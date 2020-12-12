@@ -1,0 +1,15 @@
+version: "3.9"
+services:
+  db:
+    image: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: "${DEKART_POSTGRES_PASSWORD}"
+      POSTGRES_USER: "${DEKART_POSTGRES_USER}"
+      POSTGRES_DB: "${DEKART_POSTGRES_DB}"
+  adminer:
+      image: adminer
+      restart: always
+      ports:
+        - 8081:8080
