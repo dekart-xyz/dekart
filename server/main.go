@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"dekart/server/reports"
 	"fmt"
@@ -18,7 +19,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func main() {
+func configureLogger() {
 	rand.Seed(time.Now().UnixNano())
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
@@ -28,14 +29,13 @@ func main() {
 	}
 	log.Info().Msgf("Log level: %s", zerolog.GlobalLevel().String())
 
-	port := os.Getenv("DEKART_PORT")
-	log.Info().Msgf("Port: %s", port)
-
 	pretty := os.Getenv("DEKART_LOG_PRETTY")
 	if pretty != "" {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
 	}
+}
 
+func configureDb() *sql.DB {
 	db, err := sql.Open("postgres", fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
 		os.Getenv("DEKART_POSTGRES_USER"),
@@ -47,11 +47,13 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Send()
 	}
-	defer db.Close()
 	db.SetConnMaxLifetime(0)
 	db.SetMaxIdleConns(3)
 	db.SetMaxOpenConns(3)
+	return db
+}
 
+func applyMigrations(db *sql.DB) {
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
 		log.Fatal().Err(err).Msg("WithInstance")
@@ -64,19 +66,31 @@ func main() {
 	}
 	m.Up()
 	if err != nil {
-		log.Fatal().Err(err).Msg("m.Up")
+		log.Fatal().Err(err).Msg("Migrations Up")
 	}
-	if err != nil {
-		log.Fatal().Err(err).Send()
-	}
+}
 
-	reportsManager := reports.Manager{}
+func main() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	configureLogger()
+
+	db := configureDb()
+	defer db.Close()
+
+	applyMigrations(db)
+
+	reportsManager := reports.Manager{
+		Db: db,
+	}
 
 	r := mux.NewRouter()
 	api := r.PathPrefix("/api/v1").Subrouter()
-	api.HandleFunc("/report", reportsManager.CreateReportHandler).Methods("POST")
-	// r.HandleFunc("/webhook", messenger.VerifyWebhook).Methods("GET")
+	api.HandleFunc("/report", func(w http.ResponseWriter, r *http.Request) {
+		reportsManager.CreateReportHandler(ctx, w, r)
+	}).Methods("POST")
 
+	port := os.Getenv("DEKART_PORT")
 	log.Info().Msgf("Starting dekart at :%s", port)
 	srv := &http.Server{
 		Handler:      r,
