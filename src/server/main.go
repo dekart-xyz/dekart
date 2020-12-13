@@ -87,9 +87,14 @@ func main() {
 
 	r := mux.NewRouter()
 	api := r.PathPrefix("/api/v1").Subrouter()
+	api.Use(mux.CORSMethodMiddleware(r))
 	api.HandleFunc("/report", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		if r.Method == http.MethodOptions {
+			return
+		}
 		reportsManager.CreateReportHandler(ctx, w, r)
-	}).Methods("POST")
+	}).Methods("POST", "OPTIONS")
 
 	port := os.Getenv("DEKART_PORT")
 	log.Info().Msgf("Starting dekart at :%s", port)
