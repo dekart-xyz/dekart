@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
-	"dekart/server/reports"
+	"dekart/src/server/reports"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -23,16 +23,17 @@ func configureLogger() {
 	rand.Seed(time.Now().UnixNano())
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
+	pretty := os.Getenv("DEKART_LOG_PRETTY")
+	if pretty != "" {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
+	}
+
 	debug := os.Getenv("DEKART_LOG_DEBUG")
 	if debug != "" {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 	log.Info().Msgf("Log level: %s", zerolog.GlobalLevel().String())
 
-	pretty := os.Getenv("DEKART_LOG_PRETTY")
-	if pretty != "" {
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
-	}
 }
 
 func configureDb() *sql.DB {
