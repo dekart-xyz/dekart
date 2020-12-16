@@ -88,12 +88,24 @@ func main() {
 	r := mux.NewRouter()
 	api := r.PathPrefix("/api/v1").Subrouter()
 	api.Use(mux.CORSMethodMiddleware(r))
+
+	// POST /v1/api/report
 	api.HandleFunc("/report", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		if r.Method == http.MethodOptions {
 			return
 		}
 		reportsManager.CreateReportHandler(ctx, w, r)
+	}).Methods("POST", "OPTIONS")
+
+	// POST /v1/api/report/$id/query
+	api.HandleFunc("/report/{reportId}/query", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		if r.Method == http.MethodOptions {
+			return
+		}
+		vars := mux.Vars(r)
+		reportsManager.CreateQueryHandler(ctx, vars["reportId"], w, r)
 	}).Methods("POST", "OPTIONS")
 
 	port := os.Getenv("DEKART_PORT")
