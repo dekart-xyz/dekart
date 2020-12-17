@@ -108,6 +108,16 @@ func main() {
 		reportsManager.CreateQueryHandler(ctx, vars["reportId"], w, r)
 	}).Methods("POST", "OPTIONS")
 
+	// GET /v1/api/report/$id
+	api.HandleFunc("/report/{reportId}", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		if r.Method == http.MethodOptions {
+			return
+		}
+		vars := mux.Vars(r)
+		reportsManager.GetReportHandler(ctx, vars["reportId"], w, r)
+	}).Methods("GET", "OPTIONS")
+
 	port := os.Getenv("DEKART_PORT")
 	log.Info().Msgf("Starting dekart at :%s", port)
 	srv := &http.Server{
