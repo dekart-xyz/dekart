@@ -108,6 +108,16 @@ func main() {
 		reportsManager.CreateQueryHandler(ctx, vars["reportId"], w, r)
 	}).Methods("POST", "OPTIONS")
 
+	// PATCH /v1/api/query/$id
+	api.HandleFunc("/query/{queryId}", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		if r.Method == http.MethodOptions {
+			return
+		}
+		vars := mux.Vars(r)
+		reportsManager.UpdateQueryHandler(ctx, vars["queryId"], w, r)
+	}).Methods("PATCH", "OPTIONS")
+
 	// GET /v1/api/report/$id
 	api.HandleFunc("/report/{reportId}", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")

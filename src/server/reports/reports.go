@@ -36,6 +36,10 @@ type getReportResponse struct {
 	Report Report `json:"report"`
 }
 
+type updateQueryRequest struct {
+	Query Query `json:"query"`
+}
+
 type createQueryRequest struct {
 	Query Query `json:"query"`
 }
@@ -116,6 +120,34 @@ func jsonResponse(w http.ResponseWriter, res interface{}) {
 	if err != nil {
 		log.Err(err).Send()
 	}
+}
+func (m *Manager) UpdateQueryHandler(ctx context.Context, queryId string, w http.ResponseWriter, r *http.Request) {
+	request := &updateQueryRequest{}
+	err := json.NewDecoder(r.Body).Decode(request)
+	if err != nil {
+		responceError(w, r, err, http.StatusBadRequest)
+		return
+	}
+	res, err := m.Db.ExecContext(ctx,
+		"update queries set query_text=$2 where id=$1",
+		queryId,
+		request.Query.QueryText,
+	)
+	if err != nil {
+		responceError(w, r, err, http.StatusInternalServerError)
+		return
+	}
+	affectedRows, err := res.RowsAffected()
+	if err != nil {
+		responceError(w, r, err, http.StatusInternalServerError)
+		return
+	}
+	fmt.Printf("%d rows affected", affectedRows)
+	if affectedRows == 0 {
+		responceError(w, r, fmt.Errorf("query not found"), http.StatusNotFound)
+		return
+	}
+	w.WriteHeader(http.StatusAccepted)
 }
 
 // CreateQueryHandler updates report props
