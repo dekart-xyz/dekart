@@ -128,10 +128,11 @@ func (m *Manager) UpdateQueryHandler(ctx context.Context, queryId string, w http
 		responceError(w, r, err, http.StatusBadRequest)
 		return
 	}
+	log.Debug().Str("queryId", queryId).Msg("Updating query")
 	res, err := m.Db.ExecContext(ctx,
-		"update queries set query_text=$2 where id=$1",
-		queryId,
+		"update queries set query_text=$1 where id=$2",
 		request.Query.QueryText,
+		queryId,
 	)
 	if err != nil {
 		responceError(w, r, err, http.StatusInternalServerError)
@@ -142,7 +143,6 @@ func (m *Manager) UpdateQueryHandler(ctx context.Context, queryId string, w http
 		responceError(w, r, err, http.StatusInternalServerError)
 		return
 	}
-	fmt.Printf("%d rows affected", affectedRows)
 	if affectedRows == 0 {
 		responceError(w, r, fmt.Errorf("query not found"), http.StatusNotFound)
 		return

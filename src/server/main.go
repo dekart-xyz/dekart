@@ -92,6 +92,7 @@ func main() {
 	// POST /v1/api/report
 	api.HandleFunc("/report", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		if r.Method == http.MethodOptions {
 			return
 		}
@@ -101,6 +102,7 @@ func main() {
 	// POST /v1/api/report/$id/query
 	api.HandleFunc("/report/{reportId}/query", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		if r.Method == http.MethodOptions {
 			return
 		}
@@ -111,6 +113,8 @@ func main() {
 	// PATCH /v1/api/query/$id
 	api.HandleFunc("/query/{queryId}", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Access-Control-Allow-Methods", "PATCH")
 		if r.Method == http.MethodOptions {
 			return
 		}
@@ -121,6 +125,7 @@ func main() {
 	// GET /v1/api/report/$id
 	api.HandleFunc("/report/{reportId}", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		if r.Method == http.MethodOptions {
 			return
 		}
