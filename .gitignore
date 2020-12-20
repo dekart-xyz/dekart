@@ -38,5 +38,4 @@ npm-debug.log*
 
 .eslintcache
 
-/proto/go
-/proto/js
+/src/proto

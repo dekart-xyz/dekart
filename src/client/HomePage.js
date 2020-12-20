@@ -1,10 +1,9 @@
 import { useEffect } from 'react'
 import { useHistory } from 'react-router-dom'
-import { post } from './lib/api'
+import { createReport } from './lib/grpc'
 
 async function redirectToReport (history) {
-  const res = await post('/report')
-  const { report } = await res.json()
+  const { report } = await createReport()
   history.replace(`/reports/${report.id}`)
 }
 

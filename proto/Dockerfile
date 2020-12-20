@@ -36,10 +36,11 @@ RUN unzip -o protobuf-js-3.14.0.zip -d ./protobuf-js-3.14.0
 WORKDIR /home/root/protobuf-js-3.14.0
 RUN npm install
 
-RUN curl -OL https://github.com/grpc/grpc-web/releases/download/1.2.1/protoc-gen-grpc-web-1.2.1-linux-x86_64
-RUN mv protoc-gen-grpc-web-1.2.1-linux-x86_64 /usr/local/bin/protoc-gen-grpc-web
-RUN chmod +x /usr/local/bin/protoc-gen-grpc-web
-# RUN unzip -o protoc-gen-grpc-web-1.2.1-linux-x86_64 -d ./protobuf-js-3.14.0
+RUN npm install -g ts-protoc-gen
+
+# RUN curl -OL https://github.com/grpc/grpc-web/releases/download/1.2.1/protoc-gen-grpc-web-1.2.1-linux-x86_64
+# RUN mv protoc-gen-grpc-web-1.2.1-linux-x86_64 /usr/local/bin/protoc-gen-grpc-web
+# RUN chmod +x /usr/local/bin/protoc-gen-grpc-web
 
 
 

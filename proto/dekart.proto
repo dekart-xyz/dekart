@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+option go_package = "proto";
+
+service Dekart {
+    rpc CreateReport(CreateReportRequest) returns (CreateReportResponse) {}
+    rpc CreateQuery(CreateQueryRequest) returns (CreateQueryResponse) {}
+    rpc UpdateQuery(UpdateQueryRequest) returns (UpdateQueryResponse) {}
+    rpc GetReportStream(ReportStreamRequest) returns (stream ReportStreamResponse) {}
+}
+
+message Report {
+    string id = 1;
+}
+
+message Query {
+    string id = 1;
+    string report_id = 2;
+    string query_text = 3;
+}
+
+message UpdateQueryRequest {
+    Query query = 1;
+}
+
+message UpdateQueryResponse {
+    Query query = 1;
+}
+
+message CreateQueryRequest {
+    Query query = 1;
+}
+
+message CreateQueryResponse {
+    Query query = 1;
+}
+
+message ReportStreamRequest {
+    Report report = 1;
+}
+
+message ReportStreamResponse {
+    Report report = 1;
+    repeated Query queries = 2;
+}
+
+message CreateReportRequest {
+
+}
+
+message CreateReportResponse {
+    Report report = 1;
+}

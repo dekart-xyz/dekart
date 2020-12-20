@@ -3,11 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@improbable-eng/grpc-web": "^0.13.0",
     "@testing-library/jest-dom": "^5.11.6",
     "@testing-library/react": "^11.2.2",
     "@testing-library/user-event": "^12.5.0",
     "ace-builds": "^1.4.12",
     "antd": "^4.9.4",
+    "google-protobuf": "^3.14.0",
     "lodash.debounce": "^4.0.8",
     "react": "^17.0.1",
     "react-ace": "^9.2.1",
