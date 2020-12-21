@@ -40,7 +40,7 @@ func (s *Streams) Regter(reportId string, streamId string) chan int {
 	return ch
 }
 
-func (s *Streams) Unregister(reportId string, streamId string) {
+func (s *Streams) Deregister(reportId string, streamId string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	streamMap, ok := s.channels[reportId]

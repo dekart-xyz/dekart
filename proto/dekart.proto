@@ -6,6 +6,7 @@ service Dekart {
     rpc CreateReport(CreateReportRequest) returns (CreateReportResponse) {}
     rpc CreateQuery(CreateQueryRequest) returns (CreateQueryResponse) {}
     rpc UpdateQuery(UpdateQueryRequest) returns (UpdateQueryResponse) {}
+    rpc RunQuery(RunQueryRequest) returns (RunQueryResponse) {}
     rpc GetReportStream(ReportStreamRequest) returns (stream ReportStreamResponse) {}
 }
 
@@ -17,6 +18,22 @@ message Query {
     string id = 1;
     string report_id = 2;
     string query_text = 3;
+
+    enum JobStatus {
+        JOB_STATUS_UNSPECIFIED = 0;
+        JOB_STATUS_PENDING = 1;
+        JOB_STATUS_RUNNING = 2;
+        JOB_STATUS_DONE = 3;
+    }
+
+    JobStatus job_status = 4;
+}
+
+message RunQueryRequest {
+    string query_id = 1;
+}
+
+message RunQueryResponse {
 }
 
 message UpdateQueryRequest {

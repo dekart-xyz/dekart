@@ -9,7 +9,8 @@ import 'ace-builds/src-noconflict/ext-language_tools'
 import 'ace-builds/webpack-resolver'
 import { useEffect, useReducer, useState } from 'react'
 import { get, post, patch } from './lib/api'
-import { createQuery, getReportStream, updateQuery } from './lib/grpc'
+import { createQuery, getReportStream, runQuery, updateQuery } from './lib/grpc'
+import { Query } from '../proto/dekart_pb'
 
 function reducer (state, action) {
   if (action.queriesList) {
@@ -50,7 +51,7 @@ export default function ReportPage () {
           <AceEditor
             mode='sql'
             theme='textmate'
-        // onChange={onChange}
+            // onChange={onChange}
             name='UNIQUE_ID_OF_DIV'
             onChange={value => {
               dispatch({ queryId: query.id, queryText: value })
@@ -63,9 +64,10 @@ export default function ReportPage () {
               enableSnippets: true
             }}
           />
+          <div>Status {Object.keys(Query.JobStatus).find(key => Query.JobStatus[key] === query.jobStatus)}</div>
           <div>
-            <Button onClick={() => updateQuery(query.id, query.queryText)}>Save</Button>
-            <Button>Run</Button>
+            <Button onClick={() => updateQuery(query.id, query.queryText).catch(console.error)}>Save</Button>
+            <Button onClick={() => runQuery(query.id).catch(console.error)}>Run</Button>
           </div>
         </div>
       )
