@@ -1,16 +1,15 @@
 import { useParams } from 'react-router-dom'
 import { Button } from 'antd'
 import AceEditor from 'react-ace'
-import debounce from 'lodash.debounce'
 
 import 'ace-builds/src-noconflict/mode-sql'
 import 'ace-builds/src-noconflict/theme-textmate'
 import 'ace-builds/src-noconflict/ext-language_tools'
 import 'ace-builds/webpack-resolver'
 import { useEffect, useReducer, useState } from 'react'
-import { get, post, patch } from './lib/api'
 import { createQuery, getReportStream, runQuery, updateQuery } from './lib/grpc'
 import { Query } from '../proto/dekart_pb'
+import KeplerGl from 'kepler.gl'
 
 function reducer (state, action) {
   if (action.queriesList) {
@@ -45,7 +44,7 @@ export default function ReportPage () {
   }, [id])
   let queriesSection
   if (state.queries && state.queries.length) {
-    queriesSection = state.queries.map(query => {
+    const queriesSections = state.queries.map(query => {
       return (
         <div key={query.id}>
           <AceEditor
@@ -72,6 +71,19 @@ export default function ReportPage () {
         </div>
       )
     })
+    console.log(process.env.REACT_APP_MAPBOX_TOKEN)
+
+    queriesSection = (
+      <div>
+        {queriesSections}
+        <KeplerGl
+          id='kepler'
+          mapboxApiAccessToken={process.env.REACT_APP_MAPBOX_TOKEN}
+          width={800}
+          height={800}
+        />
+      </div>
+    )
   } else {
     queriesSection = (
       <div>

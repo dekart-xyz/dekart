@@ -10,13 +10,18 @@
     "ace-builds": "^1.4.12",
     "antd": "^4.9.4",
     "google-protobuf": "^3.14.0",
+    "kepler.gl": "^2.4.0",
     "lodash.debounce": "^4.0.8",
     "react": "^17.0.1",
     "react-ace": "^9.2.1",
     "react-dom": "^17.0.1",
     "react-router-dom": "^5.2.0",
     "react-scripts": "4.0.1",
+    "redux": "^4.0.5",
+    "redux-logger": "^3.0.6",
+    "redux-thunk": "^2.3.0",
     "standard": "^16.0.3",
+    "styled-components": "^5.2.1",
     "web-vitals": "^0.2.4"
   },
   "scripts": {
