@@ -10,6 +10,7 @@ import (
 
 	"dekart/src/proto"
 	"dekart/src/server/dekart"
+	"dekart/src/server/report"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -84,7 +85,8 @@ func main() {
 	applyMigrations(db)
 
 	dekartServer := dekart.Server{
-		Db: db,
+		Db:            db,
+		ReportStreams: report.NewStreams(),
 	}
 
 	grpcServer := grpc.NewServer()
@@ -105,8 +107,8 @@ func main() {
 			grpcwebServer.ServeHTTP(resp, req)
 		}),
 		Addr:         ":" + port,
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 20 * time.Second,
+		ReadTimeout:  20 * time.Second,
 	}
 	log.Fatal().Err(httpServer.ListenAndServe()).Send()
 

@@ -50,17 +50,21 @@ export function getReportStream (reportId, onMessage) {
   report.setId(reportId)
   const request = new ReportStreamRequest()
   request.setReport(report)
-  const { cancel } = grpc.invoke(Dekart.GetReportStream, {
+  let { cancel } = grpc.invoke(Dekart.GetReportStream, {
     host,
     request,
-    debug: true,
+    // debug: true,
     onMessage: (message) => {
-      // console.log(message.toObject())
+      console.log('onMessage', message.toObject())
       onMessage(message.toObject())
     },
-    onEnd: (response) => {
-      console.error(response.statusMessage)
+    onEnd: (code, message) => {
+      if (code === 0) {
+        cancel = getReportStream(reportId, onMessage)
+      } else {
+        console.error('onEnd', code)
+      }
     }
   })
-  return cancel
+  return () => cancel()
 }

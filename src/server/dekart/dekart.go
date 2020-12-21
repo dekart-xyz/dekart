@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/report"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -12,11 +14,14 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// Server is Dekart GRPC Server implementation
 type Server struct {
-	Db *sql.DB
+	Db            *sql.DB
+	ReportStreams *report.Streams
 	proto.UnimplementedDekartServer
 }
 
+// CreateReport implementation
 func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest) (*proto.CreateReportResponse, error) {
 	u, err := uuid.NewRandom()
 	if err != nil {
@@ -39,6 +44,7 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 	return res, nil
 }
 
+// CreateQuery in Report
 func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) (*proto.CreateQueryResponse, error) {
 	if req.Query == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "req.Query == nil")
@@ -59,6 +65,8 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
+	s.ReportStreams.Ping(req.Query.ReportId)
+
 	res := &proto.CreateQueryResponse{
 		Query: &proto.Query{
 			Id:        u.String(),
@@ -70,6 +78,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	return res, nil
 }
 
+// UpdateQuery by id implementation
 func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) (*proto.UpdateQueryResponse, error) {
 	if req.Query == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "req.Query == nil")
@@ -97,6 +106,25 @@ func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) 
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
+	queryRows, err := s.Db.QueryContext(ctx,
+		"select report_id from queries where id=$1 limit 1",
+		req.Query.Id,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer queryRows.Close()
+	var reportID string
+	for queryRows.Next() {
+		err := queryRows.Scan(&reportID)
+		if err != nil {
+			log.Err(err).Send()
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+	s.ReportStreams.Ping(reportID)
+
 	res := &proto.UpdateQueryResponse{
 		Query: &proto.Query{
 			Id: req.Query.Id,
@@ -106,14 +134,11 @@ func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) 
 	return res, nil
 }
 
-func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart_GetReportStreamServer) error {
-	if req.Report == nil {
-		return status.Errorf(codes.InvalidArgument, "req.Report == nil")
-	}
+func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStreamServer) error {
 	ctx := srv.Context()
 	reportRows, err := s.Db.QueryContext(ctx,
 		"select id from reports where id=$1 limit 1",
-		req.Report.Id,
+		reportID,
 	)
 	if err != nil {
 		log.Err(err).Send()
@@ -123,10 +148,6 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 	res := proto.ReportStreamResponse{
 		Report: &proto.Report{},
 	}
-	// queries := make([]Query, 0)
-	// 	report := Report{
-	// 		Queries: &queries,
-	// 	}
 	for reportRows.Next() {
 		err = reportRows.Scan(&res.Report.Id)
 		if err != nil {
@@ -137,7 +158,6 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 	if res.Report.Id == "" {
 		err := fmt.Errorf("Report %s not found", res.Report.Id)
 		log.Warn().Err(err).Send()
-		// responceError(w, r, fmt.Errorf("report not found"), http.StatusNotFound)
 		return status.Errorf(codes.NotFound, err.Error())
 	}
 	queryRows, err := s.Db.QueryContext(ctx,
@@ -163,6 +183,46 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 		}
 		res.Queries = append(res.Queries, &query)
 	}
-	srv.Send(&res)
+	err = srv.Send(&res)
+	if err != nil {
+		log.Err(err).Send()
+		return err
+	}
 	return nil
+
+}
+
+// GetReportStream which sends report and queries on every update
+func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart_GetReportStreamServer) error {
+	if req.Report == nil {
+		return status.Errorf(codes.InvalidArgument, "req.Report == nil")
+	}
+
+	streamID, err := uuid.NewRandom()
+	if err != nil {
+		log.Err(err).Send()
+		return status.Error(codes.Internal, err.Error())
+	}
+	ping := s.ReportStreams.Regter(req.Report.Id, streamID.String())
+	defer s.ReportStreams.Deregister(req.Report.Id, streamID.String())
+
+	err = s.sendReportMessage(req.Report.Id, srv)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(srv.Context(), 10*time.Second)
+	defer cancel()
+
+	for {
+		select {
+		case <-ping:
+			err := s.sendReportMessage(req.Report.Id, srv)
+			if err != nil {
+				return err
+			}
+		case <-ctx.Done():
+			return nil
+		}
+	}
 }
