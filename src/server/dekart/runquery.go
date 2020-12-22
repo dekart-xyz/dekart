@@ -3,15 +3,28 @@ package dekart
 import (
 	"context"
 	"dekart/src/proto"
+	"encoding/csv"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"cloud.google.com/go/bigquery"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/api/iterator"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+func getUUID() string {
+	u, err := uuid.NewRandom()
+	if err != nil {
+		log.Fatal().Err(err).Send()
+		return ""
+	}
+	return u.String()
+}
 
 func (s Server) waitJob(job *bigquery.Job, queryID string, reportID string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
@@ -29,26 +42,69 @@ func (s Server) waitJob(job *bigquery.Job, queryID string, reportID string) {
 		log.Err(err).Send()
 		return
 	}
-	// if err := queryStatus.Err(); err != nil {
-	// 	log.Err(err).Send()
-	// 	return
-	// 	// return nil, status.Error(codes.Internal, err.Error())
-	// }
-	// it, err := job.Read(ctx)
-	// for {
-	// 	var row []bigquery.Value
-	// 	err := it.Next(&row)
-	// 	if err == iterator.Done {
-	// 		break
-	// 	}
-	// 	if err != nil {
-	// 		log.Err(err).Send()
-	// 		return
-	// 		// return nil, status.Error(codes.Internal, err.Error())
-	// 	}
-	// 	fmt.Println(row)
-	// }
-	// fmt.Println(it.Schema)
+	resultID := getUUID()
+	file, err := os.Create(filepath.Join(
+		os.Getenv("DEKART_QUERY_RESULTS"),
+		fmt.Sprintf("%s.csv", resultID),
+	))
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	it, err := job.Read(ctx)
+	if err := queryStatus.Err(); err != nil {
+		log.Err(err).Send()
+		return
+	}
+	firstLine := true
+	for {
+		var row []bigquery.Value
+		err := it.Next(&row)
+		if err == iterator.Done {
+			break
+		}
+		if firstLine {
+			firstLine = false
+			csvRow := make([]string, len(row), len(row))
+			for i, fieldSchema := range it.Schema {
+				csvRow[i] = fieldSchema.Name
+				// fmt.Println(fieldSchema.Name, fieldSchema.Type)
+			}
+			err = writer.Write(csvRow)
+			if err != nil {
+				log.Err(err).Send()
+				return
+			}
+		}
+		if err != nil {
+			log.Err(err).Send()
+			return
+			// return nil, status.Error(codes.Internal, err.Error())
+		}
+		csvRow := make([]string, len(row), len(row))
+		for i, v := range row {
+			// switch it.Schema[i].Type {
+			// case
+			// 	bigquery.StringFieldType,
+			// 	bigquery.BytesFieldType,
+			// 	bigquery.TimestampFieldType,
+			// 	bigquery.DateFieldType,
+			// 	bigquery.TimeFieldType,
+			// 	bigquery.DateTimeFieldType:
+			// 	csvRow[i] = fmt.Sprintf(`"%s"`, v)
+			// default:
+			// 	csvRow[i] = fmt.Sprintf("%v", v)
+			// }
+			csvRow[i] = fmt.Sprintf("%v", v)
+		}
+		err = writer.Write(csvRow)
+		if err != nil {
+			log.Err(err).Send()
+			return
+		}
+		// fmt.Println(csvRow)
+	}
 }
 
 func (s Server) setJobStatus(ctx context.Context, queryID string, reportID string, status int) error {

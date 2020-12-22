@@ -39,3 +39,5 @@ npm-debug.log*
 .eslintcache
 
 /src/proto
+
+.query-results
