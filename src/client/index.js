@@ -7,11 +7,12 @@ import { Provider } from 'react-redux'
 import thunk from 'redux-thunk'
 import { createLogger } from 'redux-logger'
 import reducer from './reducer'
+import { taskMiddleware } from 'react-palm/tasks'
 
 const store = createStore(
   reducer,
   compose(
-    applyMiddleware(thunk, createLogger())
+    applyMiddleware(taskMiddleware, thunk, createLogger())
   )
 )
 

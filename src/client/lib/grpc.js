@@ -50,26 +50,55 @@ export function runQuery (queryId) {
   return unary(Dekart.RunQuery, request)
 }
 
-export function getReportStream (reportId, onMessage) {
+class CancelableRequest {
+  constructor () {
+    this.canceled = false
+    this.cancel = this.cancel.bind(this)
+  }
+
+  setInvokeRequest ({ cancel }) {
+    if (this.canceled) {
+      throw new Error('Request already canceled')
+    }
+    this.cancelInvoke = cancel
+  }
+
+  cancel () {
+    if (this.cancelInvoke) {
+      this.cancelInvoke()
+    }
+    this.canceled = true
+  }
+}
+
+export function getReportStream (reportId, onMessage, cancelable = new CancelableRequest()) {
   const report = new Report()
   report.setId(reportId)
   const request = new ReportStreamRequest()
   request.setReport(report)
-  let { cancel } = grpc.invoke(Dekart.GetReportStream, {
+  // let canceled = false
+  cancelable.setInvokeRequest(grpc.invoke(Dekart.GetReportStream, {
     host,
     request,
     // debug: true,
     onMessage: (message) => {
-      console.log('onMessage', message.toObject())
-      onMessage(message.toObject())
+      if (!cancelable.canceled) {
+        onMessage(message.toObject())
+      }
+      // console.log('onMessage', message.toObject())
+      // onMessage(message.toObject())
     },
     onEnd: (code, message) => {
       if (code === 0) {
-        cancel = getReportStream(reportId, onMessage)
+        if (!cancelable.canceled) {
+          getReportStream(reportId, onMessage, cancelable)
+        }
       } else {
+        cancelable.cancel()
+        // canceled = true
         console.error('onEnd', code)
       }
     }
-  })
-  return () => cancel()
+  }))
+  return cancelable
 }

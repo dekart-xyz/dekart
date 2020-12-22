@@ -1,2 +1,11 @@
 @import-normalize;
 @import '~antd/dist/antd.css';
+
+html, body, #root {
+    width: 100%;
+    min-height: 100%;
+}
+
+#root {
+    /* position: relative; */
+}

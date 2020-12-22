@@ -10,6 +10,8 @@ import { useEffect, useReducer, useState } from 'react'
 import { createQuery, getReportStream, runQuery, updateQuery } from './lib/grpc'
 import { Query } from '../proto/dekart_pb'
 import KeplerGl from 'kepler.gl'
+import styles from './ReportPage.module.css'
+import { AutoSizer } from 'react-virtualized'
 
 function reducer (state, action) {
   if (action.queriesList) {
@@ -38,62 +40,79 @@ export default function ReportPage () {
     queries: null
   })
   useEffect(() => {
-    return getReportStream(id, ({ report, queriesList }) => {
+    const cancelable = getReportStream(id, ({ queriesList }) => {
       dispatch({ queriesList })
     })
+    return cancelable.cancel
   }, [id])
   let queriesSection
   if (state.queries && state.queries.length) {
     const queriesSections = state.queries.map(query => {
       return (
-        <div key={query.id}>
-          <AceEditor
-            mode='sql'
-            theme='textmate'
-            // onChange={onChange}
-            name='UNIQUE_ID_OF_DIV'
-            onChange={value => {
-              dispatch({ queryId: query.id, queryText: value })
-            }}
-            value={query.queryText}
-            editorProps={{ $blockScrolling: true }}
-            setOptions={{
-              enableBasicAutocompletion: true,
-              enableLiveAutocompletion: true,
-              enableSnippets: true
-            }}
-          />
+        <div key={query.id} className={styles.query}>
+          <div className={styles.editor}>
+            <AutoSizer>
+              {({ height, width }) => (
+                <AceEditor
+                  mode='sql'
+                  width={width}
+                  height={height}
+                  theme='textmate'
+          // onChange={onChange}
+                  name={'AceEditor' + query.id}
+                  onChange={value => {
+                    dispatch({ queryId: query.id, queryText: value })
+                  }}
+                  value={query.queryText}
+                  editorProps={{ $blockScrolling: true }}
+                  setOptions={{
+                    enableBasicAutocompletion: true,
+                    enableLiveAutocompletion: true,
+                    enableSnippets: true
+                  }}
+                />
+              )}
+            </AutoSizer>
+          </div>
           <div>Status {Object.keys(Query.JobStatus).find(key => Query.JobStatus[key] === query.jobStatus)}</div>
-          <div>
+          <div className={styles.buttons}>
             <Button onClick={() => updateQuery(query.id, query.queryText).catch(console.error)}>Save</Button>
             <Button onClick={() => runQuery(query.id).catch(console.error)}>Run</Button>
           </div>
         </div>
       )
     })
-    console.log(process.env.REACT_APP_MAPBOX_TOKEN)
-
     queriesSection = (
-      <div>
-        {queriesSections}
-        <KeplerGl
-          id='kepler'
-          mapboxApiAccessToken={process.env.REACT_APP_MAPBOX_TOKEN}
-          width={800}
-          height={800}
-        />
-      </div>
+      <div className={styles.querySection}>{queriesSections}</div>
     )
   } else {
     queriesSection = (
-      <div>
+      <div className={styles.querySection}>
         <Button onClick={() => createQuery(id).catch(console.error)}>Add Query</Button>
       </div>
     )
   }
   return (
-    <div>
-      <div>Report {id}</div>
+    <div className={styles.root}>
+      <div className={styles.keplerFlex}>
+        <div className={styles.keplerBlock}>
+          {/* <KeplerGl
+            id='kepler'
+            mapboxApiAccessToken={process.env.REACT_APP_MAPBOX_TOKEN}
+          /> */}
+
+          <AutoSizer>
+            {({ height, width }) => (
+              <KeplerGl
+                id='kepler'
+                mapboxApiAccessToken={process.env.REACT_APP_MAPBOX_TOKEN}
+                width={width}
+                height={height}
+              />
+            )}
+          </AutoSizer>
+        </div>
+      </div>
       {queriesSection}
     </div>
   )

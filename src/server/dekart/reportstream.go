@@ -90,7 +90,7 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(srv.Context(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(srv.Context(), 55*time.Second)
 	defer cancel()
 
 	for {

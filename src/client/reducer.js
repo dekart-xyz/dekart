@@ -3,8 +3,8 @@ import keplerGlReducer from 'kepler.gl/reducers'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
   uiState: {
-    currentModal: null,
-    activeSidePanel: null
+    currentModal: null
+    // activeSidePanel: null
   }
 })
 
