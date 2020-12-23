@@ -39,7 +39,12 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 		return status.Errorf(codes.NotFound, err.Error())
 	}
 	queryRows, err := s.Db.QueryContext(ctx,
-		`select id, query_text, job_status from queries where report_id=$1`,
+		`select
+			id,
+			query_text,
+			job_status,
+			case when job_result_id is null then '' else cast(job_result_id as VARCHAR) end as job_result_id
+		from queries where report_id=$1`,
 		res.Report.Id,
 	)
 	if err != nil {
@@ -56,6 +61,7 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 			&query.Id,
 			&query.QueryText,
 			&query.JobStatus,
+			&query.JobResultId,
 		); err != nil {
 			log.Err(err).Send()
 			return status.Errorf(codes.Internal, err.Error())

@@ -26,34 +26,23 @@ func getUUID() string {
 	return u.String()
 }
 
-func (s Server) waitJob(job *bigquery.Job, queryID string, reportID string) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-	defer cancel()
-	queryStatus, err := job.Wait(ctx)
-	if err != nil {
-		log.Info().Err(err).Send()
-		err = s.setJobStatus(ctx, queryID, reportID, 0)
-		log.Err(err).Send()
-		return
-		// return nil, status.Error(codes.Internal, err.Error())
-	}
-	err = s.setJobStatus(ctx, queryID, reportID, int(queryStatus.State))
-	if err != nil {
-		log.Err(err).Send()
-		return
-	}
+func (s Server) readJobResult(ctx context.Context, job *bigquery.Job, queryID string, reportID string) {
 	resultID := getUUID()
 	file, err := os.Create(filepath.Join(
 		os.Getenv("DEKART_QUERY_RESULTS"),
 		fmt.Sprintf("%s.csv", resultID),
 	))
+	if err != nil {
+		log.Fatal().Err(err).Send()
+		return
+	}
 	defer file.Close()
 
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
 	it, err := job.Read(ctx)
-	if err := queryStatus.Err(); err != nil {
+	if err != nil {
 		log.Err(err).Send()
 		return
 	}
@@ -80,22 +69,9 @@ func (s Server) waitJob(job *bigquery.Job, queryID string, reportID string) {
 		if err != nil {
 			log.Err(err).Send()
 			return
-			// return nil, status.Error(codes.Internal, err.Error())
 		}
 		csvRow := make([]string, len(row), len(row))
 		for i, v := range row {
-			// switch it.Schema[i].Type {
-			// case
-			// 	bigquery.StringFieldType,
-			// 	bigquery.BytesFieldType,
-			// 	bigquery.TimestampFieldType,
-			// 	bigquery.DateFieldType,
-			// 	bigquery.TimeFieldType,
-			// 	bigquery.DateTimeFieldType:
-			// 	csvRow[i] = fmt.Sprintf(`"%s"`, v)
-			// default:
-			// 	csvRow[i] = fmt.Sprintf("%v", v)
-			// }
 			csvRow[i] = fmt.Sprintf("%v", v)
 		}
 		err = writer.Write(csvRow)
@@ -103,8 +79,34 @@ func (s Server) waitJob(job *bigquery.Job, queryID string, reportID string) {
 			log.Err(err).Send()
 			return
 		}
-		// fmt.Println(csvRow)
 	}
+	err = s.setJobResult(ctx, queryID, reportID, resultID)
+	if err != nil {
+		log.Err(err).Send()
+		return
+	}
+}
+
+func (s Server) waitJob(job *bigquery.Job, queryID string, reportID string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	queryStatus, err := job.Wait(ctx)
+	if err != nil {
+		log.Info().Err(err).Send()
+		err = s.setJobStatus(ctx, queryID, reportID, 0)
+		return
+	}
+	if err := queryStatus.Err(); err != nil {
+		log.Info().Err(err).Send()
+		err = s.setJobStatus(ctx, queryID, reportID, 0)
+		return
+	}
+	err = s.setJobStatus(ctx, queryID, reportID, int(queryStatus.State))
+	if err != nil {
+		log.Err(err).Send()
+		return
+	}
+	s.readJobResult(ctx, job, queryID, reportID)
 }
 
 func (s Server) setJobStatus(ctx context.Context, queryID string, reportID string, status int) error {
@@ -113,6 +115,20 @@ func (s Server) setJobStatus(ctx context.Context, queryID string, reportID strin
 		ctx,
 		"update queries set job_status = $1 where id  = $2",
 		status,
+		queryID,
+	)
+	if err != nil {
+		return err
+	}
+	s.ReportStreams.Ping(reportID)
+	return nil
+}
+
+func (s Server) setJobResult(ctx context.Context, queryID string, reportID string, jobResultID string) error {
+	_, err := s.Db.ExecContext(
+		ctx,
+		"update queries set job_result_id = $1 where id  = $2",
+		jobResultID,
 		queryID,
 	)
 	if err != nil {
@@ -142,7 +158,6 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		}
 	}
 	bigqueryClient, err := bigquery.NewClient(ctx, os.Getenv("DEKART_BIGQUERY_PROJECT_ID"))
-	fmt.Println(bigqueryClient)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())

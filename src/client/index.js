@@ -5,14 +5,14 @@ import './index.css'
 import { createStore, applyMiddleware, compose } from 'redux'
 import { Provider } from 'react-redux'
 import thunk from 'redux-thunk'
-import { createLogger } from 'redux-logger'
-import reducer from './reducer'
+// import { createLogger } from 'redux-logger'
+import reducer from './reducers'
 import { taskMiddleware } from 'react-palm/tasks'
 
 const store = createStore(
   reducer,
   compose(
-    applyMiddleware(taskMiddleware, thunk, createLogger())
+    applyMiddleware(taskMiddleware, thunk/*, createLogger() */)
   )
 )
 

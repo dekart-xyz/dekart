@@ -15,6 +15,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/gorilla/mux"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	_ "github.com/lib/pq"
 	"github.com/rs/zerolog"
@@ -68,8 +69,11 @@ func applyMigrations(db *sql.DB) {
 	if err != nil {
 		log.Fatal().Err(err).Msg("NewWithDatabaseInstance")
 	}
-	m.Up()
+	err = m.Up()
 	if err != nil {
+		if err == migrate.ErrNoChange {
+			return
+		}
 		log.Fatal().Err(err).Msg("Migrations Up")
 	}
 }
@@ -94,17 +98,38 @@ func main() {
 	grpcwebServer := grpcweb.WrapServer(
 		grpcServer,
 		grpcweb.WithOriginFunc(func(origin string) bool {
-			// log.Debug().Str("origin", origin).Send()
-			//TODO:
+			//TODO check origin
 			return true
 		}),
 	)
 
+	fileServer := http.StripPrefix("/api/v1/job-results/", http.FileServer(http.Dir(os.Getenv("DEKART_QUERY_RESULTS"))))
+
+	r := mux.NewRouter()
+	api := r.PathPrefix("/api/v1/").Subrouter()
+	api.Use(mux.CORSMethodMiddleware(r))
+	api.HandleFunc("/job-results/{id}.csv", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		if r.Method == http.MethodOptions {
+			return
+		}
+		fileServer.ServeHTTP(w, r)
+	}).Methods("GET", "OPTIONS")
+
 	port := os.Getenv("DEKART_PORT")
 	log.Info().Msgf("Starting dekart at :%s", port)
 	httpServer := &http.Server{
-		Handler: http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
-			grpcwebServer.ServeHTTP(resp, req)
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			// if req.Method == http.MethodOptions {
+			// 	w.Header().Set("Access-Control-Allow-Origin", "*")
+			// 	return
+			// }
+			// grpcwebServer.ServeHTTP(w, req)
+			if grpcwebServer.IsGrpcWebRequest(req) {
+				grpcwebServer.ServeHTTP(w, req)
+			} else {
+				r.ServeHTTP(w, req)
+			}
 		}),
 		Addr:         ":" + port,
 		WriteTimeout: 60 * time.Second,

@@ -27,6 +27,7 @@ message Query {
     }
 
     JobStatus job_status = 4;
+    string job_result_id = 5;
 }
 
 message RunQueryRequest {
