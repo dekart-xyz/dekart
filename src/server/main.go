@@ -78,6 +78,38 @@ func applyMigrations(db *sql.DB) {
 	}
 }
 
+func configureGrpcServer(db *sql.DB) *grpcweb.WrappedGrpcServer {
+	dekartServer := dekart.Server{
+		Db:            db,
+		ReportStreams: report.NewStreams(),
+	}
+	server := grpc.NewServer()
+	proto.RegisterDekartServer(server, dekartServer)
+	return grpcweb.WrapServer(
+		server,
+		grpcweb.WithOriginFunc(func(origin string) bool {
+			//TODO check origin
+			return true
+		}),
+	)
+
+}
+
+func configureHttpServer() *mux.Router {
+	fileServer := http.StripPrefix("/api/v1/job-results/", http.FileServer(http.Dir(os.Getenv("DEKART_QUERY_RESULTS"))))
+	router := mux.NewRouter()
+	api := router.PathPrefix("/api/v1/").Subrouter()
+	api.Use(mux.CORSMethodMiddleware(router))
+	api.HandleFunc("/job-results/{id}.csv", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		if r.Method == http.MethodOptions {
+			return
+		}
+		fileServer.ServeHTTP(w, r)
+	}).Methods("GET", "OPTIONS")
+	return router
+}
+
 func main() {
 	// ctx, cancel := context.WithCancel(context.Background())
 	// defer cancel()
@@ -88,53 +120,23 @@ func main() {
 
 	applyMigrations(db)
 
-	dekartServer := dekart.Server{
-		Db:            db,
-		ReportStreams: report.NewStreams(),
-	}
-
-	grpcServer := grpc.NewServer()
-	proto.RegisterDekartServer(grpcServer, dekartServer)
-	grpcwebServer := grpcweb.WrapServer(
-		grpcServer,
-		grpcweb.WithOriginFunc(func(origin string) bool {
-			//TODO check origin
-			return true
-		}),
-	)
-
-	fileServer := http.StripPrefix("/api/v1/job-results/", http.FileServer(http.Dir(os.Getenv("DEKART_QUERY_RESULTS"))))
-
-	r := mux.NewRouter()
-	api := r.PathPrefix("/api/v1/").Subrouter()
-	api.Use(mux.CORSMethodMiddleware(r))
-	api.HandleFunc("/job-results/{id}.csv", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		if r.Method == http.MethodOptions {
-			return
-		}
-		fileServer.ServeHTTP(w, r)
-	}).Methods("GET", "OPTIONS")
+	grpcServer := configureGrpcServer(db)
+	httpServer := configureHttpServer()
 
 	port := os.Getenv("DEKART_PORT")
 	log.Info().Msgf("Starting dekart at :%s", port)
-	httpServer := &http.Server{
-		Handler: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			// if req.Method == http.MethodOptions {
-			// 	w.Header().Set("Access-Control-Allow-Origin", "*")
-			// 	return
-			// }
-			// grpcwebServer.ServeHTTP(w, req)
-			if grpcwebServer.IsGrpcWebRequest(req) {
-				grpcwebServer.ServeHTTP(w, req)
+	server := &http.Server{
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if grpcServer.IsAcceptableGrpcCorsRequest(r) || grpcServer.IsGrpcWebRequest(r) {
+				grpcServer.ServeHTTP(w, r)
 			} else {
-				r.ServeHTTP(w, req)
+				httpServer.ServeHTTP(w, r)
 			}
 		}),
 		Addr:         ":" + port,
 		WriteTimeout: 60 * time.Second,
 		ReadTimeout:  60 * time.Second,
 	}
-	log.Fatal().Err(httpServer.ListenAndServe()).Send()
+	log.Fatal().Err(server.ListenAndServe()).Send()
 
 }
