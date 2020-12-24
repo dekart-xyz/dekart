@@ -92,14 +92,11 @@ func (s Server) waitJob(job *bigquery.Job, queryID string, reportID string) {
 	defer cancel()
 	queryStatus, err := job.Wait(ctx)
 	if err != nil {
-		log.Info().Err(err).Send()
-		err = s.setJobStatus(ctx, queryID, reportID, 0)
+		s.setJobError(ctx, queryID, reportID, err)
 		return
 	}
 	if err := queryStatus.Err(); err != nil {
-		log.Info().Err(err).Send()
-		err = s.setJobStatus(ctx, queryID, reportID, 0)
-		return
+		s.setJobError(ctx, queryID, reportID, err)
 	}
 	err = s.setJobStatus(ctx, queryID, reportID, int(queryStatus.State))
 	if err != nil {
@@ -109,11 +106,25 @@ func (s Server) waitJob(job *bigquery.Job, queryID string, reportID string) {
 	s.readJobResult(ctx, job, queryID, reportID)
 }
 
+func (s Server) setJobError(ctx context.Context, queryID string, reportID string, jobErr error) {
+	_, err := s.Db.ExecContext(
+		ctx,
+		"update queries set job_status = 0, job_error=$1 where id  = $2",
+		jobErr.Error(),
+		queryID,
+	)
+	if err != nil {
+		log.Fatal().Err(err).Send()
+		return
+	}
+	s.ReportStreams.Ping(reportID)
+}
+
 func (s Server) setJobStatus(ctx context.Context, queryID string, reportID string, status int) error {
 	//TODO: optimistic lock for job status
 	_, err := s.Db.ExecContext(
 		ctx,
-		"update queries set job_status = $1 where id  = $2",
+		"update queries set job_status = $1, job_error = null, job_result_id = null where id  = $2",
 		status,
 		queryID,
 	)

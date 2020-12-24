@@ -43,7 +43,8 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 			id,
 			query_text,
 			job_status,
-			case when job_result_id is null then '' else cast(job_result_id as VARCHAR) end as job_result_id
+			case when job_result_id is null then '' else cast(job_result_id as VARCHAR) end as job_result_id,
+			case when job_error is null then '' else job_error end as job_error
 		from queries where report_id=$1`,
 		res.Report.Id,
 	)
@@ -62,6 +63,7 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 			&query.QueryText,
 			&query.JobStatus,
 			&query.JobResultId,
+			&query.JobError,
 		); err != nil {
 			log.Err(err).Send()
 			return status.Errorf(codes.Internal, err.Error())

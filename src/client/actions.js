@@ -43,6 +43,7 @@ function shouldAddDataset (query, queriesList) {
 
 export function reportUpdate (reportStreamResponse) {
   const { report, queriesList } = reportStreamResponse
+  console.log('queriesList', queriesList)
   return async (dispatch, getState) => {
     dispatch({
       type: reportUpdate.name,
