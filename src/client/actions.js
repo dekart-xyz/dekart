@@ -27,16 +27,31 @@ export function openReport (reportId) {
   }
 }
 
+function shouldAddDataset (query, queriesList) {
+  if (!query.jobResultId) {
+    return false
+  }
+  if (!queriesList) {
+    return true
+  }
+  const prevQueryState = queriesList.find(q => q.id === query.id)
+  if (!prevQueryState || prevQueryState.jobResultId !== query.jobResultId) {
+    return true
+  }
+  return false
+}
+
 export function reportUpdate (reportStreamResponse) {
   const { report, queriesList } = reportStreamResponse
-  return async (dispatch) => {
+  return async (dispatch, getState) => {
     dispatch({
       type: reportUpdate.name,
       report,
       queriesList
     })
+    const { prevQueriesList } = getState()
     await Promise.all(queriesList.map(async (query, i) => {
-      if (query.jobResultId) {
+      if (shouldAddDataset(query, prevQueriesList)) {
         const res = await get(`/job-results/${query.jobResultId}.csv`)
         const csv = await res.text()
         const data = processCsvData(csv)
@@ -44,7 +59,7 @@ export function reportUpdate (reportStreamResponse) {
           datasets: {
             info: {
               label: `Dataset ${i}`,
-              id: query.jobResultId
+              id: query.id
             },
             data
           }
