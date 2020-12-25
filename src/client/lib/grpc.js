@@ -1,5 +1,5 @@
 import { grpc } from '@improbable-eng/grpc-web'
-import { CreateReportRequest, ReportStreamRequest, Report, CreateQueryRequest, Query, UpdateQueryRequest, RunQueryRequest } from '../../proto/dekart_pb'
+import { CreateReportRequest, ReportStreamRequest, Report, CreateQueryRequest, Query } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 
 const { REACT_APP_API_HOST: host } = process.env
@@ -34,21 +34,6 @@ export function createQuery (reportId) {
   request.setQuery(query)
   return unary(Dekart.CreateQuery, request)
 }
-
-// export function updateQuery (queryId, queryText) {
-//   const request = new UpdateQueryRequest()
-//   const query = new Query()
-//   query.setId(queryId)
-//   query.setQueryText(queryText)
-//   request.setQuery(query)
-//   return unary(Dekart.UpdateQuery, request)
-// }
-
-// export function runQuery (queryId) {
-//   const request = new RunQueryRequest()
-//   request.setQueryId(queryId)
-//   return unary(Dekart.RunQuery, request)
-// }
 
 class CancelableRequest {
   constructor () {

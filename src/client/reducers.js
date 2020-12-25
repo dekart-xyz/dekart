@@ -13,6 +13,7 @@ const customKeplerGlReducer = keplerGlReducer.initialState({
 
 function keplerGl (state, action) {
   // console.log('keplerGl', state)
+  // console.log('keplerGl', action)
   return customKeplerGlReducer(state, action)
 }
 

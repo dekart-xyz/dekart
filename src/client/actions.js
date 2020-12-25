@@ -1,7 +1,7 @@
 import { getReportStream, unary } from './lib/grpc'
 import { get } from './lib/api'
 import { processCsvData } from 'kepler.gl/dist/processors'
-import { addDataToMap } from 'kepler.gl/actions'
+import { addDataToMap, showDatasetTable, toggleModal, ActionTypes as KeplerActionTypes } from 'kepler.gl/actions'
 import { Query, RunQueryRequest, UpdateQueryRequest } from '../proto/dekart_pb'
 import { Dekart } from '../proto/dekart_pb_service'
 
@@ -45,14 +45,13 @@ function shouldAddDataset (query, queriesList) {
 
 export function reportUpdate (reportStreamResponse) {
   const { report, queriesList } = reportStreamResponse
-  console.log('queriesList', queriesList)
   return async (dispatch, getState) => {
+    const { queries: prevQueriesList } = getState()
     dispatch({
       type: reportUpdate.name,
       report,
       queriesList
     })
-    const { prevQueriesList } = getState()
     await Promise.all(queriesList.map(async (query, i) => {
       if (shouldAddDataset(query, prevQueriesList)) {
         dispatch(downloadJobResults(query))
@@ -84,6 +83,14 @@ export function downloadJobResults (query) {
   }
 }
 
+export function showDataTable (query) {
+  console.log(KeplerActionTypes.SHOW_DATASET_TABLE)
+  return (dispatch) => {
+    dispatch(showDatasetTable(query.id))
+    dispatch(toggleModal('dataTable'))
+  }
+}
+
 export function error (err) {
   console.error(err)
   return {
@@ -107,11 +114,16 @@ export function updateQuery (queryId, queryText) {
     }
   }
 }
-export function runQuery (queryId) {
-  return (dispatch) => {
+export function runQuery (queryId, queryText) {
+  return async (dispatch) => {
+    await updateQuery(queryId, queryText)(dispatch)
     dispatch({ type: runQuery.name, queryId })
     const request = new RunQueryRequest()
     request.setQueryId(queryId)
-    unary(Dekart.RunQuery, request).catch(err => dispatch(error(err)))
+    try {
+      await unary(Dekart.RunQuery, request)
+    } catch (err) {
+      dispatch(error(err))
+    }
   }
 }
