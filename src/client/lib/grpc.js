@@ -5,7 +5,7 @@ import { Dekart } from '../../proto/dekart_pb_service'
 const { REACT_APP_API_HOST: host } = process.env
 // const client = new DekartPromiseClient(REACT_APP_API_HOST)
 
-function unary (method, request) {
+export function unary (method, request) {
   return new Promise((resolve, reject) => {
     grpc.unary(method, {
       host,
@@ -35,20 +35,20 @@ export function createQuery (reportId) {
   return unary(Dekart.CreateQuery, request)
 }
 
-export function updateQuery (queryId, queryText) {
-  const request = new UpdateQueryRequest()
-  const query = new Query()
-  query.setId(queryId)
-  query.setQueryText(queryText)
-  request.setQuery(query)
-  return unary(Dekart.UpdateQuery, request)
-}
+// export function updateQuery (queryId, queryText) {
+//   const request = new UpdateQueryRequest()
+//   const query = new Query()
+//   query.setId(queryId)
+//   query.setQueryText(queryText)
+//   request.setQuery(query)
+//   return unary(Dekart.UpdateQuery, request)
+// }
 
-export function runQuery (queryId) {
-  const request = new RunQueryRequest()
-  request.setQueryId(queryId)
-  return unary(Dekart.RunQuery, request)
-}
+// export function runQuery (queryId) {
+//   const request = new RunQueryRequest()
+//   request.setQueryId(queryId)
+//   return unary(Dekart.RunQuery, request)
+// }
 
 class CancelableRequest {
   constructor () {
