@@ -1,12 +1,15 @@
 import { useParams } from 'react-router-dom'
 import { Button, Input } from 'antd'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import KeplerGl from 'kepler.gl'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
 import { useDispatch, useSelector } from 'react-redux'
 import { closeReport, openReport, createQuery, saveMapConfig } from './actions'
 import Query from './Query'
+import { SaveOutlined } from '@ant-design/icons'
+import debounce from 'lodash.debounce'
+import { KeplerGlSchema } from 'kepler.gl/schemas'
 
 function ReportQuery ({ reportId }) {
   const queries = useSelector(state => state.queries)
@@ -27,18 +30,28 @@ function ReportQuery ({ reportId }) {
   }
 }
 
+const checkMapConfig = debounce((kepler, mapConfig, setMapChanged) => {
+  const configToSave = JSON.stringify(KeplerGlSchema.getConfigToSave(kepler))
+  setMapChanged(configToSave !== mapConfig)
+}, 500)
+
 export default function ReportPage () {
   const { id } = useParams()
+  const [mapChanged, setMapChanged] = useState(false)
 
   // const queries = useSelector(selectQueries)
-  // const visState = useSelector(selectVisState, shallowEqual)
+  const kepler = useSelector(state => state.keplerGl.kepler)
+  const mapConfig = useSelector(state => state.report && state.report.mapConfig)
   const reportStatus = useSelector(state => state.reportStatus)
+
   const dispatch = useDispatch()
 
   useEffect(() => {
     dispatch(openReport(id))
     return () => dispatch(closeReport(id))
   }, [id, dispatch])
+
+  useEffect(() => checkMapConfig(kepler, mapConfig, setMapChanged), [kepler, mapConfig, setMapChanged])
 
   // useEffect(() => {
   //   dispatch(saveVisState())
@@ -53,9 +66,10 @@ export default function ReportPage () {
         <div className={styles.headerButtons}>
           <Button
             type='primary'
-            disabled={!reportStatus.dataAdded}
+            icon={<SaveOutlined />}
+            disabled={!reportStatus.canSave}
             onClick={() => dispatch(saveMapConfig())}
-          >Save Map
+          >Save Map{mapChanged ? '*' : ''}
           </Button>
         </div>
       </div>

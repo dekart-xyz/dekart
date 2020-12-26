@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 import keplerGlReducer from 'kepler.gl/reducers'
 import { ActionTypes as KeplerActionTypes } from 'kepler.gl/actions'
-import { downloadJobResults, openReport, reportUpdate, runQuery, updateQuery } from './actions'
+import { downloadJobResults, openReport, reportUpdate, runQuery, saveMapConfig, updateQuery } from './actions'
 import { Query } from '../proto/dekart_pb'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
@@ -40,10 +40,21 @@ function queries (state = [], action) {
 }
 
 const defaultReportStatus = {
-  dataAdded: false
+  dataAdded: false,
+  canSave: false
 }
 function reportStatus (state = defaultReportStatus, action) {
   switch (action.type) {
+    case saveMapConfig.name:
+      return {
+        ...state,
+        canSave: false
+      }
+    case reportUpdate.name:
+      return {
+        ...state,
+        canSave: true
+      }
     case openReport.name:
       return defaultReportStatus
     case KeplerActionTypes.ADD_DATA_TO_MAP:

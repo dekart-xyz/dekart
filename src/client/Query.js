@@ -4,12 +4,13 @@ import { AutoSizer } from 'react-virtualized'
 import { Alert, Button } from 'antd'
 import styles from './Query.module.css'
 import { useDispatch, useSelector } from 'react-redux'
-import { runQuery, showDataTable, updateQuery } from './actions'
+import { runQuery, showDataTable } from './actions'
 import 'ace-builds/src-noconflict/mode-sql'
 import 'ace-builds/src-noconflict/theme-textmate'
 import 'ace-builds/src-noconflict/ext-language_tools'
 import 'ace-builds/webpack-resolver'
 import { Query as QueryType } from '../proto/dekart_pb'
+import { SendOutlined } from '@ant-design/icons'
 
 function QueryAlert ({ query, downloadingResults }) {
   const dispatch = useDispatch()
@@ -87,14 +88,9 @@ export default function Query ({ query }) {
         </div>
         <div className={styles.button}>
           <Button
-            onClick={() => dispatch(updateQuery(query.id, queryText))}
-          >Save
-          </Button>
-        </div>
-        <div className={styles.button}>
-          <Button
-            type='primary'
+            size='large'
             disabled={!canRun}
+            icon={<SendOutlined />}
             onClick={() => dispatch(runQuery(query.id, queryText))}
           >Execute
           </Button>

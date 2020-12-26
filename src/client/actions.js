@@ -21,6 +21,7 @@ export function closeReport (reportId) {
 
 export function saveMapConfig () {
   return (dispatch, getState) => {
+    dispatch({ type: saveMapConfig.name })
     const { keplerGl, report } = getState()
     const configToSave = KeplerGlSchema.getConfigToSave(keplerGl.kepler)
     const request = new UpdateReportRequest()
