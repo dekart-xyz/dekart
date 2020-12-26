@@ -77,6 +77,38 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	return res, nil
 }
 
+func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest) (*proto.UpdateReportResponse, error) {
+	if req.Report == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "req.Report == nil")
+	}
+	result, err := s.Db.ExecContext(ctx,
+		"update reports set map_config=$1 where id=$2",
+		req.Report.MapConfig,
+		req.Report.Id,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	affectedRows, err := result.RowsAffected()
+
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if affectedRows == 0 {
+		err := fmt.Errorf("Report not found id:%s", req.Report.Id)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+
+	s.ReportStreams.Ping(req.Report.Id)
+
+	return &proto.UpdateReportResponse{}, nil
+}
+
 // UpdateQuery by id implementation
 func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) (*proto.UpdateQueryResponse, error) {
 	if req.Query == nil {

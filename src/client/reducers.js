@@ -39,18 +39,37 @@ function queries (state = [], action) {
   }
 }
 
+const defaultReportStatus = {
+  dataAdded: false
+}
+function reportStatus (state = defaultReportStatus, action) {
+  switch (action.type) {
+    case openReport.name:
+      return defaultReportStatus
+    case KeplerActionTypes.ADD_DATA_TO_MAP:
+      return {
+        ...state,
+        dataAdded: true
+      }
+    default:
+      return state
+  }
+}
 function queryStatus (state = {}, action) {
   let queryId
   switch (action.type) {
     case KeplerActionTypes.ADD_DATA_TO_MAP:
-      queryId = action.payload.datasets.info.id
-      return {
-        ...state,
-        [queryId]: {
-          ...state[queryId],
-          downloadingResults: false
+      if (action.payload.datasets && action.payload.datasets.info) {
+        queryId = action.payload.datasets.info.id
+        return {
+          ...state,
+          [queryId]: {
+            ...state[queryId],
+            downloadingResults: false
+          }
         }
       }
+      return state
     case downloadJobResults.name:
       return {
         ...state,
@@ -86,5 +105,6 @@ export default combineReducers({
   keplerGl,
   report,
   queries,
-  queryStatus
+  queryStatus,
+  reportStatus
 })

@@ -15,7 +15,10 @@ import (
 func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStreamServer) error {
 	ctx := srv.Context()
 	reportRows, err := s.Db.QueryContext(ctx,
-		"select id from reports where id=$1 limit 1",
+		`select
+			id,
+			case when map_config is null then '' else map_config end as map_config
+		from reports where id=$1 limit 1`,
 		reportID,
 	)
 	if err != nil {
@@ -27,7 +30,10 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 		Report: &proto.Report{},
 	}
 	for reportRows.Next() {
-		err = reportRows.Scan(&res.Report.Id)
+		err = reportRows.Scan(
+			&res.Report.Id,
+			&res.Report.MapConfig,
+		)
 		if err != nil {
 			log.Err(err).Send()
 			return status.Errorf(codes.Internal, err.Error())

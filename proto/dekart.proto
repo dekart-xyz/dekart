@@ -6,12 +6,14 @@ service Dekart {
     rpc CreateReport(CreateReportRequest) returns (CreateReportResponse) {}
     rpc CreateQuery(CreateQueryRequest) returns (CreateQueryResponse) {}
     rpc UpdateQuery(UpdateQueryRequest) returns (UpdateQueryResponse) {}
+    rpc UpdateReport(UpdateReportRequest) returns (UpdateReportResponse) {}
     rpc RunQuery(RunQueryRequest) returns (RunQueryResponse) {}
     rpc GetReportStream(ReportStreamRequest) returns (stream ReportStreamResponse) {}
 }
 
 message Report {
     string id = 1;
+    string map_config = 2;
 }
 
 message Query {
@@ -29,6 +31,13 @@ message Query {
     JobStatus job_status = 4;
     string job_result_id = 5;
     string job_error = 6;
+}
+
+message UpdateReportRequest {
+    Report report = 1;
+}
+
+message UpdateReportResponse {
 }
 
 message RunQueryRequest {

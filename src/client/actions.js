@@ -1,9 +1,10 @@
 import { getReportStream, unary } from './lib/grpc'
 import { get } from './lib/api'
 import { processCsvData } from 'kepler.gl/dist/processors'
-import { addDataToMap, showDatasetTable, toggleModal, ActionTypes as KeplerActionTypes } from 'kepler.gl/actions'
-import { Query, RunQueryRequest, UpdateQueryRequest } from '../proto/dekart_pb'
+import { addDataToMap, receiveMapConfig, showDatasetTable, toggleModal, ActionTypes as KeplerActionTypes } from 'kepler.gl/actions'
+import { CreateQueryRequest, Query, RunQueryRequest, UpdateQueryRequest, UpdateReportRequest, Report } from '../proto/dekart_pb'
 import { Dekart } from '../proto/dekart_pb_service'
+import KeplerGlSchema from 'kepler.gl/schemas'
 
 let reportStreamCancelable
 
@@ -15,6 +16,19 @@ export function closeReport (reportId) {
     dispatch({
       type: openReport.name
     })
+  }
+}
+
+export function saveMapConfig () {
+  return (dispatch, getState) => {
+    const { keplerGl, report } = getState()
+    const configToSave = KeplerGlSchema.getConfigToSave(keplerGl.kepler)
+    const request = new UpdateReportRequest()
+    const reportPayload = new Report()
+    reportPayload.setId(report.id)
+    reportPayload.setMapConfig(JSON.stringify(configToSave))
+    request.setReport(reportPayload)
+    unary(Dekart.UpdateReport, request).catch(err => dispatch(error(err)))
   }
 }
 
@@ -46,12 +60,17 @@ function shouldAddDataset (query, queriesList) {
 export function reportUpdate (reportStreamResponse) {
   const { report, queriesList } = reportStreamResponse
   return async (dispatch, getState) => {
-    const { queries: prevQueriesList } = getState()
+    const { queries: prevQueriesList, report: prevReport } = getState()
     dispatch({
       type: reportUpdate.name,
       report,
       queriesList
     })
+    const prevMapConfig = prevReport ? prevReport.mapConfig : ''
+    if (report.mapConfig && !prevMapConfig) {
+      const parsedConfig = KeplerGlSchema.parseSavedConfig(JSON.parse(report.mapConfig))
+      dispatch(receiveMapConfig(parsedConfig))
+    }
     await Promise.all(queriesList.map(async (query, i) => {
       if (shouldAddDataset(query, prevQueriesList)) {
         dispatch(downloadJobResults(query))
@@ -82,6 +101,26 @@ export function downloadJobResults (query) {
     }))
   }
 }
+
+export function createQuery (reportId) {
+  return (dispatch) => {
+    dispatch({ type: createQuery.name })
+    const request = new CreateQueryRequest()
+    const query = new Query()
+    query.setReportId(reportId)
+    request.setQuery(query)
+    unary(Dekart.CreateQuery, request).catch(err => dispatch(error(err)))
+  }
+}
+
+// export function saveVisState () {
+//   return (dispatch, getState) => {
+//     const { reportStatus } = getState()
+//     if (reportStatus.dataAdded) {
+//       console.log('saveVisState')
+//     }
+//   }
+// }
 
 export function showDataTable (query) {
   console.log(KeplerActionTypes.SHOW_DATASET_TABLE)
