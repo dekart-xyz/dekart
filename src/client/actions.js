@@ -5,6 +5,7 @@ import { addDataToMap, receiveMapConfig, showDatasetTable, toggleModal, ActionTy
 import { CreateQueryRequest, Query, RunQueryRequest, UpdateQueryRequest, UpdateReportRequest, Report } from '../proto/dekart_pb'
 import { Dekart } from '../proto/dekart_pb_service'
 import KeplerGlSchema from 'kepler.gl/schemas'
+import { streamError, genericError, success } from './lib/message'
 
 let reportStreamCancelable
 
@@ -14,13 +15,13 @@ export function closeReport (reportId) {
       reportStreamCancelable.cancel()
     }
     dispatch({
-      type: openReport.name
+      type: closeReport.name
     })
   }
 }
 
 export function saveMapConfig () {
-  return (dispatch, getState) => {
+  return async (dispatch, getState) => {
     dispatch({ type: saveMapConfig.name })
     const { keplerGl, report } = getState()
     const configToSave = KeplerGlSchema.getConfigToSave(keplerGl.kepler)
@@ -29,7 +30,12 @@ export function saveMapConfig () {
     reportPayload.setId(report.id)
     reportPayload.setMapConfig(JSON.stringify(configToSave))
     request.setReport(reportPayload)
-    unary(Dekart.UpdateReport, request).catch(err => dispatch(error(err)))
+    try {
+      await unary(Dekart.UpdateReport, request)
+      success('Map Config Saved')
+    } catch (err) {
+      dispatch(error(err))
+    }
   }
 }
 
@@ -38,9 +44,15 @@ export function openReport (reportId) {
     dispatch({
       type: openReport.name
     })
-    reportStreamCancelable = getReportStream(reportId, (reportStreamResponse) => {
-      dispatch(reportUpdate(reportStreamResponse))
-    })
+    reportStreamCancelable = getReportStream(
+      reportId,
+      (reportStreamResponse) => {
+        dispatch(reportUpdate(reportStreamResponse))
+      },
+      (code) => {
+        streamError(code)
+      }
+    )
   }
 }
 
@@ -133,6 +145,7 @@ export function showDataTable (query) {
 
 export function error (err) {
   console.error(err)
+  genericError(err)
   return {
     type: error.name,
     err
@@ -149,8 +162,10 @@ export function updateQuery (queryId, queryText) {
     request.setQuery(query)
     try {
       await unary(Dekart.UpdateQuery, request)
+      success('Query Saved')
     } catch (err) {
       dispatch(error(err))
+      throw error
     }
   }
 }

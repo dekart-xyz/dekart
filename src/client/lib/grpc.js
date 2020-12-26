@@ -56,7 +56,7 @@ class CancelableRequest {
   }
 }
 
-export function getReportStream (reportId, onMessage, cancelable = new CancelableRequest()) {
+export function getReportStream (reportId, onMessage, onError, cancelable = new CancelableRequest()) {
   const report = new Report()
   report.setId(reportId)
   const request = new ReportStreamRequest()
@@ -80,8 +80,9 @@ export function getReportStream (reportId, onMessage, cancelable = new Cancelabl
         }
       } else {
         cancelable.cancel()
+        onError(code)
         // canceled = true
-        console.error('onEnd', code)
+        // console.error('onEnd', code)
       }
     }
   }))
