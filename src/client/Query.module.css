@@ -2,12 +2,16 @@
     flex: 1;
     display: flex;
     flex-direction: column;
+    background-color: #F7F7F7;
 }
 
 .editor {
-    flex: 1
+    flex: 1;
 }
 
+.status {
+    word-break: break-all;
+}
 .status {
     flex: 1;
     margin-right: 8px;
@@ -21,6 +25,7 @@
     padding: 10px;
     display: flex;
     flex-direction: row;
+    border-top: 1px solid rgb(217, 217, 217)
     /* align-items: center; */
 }
 

@@ -28,3 +28,13 @@ html, body, #root {
 #kepler-gl__kepler .map-control-button[data-for=locale] {
     display: none;
 }
+
+.ace_content,
+.ace_gutter {
+    /* background-color: #F7F7F7!important; */
+    background-color: white!important;
+}
+
+.ace_gutter-active-line.ace_gutter-cell {
+    background-color: #EDEDED!important;
+}

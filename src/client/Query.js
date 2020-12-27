@@ -6,7 +6,8 @@ import styles from './Query.module.css'
 import { useDispatch, useSelector } from 'react-redux'
 import { runQuery, showDataTable } from './actions'
 import 'ace-builds/src-noconflict/mode-sql'
-import 'ace-builds/src-noconflict/theme-textmate'
+// import 'ace-builds/src-noconflict/theme-textmate'
+import 'ace-builds/src-noconflict/theme-sqlserver'
 import 'ace-builds/src-noconflict/ext-language_tools'
 import 'ace-builds/webpack-resolver'
 import { Query as QueryType } from '../proto/dekart_pb'
@@ -58,7 +59,8 @@ function QueryEditor ({ queryId, queryText, onChange }) {
             mode='sql'
             width={`${width}px`}
             height={`${height}px`}
-            theme='textmate'
+            // theme='textmate'
+            theme='sqlserver'
             name={'AceEditor' + queryId}
             onChange={onChange}
             value={queryText}
