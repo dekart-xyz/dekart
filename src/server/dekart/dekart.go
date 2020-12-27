@@ -82,8 +82,9 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 		return nil, status.Errorf(codes.InvalidArgument, "req.Report == nil")
 	}
 	result, err := s.Db.ExecContext(ctx,
-		"update reports set map_config=$1 where id=$2",
+		"update reports set map_config=$1, title=$2 where id=$3",
 		req.Report.MapConfig,
+		req.Report.Title,
 		req.Report.Id,
 	)
 	if err != nil {

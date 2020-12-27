@@ -76,7 +76,7 @@ export function getReportStream (reportId, onMessage, onError, cancelable = new 
     onEnd: (code, message) => {
       if (code === 0) {
         if (!cancelable.canceled) {
-          getReportStream(reportId, onMessage, cancelable)
+          getReportStream(reportId, onMessage, onError, cancelable)
         }
       } else {
         cancelable.cancel()

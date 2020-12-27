@@ -5,7 +5,7 @@ import KeplerGl from 'kepler.gl'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
 import { useDispatch, useSelector } from 'react-redux'
-import { closeReport, openReport, createQuery, saveMapConfig } from './actions'
+import { closeReport, openReport, createQuery, saveMap, reportTitleChange } from './actions'
 import Query from './Query'
 import { SaveOutlined } from '@ant-design/icons'
 import debounce from 'lodash.debounce'
@@ -37,14 +37,16 @@ const checkMapConfig = debounce((kepler, mapConfig, setMapChanged) => {
 
 export default function ReportPage () {
   const { id } = useParams()
-  const [mapChanged, setMapChanged] = useState(false)
 
   // const queries = useSelector(selectQueries)
   const kepler = useSelector(state => state.keplerGl.kepler)
-  const mapConfig = useSelector(state => state.report && state.report.mapConfig)
+  const report = useSelector(state => state.report)
+  const { mapConfig, title } = report || {}
   const reportStatus = useSelector(state => state.reportStatus)
 
   const dispatch = useDispatch()
+
+  const [mapChanged, setMapChanged] = useState(false)
 
   useEffect(() => {
     dispatch(openReport(id))
@@ -52,24 +54,36 @@ export default function ReportPage () {
   }, [id, dispatch])
 
   useEffect(() => checkMapConfig(kepler, mapConfig, setMapChanged), [kepler, mapConfig, setMapChanged])
+  const titleChanged = reportStatus.title && title && reportStatus.title !== title
 
   // useEffect(() => {
   //   dispatch(saveVisState())
   // }, [visState, dispatch])
 
+  if (!report) {
+    return null
+  }
+
   return (
     <div className={styles.report}>
       <div className={styles.header}>
         <div className={styles.title}>
-          <Input placeholder='Report Title' size='large' bordered={false} />
+          <Input
+            className={styles.titleInput}
+            value={reportStatus.title}
+            onChange={(e) => dispatch(reportTitleChange(e.target.value))}
+            placeholder='Untitled'
+            size='large'
+            bordered={false}
+          />
         </div>
         <div className={styles.headerButtons}>
           <Button
             type='primary'
             icon={<SaveOutlined />}
             disabled={!reportStatus.canSave}
-            onClick={() => dispatch(saveMapConfig())}
-          >Save Map{mapChanged ? '*' : ''}
+            onClick={() => dispatch(saveMap())}
+          >Save Map{mapChanged || titleChanged ? '*' : ''}
           </Button>
         </div>
       </div>

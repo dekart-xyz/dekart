@@ -9,6 +9,15 @@
     flex-direction: column;
 }
 
+.titleInput::placeholder {
+    color: white!important;
+    opacity: 0.7;
+}
+.titleInput {
+    /* background-color: aqua; */
+    color: white!important;
+}
+
 .title {
     flex: 1px;
 }

@@ -20,22 +20,30 @@ export function closeReport (reportId) {
   }
 }
 
-export function saveMapConfig () {
+export function saveMap () {
   return async (dispatch, getState) => {
-    dispatch({ type: saveMapConfig.name })
-    const { keplerGl, report } = getState()
+    dispatch({ type: saveMap.name })
+    const { keplerGl, report, reportStatus } = getState()
     const configToSave = KeplerGlSchema.getConfigToSave(keplerGl.kepler)
     const request = new UpdateReportRequest()
     const reportPayload = new Report()
     reportPayload.setId(report.id)
     reportPayload.setMapConfig(JSON.stringify(configToSave))
+    reportPayload.setTitle(reportStatus.title)
     request.setReport(reportPayload)
     try {
       await unary(Dekart.UpdateReport, request)
-      success('Map Config Saved')
+      success('Map Saved')
     } catch (err) {
       dispatch(error(err))
     }
+  }
+}
+
+export function reportTitleChange (title) {
+  return {
+    type: reportTitleChange.name,
+    title
   }
 }
 
@@ -79,16 +87,15 @@ export function reportUpdate (reportStreamResponse) {
       report,
       queriesList
     })
-    const prevMapConfig = prevReport ? prevReport.mapConfig : ''
-    if (report.mapConfig && !prevMapConfig) {
+    if (report.mapConfig && !prevReport) {
       const parsedConfig = KeplerGlSchema.parseSavedConfig(JSON.parse(report.mapConfig))
       dispatch(receiveMapConfig(parsedConfig))
     }
-    await Promise.all(queriesList.map(async (query, i) => {
+    queriesList.forEach(query => {
       if (shouldAddDataset(query, prevQueriesList)) {
         dispatch(downloadJobResults(query))
       }
-    }))
+    })
   }
 }
 
@@ -126,17 +133,7 @@ export function createQuery (reportId) {
   }
 }
 
-// export function saveVisState () {
-//   return (dispatch, getState) => {
-//     const { reportStatus } = getState()
-//     if (reportStatus.dataAdded) {
-//       console.log('saveVisState')
-//     }
-//   }
-// }
-
 export function showDataTable (query) {
-  console.log(KeplerActionTypes.SHOW_DATASET_TABLE)
   return (dispatch) => {
     dispatch(showDatasetTable(query.id))
     dispatch(toggleModal('dataTable'))

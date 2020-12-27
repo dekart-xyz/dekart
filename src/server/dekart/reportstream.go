@@ -17,7 +17,8 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 	reportRows, err := s.Db.QueryContext(ctx,
 		`select
 			id,
-			case when map_config is null then '' else map_config end as map_config
+			case when map_config is null then '' else map_config end as map_config,
+			case when title is null then 'Untitled' else title end as title
 		from reports where id=$1 limit 1`,
 		reportID,
 	)
@@ -33,6 +34,7 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 		err = reportRows.Scan(
 			&res.Report.Id,
 			&res.Report.MapConfig,
+			&res.Report.Title,
 		)
 		if err != nil {
 			log.Err(err).Send()
