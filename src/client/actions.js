@@ -1,7 +1,7 @@
 import { getReportStream, unary } from './lib/grpc'
 import { get } from './lib/api'
 import { processCsvData } from 'kepler.gl/dist/processors'
-import { addDataToMap, receiveMapConfig, showDatasetTable, toggleModal, ActionTypes as KeplerActionTypes } from 'kepler.gl/actions'
+import { addDataToMap, receiveMapConfig, showDatasetTable, toggleModal, toggleSidePanel } from 'kepler.gl/actions'
 import { CreateQueryRequest, Query, RunQueryRequest, UpdateQueryRequest, UpdateReportRequest, Report } from '../proto/dekart_pb'
 import { Dekart } from '../proto/dekart_pb_service'
 import KeplerGlSchema from 'kepler.gl/schemas'
@@ -47,10 +47,11 @@ export function reportTitleChange (title) {
   }
 }
 
-export function openReport (reportId) {
+export function openReport (reportId, edit) {
   return (dispatch) => {
     dispatch({
-      type: openReport.name
+      type: openReport.name,
+      edit
     })
     reportStreamCancelable = getReportStream(
       reportId,
@@ -100,7 +101,7 @@ export function reportUpdate (reportStreamResponse) {
 }
 
 export function downloadJobResults (query) {
-  return async (dispatch) => {
+  return async (dispatch, getState) => {
     dispatch({ type: downloadJobResults.name, query })
     let csv
     try {
@@ -119,6 +120,10 @@ export function downloadJobResults (query) {
         data
       }
     }))
+    const { reportStatus } = getState()
+    if (reportStatus.edit) {
+      dispatch(toggleSidePanel('layer'))
+    }
   }
 }
 

@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom'
+import { useHistory, useParams } from 'react-router-dom'
 import { Button, Input } from 'antd'
 import { useEffect, useState } from 'react'
 import KeplerGl from 'kepler.gl'
@@ -7,7 +7,7 @@ import { AutoSizer } from 'react-virtualized'
 import { useDispatch, useSelector } from 'react-redux'
 import { closeReport, openReport, createQuery, saveMap, reportTitleChange } from './actions'
 import Query from './Query'
-import { SaveOutlined } from '@ant-design/icons'
+import { SaveOutlined, PlaySquareOutlined, EditOutlined } from '@ant-design/icons'
 import debounce from 'lodash.debounce'
 import { KeplerGlSchema } from 'kepler.gl/schemas'
 
@@ -31,14 +31,49 @@ function ReportQuery ({ reportId }) {
 }
 
 const checkMapConfig = debounce((kepler, mapConfig, setMapChanged) => {
-  const configToSave = JSON.stringify(KeplerGlSchema.getConfigToSave(kepler))
-  setMapChanged(configToSave !== mapConfig)
+  if (kepler) {
+    const configToSave = JSON.stringify(KeplerGlSchema.getConfigToSave(kepler))
+    setMapChanged(configToSave !== mapConfig)
+  }
 }, 500)
 
-export default function ReportPage () {
+function HeaderButtons ({ edit, changed, canSave, reportId }) {
+  const dispatch = useDispatch()
+  const history = useHistory()
+  if (edit) {
+    return (
+      <div className={styles.headerButtons}>
+        <Button
+          type='primary'
+          icon={<SaveOutlined />}
+          disabled={!canSave}
+          onClick={() => dispatch(saveMap())}
+        >Save Map{changed ? '*' : ''}
+        </Button>
+        <Button
+          icon={<PlaySquareOutlined />}
+          disabled={changed}
+          onClick={() => history.replace(`/reports/${reportId}`)}
+        >Present
+        </Button>
+      </div>
+    )
+  }
+  return (
+    <div className={styles.headerButtons}>
+      <Button
+        type='primary'
+        icon={<EditOutlined />}
+        onClick={() => history.replace(`/reports/${reportId}/edit`)}
+      >Edit
+      </Button>
+    </div>
+  )
+}
+
+export default function ReportPage ({ edit }) {
   const { id } = useParams()
 
-  // const queries = useSelector(selectQueries)
   const kepler = useSelector(state => state.keplerGl.kepler)
   const report = useSelector(state => state.report)
   const { mapConfig, title } = report || {}
@@ -49,16 +84,12 @@ export default function ReportPage () {
   const [mapChanged, setMapChanged] = useState(false)
 
   useEffect(() => {
-    dispatch(openReport(id))
+    dispatch(openReport(id, edit))
     return () => dispatch(closeReport(id))
-  }, [id, dispatch])
+  }, [id, dispatch, edit])
 
   useEffect(() => checkMapConfig(kepler, mapConfig, setMapChanged), [kepler, mapConfig, setMapChanged])
   const titleChanged = reportStatus.title && title && reportStatus.title !== title
-
-  // useEffect(() => {
-  //   dispatch(saveVisState())
-  // }, [visState, dispatch])
 
   if (!report) {
     return null
@@ -74,18 +105,15 @@ export default function ReportPage () {
             onChange={(e) => dispatch(reportTitleChange(e.target.value))}
             placeholder='Untitled'
             size='large'
+            disabled={!edit}
             bordered={false}
           />
         </div>
-        <div className={styles.headerButtons}>
-          <Button
-            type='primary'
-            icon={<SaveOutlined />}
-            disabled={!reportStatus.canSave}
-            onClick={() => dispatch(saveMap())}
-          >Save Map{mapChanged || titleChanged ? '*' : ''}
-          </Button>
-        </div>
+        <HeaderButtons
+          reportId={id}
+          changed={mapChanged || titleChanged}
+          canSave={reportStatus.canSave} edit={edit}
+        />
       </div>
       <div className={styles.body}>
         <div className={styles.keplerFlex}>
@@ -102,7 +130,7 @@ export default function ReportPage () {
             </AutoSizer>
           </div>
         </div>
-        <ReportQuery reportId={id} />
+        {edit ? <ReportQuery reportId={id} /> : null}
       </div>
     </div>
   )

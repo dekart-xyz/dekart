@@ -6,8 +6,8 @@ import { Query } from '../proto/dekart_pb'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
   uiState: {
-    currentModal: null
-    // activeSidePanel: null
+    currentModal: null,
+    activeSidePanel: null
   }
 })
 
@@ -42,7 +42,8 @@ function queries (state = [], action) {
 const defaultReportStatus = {
   dataAdded: false,
   canSave: false,
-  title: null
+  title: null,
+  edit: false
 }
 function reportStatus (state = defaultReportStatus, action) {
   switch (action.type) {
@@ -63,7 +64,10 @@ function reportStatus (state = defaultReportStatus, action) {
         title: state.title == null ? action.report.title : state.title
       }
     case openReport.name:
-      return defaultReportStatus
+      return {
+        ...defaultReportStatus,
+        edit: action.edit
+      }
     case KeplerActionTypes.ADD_DATA_TO_MAP:
       return {
         ...state,

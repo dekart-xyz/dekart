@@ -23,6 +23,9 @@ export default function App () {
         <Route exact path='/'>
           <HomePage />
         </Route>
+        <Route path='/reports/:id/edit'>
+          <ReportPage edit />
+        </Route>
         <Route path='/reports/:id'>
           <ReportPage />
         </Route>

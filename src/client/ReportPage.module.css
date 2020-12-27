@@ -18,6 +18,10 @@
     color: white!important;
 }
 
+.headerButtons button {
+    margin-left: 10px;
+}
+
 .title {
     flex: 1px;
 }
