@@ -9,3 +9,22 @@ html, body, #root {
 #root {
     /* position: relative; */
 }
+
+#kepler-gl__kepler .side-bar__close {
+    display: none;
+}
+#kepler-gl__kepler .side-panel__header__top {
+    display: none;
+}
+
+#kepler-gl__kepler .add-data-button {
+    display: none;
+}
+
+#kepler-gl__kepler .remove-dataset {
+    display: none;
+}
+
+#kepler-gl__kepler .map-control-button[data-for=locale] {
+    display: none;
+}
