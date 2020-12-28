@@ -6,6 +6,8 @@ import {
 } from 'react-router-dom'
 import ReportPage from './ReportPage'
 import HomePage from './HomePage'
+import { Result } from 'antd'
+import { QuestionOutlined, WarningOutlined } from '@ant-design/icons'
 
 // This site has 3 pages, all of which are rendered
 // dynamically in the browser (not server rendered).
@@ -28,6 +30,12 @@ export default function App () {
         </Route>
         <Route path='/reports/:id'>
           <ReportPage />
+        </Route>
+        <Route path='/400'>
+          <Result icon={<WarningOutlined />} title='400' subTitle='Bad Request' />
+        </Route>
+        <Route path='*'>
+          <Result icon={<QuestionOutlined />} title='404' subTitle='Page not found' />
         </Route>
       </Switch>
     </Router>

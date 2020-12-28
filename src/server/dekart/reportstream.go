@@ -93,6 +93,11 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 		return status.Errorf(codes.InvalidArgument, "req.Report == nil")
 	}
 
+	_, err := uuid.Parse(req.Report.Id)
+	if err != nil {
+		return status.Errorf(codes.InvalidArgument, err.Error())
+	}
+
 	streamID, err := uuid.NewRandom()
 	if err != nil {
 		log.Err(err).Send()

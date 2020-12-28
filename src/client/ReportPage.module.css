@@ -98,8 +98,9 @@
 }
 .keplerFlex {
     flex: 1;
-    width: 50%;
+    /* width: 50%; */
     position: relative;
+    background-color: #15232F;
 }
 
 .keplerBlock :global #kepler-gl__kepler .side-bar__close {

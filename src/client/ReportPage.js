@@ -76,7 +76,6 @@ function HeaderButtons ({ edit, changed, canSave, reportId }) {
 function Title () {
   const reportStatus = useSelector(state => state.reportStatus)
   const [edit, setEdit] = useState(false)
-  console.log('edit', edit)
   const dispatch = useDispatch()
   if (reportStatus.edit && edit) {
     return (
@@ -109,8 +108,29 @@ function Title () {
   }
 }
 
+function Kepler () {
+  return (
+    <div className={styles.keplerFlex}>
+      <div className={styles.keplerBlock}>
+        <AutoSizer>
+          {({ height, width }) => (
+            <KeplerGl
+              id='kepler'
+              mapboxApiAccessToken={process.env.REACT_APP_MAPBOX_TOKEN}
+              width={width}
+              height={height}
+            />
+          )}
+        </AutoSizer>
+      </div>
+    </div>
+
+  )
+}
+
 export default function ReportPage ({ edit }) {
   const { id } = useParams()
+  const history = useHistory()
 
   const kepler = useSelector(state => state.keplerGl.kepler)
   const report = useSelector(state => state.report)
@@ -122,9 +142,9 @@ export default function ReportPage ({ edit }) {
   const [mapChanged, setMapChanged] = useState(false)
 
   useEffect(() => {
-    dispatch(openReport(id, edit))
+    dispatch(openReport(id, edit, history))
     return () => dispatch(closeReport(id))
-  }, [id, dispatch, edit])
+  }, [id, dispatch, edit, history])
 
   useEffect(() => checkMapConfig(kepler, mapConfig, setMapChanged), [kepler, mapConfig, setMapChanged])
   const titleChanged = reportStatus.title && title && reportStatus.title !== title
@@ -146,20 +166,7 @@ export default function ReportPage ({ edit }) {
         />
       </div>
       <div className={styles.body}>
-        <div className={styles.keplerFlex}>
-          <div className={styles.keplerBlock}>
-            <AutoSizer>
-              {({ height, width }) => (
-                <KeplerGl
-                  id='kepler'
-                  mapboxApiAccessToken={process.env.REACT_APP_MAPBOX_TOKEN}
-                  width={width}
-                  height={height}
-                />
-              )}
-            </AutoSizer>
-          </div>
-        </div>
+        <Kepler />
         {edit ? <ReportQuery reportId={id} /> : null}
       </div>
     </div>

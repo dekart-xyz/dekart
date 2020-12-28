@@ -47,7 +47,7 @@ export function reportTitleChange (title) {
   }
 }
 
-export function openReport (reportId, edit) {
+export function openReport (reportId, edit, history) {
   return (dispatch) => {
     dispatch({
       type: openReport.name,
@@ -59,7 +59,17 @@ export function openReport (reportId, edit) {
         dispatch(reportUpdate(reportStreamResponse))
       },
       (code) => {
-        streamError(code)
+        // https://github.com/grpc/grpc/blob/master/doc/statuscodes.md
+        switch (code) {
+          case 5:
+            history.replace('/404')
+            return
+          case 3:
+            history.replace('/400')
+            return
+          default:
+            streamError(code)
+        }
       }
     )
   }
