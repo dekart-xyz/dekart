@@ -9,6 +9,16 @@
     flex: 1;
 }
 
+.editor :global .ace_content,
+.editor :global .ace_gutter {
+    /* background-color: #F7F7F7!important; */
+    background-color: white!important;
+}
+
+.editor :global .ace_gutter-active-line.ace_gutter-cell {
+    background-color: #EDEDED!important;
+}
+
 .status {
     word-break: break-all;
 }

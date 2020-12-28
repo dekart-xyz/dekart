@@ -5,36 +5,3 @@ html, body, #root {
     width: 100%;
     min-height: 100%;
 }
-
-#root {
-    /* position: relative; */
-}
-
-#kepler-gl__kepler .side-bar__close {
-    display: none;
-}
-#kepler-gl__kepler .side-panel__header__top {
-    display: none;
-}
-
-#kepler-gl__kepler .add-data-button {
-    display: none;
-}
-
-#kepler-gl__kepler .remove-dataset {
-    display: none;
-}
-
-#kepler-gl__kepler .map-control-button[data-for=locale] {
-    display: none;
-}
-
-.ace_content,
-.ace_gutter {
-    /* background-color: #F7F7F7!important; */
-    background-color: white!important;
-}
-
-.ace_gutter-active-line.ace_gutter-cell {
-    background-color: #EDEDED!important;
-}

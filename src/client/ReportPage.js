@@ -10,6 +10,8 @@ import Query from './Query'
 import { SaveOutlined, PlaySquareOutlined, EditOutlined } from '@ant-design/icons'
 import debounce from 'lodash.debounce'
 import { KeplerGlSchema } from 'kepler.gl/schemas'
+import classnames from 'classnames'
+import DekartMenu from './DekartMenu'
 
 function ReportQuery ({ reportId }) {
   const queries = useSelector(state => state.queries)
@@ -71,6 +73,42 @@ function HeaderButtons ({ edit, changed, canSave, reportId }) {
   )
 }
 
+function Title () {
+  const reportStatus = useSelector(state => state.reportStatus)
+  const [edit, setEdit] = useState(false)
+  console.log('edit', edit)
+  const dispatch = useDispatch()
+  if (reportStatus.edit && edit) {
+    return (
+      <div className={styles.title}>
+        <Input
+          className={styles.titleInput}
+          value={reportStatus.title}
+          onChange={(e) => dispatch(reportTitleChange(e.target.value))}
+          onBlur={() => setEdit(false)}
+          placeholder='Untitled'
+          // size='large'
+          disabled={!reportStatus.edit}
+          // bordered={false}
+        />
+      </div>
+    )
+  } else {
+    return (
+      <div className={styles.title}>
+        <span
+          className={classnames(
+            styles.titleText,
+            reportStatus.edit && styles.titleTextEdit
+          )}
+          onClick={() => reportStatus.edit && setEdit(true)}
+        >{reportStatus.title} <EditOutlined className={styles.titleEditIcon} />
+        </span>
+      </div>
+    )
+  }
+}
+
 export default function ReportPage ({ edit }) {
   const { id } = useParams()
 
@@ -98,21 +136,13 @@ export default function ReportPage ({ edit }) {
   return (
     <div className={styles.report}>
       <div className={styles.header}>
-        <div className={styles.title}>
-          <Input
-            className={styles.titleInput}
-            value={reportStatus.title}
-            onChange={(e) => dispatch(reportTitleChange(e.target.value))}
-            placeholder='Untitled'
-            size='large'
-            disabled={!edit}
-            bordered={false}
-          />
-        </div>
+        <Title />
+        <div className={styles.headerMiddle}><DekartMenu /></div>
         <HeaderButtons
           reportId={id}
           changed={mapChanged || titleChanged}
-          canSave={reportStatus.canSave} edit={edit}
+          canSave={reportStatus.canSave}
+          edit={edit}
         />
       </div>
       <div className={styles.body}>
