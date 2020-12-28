@@ -8,9 +8,7 @@ const menu = (
       <a href='/'>Reports</a>
     </Menu.Item>
     <Menu.Item>
-      <a target='_blank' href='https://github.com/delfrrr/dekart'>
-        GitHub <ExportOutlined />
-      </a>
+      <a target='_blank' rel='noopener noreferrer' href='https://github.com/delfrrr/dekart'>GitHub <ExportOutlined /></a>
     </Menu.Item>
   </Menu>
 )

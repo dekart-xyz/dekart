@@ -6,6 +6,13 @@ function StreamError ({ code }) {
   return (<span>Disconnected From Dekart backend (code={code}) <Button onClick={() => window.location.reload()} size='small'>Reload Page</Button></span>)
 }
 
+export function downloading () {
+  return message.loading({
+    content: 'Downloading Map Data...',
+    duration: 0,
+    style
+  })
+}
 export function success (content) {
   message.success({
     content,

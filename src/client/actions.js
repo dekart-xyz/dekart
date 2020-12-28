@@ -5,7 +5,7 @@ import { addDataToMap, receiveMapConfig, showDatasetTable, toggleModal, toggleSi
 import { CreateQueryRequest, Query, RunQueryRequest, UpdateQueryRequest, UpdateReportRequest, Report } from '../proto/dekart_pb'
 import { Dekart } from '../proto/dekart_pb_service'
 import KeplerGlSchema from 'kepler.gl/schemas'
-import { streamError, genericError, success } from './lib/message'
+import { streamError, genericError, success, downloading } from './lib/message'
 
 let reportStreamCancelable
 
@@ -103,6 +103,7 @@ export function reportUpdate (reportStreamResponse) {
 export function downloadJobResults (query) {
   return async (dispatch, getState) => {
     dispatch({ type: downloadJobResults.name, query })
+    const finish = downloading()
     let csv
     try {
       const res = await get(`/job-results/${query.jobResultId}.csv`)
@@ -120,6 +121,7 @@ export function downloadJobResults (query) {
         data
       }
     }))
+    finish()
     const { reportStatus } = getState()
     if (reportStatus.edit) {
       dispatch(toggleSidePanel('layer'))
