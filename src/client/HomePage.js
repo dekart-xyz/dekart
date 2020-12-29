@@ -3,7 +3,7 @@ import { useHistory } from 'react-router-dom'
 import DekartMenu from './DekartMenu'
 import { Header } from './Header'
 import styles from './HomePage.module.css'
-import { Button, Result, Table } from 'antd'
+import { Button, Radio, Result, Table } from 'antd'
 import { archiveReport, createReport, subscribeReports, unsubscribeReports } from './actions'
 import { useDispatch, useSelector } from 'react-redux'
 import { PlusOutlined } from '@ant-design/icons'
@@ -21,10 +21,10 @@ function ArchiveButton ({ report }) {
       type='text'
       disabled={disabled}
       onClick={() => {
-        dispatch(archiveReport(report.id))
+        dispatch(archiveReport(report.id, !report.archived))
         setDisabled(true)
       }}
-    >Archive
+    >{report.archived ? 'Restore' : 'Archive'}
     </Button>
   )
 }
@@ -42,7 +42,13 @@ const columns = [
   }
 ]
 
-function Reports ({ reports, createReportButton }) {
+function Reports ({ reports, createReportButton, archived }) {
+  const [archivedFilter, setArchivedFilter] = useState('active')
+  useEffect(() => {
+    if (archived.length === 0) {
+      setArchivedFilter('active')
+    }
+  }, [archived, setArchivedFilter])
   if (reports.length === 0) {
     return (
       <div className={styles.reports}>
@@ -57,9 +63,14 @@ function Reports ({ reports, createReportButton }) {
   } else {
     return (
       <div className={styles.reports}>
-        <h1>Reports</h1>
+        <div className={styles.reportsHeader}>
+          <Radio.Group value={archivedFilter} onChange={(e) => setArchivedFilter(e.target.value)}>
+            <Radio.Button value='active'>Active Reports</Radio.Button>
+            <Radio.Button value='archived' disabled={archived.length === 0}>Archived Reports</Radio.Button>
+          </Radio.Group>
+        </div>
         <Table
-          dataSource={reports}
+          dataSource={archivedFilter === 'active' ? reports : archived}
           columns={columns}
           showHeader={false}
           rowClassName={styles.reportsRow}
@@ -94,6 +105,7 @@ export default function HomePage () {
           reportsList.loaded
             ? <Reports
                 reports={reportsList.reports}
+                archived={reportsList.archived}
                 createReportButton={createReportButton}
                 body={body}
               />

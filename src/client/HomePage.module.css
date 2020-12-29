@@ -49,3 +49,7 @@
     flex-direction: row;
     justify-content: flex-end;
 }
+
+.reportsHeader{
+    margin-bottom: 20px;
+}

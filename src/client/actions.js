@@ -234,15 +234,16 @@ export function unsubscribeReports () {
 }
 
 export function reportsListUpdate (reportsList) {
+  // console.log('reportsListUpdate', reportsList)
   return { type: reportsListUpdate.name, reportsList }
 }
 
-export function archiveReport (reportId) {
+export function archiveReport (reportId, archive) {
   return async dispatch => {
     dispatch({ type: archiveReport.name, reportId })
     const req = new ArchiveReportRequest()
     req.setReportId(reportId)
-    req.setArchive(true)
+    req.setArchive(archive)
     try {
       await unary(Dekart.ArchiveReport, req)
     } catch (err) {
