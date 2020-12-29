@@ -9,6 +9,15 @@ service Dekart {
     rpc UpdateReport(UpdateReportRequest) returns (UpdateReportResponse) {}
     rpc RunQuery(RunQueryRequest) returns (RunQueryResponse) {}
     rpc GetReportStream(ReportStreamRequest) returns (stream ReportStreamResponse) {}
+    rpc GetReportListStream(ReportListRequest) returns (stream ReportListResponse) {}
+}
+
+message ReportListRequest{
+
+}
+
+message ReportListResponse {
+    repeated Report reports = 1;
 }
 
 message Report {

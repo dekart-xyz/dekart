@@ -3,6 +3,7 @@ package dekart
 import (
 	"context"
 	"dekart/src/proto"
+	"dekart/src/server/report"
 	"fmt"
 	"time"
 
@@ -103,7 +104,7 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 		log.Err(err).Send()
 		return status.Error(codes.Internal, err.Error())
 	}
-	ping := s.ReportStreams.Regter(req.Report.Id, streamID.String())
+	ping := s.ReportStreams.Register(req.Report.Id, streamID.String())
 	defer s.ReportStreams.Deregister(req.Report.Id, streamID.String())
 
 	err = s.sendReportMessage(req.Report.Id, srv)
@@ -118,6 +119,68 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 		select {
 		case <-ping:
 			err := s.sendReportMessage(req.Report.Id, srv)
+			if err != nil {
+				return err
+			}
+		case <-ctx.Done():
+			return nil
+		}
+	}
+}
+
+func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportListStreamServer) error {
+	reportRows, err := s.Db.QueryContext(ctx,
+		`select
+			id,
+			case when title is null then 'Untitled' else title end as title
+		from reports order by updated_at desc`,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return status.Errorf(codes.Internal, err.Error())
+	}
+	defer reportRows.Close()
+	res := proto.ReportListResponse{
+		Reports: make([]*proto.Report, 0),
+	}
+	for reportRows.Next() {
+		report := proto.Report{}
+		err = reportRows.Scan(
+			&report.Id,
+			&report.Title,
+		)
+		res.Reports = append(res.Reports, &report)
+	}
+	err = srv.Send(&res)
+	if err != nil {
+		log.Err(err).Send()
+		return status.Errorf(codes.Internal, err.Error())
+	}
+	return nil
+}
+
+// GetReportListStream streams list of reports
+func (s Server) GetReportListStream(req *proto.ReportListRequest, srv proto.Dekart_GetReportListStreamServer) error {
+	streamID, err := uuid.NewRandom()
+	if err != nil {
+		log.Err(err).Send()
+		return status.Error(codes.Internal, err.Error())
+	}
+	ping := s.ReportStreams.Register(report.All, streamID.String())
+	defer s.ReportStreams.Deregister(report.All, streamID.String())
+
+	ctx, cancel := context.WithTimeout(srv.Context(), 55*time.Second)
+	defer cancel()
+
+	err = s.sendReportList(ctx, srv)
+	if err != nil {
+		return err
+	}
+
+	for {
+		select {
+		case <-ping:
+			err := s.sendReportList(ctx, srv)
 			if err != nil {
 				return err
 			}

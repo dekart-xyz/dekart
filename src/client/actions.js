@@ -1,8 +1,8 @@
-import { getReportStream, unary } from './lib/grpc'
+import { getReportStream, getStream, unary } from './lib/grpc'
 import { get } from './lib/api'
 import { processCsvData } from 'kepler.gl/dist/processors'
 import { addDataToMap, receiveMapConfig, showDatasetTable, toggleModal, toggleSidePanel } from 'kepler.gl/actions'
-import { CreateQueryRequest, Query, RunQueryRequest, UpdateQueryRequest, UpdateReportRequest, Report, CreateReportRequest } from '../proto/dekart_pb'
+import { CreateQueryRequest, Query, RunQueryRequest, UpdateQueryRequest, UpdateReportRequest, Report, CreateReportRequest, ReportListRequest } from '../proto/dekart_pb'
 import { Dekart } from '../proto/dekart_pb_service'
 import KeplerGlSchema from 'kepler.gl/schemas'
 import { streamError, genericError, success, downloading } from './lib/message'
@@ -209,4 +209,31 @@ export function createReport (history) {
     }
     success('New Report Created')
   }
+}
+
+let reportStreamListCancelable
+
+export function subscribeReports () {
+  return (dispatch) => {
+    dispatch({ type: subscribeReports.name })
+    const request = new ReportListRequest()
+    reportStreamListCancelable = getStream(
+      Dekart.GetReportListStream,
+      request,
+      ({ reportsList }) => dispatch(reportsListUpdate(reportsList)),
+      (code) => streamError(code)
+    )
+  }
+}
+
+export function unsubscribeReports () {
+  return dispatch => {
+    dispatch({ type: unsubscribeReports.name })
+    reportStreamListCancelable.cancel()
+  }
+}
+
+export function reportsListUpdate (reportsList) {
+  console.log('reportsListUpdate', reportsList)
+  return { type: reportsListUpdate.name, reportsList }
 }

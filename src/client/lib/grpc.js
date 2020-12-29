@@ -56,35 +56,53 @@ class CancelableRequest {
   }
 }
 
-export function getReportStream (reportId, onMessage, onError, cancelable = new CancelableRequest()) {
-  const report = new Report()
-  report.setId(reportId)
-  const request = new ReportStreamRequest()
-  request.setReport(report)
-  // let canceled = false
-  cancelable.setInvokeRequest(grpc.invoke(Dekart.GetReportStream, {
+export function getStream (endpoint, request, onMessage, onError, cancelable = new CancelableRequest()) {
+  cancelable.setInvokeRequest(grpc.invoke(endpoint, {
     host,
     request,
-    // debug: true,
     onMessage: (message) => {
       if (!cancelable.canceled) {
         onMessage(message.toObject())
       }
-      // console.log('onMessage', message.toObject())
-      // onMessage(message.toObject())
     },
     onEnd: (code, message) => {
       if (code === 0) {
         if (!cancelable.canceled) {
-          getReportStream(reportId, onMessage, onError, cancelable)
+          getStream(endpoint, request, onMessage, onError, cancelable)
         }
       } else {
         cancelable.cancel()
         onError(code)
-        // canceled = true
-        // console.error('onEnd', code)
       }
     }
   }))
   return cancelable
+}
+
+export function getReportStream (reportId, onMessage, onError) {
+  const report = new Report()
+  report.setId(reportId)
+  const request = new ReportStreamRequest()
+  request.setReport(report)
+  return getStream(Dekart.GetReportStream, request, onMessage, onError)
+  // cancelable.setInvokeRequest(grpc.invoke(Dekart.GetReportStream, {
+  //   host,
+  //   request,
+  //   onMessage: (message) => {
+  //     if (!cancelable.canceled) {
+  //       onMessage(message.toObject())
+  //     }
+  //   },
+  //   onEnd: (code, message) => {
+  //     if (code === 0) {
+  //       if (!cancelable.canceled) {
+  //         getReportStream(reportId, onMessage, onError, cancelable)
+  //       }
+  //     } else {
+  //       cancelable.cancel()
+  //       onError(code)
+  //     }
+  //   }
+  // }))
+  // return cancelable
 }
