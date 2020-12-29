@@ -18,6 +18,11 @@
     flex-direction: column;
 }
 
+.deleteColumn {
+    padding-top: 0!important;
+    padding-bottom: 0!important;
+}
+
 .reportsRow .deleteButton {
     opacity: 0;
     pointer-events: none;
@@ -30,6 +35,8 @@
 
 .titleColumn {
     width: 600px;
+    padding-top: 10px!important;
+    padding-bottom: 10px!important;
 }
 
 .reports {

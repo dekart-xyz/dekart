@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useHistory } from 'react-router-dom'
 import DekartMenu from './DekartMenu'
 import { Header } from './Header'
@@ -6,7 +6,6 @@ import styles from './HomePage.module.css'
 import { Button, Result, Table } from 'antd'
 import { createReport, subscribeReports, unsubscribeReports } from './actions'
 import { useDispatch, useSelector } from 'react-redux'
-import Title from 'antd/lib/skeleton/Title'
 import { PlusOutlined } from '@ant-design/icons'
 
 function Loading () {
@@ -21,8 +20,8 @@ const columns = [
   },
   {
     dataIndex: 'delete',
-    render: (t, report) => <Button className={styles.deleteButton} danger type='text'>Delete</Button>
-
+    render: (t, report) => <Button className={styles.deleteButton} danger type='text'>Delete</Button>,
+    className: styles.deleteColumn
   }
 ]
 
@@ -59,6 +58,7 @@ export default function HomePage () {
   const reportsList = useSelector(state => state.reportsList)
   const history = useHistory()
   const dispatch = useDispatch()
+  const body = useRef()
   useEffect(() => {
     dispatch(subscribeReports())
     return () => dispatch(unsubscribeReports())
@@ -73,7 +73,15 @@ export default function HomePage () {
         <div className={styles.headerButtons}>{reportsList.loaded && reportsList.reports.length ? createReportButton : null}</div>
       </Header>
       <div className={styles.body}>
-        {reportsList.loaded ? <Reports reports={reportsList.reports} createReportButton={createReportButton} /> : <Loading />}
+        {
+          reportsList.loaded
+            ? <Reports
+                reports={reportsList.reports}
+                createReportButton={createReportButton}
+                body={body}
+              />
+            : <Loading />
+}
       </div>
     </div>
   )
