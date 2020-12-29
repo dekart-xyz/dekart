@@ -2,7 +2,7 @@ import { getReportStream, getStream, unary } from './lib/grpc'
 import { get } from './lib/api'
 import { processCsvData } from 'kepler.gl/dist/processors'
 import { addDataToMap, receiveMapConfig, showDatasetTable, toggleModal, toggleSidePanel } from 'kepler.gl/actions'
-import { CreateQueryRequest, Query, RunQueryRequest, UpdateQueryRequest, UpdateReportRequest, Report, CreateReportRequest, ReportListRequest } from '../proto/dekart_pb'
+import { CreateQueryRequest, Query, RunQueryRequest, UpdateQueryRequest, UpdateReportRequest, Report, CreateReportRequest, ReportListRequest, ArchiveReportRequest } from '../proto/dekart_pb'
 import { Dekart } from '../proto/dekart_pb_service'
 import KeplerGlSchema from 'kepler.gl/schemas'
 import { streamError, genericError, success, downloading } from './lib/message'
@@ -234,6 +234,19 @@ export function unsubscribeReports () {
 }
 
 export function reportsListUpdate (reportsList) {
-  console.log('reportsListUpdate', reportsList)
   return { type: reportsListUpdate.name, reportsList }
+}
+
+export function archiveReport (reportId) {
+  return async dispatch => {
+    dispatch({ type: archiveReport.name, reportId })
+    const req = new ArchiveReportRequest()
+    req.setReportId(reportId)
+    req.setArchive(true)
+    try {
+      await unary(Dekart.ArchiveReport, req)
+    } catch (err) {
+      dispatch(error(err))
+    }
+  }
 }

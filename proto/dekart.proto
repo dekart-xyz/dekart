@@ -7,10 +7,19 @@ service Dekart {
     rpc CreateQuery(CreateQueryRequest) returns (CreateQueryResponse) {}
     rpc UpdateQuery(UpdateQueryRequest) returns (UpdateQueryResponse) {}
     rpc UpdateReport(UpdateReportRequest) returns (UpdateReportResponse) {}
+    rpc ArchiveReport(ArchiveReportRequest) returns (ArchiveReportResponse) {}
     rpc RunQuery(RunQueryRequest) returns (RunQueryResponse) {}
     rpc GetReportStream(ReportStreamRequest) returns (stream ReportStreamResponse) {}
     rpc GetReportListStream(ReportListRequest) returns (stream ReportListResponse) {}
 }
+
+
+message ArchiveReportRequest {
+    string report_id = 1;
+    bool archive = 2;
+}
+
+message ArchiveReportResponse {}
 
 message ReportListRequest{
 
@@ -24,6 +33,7 @@ message Report {
     string id = 1;
     string map_config = 2;
     string title = 3;
+    bool archived = 4;
 }
 
 message Query {

@@ -1,15 +1,32 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useHistory } from 'react-router-dom'
 import DekartMenu from './DekartMenu'
 import { Header } from './Header'
 import styles from './HomePage.module.css'
 import { Button, Result, Table } from 'antd'
-import { createReport, subscribeReports, unsubscribeReports } from './actions'
+import { archiveReport, createReport, subscribeReports, unsubscribeReports } from './actions'
 import { useDispatch, useSelector } from 'react-redux'
 import { PlusOutlined } from '@ant-design/icons'
 
 function Loading () {
   return null
+}
+
+function ArchiveButton ({ report }) {
+  const dispatch = useDispatch()
+  const [disabled, setDisabled] = useState(false)
+  return (
+    <Button
+      className={styles.deleteButton}
+      type='text'
+      disabled={disabled}
+      onClick={() => {
+        dispatch(archiveReport(report.id))
+        setDisabled(true)
+      }}
+    >Archive
+    </Button>
+  )
 }
 
 const columns = [
@@ -20,7 +37,7 @@ const columns = [
   },
   {
     dataIndex: 'delete',
-    render: (t, report) => <Button className={styles.deleteButton} danger type='text'>Delete</Button>,
+    render: (t, report) => <ArchiveButton report={report} />,
     className: styles.deleteColumn
   }
 ]

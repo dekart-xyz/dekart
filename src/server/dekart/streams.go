@@ -132,7 +132,8 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 	reportRows, err := s.Db.QueryContext(ctx,
 		`select
 			id,
-			case when title is null then 'Untitled' else title end as title
+			case when title is null then 'Untitled' else title end as title,
+			archived
 		from reports order by updated_at desc`,
 	)
 	if err != nil {
@@ -148,6 +149,7 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 		err = reportRows.Scan(
 			&report.Id,
 			&report.Title,
+			&report.Archived,
 		)
 		res.Reports = append(res.Reports, &report)
 	}

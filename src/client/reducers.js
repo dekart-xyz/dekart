@@ -129,10 +129,11 @@ export function reportsList (state = defaultReportsList, action) {
     case unsubscribeReports.name:
       return defaultReportsList
     case reportsListUpdate.name:
+      console.log(action)
       return {
         ...state,
         loaded: true,
-        reports: action.reportsList
+        reports: action.reportsList.filter(report => !report.archived)
       }
     default:
       return state

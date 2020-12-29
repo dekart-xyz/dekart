@@ -110,6 +110,39 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	return &proto.UpdateReportResponse{}, nil
 }
 
+// ArchiveReport implementation
+func (s Server) ArchiveReport(ctx context.Context, req *proto.ArchiveReportRequest) (*proto.ArchiveReportResponse, error) {
+	_, err := uuid.Parse(req.ReportId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+	result, err := s.Db.ExecContext(ctx,
+		"update reports set archived=$1 where id=$2",
+		req.Archive,
+		req.ReportId,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	affectedRows, err := result.RowsAffected()
+
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if affectedRows == 0 {
+		err := fmt.Errorf("Report not found id:%s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	s.ReportStreams.Ping(req.ReportId)
+
+	return &proto.ArchiveReportResponse{}, nil
+
+}
+
 // UpdateQuery by id implementation
 func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) (*proto.UpdateQueryResponse, error) {
 	if req.Query == nil {
