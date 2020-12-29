@@ -20,7 +20,7 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 			id,
 			case when map_config is null then '' else map_config end as map_config,
 			case when title is null then 'Untitled' else title end as title
-		from reports where id=$1 limit 1`,
+		from reports where id=$1 and not archived limit 1`,
 		reportID,
 	)
 	if err != nil {
