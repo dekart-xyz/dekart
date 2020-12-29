@@ -2,7 +2,7 @@ import { getReportStream, unary } from './lib/grpc'
 import { get } from './lib/api'
 import { processCsvData } from 'kepler.gl/dist/processors'
 import { addDataToMap, receiveMapConfig, showDatasetTable, toggleModal, toggleSidePanel } from 'kepler.gl/actions'
-import { CreateQueryRequest, Query, RunQueryRequest, UpdateQueryRequest, UpdateReportRequest, Report } from '../proto/dekart_pb'
+import { CreateQueryRequest, Query, RunQueryRequest, UpdateQueryRequest, UpdateReportRequest, Report, CreateReportRequest } from '../proto/dekart_pb'
 import { Dekart } from '../proto/dekart_pb_service'
 import KeplerGlSchema from 'kepler.gl/schemas'
 import { streamError, genericError, success, downloading } from './lib/message'
@@ -194,5 +194,19 @@ export function runQuery (queryId, queryText) {
     } catch (err) {
       dispatch(error(err))
     }
+  }
+}
+
+export function createReport (history) {
+  return async (dispatch) => {
+    const request = new CreateReportRequest()
+    try {
+      const { report } = await unary(Dekart.CreateReport, request)
+      history.replace(`/reports/${report.id}/edit`)
+    } catch (err) {
+      dispatch(error(err))
+      throw err
+    }
+    success('New Report Created')
   }
 }

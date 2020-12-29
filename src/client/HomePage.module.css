@@ -1,0 +1,15 @@
+.homePage {
+    width: 100%;
+    min-height: 100%;
+    position: absolute;
+    background-color: #F7F7F7;
+    /* background-color: #EDEDED; */
+    /* background-color: aqua; */
+}
+
+.body {
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+}

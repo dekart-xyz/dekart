@@ -15,8 +15,10 @@ const menu = (
 
 export default function DekartMenu () {
   return (
-    <Dropdown overlay={menu} placement='bottomCenter'>
-      <div className={styles.dekart}>Dekart</div>
-    </Dropdown>
+    <div className={styles.dekartMenu}>
+      <Dropdown overlay={menu} placement='bottomCenter'>
+        <div className={styles.dekart}>Dekart</div>
+      </Dropdown>
+    </div>
   )
 }

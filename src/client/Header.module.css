@@ -1,0 +1,8 @@
+.header {
+    /* background-color: #25272F; */
+    padding: 10px 10px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    background: linear-gradient(180deg, #2B323B 70%, #25272F 100%);
+}

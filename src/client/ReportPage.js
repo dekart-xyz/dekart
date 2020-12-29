@@ -12,6 +12,7 @@ import debounce from 'lodash.debounce'
 import { KeplerGlSchema } from 'kepler.gl/schemas'
 import classnames from 'classnames'
 import DekartMenu from './DekartMenu'
+import { Header } from './Header'
 
 function ReportQuery ({ reportId }) {
   const queries = useSelector(state => state.queries)
@@ -155,16 +156,16 @@ export default function ReportPage ({ edit }) {
 
   return (
     <div className={styles.report}>
-      <div className={styles.header}>
+      <Header>
         <Title />
-        <div className={styles.headerMiddle}><DekartMenu /></div>
+        <DekartMenu />
         <HeaderButtons
           reportId={id}
           changed={mapChanged || titleChanged}
           canSave={reportStatus.canSave}
           edit={edit}
         />
-      </div>
+      </Header>
       <div className={styles.body}>
         <Kepler />
         {edit ? <ReportQuery reportId={id} /> : null}
