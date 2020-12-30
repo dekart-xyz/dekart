@@ -5,7 +5,7 @@ import KeplerGl from 'kepler.gl'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
 import { useDispatch, useSelector } from 'react-redux'
-import { closeReport, openReport, createQuery, saveMap, reportTitleChange } from './actions'
+import { closeReport, openReport, createQuery, saveMap, reportTitleChange, getTokens } from './actions'
 import Query from './Query'
 import { SaveOutlined, PlaySquareOutlined, EditOutlined } from '@ant-design/icons'
 import debounce from 'lodash.debounce'
@@ -110,6 +110,18 @@ function Title () {
 }
 
 function Kepler () {
+  const dispatch = useDispatch()
+  useEffect(() => {
+    dispatch(getTokens())
+  }, [dispatch])
+  const mapboxApiAccessToken = useSelector(state => state.tokens.mapbox)
+  if (!mapboxApiAccessToken) {
+    return (
+      <div className={styles.keplerFlex}>
+        <div className={styles.keplerBlock} />
+      </div>
+    )
+  }
   return (
     <div className={styles.keplerFlex}>
       <div className={styles.keplerBlock}>
@@ -117,7 +129,7 @@ function Kepler () {
           {({ height, width }) => (
             <KeplerGl
               id='kepler'
-              mapboxApiAccessToken={process.env.REACT_APP_MAPBOX_TOKEN}
+              mapboxApiAccessToken={mapboxApiAccessToken}
               width={width}
               height={height}
             />

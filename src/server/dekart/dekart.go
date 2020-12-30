@@ -6,6 +6,7 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/report"
 	"fmt"
+	"os"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -197,4 +198,16 @@ func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) 
 	}
 
 	return res, nil
+}
+
+func (s Server) GetTokens(ctx context.Context, req *proto.GetTokensRequest) (*proto.GetTokensResponse, error) {
+	tokens := []*proto.GetTokensResponse_Token{
+		{
+			Name:  "mapbox",
+			Token: os.Getenv("DEKART_MAPBOX_TOKEN"),
+		},
+	}
+	return &proto.GetTokensResponse{
+		Tokens: tokens,
+	}, nil
 }

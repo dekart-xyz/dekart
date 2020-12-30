@@ -9,10 +9,20 @@ service Dekart {
     rpc UpdateReport(UpdateReportRequest) returns (UpdateReportResponse) {}
     rpc ArchiveReport(ArchiveReportRequest) returns (ArchiveReportResponse) {}
     rpc RunQuery(RunQueryRequest) returns (RunQueryResponse) {}
+    rpc GetTokens(GetTokensRequest) returns (GetTokensResponse) {}
     rpc GetReportStream(ReportStreamRequest) returns (stream ReportStreamResponse) {}
     rpc GetReportListStream(ReportListRequest) returns (stream ReportListResponse) {}
 }
 
+message GetTokensRequest {}
+
+message GetTokensResponse {
+    message Token {
+        string name = 1;
+        string token = 2;
+    }
+    repeated Token tokens = 1;
+}
 
 message ArchiveReportRequest {
     string report_id = 1;
