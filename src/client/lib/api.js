@@ -4,7 +4,9 @@ export async function call (method, endpoint, body) {
     headers['Content-Type'] = 'application/json; charset=utf-8'
   }
   const { REACT_APP_API_HOST } = process.env
-  const url = `${REACT_APP_API_HOST}/api/v1${endpoint}`
+  const host = REACT_APP_API_HOST || ''
+
+  const url = `${host}/api/v1${endpoint}`
   const res = await window.fetch(
     url,
     {

@@ -13,3 +13,23 @@ services:
       restart: always
       ports:
         - 8081:8080
+  dekart:
+      image: dekart-dev
+      restart: always
+      ports:
+        - 8082:8080
+      depends_on:
+        - db
+      volumes:
+        - "${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS}"
+      environment:
+        DEKART_LOG_DEBUG: "${DEKART_LOG_DEBUG}"
+        DEKART_LOG_PRETTY: "${DEKART_LOG_PRETTY}"
+        DEKART_POSTGRES_DB: "${DEKART_POSTGRES_DB}"
+        DEKART_POSTGRES_USER: "${DEKART_POSTGRES_USER}"
+        DEKART_POSTGRES_PASSWORD: "${DEKART_POSTGRES_PASSWORD}"
+        DEKART_POSTGRES_PORT: "${DEKART_POSTGRES_PORT}"
+        DEKART_POSTGRES_HOST: "db"
+        DEKART_BIGQUERY_PROJECT_ID: "${DEKART_BIGQUERY_PROJECT_ID}"
+        DEKART_MAPBOX_TOKEN: "${DEKART_MAPBOX_TOKEN}"
+        GOOGLE_APPLICATION_CREDENTIALS: "${GOOGLE_APPLICATION_CREDENTIALS}"

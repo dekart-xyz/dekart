@@ -1,0 +1,28 @@
+version: "3.9"
+services:
+  db:
+    image: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: "dekart"
+      POSTGRES_USER: "dekart"
+      POSTGRES_DB: "${POSTGRES_PASSWORD}"
+  dekart:
+      image: dekartxyz/dekart:latest
+      restart: always
+      ports:
+        - 8080:8080
+      links:
+        - db
+      volumes:
+        - "${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS}"
+      environment:
+        DEKART_POSTGRES_DB: "dekart"
+        DEKART_POSTGRES_USER: "dekart"
+        DEKART_POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+        DEKART_POSTGRES_PORT: "5432"
+        DEKART_POSTGRES_HOST: "db"
+        DEKART_BIGQUERY_PROJECT_ID: "${PROJECT_ID}"
+        DEKART_MAPBOX_TOKEN: "${MAPBOX_TOKEN}"
+        GOOGLE_APPLICATION_CREDENTIALS: "${GOOGLE_APPLICATION_CREDENTIALS}"

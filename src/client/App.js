@@ -7,7 +7,7 @@ import {
 import ReportPage from './ReportPage'
 import HomePage from './HomePage'
 import { QuestionOutlined, WarningOutlined } from '@ant-design/icons'
-import { Result } from 'antd'
+import Result from 'antd/es/result'
 
 export default function App () {
   return (

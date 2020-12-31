@@ -1,4 +1,5 @@
-import { Dropdown, Menu } from 'antd'
+import Dropdown from 'antd/es/dropdown'
+import Menu from 'antd/es/menu'
 import styles from './DekartMenu.module.css'
 import { ExportOutlined } from '@ant-design/icons'
 
@@ -8,7 +9,7 @@ const menu = (
       <a href='/'>Reports</a>
     </Menu.Item>
     <Menu.Item>
-      <a target='_blank' rel='noopener noreferrer' href='https://github.com/delfrrr/dekart'>GitHub <ExportOutlined /></a>
+      <a target='_blank' rel='noopener noreferrer' href='https://github.com/dekart-xyz/dekart/issues'>Report Issue <ExportOutlined /></a>
     </Menu.Item>
   </Menu>
 )

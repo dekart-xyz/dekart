@@ -1,4 +1,5 @@
-import { Button, message } from 'antd'
+import Button from 'antd/es/button'
+import message from 'antd/es/message'
 
 const style = { marginTop: 60 }
 
