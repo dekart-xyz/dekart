@@ -37,5 +37,3 @@
 npm-debug.log*
 
 .eslintcache
-
-.query-results

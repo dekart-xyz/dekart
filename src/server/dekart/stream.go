@@ -15,7 +15,7 @@ import (
 
 func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStreamServer) error {
 	ctx := srv.Context()
-	reportRows, err := s.Db.QueryContext(ctx,
+	reportRows, err := s.db.QueryContext(ctx,
 		`select
 			id,
 			case when map_config is null then '' else map_config end as map_config,
@@ -47,7 +47,7 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 		log.Warn().Err(err).Send()
 		return status.Errorf(codes.NotFound, err.Error())
 	}
-	queryRows, err := s.Db.QueryContext(ctx,
+	queryRows, err := s.db.QueryContext(ctx,
 		`select
 			id,
 			query_text,
@@ -104,8 +104,8 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 		log.Err(err).Send()
 		return status.Error(codes.Internal, err.Error())
 	}
-	ping := s.ReportStreams.Register(req.Report.Id, streamID.String())
-	defer s.ReportStreams.Deregister(req.Report.Id, streamID.String())
+	ping := s.reportStreams.Register(req.Report.Id, streamID.String())
+	defer s.reportStreams.Deregister(req.Report.Id, streamID.String())
 
 	err = s.sendReportMessage(req.Report.Id, srv)
 	if err != nil {
@@ -129,7 +129,7 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 }
 
 func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportListStreamServer) error {
-	reportRows, err := s.Db.QueryContext(ctx,
+	reportRows, err := s.db.QueryContext(ctx,
 		`select
 			id,
 			case when title is null then 'Untitled' else title end as title,
@@ -168,8 +168,8 @@ func (s Server) GetReportListStream(req *proto.ReportListRequest, srv proto.Deka
 		log.Err(err).Send()
 		return status.Error(codes.Internal, err.Error())
 	}
-	ping := s.ReportStreams.Register(report.All, streamID.String())
-	defer s.ReportStreams.Deregister(report.All, streamID.String())
+	ping := s.reportStreams.Register(report.All, streamID.String())
+	defer s.reportStreams.Deregister(report.All, streamID.String())
 
 	ctx, cancel := context.WithTimeout(srv.Context(), 55*time.Second)
 	defer cancel()

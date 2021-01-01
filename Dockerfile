@@ -26,10 +26,8 @@ RUN update-ca-certificates
 COPY --from=nodebuilder /source/build build
 COPY --from=gobuilder /source/server .
 ADD migrations migrations
-RUN mkdir ./.query-reults
 
 ENV DEKART_PORT=8080
 ENV DEKART_STATIC_FILES=./build
-ENV DEKART_QUERY_RESULTS=./.query-reults
 
 CMD ["/dekart/server"]

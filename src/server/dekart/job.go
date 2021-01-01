@@ -2,19 +2,15 @@ package dekart
 
 import (
 	"context"
-	"dekart/src/proto"
 	"encoding/csv"
 	"fmt"
-	"os"
-	"path/filepath"
 	"time"
 
 	"cloud.google.com/go/bigquery"
+	"cloud.google.com/go/storage"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/api/iterator"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func getUUID() string {
@@ -26,20 +22,28 @@ func getUUID() string {
 	return u.String()
 }
 
+func (s Server) finishSavingQuery(bucket *storage.Writer, csv *csv.Writer) {
+	csv.Flush()
+	err := bucket.Close()
+	if err != nil {
+		log.Err(err).Send()
+	}
+}
+
 func (s Server) readJobResult(ctx context.Context, job *bigquery.Job, queryID string, reportID string) {
 	resultID := getUUID()
-	file, err := os.Create(filepath.Join(
-		os.Getenv("DEKART_QUERY_RESULTS"),
-		fmt.Sprintf("%s.csv", resultID),
-	))
-	if err != nil {
-		log.Fatal().Err(err).Send()
-		return
-	}
-	defer file.Close()
+	obj := s.bucket.Object(fmt.Sprintf("%s.csv", resultID))
+	w := obj.NewWriter(ctx)
 
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
+	writer := csv.NewWriter(w)
+	defer (func() {
+		s.finishSavingQuery(w, writer)
+		err := s.setJobResult(ctx, queryID, reportID, resultID)
+		if err != nil {
+			log.Err(err).Send()
+			return
+		}
+	})()
 
 	it, err := job.Read(ctx)
 	if err != nil {
@@ -80,11 +84,6 @@ func (s Server) readJobResult(ctx context.Context, job *bigquery.Job, queryID st
 			return
 		}
 	}
-	err = s.setJobResult(ctx, queryID, reportID, resultID)
-	if err != nil {
-		log.Err(err).Send()
-		return
-	}
 }
 
 func (s Server) waitJob(job *bigquery.Job, queryID string, reportID string) {
@@ -107,7 +106,7 @@ func (s Server) waitJob(job *bigquery.Job, queryID string, reportID string) {
 }
 
 func (s Server) setJobError(ctx context.Context, queryID string, reportID string, jobErr error) {
-	_, err := s.Db.ExecContext(
+	_, err := s.db.ExecContext(
 		ctx,
 		"update queries set job_status = 0, job_error=$1 where id  = $2",
 		jobErr.Error(),
@@ -117,12 +116,12 @@ func (s Server) setJobError(ctx context.Context, queryID string, reportID string
 		log.Fatal().Err(err).Send()
 		return
 	}
-	s.ReportStreams.Ping(reportID)
+	s.reportStreams.Ping(reportID)
 }
 
 func (s Server) setJobStatus(ctx context.Context, queryID string, reportID string, status int) error {
 	//TODO: optimistic lock for job status
-	_, err := s.Db.ExecContext(
+	_, err := s.db.ExecContext(
 		ctx,
 		"update queries set job_status = $1, job_error = null, job_result_id = null where id  = $2",
 		status,
@@ -131,63 +130,21 @@ func (s Server) setJobStatus(ctx context.Context, queryID string, reportID strin
 	if err != nil {
 		return err
 	}
-	s.ReportStreams.Ping(reportID)
+	s.reportStreams.Ping(reportID)
 	return nil
 }
 
 func (s Server) setJobResult(ctx context.Context, queryID string, reportID string, jobResultID string) error {
-	_, err := s.Db.ExecContext(
+	_, err := s.db.ExecContext(
 		ctx,
 		"update queries set job_result_id = $1 where id  = $2",
 		jobResultID,
 		queryID,
 	)
 	if err != nil {
+		//TODO: make it fatal
 		return err
 	}
-	s.ReportStreams.Ping(reportID)
+	s.reportStreams.Ping(reportID)
 	return nil
-}
-
-func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*proto.RunQueryResponse, error) {
-	queriesRows, err := s.Db.QueryContext(ctx,
-		"select query_text, report_id from queries where id=$1 limit 1",
-		req.QueryId,
-	)
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	defer queriesRows.Close()
-	var queryText string
-	var reportID string
-	for queriesRows.Next() {
-		err := queriesRows.Scan(&queryText, &reportID)
-		if err != nil {
-			log.Err(err).Send()
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-	}
-	bigqueryClient, err := bigquery.NewClient(ctx, os.Getenv("DEKART_BIGQUERY_PROJECT_ID"))
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	defer bigqueryClient.Close()
-
-	q := bigqueryClient.Query(queryText)
-	job, err := q.Run(ctx)
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	//TODO: continuesly update status
-	err = s.setJobStatus(ctx, req.QueryId, reportID, 2)
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	go s.waitJob(job, req.QueryId, reportID)
-	res := &proto.RunQueryResponse{}
-	return res, nil
 }

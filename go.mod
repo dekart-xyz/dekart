@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	cloud.google.com/go/bigquery v1.8.0
+	cloud.google.com/go/storage v1.10.0
 	github.com/desertbit/timer v0.0.0-20180107155436-c41aec40b27f // indirect
 	github.com/golang-migrate/migrate/v4 v4.14.1
 	github.com/golang/protobuf v1.4.3
