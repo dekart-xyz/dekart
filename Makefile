@@ -31,3 +31,13 @@ docker-compose-rm:
 
 run-dev-server:
 	godotenv -f .env go run ./src/server/main.go
+
+cloud-sql-proxy-docker:
+	docker build -t cloud-sql-proxy -f ./cloud_sql_proxy/Dockerfile .
+
+cloud-sql-proxy: cloud-sql-proxy-docker
+	godotenv -f .env docker run -it --rm \
+		-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
+		--env-file .env \
+		-p 5432:5432 \
+		cloud-sql-proxy

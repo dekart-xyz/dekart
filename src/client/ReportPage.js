@@ -110,12 +110,12 @@ function Title () {
   }
 }
 
-function Kepler () {
-  const dispatch = useDispatch()
-  useEffect(() => {
-    dispatch(getTokens())
-  }, [dispatch])
-  const mapboxApiAccessToken = useSelector(state => state.tokens.mapbox)
+function Kepler ({ mapboxApiAccessToken }) {
+  // const dispatch = useDispatch()
+  // useEffect(() => {
+  //   dispatch(getTokens())
+  // }, [dispatch])
+  // const mapboxApiAccessToken = useSelector(state => state.tokens.mapbox)
   if (!mapboxApiAccessToken) {
     return (
       <div className={styles.keplerFlex}>
@@ -150,15 +150,20 @@ export default function ReportPage ({ edit }) {
   const report = useSelector(state => state.report)
   const { mapConfig, title } = report || {}
   const reportStatus = useSelector(state => state.reportStatus)
+  const mapboxApiAccessToken = useSelector(state => state.tokens.mapbox)
 
   const dispatch = useDispatch()
 
   const [mapChanged, setMapChanged] = useState(false)
 
   useEffect(() => {
-    dispatch(openReport(id, edit, history))
-    return () => dispatch(closeReport(id))
-  }, [id, dispatch, edit, history])
+    if (mapboxApiAccessToken) {
+      dispatch(openReport(id, edit, history))
+      return () => dispatch(closeReport(id))
+    } else {
+      dispatch(getTokens())
+    }
+  }, [id, dispatch, edit, history, mapboxApiAccessToken])
 
   useEffect(() => checkMapConfig(kepler, mapConfig, setMapChanged), [kepler, mapConfig, setMapChanged])
   const titleChanged = reportStatus.title && title && reportStatus.title !== title
@@ -180,7 +185,7 @@ export default function ReportPage ({ edit }) {
         />
       </Header>
       <div className={styles.body}>
-        <Kepler />
+        <Kepler mapboxApiAccessToken={mapboxApiAccessToken} />
         {edit ? <ReportQuery reportId={id} /> : null}
       </div>
     </div>

@@ -99,6 +99,7 @@ export function reportUpdate (reportStreamResponse) {
       queriesList
     })
     if (report.mapConfig && !prevReport) {
+      console.log('report.mapConfig', report.mapConfig)
       const parsedConfig = KeplerGlSchema.parseSavedConfig(JSON.parse(report.mapConfig))
       dispatch(receiveMapConfig(parsedConfig))
     }
