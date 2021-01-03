@@ -3,6 +3,26 @@
 
 import * as jspb from "google-protobuf";
 
+export class StreamOptions extends jspb.Message {
+  getSequence(): number;
+  setSequence(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): StreamOptions.AsObject;
+  static toObject(includeInstance: boolean, msg: StreamOptions): StreamOptions.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: StreamOptions, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): StreamOptions;
+  static deserializeBinaryFromReader(message: StreamOptions, reader: jspb.BinaryReader): StreamOptions;
+}
+
+export namespace StreamOptions {
+  export type AsObject = {
+    sequence: number,
+  }
+}
+
 export class GetTokensRequest extends jspb.Message {
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetTokensRequest.AsObject;
@@ -106,6 +126,11 @@ export namespace ArchiveReportResponse {
 }
 
 export class ReportListRequest extends jspb.Message {
+  hasStreamOptions(): boolean;
+  clearStreamOptions(): void;
+  getStreamOptions(): StreamOptions | undefined;
+  setStreamOptions(value?: StreamOptions): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): ReportListRequest.AsObject;
   static toObject(includeInstance: boolean, msg: ReportListRequest): ReportListRequest.AsObject;
@@ -118,6 +143,7 @@ export class ReportListRequest extends jspb.Message {
 
 export namespace ReportListRequest {
   export type AsObject = {
+    streamOptions?: StreamOptions.AsObject,
   }
 }
 
@@ -126,6 +152,11 @@ export class ReportListResponse extends jspb.Message {
   getReportsList(): Array<Report>;
   setReportsList(value: Array<Report>): void;
   addReports(value?: Report, index?: number): Report;
+
+  hasStreamOptions(): boolean;
+  clearStreamOptions(): void;
+  getStreamOptions(): StreamOptions | undefined;
+  setStreamOptions(value?: StreamOptions): void;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): ReportListResponse.AsObject;
@@ -140,6 +171,7 @@ export class ReportListResponse extends jspb.Message {
 export namespace ReportListResponse {
   export type AsObject = {
     reportsList: Array<Report.AsObject>,
+    streamOptions?: StreamOptions.AsObject,
   }
 }
 
@@ -392,6 +424,11 @@ export class ReportStreamRequest extends jspb.Message {
   getReport(): Report | undefined;
   setReport(value?: Report): void;
 
+  hasStreamOptions(): boolean;
+  clearStreamOptions(): void;
+  getStreamOptions(): StreamOptions | undefined;
+  setStreamOptions(value?: StreamOptions): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): ReportStreamRequest.AsObject;
   static toObject(includeInstance: boolean, msg: ReportStreamRequest): ReportStreamRequest.AsObject;
@@ -405,6 +442,7 @@ export class ReportStreamRequest extends jspb.Message {
 export namespace ReportStreamRequest {
   export type AsObject = {
     report?: Report.AsObject,
+    streamOptions?: StreamOptions.AsObject,
   }
 }
 
@@ -418,6 +456,11 @@ export class ReportStreamResponse extends jspb.Message {
   getQueriesList(): Array<Query>;
   setQueriesList(value: Array<Query>): void;
   addQueries(value?: Query, index?: number): Query;
+
+  hasStreamOptions(): boolean;
+  clearStreamOptions(): void;
+  getStreamOptions(): StreamOptions | undefined;
+  setStreamOptions(value?: StreamOptions): void;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): ReportStreamResponse.AsObject;
@@ -433,6 +476,7 @@ export namespace ReportStreamResponse {
   export type AsObject = {
     report?: Report.AsObject,
     queriesList: Array<Query.AsObject>,
+    streamOptions?: StreamOptions.AsObject,
   }
 }
 

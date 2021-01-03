@@ -1,5 +1,5 @@
 import { grpc } from '@improbable-eng/grpc-web'
-import { CreateReportRequest, ReportStreamRequest, Report } from '../../proto/dekart_pb'
+import { CreateReportRequest, ReportStreamRequest, Report, StreamOptions } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 
 const { REACT_APP_API_HOST } = process.env
@@ -48,19 +48,25 @@ class CancelableRequest {
   }
 }
 
-export function getStream (endpoint, request, onMessage, onError, cancelable = new CancelableRequest()) {
+export function getStream (endpoint, request, onMessage, onError, cancelable = new CancelableRequest(), sequence = 0) {
+  const streamOptions = new StreamOptions()
+  let currentSequence = sequence
+  streamOptions.setSequence(currentSequence)
+  request.setStreamOptions(streamOptions)
   cancelable.setInvokeRequest(grpc.invoke(endpoint, {
     host,
     request,
     onMessage: (message) => {
       if (!cancelable.canceled) {
-        onMessage(message.toObject())
+        const messageObj = message.toObject()
+        currentSequence = messageObj.streamOptions.sequence
+        onMessage(messageObj)
       }
     },
     onEnd: (code, message) => {
       if (code === 0) {
         if (!cancelable.canceled) {
-          getStream(endpoint, request, onMessage, onError, cancelable)
+          getStream(endpoint, request, onMessage, onError, cancelable, currentSequence)
         }
       } else {
         cancelable.cancel()
@@ -77,24 +83,4 @@ export function getReportStream (reportId, onMessage, onError) {
   const request = new ReportStreamRequest()
   request.setReport(report)
   return getStream(Dekart.GetReportStream, request, onMessage, onError)
-  // cancelable.setInvokeRequest(grpc.invoke(Dekart.GetReportStream, {
-  //   host,
-  //   request,
-  //   onMessage: (message) => {
-  //     if (!cancelable.canceled) {
-  //       onMessage(message.toObject())
-  //     }
-  //   },
-  //   onEnd: (code, message) => {
-  //     if (code === 0) {
-  //       if (!cancelable.canceled) {
-  //         getReportStream(reportId, onMessage, onError, cancelable)
-  //       }
-  //     } else {
-  //       cancelable.cancel()
-  //       onError(code)
-  //     }
-  //   }
-  // }))
-  // return cancelable
 }

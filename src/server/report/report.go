@@ -8,8 +8,9 @@ import (
 
 // Streams of report changes; use NewStreams to init
 type Streams struct {
-	channels map[string]map[string]chan int
-	mutex    sync.RWMutex
+	channels map[string]map[string]chan int64
+	sequence map[string]int64
+	mutex    sync.Mutex
 }
 
 // NewStreams creates new Streams struct
@@ -23,27 +24,38 @@ func NewStreams() *Streams {
 func (s *Streams) Init() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	s.channels = make(map[string]map[string]chan int)
+	s.channels = make(map[string]map[string]chan int64)
+	s.sequence = make(map[string]int64)
 }
 
 // All means subscribing for all reports changes
 const All string = "AllReports"
 
 // Register to listen report updates
-func (s *Streams) Register(reportID string, streamID string) chan int {
+func (s *Streams) Register(reportID string, streamID string, sequence int64) chan int64 {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+	currentSequence, ok := s.sequence[reportID]
+	if !ok {
+		s.sequence[reportID] = 1
+		currentSequence = 1
+	}
 	streamMap, ok := s.channels[reportID]
 	if !ok {
-		streamMap = make(map[string]chan int)
+		streamMap = make(map[string]chan int64)
 		s.channels[reportID] = streamMap
 	}
 	_, ok = streamMap[streamID]
 	if ok {
 		log.Fatal().Msgf("streamID %s exists", streamID)
 	}
-	ch := make(chan int)
+	ch := make(chan int64)
 	streamMap[streamID] = ch
+	if currentSequence > sequence {
+		go func() {
+			ch <- currentSequence
+		}()
+	}
 	return ch
 }
 
@@ -60,15 +72,17 @@ func (s *Streams) Deregister(reportID string, streamID string) {
 
 // Ping about report update
 func (s *Streams) Ping(reportID string) {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	for _, rid := range []string{reportID, All} {
+		sequence, ok := s.sequence[rid]
+		s.sequence[rid] = sequence + 1
 		streamMap, ok := s.channels[rid]
 		if !ok {
-			return
+			continue
 		}
 		for _, ch := range streamMap {
-			ch <- 1
+			ch <- s.sequence[rid]
 		}
 	}
 }

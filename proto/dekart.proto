@@ -14,6 +14,10 @@ service Dekart {
     rpc GetReportListStream(ReportListRequest) returns (stream ReportListResponse) {}
 }
 
+message StreamOptions {
+    int64 sequence = 1;
+}
+
 message GetTokensRequest {}
 
 message GetTokensResponse {
@@ -32,11 +36,12 @@ message ArchiveReportRequest {
 message ArchiveReportResponse {}
 
 message ReportListRequest{
-
+    StreamOptions stream_options = 1;
 }
 
 message ReportListResponse {
     repeated Report reports = 1;
+    StreamOptions stream_options = 2;
 }
 
 message Report {
@@ -95,11 +100,13 @@ message CreateQueryResponse {
 
 message ReportStreamRequest {
     Report report = 1;
+    StreamOptions stream_options = 2;
 }
 
 message ReportStreamResponse {
     Report report = 1;
     repeated Query queries = 2;
+    StreamOptions stream_options = 3;
 }
 
 message CreateReportRequest {

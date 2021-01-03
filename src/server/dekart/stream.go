@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStreamServer) error {
+func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStreamServer, sequence int64) error {
 	ctx := srv.Context()
 	reportRows, err := s.db.QueryContext(ctx,
 		`select
@@ -30,6 +30,9 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 	defer reportRows.Close()
 	res := proto.ReportStreamResponse{
 		Report: &proto.Report{},
+		StreamOptions: &proto.StreamOptions{
+			Sequence: sequence,
+		},
 	}
 	for reportRows.Next() {
 		err = reportRows.Scan(
@@ -90,6 +93,11 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 
 // GetReportStream which sends report and queries on every update
 func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart_GetReportStreamServer) error {
+	if req.StreamOptions == nil {
+		err := fmt.Errorf("Missing StreamOptions")
+		return status.Error(codes.InvalidArgument, err.Error())
+	}
+
 	if req.Report == nil {
 		return status.Errorf(codes.InvalidArgument, "req.Report == nil")
 	}
@@ -104,10 +112,9 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 		log.Err(err).Send()
 		return status.Error(codes.Internal, err.Error())
 	}
-	ping := s.reportStreams.Register(req.Report.Id, streamID.String())
+	ping := s.reportStreams.Register(req.Report.Id, streamID.String(), req.StreamOptions.Sequence)
 	defer s.reportStreams.Deregister(req.Report.Id, streamID.String())
 
-	err = s.sendReportMessage(req.Report.Id, srv)
 	if err != nil {
 		return err
 	}
@@ -117,18 +124,15 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 
 	for {
 		select {
-		case <-ping:
-			err := s.sendReportMessage(req.Report.Id, srv)
-			if err != nil {
-				return err
-			}
+		case sequence := <-ping:
+			return s.sendReportMessage(req.Report.Id, srv, sequence)
 		case <-ctx.Done():
 			return nil
 		}
 	}
 }
 
-func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportListStreamServer) error {
+func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportListStreamServer, sequence int64) error {
 	reportRows, err := s.db.QueryContext(ctx,
 		`select
 			id,
@@ -143,6 +147,9 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 	defer reportRows.Close()
 	res := proto.ReportListResponse{
 		Reports: make([]*proto.Report, 0),
+		StreamOptions: &proto.StreamOptions{
+			Sequence: sequence,
+		},
 	}
 	for reportRows.Next() {
 		report := proto.Report{}
@@ -163,29 +170,27 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 
 // GetReportListStream streams list of reports
 func (s Server) GetReportListStream(req *proto.ReportListRequest, srv proto.Dekart_GetReportListStreamServer) error {
+	if req.StreamOptions == nil {
+		err := fmt.Errorf("Missing StreamOptions")
+		return status.Error(codes.InvalidArgument, err.Error())
+	}
+
 	streamID, err := uuid.NewRandom()
 	if err != nil {
 		log.Err(err).Send()
 		return status.Error(codes.Internal, err.Error())
 	}
-	ping := s.reportStreams.Register(report.All, streamID.String())
+
+	ping := s.reportStreams.Register(report.All, streamID.String(), req.StreamOptions.Sequence)
 	defer s.reportStreams.Deregister(report.All, streamID.String())
 
 	ctx, cancel := context.WithTimeout(srv.Context(), 55*time.Second)
 	defer cancel()
 
-	err = s.sendReportList(ctx, srv)
-	if err != nil {
-		return err
-	}
-
 	for {
 		select {
-		case <-ping:
-			err := s.sendReportList(ctx, srv)
-			if err != nil {
-				return err
-			}
+		case sequence := <-ping:
+			return s.sendReportList(ctx, srv, sequence)
 		case <-ctx.Done():
 			return nil
 		}
