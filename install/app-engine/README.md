@@ -1,58 +1,68 @@
 # Deploying Dekart to Google App Engine
 
-You will need:
+## Prerequisites
+
 * Google Cloud Project
 * BigQuery API Enabled
 * Mapbox Token
-* Cloud Storage Bucket
+
+## In this guide you will create
 * Cloud SQL DB
+* Cloud Storage Bucket
+* App Engine App (Flexible environment)
+* Configure Access to specific Google Accounts with Google IAP
 
 ## Steps
 
-### Create db instance
+1. Create db instance
 
-```
+```bash
 gcloud sql instances create ${DB_INSTANCE_NAME} \
     --database-version=POSTGRES_12 \
     --tier=db-f1-micro\
     --region=europe-west1
 ```
 
-### Create database
+2. Create database
 
 ```
 gcloud sql databases create dekart --instance=${DB_INSTANCE_NAME}
 ```
 
-### Set password
+3. Set password
 
 ```
 gcloud sql users set-password postgres --instance=${DB_INSTANCE_NAME} --password=dekart
 ```
 
-### Create storage
+4. Create storage
 
 ```
 gsutil mb -b on -l europe-west1 gs://${BUCKET}/
 ```
 
-### Create App Engine App
+5. Create App Engine App
 
 ```
 gcloud app create --region=europe-west
 ```
 
-### Create [Dockerfile](./Dockerfile)
+6. Create [Dockerfile](./Dockerfile)
 
-### Create [app.yaml](./app.example.yaml)
+7. Create [app.yaml](./app.example.yaml)
 
 
-### Deploy app
+8. Deploy app
 
 ```
 gcloud app deploy app.yaml
 ```
 
-## All streps in [Makefile](./Makefile)
+9. [Configure Google IAP](https://cloud.google.com/iap/docs/app-engine-quickstart) (works only with web console)
+
+
+**All gcloud commands in [Makefile](./Makefile)**
+
+
 
 

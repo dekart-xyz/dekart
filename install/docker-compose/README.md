@@ -11,7 +11,7 @@ You will need:
 
 ## Steps
 
-Create `.env` file
+1. Create `.env` file
 
 ```
 POSTGRES_PASSWORD=
@@ -21,7 +21,7 @@ MAPBOX_TOKEN=
 GOOGLE_APPLICATION_CREDENTIALS=
 ```
 
-Run
+2. Run
 
 ```
 docker-compose  --env-file .env up
