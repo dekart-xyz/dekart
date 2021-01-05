@@ -1,4 +1,4 @@
-.PHONY: proto-build proto-docker proto docker docker-compose-up docker-compose-rm release minor
+.PHONY: proto-build proto-docker proto docker docker-compose-up docker-compose-rm version minor patch
 
 proto-clean:
 	rm -rf ./src/proto/*.go
@@ -41,6 +41,11 @@ cloud-sql-proxy: cloud-sql-proxy-docker
 		--env-file .env \
 		-p 5432:5432 \
 		cloud-sql-proxy
-release:
+version:
 	npm version $(MAKECMDGOALS)
-minor: release
+minor: version
+patch: version
+latest:
+	git tag -f latest
+release:
+	git push origin HEAD --tags
