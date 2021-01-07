@@ -39,7 +39,7 @@ docker run \
   dekartxyz/dekart:latest
 ```
 
-See details on [environment variables](https://github.com/dekart-xyz/dekart#environment-variables)
+See details on [environment variables](https://github.com/dekart-xyz/dekart/blob/main/docs/ENVIROMENT.md)
 
 ## Other options to run Dekart
 
