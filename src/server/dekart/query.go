@@ -3,10 +3,10 @@ package dekart
 import (
 	"context"
 	"dekart/src/proto"
+	"dekart/src/server/job"
 	"fmt"
-	"os"
+	"time"
 
-	"cloud.google.com/go/bigquery"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
@@ -103,7 +103,71 @@ func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) 
 	return res, nil
 }
 
+func (s Server) updateJobStatus(job *job.Job) {
+	for {
+		select {
+		case status := <-job.Status:
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			_, err := s.db.ExecContext(
+				ctx,
+				"update queries set job_status = $1, job_error = $3, job_result_id = $4 where id  = $2",
+				status,
+				job.QueryID,
+				job.Err(),
+				job.GetResultID(),
+			)
+			cancel()
+			if err != nil {
+				log.Fatal().Err(err).Send()
+			}
+			s.reportStreams.Ping(job.ReportID)
+		case <-job.Ctx.Done():
+			return
+		}
+	}
+}
+
+// RunQuery job against database
 func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*proto.RunQueryResponse, error) {
+	queriesRows, err := s.db.QueryContext(ctx,
+		`select
+			query_text,
+			report_id
+		from queries where id=$1 limit 1`,
+		req.QueryId,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer queriesRows.Close()
+	var queryText string
+	var reportID string
+	for queriesRows.Next() {
+		err := queriesRows.Scan(&queryText, &reportID)
+		if err != nil {
+			log.Err(err).Send()
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+	job := s.jobs.New(reportID, req.QueryId)
+	obj := s.bucket.Object(fmt.Sprintf("%s.csv", job.ID))
+	go s.updateJobStatus(job)
+	err = job.Run(queryText, obj)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	res := &proto.RunQueryResponse{}
+	return res, nil
+}
+
+// CancelQuery jobs
+func (s Server) CancelQuery(ctx context.Context, req *proto.CancelQueryRequest) (*proto.CancelQueryResponse, error) {
+	_, err := uuid.Parse(req.QueryId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
 	queriesRows, err := s.db.QueryContext(ctx,
 		"select query_text, report_id from queries where id=$1 limit 1",
 		req.QueryId,
@@ -122,26 +186,10 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	}
-	bigqueryClient, err := bigquery.NewClient(ctx, os.Getenv("DEKART_BIGQUERY_PROJECT_ID"))
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
+	if reportID == "" {
+		log.Warn().Str("QueryId", req.QueryId).Msg("Query not found")
+		return nil, status.Error(codes.NotFound, err.Error())
 	}
-	defer bigqueryClient.Close()
-
-	q := bigqueryClient.Query(queryText)
-	job, err := q.Run(ctx)
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	//TODO: continuesly update status
-	err = s.setJobStatus(ctx, req.QueryId, reportID, 2)
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	go s.waitJob(job, req.QueryId, reportID)
-	res := &proto.RunQueryResponse{}
-	return res, nil
+	s.jobs.Cancel(req.QueryId)
+	return &proto.CancelQueryResponse{}, nil
 }

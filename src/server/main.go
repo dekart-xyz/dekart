@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"dekart/src/server/dekart"
 	"dekart/src/server/http"
+	"dekart/src/server/job"
 	"fmt"
 	"math/rand"
 	"os"
@@ -92,8 +93,9 @@ func main() {
 	applyMigrations(db)
 
 	bucket := configureBucket()
+	jobs := job.NewStore()
 
-	dekartServer := dekart.NewServer(db, bucket)
+	dekartServer := dekart.NewServer(db, bucket, jobs)
 
 	httpServer := http.Configure(dekartServer)
 	log.Fatal().Err(httpServer.ListenAndServe()).Send()

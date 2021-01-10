@@ -4,12 +4,16 @@ option go_package = "proto";
 
 service Dekart {
     rpc CreateReport(CreateReportRequest) returns (CreateReportResponse) {}
-    rpc CreateQuery(CreateQueryRequest) returns (CreateQueryResponse) {}
-    rpc UpdateQuery(UpdateQueryRequest) returns (UpdateQueryResponse) {}
     rpc UpdateReport(UpdateReportRequest) returns (UpdateReportResponse) {}
     rpc ArchiveReport(ArchiveReportRequest) returns (ArchiveReportResponse) {}
+
+    rpc CreateQuery(CreateQueryRequest) returns (CreateQueryResponse) {}
+    rpc UpdateQuery(UpdateQueryRequest) returns (UpdateQueryResponse) {}
     rpc RunQuery(RunQueryRequest) returns (RunQueryResponse) {}
+    rpc CancelQuery(CancelQueryRequest) returns (CancelQueryResponse) {}
+
     rpc GetTokens(GetTokensRequest) returns (GetTokensResponse) {}
+
     rpc GetReportStream(ReportStreamRequest) returns (stream ReportStreamResponse) {}
     rpc GetReportListStream(ReportListRequest) returns (stream ReportListResponse) {}
 }
@@ -80,6 +84,13 @@ message RunQueryRequest {
 }
 
 message RunQueryResponse {
+}
+
+message CancelQueryRequest {
+    string query_id = 1;
+}
+
+message CancelQueryResponse {
 }
 
 message UpdateQueryRequest {

@@ -13,24 +13,6 @@ type DekartCreateReport = {
   readonly responseType: typeof proto_dekart_pb.CreateReportResponse;
 };
 
-type DekartCreateQuery = {
-  readonly methodName: string;
-  readonly service: typeof Dekart;
-  readonly requestStream: false;
-  readonly responseStream: false;
-  readonly requestType: typeof proto_dekart_pb.CreateQueryRequest;
-  readonly responseType: typeof proto_dekart_pb.CreateQueryResponse;
-};
-
-type DekartUpdateQuery = {
-  readonly methodName: string;
-  readonly service: typeof Dekart;
-  readonly requestStream: false;
-  readonly responseStream: false;
-  readonly requestType: typeof proto_dekart_pb.UpdateQueryRequest;
-  readonly responseType: typeof proto_dekart_pb.UpdateQueryResponse;
-};
-
 type DekartUpdateReport = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -49,6 +31,24 @@ type DekartArchiveReport = {
   readonly responseType: typeof proto_dekart_pb.ArchiveReportResponse;
 };
 
+type DekartCreateQuery = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.CreateQueryRequest;
+  readonly responseType: typeof proto_dekart_pb.CreateQueryResponse;
+};
+
+type DekartUpdateQuery = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.UpdateQueryRequest;
+  readonly responseType: typeof proto_dekart_pb.UpdateQueryResponse;
+};
+
 type DekartRunQuery = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -56,6 +56,15 @@ type DekartRunQuery = {
   readonly responseStream: false;
   readonly requestType: typeof proto_dekart_pb.RunQueryRequest;
   readonly responseType: typeof proto_dekart_pb.RunQueryResponse;
+};
+
+type DekartCancelQuery = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.CancelQueryRequest;
+  readonly responseType: typeof proto_dekart_pb.CancelQueryResponse;
 };
 
 type DekartGetTokens = {
@@ -88,11 +97,12 @@ type DekartGetReportListStream = {
 export class Dekart {
   static readonly serviceName: string;
   static readonly CreateReport: DekartCreateReport;
-  static readonly CreateQuery: DekartCreateQuery;
-  static readonly UpdateQuery: DekartUpdateQuery;
   static readonly UpdateReport: DekartUpdateReport;
   static readonly ArchiveReport: DekartArchiveReport;
+  static readonly CreateQuery: DekartCreateQuery;
+  static readonly UpdateQuery: DekartUpdateQuery;
   static readonly RunQuery: DekartRunQuery;
+  static readonly CancelQuery: DekartCancelQuery;
   static readonly GetTokens: DekartGetTokens;
   static readonly GetReportStream: DekartGetReportStream;
   static readonly GetReportListStream: DekartGetReportListStream;
@@ -139,24 +149,6 @@ export class DekartClient {
     requestMessage: proto_dekart_pb.CreateReportRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateReportResponse|null) => void
   ): UnaryResponse;
-  createQuery(
-    requestMessage: proto_dekart_pb.CreateQueryRequest,
-    metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateQueryResponse|null) => void
-  ): UnaryResponse;
-  createQuery(
-    requestMessage: proto_dekart_pb.CreateQueryRequest,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateQueryResponse|null) => void
-  ): UnaryResponse;
-  updateQuery(
-    requestMessage: proto_dekart_pb.UpdateQueryRequest,
-    metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateQueryResponse|null) => void
-  ): UnaryResponse;
-  updateQuery(
-    requestMessage: proto_dekart_pb.UpdateQueryRequest,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateQueryResponse|null) => void
-  ): UnaryResponse;
   updateReport(
     requestMessage: proto_dekart_pb.UpdateReportRequest,
     metadata: grpc.Metadata,
@@ -175,6 +167,24 @@ export class DekartClient {
     requestMessage: proto_dekart_pb.ArchiveReportRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.ArchiveReportResponse|null) => void
   ): UnaryResponse;
+  createQuery(
+    requestMessage: proto_dekart_pb.CreateQueryRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateQueryResponse|null) => void
+  ): UnaryResponse;
+  createQuery(
+    requestMessage: proto_dekart_pb.CreateQueryRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateQueryResponse|null) => void
+  ): UnaryResponse;
+  updateQuery(
+    requestMessage: proto_dekart_pb.UpdateQueryRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateQueryResponse|null) => void
+  ): UnaryResponse;
+  updateQuery(
+    requestMessage: proto_dekart_pb.UpdateQueryRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateQueryResponse|null) => void
+  ): UnaryResponse;
   runQuery(
     requestMessage: proto_dekart_pb.RunQueryRequest,
     metadata: grpc.Metadata,
@@ -183,6 +193,15 @@ export class DekartClient {
   runQuery(
     requestMessage: proto_dekart_pb.RunQueryRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.RunQueryResponse|null) => void
+  ): UnaryResponse;
+  cancelQuery(
+    requestMessage: proto_dekart_pb.CancelQueryRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CancelQueryResponse|null) => void
+  ): UnaryResponse;
+  cancelQuery(
+    requestMessage: proto_dekart_pb.CancelQueryRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CancelQueryResponse|null) => void
   ): UnaryResponse;
   getTokens(
     requestMessage: proto_dekart_pb.GetTokensRequest,

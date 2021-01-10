@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/job"
 	"dekart/src/server/report"
 	"os"
 
@@ -16,13 +17,15 @@ type Server struct {
 	reportStreams *report.Streams
 	bucket        *storage.BucketHandle
 	proto.UnimplementedDekartServer
+	jobs *job.Store
 }
 
-func NewServer(db *sql.DB, bucket *storage.BucketHandle) *Server {
+func NewServer(db *sql.DB, bucket *storage.BucketHandle, jobs *job.Store) *Server {
 	server := Server{
 		db:            db,
 		reportStreams: report.NewStreams(),
 		bucket:        bucket,
+		jobs:          jobs,
 	}
 	return &server
 

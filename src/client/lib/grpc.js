@@ -60,6 +60,7 @@ export function getStream (endpoint, request, onMessage, onError, cancelable = n
       if (!cancelable.canceled) {
         const messageObj = message.toObject()
         currentSequence = messageObj.streamOptions.sequence
+        // console.log('messageObj', messageObj)
         onMessage(messageObj)
       }
     },
