@@ -48,7 +48,7 @@ class CancelableRequest {
   }
 }
 
-export function getStream (endpoint, request, onMessage, onError, cancelable = new CancelableRequest(), sequence = 0) {
+export function getStream (endpoint, request, onMessage, onError, cancelable = new CancelableRequest(), sequence = 0, retryCount = 0) {
   const streamOptions = new StreamOptions()
   let currentSequence = sequence
   streamOptions.setSequence(currentSequence)
@@ -57,6 +57,7 @@ export function getStream (endpoint, request, onMessage, onError, cancelable = n
     host,
     request,
     onMessage: (message) => {
+      retryCount = 0
       if (!cancelable.canceled) {
         const messageObj = message.toObject()
         currentSequence = messageObj.streamOptions.sequence
@@ -64,10 +65,22 @@ export function getStream (endpoint, request, onMessage, onError, cancelable = n
         onMessage(messageObj)
       }
     },
-    onEnd: (code, message) => {
+    onEnd: function onEnd (code, message) {
+      if (cancelable.canceled) {
+        return
+      }
       if (code === 0) {
-        if (!cancelable.canceled) {
-          getStream(endpoint, request, onMessage, onError, cancelable, currentSequence)
+        getStream(endpoint, request, onMessage, onError, cancelable, currentSequence)
+      } else if (code === 2 && retryCount <= 4) {
+        if (window.document.hidden) {
+          const onVisibilityChange = () => {
+            window.document.removeEventListener('visibilitychange', onVisibilityChange, false)
+            onEnd(code, message)
+          }
+          window.document.addEventListener('visibilitychange', onVisibilityChange, false)
+        } else {
+          retryCount++
+          setTimeout(() => getStream(endpoint, request, onMessage, onError, cancelable, currentSequence, retryCount + 1), 100 * Math.pow(2, retryCount))
         }
       } else {
         cancelable.cancel()
