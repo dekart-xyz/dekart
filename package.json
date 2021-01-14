@@ -13,6 +13,7 @@
     "google-protobuf": "^3.14.0",
     "kepler.gl": "^2.4.0",
     "lodash.debounce": "^4.0.8",
+    "luxon": "^1.25.0",
     "react": "^17.0.1",
     "react-ace": "^9.2.1",
     "react-dom": "^17.0.1",

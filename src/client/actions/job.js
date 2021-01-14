@@ -1,5 +1,4 @@
-import { downloading } from '../lib/message'
-import { error } from './error'
+import { downloading, error, finishDownloading } from './message'
 import { addDataToMap, toggleSidePanel } from 'kepler.gl/actions'
 import { processCsvData } from 'kepler.gl/dist/processors'
 import { get } from '../lib/api'
@@ -7,7 +6,7 @@ import { get } from '../lib/api'
 export function downloadJobResults (query) {
   return async (dispatch, getState) => {
     dispatch({ type: downloadJobResults.name, query })
-    const finish = downloading()
+    dispatch(downloading())
     let csv
     try {
       const res = await get(`/job-results/${query.jobResultId}.csv`)
@@ -25,7 +24,7 @@ export function downloadJobResults (query) {
         data
       }
     }))
-    finish()
+    dispatch(finishDownloading())
     const { reportStatus } = getState()
     if (reportStatus.edit) {
       dispatch(toggleSidePanel('layer'))

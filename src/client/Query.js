@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import AceEditor from 'react-ace'
 import { AutoSizer } from 'react-virtualized'
 import Alert from 'antd/es/alert'
@@ -13,6 +13,7 @@ import 'ace-builds/src-noconflict/ext-language_tools'
 import 'ace-builds/webpack-resolver'
 import { Query as QueryType } from '../proto/dekart_pb'
 import { SendOutlined } from '@ant-design/icons'
+import { DateTime, Duration } from 'luxon'
 
 function CancelButton ({ query }) {
   const dispatch = useDispatch()
@@ -40,18 +41,51 @@ function ShowDataTable ({ query }) {
     </Button>
   )
 }
+
+function JobTimer ({ query }) {
+  const online = useSelector(state => state.reportStatus.online)
+  const [durationMs, setDuration] = useState(Date.now())
+  useEffect(() => {
+    const start = Date.now()
+    let cancel = false
+    const iterator = () => {
+      if (cancel || !online) {
+        return
+      }
+      setDuration(query.jobDuration + Date.now() - start)
+      setTimeout(iterator, 1000)
+    }
+    iterator()
+    return () => { cancel = true }
+  }, [query.jobDuration])
+  if (!online) {
+    return null
+  }
+  const duration = Duration.fromMillis(durationMs)
+  return (<span className={styles.jobTimer}>{duration.toFormat('mm:ss')}</span>)
+}
+
+function StatusActions ({ query }) {
+  return (
+    <span className={styles.statusActions}>
+      <JobTimer query={query} />
+      <CancelButton query={query} />
+    </span>
+  )
+}
+
 function QueryAlert ({ query }) {
   if (query.jobError) {
-    return <Alert message='BigQuery Job Error' description={query.jobError} type='error' />
+    return <Alert message='Error' description={query.jobError} type='error' />
   }
   switch (query.jobStatus) {
     case QueryType.JobStatus.JOB_STATUS_PENDING:
-      return <Alert message='BigQuery Job Pending' type='info' action={<CancelButton query={query} />} />
+      return <Alert message='Pending' type='info' action={<StatusActions query={query} />} />
     case QueryType.JobStatus.JOB_STATUS_RUNNING:
-      return <Alert message='BigQuery Job Running' type='info' action={<CancelButton query={query} />} />
+      return <Alert message='Running' type='info' action={<StatusActions query={query} />} />
     case QueryType.JobStatus.JOB_STATUS_DONE:
       if (!query.jobResultId) {
-        return <Alert message='Reading Job Result from BigQuery' type='info' action={<CancelButton query={query} />} />
+        return <Alert message='Reading Result' type='info' action={<StatusActions query={query} />} />
       }
       return (
         <Alert

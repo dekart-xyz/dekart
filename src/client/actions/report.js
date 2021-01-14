@@ -1,11 +1,10 @@
 import { KeplerGlSchema } from 'kepler.gl/schemas'
 import { receiveMapConfig } from 'kepler.gl/actions'
 import { getReportStream, getStream, unary } from '../lib/grpc'
-import { streamError, success } from '../lib/message'
+import { error, streamError, success } from './message'
 import { downloadJobResults } from './job'
 import { ArchiveReportRequest, CreateReportRequest, Report, ReportListRequest, UpdateReportRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
-import { error } from './error'
 
 let reportStreamCancelable
 
@@ -41,7 +40,7 @@ export function openReport (reportId, edit, history) {
             history.replace('/400')
             return
           default:
-            streamError(code)
+            dispatch(streamError(code))
         }
       }
     )
@@ -135,7 +134,7 @@ export function createReport (history) {
       dispatch(error(err))
       throw err
     }
-    success('New Report Created')
+    dispatch(success('New Report Created'))
   }
 }
 
@@ -159,7 +158,7 @@ export function saveMap () {
     request.setReport(reportPayload)
     try {
       await unary(Dekart.UpdateReport, request)
-      success('Map Saved')
+      dispatch(success('Map Saved'))
     } catch (err) {
       dispatch(error(err))
     }

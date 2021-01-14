@@ -1,7 +1,7 @@
 import { GetTokensRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { unary } from '../lib/grpc'
-import { error } from './error'
+import { error } from './message'
 
 export function setTokens (tokensList) {
   return { type: setTokens.name, tokensList }

@@ -1,8 +1,7 @@
 import { CancelQueryRequest, CreateQueryRequest, Query, RunQueryRequest, UpdateQueryRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { unary } from '../lib/grpc'
-import { success } from '../lib/message'
-import { error } from './error'
+import { error, success } from './message'
 
 export function createQuery (reportId) {
   return (dispatch) => {
@@ -25,7 +24,7 @@ export function updateQuery (queryId, queryText) {
     request.setQuery(query)
     try {
       await unary(Dekart.UpdateQuery, request)
-      success('Query Saved')
+      dispatch(success('Query Saved'))
     } catch (err) {
       dispatch(error(err))
       throw error

@@ -226,6 +226,9 @@ export class Query extends jspb.Message {
   getJobError(): string;
   setJobError(value: string): void;
 
+  getJobDuration(): number;
+  setJobDuration(value: number): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Query.AsObject;
   static toObject(includeInstance: boolean, msg: Query): Query.AsObject;
@@ -244,6 +247,7 @@ export namespace Query {
     jobStatus: Query.JobStatusMap[keyof Query.JobStatusMap],
     jobResultId: string,
     jobError: string,
+    jobDuration: number,
   }
 
   export interface JobStatusMap {

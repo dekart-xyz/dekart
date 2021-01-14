@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 import keplerGlReducer from 'kepler.gl/reducers'
 import { ActionTypes as KeplerActionTypes } from 'kepler.gl/actions'
-import { downloadJobResults, openReport, reportTitleChange, reportUpdate, runQuery, saveMap, updateQuery, reportsListUpdate, unsubscribeReports, setTokens } from './actions'
+import { downloadJobResults, openReport, reportTitleChange, reportUpdate, runQuery, saveMap, updateQuery, reportsListUpdate, unsubscribeReports, setTokens, streamError } from './actions'
 import { Query } from '../proto/dekart_pb'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
@@ -43,7 +43,8 @@ const defaultReportStatus = {
   dataAdded: false,
   canSave: false,
   title: null,
-  edit: false
+  edit: false,
+  online: false
 }
 function reportStatus (state = defaultReportStatus, action) {
   switch (action.type) {
@@ -61,12 +62,18 @@ function reportStatus (state = defaultReportStatus, action) {
       return {
         ...state,
         canSave: true,
+        online: true,
         title: state.title == null ? action.report.title : state.title
       }
     case openReport.name:
       return {
         ...defaultReportStatus,
         edit: action.edit
+      }
+    case streamError.name:
+      return {
+        ...state,
+        online: false
       }
     case KeplerActionTypes.ADD_DATA_TO_MAP:
       return {

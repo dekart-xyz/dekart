@@ -56,7 +56,12 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 			query_text,
 			job_status,
 			case when job_result_id is null then '' else cast(job_result_id as VARCHAR) end as job_result_id,
-			case when job_error is null then '' else job_error end as job_error
+			case when job_error is null then '' else job_error end as job_error,
+			case
+				when job_started is null
+				then 0
+				else CAST((extract('epoch' from CURRENT_TIMESTAMP)  - extract('epoch' from job_started))*1000 as INTEGER)
+			end as job_duration
 		from queries where report_id=$1`,
 		res.Report.Id,
 	)
@@ -76,9 +81,18 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 			&query.JobStatus,
 			&query.JobResultId,
 			&query.JobError,
+			&query.JobDuration,
 		); err != nil {
 			log.Err(err).Send()
 			return status.Errorf(codes.Internal, err.Error())
+		}
+		switch query.JobStatus {
+		case proto.Query_JOB_STATUS_UNSPECIFIED:
+			query.JobDuration = 0
+		case proto.Query_JOB_STATUS_DONE:
+			if query.JobResultId != "" {
+				query.JobDuration = 0
+			}
 		}
 		res.Queries = append(res.Queries, &query)
 	}

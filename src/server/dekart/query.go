@@ -108,14 +108,32 @@ func (s Server) updateJobStatus(job *job.Job) {
 		select {
 		case status := <-job.Status:
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			_, err := s.db.ExecContext(
-				ctx,
-				"update queries set job_status = $1, job_error = $3, job_result_id = $4 where id  = $2",
-				status,
-				job.QueryID,
-				job.Err(),
-				job.GetResultID(),
-			)
+			var err error
+			if status == int32(proto.Query_JOB_STATUS_RUNNING) {
+				_, err = s.db.ExecContext(
+					ctx,
+					`update queries set
+						job_status = $1,
+						job_error = $3,
+						job_result_id = $4,
+						job_started = CURRENT_TIMESTAMP
+					where id  = $2`,
+					status,
+					job.QueryID,
+					job.Err(),
+					job.GetResultID(),
+				)
+
+			} else {
+				_, err = s.db.ExecContext(
+					ctx,
+					"update queries set job_status = $1, job_error = $3, job_result_id = $4 where id  = $2",
+					status,
+					job.QueryID,
+					job.Err(),
+					job.GetResultID(),
+				)
+			}
 			cancel()
 			if err != nil {
 				log.Fatal().Err(err).Send()

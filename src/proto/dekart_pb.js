@@ -1974,7 +1974,8 @@ proto.Query.toObject = function(includeInstance, msg) {
     queryText: jspb.Message.getFieldWithDefault(msg, 3, ""),
     jobStatus: jspb.Message.getFieldWithDefault(msg, 4, 0),
     jobResultId: jspb.Message.getFieldWithDefault(msg, 5, ""),
-    jobError: jspb.Message.getFieldWithDefault(msg, 6, "")
+    jobError: jspb.Message.getFieldWithDefault(msg, 6, ""),
+    jobDuration: jspb.Message.getFieldWithDefault(msg, 7, 0)
   };
 
   if (includeInstance) {
@@ -2034,6 +2035,10 @@ proto.Query.deserializeBinaryFromReader = function(msg, reader) {
     case 6:
       var value = /** @type {string} */ (reader.readString());
       msg.setJobError(value);
+      break;
+    case 7:
+      var value = /** @type {number} */ (reader.readInt32());
+      msg.setJobDuration(value);
       break;
     default:
       reader.skipField();
@@ -2103,6 +2108,13 @@ proto.Query.serializeBinaryToWriter = function(message, writer) {
   if (f.length > 0) {
     writer.writeString(
       6,
+      f
+    );
+  }
+  f = message.getJobDuration();
+  if (f !== 0) {
+    writer.writeInt32(
+      7,
       f
     );
   }
@@ -2224,6 +2236,24 @@ proto.Query.prototype.getJobError = function() {
  */
 proto.Query.prototype.setJobError = function(value) {
   return jspb.Message.setProto3StringField(this, 6, value);
+};
+
+
+/**
+ * optional int32 job_duration = 7;
+ * @return {number}
+ */
+proto.Query.prototype.getJobDuration = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 7, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.Query} returns this
+ */
+proto.Query.prototype.setJobDuration = function(value) {
+  return jspb.Message.setProto3IntField(this, 7, value);
 };
 
 
