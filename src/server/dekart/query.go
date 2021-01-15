@@ -116,7 +116,9 @@ func (s Server) updateJobStatus(job *job.Job) {
 						job_status = $1,
 						job_error = $3,
 						job_result_id = $4,
-						job_started = CURRENT_TIMESTAMP
+						job_started = CURRENT_TIMESTAMP,
+						total_rows = 0,
+						bytes_processed = 0
 					where id  = $2`,
 					status,
 					job.QueryID,
@@ -127,11 +129,19 @@ func (s Server) updateJobStatus(job *job.Job) {
 			} else {
 				_, err = s.db.ExecContext(
 					ctx,
-					"update queries set job_status = $1, job_error = $3, job_result_id = $4 where id  = $2",
+					`update queries set
+						job_status = $1,
+						job_error = $3,
+						job_result_id = $4,
+						total_rows = $5,
+						bytes_processed = $6
+					where id  = $2`,
 					status,
 					job.QueryID,
 					job.Err(),
 					job.GetResultID(),
+					job.GetTotalRows(),
+					job.GetProcessedBytes(),
 				)
 			}
 			cancel()

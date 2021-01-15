@@ -1975,7 +1975,9 @@ proto.Query.toObject = function(includeInstance, msg) {
     jobStatus: jspb.Message.getFieldWithDefault(msg, 4, 0),
     jobResultId: jspb.Message.getFieldWithDefault(msg, 5, ""),
     jobError: jspb.Message.getFieldWithDefault(msg, 6, ""),
-    jobDuration: jspb.Message.getFieldWithDefault(msg, 7, 0)
+    jobDuration: jspb.Message.getFieldWithDefault(msg, 7, 0),
+    totalRows: jspb.Message.getFieldWithDefault(msg, 8, 0),
+    bytesProcessed: jspb.Message.getFieldWithDefault(msg, 9, 0)
   };
 
   if (includeInstance) {
@@ -2039,6 +2041,14 @@ proto.Query.deserializeBinaryFromReader = function(msg, reader) {
     case 7:
       var value = /** @type {number} */ (reader.readInt32());
       msg.setJobDuration(value);
+      break;
+    case 8:
+      var value = /** @type {number} */ (reader.readInt32());
+      msg.setTotalRows(value);
+      break;
+    case 9:
+      var value = /** @type {number} */ (reader.readInt32());
+      msg.setBytesProcessed(value);
       break;
     default:
       reader.skipField();
@@ -2115,6 +2125,20 @@ proto.Query.serializeBinaryToWriter = function(message, writer) {
   if (f !== 0) {
     writer.writeInt32(
       7,
+      f
+    );
+  }
+  f = message.getTotalRows();
+  if (f !== 0) {
+    writer.writeInt32(
+      8,
+      f
+    );
+  }
+  f = message.getBytesProcessed();
+  if (f !== 0) {
+    writer.writeInt32(
+      9,
       f
     );
   }
@@ -2254,6 +2278,42 @@ proto.Query.prototype.getJobDuration = function() {
  */
 proto.Query.prototype.setJobDuration = function(value) {
   return jspb.Message.setProto3IntField(this, 7, value);
+};
+
+
+/**
+ * optional int32 total_rows = 8;
+ * @return {number}
+ */
+proto.Query.prototype.getTotalRows = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 8, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.Query} returns this
+ */
+proto.Query.prototype.setTotalRows = function(value) {
+  return jspb.Message.setProto3IntField(this, 8, value);
+};
+
+
+/**
+ * optional int32 bytes_processed = 9;
+ * @return {number}
+ */
+proto.Query.prototype.getBytesProcessed = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 9, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.Query} returns this
+ */
+proto.Query.prototype.setBytesProcessed = function(value) {
+  return jspb.Message.setProto3IntField(this, 9, value);
 };
 
 

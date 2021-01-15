@@ -71,6 +71,8 @@ message Query {
     string job_result_id = 5;
     string job_error = 6;
     int32 job_duration = 7;
+    int32 total_rows = 8;
+    int32 bytes_processed = 9;
 }
 
 message UpdateReportRequest {

@@ -19,17 +19,19 @@ import (
 
 // Job of quering db, concurency safe
 type Job struct {
-	ID          string
-	QueryID     string
-	ReportID    string
-	Ctx         context.Context
-	cancel      context.CancelFunc
-	bigqueryJob *bigquery.Job
-	Status      chan int32
-	err         string
-	resultID    *string
-	storageObj  *storage.ObjectHandle
-	mutex       sync.Mutex
+	ID             string
+	QueryID        string
+	ReportID       string
+	Ctx            context.Context
+	cancel         context.CancelFunc
+	bigqueryJob    *bigquery.Job
+	Status         chan int32
+	err            string
+	totalRows      int64
+	processedBytes int64
+	resultID       *string
+	storageObj     *storage.ObjectHandle
+	mutex          sync.Mutex
 }
 
 // Err of job
@@ -44,6 +46,20 @@ func (job *Job) GetResultID() *string {
 	job.mutex.Lock()
 	defer job.mutex.Unlock()
 	return job.resultID
+}
+
+// GetTotalRows in result
+func (job *Job) GetTotalRows() int64 {
+	job.mutex.Lock()
+	defer job.mutex.Unlock()
+	return job.totalRows
+}
+
+// GetProcessedBytes in result
+func (job *Job) GetProcessedBytes() int64 {
+	job.mutex.Lock()
+	defer job.mutex.Unlock()
+	return job.processedBytes
 }
 
 func (job *Job) close(storageWriter *storage.Writer, csvWriter *csv.Writer) {
@@ -65,18 +81,34 @@ func (job *Job) close(storageWriter *storage.Writer, csvWriter *csv.Writer) {
 	job.cancel()
 }
 
-func (job *Job) read() {
+func (job *Job) setJobStats(queryStatus *bigquery.JobStatus, totalRows uint64) {
+	job.mutex.Lock()
+	defer job.mutex.Unlock()
+	if queryStatus.Statistics != nil {
+		job.processedBytes = queryStatus.Statistics.TotalBytesProcessed
+	}
+	job.totalRows = int64(totalRows)
+}
+
+func (job *Job) read(queryStatus *bigquery.JobStatus) {
 	ctx := job.Ctx
-	storageWriter := job.storageObj.NewWriter(ctx)
-	csvWriter := csv.NewWriter(storageWriter)
-	defer job.close(storageWriter, csvWriter)
+
 	it, err := job.bigqueryJob.Read(ctx)
 	if err != nil {
 		log.Err(err).Send()
 		job.cancel()
 		return
 	}
+
+	job.setJobStats(queryStatus, it.TotalRows)
+	job.Status <- int32(queryStatus.State)
+
+	storageWriter := job.storageObj.NewWriter(ctx)
+	csvWriter := csv.NewWriter(storageWriter)
+	defer job.close(storageWriter, csvWriter)
+
 	firstLine := true
+
 	for {
 		var row []bigquery.Value
 		err := it.Next(&row)
@@ -124,23 +156,31 @@ func (job *Job) read() {
 	}
 }
 
+func (job *Job) cancelWithError(err error) {
+	job.mutex.Lock()
+	job.err = err.Error()
+	job.mutex.Unlock()
+	job.Status <- 0
+	job.cancel()
+}
+
 func (job *Job) wait() {
 	queryStatus, err := job.bigqueryJob.Wait(job.Ctx)
 	if err == context.Canceled {
 		return
 	}
 	if err != nil {
-		job.mutex.Lock()
-		job.err = err.Error()
-		job.mutex.Unlock()
-		job.Status <- 0
-		job.cancel()
+		job.cancelWithError(err)
 		return
 	}
-	if queryStatus != nil {
-		job.Status <- int32(queryStatus.State)
+	if queryStatus == nil {
+		log.Fatal().Msgf("queryStatus == nil")
 	}
-	job.read()
+	if err := queryStatus.Err(); err != nil {
+		job.cancelWithError(err)
+		return
+	}
+	job.read(queryStatus)
 }
 
 // Run implementation

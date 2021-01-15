@@ -13,7 +13,8 @@ import 'ace-builds/src-noconflict/ext-language_tools'
 import 'ace-builds/webpack-resolver'
 import { Query as QueryType } from '../proto/dekart_pb'
 import { SendOutlined } from '@ant-design/icons'
-import { DateTime, Duration } from 'luxon'
+import { Duration } from 'luxon'
+import prettyBites from 'pretty-bytes'
 
 function CancelButton ({ query }) {
   const dispatch = useDispatch()
@@ -37,7 +38,7 @@ function ShowDataTable ({ query }) {
       size='small'
       type='ghost'
       onClick={() => dispatch(showDataTable(query))}
-    >Show Data Table
+    >Show Table
     </Button>
   )
 }
@@ -57,7 +58,7 @@ function JobTimer ({ query }) {
     }
     iterator()
     return () => { cancel = true }
-  }, [query.jobDuration])
+  }, [query.jobDuration, online])
   if (!online) {
     return null
   }
@@ -72,6 +73,14 @@ function StatusActions ({ query }) {
       <CancelButton query={query} />
     </span>
   )
+}
+
+function Processed ({ query }) {
+  if (query.bytesProcessed) {
+    return (<span className={styles.processed}>({prettyBites(query.bytesProcessed)} processed)</span>)
+  } else {
+    return (<span className={styles.processed}>(cashed)</span>)
+  }
 }
 
 function QueryAlert ({ query }) {
@@ -89,7 +98,7 @@ function QueryAlert ({ query }) {
       }
       return (
         <Alert
-          message='Ready'
+          message={<span>Ready <Processed query={query} /></span>}
           type='success'
           showIcon
           action={<ShowDataTable query={query} />}
@@ -129,14 +138,14 @@ function QueryEditor ({ queryId, queryText, onChange }) {
 
 export default function Query ({ query }) {
   const [queryText, setQueryText] = useState(query.queryText)
-  const { canRun/*, downloadingResults */ } = useSelector(state => state.queryStatus[query.id])
+  const { canRun } = useSelector(state => state.queryStatus[query.id])
   const dispatch = useDispatch()
   return (
     <div key={query.id} className={styles.query}>
       <QueryEditor queryId={query.id} queryText={queryText} onChange={value => setQueryText(value)} />
       <div className={styles.actions}>
         <div className={styles.status}>
-          <QueryAlert query={query} /* downloadingResults={downloadingResults} */ />
+          <QueryAlert query={query} />
         </div>
         <div className={styles.button}>
           <Button
