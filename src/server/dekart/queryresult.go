@@ -23,6 +23,7 @@ func (s Server) ServeQueryResult(w http.ResponseWriter, r *http.Request) {
 	}
 	defer objectReader.Close()
 	w.Header().Set("Content-Type", attrs.ContentType)
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", attrs.Size))
 	w.Header().Set("Cache-Control", "public, max-age=31536000")
 	w.Header().Set("Last-Modified", attrs.Created.Format(time.UnixDate))
 	if _, err := io.Copy(w, objectReader); err != nil {

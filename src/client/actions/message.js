@@ -1,16 +1,13 @@
-import Button from 'antd/es/button'
 import message from 'antd/es/message'
+import Downloading from '../Downloading'
+import StreamError from '../StreamError'
 
 const style = { marginTop: 60 }
-
-function StreamError ({ code }) {
-  return (<span>Disconnected From Dekart backend (code={code}) <Button onClick={() => window.location.reload()} size='small'>Reload Page</Button></span>)
-}
 
 let hideDownloading = null
 export function downloading () {
   hideDownloading = message.loading({
-    content: 'Downloading Map Data...',
+    content: <Downloading />,
     duration: 0,
     style
   })

@@ -2,6 +2,7 @@ import { downloading, error, finishDownloading } from './message'
 import { addDataToMap, toggleSidePanel } from 'kepler.gl/actions'
 import { processCsvData } from 'kepler.gl/dist/processors'
 import { get } from '../lib/api'
+import Downloading from '../Downloading'
 
 export function downloadJobResults (query) {
   return async (dispatch, getState) => {
@@ -10,6 +11,8 @@ export function downloadJobResults (query) {
     let csv
     try {
       const res = await get(`/job-results/${query.jobResultId}.csv`)
+      Downloading.setSize(Number(res.headers.get('Content-Length')))
+      dispatch(jobResultSize(query, Number(res.headers.get('Content-Length'))))
       csv = await res.text()
     } catch (err) {
       dispatch(error(err))
@@ -30,4 +33,8 @@ export function downloadJobResults (query) {
       dispatch(toggleSidePanel('layer'))
     }
   }
+}
+
+export function jobResultSize (query, size) {
+  return { type: jobResultSize.name, query, size }
 }
