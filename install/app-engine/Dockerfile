@@ -1,1 +1,1 @@
-from dekartxyz/dekart:latest
+from dekartxyz/dekart:0.2

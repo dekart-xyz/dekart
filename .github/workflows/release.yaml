@@ -1,4 +1,4 @@
-name: CI
+name: Release
 
 on:
   push:
@@ -36,12 +36,4 @@ jobs:
           push: true
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
-      - name: Docker Hub Description
-        uses: peter-evans/dockerhub-description@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
-          repository: dekartxyz/dekart
-          short-description: Visualize Data from BigQuery on a Kepler.gl map
-          readme-filepath: ./install/docker/README.md
 

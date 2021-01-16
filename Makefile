@@ -45,7 +45,5 @@ version:
 	npm version $(MAKECMDGOALS)
 minor: version
 patch: version
-latest:
-	git tag -f latest
 release:
 	git push origin HEAD --tags
