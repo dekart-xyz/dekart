@@ -2047,7 +2047,7 @@ proto.Query.deserializeBinaryFromReader = function(msg, reader) {
       msg.setTotalRows(value);
       break;
     case 9:
-      var value = /** @type {number} */ (reader.readInt32());
+      var value = /** @type {number} */ (reader.readInt64());
       msg.setBytesProcessed(value);
       break;
     default:
@@ -2137,7 +2137,7 @@ proto.Query.serializeBinaryToWriter = function(message, writer) {
   }
   f = message.getBytesProcessed();
   if (f !== 0) {
-    writer.writeInt32(
+    writer.writeInt64(
       9,
       f
     );
@@ -2300,7 +2300,7 @@ proto.Query.prototype.setTotalRows = function(value) {
 
 
 /**
- * optional int32 bytes_processed = 9;
+ * optional int64 bytes_processed = 9;
  * @return {number}
  */
 proto.Query.prototype.getBytesProcessed = function() {
