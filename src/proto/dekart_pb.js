@@ -1977,7 +1977,8 @@ proto.Query.toObject = function(includeInstance, msg) {
     jobError: jspb.Message.getFieldWithDefault(msg, 6, ""),
     jobDuration: jspb.Message.getFieldWithDefault(msg, 7, 0),
     totalRows: jspb.Message.getFieldWithDefault(msg, 8, 0),
-    bytesProcessed: jspb.Message.getFieldWithDefault(msg, 9, 0)
+    bytesProcessed: jspb.Message.getFieldWithDefault(msg, 9, 0),
+    resultSize: jspb.Message.getFieldWithDefault(msg, 10, 0)
   };
 
   if (includeInstance) {
@@ -2049,6 +2050,10 @@ proto.Query.deserializeBinaryFromReader = function(msg, reader) {
     case 9:
       var value = /** @type {number} */ (reader.readInt64());
       msg.setBytesProcessed(value);
+      break;
+    case 10:
+      var value = /** @type {number} */ (reader.readInt64());
+      msg.setResultSize(value);
       break;
     default:
       reader.skipField();
@@ -2139,6 +2144,13 @@ proto.Query.serializeBinaryToWriter = function(message, writer) {
   if (f !== 0) {
     writer.writeInt64(
       9,
+      f
+    );
+  }
+  f = message.getResultSize();
+  if (f !== 0) {
+    writer.writeInt64(
+      10,
       f
     );
   }
@@ -2314,6 +2326,24 @@ proto.Query.prototype.getBytesProcessed = function() {
  */
 proto.Query.prototype.setBytesProcessed = function(value) {
   return jspb.Message.setProto3IntField(this, 9, value);
+};
+
+
+/**
+ * optional int64 result_size = 10;
+ * @return {number}
+ */
+proto.Query.prototype.getResultSize = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 10, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.Query} returns this
+ */
+proto.Query.prototype.setResultSize = function(value) {
+  return jspb.Message.setProto3IntField(this, 10, value);
 };
 
 

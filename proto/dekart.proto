@@ -73,6 +73,7 @@ message Query {
     int32 job_duration = 7;
     int32 total_rows = 8;
     int64 bytes_processed = 9;
+    int64 result_size = 10;
 }
 
 message UpdateReportRequest {

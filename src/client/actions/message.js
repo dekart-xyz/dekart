@@ -5,9 +5,10 @@ import StreamError from '../StreamError'
 const style = { marginTop: 60 }
 
 let hideDownloading = null
-export function downloading () {
+export function downloading (query) {
+  const { resultSize } = query
   hideDownloading = message.loading({
-    content: <Downloading />,
+    content: <Downloading size={resultSize} />,
     duration: 0,
     style
   })

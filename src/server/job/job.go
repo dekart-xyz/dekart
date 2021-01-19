@@ -29,6 +29,7 @@ type Job struct {
 	err            string
 	totalRows      int64
 	processedBytes int64
+	resultSize     int64
 	resultID       *string
 	storageObj     *storage.ObjectHandle
 	mutex          sync.Mutex
@@ -39,6 +40,13 @@ func (job *Job) Err() string {
 	job.mutex.Lock()
 	defer job.mutex.Unlock()
 	return job.err
+}
+
+// GetResultSize of the job
+func (job *Job) GetResultSize() int64 {
+	job.mutex.Lock()
+	defer job.mutex.Unlock()
+	return job.resultSize
 }
 
 // GetResultID for the job; nil means results not yet saved
@@ -73,9 +81,13 @@ func (job *Job) close(storageWriter *storage.Writer, csvWriter *csv.Writer) {
 		job.cancel()
 		return
 	}
+	attrs := storageWriter.Attrs()
 	job.mutex.Lock()
 	// TODO: use bool done
 	job.resultID = &job.ID
+	if attrs != nil {
+		job.resultSize = attrs.Size
+	}
 	job.mutex.Unlock()
 	job.Status <- int32(proto.Query_JOB_STATUS_DONE)
 	job.cancel()

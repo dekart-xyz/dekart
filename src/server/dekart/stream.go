@@ -63,7 +63,8 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 				else CAST((extract('epoch' from CURRENT_TIMESTAMP)  - extract('epoch' from job_started))*1000 as INTEGER)
 			end as job_duration,
 			total_rows,
-			bytes_processed
+			bytes_processed,
+			result_size
 		from queries where report_id=$1`,
 		res.Report.Id,
 	)
@@ -86,6 +87,7 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 			&query.JobDuration,
 			&query.TotalRows,
 			&query.BytesProcessed,
+			&query.ResultSize,
 		); err != nil {
 			log.Err(err).Send()
 			return status.Errorf(codes.Internal, err.Error())

@@ -118,7 +118,8 @@ func (s Server) updateJobStatus(job *job.Job) {
 						job_result_id = $4,
 						job_started = CURRENT_TIMESTAMP,
 						total_rows = 0,
-						bytes_processed = 0
+						bytes_processed = 0,
+						result_size = 0
 					where id  = $2`,
 					status,
 					job.QueryID,
@@ -134,7 +135,8 @@ func (s Server) updateJobStatus(job *job.Job) {
 						job_error = $3,
 						job_result_id = $4,
 						total_rows = $5,
-						bytes_processed = $6
+						bytes_processed = $6,
+						result_size = $7
 					where id  = $2`,
 					status,
 					job.QueryID,
@@ -142,6 +144,7 @@ func (s Server) updateJobStatus(job *job.Job) {
 					job.GetResultID(),
 					job.GetTotalRows(),
 					job.GetProcessedBytes(),
+					job.GetResultSize(),
 				)
 			}
 			cancel()
