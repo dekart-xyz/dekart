@@ -22,6 +22,10 @@ Visualize Data from BigQuery on a Kepler.gl map and share it with your team:
 
 See [environment variables](./docs/ENVIROMENT.md) for configuration details
 
+## Roadmap
+
+Please add 👍 to the issues in the [roadmap](https://github.com/dekart-xyz/dekart/projects/1).
+
 ## License
 
 MIT
