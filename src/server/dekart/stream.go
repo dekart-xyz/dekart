@@ -4,6 +4,7 @@ import (
 	"context"
 	"dekart/src/proto"
 	"dekart/src/server/report"
+	"dekart/src/server/user"
 	"fmt"
 	"time"
 
@@ -113,6 +114,10 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 
 // GetReportStream which sends report and queries on every update
 func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart_GetReportStreamServer) error {
+	claims := user.GetClaims(srv.Context())
+	if claims == nil {
+		return Unauthenticated
+	}
 	if req.StreamOptions == nil {
 		err := fmt.Errorf("Missing StreamOptions")
 		return status.Error(codes.InvalidArgument, err.Error())
@@ -190,6 +195,10 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 
 // GetReportListStream streams list of reports
 func (s Server) GetReportListStream(req *proto.ReportListRequest, srv proto.Dekart_GetReportListStreamServer) error {
+	claims := user.GetClaims(srv.Context())
+	if claims == nil {
+		return Unauthenticated
+	}
 	if req.StreamOptions == nil {
 		err := fmt.Errorf("Missing StreamOptions")
 		return status.Error(codes.InvalidArgument, err.Error())

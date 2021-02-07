@@ -25,6 +25,9 @@ export default function App () {
         <Route path='/400'>
           <Result icon={<WarningOutlined />} title='400' subTitle='Bad Request' />
         </Route>
+        <Route path='/401'>
+          <Result icon={<WarningOutlined />} title='401' subTitle='Unauthorized' />
+        </Route>
         <Route path='*'>
           <Result icon={<QuestionOutlined />} title='404' subTitle='Page not found' />
         </Route>

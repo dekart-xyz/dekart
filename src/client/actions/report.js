@@ -30,19 +30,7 @@ export function openReport (reportId, edit, history) {
       (reportStreamResponse) => {
         dispatch(reportUpdate(reportStreamResponse))
       },
-      (code) => {
-        // https://github.com/grpc/grpc/blob/master/doc/statuscodes.md
-        switch (code) {
-          case 5:
-            history.replace('/404')
-            return
-          case 3:
-            history.replace('/400')
-            return
-          default:
-            dispatch(streamError(code))
-        }
-      }
+      code => dispatch(streamError(code, history))
     )
   }
 }
@@ -85,7 +73,7 @@ export function reportUpdate (reportStreamResponse) {
 
 let reportStreamListCancelable
 
-export function subscribeReports () {
+export function subscribeReports (history) {
   return (dispatch) => {
     dispatch({ type: subscribeReports.name })
     const request = new ReportListRequest()
@@ -93,7 +81,7 @@ export function subscribeReports () {
       Dekart.GetReportListStream,
       request,
       ({ reportsList }) => dispatch(reportsListUpdate(reportsList)),
-      (code) => streamError(code)
+      code => dispatch(streamError(code, history))
     )
   }
 }

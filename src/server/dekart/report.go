@@ -3,6 +3,7 @@ package dekart
 import (
 	"context"
 	"dekart/src/proto"
+	"dekart/src/server/user"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -13,6 +14,10 @@ import (
 
 // CreateReport implementation
 func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest) (*proto.CreateReportResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
 	u, err := uuid.NewRandom()
 	if err != nil {
 		log.Err(err).Send()
@@ -34,7 +39,12 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 	return res, nil
 }
 
+// UpdateReport implementation
 func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest) (*proto.UpdateReportResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
 	if req.Report == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "req.Report == nil")
 	}
@@ -69,6 +79,10 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 
 // ArchiveReport implementation
 func (s Server) ArchiveReport(ctx context.Context, req *proto.ArchiveReportRequest) (*proto.ArchiveReportResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())

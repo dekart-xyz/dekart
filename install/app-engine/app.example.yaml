@@ -10,6 +10,7 @@ resources:
    memory_gb: 2.0 # recommended to handle up to 1M points
 
 env_variables:
+  DEKART_LOG_DEBUG: "1"
   DEKART_POSTGRES_DB: "dekart"
   DEKART_POSTGRES_USER: "postgres"
   DEKART_POSTGRES_PASSWORD: "dekart"

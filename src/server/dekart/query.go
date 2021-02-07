@@ -4,6 +4,7 @@ import (
 	"context"
 	"dekart/src/proto"
 	"dekart/src/server/job"
+	"dekart/src/server/user"
 	"fmt"
 	"time"
 
@@ -15,6 +16,10 @@ import (
 
 // CreateQuery in Report
 func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) (*proto.CreateQueryResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
 	if req.Query == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "req.Query == nil")
 	}
@@ -49,6 +54,10 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 
 // UpdateQuery by id implementation
 func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) (*proto.UpdateQueryResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
 	if req.Query == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "req.Query == nil")
 	}
@@ -160,6 +169,10 @@ func (s Server) updateJobStatus(job *job.Job) {
 
 // RunQuery job against database
 func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*proto.RunQueryResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
 	queriesRows, err := s.db.QueryContext(ctx,
 		`select
 			query_text,
@@ -195,6 +208,10 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 
 // CancelQuery jobs
 func (s Server) CancelQuery(ctx context.Context, req *proto.CancelQueryRequest) (*proto.CancelQueryResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
 	_, err := uuid.Parse(req.QueryId)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())

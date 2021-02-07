@@ -3,6 +3,7 @@ package http
 import (
 	"dekart/src/proto"
 	"dekart/src/server/dekart"
+	"dekart/src/server/user"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -108,18 +109,25 @@ func configureHTTP(dekartServer *dekart.Server) *mux.Router {
 	return router
 }
 
+// Configure HTTP server with http and grpc
 func Configure(dekartServer *dekart.Server) *http.Server {
 	grpcServer := configureGRPC(dekartServer)
 	httpServer := configureHTTP(dekartServer)
+	claimsCheck := user.NewClaimsCheck(
+		os.Getenv("DEKART_IAP_JWT_AUD"),
+		os.Getenv("DEKART_REQUIRE_IAP") == "1",
+		os.Getenv("DEKART_DEV_CLAIMS_EMAIL"),
+	)
 
 	port := os.Getenv("DEKART_PORT")
 	log.Info().Msgf("Starting dekart at :%s", port)
 	return &http.Server{
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			reqWithClaims := r.WithContext(claimsCheck.GetContext(r))
 			if grpcServer.IsAcceptableGrpcCorsRequest(r) || grpcServer.IsGrpcWebRequest(r) {
-				grpcServer.ServeHTTP(w, r)
+				grpcServer.ServeHTTP(w, reqWithClaims)
 			} else {
-				httpServer.ServeHTTP(w, r)
+				httpServer.ServeHTTP(w, reqWithClaims)
 			}
 		}),
 		Addr:         ":" + port,

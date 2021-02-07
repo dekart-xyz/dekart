@@ -23,6 +23,10 @@ proto: proto-docker # build proto stubs
 docker: # build docker for local use
 	docker build -t dekart-dev -f ./Dockerfile .
 
+ecr:
+	docker tag dekart-dev eu.gcr.io/dekart-playground/dekart:0.2
+	docker push eu.gcr.io/dekart-playground/dekart:0.2
+
 docker-compose-up:
 	docker-compose  --env-file .env up
 
@@ -47,3 +51,5 @@ minor: version
 patch: version
 release:
 	git push origin HEAD --tags
+test:
+	godotenv -f ./.env go test -v -count=1 ./src/server/**/

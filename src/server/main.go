@@ -32,6 +32,8 @@ func configureLogger() {
 	debug := os.Getenv("DEKART_LOG_DEBUG")
 	if debug != "" {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	} else {
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 	log.Info().Msgf("Log level: %s", zerolog.GlobalLevel().String())
 

@@ -9,9 +9,11 @@ import (
 	"os"
 
 	"cloud.google.com/go/storage"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
-// Server is Dekart GRPC Server implementation
+// Server is Dekart Endpoints implementation (HTTP and GRPC)
 type Server struct {
 	db            *sql.DB
 	reportStreams *report.Streams
@@ -20,6 +22,10 @@ type Server struct {
 	jobs *job.Store
 }
 
+//Unauthenticated error returned when no user claims in context
+var Unauthenticated error = status.Error(codes.Unauthenticated, "UNAUTHENTICATED")
+
+// NewServer returns new Dekart Server
 func NewServer(db *sql.DB, bucket *storage.BucketHandle, jobs *job.Store) *Server {
 	server := Server{
 		db:            db,
@@ -31,6 +37,7 @@ func NewServer(db *sql.DB, bucket *storage.BucketHandle, jobs *job.Store) *Serve
 
 }
 
+//GetTokens implementation
 func (s Server) GetTokens(ctx context.Context, req *proto.GetTokensRequest) (*proto.GetTokensResponse, error) {
 	tokens := []*proto.GetTokensResponse_Token{
 		{

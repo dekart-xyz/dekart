@@ -40,11 +40,26 @@ export function error (err) {
   return { type: error.name }
 }
 
-export function streamError (code) {
-  message.error({
-    content: (<StreamError code={code} />),
-    duration: 10000,
-    style
-  })
-  return { type: streamError.name }
+export function streamError (code, history) {
+  return (dispatch) => {
+    dispatch({ type: streamError.name })
+    // https://github.com/grpc/grpc/blob/master/doc/statuscodes.md
+    switch (code) {
+      case 5:
+        history.replace('/404')
+        return
+      case 3:
+        history.replace('/400')
+        return
+      case 16:
+        history.replace('/401')
+        return
+      default:
+        message.error({
+          content: (<StreamError code={code} />),
+          duration: 10000,
+          style
+        })
+    }
+  }
 }
