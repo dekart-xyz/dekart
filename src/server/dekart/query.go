@@ -23,20 +23,41 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	if req.Query == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "req.Query == nil")
 	}
+
 	u, err := uuid.NewRandom()
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	_, err = s.db.ExecContext(ctx,
-		"INSERT INTO queries (id, report_id, query_text) VALUES ($1, $2, $3)",
+	result, err := s.db.ExecContext(ctx,
+		`insert into queries (id, report_id, query_text)
+		select
+			$1 as id,
+			id as report_id,
+			$3 as query_text
+		from reports
+		where id=$2 and not archived and author_email=$4 limit 1
+		`,
 		u.String(),
 		req.Query.ReportId,
 		req.Query.QueryText,
+		claims.Email,
 	)
 	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	affectedRows, err := result.RowsAffected()
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if affectedRows == 0 {
+		err := fmt.Errorf("Report=%s, author_email=%s not found", req.Query.ReportId, claims.Email)
 		log.Warn().Err(err).Send()
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, status.Errorf(codes.NotFound, err.Error())
 	}
 
 	s.reportStreams.Ping(req.Query.ReportId)
@@ -62,9 +83,13 @@ func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) 
 		return nil, status.Errorf(codes.InvalidArgument, "req.Query == nil")
 	}
 	result, err := s.db.ExecContext(ctx,
-		"update queries set query_text=$1 where id=$2",
+		`update queries
+			set query_text=$1
+		where
+			id=$2 and report_id in (select report_id from reports where author_email=$3)`,
 		req.Query.QueryText,
 		req.Query.Id,
+		claims.Email,
 	)
 	if err != nil {
 		log.Err(err).Send()
@@ -177,8 +202,9 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		`select
 			query_text,
 			report_id
-		from queries where id=$1 limit 1`,
+		from queries where id=$1 and report_id in (select report_id from reports where author_email=$2) limit 1`,
 		req.QueryId,
+		claims.Email,
 	)
 	if err != nil {
 		log.Err(err).Send()
@@ -194,6 +220,13 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	}
+
+	if reportID == "" {
+		err := fmt.Errorf("Query not found id:%s", req.QueryId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+
 	job := s.jobs.New(reportID, req.QueryId)
 	obj := s.bucket.Object(fmt.Sprintf("%s.csv", job.ID))
 	go s.updateJobStatus(job)
@@ -217,18 +250,21 @@ func (s Server) CancelQuery(ctx context.Context, req *proto.CancelQueryRequest) 
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
 	}
 	queriesRows, err := s.db.QueryContext(ctx,
-		"select query_text, report_id from queries where id=$1 limit 1",
+		`select
+			report_id
+		from queries
+		where id=$1 and report_id in (select report_id from reports where author_email=$2) limit 1`,
 		req.QueryId,
+		claims.Email,
 	)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	defer queriesRows.Close()
-	var queryText string
 	var reportID string
 	for queriesRows.Next() {
-		err := queriesRows.Scan(&queryText, &reportID)
+		err := queriesRows.Scan(&reportID)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, status.Error(codes.Internal, err.Error())

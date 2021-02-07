@@ -158,12 +158,16 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 }
 
 func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportListStreamServer, sequence int64) error {
+	claims := user.GetClaims(ctx)
 	reportRows, err := s.db.QueryContext(ctx,
 		`select
 			id,
 			case when title is null then 'Untitled' else title end as title,
 			archived
-		from reports order by updated_at desc`,
+		from reports
+		where author_email=$1
+		order by updated_at desc`,
+		claims.Email,
 	)
 	if err != nil {
 		log.Err(err).Send()

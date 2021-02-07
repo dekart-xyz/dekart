@@ -24,8 +24,9 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 		return nil, err
 	}
 	_, err = s.db.ExecContext(ctx,
-		"INSERT INTO reports (id) VALUES ($1)",
+		"INSERT INTO reports (id, author_email) VALUES ($1, $2)",
 		u.String(),
+		claims.Email,
 	)
 	if err != nil {
 		log.Err(err).Send()
@@ -49,10 +50,14 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 		return nil, status.Errorf(codes.InvalidArgument, "req.Report == nil")
 	}
 	result, err := s.db.ExecContext(ctx,
-		"update reports set map_config=$1, title=$2 where id=$3",
+		`update
+			reports
+		set map_config=$1, title=$2
+		where id=$3 and author_email=$4`,
 		req.Report.MapConfig,
 		req.Report.Title,
 		req.Report.Id,
+		claims.Email,
 	)
 	if err != nil {
 		log.Err(err).Send()
@@ -67,6 +72,7 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	}
 
 	if affectedRows == 0 {
+		// TODO: distinguish between not found and read only
 		err := fmt.Errorf("Report not found id:%s", req.Report.Id)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
@@ -88,9 +94,10 @@ func (s Server) ArchiveReport(ctx context.Context, req *proto.ArchiveReportReque
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
 	}
 	result, err := s.db.ExecContext(ctx,
-		"update reports set archived=$1 where id=$2",
+		"update reports set archived=$1 where id=$2 and author_email=$3",
 		req.Archive,
 		req.ReportId,
+		claims.Email,
 	)
 	if err != nil {
 		log.Err(err).Send()
