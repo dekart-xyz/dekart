@@ -19,7 +19,7 @@ export function closeReport (reportId) {
   }
 }
 
-export function openReport (reportId, edit, history) {
+export function openReport (reportId, edit) {
   // TODO: refactor history from actions
   return (dispatch) => {
     dispatch({
@@ -31,7 +31,7 @@ export function openReport (reportId, edit, history) {
       (reportStreamResponse) => {
         dispatch(reportUpdate(reportStreamResponse))
       },
-      code => dispatch(streamError(code, history))
+      code => dispatch(streamError(code))
     )
   }
 }
@@ -77,7 +77,7 @@ export function reportUpdate (reportStreamResponse) {
 
 let reportStreamListCancelable
 
-export function subscribeReports (history) {
+export function subscribeReports () {
   return (dispatch) => {
     dispatch({ type: subscribeReports.name })
     const request = new ReportListRequest()
@@ -85,7 +85,7 @@ export function subscribeReports (history) {
       Dekart.GetReportListStream,
       request,
       ({ reportsList }) => dispatch(reportsListUpdate(reportsList)),
-      code => dispatch(streamError(code, history))
+      code => dispatch(streamError(code))
     )
   }
 }

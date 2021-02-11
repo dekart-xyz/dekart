@@ -91,7 +91,7 @@ export default function HomePage () {
   const dispatch = useDispatch()
   const body = useRef()
   useEffect(() => {
-    dispatch(subscribeReports(history))
+    dispatch(subscribeReports())
     return () => dispatch(unsubscribeReports())
   }, [dispatch])
   const createReportButton = <Button icon={<PlusOutlined />} type='primary' onClick={() => dispatch(createReport(history))}>Create Report</Button>

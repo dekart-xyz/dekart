@@ -40,19 +40,23 @@ export function error (err) {
   return { type: error.name }
 }
 
-export function streamError (code, history) {
+export function httpError (status) {
+  return { type: httpError.name, status }
+}
+
+export function streamError (code) {
   return (dispatch) => {
     dispatch({ type: streamError.name })
     // https://github.com/grpc/grpc/blob/master/doc/statuscodes.md
     switch (code) {
       case 5:
-        history.replace('/404')
+        dispatch(httpError(404))
         return
       case 3:
-        history.replace('/400')
+        dispatch(httpError(400))
         return
       case 16:
-        history.replace('/401')
+        dispatch(httpError(401))
         return
       default:
         message.error({

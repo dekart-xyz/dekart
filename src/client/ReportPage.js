@@ -153,7 +153,6 @@ function Kepler ({ mapboxApiAccessToken }) {
 
 export default function ReportPage ({ edit }) {
   const { id } = useParams()
-  const history = useHistory()
 
   const kepler = useSelector(state => state.keplerGl.kepler)
   const report = useSelector(state => state.report)
@@ -167,12 +166,12 @@ export default function ReportPage ({ edit }) {
 
   useEffect(() => {
     if (mapboxApiAccessToken) {
-      dispatch(openReport(id, edit, history))
+      dispatch(openReport(id, edit))
       return () => dispatch(closeReport(id))
     } else {
       dispatch(getTokens())
     }
-  }, [id, dispatch, edit, history, mapboxApiAccessToken])
+  }, [id, dispatch, edit, mapboxApiAccessToken])
 
   useEffect(() => checkMapConfig(kepler, mapConfig, setMapChanged), [kepler, mapConfig, setMapChanged])
   const titleChanged = reportStatus.title && title && reportStatus.title !== title

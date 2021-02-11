@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 import keplerGlReducer from 'kepler.gl/reducers'
 import { ActionTypes as KeplerActionTypes } from 'kepler.gl/actions'
-import { downloadJobResults, openReport, reportTitleChange, reportUpdate, runQuery, saveMap, updateQuery, reportsListUpdate, unsubscribeReports, setTokens, streamError } from './actions'
+import { downloadJobResults, openReport, reportTitleChange, reportUpdate, runQuery, saveMap, updateQuery, reportsListUpdate, unsubscribeReports, setTokens, streamError, httpError } from './actions'
 import { Query } from '../proto/dekart_pb'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
@@ -167,6 +167,15 @@ function tokens (state = defaultTokens, action) {
   }
 }
 
+function httpErrorStatus (state = 0, action) {
+  switch (action.type) {
+    case httpError.name:
+      return action.status
+    default:
+      return state
+  }
+}
+
 export default combineReducers({
   keplerGl,
   report,
@@ -174,5 +183,6 @@ export default combineReducers({
   queryStatus,
   reportStatus,
   reportsList,
-  tokens
+  tokens,
+  httpErrorStatus
 })
