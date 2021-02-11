@@ -1,4 +1,4 @@
-import { useHistory, useParams } from 'react-router-dom'
+import { Redirect, useHistory, useParams } from 'react-router-dom'
 import Button from 'antd/es/button'
 import Input from 'antd/es/input'
 import { useEffect, useState } from 'react'
@@ -9,7 +9,6 @@ import { useDispatch, useSelector } from 'react-redux'
 import { closeReport, openReport, createQuery, saveMap, reportTitleChange, getTokens } from './actions'
 import Query from './Query'
 import { SaveOutlined, PlaySquareOutlined, EditOutlined } from '@ant-design/icons'
-import debounce from 'lodash.debounce'
 import { KeplerGlSchema } from 'kepler.gl/schemas'
 import classnames from 'classnames'
 import DekartMenu from './DekartMenu'
@@ -34,14 +33,26 @@ function ReportQuery ({ reportId }) {
   }
 }
 
-const checkMapConfig = debounce((kepler, mapConfig, setMapChanged) => {
-  if (kepler) {
-    const configToSave = JSON.stringify(KeplerGlSchema.getConfigToSave(kepler))
-    setMapChanged(configToSave !== mapConfig)
+let checkMapConfigTimer
+function checkMapConfig (kepler, mapConfig, setMapChanged) {
+  if (checkMapConfigTimer) {
+    clearTimeout(checkMapConfigTimer)
   }
-}, 500)
+  checkMapConfigTimer = setTimeout(() => {
+    if (kepler) {
+      const configToSave = JSON.stringify(KeplerGlSchema.getConfigToSave(kepler))
+      setMapChanged(configToSave !== mapConfig)
+    }
+    checkMapConfigTimer = null
+  }, 500)
+  return () => {
+    if (checkMapConfigTimer) {
+      clearTimeout(checkMapConfigTimer)
+    }
+  }
+}
 
-function HeaderButtons ({ edit, changed, canSave, reportId }) {
+function HeaderButtons ({ edit, changed, canSave, reportId, canWrite }) {
   const dispatch = useDispatch()
   const history = useHistory()
   if (edit) {
@@ -63,10 +74,13 @@ function HeaderButtons ({ edit, changed, canSave, reportId }) {
       </div>
     )
   }
+  const title = canWrite ? 'Edit' : 'You can only view this report'
   return (
     <div className={styles.headerButtons}>
       <Button
         type='primary'
+        title={title}
+        disabled={!canWrite}
         icon={<EditOutlined />}
         onClick={() => history.replace(`/reports/${reportId}/edit`)}
       >Edit
@@ -111,11 +125,6 @@ function Title () {
 }
 
 function Kepler ({ mapboxApiAccessToken }) {
-  // const dispatch = useDispatch()
-  // useEffect(() => {
-  //   dispatch(getTokens())
-  // }, [dispatch])
-  // const mapboxApiAccessToken = useSelector(state => state.tokens.mapbox)
   if (!mapboxApiAccessToken) {
     return (
       <div className={styles.keplerFlex}>
@@ -172,6 +181,10 @@ export default function ReportPage ({ edit }) {
     return null
   }
 
+  if (edit && !report.canWrite) {
+    return <Redirect to={`/reports/${id}`} />
+  }
+
   return (
     <div className={styles.report}>
       <Header>
@@ -179,6 +192,7 @@ export default function ReportPage ({ edit }) {
         <DekartMenu />
         <HeaderButtons
           reportId={id}
+          canWrite={report.canWrite}
           changed={mapChanged || titleChanged}
           canSave={reportStatus.canSave}
           edit={edit}

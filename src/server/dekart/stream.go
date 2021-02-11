@@ -16,13 +16,16 @@ import (
 
 func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStreamServer, sequence int64) error {
 	ctx := srv.Context()
+	claims := user.GetClaims(ctx)
 	reportRows, err := s.db.QueryContext(ctx,
 		`select
 			id,
 			case when map_config is null then '' else map_config end as map_config,
-			case when title is null then 'Untitled' else title end as title
+			case when title is null then 'Untitled' else title end as title,
+			author_email = $2 as can_write
 		from reports where id=$1 and not archived limit 1`,
 		reportID,
+		claims.Email,
 	)
 	if err != nil {
 		log.Err(err).Send()
@@ -40,6 +43,7 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 			&res.Report.Id,
 			&res.Report.MapConfig,
 			&res.Report.Title,
+			&res.Report.CanWrite,
 		)
 		if err != nil {
 			log.Err(err).Send()

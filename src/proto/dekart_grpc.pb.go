@@ -11,6 +11,7 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
+// Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
 // DekartClient is the client API for Dekart service.
@@ -110,7 +111,7 @@ func (c *dekartClient) GetTokens(ctx context.Context, in *GetTokensRequest, opts
 }
 
 func (c *dekartClient) GetReportStream(ctx context.Context, in *ReportStreamRequest, opts ...grpc.CallOption) (Dekart_GetReportStreamClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_Dekart_serviceDesc.Streams[0], "/Dekart/GetReportStream", opts...)
+	stream, err := c.cc.NewStream(ctx, &Dekart_ServiceDesc.Streams[0], "/Dekart/GetReportStream", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +143,7 @@ func (x *dekartGetReportStreamClient) Recv() (*ReportStreamResponse, error) {
 }
 
 func (c *dekartClient) GetReportListStream(ctx context.Context, in *ReportListRequest, opts ...grpc.CallOption) (Dekart_GetReportListStreamClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_Dekart_serviceDesc.Streams[1], "/Dekart/GetReportListStream", opts...)
+	stream, err := c.cc.NewStream(ctx, &Dekart_ServiceDesc.Streams[1], "/Dekart/GetReportListStream", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +235,7 @@ type UnsafeDekartServer interface {
 }
 
 func RegisterDekartServer(s grpc.ServiceRegistrar, srv DekartServer) {
-	s.RegisterService(&_Dekart_serviceDesc, srv)
+	s.RegisterService(&Dekart_ServiceDesc, srv)
 }
 
 func _Dekart_CreateReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -423,7 +424,10 @@ func (x *dekartGetReportListStreamServer) Send(m *ReportListResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-var _Dekart_serviceDesc = grpc.ServiceDesc{
+// Dekart_ServiceDesc is the grpc.ServiceDesc for Dekart service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Dekart_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "Dekart",
 	HandlerType: (*DekartServer)(nil),
 	Methods: []grpc.MethodDesc{

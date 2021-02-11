@@ -1752,7 +1752,8 @@ proto.Report.toObject = function(includeInstance, msg) {
     id: jspb.Message.getFieldWithDefault(msg, 1, ""),
     mapConfig: jspb.Message.getFieldWithDefault(msg, 2, ""),
     title: jspb.Message.getFieldWithDefault(msg, 3, ""),
-    archived: jspb.Message.getBooleanFieldWithDefault(msg, 4, false)
+    archived: jspb.Message.getBooleanFieldWithDefault(msg, 4, false),
+    canWrite: jspb.Message.getBooleanFieldWithDefault(msg, 5, false)
   };
 
   if (includeInstance) {
@@ -1804,6 +1805,10 @@ proto.Report.deserializeBinaryFromReader = function(msg, reader) {
     case 4:
       var value = /** @type {boolean} */ (reader.readBool());
       msg.setArchived(value);
+      break;
+    case 5:
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setCanWrite(value);
       break;
     default:
       reader.skipField();
@@ -1859,6 +1864,13 @@ proto.Report.serializeBinaryToWriter = function(message, writer) {
   if (f) {
     writer.writeBool(
       4,
+      f
+    );
+  }
+  f = message.getCanWrite();
+  if (f) {
+    writer.writeBool(
+      5,
       f
     );
   }
@@ -1934,6 +1946,24 @@ proto.Report.prototype.getArchived = function() {
  */
 proto.Report.prototype.setArchived = function(value) {
   return jspb.Message.setProto3BooleanField(this, 4, value);
+};
+
+
+/**
+ * optional bool can_write = 5;
+ * @return {boolean}
+ */
+proto.Report.prototype.getCanWrite = function() {
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 5, false));
+};
+
+
+/**
+ * @param {boolean} value
+ * @return {!proto.Report} returns this
+ */
+proto.Report.prototype.setCanWrite = function(value) {
+  return jspb.Message.setProto3BooleanField(this, 5, value);
 };
 
 

@@ -19,8 +19,8 @@ export function finishDownloading () {
   if (hideDownloading) {
     hideDownloading()
     hideDownloading = null
-    return { type: finishDownloading.name }
   }
+  return { type: finishDownloading.name }
 }
 
 export function success (content) {

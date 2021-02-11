@@ -53,6 +53,7 @@ message Report {
     string map_config = 2;
     string title = 3;
     bool archived = 4;
+    bool can_write = 5;
 }
 
 message Query {
