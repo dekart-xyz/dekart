@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useHistory } from 'react-router-dom'
+import { Redirect } from 'react-router-dom'
 import DekartMenu from './DekartMenu'
 import { Header } from './Header'
 import styles from './HomePage.module.css'
@@ -87,14 +87,18 @@ function Reports ({ reports, createReportButton, archived }) {
 
 export default function HomePage () {
   const reportsList = useSelector(state => state.reportsList)
-  const history = useHistory()
+  const { newReportId } = useSelector(state => state.reportStatus)
   const dispatch = useDispatch()
   const body = useRef()
   useEffect(() => {
     dispatch(subscribeReports())
     return () => dispatch(unsubscribeReports())
   }, [dispatch])
-  const createReportButton = <Button icon={<PlusOutlined />} type='primary' onClick={() => dispatch(createReport(history))}>Create Report</Button>
+  const createReportButton = <Button icon={<PlusOutlined />} type='primary' onClick={() => dispatch(createReport())}>Create Report</Button>
+
+  if (newReportId) {
+    return <Redirect to={`/reports/${newReportId}/edit`} />
+  }
 
   return (
     <div className={styles.homePage}>

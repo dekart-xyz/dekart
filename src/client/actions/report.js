@@ -20,7 +20,6 @@ export function closeReport (reportId) {
 }
 
 export function openReport (reportId, edit) {
-  // TODO: refactor history from actions
   return (dispatch) => {
     dispatch({
       type: openReport.name,
@@ -116,12 +115,16 @@ export function archiveReport (reportId, archive) {
   }
 }
 
-export function createReport (history) {
+export function newReport (id) {
+  return { type: newReport.name, id }
+}
+
+export function createReport () {
   return async (dispatch) => {
     const request = new CreateReportRequest()
     try {
       const { report } = await unary(Dekart.CreateReport, request)
-      history.replace(`/reports/${report.id}/edit`)
+      dispatch(newReport(report.id))
     } catch (err) {
       dispatch(error(err))
       throw err
