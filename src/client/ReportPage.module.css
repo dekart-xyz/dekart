@@ -105,3 +105,17 @@
 .keplerBlock :global #kepler-gl__kepler .map-control-button[data-for=locale] {
     display: none;
 }
+
+.readOnly span {
+    margin-right: 5px;
+}
+.readOnly {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    color: #6C7483;
+    padding-right: 10px;
+    font-style: italic;
+    vertical-align: middle;
+    cursor: pointer;
+}

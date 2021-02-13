@@ -1,5 +1,6 @@
 import { Redirect, useHistory, useParams } from 'react-router-dom'
 import Button from 'antd/es/button'
+import Tooltip from 'antd/es/tooltip'
 import Input from 'antd/es/input'
 import { useEffect, useState } from 'react'
 import { KeplerGl } from 'kepler.gl/components'
@@ -8,7 +9,7 @@ import { AutoSizer } from 'react-virtualized'
 import { useDispatch, useSelector } from 'react-redux'
 import { closeReport, openReport, createQuery, saveMap, reportTitleChange, getTokens } from './actions'
 import Query from './Query'
-import { SaveOutlined, PlaySquareOutlined, EditOutlined } from '@ant-design/icons'
+import { SaveOutlined, PlaySquareOutlined, EditOutlined, InfoCircleFilled } from '@ant-design/icons'
 import { KeplerGlSchema } from 'kepler.gl/schemas'
 import classnames from 'classnames'
 import DekartMenu from './DekartMenu'
@@ -74,20 +75,28 @@ function HeaderButtons ({ edit, changed, canSave, reportId, canWrite }) {
       </div>
     )
   }
-  const title = canWrite ? 'Edit' : 'You can only view this report'
+  if (canWrite) {
+    return (
+      <div className={styles.headerButtons}>
+        <Button
+          type='primary'
+          disabled={!canWrite}
+          icon={<EditOutlined />}
+          onClick={() => history.replace(`/reports/${reportId}/edit`)}
+        >Edit
+        </Button>
+      </div>
+    )
+  }
   return (
     <div className={styles.headerButtons}>
-      <Button
-        type='primary'
-        title={title}
-        disabled={!canWrite}
-        icon={<EditOutlined />}
-        onClick={() => history.replace(`/reports/${reportId}/edit`)}
-      >Edit
-      </Button>
+      <Tooltip title='The report is created by the other author. You can only view it.'>
+        <div className={styles.readOnly}><span>Read-only</span><InfoCircleFilled /></div>
+      </Tooltip>
     </div>
   )
 }
+// const title = canWrite ? 'Edit' : 'You can only view this report'
 
 function Title () {
   const reportStatus = useSelector(state => state.reportStatus)
