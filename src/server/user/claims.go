@@ -32,7 +32,7 @@ func NewClaimsCheck(audience string, requireIAP bool, devClaimsEmail string) Cla
 	} else {
 		log.Info().Msgf("Dekart configured to require IAP")
 		if devClaimsEmail != "" {
-			log.Warn().Msgf("user DEKART_DEV_CLAIMS_EMAIL only in development environment")
+			log.Warn().Msgf("Use DEKART_DEV_CLAIMS_EMAIL only in development environment")
 		}
 	}
 	return ClaimsCheck{

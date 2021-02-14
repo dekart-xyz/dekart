@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import AceEditor from 'react-ace'
 import { AutoSizer } from 'react-virtualized'
-import Alert from 'antd/es/alert'
 import Button from 'antd/es/button'
 import styles from './Query.module.css'
 import { useDispatch, useSelector } from 'react-redux'
@@ -12,7 +11,7 @@ import 'ace-builds/src-noconflict/theme-sqlserver'
 import 'ace-builds/src-noconflict/ext-language_tools'
 import 'ace-builds/webpack-resolver'
 import { Query as QueryType } from '../proto/dekart_pb'
-import { SendOutlined } from '@ant-design/icons'
+import { SendOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
 import { Duration } from 'luxon'
 import prettyBites from 'pretty-bytes'
 
@@ -83,32 +82,6 @@ function Processed ({ query }) {
   }
 }
 
-function QueryAlert ({ query }) {
-  if (query.jobError) {
-    return <Alert message='Error' description={query.jobError} type='error' />
-  }
-  switch (query.jobStatus) {
-    case QueryType.JobStatus.JOB_STATUS_PENDING:
-      return <Alert message='Pending' type='info' action={<StatusActions query={query} />} />
-    case QueryType.JobStatus.JOB_STATUS_RUNNING:
-      return <Alert message='Running' type='info' action={<StatusActions query={query} />} />
-    case QueryType.JobStatus.JOB_STATUS_DONE:
-      if (!query.jobResultId) {
-        return <Alert message='Reading Result' type='info' action={<StatusActions query={query} />} />
-      }
-      return (
-        <Alert
-          message={<span>Ready <Processed query={query} /></span>}
-          type='success'
-          showIcon
-          action={<ShowDataTable query={query} />}
-        />
-      )
-    default:
-      return null
-  }
-}
-
 function QueryEditor ({ queryId, queryText, onChange }) {
   return (
     <div className={styles.editor}>
@@ -136,6 +109,56 @@ function QueryEditor ({ queryId, queryText, onChange }) {
   )
 }
 
+function QueryStatus ({ children, query }) {
+  let message, errorMessage, action, style
+  let icon = null
+  if (query.jobError) {
+    message = 'Error'
+    style = styles.error
+    errorMessage = query.jobError
+    icon = <ExclamationCircleTwoTone className={styles.icon} twoToneColor='#F66B55' />
+  }
+  switch (query.jobStatus) {
+    case QueryType.JobStatus.JOB_STATUS_PENDING:
+      message = 'Pending'
+      style = styles.info
+      action = <StatusActions query={query} />
+      break
+    case QueryType.JobStatus.JOB_STATUS_RUNNING:
+      icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
+      message = 'Running'
+      style = styles.info
+      action = <StatusActions query={query} />
+      break
+    case QueryType.JobStatus.JOB_STATUS_DONE:
+      if (!query.jobResultId) {
+        message = 'Reading Result'
+        style = styles.info
+        icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
+        action = <StatusActions query={query} />
+        break
+      }
+      icon = <CheckCircleTwoTone className={styles.icon} twoToneColor='#52c41a' />
+      message = <span>Ready <Processed query={query} /></span>
+      style = styles.success
+      action = <ShowDataTable query={query} />
+      break
+  }
+  return (
+    <div className={[styles.queryStatus, style].join(' ')}>
+      <div className={styles.status}>
+        <div className={styles.statusHead}>
+          {icon}
+          <div className={styles.message}>{message}</div>
+          {action ? <div className={styles.action}>{action}</div> : null}
+        </div>
+        {errorMessage ? <div className={styles.errorMessage}>{errorMessage}</div> : null}
+      </div>
+      <div className={styles.button}>{children}</div>
+    </div>
+  )
+}
+
 export default function Query ({ query }) {
   const [queryText, setQueryText] = useState(query.queryText)
   const { canRun } = useSelector(state => state.queryStatus[query.id])
@@ -143,20 +166,15 @@ export default function Query ({ query }) {
   return (
     <div key={query.id} className={styles.query}>
       <QueryEditor queryId={query.id} queryText={queryText} onChange={value => setQueryText(value)} />
-      <div className={styles.actions}>
-        <div className={styles.status}>
-          <QueryAlert query={query} />
-        </div>
-        <div className={styles.button}>
-          <Button
-            size='large'
-            disabled={!canRun}
-            icon={<SendOutlined />}
-            onClick={() => dispatch(runQuery(query.id, queryText))}
-          >Execute
-          </Button>
-        </div>
-      </div>
+      <QueryStatus query={query}>
+        <Button
+          size='large'
+          disabled={!canRun}
+          icon={<SendOutlined />}
+          onClick={() => dispatch(runQuery(query.id, queryText))}
+        >Execute
+        </Button>
+      </QueryStatus>
     </div>
   )
 }

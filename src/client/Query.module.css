@@ -24,19 +24,55 @@
 }
 .status {
     flex: 1;
-    margin-right: 8px;
+    margin-right: 10px;
+    display: flex;
+    flex-direction: column;
+}
+
+.statusHead {
+    flex: 1;
+    margin-right: 10px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
 }
 
 .button {
     margin-left: 2px;
 }
 
-.actions{
+.icon {
+    font-size: 18px;
+    margin-right: 10px;
+}
+
+.message {
+    font-size: 1.1em;
+    flex: 1;
+}
+
+.queryStatus{
     padding: 10px;
+    padding-left: 15px;
     display: flex;
     flex-direction: row;
-    border-top: 1px solid rgb(217, 217, 217)
-    /* align-items: center; */
+    border-top: 1px solid rgb(217, 217, 217);
+}
+
+.success {
+    background-color: #F6FFED;
+    border-top-color: #B7EB8F;
+}
+
+.error {
+    background-color: #FFF2F0;
+    border-top-color: #FFCCC7;
+}
+
+.errorMessage {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+    font-size: 0.85em;
+    margin-left: 28px;
 }
 
 .jobTimer {
