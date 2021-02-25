@@ -23,9 +23,9 @@ proto: proto-docker # build proto stubs
 docker: # build docker for local use
 	docker build -t dekart-dev -f ./Dockerfile .
 
-ecr:
-	docker tag dekart-dev eu.gcr.io/dekart-playground/dekart:0.2
-	docker push eu.gcr.io/dekart-playground/dekart:0.2
+ecr-dev:
+	docker tag dekart-dev eu.gcr.io/dekart-playground/dekart:dev
+	docker push eu.gcr.io/dekart-playground/dekart:dev
 
 docker-compose-up:
 	docker-compose  --env-file .env up
