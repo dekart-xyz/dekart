@@ -1,1 +1,1 @@
-from eu.gcr.io/dekart-playground/dekart:dev
+from dekartxyz/dekart:0.2
