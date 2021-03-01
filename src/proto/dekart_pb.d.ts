@@ -23,65 +23,72 @@ export namespace StreamOptions {
   }
 }
 
-export class GetTokensRequest extends jspb.Message {
+export class GetEnvRequest extends jspb.Message {
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): GetTokensRequest.AsObject;
-  static toObject(includeInstance: boolean, msg: GetTokensRequest): GetTokensRequest.AsObject;
+  toObject(includeInstance?: boolean): GetEnvRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: GetEnvRequest): GetEnvRequest.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: GetTokensRequest, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): GetTokensRequest;
-  static deserializeBinaryFromReader(message: GetTokensRequest, reader: jspb.BinaryReader): GetTokensRequest;
+  static serializeBinaryToWriter(message: GetEnvRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetEnvRequest;
+  static deserializeBinaryFromReader(message: GetEnvRequest, reader: jspb.BinaryReader): GetEnvRequest;
 }
 
-export namespace GetTokensRequest {
+export namespace GetEnvRequest {
   export type AsObject = {
   }
 }
 
-export class GetTokensResponse extends jspb.Message {
-  clearTokensList(): void;
-  getTokensList(): Array<GetTokensResponse.Token>;
-  setTokensList(value: Array<GetTokensResponse.Token>): void;
-  addTokens(value?: GetTokensResponse.Token, index?: number): GetTokensResponse.Token;
+export class GetEnvResponse extends jspb.Message {
+  clearVariablesList(): void;
+  getVariablesList(): Array<GetEnvResponse.Variable>;
+  setVariablesList(value: Array<GetEnvResponse.Variable>): void;
+  addVariables(value?: GetEnvResponse.Variable, index?: number): GetEnvResponse.Variable;
 
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): GetTokensResponse.AsObject;
-  static toObject(includeInstance: boolean, msg: GetTokensResponse): GetTokensResponse.AsObject;
+  toObject(includeInstance?: boolean): GetEnvResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: GetEnvResponse): GetEnvResponse.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: GetTokensResponse, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): GetTokensResponse;
-  static deserializeBinaryFromReader(message: GetTokensResponse, reader: jspb.BinaryReader): GetTokensResponse;
+  static serializeBinaryToWriter(message: GetEnvResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetEnvResponse;
+  static deserializeBinaryFromReader(message: GetEnvResponse, reader: jspb.BinaryReader): GetEnvResponse;
 }
 
-export namespace GetTokensResponse {
+export namespace GetEnvResponse {
   export type AsObject = {
-    tokensList: Array<GetTokensResponse.Token.AsObject>,
+    variablesList: Array<GetEnvResponse.Variable.AsObject>,
   }
 
-  export class Token extends jspb.Message {
-    getName(): string;
-    setName(value: string): void;
+  export class Variable extends jspb.Message {
+    getType(): GetEnvResponse.Variable.TypeMap[keyof GetEnvResponse.Variable.TypeMap];
+    setType(value: GetEnvResponse.Variable.TypeMap[keyof GetEnvResponse.Variable.TypeMap]): void;
 
-    getToken(): string;
-    setToken(value: string): void;
+    getValue(): string;
+    setValue(value: string): void;
 
     serializeBinary(): Uint8Array;
-    toObject(includeInstance?: boolean): Token.AsObject;
-    static toObject(includeInstance: boolean, msg: Token): Token.AsObject;
+    toObject(includeInstance?: boolean): Variable.AsObject;
+    static toObject(includeInstance: boolean, msg: Variable): Variable.AsObject;
     static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
     static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-    static serializeBinaryToWriter(message: Token, writer: jspb.BinaryWriter): void;
-    static deserializeBinary(bytes: Uint8Array): Token;
-    static deserializeBinaryFromReader(message: Token, reader: jspb.BinaryReader): Token;
+    static serializeBinaryToWriter(message: Variable, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): Variable;
+    static deserializeBinaryFromReader(message: Variable, reader: jspb.BinaryReader): Variable;
   }
 
-  export namespace Token {
+  export namespace Variable {
     export type AsObject = {
-      name: string,
-      token: string,
+      type: GetEnvResponse.Variable.TypeMap[keyof GetEnvResponse.Variable.TypeMap],
+      value: string,
     }
+
+    export interface TypeMap {
+      TYPE_UNSPECIFIED: 0;
+      TYPE_MAPBOX_TOKEN: 1;
+    }
+
+    export const Type: TypeMap;
   }
 }
 

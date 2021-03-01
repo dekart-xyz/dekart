@@ -37,15 +37,15 @@ func NewServer(db *sql.DB, bucket *storage.BucketHandle, jobs *job.Store) *Serve
 
 }
 
-//GetTokens implementation
-func (s Server) GetTokens(ctx context.Context, req *proto.GetTokensRequest) (*proto.GetTokensResponse, error) {
-	tokens := []*proto.GetTokensResponse_Token{
+// GetEnv variables to the client
+func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.GetEnvResponse, error) {
+	variables := []*proto.GetEnvResponse_Variable{
 		{
-			Name:  "mapbox",
-			Token: os.Getenv("DEKART_MAPBOX_TOKEN"),
+			Type:  proto.GetEnvResponse_Variable_TYPE_MAPBOX_TOKEN,
+			Value: os.Getenv("DEKART_MAPBOX_TOKEN"),
 		},
 	}
-	return &proto.GetTokensResponse{
-		Tokens: tokens,
+	return &proto.GetEnvResponse{
+		Variables: variables,
 	}, nil
 }

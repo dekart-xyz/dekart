@@ -25,7 +25,7 @@ type DekartClient interface {
 	UpdateQuery(ctx context.Context, in *UpdateQueryRequest, opts ...grpc.CallOption) (*UpdateQueryResponse, error)
 	RunQuery(ctx context.Context, in *RunQueryRequest, opts ...grpc.CallOption) (*RunQueryResponse, error)
 	CancelQuery(ctx context.Context, in *CancelQueryRequest, opts ...grpc.CallOption) (*CancelQueryResponse, error)
-	GetTokens(ctx context.Context, in *GetTokensRequest, opts ...grpc.CallOption) (*GetTokensResponse, error)
+	GetEnv(ctx context.Context, in *GetEnvRequest, opts ...grpc.CallOption) (*GetEnvResponse, error)
 	GetReportStream(ctx context.Context, in *ReportStreamRequest, opts ...grpc.CallOption) (Dekart_GetReportStreamClient, error)
 	GetReportListStream(ctx context.Context, in *ReportListRequest, opts ...grpc.CallOption) (Dekart_GetReportListStreamClient, error)
 }
@@ -101,9 +101,9 @@ func (c *dekartClient) CancelQuery(ctx context.Context, in *CancelQueryRequest, 
 	return out, nil
 }
 
-func (c *dekartClient) GetTokens(ctx context.Context, in *GetTokensRequest, opts ...grpc.CallOption) (*GetTokensResponse, error) {
-	out := new(GetTokensResponse)
-	err := c.cc.Invoke(ctx, "/Dekart/GetTokens", in, out, opts...)
+func (c *dekartClient) GetEnv(ctx context.Context, in *GetEnvRequest, opts ...grpc.CallOption) (*GetEnvResponse, error) {
+	out := new(GetEnvResponse)
+	err := c.cc.Invoke(ctx, "/Dekart/GetEnv", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +185,7 @@ type DekartServer interface {
 	UpdateQuery(context.Context, *UpdateQueryRequest) (*UpdateQueryResponse, error)
 	RunQuery(context.Context, *RunQueryRequest) (*RunQueryResponse, error)
 	CancelQuery(context.Context, *CancelQueryRequest) (*CancelQueryResponse, error)
-	GetTokens(context.Context, *GetTokensRequest) (*GetTokensResponse, error)
+	GetEnv(context.Context, *GetEnvRequest) (*GetEnvResponse, error)
 	GetReportStream(*ReportStreamRequest, Dekart_GetReportStreamServer) error
 	GetReportListStream(*ReportListRequest, Dekart_GetReportListStreamServer) error
 	mustEmbedUnimplementedDekartServer()
@@ -216,8 +216,8 @@ func (UnimplementedDekartServer) RunQuery(context.Context, *RunQueryRequest) (*R
 func (UnimplementedDekartServer) CancelQuery(context.Context, *CancelQueryRequest) (*CancelQueryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CancelQuery not implemented")
 }
-func (UnimplementedDekartServer) GetTokens(context.Context, *GetTokensRequest) (*GetTokensResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetTokens not implemented")
+func (UnimplementedDekartServer) GetEnv(context.Context, *GetEnvRequest) (*GetEnvResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetEnv not implemented")
 }
 func (UnimplementedDekartServer) GetReportStream(*ReportStreamRequest, Dekart_GetReportStreamServer) error {
 	return status.Errorf(codes.Unimplemented, "method GetReportStream not implemented")
@@ -364,20 +364,20 @@ func _Dekart_CancelQuery_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_GetTokens_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetTokensRequest)
+func _Dekart_GetEnv_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetEnvRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DekartServer).GetTokens(ctx, in)
+		return srv.(DekartServer).GetEnv(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Dekart/GetTokens",
+		FullMethod: "/Dekart/GetEnv",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).GetTokens(ctx, req.(*GetTokensRequest))
+		return srv.(DekartServer).GetEnv(ctx, req.(*GetEnvRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -460,8 +460,8 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Dekart_CancelQuery_Handler,
 		},
 		{
-			MethodName: "GetTokens",
-			Handler:    _Dekart_GetTokens_Handler,
+			MethodName: "GetEnv",
+			Handler:    _Dekart_GetEnv_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

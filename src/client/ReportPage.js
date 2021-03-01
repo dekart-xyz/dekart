@@ -7,7 +7,7 @@ import { KeplerGl } from 'kepler.gl/components'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
 import { useDispatch, useSelector } from 'react-redux'
-import { closeReport, openReport, createQuery, saveMap, reportTitleChange, getTokens } from './actions'
+import { closeReport, openReport, createQuery, saveMap, reportTitleChange } from './actions'
 import Query from './Query'
 import { SaveOutlined, PlaySquareOutlined, EditOutlined, InfoCircleFilled } from '@ant-design/icons'
 import { KeplerGlSchema } from 'kepler.gl/schemas'
@@ -133,8 +133,9 @@ function Title () {
   }
 }
 
-function Kepler ({ mapboxApiAccessToken }) {
-  if (!mapboxApiAccessToken) {
+function Kepler () {
+  const env = useSelector(state => state.env)
+  if (!env.loaded) {
     return (
       <div className={styles.keplerFlex}>
         <div className={styles.keplerBlock} />
@@ -148,7 +149,7 @@ function Kepler ({ mapboxApiAccessToken }) {
           {({ height, width }) => (
             <KeplerGl
               id='kepler'
-              mapboxApiAccessToken={mapboxApiAccessToken}
+              mapboxApiAccessToken={env.variables.MAPBOX_TOKEN}
               width={width}
               height={height}
             />
@@ -167,20 +168,15 @@ export default function ReportPage ({ edit }) {
   const report = useSelector(state => state.report)
   const { mapConfig, title } = report || {}
   const reportStatus = useSelector(state => state.reportStatus)
-  const mapboxApiAccessToken = useSelector(state => state.tokens.mapbox)
 
   const dispatch = useDispatch()
 
   const [mapChanged, setMapChanged] = useState(false)
 
   useEffect(() => {
-    if (mapboxApiAccessToken) {
-      dispatch(openReport(id, edit))
-      return () => dispatch(closeReport(id))
-    } else {
-      dispatch(getTokens())
-    }
-  }, [id, dispatch, edit, mapboxApiAccessToken])
+    dispatch(openReport(id, edit))
+    return () => dispatch(closeReport(id))
+  }, [id, dispatch, edit])
 
   useEffect(() => checkMapConfig(kepler, mapConfig, setMapChanged), [kepler, mapConfig, setMapChanged])
   const titleChanged = reportStatus.title && title && reportStatus.title !== title
@@ -207,7 +203,7 @@ export default function ReportPage ({ edit }) {
         />
       </Header>
       <div className={styles.body}>
-        <Kepler mapboxApiAccessToken={mapboxApiAccessToken} />
+        <Kepler />
         {edit ? <ReportQuery reportId={id} /> : null}
       </div>
     </div>

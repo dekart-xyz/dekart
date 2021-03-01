@@ -12,7 +12,7 @@ service Dekart {
     rpc RunQuery(RunQueryRequest) returns (RunQueryResponse) {}
     rpc CancelQuery(CancelQueryRequest) returns (CancelQueryResponse) {}
 
-    rpc GetTokens(GetTokensRequest) returns (GetTokensResponse) {}
+    rpc GetEnv(GetEnvRequest) returns (GetEnvResponse) {}
 
     rpc GetReportStream(ReportStreamRequest) returns (stream ReportStreamResponse) {}
     rpc GetReportListStream(ReportListRequest) returns (stream ReportListResponse) {}
@@ -22,14 +22,18 @@ message StreamOptions {
     int64 sequence = 1;
 }
 
-message GetTokensRequest {}
+message GetEnvRequest {}
 
-message GetTokensResponse {
-    message Token {
-        string name = 1;
-        string token = 2;
+message GetEnvResponse {
+    message Variable {
+        enum Type {
+            TYPE_UNSPECIFIED = 0;
+            TYPE_MAPBOX_TOKEN = 1;
+        }
+        Type type = 1;
+        string value = 2;
     }
-    repeated Token tokens = 1;
+    repeated Variable variables = 1;
 }
 
 message ArchiveReportRequest {

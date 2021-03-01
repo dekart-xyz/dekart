@@ -73,13 +73,13 @@ Dekart.CancelQuery = {
   responseType: proto_dekart_pb.CancelQueryResponse
 };
 
-Dekart.GetTokens = {
-  methodName: "GetTokens",
+Dekart.GetEnv = {
+  methodName: "GetEnv",
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.GetTokensRequest,
-  responseType: proto_dekart_pb.GetTokensResponse
+  requestType: proto_dekart_pb.GetEnvRequest,
+  responseType: proto_dekart_pb.GetEnvResponse
 };
 
 Dekart.GetReportStream = {
@@ -324,11 +324,11 @@ DekartClient.prototype.cancelQuery = function cancelQuery(requestMessage, metada
   };
 };
 
-DekartClient.prototype.getTokens = function getTokens(requestMessage, metadata, callback) {
+DekartClient.prototype.getEnv = function getEnv(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
-  var client = grpc.unary(Dekart.GetTokens, {
+  var client = grpc.unary(Dekart.GetEnv, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,

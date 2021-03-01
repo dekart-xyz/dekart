@@ -1,32 +1,34 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import {
   BrowserRouter as Router,
   Switch,
   Route,
-  Redirect,
-  useLocation
+  Redirect
 } from 'react-router-dom'
 import ReportPage from './ReportPage'
 import HomePage from './HomePage'
 import { QuestionOutlined, WarningOutlined } from '@ant-design/icons'
 import Result from 'antd/es/result'
-import { useSelector } from 'react-redux'
+import { useSelector, useDispatch } from 'react-redux'
+import { getEnv } from './actions'
 
 function AppRedirect () {
   const httpErrorStatus = useSelector(state => state.httpErrorStatus)
-  // const location = useLocation()
-  // console.log(location)
   if (httpErrorStatus) {
     return <Redirect to={`/${httpErrorStatus}`} />
-    // const path = `/${httpErrorStatus}`
-    // if (location.pathname !== path) {
-    //   return <Redirect to={`/${httpErrorStatus}`} />
-    // }
   }
   return null
 }
 
 export default function App () {
+  const env = useSelector(state => state.env)
+  const dispatch = useDispatch()
+
+  useEffect(() => {
+    if (!env.loaded) {
+      dispatch(getEnv())
+    }
+  })
   return (
     <Router>
       <Switch>

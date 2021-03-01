@@ -67,13 +67,13 @@ type DekartCancelQuery = {
   readonly responseType: typeof proto_dekart_pb.CancelQueryResponse;
 };
 
-type DekartGetTokens = {
+type DekartGetEnv = {
   readonly methodName: string;
   readonly service: typeof Dekart;
   readonly requestStream: false;
   readonly responseStream: false;
-  readonly requestType: typeof proto_dekart_pb.GetTokensRequest;
-  readonly responseType: typeof proto_dekart_pb.GetTokensResponse;
+  readonly requestType: typeof proto_dekart_pb.GetEnvRequest;
+  readonly responseType: typeof proto_dekart_pb.GetEnvResponse;
 };
 
 type DekartGetReportStream = {
@@ -103,7 +103,7 @@ export class Dekart {
   static readonly UpdateQuery: DekartUpdateQuery;
   static readonly RunQuery: DekartRunQuery;
   static readonly CancelQuery: DekartCancelQuery;
-  static readonly GetTokens: DekartGetTokens;
+  static readonly GetEnv: DekartGetEnv;
   static readonly GetReportStream: DekartGetReportStream;
   static readonly GetReportListStream: DekartGetReportListStream;
 }
@@ -203,14 +203,14 @@ export class DekartClient {
     requestMessage: proto_dekart_pb.CancelQueryRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CancelQueryResponse|null) => void
   ): UnaryResponse;
-  getTokens(
-    requestMessage: proto_dekart_pb.GetTokensRequest,
+  getEnv(
+    requestMessage: proto_dekart_pb.GetEnvRequest,
     metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetTokensResponse|null) => void
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetEnvResponse|null) => void
   ): UnaryResponse;
-  getTokens(
-    requestMessage: proto_dekart_pb.GetTokensRequest,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetTokensResponse|null) => void
+  getEnv(
+    requestMessage: proto_dekart_pb.GetEnvRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetEnvResponse|null) => void
   ): UnaryResponse;
   getReportStream(requestMessage: proto_dekart_pb.ReportStreamRequest, metadata?: grpc.Metadata): ResponseStream<proto_dekart_pb.ReportStreamResponse>;
   getReportListStream(requestMessage: proto_dekart_pb.ReportListRequest, metadata?: grpc.Metadata): ResponseStream<proto_dekart_pb.ReportListResponse>;
