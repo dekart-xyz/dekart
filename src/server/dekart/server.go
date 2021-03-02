@@ -44,6 +44,10 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 			Type:  proto.GetEnvResponse_Variable_TYPE_MAPBOX_TOKEN,
 			Value: os.Getenv("DEKART_MAPBOX_TOKEN"),
 		},
+		{
+			Type:  proto.GetEnvResponse_Variable_TYPE_UX_DATA_DOCUMENTATION,
+			Value: os.Getenv("DEKART_UX_DATA_DOCUMENTATION"),
+		},
 	}
 	return &proto.GetEnvResponse{
 		Variables: variables,

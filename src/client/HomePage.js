@@ -10,6 +10,7 @@ import Table from 'antd/es/table'
 import { archiveReport, createReport, subscribeReports, unsubscribeReports } from './actions'
 import { useDispatch, useSelector } from 'react-redux'
 import { PlusOutlined } from '@ant-design/icons'
+import DataDocumentationLink from './DataDocumentationLink'
 
 function Loading () {
   return null
@@ -61,6 +62,7 @@ function Reports ({ reports, createReportButton, archived }) {
           subTitle='Get ready to create you first map with Dekart'
           extra={createReportButton}
         />
+        <DataDocumentationLink />
       </div>
     )
   } else {

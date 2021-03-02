@@ -14,6 +14,7 @@ import { Query as QueryType } from '../proto/dekart_pb'
 import { SendOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
 import { Duration } from 'luxon'
 import prettyBites from 'pretty-bytes'
+import DataDocumentationLink from './DataDocumentationLink'
 
 function CancelButton ({ query }) {
   const dispatch = useDispatch()
@@ -105,6 +106,7 @@ function QueryEditor ({ queryId, queryText, onChange }) {
           />
         )}
       </AutoSizer>
+      {queryText.length ? null : <DataDocumentationLink className={styles.dataDoc} />}
     </div>
   )
 }

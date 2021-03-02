@@ -29,6 +29,7 @@ message GetEnvResponse {
         enum Type {
             TYPE_UNSPECIFIED = 0;
             TYPE_MAPBOX_TOKEN = 1;
+            TYPE_UX_DATA_DOCUMENTATION = 2;
         }
         Type type = 1;
         string value = 2;

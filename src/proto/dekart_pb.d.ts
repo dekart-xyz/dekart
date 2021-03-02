@@ -86,6 +86,7 @@ export namespace GetEnvResponse {
     export interface TypeMap {
       TYPE_UNSPECIFIED: 0;
       TYPE_MAPBOX_TOKEN: 1;
+      TYPE_UX_DATA_DOCUMENTATION: 2;
     }
 
     export const Type: TypeMap;

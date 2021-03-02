@@ -82,3 +82,12 @@
 .processed {
     font-size: 0.8em
 }
+
+.dataDoc {
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    text-align: center;
+}

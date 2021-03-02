@@ -16,6 +16,10 @@
     flex-direction: column;
 }
 
+.dataDocs {
+    display: block;
+}
+
 .deleteColumn {
     padding-top: 0!important;
     padding-bottom: 0!important;
