@@ -8,9 +8,9 @@ const menu = (
     <Menu.Item>
       <a href='/'>Reports</a>
     </Menu.Item>
-    <Menu.Divider/>
+    <Menu.Divider />
     <Menu.Item>
-      <a target='_blank' href='https://dekart.xyz/docs/'>Documentation <ExportOutlined /></a>
+      <a target='_blank' rel='noopener noreferrer' href='https://dekart.xyz/docs/'>Documentation <ExportOutlined /></a>
     </Menu.Item>
     <Menu.Item>
       <a target='_blank' rel='noopener noreferrer' href='https://github.com/dekart-xyz/dekart/issues'>Report Issue <ExportOutlined /></a>
