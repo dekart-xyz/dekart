@@ -6,7 +6,6 @@ import (
 	"dekart/src/server/user"
 	"net/http"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -41,35 +40,6 @@ func (m ResponseWriter) WriteHeader(statusCode int) {
 	}
 }
 
-type StaticFilesHandler struct {
-	staticPath string
-}
-
-//ServeHTTP implementation for reading static files from build folder
-func (h StaticFilesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
-	path, err := filepath.Abs(r.URL.Path)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	path = filepath.Join(h.staticPath, path)
-	_, err = os.Stat(path)
-	if os.IsNotExist(err) {
-		h.ServeIndex(ResponseWriter{w: w, statusCode: http.StatusNotFound}, r)
-		return
-	} else if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	http.FileServer(http.Dir(h.staticPath)).ServeHTTP(w, r)
-}
-
-//ServeIndex serves index.html
-func (h StaticFilesHandler) ServeIndex(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, filepath.Join(h.staticPath, "./index.html"))
-}
-
 func configureGRPC(dekartServer *dekart.Server) *grpcweb.WrappedGrpcServer {
 	server := grpc.NewServer()
 	proto.RegisterDekartServer(server, dekartServer)
@@ -94,9 +64,7 @@ func configureHTTP(dekartServer *dekart.Server) *mux.Router {
 		dekartServer.ServeQueryResult(w, r)
 	}).Methods("GET", "OPTIONS")
 
-	staticFilesHandler := StaticFilesHandler{
-		staticPath: os.Getenv("DEKART_STATIC_FILES"),
-	}
+	staticFilesHandler := NewStaticFilesHandler()
 
 	router.HandleFunc("/", staticFilesHandler.ServeIndex)
 	router.HandleFunc("/reports/{id}", staticFilesHandler.ServeIndex)
