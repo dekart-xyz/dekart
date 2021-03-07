@@ -1,7 +1,7 @@
 # Dekart
 Dekart is an open-source data visualization and analytical tool for large scale geo-spatial data. Dekart is based on Kepler.gl visualization and supports BigQuery as a data source.
 <a href="https://dekart.xyz/docs/about/screencast/"><img src="./docs/files/screen.png"></a>
-<p align="center"><a href="https://dekart.xyz/docs/about/screencast/">Demo Screencast</a></p>
+<p align="center"><a href="https://dekart.xyz/docs/about/playground/">Try Dekart with BigQuery Open Datasets</a></p>
 
 ## Features
 
