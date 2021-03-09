@@ -14,7 +14,7 @@ Visualize Data from BigQuery on a Kepler.gl map and share it with your team:
 
 ## Self-hosting Dekart
 
-* [Deploy to Google App Engine](./install/app-engine) and manage access with Google IAP
+* [Deploy to Google App Engine](https://dekart.xyz/docs/self-hosting/app-engine/)  and manage access with Google IAP
 * [Run with Docker](https://dekart.xyz/docs/self-hosting/docker/)
 * [Configuration](https://dekart.xyz/docs/configuration/environment-variables/)
 
