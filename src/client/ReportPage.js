@@ -64,7 +64,7 @@ function HeaderButtons ({ edit, changed, canSave, reportId, canWrite }) {
           icon={<SaveOutlined />}
           disabled={!canSave}
           onClick={() => dispatch(saveMap())}
-        >Save Map{changed ? '*' : ''}
+        >Save{changed ? '*' : ''}
         </Button>
         <Button
           icon={<PlaySquareOutlined />}
@@ -111,6 +111,7 @@ function Title () {
           onChange={(e) => dispatch(reportTitleChange(e.target.value))}
           onBlur={() => setEdit(false)}
           placeholder='Untitled'
+          autoFocus
           // size='large'
           disabled={!reportStatus.edit}
           // bordered={false}
@@ -192,8 +193,8 @@ export default function ReportPage ({ edit }) {
   return (
     <div className={styles.report}>
       <Header>
-        <Title />
         <DekartMenu />
+        <Title />
         <HeaderButtons
           reportId={id}
           canWrite={report.canWrite}
