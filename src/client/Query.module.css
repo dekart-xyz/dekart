@@ -24,9 +24,10 @@
 }
 .status {
     flex: 1;
-    margin-right: 10px;
+    margin-right: 0px;
     display: flex;
     flex-direction: column;
+    min-height: 40px;
 }
 
 .statusHead {
@@ -38,7 +39,7 @@
 }
 
 .button {
-    margin-left: 2px;
+    margin-left: 10px;
 }
 
 .icon {

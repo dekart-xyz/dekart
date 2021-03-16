@@ -83,7 +83,7 @@ function Processed ({ query }) {
   }
 }
 
-function QueryEditor ({ queryId, queryText, onChange }) {
+function QueryEditor ({ queryId, queryText, onChange, canWrite }) {
   return (
     <div className={styles.editor}>
       <AutoSizer>
@@ -97,11 +97,14 @@ function QueryEditor ({ queryId, queryText, onChange }) {
             name={'AceEditor' + queryId}
             onChange={onChange}
             value={queryText}
+            readOnly={!canWrite}
             editorProps={{ $blockScrolling: true }}
             setOptions={{
               enableBasicAutocompletion: true,
               enableLiveAutocompletion: true,
-              enableSnippets: true
+              enableSnippets: true,
+              highlightActiveLine: canWrite,
+              highlightGutterLine: canWrite
             }}
           />
         )}
@@ -156,7 +159,8 @@ function QueryStatus ({ children, query }) {
         </div>
         {errorMessage ? <div className={styles.errorMessage}>{errorMessage}</div> : null}
       </div>
-      <div className={styles.button}>{children}</div>
+      {children ? <div className={styles.button}>{children}</div> : null}
+
     </div>
   )
 }
@@ -164,18 +168,30 @@ function QueryStatus ({ children, query }) {
 export default function Query ({ query }) {
   const [queryText, setQueryText] = useState(query.queryText)
   const { canRun } = useSelector(state => state.queryStatus[query.id])
+  const { canWrite } = useSelector(state => state.report)
   const dispatch = useDispatch()
   return (
     <div key={query.id} className={styles.query}>
-      <QueryEditor queryId={query.id} queryText={queryText} onChange={value => setQueryText(value)} />
+      <QueryEditor
+        queryId={query.id}
+        queryText={queryText}
+        onChange={value => setQueryText(value)}
+        canWrite={canWrite}
+      />
       <QueryStatus query={query}>
-        <Button
-          size='large'
-          disabled={!canRun}
-          icon={<SendOutlined />}
-          onClick={() => dispatch(runQuery(query.id, queryText))}
-        >Execute
-        </Button>
+        {
+          canWrite
+            ? (
+              <Button
+                size='large'
+                disabled={!canRun}
+                icon={<SendOutlined />}
+                onClick={() => dispatch(runQuery(query.id, queryText))}
+              >Execute
+              </Button>
+              )
+            : null
+        }
       </QueryStatus>
     </div>
   )

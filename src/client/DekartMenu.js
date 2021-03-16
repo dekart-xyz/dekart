@@ -1,6 +1,5 @@
 import Menu from 'antd/es/menu'
 import styles from './DekartMenu.module.css'
-import { ExportOutlined } from '@ant-design/icons'
 import {
   Link
 } from 'react-router-dom'
@@ -15,12 +14,15 @@ export default function DekartMenu () {
         <Menu.Item>
           <Link to='/'>Reports</Link>
         </Menu.Item>
-        <Menu.SubMenu popupClassName={styles.subMenu} title='Support' active>
+        <Menu.SubMenu popupClassName={styles.subMenu} title='Community' active>
           <Menu.Item>
-            <a target='_blank' rel='noopener noreferrer' href='https://dekart.xyz/docs/'>Documentation <ExportOutlined /></a>
+            <a target='_blank' rel='noopener noreferrer' href='https://dekart.xyz/docs/'>Documentation</a>
           </Menu.Item>
           <Menu.Item>
-            <a target='_blank' rel='noopener noreferrer' href='https://github.com/dekart-xyz/dekart/issues'>Report Issue <ExportOutlined /></a>
+            <a target='_blank' rel='noopener noreferrer' href='http://github.com/dekart-xyz/dekart/'>GitHub</a>
+          </Menu.Item>
+          <Menu.Item>
+            <a target='_blank' rel='noopener noreferrer' href='https://github.com/dekart-xyz/dekart/issues'>Report Issue</a>
           </Menu.Item>
         </Menu.SubMenu>
       </Menu>

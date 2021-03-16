@@ -52,16 +52,12 @@ function shouldAddDataset (query, queriesList) {
 export function reportUpdate (reportStreamResponse) {
   const { report, queriesList } = reportStreamResponse
   return async (dispatch, getState) => {
-    const { queries: prevQueriesList, report: prevReport, reportStatus } = getState()
+    const { queries: prevQueriesList, report: prevReport } = getState()
     dispatch({
       type: reportUpdate.name,
       report,
       queriesList
     })
-    if (reportStatus.edit && !report.canWrite) {
-      // readonly report opened in edit mode, do not load data
-      return
-    }
     if (report.mapConfig && !prevReport) {
       const parsedConfig = KeplerGlSchema.parseSavedConfig(JSON.parse(report.mapConfig))
       dispatch(receiveMapConfig(parsedConfig))

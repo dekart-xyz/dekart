@@ -1,6 +1,5 @@
-import { Redirect, useHistory, useParams } from 'react-router-dom'
+import { useHistory, useParams } from 'react-router-dom'
 import Button from 'antd/es/button'
-import Tooltip from 'antd/es/tooltip'
 import Input from 'antd/es/input'
 import { useEffect, useState } from 'react'
 import { KeplerGl } from 'kepler.gl/components'
@@ -9,7 +8,7 @@ import { AutoSizer } from 'react-virtualized'
 import { useDispatch, useSelector } from 'react-redux'
 import { closeReport, openReport, createQuery, saveMap, reportTitleChange } from './actions'
 import Query from './Query'
-import { SaveOutlined, PlaySquareOutlined, EditOutlined, InfoCircleFilled } from '@ant-design/icons'
+import { SaveOutlined, PlaySquareOutlined, EditOutlined, ConsoleSqlOutlined } from '@ant-design/icons'
 import { KeplerGlSchema } from 'kepler.gl/schemas'
 import classnames from 'classnames'
 import DekartMenu from './DekartMenu'
@@ -59,13 +58,17 @@ function HeaderButtons ({ edit, changed, canSave, reportId, canWrite }) {
   if (edit) {
     return (
       <div className={styles.headerButtons}>
-        <Button
-          type='primary'
-          icon={<SaveOutlined />}
-          disabled={!canSave}
-          onClick={() => dispatch(saveMap())}
-        >Save{changed ? '*' : ''}
-        </Button>
+        {canWrite
+          ? (
+            <Button
+              type='primary'
+              icon={<SaveOutlined />}
+              disabled={!canSave}
+              onClick={() => dispatch(saveMap())}
+            >Save{changed ? '*' : ''}
+            </Button>
+            )
+          : null}
         <Button
           icon={<PlaySquareOutlined />}
           disabled={changed}
@@ -90,9 +93,11 @@ function HeaderButtons ({ edit, changed, canSave, reportId, canWrite }) {
   }
   return (
     <div className={styles.headerButtons}>
-      <Tooltip title='The report is created by the other author. You can only view it.'>
-        <div className={styles.readOnly}><span>Read-only</span><InfoCircleFilled /></div>
-      </Tooltip>
+      <Button
+        icon={<ConsoleSqlOutlined />}
+        onClick={() => history.replace(`/reports/${reportId}/edit`)}
+      >Source
+      </Button>
     </div>
   )
 }
@@ -100,9 +105,10 @@ function HeaderButtons ({ edit, changed, canSave, reportId, canWrite }) {
 
 function Title () {
   const reportStatus = useSelector(state => state.reportStatus)
+  const { canWrite } = useSelector(state => state.report)
   const [edit, setEdit] = useState(false)
   const dispatch = useDispatch()
-  if (reportStatus.edit && edit) {
+  if (canWrite && reportStatus.edit && edit) {
     return (
       <div className={styles.title}>
         <Input
@@ -113,7 +119,7 @@ function Title () {
           placeholder='Untitled'
           autoFocus
           // size='large'
-          disabled={!reportStatus.edit}
+          disabled={!(reportStatus.edit && canWrite)}
           // bordered={false}
         />
       </div>
@@ -124,7 +130,9 @@ function Title () {
         <span
           className={classnames(
             styles.titleText,
-            reportStatus.edit && styles.titleTextEdit
+            {
+              [styles.titleTextEdit]: reportStatus.edit && canWrite
+            }
           )}
           onClick={() => reportStatus.edit && setEdit(true)}
         >{reportStatus.title} <EditOutlined className={styles.titleEditIcon} />
@@ -184,10 +192,6 @@ export default function ReportPage ({ edit }) {
 
   if (!report) {
     return null
-  }
-
-  if (edit && !report.canWrite) {
-    return <Redirect to={`/reports/${id}`} />
   }
 
   return (
