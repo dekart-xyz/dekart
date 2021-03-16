@@ -3,7 +3,8 @@ import {
   BrowserRouter as Router,
   Switch,
   Route,
-  Redirect
+  Redirect,
+  useParams
 } from 'react-router-dom'
 import ReportPage from './ReportPage'
 import HomePage from './HomePage'
@@ -18,6 +19,11 @@ function AppRedirect () {
     return <Redirect to={`/${httpErrorStatus}`} />
   }
   return null
+}
+
+function RedirectToSource () {
+  const { id } = useParams()
+  return <Redirect to={`/reports/${id}/source`} />
 }
 
 export default function App () {
@@ -36,6 +42,9 @@ export default function App () {
           <HomePage />
         </Route>
         <Route path='/reports/:id/edit'>
+          <RedirectToSource />
+        </Route>
+        <Route path='/reports/:id/source'>
           <ReportPage edit />
         </Route>
         <Route path='/reports/:id'>

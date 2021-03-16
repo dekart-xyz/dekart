@@ -85,7 +85,7 @@ function HeaderButtons ({ edit, changed, canSave, reportId, canWrite }) {
           type='primary'
           disabled={!canWrite}
           icon={<EditOutlined />}
-          onClick={() => history.replace(`/reports/${reportId}/edit`)}
+          onClick={() => history.replace(`/reports/${reportId}/source`)}
         >Edit
         </Button>
       </div>
@@ -95,7 +95,7 @@ function HeaderButtons ({ edit, changed, canSave, reportId, canWrite }) {
     <div className={styles.headerButtons}>
       <Button
         icon={<ConsoleSqlOutlined />}
-        onClick={() => history.replace(`/reports/${reportId}/edit`)}
+        onClick={() => history.replace(`/reports/${reportId}/source`)}
       >Source
       </Button>
     </div>

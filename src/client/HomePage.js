@@ -99,7 +99,7 @@ export default function HomePage () {
   const createReportButton = <Button icon={<PlusOutlined />} type='primary' onClick={() => dispatch(createReport())}>Create Report</Button>
 
   if (newReportId) {
-    return <Redirect to={`/reports/${newReportId}/edit`} />
+    return <Redirect to={`/reports/${newReportId}/source`} />
   }
 
   return (
