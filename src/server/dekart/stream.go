@@ -16,97 +16,33 @@ import (
 
 func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStreamServer, sequence int64) error {
 	ctx := srv.Context()
-	claims := user.GetClaims(ctx)
-	reportRows, err := s.db.QueryContext(ctx,
-		`select
-			id,
-			case when map_config is null then '' else map_config end as map_config,
-			case when title is null then 'Untitled' else title end as title,
-			author_email = $2 as can_write
-		from reports where id=$1 and not archived limit 1`,
-		reportID,
-		claims.Email,
-	)
+
+	report, err := s.getReport(ctx, reportID)
 	if err != nil {
 		log.Err(err).Send()
 		return status.Errorf(codes.Internal, err.Error())
 	}
-	defer reportRows.Close()
+	if report == nil {
+		err := fmt.Errorf("Report %s not found", reportID)
+		log.Warn().Err(err).Send()
+		return status.Errorf(codes.NotFound, err.Error())
+	}
+
+	queries, err := s.getQueries(ctx, reportID)
+
+	if err != nil {
+		log.Err(err).Send()
+		return status.Errorf(codes.Internal, err.Error())
+	}
+
 	res := proto.ReportStreamResponse{
-		Report: &proto.Report{},
+		Report:  report,
+		Queries: queries,
 		StreamOptions: &proto.StreamOptions{
 			Sequence: sequence,
 		},
 	}
-	for reportRows.Next() {
-		err = reportRows.Scan(
-			&res.Report.Id,
-			&res.Report.MapConfig,
-			&res.Report.Title,
-			&res.Report.CanWrite,
-		)
-		if err != nil {
-			log.Err(err).Send()
-			return status.Errorf(codes.Internal, err.Error())
-		}
-	}
-	if res.Report.Id == "" {
-		err := fmt.Errorf("Report %s not found", res.Report.Id)
-		log.Warn().Err(err).Send()
-		return status.Errorf(codes.NotFound, err.Error())
-	}
-	queryRows, err := s.db.QueryContext(ctx,
-		`select
-			id,
-			query_text,
-			job_status,
-			case when job_result_id is null then '' else cast(job_result_id as VARCHAR) end as job_result_id,
-			case when job_error is null then '' else job_error end as job_error,
-			case
-				when job_started is null
-				then 0
-				else CAST((extract('epoch' from CURRENT_TIMESTAMP)  - extract('epoch' from job_started))*1000 as INTEGER)
-			end as job_duration,
-			total_rows,
-			bytes_processed,
-			result_size
-		from queries where report_id=$1`,
-		res.Report.Id,
-	)
-	if err != nil {
-		log.Err(err).Send()
-		return status.Errorf(codes.Internal, err.Error())
-	}
-	defer queryRows.Close()
-	res.Queries = make([]*proto.Query, 0)
-	for queryRows.Next() {
-		query := proto.Query{
-			ReportId: res.Report.Id,
-		}
-		if err := queryRows.Scan(
-			&query.Id,
-			&query.QueryText,
-			&query.JobStatus,
-			&query.JobResultId,
-			&query.JobError,
-			&query.JobDuration,
-			&query.TotalRows,
-			&query.BytesProcessed,
-			&query.ResultSize,
-		); err != nil {
-			log.Err(err).Send()
-			return status.Errorf(codes.Internal, err.Error())
-		}
-		switch query.JobStatus {
-		case proto.Query_JOB_STATUS_UNSPECIFIED:
-			query.JobDuration = 0
-		case proto.Query_JOB_STATUS_DONE:
-			if query.JobResultId != "" {
-				query.JobDuration = 0
-			}
-		}
-		res.Queries = append(res.Queries, &query)
-	}
+
 	err = srv.Send(&res)
 	if err != nil {
 		log.Err(err).Send()

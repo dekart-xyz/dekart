@@ -19,6 +19,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type DekartClient interface {
 	CreateReport(ctx context.Context, in *CreateReportRequest, opts ...grpc.CallOption) (*CreateReportResponse, error)
+	ForkReport(ctx context.Context, in *ForkReportRequest, opts ...grpc.CallOption) (*ForkReportResponse, error)
 	UpdateReport(ctx context.Context, in *UpdateReportRequest, opts ...grpc.CallOption) (*UpdateReportResponse, error)
 	ArchiveReport(ctx context.Context, in *ArchiveReportRequest, opts ...grpc.CallOption) (*ArchiveReportResponse, error)
 	CreateQuery(ctx context.Context, in *CreateQueryRequest, opts ...grpc.CallOption) (*CreateQueryResponse, error)
@@ -41,6 +42,15 @@ func NewDekartClient(cc grpc.ClientConnInterface) DekartClient {
 func (c *dekartClient) CreateReport(ctx context.Context, in *CreateReportRequest, opts ...grpc.CallOption) (*CreateReportResponse, error) {
 	out := new(CreateReportResponse)
 	err := c.cc.Invoke(ctx, "/Dekart/CreateReport", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) ForkReport(ctx context.Context, in *ForkReportRequest, opts ...grpc.CallOption) (*ForkReportResponse, error) {
+	out := new(ForkReportResponse)
+	err := c.cc.Invoke(ctx, "/Dekart/ForkReport", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -179,6 +189,7 @@ func (x *dekartGetReportListStreamClient) Recv() (*ReportListResponse, error) {
 // for forward compatibility
 type DekartServer interface {
 	CreateReport(context.Context, *CreateReportRequest) (*CreateReportResponse, error)
+	ForkReport(context.Context, *ForkReportRequest) (*ForkReportResponse, error)
 	UpdateReport(context.Context, *UpdateReportRequest) (*UpdateReportResponse, error)
 	ArchiveReport(context.Context, *ArchiveReportRequest) (*ArchiveReportResponse, error)
 	CreateQuery(context.Context, *CreateQueryRequest) (*CreateQueryResponse, error)
@@ -197,6 +208,9 @@ type UnimplementedDekartServer struct {
 
 func (UnimplementedDekartServer) CreateReport(context.Context, *CreateReportRequest) (*CreateReportResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateReport not implemented")
+}
+func (UnimplementedDekartServer) ForkReport(context.Context, *ForkReportRequest) (*ForkReportResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ForkReport not implemented")
 }
 func (UnimplementedDekartServer) UpdateReport(context.Context, *UpdateReportRequest) (*UpdateReportResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateReport not implemented")
@@ -252,6 +266,24 @@ func _Dekart_CreateReport_Handler(srv interface{}, ctx context.Context, dec func
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DekartServer).CreateReport(ctx, req.(*CreateReportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_ForkReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ForkReportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).ForkReport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Dekart/ForkReport",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).ForkReport(ctx, req.(*ForkReportRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -434,6 +466,10 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateReport",
 			Handler:    _Dekart_CreateReport_Handler,
+		},
+		{
+			MethodName: "ForkReport",
+			Handler:    _Dekart_ForkReport_Handler,
 		},
 		{
 			MethodName: "UpdateReport",

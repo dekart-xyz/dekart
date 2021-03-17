@@ -6,9 +6,9 @@ import { KeplerGl } from 'kepler.gl/components'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
 import { useDispatch, useSelector } from 'react-redux'
-import { closeReport, openReport, createQuery, saveMap, reportTitleChange } from './actions'
+import { closeReport, openReport, createQuery, saveMap, reportTitleChange, forkReport } from './actions'
 import Query from './Query'
-import { SaveOutlined, PlaySquareOutlined, EditOutlined, ConsoleSqlOutlined } from '@ant-design/icons'
+import { SaveOutlined, PlaySquareOutlined, EditOutlined, ConsoleSqlOutlined, ForkOutlined } from '@ant-design/icons'
 import { KeplerGlSchema } from 'kepler.gl/schemas'
 import classnames from 'classnames'
 import DekartMenu from './DekartMenu'
@@ -68,7 +68,15 @@ function HeaderButtons ({ edit, changed, canSave, reportId, canWrite }) {
             >Save{changed ? '*' : ''}
             </Button>
             )
-          : null}
+          : (
+            <Button
+              type='primary'
+              icon={<ForkOutlined />}
+              disabled={!canSave}
+              onClick={() => dispatch(forkReport())}
+            >Fork{changed ? '*' : ''}
+            </Button>
+            )}
         <Button
           icon={<PlaySquareOutlined />}
           disabled={changed}

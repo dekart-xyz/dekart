@@ -115,6 +115,10 @@ export function newReport (id) {
   return { type: newReport.name, id }
 }
 
+export function forkReport () {
+  return (dispatch, getState) => {}
+}
+
 export function createReport () {
   return async (dispatch) => {
     const request = new CreateReportRequest()

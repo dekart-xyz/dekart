@@ -12,20 +12,64 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+func newUUID() string {
+	u, err := uuid.NewRandom()
+	if err != nil {
+		log.Fatal().Err(err).Send()
+	}
+	return u.String()
+}
+
+func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		log.Fatal().Msg("getReport require claims")
+	}
+	reportRows, err := s.db.QueryContext(ctx,
+		`select
+			id,
+			case when map_config is null then '' else map_config end as map_config,
+			case when title is null then 'Untitled' else title end as title,
+			author_email = $2 as can_write
+		from reports where id=$1 and not archived limit 1`,
+		reportID,
+		claims.Email,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, err
+	}
+	defer reportRows.Close()
+	report := &proto.Report{}
+
+	for reportRows.Next() {
+		err = reportRows.Scan(
+			&report.Id,
+			&report.MapConfig,
+			&report.Title,
+			&report.CanWrite,
+		)
+		if err != nil {
+			log.Err(err).Send()
+			return nil, err
+		}
+	}
+	if report.Id == "" {
+		return nil, nil // not found
+	}
+	return report, nil
+}
+
 // CreateReport implementation
 func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest) (*proto.CreateReportResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	u, err := uuid.NewRandom()
-	if err != nil {
-		log.Err(err).Send()
-		return nil, err
-	}
-	_, err = s.db.ExecContext(ctx,
+	id := newUUID()
+	_, err := s.db.ExecContext(ctx,
 		"INSERT INTO reports (id, author_email) VALUES ($1, $2)",
-		u.String(),
+		id,
 		claims.Email,
 	)
 	if err != nil {
@@ -34,10 +78,22 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 	}
 	res := &proto.CreateReportResponse{
 		Report: &proto.Report{
-			Id: u.String(),
+			Id: id,
 		},
 	}
 	return res, nil
+}
+
+func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*proto.ForkReportResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	_, err := uuid.Parse(req.ReportId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+	return nil, nil
 }
 
 // UpdateReport implementation

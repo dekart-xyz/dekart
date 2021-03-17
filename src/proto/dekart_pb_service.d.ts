@@ -13,6 +13,15 @@ type DekartCreateReport = {
   readonly responseType: typeof proto_dekart_pb.CreateReportResponse;
 };
 
+type DekartForkReport = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.ForkReportRequest;
+  readonly responseType: typeof proto_dekart_pb.ForkReportResponse;
+};
+
 type DekartUpdateReport = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -97,6 +106,7 @@ type DekartGetReportListStream = {
 export class Dekart {
   static readonly serviceName: string;
   static readonly CreateReport: DekartCreateReport;
+  static readonly ForkReport: DekartForkReport;
   static readonly UpdateReport: DekartUpdateReport;
   static readonly ArchiveReport: DekartArchiveReport;
   static readonly CreateQuery: DekartCreateQuery;
@@ -148,6 +158,15 @@ export class DekartClient {
   createReport(
     requestMessage: proto_dekart_pb.CreateReportRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateReportResponse|null) => void
+  ): UnaryResponse;
+  forkReport(
+    requestMessage: proto_dekart_pb.ForkReportRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.ForkReportResponse|null) => void
+  ): UnaryResponse;
+  forkReport(
+    requestMessage: proto_dekart_pb.ForkReportRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.ForkReportResponse|null) => void
   ): UnaryResponse;
   updateReport(
     requestMessage: proto_dekart_pb.UpdateReportRequest,
