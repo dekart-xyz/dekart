@@ -73,8 +73,8 @@ function HeaderButtons ({ edit, changed, canSave, reportId, canWrite }) {
               type='primary'
               icon={<ForkOutlined />}
               disabled={!canSave}
-              onClick={() => dispatch(forkReport())}
-            >Fork{changed ? '*' : ''}
+              onClick={() => dispatch(forkReport(reportId))}
+            >Fork
             </Button>
             )}
         <Button

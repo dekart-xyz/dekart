@@ -2,6 +2,7 @@ package dekart
 
 import (
 	"context"
+	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/user"
 	"fmt"
@@ -84,16 +85,86 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 	return res, nil
 }
 
+func rollback(tx *sql.Tx) {
+	err := tx.Rollback()
+	if err != nil {
+		log.Err(err).Send()
+	}
+}
+
+func (s Server) commitReportWithQueries(ctx context.Context, report *proto.Report, queries []*proto.Query) error {
+	claims := user.GetClaims(ctx)
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
+
+	_, err = tx.ExecContext(ctx,
+		"INSERT INTO reports (id, author_email, map_config, title) VALUES ($1, $2, $3, $4)",
+		report.Id,
+		claims.Email,
+		report.MapConfig,
+		report.Title,
+	)
+	if err != nil {
+		rollback(tx)
+		return err
+	}
+	for _, query := range queries {
+		queryId := newUUID()
+		_, err := tx.ExecContext(ctx,
+			`INSERT INTO queries (id, report_id, query_text) VALUES($1, $2, $3)`,
+			queryId,
+			report.Id,
+			query.QueryText,
+		)
+		if err != nil {
+			rollback(tx)
+			return err
+		}
+	}
+	err = tx.Commit()
+	return err
+}
+
 func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*proto.ForkReportResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
 	}
-	return nil, nil
+
+	reportID := newUUID()
+
+	report, err := s.getReport(ctx, req.ReportId)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, err
+	}
+	if report == nil {
+		err := fmt.Errorf("Report %s not found", reportID)
+		log.Warn().Err(err).Send()
+		return nil, status.Errorf(codes.NotFound, err.Error())
+	}
+	report.Id = reportID
+	report.Title = fmt.Sprintf("Fork of %s", report.Title)
+
+	sourceQueries, err := s.getQueries(ctx, req.ReportId)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, err
+	}
+
+	err = s.commitReportWithQueries(ctx, report, sourceQueries)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, err
+	}
+
+	return &proto.ForkReportResponse{
+		ReportId: reportID,
+	}, nil
 }
 
 // UpdateReport implementation

@@ -3,7 +3,7 @@ import { receiveMapConfig } from 'kepler.gl/actions'
 import { getReportStream, getStream, unary } from '../lib/grpc'
 import { error, streamError, success } from './message'
 import { downloadJobResults } from './job'
-import { ArchiveReportRequest, CreateReportRequest, Report, ReportListRequest, UpdateReportRequest } from '../../proto/dekart_pb'
+import { ArchiveReportRequest, CreateReportRequest, ForkReportRequest, Report, ReportListRequest, UpdateReportRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 
 let reportStreamCancelable
@@ -115,8 +115,18 @@ export function newReport (id) {
   return { type: newReport.name, id }
 }
 
-export function forkReport () {
-  return (dispatch, getState) => {}
+export function forkReport (reportId) {
+  return async (dispatch, getState) => {
+    dispatch({ type: forkReport.name })
+    const request = new ForkReportRequest()
+    request.setReportId(reportId)
+    try {
+      const { reportId } = await unary(Dekart.ForkReport, request)
+      dispatch(newReport(reportId))
+    } catch (err) {
+      dispatch(error(err))
+    }
+  }
 }
 
 export function createReport () {

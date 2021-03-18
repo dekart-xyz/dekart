@@ -24,11 +24,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		return nil, status.Errorf(codes.InvalidArgument, "req.Query == nil")
 	}
 
-	u, err := uuid.NewRandom()
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
-	}
+	id := newUUID()
 	result, err := s.db.ExecContext(ctx,
 		`insert into queries (id, report_id, query_text)
 		select
@@ -38,7 +34,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		from reports
 		where id=$2 and not archived and author_email=$4 limit 1
 		`,
-		u.String(),
+		id,
 		req.Query.ReportId,
 		req.Query.QueryText,
 		claims.Email,
@@ -64,7 +60,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 
 	res := &proto.CreateQueryResponse{
 		Query: &proto.Query{
-			Id:        u.String(),
+			Id:        id,
 			ReportId:  req.Query.ReportId,
 			QueryText: req.Query.QueryText,
 		},

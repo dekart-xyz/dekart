@@ -89,7 +89,6 @@ function Reports ({ reports, createReportButton, archived }) {
 
 export default function HomePage () {
   const reportsList = useSelector(state => state.reportsList)
-  const { newReportId } = useSelector(state => state.reportStatus)
   const dispatch = useDispatch()
   const body = useRef()
   useEffect(() => {
@@ -97,10 +96,6 @@ export default function HomePage () {
     return () => dispatch(unsubscribeReports())
   }, [dispatch])
   const createReportButton = <Button icon={<PlusOutlined />} type='primary' onClick={() => dispatch(createReport())}>Create Report</Button>
-
-  if (newReportId) {
-    return <Redirect to={`/reports/${newReportId}/source`} />
-  }
 
   return (
     <div className={styles.homePage}>

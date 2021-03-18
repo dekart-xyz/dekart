@@ -15,9 +15,16 @@ import { getEnv } from './actions'
 
 function AppRedirect () {
   const httpErrorStatus = useSelector(state => state.httpErrorStatus)
+  const { newReportId } = useSelector(state => state.reportStatus)
+
   if (httpErrorStatus) {
     return <Redirect to={`/${httpErrorStatus}`} />
   }
+
+  if (newReportId) {
+    return <Redirect to={`/reports/${newReportId}/source`} />
+  }
+
   return null
 }
 
