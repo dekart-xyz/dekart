@@ -22,7 +22,7 @@ function AppRedirect () {
   }
 
   if (newReportId) {
-    return <Redirect to={`/reports/${newReportId}/source`} />
+    return <Redirect to={`/reports/${newReportId}/source`} push />
   }
 
   return null

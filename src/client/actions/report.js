@@ -115,6 +115,10 @@ export function newReport (id) {
   return { type: newReport.name, id }
 }
 
+export function newForkedReport (id) {
+  return { type: newForkedReport.name, id }
+}
+
 export function forkReport (reportId) {
   return async (dispatch, getState) => {
     dispatch({ type: forkReport.name })
@@ -122,7 +126,8 @@ export function forkReport (reportId) {
     request.setReportId(reportId)
     try {
       const { reportId } = await unary(Dekart.ForkReport, request)
-      dispatch(newReport(reportId))
+      dispatch(newForkedReport(reportId))
+      dispatch(success('Report Forked'))
     } catch (err) {
       dispatch(error(err))
     }
