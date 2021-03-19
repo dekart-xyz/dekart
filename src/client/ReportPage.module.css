@@ -87,9 +87,6 @@
     background-color: #15232F;
 }
 
-.keplerBlock :global #kepler-gl__kepler .side-bar__close {
-    display: none;
-}
 .keplerBlock :global #kepler-gl__kepler .side-panel__header__top {
     display: none;
 }
