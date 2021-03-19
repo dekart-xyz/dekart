@@ -544,6 +544,46 @@ export namespace ReportStreamResponse {
   }
 }
 
+export class ForkReportRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): ForkReportRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: ForkReportRequest): ForkReportRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: ForkReportRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): ForkReportRequest;
+  static deserializeBinaryFromReader(message: ForkReportRequest, reader: jspb.BinaryReader): ForkReportRequest;
+}
+
+export namespace ForkReportRequest {
+  export type AsObject = {
+    reportId: string,
+  }
+}
+
+export class ForkReportResponse extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): ForkReportResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: ForkReportResponse): ForkReportResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: ForkReportResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): ForkReportResponse;
+  static deserializeBinaryFromReader(message: ForkReportResponse, reader: jspb.BinaryReader): ForkReportResponse;
+}
+
+export namespace ForkReportResponse {
+  export type AsObject = {
+    reportId: string,
+  }
+}
+
 export class CreateReportRequest extends jspb.Message {
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CreateReportRequest.AsObject;

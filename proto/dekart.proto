@@ -4,6 +4,7 @@ option go_package = "proto";
 
 service Dekart {
     rpc CreateReport(CreateReportRequest) returns (CreateReportResponse) {}
+    rpc ForkReport(ForkReportRequest) returns (ForkReportResponse) {}
     rpc UpdateReport(UpdateReportRequest) returns (UpdateReportResponse) {}
     rpc ArchiveReport(ArchiveReportRequest) returns (ArchiveReportResponse) {}
 
@@ -128,6 +129,14 @@ message ReportStreamResponse {
     Report report = 1;
     repeated Query queries = 2;
     StreamOptions stream_options = 3;
+}
+
+message ForkReportRequest {
+    string report_id = 1;
+}
+
+message ForkReportResponse {
+    string report_id = 1;
 }
 
 message CreateReportRequest {

@@ -19,6 +19,15 @@ Dekart.CreateReport = {
   responseType: proto_dekart_pb.CreateReportResponse
 };
 
+Dekart.ForkReport = {
+  methodName: "ForkReport",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.ForkReportRequest,
+  responseType: proto_dekart_pb.ForkReportResponse
+};
+
 Dekart.UpdateReport = {
   methodName: "UpdateReport",
   service: Dekart,
@@ -112,6 +121,37 @@ DekartClient.prototype.createReport = function createReport(requestMessage, meta
     callback = arguments[1];
   }
   var client = grpc.unary(Dekart.CreateReport, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.forkReport = function forkReport(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.ForkReport, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
