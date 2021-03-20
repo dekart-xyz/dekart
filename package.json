@@ -10,6 +10,7 @@
     "ace-builds": "^1.4.12",
     "antd": "^4.9.4",
     "classnames": "^2.2.6",
+    "copy-to-clipboard": "^3.3.1",
     "google-protobuf": "^3.14.0",
     "kepler.gl": "^2.4.0",
     "luxon": "^1.25.0",
