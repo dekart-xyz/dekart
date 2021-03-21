@@ -39,6 +39,10 @@ func NewServer(db *sql.DB, bucket *storage.BucketHandle, jobs *job.Store) *Serve
 
 // GetEnv variables to the client
 func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.GetEnvResponse, error) {
+	homePageUrl := os.Getenv("DEKART_UX_HOMEPAGE")
+	if homePageUrl == "" {
+		homePageUrl = "/"
+	}
 	variables := []*proto.GetEnvResponse_Variable{
 		{
 			Type:  proto.GetEnvResponse_Variable_TYPE_MAPBOX_TOKEN,
@@ -47,6 +51,10 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 		{
 			Type:  proto.GetEnvResponse_Variable_TYPE_UX_DATA_DOCUMENTATION,
 			Value: os.Getenv("DEKART_UX_DATA_DOCUMENTATION"),
+		},
+		{
+			Type:  proto.GetEnvResponse_Variable_TYPE_UX_HOMEPAGE,
+			Value: homePageUrl,
 		},
 	}
 	return &proto.GetEnvResponse{

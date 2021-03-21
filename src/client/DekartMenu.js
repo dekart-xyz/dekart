@@ -3,13 +3,18 @@ import styles from './DekartMenu.module.css'
 import {
   Link
 } from 'react-router-dom'
+import { useSelector } from 'react-redux'
 
 export default function DekartMenu () {
+  const env = useSelector(state => state.env)
+  if (!env.loaded) {
+    return null
+  }
   return (
     <div className={styles.dekartMenu}>
       <Menu mode='horizontal' theme='dark'>
         <Menu.Item>
-          <a target='_blank' rel='noopener noreferrer' className={styles.dekartLink} href='https://dekart.xyz/'>Dekart</a>
+          <a target='_blank' rel='noopener noreferrer' className={styles.dekartLink} href={env.variables.UX_HOMEPAGE}>Dekart</a>
         </Menu.Item>
         <Menu.Item>
           <Link to='/'>Reports</Link>

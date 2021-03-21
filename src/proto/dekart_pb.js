@@ -1071,7 +1071,8 @@ proto.GetEnvResponse.Variable.serializeBinaryToWriter = function(message, writer
 proto.GetEnvResponse.Variable.Type = {
   TYPE_UNSPECIFIED: 0,
   TYPE_MAPBOX_TOKEN: 1,
-  TYPE_UX_DATA_DOCUMENTATION: 2
+  TYPE_UX_DATA_DOCUMENTATION: 2,
+  TYPE_UX_HOMEPAGE: 3
 };
 
 /**
