@@ -18,7 +18,7 @@ func (s Server) getQueries(ctx context.Context, reportID string) ([]*proto.Query
 			case
 				when job_started is null
 				then 0
-				else CAST((extract('epoch' from CURRENT_TIMESTAMP)  - extract('epoch' from job_started))*1000 as INTEGER)
+				else CAST((extract('epoch' from CURRENT_TIMESTAMP)  - extract('epoch' from job_started))*1000 as BIGINT)
 			end as job_duration,
 			total_rows,
 			bytes_processed,
@@ -27,7 +27,7 @@ func (s Server) getQueries(ctx context.Context, reportID string) ([]*proto.Query
 		reportID,
 	)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Str("reportID", reportID).Msg("select from queries failed")
 		return nil, err
 	}
 	defer queryRows.Close()

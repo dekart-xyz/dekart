@@ -40,7 +40,7 @@ cloud-sql-proxy-docker:
 	docker build -t cloud-sql-proxy -f ./cloud_sql_proxy/Dockerfile .
 
 cloud-sql-proxy: cloud-sql-proxy-docker
-	godotenv -f .env docker run -it --rm \
+	docker run -it --rm \
 		-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
 		--env-file .env \
 		-p 5432:5432 \

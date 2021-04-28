@@ -19,7 +19,7 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 
 	report, err := s.getReport(ctx, reportID)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Cannot retrieve report")
 		return status.Errorf(codes.Internal, err.Error())
 	}
 	if report == nil {
@@ -31,7 +31,7 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 	queries, err := s.getQueries(ctx, reportID)
 
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Cannot retrieve queries")
 		return status.Errorf(codes.Internal, err.Error())
 	}
 
@@ -79,10 +79,6 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 	}
 	ping := s.reportStreams.Register(req.Report.Id, streamID.String(), req.StreamOptions.Sequence)
 	defer s.reportStreams.Deregister(req.Report.Id, streamID.String())
-
-	if err != nil {
-		return err
-	}
 
 	ctx, cancel := context.WithTimeout(srv.Context(), 55*time.Second)
 	defer cancel()

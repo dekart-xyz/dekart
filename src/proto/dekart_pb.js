@@ -2125,7 +2125,7 @@ proto.Query.deserializeBinaryFromReader = function(msg, reader) {
       msg.setJobError(value);
       break;
     case 7:
-      var value = /** @type {number} */ (reader.readInt32());
+      var value = /** @type {number} */ (reader.readInt64());
       msg.setJobDuration(value);
       break;
     case 8:
@@ -2213,7 +2213,7 @@ proto.Query.serializeBinaryToWriter = function(message, writer) {
   }
   f = message.getJobDuration();
   if (f !== 0) {
-    writer.writeInt32(
+    writer.writeInt64(
       7,
       f
     );
@@ -2361,7 +2361,7 @@ proto.Query.prototype.setJobError = function(value) {
 
 
 /**
- * optional int32 job_duration = 7;
+ * optional int64 job_duration = 7;
  * @return {number}
  */
 proto.Query.prototype.getJobDuration = function() {
