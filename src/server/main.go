@@ -26,7 +26,7 @@ func configureLogger() {
 
 	pretty := os.Getenv("DEKART_LOG_PRETTY")
 	if pretty != "" {
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout}).With().Caller().Logger()
 	}
 
 	debug := os.Getenv("DEKART_LOG_DEBUG")

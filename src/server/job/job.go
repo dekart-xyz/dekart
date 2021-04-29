@@ -77,8 +77,8 @@ func (job *Job) close(storageWriter *storage.Writer, csvWriter *csv.Writer) {
 		return
 	}
 	if err != nil {
-		log.Err(err).Msg("Error when closing bucket connection")
-		job.cancel()
+		log.Err(err).Send()
+		job.cancelWithError(err)
 		return
 	}
 	attrs := storageWriter.Attrs()
@@ -108,7 +108,7 @@ func (job *Job) read(queryStatus *bigquery.JobStatus) {
 	it, err := job.bigqueryJob.Read(ctx)
 	if err != nil {
 		log.Err(err).Send()
-		job.cancel()
+		job.cancelWithError(err)
 		return
 	}
 
@@ -132,7 +132,7 @@ func (job *Job) read(queryStatus *bigquery.JobStatus) {
 		}
 		if err != nil {
 			log.Err(err).Send()
-			job.cancel()
+			job.cancelWithError(err)
 			return
 		}
 		if firstLine {
@@ -148,7 +148,7 @@ func (job *Job) read(queryStatus *bigquery.JobStatus) {
 			}
 			if err != nil {
 				log.Err(err).Send()
-				job.cancel()
+				job.cancelWithError(err)
 				return
 			}
 		}
@@ -162,7 +162,7 @@ func (job *Job) read(queryStatus *bigquery.JobStatus) {
 		}
 		if err != nil {
 			log.Err(err).Send()
-			job.cancel()
+			job.cancelWithError(err)
 			return
 		}
 	}
