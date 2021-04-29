@@ -8,13 +8,14 @@ import { useDispatch, useSelector } from 'react-redux'
 import { closeReport, openReport, createQuery, reportTitleChange } from './actions'
 import Query from './Query'
 import { EditOutlined } from '@ant-design/icons'
+import Tabs from 'antd/es/tabs'
 import { KeplerGlSchema } from 'kepler.gl/schemas'
 import classnames from 'classnames'
 import DekartMenu from './DekartMenu'
 import { Header } from './Header'
 import ReportHeaderButtons from './ReportHeaderButtons'
 
-function ReportQuery ({ reportId }) {
+function QuerySection ({ reportId }) {
   const queries = useSelector(state => state.queries)
   const report = useSelector(state => state.report)
   const dispatch = useDispatch()
@@ -24,9 +25,16 @@ function ReportQuery ({ reportId }) {
     }
   }, [reportId, report, queries, dispatch])
   if (queries && queries.length) {
-    const queriesSections = queries.map(query => <Query query={query} key={query.id} />)
+    const query = queries[0]
     return (
-      <div className={styles.querySection}>{queriesSections}</div>
+      <div className={styles.querySection}>
+        <div className={styles.tabs}>
+          <Tabs>
+            <Tabs.TabPane tab='Query 1' />
+          </Tabs>
+        </div>
+        <Query query={query} key={query.id} />
+      </div>
     )
   } else {
     return null
@@ -158,7 +166,7 @@ export default function ReportPage ({ edit }) {
       </Header>
       <div className={styles.body}>
         <Kepler />
-        {edit ? <ReportQuery reportId={id} /> : null}
+        {edit ? <QuerySection reportId={id} /> : null}
       </div>
     </div>
   )
