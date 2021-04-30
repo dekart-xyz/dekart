@@ -29,8 +29,8 @@ function QuerySection ({ reportId }) {
     return (
       <div className={styles.querySection}>
         <div className={styles.tabs}>
-          <Tabs>
-            <Tabs.TabPane tab='Query 1' />
+          <Tabs type='editable-card' activeKey='0'>
+            <Tabs.TabPane tab='Query 1' key='0' />
           </Tabs>
         </div>
         <Query query={query} key={query.id} />

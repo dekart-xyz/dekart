@@ -57,9 +57,19 @@
     flex: 1;
 }
 
+.tabs {
+    background-color: #EDEDED;
+    background-color: #F7F7F7;
+}
+
+.tabs :global .ant-tabs-nav {
+    margin-bottom: 0;
+}
+
 .querySection {
     width: 500px;
     display: flex;
+    flex-direction: column;
 }
 
 .keplerBlock {
