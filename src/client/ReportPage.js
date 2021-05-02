@@ -5,7 +5,7 @@ import { KeplerGl } from 'kepler.gl/components'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
 import { useDispatch, useSelector } from 'react-redux'
-import { closeReport, openReport, createQuery, reportTitleChange } from './actions'
+import { closeReport, openReport, createQuery, reportTitleChange, removeQuery } from './actions'
 import Query from './Query'
 import { EditOutlined } from '@ant-design/icons'
 import Tabs from 'antd/es/tabs'
@@ -14,23 +14,37 @@ import classnames from 'classnames'
 import DekartMenu from './DekartMenu'
 import { Header } from './Header'
 import ReportHeaderButtons from './ReportHeaderButtons'
+import Downloading from './Downloading'
 
 function QuerySection ({ reportId }) {
   const queries = useSelector(state => state.queries)
   const report = useSelector(state => state.report)
   const dispatch = useDispatch()
+  const [activeQueryId, setActiveQueryId] = useState(queries && queries[0] && queries[0].id)
   useEffect(() => {
     if (report && !(queries && queries.length)) {
       dispatch(createQuery(reportId))
     }
   }, [reportId, report, queries, dispatch])
   if (queries && queries.length) {
-    const query = queries[0]
+    const query = queries.find(q => q.id === activeQueryId)
     return (
       <div className={styles.querySection}>
         <div className={styles.tabs}>
-          <Tabs type='editable-card' activeKey='0'>
-            <Tabs.TabPane tab='Query 1' key='0' />
+          <Tabs
+            type='editable-card'
+            activeKey={activeQueryId}
+            onChange={(queryId) => setActiveQueryId(queryId)}
+            onEdit={(queryId, action) => {
+              switch (action) {
+                case 'add':
+                  return dispatch(createQuery(reportId))
+                case 'remove':
+                  return dispatch(removeQuery(queryId))
+              }
+            }}
+          >
+            {queries.map((query, i) => <Tabs.TabPane tab={`Query ${i + 1}`} key={query.id} />)}
           </Tabs>
         </div>
         <Query query={query} key={query.id} />
@@ -153,6 +167,7 @@ export default function ReportPage ({ edit }) {
 
   return (
     <div className={styles.report}>
+      <Downloading />
       <Header>
         <DekartMenu />
         <Title />

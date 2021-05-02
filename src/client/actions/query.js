@@ -3,6 +3,10 @@ import { Dekart } from '../../proto/dekart_pb_service'
 import { unary } from '../lib/grpc'
 import { error, success } from './message'
 
+export function removeQuery (queryId) {
+  return { type: removeQuery.name, queryId }
+}
+
 export function createQuery (reportId) {
   return (dispatch) => {
     dispatch({ type: createQuery.name })

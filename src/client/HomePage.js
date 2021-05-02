@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { Redirect } from 'react-router-dom'
 import DekartMenu from './DekartMenu'
 import { Header } from './Header'
 import styles from './HomePage.module.css'
@@ -114,7 +113,7 @@ export default function HomePage () {
                 body={body}
               />
             : <Loading />
-}
+        }
       </div>
     </div>
   )
