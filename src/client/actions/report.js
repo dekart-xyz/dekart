@@ -62,7 +62,7 @@ export function reportUpdate (reportStreamResponse) {
       const parsedConfig = KeplerGlSchema.parseSavedConfig(JSON.parse(report.mapConfig))
       dispatch(receiveMapConfig(parsedConfig))
     }
-    queriesList.forEach(query => {
+    queriesList.forEach((query) => {
       if (shouldAddDataset(query, prevQueriesList)) {
         dispatch(downloadJobResults(query))
       }

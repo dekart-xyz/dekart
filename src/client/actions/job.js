@@ -16,10 +16,12 @@ export function downloadJobResults (query) {
       dispatch(error(err))
     }
     const data = processCsvData(csv)
+    const { queries } = getState()
+    const i = queries.findIndex(q => q.id === query.id)
     dispatch(addDataToMap({
       datasets: {
         info: {
-          label: 'Query',
+          label: `Query ${i + 1}`,
           id: query.id
         },
         data
