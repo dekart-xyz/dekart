@@ -1,11 +1,12 @@
 import { useParams } from 'react-router-dom'
 import Input from 'antd/es/input'
+import Modal from 'antd/es/modal'
 import { useEffect, useState } from 'react'
 import { KeplerGl } from 'kepler.gl/components'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
 import { useDispatch, useSelector } from 'react-redux'
-import { closeReport, openReport, createQuery, reportTitleChange, removeQuery } from './actions'
+import { closeReport, openReport, createQuery, reportTitleChange, removeQuery, setActiveQuery } from './actions'
 import Query from './Query'
 import { EditOutlined } from '@ant-design/icons'
 import Tabs from 'antd/es/tabs'
@@ -18,36 +19,42 @@ import Downloading from './Downloading'
 
 function QuerySection ({ reportId }) {
   const queries = useSelector(state => state.queries)
+  const activeQuery = useSelector(state => state.activeQuery)
   const report = useSelector(state => state.report)
   const dispatch = useDispatch()
-  const [activeQueryId, setActiveQueryId] = useState(queries && queries[0] && queries[0].id)
   useEffect(() => {
-    if (report && !(queries && queries.length)) {
+    if (report && !(activeQuery)) {
       dispatch(createQuery(reportId))
     }
-  }, [reportId, report, queries, dispatch])
-  if (queries && queries.length) {
-    const query = queries.find(q => q.id === activeQueryId)
+  }, [reportId, report, activeQuery, dispatch])
+  if (activeQuery) {
+    const closable = queries.length > 1
     return (
       <div className={styles.querySection}>
         <div className={styles.tabs}>
           <Tabs
             type='editable-card'
-            activeKey={activeQueryId}
-            onChange={(queryId) => setActiveQueryId(queryId)}
+            activeKey={activeQuery.id}
+            onChange={(queryId) => dispatch(setActiveQuery(queryId))}
             onEdit={(queryId, action) => {
               switch (action) {
                 case 'add':
                   return dispatch(createQuery(reportId))
                 case 'remove':
-                  return dispatch(removeQuery(queryId))
+                  Modal.confirm({
+                    title: 'Are you sure delete query?',
+                    okText: 'Yes',
+                    okType: 'danger',
+                    cancelText: 'No',
+                    onOk: () => dispatch(removeQuery(queryId))
+                  })
               }
             }}
           >
-            {queries.map((query, i) => <Tabs.TabPane tab={`Query ${i + 1}`} key={query.id} />)}
+            {queries.map((query, i) => <Tabs.TabPane tab={`Query ${i + 1}`} key={query.id} closable={closable} />)}
           </Tabs>
         </div>
-        <Query query={query} key={query.id} />
+        <Query query={activeQuery} key={activeQuery.id} />
       </div>
     )
   } else {

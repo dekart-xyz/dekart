@@ -26,6 +26,7 @@ type DekartClient interface {
 	UpdateQuery(ctx context.Context, in *UpdateQueryRequest, opts ...grpc.CallOption) (*UpdateQueryResponse, error)
 	RunQuery(ctx context.Context, in *RunQueryRequest, opts ...grpc.CallOption) (*RunQueryResponse, error)
 	CancelQuery(ctx context.Context, in *CancelQueryRequest, opts ...grpc.CallOption) (*CancelQueryResponse, error)
+	RemoveQuery(ctx context.Context, in *RemoveQueryRequest, opts ...grpc.CallOption) (*RemoveQueryResponse, error)
 	GetEnv(ctx context.Context, in *GetEnvRequest, opts ...grpc.CallOption) (*GetEnvResponse, error)
 	GetReportStream(ctx context.Context, in *ReportStreamRequest, opts ...grpc.CallOption) (Dekart_GetReportStreamClient, error)
 	GetReportListStream(ctx context.Context, in *ReportListRequest, opts ...grpc.CallOption) (Dekart_GetReportListStreamClient, error)
@@ -105,6 +106,15 @@ func (c *dekartClient) RunQuery(ctx context.Context, in *RunQueryRequest, opts .
 func (c *dekartClient) CancelQuery(ctx context.Context, in *CancelQueryRequest, opts ...grpc.CallOption) (*CancelQueryResponse, error) {
 	out := new(CancelQueryResponse)
 	err := c.cc.Invoke(ctx, "/Dekart/CancelQuery", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) RemoveQuery(ctx context.Context, in *RemoveQueryRequest, opts ...grpc.CallOption) (*RemoveQueryResponse, error) {
+	out := new(RemoveQueryResponse)
+	err := c.cc.Invoke(ctx, "/Dekart/RemoveQuery", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -196,6 +206,7 @@ type DekartServer interface {
 	UpdateQuery(context.Context, *UpdateQueryRequest) (*UpdateQueryResponse, error)
 	RunQuery(context.Context, *RunQueryRequest) (*RunQueryResponse, error)
 	CancelQuery(context.Context, *CancelQueryRequest) (*CancelQueryResponse, error)
+	RemoveQuery(context.Context, *RemoveQueryRequest) (*RemoveQueryResponse, error)
 	GetEnv(context.Context, *GetEnvRequest) (*GetEnvResponse, error)
 	GetReportStream(*ReportStreamRequest, Dekart_GetReportStreamServer) error
 	GetReportListStream(*ReportListRequest, Dekart_GetReportListStreamServer) error
@@ -229,6 +240,9 @@ func (UnimplementedDekartServer) RunQuery(context.Context, *RunQueryRequest) (*R
 }
 func (UnimplementedDekartServer) CancelQuery(context.Context, *CancelQueryRequest) (*CancelQueryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CancelQuery not implemented")
+}
+func (UnimplementedDekartServer) RemoveQuery(context.Context, *RemoveQueryRequest) (*RemoveQueryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveQuery not implemented")
 }
 func (UnimplementedDekartServer) GetEnv(context.Context, *GetEnvRequest) (*GetEnvResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetEnv not implemented")
@@ -396,6 +410,24 @@ func _Dekart_CancelQuery_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Dekart_RemoveQuery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveQueryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).RemoveQuery(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Dekart/RemoveQuery",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).RemoveQuery(ctx, req.(*RemoveQueryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Dekart_GetEnv_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetEnvRequest)
 	if err := dec(in); err != nil {
@@ -494,6 +526,10 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CancelQuery",
 			Handler:    _Dekart_CancelQuery_Handler,
+		},
+		{
+			MethodName: "RemoveQuery",
+			Handler:    _Dekart_RemoveQuery_Handler,
 		},
 		{
 			MethodName: "GetEnv",

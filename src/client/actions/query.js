@@ -1,10 +1,40 @@
-import { CancelQueryRequest, CreateQueryRequest, Query, RunQueryRequest, UpdateQueryRequest } from '../../proto/dekart_pb'
+import { CancelQueryRequest, CreateQueryRequest, Query, RemoveQueryRequest, RunQueryRequest, UpdateQueryRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { unary } from '../lib/grpc'
 import { error, success } from './message'
 
+export function setActiveQuery (queryId) {
+  return (dispatch, getState) => {
+    const { queries } = getState()
+    const query = queries.find(q => q.id === queryId) || queries[0]
+    if (query) {
+      dispatch({ type: setActiveQuery.name, query })
+    }
+  }
+}
 export function removeQuery (queryId) {
-  return { type: removeQuery.name, queryId }
+  return async (dispatch, getState) => {
+    const { queries, activeQuery } = getState()
+    if (activeQuery.id === queryId) {
+      // removed active query
+      const queriesLeft = queries.filter(q => q.id !== queryId)
+      if (queriesLeft.length === 0) {
+        dispatch(error(new Error('Cannot remove last query')))
+        return
+      }
+      dispatch(setActiveQuery(queriesLeft.id))
+    }
+    dispatch({ type: removeQuery.name, queryId })
+
+    const request = new RemoveQueryRequest()
+    request.setQueryId(queryId)
+    try {
+      await unary(Dekart.RemoveQuery, request)
+      dispatch(success('Query Removed'))
+    } catch (err) {
+      dispatch(error(err))
+    }
+  }
 }
 
 export function createQuery (reportId) {
@@ -28,7 +58,7 @@ export function updateQuery (queryId, queryText) {
     request.setQuery(query)
     try {
       await unary(Dekart.UpdateQuery, request)
-      dispatch(success('Query Saved'))
+      // dispatch(success('Query Saved'))
     } catch (err) {
       dispatch(error(err))
       throw error

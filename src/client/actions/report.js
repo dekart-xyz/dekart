@@ -1,5 +1,6 @@
 import { KeplerGlSchema } from 'kepler.gl/schemas'
-import { receiveMapConfig } from 'kepler.gl/actions'
+import { receiveMapConfig , removeDataset } from 'kepler.gl/actions'
+
 import { getReportStream, getStream, unary } from '../lib/grpc'
 import { error, streamError, success } from './message'
 import { downloadJobResults } from './job'
@@ -56,12 +57,18 @@ export function reportUpdate (reportStreamResponse) {
     dispatch({
       type: reportUpdate.name,
       report,
-      queriesList
+      queriesList,
+      prevQueriesList
     })
     if (report.mapConfig && !prevReport) {
       const parsedConfig = KeplerGlSchema.parseSavedConfig(JSON.parse(report.mapConfig))
       dispatch(receiveMapConfig(parsedConfig))
     }
+    prevQueriesList.forEach(query => {
+      if (!queriesList.find(q => q.id === query.id)) {
+        dispatch(removeDataset(query.id))
+      }
+    })
     queriesList.forEach((query) => {
       if (shouldAddDataset(query, prevQueriesList)) {
         dispatch(downloadJobResults(query))

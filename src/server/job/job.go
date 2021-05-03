@@ -6,6 +6,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"os"
+	"regexp"
 	"sync"
 	"time"
 
@@ -70,13 +71,18 @@ func (job *Job) GetProcessedBytes() int64 {
 	return job.processedBytes
 }
 
+var contextCancelledRe = regexp.MustCompile(`context canceled`)
+
 func (job *Job) close(storageWriter *storage.Writer, csvWriter *csv.Writer) {
 	csvWriter.Flush()
 	err := storageWriter.Close()
-	if err == context.Canceled {
-		return
-	}
 	if err != nil {
+		if err == context.Canceled {
+			return
+		}
+		if contextCancelledRe.MatchString(err.Error()) {
+			return
+		}
 		log.Err(err).Send()
 		job.cancelWithError(err)
 		return

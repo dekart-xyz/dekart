@@ -18,15 +18,17 @@ export function downloadJobResults (query) {
     const data = processCsvData(csv)
     const { queries } = getState()
     const i = queries.findIndex(q => q.id === query.id)
-    dispatch(addDataToMap({
-      datasets: {
-        info: {
-          label: `Query ${i + 1}`,
-          id: query.id
-        },
-        data
-      }
-    }))
+    if (i >= 0) {
+      dispatch(addDataToMap({
+        datasets: {
+          info: {
+            label: `Query ${i + 1}`,
+            id: query.id
+          },
+          data
+        }
+      }))
+    }
     dispatch(finishDownloading(query))
     const { reportStatus } = getState()
     if (reportStatus.edit) {
