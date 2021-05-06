@@ -45,7 +45,8 @@ const defaultReportStatus = {
   title: null,
   edit: false,
   online: false,
-  newReportId: null
+  newReportId: null,
+  lastUpdated: 0
 }
 function reportStatus (state = defaultReportStatus, action) {
   switch (action.type) {
@@ -70,7 +71,8 @@ function reportStatus (state = defaultReportStatus, action) {
         ...state,
         canSave: true,
         online: true,
-        title: state.title == null ? action.report.title : state.title
+        title: state.title == null ? action.report.title : state.title,
+        lastUpdated: Date.now()
       }
     case openReport.name:
       return {

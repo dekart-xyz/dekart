@@ -45,15 +45,15 @@ function ShowDataTable ({ query }) {
 
 function JobTimer ({ query }) {
   const online = useSelector(state => state.reportStatus.online)
+  const lastUpdated = useSelector(state => state.reportStatus.lastUpdated)
   const [durationMs, setDuration] = useState(Date.now())
   useEffect(() => {
-    const start = Date.now()
     let cancel = false
     const iterator = () => {
       if (cancel || !online) {
         return
       }
-      setDuration(query.jobDuration + Date.now() - start)
+      setDuration(query.jobDuration + Date.now() - lastUpdated)
       setTimeout(iterator, 1000)
     }
     iterator()
