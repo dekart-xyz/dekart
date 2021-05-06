@@ -203,7 +203,7 @@ function activeQuery (state = null, action) {
       return action.query
     case reportUpdate.name:
       if (!state) {
-        return queriesList[0]
+        return queriesList[0] || state
       }
       if (queriesList.length > prevQueriesList.length) {
         return queriesList.slice(-1)[0]
