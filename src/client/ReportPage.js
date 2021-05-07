@@ -17,10 +17,28 @@ import { Header } from './Header'
 import ReportHeaderButtons from './ReportHeaderButtons'
 import Downloading from './Downloading'
 
+function getOnTabEditHandler (dispatch, reportId) {
+  return (queryId, action) => {
+    switch (action) {
+      case 'add':
+        return dispatch(createQuery(reportId))
+      case 'remove':
+        Modal.confirm({
+          title: 'Are you sure delete query?',
+          okText: 'Yes',
+          okType: 'danger',
+          cancelText: 'No',
+          onOk: () => dispatch(removeQuery(queryId))
+        })
+    }
+  }
+}
+
 function QuerySection ({ reportId }) {
   const queries = useSelector(state => state.queries)
   const activeQuery = useSelector(state => state.activeQuery)
   const report = useSelector(state => state.report)
+  const { canWrite } = report
   const dispatch = useDispatch()
   useEffect(() => {
     if (report && !(activeQuery)) {
@@ -28,7 +46,7 @@ function QuerySection ({ reportId }) {
     }
   }, [reportId, report, activeQuery, dispatch])
   if (activeQuery) {
-    const closable = queries.length > 1
+    const closable = queries.length > 1 && canWrite
     return (
       <div className={styles.querySection}>
         <div className={styles.tabs}>
@@ -36,20 +54,8 @@ function QuerySection ({ reportId }) {
             type='editable-card'
             activeKey={activeQuery.id}
             onChange={(queryId) => dispatch(setActiveQuery(queryId))}
-            onEdit={(queryId, action) => {
-              switch (action) {
-                case 'add':
-                  return dispatch(createQuery(reportId))
-                case 'remove':
-                  Modal.confirm({
-                    title: 'Are you sure delete query?',
-                    okText: 'Yes',
-                    okType: 'danger',
-                    cancelText: 'No',
-                    onOk: () => dispatch(removeQuery(queryId))
-                  })
-              }
-            }}
+            hideAdd={!canWrite}
+            onEdit={getOnTabEditHandler(dispatch, reportId)}
           >
             {queries.map((query, i) => <Tabs.TabPane tab={`Query ${i + 1}`} key={query.id} closable={closable} />)}
           </Tabs>

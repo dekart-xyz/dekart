@@ -88,6 +88,9 @@ func (s Server) getReportID(ctx context.Context, queryID string, email string) (
 			return nil, err
 		}
 	}
+	if reportID == "" {
+		return nil, nil
+	}
 	return &reportID, nil
 }
 
