@@ -12,6 +12,7 @@ service Dekart {
     rpc UpdateQuery(UpdateQueryRequest) returns (UpdateQueryResponse) {}
     rpc RunQuery(RunQueryRequest) returns (RunQueryResponse) {}
     rpc CancelQuery(CancelQueryRequest) returns (CancelQueryResponse) {}
+    rpc RemoveQuery(RemoveQueryRequest) returns (RemoveQueryResponse) {}
 
     rpc GetEnv(GetEnvRequest) returns (GetEnvResponse) {}
 
@@ -96,6 +97,13 @@ message RunQueryRequest {
 }
 
 message RunQueryResponse {
+}
+
+message RemoveQueryRequest {
+    string query_id = 1;
+}
+
+message RemoveQueryResponse {
 }
 
 message CancelQueryRequest {

@@ -23,7 +23,7 @@ func (s Server) getQueries(ctx context.Context, reportID string) ([]*proto.Query
 			total_rows,
 			bytes_processed,
 			result_size
-		from queries where report_id=$1`,
+		from queries where report_id=$1 order by created_at asc`,
 		reportID,
 	)
 	if err != nil {

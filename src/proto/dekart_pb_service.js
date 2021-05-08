@@ -82,6 +82,15 @@ Dekart.CancelQuery = {
   responseType: proto_dekart_pb.CancelQueryResponse
 };
 
+Dekart.RemoveQuery = {
+  methodName: "RemoveQuery",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.RemoveQueryRequest,
+  responseType: proto_dekart_pb.RemoveQueryResponse
+};
+
 Dekart.GetEnv = {
   methodName: "GetEnv",
   service: Dekart,
@@ -338,6 +347,37 @@ DekartClient.prototype.cancelQuery = function cancelQuery(requestMessage, metada
     callback = arguments[1];
   }
   var client = grpc.unary(Dekart.CancelQuery, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.removeQuery = function removeQuery(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.RemoveQuery, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,

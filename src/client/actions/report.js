@@ -1,5 +1,6 @@
 import { KeplerGlSchema } from 'kepler.gl/schemas'
-import { receiveMapConfig } from 'kepler.gl/actions'
+import { receiveMapConfig, removeDataset } from 'kepler.gl/actions'
+
 import { getReportStream, getStream, unary } from '../lib/grpc'
 import { error, streamError, success } from './message'
 import { downloadJobResults } from './job'
@@ -30,19 +31,22 @@ export function openReport (reportId, edit) {
       (reportStreamResponse) => {
         dispatch(reportUpdate(reportStreamResponse))
       },
-      code => dispatch(streamError(code))
+      (code, message) => dispatch(streamError(code, message))
     )
   }
 }
 
-function shouldAddDataset (query, queriesList) {
+function shouldAddDataset (query, prevQueriesList, queriesList) {
   if (!query.jobResultId) {
     return false
   }
-  if (!queriesList) {
+  if (!prevQueriesList) {
     return true
   }
-  const prevQueryState = queriesList.find(q => q.id === query.id)
+  if (prevQueriesList.length !== queriesList.length) {
+    return true
+  }
+  const prevQueryState = prevQueriesList.find(q => q.id === query.id)
   if (!prevQueryState || prevQueryState.jobResultId !== query.jobResultId) {
     return true
   }
@@ -56,14 +60,20 @@ export function reportUpdate (reportStreamResponse) {
     dispatch({
       type: reportUpdate.name,
       report,
-      queriesList
+      queriesList,
+      prevQueriesList
     })
     if (report.mapConfig && !prevReport) {
       const parsedConfig = KeplerGlSchema.parseSavedConfig(JSON.parse(report.mapConfig))
       dispatch(receiveMapConfig(parsedConfig))
     }
-    queriesList.forEach(query => {
-      if (shouldAddDataset(query, prevQueriesList)) {
+    prevQueriesList.forEach(query => {
+      if (!queriesList.find(q => q.id === query.id)) {
+        dispatch(removeDataset(query.id))
+      }
+    })
+    queriesList.forEach((query) => {
+      if (shouldAddDataset(query, prevQueriesList, queriesList)) {
         dispatch(downloadJobResults(query))
       }
     })
@@ -80,7 +90,7 @@ export function subscribeReports () {
       Dekart.GetReportListStream,
       request,
       ({ reportsList }) => dispatch(reportsListUpdate(reportsList)),
-      code => dispatch(streamError(code))
+      (code, message) => dispatch(streamError(code, message))
     )
   }
 }

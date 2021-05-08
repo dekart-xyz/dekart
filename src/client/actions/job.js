@@ -11,23 +11,25 @@ export function downloadJobResults (query) {
     let csv
     try {
       const res = await get(`/job-results/${query.jobResultId}.csv`)
-      // console.log('X-Content-Length', Object.fromEntries(res.headers))
-      // dispatch(jobResultSize(query, Number(res.headers.get('X-Content-Length'))))
       csv = await res.text()
     } catch (err) {
       dispatch(error(err))
     }
     const data = processCsvData(csv)
-    dispatch(addDataToMap({
-      datasets: {
-        info: {
-          label: 'Dataset',
-          id: query.id
-        },
-        data
-      }
-    }))
-    dispatch(finishDownloading())
+    const { queries } = getState()
+    const i = queries.findIndex(q => q.id === query.id)
+    if (i >= 0) {
+      dispatch(addDataToMap({
+        datasets: {
+          info: {
+            label: `Query ${i + 1}`,
+            id: query.id
+          },
+          data
+        }
+      }))
+    }
+    dispatch(finishDownloading(query))
     const { reportStatus } = getState()
     if (reportStatus.edit) {
       dispatch(toggleSidePanel('layer'))

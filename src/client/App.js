@@ -36,7 +36,6 @@ function RedirectToSource () {
 export default function App () {
   const env = useSelector(state => state.env)
   const dispatch = useDispatch()
-
   useEffect(() => {
     if (!env.loaded) {
       dispatch(getEnv())

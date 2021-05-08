@@ -1,26 +1,16 @@
 import message from 'antd/es/message'
-import Downloading from '../Downloading'
 import StreamError from '../StreamError'
 
-const style = { marginTop: 60 }
+const style = { /* marginTop: 0 */ }
 
-let hideDownloading = null
+message.config({ top: 40 })
+
 export function downloading (query) {
-  const { resultSize } = query
-  hideDownloading = message.loading({
-    content: <Downloading size={resultSize} />,
-    duration: 0,
-    style
-  })
-  return { type: downloading.name }
+  return { type: downloading.name, query }
 }
 
-export function finishDownloading () {
-  if (hideDownloading) {
-    hideDownloading()
-    hideDownloading = null
-  }
-  return { type: finishDownloading.name }
+export function finishDownloading (query) {
+  return { type: finishDownloading.name, query }
 }
 
 export function success (content) {
@@ -44,7 +34,7 @@ export function httpError (status) {
   return { type: httpError.name, status }
 }
 
-export function streamError (code) {
+export function streamError (code, msg) {
   return (dispatch) => {
     dispatch({ type: streamError.name })
     // https://github.com/grpc/grpc/blob/master/doc/statuscodes.md
@@ -60,7 +50,7 @@ export function streamError (code) {
         return
       default:
         message.error({
-          content: (<StreamError code={code} />),
+          content: (<StreamError code={code} message={msg} />),
           duration: 10000,
           style
         })

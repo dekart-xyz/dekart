@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 import keplerGlReducer from 'kepler.gl/reducers'
 import { ActionTypes as KeplerActionTypes } from 'kepler.gl/actions'
-import { downloadJobResults, openReport, reportTitleChange, reportUpdate, runQuery, saveMap, updateQuery, reportsListUpdate, unsubscribeReports, streamError, httpError, newReport, setEnv, forkReport, newForkedReport } from './actions'
+import { downloadJobResults, openReport, reportTitleChange, reportUpdate, runQuery, saveMap, updateQuery, reportsListUpdate, unsubscribeReports, streamError, httpError, newReport, setEnv, forkReport, newForkedReport, downloading, finishDownloading, setActiveQuery } from './actions'
 import { Query } from '../proto/dekart_pb'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
@@ -45,7 +45,8 @@ const defaultReportStatus = {
   title: null,
   edit: false,
   online: false,
-  newReportId: null
+  newReportId: null,
+  lastUpdated: 0
 }
 function reportStatus (state = defaultReportStatus, action) {
   switch (action.type) {
@@ -70,7 +71,8 @@ function reportStatus (state = defaultReportStatus, action) {
         ...state,
         canSave: true,
         online: true,
-        title: state.title == null ? action.report.title : state.title
+        title: state.title == null ? action.report.title : state.title,
+        lastUpdated: Date.now()
       }
     case openReport.name:
       return {
@@ -182,13 +184,49 @@ function httpErrorStatus (state = 0, action) {
   }
 }
 
+function downloadingQueryResults (state = [], action) {
+  const { query } = action
+  switch (action.type) {
+    case downloading.name:
+      return state.concat(query)
+    case finishDownloading.name:
+      return state.filter(q => q.id !== query.id)
+    default:
+      return state
+  }
+}
+
+function activeQuery (state = null, action) {
+  const { queriesList, prevQueriesList } = action
+  switch (action.type) {
+    case openReport.name:
+      return null
+    case setActiveQuery.name:
+      return action.query
+    case reportUpdate.name:
+      if (!state) {
+        return queriesList[0] || state
+      }
+      if (queriesList.length > prevQueriesList.length) {
+        return queriesList.slice(-1)[0]
+      }
+      return {
+        ...(queriesList.find(q => q.id === state.id) || queriesList[0])
+      }
+    default:
+      return state
+  }
+}
+
 export default combineReducers({
   keplerGl,
   report,
   queries,
   queryStatus,
+  activeQuery,
   reportStatus,
   reportsList,
   env,
-  httpErrorStatus
+  httpErrorStatus,
+  downloadingQueryResults
 })

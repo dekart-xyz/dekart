@@ -1,32 +1,98 @@
 import { useParams } from 'react-router-dom'
 import Input from 'antd/es/input'
+import Modal from 'antd/es/modal'
 import { useEffect, useState } from 'react'
 import { KeplerGl } from 'kepler.gl/components'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
 import { useDispatch, useSelector } from 'react-redux'
-import { closeReport, openReport, createQuery, reportTitleChange } from './actions'
+import { closeReport, openReport, createQuery, reportTitleChange, removeQuery, setActiveQuery } from './actions'
 import Query from './Query'
 import { EditOutlined } from '@ant-design/icons'
+import { Query as QueryType } from '../proto/dekart_pb'
+import Tabs from 'antd/es/tabs'
 import { KeplerGlSchema } from 'kepler.gl/schemas'
 import classnames from 'classnames'
 import DekartMenu from './DekartMenu'
 import { Header } from './Header'
 import ReportHeaderButtons from './ReportHeaderButtons'
+import Downloading from './Downloading'
 
-function ReportQuery ({ reportId }) {
+function TabIcon ({ query }) {
+  let iconColor = 'transparent'
+  if (query.jobError) {
+    iconColor = '#F66B55'
+  }
+  switch (query.jobStatus) {
+    case QueryType.JobStatus.JOB_STATUS_RUNNING:
+      iconColor = '#B8B8B8'
+      break
+    case QueryType.JobStatus.JOB_STATUS_DONE:
+      if (!query.jobResultId) {
+        iconColor = '#B8B8B8'
+        break
+      }
+      iconColor = '#52c41a'
+      break
+  }
+  return (
+    <span
+      className={styles.tabIcon} style={{
+        backgroundColor: iconColor
+      }}
+    />
+  )
+}
+
+function getOnTabEditHandler (dispatch, reportId) {
+  return (queryId, action) => {
+    switch (action) {
+      case 'add':
+        return dispatch(createQuery(reportId))
+      case 'remove':
+        Modal.confirm({
+          title: 'Are you sure delete query?',
+          okText: 'Yes',
+          okType: 'danger',
+          cancelText: 'No',
+          onOk: () => dispatch(removeQuery(queryId))
+        })
+    }
+  }
+}
+
+function getTabPane (query, i, closable) {
+  return (<Tabs.TabPane tab={<><TabIcon query={query} />{`Query ${i + 1}`}</>} key={query.id} closable={closable} />)
+}
+
+function QuerySection ({ reportId }) {
   const queries = useSelector(state => state.queries)
+  const activeQuery = useSelector(state => state.activeQuery)
   const report = useSelector(state => state.report)
+  const { canWrite } = report
   const dispatch = useDispatch()
   useEffect(() => {
-    if (report && !(queries && queries.length)) {
+    if (report && !(activeQuery)) {
       dispatch(createQuery(reportId))
     }
-  }, [reportId, report, queries, dispatch])
-  if (queries && queries.length) {
-    const queriesSections = queries.map(query => <Query query={query} key={query.id} />)
+  }, [reportId, report, activeQuery, dispatch])
+  if (activeQuery) {
+    const closable = queries.length > 1 && canWrite
     return (
-      <div className={styles.querySection}>{queriesSections}</div>
+      <div className={styles.querySection}>
+        <div className={styles.tabs}>
+          <Tabs
+            type='editable-card'
+            activeKey={activeQuery.id}
+            onChange={(queryId) => dispatch(setActiveQuery(queryId))}
+            hideAdd={!canWrite}
+            onEdit={getOnTabEditHandler(dispatch, reportId)}
+          >
+            {queries.map((query, i) => getTabPane(query, i, closable))}
+          </Tabs>
+        </div>
+        <Query query={activeQuery} key={activeQuery.id} />
+      </div>
     )
   } else {
     return null
@@ -145,6 +211,7 @@ export default function ReportPage ({ edit }) {
 
   return (
     <div className={styles.report}>
+      <Downloading />
       <Header>
         <DekartMenu />
         <Title />
@@ -158,7 +225,7 @@ export default function ReportPage ({ edit }) {
       </Header>
       <div className={styles.body}>
         <Kepler />
-        {edit ? <ReportQuery reportId={id} /> : null}
+        {edit ? <QuerySection reportId={id} /> : null}
       </div>
     </div>
   )

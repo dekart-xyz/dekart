@@ -57,9 +57,19 @@
     flex: 1;
 }
 
+.tabs {
+    background-color: #EDEDED;
+    background-color: #F7F7F7;
+}
+
+.tabs :global .ant-tabs-nav {
+    margin-bottom: 0!important;
+}
+
 .querySection {
     width: 500px;
     display: flex;
+    flex-direction: column;
 }
 
 .keplerBlock {
@@ -105,4 +115,15 @@
     font-style: italic;
     vertical-align: middle;
     cursor: pointer;
+}
+
+.tabIcon {
+    width: 8px;
+    height: 8px;
+    display: inline-block;
+    border-radius: 4px;
+    margin-right: 8px;
+    margin-left: 2px;
+    color: #6A7484 !important;
+    font-size: 0.9em;
 }

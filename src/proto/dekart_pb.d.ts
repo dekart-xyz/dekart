@@ -359,6 +359,42 @@ export namespace RunQueryResponse {
   }
 }
 
+export class RemoveQueryRequest extends jspb.Message {
+  getQueryId(): string;
+  setQueryId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): RemoveQueryRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: RemoveQueryRequest): RemoveQueryRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: RemoveQueryRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RemoveQueryRequest;
+  static deserializeBinaryFromReader(message: RemoveQueryRequest, reader: jspb.BinaryReader): RemoveQueryRequest;
+}
+
+export namespace RemoveQueryRequest {
+  export type AsObject = {
+    queryId: string,
+  }
+}
+
+export class RemoveQueryResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): RemoveQueryResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: RemoveQueryResponse): RemoveQueryResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: RemoveQueryResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RemoveQueryResponse;
+  static deserializeBinaryFromReader(message: RemoveQueryResponse, reader: jspb.BinaryReader): RemoveQueryResponse;
+}
+
+export namespace RemoveQueryResponse {
+  export type AsObject = {
+  }
+}
+
 export class CancelQueryRequest extends jspb.Message {
   getQueryId(): string;
   setQueryId(value: string): void;
