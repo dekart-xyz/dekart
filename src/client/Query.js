@@ -58,7 +58,7 @@ function JobTimer ({ query }) {
     }
     iterator()
     return () => { cancel = true }
-  }, [query.jobDuration, online])
+  }, [query.jobDuration, online, lastUpdated])
   if (!online) {
     return null
   }

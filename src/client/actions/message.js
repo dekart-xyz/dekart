@@ -34,7 +34,7 @@ export function httpError (status) {
   return { type: httpError.name, status }
 }
 
-export function streamError (code) {
+export function streamError (code, msg) {
   return (dispatch) => {
     dispatch({ type: streamError.name })
     // https://github.com/grpc/grpc/blob/master/doc/statuscodes.md
@@ -50,7 +50,7 @@ export function streamError (code) {
         return
       default:
         message.error({
-          content: (<StreamError code={code} />),
+          content: (<StreamError code={code} message={msg} />),
           duration: 10000,
           style
         })

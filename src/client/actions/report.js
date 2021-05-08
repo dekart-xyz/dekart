@@ -31,7 +31,7 @@ export function openReport (reportId, edit) {
       (reportStreamResponse) => {
         dispatch(reportUpdate(reportStreamResponse))
       },
-      code => dispatch(streamError(code))
+      (code, message) => dispatch(streamError(code, message))
     )
   }
 }
@@ -90,7 +90,7 @@ export function subscribeReports () {
       Dekart.GetReportListStream,
       request,
       ({ reportsList }) => dispatch(reportsListUpdate(reportsList)),
-      code => dispatch(streamError(code))
+      (code, message) => dispatch(streamError(code, message))
     )
   }
 }

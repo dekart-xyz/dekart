@@ -84,7 +84,8 @@ export function getStream (endpoint, request, onMessage, onError, cancelable = n
         }
       } else {
         cancelable.cancel()
-        onError(code)
+        // console.error('GRPC stream error', code, message)
+        onError(code, message)
       }
     }
   }))
