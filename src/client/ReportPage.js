@@ -9,6 +9,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { closeReport, openReport, createQuery, reportTitleChange, removeQuery, setActiveQuery } from './actions'
 import Query from './Query'
 import { EditOutlined } from '@ant-design/icons'
+import { Query as QueryType } from '../proto/dekart_pb'
 import Tabs from 'antd/es/tabs'
 import { KeplerGlSchema } from 'kepler.gl/schemas'
 import classnames from 'classnames'
@@ -16,6 +17,32 @@ import DekartMenu from './DekartMenu'
 import { Header } from './Header'
 import ReportHeaderButtons from './ReportHeaderButtons'
 import Downloading from './Downloading'
+
+function TabIcon ({ query }) {
+  let iconColor = 'transparent'
+  if (query.jobError) {
+    iconColor = '#F66B55'
+  }
+  switch (query.jobStatus) {
+    case QueryType.JobStatus.JOB_STATUS_RUNNING:
+      iconColor = '#B8B8B8'
+      break
+    case QueryType.JobStatus.JOB_STATUS_DONE:
+      if (!query.jobResultId) {
+        iconColor = '#B8B8B8'
+        break
+      }
+      iconColor = '#52c41a'
+      break
+  }
+  return (
+    <span
+      className={styles.tabIcon} style={{
+        backgroundColor: iconColor
+      }}
+    />
+  )
+}
 
 function getOnTabEditHandler (dispatch, reportId) {
   return (queryId, action) => {
@@ -32,6 +59,10 @@ function getOnTabEditHandler (dispatch, reportId) {
         })
     }
   }
+}
+
+function getTabPane (query, i, closable) {
+  return (<Tabs.TabPane tab={<><TabIcon query={query} />{`Query ${i + 1}`}</>} key={query.id} closable={closable} />)
 }
 
 function QuerySection ({ reportId }) {
@@ -57,7 +88,7 @@ function QuerySection ({ reportId }) {
             hideAdd={!canWrite}
             onEdit={getOnTabEditHandler(dispatch, reportId)}
           >
-            {queries.map((query, i) => <Tabs.TabPane tab={`Query ${i + 1}`} key={query.id} closable={closable} />)}
+            {queries.map((query, i) => getTabPane(query, i, closable))}
           </Tabs>
         </div>
         <Query query={activeQuery} key={activeQuery.id} />
