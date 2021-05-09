@@ -1,4 +1,4 @@
-import { showDatasetTable, toggleModal } from 'kepler.gl/actions'
+import { showDatasetTable, toggleModal } from 'kepler.gl/dist/actions'
 
 export function showDataTable (query) {
   return (dispatch) => {

@@ -13,3 +13,16 @@ services:
       restart: always
       ports:
         - 8081:8080
+  cloudsql:
+    build: ./cloud_sql_proxy
+    ports:
+      - "5432:5432"
+    profiles:
+      - cloudsql
+    volumes:
+      - "${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS}"
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: "${GOOGLE_APPLICATION_CREDENTIALS}"
+      INSTANCE_CONNECTION_NAME: "${INSTANCE_CONNECTION_NAME}"
+
+

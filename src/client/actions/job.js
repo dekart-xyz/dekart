@@ -1,5 +1,5 @@
 import { downloading, error, finishDownloading } from './message'
-import { addDataToMap, toggleSidePanel } from 'kepler.gl/actions'
+import { addDataToMap, toggleSidePanel } from 'kepler.gl/dist/actions'
 import { processCsvData } from 'kepler.gl/dist/processors'
 import { get } from '../lib/api'
 // import Downloading from '../Downloading'
@@ -7,18 +7,16 @@ import { get } from '../lib/api'
 export function downloadJobResults (query) {
   return async (dispatch, getState) => {
     dispatch({ type: downloadJobResults.name, query })
-    dispatch(downloading(query))
-    let csv
-    try {
-      const res = await get(`/job-results/${query.jobResultId}.csv`)
-      csv = await res.text()
-    } catch (err) {
-      dispatch(error(err))
-    }
-    const data = processCsvData(csv)
     const { queries } = getState()
     const i = queries.findIndex(q => q.id === query.id)
-    if (i >= 0) {
+    if (i < 0) {
+      return
+    }
+    dispatch(downloading(query))
+    try {
+      const res = await get(`/job-results/${query.jobResultId}.csv`)
+      const csv = await res.text()
+      const data = processCsvData(csv)
       dispatch(addDataToMap({
         datasets: {
           info: {
@@ -28,6 +26,8 @@ export function downloadJobResults (query) {
           data
         }
       }))
+    } catch (err) {
+      dispatch(error(err))
     }
     dispatch(finishDownloading(query))
     const { reportStatus } = getState()

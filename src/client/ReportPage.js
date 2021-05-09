@@ -1,17 +1,17 @@
 import { useParams } from 'react-router-dom'
 import Input from 'antd/es/input'
 import Modal from 'antd/es/modal'
-import { useEffect, useState } from 'react'
-import { KeplerGl } from 'kepler.gl/components'
+import { useEffect, useState, Component } from 'react'
+import { KeplerGl } from 'kepler.gl/dist/components'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
 import { useDispatch, useSelector } from 'react-redux'
-import { closeReport, openReport, createQuery, reportTitleChange, removeQuery, setActiveQuery } from './actions'
+import { closeReport, openReport, createQuery, reportTitleChange, removeQuery, setActiveQuery, error } from './actions'
 import Query from './Query'
-import { EditOutlined } from '@ant-design/icons'
+import { EditOutlined, WarningFilled } from '@ant-design/icons'
 import { Query as QueryType } from '../proto/dekart_pb'
 import Tabs from 'antd/es/tabs'
-import { KeplerGlSchema } from 'kepler.gl/schemas'
+import { KeplerGlSchema } from 'kepler.gl/dist/schemas'
 import classnames from 'classnames'
 import DekartMenu from './DekartMenu'
 import { Header } from './Header'
@@ -157,8 +157,32 @@ function Title () {
   }
 }
 
+class CatchKeplerError extends Component {
+  constructor (props) {
+    super(props)
+    this.state = { hasError: false }
+  }
+
+  componentDidCatch (error, errorInfo) {
+    this.setState({ hasError: true })
+    this.props.onError(error)
+  }
+
+  render () {
+    if (this.state.hasError) {
+      return (
+        <div className={styles.keplerError}>
+          <WarningFilled />
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
 function Kepler () {
   const env = useSelector(state => state.env)
+  const dispatch = useDispatch()
   if (!env.loaded) {
     return (
       <div className={styles.keplerFlex}>
@@ -171,12 +195,14 @@ function Kepler () {
       <div className={styles.keplerBlock}>
         <AutoSizer>
           {({ height, width }) => (
-            <KeplerGl
-              id='kepler'
-              mapboxApiAccessToken={env.variables.MAPBOX_TOKEN}
-              width={width}
-              height={height}
-            />
+            <CatchKeplerError onError={(err) => dispatch(error(err))}>
+              <KeplerGl
+                id='kepler'
+                mapboxApiAccessToken={env.variables.MAPBOX_TOKEN}
+                width={width}
+                height={height}
+              />
+            </CatchKeplerError>
           )}
         </AutoSizer>
       </div>
