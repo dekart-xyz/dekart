@@ -36,7 +36,7 @@ docker run \
   -e DEKART_BIGQUERY_PROJECT_ID=${DEKART_BIGQUERY_PROJECT_ID} \
   -e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
   -p 8080:8080 \
-  dekartxyz/dekart:0.4
+  dekartxyz/dekart:0.5
 ```
 [Configuration details](https://dekart.xyz/docs/configuration/environment-variables/)
 
