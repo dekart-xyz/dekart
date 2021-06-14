@@ -2,7 +2,6 @@ import { downloading, error, finishDownloading } from './message'
 import { addDataToMap, toggleSidePanel } from 'kepler.gl/dist/actions'
 import { processCsvData } from 'kepler.gl/dist/processors'
 import { get } from '../lib/api'
-// import Downloading from '../Downloading'
 
 export function downloadJobResults (query) {
   return async (dispatch, getState) => {

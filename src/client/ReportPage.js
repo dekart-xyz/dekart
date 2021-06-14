@@ -216,6 +216,7 @@ export default function ReportPage ({ edit }) {
 
   const kepler = useSelector(state => state.keplerGl.kepler)
   const report = useSelector(state => state.report)
+  const envLoaded = useSelector(state => state.env.loaded)
   const { mapConfig, title } = report || {}
   const reportStatus = useSelector(state => state.reportStatus)
 
@@ -224,9 +225,13 @@ export default function ReportPage ({ edit }) {
   const [mapChanged, setMapChanged] = useState(false)
 
   useEffect(() => {
+    // make sure kepler loaded before firing kepler actions
+    if (!envLoaded) {
+      return
+    }
     dispatch(openReport(id, edit))
     return () => dispatch(closeReport(id))
-  }, [id, dispatch, edit])
+  }, [id, dispatch, edit, envLoaded])
 
   useEffect(() => checkMapConfig(kepler, mapConfig, setMapChanged), [kepler, mapConfig, setMapChanged])
   const titleChanged = reportStatus.title && title && reportStatus.title !== title
