@@ -128,6 +128,15 @@
     font-size: 0.9em;
 }
 
+.query {
+    display: none;
+}
+
+.activeQuery {
+    flex: 1;
+    display: flex;
+}
+
 .keplerError {
     color: white;
     position: absolute;

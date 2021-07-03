@@ -265,7 +265,7 @@ if (goog.DEBUG && !COMPILED) {
  * @constructor
  */
 proto.UpdateReportRequest = function(opt_data) {
-  jspb.Message.initialize(this, opt_data, 0, -1, null, null);
+  jspb.Message.initialize(this, opt_data, 0, -1, proto.UpdateReportRequest.repeatedFields_, null);
 };
 goog.inherits(proto.UpdateReportRequest, jspb.Message);
 if (goog.DEBUG && !COMPILED) {
@@ -2477,6 +2477,13 @@ proto.Query.prototype.setResultSize = function(value) {
 
 
 
+/**
+ * List of repeated fields within this message type.
+ * @private {!Array<number>}
+ * @const
+ */
+proto.UpdateReportRequest.repeatedFields_ = [2];
+
 
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
@@ -2508,7 +2515,9 @@ proto.UpdateReportRequest.prototype.toObject = function(opt_includeInstance) {
  */
 proto.UpdateReportRequest.toObject = function(includeInstance, msg) {
   var f, obj = {
-    report: (f = msg.getReport()) && proto.Report.toObject(includeInstance, f)
+    report: (f = msg.getReport()) && proto.Report.toObject(includeInstance, f),
+    queryList: jspb.Message.toObjectList(msg.getQueryList(),
+    proto.Query.toObject, includeInstance)
   };
 
   if (includeInstance) {
@@ -2550,6 +2559,11 @@ proto.UpdateReportRequest.deserializeBinaryFromReader = function(msg, reader) {
       reader.readMessage(value,proto.Report.deserializeBinaryFromReader);
       msg.setReport(value);
       break;
+    case 2:
+      var value = new proto.Query;
+      reader.readMessage(value,proto.Query.deserializeBinaryFromReader);
+      msg.addQuery(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -2585,6 +2599,14 @@ proto.UpdateReportRequest.serializeBinaryToWriter = function(message, writer) {
       1,
       f,
       proto.Report.serializeBinaryToWriter
+    );
+  }
+  f = message.getQueryList();
+  if (f.length > 0) {
+    writer.writeRepeatedMessage(
+      2,
+      f,
+      proto.Query.serializeBinaryToWriter
     );
   }
 };
@@ -2624,6 +2646,44 @@ proto.UpdateReportRequest.prototype.clearReport = function() {
  */
 proto.UpdateReportRequest.prototype.hasReport = function() {
   return jspb.Message.getField(this, 1) != null;
+};
+
+
+/**
+ * repeated Query query = 2;
+ * @return {!Array<!proto.Query>}
+ */
+proto.UpdateReportRequest.prototype.getQueryList = function() {
+  return /** @type{!Array<!proto.Query>} */ (
+    jspb.Message.getRepeatedWrapperField(this, proto.Query, 2));
+};
+
+
+/**
+ * @param {!Array<!proto.Query>} value
+ * @return {!proto.UpdateReportRequest} returns this
+*/
+proto.UpdateReportRequest.prototype.setQueryList = function(value) {
+  return jspb.Message.setRepeatedWrapperField(this, 2, value);
+};
+
+
+/**
+ * @param {!proto.Query=} opt_value
+ * @param {number=} opt_index
+ * @return {!proto.Query}
+ */
+proto.UpdateReportRequest.prototype.addQuery = function(opt_value, opt_index) {
+  return jspb.Message.addToRepeatedWrapperField(this, 2, opt_value, proto.Query, opt_index);
+};
+
+
+/**
+ * Clears the list making it empty but non-null.
+ * @return {!proto.UpdateReportRequest} returns this
+ */
+proto.UpdateReportRequest.prototype.clearQueryList = function() {
+  return this.setQueryList([]);
 };
 
 

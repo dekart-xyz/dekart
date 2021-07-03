@@ -291,6 +291,11 @@ export class UpdateReportRequest extends jspb.Message {
   getReport(): Report | undefined;
   setReport(value?: Report): void;
 
+  clearQueryList(): void;
+  getQueryList(): Array<Query>;
+  setQueryList(value: Array<Query>): void;
+  addQuery(value?: Query, index?: number): Query;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): UpdateReportRequest.AsObject;
   static toObject(includeInstance: boolean, msg: UpdateReportRequest): UpdateReportRequest.AsObject;
@@ -304,6 +309,7 @@ export class UpdateReportRequest extends jspb.Message {
 export namespace UpdateReportRequest {
   export type AsObject = {
     report?: Report.AsObject,
+    queryList: Array<Query.AsObject>,
   }
 }
 

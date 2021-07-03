@@ -87,6 +87,7 @@ message Query {
 
 message UpdateReportRequest {
     Report report = 1;
+    repeated Query query = 2;
 }
 
 message UpdateReportResponse {

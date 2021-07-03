@@ -3,6 +3,14 @@ import { Dekart } from '../../proto/dekart_pb_service'
 import { unary } from '../lib/grpc'
 import { error, success } from './message'
 
+export function queryChanged (queryId, queryText) {
+  return (dispatch, getState) => {
+    const query = getState().queries.find(q => q.id === queryId)
+    const changed = query ? query.queryText !== queryText : true
+    dispatch({ type: queryChanged.name, queryText, queryId, changed })
+  }
+}
+
 export function setActiveQuery (queryId) {
   return (dispatch, getState) => {
     const { queries } = getState()
@@ -58,7 +66,6 @@ export function updateQuery (queryId, queryText) {
     request.setQuery(query)
     try {
       await unary(Dekart.UpdateQuery, request)
-      // dispatch(success('Query Saved'))
     } catch (err) {
       dispatch(error(err))
       throw error

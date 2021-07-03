@@ -61,14 +61,15 @@ function getOnTabEditHandler (dispatch, reportId) {
   }
 }
 
-function getTabPane (query, i, closable) {
-  return (<Tabs.TabPane tab={<><TabIcon query={query} />{`Query ${i + 1}`}</>} key={query.id} closable={closable} />)
+function getTabPane (query, i, closable, changed) {
+  return (<Tabs.TabPane tab={<><TabIcon query={query} />{`Query ${i + 1}${changed ? '*' : ''}`}</>} key={query.id} closable={closable} />)
 }
 
 function QuerySection ({ reportId }) {
   const queries = useSelector(state => state.queries)
   const activeQuery = useSelector(state => state.activeQuery)
   const report = useSelector(state => state.report)
+  const queryStatus = useSelector(state => state.queryStatus)
   const { canWrite } = report
   const dispatch = useDispatch()
   useEffect(() => {
@@ -88,9 +89,20 @@ function QuerySection ({ reportId }) {
             hideAdd={!canWrite}
             onEdit={getOnTabEditHandler(dispatch, reportId)}
           >
-            {queries.map((query, i) => getTabPane(query, i, closable))}
+            {queries.map((query, i) => getTabPane(query, i, closable, queryStatus[query.id].changed))}
           </Tabs>
         </div>
+        {/* {queries.map((query) => (
+          <div
+            className={classnames(
+              styles.query,
+              {
+                [styles.activeQuery]: query.id === activeQuery.id
+              }
+            )} key={query.id}
+          ><Query query={query} />
+          </div>
+        ))} */}
         <Query query={activeQuery} key={activeQuery.id} />
       </div>
     )
@@ -219,6 +231,9 @@ export default function ReportPage ({ edit }) {
   const envLoaded = useSelector(state => state.env.loaded)
   const { mapConfig, title } = report || {}
   const reportStatus = useSelector(state => state.reportStatus)
+  const queryChanged = useSelector(state => Object.values(state.queryStatus).reduce((queryChanged, queryStatus) => {
+    return queryStatus.changed || queryChanged
+  }, false))
 
   const dispatch = useDispatch()
 
@@ -249,7 +264,7 @@ export default function ReportPage ({ edit }) {
         <ReportHeaderButtons
           reportId={id}
           canWrite={report.canWrite}
-          changed={mapChanged || titleChanged}
+          changed={mapChanged || titleChanged || queryChanged}
           canSave={reportStatus.canSave}
           edit={edit}
         />

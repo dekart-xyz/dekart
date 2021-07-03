@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 import keplerGlReducer from 'kepler.gl/dist/reducers'
 import { ActionTypes as KeplerActionTypes } from 'kepler.gl/dist/actions'
-import { downloadJobResults, openReport, reportTitleChange, reportUpdate, runQuery, saveMap, updateQuery, reportsListUpdate, unsubscribeReports, streamError, httpError, newReport, setEnv, forkReport, newForkedReport, downloading, finishDownloading, setActiveQuery } from './actions'
+import { downloadJobResults, openReport, reportTitleChange, reportUpdate, runQuery, saveMap, updateQuery, reportsListUpdate, unsubscribeReports, streamError, httpError, newReport, setEnv, forkReport, newForkedReport, downloading, finishDownloading, setActiveQuery, queryChanged } from './actions'
 import { Query } from '../proto/dekart_pb'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
@@ -132,11 +132,27 @@ function queryStatus (state = {}, action) {
           canRun: false
         }
       }
+    case queryChanged.name:
+      return {
+        ...state,
+        [action.queryId]: {
+          ...state[action.queryId],
+          changed: action.changed,
+          queryText: action.queryText
+        }
+      }
     case reportUpdate.name:
       return action.queriesList.reduce(function (queryStatus, query) {
+        const wasChanged = state[query.id] ? state[query.id].changed : false
+        // if it was not changed query will update to remote state
+        // otherwise compare remote state to local state
+        const changed = wasChanged ? state[query.id].queryText !== query.queryText : false
         queryStatus[query.id] = {
           canRun: [Query.JobStatus.JOB_STATUS_UNSPECIFIED, Query.JobStatus.JOB_STATUS_DONE].includes(query.jobStatus),
-          downloadingResults: false
+          downloadingResults: false,
+          changed,
+          // update to remote state only if it was not locally changed
+          queryText: wasChanged ? state[query.id].queryText : query.queryText
         }
         return queryStatus
       }, {})

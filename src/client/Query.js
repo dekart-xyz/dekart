@@ -4,7 +4,7 @@ import { AutoSizer } from 'react-virtualized'
 import Button from 'antd/es/button'
 import styles from './Query.module.css'
 import { useDispatch, useSelector } from 'react-redux'
-import { cancelQuery, runQuery, showDataTable } from './actions'
+import { cancelQuery, queryChanged, runQuery, showDataTable } from './actions'
 import 'ace-builds/src-noconflict/mode-sql'
 // import 'ace-builds/src-noconflict/theme-textmate'
 import 'ace-builds/src-noconflict/theme-sqlserver'
@@ -166,8 +166,7 @@ function QueryStatus ({ children, query }) {
 }
 
 export default function Query ({ query }) {
-  const [queryText, setQueryText] = useState(query.queryText)
-  const { canRun } = useSelector(state => state.queryStatus[query.id])
+  const { canRun, queryText } = useSelector(state => state.queryStatus[query.id])
   const { canWrite } = useSelector(state => state.report)
   const dispatch = useDispatch()
   return (
@@ -175,7 +174,7 @@ export default function Query ({ query }) {
       <QueryEditor
         queryId={query.id}
         queryText={queryText}
-        onChange={value => setQueryText(value)}
+        onChange={value => dispatch(queryChanged(query.id, value))}
         canWrite={canWrite}
       />
       <QueryStatus query={query}>

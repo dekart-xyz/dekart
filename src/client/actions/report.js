@@ -4,7 +4,7 @@ import { receiveMapConfig, removeDataset } from 'kepler.gl/dist/actions'
 import { getReportStream, getStream, unary } from '../lib/grpc'
 import { error, streamError, success } from './message'
 import { downloadJobResults } from './job'
-import { ArchiveReportRequest, CreateReportRequest, ForkReportRequest, Report, ReportListRequest, UpdateReportRequest } from '../../proto/dekart_pb'
+import { ArchiveReportRequest, CreateReportRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 
 let reportStreamCancelable
@@ -168,14 +168,25 @@ export function reportTitleChange (title) {
 export function saveMap () {
   return async (dispatch, getState) => {
     dispatch({ type: saveMap.name })
-    const { keplerGl, report, reportStatus } = getState()
+    const { keplerGl, report, reportStatus, queryStatus } = getState()
     const configToSave = KeplerGlSchema.getConfigToSave(keplerGl.kepler)
     const request = new UpdateReportRequest()
     const reportPayload = new Report()
+    const queries = Object.keys(queryStatus).reduce((queries, id) => {
+      const status = queryStatus[id]
+      if (status.changed) {
+        const query = new Query()
+        query.setId(id)
+        query.setQueryText(status.queryText)
+        queries.push(query)
+      }
+      return queries
+    }, [])
     reportPayload.setId(report.id)
     reportPayload.setMapConfig(JSON.stringify(configToSave))
     reportPayload.setTitle(reportStatus.title)
     request.setReport(reportPayload)
+    request.setQueryList(queries)
     try {
       await unary(Dekart.UpdateReport, request)
       dispatch(success('Map Saved'))

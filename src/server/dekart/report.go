@@ -173,10 +173,16 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	//start here, save queries
 	if req.Report == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "req.Report == nil")
 	}
-	result, err := s.db.ExecContext(ctx,
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	result, err := tx.ExecContext(ctx,
 		`update
 			reports
 		set map_config=$1, title=$2
@@ -188,6 +194,9 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	)
 	if err != nil {
 		log.Err(err).Send()
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			log.Err(rollbackErr).Send()
+		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -195,6 +204,9 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 
 	if err != nil {
 		log.Err(err).Send()
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			log.Err(rollbackErr).Send()
+		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -202,7 +214,33 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 		// TODO: distinguish between not found and read only
 		err := fmt.Errorf("Report not found id:%s", req.Report.Id)
 		log.Warn().Err(err).Send()
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			log.Err(rollbackErr).Send()
+		}
 		return nil, status.Error(codes.NotFound, err.Error())
+	}
+
+	// save queries
+	for _, query := range req.Query {
+		_, err = tx.ExecContext(ctx,
+			`update queries set query_text=$1 where id=$2`,
+			query.QueryText,
+			query.Id,
+		)
+		if err != nil {
+			log.Err(err).Send()
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				log.Err(rollbackErr).Send()
+			}
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	err = tx.Commit()
+
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	s.reportStreams.Ping(req.Report.Id)
