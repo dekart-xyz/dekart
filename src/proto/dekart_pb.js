@@ -2107,7 +2107,9 @@ proto.Query.toObject = function(includeInstance, msg) {
     jobDuration: jspb.Message.getFieldWithDefault(msg, 7, 0),
     totalRows: jspb.Message.getFieldWithDefault(msg, 8, 0),
     bytesProcessed: jspb.Message.getFieldWithDefault(msg, 9, 0),
-    resultSize: jspb.Message.getFieldWithDefault(msg, 10, 0)
+    resultSize: jspb.Message.getFieldWithDefault(msg, 10, 0),
+    createdAt: jspb.Message.getFieldWithDefault(msg, 11, 0),
+    updatedAt: jspb.Message.getFieldWithDefault(msg, 12, 0)
   };
 
   if (includeInstance) {
@@ -2183,6 +2185,14 @@ proto.Query.deserializeBinaryFromReader = function(msg, reader) {
     case 10:
       var value = /** @type {number} */ (reader.readInt64());
       msg.setResultSize(value);
+      break;
+    case 11:
+      var value = /** @type {number} */ (reader.readInt64());
+      msg.setCreatedAt(value);
+      break;
+    case 12:
+      var value = /** @type {number} */ (reader.readInt64());
+      msg.setUpdatedAt(value);
       break;
     default:
       reader.skipField();
@@ -2280,6 +2290,20 @@ proto.Query.serializeBinaryToWriter = function(message, writer) {
   if (f !== 0) {
     writer.writeInt64(
       10,
+      f
+    );
+  }
+  f = message.getCreatedAt();
+  if (f !== 0) {
+    writer.writeInt64(
+      11,
+      f
+    );
+  }
+  f = message.getUpdatedAt();
+  if (f !== 0) {
+    writer.writeInt64(
+      12,
       f
     );
   }
@@ -2473,6 +2497,42 @@ proto.Query.prototype.getResultSize = function() {
  */
 proto.Query.prototype.setResultSize = function(value) {
   return jspb.Message.setProto3IntField(this, 10, value);
+};
+
+
+/**
+ * optional int64 created_at = 11;
+ * @return {number}
+ */
+proto.Query.prototype.getCreatedAt = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 11, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.Query} returns this
+ */
+proto.Query.prototype.setCreatedAt = function(value) {
+  return jspb.Message.setProto3IntField(this, 11, value);
+};
+
+
+/**
+ * optional int64 updated_at = 12;
+ * @return {number}
+ */
+proto.Query.prototype.getUpdatedAt = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 12, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.Query} returns this
+ */
+proto.Query.prototype.setUpdatedAt = function(value) {
+  return jspb.Message.setProto3IntField(this, 12, value);
 };
 
 

@@ -6,6 +6,7 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/user"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -110,10 +111,11 @@ func (s Server) commitReportWithQueries(ctx context.Context, report *proto.Repor
 	for _, query := range queries {
 		queryId := newUUID()
 		_, err := tx.ExecContext(ctx,
-			`INSERT INTO queries (id, report_id, query_text) VALUES($1, $2, $3)`,
+			`INSERT INTO queries (id, report_id, query_text, created_at) VALUES($1, $2, $3, $4)`,
 			queryId,
 			report.Id,
 			query.QueryText,
+			time.Unix(query.CreatedAt, 0), // to preserve query sequence
 		)
 		if err != nil {
 			rollback(tx)

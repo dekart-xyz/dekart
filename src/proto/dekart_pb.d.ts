@@ -251,6 +251,12 @@ export class Query extends jspb.Message {
   getResultSize(): number;
   setResultSize(value: number): void;
 
+  getCreatedAt(): number;
+  setCreatedAt(value: number): void;
+
+  getUpdatedAt(): number;
+  setUpdatedAt(value: number): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Query.AsObject;
   static toObject(includeInstance: boolean, msg: Query): Query.AsObject;
@@ -273,6 +279,8 @@ export namespace Query {
     totalRows: number,
     bytesProcessed: number,
     resultSize: number,
+    createdAt: number,
+    updatedAt: number,
   }
 
   export interface JobStatusMap {

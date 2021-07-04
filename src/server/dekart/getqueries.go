@@ -3,6 +3,7 @@ package dekart
 import (
 	"context"
 	"dekart/src/proto"
+	"time"
 
 	"github.com/rs/zerolog/log"
 )
@@ -22,7 +23,9 @@ func (s Server) getQueries(ctx context.Context, reportID string) ([]*proto.Query
 			end as job_duration,
 			total_rows,
 			bytes_processed,
-			result_size
+			result_size,
+			created_at,
+			updated_at
 		from queries where report_id=$1 order by created_at asc`,
 		reportID,
 	)
@@ -36,6 +39,8 @@ func (s Server) getQueries(ctx context.Context, reportID string) ([]*proto.Query
 		query := proto.Query{
 			ReportId: reportID,
 		}
+		var createdAt time.Time
+		var updatedAt time.Time
 		if err := queryRows.Scan(
 			&query.Id,
 			&query.QueryText,
@@ -46,10 +51,14 @@ func (s Server) getQueries(ctx context.Context, reportID string) ([]*proto.Query
 			&query.TotalRows,
 			&query.BytesProcessed,
 			&query.ResultSize,
+			&createdAt,
+			&updatedAt,
 		); err != nil {
 			log.Err(err).Send()
 			return nil, err
 		}
+		query.CreatedAt = createdAt.Unix()
+		query.UpdatedAt = updatedAt.Unix()
 		switch query.JobStatus {
 		case proto.Query_JOB_STATUS_UNSPECIFIED:
 			query.JobDuration = 0
