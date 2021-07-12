@@ -1,6 +1,6 @@
 import { downloading, error, finishDownloading } from './message'
-import { addDataToMap, toggleSidePanel } from 'kepler.gl/dist/actions'
-import { processCsvData } from 'kepler.gl/dist/processors'
+import { addDataToMap, toggleSidePanel } from '@dekart-xyz/kepler.gl/dist/actions'
+import { processCsvData } from '@dekart-xyz/kepler.gl/dist/processors'
 import { get } from '../lib/api'
 
 export function downloadJobResults (query) {

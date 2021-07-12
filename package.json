@@ -3,7 +3,7 @@
   "version": "0.5.0",
   "private": true,
   "dependencies": {
-    "@dekart-xyz/kepler.gl": "^2.5.1-fix.0",
+    "@dekart-xyz/kepler.gl": "^2.5.1-fix.1",
     "@improbable-eng/grpc-web": "^0.13.0",
     "@testing-library/jest-dom": "^5.11.6",
     "@testing-library/react": "^11.2.2",

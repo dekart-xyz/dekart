@@ -2,6 +2,7 @@ FROM node:14 as nodebuilder
 WORKDIR /source
 ADD package.json .
 ADD package-lock.json .
+ADD .npmrc .
 RUN npm i
 ADD public public
 ADD src src

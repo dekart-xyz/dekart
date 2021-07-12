@@ -1,5 +1,5 @@
-import { KeplerGlSchema } from 'kepler.gl/dist/schemas'
-import { receiveMapConfig, removeDataset } from 'kepler.gl/dist/actions'
+import { KeplerGlSchema } from '@dekart-xyz/kepler.gl/dist/schemas'
+import { receiveMapConfig, removeDataset } from '@dekart-xyz/kepler.gl/dist/actions'
 
 import { getReportStream, getStream, unary } from '../lib/grpc'
 import { error, streamError, success } from './message'

@@ -1,6 +1,6 @@
 import { combineReducers } from 'redux'
-import keplerGlReducer from 'kepler.gl/dist/reducers'
-import { ActionTypes as KeplerActionTypes } from 'kepler.gl/dist/actions'
+import keplerGlReducer from '@dekart-xyz/kepler.gl/dist/reducers'
+import { ActionTypes as KeplerActionTypes } from '@dekart-xyz/kepler.gl/dist/actions'
 import { downloadJobResults, openReport, reportTitleChange, reportUpdate, runQuery, saveMap, updateQuery, reportsListUpdate, unsubscribeReports, streamError, httpError, newReport, setEnv, forkReport, newForkedReport, downloading, finishDownloading, setActiveQuery, queryChanged } from './actions'
 import { Query } from '../proto/dekart_pb'
 
