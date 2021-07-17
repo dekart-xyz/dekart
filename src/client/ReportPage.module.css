@@ -32,6 +32,7 @@
 
 .titleEditIcon {
     opacity: 0;
+    padding: 2px 7px;
     color: white;
     font-size: 0.8em;
 }
@@ -45,9 +46,10 @@
 }
 
 .title {
-    width: calc(100% - 700px);
-    min-width: 400px;
+    width:100%;
+    min-width: 100px;
     text-align: center;
+    position: relative;
     /* flex: 1px; */
 }
 

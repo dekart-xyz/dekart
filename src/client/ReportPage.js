@@ -92,17 +92,6 @@ function QuerySection ({ reportId }) {
             {queries.map((query, i) => getTabPane(query, i, closable, queryStatus[query.id].changed))}
           </Tabs>
         </div>
-        {/* {queries.map((query) => (
-          <div
-            className={classnames(
-              styles.query,
-              {
-                [styles.activeQuery]: query.id === activeQuery.id
-              }
-            )} key={query.id}
-          ><Query query={query} />
-          </div>
-        ))} */}
         <Query query={activeQuery} key={activeQuery.id} />
       </div>
     )
@@ -145,9 +134,7 @@ function Title () {
           onBlur={() => setEdit(false)}
           placeholder='Untitled'
           autoFocus
-          // size='large'
           disabled={!(reportStatus.edit && canWrite)}
-          // bordered={false}
         />
       </div>
     )
@@ -162,7 +149,9 @@ function Title () {
             }
           )}
           onClick={() => reportStatus.edit && setEdit(true)}
-        >{reportStatus.title} <EditOutlined className={styles.titleEditIcon} />
+        >{
+          reportStatus.edit && canWrite ? <EditOutlined className={styles.titleEditIcon} /> : null
+        }{reportStatus.title}
         </span>
       </div>
     )
@@ -258,17 +247,16 @@ export default function ReportPage ({ edit }) {
   return (
     <div className={styles.report}>
       <Downloading />
-      <Header>
-        <DekartMenu />
-        <Title />
-        <ReportHeaderButtons
+      <Header
+        title={(<Title />)}
+        buttons={(<ReportHeaderButtons
           reportId={id}
           canWrite={report.canWrite}
           changed={mapChanged || titleChanged || queryChanged}
           canSave={reportStatus.canSave}
           edit={edit}
-        />
-      </Header>
+                  />)}
+      />
       <div className={styles.body}>
         <Kepler />
         {edit ? <QuerySection reportId={id} /> : null}

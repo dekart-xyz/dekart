@@ -98,11 +98,9 @@ export default function HomePage () {
 
   return (
     <div className={styles.homePage}>
-      <Header>
-        <div className={styles.headerButtons} />
-        <DekartMenu />
-        <div className={styles.headerButtons}>{reportsList.loaded && reportsList.reports.length ? createReportButton : null}</div>
-      </Header>
+      <Header
+        buttons={<div className={styles.headerButtons}>{reportsList.loaded && reportsList.reports.length ? createReportButton : null}</div>}
+      />
       <div className={styles.body}>
         {
           reportsList.loaded

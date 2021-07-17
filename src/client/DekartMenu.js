@@ -14,9 +14,6 @@ export default function DekartMenu () {
     <div className={styles.dekartMenu}>
       <Menu mode='horizontal' theme='dark'>
         <Menu.Item>
-          <a target='_blank' rel='noopener noreferrer' className={styles.dekartLink} href={env.variables.UX_HOMEPAGE}>Dekart</a>
-        </Menu.Item>
-        <Menu.Item>
           <Link to='/'>Reports</Link>
         </Menu.Item>
         <Menu.SubMenu popupClassName={styles.subMenu} title='Community' active>

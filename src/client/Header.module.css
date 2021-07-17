@@ -1,8 +1,41 @@
+.buttons {
+    flex: 1;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+.middle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: calc(100% - 500px);
+}
 .header {
-    padding: 0px 10px;
-    height: 60px;
+    padding: 5px 10px 5px 10px;
     display: flex;
     flex-direction: row;
-    align-items: center;
+    align-items: flex-start;
     background: linear-gradient(180deg, #2B323B 70%, #25272F 100%);
 }
+
+.dekartLinkHolder {
+    height: 46px;
+    display: flex;
+    align-items: center;
+}
+
+.title {
+    width: 100%;
+    margin-top: -5px;
+    padding-bottom: 0px;
+}
+
+a.dekartLink {
+    color: #57B7D3!important;
+    font-size: 18px;
+    font-weight: bold;
+    line-height: 32px;
+    cursor: pointer;
+}
+
