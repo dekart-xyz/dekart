@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import DekartMenu from './DekartMenu'
 import { Header } from './Header'
 import styles from './HomePage.module.css'
 import Button from 'antd/es/button'
 import Radio from 'antd/es/radio'
 import Result from 'antd/es/result'
 import Table from 'antd/es/table'
-import { archiveReport, createReport, subscribeReports, unsubscribeReports } from './actions'
+import { archiveReport, createReport, subscribeReports, testVersion, unsubscribeReports } from './actions'
 import { useDispatch, useSelector } from 'react-redux'
-import { PlusOutlined } from '@ant-design/icons'
+import { PlusOutlined, GiftOutlined } from '@ant-design/icons'
 import DataDocumentationLink from './DataDocumentationLink'
 
 function Loading () {
@@ -35,7 +34,7 @@ function ArchiveButton ({ report }) {
 const columns = [
   {
     dataIndex: 'title',
-    render: (t, report) => <a href={`/reports/${report.id}`}>{report.title}</a>,
+    render: (t, report) => <a href={`/reports/${report.id}/source`}>{report.title}</a>,
     className: styles.titleColumn
   },
   {
@@ -86,6 +85,27 @@ function Reports ({ reports, createReportButton, archived }) {
   }
 }
 
+function NewVersion () {
+  const release = useSelector(state => state.release)
+  const dispatch = useDispatch()
+  useEffect(() => {
+    dispatch(testVersion())
+  }, [dispatch])
+  if (release) {
+    return (
+      <div className={styles.newRelease}>
+        <GiftOutlined className={styles.newReleaseIcon} />
+        <div className={styles.newReleaseTitle}>New release {release.tag_name} available</div>
+        <div>
+          <Button type='primary' href='https://dekart.xyz/docs/self-hosting/upgrade/?ref=dekart'>Update</Button>
+          <Button type='link' href={release.html_url + '?ref=dekart'}>Release Notes</Button>
+        </div>
+      </div>
+    )
+  }
+  return null
+}
+
 export default function HomePage () {
   const reportsList = useSelector(state => state.reportsList)
   const dispatch = useDispatch()
@@ -102,6 +122,7 @@ export default function HomePage () {
         buttons={<div className={styles.headerButtons}>{reportsList.loaded && reportsList.reports.length ? createReportButton : null}</div>}
       />
       <div className={styles.body}>
+        <NewVersion />
         {
           reportsList.loaded
             ? <Reports

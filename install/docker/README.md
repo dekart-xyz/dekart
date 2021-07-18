@@ -2,7 +2,7 @@
 
 Dekart is an open-source data visualization and analytical tool for large scale geo-spacial data. Dekart is based on Kepler.gl visualization and supports BigQuery as a data source.
 
-[Home Page](https://dekart.xyz) | [GitHub](https://github.com/dekart/dekart)
+[Home Page](https://dekart.xyz?ref=dokerhub) | [GitHub](https://github.com/dekart/dekart?ref=dokerhub)
 
 ## Features
 
@@ -38,10 +38,10 @@ docker run \
   -p 8080:8080 \
   dekartxyz/dekart:0.5
 ```
-[Configuration details](https://dekart.xyz/docs/configuration/environment-variables/)
+[Configuration details](https://dekart.xyz/docs/configuration/environment-variables/?ref=dokerhub)
 
 ## Other options to run Dekart
 
-* [Google App Engine](https://dekart.xyz/docs/self-hosting/app-engine/)
-* [docker-compose](https://dekart.xyz/docs/self-hosting/docker-compose/)
+* [Google App Engine](https://dekart.xyz/docs/self-hosting/app-engine/?ref=dockerhub)
+* [docker-compose](https://dekart.xyz/docs/self-hosting/docker-compose/?ref=dockerhub)
 

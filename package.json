@@ -24,6 +24,7 @@
     "redux": "^4.0.5",
     "redux-logger": "^3.0.6",
     "redux-thunk": "^2.3.0",
+    "semver": "^7.3.5",
     "standard": "^16.0.3",
     "styled-components": "^5.2.1",
     "web-vitals": "^0.2.4"
