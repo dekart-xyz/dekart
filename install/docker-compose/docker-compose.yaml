@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: "dekart"
       POSTGRES_DB: "${POSTGRES_PASSWORD}"
   dekart:
-      image: dekartxyz/dekart:0.5
+      image: dekartxyz/dekart:0.6
       restart: always
       ports:
         - 8080:8080

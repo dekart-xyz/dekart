@@ -1,1 +1,1 @@
-from dekartxyz/dekart:0.5
+from dekartxyz/dekart:0.6

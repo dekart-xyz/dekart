@@ -26,11 +26,6 @@ jobs:
         run: |
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > .npmrc
           echo "@dekart-xyz:registry=https://npm.pkg.github.com" >> .npmrc
-      # - name: Create .npmrc
-      #   uses: "finnp/create-file-action@master"
-      #   env:
-      #     FILE_NAME: ".npmrc"
-      #     FILE_DATA: "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}\n@dekart-xyz:registry=https://npm.pkg.github.com"
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
