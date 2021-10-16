@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 	"sync"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/storage"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iterator"
 )
 
@@ -188,6 +190,15 @@ func (job *Job) wait() {
 		return
 	}
 	if err != nil {
+		if apiError, ok := err.(*googleapi.Error); ok {
+			for _, e := range apiError.Errors {
+				if e.Reason == "bytesBilledLimitExceeded" {
+					log.Warn().Str(
+						"DEKART_BIGQUERY_MAX_BYTES_BILLED", os.Getenv("DEKART_BIGQUERY_MAX_BYTES_BILLED"),
+					).Msg(e.Message)
+				}
+			}
+		}
 		job.cancelWithError(err)
 		return
 	}
@@ -208,11 +219,24 @@ func (job *Job) Run(queryText string, obj *storage.ObjectHandle) error {
 		job.cancel()
 		return err
 	}
-	bigqueryJob, err := client.Query(queryText).Run(job.Ctx)
+	query := client.Query(queryText)
+	maxBytesBilled := os.Getenv("DEKART_BIGQUERY_MAX_BYTES_BILLED")
+	if maxBytesBilled != "" {
+		query.MaxBytesBilled, err = strconv.ParseInt(maxBytesBilled, 10, 64)
+		if err != nil {
+			job.cancel()
+			log.Fatal().Msgf("Cannot parse DEKART_BIGQUERY_MAX_BYTES_BILLED")
+		}
+	} else {
+		log.Warn().Msgf("DEKART_BIGQUERY_MAX_BYTES_BILLED is not set! Use the maximum bytes billed setting to limit query costs. https://cloud.google.com/bigquery/docs/best-practices-costs#limit_query_costs_by_restricting_the_number_of_bytes_billed")
+	}
+
+	bigqueryJob, err := query.Run(job.Ctx)
 	if err != nil {
 		job.cancel()
 		return err
 	}
+
 	job.mutex.Lock()
 	job.bigqueryJob = bigqueryJob
 	job.storageObj = obj
