@@ -12,22 +12,24 @@ export function downloadJobResults (query) {
       return
     }
     dispatch(downloading(query))
+    let data
     try {
       const res = await get(`/job-results/${query.jobResultId}.csv`)
       const csv = await res.text()
-      const data = processCsvData(csv)
-      dispatch(addDataToMap({
-        datasets: {
-          info: {
-            label: `Query ${i + 1}`,
-            id: query.id
-          },
-          data
-        }
-      }))
+      data = processCsvData(csv)
     } catch (err) {
       dispatch(error(err))
+      return
     }
+    dispatch(addDataToMap({
+      datasets: {
+        info: {
+          label: `Query ${i + 1}`,
+          id: query.id
+        },
+        data
+      }
+    }))
     dispatch(finishDownloading(query))
     const { reportStatus } = getState()
     if (reportStatus.edit) {

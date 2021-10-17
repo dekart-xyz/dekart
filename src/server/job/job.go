@@ -110,25 +110,32 @@ func (job *Job) setJobStats(queryStatus *bigquery.JobStatus, totalRows uint64) {
 	job.totalRows = int64(totalRows)
 }
 
-func (job *Job) read(queryStatus *bigquery.JobStatus) {
-	ctx := job.Ctx
-
-	it, err := job.bigqueryJob.Read(ctx)
-	if err != nil {
-		log.Err(err).Send()
-		job.cancelWithError(err)
-		return
-	}
-
-	job.setJobStats(queryStatus, it.TotalRows)
-	job.Status <- int32(queryStatus.State)
-
-	storageWriter := job.storageObj.NewWriter(ctx)
+// write csv rows to storage
+func (job *Job) write(csvRows chan []string) {
+	storageWriter := job.storageObj.NewWriter(job.Ctx)
+	storageWriter.ChunkSize = 0 // do not buffer when writing to storage
 	csvWriter := csv.NewWriter(storageWriter)
-	defer job.close(storageWriter, csvWriter)
+	for {
+		csvRow, more := <-csvRows
+		if !more {
+			break
+		}
+		err := csvWriter.Write(csvRow)
+		if err == context.Canceled {
+			break
+		}
+		if err != nil {
+			log.Err(err).Send()
+			job.cancelWithError(err)
+			break
+		}
+	}
+	job.close(storageWriter, csvWriter)
+}
 
+// read rows from bigquery response and send to csvRows channel
+func (job *Job) read(it *bigquery.RowIterator, csvRows chan []string) {
 	firstLine := true
-
 	for {
 		var row []bigquery.Value
 		err := it.Next(&row)
@@ -150,30 +157,15 @@ func (job *Job) read(queryStatus *bigquery.JobStatus) {
 				csvRow[i] = fieldSchema.Name
 				// fmt.Println(fieldSchema.Name, fieldSchema.Type)
 			}
-			err = csvWriter.Write(csvRow)
-			if err == context.Canceled {
-				break
-			}
-			if err != nil {
-				log.Err(err).Send()
-				job.cancelWithError(err)
-				return
-			}
+			csvRows <- csvRow
 		}
 		csvRow := make([]string, len(row), len(row))
 		for i, v := range row {
 			csvRow[i] = fmt.Sprintf("%v", v)
 		}
-		err = csvWriter.Write(csvRow)
-		if err == context.Canceled {
-			break
-		}
-		if err != nil {
-			log.Err(err).Send()
-			job.cancelWithError(err)
-			return
-		}
+		csvRows <- csvRow
 	}
+	close(csvRows)
 }
 
 func (job *Job) cancelWithError(err error) {
@@ -209,7 +201,21 @@ func (job *Job) wait() {
 		job.cancelWithError(err)
 		return
 	}
-	job.read(queryStatus)
+
+	it, err := job.bigqueryJob.Read(job.Ctx)
+	if err != nil {
+		log.Err(err).Send()
+		job.cancelWithError(err)
+		return
+	}
+	// it.PageInfo().MaxSize = 50000
+	job.setJobStats(queryStatus, it.TotalRows)
+	job.Status <- int32(queryStatus.State)
+
+	csvRows := make(chan []string, it.TotalRows)
+
+	go job.read(it, csvRows)
+	go job.write(csvRows)
 }
 
 // Run implementation
