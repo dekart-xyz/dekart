@@ -15,6 +15,7 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/storage"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iterator"
@@ -36,6 +37,7 @@ type Job struct {
 	resultID       *string
 	storageObj     *storage.ObjectHandle
 	mutex          sync.Mutex
+	logger         zerolog.Logger
 }
 
 // Err of job
@@ -89,6 +91,7 @@ func (job *Job) close(storageWriter *storage.Writer, csvWriter *csv.Writer) {
 		job.cancelWithError(err)
 		return
 	}
+	job.logger.Debug().Msg("Writing Done")
 	attrs := storageWriter.Attrs()
 	job.mutex.Lock()
 	// TODO: use bool done
@@ -166,6 +169,7 @@ func (job *Job) read(it *bigquery.RowIterator, csvRows chan []string) {
 		csvRows <- csvRow
 	}
 	close(csvRows)
+	job.logger.Debug().Msg("Reading Done")
 }
 
 func (job *Job) cancelWithError(err error) {
@@ -214,12 +218,15 @@ func (job *Job) wait() {
 
 	csvRows := make(chan []string, it.TotalRows)
 
+	job.logger.Debug().Uint64("TotalRows", it.TotalRows).Msg("Received iterator")
+
 	go job.read(it, csvRows)
 	go job.write(csvRows)
 }
 
 // Run implementation
 func (job *Job) Run(queryText string, obj *storage.ObjectHandle) error {
+	job.logger.Debug().Msg("Run BigQuery Job")
 	client, err := bigquery.NewClient(job.Ctx, os.Getenv("DEKART_BIGQUERY_PROJECT_ID"))
 	if err != nil {
 		job.cancel()
@@ -248,6 +255,7 @@ func (job *Job) Run(queryText string, obj *storage.ObjectHandle) error {
 	job.storageObj = obj
 	job.mutex.Unlock()
 	job.Status <- int32(proto.Query_JOB_STATUS_RUNNING)
+	job.logger.Debug().Msg("Waiting for results")
 	go job.wait()
 	return nil
 }
@@ -295,7 +303,9 @@ func (s *Store) New(reportID string, queryID string) *Job {
 		Ctx:      ctx,
 		cancel:   cancel,
 		Status:   make(chan int32),
+		logger:   log.With().Str("reportID", reportID).Str("queryID", queryID).Logger(),
 	}
+
 	s.jobs = append(s.jobs, job)
 	go s.removeJobWhenDone(job)
 	return job
@@ -307,7 +317,7 @@ func (s *Store) Cancel(queryID string) {
 	for _, job := range s.jobs {
 		if job.QueryID == queryID {
 			job.Status <- int32(proto.Query_JOB_STATUS_UNSPECIFIED)
-			log.Info().Msg("Canceling Job Context")
+			job.logger.Info().Msg("Canceling Job Context")
 			job.cancel()
 		}
 	}

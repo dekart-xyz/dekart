@@ -8,7 +8,7 @@ ADD public public
 ADD src src
 RUN npm run build
 
-FROM golang:1.15 as gobuilder
+FROM golang:1.17 as gobuilder
 WORKDIR /source
 ADD go.mod .
 ADD go.sum .
