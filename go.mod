@@ -8,11 +8,13 @@ require (
 	github.com/golang-migrate/migrate/v4 v4.14.1
 	github.com/golang/protobuf v1.4.3
 	github.com/google/uuid v1.1.2
+	github.com/googleapis/gax-go/v2 v2.0.5
 	github.com/gorilla/mux v1.8.0
 	github.com/improbable-eng/grpc-web v0.13.0
 	github.com/lib/pq v1.9.0
 	github.com/rs/zerolog v1.20.0
 	google.golang.org/api v0.30.0
+	google.golang.org/genproto v0.0.0-20201030142918-24207fddd1c3
 	google.golang.org/grpc v1.33.1
 	google.golang.org/protobuf v1.25.0
 )
@@ -21,7 +23,7 @@ require (
 	cloud.google.com/go v0.64.0 // indirect
 	github.com/desertbit/timer v0.0.0-20180107155436-c41aec40b27f // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
-	github.com/googleapis/gax-go/v2 v2.0.5 // indirect
+	github.com/google/go-cmp v0.5.1 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.0 // indirect
@@ -38,7 +40,6 @@ require (
 	golang.org/x/tools v0.0.0-20200818005847-188abfa75333 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/appengine v1.6.6 // indirect
-	google.golang.org/genproto v0.0.0-20201030142918-24207fddd1c3 // indirect
 )
 
 replace github.com/containerd/containerd => github.com/containerd/containerd v1.4.11

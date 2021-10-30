@@ -6,6 +6,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"os"
+	"reflect"
 	"regexp"
 	"strconv"
 	"sync"
@@ -14,11 +15,22 @@ import (
 	"context"
 
 	"cloud.google.com/go/bigquery"
+	bqStorage "cloud.google.com/go/bigquery/storage/apiv1"
 	"cloud.google.com/go/storage"
+	gax "github.com/googleapis/gax-go/v2"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iterator"
+	bqStoragePb "google.golang.org/genproto/googleapis/cloud/bigquery/storage/v1"
+	"google.golang.org/grpc"
+)
+
+// rpcOpts is used to configure the underlying gRPC client to accept large
+// messages.  The BigQuery Storage API may send message blocks up to 128MB
+// in size, see https://cloud.google.com/bigquery/docs/reference/storage/libraries
+var rpcOpts = gax.WithGRPCOptions(
+	grpc.MaxCallRecvMsgSize(1024 * 1024 * 129),
 )
 
 // Job of quering db, concurency safe
@@ -87,7 +99,7 @@ func (job *Job) close(storageWriter *storage.Writer, csvWriter *csv.Writer) {
 		if contextCancelledRe.MatchString(err.Error()) {
 			return
 		}
-		log.Err(err).Send()
+		job.logger.Err(err).Send()
 		job.cancelWithError(err)
 		return
 	}
@@ -128,7 +140,7 @@ func (job *Job) write(csvRows chan []string) {
 			break
 		}
 		if err != nil {
-			log.Err(err).Send()
+			job.logger.Err(err).Send()
 			job.cancelWithError(err)
 			break
 		}
@@ -149,20 +161,20 @@ func (job *Job) read(it *bigquery.RowIterator, csvRows chan []string) {
 			break
 		}
 		if err != nil {
-			log.Err(err).Send()
+			job.logger.Err(err).Send()
 			job.cancelWithError(err)
 			return
 		}
 		if firstLine {
 			firstLine = false
-			csvRow := make([]string, len(row), len(row))
+			csvRow := make([]string, len(row))
 			for i, fieldSchema := range it.Schema {
 				csvRow[i] = fieldSchema.Name
 				// fmt.Println(fieldSchema.Name, fieldSchema.Type)
 			}
 			csvRows <- csvRow
 		}
-		csvRow := make([]string, len(row), len(row))
+		csvRow := make([]string, len(row))
 		for i, v := range row {
 			csvRow[i] = fmt.Sprintf("%v", v)
 		}
@@ -189,7 +201,7 @@ func (job *Job) wait() {
 		if apiError, ok := err.(*googleapi.Error); ok {
 			for _, e := range apiError.Errors {
 				if e.Reason == "bytesBilledLimitExceeded" {
-					log.Warn().Str(
+					job.logger.Warn().Str(
 						"DEKART_BIGQUERY_MAX_BYTES_BILLED", os.Getenv("DEKART_BIGQUERY_MAX_BYTES_BILLED"),
 					).Msg(e.Message)
 				}
@@ -199,29 +211,82 @@ func (job *Job) wait() {
 		return
 	}
 	if queryStatus == nil {
-		log.Fatal().Msgf("queryStatus == nil")
+		job.logger.Fatal().Msgf("queryStatus == nil")
 	}
 	if err := queryStatus.Err(); err != nil {
 		job.cancelWithError(err)
 		return
 	}
 
-	it, err := job.bigqueryJob.Read(job.Ctx)
+	// get temporary table
+	jobConfig, err := job.bigqueryJob.Config()
 	if err != nil {
-		log.Err(err).Send()
 		job.cancelWithError(err)
 		return
 	}
-	// it.PageInfo().MaxSize = 50000
-	job.setJobStats(queryStatus, it.TotalRows)
-	job.Status <- int32(queryStatus.State)
+	log.Debug().Msgf("table %+v", jobConfig)
+	jobConfigVal := reflect.ValueOf(jobConfig).Elem()
+	table, ok := jobConfigVal.FieldByName("Dst").Interface().(*bigquery.Table)
+	if !ok {
+		err := fmt.Errorf("cannot get destination table from job config")
+		job.logger.Error().Err(err).Str("jobConfig", fmt.Sprintf("%v+", jobConfig)).Send()
+		job.cancelWithError(err)
+		return
+	}
+	log.Debug().Msgf("table %+v", table)
+	tableMetadata, err := table.Metadata(job.Ctx)
+	if err != nil {
+		job.cancelWithError(err)
+		return
+	}
+	log.Debug().Msgf("tableMetadata %+v", tableMetadata.NumRows)
 
-	csvRows := make(chan []string, it.TotalRows)
+	bqReadClient, err := bqStorage.NewBigQueryReadClient(job.Ctx)
+	if err != nil {
+		job.logger.Fatal().Err(err).Msg("cannot create bigquery read client")
+	}
+	defer bqReadClient.Close()
 
-	job.logger.Debug().Uint64("TotalRows", it.TotalRows).Msg("Received iterator")
+	createReadSessionRequest := &bqStoragePb.CreateReadSessionRequest{
+		Parent: "projects/" + table.ProjectID,
+		ReadSession: &bqStoragePb.ReadSession{
+			Table: fmt.Sprintf("projects/%s/datasets/%s/tables/%s",
+				table.ProjectID, table.DatasetID, table.TableID),
+			DataFormat: bqStoragePb.DataFormat_AVRO,
+		},
+		MaxStreamCount: 1,
+	}
+	session, err := bqReadClient.CreateReadSession(job.Ctx, createReadSessionRequest, rpcOpts)
+	if err != nil {
+		job.logger.Error().Err(err).Msg("cannot create read session")
+		job.cancelWithError(err)
+		return
+	}
 
-	go job.read(it, csvRows)
-	go job.write(csvRows)
+	if len(session.GetStreams()) == 0 {
+		err := fmt.Errorf("no streams in read session")
+		job.logger.Error().Err(err).Send()
+		job.cancelWithError(err)
+		return
+	}
+	log.Debug().Msgf("session %+v", session.GetStreams()[0])
+
+	// it, err := job.bigqueryJob.Read(job.Ctx)
+	// if err != nil {
+	// 	job.logger.Err(err).Send()
+	// 	job.cancelWithError(err)
+	// 	return
+	// }
+	// // it.PageInfo().MaxSize = 50000
+	// job.setJobStats(queryStatus, it.TotalRows)
+	// job.Status <- int32(queryStatus.State)
+
+	// csvRows := make(chan []string, it.TotalRows)
+
+	// job.logger.Debug().Uint64("TotalRows", it.TotalRows).Msg("Received iterator")
+
+	// go job.read(it, csvRows)
+	// go job.write(csvRows)
 }
 
 // Run implementation
@@ -238,10 +303,10 @@ func (job *Job) Run(queryText string, obj *storage.ObjectHandle) error {
 		query.MaxBytesBilled, err = strconv.ParseInt(maxBytesBilled, 10, 64)
 		if err != nil {
 			job.cancel()
-			log.Fatal().Msgf("Cannot parse DEKART_BIGQUERY_MAX_BYTES_BILLED")
+			job.logger.Fatal().Msgf("Cannot parse DEKART_BIGQUERY_MAX_BYTES_BILLED")
 		}
 	} else {
-		log.Warn().Msgf("DEKART_BIGQUERY_MAX_BYTES_BILLED is not set! Use the maximum bytes billed setting to limit query costs. https://cloud.google.com/bigquery/docs/best-practices-costs#limit_query_costs_by_restricting_the_number_of_bytes_billed")
+		job.logger.Warn().Msgf("DEKART_BIGQUERY_MAX_BYTES_BILLED is not set! Use the maximum bytes billed setting to limit query costs. https://cloud.google.com/bigquery/docs/best-practices-costs#limit_query_costs_by_restricting_the_number_of_bytes_billed")
 	}
 
 	bigqueryJob, err := query.Run(job.Ctx)
@@ -249,7 +314,6 @@ func (job *Job) Run(queryText string, obj *storage.ObjectHandle) error {
 		job.cancel()
 		return err
 	}
-
 	job.mutex.Lock()
 	job.bigqueryJob = bigqueryJob
 	job.storageObj = obj
@@ -274,21 +338,18 @@ func NewStore() *Store {
 }
 
 func (s *Store) removeJobWhenDone(job *Job) {
-	select {
-	case <-job.Ctx.Done():
-		s.mutex.Lock()
-		for i, j := range s.jobs {
-			if job.ID == j.ID {
-				// removing job from slice
-				last := len(s.jobs) - 1
-				s.jobs[i] = s.jobs[last]
-				s.jobs = s.jobs[:last]
-				break
-			}
+	<-job.Ctx.Done()
+	s.mutex.Lock()
+	for i, j := range s.jobs {
+		if job.ID == j.ID {
+			// removing job from slice
+			last := len(s.jobs) - 1
+			s.jobs[i] = s.jobs[last]
+			s.jobs = s.jobs[:last]
+			break
 		}
-		s.mutex.Unlock()
-		return
 	}
+	s.mutex.Unlock()
 }
 
 // New job on store
