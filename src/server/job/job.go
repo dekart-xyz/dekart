@@ -5,6 +5,7 @@ import (
 	"dekart/src/server/uuid"
 	"encoding/csv"
 	"fmt"
+	"io"
 	"os"
 	"reflect"
 	"regexp"
@@ -18,6 +19,7 @@ import (
 	bqStorage "cloud.google.com/go/bigquery/storage/apiv1"
 	"cloud.google.com/go/storage"
 	gax "github.com/googleapis/gax-go/v2"
+	goavro "github.com/linkedin/goavro/v2"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/api/googleapi"
@@ -224,7 +226,7 @@ func (job *Job) wait() {
 		job.cancelWithError(err)
 		return
 	}
-	log.Debug().Msgf("table %+v", jobConfig)
+	log.Debug().Msgf("jobConfig %+v", jobConfig)
 	jobConfigVal := reflect.ValueOf(jobConfig).Elem()
 	table, ok := jobConfigVal.FieldByName("Dst").Interface().(*bigquery.Table)
 	if !ok {
@@ -239,11 +241,22 @@ func (job *Job) wait() {
 		job.cancelWithError(err)
 		return
 	}
-	log.Debug().Msgf("tableMetadata %+v", tableMetadata.NumRows)
+	log.Debug().Msgf("tableMetadata %+v", tableMetadata)
+	job.setJobStats(queryStatus, tableMetadata.NumRows)
+	log.Debug().Msgf("queryStatus.State %v %v", queryStatus.State, int32(queryStatus.State))
+	// job is done
+	// TODO: reading result as separate state
+	job.Status <- int32(queryStatus.State)
 
 	bqReadClient, err := bqStorage.NewBigQueryReadClient(job.Ctx)
 	if err != nil {
 		job.logger.Fatal().Err(err).Msg("cannot create bigquery read client")
+	}
+	if bqReadClient == nil {
+		err = fmt.Errorf("bqReadClient is nil")
+		job.logger.Error().Err(err).Send()
+		job.cancelWithError(err)
+		return
 	}
 	defer bqReadClient.Close()
 
@@ -262,6 +275,34 @@ func (job *Job) wait() {
 		job.cancelWithError(err)
 		return
 	}
+	if session == nil {
+		err = fmt.Errorf("session is nil")
+		job.logger.Error().Err(err).Send()
+		job.cancelWithError(err)
+		return
+	}
+
+	// crete AVRO codec
+	// log.Debug().Msgf("GetSchema %+v", session.GetAvroSchema().GetSchema())
+	avroSchema := session.GetAvroSchema()
+	if avroSchema == nil {
+		err = fmt.Errorf("avroSchema is nil")
+		job.logger.Error().Err(err).Send()
+		job.cancelWithError(err)
+		return
+	}
+	codec, err := goavro.NewCodec(avroSchema.GetSchema())
+	if err != nil {
+		job.logger.Error().Str("schema", avroSchema.GetSchema()).Err(err).Msg("cannot create AVRO codec")
+		job.cancelWithError(err)
+		return
+	}
+	if codec == nil {
+		err = fmt.Errorf("codec is nil")
+		job.logger.Error().Err(err).Msg("cannot create AVRO codec")
+		job.cancelWithError(err)
+		return
+	}
 
 	if len(session.GetStreams()) == 0 {
 		err := fmt.Errorf("no streams in read session")
@@ -270,6 +311,54 @@ func (job *Job) wait() {
 		return
 	}
 	log.Debug().Msgf("session %+v", session.GetStreams()[0])
+
+	rowStream, err := bqReadClient.ReadRows(job.Ctx, &bqStoragePb.ReadRowsRequest{
+		ReadStream: session.GetStreams()[0].Name,
+	}, rpcOpts)
+	if err != nil {
+		job.logger.Err(err).Msg("cannot read rows from stream")
+		job.cancelWithError(err)
+		return
+	}
+
+	for {
+		res, err := rowStream.Recv()
+
+		if err == io.EOF {
+			job.logger.Debug().Msg("EOF")
+			return
+		}
+		if err != nil {
+			job.logger.Err(err).Msg("cannot read rows from stream")
+			job.cancelWithError(err)
+			return
+		}
+		if res.GetRowCount() > 0 {
+			log.Debug().Msgf("RowsCount: %d", res.GetRowCount())
+			rows := res.GetAvroRows()
+			if rows == nil {
+				err = fmt.Errorf("rows is nil")
+				job.logger.Err(err).Send()
+				job.cancelWithError(err)
+				return
+			}
+			undecoded := rows.GetSerializedBinaryRows()
+			for len(undecoded) > 0 {
+				var datum interface{}
+				datum, undecoded, err = codec.NativeFromBinary(undecoded)
+				if err != nil {
+					if err == io.EOF {
+						break
+					}
+					job.logger.Err(err).Msg("cannot decode AVRO")
+					job.cancelWithError(err)
+					return
+				}
+				log.Debug().Msgf("datum %+v", datum)
+			}
+			// log.Debug().Msgf("GetAvroRows %+v", res.GetAvroRows().)
+		}
+	}
 
 	// it, err := job.bigqueryJob.Read(job.Ctx)
 	// if err != nil {

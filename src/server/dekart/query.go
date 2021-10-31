@@ -142,6 +142,7 @@ func (s Server) updateJobStatus(job *job.Job) {
 	for {
 		select {
 		case status := <-job.Status:
+			log.Debug().Int32("status", status).Msg("job status")
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			var err error
 			if status == int32(proto.Query_JOB_STATUS_RUNNING) {
