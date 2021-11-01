@@ -4,6 +4,7 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/uuid"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -194,6 +195,12 @@ func (job *Job) cancelWithError(err error) {
 	job.cancel()
 }
 
+type AvroSchema struct {
+	Fields []struct {
+		Name string `json:"name"`
+	} `json:"fields"`
+}
+
 func (job *Job) wait() {
 	queryStatus, err := job.bigqueryJob.Wait(job.Ctx)
 	if err == context.Canceled {
@@ -291,6 +298,24 @@ func (job *Job) wait() {
 		job.cancelWithError(err)
 		return
 	}
+
+	var avroSchemaFields AvroSchema
+	err = json.Unmarshal([]byte(avroSchema.GetSchema()), &avroSchemaFields)
+	if err != nil {
+		job.logger.Error().Err(err).Msg("cannot unmarshal avro schema")
+		job.cancelWithError(err)
+		return
+	}
+
+	log.Debug().Msgf("avroSchemaFields is %+v", avroSchemaFields)
+	tableFields := make([]string, len(avroSchemaFields.Fields))
+
+	for i := range avroSchemaFields.Fields {
+		tableFields[i] = avroSchemaFields.Fields[i].Name
+	}
+	log.Debug().Msgf("tableFields is %+v", tableFields)
+
+	// create avro codec
 	codec, err := goavro.NewCodec(avroSchema.GetSchema())
 	if err != nil {
 		job.logger.Error().Str("schema", avroSchema.GetSchema()).Err(err).Msg("cannot create AVRO codec")
@@ -354,7 +379,21 @@ func (job *Job) wait() {
 					job.cancelWithError(err)
 					return
 				}
+				valuesMap, ok := datum.(map[string]interface{})
+				if !ok {
+					err = fmt.Errorf("cannot convert datum to map")
+					job.logger.Err(err).Send()
+					job.cancelWithError(err)
+					return
+				}
+				csvRow := make([]string, len(tableFields))
+				for i, name := range tableFields {
+					value := valuesMap[name]
+					//START HERE: valueMap
+					csvRow[i] = fmt.Sprintf("%v", value)
+				}
 				log.Debug().Msgf("datum %+v", datum)
+				log.Debug().Msgf("csvRow %+v", csvRow)
 			}
 			// log.Debug().Msgf("GetAvroRows %+v", res.GetAvroRows().)
 		}
