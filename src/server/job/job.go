@@ -24,7 +24,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/api/googleapi"
-	"google.golang.org/api/iterator"
 	bqStoragePb "google.golang.org/genproto/googleapis/cloud/bigquery/storage/v1"
 	"google.golang.org/grpc"
 )
@@ -96,6 +95,7 @@ func (job *Job) close(storageWriter *storage.Writer, csvWriter *csv.Writer) {
 	csvWriter.Flush()
 	err := storageWriter.Close()
 	if err != nil {
+		// maybe we should not close when context is canceled in job.write()
 		if err == context.Canceled {
 			return
 		}
@@ -109,7 +109,7 @@ func (job *Job) close(storageWriter *storage.Writer, csvWriter *csv.Writer) {
 	job.logger.Debug().Msg("Writing Done")
 	attrs := storageWriter.Attrs()
 	job.mutex.Lock()
-	// TODO: use bool done
+	// TODO: use bool done or better new status values
 	job.resultID = &job.ID
 	if attrs != nil {
 		job.resultSize = attrs.Size
@@ -152,40 +152,40 @@ func (job *Job) write(csvRows chan []string) {
 }
 
 // read rows from bigquery response and send to csvRows channel
-func (job *Job) read(it *bigquery.RowIterator, csvRows chan []string) {
-	firstLine := true
-	for {
-		var row []bigquery.Value
-		err := it.Next(&row)
-		if err == iterator.Done {
-			break
-		}
-		if err == context.Canceled {
-			break
-		}
-		if err != nil {
-			job.logger.Err(err).Send()
-			job.cancelWithError(err)
-			return
-		}
-		if firstLine {
-			firstLine = false
-			csvRow := make([]string, len(row))
-			for i, fieldSchema := range it.Schema {
-				csvRow[i] = fieldSchema.Name
-				// fmt.Println(fieldSchema.Name, fieldSchema.Type)
-			}
-			csvRows <- csvRow
-		}
-		csvRow := make([]string, len(row))
-		for i, v := range row {
-			csvRow[i] = fmt.Sprintf("%v", v)
-		}
-		csvRows <- csvRow
-	}
-	close(csvRows)
-	job.logger.Debug().Msg("Reading Done")
-}
+// func (job *Job) read(it *bigquery.RowIterator, csvRows chan []string) {
+// 	firstLine := true
+// 	for {
+// 		var row []bigquery.Value
+// 		err := it.Next(&row)
+// 		if err == iterator.Done {
+// 			break
+// 		}
+// 		if err == context.Canceled {
+// 			break
+// 		}
+// 		if err != nil {
+// 			job.logger.Err(err).Send()
+// 			job.cancelWithError(err)
+// 			break
+// 		}
+// 		if firstLine {
+// 			firstLine = false
+// 			csvRow := make([]string, len(row))
+// 			for i, fieldSchema := range it.Schema {
+// 				csvRow[i] = fieldSchema.Name
+// 				// fmt.Println(fieldSchema.Name, fieldSchema.Type)
+// 			}
+// 			csvRows <- csvRow
+// 		}
+// 		csvRow := make([]string, len(row))
+// 		for i, v := range row {
+// 			csvRow[i] = fmt.Sprintf("%v", v)
+// 		}
+// 		csvRows <- csvRow
+// 	}
+// 	close(csvRows)
+// 	job.logger.Debug().Msg("Reading Done")
+// }
 
 func (job *Job) cancelWithError(err error) {
 	job.mutex.Lock()
@@ -315,6 +315,12 @@ func (job *Job) wait() {
 	}
 	log.Debug().Msgf("tableFields is %+v", tableFields)
 
+	csvRows := make(chan []string, tableMetadata.NumRows)
+	defer close(csvRows)
+	go job.write(csvRows)
+
+	csvRows <- tableFields
+
 	// create avro codec
 	codec, err := goavro.NewCodec(avroSchema.GetSchema())
 	if err != nil {
@@ -349,11 +355,17 @@ func (job *Job) wait() {
 	for {
 		res, err := rowStream.Recv()
 
-		if err == io.EOF {
-			job.logger.Debug().Msg("EOF")
-			return
-		}
 		if err != nil {
+			if err == io.EOF {
+				job.logger.Debug().Msg("EOF")
+				break
+			}
+			if err == context.Canceled {
+				break
+			}
+			if contextCancelledRe.MatchString(err.Error()) {
+				break
+			}
 			job.logger.Err(err).Msg("cannot read rows from stream")
 			job.cancelWithError(err)
 			return
@@ -382,6 +394,7 @@ func (job *Job) wait() {
 				valuesMap, ok := datum.(map[string]interface{})
 				if !ok {
 					err = fmt.Errorf("cannot convert datum to map")
+					// log.Debug().Msgf("datum %+v", datum)
 					job.logger.Err(err).Send()
 					job.cancelWithError(err)
 					return
@@ -389,16 +402,30 @@ func (job *Job) wait() {
 				csvRow := make([]string, len(tableFields))
 				for i, name := range tableFields {
 					value := valuesMap[name]
-					//START HERE: valueMap
-					csvRow[i] = fmt.Sprintf("%v", value)
+					if value == nil {
+						csvRow[i] = ""
+						continue
+					}
+					valueMap, ok := value.(map[string]interface{})
+					if !ok {
+						err = fmt.Errorf("cannot convert value to map: value %+v", value)
+						job.logger.Err(err).Send()
+						job.cancelWithError(err)
+						return
+					}
+					for _, v := range valueMap {
+						csvRow[i] = fmt.Sprintf("%v", v)
+						break
+					}
 				}
-				log.Debug().Msgf("datum %+v", datum)
-				log.Debug().Msgf("csvRow %+v", csvRow)
+				csvRows <- csvRow
+				// log.Debug().Msgf("datum %+v", datum)
+				// log.Debug().Msgf("csvRow %+v", csvRow)
 			}
 			// log.Debug().Msgf("GetAvroRows %+v", res.GetAvroRows().)
 		}
 	}
-
+	job.logger.Debug().Msg("Reading Done")
 	// it, err := job.bigqueryJob.Read(job.Ctx)
 	// if err != nil {
 	// 	job.logger.Err(err).Send()
