@@ -352,6 +352,13 @@ func (job *Job) wait() {
 		return
 	}
 
+	resCh := make(chan *bqStoragePb.ReadRowsResponse, 1024)
+
+	var proccessWaitGroup sync.WaitGroup
+
+	proccessWaitGroup.Add(1)
+	go job.proccessStreamResponse(resCh, csvRows, avroSchema.GetSchema(), tableFields, &proccessWaitGroup)
+
 	for {
 		res, err := rowStream.Recv()
 
@@ -370,78 +377,97 @@ func (job *Job) wait() {
 			job.cancelWithError(err)
 			return
 		}
-		if res.GetRowCount() > 0 {
-			log.Debug().Msgf("RowsCount: %d", res.GetRowCount())
-			rows := res.GetAvroRows()
-			if rows == nil {
-				err = fmt.Errorf("rows is nil")
+		resCh <- res
+		// job.proccessStreamResponse()
+	}
+	close(resCh)
+	log.Debug().Msg("close resCh")
+	proccessWaitGroup.Wait()
+	job.logger.Debug().Msg("Reading Done")
+}
+
+func (job *Job) proccessStreamResponse(resCh chan *bqStoragePb.ReadRowsResponse, csvRows chan []string, avroSchema string, tableFields []string, proccessWaitGroup *sync.WaitGroup) {
+	defer proccessWaitGroup.Done()
+	defer log.Debug().Msg("proccessStreamResponse Done")
+	codec, err := goavro.NewCodec(avroSchema)
+	if err != nil {
+		job.logger.Error().Str("schema", avroSchema).Err(err).Msg("cannot create AVRO codec")
+		job.cancelWithError(err)
+		return
+	}
+	if codec == nil {
+		err = fmt.Errorf("codec is nil")
+		job.logger.Error().Err(err).Msg("cannot create AVRO codec")
+		job.cancelWithError(err)
+		return
+	}
+	for {
+		select {
+		case <-job.Ctx.Done():
+			return
+		case res, ok := <-resCh:
+			if !ok {
+				return
+			}
+			if res == nil {
+				err := fmt.Errorf("res is nil")
 				job.logger.Err(err).Send()
 				job.cancelWithError(err)
 				return
 			}
-			undecoded := rows.GetSerializedBinaryRows()
-			for len(undecoded) > 0 {
-				var datum interface{}
-				datum, undecoded, err = codec.NativeFromBinary(undecoded)
-				if err != nil {
-					if err == io.EOF {
-						break
-					}
-					job.logger.Err(err).Msg("cannot decode AVRO")
-					job.cancelWithError(err)
-					return
-				}
-				valuesMap, ok := datum.(map[string]interface{})
-				if !ok {
-					err = fmt.Errorf("cannot convert datum to map")
-					// log.Debug().Msgf("datum %+v", datum)
+			if res.GetRowCount() > 0 {
+				log.Debug().Msgf("RowsCount: %d", res.GetRowCount())
+				rows := res.GetAvroRows()
+				if rows == nil {
+					err := fmt.Errorf("rows is nil")
 					job.logger.Err(err).Send()
 					job.cancelWithError(err)
 					return
 				}
-				csvRow := make([]string, len(tableFields))
-				for i, name := range tableFields {
-					value := valuesMap[name]
-					if value == nil {
-						csvRow[i] = ""
-						continue
+				undecoded := rows.GetSerializedBinaryRows()
+				for len(undecoded) > 0 {
+					var datum interface{}
+					datum, undecoded, err = codec.NativeFromBinary(undecoded)
+					if err != nil {
+						if err == io.EOF {
+							break
+						}
+						job.logger.Err(err).Msg("cannot decode AVRO")
+						job.cancelWithError(err)
+						return
 					}
-					valueMap, ok := value.(map[string]interface{})
+					valuesMap, ok := datum.(map[string]interface{})
 					if !ok {
-						err = fmt.Errorf("cannot convert value to map: value %+v", value)
+						err = fmt.Errorf("cannot convert datum to map")
 						job.logger.Err(err).Send()
 						job.cancelWithError(err)
 						return
 					}
-					for _, v := range valueMap {
-						csvRow[i] = fmt.Sprintf("%v", v)
-						break
+					//TODO: create once?
+					csvRow := make([]string, len(tableFields))
+					for i, name := range tableFields {
+						value := valuesMap[name]
+						if value == nil {
+							csvRow[i] = ""
+							continue
+						}
+						valueMap, ok := value.(map[string]interface{})
+						if !ok {
+							err = fmt.Errorf("cannot convert value to map: value %+v", value)
+							job.logger.Err(err).Send()
+							job.cancelWithError(err)
+							return
+						}
+						for _, v := range valueMap {
+							csvRow[i] = fmt.Sprintf("%v", v)
+							break
+						}
 					}
+					csvRows <- csvRow
 				}
-				csvRows <- csvRow
-				// log.Debug().Msgf("datum %+v", datum)
-				// log.Debug().Msgf("csvRow %+v", csvRow)
 			}
-			// log.Debug().Msgf("GetAvroRows %+v", res.GetAvroRows().)
 		}
 	}
-	job.logger.Debug().Msg("Reading Done")
-	// it, err := job.bigqueryJob.Read(job.Ctx)
-	// if err != nil {
-	// 	job.logger.Err(err).Send()
-	// 	job.cancelWithError(err)
-	// 	return
-	// }
-	// // it.PageInfo().MaxSize = 50000
-	// job.setJobStats(queryStatus, it.TotalRows)
-	// job.Status <- int32(queryStatus.State)
-
-	// csvRows := make(chan []string, it.TotalRows)
-
-	// job.logger.Debug().Uint64("TotalRows", it.TotalRows).Msg("Received iterator")
-
-	// go job.read(it, csvRows)
-	// go job.write(csvRows)
 }
 
 // Run implementation
