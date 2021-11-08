@@ -5,9 +5,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_PASSWORD: "dekart"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
       POSTGRES_USER: "dekart"
-      POSTGRES_DB: "${POSTGRES_PASSWORD}"
+      POSTGRES_DB: "dekart"
   dekart:
       image: dekartxyz/dekart:0.6
       restart: always
