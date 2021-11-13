@@ -274,7 +274,7 @@ func (job *Job) wait() {
 				table.ProjectID, table.DatasetID, table.TableID),
 			DataFormat: bqStoragePb.DataFormat_AVRO,
 		},
-		MaxStreamCount: 1,
+		MaxStreamCount: 10,
 	}
 	session, err := bqReadClient.CreateReadSession(job.Ctx, createReadSessionRequest, rpcOpts)
 	if err != nil {
@@ -335,30 +335,75 @@ func (job *Job) wait() {
 		return
 	}
 
-	if len(session.GetStreams()) == 0 {
+	log.Debug().Msgf("session %+v", session.GetStreams()[0])
+
+	// rowStream, err := bqReadClient.ReadRows(job.Ctx, &bqStoragePb.ReadRowsRequest{
+	// 	ReadStream: session.GetStreams()[0].Name,
+	// }, rpcOpts)
+	// if err != nil {
+	// 	job.logger.Err(err).Msg("cannot read rows from stream")
+	// 	job.cancelWithError(err)
+	// 	return
+	// }
+
+	readStreams := session.GetStreams()
+
+	if len(readStreams) == 0 {
 		err := fmt.Errorf("no streams in read session")
 		job.logger.Error().Err(err).Send()
 		job.cancelWithError(err)
 		return
 	}
-	log.Debug().Msgf("session %+v", session.GetStreams()[0])
+	var proccessWaitGroup sync.WaitGroup
+	for _, stream := range readStreams {
+		resCh := make(chan *bqStoragePb.ReadRowsResponse, 1024)
+		proccessWaitGroup.Add(1)
+		go job.proccessStreamResponse(resCh, csvRows, avroSchema.GetSchema(), tableFields, stream.Name, &proccessWaitGroup)
+		go job.readStream(bqReadClient, stream.Name, resCh)
+	}
 
+	// for {
+	// 	res, err := rowStream.Recv()
+
+	// 	if err != nil {
+	// 		if err == io.EOF {
+	// 			job.logger.Debug().Msg("EOF")
+	// 			break
+	// 		}
+	// 		if err == context.Canceled {
+	// 			break
+	// 		}
+	// 		if contextCancelledRe.MatchString(err.Error()) {
+	// 			break
+	// 		}
+	// 		job.logger.Err(err).Msg("cannot read rows from stream")
+	// 		job.cancelWithError(err)
+	// 		return
+	// 	}
+	// 	resCh <- res
+	// }
+	// close(resCh)
+	// log.Debug().Msg("close resCh")
+	proccessWaitGroup.Wait()
+	job.logger.Debug().Msg("All Reading Streams Done")
+}
+
+func (job *Job) readStream(
+	bqReadClient *bqStorage.BigQueryReadClient,
+	readStream string,
+	resCh chan *bqStoragePb.ReadRowsResponse,
+) {
+	defer close(resCh)
+	defer job.logger.Debug().Str("readStream", readStream).Msg("Reading Done")
+	job.logger.Debug().Str("readStream", readStream).Msg("Start Reading Streams")
 	rowStream, err := bqReadClient.ReadRows(job.Ctx, &bqStoragePb.ReadRowsRequest{
-		ReadStream: session.GetStreams()[0].Name,
+		ReadStream: readStream,
 	}, rpcOpts)
 	if err != nil {
 		job.logger.Err(err).Msg("cannot read rows from stream")
 		job.cancelWithError(err)
 		return
 	}
-
-	resCh := make(chan *bqStoragePb.ReadRowsResponse, 1024)
-
-	var proccessWaitGroup sync.WaitGroup
-
-	proccessWaitGroup.Add(1)
-	go job.proccessStreamResponse(resCh, csvRows, avroSchema.GetSchema(), tableFields, &proccessWaitGroup)
-
 	for {
 		res, err := rowStream.Recv()
 
@@ -378,17 +423,12 @@ func (job *Job) wait() {
 			return
 		}
 		resCh <- res
-		// job.proccessStreamResponse()
 	}
-	close(resCh)
-	log.Debug().Msg("close resCh")
-	proccessWaitGroup.Wait()
-	job.logger.Debug().Msg("Reading Done")
 }
 
-func (job *Job) proccessStreamResponse(resCh chan *bqStoragePb.ReadRowsResponse, csvRows chan []string, avroSchema string, tableFields []string, proccessWaitGroup *sync.WaitGroup) {
+func (job *Job) proccessStreamResponse(resCh chan *bqStoragePb.ReadRowsResponse, csvRows chan []string, avroSchema string, tableFields []string, readStream string, proccessWaitGroup *sync.WaitGroup) {
 	defer proccessWaitGroup.Done()
-	defer log.Debug().Msg("proccessStreamResponse Done")
+	defer job.logger.Debug().Str("readStream", readStream).Msg("proccessStreamResponse Done")
 	codec, err := goavro.NewCodec(avroSchema)
 	if err != nil {
 		job.logger.Error().Str("schema", avroSchema).Err(err).Msg("cannot create AVRO codec")
