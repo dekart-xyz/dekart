@@ -37,21 +37,22 @@ var rpcOpts = gax.WithGRPCOptions(
 
 // Job of quering db, concurency safe
 type Job struct {
-	ID             string
-	QueryID        string
-	ReportID       string
-	Ctx            context.Context
-	cancel         context.CancelFunc
-	bigqueryJob    *bigquery.Job
-	Status         chan int32
-	err            string
-	totalRows      int64
-	processedBytes int64
-	resultSize     int64
-	resultID       *string
-	storageObj     *storage.ObjectHandle
-	mutex          sync.Mutex
-	logger         zerolog.Logger
+	ID                  string
+	QueryID             string
+	ReportID            string
+	Ctx                 context.Context
+	cancel              context.CancelFunc
+	bigqueryJob         *bigquery.Job
+	Status              chan int32
+	err                 string
+	totalRows           int64
+	processedBytes      int64
+	resultSize          int64
+	resultID            *string
+	storageObj          *storage.ObjectHandle
+	mutex               sync.Mutex
+	logger              zerolog.Logger
+	maxReadStreamsCount int32
 }
 
 // Err of job
@@ -90,6 +91,7 @@ func (job *Job) GetProcessedBytes() int64 {
 }
 
 var contextCancelledRe = regexp.MustCompile(`context canceled`)
+var orderByRe = regexp.MustCompile(`(?ims)order[\s]+by`)
 
 func (job *Job) close(storageWriter *storage.Writer, csvWriter *csv.Writer) {
 	csvWriter.Flush()
@@ -151,42 +153,6 @@ func (job *Job) write(csvRows chan []string) {
 	job.close(storageWriter, csvWriter)
 }
 
-// read rows from bigquery response and send to csvRows channel
-// func (job *Job) read(it *bigquery.RowIterator, csvRows chan []string) {
-// 	firstLine := true
-// 	for {
-// 		var row []bigquery.Value
-// 		err := it.Next(&row)
-// 		if err == iterator.Done {
-// 			break
-// 		}
-// 		if err == context.Canceled {
-// 			break
-// 		}
-// 		if err != nil {
-// 			job.logger.Err(err).Send()
-// 			job.cancelWithError(err)
-// 			break
-// 		}
-// 		if firstLine {
-// 			firstLine = false
-// 			csvRow := make([]string, len(row))
-// 			for i, fieldSchema := range it.Schema {
-// 				csvRow[i] = fieldSchema.Name
-// 				// fmt.Println(fieldSchema.Name, fieldSchema.Type)
-// 			}
-// 			csvRows <- csvRow
-// 		}
-// 		csvRow := make([]string, len(row))
-// 		for i, v := range row {
-// 			csvRow[i] = fmt.Sprintf("%v", v)
-// 		}
-// 		csvRows <- csvRow
-// 	}
-// 	close(csvRows)
-// 	job.logger.Debug().Msg("Reading Done")
-// }
-
 func (job *Job) cancelWithError(err error) {
 	job.mutex.Lock()
 	job.err = err.Error()
@@ -233,7 +199,7 @@ func (job *Job) wait() {
 		job.cancelWithError(err)
 		return
 	}
-	log.Debug().Msgf("jobConfig %+v", jobConfig)
+	// log.Debug().Msgf("jobConfig %+v", jobConfig)
 	jobConfigVal := reflect.ValueOf(jobConfig).Elem()
 	table, ok := jobConfigVal.FieldByName("Dst").Interface().(*bigquery.Table)
 	if !ok {
@@ -242,15 +208,15 @@ func (job *Job) wait() {
 		job.cancelWithError(err)
 		return
 	}
-	log.Debug().Msgf("table %+v", table)
+	// log.Debug().Msgf("table %+v", table)
 	tableMetadata, err := table.Metadata(job.Ctx)
 	if err != nil {
 		job.cancelWithError(err)
 		return
 	}
-	log.Debug().Msgf("tableMetadata %+v", tableMetadata)
+	// log.Debug().Msgf("tableMetadata %+v", tableMetadata)
 	job.setJobStats(queryStatus, tableMetadata.NumRows)
-	log.Debug().Msgf("queryStatus.State %v %v", queryStatus.State, int32(queryStatus.State))
+	// log.Debug().Msgf("queryStatus.State %v %v", queryStatus.State, int32(queryStatus.State))
 	// job is done
 	// TODO: reading result as separate state
 	job.Status <- int32(queryStatus.State)
@@ -274,7 +240,7 @@ func (job *Job) wait() {
 				table.ProjectID, table.DatasetID, table.TableID),
 			DataFormat: bqStoragePb.DataFormat_AVRO,
 		},
-		MaxStreamCount: 10,
+		MaxStreamCount: job.maxReadStreamsCount,
 	}
 	session, err := bqReadClient.CreateReadSession(job.Ctx, createReadSessionRequest, rpcOpts)
 	if err != nil {
@@ -307,13 +273,13 @@ func (job *Job) wait() {
 		return
 	}
 
-	log.Debug().Msgf("avroSchemaFields is %+v", avroSchemaFields)
+	// log.Debug().Msgf("avroSchemaFields is %+v", avroSchemaFields)
 	tableFields := make([]string, len(avroSchemaFields.Fields))
 
 	for i := range avroSchemaFields.Fields {
 		tableFields[i] = avroSchemaFields.Fields[i].Name
 	}
-	log.Debug().Msgf("tableFields is %+v", tableFields)
+	// log.Debug().Msgf("tableFields is %+v", tableFields)
 
 	csvRows := make(chan []string, tableMetadata.NumRows)
 	defer close(csvRows)
@@ -335,16 +301,7 @@ func (job *Job) wait() {
 		return
 	}
 
-	log.Debug().Msgf("session %+v", session.GetStreams()[0])
-
-	// rowStream, err := bqReadClient.ReadRows(job.Ctx, &bqStoragePb.ReadRowsRequest{
-	// 	ReadStream: session.GetStreams()[0].Name,
-	// }, rpcOpts)
-	// if err != nil {
-	// 	job.logger.Err(err).Msg("cannot read rows from stream")
-	// 	job.cancelWithError(err)
-	// 	return
-	// }
+	// log.Debug().Msgf("session %+v", session.GetStreams()[0])
 
 	readStreams := session.GetStreams()
 
@@ -354,6 +311,7 @@ func (job *Job) wait() {
 		job.cancelWithError(err)
 		return
 	}
+	job.logger.Debug().Int32("maxReadStreamsCount", job.maxReadStreamsCount).Msgf("Number of Streams %d", len(readStreams))
 	var proccessWaitGroup sync.WaitGroup
 	for _, stream := range readStreams {
 		resCh := make(chan *bqStoragePb.ReadRowsResponse, 1024)
@@ -362,29 +320,7 @@ func (job *Job) wait() {
 		go job.readStream(bqReadClient, stream.Name, resCh)
 	}
 
-	// for {
-	// 	res, err := rowStream.Recv()
-
-	// 	if err != nil {
-	// 		if err == io.EOF {
-	// 			job.logger.Debug().Msg("EOF")
-	// 			break
-	// 		}
-	// 		if err == context.Canceled {
-	// 			break
-	// 		}
-	// 		if contextCancelledRe.MatchString(err.Error()) {
-	// 			break
-	// 		}
-	// 		job.logger.Err(err).Msg("cannot read rows from stream")
-	// 		job.cancelWithError(err)
-	// 		return
-	// 	}
-	// 	resCh <- res
-	// }
-	// close(resCh)
-	// log.Debug().Msg("close resCh")
-	proccessWaitGroup.Wait()
+	proccessWaitGroup.Wait() // to close channels and client, see defer statements
 	job.logger.Debug().Msg("All Reading Streams Done")
 }
 
@@ -393,9 +329,10 @@ func (job *Job) readStream(
 	readStream string,
 	resCh chan *bqStoragePb.ReadRowsResponse,
 ) {
+	logger := job.logger.With().Str("readStream", readStream).Logger()
+	logger.Debug().Msg("Start Reading Stream")
 	defer close(resCh)
-	defer job.logger.Debug().Str("readStream", readStream).Msg("Reading Done")
-	job.logger.Debug().Str("readStream", readStream).Msg("Start Reading Streams")
+	defer logger.Debug().Msg("Finish Reading Stream")
 	rowStream, err := bqReadClient.ReadRows(job.Ctx, &bqStoragePb.ReadRowsRequest{
 		ReadStream: readStream,
 	}, rpcOpts)
@@ -409,7 +346,6 @@ func (job *Job) readStream(
 
 		if err != nil {
 			if err == io.EOF {
-				job.logger.Debug().Msg("EOF")
 				break
 			}
 			if err == context.Canceled {
@@ -456,7 +392,7 @@ func (job *Job) proccessStreamResponse(resCh chan *bqStoragePb.ReadRowsResponse,
 				return
 			}
 			if res.GetRowCount() > 0 {
-				log.Debug().Msgf("RowsCount: %d", res.GetRowCount())
+				// log.Debug().Msgf("RowsCount: %d", res.GetRowCount())
 				rows := res.GetAvroRows()
 				if rows == nil {
 					err := fmt.Errorf("rows is nil")
@@ -510,6 +446,16 @@ func (job *Job) proccessStreamResponse(resCh chan *bqStoragePb.ReadRowsResponse,
 	}
 }
 
+func (job *Job) setMaxReadStreamsCount(queryText string) {
+	job.mutex.Lock()
+	defer job.mutex.Unlock()
+	if orderByRe.MatchString(queryText) {
+		job.maxReadStreamsCount = 1 // keep order of items
+	} else {
+		job.maxReadStreamsCount = 10
+	}
+}
+
 // Run implementation
 func (job *Job) Run(queryText string, obj *storage.ObjectHandle) error {
 	job.logger.Debug().Msg("Run BigQuery Job")
@@ -529,6 +475,8 @@ func (job *Job) Run(queryText string, obj *storage.ObjectHandle) error {
 	} else {
 		job.logger.Warn().Msgf("DEKART_BIGQUERY_MAX_BYTES_BILLED is not set! Use the maximum bytes billed setting to limit query costs. https://cloud.google.com/bigquery/docs/best-practices-costs#limit_query_costs_by_restricting_the_number_of_bytes_billed")
 	}
+
+	job.setMaxReadStreamsCount(queryText)
 
 	bigqueryJob, err := query.Run(job.Ctx)
 	if err != nil {
