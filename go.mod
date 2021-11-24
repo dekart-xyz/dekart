@@ -20,6 +20,8 @@ require (
 	google.golang.org/protobuf v1.25.0
 )
 
+require github.com/pkg/errors v0.9.1 // indirect
+
 require (
 	cloud.google.com/go v0.64.0 // indirect
 	github.com/desertbit/timer v0.0.0-20180107155436-c41aec40b27f // indirect
@@ -42,6 +44,7 @@ require (
 	golang.org/x/tools v0.0.0-20200818005847-188abfa75333 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/appengine v1.6.6 // indirect
+	gotest.tools/v3 v3.0.3
 )
 
 replace github.com/containerd/containerd => github.com/containerd/containerd v1.4.11

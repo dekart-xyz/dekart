@@ -52,4 +52,4 @@ patch: version
 release:
 	git push origin HEAD --tags
 test:
-	godotenv -f ./.env go test -v -count=1 ./src/server/**/
+	go test -v -count=1 ./src/server/**/
