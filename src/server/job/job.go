@@ -53,6 +53,7 @@ type Job struct {
 	mutex               sync.Mutex
 	logger              zerolog.Logger
 	maxReadStreamsCount int32
+	maxBytesBilled      int64
 }
 
 // Err of job
@@ -465,16 +466,7 @@ func (job *Job) Run(queryText string, obj *storage.ObjectHandle) error {
 		return err
 	}
 	query := client.Query(queryText)
-	maxBytesBilled := os.Getenv("DEKART_BIGQUERY_MAX_BYTES_BILLED")
-	if maxBytesBilled != "" {
-		query.MaxBytesBilled, err = strconv.ParseInt(maxBytesBilled, 10, 64)
-		if err != nil {
-			job.cancel()
-			job.logger.Fatal().Msgf("Cannot parse DEKART_BIGQUERY_MAX_BYTES_BILLED")
-		}
-	} else {
-		job.logger.Warn().Msgf("DEKART_BIGQUERY_MAX_BYTES_BILLED is not set! Use the maximum bytes billed setting to limit query costs. https://cloud.google.com/bigquery/docs/best-practices-costs#limit_query_costs_by_restricting_the_number_of_bytes_billed")
-	}
+	query.MaxBytesBilled = job.maxBytesBilled
 
 	job.setMaxReadStreamsCount(queryText)
 
@@ -521,24 +513,37 @@ func (s *Store) removeJobWhenDone(job *Job) {
 	s.mutex.Unlock()
 }
 
-// New job on store
-func (s *Store) New(reportID string, queryID string) *Job {
+// NewJob job on store
+func (s *Store) NewJob(reportID string, queryID string) (*Job, error) {
+	maxBytesBilledStr := os.Getenv("DEKART_BIGQUERY_MAX_BYTES_BILLED")
+	var maxBytesBilled int64
+	var err error
+	if maxBytesBilledStr != "" {
+		maxBytesBilled, err = strconv.ParseInt(maxBytesBilledStr, 10, 64)
+		if err != nil {
+			log.Fatal().Msgf("Cannot parse DEKART_BIGQUERY_MAX_BYTES_BILLED")
+			return nil, err
+		}
+	} else {
+		log.Warn().Msgf("DEKART_BIGQUERY_MAX_BYTES_BILLED is not set! Use the maximum bytes billed setting to limit query costs. https://cloud.google.com/bigquery/docs/best-practices-costs#limit_query_costs_by_restricting_the_number_of_bytes_billed")
+	}
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	job := &Job{
-		ID:       uuid.GetUUID(),
-		ReportID: reportID,
-		QueryID:  queryID,
-		Ctx:      ctx,
-		cancel:   cancel,
-		Status:   make(chan int32),
-		logger:   log.With().Str("reportID", reportID).Str("queryID", queryID).Logger(),
+		ID:             uuid.GetUUID(),
+		ReportID:       reportID,
+		QueryID:        queryID,
+		Ctx:            ctx,
+		cancel:         cancel,
+		Status:         make(chan int32),
+		logger:         log.With().Str("reportID", reportID).Str("queryID", queryID).Logger(),
+		maxBytesBilled: maxBytesBilled,
 	}
 
 	s.jobs = append(s.jobs, job)
 	go s.removeJobWhenDone(job)
-	return job
+	return job, nil
 }
 
 // Cancel job for queryID

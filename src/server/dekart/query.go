@@ -224,12 +224,16 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	}
 
 	if reportID == "" {
-		err := fmt.Errorf("Query not found id:%s", req.QueryId)
+		err := fmt.Errorf("query not found id:%s", req.QueryId)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	job := s.jobs.New(reportID, req.QueryId)
+	job, err := s.jobs.NewJob(reportID, req.QueryId)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 	obj := s.bucket.Object(fmt.Sprintf("%s.csv", job.ID))
 	go s.updateJobStatus(job)
 	err = job.Run(queryText, obj)
