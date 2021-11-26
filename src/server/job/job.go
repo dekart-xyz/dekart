@@ -122,13 +122,18 @@ func (job *Job) close(storageWriter *storage.Writer, csvWriter *csv.Writer) {
 	job.cancel()
 }
 
-func (job *Job) setJobStats(queryStatus *bigquery.JobStatus, totalRows uint64) {
+func (job *Job) setJobStats(queryStatus *bigquery.JobStatus, table *bigquery.Table) error {
+	tableMetadata, err := table.Metadata(job.Ctx)
+	if err != nil {
+		return err
+	}
 	job.mutex.Lock()
 	defer job.mutex.Unlock()
 	if queryStatus.Statistics != nil {
 		job.processedBytes = queryStatus.Statistics.TotalBytesProcessed
 	}
-	job.totalRows = int64(totalRows)
+	job.totalRows = int64(tableMetadata.NumRows)
+	return nil
 }
 
 // write csv rows to storage
@@ -168,21 +173,41 @@ type AvroSchema struct {
 	} `json:"fields"`
 }
 
+func (job *Job) proccessApiErrors(err error) {
+	if apiError, ok := err.(*googleapi.Error); ok {
+		for _, e := range apiError.Errors {
+			if e.Reason == "bytesBilledLimitExceeded" {
+				job.logger.Warn().Str(
+					"DEKART_BIGQUERY_MAX_BYTES_BILLED", os.Getenv("DEKART_BIGQUERY_MAX_BYTES_BILLED"),
+				).Msg(e.Message)
+			}
+		}
+	}
+}
+
+func (job *Job) getResultTable() (*bigquery.Table, error) {
+	jobConfig, err := job.bigqueryJob.Config()
+	if err != nil {
+		return nil, err
+	}
+	// log.Debug().Msgf("jobConfig %+v", jobConfig)
+	jobConfigVal := reflect.ValueOf(jobConfig).Elem()
+	table, ok := jobConfigVal.FieldByName("Dst").Interface().(*bigquery.Table)
+	if !ok {
+		err := fmt.Errorf("cannot get destination table from job config")
+		job.logger.Error().Err(err).Str("jobConfig", fmt.Sprintf("%v+", jobConfig)).Send()
+		return nil, err
+	}
+	return table, nil
+}
+
 func (job *Job) wait() {
 	queryStatus, err := job.bigqueryJob.Wait(job.Ctx)
 	if err == context.Canceled {
 		return
 	}
 	if err != nil {
-		if apiError, ok := err.(*googleapi.Error); ok {
-			for _, e := range apiError.Errors {
-				if e.Reason == "bytesBilledLimitExceeded" {
-					job.logger.Warn().Str(
-						"DEKART_BIGQUERY_MAX_BYTES_BILLED", os.Getenv("DEKART_BIGQUERY_MAX_BYTES_BILLED"),
-					).Msg(e.Message)
-				}
-			}
-		}
+		job.proccessApiErrors(err)
 		job.cancelWithError(err)
 		return
 	}
@@ -194,44 +219,40 @@ func (job *Job) wait() {
 		return
 	}
 
-	// get temporary table
-	jobConfig, err := job.bigqueryJob.Config()
+	table, err := job.getResultTable()
 	if err != nil {
 		job.cancelWithError(err)
 		return
 	}
-	// log.Debug().Msgf("jobConfig %+v", jobConfig)
-	jobConfigVal := reflect.ValueOf(jobConfig).Elem()
-	table, ok := jobConfigVal.FieldByName("Dst").Interface().(*bigquery.Table)
-	if !ok {
-		err := fmt.Errorf("cannot get destination table from job config")
-		job.logger.Error().Err(err).Str("jobConfig", fmt.Sprintf("%v+", jobConfig)).Send()
-		job.cancelWithError(err)
-		return
-	}
-	// log.Debug().Msgf("table %+v", table)
-	tableMetadata, err := table.Metadata(job.Ctx)
+
+	err = job.setJobStats(queryStatus, table)
 	if err != nil {
 		job.cancelWithError(err)
 		return
 	}
-	// log.Debug().Msgf("tableMetadata %+v", tableMetadata)
-	job.setJobStats(queryStatus, tableMetadata.NumRows)
-	// log.Debug().Msgf("queryStatus.State %v %v", queryStatus.State, int32(queryStatus.State))
-	// job is done
+
 	// TODO: reading result as separate state
 	job.Status <- int32(queryStatus.State)
 
+	go job.readFromResultTable(table)
+}
+
+func (job *Job) newBigQueryReadClient() *bqStorage.BigQueryReadClient {
 	bqReadClient, err := bqStorage.NewBigQueryReadClient(job.Ctx)
 	if err != nil {
+		job.cancelWithError(err)
 		job.logger.Fatal().Err(err).Msg("cannot create bigquery read client")
 	}
 	if bqReadClient == nil {
 		err = fmt.Errorf("bqReadClient is nil")
-		job.logger.Error().Err(err).Send()
 		job.cancelWithError(err)
-		return
+		job.logger.Fatal().Err(err).Msg("cannot create bigquery read client")
 	}
+	return bqReadClient
+}
+
+func (job *Job) readFromResultTable(table *bigquery.Table) {
+	bqReadClient := job.newBigQueryReadClient()
 	defer bqReadClient.Close()
 
 	createReadSessionRequest := &bqStoragePb.CreateReadSessionRequest{
@@ -282,7 +303,7 @@ func (job *Job) wait() {
 	}
 	// log.Debug().Msgf("tableFields is %+v", tableFields)
 
-	csvRows := make(chan []string, tableMetadata.NumRows)
+	csvRows := make(chan []string, job.totalRows)
 	defer close(csvRows)
 	go job.write(csvRows)
 
