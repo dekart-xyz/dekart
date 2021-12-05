@@ -2,29 +2,20 @@ package job
 
 import (
 	"dekart/src/proto"
-	"dekart/src/server/uuid"
 	"encoding/csv"
-	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"reflect"
 	"regexp"
-	"strconv"
 	"sync"
-	"time"
 
 	"context"
 
 	"cloud.google.com/go/bigquery"
-	bqStorage "cloud.google.com/go/bigquery/storage/apiv1"
 	"cloud.google.com/go/storage"
 	gax "github.com/googleapis/gax-go/v2"
-	goavro "github.com/linkedin/goavro/v2"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"google.golang.org/api/googleapi"
-	bqStoragePb "google.golang.org/genproto/googleapis/cloud/bigquery/storage/v1"
 	"google.golang.org/grpc"
 )
 
@@ -234,238 +225,9 @@ func (job *Job) wait() {
 	// TODO: reading result as separate state
 	job.Status <- int32(queryStatus.State)
 
-	go job.readFromResultTable(table)
-}
-
-func (job *Job) newBigQueryReadClient() *bqStorage.BigQueryReadClient {
-	bqReadClient, err := bqStorage.NewBigQueryReadClient(job.Ctx)
-	if err != nil {
-		job.cancelWithError(err)
-		job.logger.Fatal().Err(err).Msg("cannot create bigquery read client")
-	}
-	if bqReadClient == nil {
-		err = fmt.Errorf("bqReadClient is nil")
-		job.cancelWithError(err)
-		job.logger.Fatal().Err(err).Msg("cannot create bigquery read client")
-	}
-	return bqReadClient
-}
-
-func (job *Job) readFromResultTable(table *bigquery.Table) {
-	bqReadClient := job.newBigQueryReadClient()
-	defer bqReadClient.Close()
-
-	createReadSessionRequest := &bqStoragePb.CreateReadSessionRequest{
-		Parent: "projects/" + table.ProjectID,
-		ReadSession: &bqStoragePb.ReadSession{
-			Table: fmt.Sprintf("projects/%s/datasets/%s/tables/%s",
-				table.ProjectID, table.DatasetID, table.TableID),
-			DataFormat: bqStoragePb.DataFormat_AVRO,
-		},
-		MaxStreamCount: job.maxReadStreamsCount,
-	}
-	session, err := bqReadClient.CreateReadSession(job.Ctx, createReadSessionRequest, rpcOpts)
-	if err != nil {
-		job.logger.Error().Err(err).Msg("cannot create read session")
-		job.cancelWithError(err)
-		return
-	}
-	if session == nil {
-		err = fmt.Errorf("session is nil")
-		job.logger.Error().Err(err).Send()
-		job.cancelWithError(err)
-		return
-	}
-
-	// crete AVRO codec
-	// log.Debug().Msgf("GetSchema %+v", session.GetAvroSchema().GetSchema())
-	avroSchema := session.GetAvroSchema()
-	if avroSchema == nil {
-		err = fmt.Errorf("avroSchema is nil")
-		job.logger.Error().Err(err).Send()
-		job.cancelWithError(err)
-		return
-	}
-
-	var avroSchemaFields AvroSchema
-	err = json.Unmarshal([]byte(avroSchema.GetSchema()), &avroSchemaFields)
-	if err != nil {
-		job.logger.Error().Err(err).Msg("cannot unmarshal avro schema")
-		job.cancelWithError(err)
-		return
-	}
-
-	// log.Debug().Msgf("avroSchemaFields is %+v", avroSchemaFields)
-	tableFields := make([]string, len(avroSchemaFields.Fields))
-
-	for i := range avroSchemaFields.Fields {
-		tableFields[i] = avroSchemaFields.Fields[i].Name
-	}
-	// log.Debug().Msgf("tableFields is %+v", tableFields)
-
 	csvRows := make(chan []string, job.totalRows)
-	defer close(csvRows)
+	go job.readFromResultTable(table, csvRows)
 	go job.write(csvRows)
-
-	csvRows <- tableFields
-
-	// create avro codec
-	codec, err := goavro.NewCodec(avroSchema.GetSchema())
-	if err != nil {
-		job.logger.Error().Str("schema", avroSchema.GetSchema()).Err(err).Msg("cannot create AVRO codec")
-		job.cancelWithError(err)
-		return
-	}
-	if codec == nil {
-		err = fmt.Errorf("codec is nil")
-		job.logger.Error().Err(err).Msg("cannot create AVRO codec")
-		job.cancelWithError(err)
-		return
-	}
-
-	// log.Debug().Msgf("session %+v", session.GetStreams()[0])
-
-	readStreams := session.GetStreams()
-
-	if len(readStreams) == 0 {
-		err := fmt.Errorf("no streams in read session")
-		job.logger.Error().Err(err).Send()
-		job.cancelWithError(err)
-		return
-	}
-	job.logger.Debug().Int32("maxReadStreamsCount", job.maxReadStreamsCount).Msgf("Number of Streams %d", len(readStreams))
-	var proccessWaitGroup sync.WaitGroup
-	for _, stream := range readStreams {
-		resCh := make(chan *bqStoragePb.ReadRowsResponse, 1024)
-		proccessWaitGroup.Add(1)
-		go job.proccessStreamResponse(resCh, csvRows, avroSchema.GetSchema(), tableFields, stream.Name, &proccessWaitGroup)
-		go job.readStream(bqReadClient, stream.Name, resCh)
-	}
-
-	proccessWaitGroup.Wait() // to close channels and client, see defer statements
-	job.logger.Debug().Msg("All Reading Streams Done")
-}
-
-func (job *Job) readStream(
-	bqReadClient *bqStorage.BigQueryReadClient,
-	readStream string,
-	resCh chan *bqStoragePb.ReadRowsResponse,
-) {
-	logger := job.logger.With().Str("readStream", readStream).Logger()
-	logger.Debug().Msg("Start Reading Stream")
-	defer close(resCh)
-	defer logger.Debug().Msg("Finish Reading Stream")
-	rowStream, err := bqReadClient.ReadRows(job.Ctx, &bqStoragePb.ReadRowsRequest{
-		ReadStream: readStream,
-	}, rpcOpts)
-	if err != nil {
-		job.logger.Err(err).Msg("cannot read rows from stream")
-		job.cancelWithError(err)
-		return
-	}
-	for {
-		res, err := rowStream.Recv()
-
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			if err == context.Canceled {
-				break
-			}
-			if contextCancelledRe.MatchString(err.Error()) {
-				break
-			}
-			job.logger.Err(err).Msg("cannot read rows from stream")
-			job.cancelWithError(err)
-			return
-		}
-		resCh <- res
-	}
-}
-
-func (job *Job) proccessStreamResponse(resCh chan *bqStoragePb.ReadRowsResponse, csvRows chan []string, avroSchema string, tableFields []string, readStream string, proccessWaitGroup *sync.WaitGroup) {
-	defer proccessWaitGroup.Done()
-	defer job.logger.Debug().Str("readStream", readStream).Msg("proccessStreamResponse Done")
-	codec, err := goavro.NewCodec(avroSchema)
-	if err != nil {
-		job.logger.Error().Str("schema", avroSchema).Err(err).Msg("cannot create AVRO codec")
-		job.cancelWithError(err)
-		return
-	}
-	if codec == nil {
-		err = fmt.Errorf("codec is nil")
-		job.logger.Error().Err(err).Msg("cannot create AVRO codec")
-		job.cancelWithError(err)
-		return
-	}
-	for {
-		select {
-		case <-job.Ctx.Done():
-			return
-		case res, ok := <-resCh:
-			if !ok {
-				return
-			}
-			if res == nil {
-				err := fmt.Errorf("res is nil")
-				job.logger.Err(err).Send()
-				job.cancelWithError(err)
-				return
-			}
-			if res.GetRowCount() > 0 {
-				// log.Debug().Msgf("RowsCount: %d", res.GetRowCount())
-				rows := res.GetAvroRows()
-				if rows == nil {
-					err := fmt.Errorf("rows is nil")
-					job.logger.Err(err).Send()
-					job.cancelWithError(err)
-					return
-				}
-				undecoded := rows.GetSerializedBinaryRows()
-				for len(undecoded) > 0 {
-					var datum interface{}
-					datum, undecoded, err = codec.NativeFromBinary(undecoded)
-					if err != nil {
-						if err == io.EOF {
-							break
-						}
-						job.logger.Err(err).Msg("cannot decode AVRO")
-						job.cancelWithError(err)
-						return
-					}
-					valuesMap, ok := datum.(map[string]interface{})
-					if !ok {
-						err = fmt.Errorf("cannot convert datum to map")
-						job.logger.Err(err).Send()
-						job.cancelWithError(err)
-						return
-					}
-					//TODO: create once?
-					csvRow := make([]string, len(tableFields))
-					for i, name := range tableFields {
-						value := valuesMap[name]
-						if value == nil {
-							csvRow[i] = ""
-							continue
-						}
-						valueMap, ok := value.(map[string]interface{})
-						if !ok {
-							err = fmt.Errorf("cannot convert value to map: value %+v", value)
-							job.logger.Err(err).Send()
-							job.cancelWithError(err)
-							return
-						}
-						for _, v := range valueMap {
-							csvRow[i] = fmt.Sprintf("%v", v)
-							break
-						}
-					}
-					csvRows <- csvRow
-				}
-			}
-		}
-	}
 }
 
 func (job *Job) setMaxReadStreamsCount(queryText string) {
@@ -504,78 +266,4 @@ func (job *Job) Run(queryText string, obj *storage.ObjectHandle) error {
 	job.logger.Debug().Msg("Waiting for results")
 	go job.wait()
 	return nil
-}
-
-// Store of jobs
-type Store struct {
-	jobs  []*Job
-	mutex sync.Mutex
-}
-
-// NewStore instance
-func NewStore() *Store {
-	store := &Store{}
-	store.jobs = make([]*Job, 0)
-	return store
-}
-
-func (s *Store) removeJobWhenDone(job *Job) {
-	<-job.Ctx.Done()
-	s.mutex.Lock()
-	for i, j := range s.jobs {
-		if job.ID == j.ID {
-			// removing job from slice
-			last := len(s.jobs) - 1
-			s.jobs[i] = s.jobs[last]
-			s.jobs = s.jobs[:last]
-			break
-		}
-	}
-	s.mutex.Unlock()
-}
-
-// NewJob job on store
-func (s *Store) NewJob(reportID string, queryID string) (*Job, error) {
-	maxBytesBilledStr := os.Getenv("DEKART_BIGQUERY_MAX_BYTES_BILLED")
-	var maxBytesBilled int64
-	var err error
-	if maxBytesBilledStr != "" {
-		maxBytesBilled, err = strconv.ParseInt(maxBytesBilledStr, 10, 64)
-		if err != nil {
-			log.Fatal().Msgf("Cannot parse DEKART_BIGQUERY_MAX_BYTES_BILLED")
-			return nil, err
-		}
-	} else {
-		log.Warn().Msgf("DEKART_BIGQUERY_MAX_BYTES_BILLED is not set! Use the maximum bytes billed setting to limit query costs. https://cloud.google.com/bigquery/docs/best-practices-costs#limit_query_costs_by_restricting_the_number_of_bytes_billed")
-	}
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-	job := &Job{
-		ID:             uuid.GetUUID(),
-		ReportID:       reportID,
-		QueryID:        queryID,
-		Ctx:            ctx,
-		cancel:         cancel,
-		Status:         make(chan int32),
-		logger:         log.With().Str("reportID", reportID).Str("queryID", queryID).Logger(),
-		maxBytesBilled: maxBytesBilled,
-	}
-
-	s.jobs = append(s.jobs, job)
-	go s.removeJobWhenDone(job)
-	return job, nil
-}
-
-// Cancel job for queryID
-func (s *Store) Cancel(queryID string) {
-	s.mutex.Lock()
-	for _, job := range s.jobs {
-		if job.QueryID == queryID {
-			job.Status <- int32(proto.Query_JOB_STATUS_UNSPECIFIED)
-			job.logger.Info().Msg("Canceling Job Context")
-			job.cancel()
-		}
-	}
-	s.mutex.Unlock()
 }
