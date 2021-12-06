@@ -226,8 +226,22 @@ func (job *Job) wait() {
 	job.Status <- int32(queryStatus.State)
 
 	csvRows := make(chan []string, job.totalRows)
-	go job.readFromResultTable(table, csvRows)
+	errors := make(chan error)
+	go Read(
+		job.Ctx,
+		errors,
+		csvRows,
+		table,
+		job.logger,
+		job.maxReadStreamsCount,
+	)
 	go job.write(csvRows)
+	err = <-errors
+	if err != nil {
+		job.cancelWithError(err)
+		return
+	}
+	job.logger.Debug().Msg("Job Wait Done")
 }
 
 func (job *Job) setMaxReadStreamsCount(queryText string) {

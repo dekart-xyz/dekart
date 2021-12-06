@@ -8,64 +8,83 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	bqStorage "cloud.google.com/go/bigquery/storage/apiv1"
+	"github.com/rs/zerolog"
 	bqStoragePb "google.golang.org/genproto/googleapis/cloud/bigquery/storage/v1"
 )
 
-func (job *Job) readFromResultTable(table *bigquery.Table, csvRows chan []string) {
-	defer close(csvRows)
-	bqReadClient := job.newBigQueryReadClient()
-	defer bqReadClient.Close()
+type Reader struct {
+	ctx                 context.Context
+	errors              chan error
+	csvRows             chan []string
+	table               *bigquery.Table
+	bqReadClient        *bqStorage.BigQueryReadClient
+	logger              zerolog.Logger
+	maxReadStreamsCount int32
+	tableDecoder        *Decoder
+}
 
-	session, err := job.createReadSession(bqReadClient, table)
+func Read(ctx context.Context, errors chan error, csvRows chan []string, table *bigquery.Table, logger zerolog.Logger, maxReadStreamsCount int32) {
+	r := &Reader{
+		ctx:                 ctx,
+		errors:              errors,
+		csvRows:             csvRows,
+		table:               table,
+		logger:              logger,
+		maxReadStreamsCount: maxReadStreamsCount,
+	}
+	defer close(r.csvRows)
+	r.bqReadClient = r.newBigQueryReadClient()
+	defer r.bqReadClient.Close()
+
+	session, err := r.createReadSession()
 	if err != nil {
-		job.cancelWithError(err)
+		r.errors <- err
 		return
 	}
 
-	tableDecoder, err := NewDecoder(session)
+	r.tableDecoder, err = NewDecoder(session)
 	if err != nil {
-		job.logger.Error().Err(err).Msg("cannot create avro table decoder")
-		job.cancelWithError(err)
+		r.logger.Error().Err(err).Msg("cannot create avro table decoder")
+		r.errors <- err
 		return
 	}
 
-	csvRows <- tableDecoder.tableFields
+	r.csvRows <- r.tableDecoder.tableFields
 
 	readStreams := session.GetStreams()
 	if len(readStreams) == 0 {
 		err := fmt.Errorf("no streams in read session")
-		job.logger.Error().Err(err).Send()
-		job.cancelWithError(err)
+		r.logger.Error().Err(err).Send()
+		r.errors <- err
 		return
 	}
-	job.logger.Debug().Int32("maxReadStreamsCount", job.maxReadStreamsCount).Msgf("Number of Streams %d", len(readStreams))
+	r.logger.Debug().Int32("maxReadStreamsCount", r.maxReadStreamsCount).Msgf("Number of Streams %d", len(readStreams))
 	var proccessWaitGroup sync.WaitGroup
 	for _, stream := range readStreams {
 		resCh := make(chan *bqStoragePb.ReadRowsResponse, 1024)
 		proccessWaitGroup.Add(1)
-		go job.proccessStreamResponse(resCh, csvRows, tableDecoder, stream.Name, &proccessWaitGroup)
-		go job.readStream(bqReadClient, stream.Name, resCh)
+		go r.proccessStreamResponse(resCh, stream.Name, &proccessWaitGroup)
+		go r.readStream(resCh, stream.Name)
 	}
 
 	proccessWaitGroup.Wait() // to close channels and client, see defer statements
-	job.logger.Debug().Msg("All Reading Streams Done")
+	r.logger.Debug().Msg("All Reading Streams Done")
 }
 
-func (job *Job) readStream(
-	bqReadClient *bqStorage.BigQueryReadClient,
-	readStream string,
+func (r *Reader) readStream(
 	resCh chan *bqStoragePb.ReadRowsResponse,
+	readStream string,
 ) {
-	logger := job.logger.With().Str("readStream", readStream).Logger()
+	logger := r.logger.With().Str("readStream", readStream).Logger()
 	logger.Debug().Msg("Start Reading Stream")
 	defer close(resCh)
 	defer logger.Debug().Msg("Finish Reading Stream")
-	rowStream, err := bqReadClient.ReadRows(job.Ctx, &bqStoragePb.ReadRowsRequest{
+	rowStream, err := r.bqReadClient.ReadRows(r.ctx, &bqStoragePb.ReadRowsRequest{
 		ReadStream: readStream,
 	}, rpcOpts)
 	if err != nil {
-		job.logger.Err(err).Msg("cannot read rows from stream")
-		job.cancelWithError(err)
+		logger.Err(err).Msg("cannot read rows from stream")
+		r.errors <- err
 		return
 	}
 	for {
@@ -81,21 +100,21 @@ func (job *Job) readStream(
 			if contextCancelledRe.MatchString(err.Error()) {
 				break
 			}
-			job.logger.Err(err).Msg("cannot read rows from stream")
-			job.cancelWithError(err)
+			logger.Err(err).Msg("cannot read rows from stream")
+			r.errors <- err
 			return
 		}
 		resCh <- res
 	}
 }
 
-func (job *Job) proccessStreamResponse(resCh chan *bqStoragePb.ReadRowsResponse, csvRows chan []string, tableDecoder *Decoder, readStream string, proccessWaitGroup *sync.WaitGroup) {
+func (r *Reader) proccessStreamResponse(resCh chan *bqStoragePb.ReadRowsResponse, readStream string, proccessWaitGroup *sync.WaitGroup) {
 	defer proccessWaitGroup.Done()
-	defer job.logger.Debug().Str("readStream", readStream).Msg("proccessStreamResponse Done")
+	defer r.logger.Debug().Str("readStream", readStream).Msg("proccessStreamResponse Done")
 	var err error
 	for {
 		select {
-		case <-job.Ctx.Done():
+		case <-r.ctx.Done():
 			return
 		case res, ok := <-resCh:
 			if !ok {
@@ -103,8 +122,8 @@ func (job *Job) proccessStreamResponse(resCh chan *bqStoragePb.ReadRowsResponse,
 			}
 			if res == nil {
 				err = fmt.Errorf("res is nil")
-				job.logger.Err(err).Send()
-				job.cancelWithError(err)
+				r.logger.Err(err).Send()
+				r.errors <- err
 				return
 			}
 			if res.GetRowCount() > 0 {
@@ -112,15 +131,15 @@ func (job *Job) proccessStreamResponse(resCh chan *bqStoragePb.ReadRowsResponse,
 				rows := res.GetAvroRows()
 				if rows == nil {
 					err = fmt.Errorf("rows is nil")
-					job.logger.Err(err).Send()
-					job.cancelWithError(err)
+					r.logger.Err(err).Send()
+					r.errors <- err
 					return
 				}
 				undecoded := rows.GetSerializedBinaryRows()
-				err = tableDecoder.DecodeRows(undecoded, csvRows)
+				err = r.tableDecoder.DecodeRows(undecoded, r.csvRows)
 				if err != nil {
-					job.logger.Err(err).Send()
-					job.cancelWithError(err)
+					r.logger.Err(err).Send()
+					r.errors <- err
 					return
 				}
 			}
@@ -128,38 +147,36 @@ func (job *Job) proccessStreamResponse(resCh chan *bqStoragePb.ReadRowsResponse,
 	}
 }
 
-func (job *Job) newBigQueryReadClient() *bqStorage.BigQueryReadClient {
-	bqReadClient, err := bqStorage.NewBigQueryReadClient(job.Ctx)
+func (r *Reader) newBigQueryReadClient() *bqStorage.BigQueryReadClient {
+	bqReadClient, err := bqStorage.NewBigQueryReadClient(r.ctx)
 	if err != nil {
-		job.cancelWithError(err)
-		job.logger.Fatal().Err(err).Msg("cannot create bigquery read client")
+		r.logger.Fatal().Err(err).Msg("cannot create bigquery read client")
 	}
 	if bqReadClient == nil {
 		err = fmt.Errorf("bqReadClient is nil")
-		job.cancelWithError(err)
-		job.logger.Fatal().Err(err).Msg("cannot create bigquery read client")
+		r.logger.Fatal().Err(err).Msg("cannot create bigquery read client")
 	}
 	return bqReadClient
 }
 
-func (job *Job) createReadSession(bqReadClient *bqStorage.BigQueryReadClient, table *bigquery.Table) (*bqStoragePb.ReadSession, error) {
+func (r *Reader) createReadSession() (*bqStoragePb.ReadSession, error) {
 	createReadSessionRequest := &bqStoragePb.CreateReadSessionRequest{
-		Parent: "projects/" + table.ProjectID,
+		Parent: "projects/" + r.table.ProjectID,
 		ReadSession: &bqStoragePb.ReadSession{
 			Table: fmt.Sprintf("projects/%s/datasets/%s/tables/%s",
-				table.ProjectID, table.DatasetID, table.TableID),
+				r.table.ProjectID, r.table.DatasetID, r.table.TableID),
 			DataFormat: bqStoragePb.DataFormat_AVRO,
 		},
-		MaxStreamCount: job.maxReadStreamsCount,
+		MaxStreamCount: r.maxReadStreamsCount,
 	}
-	session, err := bqReadClient.CreateReadSession(job.Ctx, createReadSessionRequest, rpcOpts)
+	session, err := r.bqReadClient.CreateReadSession(r.ctx, createReadSessionRequest, rpcOpts)
 	if session == nil && err != nil {
 		if err == nil {
 			err = fmt.Errorf("session == nil")
 		}
 	}
 	if err != nil {
-		job.logger.Error().Err(err).Msg("Cannot create read session")
+		r.logger.Error().Err(err).Msg("Cannot create read session")
 	}
 	return session, err
 }
