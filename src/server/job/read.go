@@ -14,76 +14,136 @@ import (
 
 type Reader struct {
 	ctx                 context.Context
-	errors              chan error
-	csvRows             chan []string
 	table               *bigquery.Table
 	bqReadClient        *bqStorage.BigQueryReadClient
 	logger              zerolog.Logger
 	maxReadStreamsCount int32
 	tableDecoder        *Decoder
+	session             *bqStoragePb.ReadSession
 }
 
-func Read(ctx context.Context, errors chan error, csvRows chan []string, table *bigquery.Table, logger zerolog.Logger, maxReadStreamsCount int32) {
+// create new Reader
+func NewReader(ctx context.Context, errors chan error, csvRows chan []string, table *bigquery.Table, logger zerolog.Logger, maxReadStreamsCount int32) (*Reader, error) {
 	r := &Reader{
 		ctx:                 ctx,
-		errors:              errors,
-		csvRows:             csvRows,
 		table:               table,
 		logger:              logger,
 		maxReadStreamsCount: maxReadStreamsCount,
 	}
-	defer close(r.csvRows)
-	r.bqReadClient = r.newBigQueryReadClient()
-	defer r.bqReadClient.Close()
-
-	session, err := r.createReadSession()
-	if err != nil {
-		r.errors <- err
-		return
+	var err error
+	r.bqReadClient, err = bqStorage.NewBigQueryReadClient(r.ctx)
+	if err != nil || r.bqReadClient == nil {
+		r.logger.Fatal().Err(err).Msg("cannot create bigquery read client")
 	}
-
-	r.tableDecoder, err = NewDecoder(session)
+	createReadSessionRequest := &bqStoragePb.CreateReadSessionRequest{
+		Parent: "projects/" + r.table.ProjectID,
+		ReadSession: &bqStoragePb.ReadSession{
+			Table: fmt.Sprintf("projects/%s/datasets/%s/tables/%s",
+				r.table.ProjectID, r.table.DatasetID, r.table.TableID),
+			DataFormat: bqStoragePb.DataFormat_AVRO,
+		},
+		MaxStreamCount: r.maxReadStreamsCount,
+	}
+	r.session, err = r.bqReadClient.CreateReadSession(r.ctx, createReadSessionRequest, rpcOpts)
+	if err != nil {
+		r.logger.Error().Err(err).Msg("cannot create read session")
+		return r, err
+	}
+	r.tableDecoder, err = NewDecoder(r.session)
 	if err != nil {
 		r.logger.Error().Err(err).Msg("cannot create avro table decoder")
-		r.errors <- err
-		return
+		return r, err
 	}
+	return r, err
+}
 
-	r.csvRows <- r.tableDecoder.tableFields
+func (r *Reader) close() {
+	if r.bqReadClient != nil {
+		err := r.bqReadClient.Close()
+		if err != nil {
+			r.logger.Err(err).Send()
+		}
+	}
+}
 
-	readStreams := session.GetStreams()
+func (r *Reader) getTableFields() []string {
+	return r.tableDecoder.tableFields
+}
+
+func (r *Reader) getStreams() ([]*bqStoragePb.ReadStream, error) {
+	readStreams := r.session.GetStreams()
 	if len(readStreams) == 0 {
 		err := fmt.Errorf("no streams in read session")
 		r.logger.Error().Err(err).Send()
-		r.errors <- err
-		return
+		return readStreams, err
 	}
 	r.logger.Debug().Int32("maxReadStreamsCount", r.maxReadStreamsCount).Msgf("Number of Streams %d", len(readStreams))
+	return readStreams, nil
+}
+
+type StreamReader struct {
+	Reader
+	resCh      chan *bqStoragePb.ReadRowsResponse
+	streamName string
+	errors     chan error
+	csvRows    chan []string
+	logger     zerolog.Logger
+}
+
+func (r *StreamReader) read(proccessWaitGroup *sync.WaitGroup) {
+	go r.proccessStreamResponse(proccessWaitGroup)
+	go r.readStream()
+}
+
+func (r *Reader) newStreamReader(streamName string, csvRows chan []string, errors chan error, logger zerolog.Logger) *StreamReader {
+	resCh := make(chan *bqStoragePb.ReadRowsResponse, 1024)
+	streamReader := StreamReader{
+		Reader:     *r,
+		resCh:      resCh,
+		streamName: streamName,
+		errors:     errors,
+		csvRows:    csvRows,
+		logger:     logger.With().Str("streamName", streamName).Logger(),
+	}
+	return &streamReader
+}
+
+func Read(ctx context.Context, errors chan error, csvRows chan []string, table *bigquery.Table, logger zerolog.Logger, maxReadStreamsCount int32) {
+	defer close(errors)
+	defer close(csvRows)
+	r, err := NewReader(ctx, errors, csvRows, table, logger, maxReadStreamsCount)
+	if err != nil {
+		errors <- err
+		return
+	}
+	defer r.close()
+
+	csvRows <- r.getTableFields()
+	readStreams, err := r.getStreams()
+	if err != nil {
+		errors <- err
+		return
+	}
+
 	var proccessWaitGroup sync.WaitGroup
 	for _, stream := range readStreams {
-		resCh := make(chan *bqStoragePb.ReadRowsResponse, 1024)
 		proccessWaitGroup.Add(1)
-		go r.proccessStreamResponse(resCh, stream.Name, &proccessWaitGroup)
-		go r.readStream(resCh, stream.Name)
+		r.newStreamReader(stream.Name, csvRows, errors, logger).read(&proccessWaitGroup)
 	}
 
 	proccessWaitGroup.Wait() // to close channels and client, see defer statements
 	r.logger.Debug().Msg("All Reading Streams Done")
 }
 
-func (r *Reader) readStream(
-	resCh chan *bqStoragePb.ReadRowsResponse,
-	readStream string,
-) {
-	logger := r.logger.With().Str("readStream", readStream).Logger()
-	logger.Debug().Msg("Start Reading Stream")
-	defer close(resCh)
-	defer logger.Debug().Msg("Finish Reading Stream")
+func (r *StreamReader) readStream() {
+	r.logger.Debug().Msg("Start Reading Stream")
+	defer close(r.resCh)
+	defer r.logger.Debug().Msg("Finish Reading Stream")
 	rowStream, err := r.bqReadClient.ReadRows(r.ctx, &bqStoragePb.ReadRowsRequest{
-		ReadStream: readStream,
+		ReadStream: r.streamName,
 	}, rpcOpts)
 	if err != nil {
-		logger.Err(err).Msg("cannot read rows from stream")
+		r.logger.Err(err).Msg("cannot read rows from stream")
 		r.errors <- err
 		return
 	}
@@ -100,23 +160,23 @@ func (r *Reader) readStream(
 			if contextCancelledRe.MatchString(err.Error()) {
 				break
 			}
-			logger.Err(err).Msg("cannot read rows from stream")
+			r.logger.Err(err).Msg("cannot read rows from stream")
 			r.errors <- err
 			return
 		}
-		resCh <- res
+		r.resCh <- res
 	}
 }
 
-func (r *Reader) proccessStreamResponse(resCh chan *bqStoragePb.ReadRowsResponse, readStream string, proccessWaitGroup *sync.WaitGroup) {
+func (r *StreamReader) proccessStreamResponse(proccessWaitGroup *sync.WaitGroup) {
 	defer proccessWaitGroup.Done()
-	defer r.logger.Debug().Str("readStream", readStream).Msg("proccessStreamResponse Done")
+	defer r.logger.Debug().Str("readStream", r.streamName).Msg("proccessStreamResponse Done")
 	var err error
 	for {
 		select {
 		case <-r.ctx.Done():
 			return
-		case res, ok := <-resCh:
+		case res, ok := <-r.resCh:
 			if !ok {
 				return
 			}
@@ -127,7 +187,6 @@ func (r *Reader) proccessStreamResponse(resCh chan *bqStoragePb.ReadRowsResponse
 				return
 			}
 			if res.GetRowCount() > 0 {
-				// log.Debug().Msgf("RowsCount: %d", res.GetRowCount())
 				rows := res.GetAvroRows()
 				if rows == nil {
 					err = fmt.Errorf("rows is nil")
@@ -145,38 +204,4 @@ func (r *Reader) proccessStreamResponse(resCh chan *bqStoragePb.ReadRowsResponse
 			}
 		}
 	}
-}
-
-func (r *Reader) newBigQueryReadClient() *bqStorage.BigQueryReadClient {
-	bqReadClient, err := bqStorage.NewBigQueryReadClient(r.ctx)
-	if err != nil {
-		r.logger.Fatal().Err(err).Msg("cannot create bigquery read client")
-	}
-	if bqReadClient == nil {
-		err = fmt.Errorf("bqReadClient is nil")
-		r.logger.Fatal().Err(err).Msg("cannot create bigquery read client")
-	}
-	return bqReadClient
-}
-
-func (r *Reader) createReadSession() (*bqStoragePb.ReadSession, error) {
-	createReadSessionRequest := &bqStoragePb.CreateReadSessionRequest{
-		Parent: "projects/" + r.table.ProjectID,
-		ReadSession: &bqStoragePb.ReadSession{
-			Table: fmt.Sprintf("projects/%s/datasets/%s/tables/%s",
-				r.table.ProjectID, r.table.DatasetID, r.table.TableID),
-			DataFormat: bqStoragePb.DataFormat_AVRO,
-		},
-		MaxStreamCount: r.maxReadStreamsCount,
-	}
-	session, err := r.bqReadClient.CreateReadSession(r.ctx, createReadSessionRequest, rpcOpts)
-	if session == nil && err != nil {
-		if err == nil {
-			err = fmt.Errorf("session == nil")
-		}
-	}
-	if err != nil {
-		r.logger.Error().Err(err).Msg("Cannot create read session")
-	}
-	return session, err
 }
