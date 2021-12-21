@@ -8,8 +8,10 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	bqStorage "cloud.google.com/go/bigquery/storage/apiv1"
+	gax "github.com/googleapis/gax-go/v2"
 	"github.com/rs/zerolog"
 	bqStoragePb "google.golang.org/genproto/googleapis/cloud/bigquery/storage/v1"
+	"google.golang.org/grpc"
 )
 
 type Reader struct {
@@ -134,6 +136,13 @@ func Read(ctx context.Context, errors chan error, csvRows chan []string, table *
 	proccessWaitGroup.Wait() // to close channels and client, see defer statements
 	r.logger.Debug().Msg("All Reading Streams Done")
 }
+
+// rpcOpts is used to configure the underlying gRPC client to accept large
+// messages.  The BigQuery Storage API may send message blocks up to 128MB
+// in size, see https://cloud.google.com/bigquery/docs/reference/storage/libraries
+var rpcOpts = gax.WithGRPCOptions(
+	grpc.MaxCallRecvMsgSize(1024 * 1024 * 129),
+)
 
 func (r *StreamReader) readStream() {
 	r.logger.Debug().Msg("Start Reading Stream")

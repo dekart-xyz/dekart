@@ -13,17 +13,8 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/storage"
-	gax "github.com/googleapis/gax-go/v2"
 	"github.com/rs/zerolog"
 	"google.golang.org/api/googleapi"
-	"google.golang.org/grpc"
-)
-
-// rpcOpts is used to configure the underlying gRPC client to accept large
-// messages.  The BigQuery Storage API may send message blocks up to 128MB
-// in size, see https://cloud.google.com/bigquery/docs/reference/storage/libraries
-var rpcOpts = gax.WithGRPCOptions(
-	grpc.MaxCallRecvMsgSize(1024 * 1024 * 129),
 )
 
 // Job of quering db, concurency safe
@@ -227,6 +218,8 @@ func (job *Job) wait() {
 
 	csvRows := make(chan []string, job.totalRows)
 	errors := make(chan error)
+
+	// read table rows into csvRows
 	go Read(
 		job.Ctx,
 		errors,
@@ -235,7 +228,11 @@ func (job *Job) wait() {
 		job.logger,
 		job.maxReadStreamsCount,
 	)
+
+	// write csvRows to storage
 	go job.write(csvRows)
+
+	// wait for errors
 	err = <-errors
 	if err != nil {
 		job.cancelWithError(err)
