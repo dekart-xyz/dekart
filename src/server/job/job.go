@@ -172,7 +172,6 @@ func (job *Job) getResultTable() (*bigquery.Table, error) {
 	if err != nil {
 		return nil, err
 	}
-	// log.Debug().Msgf("jobConfig %+v", jobConfig)
 	jobConfigVal := reflect.ValueOf(jobConfig).Elem()
 	table, ok := jobConfigVal.FieldByName("Dst").Interface().(*bigquery.Table)
 	if !ok {
