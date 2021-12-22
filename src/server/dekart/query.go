@@ -142,6 +142,7 @@ func (s Server) updateJobStatus(job *job.Job) {
 	for {
 		select {
 		case status := <-job.Status:
+			log.Debug().Int32("status", status).Msg("job status")
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			var err error
 			if status == int32(proto.Query_JOB_STATUS_RUNNING) {
@@ -223,12 +224,16 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	}
 
 	if reportID == "" {
-		err := fmt.Errorf("Query not found id:%s", req.QueryId)
+		err := fmt.Errorf("query not found id:%s", req.QueryId)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	job := s.jobs.New(reportID, req.QueryId)
+	job, err := s.jobs.NewJob(reportID, req.QueryId)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 	obj := s.bucket.Object(fmt.Sprintf("%s.csv", job.ID))
 	go s.updateJobStatus(job)
 	err = job.Run(queryText, obj)

@@ -2,42 +2,40 @@ package job
 
 import (
 	"dekart/src/proto"
-	"dekart/src/server/uuid"
 	"encoding/csv"
 	"fmt"
 	"os"
+	"reflect"
 	"regexp"
-	"strconv"
 	"sync"
-	"time"
 
 	"context"
 
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/storage"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"google.golang.org/api/googleapi"
-	"google.golang.org/api/iterator"
 )
 
 // Job of quering db, concurency safe
 type Job struct {
-	ID             string
-	QueryID        string
-	ReportID       string
-	Ctx            context.Context
-	cancel         context.CancelFunc
-	bigqueryJob    *bigquery.Job
-	Status         chan int32
-	err            string
-	totalRows      int64
-	processedBytes int64
-	resultSize     int64
-	resultID       *string
-	storageObj     *storage.ObjectHandle
-	mutex          sync.Mutex
-	logger         zerolog.Logger
+	ID                  string
+	QueryID             string
+	ReportID            string
+	Ctx                 context.Context
+	cancel              context.CancelFunc
+	bigqueryJob         *bigquery.Job
+	Status              chan int32
+	err                 string
+	totalRows           int64
+	processedBytes      int64
+	resultSize          int64
+	resultID            *string
+	storageObj          *storage.ObjectHandle
+	mutex               sync.Mutex
+	logger              zerolog.Logger
+	maxReadStreamsCount int32
+	maxBytesBilled      int64
 }
 
 // Err of job
@@ -76,25 +74,27 @@ func (job *Job) GetProcessedBytes() int64 {
 }
 
 var contextCancelledRe = regexp.MustCompile(`context canceled`)
+var orderByRe = regexp.MustCompile(`(?ims)order[\s]+by`)
 
 func (job *Job) close(storageWriter *storage.Writer, csvWriter *csv.Writer) {
 	csvWriter.Flush()
 	err := storageWriter.Close()
 	if err != nil {
+		// maybe we should not close when context is canceled in job.write()
 		if err == context.Canceled {
 			return
 		}
 		if contextCancelledRe.MatchString(err.Error()) {
 			return
 		}
-		log.Err(err).Send()
+		job.logger.Err(err).Send()
 		job.cancelWithError(err)
 		return
 	}
 	job.logger.Debug().Msg("Writing Done")
 	attrs := storageWriter.Attrs()
 	job.mutex.Lock()
-	// TODO: use bool done
+	// TODO: use bool done or better new status values
 	job.resultID = &job.ID
 	if attrs != nil {
 		job.resultSize = attrs.Size
@@ -104,13 +104,18 @@ func (job *Job) close(storageWriter *storage.Writer, csvWriter *csv.Writer) {
 	job.cancel()
 }
 
-func (job *Job) setJobStats(queryStatus *bigquery.JobStatus, totalRows uint64) {
+func (job *Job) setJobStats(queryStatus *bigquery.JobStatus, table *bigquery.Table) error {
+	tableMetadata, err := table.Metadata(job.Ctx)
+	if err != nil {
+		return err
+	}
 	job.mutex.Lock()
 	defer job.mutex.Unlock()
 	if queryStatus.Statistics != nil {
 		job.processedBytes = queryStatus.Statistics.TotalBytesProcessed
 	}
-	job.totalRows = int64(totalRows)
+	job.totalRows = int64(tableMetadata.NumRows)
+	return nil
 }
 
 // write csv rows to storage
@@ -128,48 +133,12 @@ func (job *Job) write(csvRows chan []string) {
 			break
 		}
 		if err != nil {
-			log.Err(err).Send()
+			job.logger.Err(err).Send()
 			job.cancelWithError(err)
 			break
 		}
 	}
 	job.close(storageWriter, csvWriter)
-}
-
-// read rows from bigquery response and send to csvRows channel
-func (job *Job) read(it *bigquery.RowIterator, csvRows chan []string) {
-	firstLine := true
-	for {
-		var row []bigquery.Value
-		err := it.Next(&row)
-		if err == iterator.Done {
-			break
-		}
-		if err == context.Canceled {
-			break
-		}
-		if err != nil {
-			log.Err(err).Send()
-			job.cancelWithError(err)
-			return
-		}
-		if firstLine {
-			firstLine = false
-			csvRow := make([]string, len(row), len(row))
-			for i, fieldSchema := range it.Schema {
-				csvRow[i] = fieldSchema.Name
-				// fmt.Println(fieldSchema.Name, fieldSchema.Type)
-			}
-			csvRows <- csvRow
-		}
-		csvRow := make([]string, len(row), len(row))
-		for i, v := range row {
-			csvRow[i] = fmt.Sprintf("%v", v)
-		}
-		csvRows <- csvRow
-	}
-	close(csvRows)
-	job.logger.Debug().Msg("Reading Done")
 }
 
 func (job *Job) cancelWithError(err error) {
@@ -180,48 +149,105 @@ func (job *Job) cancelWithError(err error) {
 	job.cancel()
 }
 
+type AvroSchema struct {
+	Fields []struct {
+		Name string `json:"name"`
+	} `json:"fields"`
+}
+
+func (job *Job) proccessApiErrors(err error) {
+	if apiError, ok := err.(*googleapi.Error); ok {
+		for _, e := range apiError.Errors {
+			if e.Reason == "bytesBilledLimitExceeded" {
+				job.logger.Warn().Str(
+					"DEKART_BIGQUERY_MAX_BYTES_BILLED", os.Getenv("DEKART_BIGQUERY_MAX_BYTES_BILLED"),
+				).Msg(e.Message)
+			}
+		}
+	}
+}
+
+func (job *Job) getResultTable() (*bigquery.Table, error) {
+	jobConfig, err := job.bigqueryJob.Config()
+	if err != nil {
+		return nil, err
+	}
+	jobConfigVal := reflect.ValueOf(jobConfig).Elem()
+	table, ok := jobConfigVal.FieldByName("Dst").Interface().(*bigquery.Table)
+	if !ok {
+		err := fmt.Errorf("cannot get destination table from job config")
+		job.logger.Error().Err(err).Str("jobConfig", fmt.Sprintf("%v+", jobConfig)).Send()
+		return nil, err
+	}
+	return table, nil
+}
+
 func (job *Job) wait() {
 	queryStatus, err := job.bigqueryJob.Wait(job.Ctx)
 	if err == context.Canceled {
 		return
 	}
 	if err != nil {
-		if apiError, ok := err.(*googleapi.Error); ok {
-			for _, e := range apiError.Errors {
-				if e.Reason == "bytesBilledLimitExceeded" {
-					log.Warn().Str(
-						"DEKART_BIGQUERY_MAX_BYTES_BILLED", os.Getenv("DEKART_BIGQUERY_MAX_BYTES_BILLED"),
-					).Msg(e.Message)
-				}
-			}
-		}
+		job.proccessApiErrors(err)
 		job.cancelWithError(err)
 		return
 	}
 	if queryStatus == nil {
-		log.Fatal().Msgf("queryStatus == nil")
+		job.logger.Fatal().Msgf("queryStatus == nil")
 	}
 	if err := queryStatus.Err(); err != nil {
 		job.cancelWithError(err)
 		return
 	}
 
-	it, err := job.bigqueryJob.Read(job.Ctx)
+	table, err := job.getResultTable()
 	if err != nil {
-		log.Err(err).Send()
 		job.cancelWithError(err)
 		return
 	}
-	// it.PageInfo().MaxSize = 50000
-	job.setJobStats(queryStatus, it.TotalRows)
+
+	err = job.setJobStats(queryStatus, table)
+	if err != nil {
+		job.cancelWithError(err)
+		return
+	}
+
+	// TODO: reading result as separate state
 	job.Status <- int32(queryStatus.State)
 
-	csvRows := make(chan []string, it.TotalRows)
+	csvRows := make(chan []string, job.totalRows)
+	errors := make(chan error)
 
-	job.logger.Debug().Uint64("TotalRows", it.TotalRows).Msg("Received iterator")
+	// read table rows into csvRows
+	go Read(
+		job.Ctx,
+		errors,
+		csvRows,
+		table,
+		job.logger,
+		job.maxReadStreamsCount,
+	)
 
-	go job.read(it, csvRows)
+	// write csvRows to storage
 	go job.write(csvRows)
+
+	// wait for errors
+	err = <-errors
+	if err != nil {
+		job.cancelWithError(err)
+		return
+	}
+	job.logger.Debug().Msg("Job Wait Done")
+}
+
+func (job *Job) setMaxReadStreamsCount(queryText string) {
+	job.mutex.Lock()
+	defer job.mutex.Unlock()
+	if orderByRe.MatchString(queryText) {
+		job.maxReadStreamsCount = 1 // keep order of items
+	} else {
+		job.maxReadStreamsCount = 10
+	}
 }
 
 // Run implementation
@@ -233,23 +259,15 @@ func (job *Job) Run(queryText string, obj *storage.ObjectHandle) error {
 		return err
 	}
 	query := client.Query(queryText)
-	maxBytesBilled := os.Getenv("DEKART_BIGQUERY_MAX_BYTES_BILLED")
-	if maxBytesBilled != "" {
-		query.MaxBytesBilled, err = strconv.ParseInt(maxBytesBilled, 10, 64)
-		if err != nil {
-			job.cancel()
-			log.Fatal().Msgf("Cannot parse DEKART_BIGQUERY_MAX_BYTES_BILLED")
-		}
-	} else {
-		log.Warn().Msgf("DEKART_BIGQUERY_MAX_BYTES_BILLED is not set! Use the maximum bytes billed setting to limit query costs. https://cloud.google.com/bigquery/docs/best-practices-costs#limit_query_costs_by_restricting_the_number_of_bytes_billed")
-	}
+	query.MaxBytesBilled = job.maxBytesBilled
+
+	job.setMaxReadStreamsCount(queryText)
 
 	bigqueryJob, err := query.Run(job.Ctx)
 	if err != nil {
 		job.cancel()
 		return err
 	}
-
 	job.mutex.Lock()
 	job.bigqueryJob = bigqueryJob
 	job.storageObj = obj
@@ -258,68 +276,4 @@ func (job *Job) Run(queryText string, obj *storage.ObjectHandle) error {
 	job.logger.Debug().Msg("Waiting for results")
 	go job.wait()
 	return nil
-}
-
-// Store of jobs
-type Store struct {
-	jobs  []*Job
-	mutex sync.Mutex
-}
-
-// NewStore instance
-func NewStore() *Store {
-	store := &Store{}
-	store.jobs = make([]*Job, 0)
-	return store
-}
-
-func (s *Store) removeJobWhenDone(job *Job) {
-	select {
-	case <-job.Ctx.Done():
-		s.mutex.Lock()
-		for i, j := range s.jobs {
-			if job.ID == j.ID {
-				// removing job from slice
-				last := len(s.jobs) - 1
-				s.jobs[i] = s.jobs[last]
-				s.jobs = s.jobs[:last]
-				break
-			}
-		}
-		s.mutex.Unlock()
-		return
-	}
-}
-
-// New job on store
-func (s *Store) New(reportID string, queryID string) *Job {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-	job := &Job{
-		ID:       uuid.GetUUID(),
-		ReportID: reportID,
-		QueryID:  queryID,
-		Ctx:      ctx,
-		cancel:   cancel,
-		Status:   make(chan int32),
-		logger:   log.With().Str("reportID", reportID).Str("queryID", queryID).Logger(),
-	}
-
-	s.jobs = append(s.jobs, job)
-	go s.removeJobWhenDone(job)
-	return job
-}
-
-// Cancel job for queryID
-func (s *Store) Cancel(queryID string) {
-	s.mutex.Lock()
-	for _, job := range s.jobs {
-		if job.QueryID == queryID {
-			job.Status <- int32(proto.Query_JOB_STATUS_UNSPECIFIED)
-			job.logger.Info().Msg("Canceling Job Context")
-			job.cancel()
-		}
-	}
-	s.mutex.Unlock()
 }
