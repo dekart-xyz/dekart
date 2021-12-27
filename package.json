@@ -44,7 +44,7 @@
   },
   "browserslist": {
     "production": [
-      ">0.2%",
+      ">2.0%",
       "not dead",
       "not op_mini all"
     ],
