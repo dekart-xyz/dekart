@@ -9,6 +9,7 @@ import { archiveReport, createReport, subscribeReports, testVersion, unsubscribe
 import { useDispatch, useSelector } from 'react-redux'
 import { PlusOutlined, GiftOutlined } from '@ant-design/icons'
 import DataDocumentationLink from './DataDocumentationLink'
+import { getRef } from './lib/ref'
 
 function Loading () {
   return null
@@ -92,13 +93,14 @@ function NewVersion () {
     dispatch(testVersion())
   }, [dispatch])
   if (release) {
+    const ref = getRef()
     return (
       <div className={styles.newRelease}>
         <GiftOutlined className={styles.newReleaseIcon} />
         <div className={styles.newReleaseTitle}>New release {release.tag_name} available</div>
         <div>
-          <Button type='primary' href='https://dekart.xyz/docs/self-hosting/upgrade/?ref=dekart'>Update</Button>
-          <Button type='link' href={release.html_url + '?ref=dekart'}>Release Notes</Button>
+          <Button type='primary' href={'https://dekart.xyz/docs/self-hosting/upgrade/?ref=' + ref}>Update</Button>
+          <Button type='link' href={release.html_url + '?ref=' + ref}>Release Notes</Button>
         </div>
       </div>
     )

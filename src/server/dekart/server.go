@@ -41,7 +41,7 @@ func NewServer(db *sql.DB, bucket *storage.BucketHandle, jobs *job.Store) *Serve
 func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.GetEnvResponse, error) {
 	homePageUrl := os.Getenv("DEKART_UX_HOMEPAGE")
 	if homePageUrl == "" {
-		homePageUrl = "https://dekart.xyz/?ref=dekart"
+		homePageUrl = "https://dekart.xyz/"
 	}
 	variables := []*proto.GetEnvResponse_Variable{
 		{

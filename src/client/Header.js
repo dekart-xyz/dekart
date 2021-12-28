@@ -1,12 +1,13 @@
 import styles from './Header.module.css'
 import { useSelector } from 'react-redux'
 import DekartMenu from './DekartMenu'
+import { getRef } from './lib/ref'
 
 export function Header ({ buttons, title }) {
   const env = useSelector(state => state.env)
   let homePage
   if (env.loaded) {
-    homePage = env.variables.UX_HOMEPAGE
+    homePage = env.variables.UX_HOMEPAGE + '?ref=' + getRef()
   }
   return (
     <div className={styles.header}>

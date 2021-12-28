@@ -12,6 +12,7 @@
     "antd": "^4.9.4",
     "classnames": "^2.2.6",
     "copy-to-clipboard": "^3.3.1",
+    "crypto-js": "^4.1.1",
     "google-protobuf": "^3.14.0",
     "luxon": "^1.25.0",
     "pretty-bytes": "^5.5.0",
