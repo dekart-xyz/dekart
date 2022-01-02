@@ -236,6 +236,7 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 			}
 			return nil, status.Error(codes.Internal, err.Error())
 		}
+		go s.storeQuery(req.Report.Id, query.Id, query.QueryText, query.QuerySourceId)
 	}
 
 	err = tx.Commit()

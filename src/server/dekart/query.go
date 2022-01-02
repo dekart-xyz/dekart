@@ -2,6 +2,7 @@ package dekart
 
 import (
 	"context"
+	"crypto/sha1"
 	"dekart/src/proto"
 	"dekart/src/server/job"
 	"dekart/src/server/user"
@@ -51,11 +52,11 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	}
 
 	if affectedRows == 0 {
-		err := fmt.Errorf("Report=%s, author_email=%s not found", req.Query.ReportId, claims.Email)
+		err := fmt.Errorf("report=%s, author_email=%s not found", req.Query.ReportId, claims.Email)
 		log.Warn().Err(err).Send()
 		return nil, status.Errorf(codes.NotFound, err.Error())
 	}
-
+	go s.storeQuery(req.Query.ReportId, id, req.Query.QueryText, "")
 	s.reportStreams.Ping(req.Query.ReportId)
 
 	res := &proto.CreateQueryResponse{
@@ -94,6 +95,46 @@ func (s Server) getReportID(ctx context.Context, queryID string, email string) (
 	return &reportID, nil
 }
 
+func (s Server) storeQuery(reportID string, queryID string, query_text string, prev_query_source_id string) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	h := sha1.New()
+	query_text_byte := []byte(query_text)
+	h.Write(query_text_byte)
+	new_query_source_id := fmt.Sprintf("%x", h.Sum(nil))
+	log.Debug().Msgf(fmt.Sprintf("%s.csv", new_query_source_id))
+	obj := s.bucket.Object(fmt.Sprintf("%s.sql", new_query_source_id))
+	storageWriter := obj.NewWriter(ctx)
+	_, err := storageWriter.Write(query_text_byte)
+	if err != nil {
+		log.Err(err).Msg("Error writing query_text to storage")
+		storageWriter.Close()
+		return
+	}
+	err = storageWriter.Close()
+	if err != nil {
+		log.Err(err).Msg("Error writing query_text to storage")
+		return
+	}
+
+	result, err := s.db.ExecContext(ctx,
+		`update queries set query_source_id=$1 where id=$2 and query_source_id=$3`,
+		new_query_source_id,
+		queryID,
+		prev_query_source_id,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return
+	}
+	affectedRows, _ := result.RowsAffected()
+	if affectedRows == 0 {
+		log.Warn().Msg("Query text not updated")
+	} else {
+		s.reportStreams.Ping(reportID)
+	}
+}
+
 // UpdateQuery by id implementation
 func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) (*proto.UpdateQueryResponse, error) {
 	claims := user.GetClaims(ctx)
@@ -112,7 +153,7 @@ func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) 
 	}
 
 	if reportID == nil {
-		err := fmt.Errorf("Query not found id:%s", req.Query.Id)
+		err := fmt.Errorf("query not found id:%s", req.Query.Id)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
@@ -127,6 +168,7 @@ func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) 
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
+	go s.storeQuery(*reportID, req.Query.Id, req.Query.QueryText, req.Query.QuerySourceId)
 	s.reportStreams.Ping(*reportID)
 
 	res := &proto.UpdateQueryResponse{

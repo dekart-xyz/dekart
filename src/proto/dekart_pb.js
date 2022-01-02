@@ -30,6 +30,7 @@ goog.exportSymbol('proto.GetEnvResponse.Variable', null, global);
 goog.exportSymbol('proto.GetEnvResponse.Variable.Type', null, global);
 goog.exportSymbol('proto.Query', null, global);
 goog.exportSymbol('proto.Query.JobStatus', null, global);
+goog.exportSymbol('proto.Query.QuerySource', null, global);
 goog.exportSymbol('proto.RemoveQueryRequest', null, global);
 goog.exportSymbol('proto.RemoveQueryResponse', null, global);
 goog.exportSymbol('proto.Report', null, global);
@@ -2109,7 +2110,9 @@ proto.Query.toObject = function(includeInstance, msg) {
     bytesProcessed: jspb.Message.getFieldWithDefault(msg, 9, 0),
     resultSize: jspb.Message.getFieldWithDefault(msg, 10, 0),
     createdAt: jspb.Message.getFieldWithDefault(msg, 11, 0),
-    updatedAt: jspb.Message.getFieldWithDefault(msg, 12, 0)
+    updatedAt: jspb.Message.getFieldWithDefault(msg, 12, 0),
+    querySource: jspb.Message.getFieldWithDefault(msg, 13, 0),
+    querySourceId: jspb.Message.getFieldWithDefault(msg, 14, "")
   };
 
   if (includeInstance) {
@@ -2193,6 +2196,14 @@ proto.Query.deserializeBinaryFromReader = function(msg, reader) {
     case 12:
       var value = /** @type {number} */ (reader.readInt64());
       msg.setUpdatedAt(value);
+      break;
+    case 13:
+      var value = /** @type {!proto.Query.QuerySource} */ (reader.readEnum());
+      msg.setQuerySource(value);
+      break;
+    case 14:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setQuerySourceId(value);
       break;
     default:
       reader.skipField();
@@ -2307,6 +2318,20 @@ proto.Query.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
+  f = message.getQuerySource();
+  if (f !== 0.0) {
+    writer.writeEnum(
+      13,
+      f
+    );
+  }
+  f = message.getQuerySourceId();
+  if (f.length > 0) {
+    writer.writeString(
+      14,
+      f
+    );
+  }
 };
 
 
@@ -2318,6 +2343,15 @@ proto.Query.JobStatus = {
   JOB_STATUS_PENDING: 1,
   JOB_STATUS_RUNNING: 2,
   JOB_STATUS_DONE: 3
+};
+
+/**
+ * @enum {number}
+ */
+proto.Query.QuerySource = {
+  QUERY_SOURCE_UNSPECIFIED: 0,
+  QUERY_SOURCE_INLINE: 1,
+  QUERY_SOURCE_STORAGE: 2
 };
 
 /**
@@ -2533,6 +2567,42 @@ proto.Query.prototype.getUpdatedAt = function() {
  */
 proto.Query.prototype.setUpdatedAt = function(value) {
   return jspb.Message.setProto3IntField(this, 12, value);
+};
+
+
+/**
+ * optional QuerySource query_source = 13;
+ * @return {!proto.Query.QuerySource}
+ */
+proto.Query.prototype.getQuerySource = function() {
+  return /** @type {!proto.Query.QuerySource} */ (jspb.Message.getFieldWithDefault(this, 13, 0));
+};
+
+
+/**
+ * @param {!proto.Query.QuerySource} value
+ * @return {!proto.Query} returns this
+ */
+proto.Query.prototype.setQuerySource = function(value) {
+  return jspb.Message.setProto3EnumField(this, 13, value);
+};
+
+
+/**
+ * optional string query_source_id = 14;
+ * @return {string}
+ */
+proto.Query.prototype.getQuerySourceId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 14, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.Query} returns this
+ */
+proto.Query.prototype.setQuerySourceId = function(value) {
+  return jspb.Message.setProto3StringField(this, 14, value);
 };
 
 
