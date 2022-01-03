@@ -95,17 +95,16 @@ func (s Server) getReportID(ctx context.Context, queryID string, email string) (
 	return &reportID, nil
 }
 
-func (s Server) storeQuery(reportID string, queryID string, query_text string, prev_query_source_id string) {
+func (s Server) storeQuery(reportID string, queryID string, queryText string, prevQuerySourceId string) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 	h := sha1.New()
-	query_text_byte := []byte(query_text)
-	h.Write(query_text_byte)
-	new_query_source_id := fmt.Sprintf("%x", h.Sum(nil))
-	log.Debug().Msgf(fmt.Sprintf("%s.csv", new_query_source_id))
-	obj := s.bucket.Object(fmt.Sprintf("%s.sql", new_query_source_id))
+	queryTextByte := []byte(queryText)
+	h.Write(queryTextByte)
+	newQuerySourceId := fmt.Sprintf("%x", h.Sum(nil))
+	obj := s.bucket.Object(fmt.Sprintf("%s.sql", newQuerySourceId))
 	storageWriter := obj.NewWriter(ctx)
-	_, err := storageWriter.Write(query_text_byte)
+	_, err := storageWriter.Write(queryTextByte)
 	if err != nil {
 		log.Err(err).Msg("Error writing query_text to storage")
 		storageWriter.Close()
@@ -118,10 +117,11 @@ func (s Server) storeQuery(reportID string, queryID string, query_text string, p
 	}
 
 	result, err := s.db.ExecContext(ctx,
-		`update queries set query_source_id=$1 where id=$2 and query_source_id=$3`,
-		new_query_source_id,
+		`update queries set query_source_id=$1, query_source=$2 where id=$3 and query_source_id=$4`,
+		newQuerySourceId,
+		proto.Query_QUERY_SOURCE_STORAGE,
 		queryID,
-		prev_query_source_id,
+		prevQuerySourceId,
 	)
 	if err != nil {
 		log.Err(err).Send()
@@ -131,6 +131,7 @@ func (s Server) storeQuery(reportID string, queryID string, query_text string, p
 	if affectedRows == 0 {
 		log.Warn().Msg("Query text not updated")
 	} else {
+		log.Debug().Msg("Query text updated in storage")
 		s.reportStreams.Ping(reportID)
 	}
 }

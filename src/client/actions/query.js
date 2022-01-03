@@ -57,12 +57,14 @@ export function createQuery (reportId) {
 }
 
 export function updateQuery (queryId, queryText) {
-  return async (dispatch) => {
+  return async (dispatch, getState) => {
+    const { queryStatus } = getState()
     dispatch({ type: updateQuery.name, queryId })
     const request = new UpdateQueryRequest()
     const query = new Query()
     query.setId(queryId)
     query.setQueryText(queryText)
+    query.setQuerySourceId(queryStatus[queryId].querySourceId)
     request.setQuery(query)
     try {
       await unary(Dekart.UpdateQuery, request)
@@ -73,8 +75,8 @@ export function updateQuery (queryId, queryText) {
   }
 }
 export function runQuery (queryId, queryText) {
-  return async (dispatch) => {
-    await updateQuery(queryId, queryText)(dispatch)
+  return async (dispatch, getState) => {
+    await updateQuery(queryId, queryText)(dispatch, getState)
     dispatch({ type: runQuery.name, queryId })
     const request = new RunQueryRequest()
     request.setQueryId(queryId)

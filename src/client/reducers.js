@@ -152,7 +152,9 @@ function queryStatus (state = {}, action) {
           downloadingResults: false,
           changed,
           // update to remote state only if it was not locally changed
-          queryText: wasChanged ? state[query.id].queryText : query.queryText
+          queryText: wasChanged ? state[query.id].queryText : query.queryText,
+          querySourceId: query.querySourceId,
+          querySource: query.querySource
         }
         return queryStatus
       }, {})

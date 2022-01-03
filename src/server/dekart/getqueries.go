@@ -25,7 +25,9 @@ func (s Server) getQueries(ctx context.Context, reportID string) ([]*proto.Query
 			bytes_processed,
 			result_size,
 			created_at,
-			updated_at
+			updated_at,
+			query_source,
+			query_source_id
 		from queries where report_id=$1 order by created_at asc`,
 		reportID,
 	)
@@ -53,6 +55,8 @@ func (s Server) getQueries(ctx context.Context, reportID string) ([]*proto.Query
 			&query.ResultSize,
 			&createdAt,
 			&updatedAt,
+			&query.QuerySource,
+			&query.QuerySourceId,
 		); err != nil {
 			log.Err(err).Send()
 			return nil, err
