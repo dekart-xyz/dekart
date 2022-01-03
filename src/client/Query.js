@@ -79,7 +79,7 @@ function Processed ({ query }) {
   if (query.bytesProcessed) {
     return (<span className={styles.processed}>({prettyBites(query.bytesProcessed)} processed)</span>)
   } else {
-    return (<span className={styles.processed}>(cashed)</span>)
+    return (<span className={styles.processed}>(cached)</span>)
   }
 }
 
