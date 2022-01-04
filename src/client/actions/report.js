@@ -6,6 +6,7 @@ import { error, streamError, success } from './message'
 import { downloadJobResults } from './job'
 import { ArchiveReportRequest, CreateReportRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
+import { downloadQuerySource } from './query'
 
 let reportStreamCancelable
 
@@ -43,11 +44,28 @@ function shouldAddDataset (query, prevQueriesList, queriesList) {
   if (!prevQueriesList) {
     return true
   }
-  if (prevQueriesList.length !== queriesList.length) {
+  if (prevQueriesList.length !== queriesList.length) { // TODO: why is this needed?
     return true
   }
   const prevQueryState = prevQueriesList.find(q => q.id === query.id)
   if (!prevQueryState || prevQueryState.jobResultId !== query.jobResultId) {
+    return true
+  }
+  return false
+}
+
+function shouldDownloadQueryText (query, prevQueriesList, queriesList) {
+  if (query.querySource !== Query.QuerySource.QUERY_SOURCE_STORAGE) {
+    return false
+  }
+  if (!query.querySourceId) {
+    return false
+  }
+  if (!prevQueriesList) {
+    return true
+  }
+  const prevQueryState = prevQueriesList.find(q => q.id === query.id)
+  if (!prevQueryState || prevQueryState.querySourceId !== query.querySourceId) {
     return true
   }
   return false
@@ -73,6 +91,9 @@ export function reportUpdate (reportStreamResponse) {
       }
     })
     queriesList.forEach((query) => {
+      if (shouldDownloadQueryText(query, prevQueriesList, queriesList)) {
+        dispatch(downloadQuerySource(query))
+      }
       if (shouldAddDataset(query, prevQueriesList, queriesList)) {
         dispatch(downloadJobResults(query))
       }

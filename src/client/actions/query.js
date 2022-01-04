@@ -1,7 +1,8 @@
 import { CancelQueryRequest, CreateQueryRequest, Query, RemoveQueryRequest, RunQueryRequest, UpdateQueryRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
+import { get } from '../lib/api'
 import { unary } from '../lib/grpc'
-import { error, success } from './message'
+import { downloading, error, success } from './message'
 
 export function queryChanged (queryId, queryText) {
   return (dispatch, getState) => {
@@ -95,6 +96,28 @@ export function cancelQuery (queryId) {
     request.setQueryId(queryId)
     try {
       await unary(Dekart.CancelQuery, request)
+    } catch (err) {
+      dispatch(error(err))
+    }
+  }
+}
+
+export function querySource (queryId, querySourceId, sql) {
+  return { type: querySource.name, sql, querySourceId, queryId }
+}
+
+export function downloadQuerySource (query) {
+  return async (dispatch, getState) => {
+    dispatch({ type: downloadQuerySource.name, query })
+    const { queries } = getState()
+    const i = queries.findIndex(q => q.id === query.id)
+    if (i < 0) {
+      return
+    }
+    try {
+      const res = await get(`/query-source/${query.querySourceId}.sql`)
+      const sql = await res.text()
+      dispatch(querySource(query.id, query.querySourceId, sql))
     } catch (err) {
       dispatch(error(err))
     }

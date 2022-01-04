@@ -63,6 +63,13 @@ func configureHTTP(dekartServer *dekart.Server) *mux.Router {
 		}
 		dekartServer.ServeQueryResult(w, r)
 	}).Methods("GET", "OPTIONS")
+	api.HandleFunc("/query-source/{id}.sql", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.ServeQuerySource(w, r)
+	}).Methods("GET", "OPTIONS")
 
 	staticFilesHandler := NewStaticFilesHandler()
 
