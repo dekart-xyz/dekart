@@ -31,13 +31,12 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		select
 			$1 as id,
 			id as report_id,
-			$3 as query_text
+			'' as query_text
 		from reports
-		where id=$2 and not archived and author_email=$4 limit 1
+		where id=$2 and not archived and author_email=$3 limit 1
 		`,
 		id,
 		req.Query.ReportId,
-		req.Query.QueryText,
 		claims.Email,
 	)
 	if err != nil {
@@ -95,9 +94,14 @@ func (s Server) getReportID(ctx context.Context, queryID string, email string) (
 	return &reportID, nil
 }
 
-func (s Server) storeQuery(reportID string, queryID string, queryText string, prevQuerySourceId string) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
+// queryWasNotUpdated was not updated because it was changed
+type queryWasNotUpdated struct{}
+
+func (e *queryWasNotUpdated) Error() string {
+	return "query was not updated"
+}
+
+func (s Server) storeQuerySync(ctx context.Context, queryID string, queryText string, prevQuerySourceId string) error {
 	h := sha1.New()
 	queryTextByte := []byte(queryText)
 	h.Write(queryTextByte)
@@ -108,12 +112,12 @@ func (s Server) storeQuery(reportID string, queryID string, queryText string, pr
 	if err != nil {
 		log.Err(err).Msg("Error writing query_text to storage")
 		storageWriter.Close()
-		return
+		return err
 	}
 	err = storageWriter.Close()
 	if err != nil {
 		log.Err(err).Msg("Error writing query_text to storage")
-		return
+		return err
 	}
 
 	result, err := s.db.ExecContext(ctx,
@@ -124,16 +128,28 @@ func (s Server) storeQuery(reportID string, queryID string, queryText string, pr
 		prevQuerySourceId,
 	)
 	if err != nil {
-		log.Err(err).Send()
-		return
+		return err
 	}
 	affectedRows, _ := result.RowsAffected()
 	if affectedRows == 0 {
-		log.Warn().Msg("Query text not updated")
-	} else {
-		log.Debug().Msg("Query text updated in storage")
-		s.reportStreams.Ping(reportID)
+		return &queryWasNotUpdated{}
 	}
+	return nil
+}
+
+func (s Server) storeQuery(reportID string, queryID string, queryText string, prevQuerySourceId string) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	err := s.storeQuerySync(ctx, queryID, queryText, prevQuerySourceId)
+	if _, ok := err.(*queryWasNotUpdated); ok {
+		log.Warn().Msg("Query text not updated")
+		return
+	} else if err != nil {
+		log.Err(err).Msg("Error updating query text")
+		return
+	}
+	log.Debug().Msg("Query text updated in storage")
+	s.reportStreams.Ping(reportID)
 }
 
 // UpdateQuery by id implementation
@@ -159,18 +175,7 @@ func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) 
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	_, err = s.db.ExecContext(ctx,
-		`update queries set query_text=$1 where id=$2`,
-		req.Query.QueryText,
-		req.Query.Id,
-	)
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
 	go s.storeQuery(*reportID, req.Query.Id, req.Query.QueryText, req.Query.QuerySourceId)
-	s.reportStreams.Ping(*reportID)
 
 	res := &proto.UpdateQueryResponse{
 		Query: &proto.Query{
@@ -245,21 +250,22 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	}
 	queriesRows, err := s.db.QueryContext(ctx,
 		`select
-			query_text,
-			report_id
+			report_id,
+			query_source_id
 		from queries where id=$1 and report_id in (select report_id from reports where author_email=$2) limit 1`,
 		req.QueryId,
 		claims.Email,
 	)
+
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	defer queriesRows.Close()
-	var queryText string
 	var reportID string
+	var prevQuerySourceId string
 	for queriesRows.Next() {
-		err := queriesRows.Scan(&queryText, &reportID)
+		err := queriesRows.Scan(&reportID, &prevQuerySourceId)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, status.Error(codes.Internal, err.Error())
@@ -272,14 +278,27 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
+	err = s.storeQuerySync(ctx, req.QueryId, req.QueryText, prevQuerySourceId)
+
+	if err != nil {
+		code := codes.Internal
+		if _, ok := err.(*queryWasNotUpdated); ok {
+			code = codes.Canceled
+			log.Warn().Err(err).Send()
+		} else {
+			log.Error().Err(err).Send()
+		}
+		return nil, status.Error(code, err.Error())
+	}
+
 	job, err := s.jobs.NewJob(reportID, req.QueryId)
 	if err != nil {
-		log.Err(err).Send()
+		log.Error().Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	obj := s.bucket.Object(fmt.Sprintf("%s.csv", job.ID))
 	go s.updateJobStatus(job)
-	err = job.Run(queryText, obj)
+	err = job.Run(req.QueryText, obj)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())

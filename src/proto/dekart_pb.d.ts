@@ -357,6 +357,9 @@ export class RunQueryRequest extends jspb.Message {
   getQueryId(): string;
   setQueryId(value: string): void;
 
+  getQueryText(): string;
+  setQueryText(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): RunQueryRequest.AsObject;
   static toObject(includeInstance: boolean, msg: RunQueryRequest): RunQueryRequest.AsObject;
@@ -370,6 +373,7 @@ export class RunQueryRequest extends jspb.Message {
 export namespace RunQueryRequest {
   export type AsObject = {
     queryId: string,
+    queryText: string,
   }
 }
 

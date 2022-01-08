@@ -3,6 +3,7 @@ package dekart
 import (
 	"context"
 	"dekart/src/proto"
+	"fmt"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -38,6 +39,7 @@ func (s Server) getQueries(ctx context.Context, reportID string) ([]*proto.Query
 	defer queryRows.Close()
 	queries := make([]*proto.Query, 0)
 	for queryRows.Next() {
+		var queryText string
 		query := proto.Query{
 			ReportId: reportID,
 		}
@@ -45,7 +47,7 @@ func (s Server) getQueries(ctx context.Context, reportID string) ([]*proto.Query
 		var updatedAt time.Time
 		if err := queryRows.Scan(
 			&query.Id,
-			&query.QueryText,
+			&queryText,
 			&query.JobStatus,
 			&query.JobResultId,
 			&query.JobError,
@@ -60,6 +62,15 @@ func (s Server) getQueries(ctx context.Context, reportID string) ([]*proto.Query
 		); err != nil {
 			log.Err(err).Send()
 			return nil, err
+		}
+
+		switch query.QuerySource {
+		case proto.Query_QUERY_SOURCE_UNSPECIFIED:
+			err = fmt.Errorf("unknown query source query id=%s", query.Id)
+			log.Err(err).Send()
+			return nil, err
+		case proto.Query_QUERY_SOURCE_INLINE:
+			query.QueryText = queryText
 		}
 		query.CreatedAt = createdAt.Unix()
 		query.UpdatedAt = updatedAt.Unix()

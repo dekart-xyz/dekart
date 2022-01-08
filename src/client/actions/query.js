@@ -2,7 +2,7 @@ import { CancelQueryRequest, CreateQueryRequest, Query, RemoveQueryRequest, RunQ
 import { Dekart } from '../../proto/dekart_pb_service'
 import { get } from '../lib/api'
 import { unary } from '../lib/grpc'
-import { downloading, error, success } from './message'
+import { error, success } from './message'
 
 export function queryChanged (queryId, queryText) {
   return (dispatch, getState) => {
@@ -76,11 +76,11 @@ export function updateQuery (queryId, queryText) {
   }
 }
 export function runQuery (queryId, queryText) {
-  return async (dispatch, getState) => {
-    await updateQuery(queryId, queryText)(dispatch, getState)
+  return async (dispatch) => {
     dispatch({ type: runQuery.name, queryId })
     const request = new RunQueryRequest()
     request.setQueryId(queryId)
+    request.setQueryText(queryText)
     try {
       await unary(Dekart.RunQuery, request)
     } catch (err) {
@@ -102,8 +102,8 @@ export function cancelQuery (queryId) {
   }
 }
 
-export function querySource (queryId, querySourceId, sql) {
-  return { type: querySource.name, sql, querySourceId, queryId }
+export function querySource (queryId, querySourceId, queryText) {
+  return { type: querySource.name, queryText, querySourceId, queryId }
 }
 
 export function downloadQuerySource (query) {
@@ -116,8 +116,8 @@ export function downloadQuerySource (query) {
     }
     try {
       const res = await get(`/query-source/${query.querySourceId}.sql`)
-      const sql = await res.text()
-      dispatch(querySource(query.id, query.querySourceId, sql))
+      const queryText = await res.text()
+      dispatch(querySource(query.id, query.querySourceId, queryText))
     } catch (err) {
       dispatch(error(err))
     }

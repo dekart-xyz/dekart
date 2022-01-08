@@ -106,6 +106,7 @@ message UpdateReportResponse {
 
 message RunQueryRequest {
     string query_id = 1;
+    string query_text = 2;
 }
 
 message RunQueryResponse {

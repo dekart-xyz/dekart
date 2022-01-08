@@ -2950,7 +2950,8 @@ proto.RunQueryRequest.prototype.toObject = function(opt_includeInstance) {
  */
 proto.RunQueryRequest.toObject = function(includeInstance, msg) {
   var f, obj = {
-    queryId: jspb.Message.getFieldWithDefault(msg, 1, "")
+    queryId: jspb.Message.getFieldWithDefault(msg, 1, ""),
+    queryText: jspb.Message.getFieldWithDefault(msg, 2, "")
   };
 
   if (includeInstance) {
@@ -2991,6 +2992,10 @@ proto.RunQueryRequest.deserializeBinaryFromReader = function(msg, reader) {
       var value = /** @type {string} */ (reader.readString());
       msg.setQueryId(value);
       break;
+    case 2:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setQueryText(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -3027,6 +3032,13 @@ proto.RunQueryRequest.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
+  f = message.getQueryText();
+  if (f.length > 0) {
+    writer.writeString(
+      2,
+      f
+    );
+  }
 };
 
 
@@ -3045,6 +3057,24 @@ proto.RunQueryRequest.prototype.getQueryId = function() {
  */
 proto.RunQueryRequest.prototype.setQueryId = function(value) {
   return jspb.Message.setProto3StringField(this, 1, value);
+};
+
+
+/**
+ * optional string query_text = 2;
+ * @return {string}
+ */
+proto.RunQueryRequest.prototype.getQueryText = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 2, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.RunQueryRequest} returns this
+ */
+proto.RunQueryRequest.prototype.setQueryText = function(value) {
+  return jspb.Message.setProto3StringField(this, 2, value);
 };
 
 
