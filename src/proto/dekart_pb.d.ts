@@ -257,6 +257,12 @@ export class Query extends jspb.Message {
   getUpdatedAt(): number;
   setUpdatedAt(value: number): void;
 
+  getQuerySource(): Query.QuerySourceMap[keyof Query.QuerySourceMap];
+  setQuerySource(value: Query.QuerySourceMap[keyof Query.QuerySourceMap]): void;
+
+  getQuerySourceId(): string;
+  setQuerySourceId(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Query.AsObject;
   static toObject(includeInstance: boolean, msg: Query): Query.AsObject;
@@ -281,6 +287,8 @@ export namespace Query {
     resultSize: number,
     createdAt: number,
     updatedAt: number,
+    querySource: Query.QuerySourceMap[keyof Query.QuerySourceMap],
+    querySourceId: string,
   }
 
   export interface JobStatusMap {
@@ -291,6 +299,14 @@ export namespace Query {
   }
 
   export const JobStatus: JobStatusMap;
+
+  export interface QuerySourceMap {
+    QUERY_SOURCE_UNSPECIFIED: 0;
+    QUERY_SOURCE_INLINE: 1;
+    QUERY_SOURCE_STORAGE: 2;
+  }
+
+  export const QuerySource: QuerySourceMap;
 }
 
 export class UpdateReportRequest extends jspb.Message {
@@ -341,6 +357,9 @@ export class RunQueryRequest extends jspb.Message {
   getQueryId(): string;
   setQueryId(value: string): void;
 
+  getQueryText(): string;
+  setQueryText(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): RunQueryRequest.AsObject;
   static toObject(includeInstance: boolean, msg: RunQueryRequest): RunQueryRequest.AsObject;
@@ -354,6 +373,7 @@ export class RunQueryRequest extends jspb.Message {
 export namespace RunQueryRequest {
   export type AsObject = {
     queryId: string,
+    queryText: string,
   }
 }
 

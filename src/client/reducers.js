@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 import keplerGlReducer from '@dekart-xyz/kepler.gl/dist/reducers'
 import { ActionTypes as KeplerActionTypes } from '@dekart-xyz/kepler.gl/dist/actions'
-import { downloadJobResults, openReport, reportTitleChange, reportUpdate, runQuery, saveMap, updateQuery, reportsListUpdate, unsubscribeReports, streamError, httpError, newReport, setEnv, forkReport, newForkedReport, downloading, finishDownloading, setActiveQuery, queryChanged, newRelease } from './actions'
+import { downloadJobResults, openReport, reportTitleChange, reportUpdate, runQuery, saveMap, updateQuery, reportsListUpdate, unsubscribeReports, streamError, httpError, newReport, setEnv, forkReport, newForkedReport, downloading, finishDownloading, setActiveQuery, queryChanged, newRelease, querySource } from './actions'
 import { Query } from '../proto/dekart_pb'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
@@ -141,18 +141,53 @@ function queryStatus (state = {}, action) {
           queryText: action.queryText
         }
       }
+    case querySource.name:
+      if (
+        state[action.queryId] &&
+        state[action.queryId].querySourceId === action.querySourceId
+      ) {
+        if (state[action.queryId].changed && action.queryText === state[action.queryId].queryText) {
+          return {
+            ...state,
+            [action.queryId]: {
+              ...state[action.queryId],
+              changed: false
+            }
+          }
+        } else {
+          return {
+            ...state,
+            [action.queryId]: {
+              ...state[action.queryId],
+              queryText: action.queryText
+            }
+          }
+        }
+      }
+      return state
     case reportUpdate.name:
       return action.queriesList.reduce(function (queryStatus, query) {
-        const wasChanged = state[query.id] ? state[query.id].changed : false
-        // if it was not changed query will update to remote state
-        // otherwise compare remote state to local state
-        const changed = wasChanged ? state[query.id].queryText !== query.queryText : false
         queryStatus[query.id] = {
           canRun: [Query.JobStatus.JOB_STATUS_UNSPECIFIED, Query.JobStatus.JOB_STATUS_DONE].includes(query.jobStatus),
           downloadingResults: false,
-          changed,
-          // update to remote state only if it was not locally changed
-          queryText: wasChanged ? state[query.id].queryText : query.queryText
+          querySourceId: query.querySourceId,
+          querySource: query.querySource
+        }
+        const wasChanged = state[query.id] ? state[query.id].changed : false
+        if (query.querySource === Query.QuerySource.QUERY_SOURCE_INLINE) {
+          // if it was not changed query will update to remote state
+          // otherwise compare remote state to local state
+          const changed = wasChanged ? state[query.id].queryText !== query.queryText : false
+          const queryText = wasChanged ? state[query.id].queryText : query.queryText
+          Object.assign(queryStatus[query.id], {
+            changed,
+            queryText
+          })
+        } else {
+          Object.assign(queryStatus[query.id], {
+            changed: wasChanged,
+            queryText: state[query.id] ? state[query.id].queryText : ''
+          })
         }
         return queryStatus
       }, {})

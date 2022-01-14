@@ -12,7 +12,7 @@ import { taskMiddleware } from 'react-palm/tasks'
 const store = createStore(
   reducer,
   compose(
-    applyMiddleware(taskMiddleware, thunk /* createLogger() */)
+    applyMiddleware(taskMiddleware, thunk/*, createLogger() */)
   )
 )
 

@@ -96,6 +96,9 @@ func rollback(tx *sql.Tx) {
 func (s Server) commitReportWithQueries(ctx context.Context, report *proto.Report, queries []*proto.Query) error {
 	claims := user.GetClaims(ctx)
 	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return err
+	}
 
 	_, err = tx.ExecContext(ctx,
 		"INSERT INTO reports (id, author_email, map_config, title) VALUES ($1, $2, $3, $4)",
@@ -111,10 +114,19 @@ func (s Server) commitReportWithQueries(ctx context.Context, report *proto.Repor
 	for _, query := range queries {
 		queryId := newUUID()
 		_, err := tx.ExecContext(ctx,
-			`INSERT INTO queries (id, report_id, query_text, created_at) VALUES($1, $2, $3, $4)`,
+			`INSERT INTO queries (
+				id,
+				report_id,
+				query_text,
+				query_source,
+				query_source_id,
+				created_at
+			) VALUES($1, $2, $3, $4, $5, $6)`,
 			queryId,
 			report.Id,
 			query.QueryText,
+			query.QuerySource,
+			query.QuerySourceId,
 			time.Unix(query.CreatedAt, 0), // to preserve query sequence
 		)
 		if err != nil {
@@ -179,12 +191,7 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	if req.Report == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "req.Report == nil")
 	}
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	result, err := tx.ExecContext(ctx,
+	result, err := s.db.ExecContext(ctx,
 		`update
 			reports
 		set map_config=$1, title=$2
@@ -196,9 +203,6 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	)
 	if err != nil {
 		log.Err(err).Send()
-		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			log.Err(rollbackErr).Send()
-		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -206,43 +210,19 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 
 	if err != nil {
 		log.Err(err).Send()
-		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			log.Err(rollbackErr).Send()
-		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if affectedRows == 0 {
 		// TODO: distinguish between not found and read only
-		err := fmt.Errorf("Report not found id:%s", req.Report.Id)
+		err := fmt.Errorf("report not found id:%s", req.Report.Id)
 		log.Warn().Err(err).Send()
-		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			log.Err(rollbackErr).Send()
-		}
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
 	// save queries
 	for _, query := range req.Query {
-		_, err = tx.ExecContext(ctx,
-			`update queries set query_text=$1 where id=$2`,
-			query.QueryText,
-			query.Id,
-		)
-		if err != nil {
-			log.Err(err).Send()
-			if rollbackErr := tx.Rollback(); rollbackErr != nil {
-				log.Err(rollbackErr).Send()
-			}
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-	}
-
-	err = tx.Commit()
-
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
+		go s.storeQuery(req.Report.Id, query.Id, query.QueryText, query.QuerySourceId)
 	}
 
 	s.reportStreams.Ping(req.Report.Id)

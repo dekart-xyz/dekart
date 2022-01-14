@@ -85,6 +85,15 @@ message Query {
     int64 result_size = 10;
     int64 created_at = 11;
     int64 updated_at = 12;
+
+    enum QuerySource {
+        QUERY_SOURCE_UNSPECIFIED = 0;
+        QUERY_SOURCE_INLINE = 1;
+        QUERY_SOURCE_STORAGE = 2;
+    }
+    QuerySource query_source = 13;
+    string query_source_id = 14;
+
 }
 
 message UpdateReportRequest {
@@ -97,6 +106,7 @@ message UpdateReportResponse {
 
 message RunQueryRequest {
     string query_id = 1;
+    string query_text = 2;
 }
 
 message RunQueryResponse {
