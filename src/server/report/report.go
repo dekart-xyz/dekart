@@ -37,6 +37,8 @@ func (s *Streams) Register(reportID string, streamID string, sequence int64) cha
 	defer s.mutex.Unlock()
 	currentSequence, ok := s.sequence[reportID]
 	if !ok {
+		//initial sequence sent by client is sequence=0
+		// first time we always send update
 		s.sequence[reportID] = 1
 		currentSequence = 1
 	}
@@ -76,13 +78,19 @@ func (s *Streams) Ping(reportID string) {
 	defer s.mutex.Unlock()
 	for _, rid := range []string{reportID, All} {
 		sequence, ok := s.sequence[rid]
+		if !ok {
+			//initial sequence in register is sequence=1
+			sequence = 1
+		}
 		s.sequence[rid] = sequence + 1
 		streamMap, ok := s.channels[rid]
 		if !ok {
 			continue
 		}
 		for _, ch := range streamMap {
-			ch <- s.sequence[rid]
+			go func(ch chan int64) {
+				ch <- s.sequence[rid]
+			}(ch)
 		}
 	}
 }
