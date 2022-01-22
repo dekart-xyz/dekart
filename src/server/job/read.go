@@ -48,6 +48,7 @@ func NewReader(ctx context.Context, errors chan error, csvRows chan []string, ta
 	}
 	r.session, err = r.bqReadClient.CreateReadSession(r.ctx, createReadSessionRequest, rpcOpts)
 	if err != nil {
+		//TODO: context canceled
 		r.logger.Error().Err(err).Msg("cannot create read session")
 		return r, err
 	}
