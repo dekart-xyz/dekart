@@ -21,12 +21,11 @@ type StaticFilesHandler struct {
 var customCodeRe = regexp.MustCompile(`CUSTOM_CODE`)
 
 // NewStaticFilesHandler creates a new StaticFilesHandler
-func NewStaticFilesHandler() StaticFilesHandler {
-	staticPath := os.Getenv("DEKART_STATIC_FILES")
+func NewStaticFilesHandler(staticPath string) StaticFilesHandler {
 	fs := http.Dir(staticPath)
 	indexFile, err := fs.Open("./index.html")
 	if err != nil {
-		log.Fatal().Err(err).Send()
+		log.Fatal().Str("DEKART_STATIC_FILES", staticPath).Err(err).Send()
 	}
 	defer indexFile.Close()
 	stat, err := indexFile.Stat()

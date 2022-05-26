@@ -71,17 +71,23 @@ func configureHTTP(dekartServer *dekart.Server) *mux.Router {
 		dekartServer.ServeQuerySource(w, r)
 	}).Methods("GET", "OPTIONS")
 
-	staticFilesHandler := NewStaticFilesHandler()
+	staticPath := os.Getenv("DEKART_STATIC_FILES")
 
-	router.HandleFunc("/", staticFilesHandler.ServeIndex)
-	router.HandleFunc("/reports/{id}", staticFilesHandler.ServeIndex)
-	router.HandleFunc("/reports/{id}/edit", staticFilesHandler.ServeIndex) // deprecated
-	router.HandleFunc("/reports/{id}/source", staticFilesHandler.ServeIndex)
-	router.HandleFunc("/400", func(w http.ResponseWriter, r *http.Request) {
-		staticFilesHandler.ServeIndex(ResponseWriter{w: w, statusCode: http.StatusBadRequest}, r)
-	})
+	if staticPath != "" {
+		staticFilesHandler := NewStaticFilesHandler(staticPath)
 
-	router.PathPrefix("/").Handler(staticFilesHandler)
+		router.HandleFunc("/", staticFilesHandler.ServeIndex)
+		router.HandleFunc("/reports/{id}", staticFilesHandler.ServeIndex)
+		router.HandleFunc("/reports/{id}/edit", staticFilesHandler.ServeIndex) // deprecated
+		router.HandleFunc("/reports/{id}/source", staticFilesHandler.ServeIndex)
+		router.HandleFunc("/400", func(w http.ResponseWriter, r *http.Request) {
+			staticFilesHandler.ServeIndex(ResponseWriter{w: w, statusCode: http.StatusBadRequest}, r)
+		})
+		router.PathPrefix("/").Handler(staticFilesHandler)
+	} else {
+		log.Warn().Msg("DEKART_STATIC_FILES is empty; UI will not be served")
+	}
+
 	return router
 }
 
