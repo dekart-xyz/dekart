@@ -6,22 +6,28 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Streams of report changes; use NewStreams to init
-type Streams struct {
+type Streams interface {
+	Register(reportID string, streamID string, sequence int64) chan int64
+	Deregister(reportID string, streamID string)
+	Ping(reportID string)
+}
+
+// localStreams of report changes; use NewStreams to init
+type localStreams struct {
 	channels map[string]map[string]chan int64
 	sequence map[string]int64
 	mutex    sync.Mutex
 }
 
 // NewStreams creates new Streams struct
-func NewStreams() *Streams {
-	s := &Streams{}
-	s.Init()
+func NewStreams() Streams {
+	s := &localStreams{}
+	s.init()
 	return s
 }
 
-// Init Streams; do not call directly, use NewStreams
-func (s *Streams) Init() {
+// init Streams
+func (s *localStreams) init() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	s.channels = make(map[string]map[string]chan int64)
@@ -32,7 +38,7 @@ func (s *Streams) Init() {
 const All string = "AllReports"
 
 // Register to listen report updates
-func (s *Streams) Register(reportID string, streamID string, sequence int64) chan int64 {
+func (s *localStreams) Register(reportID string, streamID string, sequence int64) chan int64 {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	currentSequence, ok := s.sequence[reportID]
@@ -62,7 +68,7 @@ func (s *Streams) Register(reportID string, streamID string, sequence int64) cha
 }
 
 // Deregister from report updates
-func (s *Streams) Deregister(reportID string, streamID string) {
+func (s *localStreams) Deregister(reportID string, streamID string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	streamMap, ok := s.channels[reportID]
@@ -73,7 +79,7 @@ func (s *Streams) Deregister(reportID string, streamID string) {
 }
 
 // Ping about report update
-func (s *Streams) Ping(reportID string) {
+func (s *localStreams) Ping(reportID string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	for _, rid := range []string{reportID, All} {

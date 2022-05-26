@@ -16,7 +16,7 @@ import (
 // Server is Dekart Endpoints implementation (HTTP and GRPC)
 type Server struct {
 	db            *sql.DB
-	reportStreams *report.Streams
+	reportStreams report.Streams
 	bucket        *storage.BucketHandle
 	proto.UnimplementedDekartServer
 	jobs *job.Store
