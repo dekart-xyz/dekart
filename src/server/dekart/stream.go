@@ -59,7 +59,7 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 		return Unauthenticated
 	}
 	if req.StreamOptions == nil {
-		err := fmt.Errorf("Missing StreamOptions")
+		err := fmt.Errorf("missing StreamOptions")
 		return status.Error(codes.InvalidArgument, err.Error())
 	}
 
