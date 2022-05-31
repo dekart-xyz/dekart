@@ -1,5 +1,12 @@
 .PHONY: proto-build proto-docker proto docker docker-compose-up docker-compose-rm version minor patch
 
+# load .env
+# https://lithic.tech/blog/2020-05/makefile-dot-env
+ifneq (,$(wildcard ./.env))
+    include .env
+    export
+endif
+
 proto-clean:
 	rm -rf ./src/proto/*.go
 	rm -rf ./src/proto/*.js
@@ -20,12 +27,8 @@ proto: proto-docker # build proto stubs
 		dekart-proto \
 		make proto-build
 
-docker: # build docker for local use
-	docker build -t dekart-dev -f ./Dockerfile .
-
-ecr-dev:
-	docker tag dekart-dev eu.gcr.io/dekart-playground/dekart:dev
-	docker push eu.gcr.io/dekart-playground/dekart:dev
+build-docker-dev: # build docker for local use
+	docker buildx build --push --tag ${DEKART_DOCKER_DEV_TAG} -o type=image --platform=linux/amd64 -f ./Dockerfile .
 
 docker-compose-up:
 	docker-compose  --env-file .env up
@@ -34,7 +37,7 @@ docker-compose-rm:
 	docker-compose rm
 
 run-dev-server:
-	godotenv -f .env go run ./src/server/main.go
+	go run ./src/server/main.go
 
 cloud-sql-proxy-docker:
 	docker build -t cloud-sql-proxy -f ./cloud_sql_proxy/Dockerfile .
@@ -54,6 +57,23 @@ release:
 test:
 	go test -v -count=1 ./src/server/**/
 
+run-docker-dev:
+	docker run -it --rm \
+		-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
+		-e GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} \
+		-e DEKART_POSTGRES_DB=${DEKART_POSTGRES_DB} \
+		-e DEKART_POSTGRES_USER=${DEKART_POSTGRES_USER} \
+		-e DEKART_POSTGRES_PASSWORD=${DEKART_POSTGRES_PASSWORD} \
+		-e DEKART_POSTGRES_PORT=${DEKART_POSTGRES_PORT} \
+		-e DEKART_POSTGRES_HOST=host.docker.internal \
+		-e DEKART_CLOUD_STORAGE_BUCKET=${DEKART_CLOUD_STORAGE_BUCKET} \
+		-e DEKART_BIGQUERY_PROJECT_ID=${DEKART_BIGQUERY_PROJECT_ID} \
+		-e DEKART_BIGQUERY_MAX_BYTES_BILLED=53687091200 \
+		-e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
+		-p 8080:8080 \
+		${DEKART_DOCKER_DEV_TAG}
+
+
 dekart-0-7:
 	docker run -it --rm \
 		-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
@@ -62,7 +82,7 @@ dekart-0-7:
 		-e DEKART_POSTGRES_USER=${DEKART_POSTGRES_USER} \
 		-e DEKART_POSTGRES_PASSWORD=${DEKART_POSTGRES_PASSWORD} \
 		-e DEKART_POSTGRES_PORT=${DEKART_POSTGRES_PORT} \
-		-e DEKART_POSTGRES_HOST=${DEKART_POSTGRES_HOST} \
+		-e DEKART_POSTGRES_HOST=host.docker.internal \
 		-e DEKART_CLOUD_STORAGE_BUCKET=${DEKART_CLOUD_STORAGE_BUCKET} \
 		-e DEKART_BIGQUERY_PROJECT_ID=${DEKART_BIGQUERY_PROJECT_ID} \
 		-e DEKART_BIGQUERY_MAX_BYTES_BILLED=53687091200 \
