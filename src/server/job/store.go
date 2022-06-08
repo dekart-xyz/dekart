@@ -9,18 +9,35 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/rs/zerolog/log"
 )
 
 // Store of jobs
 type Store struct {
-	jobs  []*Job
-	mutex sync.Mutex
+	jobs         []*Job
+	outputBucket string
+	region       string
+	awsSession   *session.Session
+	mutex        sync.Mutex
 }
 
 // NewStore instance
 func NewStore() *Store {
-	store := &Store{}
+
+	conf := aws.NewConfig().
+		WithMaxRetries(3).
+		WithS3ForcePathStyle(true)
+
+	outputBucket := os.Getenv("DEKART_ATHENA_S3_RESULT")
+	region := os.Getenv("AWS_REGION")
+	awsSession := session.Must(session.NewSession(conf))
+	store := &Store{
+		outputBucket: outputBucket,
+		region:       region,
+		awsSession:   awsSession,
+	}
 	store.jobs = make([]*Job, 0)
 	return store
 }
@@ -66,6 +83,9 @@ func (s *Store) NewJob(reportID string, queryID string) (*Job, error) {
 		Status:         make(chan int32),
 		logger:         log.With().Str("reportID", reportID).Str("queryID", queryID).Logger(),
 		maxBytesBilled: maxBytesBilled,
+		outputBucket:   s.outputBucket,
+		region:         s.region,
+		awsSession:     s.awsSession,
 	}
 
 	s.jobs = append(s.jobs, job)

@@ -60,6 +60,50 @@ func configureDb() *sql.DB {
 	return db
 }
 
+// func configureAthena() *sql.DB {
+// 	creds, err := awscredentials.NewChainCredentials(
+// 		[]awscredentials.Provider{
+// 			&awscredentials.EnvProvider{},
+// 			&awscredentials.SharedCredentialsProvider{},
+// 		}).Get()
+
+// 	conf, err := drv.NewDefaultConfig(os.Getenv("DEKART_ATHENA_S3_RESULT"), os.Getenv("AWS_REGION"), creds.AccessKeyID, creds.SecretAccessKey)
+// 	if err != nil {
+// 		log.Fatal().Err(err).Send()
+// 	}
+
+// 	conf.SetWGRemoteCreationAllowed(false)
+
+// 	// wrkg := drv.NewDefaultWG("tests", nil, nil)
+
+// 	// err = conf.SetWorkGroup(wrkg)
+// 	// if err != nil {
+// 	// 	log.Fatal().Err(err).Send()
+// 	// }
+
+// 	db, err := sql.Open(drv.DriverName, conf.Stringify())
+// 	if err != nil {
+// 		log.Fatal().Err(err).Send()
+// 	}
+
+// 	// db, _ := sql.Open(drv.DriverName, conf.Stringify())
+// 	// db, err := sql.Open("postgres", fmt.Sprintf(
+// 	// 	"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+// 	// 	os.Getenv("DEKART_POSTGRES_USER"),
+// 	// 	os.Getenv("DEKART_POSTGRES_PASSWORD"),
+// 	// 	os.Getenv("DEKART_POSTGRES_HOST"),
+// 	// 	os.Getenv("DEKART_POSTGRES_PORT"),
+// 	// 	os.Getenv("DEKART_POSTGRES_DB"),
+// 	// ))
+// 	// if err != nil {
+// 	// 	log.Fatal().Err(err).Send()
+// 	// }
+// 	// db.SetConnMaxLifetime(0)
+// 	// db.SetMaxIdleConns(3)
+// 	// db.SetMaxOpenConns(3)
+// 	return db
+// }
+
 func applyMigrations(db *sql.DB) {
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
@@ -105,6 +149,9 @@ func main() {
 
 	db := configureDb()
 	defer db.Close()
+
+	// athenaDb := configureAthena()
+	// defer athenaDb.Close()
 
 	applyMigrations(db)
 
