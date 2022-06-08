@@ -106,8 +106,9 @@ func (s Server) storeQuerySync(ctx context.Context, queryID string, queryText st
 	queryTextByte := []byte(queryText)
 	h.Write(queryTextByte)
 	newQuerySourceId := fmt.Sprintf("%x", h.Sum(nil))
-	obj := s.bucket.Object(fmt.Sprintf("%s.sql", newQuerySourceId))
-	storageWriter := obj.NewWriter(ctx)
+
+	storageWriter := s.bucket.Writer(ctx, fmt.Sprintf("%s.sql", newQuerySourceId))
+
 	_, err := storageWriter.Write(queryTextByte)
 	if err != nil {
 		log.Err(err).Msg("Error writing query_text to storage")
@@ -296,9 +297,9 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		log.Error().Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	obj := s.bucket.Object(fmt.Sprintf("%s.csv", job.ID))
+	storageWriter := s.bucket.Writer(ctx, fmt.Sprintf("%s.csv", job.ID))
 	go s.updateJobStatus(job)
-	err = job.Run(req.QueryText, obj)
+	err = job.Run(req.QueryText, storageWriter)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())

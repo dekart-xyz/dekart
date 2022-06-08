@@ -4,6 +4,7 @@ import (
 	"dekart/src/proto"
 	"encoding/csv"
 	"fmt"
+	"io"
 	"os"
 	"reflect"
 	"regexp"
@@ -12,7 +13,6 @@ import (
 	"context"
 
 	"cloud.google.com/go/bigquery"
-	"cloud.google.com/go/storage"
 	"github.com/rs/zerolog"
 	"google.golang.org/api/googleapi"
 )
@@ -31,7 +31,7 @@ type Job struct {
 	processedBytes      int64
 	resultSize          int64
 	resultID            *string
-	storageObj          *storage.ObjectHandle
+	storageWriter       io.WriteCloser
 	mutex               sync.Mutex
 	logger              zerolog.Logger
 	maxReadStreamsCount int32
@@ -76,7 +76,7 @@ func (job *Job) GetProcessedBytes() int64 {
 var contextCancelledRe = regexp.MustCompile(`context canceled`)
 var orderByRe = regexp.MustCompile(`(?ims)order[\s]+by`)
 
-func (job *Job) close(storageWriter *storage.Writer, csvWriter *csv.Writer) {
+func (job *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 	csvWriter.Flush()
 	err := storageWriter.Close()
 	if err != nil {
@@ -92,13 +92,9 @@ func (job *Job) close(storageWriter *storage.Writer, csvWriter *csv.Writer) {
 		return
 	}
 	job.logger.Debug().Msg("Writing Done")
-	attrs := storageWriter.Attrs()
 	job.mutex.Lock()
 	// TODO: use bool done or better new status values
 	job.resultID = &job.ID
-	if attrs != nil {
-		job.resultSize = attrs.Size
-	}
 	job.mutex.Unlock()
 	job.Status <- int32(proto.Query_JOB_STATUS_DONE)
 	job.cancel()
@@ -120,9 +116,7 @@ func (job *Job) setJobStats(queryStatus *bigquery.JobStatus, table *bigquery.Tab
 
 // write csv rows to storage
 func (job *Job) write(csvRows chan []string) {
-	storageWriter := job.storageObj.NewWriter(job.Ctx)
-	storageWriter.ChunkSize = 0 // do not buffer when writing to storage
-	csvWriter := csv.NewWriter(storageWriter)
+	csvWriter := csv.NewWriter(job.storageWriter)
 	for {
 		csvRow, more := <-csvRows
 		if !more {
@@ -138,7 +132,7 @@ func (job *Job) write(csvRows chan []string) {
 			break
 		}
 	}
-	job.close(storageWriter, csvWriter)
+	job.close(job.storageWriter, csvWriter)
 }
 
 func (job *Job) cancelWithError(err error) {
@@ -251,7 +245,7 @@ func (job *Job) setMaxReadStreamsCount(queryText string) {
 }
 
 // Run implementation
-func (job *Job) Run(queryText string, obj *storage.ObjectHandle) error {
+func (job *Job) Run(queryText string, storageWriter io.WriteCloser) error {
 	job.logger.Debug().Msg("Run BigQuery Job")
 	client, err := bigquery.NewClient(job.Ctx, os.Getenv("DEKART_BIGQUERY_PROJECT_ID"))
 	if err != nil {
@@ -270,7 +264,7 @@ func (job *Job) Run(queryText string, obj *storage.ObjectHandle) error {
 	}
 	job.mutex.Lock()
 	job.bigqueryJob = bigqueryJob
-	job.storageObj = obj
+	job.storageWriter = storageWriter
 	job.mutex.Unlock()
 	job.Status <- int32(proto.Query_JOB_STATUS_RUNNING)
 	job.logger.Debug().Msg("Waiting for results")

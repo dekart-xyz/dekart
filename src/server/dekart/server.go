@@ -6,9 +6,10 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/job"
 	"dekart/src/server/report"
+	"io"
 	"os"
 
-	"cloud.google.com/go/storage"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -17,16 +18,22 @@ import (
 type Server struct {
 	db            *sql.DB
 	reportStreams *report.Streams
-	bucket        *storage.BucketHandle
+	bucket        Blobstorage
 	proto.UnimplementedDekartServer
 	jobs *job.Store
+}
+
+type Blobstorage interface {
+	Writer(ctx context.Context, key string) io.WriteCloser
+	Reader(ctx context.Context, key string) (io.Reader, error)
+	GetObjectMetadata(ctx context.Context, key string) (*s3.HeadObjectOutput, error)
 }
 
 //Unauthenticated error returned when no user claims in context
 var Unauthenticated error = status.Error(codes.Unauthenticated, "UNAUTHENTICATED")
 
 // NewServer returns new Dekart Server
-func NewServer(db *sql.DB, bucket *storage.BucketHandle, jobs *job.Store) *Server {
+func NewServer(db *sql.DB, bucket Blobstorage, jobs *job.Store) *Server {
 	server := Server{
 		db:            db,
 		reportStreams: report.NewStreams(),

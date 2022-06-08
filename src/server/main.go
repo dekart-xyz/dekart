@@ -1,8 +1,8 @@
 package main
 
 import (
-	"context"
 	"database/sql"
+	"dekart/src/blobstorage"
 	"dekart/src/server/dekart"
 	"dekart/src/server/http"
 	"dekart/src/server/job"
@@ -11,13 +11,16 @@ import (
 	"os"
 	"time"
 
-	"cloud.google.com/go/storage"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/lib/pq"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 )
 
 func configureLogger() {
@@ -77,13 +80,24 @@ func applyMigrations(db *sql.DB) {
 	}
 }
 
-func configureBucket() *storage.BucketHandle {
-	ctx := context.Background()
-	client, err := storage.NewClient(ctx)
-	if err != nil {
-		log.Fatal().Err(err).Send()
-	}
-	return client.Bucket(os.Getenv("DEKART_CLOUD_STORAGE_BUCKET"))
+func configureBucket() *blobstorage.Storage {
+	bucket := os.Getenv("DEKART_CLOUD_STORAGE_BUCKET")
+
+	conf := aws.NewConfig().
+		WithMaxRetries(3).
+		WithS3ForcePathStyle(true)
+
+	ses := session.Must(session.NewSession(conf))
+
+	return blobstorage.New(bucket, s3.New(ses))
+
+	// ctx := context.Background()
+	// client, err := storage.NewClient(ctx)
+	// if err != nil {
+	// 	log.Fatal().Err(err).Send()
+	// }
+	// return client.Bucket(os.Getenv("DEKART_CLOUD_STORAGE_BUCKET"))
+	// return nil
 }
 
 func main() {
