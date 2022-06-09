@@ -1,13 +1,16 @@
+// original source https://github.com/alwaysbespoke/aws/blob/1f685929a639566dcfaf72c93b67da1d607671cd/athena/athena.go
 package job
 
 import (
-	"errors"
+	"context"
+	"fmt"
 	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/athena"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -151,35 +154,38 @@ func (q *AthenaQuery) startQuery() error {
 	return nil
 }
 
-func (q *AthenaQuery) pollQueryState() error {
+func (q *AthenaQuery) pollQueryState(ctx context.Context) (*athena.QueryExecution, error) {
+	var err error
 
 	q.getInput.SetQueryExecutionId(*q.startOutput.QueryExecutionId)
 
-	var err error
+	ticker := time.NewTicker(QUERY_POLLING_INTERVAL * time.Second)
+	defer ticker.Stop()
 
 	for {
-
-		// get output
-		q.getOutput, err = q.inputParams.AthenaClient.GetQueryExecution(&q.getInput)
-		if err != nil {
-			return err
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-ticker.C:
+			// get output
+			q.getOutput, err = q.inputParams.AthenaClient.GetQueryExecution(&q.getInput)
+			if err != nil {
+				return nil, err
+			}
+			// log.Debug().Msg(q.getOutput.GoString())
+			log.Debug().Msg(q.getOutput.QueryExecution.Status.String())
+			// log.Println(q.getOutput.QueryExecution.Status)
+			// check if query is running
+			if *q.getOutput.QueryExecution.Status.State != RUNNING {
+				return q.getOutput.QueryExecution, nil
+			}
 		}
-
-		// check if query is running
-		if *q.getOutput.QueryExecution.Status.State != RUNNING {
-			return nil
-		}
-
-		// rest between iterations
-		time.Sleep(QUERY_POLLING_INTERVAL * time.Second)
-
 	}
-
 }
 
 func (q *AthenaQuery) handleFailure() error {
 	if *q.getOutput.QueryExecution.Status.State != SUCCEEDED {
-		return errors.New("Query failure: " + *q.getOutput.QueryExecution.Status.State)
+		return fmt.Errorf("query Failed. State: %s; Reason: %s", *q.getOutput.QueryExecution.Status.State, *q.getOutput.QueryExecution.Status.StateChangeReason)
 	}
 	return nil
 }

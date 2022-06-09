@@ -297,7 +297,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		log.Error().Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	storageWriter := s.bucket.Writer(ctx, fmt.Sprintf("%s.csv", job.ID))
+	storageWriter := s.bucket.Writer(job.Ctx, fmt.Sprintf("%s.csv", job.ID))
 	go s.updateJobStatus(job)
 	err = job.Run(req.QueryText, storageWriter)
 	if err != nil {
