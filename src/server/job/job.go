@@ -3,7 +3,6 @@ package job
 import (
 	"dekart/src/proto"
 	"encoding/csv"
-	"fmt"
 	"io"
 	"regexp"
 	"sync"
@@ -131,41 +130,29 @@ func (job *Job) wait() {
 		return
 	}
 
-	if err := job.athenaQuery.handleSuccess(); err != nil {
-		job.cancelWithError(err)
-		return
-	}
-
-	job.mutex.Lock()
-	{
-		job.processedBytes = *queryStatus.Statistics.DataScannedInBytes
-		job.totalRows = int64(len(job.athenaQuery.results.ResultSet.Rows))
-	}
-	job.mutex.Unlock()
-
 	// TODO: reading result as separate state
-	job.Status <- int32(2)
+	job.Status <- int32(3)
 
 	// csvRows := make(chan []string, job.totalRows)
 	csvRows := make(chan []string)
 	errors := make(chan error)
 
+	isSetupHeader := false
+	var totalRows int64
 	resultFunc := func(page *athena.GetQueryResultsOutput, lastPage bool) bool {
-		defer close(csvRows)
-		defer close(errors)
-
-		// fmt.Println(len(page.ResultSet.Rows), "Rows")
-		// resultMap := make(map[string][]map[string]string)
 		var csvHeader []string
 
 		for _, column := range page.ResultSet.ResultSetMetadata.ColumnInfo {
-			// fmt.Println(c, column)
 			csvHeader = append(csvHeader, *column.Name)
 		}
-		// fmt.Println("Header", len(csvHeader), csvHeader)
-		csvRows <- csvHeader
 
-		job.logger.Debug().Msg(fmt.Sprintf("all result set rows: %d", len(page.ResultSet.Rows)))
+		if !isSetupHeader {
+			csvRows <- csvHeader
+			isSetupHeader = true
+		}
+
+		totalRows += int64(len(page.ResultSet.Rows))
+		job.logger.Debug().Int64("totalRows", totalRows).Send()
 		for n, row := range page.ResultSet.Rows {
 			if n != 0 {
 				// csvBody := make(map[string]string, len(csvHeader))
@@ -179,18 +166,18 @@ func (job *Job) wait() {
 					}
 				}
 
-				job.logger.Debug().Str("csvLine", fmt.Sprintf("%v+", csvLine)).Send()
+				// job.logger.Debug().Str("csvLine", fmt.Sprintf("%v+", csvLine)).Send()
 				csvRows <- csvLine
-				// resultMap["result"] = append(resultMap["result"], csvBody)
 			}
 		}
-
-		// jsonString, _ := json.Marshal(resultMap)
-		// fmt.Println(string(jsonString))
 		return !lastPage
 	}
 
-	go resultFunc(job.athenaQuery.results, true)
+	go func() {
+		defer close(csvRows)
+		defer close(errors)
+		errors <- job.athenaQuery.handleSuccess(job.Ctx, resultFunc)
+	}()
 
 	// write csvRows to storage
 	go job.write(csvRows)
@@ -201,6 +188,14 @@ func (job *Job) wait() {
 		job.cancelWithError(err)
 		return
 	}
+
+	job.mutex.Lock()
+	{
+		job.processedBytes = *queryStatus.Statistics.DataScannedInBytes
+		job.totalRows = totalRows
+	}
+	job.mutex.Unlock()
+
 	job.logger.Debug().Msg("Job Wait Done")
 }
 
@@ -212,7 +207,7 @@ func (job *Job) write(csvRows chan []string) {
 			job.logger.Debug().Msg("no more csv rows")
 			break
 		}
-		job.logger.Debug().Msg("Writing csv row")
+		// job.logger.Debug().Msg("Writing csv row")
 
 		err := csvWriter.Write(csvRow)
 		if err == context.Canceled {

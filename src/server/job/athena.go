@@ -190,13 +190,14 @@ func (q *AthenaQuery) handleFailure() error {
 	return nil
 }
 
-func (q *AthenaQuery) handleSuccess() error {
+func (q *AthenaQuery) handleSuccess(ctx context.Context, fn func(page *athena.GetQueryResultsOutput, lastPage bool) bool) error {
 	var getQueryResultsInput athena.GetQueryResultsInput
 	getQueryResultsInput.SetQueryExecutionId(*q.startOutput.QueryExecutionId)
 	var err error
-	q.results, err = q.inputParams.AthenaClient.GetQueryResults(&getQueryResultsInput)
+	err = q.inputParams.AthenaClient.GetQueryResultsPagesWithContext(ctx, &getQueryResultsInput, fn)
 	if err != nil {
 		return err
 	}
 	return nil
+
 }
