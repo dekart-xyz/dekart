@@ -156,7 +156,7 @@ func main() {
 	applyMigrations(db)
 
 	bucket := configureBucket()
-	jobs := job.NewStore()
+	jobs := job.NewStore(bucket)
 
 	dekartServer := dekart.NewServer(db, bucket, jobs)
 

@@ -20,11 +20,12 @@ type Store struct {
 	outputBucket string
 	region       string
 	awsSession   *session.Session
+	storage      copier
 	mutex        sync.Mutex
 }
 
 // NewStore instance
-func NewStore() *Store {
+func NewStore(storage copier) *Store {
 
 	conf := aws.NewConfig().
 		WithMaxRetries(3).
@@ -37,6 +38,7 @@ func NewStore() *Store {
 		outputBucket: outputBucket,
 		region:       region,
 		awsSession:   awsSession,
+		storage:      storage,
 	}
 	store.jobs = make([]*Job, 0)
 	return store
@@ -86,6 +88,7 @@ func (s *Store) NewJob(reportID string, queryID string) (*Job, error) {
 		outputBucket:   s.outputBucket,
 		region:         s.region,
 		awsSession:     s.awsSession,
+		cp:             s.storage,
 	}
 
 	s.jobs = append(s.jobs, job)

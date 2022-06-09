@@ -27,6 +27,7 @@ type Blobstorage interface {
 	Writer(ctx context.Context, key string) io.WriteCloser
 	Reader(ctx context.Context, key string) (io.Reader, error)
 	GetObjectMetadata(ctx context.Context, key string) (*s3.HeadObjectOutput, error)
+	CopyObject(ctx context.Context, srcKeyFullPath, dstKey string) error
 }
 
 //Unauthenticated error returned when no user claims in context

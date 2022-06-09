@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 	"path/filepath"
 	"strings"
 
@@ -110,4 +111,26 @@ func (bs *Storage) GetObjectMetadata(ctx context.Context, key string) (*s3.HeadO
 	}
 
 	return out, nil
+}
+
+func (bs *Storage) CopyObject(ctx context.Context, srcKeyFullPath, dstKey string) error {
+	_, err := bs.client.CopyObjectWithContext(ctx, &s3.CopyObjectInput{
+		Bucket:     aws.String(bs.bucket),
+		CopySource: aws.String(url.PathEscape(srcKeyFullPath[5:])),
+		Key:        aws.String(dstKey),
+	})
+	if err != nil {
+		return fmt.Errorf("could not copy s3 object: %w", err)
+	}
+
+	err = bs.client.WaitUntilObjectExistsWithContext(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(bs.bucket),
+		Key:    aws.String(dstKey),
+	})
+
+	if err != nil {
+		return fmt.Errorf("could not wait for s3 object: %w", err)
+	}
+
+	return nil
 }

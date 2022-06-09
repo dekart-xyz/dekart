@@ -10,7 +10,6 @@ import (
 	"context"
 
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/athena"
 	"github.com/rs/zerolog"
 )
 
@@ -36,6 +35,12 @@ type Job struct {
 	outputBucket        string
 	region              string
 	awsSession          *session.Session
+
+	cp copier
+}
+
+type copier interface {
+	CopyObject(ctx context.Context, srcKeyFullPath, dstKey string) error
 }
 
 // Err of job
@@ -133,68 +138,83 @@ func (job *Job) wait() {
 	// TODO: reading result as separate state
 	job.Status <- int32(3)
 
-	// csvRows := make(chan []string, job.totalRows)
-	csvRows := make(chan []string)
-	errors := make(chan error)
+	job.logger.Debug().Msgf("copy from: %s", *queryStatus.ResultConfiguration.OutputLocation)
+	job.logger.Debug().Msgf("copying result to S3: %s", "s3://"+job.outputBucket+"/"+job.ID)
 
-	isSetupHeader := false
-	var totalRows int64
-	resultFunc := func(page *athena.GetQueryResultsOutput, lastPage bool) bool {
-		var csvHeader []string
-
-		for _, column := range page.ResultSet.ResultSetMetadata.ColumnInfo {
-			csvHeader = append(csvHeader, *column.Name)
-		}
-
-		if !isSetupHeader {
-			csvRows <- csvHeader
-			isSetupHeader = true
-		}
-
-		totalRows += int64(len(page.ResultSet.Rows))
-		job.logger.Debug().Int64("totalRows", totalRows).Send()
-		for n, row := range page.ResultSet.Rows {
-			if n != 0 {
-				// csvBody := make(map[string]string, len(csvHeader))
-				csvLine := make([]string, len(csvHeader))
-				for c, column := range row.Data {
-					if column.VarCharValue == nil {
-						// csvLine[c] = "<empty>"
-					} else {
-						// csvBody[csvHeader[c]] = *column.VarCharValue
-						csvLine[c] = *column.VarCharValue
-					}
-				}
-
-				// job.logger.Debug().Str("csvLine", fmt.Sprintf("%v+", csvLine)).Send()
-				csvRows <- csvLine
-			}
-		}
-		return !lastPage
-	}
-
-	go func() {
-		defer close(csvRows)
-		defer close(errors)
-		errors <- job.athenaQuery.handleSuccess(job.Ctx, resultFunc)
-	}()
-
-	// write csvRows to storage
-	go job.write(csvRows)
-
-	// wait for errors
-	err = <-errors
+	err = job.cp.CopyObject(job.Ctx, *queryStatus.ResultConfiguration.OutputLocation, job.ID+".csv")
 	if err != nil {
 		job.cancelWithError(err)
 		return
 	}
 
+	// csvRows := make(chan []string, job.totalRows)
+	// csvRows := make(chan []string)
+	// errors := make(chan error)
+
+	// isSetupHeader := false
+	// var totalRows int64
+	// resultFunc := func(page *athena.GetQueryResultsOutput, lastPage bool) bool {
+	// 	var csvHeader []string
+
+	// 	for _, column := range page.ResultSet.ResultSetMetadata.ColumnInfo {
+	// 		csvHeader = append(csvHeader, *column.Name)
+	// 	}
+
+	// 	if !isSetupHeader {
+	// 		csvRows <- csvHeader
+	// 		isSetupHeader = true
+	// 	}
+
+	// 	totalRows += int64(len(page.ResultSet.Rows))
+	// 	job.logger.Debug().Int64("totalRows", totalRows).Send()
+	// 	for n, row := range page.ResultSet.Rows {
+	// 		if n != 0 {
+	// 			// csvBody := make(map[string]string, len(csvHeader))
+	// 			csvLine := make([]string, len(csvHeader))
+	// 			for c, column := range row.Data {
+	// 				if column.VarCharValue == nil {
+	// 					// csvLine[c] = "<empty>"
+	// 				} else {
+	// 					// csvBody[csvHeader[c]] = *column.VarCharValue
+	// 					csvLine[c] = *column.VarCharValue
+	// 				}
+	// 			}
+
+	// 			// job.logger.Debug().Str("csvLine", fmt.Sprintf("%v+", csvLine)).Send()
+	// 			csvRows <- csvLine
+	// 		}
+	// 	}
+	// 	return !lastPage
+	// }
+
+	// go func() {
+	// 	defer close(csvRows)
+	// 	defer close(errors)
+	// 	errors <- job.athenaQuery.handleSuccess(job.Ctx, resultFunc)
+	// }()
+
+	// // write csvRows to storage
+	// go job.write(csvRows)
+
+	// wait for errors
+	// err = <-errors
+	// if err != nil {
+	// 	job.cancelWithError(err)
+	// 	return
+	// }
+
+	job.logger.Debug().Msg("Writing Done")
+
 	job.mutex.Lock()
 	{
+		job.resultID = &job.ID
 		job.processedBytes = *queryStatus.Statistics.DataScannedInBytes
-		job.totalRows = totalRows
+		// job.totalRows = totalRows
 	}
 	job.mutex.Unlock()
+
+	job.Status <- int32(proto.Query_JOB_STATUS_DONE)
+	job.cancel()
 
 	job.logger.Debug().Msg("Job Wait Done")
 }

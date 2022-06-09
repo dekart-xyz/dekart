@@ -113,6 +113,7 @@ func (q *AthenaQuery) createQuery() {
 	// set result configuration
 	var resultConfig athena.ResultConfiguration
 	resultConfig.SetOutputLocation(PROTOCOL + *q.inputParams.OutputBucket)
+	log.Debug().Msgf("Ouput Location: %s", PROTOCOL+*q.inputParams.OutputBucket)
 	q.startInput.SetResultConfiguration(&resultConfig)
 
 }
@@ -193,11 +194,7 @@ func (q *AthenaQuery) handleFailure() error {
 func (q *AthenaQuery) handleSuccess(ctx context.Context, fn func(page *athena.GetQueryResultsOutput, lastPage bool) bool) error {
 	var getQueryResultsInput athena.GetQueryResultsInput
 	getQueryResultsInput.SetQueryExecutionId(*q.startOutput.QueryExecutionId)
-	var err error
-	err = q.inputParams.AthenaClient.GetQueryResultsPagesWithContext(ctx, &getQueryResultsInput, fn)
-	if err != nil {
-		return err
-	}
-	return nil
+	log.Debug().Msgf("Athena query id: %s", *q.startOutput.QueryExecutionId)
 
+	return q.inputParams.AthenaClient.GetQueryResultsPagesWithContext(ctx, &getQueryResultsInput, fn)
 }
