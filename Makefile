@@ -27,8 +27,11 @@ proto: proto-docker # build proto stubs
 		dekart-proto \
 		make proto-build
 
-build-docker-dev: # build docker for local use
+build-docker-dev:
 	docker buildx build --push --tag ${DEKART_DOCKER_DEV_TAG} -o type=image --platform=linux/amd64 -f ./Dockerfile .
+
+build-docker-local:
+	docker build -t dekart-local -f ./Dockerfile .
 
 docker-compose-up:
 	docker-compose  --env-file .env up
@@ -56,6 +59,27 @@ release:
 	git push origin HEAD --tags
 test:
 	go test -v -count=1 ./src/server/**/
+
+run-docker-local:
+	docker run -it --rm \
+		-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
+		-e GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} \
+		-e AWS_REGION=${AWS_REGION} \
+		-e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
+		-e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
+		-e DEKART_ATHENA_CATALOG=${DEKART_ATHENA_CATALOG} \
+		-e DEKART_POSTGRES_DB=${DEKART_POSTGRES_DB} \
+		-e DEKART_POSTGRES_USER=${DEKART_POSTGRES_USER} \
+		-e DEKART_POSTGRES_PASSWORD=${DEKART_POSTGRES_PASSWORD} \
+		-e DEKART_POSTGRES_PORT=${DEKART_POSTGRES_PORT} \
+		-e DEKART_POSTGRES_HOST=host.docker.internal \
+		-e DEKART_CLOUD_STORAGE_BUCKET=${DEKART_CLOUD_STORAGE_BUCKET} \
+		-e DEKART_ATHENA_S3_RESULT=${DEKART_CLOUD_STORAGE_BUCKET} \
+		-e DEKART_BIGQUERY_PROJECT_ID=${DEKART_BIGQUERY_PROJECT_ID} \
+		-e DEKART_BIGQUERY_MAX_BYTES_BILLED=53687091200 \
+		-e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
+		-p 8080:8080 \
+		dekart-local
 
 run-docker-dev:
 	docker run -it --rm \

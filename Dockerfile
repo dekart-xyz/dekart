@@ -3,7 +3,7 @@ WORKDIR /source
 ADD package.json .
 ADD package-lock.json .
 ADD .npmrc .
-RUN npm i
+RUN npm i --legacy-peer-deps
 ADD public public
 ADD src src
 RUN npm run build
