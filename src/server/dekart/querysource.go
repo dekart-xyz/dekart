@@ -18,24 +18,23 @@ func (s Server) ServeQuerySource(w http.ResponseWriter, r *http.Request) {
 	if claims == nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 	}
-
-	obj := s.bucket.Object(fmt.Sprintf("%s.sql", vars["id"]))
-	attrs, err := obj.Attrs(ctx)
+	obj := s.storage.GetObject(fmt.Sprintf("%s.sql", vars["id"]))
+	ctreated, err := obj.GetCreatedAt(ctx)
 	if err != nil {
 		log.Err(err).Send()
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	objectReader, err := obj.NewReader(ctx)
+	objectReader, err := obj.GetReader(ctx)
 	if err != nil {
 		log.Err(err).Send()
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	defer objectReader.Close()
-	w.Header().Set("Content-Type", attrs.ContentType)
+	w.Header().Set("Content-Type", "text/plain")
 	w.Header().Set("Cache-Control", "public, max-age=31536000")
-	w.Header().Set("Last-Modified", attrs.Created.Format(time.UnixDate))
+	w.Header().Set("Last-Modified", ctreated.Format(time.UnixDate))
 	if _, err := io.Copy(w, objectReader); err != nil {
 		log.Err(err).Send()
 		http.Error(w, err.Error(), http.StatusInternalServerError)

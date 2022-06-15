@@ -1,17 +1,16 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"dekart/src/server/dekart"
 	"dekart/src/server/http"
 	"dekart/src/server/job"
+	"dekart/src/server/storage"
 	"fmt"
 	"math/rand"
 	"os"
 	"time"
 
-	"cloud.google.com/go/storage"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -77,15 +76,6 @@ func applyMigrations(db *sql.DB) {
 	}
 }
 
-func configureBucket() *storage.BucketHandle {
-	ctx := context.Background()
-	client, err := storage.NewClient(ctx)
-	if err != nil {
-		log.Fatal().Err(err).Send()
-	}
-	return client.Bucket(os.Getenv("DEKART_CLOUD_STORAGE_BUCKET"))
-}
-
 func main() {
 	configureLogger()
 
@@ -94,7 +84,7 @@ func main() {
 
 	applyMigrations(db)
 
-	bucket := configureBucket()
+	bucket := storage.NewGoogleCloudStorage()
 	jobs := job.NewStore()
 
 	dekartServer := dekart.NewServer(db, bucket, jobs)

@@ -106,8 +106,7 @@ func (s Server) storeQuerySync(ctx context.Context, queryID string, queryText st
 	queryTextByte := []byte(queryText)
 	h.Write(queryTextByte)
 	newQuerySourceId := fmt.Sprintf("%x", h.Sum(nil))
-	obj := s.bucket.Object(fmt.Sprintf("%s.sql", newQuerySourceId))
-	storageWriter := obj.NewWriter(ctx)
+	storageWriter := s.storage.GetObject(newQuerySourceId).GetWriter(ctx)
 	_, err := storageWriter.Write(queryTextByte)
 	if err != nil {
 		log.Err(err).Msg("Error writing query_text to storage")
@@ -296,7 +295,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		log.Error().Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	obj := s.bucket.Object(fmt.Sprintf("%s.csv", job.ID))
+	obj := s.storage.GetObject(fmt.Sprintf("%s.csv", job.ID))
 	go s.updateJobStatus(job)
 	err = job.Run(req.QueryText, obj)
 	if err != nil {
@@ -325,7 +324,7 @@ func (s Server) RemoveQuery(ctx context.Context, req *proto.RemoveQueryRequest) 
 	}
 
 	if reportID == nil {
-		err := fmt.Errorf("Query not found id:%s", req.QueryId)
+		err := fmt.Errorf("query not found id:%s", req.QueryId)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
 	}

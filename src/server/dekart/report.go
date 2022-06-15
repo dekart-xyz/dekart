@@ -187,7 +187,6 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	//start here, save queries
 	if req.Report == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "req.Report == nil")
 	}
