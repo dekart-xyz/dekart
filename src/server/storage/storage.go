@@ -7,8 +7,13 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/sync/errgroup"
 )
 
 type StorageObject interface {
@@ -85,4 +90,126 @@ func (o GoogleCloudStorageObject) GetSize(ctx context.Context) (*int64, error) {
 		return nil, err
 	}
 	return &attrs.Size, nil
+}
+
+type S3Storage struct {
+	bucketName string
+	client     *s3.S3
+	uploader   *s3manager.Uploader
+	logger     zerolog.Logger
+}
+
+type S3StorageObject struct {
+	S3Storage
+	name   string
+	logger zerolog.Logger
+}
+
+func NewS3Storage() Storage {
+	bucketName := os.Getenv("DEKART_CLOUD_STORAGE_BUCKET")
+	conf := aws.NewConfig().
+		WithMaxRetries(3).
+		WithS3ForcePathStyle(true)
+	ses := session.Must(session.NewSession(conf))
+	s3client := s3.New(ses)
+	return S3Storage{
+		client:     s3client,
+		bucketName: bucketName,
+		uploader:   s3manager.NewUploaderWithClient(s3client),
+		logger:     log.With().Str("DEKART_CLOUD_STORAGE_BUCKET", bucketName).Logger(),
+	}
+}
+
+func (s S3Storage) GetObject(name string) StorageObject {
+	return S3StorageObject{
+		s,
+		name,
+		s.logger.With().Str("name", name).Logger(),
+	}
+}
+
+func (o S3StorageObject) GetWriter(ctx context.Context) io.WriteCloser {
+	r, w := io.Pipe()
+	errorGroup := &errgroup.Group{}
+	errorGroup.Go(func() error {
+		_, err := o.uploader.UploadWithContext(ctx,
+			&s3manager.UploadInput{
+				Bucket: aws.String(o.bucketName),
+				Key:    aws.String(o.name),
+				Body:   r,
+			})
+		if err != nil {
+			o.logger.Error().Err(err).Msg("error while uploading object")
+			return err
+		}
+		o.logger.Debug().Msg("object is successfully uploaded")
+		return nil
+	})
+
+	return S3Writer{
+		errorGroup,
+		w,
+		o.logger,
+	}
+}
+
+func (o S3StorageObject) GetReader(ctx context.Context) (io.ReadCloser, error) {
+	output, err := o.client.GetObjectWithContext(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(o.bucketName),
+		Key:    aws.String(o.name),
+	})
+	if err != nil {
+		o.logger.Error().Err(err).Msg("error while getting object")
+		return nil, err
+	}
+	return output.Body, nil
+}
+
+func (o S3StorageObject) GetSize(ctx context.Context) (*int64, error) {
+	out, err := o.client.HeadObjectWithContext(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(o.bucketName),
+		Key:    aws.String(o.name),
+	})
+	if err != nil {
+		o.logger.Err(err).Msg("error while getting object header")
+		return nil, err
+	}
+	return out.ContentLength, nil
+}
+func (o S3StorageObject) GetCreatedAt(ctx context.Context) (*time.Time, error) {
+	out, err := o.client.HeadObjectWithContext(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(o.bucketName),
+		Key:    aws.String(o.name),
+	})
+	if err != nil {
+		o.logger.Err(err).Msg("error while getting object header")
+		return nil, err
+	}
+	return out.LastModified, nil
+}
+
+type S3Writer struct {
+	errorGroup *errgroup.Group
+	w          io.WriteCloser
+	logger     zerolog.Logger
+}
+
+func (w S3Writer) Write(p []byte) (n int, err error) {
+	return w.w.Write(p)
+}
+
+func (w S3Writer) Close() error {
+	// keep sequence closing right writer->pipe.writer->reader->pipe.reader
+	if err := w.w.Close(); err != nil {
+		w.logger.Err(err).Msg("error closing writer")
+		return err
+	}
+
+	// wait for upload
+	if err := w.errorGroup.Wait(); err != nil {
+		w.logger.Err(err).Msg("error uploading")
+		return err
+	}
+
+	return nil
 }

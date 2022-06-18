@@ -84,7 +84,18 @@ func main() {
 
 	applyMigrations(db)
 
-	bucket := storage.NewGoogleCloudStorage()
+	var bucket storage.Storage
+	switch os.Getenv("DEKART_STORAGE") {
+	case "S3":
+		log.Info().Msg("Using S3 storage backend")
+		bucket = storage.NewS3Storage()
+	case "GCS", "":
+		log.Info().Msg("Using GCS storage backend")
+		bucket = storage.NewGoogleCloudStorage()
+	default:
+		log.Fatal().Str("DEKART_STORAGE", os.Getenv("DEKART_STORAGE")).Msg("Unknown storage backend")
+	}
+
 	jobs := job.NewStore()
 
 	dekartServer := dekart.NewServer(db, bucket, jobs)

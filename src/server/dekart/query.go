@@ -106,7 +106,7 @@ func (s Server) storeQuerySync(ctx context.Context, queryID string, queryText st
 	queryTextByte := []byte(queryText)
 	h.Write(queryTextByte)
 	newQuerySourceId := fmt.Sprintf("%x", h.Sum(nil))
-	storageWriter := s.storage.GetObject(newQuerySourceId).GetWriter(ctx)
+	storageWriter := s.storage.GetObject(fmt.Sprintf("%s.sql", newQuerySourceId)).GetWriter(ctx)
 	_, err := storageWriter.Write(queryTextByte)
 	if err != nil {
 		log.Err(err).Msg("Error writing query_text to storage")
