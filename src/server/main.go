@@ -2,9 +2,9 @@ package main
 
 import (
 	"database/sql"
+	"dekart/src/server/bqjob"
 	"dekart/src/server/dekart"
 	"dekart/src/server/http"
-	"dekart/src/server/job"
 	"dekart/src/server/storage"
 	"fmt"
 	"math/rand"
@@ -96,9 +96,9 @@ func main() {
 		log.Fatal().Str("DEKART_STORAGE", os.Getenv("DEKART_STORAGE")).Msg("Unknown storage backend")
 	}
 
-	jobs := job.NewStore()
+	jobStore := bqjob.NewStore()
 
-	dekartServer := dekart.NewServer(db, bucket, jobs)
+	dekartServer := dekart.NewServer(db, bucket, jobStore)
 
 	httpServer := http.Configure(dekartServer)
 	log.Fatal().Err(httpServer.ListenAndServe()).Send()

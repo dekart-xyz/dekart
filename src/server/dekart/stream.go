@@ -23,7 +23,7 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 		return status.Errorf(codes.Internal, err.Error())
 	}
 	if report == nil {
-		err := fmt.Errorf("Report %s not found", reportID)
+		err := fmt.Errorf("report %s not found", reportID)
 		log.Warn().Err(err).Send()
 		return status.Errorf(codes.NotFound, err.Error())
 	}
@@ -123,6 +123,10 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			&report.Title,
 			&report.Archived,
 		)
+		if err != nil {
+			log.Err(err).Send()
+			return status.Errorf(codes.Internal, err.Error())
+		}
 		res.Reports = append(res.Reports, &report)
 	}
 	err = srv.Send(&res)
@@ -140,7 +144,7 @@ func (s Server) GetReportListStream(req *proto.ReportListRequest, srv proto.Deka
 		return Unauthenticated
 	}
 	if req.StreamOptions == nil {
-		err := fmt.Errorf("Missing StreamOptions")
+		err := fmt.Errorf("missing StreamOptions")
 		return status.Error(codes.InvalidArgument, err.Error())
 	}
 
