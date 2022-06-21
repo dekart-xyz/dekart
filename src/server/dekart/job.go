@@ -5,7 +5,7 @@ import (
 	"dekart/src/server/storage"
 )
 
-// Store is the interface for the job storage; it allows the cancelation of a job
+// Store is the interface for the job storage; it allows the cancellation of a job
 type JobStore interface {
 	Create(reportID string, queryID string, queryText string) (Job, chan int32, error)
 	Cancel(queryID string)

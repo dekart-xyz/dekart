@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"dekart/src/server/athenajob"
 	"dekart/src/server/bqjob"
 	"dekart/src/server/dekart"
 	"dekart/src/server/http"
@@ -96,7 +97,18 @@ func main() {
 		log.Fatal().Str("DEKART_STORAGE", os.Getenv("DEKART_STORAGE")).Msg("Unknown storage backend")
 	}
 
-	jobStore := bqjob.NewStore()
+	var jobStore dekart.JobStore
+	switch os.Getenv("DEKART_DATASOURCE") {
+	case "ATHENA":
+		log.Info().Msg("Using Athena Datasource backend")
+		jobStore = athenajob.NewStore(bucket)
+	case "BQ", "":
+		log.Info().Msg("Using BigQuery Datasource backend")
+		jobStore = bqjob.NewStore()
+	default:
+		log.Fatal().Str("DEKART_STORAGE", os.Getenv("DEKART_STORAGE")).Msg("Unknown storage backend")
+
+	}
 
 	dekartServer := dekart.NewServer(db, bucket, jobStore)
 
