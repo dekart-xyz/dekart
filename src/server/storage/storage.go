@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"io"
+	"net/url"
 	"os"
 	"time"
 
@@ -21,6 +22,7 @@ type StorageObject interface {
 	GetWriter(context.Context) io.WriteCloser
 	GetCreatedAt(context.Context) (*time.Time, error)
 	GetSize(context.Context) (*int64, error)
+	CopyFromS3(ctx context.Context, source string) error
 }
 
 type Storage interface {
@@ -62,6 +64,11 @@ func (s GoogleCloudStorage) GetObject(object string) StorageObject {
 type GoogleCloudStorageObject struct {
 	obj    *storage.ObjectHandle
 	logger zerolog.Logger
+}
+
+func (o GoogleCloudStorageObject) CopyFromS3(ctx context.Context, source string) error {
+	log.Fatal().Msg("method not implemented")
+	return nil
 }
 
 func (o GoogleCloudStorageObject) GetWriter(ctx context.Context) io.WriteCloser {
@@ -186,6 +193,25 @@ func (o S3StorageObject) GetCreatedAt(ctx context.Context) (*time.Time, error) {
 		return nil, err
 	}
 	return out.LastModified, nil
+}
+
+func (o S3StorageObject) CopyFromS3(ctx context.Context, source string) error {
+	u, err := url.Parse(source)
+	if err != nil {
+		o.logger.Error().Str("source", source).Err(err).Msg("Error parsing source URL")
+		return err
+	}
+	copySource := u.Hostname() + u.Path
+
+	_, err = o.client.CopyObjectWithContext(ctx, &s3.CopyObjectInput{
+		Bucket:     aws.String(o.bucketName),
+		CopySource: aws.String(copySource),
+		Key:        aws.String(o.name),
+	})
+	if err != nil {
+		o.logger.Error().Str("source", source).Str("copySource", copySource).Err(err).Msg("Error copying from S3")
+	}
+	return err
 }
 
 type S3Writer struct {

@@ -118,6 +118,7 @@ type Job struct {
 	queryExecutionId string
 	client           *athena.Athena
 	outputLocation   string
+	storageObject    storage.StorageObject
 }
 
 func (j *Job) GetID() string {
@@ -215,15 +216,31 @@ func (j *Job) pullQueryExecutionStatus() (*athena.QueryExecution, error) {
 
 }
 func (j *Job) wait() {
-	_, err := j.pullQueryExecutionStatus()
+	queryExecution, err := j.pullQueryExecutionStatus()
 	if err != nil {
 		j.cancelWithError(err)
 		return
 	}
+	j.logger.Debug().Msg("job done")
+	//TODO: finally add reading results status
 	j.status <- int32(proto.Query_JOB_STATUS_DONE)
+	err = j.storageObject.CopyFromS3(j.ctx, *queryExecution.ResultConfiguration.OutputLocation)
+	if err != nil {
+		j.cancelWithError(err)
+		return
+	}
+	j.mutex.Lock()
+	j.resultID = &j.id
+	j.mutex.Unlock()
+	j.status <- int32(proto.Query_JOB_STATUS_DONE)
+	j.cancel()
 }
 
 func (j *Job) Run(storageObject storage.StorageObject) error {
+	j.mutex.Lock()
+	j.storageObject = storageObject
+	j.mutex.Unlock()
+
 	j.status <- int32(proto.Query_JOB_STATUS_PENDING)
 	out, err := j.client.StartQueryExecutionWithContext(j.ctx, &athena.StartQueryExecutionInput{
 		QueryString: &j.queryText,
