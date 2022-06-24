@@ -222,6 +222,11 @@ func (j *Job) wait() {
 		return
 	}
 	j.logger.Debug().Msg("job done")
+	{
+		j.mutex.Lock()
+		j.processedBytes = *queryExecution.Statistics.DataScannedInBytes
+		j.mutex.Unlock()
+	}
 	//TODO: finally add reading results status
 	j.status <- int32(proto.Query_JOB_STATUS_DONE)
 	err = j.storageObject.CopyFromS3(j.ctx, *queryExecution.ResultConfiguration.OutputLocation)
@@ -229,9 +234,17 @@ func (j *Job) wait() {
 		j.cancelWithError(err)
 		return
 	}
-	j.mutex.Lock()
-	j.resultID = &j.id
-	j.mutex.Unlock()
+	size, err := j.storageObject.GetSize(j.ctx)
+	if err != nil {
+		j.cancelWithError(err)
+		return
+	}
+	{
+		j.mutex.Lock()
+		j.resultSize = *size
+		j.resultID = &j.id
+		j.mutex.Unlock()
+	}
 	j.status <- int32(proto.Query_JOB_STATUS_DONE)
 	j.cancel()
 }
