@@ -295,7 +295,9 @@ export namespace Query {
     JOB_STATUS_UNSPECIFIED: 0;
     JOB_STATUS_PENDING: 1;
     JOB_STATUS_RUNNING: 2;
-    JOB_STATUS_DONE: 3;
+    JOB_STATUS_DONE_LEGACY: 3;
+    JOB_STATUS_READING_RESULTS: 4;
+    JOB_STATUS_DONE: 5;
   }
 
   export const JobStatus: JobStatusMap;

@@ -7,6 +7,8 @@ ifneq (,$(wildcard ./.env))
     export
 endif
 
+UNAME := $(shell uname -m)
+
 proto-clean:
 	rm -rf ./src/proto/*.go
 	rm -rf ./src/proto/*.js
@@ -19,7 +21,11 @@ proto-build: proto-clean  #to run inside docker
 	protoc --go-grpc_out=./src $$(find proto -type f -name "*.proto")
 
 proto-docker: # build docker container for building protos
+ifeq ($(UNAME),arm64)
+	docker build -t dekart-proto -f ./proto/Dockerfile --build-arg PLATFORM=aarch_64 .
+else
 	docker build -t dekart-proto -f ./proto/Dockerfile .
+endif
 
 proto: proto-docker # build proto stubs
 	docker run -it --rm \

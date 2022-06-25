@@ -123,7 +123,6 @@ func (job *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 	job.logger.Debug().Msg("Writing Done")
 	job.mutex.Lock()
 	job.resultSize = *resultSize
-	// TODO: use bool done or better new status values
 	job.resultID = &job.id
 	job.mutex.Unlock()
 	job.status <- int32(proto.Query_JOB_STATUS_DONE)
@@ -170,7 +169,7 @@ func (job *Job) cancelWithError(err error) {
 	job.mutex.Lock()
 	job.err = err.Error()
 	job.mutex.Unlock()
-	job.status <- 0
+	job.status <- int32(proto.Query_JOB_STATUS_UNSPECIFIED)
 	job.cancel()
 }
 
@@ -237,8 +236,7 @@ func (job *Job) wait() {
 		return
 	}
 
-	// TODO: reading result as separate state
-	job.status <- int32(queryStatus.State)
+	job.status <- int32(proto.Query_JOB_STATUS_READING_RESULTS)
 
 	csvRows := make(chan []string, job.totalRows)
 	errors := make(chan error)

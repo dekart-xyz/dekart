@@ -135,7 +135,7 @@ function QueryStatus ({ children, query }) {
       style = styles.info
       action = <StatusActions query={query} />
       break
-    case QueryType.JobStatus.JOB_STATUS_DONE:
+    case QueryType.JobStatus.JOB_STATUS_DONE_LEGACY:
       if (!query.jobResultId) {
         message = 'Reading Result'
         style = styles.info
@@ -143,6 +143,18 @@ function QueryStatus ({ children, query }) {
         action = <StatusActions query={query} />
         break
       }
+      icon = <CheckCircleTwoTone className={styles.icon} twoToneColor='#52c41a' />
+      message = <span>Ready <Processed query={query} /></span>
+      style = styles.success
+      action = <ShowDataTable query={query} />
+      break
+    case QueryType.JobStatus.JOB_STATUS_READING_RESULTS:
+      message = 'Reading Result'
+      style = styles.info
+      icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
+      action = <StatusActions query={query} />
+      break
+    case QueryType.JobStatus.JOB_STATUS_DONE:
       icon = <CheckCircleTwoTone className={styles.icon} twoToneColor='#52c41a' />
       message = <span>Ready <Processed query={query} /></span>
       style = styles.success

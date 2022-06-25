@@ -173,7 +173,7 @@ func (job *Job) cancelWithError(err error) {
 		job.err = err.Error()
 		job.mutex.Unlock()
 	}
-	job.status <- 0
+	job.status <- int32(proto.Query_JOB_STATUS_UNSPECIFIED)
 	job.cancel()
 }
 
@@ -227,8 +227,7 @@ func (j *Job) wait() {
 		j.processedBytes = *queryExecution.Statistics.DataScannedInBytes
 		j.mutex.Unlock()
 	}
-	//TODO: finally add reading results status
-	j.status <- int32(proto.Query_JOB_STATUS_DONE)
+	j.status <- int32(proto.Query_JOB_STATUS_READING_RESULTS)
 	err = j.storageObject.CopyFromS3(j.ctx, *queryExecution.ResultConfiguration.OutputLocation)
 	if err != nil {
 		j.cancelWithError(err)
