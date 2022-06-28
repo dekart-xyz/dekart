@@ -1,4 +1,4 @@
-package job
+package bqjob
 
 import (
 	"encoding/json"

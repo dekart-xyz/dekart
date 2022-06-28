@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "proto";
+option go_package = "./proto";
 
 service Dekart {
     rpc CreateReport(CreateReportRequest) returns (CreateReportResponse) {}
@@ -73,7 +73,9 @@ message Query {
         JOB_STATUS_UNSPECIFIED = 0;
         JOB_STATUS_PENDING = 1;
         JOB_STATUS_RUNNING = 2;
-        JOB_STATUS_DONE = 3;
+        JOB_STATUS_DONE_LEGACY = 3;  // legacy for backwards compatibility
+        JOB_STATUS_READING_RESULTS = 4; // job is done proccessing results
+        JOB_STATUS_DONE = 5; 
     }
 
     JobStatus job_status = 4;

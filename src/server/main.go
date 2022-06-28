@@ -1,17 +1,17 @@
 package main
 
 import (
-	"context"
 	"database/sql"
+	"dekart/src/server/athenajob"
+	"dekart/src/server/bqjob"
 	"dekart/src/server/dekart"
 	"dekart/src/server/http"
-	"dekart/src/server/job"
+	"dekart/src/server/storage"
 	"fmt"
 	"math/rand"
 	"os"
 	"time"
 
-	"cloud.google.com/go/storage"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -77,15 +77,6 @@ func applyMigrations(db *sql.DB) {
 	}
 }
 
-func configureBucket() *storage.BucketHandle {
-	ctx := context.Background()
-	client, err := storage.NewClient(ctx)
-	if err != nil {
-		log.Fatal().Err(err).Send()
-	}
-	return client.Bucket(os.Getenv("DEKART_CLOUD_STORAGE_BUCKET"))
-}
-
 func main() {
 	configureLogger()
 
@@ -94,10 +85,32 @@ func main() {
 
 	applyMigrations(db)
 
-	bucket := configureBucket()
-	jobs := job.NewStore()
+	var bucket storage.Storage
+	switch os.Getenv("DEKART_STORAGE") {
+	case "S3":
+		log.Info().Msg("Using S3 storage backend")
+		bucket = storage.NewS3Storage()
+	case "GCS", "":
+		log.Info().Msg("Using GCS storage backend")
+		bucket = storage.NewGoogleCloudStorage()
+	default:
+		log.Fatal().Str("DEKART_STORAGE", os.Getenv("DEKART_STORAGE")).Msg("Unknown storage backend")
+	}
 
-	dekartServer := dekart.NewServer(db, bucket, jobs)
+	var jobStore dekart.JobStore
+	switch os.Getenv("DEKART_DATASOURCE") {
+	case "ATHENA":
+		log.Info().Msg("Using Athena Datasource backend")
+		jobStore = athenajob.NewStore(bucket)
+	case "BQ", "":
+		log.Info().Msg("Using BigQuery Datasource backend")
+		jobStore = bqjob.NewStore()
+	default:
+		log.Fatal().Str("DEKART_STORAGE", os.Getenv("DEKART_STORAGE")).Msg("Unknown storage backend")
+
+	}
+
+	dekartServer := dekart.NewServer(db, bucket, jobStore)
 
 	httpServer := http.Configure(dekartServer)
 	log.Fatal().Err(httpServer.ListenAndServe()).Send()

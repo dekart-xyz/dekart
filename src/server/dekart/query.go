@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha1"
 	"dekart/src/proto"
-	"dekart/src/server/job"
 	"dekart/src/server/user"
 	"fmt"
 	"time"
@@ -106,8 +105,7 @@ func (s Server) storeQuerySync(ctx context.Context, queryID string, queryText st
 	queryTextByte := []byte(queryText)
 	h.Write(queryTextByte)
 	newQuerySourceId := fmt.Sprintf("%x", h.Sum(nil))
-	obj := s.bucket.Object(fmt.Sprintf("%s.sql", newQuerySourceId))
-	storageWriter := obj.NewWriter(ctx)
+	storageWriter := s.storage.GetObject(fmt.Sprintf("%s.sql", newQuerySourceId)).GetWriter(ctx)
 	_, err := storageWriter.Write(queryTextByte)
 	if err != nil {
 		log.Err(err).Msg("Error writing query_text to storage")
@@ -186,10 +184,10 @@ func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) 
 	return res, nil
 }
 
-func (s Server) updateJobStatus(job *job.Job) {
+func (s Server) updateJobStatus(job Job, jobStatus chan int32) {
 	for {
 		select {
-		case status := <-job.Status:
+		case status := <-jobStatus:
 			log.Debug().Int32("status", status).Msg("job status")
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			var err error
@@ -206,7 +204,7 @@ func (s Server) updateJobStatus(job *job.Job) {
 						result_size = 0
 					where id  = $2`,
 					status,
-					job.QueryID,
+					job.GetQueryID(),
 					job.Err(),
 					job.GetResultID(),
 				)
@@ -223,7 +221,7 @@ func (s Server) updateJobStatus(job *job.Job) {
 						result_size = $7
 					where id  = $2`,
 					status,
-					job.QueryID,
+					job.GetQueryID(),
 					job.Err(),
 					job.GetResultID(),
 					job.GetTotalRows(),
@@ -235,8 +233,8 @@ func (s Server) updateJobStatus(job *job.Job) {
 			if err != nil {
 				log.Fatal().Err(err).Send()
 			}
-			s.reportStreams.Ping(job.ReportID)
-		case <-job.Ctx.Done():
+			s.reportStreams.Ping(job.GetReportID())
+		case <-job.GetCtx().Done():
 			return
 		}
 	}
@@ -291,14 +289,14 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, status.Error(code, err.Error())
 	}
 
-	job, err := s.jobs.NewJob(reportID, req.QueryId)
+	job, jobStatus, err := s.jobs.Create(reportID, req.QueryId, req.QueryText)
 	if err != nil {
 		log.Error().Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	obj := s.bucket.Object(fmt.Sprintf("%s.csv", job.ID))
-	go s.updateJobStatus(job)
-	err = job.Run(req.QueryText, obj)
+	obj := s.storage.GetObject(fmt.Sprintf("%s.csv", job.GetID()))
+	go s.updateJobStatus(job, jobStatus)
+	err = job.Run(obj)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
@@ -325,7 +323,7 @@ func (s Server) RemoveQuery(ctx context.Context, req *proto.RemoveQueryRequest) 
 	}
 
 	if reportID == nil {
-		err := fmt.Errorf("Query not found id:%s", req.QueryId)
+		err := fmt.Errorf("query not found id:%s", req.QueryId)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
 	}

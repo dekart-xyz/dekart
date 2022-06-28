@@ -157,7 +157,7 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 		return nil, err
 	}
 	if report == nil {
-		err := fmt.Errorf("Report %s not found", reportID)
+		err := fmt.Errorf("report %s not found", reportID)
 		log.Warn().Err(err).Send()
 		return nil, status.Errorf(codes.NotFound, err.Error())
 	}
@@ -187,7 +187,6 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	//start here, save queries
 	if req.Report == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "req.Report == nil")
 	}
@@ -258,7 +257,7 @@ func (s Server) ArchiveReport(ctx context.Context, req *proto.ArchiveReportReque
 	}
 
 	if affectedRows == 0 {
-		err := fmt.Errorf("Report not found id:%s", req.ReportId)
+		err := fmt.Errorf("report not found id:%s", req.ReportId)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
 	}

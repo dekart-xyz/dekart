@@ -5,6 +5,7 @@ go 1.17
 require (
 	cloud.google.com/go/bigquery v1.8.0
 	cloud.google.com/go/storage v1.10.0
+	github.com/aws/aws-sdk-go v1.17.7
 	github.com/golang-migrate/migrate/v4 v4.14.1
 	github.com/golang/protobuf v1.4.3
 	github.com/google/uuid v1.1.2
@@ -14,13 +15,17 @@ require (
 	github.com/lib/pq v1.9.0
 	github.com/linkedin/goavro/v2 v2.10.1
 	github.com/rs/zerolog v1.20.0
+	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 	google.golang.org/api v0.30.0
 	google.golang.org/genproto v0.0.0-20201030142918-24207fddd1c3
 	google.golang.org/grpc v1.33.1
 	google.golang.org/protobuf v1.25.0
 )
 
-require github.com/pkg/errors v0.9.1 // indirect
+require (
+	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
+	github.com/pkg/errors v0.9.1 // indirect
+)
 
 require (
 	cloud.google.com/go v0.64.0 // indirect

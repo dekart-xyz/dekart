@@ -4,11 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
-	"dekart/src/server/job"
 	"dekart/src/server/report"
+	"dekart/src/server/storage"
 	"os"
 
-	"cloud.google.com/go/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -17,20 +16,21 @@ import (
 type Server struct {
 	db            *sql.DB
 	reportStreams *report.Streams
-	bucket        *storage.BucketHandle
+	storage       storage.Storage
 	proto.UnimplementedDekartServer
-	jobs *job.Store
+	jobs JobStore
 }
 
 //Unauthenticated error returned when no user claims in context
 var Unauthenticated error = status.Error(codes.Unauthenticated, "UNAUTHENTICATED")
 
 // NewServer returns new Dekart Server
-func NewServer(db *sql.DB, bucket *storage.BucketHandle, jobs *job.Store) *Server {
+// func NewServer(db *sql.DB, bucket *storage.BucketHandle, jobs *job.Store) *Server {
+func NewServer(db *sql.DB, storageBucket storage.Storage, jobs JobStore) *Server {
 	server := Server{
 		db:            db,
 		reportStreams: report.NewStreams(),
-		bucket:        bucket,
+		storage:       storageBucket,
 		jobs:          jobs,
 	}
 	return &server
