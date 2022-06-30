@@ -1,27 +1,30 @@
 # Dekart Docker image
 
-Dekart is an open-source data visualization and analytical tool for large scale geo-spacial data. Dekart is based on Kepler.gl visualization and supports BigQuery as a data source.
+Dekart is an open-source data visualization and analytical tool for large scale geo-spacial data. Dekart is based on Kepler.gl visualization and supports BigQuery and AWS Athena as a data source.
 
 [Home Page](https://dekart.xyz?ref=dokerhub) | [GitHub](https://github.com/dekart/dekart?ref=dokerhub)
 
 ## Features
 
-Visualize Data from BigQuery on a Kepler.gl map and share it with your team:
+Visualize Data from BigQuery and AWS Athena on a Kepler.gl map and share it with your team:
 
 * Beautiful, large Scale Map Visualizations using only SQL
 * Can visualize up to 1 million rows
 * Easy to save map and share link with your team
-* Easy to install/deploy on Google Cloud
+* Supports deployment to Google Cloud and AWS
 
 ## Requirements
 
-* Google Cloud Project
-* BigQuery API Enabled
+* Google Cloud or AWS
+* BigQuery API Enabled or AWS Athena Workspace
+* Google CLoud Storage or AWS S3 bucket
 * PostgreSQL (for example Cloud SQL)
 * Service account credentials with access to all above
 * Mapbox Token
 
 ## Running docker
+
+With BigQuery configuration
 
 ```bash
 docker run \
@@ -32,11 +35,13 @@ docker run \
   -e DEKART_POSTGRES_PASSWORD=${DEKART_POSTGRES_PASSWORD} \
   -e DEKART_POSTGRES_PORT=${DEKART_POSTGRES_PORT} \
   -e DEKART_POSTGRES_HOST=${DEKART_POSTGRES_HOST} \
+  -e DEKART_STORAGE=GCS \
+  -e DEKART_DATASOURCE=BQ \
   -e DEKART_CLOUD_STORAGE_BUCKET=${DEKART_CLOUD_STORAGE_BUCKET} \
   -e DEKART_BIGQUERY_PROJECT_ID=${DEKART_BIGQUERY_PROJECT_ID} \
   -e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
   -p 8080:8080 \
-  dekartxyz/dekart:0.7
+  dekartxyz/dekart:0.8
 ```
 [Configuration details](https://dekart.xyz/docs/configuration/environment-variables/?ref=dokerhub)
 
