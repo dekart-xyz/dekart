@@ -24,7 +24,30 @@ Visualize Data from BigQuery and AWS Athena on a Kepler.gl map and share it with
 
 ## Running docker
 
-With BigQuery configuration
+### Athena
+
+```bash
+docker run \
+  -e AWS_REGION=${AWS_REGION} \
+  -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
+  -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
+  -e DEKART_POSTGRES_DB=${DEKART_POSTGRES_DB} \
+  -e DEKART_POSTGRES_USER=${DEKART_POSTGRES_USER} \
+  -e DEKART_POSTGRES_PASSWORD=${DEKART_POSTGRES_PASSWORD} \
+  -e DEKART_POSTGRES_PORT=${DEKART_POSTGRES_PORT} \
+  -e DEKART_POSTGRES_HOST=host.docker.internal \
+  -e DEKART_STORAGE=S3 \
+  -e DEKART_DATASOURCE=ATHENA \
+  -e DEKART_CLOUD_STORAGE_BUCKET=${DEKART_CLOUD_STORAGE_BUCKET} \
+  -e DEKART_ATHENA_CATALOG=${DEKART_ATHENA_CATALOG} \
+  -e DEKART_ATHENA_S3_OUTPUT_LOCATION=${DEKART_ATHENA_S3_OUTPUT_LOCATION} \
+  -e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
+  -e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
+  -p 8080:8080 \
+  dekartxyz/dekart:0.8
+```
+
+### BigQuery
 
 ```bash
 docker run \
@@ -43,6 +66,7 @@ docker run \
   -p 8080:8080 \
   dekartxyz/dekart:0.8
 ```
+
 [Configuration details](https://dekart.xyz/docs/configuration/environment-variables/?ref=dokerhub)
 
 ## Other options to run Dekart
