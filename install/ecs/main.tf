@@ -18,9 +18,8 @@ locals {
 }
 
 resource "random_password" "rds_password" {
-  length           = 16
-  special          = true
-  override_special = "!?$%^&*#()+={}~-[]<>"
+  length  = 16
+  special = false
 }
 
 resource "aws_secretsmanager_secret" "rds_credentials" {
@@ -204,19 +203,173 @@ resource "aws_ecs_cluster" "ecs_cluster" {
   name = local.project
 }
 
-data "aws_vpc" "default_vpc" {
-  default = true
+# VPC
+
+resource "aws_vpc" "main" {
+  cidr_block = "172.31.0.0/16"
 }
 
-data "aws_subnets" "subnets" {
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.default_vpc.id]
+resource "aws_internet_gateway" "main" {
+  vpc_id = aws_vpc.main.id
+}
+
+data "aws_availability_zones" "available" {
+  state = "available"
+}
+
+# private and public subnets
+
+resource "aws_subnet" "private" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = element(["172.31.0.0/24", "172.31.1.0/24"], count.index)
+  availability_zone = element(data.aws_availability_zones.available.names, count.index)
+  count             = 2
+}
+
+resource "aws_subnet" "public" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = element(["172.31.2.0/24", "172.31.3.0/24"], count.index)
+  availability_zone = element(data.aws_availability_zones.available.names, count.index)
+  count             = 2
+}
+
+# route public subnet via internet gateway
+
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main.id
+}
+
+resource "aws_route" "public" {
+  route_table_id         = aws_route_table.public.id
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id             = aws_internet_gateway.main.id
+}
+
+resource "aws_route_table_association" "public" {
+  count          = 2
+  subnet_id      = element(aws_subnet.public.*.id, count.index)
+  route_table_id = aws_route_table.public.id
+}
+
+# NAT for private subnet for outbound traffic
+
+resource "aws_eip" "nat" {
+  count = 2
+  vpc   = true
+}
+
+resource "aws_nat_gateway" "main" {
+  count         = 2
+  allocation_id = element(aws_eip.nat.*.id, count.index)
+  subnet_id     = element(aws_subnet.public.*.id, count.index)
+}
+
+# route table for the private subnet to route through the NAT gateway
+
+resource "aws_route_table" "private" {
+  count  = 2
+  vpc_id = aws_vpc.main.id
+}
+
+resource "aws_route" "private" {
+  count                  = 2
+  route_table_id         = element(aws_route_table.private.*.id, count.index)
+  destination_cidr_block = "0.0.0.0/0"
+  nat_gateway_id         = element(aws_nat_gateway.main.*.id, count.index)
+}
+
+resource "aws_route_table_association" "private" {
+  count          = 2
+  subnet_id      = element(aws_subnet.private.*.id, count.index)
+  route_table_id = element(aws_route_table.private.*.id, count.index)
+}
+
+# security group for alb (load balancer)
+
+resource "aws_security_group" "dekart_alb" {
+  name   = "${local.project}-alb"
+  vpc_id = aws_vpc.main.id
+
+  ingress {
+    protocol         = "tcp"
+    from_port        = 80
+    to_port          = 80
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+
+  ingress {
+    protocol         = "tcp"
+    from_port        = 443
+    to_port          = 443
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+
+  egress {
+    protocol         = "-1"
+    from_port        = 0
+    to_port          = 0
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
   }
 }
 
+# security group for ECS tasks
 
-resource "aws_ecs_service" "ecs_service" {
+resource "aws_security_group" "dekart_tasks" {
+  name   = "${local.project}-task"
+  vpc_id = aws_vpc.main.id
+
+  ingress {
+    protocol         = "tcp"
+    from_port        = "8080"
+    to_port          = "8080"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+
+  egress {
+    protocol         = "-1"
+    from_port        = 0
+    to_port          = 0
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+}
+
+# load balancer
+
+resource "aws_alb" "dekart_alb" {
+  name               = local.project
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.dekart_alb.id]
+  subnets            = aws_subnet.public.*.id
+}
+
+resource "aws_alb_target_group" "dekart_target_group" {
+  name        = local.project
+  port        = "8080"
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.main.id
+  target_type = "ip"
+}
+
+resource "aws_alb_listener" "dekart_listener" {
+  load_balancer_arn = aws_alb.dekart_alb.arn
+  port              = "80"
+  protocol          = "HTTP"
+  # certificate_arn   = data.aws_acm_certificate.reeinfra.arn
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_alb_target_group.dekart_target_group.arn
+  }
+}
+
+# ECS Service
+
+resource "aws_ecs_service" "dekart_ecs_service" {
   name                 = local.project
   cluster              = aws_ecs_cluster.ecs_cluster.id
   task_definition      = "${aws_ecs_task_definition.dekart.family}:${aws_ecs_task_definition.dekart.revision}"
@@ -225,96 +378,14 @@ resource "aws_ecs_service" "ecs_service" {
   launch_type          = "FARGATE"
 
   network_configuration {
-    subnets          = data.aws_subnets.subnets.ids
+    security_groups  = [aws_security_group.dekart_tasks.id]
+    subnets          = aws_subnet.public.*.id
     assign_public_ip = false
   }
 
-  #   load_balancer {
-  #     target_group_arn = aws_alb_target_group.dekart.arn
-  #     container_name   = local.project
-  #     container_port   = 8080
-  #   }
+  load_balancer {
+    target_group_arn = aws_alb_target_group.dekart_target_group.arn
+    container_name   = local.project
+    container_port   = 8080
+  }
 }
-
-
-# resource "aws_ecs_service" "aws-ecs-service" {
-#   name                 = local.project
-#   cluster              = aws_ecs_cluster.aws-ecs-cluster.id
-#   task_definition      = "${aws_ecs_task_definition.aws-ecs-task.family}:${aws_ecs_task_definition.aws-ecs-task.revision}"
-#   desired_count        = 1
-#   force_new_deployment = true
-
-#   load_balancer {
-#     target_group_arn = aws_alb_target_group.dekart.arn
-#     container_name   = local.project
-#     container_port   = 8080
-#   }
-# }
-
-# resource "aws_ecs_task_definition" "definition" {
-#   family                   = "project_name"
-#   task_role_arn            = data.terraform_remote_state.env.outputs.ecs_task_role_arn
-#   execution_role_arn       = data.terraform_remote_state.env.outputs.ecs_task_execution_role_arn
-#   network_mode             = "awsvpc"
-#   cpu                      = "256"
-#   memory                   = "512"
-#   requires_compatibilities = ["FARGATE"]
-#   container_definitions    = <<TASK_DEFINITION
-#   [
-#     {
-#       "cpu": 256,
-#       "memory": 512,
-#       "image": " .dkr.ecr.eu-central-1.amazonaws.com/project_name:${var.docker_image_tag}",
-#         "environment": [
-#             {"name": "JSON_LOGS", "value": "1"},
-#             {"name": "PORT", "value": "80"},
-#             {"name": "API_VERSION", "value": "${var.docker_image_tag}"},
-#             {"name": "ENV", "value": "${terraform.workspace}"}
-#         ],
-#       "name": "project-container",
-#       "portMappings": [
-#         {
-#           "containerPort": 80,
-#           "hostPort": 80
-#       }],
-#       "logConfiguration": {
-#                   "logDriver": "awslogs",
-#                   "options": {
-#                       "awslogs-region" : "eu-central-1",
-#                       "awslogs-group" : "project_name-${terraform.workspace}",
-#                       "awslogs-stream-prefix" : "project"
-#                   }
-#               }
-#       }
-#   ]
-#   TASK_DEFINITION
-# }
-
-# resource "aws_ecs_service" "api" {
-#   name                 = "project-api-${terraform.workspace}"
-#   cluster              = data.terraform_remote_state.env.outputs.ecs_cluster_id
-#   task_definition      = aws_ecs_task_definition.definition.arn
-#   desired_count        = 1
-#   launch_type          = "FARGATE"
-#   force_new_deployment = true
-
-#   network_configuration {
-#     assign_public_ip = true
-#     security_groups  = [data.terraform_remote_state.env.outputs.aws_sg]
-#     subnets          = ["subnet-", "subnet-", "subnet-"]
-#   }
-
-#   load_balancer {
-#     target_group_arn = aws_alb_target_group.api.arn
-#     container_name   = "project-container"
-#     container_port   = 80
-#   }
-
-#   lifecycle {
-#     #ignore_changes = [task_definition, desired_count]
-#   }
-
-#   depends_on = [
-#     aws_ecs_task_definition.definition,
-#   ]
-# }
