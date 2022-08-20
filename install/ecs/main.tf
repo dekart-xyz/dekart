@@ -38,8 +38,13 @@ resource "aws_secretsmanager_secret_version" "rds_credential_secret" {
 
 variable "mapbox_token" {}
 
+resource "aws_db_subnet_group" "dekart_rds_subnet_group" {
+  name       = "${local.project}-rds-subnet-group"
+  subnet_ids = aws_subnet.private.*.id
+}
+
 resource "aws_db_instance" "dekart_db_instance" {
-  identifier                  = "dekart-db-instance"
+  identifier                  = "${local.project}-rds"
   allocated_storage           = 10
   storage_type                = "gp2"
   engine                      = "postgres"
@@ -53,6 +58,9 @@ resource "aws_db_instance" "dekart_db_instance" {
   port                        = 5432
   publicly_accessible         = false
   storage_encrypted           = true
+  vpc_security_group_ids      = [aws_security_group.default.id]
+  db_subnet_group_name        = aws_db_subnet_group.dekart_rds_subnet_group.name
+  skip_final_snapshot         = true
 
   lifecycle {
     ignore_changes = [
@@ -115,7 +123,7 @@ resource "aws_iam_role" "execution_task_role" {
   })
 }
 
-resource "aws_ecs_task_definition" "dekart" {
+resource "aws_ecs_task_definition" "dekart_ecs_task" {
   family                   = "dekart"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
@@ -136,6 +144,10 @@ resource "aws_ecs_task_definition" "dekart" {
           }
         ],
        "environment": [
+          {
+             "name": "DEKART_LOG_DEBUG",
+             "value": "1"
+          },
           {
              "name": "AWS_REGION",
              "value": "${data.aws_region.current.name}"
@@ -284,6 +296,37 @@ resource "aws_route_table_association" "private" {
   route_table_id = element(aws_route_table.private.*.id, count.index)
 }
 
+# security group for rds
+
+resource "aws_security_group" "default" {
+  name        = "${local.project}-default"
+  description = "default VPC security group"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port = 0
+    to_port   = 0
+    protocol  = "-1"
+    self      = true
+  }
+
+  ingress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+
+  egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+}
+
 # security group for alb (load balancer)
 
 resource "aws_security_group" "dekart_alb" {
@@ -323,8 +366,8 @@ resource "aws_security_group" "dekart_tasks" {
 
   ingress {
     protocol         = "tcp"
-    from_port        = "8080"
-    to_port          = "8080"
+    from_port        = 0
+    to_port          = 0
     cidr_blocks      = ["0.0.0.0/0"]
     ipv6_cidr_blocks = ["::/0"]
   }
@@ -343,7 +386,7 @@ resource "aws_security_group" "dekart_tasks" {
 resource "aws_alb" "dekart_alb" {
   name               = local.project
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.dekart_alb.id]
+  security_groups    = [aws_security_group.default.id]
   subnets            = aws_subnet.public.*.id
 }
 
@@ -372,14 +415,14 @@ resource "aws_alb_listener" "dekart_listener" {
 resource "aws_ecs_service" "dekart_ecs_service" {
   name                 = local.project
   cluster              = aws_ecs_cluster.ecs_cluster.id
-  task_definition      = "${aws_ecs_task_definition.dekart.family}:${aws_ecs_task_definition.dekart.revision}"
+  task_definition      = "${aws_ecs_task_definition.dekart_ecs_task.family}:${aws_ecs_task_definition.dekart_ecs_task.revision}"
   desired_count        = 1
   force_new_deployment = true
   launch_type          = "FARGATE"
 
   network_configuration {
-    security_groups  = [aws_security_group.dekart_tasks.id]
-    subnets          = aws_subnet.public.*.id
+    security_groups  = [aws_security_group.default.id]
+    subnets          = aws_subnet.private.*.id
     assign_public_ip = false
   }
 
