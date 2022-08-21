@@ -58,7 +58,7 @@ resource "aws_db_instance" "dekart_db_instance" {
   port                        = 5432
   publicly_accessible         = false
   storage_encrypted           = true
-  vpc_security_group_ids      = [aws_security_group.default.id]
+  vpc_security_group_ids      = [aws_security_group.dekart_private.id]
   db_subnet_group_name        = aws_db_subnet_group.dekart_rds_subnet_group.name
   skip_final_snapshot         = true
 
@@ -298,24 +298,15 @@ resource "aws_route_table_association" "private" {
 
 # security group for rds
 
-resource "aws_security_group" "default" {
-  name        = "${local.project}-default"
-  description = "default VPC security group"
-  vpc_id      = aws_vpc.main.id
+resource "aws_security_group" "dekart_private" {
+  name   = "${local.project}-private"
+  vpc_id = aws_vpc.main.id
 
   ingress {
     from_port = 0
     to_port   = 0
     protocol  = "-1"
     self      = true
-  }
-
-  ingress {
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
   }
 
   egress {
@@ -325,6 +316,9 @@ resource "aws_security_group" "default" {
     cidr_blocks      = ["0.0.0.0/0"]
     ipv6_cidr_blocks = ["::/0"]
   }
+
+  # https://github.com/hashicorp/terraform-provider-aws/issues/265
+  lifecycle { create_before_destroy = true }
 }
 
 # security group for alb (load balancer)
@@ -358,35 +352,12 @@ resource "aws_security_group" "dekart_alb" {
   }
 }
 
-# security group for ECS tasks
-
-resource "aws_security_group" "dekart_tasks" {
-  name   = "${local.project}-task"
-  vpc_id = aws_vpc.main.id
-
-  ingress {
-    protocol         = "tcp"
-    from_port        = 0
-    to_port          = 0
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
-  }
-
-  egress {
-    protocol         = "-1"
-    from_port        = 0
-    to_port          = 0
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
-  }
-}
-
 # load balancer
 
 resource "aws_alb" "dekart_alb" {
   name               = local.project
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.default.id]
+  security_groups    = [aws_security_group.dekart_private.id, aws_security_group.dekart_alb.id]
   subnets            = aws_subnet.public.*.id
 }
 
@@ -421,7 +392,7 @@ resource "aws_ecs_service" "dekart_ecs_service" {
   launch_type          = "FARGATE"
 
   network_configuration {
-    security_groups  = [aws_security_group.default.id]
+    security_groups  = [aws_security_group.dekart_private.id]
     subnets          = aws_subnet.private.*.id
     assign_public_ip = false
   }
