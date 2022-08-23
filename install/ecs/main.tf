@@ -361,6 +361,59 @@ resource "aws_alb" "dekart_alb" {
   subnets            = aws_subnet.public.*.id
 }
 
+# dns
+
+variable "default_zone_name" {}
+
+data "aws_route53_zone" "default_zone" {
+  name = var.default_zone_name
+}
+
+resource "aws_route53_record" "dekart_route53_record" {
+  name    = "${local.project}.${data.aws_route53_zone.default_zone.name}"
+  zone_id = data.aws_route53_zone.default_zone.zone_id
+  type    = "A"
+
+  alias {
+    name                   = aws_alb.dekart_alb.dns_name
+    zone_id                = aws_alb.dekart_alb.zone_id
+    evaluate_target_health = false
+  }
+}
+
+# certificate
+
+resource "aws_acm_certificate" "dekart_certificate" {
+
+  domain_name       = aws_route53_record.dekart_route53_record.name
+  validation_method = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_route53_record" "dekart_certificate_validation" {
+  for_each = {
+    for dvo in aws_acm_certificate.dekart_certificate.domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
+    }
+  }
+  allow_overwrite = true
+  name            = each.value.name
+  records         = [each.value.record]
+  ttl             = 60
+  type            = each.value.type
+  zone_id         = aws_route53_record.dekart_route53_record.zone_id
+}
+
+resource "aws_acm_certificate_validation" "dekart_certificate_validation" {
+  certificate_arn         = aws_acm_certificate.dekart_certificate.arn
+  validation_record_fqdns = [for record in aws_route53_record.dekart_certificate_validation : record.fqdn]
+}
+
 resource "aws_alb_target_group" "dekart_target_group" {
   name        = local.project
   port        = "8080"
@@ -369,11 +422,29 @@ resource "aws_alb_target_group" "dekart_target_group" {
   target_type = "ip"
 }
 
-resource "aws_alb_listener" "dekart_listener" {
+resource "aws_alb_listener" "dekart_listener_http" {
   load_balancer_arn = aws_alb.dekart_alb.arn
   port              = "80"
   protocol          = "HTTP"
-  # certificate_arn   = data.aws_acm_certificate.reeinfra.arn
+
+  default_action {
+    type = "redirect"
+
+    redirect {
+      port        = 443
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+}
+
+resource "aws_alb_listener" "dekart_listener_https" {
+  load_balancer_arn = aws_alb.dekart_alb.arn
+  port              = 443
+  protocol          = "HTTPS"
+
+  ssl_policy      = "ELBSecurityPolicy-2016-08"
+  certificate_arn = aws_acm_certificate.dekart_certificate.arn
 
   default_action {
     type             = "forward"
