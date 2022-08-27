@@ -80,6 +80,11 @@ resource "aws_cloudwatch_log_group" "log_group" {
   retention_in_days = 7
 }
 
+variable "athena_s3_data_source" {
+  type    = list(string)
+  default = ["my-athena-source-bucket/data/*"]
+}
+
 resource "aws_iam_role" "task_role" {
   name = "${local.project}-task-role"
   # managed_policy_arns = [
@@ -101,6 +106,66 @@ resource "aws_iam_role" "task_role" {
       },
     ]
   })
+  inline_policy {
+    name = "${local.project}-task-policy"
+    policy = jsonencode({
+      Version = "2012-10-17",
+      Statement = [
+        {
+          Effect = "Allow",
+          Action = [
+            "s3:*"
+          ]
+          Resource = [
+            aws_s3_bucket.storage_bucket.arn,
+            "${aws_s3_bucket.storage_bucket.arn}/*",
+          ]
+        },
+        {
+          Effect = "Allow",
+          Action = [
+            "athena:CancelQueryExecution",
+            "athena:Get*",
+            "athena:StartQueryExecution",
+            "athena:StopQueryExecution",
+            "glue:Get*",
+          ],
+          Resource = [
+            "*"
+          ]
+        },
+        {
+          "Effect" : "Allow",
+          "Action" : [
+            "s3:ListBucket",
+            "s3:GetBucketLocation",
+            "s3:ListAllMyBuckets"
+          ],
+          "Resource" : [
+            "*"
+          ]
+        },
+        {
+          "Effect" : "Allow",
+          "Action" : [
+            "lakeformation:GetDataAccess"
+          ],
+          "Resource" : [
+            "*"
+          ]
+        },
+        {
+          "Effect" : "Allow",
+          "Action" : [
+            "s3:GetObject"
+          ],
+          "Resource" : flatten([
+            [for bucket in var.athena_s3_data_source : "arn:aws:s3:::${bucket}"]
+          ])
+        },
+      ]
+    })
+  }
 }
 
 resource "aws_iam_role" "execution_task_role" {
@@ -438,6 +503,10 @@ resource "aws_alb_listener" "dekart_listener_http" {
   }
 }
 
+variable "user_pool_arn" {}
+variable "user_pool_client_id" {}
+variable "user_pool_domain" {}
+
 resource "aws_alb_listener" "dekart_listener_https" {
   load_balancer_arn = aws_alb.dekart_alb.arn
   port              = 443
@@ -449,6 +518,35 @@ resource "aws_alb_listener" "dekart_listener_https" {
   default_action {
     type             = "forward"
     target_group_arn = aws_alb_target_group.dekart_target_group.arn
+  }
+}
+
+resource "aws_alb_listener_rule" "dekart_listener_rule" {
+
+  listener_arn = aws_alb_listener.dekart_listener_https.arn
+
+  action {
+    type = "authenticate-cognito"
+
+    # configuration example https://beabetterdev.com/2021/08/16/how-to-add-google-social-sign-on-to-your-amazon-cognito-user-pool/
+
+    authenticate_cognito {
+      scope               = "email openid"
+      user_pool_arn       = var.user_pool_arn
+      user_pool_client_id = var.user_pool_client_id
+      user_pool_domain    = var.user_pool_domain
+    }
+  }
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_alb_target_group.dekart_target_group.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/*"]
+    }
   }
 }
 
@@ -474,3 +572,4 @@ resource "aws_ecs_service" "dekart_ecs_service" {
     container_port   = 8080
   }
 }
+
