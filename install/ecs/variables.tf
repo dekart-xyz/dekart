@@ -5,7 +5,7 @@ variable "dekart_deployment_name" {
   description = "prefix for your deployment resource names"
 }
 
-variable "default_zone_name" {
+variable "zone_name" {
   description = "route 53 zone name for dekart deployment"
 }
 
@@ -16,4 +16,18 @@ variable "user_pool_domain" {}
 
 variable "mapbox_token" {
   description = "Mapbox token needed to show map in Dekart UI"
+}
+
+# list of s3 objects accessed via Athena, for example "osm-pds/planet/*"
+variable "athena_s3_data_source" {
+  type    = list(string)
+  default = ["my-athena-source-bucket/data/*"]
+}
+
+#rds
+variable "dekart_rds_db_name" {
+  default = "dekart"
+}
+variable "dekart_rds_username" {
+  default = "dekart"
 }
