@@ -7,7 +7,7 @@ resource "random_password" "dekart_rds" {
 }
 
 resource "aws_secretsmanager_secret" "dekart_rds" {
-  name = "${local.project}-rds"
+  name = "${var.dekart_deployment_name}-rds"
 }
 
 resource "aws_secretsmanager_secret_version" "dekart_rds" {
@@ -22,15 +22,15 @@ resource "aws_secretsmanager_secret_version" "dekart_rds" {
 
 # subnet group
 
-resource "aws_db_subnet_group" "dekart" {
-  name       = "${local.project}-rds"
+resource "aws_db_subnet_group" "dekart_rds" {
+  name       = "${var.dekart_deployment_name}-rds"
   subnet_ids = aws_subnet.private.*.id
 }
 
 # rds
 
-resource "aws_db_instance" "dekart_db_instance" {
-  identifier                  = "${local.project}-rds"
+resource "aws_db_instance" "dekart" {
+  identifier                  = var.dekart_deployment_name
   allocated_storage           = 10
   storage_type                = "gp2"
   engine                      = "postgres"
@@ -45,7 +45,7 @@ resource "aws_db_instance" "dekart_db_instance" {
   publicly_accessible         = false
   storage_encrypted           = true
   vpc_security_group_ids      = [aws_security_group.dekart_private.id]
-  db_subnet_group_name        = aws_db_subnet_group.dekart.name
+  db_subnet_group_name        = aws_db_subnet_group.dekart_rds.name
   skip_final_snapshot         = true
 
   lifecycle {

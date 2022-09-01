@@ -1,13 +1,13 @@
 
 resource "aws_alb" "dekart" {
-  name               = local.project
+  name               = var.dekart_deployment_name
   load_balancer_type = "application"
   security_groups    = [aws_security_group.dekart_private.id, aws_security_group.dekart_alb.id]
   subnets            = aws_subnet.public.*.id
 }
 
 resource "aws_alb_target_group" "dekart" {
-  name        = local.project
+  name        = var.dekart_deployment_name
   port        = "8080"
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
@@ -21,7 +21,7 @@ data "aws_route53_zone" "main" {
 }
 
 resource "aws_route53_record" "dekart" {
-  name    = "${local.project}.${data.aws_route53_zone.main.name}"
+  name    = "${var.dekart_deployment_name}.${data.aws_route53_zone.main.name}"
   zone_id = data.aws_route53_zone.main.zone_id
   type    = "A"
 

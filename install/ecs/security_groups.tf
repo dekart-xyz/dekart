@@ -1,7 +1,7 @@
 
 # let the ecs, rds and alb to connect to each other
 resource "aws_security_group" "dekart_private" {
-  name   = "${local.project}-private"
+  name   = "${var.dekart_deployment_name}-private"
   vpc_id = aws_vpc.main.id
 
   # connection within the group
@@ -27,7 +27,7 @@ resource "aws_security_group" "dekart_private" {
 
 # allow connections to load balancer
 resource "aws_security_group" "dekart_alb" {
-  name   = "${local.project}-alb"
+  name   = "${var.dekart_deployment_name}-alb"
   vpc_id = aws_vpc.main.id
 
   ingress {

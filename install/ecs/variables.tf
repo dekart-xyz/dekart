@@ -5,6 +5,14 @@ variable "dekart_deployment_name" {
   description = "prefix for your deployment resource names"
 }
 
+variable "region" {
+  default = "us-east-1"
+}
+
+variable "dekart_version" {
+  default = "0.8"
+}
+
 variable "zone_name" {
   description = "route 53 zone name for dekart deployment"
 }
@@ -22,6 +30,10 @@ variable "mapbox_token" {
 variable "athena_s3_data_source" {
   type    = list(string)
   default = ["my-athena-source-bucket/data/*"]
+}
+
+variable "athena_catalog" {
+  default = "AwsDataCatalog"
 }
 
 #rds

@@ -9,115 +9,13 @@ terraform {
 }
 
 provider "aws" {
-  region = "us-east-1"
+  region = var.region
 }
-
-locals {
-  project = "dekart"
-}
-
-
-
 
 # data "aws_region" "current" {}
 
-# resource "aws_cloudwatch_log_group" "log_group" {
-#   name              = local.project
-#   retention_in_days = 7
-# }
 
 
-# resource "aws_ecs_task_definition" "dekart_ecs_task" {
-#   family                   = "dekart"
-#   requires_compatibilities = ["FARGATE"]
-#   network_mode             = "awsvpc"
-#   cpu                      = "256"
-#   memory                   = "512"
-#   task_role_arn            = aws_iam_role.task_role.arn
-#   execution_role_arn       = aws_iam_role.execution_task_role.arn
-#   container_definitions    = <<TASK_DEFINITION
-# [
-#     {
-#        "name": "${local.project}",
-#        "image": "dekartxyz/dekart:0.8",
-#        "portmappings": [
-#           {
-#             "hostport": 8080,
-#             "protocol": "tcp",
-#             "containerport": 8080
-#           }
-#         ],
-#        "environment": [
-#           {
-#              "name": "DEKART_LOG_DEBUG",
-#              "value": "1"
-#           },
-#           {
-#              "name": "AWS_REGION",
-#              "value": "${data.aws_region.current.name}"
-#           },
-#           {
-#              "name": "DEKART_POSTGRES_HOST",
-#              "value": "${aws_db_instance.dekart_db_instance.address}"
-#           },
-#           {
-#              "name": "DEKART_POSTGRES_PORT",
-#              "value": "${aws_db_instance.dekart_db_instance.port}"
-#           },
-#           {
-#              "name": "DEKART_POSTGRES_DB",
-#              "value": "${aws_db_instance.dekart_db_instance.db_name}"
-#           },
-#           {
-#              "name": "DEKART_POSTGRES_USER",
-#              "value": "dekart"
-#           },
-#           {
-#              "name": "DEKART_POSTGRES_PASSWORD",
-#              "value": "${aws_secretsmanager_secret_version.rds_credential_secret.secret_string}"
-#           },
-#           {
-#              "name": "DEKART_STORAGE",
-#              "value": "S3"
-#           },
-#           {
-#              "name": "DEKART_DATASOURCE",
-#              "value": "ATHENA"
-#           },
-#           {
-#              "name": "DEKART_CLOUD_STORAGE_BUCKET",
-#              "value": "${aws_s3_bucket.storage_bucket.id}"
-#           },
-#           {
-#              "name": "DEKART_ATHENA_CATALOG",
-#              "value": "AwsDataCatalog"
-#           },
-#           {
-#              "name": "DEKART_ATHENA_S3_OUTPUT_LOCATION",
-#              "value": "${aws_s3_bucket.storage_bucket.id}"
-#           },
-#           {
-#              "name": "DEKART_MAPBOX_TOKEN",
-#              "value": "${var.mapbox_token}"
-#           }
-#        ],
-#        "logconfiguration": {
-#           "logdriver": "awslogs",
-#           "secretoptions": null,
-#           "options": {
-#              "awslogs-group": "${aws_cloudwatch_log_group.log_group.name}",
-#              "awslogs-region": "${data.aws_region.current.name}",
-#              "awslogs-stream-prefix": "dekart"
-#           }
-#        }
-#     }
-#  ]
-#    TASK_DEFINITION
-# }
-
-# resource "aws_ecs_cluster" "ecs_cluster" {
-#   name = local.project
-# }
 
 # # private and public subnets
 
@@ -166,25 +64,4 @@ locals {
 
 
 # # ECS Service
-
-# resource "aws_ecs_service" "dekart_ecs_service" {
-#   name                 = local.project
-#   cluster              = aws_ecs_cluster.ecs_cluster.id
-#   task_definition      = "${aws_ecs_task_definition.dekart_ecs_task.family}:${aws_ecs_task_definition.dekart_ecs_task.revision}"
-#   desired_count        = 1
-#   force_new_deployment = true
-#   launch_type          = "FARGATE"
-
-#   network_configuration {
-#     security_groups  = [aws_security_group.dekart_private.id]
-#     subnets          = aws_subnet.private.*.id
-#     assign_public_ip = false
-#   }
-
-#   load_balancer {
-#     target_group_arn = aws_alb_target_group.dekart_target_group.arn
-#     container_name   = local.project
-#     container_port   = 8080
-#   }
-# }
 

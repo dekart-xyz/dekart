@@ -1,7 +1,7 @@
 
 # ecs task role
 resource "aws_iam_role" "dekart_task" {
-  name = "${local.project}-task"
+  name = "${var.dekart_deployment_name}-task"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -16,7 +16,7 @@ resource "aws_iam_role" "dekart_task" {
     ]
   })
   inline_policy {
-    name = "${local.project}-task-policy"
+    name = "${var.dekart_deployment_name}-task-policy"
     policy = jsonencode({
       Version = "2012-10-17",
       Statement = [
@@ -79,7 +79,7 @@ resource "aws_iam_role" "dekart_task" {
 
 # ecs execution role
 resource "aws_iam_role" "dekart_execution" {
-  name = "${local.project}-execution"
+  name = "${var.dekart_deployment_name}-execution"
   managed_policy_arns = [
     "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy",
   ]
