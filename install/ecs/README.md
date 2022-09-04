@@ -1,4 +1,4 @@
-# Deploying Dekart to AWS ECS with terraform
+# Example of Deploying Dekart to AWS ECS with terraform
 
 ## Requires:
 

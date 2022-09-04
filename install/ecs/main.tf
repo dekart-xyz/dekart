@@ -6,6 +6,7 @@ terraform {
     }
   }
   required_version = ">= 1.2.0"
+  # This is an example, so no terraform backend configuration
 }
 
 provider "aws" {

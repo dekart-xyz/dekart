@@ -31,7 +31,7 @@ resource "aws_db_subnet_group" "dekart_rds" {
 
 resource "aws_db_instance" "dekart" {
   identifier                  = var.dekart_deployment_name
-  allocated_storage           = 10
+  allocated_storage           = 20 # min size for gp2 storage_type type
   storage_type                = "gp2"
   engine                      = "postgres"
   engine_version              = "14.1"
