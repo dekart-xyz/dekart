@@ -126,6 +126,8 @@ func (c ClaimsCheck) getPublicKeyFromAmazon(token *jwt.Token) (interface{}, erro
 	return publicKey, nil
 }
 
+// validateJWTFromAmazonOIDC parses and validates token from x-amzn-oidc-data
+// see https://docs.aws.amazon.com/elasticloadbalancing/latest/application/listener-authenticate-users.html
 func (c ClaimsCheck) validateJWTFromAmazonOIDC(ctx context.Context, header string) *Claims {
 	if header == "" {
 		return nil
