@@ -30,7 +30,6 @@ func NewStore(storage storage.Storage) *Store {
 	conf := aws.NewConfig().
 		WithMaxRetries(3).
 		WithS3ForcePathStyle(true)
-
 	outputLocation := os.Getenv("DEKART_ATHENA_S3_OUTPUT_LOCATION")
 	if outputLocation == "" {
 		log.Fatal().Msgf("athena data source require DEKART_ATHENA_S3_OUTPUT_LOCATION")

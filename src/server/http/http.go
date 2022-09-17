@@ -98,6 +98,8 @@ func Configure(dekartServer *dekart.Server) *http.Server {
 	claimsCheck := user.NewClaimsCheck(
 		os.Getenv("DEKART_IAP_JWT_AUD"),
 		os.Getenv("DEKART_REQUIRE_IAP") == "1",
+		os.Getenv("DEKART_REQUIRE_AMAZON_OIDC") == "1",
+		os.Getenv("AWS_REGION"),
 		os.Getenv("DEKART_DEV_CLAIMS_EMAIL"),
 	)
 
