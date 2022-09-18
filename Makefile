@@ -80,7 +80,7 @@ run-docker-dev:
 		${DEKART_DOCKER_DEV_TAG}
 
 
-dekart-0-8-athena:
+dekart-0-9-athena:
 	docker run -it --rm \
 		-e AWS_REGION=${DEKART_POSTGRES_DB} \
 		-e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
@@ -100,7 +100,7 @@ dekart-0-8-athena:
 		-p 8080:8080 \
 		dekartxyz/dekart:0.8
 
-dekart-0-8-bigquery:
+dekart-0-9-bigquery:
 	docker run -it --rm \
 		-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
 		-e GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} \
@@ -117,4 +117,4 @@ dekart-0-8-bigquery:
 		-e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
 		-e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
 		-p 8080:8080 \
-		dekartxyz/dekart:0.8
+		dekartxyz/dekart:0.9
