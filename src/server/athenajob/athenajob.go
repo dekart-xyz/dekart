@@ -97,6 +97,20 @@ func (s *Store) Cancel(queryID string) {
 	s.mutex.Unlock()
 }
 
+func (s *Store) CancelAll(ctx context.Context) {
+	s.mutex.Lock()
+	for _, job := range s.jobs {
+		select {
+		case job.status <- int32(proto.Query_JOB_STATUS_UNSPECIFIED):
+			job.logger.Info().Msg("Canceling Job Context")
+		case <-ctx.Done():
+			job.logger.Warn().Msg("Timeout canceling Job")
+		}
+		job.cancel()
+	}
+	s.mutex.Unlock()
+}
+
 // Job implements dekart.Job interface for Athena
 type Job struct {
 	id               string

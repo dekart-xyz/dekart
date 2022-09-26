@@ -37,6 +37,10 @@ func NewServer(db *sql.DB, storageBucket storage.Storage, jobs JobStore) *Server
 
 }
 
+func (s Server) Shutdown(ctx context.Context) {
+	s.jobs.CancelAll(ctx)
+}
+
 // GetEnv variables to the client
 func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.GetEnvResponse, error) {
 	homePageUrl := os.Getenv("DEKART_UX_HOMEPAGE")

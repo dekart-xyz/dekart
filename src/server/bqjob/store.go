@@ -88,3 +88,20 @@ func (s *Store) Cancel(queryID string) {
 	}
 	s.mutex.Unlock()
 }
+
+// CancelAll jobs
+func (s *Store) CancelAll(ctx context.Context) {
+	s.mutex.Lock()
+	for _, job := range s.jobs {
+		job.logger.Debug().Msg("Canceling Job")
+		select {
+		case job.status <- int32(proto.Query_JOB_STATUS_UNSPECIFIED):
+			job.logger.Info().Msg("Updated status")
+		case <-ctx.Done():
+			job.logger.Warn().Msg("Timeout canceling Job")
+		}
+		job.cancel()
+		job.logger.Info().Msg("Canceled context")
+	}
+	s.mutex.Unlock()
+}

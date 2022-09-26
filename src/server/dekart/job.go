@@ -9,6 +9,7 @@ import (
 type JobStore interface {
 	Create(reportID string, queryID string, queryText string) (Job, chan int32, error)
 	Cancel(queryID string)
+	CancelAll(ctx context.Context)
 }
 
 // Job is the interface for the query job in datasource like BigQuery or Athena
