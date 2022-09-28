@@ -8,7 +8,7 @@ import (
 // Store is the interface for the job storage; it allows the cancellation of a job
 type JobStore interface {
 	Create(reportID string, queryID string, queryText string) (Job, chan int32, error)
-	Cancel(queryID string)
+	Cancel(queryID string) bool
 	CancelAll(ctx context.Context)
 }
 

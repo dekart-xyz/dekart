@@ -380,6 +380,21 @@ func (s Server) CancelQuery(ctx context.Context, req *proto.CancelQueryRequest) 
 		log.Warn().Str("QueryId", req.QueryId).Msg("Query not found")
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
-	s.jobs.Cancel(req.QueryId)
+
+	if ok := s.jobs.Cancel(req.QueryId); !ok {
+		_, err = s.db.ExecContext(
+			ctx,
+			`update queries set
+				job_status = $1
+			where id  = $2`,
+			int32(proto.Query_JOB_STATUS_UNSPECIFIED),
+			req.QueryId,
+		)
+		if err != nil {
+			log.Err(err).Send()
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		s.reportStreams.Ping(reportID)
+	}
 	return &proto.CancelQueryResponse{}, nil
 }

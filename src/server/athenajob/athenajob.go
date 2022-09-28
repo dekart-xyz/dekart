@@ -85,28 +85,33 @@ func (s *Store) Create(reportID string, queryID string, queryText string) (dekar
 	return job, status, nil
 }
 
-func (s *Store) Cancel(queryID string) {
+func (s *Store) Cancel(queryID string) bool {
 	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	for _, job := range s.jobs {
 		if job.queryID == queryID {
 			job.status <- int32(proto.Query_JOB_STATUS_UNSPECIFIED)
 			job.logger.Info().Msg("Canceling Job Context")
 			job.cancel()
+			return true
 		}
 	}
-	s.mutex.Unlock()
+	return false
 }
 
+// CancelAll jobs
 func (s *Store) CancelAll(ctx context.Context) {
 	s.mutex.Lock()
 	for _, job := range s.jobs {
+		job.logger.Debug().Msg("Canceling Job")
 		select {
 		case job.status <- int32(proto.Query_JOB_STATUS_UNSPECIFIED):
-			job.logger.Info().Msg("Canceling Job Context")
+			job.logger.Info().Msg("Updated status")
 		case <-ctx.Done():
 			job.logger.Warn().Msg("Timeout canceling Job")
 		}
 		job.cancel()
+		job.logger.Info().Msg("Canceled context")
 	}
 	s.mutex.Unlock()
 }
