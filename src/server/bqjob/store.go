@@ -8,7 +8,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Store implements dekart.JobStore interface for BigQuery
+// Store implements job.Store interface for BigQuery
 type Store struct {
 	job.BasicStore
 	Jobs []*Job
@@ -20,21 +20,6 @@ func NewStore() *Store {
 	store.Jobs = make([]*Job, 0)
 	return store
 }
-
-// func (s *Store) removeJobWhenDone(job *Job) {
-// 	<-job.ctx.Done()
-// 	s.mutex.Lock()
-// 	for i, j := range s.jobs {
-// 		if job.id == j.id {
-// 			// removing job from slice
-// 			last := len(s.jobs) - 1
-// 			s.jobs[i] = s.jobs[last]
-// 			s.jobs = s.jobs[:last]
-// 			break
-// 		}
-// 	}
-// 	s.mutex.Unlock()
-// }
 
 // Create job on store
 func (s *Store) Create(reportID string, queryID string, queryText string) (job.Job, chan int32, error) {
@@ -66,35 +51,3 @@ func (s *Store) Create(reportID string, queryID string, queryText string) (job.J
 	go s.RemoveJobWhenDone(job)
 	return job, job.Status(), nil
 }
-
-// Cancel job for queryID
-// func (s *Store) Cancel(queryID string) bool {
-// 	s.mutex.Lock()
-// 	defer s.mutex.Unlock()
-// 	for _, job := range s.jobs {
-// 		if job.QueryID == queryID {
-// 			job.Status() <- int32(proto.Query_JOB_STATUS_UNSPECIFIED)
-// 			job.Logger.Info().Msg("Canceling Job Context")
-// 			job.Cancel()
-// 			return true
-// 		}
-// 	}
-// 	return false
-// }
-
-// CancelAll jobs
-// func (s *Store) CancelAll(ctx context.Context) {
-// 	s.mutex.Lock()
-// 	for _, job := range s.jobs {
-// 		job.logger.Debug().Msg("Canceling Job")
-// 		select {
-// 		case job.status <- int32(proto.Query_JOB_STATUS_UNSPECIFIED):
-// 			job.logger.Info().Msg("Updated status")
-// 		case <-ctx.Done():
-// 			job.logger.Warn().Msg("Timeout canceling Job")
-// 		}
-// 		job.cancel()
-// 		job.logger.Info().Msg("Canceled context")
-// 	}
-// 	s.mutex.Unlock()
-// }

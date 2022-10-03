@@ -11,7 +11,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// Store is the interface for the job storage; it allows the cancellation of a job
+// Store is the interface for the job storage
 type Store interface {
 	Create(reportID string, queryID string, queryText string) (Job, chan int32, error)
 	Cancel(queryID string) bool
@@ -34,6 +34,7 @@ type Job interface {
 	Cancel()
 }
 
+// BasicJob implements the common methods for Job
 type BasicJob struct {
 	sync.Mutex
 	id             string
@@ -125,7 +126,7 @@ func (j *BasicJob) CancelWithError(err error) {
 	j.cancel()
 }
 
-// BasicStore with job cancellation
+// BasicStore implements common methods for Store
 type BasicStore struct {
 	sync.Mutex
 	Jobs []Job

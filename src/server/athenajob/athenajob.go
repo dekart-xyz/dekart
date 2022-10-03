@@ -14,10 +14,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Store implements dekart.Store interface for athena
+// Store implements job.Store interface for athena
 type Store struct {
 	job.BasicStore
-	// mutex          sync.Mutex
 	session        *session.Session
 	outputLocation string
 	Jobs           []*Job
@@ -42,21 +41,6 @@ func NewStore(storage storage.Storage) *Store {
 
 }
 
-// func (s *Store) removeJobWhenDone(job *Job) {
-// 	<-job.ctx.Done()
-// 	s.Lock()
-// 	for i, j := range s.Jobs {
-// 		if job.id == j.GetID() {
-// 			// removing job from slice
-// 			last := len(s.Jobs) - 1
-// 			s.Jobs[i] = s.Jobs[last]
-// 			s.Jobs = s.Jobs[:last]
-// 			break
-// 		}
-// 	}
-// 	s.Unlock()
-// }
-
 // Create a new Athena job within the store
 func (s *Store) Create(reportID string, queryID string, queryText string) (job.Job, chan int32, error) {
 	s.Lock()
@@ -79,37 +63,6 @@ func (s *Store) Create(reportID string, queryID string, queryText string) (job.J
 	return job, job.Status(), nil
 }
 
-// func (s *Store) Cancel(queryID string) bool {
-// 	s.mutex.Lock()
-// 	defer s.mutex.Unlock()
-// 	for _, job := range s.jobs {
-// 		if job.queryID == queryID {
-// 			job.status <- int32(proto.Query_JOB_STATUS_UNSPECIFIED)
-// 			job.logger.Info().Msg("Canceling Job Context")
-// 			job.cancel()
-// 			return true
-// 		}
-// 	}
-// 	return false
-// }
-
-// // CancelAll jobs
-// func (s *Store) CancelAll(ctx context.Context) {
-// 	s.mutex.Lock()
-// 	for _, job := range s.jobs {
-// 		job.logger.Debug().Msg("Canceling Job")
-// 		select {
-// 		case job.status <- int32(proto.Query_JOB_STATUS_UNSPECIFIED):
-// 			job.logger.Info().Msg("Updated status")
-// 		case <-ctx.Done():
-// 			job.logger.Warn().Msg("Timeout canceling Job")
-// 		}
-// 		job.cancel()
-// 		job.logger.Info().Msg("Canceled context")
-// 	}
-// 	s.mutex.Unlock()
-// }
-
 // Job implements dekart.Job interface for Athena
 type Job struct {
 	job.BasicJob
@@ -119,70 +72,6 @@ type Job struct {
 	outputLocation   string
 	storageObject    storage.StorageObject
 }
-
-// func (j *Job) Cancel() {
-// 	j.cancel()
-// }
-
-// func (j *Job) Status() chan int32 {
-// 	return j.status
-// }
-
-// func (j *Job) GetID() string {
-// 	return j.id
-// }
-
-// func (j *Job) GetReportID() string {
-// 	return j.reportID
-// }
-
-// func (j *Job) GetQueryID() string {
-// 	return j.queryID
-// }
-
-// func (j *Job) GetResultID() *string {
-// 	j.mutex.Lock()
-// 	defer j.mutex.Unlock()
-// 	return j.resultID
-// }
-
-// func (j *Job) GetTotalRows() int64 {
-// 	j.mutex.Lock()
-// 	defer j.mutex.Unlock()
-// 	return j.totalRows
-// }
-
-// func (j *Job) GetProcessedBytes() int64 {
-// 	j.mutex.Lock()
-// 	defer j.mutex.Unlock()
-// 	return j.processedBytes
-// }
-
-// func (j *Job) GetResultSize() int64 {
-// 	j.mutex.Lock()
-// 	defer j.mutex.Unlock()
-// 	return j.resultSize
-// }
-
-// func (j *Job) GetCtx() context.Context {
-// 	return j.ctx
-// }
-
-// func (j *Job) Err() string {
-// 	j.mutex.Lock()
-// 	defer j.mutex.Unlock()
-// 	return j.err
-// }
-
-// func (job *Job) cancelWithError(err error) {
-// 	if err != context.Canceled {
-// 		job.mutex.Lock()
-// 		job.err = err.Error()
-// 		job.mutex.Unlock()
-// 	}
-// 	job.status <- int32(proto.Query_JOB_STATUS_UNSPECIFIED)
-// 	job.cancel()
-// }
 
 func (j *Job) pullQueryExecutionStatus() (*athena.QueryExecution, error) {
 	var err error

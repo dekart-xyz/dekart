@@ -20,22 +20,8 @@ import (
 // Job implements the dekart.Job interface for BigQuery; concurrency safe.
 type Job struct {
 	job.BasicJob
-	// id                  string
-	// queryID             string
-	// reportID            string
-	// ctx                 context.Context
-	// cancel              context.CancelFunc
-	// status              chan int32
-	// err                 string
-	// queryText           string
-	// totalRows           int64
-	// processedBytes      int64
-	// resultSize          int64
-	// resultID            *string
-	bigqueryJob   *bigquery.Job
-	storageObject storage.StorageObject
-	// mutex               sync.Mutex
-	// logger              zerolog.Logger
+	bigqueryJob         *bigquery.Job
+	storageObject       storage.StorageObject
 	maxReadStreamsCount int32
 	maxBytesBilled      int64
 }
