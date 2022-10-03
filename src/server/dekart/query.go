@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha1"
 	"dekart/src/proto"
+	"dekart/src/server/job"
 	"dekart/src/server/user"
 	"fmt"
 	"time"
@@ -184,7 +185,7 @@ func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) 
 	return res, nil
 }
 
-func (s Server) updateJobStatus(job Job, jobStatus chan int32) {
+func (s Server) updateJobStatus(job job.Job, jobStatus chan int32) {
 	for {
 		select {
 		case status := <-jobStatus:

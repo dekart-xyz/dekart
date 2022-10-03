@@ -7,6 +7,7 @@ import (
 	"dekart/src/server/athenajob"
 	"dekart/src/server/bqjob"
 	"dekart/src/server/dekart"
+	"dekart/src/server/job"
 	"dekart/src/server/storage"
 	"fmt"
 	"math/rand"
@@ -97,8 +98,8 @@ func configureBucket() storage.Storage {
 	return bucket
 }
 
-func configureJobStore(bucket storage.Storage) dekart.JobStore {
-	var jobStore dekart.JobStore
+func configureJobStore(bucket storage.Storage) job.Store {
+	var jobStore job.Store
 	switch os.Getenv("DEKART_DATASOURCE") {
 	case "ATHENA":
 		log.Info().Msg("Using Athena Datasource backend")
@@ -111,6 +112,24 @@ func configureJobStore(bucket storage.Storage) dekart.JobStore {
 	}
 
 	return jobStore
+}
+
+func startHttpServer(httpServer *http.Server) {
+	err := httpServer.ListenAndServe()
+	if err != nil {
+		if err == http.ErrServerClosed {
+			log.Info().Msg("http server closed")
+		} else {
+			log.Fatal().Err(err).Send()
+		}
+	}
+}
+
+func waitForInterrupt() os.Signal {
+	var s = make(chan os.Signal, 1)
+	signal.Notify(s, syscall.SIGTERM)
+	signal.Notify(s, syscall.SIGINT)
+	return <-s
 }
 
 func main() {
@@ -127,25 +146,12 @@ func main() {
 	dekartServer := dekart.NewServer(db, bucket, jobStore)
 	httpServer := app.Configure(dekartServer)
 
-	go func() {
-		err := httpServer.ListenAndServe()
-		if err != nil {
-			if err == http.ErrServerClosed {
-				log.Info().Msg("HTTP server closed")
-			} else {
-				log.Fatal().Err(err).Send()
-			}
-		}
-	}()
+	go startHttpServer(httpServer)
 
-	var gracefulStop = make(chan os.Signal, 1)
-	signal.Notify(gracefulStop, syscall.SIGTERM)
-	signal.Notify(gracefulStop, syscall.SIGINT)
-
-	sig := <-gracefulStop
+	sig := waitForInterrupt()
 
 	// shutdown gracefully
-	log.Info().Str("signal", sig.String()).Msg("Shutting down")
+	log.Info().Str("signal", sig.String()).Msg("shutdown signal received")
 	var wg sync.WaitGroup
 	wg.Add(2)
 
@@ -155,7 +161,7 @@ func main() {
 	go func() {
 		defer wg.Done()
 		dekartServer.Shutdown(shutdownCtx)
-		log.Debug().Msg("Dekart server shutdown complete")
+		log.Debug().Msg("dekart server shutdown complete")
 	}()
 
 	go func() {
@@ -165,5 +171,5 @@ func main() {
 	}()
 
 	wg.Wait()
-	log.Debug().Msg("Shutdown complete")
+	log.Info().Msg("shutdown complete")
 }
