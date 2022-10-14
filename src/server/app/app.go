@@ -1,4 +1,4 @@
-package http
+package app
 
 import (
 	"dekart/src/proto"

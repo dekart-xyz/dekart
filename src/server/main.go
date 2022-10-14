@@ -1,15 +1,21 @@
 package main
 
 import (
+	"context"
 	"database/sql"
+	"dekart/src/server/app"
 	"dekart/src/server/athenajob"
 	"dekart/src/server/bqjob"
 	"dekart/src/server/dekart"
-	"dekart/src/server/http"
+	"dekart/src/server/job"
 	"dekart/src/server/storage"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -77,14 +83,7 @@ func applyMigrations(db *sql.DB) {
 	}
 }
 
-func main() {
-	configureLogger()
-
-	db := configureDb()
-	defer db.Close()
-
-	applyMigrations(db)
-
+func configureBucket() storage.Storage {
 	var bucket storage.Storage
 	switch os.Getenv("DEKART_STORAGE") {
 	case "S3":
@@ -96,8 +95,11 @@ func main() {
 	default:
 		log.Fatal().Str("DEKART_STORAGE", os.Getenv("DEKART_STORAGE")).Msg("Unknown storage backend")
 	}
+	return bucket
+}
 
-	var jobStore dekart.JobStore
+func configureJobStore(bucket storage.Storage) job.Store {
+	var jobStore job.Store
 	switch os.Getenv("DEKART_DATASOURCE") {
 	case "ATHENA":
 		log.Info().Msg("Using Athena Datasource backend")
@@ -107,12 +109,67 @@ func main() {
 		jobStore = bqjob.NewStore()
 	default:
 		log.Fatal().Str("DEKART_STORAGE", os.Getenv("DEKART_STORAGE")).Msg("Unknown storage backend")
-
 	}
 
+	return jobStore
+}
+
+func startHttpServer(httpServer *http.Server) {
+	err := httpServer.ListenAndServe()
+	if err != nil {
+		if err == http.ErrServerClosed {
+			log.Info().Msg("http server closed")
+		} else {
+			log.Fatal().Err(err).Send()
+		}
+	}
+}
+
+func waitForInterrupt() os.Signal {
+	var s = make(chan os.Signal, 1)
+	signal.Notify(s, syscall.SIGTERM)
+	signal.Notify(s, syscall.SIGINT)
+	return <-s
+}
+
+func main() {
+	configureLogger()
+
+	db := configureDb()
+	defer db.Close()
+
+	applyMigrations(db)
+
+	bucket := configureBucket()
+	jobStore := configureJobStore(bucket)
+
 	dekartServer := dekart.NewServer(db, bucket, jobStore)
+	httpServer := app.Configure(dekartServer)
 
-	httpServer := http.Configure(dekartServer)
-	log.Fatal().Err(httpServer.ListenAndServe()).Send()
+	go startHttpServer(httpServer)
 
+	sig := waitForInterrupt()
+
+	// shutdown gracefully
+	log.Info().Str("signal", sig.String()).Msg("shutdown signal received")
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	go func() {
+		defer wg.Done()
+		dekartServer.Shutdown(shutdownCtx)
+		log.Debug().Msg("dekart server shutdown complete")
+	}()
+
+	go func() {
+		defer wg.Done()
+		httpServer.Shutdown(shutdownCtx)
+		log.Debug().Msg("http server shutdown complete")
+	}()
+
+	wg.Wait()
+	log.Info().Msg("shutdown complete")
 }
