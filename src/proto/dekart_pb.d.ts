@@ -3,6 +3,46 @@
 
 import * as jspb from "google-protobuf";
 
+export class RemoveDatasetRequest extends jspb.Message {
+  getDatasetId(): string;
+  setDatasetId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): RemoveDatasetRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: RemoveDatasetRequest): RemoveDatasetRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: RemoveDatasetRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RemoveDatasetRequest;
+  static deserializeBinaryFromReader(message: RemoveDatasetRequest, reader: jspb.BinaryReader): RemoveDatasetRequest;
+}
+
+export namespace RemoveDatasetRequest {
+  export type AsObject = {
+    datasetId: string,
+  }
+}
+
+export class RemoveDatasetResponse extends jspb.Message {
+  getDatasetId(): string;
+  setDatasetId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): RemoveDatasetResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: RemoveDatasetResponse): RemoveDatasetResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: RemoveDatasetResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RemoveDatasetResponse;
+  static deserializeBinaryFromReader(message: RemoveDatasetResponse, reader: jspb.BinaryReader): RemoveDatasetResponse;
+}
+
+export namespace RemoveDatasetResponse {
+  export type AsObject = {
+    datasetId: string,
+  }
+}
+
 export class StreamOptions extends jspb.Message {
   getSequence(): number;
   setSequence(value: number): void;

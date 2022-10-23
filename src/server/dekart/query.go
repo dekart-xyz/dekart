@@ -69,7 +69,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	return res, nil
 }
 
-func (s Server) getReportID(ctx context.Context, queryID string, email string) (*string, error) {
+func (s Server) getReportIDLegacy(ctx context.Context, queryID string, email string) (*string, error) {
 	queryRows, err := s.db.QueryContext(ctx,
 		`select report_id from queries
 		where id=$1 and report_id in (select report_id from reports where author_email=$2)
@@ -161,7 +161,7 @@ func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) 
 		return nil, status.Errorf(codes.InvalidArgument, "req.Query == nil")
 	}
 
-	reportID, err := s.getReportID(ctx, req.Query.Id, claims.Email)
+	reportID, err := s.getReportIDLegacy(ctx, req.Query.Id, claims.Email)
 
 	if err != nil {
 		log.Err(err).Send()
@@ -316,7 +316,7 @@ func (s Server) RemoveQuery(ctx context.Context, req *proto.RemoveQueryRequest) 
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
 	}
 
-	reportID, err := s.getReportID(ctx, req.QueryId, claims.Email)
+	reportID, err := s.getReportIDLegacy(ctx, req.QueryId, claims.Email)
 
 	if err != nil {
 		log.Err(err).Send()

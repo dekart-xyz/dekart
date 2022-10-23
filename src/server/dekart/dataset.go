@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -67,6 +68,70 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 		datasets = append(datasets, &dataset)
 	}
 	return datasets, nil
+}
+
+func (s Server) getReportID(ctx context.Context, datasetID string, email string) (*string, error) {
+	datasetRows, err := s.db.QueryContext(ctx,
+		`select report_id from datasets
+		where id=$1 and report_id in (select report_id from reports where author_email=$2)
+		limit 1`,
+		datasetID,
+		email,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer datasetRows.Close()
+	var reportID string
+	for datasetRows.Next() {
+		err := datasetRows.Scan(&reportID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if reportID == "" {
+		return nil, nil
+	}
+	return &reportID, nil
+}
+
+func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetRequest) (*proto.RemoveDatasetResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	_, err := uuid.Parse(req.DatasetId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+
+	reportID, err := s.getReportID(ctx, req.DatasetId, claims.Email)
+
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if reportID == nil {
+		err := fmt.Errorf("dataset not found id:%s", req.DatasetId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+
+	// s.jobs.Cancel(req.QueryId)
+
+	_, err = s.db.ExecContext(ctx,
+		`delete from datasets where id=$1`,
+		req.DatasetId,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	s.reportStreams.Ping(*reportID)
+
+	return &proto.RemoveDatasetResponse{}, nil
 }
 
 func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetRequest) (*proto.CreateDatasetResponse, error) {

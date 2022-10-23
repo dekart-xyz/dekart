@@ -27,6 +27,7 @@ type DekartClient interface {
 	UpdateReport(ctx context.Context, in *UpdateReportRequest, opts ...grpc.CallOption) (*UpdateReportResponse, error)
 	ArchiveReport(ctx context.Context, in *ArchiveReportRequest, opts ...grpc.CallOption) (*ArchiveReportResponse, error)
 	CreateDataset(ctx context.Context, in *CreateDatasetRequest, opts ...grpc.CallOption) (*CreateDatasetResponse, error)
+	RemoveDataset(ctx context.Context, in *RemoveDatasetRequest, opts ...grpc.CallOption) (*RemoveDatasetResponse, error)
 	CreateQuery(ctx context.Context, in *CreateQueryRequest, opts ...grpc.CallOption) (*CreateQueryResponse, error)
 	UpdateQuery(ctx context.Context, in *UpdateQueryRequest, opts ...grpc.CallOption) (*UpdateQueryResponse, error)
 	RunQuery(ctx context.Context, in *RunQueryRequest, opts ...grpc.CallOption) (*RunQueryResponse, error)
@@ -84,6 +85,15 @@ func (c *dekartClient) ArchiveReport(ctx context.Context, in *ArchiveReportReque
 func (c *dekartClient) CreateDataset(ctx context.Context, in *CreateDatasetRequest, opts ...grpc.CallOption) (*CreateDatasetResponse, error) {
 	out := new(CreateDatasetResponse)
 	err := c.cc.Invoke(ctx, "/Dekart/CreateDataset", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) RemoveDataset(ctx context.Context, in *RemoveDatasetRequest, opts ...grpc.CallOption) (*RemoveDatasetResponse, error) {
+	out := new(RemoveDatasetResponse)
+	err := c.cc.Invoke(ctx, "/Dekart/RemoveDataset", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -217,6 +227,7 @@ type DekartServer interface {
 	UpdateReport(context.Context, *UpdateReportRequest) (*UpdateReportResponse, error)
 	ArchiveReport(context.Context, *ArchiveReportRequest) (*ArchiveReportResponse, error)
 	CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error)
+	RemoveDataset(context.Context, *RemoveDatasetRequest) (*RemoveDatasetResponse, error)
 	CreateQuery(context.Context, *CreateQueryRequest) (*CreateQueryResponse, error)
 	UpdateQuery(context.Context, *UpdateQueryRequest) (*UpdateQueryResponse, error)
 	RunQuery(context.Context, *RunQueryRequest) (*RunQueryResponse, error)
@@ -246,6 +257,9 @@ func (UnimplementedDekartServer) ArchiveReport(context.Context, *ArchiveReportRe
 }
 func (UnimplementedDekartServer) CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateDataset not implemented")
+}
+func (UnimplementedDekartServer) RemoveDataset(context.Context, *RemoveDatasetRequest) (*RemoveDatasetResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveDataset not implemented")
 }
 func (UnimplementedDekartServer) CreateQuery(context.Context, *CreateQueryRequest) (*CreateQueryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateQuery not implemented")
@@ -370,6 +384,24 @@ func _Dekart_CreateDataset_Handler(srv interface{}, ctx context.Context, dec fun
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DekartServer).CreateDataset(ctx, req.(*CreateDatasetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_RemoveDataset_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveDatasetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).RemoveDataset(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Dekart/RemoveDataset",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).RemoveDataset(ctx, req.(*RemoveDatasetRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -550,6 +582,10 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateDataset",
 			Handler:    _Dekart_CreateDataset_Handler,
+		},
+		{
+			MethodName: "RemoveDataset",
+			Handler:    _Dekart_RemoveDataset_Handler,
 		},
 		{
 			MethodName: "CreateQuery",

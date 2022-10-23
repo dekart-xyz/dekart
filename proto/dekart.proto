@@ -9,6 +9,7 @@ service Dekart {
     rpc ArchiveReport(ArchiveReportRequest) returns (ArchiveReportResponse) {}
 
     rpc CreateDataset(CreateDatasetRequest) returns (CreateDatasetResponse) {}
+    rpc RemoveDataset(RemoveDatasetRequest) returns (RemoveDatasetResponse) {}
     rpc CreateQuery(CreateQueryRequest) returns (CreateQueryResponse) {}
     rpc UpdateQuery(UpdateQueryRequest) returns (UpdateQueryResponse) {}
     rpc RunQuery(RunQueryRequest) returns (RunQueryResponse) {}
@@ -19,6 +20,14 @@ service Dekart {
 
     rpc GetReportStream(ReportStreamRequest) returns (stream ReportStreamResponse) {}
     rpc GetReportListStream(ReportListRequest) returns (stream ReportListResponse) {}
+}
+
+message RemoveDatasetRequest {
+    string dataset_id = 1;
+}
+
+message RemoveDatasetResponse {
+    string dataset_id = 1;
 }
 
 message StreamOptions {
