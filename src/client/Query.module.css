@@ -12,16 +12,17 @@
 .editor :global .ace_content,
 .editor :global .ace_gutter {
     /* background-color: #F7F7F7!important; */
-    background-color: white!important;
+    background-color: white !important;
 }
 
 .editor :global .ace_gutter-active-line.ace_gutter-cell {
-    background-color: #EDEDED!important;
+    background-color: #EDEDED !important;
 }
 
 .status {
     word-break: break-all;
 }
+
 .status {
     flex: 1;
     margin-right: 0px;
@@ -52,7 +53,7 @@
     flex: 1;
 }
 
-.queryStatus{
+.queryStatus {
     padding: 10px;
     padding-left: 15px;
     display: flex;

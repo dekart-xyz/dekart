@@ -164,7 +164,7 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 	report.Id = reportID
 	report.Title = fmt.Sprintf("Fork of %s", report.Title)
 
-	sourceQueries, err := s.getQueries(ctx, req.ReportId)
+	sourceQueries, err := s.getQueriesLegacy(ctx, req.ReportId)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, err

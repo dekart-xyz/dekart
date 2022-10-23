@@ -88,6 +88,8 @@ export namespace GetEnvResponse {
       TYPE_MAPBOX_TOKEN: 1;
       TYPE_UX_DATA_DOCUMENTATION: 2;
       TYPE_UX_HOMEPAGE: 3;
+      TYPE_ALLOW_FILE_UPLOAD: 4;
+      TYPE_DATASOURCE: 5;
     }
 
     export const Type: TypeMap;
@@ -217,6 +219,42 @@ export namespace Report {
     title: string,
     archived: boolean,
     canWrite: boolean,
+  }
+}
+
+export class Dataset extends jspb.Message {
+  getId(): string;
+  setId(value: string): void;
+
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  getQueryId(): string;
+  setQueryId(value: string): void;
+
+  getCreatedAt(): number;
+  setCreatedAt(value: number): void;
+
+  getUpdatedAt(): number;
+  setUpdatedAt(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): Dataset.AsObject;
+  static toObject(includeInstance: boolean, msg: Dataset): Dataset.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: Dataset, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): Dataset;
+  static deserializeBinaryFromReader(message: Dataset, reader: jspb.BinaryReader): Dataset;
+}
+
+export namespace Dataset {
+  export type AsObject = {
+    id: string,
+    reportId: string,
+    queryId: string,
+    createdAt: number,
+    updatedAt: number,
   }
 }
 
@@ -511,6 +549,42 @@ export namespace UpdateQueryResponse {
   }
 }
 
+export class CreateDatasetRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CreateDatasetRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: CreateDatasetRequest): CreateDatasetRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CreateDatasetRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CreateDatasetRequest;
+  static deserializeBinaryFromReader(message: CreateDatasetRequest, reader: jspb.BinaryReader): CreateDatasetRequest;
+}
+
+export namespace CreateDatasetRequest {
+  export type AsObject = {
+    reportId: string,
+  }
+}
+
+export class CreateDatasetResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CreateDatasetResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: CreateDatasetResponse): CreateDatasetResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CreateDatasetResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CreateDatasetResponse;
+  static deserializeBinaryFromReader(message: CreateDatasetResponse, reader: jspb.BinaryReader): CreateDatasetResponse;
+}
+
+export namespace CreateDatasetResponse {
+  export type AsObject = {
+  }
+}
+
 export class CreateQueryRequest extends jspb.Message {
   hasQuery(): boolean;
   clearQuery(): void;
@@ -599,6 +673,11 @@ export class ReportStreamResponse extends jspb.Message {
   getStreamOptions(): StreamOptions | undefined;
   setStreamOptions(value?: StreamOptions): void;
 
+  clearDatasetsList(): void;
+  getDatasetsList(): Array<Dataset>;
+  setDatasetsList(value: Array<Dataset>): void;
+  addDatasets(value?: Dataset, index?: number): Dataset;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): ReportStreamResponse.AsObject;
   static toObject(includeInstance: boolean, msg: ReportStreamResponse): ReportStreamResponse.AsObject;
@@ -614,6 +693,7 @@ export namespace ReportStreamResponse {
     report?: Report.AsObject,
     queriesList: Array<Query.AsObject>,
     streamOptions?: StreamOptions.AsObject,
+    datasetsList: Array<Dataset.AsObject>,
   }
 }
 

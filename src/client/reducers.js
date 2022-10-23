@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 import keplerGlReducer from '@dekart-xyz/kepler.gl/dist/reducers'
 import { ActionTypes as KeplerActionTypes } from '@dekart-xyz/kepler.gl/dist/actions'
-import { downloadJobResults, openReport, reportTitleChange, reportUpdate, runQuery, saveMap, updateQuery, reportsListUpdate, unsubscribeReports, streamError, httpError, newReport, setEnv, forkReport, newForkedReport, downloading, finishDownloading, setActiveQuery, queryChanged, newRelease, querySource } from './actions'
+import { downloadJobResults, openReport, reportTitleChange, reportUpdate, runQuery, saveMap, updateQuery, reportsListUpdate, unsubscribeReports, streamError, httpError, newReport, setEnv, forkReport, newForkedReport, downloading, finishDownloading, setActiveDataset, queryChanged, newRelease, querySource } from './actions'
 import { Query } from '../proto/dekart_pb'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
@@ -11,13 +11,13 @@ const customKeplerGlReducer = keplerGlReducer.initialState({
   }
 })
 
-function keplerGl (state, action) {
+function keplerGl(state, action) {
   // console.log('keplerGl', state)
   // console.log('keplerGl', action)
   return customKeplerGlReducer(state, action)
 }
 
-function report (state = null, action) {
+function report(state = null, action) {
   switch (action.type) {
     case openReport.name:
       return null
@@ -28,12 +28,23 @@ function report (state = null, action) {
   }
 }
 
-function queries (state = [], action) {
+function queries(state = [], action) {
   switch (action.type) {
     case openReport.name:
       return []
     case reportUpdate.name:
       return action.queriesList
+    default:
+      return state
+  }
+}
+
+function datasets(state = [], action) {
+  switch (action.type) {
+    case openReport.name:
+      return []
+    case reportUpdate.name:
+      return action.datasetsList
     default:
       return state
   }
@@ -48,7 +59,7 @@ const defaultReportStatus = {
   newReportId: null,
   lastUpdated: 0
 }
-function reportStatus (state = defaultReportStatus, action) {
+function reportStatus(state = defaultReportStatus, action) {
   switch (action.type) {
     case downloadJobResults.name:
       return {
@@ -99,7 +110,7 @@ function reportStatus (state = defaultReportStatus, action) {
       return state
   }
 }
-function queryStatus (state = {}, action) {
+function queryStatus(state = {}, action) {
   let queryId
   switch (action.type) {
     case KeplerActionTypes.ADD_DATA_TO_MAP:
@@ -197,7 +208,7 @@ function queryStatus (state = {}, action) {
 }
 
 const defaultReportsList = { loaded: false, reports: [] }
-function reportsList (state = defaultReportsList, action) {
+function reportsList(state = defaultReportsList, action) {
   switch (action.type) {
     case unsubscribeReports.name:
       return defaultReportsList
@@ -214,7 +225,7 @@ function reportsList (state = defaultReportsList, action) {
 }
 
 const defaultEnv = { loaded: false, variables: {} }
-function env (state = defaultEnv, action) {
+function env(state = defaultEnv, action) {
   switch (action.type) {
     case setEnv.name:
       return {
@@ -226,7 +237,7 @@ function env (state = defaultEnv, action) {
   }
 }
 
-function httpErrorStatus (state = 0, action) {
+function httpErrorStatus(state = 0, action) {
   switch (action.type) {
     case httpError.name:
       return action.status
@@ -235,7 +246,7 @@ function httpErrorStatus (state = 0, action) {
   }
 }
 
-function downloadingQueryResults (state = [], action) {
+function downloadingQueryResults(state = [], action) {
   const { query } = action
   switch (action.type) {
     case downloading.name:
@@ -247,29 +258,29 @@ function downloadingQueryResults (state = [], action) {
   }
 }
 
-function activeQuery (state = null, action) {
-  const { queriesList, prevQueriesList } = action
+function activeDataset(state = null, action) {
+  const { datasetsList, prevDatasetsList } = action
   switch (action.type) {
     case openReport.name:
       return null
-    case setActiveQuery.name:
-      return action.query
+    case setActiveDataset.name:
+      return action.dataset
     case reportUpdate.name:
       if (!state) {
-        return queriesList[0] || state
+        return datasetsList[0] || state
       }
-      if (queriesList.length > prevQueriesList.length) {
-        return queriesList.slice(-1)[0]
+      if (datasetsList.length > prevDatasetsList.length) {
+        return datasetsList.slice(-1)[0]
       }
       return {
-        ...(queriesList.find(q => q.id === state.id) || queriesList[0])
+        ...(datasetsList.find(d => d.id === state.id) || datasetsList[0])
       }
     default:
       return state
   }
 }
 
-function release (state = null, action) {
+function release(state = null, action) {
   switch (action.type) {
     case newRelease.name:
       return action.release
@@ -283,11 +294,12 @@ export default combineReducers({
   report,
   queries,
   queryStatus,
-  activeQuery,
+  activeDataset,
   reportStatus,
   reportsList,
   env,
   httpErrorStatus,
   downloadingQueryResults,
-  release
+  release,
+  datasets
 })

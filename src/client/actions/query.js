@@ -2,9 +2,10 @@ import { CancelQueryRequest, CreateQueryRequest, Query, RemoveQueryRequest, RunQ
 import { Dekart } from '../../proto/dekart_pb_service'
 import { get } from '../lib/api'
 import { unary } from '../lib/grpc'
+import { setActiveDataset } from './dataset'
 import { error, success } from './message'
 
-export function queryChanged (queryId, queryText) {
+export function queryChanged(queryId, queryText) {
   return (dispatch, getState) => {
     const query = getState().queries.find(q => q.id === queryId)
     const changed = query ? query.queryText !== queryText : true
@@ -12,26 +13,17 @@ export function queryChanged (queryId, queryText) {
   }
 }
 
-export function setActiveQuery (queryId) {
-  return (dispatch, getState) => {
-    const { queries } = getState()
-    const query = queries.find(q => q.id === queryId) || queries[0]
-    if (query) {
-      dispatch({ type: setActiveQuery.name, query })
-    }
-  }
-}
-export function removeQuery (queryId) {
+export function removeQuery(queryId) {
   return async (dispatch, getState) => {
-    const { queries, activeQuery } = getState()
-    if (activeQuery.id === queryId) {
+    const { queries, activeDataset } = getState()
+    if (activeDataset.id === queryId) {
       // removed active query
       const queriesLeft = queries.filter(q => q.id !== queryId)
       if (queriesLeft.length === 0) {
         dispatch(error(new Error('Cannot remove last query')))
         return
       }
-      dispatch(setActiveQuery(queriesLeft.id))
+      dispatch(setActiveDataset(queriesLeft.id))
     }
     dispatch({ type: removeQuery.name, queryId })
 
@@ -46,7 +38,7 @@ export function removeQuery (queryId) {
   }
 }
 
-export function createQuery (reportId) {
+export function createQuery(reportId) {
   return (dispatch) => {
     dispatch({ type: createQuery.name })
     const request = new CreateQueryRequest()
@@ -57,7 +49,7 @@ export function createQuery (reportId) {
   }
 }
 
-export function updateQuery (queryId, queryText) {
+export function updateQuery(queryId, queryText) {
   return async (dispatch, getState) => {
     const { queryStatus } = getState()
     dispatch({ type: updateQuery.name, queryId })
@@ -75,7 +67,7 @@ export function updateQuery (queryId, queryText) {
     }
   }
 }
-export function runQuery (queryId, queryText) {
+export function runQuery(queryId, queryText) {
   return async (dispatch) => {
     dispatch({ type: runQuery.name, queryId })
     const request = new RunQueryRequest()
@@ -89,7 +81,7 @@ export function runQuery (queryId, queryText) {
   }
 }
 
-export function cancelQuery (queryId) {
+export function cancelQuery(queryId) {
   return async (dispatch) => {
     dispatch({ type: cancelQuery.name, queryId })
     const request = new CancelQueryRequest()
@@ -102,11 +94,11 @@ export function cancelQuery (queryId) {
   }
 }
 
-export function querySource (queryId, querySourceId, queryText) {
+export function querySource(queryId, querySourceId, queryText) {
   return { type: querySource.name, queryText, querySourceId, queryId }
 }
 
-export function downloadQuerySource (query) {
+export function downloadQuerySource(query) {
   return async (dispatch, getState) => {
     dispatch({ type: downloadQuerySource.name, query })
     const { queries } = getState()

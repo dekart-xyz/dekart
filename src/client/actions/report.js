@@ -10,7 +10,7 @@ import { downloadQuerySource } from './query'
 
 let reportStreamCancelable
 
-export function closeReport (reportId) {
+export function closeReport(reportId) {
   return (dispatch) => {
     if (reportStreamCancelable) {
       reportStreamCancelable.cancel()
@@ -21,7 +21,7 @@ export function closeReport (reportId) {
   }
 }
 
-export function openReport (reportId, edit) {
+export function openReport(reportId, edit) {
   return (dispatch) => {
     dispatch({
       type: openReport.name,
@@ -37,7 +37,7 @@ export function openReport (reportId, edit) {
   }
 }
 
-function shouldAddDataset (query, prevQueriesList, queriesList) {
+function shouldAddDataset(query, prevQueriesList, queriesList) {
   if (!query.jobResultId) {
     return false
   }
@@ -54,7 +54,7 @@ function shouldAddDataset (query, prevQueriesList, queriesList) {
   return false
 }
 
-function shouldDownloadQueryText (query, prevQueriesList, queriesList) {
+function shouldDownloadQueryText(query, prevQueriesList, queriesList) {
   if (query.querySource !== Query.QuerySource.QUERY_SOURCE_STORAGE) {
     return false
   }
@@ -71,15 +71,17 @@ function shouldDownloadQueryText (query, prevQueriesList, queriesList) {
   return false
 }
 
-export function reportUpdate (reportStreamResponse) {
-  const { report, queriesList } = reportStreamResponse
+export function reportUpdate(reportStreamResponse) {
+  const { report, queriesList, datasetsList } = reportStreamResponse
   return async (dispatch, getState) => {
-    const { queries: prevQueriesList, report: prevReport } = getState()
+    const { queries: prevQueriesList, datasets: prevDatasetsList, report: prevReport } = getState()
     dispatch({
       type: reportUpdate.name,
       report,
       queriesList,
-      prevQueriesList
+      prevQueriesList,
+      datasetsList,
+      prevDatasetsList
     })
     if (report.mapConfig && !prevReport) {
       const parsedConfig = KeplerGlSchema.parseSavedConfig(JSON.parse(report.mapConfig))
@@ -103,7 +105,7 @@ export function reportUpdate (reportStreamResponse) {
 
 let reportStreamListCancelable
 
-export function subscribeReports () {
+export function subscribeReports() {
   return (dispatch) => {
     dispatch({ type: subscribeReports.name })
     const request = new ReportListRequest()
@@ -116,19 +118,19 @@ export function subscribeReports () {
   }
 }
 
-export function unsubscribeReports () {
+export function unsubscribeReports() {
   return dispatch => {
     dispatch({ type: unsubscribeReports.name })
     reportStreamListCancelable.cancel()
   }
 }
 
-export function reportsListUpdate (reportsList) {
+export function reportsListUpdate(reportsList) {
   // console.log('reportsListUpdate', reportsList)
   return { type: reportsListUpdate.name, reportsList }
 }
 
-export function archiveReport (reportId, archive) {
+export function archiveReport(reportId, archive) {
   return async dispatch => {
     dispatch({ type: archiveReport.name, reportId })
     const req = new ArchiveReportRequest()
@@ -142,15 +144,15 @@ export function archiveReport (reportId, archive) {
   }
 }
 
-export function newReport (id) {
+export function newReport(id) {
   return { type: newReport.name, id }
 }
 
-export function newForkedReport (id) {
+export function newForkedReport(id) {
   return { type: newForkedReport.name, id }
 }
 
-export function forkReport (reportId) {
+export function forkReport(reportId) {
   return async (dispatch, getState) => {
     dispatch({ type: forkReport.name })
     const request = new ForkReportRequest()
@@ -165,7 +167,7 @@ export function forkReport (reportId) {
   }
 }
 
-export function createReport () {
+export function createReport() {
   return async (dispatch) => {
     const request = new CreateReportRequest()
     try {
@@ -179,14 +181,14 @@ export function createReport () {
   }
 }
 
-export function reportTitleChange (title) {
+export function reportTitleChange(title) {
   return {
     type: reportTitleChange.name,
     title
   }
 }
 
-export function saveMap () {
+export function saveMap() {
   return async (dispatch, getState) => {
     dispatch({ type: saveMap.name })
     const { keplerGl, report, reportStatus, queryStatus } = getState()

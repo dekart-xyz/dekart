@@ -10,9 +10,10 @@
 }
 
 .titleInput::placeholder {
-    color: white!important;
+    color: white !important;
     opacity: 0.7;
 }
+
 .title .titleInput {
     color: white;
     font-size: 16px;
@@ -46,7 +47,7 @@
 }
 
 .title {
-    width:100%;
+    width: 100%;
     min-width: 100px;
     text-align: center;
     position: relative;
@@ -65,10 +66,10 @@
 }
 
 .tabs :global .ant-tabs-nav {
-    margin-bottom: 0!important;
+    margin-bottom: 0 !important;
 }
 
-.querySection {
+.datasetSection {
     width: 500px;
     display: flex;
     flex-direction: column;
@@ -83,6 +84,7 @@
     left: 0;
     right: 0;
 }
+
 .keplerFlex {
     flex: 1;
     position: relative;
@@ -108,6 +110,7 @@
 .readOnly span {
     margin-right: 5px;
 }
+
 .readOnly {
     display: flex;
     flex-direction: row;
@@ -134,10 +137,10 @@
     display: none;
 }
 
-.activeQuery {
+/* .activeDataset {
     flex: 1;
     display: flex;
-}
+} */
 
 .keplerError {
     color: white;

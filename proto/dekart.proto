@@ -8,6 +8,7 @@ service Dekart {
     rpc UpdateReport(UpdateReportRequest) returns (UpdateReportResponse) {}
     rpc ArchiveReport(ArchiveReportRequest) returns (ArchiveReportResponse) {}
 
+    rpc CreateDataset(CreateDatasetRequest) returns (CreateDatasetResponse) {}
     rpc CreateQuery(CreateQueryRequest) returns (CreateQueryResponse) {}
     rpc UpdateQuery(UpdateQueryRequest) returns (UpdateQueryResponse) {}
     rpc RunQuery(RunQueryRequest) returns (RunQueryResponse) {}
@@ -33,6 +34,8 @@ message GetEnvResponse {
             TYPE_MAPBOX_TOKEN = 1;
             TYPE_UX_DATA_DOCUMENTATION = 2;
             TYPE_UX_HOMEPAGE = 3;
+            TYPE_ALLOW_FILE_UPLOAD = 4;
+            TYPE_DATASOURCE = 5;
         }
         Type type = 1;
         string value = 2;
@@ -62,6 +65,14 @@ message Report {
     string title = 3;
     bool archived = 4;
     bool can_write = 5;
+}
+
+message Dataset {
+    string id = 1;
+    string report_id = 2;
+    string query_id = 3;
+    int64 created_at = 4;
+    int64 updated_at = 5;
 }
 
 message Query {
@@ -136,6 +147,13 @@ message UpdateQueryResponse {
     Query query = 1;
 }
 
+message CreateDatasetRequest {
+    string report_id = 1;
+}
+
+message CreateDatasetResponse {
+}
+
 message CreateQueryRequest {
     Query query = 1;
 }
@@ -153,6 +171,7 @@ message ReportStreamResponse {
     Report report = 1;
     repeated Query queries = 2;
     StreamOptions stream_options = 3;
+    repeated Dataset datasets = 4;
 }
 
 message ForkReportRequest {

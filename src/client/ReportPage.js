@@ -6,7 +6,7 @@ import { KeplerGl } from '@dekart-xyz/kepler.gl/dist/components'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
 import { useDispatch, useSelector } from 'react-redux'
-import { closeReport, openReport, createQuery, reportTitleChange, removeQuery, setActiveQuery, error } from './actions'
+import { closeReport, openReport, createQuery, reportTitleChange, removeQuery, setActiveDataset, error, createDataset } from './actions'
 import Query from './Query'
 import { EditOutlined, WarningFilled } from '@ant-design/icons'
 import { Query as QueryType } from '../proto/dekart_pb'
@@ -16,8 +16,9 @@ import classnames from 'classnames'
 import { Header } from './Header'
 import ReportHeaderButtons from './ReportHeaderButtons'
 import Downloading from './Downloading'
+import Dataset from './Dataset'
 
-function TabIcon ({ query }) {
+function TabIcon({ query }) {
   let iconColor = 'transparent'
   if (query.jobError) {
     iconColor = '#F66B55'
@@ -43,11 +44,12 @@ function TabIcon ({ query }) {
   )
 }
 
-function getOnTabEditHandler (dispatch, reportId) {
+function getOnTabEditHandler(dispatch, reportId) {
   return (queryId, action) => {
     switch (action) {
       case 'add':
-        return dispatch(createQuery(reportId))
+        // return dispatch(createQuery(reportId))
+        return dispatch(createDataset(reportId))
       case 'remove':
         Modal.confirm({
           title: 'Are you sure delete query?',
@@ -60,38 +62,50 @@ function getOnTabEditHandler (dispatch, reportId) {
   }
 }
 
-function getTabPane (query, i, closable, changed) {
-  return (<Tabs.TabPane tab={<><TabIcon query={query} />{`Query ${i + 1}${changed ? '*' : ''}`}</>} key={query.id} closable={closable} />)
+function getTabPane(dataset, i, closable, changed = false) {
+  let title = 'Dataset'
+  if (dataset.queryId) {
+    title = 'Query'
+  }
+  return (<Tabs.TabPane tab={<><TabIcon query={dataset} />{`${title} ${i + 1}${changed ? '*' : ''}`}</>} key={dataset.id} closable={closable} />)
 }
 
-function QuerySection ({ reportId }) {
+// function getTabPane(query, i, closable, changed) {
+//   return (<Tabs.TabPane tab={<><TabIcon query={query} />{`Query ${i + 1}${changed ? '*' : ''}`}</>} key={query.id} closable={closable} />)
+// }
+
+function DatasetSection({ reportId }) {
   const queries = useSelector(state => state.queries)
-  const activeQuery = useSelector(state => state.activeQuery)
+  const datasets = useSelector(state => state.datasets)
+  const activeDataset = useSelector(state => state.activeDataset)
   const report = useSelector(state => state.report)
   const queryStatus = useSelector(state => state.queryStatus)
   const { canWrite } = report
   const dispatch = useDispatch()
   useEffect(() => {
-    if (report && !(activeQuery)) {
+    if (report && !(activeDataset)) {
       dispatch(createQuery(reportId))
     }
-  }, [reportId, report, activeQuery, dispatch])
-  if (activeQuery) {
-    const closable = queries.length > 1 && canWrite
+  }, [reportId, report, activeDataset, dispatch])
+  if (activeDataset) {
+    const closable = datasets.length > 1 && canWrite
     return (
-      <div className={styles.querySection}>
+      <div className={styles.datasetSection}>
         <div className={styles.tabs}>
           <Tabs
             type='editable-card'
-            activeKey={activeQuery.id}
-            onChange={(queryId) => dispatch(setActiveQuery(queryId))}
+            activeKey={activeDataset.id}
+            onChange={(datasetId) => dispatch(setActiveDataset(datasetId))}
             hideAdd={!canWrite}
             onEdit={getOnTabEditHandler(dispatch, reportId)}
           >
-            {queries.map((query, i) => getTabPane(query, i, closable, queryStatus[query.id].changed))}
+            {datasets.map((dataset, i) => getTabPane(dataset, i, closable))}
+            {/* {queries.map((query, i) => getTabPane(query, i, closable, queryStatus[query.id].changed))} */}
           </Tabs>
         </div>
-        <Query query={activeQuery} key={activeQuery.id} />
+        <Dataset dataset={activeDataset} />
+        {/* {activeDataset.queryId ? <Query query={activeDataset} key={activeDataset.id} /> : null} */}
+        {/* {<Query query={activeDataset} key={activeDataset.id} />} */}
       </div>
     )
   } else {
@@ -100,7 +114,7 @@ function QuerySection ({ reportId }) {
 }
 
 let checkMapConfigTimer
-function checkMapConfig (kepler, mapConfig, setMapChanged) {
+function checkMapConfig(kepler, mapConfig, setMapChanged) {
   if (checkMapConfigTimer) {
     clearTimeout(checkMapConfigTimer)
   }
@@ -118,7 +132,7 @@ function checkMapConfig (kepler, mapConfig, setMapChanged) {
   }
 }
 
-function Title () {
+function Title() {
   const reportStatus = useSelector(state => state.reportStatus)
   const { canWrite } = useSelector(state => state.report)
   const [edit, setEdit] = useState(false)
@@ -149,8 +163,8 @@ function Title () {
           )}
           onClick={() => reportStatus.edit && setEdit(true)}
         >{
-          reportStatus.edit && canWrite ? <EditOutlined className={styles.titleEditIcon} /> : null
-        }{reportStatus.title}
+            reportStatus.edit && canWrite ? <EditOutlined className={styles.titleEditIcon} /> : null
+          }{reportStatus.title}
         </span>
       </div>
     )
@@ -158,17 +172,17 @@ function Title () {
 }
 
 class CatchKeplerError extends Component {
-  constructor (props) {
+  constructor(props) {
     super(props)
     this.state = { hasError: false }
   }
 
-  componentDidCatch (error, errorInfo) {
+  componentDidCatch(error, errorInfo) {
     this.setState({ hasError: true })
     this.props.onError(error)
   }
 
-  render () {
+  render() {
     if (this.state.hasError) {
       return (
         <div className={styles.keplerError}>
@@ -180,7 +194,7 @@ class CatchKeplerError extends Component {
   }
 }
 
-function Kepler () {
+function Kepler() {
   const env = useSelector(state => state.env)
   const dispatch = useDispatch()
   if (!env.loaded) {
@@ -211,7 +225,7 @@ function Kepler () {
   )
 }
 
-export default function ReportPage ({ edit }) {
+export default function ReportPage({ edit }) {
   const { id } = useParams()
 
   const kepler = useSelector(state => state.keplerGl.kepler)
@@ -254,11 +268,11 @@ export default function ReportPage ({ edit }) {
           changed={mapChanged || titleChanged || queryChanged}
           canSave={reportStatus.canSave}
           edit={edit}
-                  />)}
+        />)}
       />
       <div className={styles.body}>
         <Kepler />
-        {edit ? <QuerySection reportId={id} /> : null}
+        {edit ? <DatasetSection reportId={id} /> : null}
       </div>
     </div>
   )
