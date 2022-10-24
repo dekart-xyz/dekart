@@ -85,7 +85,7 @@ function DatasetSection({ reportId }) {
   const dispatch = useDispatch()
   useEffect(() => {
     if (report && !(activeDataset)) {
-      dispatch(createQuery(reportId))
+      dispatch(createDataset(reportId))
     }
   }, [reportId, report, activeDataset, dispatch])
   if (activeDataset) {

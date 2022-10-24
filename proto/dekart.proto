@@ -164,7 +164,7 @@ message CreateDatasetResponse {
 }
 
 message CreateQueryRequest {
-    Query query = 1;
+    string dataset_id = 1;
 }
 
 message CreateQueryResponse {

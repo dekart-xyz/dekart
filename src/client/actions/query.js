@@ -38,13 +38,26 @@ export function removeQuery(queryId) {
   }
 }
 
-export function createQuery(reportId) {
+// export function createQuery(reportId) {
+//   return (dispatch) => {
+//     dispatch({ type: createQuery.name })
+//     const request = new CreateQueryRequest()
+//     const query = new Query()
+//     query.setReportId(reportId)
+//     request.setQuery(query)
+//     unary(Dekart.CreateQuery, request).catch(err => dispatch(error(err)))
+//   }
+// }
+
+export function createQuery(datasetId) {
   return (dispatch) => {
+    console.log('createQuery', datasetId)
     dispatch({ type: createQuery.name })
     const request = new CreateQueryRequest()
-    const query = new Query()
-    query.setReportId(reportId)
-    request.setQuery(query)
+    request.setDatasetId(datasetId)
+    // const query = new Query()
+    // query.setData(reportId)
+    // request.setQuery(query)
     unary(Dekart.CreateQuery, request).catch(err => dispatch(error(err)))
   }
 }

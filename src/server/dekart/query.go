@@ -15,29 +15,44 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// CreateQuery in Report
+// CreateQuery in dataset
 func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) (*proto.CreateQueryResponse, error) {
+	log.Debug().Msg("CreateQuery request")
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	if req.Query == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "req.Query == nil")
+	// if req.Query == nil {
+	// 	return nil, status.Errorf(codes.InvalidArgument, "req.Query == nil")
+	// }
+
+	reportID, err := s.getReportID(ctx, req.DatasetId, claims.Email)
+
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if reportID == nil {
+		err := fmt.Errorf("dataset not found id:%s", req.DatasetId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
 	id := newUUID()
-	result, err := s.db.ExecContext(ctx,
-		`insert into queries (id, report_id, query_text)
-		select
-			$1 as id,
-			id as report_id,
-			'' as query_text
-		from reports
-		where id=$2 and not archived and author_email=$3 limit 1
-		`,
+	_, err = s.db.ExecContext(ctx,
+		`insert into queries (id, query_text) values ($1, '')`,
 		id,
-		req.Query.ReportId,
-		claims.Email,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	result, err := s.db.ExecContext(ctx,
+		`update datasets set query_id=$1 where id=$2 and query_id is null`,
+		id,
+		req.DatasetId,
 	)
 	if err != nil {
 		log.Err(err).Send()
@@ -51,22 +66,23 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	}
 
 	if affectedRows == 0 {
-		err := fmt.Errorf("report=%s, author_email=%s not found", req.Query.ReportId, claims.Email)
-		log.Warn().Err(err).Send()
-		return nil, status.Errorf(codes.NotFound, err.Error())
+		log.Warn().Str("report", *reportID).Str("dataset", req.DatasetId).Msg("dataset query was already created")
+		// err := fmt.Errorf("report=%s, author_email=%s not found", req.Query.ReportId, claims.Email)
+		// log.Warn().Err(err).Send()
+		// return nil, status.Errorf(codes.NotFound, err.Error())
 	}
-	go s.storeQuery(req.Query.ReportId, id, req.Query.QueryText, "")
-	s.reportStreams.Ping(req.Query.ReportId)
+	go s.storeQuery(*reportID, id, "", "")
+	s.reportStreams.Ping(*reportID)
 
-	res := &proto.CreateQueryResponse{
-		Query: &proto.Query{
-			Id:        id,
-			ReportId:  req.Query.ReportId,
-			QueryText: req.Query.QueryText,
-		},
-	}
+	// res := &proto.CreateQueryResponse{
+	// 	Query: &proto.Query{
+	// 		Id:        id,
+	// 		ReportId:  req.Query.ReportId,
+	// 		QueryText: req.Query.QueryText,
+	// 	},
+	// }
 
-	return res, nil
+	return &proto.CreateQueryResponse{}, nil
 }
 
 func (s Server) getReportIDLegacy(ctx context.Context, queryID string, email string) (*string, error) {

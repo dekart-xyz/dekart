@@ -626,10 +626,8 @@ export namespace CreateDatasetResponse {
 }
 
 export class CreateQueryRequest extends jspb.Message {
-  hasQuery(): boolean;
-  clearQuery(): void;
-  getQuery(): Query | undefined;
-  setQuery(value?: Query): void;
+  getDatasetId(): string;
+  setDatasetId(value: string): void;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CreateQueryRequest.AsObject;
@@ -643,7 +641,7 @@ export class CreateQueryRequest extends jspb.Message {
 
 export namespace CreateQueryRequest {
   export type AsObject = {
-    query?: Query.AsObject,
+    datasetId: string,
   }
 }
 

@@ -4830,7 +4830,7 @@ proto.CreateQueryRequest.prototype.toObject = function(opt_includeInstance) {
  */
 proto.CreateQueryRequest.toObject = function(includeInstance, msg) {
   var f, obj = {
-    query: (f = msg.getQuery()) && proto.Query.toObject(includeInstance, f)
+    datasetId: jspb.Message.getFieldWithDefault(msg, 1, "")
   };
 
   if (includeInstance) {
@@ -4868,9 +4868,8 @@ proto.CreateQueryRequest.deserializeBinaryFromReader = function(msg, reader) {
     var field = reader.getFieldNumber();
     switch (field) {
     case 1:
-      var value = new proto.Query;
-      reader.readMessage(value,proto.Query.deserializeBinaryFromReader);
-      msg.setQuery(value);
+      var value = /** @type {string} */ (reader.readString());
+      msg.setDatasetId(value);
       break;
     default:
       reader.skipField();
@@ -4901,51 +4900,31 @@ proto.CreateQueryRequest.prototype.serializeBinary = function() {
  */
 proto.CreateQueryRequest.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
-  f = message.getQuery();
-  if (f != null) {
-    writer.writeMessage(
+  f = message.getDatasetId();
+  if (f.length > 0) {
+    writer.writeString(
       1,
-      f,
-      proto.Query.serializeBinaryToWriter
+      f
     );
   }
 };
 
 
 /**
- * optional Query query = 1;
- * @return {?proto.Query}
+ * optional string dataset_id = 1;
+ * @return {string}
  */
-proto.CreateQueryRequest.prototype.getQuery = function() {
-  return /** @type{?proto.Query} */ (
-    jspb.Message.getWrapperField(this, proto.Query, 1));
+proto.CreateQueryRequest.prototype.getDatasetId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 1, ""));
 };
 
 
 /**
- * @param {?proto.Query|undefined} value
- * @return {!proto.CreateQueryRequest} returns this
-*/
-proto.CreateQueryRequest.prototype.setQuery = function(value) {
-  return jspb.Message.setWrapperField(this, 1, value);
-};
-
-
-/**
- * Clears the message field making it undefined.
+ * @param {string} value
  * @return {!proto.CreateQueryRequest} returns this
  */
-proto.CreateQueryRequest.prototype.clearQuery = function() {
-  return this.setQuery(undefined);
-};
-
-
-/**
- * Returns whether this field is set.
- * @return {boolean}
- */
-proto.CreateQueryRequest.prototype.hasQuery = function() {
-  return jspb.Message.getField(this, 1) != null;
+proto.CreateQueryRequest.prototype.setDatasetId = function(value) {
+  return jspb.Message.setProto3StringField(this, 1, value);
 };
 
 

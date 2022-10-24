@@ -25,7 +25,6 @@ func (s Server) getQueries(ctx context.Context, datasets []*proto.Dataset) ([]*p
 			`select
 				id,
 				query_text,
-				report_id,
 				job_status,
 				case when job_result_id is null then '' else cast(job_result_id as VARCHAR) end as job_result_id,
 				case when job_error is null then '' else job_error end as job_error,
@@ -55,7 +54,6 @@ func (s Server) getQueries(ctx context.Context, datasets []*proto.Dataset) ([]*p
 			var updatedAt time.Time
 			if err := queryRows.Scan(
 				&query.Id,
-				&query.ReportId,
 				&queryText,
 				&query.JobStatus,
 				&query.JobResultId,
