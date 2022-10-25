@@ -72,6 +72,7 @@ function shouldDownloadQueryText(query, prevQueriesList, queriesList) {
 }
 
 export function reportUpdate(reportStreamResponse) {
+  console.log('reportUpdate', reportStreamResponse)
   const { report, queriesList, datasetsList } = reportStreamResponse
   return async (dispatch, getState) => {
     const { queries: prevQueriesList, datasets: prevDatasetsList, report: prevReport } = getState()

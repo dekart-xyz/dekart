@@ -96,6 +96,7 @@ func (s Server) getQueries(ctx context.Context, datasets []*proto.Dataset) ([]*p
 
 // start here: refactor to minimize logic duplication with getQueries
 func (s Server) getQueriesLegacy(ctx context.Context, reportID string) ([]*proto.Query, error) {
+	log.Warn().Msg("getQueriesLegacy used")
 	queryRows, err := s.db.QueryContext(ctx,
 		`select
 			id,
@@ -126,9 +127,7 @@ func (s Server) getQueriesLegacy(ctx context.Context, reportID string) ([]*proto
 	queries := make([]*proto.Query, 0)
 	for queryRows.Next() {
 		var queryText string
-		query := proto.Query{
-			ReportId: reportID,
-		}
+		query := proto.Query{}
 		var createdAt time.Time
 		var updatedAt time.Time
 		if err := queryRows.Scan(

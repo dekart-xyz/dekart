@@ -2722,7 +2722,6 @@ proto.Query.prototype.toObject = function(opt_includeInstance) {
 proto.Query.toObject = function(includeInstance, msg) {
   var f, obj = {
     id: jspb.Message.getFieldWithDefault(msg, 1, ""),
-    reportId: jspb.Message.getFieldWithDefault(msg, 2, ""),
     queryText: jspb.Message.getFieldWithDefault(msg, 3, ""),
     jobStatus: jspb.Message.getFieldWithDefault(msg, 4, 0),
     jobResultId: jspb.Message.getFieldWithDefault(msg, 5, ""),
@@ -2774,10 +2773,6 @@ proto.Query.deserializeBinaryFromReader = function(msg, reader) {
     case 1:
       var value = /** @type {string} */ (reader.readString());
       msg.setId(value);
-      break;
-    case 2:
-      var value = /** @type {string} */ (reader.readString());
-      msg.setReportId(value);
       break;
     case 3:
       var value = /** @type {string} */ (reader.readString());
@@ -2860,13 +2855,6 @@ proto.Query.serializeBinaryToWriter = function(message, writer) {
   if (f.length > 0) {
     writer.writeString(
       1,
-      f
-    );
-  }
-  f = message.getReportId();
-  if (f.length > 0) {
-    writer.writeString(
-      2,
       f
     );
   }
@@ -2993,24 +2981,6 @@ proto.Query.prototype.getId = function() {
  */
 proto.Query.prototype.setId = function(value) {
   return jspb.Message.setProto3StringField(this, 1, value);
-};
-
-
-/**
- * optional string report_id = 2;
- * @return {string}
- */
-proto.Query.prototype.getReportId = function() {
-  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 2, ""));
-};
-
-
-/**
- * @param {string} value
- * @return {!proto.Query} returns this
- */
-proto.Query.prototype.setReportId = function(value) {
-  return jspb.Message.setProto3StringField(this, 2, value);
 };
 
 

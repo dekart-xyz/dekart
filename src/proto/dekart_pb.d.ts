@@ -302,9 +302,6 @@ export class Query extends jspb.Message {
   getId(): string;
   setId(value: string): void;
 
-  getReportId(): string;
-  setReportId(value: string): void;
-
   getQueryText(): string;
   setQueryText(value: string): void;
 
@@ -354,7 +351,6 @@ export class Query extends jspb.Message {
 export namespace Query {
   export type AsObject = {
     id: string,
-    reportId: string,
     queryText: string,
     jobStatus: Query.JobStatusMap[keyof Query.JobStatusMap],
     jobResultId: string,

@@ -86,7 +86,7 @@ message Dataset {
 
 message Query {
     string id = 1;
-    string report_id = 2;
+    // string report_id = 2;
     string query_text = 3;
 
     enum JobStatus {
