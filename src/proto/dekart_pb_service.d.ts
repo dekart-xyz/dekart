@@ -58,6 +58,15 @@ type DekartRemoveDataset = {
   readonly responseType: typeof proto_dekart_pb.RemoveDatasetResponse;
 };
 
+type DekartCreateFile = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.CreateFileRequest;
+  readonly responseType: typeof proto_dekart_pb.CreateFileResponse;
+};
+
 type DekartCreateQuery = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -138,6 +147,7 @@ export class Dekart {
   static readonly ArchiveReport: DekartArchiveReport;
   static readonly CreateDataset: DekartCreateDataset;
   static readonly RemoveDataset: DekartRemoveDataset;
+  static readonly CreateFile: DekartCreateFile;
   static readonly CreateQuery: DekartCreateQuery;
   static readonly UpdateQuery: DekartUpdateQuery;
   static readonly RunQuery: DekartRunQuery;
@@ -233,6 +243,15 @@ export class DekartClient {
   removeDataset(
     requestMessage: proto_dekart_pb.RemoveDatasetRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.RemoveDatasetResponse|null) => void
+  ): UnaryResponse;
+  createFile(
+    requestMessage: proto_dekart_pb.CreateFileRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateFileResponse|null) => void
+  ): UnaryResponse;
+  createFile(
+    requestMessage: proto_dekart_pb.CreateFileRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateFileResponse|null) => void
   ): UnaryResponse;
   createQuery(
     requestMessage: proto_dekart_pb.CreateQueryRequest,

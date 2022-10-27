@@ -5,7 +5,7 @@ import { unary } from '../lib/grpc'
 import { setActiveDataset } from './dataset'
 import { error, success } from './message'
 
-export function queryChanged(queryId, queryText) {
+export function queryChanged (queryId, queryText) {
   return (dispatch, getState) => {
     const query = getState().queries.find(q => q.id === queryId)
     const changed = query ? query.queryText !== queryText : true
@@ -13,7 +13,7 @@ export function queryChanged(queryId, queryText) {
   }
 }
 
-export function removeQuery(queryId) {
+export function removeQuery (queryId) {
   return async (dispatch, getState) => {
     const { queries, activeDataset } = getState()
     if (activeDataset.id === queryId) {
@@ -49,7 +49,7 @@ export function removeQuery(queryId) {
 //   }
 // }
 
-export function createQuery(datasetId) {
+export function createQuery (datasetId) {
   return (dispatch) => {
     console.log('createQuery', datasetId)
     dispatch({ type: createQuery.name })
@@ -62,7 +62,7 @@ export function createQuery(datasetId) {
   }
 }
 
-export function updateQuery(queryId, queryText) {
+export function updateQuery (queryId, queryText) {
   return async (dispatch, getState) => {
     const { queryStatus } = getState()
     dispatch({ type: updateQuery.name, queryId })
@@ -80,7 +80,7 @@ export function updateQuery(queryId, queryText) {
     }
   }
 }
-export function runQuery(queryId, queryText) {
+export function runQuery (queryId, queryText) {
   return async (dispatch) => {
     dispatch({ type: runQuery.name, queryId })
     const request = new RunQueryRequest()
@@ -94,7 +94,7 @@ export function runQuery(queryId, queryText) {
   }
 }
 
-export function cancelQuery(queryId) {
+export function cancelQuery (queryId) {
   return async (dispatch) => {
     dispatch({ type: cancelQuery.name, queryId })
     const request = new CancelQueryRequest()
@@ -107,11 +107,11 @@ export function cancelQuery(queryId) {
   }
 }
 
-export function querySource(queryId, querySourceId, queryText) {
+export function querySource (queryId, querySourceId, queryText) {
   return { type: querySource.name, queryText, querySourceId, queryId }
 }
 
-export function downloadQuerySource(query) {
+export function downloadQuerySource (query) {
   return async (dispatch, getState) => {
     dispatch({ type: downloadQuerySource.name, query })
     const { queries } = getState()

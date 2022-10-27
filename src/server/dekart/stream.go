@@ -40,10 +40,17 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 		return status.Errorf(codes.Internal, err.Error())
 	}
 
+	files, err := s.getFiles(ctx, datasets)
+	if err != nil {
+		log.Err(err).Msg("Cannot retrieve queries")
+		return status.Errorf(codes.Internal, err.Error())
+	}
+
 	res := proto.ReportStreamResponse{
 		Report:   report,
 		Queries:  queries,
 		Datasets: datasets,
+		Files:    files,
 		StreamOptions: &proto.StreamOptions{
 			Sequence: sequence,
 		},

@@ -1,6 +1,6 @@
 import { showDatasetTable, toggleModal } from '@dekart-xyz/kepler.gl/dist/actions'
 
-export function showDataTable(query) {
+export function showDataTable (query) {
   return (dispatch) => {
     dispatch(showDatasetTable(query.id))
     dispatch(toggleModal('dataTable'))
@@ -8,6 +8,7 @@ export function showDataTable(query) {
 }
 
 export * from './query'
+export * from './file'
 export * from './report'
 export * from './job'
 export * from './env'

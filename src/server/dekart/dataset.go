@@ -37,6 +37,7 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 		`select
 			id,
 			query_id,
+			file_id,
 			created_at,
 			updated_at
 		from datasets where report_id=$1 order by created_at asc`,
@@ -53,9 +54,11 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 		var createdAt time.Time
 		var updatedAt time.Time
 		var queryId sql.NullString
+		var fileId sql.NullString
 		if err := datasetRows.Scan(
 			&dataset.Id,
 			&queryId,
+			&fileId,
 			&createdAt,
 			&updatedAt,
 		); err != nil {
@@ -65,6 +68,7 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 		dataset.CreatedAt = createdAt.Unix()
 		dataset.UpdatedAt = updatedAt.Unix()
 		dataset.QueryId = queryId.String
+		dataset.FileId = fileId.String
 		datasets = append(datasets, &dataset)
 	}
 	return datasets, nil

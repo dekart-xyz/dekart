@@ -278,6 +278,9 @@ export class Dataset extends jspb.Message {
   getUpdatedAt(): number;
   setUpdatedAt(value: number): void;
 
+  getFileId(): string;
+  setFileId(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Dataset.AsObject;
   static toObject(includeInstance: boolean, msg: Dataset): Dataset.AsObject;
@@ -295,6 +298,7 @@ export namespace Dataset {
     queryId: string,
     createdAt: number,
     updatedAt: number,
+    fileId: string,
   }
 }
 
@@ -383,6 +387,50 @@ export namespace Query {
   }
 
   export const QuerySource: QuerySourceMap;
+}
+
+export class File extends jspb.Message {
+  getId(): string;
+  setId(value: string): void;
+
+  getName(): string;
+  setName(value: string): void;
+
+  getMimeType(): string;
+  setMimeType(value: string): void;
+
+  getSize(): number;
+  setSize(value: number): void;
+
+  getSourceId(): string;
+  setSourceId(value: string): void;
+
+  getCreatedAt(): number;
+  setCreatedAt(value: number): void;
+
+  getUpdatedAt(): number;
+  setUpdatedAt(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): File.AsObject;
+  static toObject(includeInstance: boolean, msg: File): File.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: File, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): File;
+  static deserializeBinaryFromReader(message: File, reader: jspb.BinaryReader): File;
+}
+
+export namespace File {
+  export type AsObject = {
+    id: string,
+    name: string,
+    mimeType: string,
+    size: number,
+    sourceId: string,
+    createdAt: number,
+    updatedAt: number,
+  }
 }
 
 export class UpdateReportRequest extends jspb.Message {
@@ -621,6 +669,46 @@ export namespace CreateDatasetResponse {
   }
 }
 
+export class CreateFileRequest extends jspb.Message {
+  getDatasetId(): string;
+  setDatasetId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CreateFileRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: CreateFileRequest): CreateFileRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CreateFileRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CreateFileRequest;
+  static deserializeBinaryFromReader(message: CreateFileRequest, reader: jspb.BinaryReader): CreateFileRequest;
+}
+
+export namespace CreateFileRequest {
+  export type AsObject = {
+    datasetId: string,
+  }
+}
+
+export class CreateFileResponse extends jspb.Message {
+  getFileId(): string;
+  setFileId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CreateFileResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: CreateFileResponse): CreateFileResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CreateFileResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CreateFileResponse;
+  static deserializeBinaryFromReader(message: CreateFileResponse, reader: jspb.BinaryReader): CreateFileResponse;
+}
+
+export namespace CreateFileResponse {
+  export type AsObject = {
+    fileId: string,
+  }
+}
+
 export class CreateQueryRequest extends jspb.Message {
   getDatasetId(): string;
   setDatasetId(value: string): void;
@@ -712,6 +800,11 @@ export class ReportStreamResponse extends jspb.Message {
   setDatasetsList(value: Array<Dataset>): void;
   addDatasets(value?: Dataset, index?: number): Dataset;
 
+  clearFilesList(): void;
+  getFilesList(): Array<File>;
+  setFilesList(value: Array<File>): void;
+  addFiles(value?: File, index?: number): File;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): ReportStreamResponse.AsObject;
   static toObject(includeInstance: boolean, msg: ReportStreamResponse): ReportStreamResponse.AsObject;
@@ -728,6 +821,7 @@ export namespace ReportStreamResponse {
     queriesList: Array<Query.AsObject>,
     streamOptions?: StreamOptions.AsObject,
     datasetsList: Array<Dataset.AsObject>,
+    filesList: Array<File.AsObject>,
   }
 }
 

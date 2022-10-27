@@ -64,6 +64,15 @@ Dekart.RemoveDataset = {
   responseType: proto_dekart_pb.RemoveDatasetResponse
 };
 
+Dekart.CreateFile = {
+  methodName: "CreateFile",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.CreateFileRequest,
+  responseType: proto_dekart_pb.CreateFileResponse
+};
+
 Dekart.CreateQuery = {
   methodName: "CreateQuery",
   service: Dekart,
@@ -303,6 +312,37 @@ DekartClient.prototype.removeDataset = function removeDataset(requestMessage, me
     callback = arguments[1];
   }
   var client = grpc.unary(Dekart.RemoveDataset, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.createFile = function createFile(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.CreateFile, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,

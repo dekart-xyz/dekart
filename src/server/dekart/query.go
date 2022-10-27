@@ -17,7 +17,6 @@ import (
 
 // CreateQuery in dataset
 func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) (*proto.CreateQueryResponse, error) {
-	log.Debug().Msg("CreateQuery request")
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
@@ -34,8 +33,8 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	}
 
 	if reportID == nil {
-		err := fmt.Errorf("dataset not found id:%s", req.DatasetId)
-		log.Warn().Err(err).Send()
+		err := fmt.Errorf("dataset not found or permission not granted")
+		log.Warn().Err(err).Str("dataset_id", req.DatasetId).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
