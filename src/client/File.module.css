@@ -1,0 +1,59 @@
+.file {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: stretch;
+}
+
+.upload :global(.ant-upload) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.upload {
+    text-align: center;
+    user-select: none;
+    cursor: pointer;
+    flex: 1;
+    width: 100%;
+    position: relative;
+}
+
+.uploadSubtitle {
+    opacity: 0.45;
+}
+
+.uploadHeader {
+    font-size: 1.15em;
+}
+
+.uploadIcon {
+    color: rgb(64, 169, 255);
+    font-size: 4em;
+    text-align: center;
+}
+
+.status {
+    min-height: 60px;
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid rgb(217, 217, 217);
+    background-color: #F7F7F7;
+    align-items: center;
+    justify-content: center;
+}
