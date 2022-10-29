@@ -10,7 +10,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: stretch;
+    justify-content: center;
+    padding-bottom: 60px;
 }
 
 .upload :global(.ant-upload) {
@@ -48,12 +49,57 @@
     text-align: center;
 }
 
+.uploadFileProgress {
+    flex: 1;
+}
+
+.uploadFileName {
+    margin-top: 5px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+    opacity: 0.65;
+}
+
 .status {
+    padding: 0 20px;
     min-height: 60px;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     border-top: 1px solid rgb(217, 217, 217);
     background-color: #F7F7F7;
     align-items: center;
     justify-content: center;
+}
+
+.fileIcon {
+    position: relative;
+    width: 100px;
+    height: 100px;
+}
+
+.fileIconExtension {
+    position: absolute;
+    top: 20px;
+    padding: 0 10px;
+    left: 0;
+    background-color: #44946B;
+    /* font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace; */
+    color: white;
+    font-weight: bold;
+    text-align: center;
+}
+
+.fileIconBody {
+    width: 80px;
+    margin-left: 10px;
+    height: 100px;
+    background:
+        linear-gradient(315deg, transparent 17px, #C9CCD4 0px),
+        linear-gradient(315deg, transparent 17px, #EFEEEE 0px);
+    background-size:
+        25px 25px,
+        80px 100px;
+    background-position:
+        bottom right,
+        bottom right;
+    background-repeat: no-repeat;
 }
