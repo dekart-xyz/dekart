@@ -4,6 +4,8 @@ import { InboxOutlined, UploadOutlined } from '@ant-design/icons'
 import Button from 'antd/es/button'
 import { useState } from 'react'
 import prettyBites from 'pretty-bytes'
+import { useSelector, useDispatch } from 'react-redux'
+import { uploadFile } from './actions'
 
 function FileIcon () {
   return (
@@ -14,8 +16,9 @@ function FileIcon () {
   )
 }
 
-export default function File () {
+export default function File ({ file }) {
   const [fileToUpload, setFileToUpload] = useState(null)
+  const dispatch = useDispatch()
   return (
     <div className={styles.file}>
       <div className={styles.info}>
@@ -48,7 +51,7 @@ export default function File () {
         <div className={styles.uploadFileProgress}>
           {fileToUpload ? `${prettyBites(fileToUpload.size)} to be uploaded` : ''}
         </div>
-        <Button icon={<UploadOutlined />} disabled={!fileToUpload}>Upload</Button>
+        <Button icon={<UploadOutlined />} disabled={!fileToUpload} onClick={() => dispatch(uploadFile(file.id, fileToUpload))}>Upload</Button>
       </div>
     </div>
   )

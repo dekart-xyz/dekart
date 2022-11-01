@@ -71,6 +71,14 @@ func configureHTTP(dekartServer *dekart.Server) *mux.Router {
 		dekartServer.ServeQuerySource(w, r)
 	}).Methods("GET", "OPTIONS")
 
+	api.HandleFunc("/file/{id}.csv", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.UploadFile(w, r)
+	}).Methods("POST", "OPTIONS")
+
 	staticPath := os.Getenv("DEKART_STATIC_FILES")
 
 	if staticPath != "" {

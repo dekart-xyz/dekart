@@ -5,13 +5,74 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/user"
 	"fmt"
+	"net/http"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/lib/pq"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
+	fileId := mux.Vars(r)["id"]
+	ctx := r.Context()
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	}
+	fileRows, err := s.db.QueryContext(ctx,
+		`select 
+			reports.id
+		from files
+			left join datasets on files.id = datasets.file_id
+			left join reports on datasets.report_id = reports.id
+		where files.id = $1 and author_email = $2`,
+		fileId,
+		claims.Email,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer fileRows.Close()
+	reportIds := make([]string, 0)
+	for fileRows.Next() {
+		var reportId string
+		if err = fileRows.Scan(&reportId); err != nil {
+			log.Err(err).Send()
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		reportIds = append(reportIds, reportId)
+	}
+
+	if len(reportIds) == 0 {
+		err = fmt.Errorf("file not found or permission not granted")
+		log.Err(err).Send()
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	err = r.ParseMultipartForm(10 << 20)
+	if err != nil {
+		log.Err(err).Send()
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	file, handler, err := r.FormFile("file")
+	if err != nil {
+		log.Err(err).Send()
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+	fileSourceID := newUUID()
+	log.Debug().Str("filename", handler.Filename).Msg("upload file")
+
+}
 
 func (s Server) CreateFile(ctx context.Context, req *proto.CreateFileRequest) (*proto.CreateFileResponse, error) {
 	claims := user.GetClaims(ctx)

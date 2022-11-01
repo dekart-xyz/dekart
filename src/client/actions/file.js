@@ -3,6 +3,64 @@ import { Dekart } from '../../proto/dekart_pb_service'
 import { unary } from '../lib/grpc'
 import { error } from './message'
 
+export function uploadFileProgress (fileId, progress) {
+  return {
+    type: uploadFileProgress.name,
+    fileId,
+    progress
+  }
+}
+
+// export function uploadFileComplete (fileId) {
+//   return {
+//     type: uploadFileComplete.name,
+//     fileId
+//   }
+// }
+
+// export function uploadFileError (fileId) {
+//   return {
+//     type: uploadFileError.name,
+//     fileId
+//   }
+// }
+
+// export function uploadFileCancelled (fileId) {
+//   return {
+//     type: uploadFileCancelled.name,
+//     fileId
+//   }
+// }
+
+export function uploadFile (fileId, file) {
+  return async (dispatch) => {
+    dispatch({ type: uploadFile.name, fileId })
+    const formData = new window.FormData()
+    console.log('file', file)
+    formData.append('file', file)
+    const { REACT_APP_API_HOST } = process.env
+    const host = REACT_APP_API_HOST || ''
+    const url = `${host}/api/v1/file/${fileId}.csv`
+    const request = new window.XMLHttpRequest()
+    request.upload.addEventListener('progress', (event) => {
+      console.log('progress', event)
+      dispatch(uploadFileProgress(fileId, event.loaded / event.total))
+    })
+    request.upload.addEventListener('load', (event) => {
+      console.log('uploadFile load', event)
+    })
+    request.upload.addEventListener('error', (event) => {
+      console.log('uploadFile error', event)
+    })
+    request.upload.addEventListener('abort', (event) => {
+      console.log('uploadFile abort', event)
+    })
+    request.open('POST', url)
+    request.timeout = 3600 * 1000 // 1 hour
+    request.send(formData)
+  }
+}
+
 export function createFile (datasetId) {
   return (dispatch) => {
     dispatch({ type: createFile.name })
