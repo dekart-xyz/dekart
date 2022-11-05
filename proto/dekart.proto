@@ -135,6 +135,13 @@ message File {
     string source_id = 5;
     int64 created_at = 6;
     int64 updated_at = 7;
+    enum Status {
+        STATUS_UNSPECIFIED = 0;
+        STATUS_NEW = 1; // default initial state
+        STATUS_RECEIVED = 2; // file uploaded by user to temp storage
+        STATUS_STORED = 3; // file stored in permanent storage
+    }
+    Status file_status = 8;
 }
 
 message UpdateReportRequest {

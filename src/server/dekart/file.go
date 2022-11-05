@@ -5,6 +5,8 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/user"
 	"fmt"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"time"
 
@@ -15,13 +17,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
-	fileId := mux.Vars(r)["id"]
-	ctx := r.Context()
-	claims := user.GetClaims(ctx)
-	if claims == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-	}
+func (s Server) getFileReports(ctx context.Context, fileId string, claims *user.Claims) ([]string, error) {
 	fileRows, err := s.db.QueryContext(ctx,
 		`select 
 			reports.id
@@ -33,20 +29,59 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 		claims.Email,
 	)
 	if err != nil {
-		log.Err(err).Send()
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 	defer fileRows.Close()
 	reportIds := make([]string, 0)
 	for fileRows.Next() {
 		var reportId string
 		if err = fileRows.Scan(&reportId); err != nil {
-			log.Err(err).Send()
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+			return nil, err
 		}
 		reportIds = append(reportIds, reportId)
+	}
+	return reportIds, nil
+}
+
+func (s Server) moveFileToStorage(fileSourceID string, file multipart.File, reportIDs []string) {
+	defer file.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	storageWriter := s.storage.GetObject(fmt.Sprintf("%s.csv", fileSourceID)).GetWriter(ctx)
+	_, err := io.Copy(storageWriter, file)
+	if err != nil {
+		log.Err(err).Send()
+		return
+	}
+
+	err = storageWriter.Close()
+	if err != nil {
+		log.Err(err).Send()
+	}
+
+	_, err = s.db.ExecContext(ctx,
+		`update files set file_status=3 where file_source_id=$1`,
+		fileSourceID,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return
+	}
+	s.reportStreams.PingAll(reportIDs)
+}
+
+func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
+	fileId := mux.Vars(r)["id"]
+	ctx := r.Context()
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	}
+	reportIds, err := s.getFileReports(ctx, fileId, claims)
+
+	if err != nil {
+		log.Err(err).Send()
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
 	if len(reportIds) == 0 {
@@ -56,12 +91,6 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = r.ParseMultipartForm(10 << 20)
-	if err != nil {
-		log.Err(err).Send()
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 	file, handler, err := r.FormFile("file")
 	if err != nil {
 		log.Err(err).Send()
@@ -70,7 +99,21 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 	fileSourceID := newUUID()
-	log.Debug().Str("filename", handler.Filename).Msg("upload file")
+
+	_, err = s.db.ExecContext(ctx,
+		`update files set name=$1, size=$2, mime_type=$3, file_status=2, file_source_id=$4 where id=$5`,
+		handler.Filename,
+		handler.Size,
+		handler.Header.Get("Content-Type"),
+		fileSourceID,
+		fileId,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	go s.moveFileToStorage(fileSourceID, file, reportIds)
+	s.reportStreams.PingAll(reportIds)
 
 }
 
@@ -142,6 +185,10 @@ func (s Server) getFiles(ctx context.Context, datasets []*proto.Dataset) ([]*pro
 		fileRows, err := s.db.QueryContext(ctx,
 			`select
 				id,
+				name,
+				size,
+				mime_type,
+				file_status,
 				created_at,
 				updated_at
 			from files where id = ANY($1) order by created_at asc`,
@@ -158,6 +205,10 @@ func (s Server) getFiles(ctx context.Context, datasets []*proto.Dataset) ([]*pro
 			var updatedAt time.Time
 			if err = fileRows.Scan(
 				&file.Id,
+				&file.Name,
+				&file.Size,
+				&file.MimeType,
+				&file.FileStatus,
 				&createdAt,
 				&updatedAt,
 			); err != nil {

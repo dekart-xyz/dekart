@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 import keplerGlReducer from '@dekart-xyz/kepler.gl/dist/reducers'
 import { ActionTypes as KeplerActionTypes } from '@dekart-xyz/kepler.gl/dist/actions'
-import { downloadJobResults, openReport, reportTitleChange, reportUpdate, runQuery, saveMap, updateQuery, reportsListUpdate, unsubscribeReports, streamError, httpError, newReport, setEnv, forkReport, newForkedReport, downloading, finishDownloading, setActiveDataset, queryChanged, newRelease, querySource } from './actions'
+import { downloadJobResults, openReport, reportTitleChange, reportUpdate, runQuery, saveMap, updateQuery, reportsListUpdate, unsubscribeReports, streamError, httpError, newReport, setEnv, forkReport, newForkedReport, downloading, finishDownloading, setActiveDataset, queryChanged, newRelease, querySource, uploadFile, uploadFileProgress, uploadFileStateChange } from './actions'
 import { Query } from '../proto/dekart_pb'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
@@ -300,6 +300,38 @@ function release (state = null, action) {
   }
 }
 
+function fileUploadStatus (state = {}, action) {
+  switch (action.type) {
+    case uploadFile.name:
+      return {
+        ...state,
+        [action.fileId]: {
+          readyState: 0,
+          loaded: 0,
+          total: action.file.size
+        }
+      }
+    case uploadFileStateChange.name:
+      return {
+        ...state,
+        [action.fileId]: {
+          ...state[action.fileId],
+          readyState: action.readyState
+        }
+      }
+    case uploadFileProgress.name:
+      return {
+        ...state,
+        [action.fileId]: {
+          ...state[action.fileId],
+          loaded: action.loaded
+        }
+      }
+    default:
+      return state
+  }
+}
+
 export default combineReducers({
   keplerGl,
   report,
@@ -313,5 +345,6 @@ export default combineReducers({
   downloadingQueryResults,
   release,
   datasets,
-  files
+  files,
+  fileUploadStatus
 })

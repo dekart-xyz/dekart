@@ -411,6 +411,9 @@ export class File extends jspb.Message {
   getUpdatedAt(): number;
   setUpdatedAt(value: number): void;
 
+  getFileStatus(): File.StatusMap[keyof File.StatusMap];
+  setFileStatus(value: File.StatusMap[keyof File.StatusMap]): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): File.AsObject;
   static toObject(includeInstance: boolean, msg: File): File.AsObject;
@@ -430,7 +433,17 @@ export namespace File {
     sourceId: string,
     createdAt: number,
     updatedAt: number,
+    fileStatus: File.StatusMap[keyof File.StatusMap],
   }
+
+  export interface StatusMap {
+    STATUS_UNSPECIFIED: 0;
+    STATUS_NEW: 1;
+    STATUS_RECEIVED: 2;
+    STATUS_STORED: 3;
+  }
+
+  export const Status: StatusMap;
 }
 
 export class UpdateReportRequest extends jspb.Message {

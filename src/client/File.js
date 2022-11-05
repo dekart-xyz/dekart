@@ -1,6 +1,6 @@
 import Upload from 'antd/lib/upload/Upload'
 import styles from './File.module.css'
-import { InboxOutlined, UploadOutlined } from '@ant-design/icons'
+import { InboxOutlined, UploadOutlined, SendOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
 import Button from 'antd/es/button'
 import { useState } from 'react'
 import prettyBites from 'pretty-bytes'
@@ -16,17 +16,73 @@ function FileIcon () {
   )
 }
 
+function FileStatus ({ file, fileToUpload, fileUploadStatus, children }) {
+  let message = ''
+  let icon = null
+  let style = styles.info
+  const errorMessage = ''
+  console.log('file', file)
+  if (file.fileStatus > 1) {
+    if (file.fileStatus === 2) {
+      message = 'Moving file to S3...'
+      icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
+    } else if (file.fileStatus === 3) {
+      icon = <CheckCircleTwoTone className={styles.icon} twoToneColor='#52c41a' />
+      message = <span>Ready <span className={styles.processed}>({prettyBites(file.size)})</span></span>
+      style = styles.success
+    }
+  } else if (fileToUpload) {
+    if (fileUploadStatus) {
+      if (fileUploadStatus.readyState === 4) {
+        message = 'Moving file to S3...'
+        icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
+      } else {
+        icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
+        message = `Uploading ${prettyBites(fileUploadStatus.loaded)} of ${prettyBites(fileUploadStatus.total)}`
+      }
+    } else {
+      message = `${prettyBites(fileToUpload.size)} to be uploaded`
+    }
+  }
+  return (
+    <div className={[styles.fileStatus, style].join(' ')}>
+      <div className={styles.status}>
+        <div className={styles.statusHead}>
+          {icon}
+          <div className={styles.message}>{message}</div>
+          {/* {action ? <div className={styles.action}>{action}</div> : null} */}
+        </div>
+        {errorMessage ? <div className={styles.errorMessage}>{errorMessage}</div> : null}
+      </div>
+      {children ? <div className={styles.button}>{children}</div> : null}
+    </div>
+  )
+}
+
 export default function File ({ file }) {
   const [fileToUpload, setFileToUpload] = useState(null)
+  const fileUploadStatus = useSelector(state => state.fileUploadStatus[file.id])
+  console.log('fileUploadStatus', fileUploadStatus)
   const dispatch = useDispatch()
+  const uploadButtonDisabled = !fileToUpload || fileUploadStatus
+  let fileInfo = null
+  if (file.fileStatus > 1) {
+    fileInfo = {
+      name: file.name
+    }
+  } else if (fileToUpload) {
+    fileInfo = {
+      name: fileToUpload.name
+    }
+  }
   return (
     <div className={styles.file}>
-      <div className={styles.info}>
-        {fileToUpload
+      <div className={styles.fileInfo}>
+        {fileInfo
           ? (
             <div className={styles.uploadFileInfo}>
-              <FileIcon file={fileToUpload} />
-              <div className={styles.uploadFileName}>{fileToUpload.name}</div>
+              <FileIcon />
+              <div className={styles.uploadFileName}>{fileInfo.name}</div>
             </div>
             )
           : (
@@ -47,12 +103,13 @@ export default function File ({ file }) {
             </div>
             )}
       </div>
-      <div className={styles.status}>
-        <div className={styles.uploadFileProgress}>
-          {fileToUpload ? `${prettyBites(fileToUpload.size)} to be uploaded` : ''}
-        </div>
-        <Button icon={<UploadOutlined />} disabled={!fileToUpload} onClick={() => dispatch(uploadFile(file.id, fileToUpload))}>Upload</Button>
-      </div>
+      <FileStatus file={file} fileToUpload={fileToUpload} fileUploadStatus={fileUploadStatus}>
+        <Button
+          size='large'
+          icon={<UploadOutlined />} disabled={uploadButtonDisabled} onClick={() => dispatch(uploadFile(file.id, fileToUpload))}
+        >Upload
+        </Button>
+      </FileStatus>
     </div>
   )
 }

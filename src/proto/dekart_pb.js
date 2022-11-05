@@ -28,6 +28,7 @@ goog.exportSymbol('proto.CreateReportRequest', null, global);
 goog.exportSymbol('proto.CreateReportResponse', null, global);
 goog.exportSymbol('proto.Dataset', null, global);
 goog.exportSymbol('proto.File', null, global);
+goog.exportSymbol('proto.File.Status', null, global);
 goog.exportSymbol('proto.ForkReportRequest', null, global);
 goog.exportSymbol('proto.ForkReportResponse', null, global);
 goog.exportSymbol('proto.GetEnvRequest', null, global);
@@ -3334,7 +3335,8 @@ proto.File.toObject = function(includeInstance, msg) {
     size: jspb.Message.getFieldWithDefault(msg, 4, 0),
     sourceId: jspb.Message.getFieldWithDefault(msg, 5, ""),
     createdAt: jspb.Message.getFieldWithDefault(msg, 6, 0),
-    updatedAt: jspb.Message.getFieldWithDefault(msg, 7, 0)
+    updatedAt: jspb.Message.getFieldWithDefault(msg, 7, 0),
+    fileStatus: jspb.Message.getFieldWithDefault(msg, 8, 0)
   };
 
   if (includeInstance) {
@@ -3398,6 +3400,10 @@ proto.File.deserializeBinaryFromReader = function(msg, reader) {
     case 7:
       var value = /** @type {number} */ (reader.readInt64());
       msg.setUpdatedAt(value);
+      break;
+    case 8:
+      var value = /** @type {!proto.File.Status} */ (reader.readEnum());
+      msg.setFileStatus(value);
       break;
     default:
       reader.skipField();
@@ -3477,8 +3483,25 @@ proto.File.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
+  f = message.getFileStatus();
+  if (f !== 0.0) {
+    writer.writeEnum(
+      8,
+      f
+    );
+  }
 };
 
+
+/**
+ * @enum {number}
+ */
+proto.File.Status = {
+  STATUS_UNSPECIFIED: 0,
+  STATUS_NEW: 1,
+  STATUS_RECEIVED: 2,
+  STATUS_STORED: 3
+};
 
 /**
  * optional string id = 1;
@@ -3603,6 +3626,24 @@ proto.File.prototype.getUpdatedAt = function() {
  */
 proto.File.prototype.setUpdatedAt = function(value) {
   return jspb.Message.setProto3IntField(this, 7, value);
+};
+
+
+/**
+ * optional Status file_status = 8;
+ * @return {!proto.File.Status}
+ */
+proto.File.prototype.getFileStatus = function() {
+  return /** @type {!proto.File.Status} */ (jspb.Message.getFieldWithDefault(this, 8, 0));
+};
+
+
+/**
+ * @param {!proto.File.Status} value
+ * @return {!proto.File} returns this
+ */
+proto.File.prototype.setFileStatus = function(value) {
+  return jspb.Message.setProto3EnumField(this, 8, value);
 };
 
 
