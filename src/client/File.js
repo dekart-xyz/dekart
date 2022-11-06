@@ -21,7 +21,6 @@ function FileStatus ({ file, fileToUpload, fileUploadStatus, children }) {
   let icon = null
   let style = styles.info
   const errorMessage = ''
-  console.log('file', file)
   if (file.fileStatus > 1) {
     if (file.fileStatus === 2) {
       message = 'Moving file to S3...'
@@ -62,7 +61,6 @@ function FileStatus ({ file, fileToUpload, fileUploadStatus, children }) {
 export default function File ({ file }) {
   const [fileToUpload, setFileToUpload] = useState(null)
   const fileUploadStatus = useSelector(state => state.fileUploadStatus[file.id])
-  console.log('fileUploadStatus', fileUploadStatus)
   const dispatch = useDispatch()
   const uploadButtonDisabled = !fileToUpload || fileUploadStatus
   let fileInfo = null

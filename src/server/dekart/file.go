@@ -2,6 +2,7 @@ package dekart
 
 import (
 	"context"
+	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/user"
 	"fmt"
@@ -58,7 +59,7 @@ func (s Server) moveFileToStorage(fileSourceID string, file multipart.File, repo
 	if err != nil {
 		log.Err(err).Send()
 	}
-
+	log.Debug().Msgf("file %s moved to storage", fileSourceID)
 	_, err = s.db.ExecContext(ctx,
 		`update files set file_status=3 where file_source_id=$1`,
 		fileSourceID,
@@ -189,6 +190,7 @@ func (s Server) getFiles(ctx context.Context, datasets []*proto.Dataset) ([]*pro
 				size,
 				mime_type,
 				file_status,
+				file_source_id,
 				created_at,
 				updated_at
 			from files where id = ANY($1) order by created_at asc`,
@@ -201,6 +203,8 @@ func (s Server) getFiles(ctx context.Context, datasets []*proto.Dataset) ([]*pro
 		defer fileRows.Close()
 		for fileRows.Next() {
 			file := proto.File{}
+			var sourceId sql.NullString
+
 			var createdAt time.Time
 			var updatedAt time.Time
 			if err = fileRows.Scan(
@@ -209,12 +213,16 @@ func (s Server) getFiles(ctx context.Context, datasets []*proto.Dataset) ([]*pro
 				&file.Size,
 				&file.MimeType,
 				&file.FileStatus,
+				&sourceId,
 				&createdAt,
 				&updatedAt,
 			); err != nil {
 				log.Error().Err(err).Msg("scan file list failed")
 				return nil, err
 			}
+			file.SourceId = sourceId.String
+			file.CreatedAt = createdAt.Unix()
+			file.UpdatedAt = updatedAt.Unix()
 			files = append(files, &file)
 		}
 	}

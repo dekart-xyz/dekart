@@ -1,7 +1,10 @@
 import { CreateDatasetRequest, RemoveDatasetRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { unary } from '../lib/grpc'
-import { error, success } from './message'
+import { downloading, error, finishDownloading, success } from './message'
+import { addDataToMap, toggleSidePanel } from '@dekart-xyz/kepler.gl/dist/actions'
+import { processCsvData } from '@dekart-xyz/kepler.gl/dist/processors'
+import { get } from '../lib/api'
 
 export function createDataset (reportId) {
   return (dispatch) => {
@@ -43,6 +46,41 @@ export function removeDataset (datasetId) {
       dispatch(success('Dataset removed'))
     } catch (err) {
       dispatch(error(err))
+    }
+  }
+}
+
+export function downloadDataset (dataset, sourceId) {
+  return async (dispatch, getState) => {
+    dispatch({ type: downloadDataset.name, dataset })
+    dispatch(downloading(dataset))
+    let data
+    try {
+      const res = await get(`/dataset-source/${sourceId}.csv`)
+      const csv = await res.text()
+      data = processCsvData(csv)
+    } catch (err) {
+      dispatch(error(err))
+      return
+    }
+    const { datasets } = getState()
+    const i = datasets.findIndex(d => d.id === dataset.id)
+    if (i < 0) {
+      return
+    }
+    dispatch(addDataToMap({
+      datasets: {
+        info: {
+          label: `Query ${i + 1}`,
+          id: dataset.id
+        },
+        data
+      }
+    }))
+    dispatch(finishDownloading(dataset))
+    const { reportStatus } = getState()
+    if (reportStatus.edit) {
+      dispatch(toggleSidePanel('layer'))
     }
   }
 }

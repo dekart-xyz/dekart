@@ -4,8 +4,19 @@ import message from 'antd/es/message'
 import { useEffect } from 'react'
 
 function DownloadingMessage () {
-  const downloadingQueryResults = useSelector(state => state.downloadingQueryResults)
-  const size = downloadingQueryResults.reduce((size, { resultSize }) => size + resultSize, 0)
+  const downloadingDatasets = useSelector(state => state.downloadingDatasets)
+  const files = useSelector(state => state.files)
+  const queries = useSelector(state => state.queries)
+  const size = downloadingDatasets.reduce((size, { queryId, fileId }) => {
+    if (queryId) {
+      const query = queries.find(q => q.id === queryId)
+      return size + query.size
+    }
+    if (fileId) {
+      const file = files.find(f => f.id === fileId)
+      return size + file.size
+    }
+  }, 0)
   if (size) {
     return (<span>Downloading Map Data ({prettyBites(size)})</span>)
   }
@@ -14,8 +25,8 @@ function DownloadingMessage () {
 
 let hideDownloading = null
 export default function Downloading () {
-  const downloadingQueryResults = useSelector(state => state.downloadingQueryResults)
-  const show = downloadingQueryResults.length > 0
+  const downloadingDatasets = useSelector(state => state.downloadingDatasets)
+  const show = downloadingDatasets.length > 0
   const [api, contextHolder] = message.useMessage()
   useEffect(() => {
     if (show && !hideDownloading) {

@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 import keplerGlReducer from '@dekart-xyz/kepler.gl/dist/reducers'
 import { ActionTypes as KeplerActionTypes } from '@dekart-xyz/kepler.gl/dist/actions'
-import { downloadJobResults, openReport, reportTitleChange, reportUpdate, runQuery, saveMap, updateQuery, reportsListUpdate, unsubscribeReports, streamError, httpError, newReport, setEnv, forkReport, newForkedReport, downloading, finishDownloading, setActiveDataset, queryChanged, newRelease, querySource, uploadFile, uploadFileProgress, uploadFileStateChange } from './actions'
+import { openReport, reportTitleChange, reportUpdate, runQuery, saveMap, updateQuery, reportsListUpdate, unsubscribeReports, streamError, httpError, newReport, setEnv, forkReport, newForkedReport, downloading, finishDownloading, setActiveDataset, queryChanged, newRelease, querySource, uploadFile, uploadFileProgress, uploadFileStateChange, downloadDataset } from './actions'
 import { Query } from '../proto/dekart_pb'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
@@ -72,11 +72,11 @@ const defaultReportStatus = {
 }
 function reportStatus (state = defaultReportStatus, action) {
   switch (action.type) {
-    case downloadJobResults.name:
-      return {
-        ...state,
-        size: 0
-      }
+    // case downloadDataset.name:
+    //   return {
+    //     ...state,
+    //     size: 0
+    //   }
     case forkReport.name:
     case saveMap.name:
       return {
@@ -136,15 +136,16 @@ function queryStatus (state = {}, action) {
         }
       }
       return state
-    case downloadJobResults.name:
-      return {
-        ...state,
-        [action.query.id]: {
-          ...state[action.query.id],
-          downloadingResults: true
-        }
-      }
-
+    case downloadDataset.name:
+      return action.dataset.queryId
+        ? {
+            ...state,
+            [action.datasets.queryId]: {
+              ...state[action.dataset.queryId],
+              downloadingResults: true
+            }
+          }
+        : state
     case runQuery.name:
     case updateQuery.name:
       return {
@@ -257,13 +258,13 @@ function httpErrorStatus (state = 0, action) {
   }
 }
 
-function downloadingQueryResults (state = [], action) {
-  const { query } = action
+function downloadingDatasets (state = [], action) {
+  const { dataset } = action
   switch (action.type) {
     case downloading.name:
-      return state.concat(query)
+      return state.concat(dataset)
     case finishDownloading.name:
-      return state.filter(q => q.id !== query.id)
+      return state.filter(d => d.id !== dataset.id)
     default:
       return state
   }
@@ -342,7 +343,7 @@ export default combineReducers({
   reportsList,
   env,
   httpErrorStatus,
-  downloadingQueryResults,
+  downloadingDatasets,
   release,
   datasets,
   files,

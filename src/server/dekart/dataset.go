@@ -6,9 +6,12 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/user"
 	"fmt"
+	"io"
+	"net/http"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -177,4 +180,31 @@ func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetReque
 	res := &proto.CreateDatasetResponse{}
 
 	return res, nil
+}
+
+func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	ctx := r.Context()
+	obj := s.storage.GetObject(fmt.Sprintf("%s.csv", vars["id"]))
+	ctreated, err := obj.GetCreatedAt(ctx)
+	if err != nil {
+		log.Err(err).Send()
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	objectReader, err := obj.GetReader(ctx)
+	if err != nil {
+		log.Err(err).Send()
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer objectReader.Close()
+	w.Header().Set("Content-Type", "text/csv")
+	w.Header().Set("Cache-Control", "public, max-age=31536000")
+	w.Header().Set("Last-Modified", ctreated.Format(time.UnixDate))
+	if _, err := io.Copy(w, objectReader); err != nil {
+		log.Err(err).Send()
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
