@@ -16,6 +16,7 @@ function DownloadingMessage () {
       const file = files.find(f => f.id === fileId)
       return size + file.size
     }
+    return size
   }, 0)
   if (size) {
     return (<span>Downloading Map Data ({prettyBites(size)})</span>)

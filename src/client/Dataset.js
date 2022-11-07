@@ -7,11 +7,26 @@ import File from './File'
 
 function DatasetSelector ({ dataset }) {
   const dispatch = useDispatch()
+  const env = useSelector(state => state.env)
+  if (!env.loaded) {
+    return null
+  }
+  let datasource = ''
+  switch (env.variables.DATASOURCE) {
+    case 'BQ':
+      datasource = 'BigQuery'
+      break
+    case 'ATHENA':
+      datasource = 'Athena'
+      break
+    default:
+      datasource = 'Unknown'
+  }
   return (
     <div className={styles.datasetSelector}>
       <div className={styles.selector}>
         <div className={styles.selectorButtons}>
-          <Button block onClick={() => dispatch(createQuery(dataset.id))}>Athena query</Button>
+          <Button block onClick={() => dispatch(createQuery(dataset.id))}>{datasource} query</Button>
           <Button block onClick={() => dispatch(createFile(dataset.id))}>Upload file</Button>
         </div>
       </div>

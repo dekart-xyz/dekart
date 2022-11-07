@@ -130,6 +130,7 @@ export namespace GetEnvResponse {
       TYPE_UX_HOMEPAGE: 3;
       TYPE_ALLOW_FILE_UPLOAD: 4;
       TYPE_DATASOURCE: 5;
+      TYPE_STORAGE: 6;
     }
 
     export const Type: TypeMap;

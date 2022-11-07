@@ -43,6 +43,13 @@ func (s Server) Shutdown(ctx context.Context) {
 	s.jobs.CancelAll(ctx)
 }
 
+func defaultString(s, def string) string {
+	if s == "" {
+		return def
+	}
+	return s
+}
+
 // GetEnv variables to the client
 func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.GetEnvResponse, error) {
 	homePageUrl := os.Getenv("DEKART_UX_HOMEPAGE")
@@ -68,7 +75,11 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 		},
 		{
 			Type:  proto.GetEnvResponse_Variable_TYPE_DATASOURCE,
-			Value: os.Getenv("DEKART_DATASOURCE"),
+			Value: defaultString(os.Getenv("DEKART_DATASOURCE"), "BQ"),
+		},
+		{
+			Type:  proto.GetEnvResponse_Variable_TYPE_STORAGE,
+			Value: defaultString(os.Getenv("DEKART_STORAGE"), "GCS"),
 		},
 	}
 	return &proto.GetEnvResponse{

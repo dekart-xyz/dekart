@@ -1,6 +1,6 @@
 import Upload from 'antd/lib/upload/Upload'
 import styles from './File.module.css'
-import { InboxOutlined, UploadOutlined, SendOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
+import { InboxOutlined, UploadOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
 import Button from 'antd/es/button'
 import { useState } from 'react'
 import prettyBites from 'pretty-bytes'
@@ -16,14 +16,33 @@ function FileIcon () {
   )
 }
 
+function getStorageName (env) {
+  let storageName = ''
+  switch (env.variables.STORAGE) {
+    case 'S3':
+      storageName = 'S3'
+      break
+    case 'GCS':
+      storageName = 'Cloud Storage'
+      break
+    default:
+      storageName = 'Unknown'
+  }
+  return storageName
+}
+
 function FileStatus ({ file, fileToUpload, fileUploadStatus, children }) {
+  const env = useSelector(state => state.env)
+  if (!env.loaded) {
+    return null
+  }
   let message = ''
   let icon = null
   let style = styles.info
   const errorMessage = ''
   if (file.fileStatus > 1) {
     if (file.fileStatus === 2) {
-      message = 'Moving file to S3...'
+      message = `Moving file to ${getStorageName(env)}...`
       icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
     } else if (file.fileStatus === 3) {
       icon = <CheckCircleTwoTone className={styles.icon} twoToneColor='#52c41a' />
@@ -33,7 +52,7 @@ function FileStatus ({ file, fileToUpload, fileUploadStatus, children }) {
   } else if (fileToUpload) {
     if (fileUploadStatus) {
       if (fileUploadStatus.readyState === 4) {
-        message = 'Moving file to S3...'
+        message = `Moving file to ${getStorageName(env)}...`
         icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
       } else {
         icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
