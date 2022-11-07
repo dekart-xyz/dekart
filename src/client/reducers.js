@@ -140,7 +140,7 @@ function queryStatus (state = {}, action) {
       return action.dataset.queryId
         ? {
             ...state,
-            [action.datasets.queryId]: {
+            [action.dataset.queryId]: {
               ...state[action.dataset.queryId],
               downloadingResults: true
             }

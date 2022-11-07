@@ -50,7 +50,7 @@ export function removeDataset (datasetId) {
   }
 }
 
-export function downloadDataset (dataset, sourceId) {
+export function downloadDataset (dataset, sourceId, label) {
   return async (dispatch, getState) => {
     dispatch({ type: downloadDataset.name, dataset })
     dispatch(downloading(dataset))
@@ -71,7 +71,7 @@ export function downloadDataset (dataset, sourceId) {
     dispatch(addDataToMap({
       datasets: {
         info: {
-          label: `Query ${i + 1}`,
+          label,
           id: dataset.id
         },
         data

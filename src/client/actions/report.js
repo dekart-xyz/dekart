@@ -3,7 +3,6 @@ import { receiveMapConfig, removeDataset } from '@dekart-xyz/kepler.gl/dist/acti
 
 import { getReportStream, getStream, unary } from '../lib/grpc'
 import { error, streamError, success } from './message'
-import { downloadJobResults } from './job'
 import { ArchiveReportRequest, CreateReportRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { downloadQuerySource } from './query'
@@ -56,7 +55,6 @@ function shouldAddQuery (query, prevQueriesList, queriesList) {
 }
 
 function shouldAddFile (file, prevFileList, filesList) {
-  console.log('shouldAddFile', file, prevFileList, filesList)
   if (file.fileStatus < File.Status.STATUS_STORED) {
     return false
   }
@@ -69,25 +67,9 @@ function shouldAddFile (file, prevFileList, filesList) {
   }
 
   const prevFileState = prevFileList.find(f => f.id === file.id)
-  console.log('prevFileState', prevFileState)
   if (!prevFileState || prevFileState.fileStatus !== file.fileStatus || prevFileState.sourceId !== file.sourceId) {
     return true
   }
-
-  // if (!query.jobResultId) {
-  //   return false
-  // }
-  // if (!prevQueriesList) {
-  //   return true
-  // }
-  // if (prevQueriesList.length !== queriesList.length) { // TODO: why is this needed?
-  //   return true
-  // }
-  // const prevQueryState = prevQueriesList.find(q => q.id === query.id)
-  // if (!prevQueryState || prevQueryState.jobResultId !== query.jobResultId) {
-  //   return true
-  // }
-  // return false
 }
 
 function shouldDownloadQueryText (query, prevQueriesList, queriesList) {
@@ -108,7 +90,6 @@ function shouldDownloadQueryText (query, prevQueriesList, queriesList) {
 }
 
 export function reportUpdate (reportStreamResponse) {
-  console.log('reportUpdate', reportStreamResponse)
   const { report, queriesList, datasetsList, filesList } = reportStreamResponse
   return async (dispatch, getState) => {
     const { queries: prevQueriesList, datasets: prevDatasetsList, report: prevReport, files: prevFileList } = getState()
@@ -128,12 +109,18 @@ export function reportUpdate (reportStreamResponse) {
 
     prevQueriesList.forEach(query => {
       if (!queriesList.find(q => q.id === query.id)) {
-        dispatch(removeDataset(query.id))
+        const dataset = prevDatasetsList.find(d => d.queryId === query.id)
+        if (dataset) {
+          dispatch(removeDataset(dataset.id))
+        }
       }
     })
     prevFileList.forEach(file => {
       if (!filesList.find(f => f.id === file.id)) {
-        dispatch(removeDataset(file.id))
+        const dataset = prevDatasetsList.find(d => d.fileId === file.id)
+        if (dataset) {
+          dispatch(removeDataset(dataset.id))
+        }
       }
     })
 
@@ -141,41 +128,23 @@ export function reportUpdate (reportStreamResponse) {
       if (shouldDownloadQueryText(query, prevQueriesList, queriesList)) {
         dispatch(downloadQuerySource(query))
       }
-      // if (shouldAddQuery(query, prevQueriesList, queriesList)) {
-      //   dispatch(downloadJobResults(query))
-      // }
     })
 
+    let i = 0
     datasetsList.forEach((dataset) => {
       if (dataset.queryId) {
+        i++
         const query = queriesList.find(q => q.id === dataset.queryId)
         if (shouldAddQuery(query, prevQueriesList, queriesList)) {
-          dispatch(downloadDataset(dataset, query.querySourceId))
+          dispatch(downloadDataset(dataset, query.jobResultId, `Query ${i}`))
         }
       } else if (dataset.fileId) {
         const file = filesList.find(f => f.id === dataset.fileId)
-        console.log('file', file)
         if (shouldAddFile(file, prevFileList, filesList)) {
-          console.log('downloadDataset file', file)
-          dispatch(downloadDataset(dataset, file.sourceId))
+          dispatch(downloadDataset(dataset, file.sourceId, file.name))
         }
       }
     })
-    // files
-
-    // prevQueriesList.forEach(query => {
-    //   if (!queriesList.find(q => q.id === query.id)) {
-    //     dispatch(removeDataset(query.id))
-    //   }
-    // })
-    // queriesList.forEach((query) => {
-    //   if (shouldDownloadQueryText(query, prevQueriesList, queriesList)) {
-    //     dispatch(downloadQuerySource(query))
-    //   }
-    //   if (shouldAddDataset(query, prevQueriesList, queriesList)) {
-    //     dispatch(downloadJobResults(query))
-    //   }
-    // })
   }
 }
 
@@ -202,7 +171,6 @@ export function unsubscribeReports () {
 }
 
 export function reportsListUpdate (reportsList) {
-  // console.log('reportsListUpdate', reportsList)
   return { type: reportsListUpdate.name, reportsList }
 }
 

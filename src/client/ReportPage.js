@@ -18,7 +18,7 @@ import ReportHeaderButtons from './ReportHeaderButtons'
 import Downloading from './Downloading'
 import Dataset from './Dataset'
 
-function TabIcon({ query }) {
+function TabIcon ({ query }) {
   let iconColor = 'transparent'
   if (query.jobError) {
     iconColor = '#F66B55'
@@ -44,7 +44,7 @@ function TabIcon({ query }) {
   )
 }
 
-function getOnTabEditHandler(dispatch, reportId) {
+function getOnTabEditHandler (dispatch, reportId) {
   return (datasetId, action) => {
     switch (action) {
       case 'add':
@@ -63,21 +63,29 @@ function getOnTabEditHandler(dispatch, reportId) {
   }
 }
 
-function getTabPane(dataset, i, closable, changed = false) {
-  let title = 'Dataset'
+function getTabPane (dataset, closable, queries, files, status) {
+  let changed = false
+  let title = 'New'
+  let tabIcon = null
   if (dataset.queryId) {
-    title = 'Query'
+    const i = queries.findIndex(q => q.id === dataset.queryId)
+    const query = queries.find(q => q.id === dataset.queryId)
+    tabIcon = <TabIcon query={query} />
+    title = `Query ${i + 1}`
+    changed = status.changed
+  } else if (dataset.fileId) {
+    const file = files.find(f => f.id === dataset.fileId)
+    if (file && file.name) {
+      title = file.name
+    }
   }
-  return (<Tabs.TabPane tab={<><TabIcon query={dataset} />{`${title} ${i + 1}${changed ? '*' : ''}`}</>} key={dataset.id} closable={closable} />)
+  return (<Tabs.TabPane tab={<>{tabIcon}{`${title}${changed ? '*' : ''}`}</>} key={dataset.id} closable={closable} />)
 }
 
-// function getTabPane(query, i, closable, changed) {
-//   return (<Tabs.TabPane tab={<><TabIcon query={query} />{`Query ${i + 1}${changed ? '*' : ''}`}</>} key={query.id} closable={closable} />)
-// }
-
-function DatasetSection({ reportId }) {
-  const queries = useSelector(state => state.queries)
+function DatasetSection ({ reportId }) {
   const datasets = useSelector(state => state.datasets)
+  const queries = useSelector(state => state.queries)
+  const files = useSelector(state => state.files)
   const activeDataset = useSelector(state => state.activeDataset)
   const report = useSelector(state => state.report)
   const queryStatus = useSelector(state => state.queryStatus)
@@ -100,8 +108,7 @@ function DatasetSection({ reportId }) {
             hideAdd={!canWrite}
             onEdit={getOnTabEditHandler(dispatch, reportId)}
           >
-            {datasets.map((dataset, i) => getTabPane(dataset, i, closable))}
-            {/* {queries.map((query, i) => getTabPane(query, i, closable, queryStatus[query.id].changed))} */}
+            {datasets.map((dataset) => getTabPane(dataset, closable, queries, files, queryStatus))}
           </Tabs>
         </div>
         <Dataset dataset={activeDataset} />
@@ -115,7 +122,7 @@ function DatasetSection({ reportId }) {
 }
 
 let checkMapConfigTimer
-function checkMapConfig(kepler, mapConfig, setMapChanged) {
+function checkMapConfig (kepler, mapConfig, setMapChanged) {
   if (checkMapConfigTimer) {
     clearTimeout(checkMapConfigTimer)
   }
@@ -133,7 +140,7 @@ function checkMapConfig(kepler, mapConfig, setMapChanged) {
   }
 }
 
-function Title() {
+function Title () {
   const reportStatus = useSelector(state => state.reportStatus)
   const { canWrite } = useSelector(state => state.report)
   const [edit, setEdit] = useState(false)
@@ -173,17 +180,17 @@ function Title() {
 }
 
 class CatchKeplerError extends Component {
-  constructor(props) {
+  constructor (props) {
     super(props)
     this.state = { hasError: false }
   }
 
-  componentDidCatch(error, errorInfo) {
+  componentDidCatch (error, errorInfo) {
     this.setState({ hasError: true })
     this.props.onError(error)
   }
 
-  render() {
+  render () {
     if (this.state.hasError) {
       return (
         <div className={styles.keplerError}>
@@ -195,7 +202,7 @@ class CatchKeplerError extends Component {
   }
 }
 
-function Kepler() {
+function Kepler () {
   const env = useSelector(state => state.env)
   const dispatch = useDispatch()
   if (!env.loaded) {
@@ -226,7 +233,7 @@ function Kepler() {
   )
 }
 
-export default function ReportPage({ edit }) {
+export default function ReportPage ({ edit }) {
   const { id } = useParams()
 
   const kepler = useSelector(state => state.keplerGl.kepler)
@@ -269,7 +276,7 @@ export default function ReportPage({ edit }) {
           changed={mapChanged || titleChanged || queryChanged}
           canSave={reportStatus.canSave}
           edit={edit}
-        />)}
+                  />)}
       />
       <div className={styles.body}>
         <Kepler />
