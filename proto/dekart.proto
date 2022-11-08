@@ -143,6 +143,7 @@ message File {
         STATUS_STORED = 3; // file stored in permanent storage
     }
     Status file_status = 8;
+    string upload_error = 9;
 }
 
 message UpdateReportRequest {

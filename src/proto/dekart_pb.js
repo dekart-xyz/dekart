@@ -3337,7 +3337,8 @@ proto.File.toObject = function(includeInstance, msg) {
     sourceId: jspb.Message.getFieldWithDefault(msg, 5, ""),
     createdAt: jspb.Message.getFieldWithDefault(msg, 6, 0),
     updatedAt: jspb.Message.getFieldWithDefault(msg, 7, 0),
-    fileStatus: jspb.Message.getFieldWithDefault(msg, 8, 0)
+    fileStatus: jspb.Message.getFieldWithDefault(msg, 8, 0),
+    uploadError: jspb.Message.getFieldWithDefault(msg, 9, "")
   };
 
   if (includeInstance) {
@@ -3405,6 +3406,10 @@ proto.File.deserializeBinaryFromReader = function(msg, reader) {
     case 8:
       var value = /** @type {!proto.File.Status} */ (reader.readEnum());
       msg.setFileStatus(value);
+      break;
+    case 9:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setUploadError(value);
       break;
     default:
       reader.skipField();
@@ -3488,6 +3493,13 @@ proto.File.serializeBinaryToWriter = function(message, writer) {
   if (f !== 0.0) {
     writer.writeEnum(
       8,
+      f
+    );
+  }
+  f = message.getUploadError();
+  if (f.length > 0) {
+    writer.writeString(
+      9,
       f
     );
   }
@@ -3645,6 +3657,24 @@ proto.File.prototype.getFileStatus = function() {
  */
 proto.File.prototype.setFileStatus = function(value) {
   return jspb.Message.setProto3EnumField(this, 8, value);
+};
+
+
+/**
+ * optional string upload_error = 9;
+ * @return {string}
+ */
+proto.File.prototype.getUploadError = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 9, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.File} returns this
+ */
+proto.File.prototype.setUploadError = function(value) {
+  return jspb.Message.setProto3StringField(this, 9, value);
 };
 
 

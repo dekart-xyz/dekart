@@ -159,6 +159,7 @@
     min-height: 40px;
 }
 
+.errorStatus,
 .processed {
     font-size: 0.8em
 }

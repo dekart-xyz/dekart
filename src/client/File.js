@@ -32,6 +32,7 @@ function getStorageName (env) {
 }
 
 function FileStatus ({ file, fileToUpload, fileUploadStatus, children }) {
+  console.log('file', file)
   const env = useSelector(state => state.env)
   if (!env.loaded) {
     return null
@@ -42,8 +43,14 @@ function FileStatus ({ file, fileToUpload, fileUploadStatus, children }) {
   const errorMessage = ''
   if (file.fileStatus > 1) {
     if (file.fileStatus === 2) {
-      message = `Moving file to ${getStorageName(env)}...`
-      icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
+      if (file.uploadError) {
+        icon = <ExclamationCircleTwoTone className={styles.icon} twoToneColor='#f5222d' />
+        message = <span>Error uploading file: <span className={styles.errorStatus}>{file.uploadError}</span></span>
+        style = styles.error
+      } else {
+        message = `Moving file to ${getStorageName(env)}...`
+        icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
+      }
     } else if (file.fileStatus === 3) {
       icon = <CheckCircleTwoTone className={styles.icon} twoToneColor='#52c41a' />
       message = <span>Ready <span className={styles.processed}>({prettyBites(file.size)})</span></span>
@@ -52,8 +59,14 @@ function FileStatus ({ file, fileToUpload, fileUploadStatus, children }) {
   } else if (fileToUpload) {
     if (fileUploadStatus) {
       if (fileUploadStatus.readyState === 4) {
-        message = `Moving file to ${getStorageName(env)}...`
-        icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
+        if (fileUploadStatus.status === 200) {
+          message = `Moving file to ${getStorageName(env)}...`
+          icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
+        } else {
+          icon = <ExclamationCircleTwoTone className={styles.icon} twoToneColor='#f5222d' />
+          message = <span>Error uploading file <span className={styles.errorStatus}>(status={fileUploadStatus.status})</span></span>
+          style = styles.error
+        }
       } else {
         icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
         message = `Uploading ${prettyBites(fileUploadStatus.loaded)} of ${prettyBites(fileUploadStatus.total)}`

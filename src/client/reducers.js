@@ -309,7 +309,8 @@ function fileUploadStatus (state = {}, action) {
         [action.fileId]: {
           readyState: 0,
           loaded: 0,
-          total: action.file.size
+          total: action.file.size,
+          status: 0
         }
       }
     case uploadFileStateChange.name:
@@ -317,7 +318,8 @@ function fileUploadStatus (state = {}, action) {
         ...state,
         [action.fileId]: {
           ...state[action.fileId],
-          readyState: action.readyState
+          readyState: action.readyState,
+          status: action.status
         }
       }
     case uploadFileProgress.name:

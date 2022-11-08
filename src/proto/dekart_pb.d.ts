@@ -415,6 +415,9 @@ export class File extends jspb.Message {
   getFileStatus(): File.StatusMap[keyof File.StatusMap];
   setFileStatus(value: File.StatusMap[keyof File.StatusMap]): void;
 
+  getUploadError(): string;
+  setUploadError(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): File.AsObject;
   static toObject(includeInstance: boolean, msg: File): File.AsObject;
@@ -435,6 +438,7 @@ export namespace File {
     createdAt: number,
     updatedAt: number,
     fileStatus: File.StatusMap[keyof File.StatusMap],
+    uploadError: string,
   }
 
   export interface StatusMap {

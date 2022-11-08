@@ -44,6 +44,22 @@ func (s Server) getFileReports(ctx context.Context, fileId string, claims *user.
 	return reportIds, nil
 }
 
+func (s Server) setUploadError(reportIDs []string, fileSourceID string, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_, err = s.db.ExecContext(
+		ctx,
+		`update files set upload_error=$1 where file_source_id=$2`,
+		err.Error(),
+		fileSourceID,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return
+	}
+	s.reportStreams.PingAll(reportIDs)
+}
+
 func (s Server) moveFileToStorage(fileSourceID string, file multipart.File, reportIDs []string) {
 	defer file.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
@@ -52,20 +68,23 @@ func (s Server) moveFileToStorage(fileSourceID string, file multipart.File, repo
 	_, err := io.Copy(storageWriter, file)
 	if err != nil {
 		log.Err(err).Send()
+		s.setUploadError(reportIDs, fileSourceID, err)
 		return
 	}
 
 	err = storageWriter.Close()
 	if err != nil {
 		log.Err(err).Send()
+		s.setUploadError(reportIDs, fileSourceID, err)
 	}
-	log.Debug().Msgf("file %s moved to storage", fileSourceID)
+	log.Debug().Msgf("file %s.csv moved to storage", fileSourceID)
 	_, err = s.db.ExecContext(ctx,
 		`update files set file_status=3 where file_source_id=$1`,
 		fileSourceID,
 	)
 	if err != nil {
 		log.Err(err).Send()
+		s.setUploadError(reportIDs, fileSourceID, err)
 		return
 	}
 	s.reportStreams.PingAll(reportIDs)
@@ -191,6 +210,7 @@ func (s Server) getFiles(ctx context.Context, datasets []*proto.Dataset) ([]*pro
 				mime_type,
 				file_status,
 				file_source_id,
+				upload_error,
 				created_at,
 				updated_at
 			from files where id = ANY($1) order by created_at asc`,
@@ -203,10 +223,11 @@ func (s Server) getFiles(ctx context.Context, datasets []*proto.Dataset) ([]*pro
 		defer fileRows.Close()
 		for fileRows.Next() {
 			file := proto.File{}
-			var sourceId sql.NullString
 
+			var sourceId sql.NullString
 			var createdAt time.Time
 			var updatedAt time.Time
+
 			if err = fileRows.Scan(
 				&file.Id,
 				&file.Name,
@@ -214,6 +235,7 @@ func (s Server) getFiles(ctx context.Context, datasets []*proto.Dataset) ([]*pro
 				&file.MimeType,
 				&file.FileStatus,
 				&sourceId,
+				&file.UploadError,
 				&createdAt,
 				&updatedAt,
 			); err != nil {

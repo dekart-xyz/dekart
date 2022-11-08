@@ -12,11 +12,12 @@ export function uploadFileProgress (fileId, loaded, total) {
   }
 }
 
-export function uploadFileStateChange (fileId, readyState) {
+export function uploadFileStateChange (fileId, readyState, status) {
   return {
     type: uploadFileStateChange.name,
     fileId,
-    readyState
+    readyState,
+    status
   }
 }
 
@@ -24,7 +25,6 @@ export function uploadFile (fileId, file) {
   return async (dispatch) => {
     dispatch({ type: uploadFile.name, fileId, file })
     const formData = new window.FormData()
-    console.log('file', file)
     formData.append('file', file)
     const { REACT_APP_API_HOST } = process.env
     const host = REACT_APP_API_HOST || ''
@@ -36,7 +36,7 @@ export function uploadFile (fileId, file) {
     // request.upload.addEventListener('load', (event) => {
     //   console.log('uploadFile load', event)
     // })
-    // request.upload.addEventListener('error', (event) => {
+    // request.addEventListener('error', (event) => {
     //   console.log('uploadFile error', event)
     // })
     // request.upload.addEventListener('abort', (event) => {
@@ -46,7 +46,7 @@ export function uploadFile (fileId, file) {
     //   console.log('uploadFile loadend', event)
     // })
     request.addEventListener('readystatechange', (event) => {
-      dispatch(uploadFileStateChange(fileId, request.readyState))
+      dispatch(uploadFileStateChange(fileId, request.readyState, request.status))
     })
     request.open('POST', url)
     request.timeout = 3600 * 1000 // 1 hour
