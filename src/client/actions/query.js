@@ -55,9 +55,6 @@ export function createQuery (datasetId) {
     dispatch({ type: createQuery.name })
     const request = new CreateQueryRequest()
     request.setDatasetId(datasetId)
-    // const query = new Query()
-    // query.setData(reportId)
-    // request.setQuery(query)
     unary(Dekart.CreateQuery, request).catch(err => dispatch(error(err)))
   }
 }

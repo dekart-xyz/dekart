@@ -5,7 +5,7 @@ import { getReportStream, getStream, unary } from '../lib/grpc'
 import { error, streamError, success } from './message'
 import { ArchiveReportRequest, CreateReportRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
-import { downloadQuerySource } from './query'
+import { createQuery, downloadQuerySource } from './query'
 import { downloadDataset } from './dataset'
 
 let reportStreamCancelable
@@ -92,7 +92,7 @@ function shouldDownloadQueryText (query, prevQueriesList, queriesList) {
 export function reportUpdate (reportStreamResponse) {
   const { report, queriesList, datasetsList, filesList } = reportStreamResponse
   return async (dispatch, getState) => {
-    const { queries: prevQueriesList, datasets: prevDatasetsList, report: prevReport, files: prevFileList } = getState()
+    const { queries: prevQueriesList, datasets: prevDatasetsList, report: prevReport, files: prevFileList, env } = getState()
     dispatch({
       type: reportUpdate.name,
       report,
@@ -131,6 +131,7 @@ export function reportUpdate (reportStreamResponse) {
     })
 
     let i = 0
+    const { ALLOW_FILE_UPLOAD } = env.variables
     datasetsList.forEach((dataset) => {
       if (dataset.queryId) {
         i++
@@ -143,6 +144,9 @@ export function reportUpdate (reportStreamResponse) {
         if (shouldAddFile(file, prevFileList, filesList)) {
           dispatch(downloadDataset(dataset, file.sourceId, file.name))
         }
+      } else if (!ALLOW_FILE_UPLOAD) {
+        // create query right away
+        dispatch(createQuery(dataset.id))
       }
     })
   }

@@ -9,6 +9,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -91,6 +92,11 @@ func (s Server) moveFileToStorage(fileSourceID string, file multipart.File, repo
 }
 
 func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
+	if len(os.Getenv("DEKART_ALLOW_FILE_UPLOAD")) == 0 {
+		log.Warn().Msg("file upload is disabled, set DEKART_ALLOW_FILE_UPLOAD to enable")
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
 	fileId := mux.Vars(r)["id"]
 	ctx := r.Context()
 	claims := user.GetClaims(ctx)

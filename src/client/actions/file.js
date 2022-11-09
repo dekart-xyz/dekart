@@ -33,18 +33,6 @@ export function uploadFile (fileId, file) {
     request.upload.addEventListener('progress', (event) => {
       dispatch(uploadFileProgress(fileId, event.loaded, event.total))
     })
-    // request.upload.addEventListener('load', (event) => {
-    //   console.log('uploadFile load', event)
-    // })
-    // request.addEventListener('error', (event) => {
-    //   console.log('uploadFile error', event)
-    // })
-    // request.upload.addEventListener('abort', (event) => {
-    //   console.log('uploadFile abort', event)
-    // })
-    // request.upload.addEventListener('loadend', (event) => {
-    //   console.log('uploadFile loadend', event)
-    // })
     request.addEventListener('readystatechange', (event) => {
       dispatch(uploadFileStateChange(fileId, request.readyState, request.status))
     })

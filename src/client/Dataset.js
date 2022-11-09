@@ -22,6 +22,10 @@ function DatasetSelector ({ dataset }) {
     default:
       datasource = 'Unknown'
   }
+  const { ALLOW_FILE_UPLOAD } = env.variables
+  if (!ALLOW_FILE_UPLOAD) {
+    return null
+  }
   return (
     <div className={styles.datasetSelector}>
       <div className={styles.selector}>
