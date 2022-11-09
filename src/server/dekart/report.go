@@ -93,7 +93,7 @@ func rollback(tx *sql.Tx) {
 	}
 }
 
-func (s Server) commitReportWithQueries(ctx context.Context, report *proto.Report, queries []*proto.Query) error {
+func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Report, datasets []*proto.Dataset) error {
 	claims := user.GetClaims(ctx)
 	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
@@ -111,23 +111,23 @@ func (s Server) commitReportWithQueries(ctx context.Context, report *proto.Repor
 		rollback(tx)
 		return err
 	}
-	for _, query := range queries {
-		queryId := newUUID()
-		_, err := tx.ExecContext(ctx,
-			`INSERT INTO queries (
-				id,
-				report_id,
-				query_text,
-				query_source,
-				query_source_id,
-				created_at
-			) VALUES($1, $2, $3, $4, $5, $6)`,
-			queryId,
+	for _, dataset := range datasets {
+		datasetId := newUUID()
+		var queryId *string
+		var fileId *string
+		if dataset.QueryId != "" {
+			queryId = &dataset.QueryId
+		} else if dataset.FileId != "" {
+			fileId = &dataset.FileId
+		}
+		_, err = tx.ExecContext(ctx, `
+			INSERT INTO datasets (id, report_id, query_id, file_id, created_at)
+			VALUES($1, $2, $3, $4, $5)`,
+			datasetId,
 			report.Id,
-			query.QueryText,
-			query.QuerySource,
-			query.QuerySourceId,
-			time.Unix(query.CreatedAt, 0), // to preserve query sequence
+			queryId,
+			fileId,
+			time.Unix(dataset.CreatedAt, 0),
 		)
 		if err != nil {
 			rollback(tx)
@@ -164,13 +164,13 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 	report.Id = reportID
 	report.Title = fmt.Sprintf("Fork of %s", report.Title)
 
-	sourceQueries, err := s.getQueriesLegacy(ctx, req.ReportId)
+	datasets, err := s.getDatasets(ctx, req.ReportId)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Cannot retrieve datasets")
 		return nil, err
 	}
 
-	err = s.commitReportWithQueries(ctx, report, sourceQueries)
+	err = s.commitReportWithDatasets(ctx, report, datasets)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, err
