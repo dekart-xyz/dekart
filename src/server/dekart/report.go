@@ -116,9 +116,54 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 		var queryId *string
 		var fileId *string
 		if dataset.QueryId != "" {
-			queryId = &dataset.QueryId
+			newQueryID := newUUID()
+			queryId = &newQueryID
+			_, err = tx.ExecContext(ctx,
+				`INSERT INTO queries (
+						id,
+						query_text,
+						query_source,
+						query_source_id
+					) select 
+						$1,
+						query_text,
+						query_source,
+						query_source_id
+					from queries where id=$2`,
+				newQueryID,
+				dataset.QueryId,
+			)
+			if err != nil {
+				log.Debug().Err(err).Send()
+				rollback(tx)
+				return err
+			}
 		} else if dataset.FileId != "" {
-			fileId = &dataset.FileId
+			newFileID := newUUID()
+			fileId = &newFileID
+			_, err = tx.ExecContext(ctx, `
+				INSERT INTO files (
+					id,
+					file_source_id,
+					name,
+					size,
+					mime_type,
+					file_status,
+					upload_error					
+				) select
+					$1,
+					file_source_id,
+					name,
+					size,
+					mime_type,
+					file_status,
+					upload_error					
+				from files where id=$2`, newFileID, dataset.FileId)
+			if err != nil {
+				log.Debug().Err(err).Send()
+				rollback(tx)
+				return err
+			}
 		}
 		_, err = tx.ExecContext(ctx, `
 			INSERT INTO datasets (id, report_id, query_id, file_id, created_at)
@@ -130,6 +175,7 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 			time.Unix(dataset.CreatedAt, 0),
 		)
 		if err != nil {
+			log.Debug().Err(err).Send()
 			rollback(tx)
 			return err
 		}
