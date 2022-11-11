@@ -2,6 +2,7 @@ package dekart
 
 import (
 	"context"
+	"database/sql"
 	"dekart/src/proto"
 	"fmt"
 	"strings"
@@ -11,8 +12,55 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func (s Server) getQueries(ctx context.Context, datasets []*proto.Dataset) ([]*proto.Query, error) {
+func rowsToQueries(queryRows *sql.Rows) ([]*proto.Query, error) {
 	queries := make([]*proto.Query, 0)
+	for queryRows.Next() {
+		var queryText string
+		query := proto.Query{}
+		var createdAt time.Time
+		var updatedAt time.Time
+		if err := queryRows.Scan(
+			&query.Id,
+			&queryText,
+			&query.JobStatus,
+			&query.JobResultId,
+			&query.JobError,
+			&query.JobDuration,
+			&query.TotalRows,
+			&query.BytesProcessed,
+			&query.ResultSize,
+			&createdAt,
+			&updatedAt,
+			&query.QuerySource,
+			&query.QuerySourceId,
+		); err != nil {
+			log.Fatal().Err(err).Send()
+		}
+
+		switch query.QuerySource {
+		case proto.Query_QUERY_SOURCE_UNSPECIFIED:
+			err := fmt.Errorf("unknown query source query id=%s", query.Id)
+			log.Err(err).Send()
+			return nil, err
+		case proto.Query_QUERY_SOURCE_INLINE:
+			query.QueryText = queryText
+		}
+		query.CreatedAt = createdAt.Unix()
+		query.UpdatedAt = updatedAt.Unix()
+		switch query.JobStatus {
+		case proto.Query_JOB_STATUS_UNSPECIFIED:
+			query.JobDuration = 0
+		case proto.Query_JOB_STATUS_DONE:
+			if query.JobResultId != "" {
+				query.JobDuration = 0
+			}
+		}
+		queries = append(queries, &query)
+	}
+	return queries, nil
+}
+
+func (s Server) getQueries(ctx context.Context, datasets []*proto.Dataset) ([]*proto.Query, error) {
 	queryIds := make([]string, 0)
 	for _, dataset := range datasets {
 		if dataset.QueryId != "" {
@@ -47,56 +95,13 @@ func (s Server) getQueries(ctx context.Context, datasets []*proto.Dataset) ([]*p
 			log.Fatal().Err(err).Msgf("select from queries failed, ids: %s", queryIdsStr)
 		}
 		defer queryRows.Close()
-		for queryRows.Next() {
-			var queryText string
-			query := proto.Query{}
-			var createdAt time.Time
-			var updatedAt time.Time
-			if err := queryRows.Scan(
-				&query.Id,
-				&queryText,
-				&query.JobStatus,
-				&query.JobResultId,
-				&query.JobError,
-				&query.JobDuration,
-				&query.TotalRows,
-				&query.BytesProcessed,
-				&query.ResultSize,
-				&createdAt,
-				&updatedAt,
-				&query.QuerySource,
-				&query.QuerySourceId,
-			); err != nil {
-				log.Fatal().Err(err).Send()
-			}
-
-			switch query.QuerySource {
-			case proto.Query_QUERY_SOURCE_UNSPECIFIED:
-				err = fmt.Errorf("unknown query source query id=%s", query.Id)
-				log.Err(err).Send()
-				return nil, err
-			case proto.Query_QUERY_SOURCE_INLINE:
-				query.QueryText = queryText
-			}
-			query.CreatedAt = createdAt.Unix()
-			query.UpdatedAt = updatedAt.Unix()
-			switch query.JobStatus {
-			case proto.Query_JOB_STATUS_UNSPECIFIED:
-				query.JobDuration = 0
-			case proto.Query_JOB_STATUS_DONE:
-				if query.JobResultId != "" {
-					query.JobDuration = 0
-				}
-			}
-			queries = append(queries, &query)
-		}
+		return rowsToQueries(queryRows)
 	}
-	return queries, nil
+	return make([]*proto.Query, 0), nil
 }
 
-// start here: refactor to minimize logic duplication with getQueries
+//getQueriesLegacy is used to get queries which are not associated with a dataset
 func (s Server) getQueriesLegacy(ctx context.Context, reportID string) ([]*proto.Query, error) {
-	log.Warn().Msg("getQueriesLegacy used")
 	queryRows, err := s.db.QueryContext(ctx,
 		`select
 			id,
@@ -124,50 +129,5 @@ func (s Server) getQueriesLegacy(ctx context.Context, reportID string) ([]*proto
 		return nil, err
 	}
 	defer queryRows.Close()
-	queries := make([]*proto.Query, 0)
-	for queryRows.Next() {
-		var queryText string
-		query := proto.Query{}
-		var createdAt time.Time
-		var updatedAt time.Time
-		if err := queryRows.Scan(
-			&query.Id,
-			&queryText,
-			&query.JobStatus,
-			&query.JobResultId,
-			&query.JobError,
-			&query.JobDuration,
-			&query.TotalRows,
-			&query.BytesProcessed,
-			&query.ResultSize,
-			&createdAt,
-			&updatedAt,
-			&query.QuerySource,
-			&query.QuerySourceId,
-		); err != nil {
-			log.Err(err).Send()
-			return nil, err
-		}
-
-		switch query.QuerySource {
-		case proto.Query_QUERY_SOURCE_UNSPECIFIED:
-			err = fmt.Errorf("unknown query source query id=%s", query.Id)
-			log.Err(err).Send()
-			return nil, err
-		case proto.Query_QUERY_SOURCE_INLINE:
-			query.QueryText = queryText
-		}
-		query.CreatedAt = createdAt.Unix()
-		query.UpdatedAt = updatedAt.Unix()
-		switch query.JobStatus {
-		case proto.Query_JOB_STATUS_UNSPECIFIED:
-			query.JobDuration = 0
-		case proto.Query_JOB_STATUS_DONE:
-			if query.JobResultId != "" {
-				query.JobDuration = 0
-			}
-		}
-		queries = append(queries, &query)
-	}
-	return queries, nil
+	return rowsToQueries(queryRows)
 }
