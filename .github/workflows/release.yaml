@@ -4,8 +4,6 @@ on:
   push:
     tags:
       - '**'
-    branches:
-      - 'fix-build'
 
 jobs:
   docker:
@@ -18,7 +16,7 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: |
-            name/app
+            dekartxyz/dekart
           tags: |
             type=ref,event=branch
             type=ref,event=pr
