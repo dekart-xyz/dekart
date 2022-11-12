@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 import keplerGlReducer from '@dekart-xyz/kepler.gl/dist/reducers'
 import { ActionTypes as KeplerActionTypes } from '@dekart-xyz/kepler.gl/dist/actions'
-import { openReport, reportTitleChange, reportUpdate, runQuery, saveMap, reportsListUpdate, unsubscribeReports, streamError, httpError, newReport, setEnv, forkReport, newForkedReport, downloading, finishDownloading, setActiveDataset, queryChanged, newRelease, querySource, uploadFile, uploadFileProgress, uploadFileStateChange, downloadDataset } from './actions'
+import { openReport, reportTitleChange, reportUpdate, saveMap, reportsListUpdate, unsubscribeReports, streamError, httpError, newReport, setEnv, forkReport, newForkedReport, downloading, finishDownloading, setActiveDataset, queryChanged, newRelease, querySource, uploadFile, uploadFileProgress, uploadFileStateChange, downloadDataset } from './actions'
 import { Query } from '../proto/dekart_pb'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
@@ -70,11 +70,6 @@ const defaultReportStatus = {
 }
 function reportStatus (state = defaultReportStatus, action) {
   switch (action.type) {
-    // case downloadDataset.name:
-    //   return {
-    //     ...state,
-    //     size: 0
-    //   }
     case forkReport.name:
     case saveMap.name:
       return {

@@ -41,7 +41,9 @@ function FileStatus ({ file, fileToUpload, fileUploadStatus, children }) {
   let style = styles.info
   const errorMessage = ''
   if (file.fileStatus > 1) {
+    // file uploaded by user
     if (file.fileStatus === 2) {
+      // file in temporary storage
       if (file.uploadError) {
         icon = <ExclamationCircleTwoTone className={styles.icon} twoToneColor='#f5222d' />
         message = <span>Error uploading file: <span className={styles.errorStatus}>{file.uploadError}</span></span>
@@ -51,13 +53,17 @@ function FileStatus ({ file, fileToUpload, fileUploadStatus, children }) {
         icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
       }
     } else if (file.fileStatus === 3) {
+      // file stored in permanent storage
       icon = <CheckCircleTwoTone className={styles.icon} twoToneColor='#52c41a' />
       message = <span>Ready <span className={styles.processed}>({prettyBites(file.size)})</span></span>
       style = styles.success
     }
   } else if (fileToUpload) {
+    // file to upload selected by user
     if (fileUploadStatus) {
+      // file upload in progress
       if (fileUploadStatus.readyState === 4) {
+        // file upload finished
         if (fileUploadStatus.status === 200) {
           message = `Moving file to ${getStorageName(env)}...`
           icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
@@ -80,7 +86,6 @@ function FileStatus ({ file, fileToUpload, fileUploadStatus, children }) {
         <div className={styles.statusHead}>
           {icon}
           <div className={styles.message}>{message}</div>
-          {/* {action ? <div className={styles.action}>{action}</div> : null} */}
         </div>
         {errorMessage ? <div className={styles.errorMessage}>{errorMessage}</div> : null}
       </div>

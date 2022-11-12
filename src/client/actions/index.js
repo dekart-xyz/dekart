@@ -10,7 +10,6 @@ export function showDataTable (query) {
 export * from './query'
 export * from './file'
 export * from './report'
-export * from './job'
 export * from './env'
 export * from './message'
 export * from './clipboard'
