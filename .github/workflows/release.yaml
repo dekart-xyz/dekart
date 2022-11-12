@@ -13,15 +13,18 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
-      - name: Docker meta
-        id: docker_meta
-        uses: crazy-max/ghaction-docker-meta@v1
+-
+        name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
         with:
-          images: dekartxyz/dekart
-          tag-latest: false
-          tag-semver: |
-            {{version}}
-            {{major}}.{{minor}}
+          images: |
+            name/app
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
       - name: Create .npmrc
         run: |
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > .npmrc
@@ -41,6 +44,5 @@ jobs:
         with:
           push: true
           context: .
-          tags: ${{ steps.docker_meta.outputs.tags }}
-          labels: ${{ steps.docker_meta.outputs.labels }}
-
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

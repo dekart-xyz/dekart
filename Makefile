@@ -54,9 +54,14 @@ cloud-sql-proxy: cloud-sql-proxy-docker
 		--env-file .env \
 		-p 5432:5432 \
 		cloud-sql-proxy
+prerelease:
+	npm version prerelease --preid=rc
+preminor:
+	npm version preminor --preid=rc
 version:
 	npm version $(MAKECMDGOALS)
 minor: version
+patch: version
 patch: version
 release:
 	git push origin HEAD --tags
