@@ -3,21 +3,37 @@ syntax = "proto3";
 option go_package = "./proto";
 
 service Dekart {
+    //reports
     rpc CreateReport(CreateReportRequest) returns (CreateReportResponse) {}
     rpc ForkReport(ForkReportRequest) returns (ForkReportResponse) {}
     rpc UpdateReport(UpdateReportRequest) returns (UpdateReportResponse) {}
     rpc ArchiveReport(ArchiveReportRequest) returns (ArchiveReportResponse) {}
 
+    // datasets
+    rpc CreateDataset(CreateDatasetRequest) returns (CreateDatasetResponse) {}
+    rpc RemoveDataset(RemoveDatasetRequest) returns (RemoveDatasetResponse) {}
+
+    // files
+    rpc CreateFile(CreateFileRequest) returns (CreateFileResponse) {}
+
+    // queries
     rpc CreateQuery(CreateQueryRequest) returns (CreateQueryResponse) {}
-    rpc UpdateQuery(UpdateQueryRequest) returns (UpdateQueryResponse) {}
     rpc RunQuery(RunQueryRequest) returns (RunQueryResponse) {}
     rpc CancelQuery(CancelQueryRequest) returns (CancelQueryResponse) {}
-    rpc RemoveQuery(RemoveQueryRequest) returns (RemoveQueryResponse) {}
 
     rpc GetEnv(GetEnvRequest) returns (GetEnvResponse) {}
 
+    // streams
     rpc GetReportStream(ReportStreamRequest) returns (stream ReportStreamResponse) {}
     rpc GetReportListStream(ReportListRequest) returns (stream ReportListResponse) {}
+}
+
+message RemoveDatasetRequest {
+    string dataset_id = 1;
+}
+
+message RemoveDatasetResponse {
+    string dataset_id = 1;
 }
 
 message StreamOptions {
@@ -33,6 +49,9 @@ message GetEnvResponse {
             TYPE_MAPBOX_TOKEN = 1;
             TYPE_UX_DATA_DOCUMENTATION = 2;
             TYPE_UX_HOMEPAGE = 3;
+            TYPE_ALLOW_FILE_UPLOAD = 4;
+            TYPE_DATASOURCE = 5;
+            TYPE_STORAGE = 6;
         }
         Type type = 1;
         string value = 2;
@@ -64,9 +83,18 @@ message Report {
     bool can_write = 5;
 }
 
-message Query {
+message Dataset {
     string id = 1;
     string report_id = 2;
+    string query_id = 3;
+    int64 created_at = 4;
+    int64 updated_at = 5;
+    string file_id = 6;
+}
+
+message Query {
+    string id = 1;
+    // string report_id = 2;
     string query_text = 3;
 
     enum JobStatus {
@@ -98,6 +126,24 @@ message Query {
 
 }
 
+message File {
+    string id = 1;
+    string name = 2;
+    string mime_type = 3;
+    int64 size = 4;
+    string source_id = 5;
+    int64 created_at = 6;
+    int64 updated_at = 7;
+    enum Status {
+        STATUS_UNSPECIFIED = 0;
+        STATUS_NEW = 1; // default initial state
+        STATUS_RECEIVED = 2; // file uploaded by user to temp storage
+        STATUS_STORED = 3; // file stored in permanent storage
+    }
+    Status file_status = 8;
+    string upload_error = 9;
+}
+
 message UpdateReportRequest {
     Report report = 1;
     repeated Query query = 2;
@@ -114,13 +160,6 @@ message RunQueryRequest {
 message RunQueryResponse {
 }
 
-message RemoveQueryRequest {
-    string query_id = 1;
-}
-
-message RemoveQueryResponse {
-}
-
 message CancelQueryRequest {
     string query_id = 1;
 }
@@ -128,16 +167,23 @@ message CancelQueryRequest {
 message CancelQueryResponse {
 }
 
-message UpdateQueryRequest {
-    Query query = 1;
+message CreateDatasetRequest {
+    string report_id = 1;
 }
 
-message UpdateQueryResponse {
-    Query query = 1;
+message CreateDatasetResponse {
+}
+
+message CreateFileRequest {
+    string dataset_id = 1;
+}
+
+message CreateFileResponse {
+    string file_id = 1;
 }
 
 message CreateQueryRequest {
-    Query query = 1;
+    string dataset_id = 1;
 }
 
 message CreateQueryResponse {
@@ -153,6 +199,8 @@ message ReportStreamResponse {
     Report report = 1;
     repeated Query queries = 2;
     StreamOptions stream_options = 3;
+    repeated Dataset datasets = 4;
+    repeated File files = 5;
 }
 
 message ForkReportRequest {

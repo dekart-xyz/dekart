@@ -6,8 +6,7 @@ import { KeplerGl } from '@dekart-xyz/kepler.gl/dist/components'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
 import { useDispatch, useSelector } from 'react-redux'
-import { closeReport, openReport, createQuery, reportTitleChange, removeQuery, setActiveQuery, error } from './actions'
-import Query from './Query'
+import { closeReport, openReport, reportTitleChange, setActiveDataset, error, createDataset, removeDataset } from './actions'
 import { EditOutlined, WarningFilled } from '@ant-design/icons'
 import { Query as QueryType } from '../proto/dekart_pb'
 import Tabs from 'antd/es/tabs'
@@ -16,6 +15,7 @@ import classnames from 'classnames'
 import { Header } from './Header'
 import ReportHeaderButtons from './ReportHeaderButtons'
 import Downloading from './Downloading'
+import Dataset from './Dataset'
 
 function TabIcon ({ query }) {
   let iconColor = 'transparent'
@@ -44,54 +44,74 @@ function TabIcon ({ query }) {
 }
 
 function getOnTabEditHandler (dispatch, reportId) {
-  return (queryId, action) => {
+  return (datasetId, action) => {
     switch (action) {
       case 'add':
-        return dispatch(createQuery(reportId))
+        // return dispatch(createQuery(reportId))
+        return dispatch(createDataset(reportId))
       case 'remove':
         Modal.confirm({
-          title: 'Are you sure delete query?',
+          title: 'Remove dataset from report?',
           okText: 'Yes',
           okType: 'danger',
           cancelText: 'No',
-          onOk: () => dispatch(removeQuery(queryId))
+          onOk: () => dispatch(removeDataset(datasetId))
         })
     }
   }
 }
 
-function getTabPane (query, i, closable, changed) {
-  return (<Tabs.TabPane tab={<><TabIcon query={query} />{`Query ${i + 1}${changed ? '*' : ''}`}</>} key={query.id} closable={closable} />)
+function getTabPane (dataset, closable, queries, files, status) {
+  let changed = false
+  let title = 'New'
+  let tabIcon = null
+  if (dataset.queryId) {
+    const i = queries.findIndex(q => q.id === dataset.queryId)
+    const query = queries.find(q => q.id === dataset.queryId)
+    tabIcon = <TabIcon query={query} />
+    title = `Query ${i + 1}`
+    changed = status.changed
+  } else if (dataset.fileId) {
+    const file = files.find(f => f.id === dataset.fileId)
+    if (file && file.name) {
+      title = file.name
+    }
+  }
+  return (<Tabs.TabPane tab={<>{tabIcon}{`${title}${changed ? '*' : ''}`}</>} key={dataset.id} closable={closable} />)
 }
 
-function QuerySection ({ reportId }) {
+function DatasetSection ({ reportId }) {
+  const datasets = useSelector(state => state.datasets)
   const queries = useSelector(state => state.queries)
-  const activeQuery = useSelector(state => state.activeQuery)
+  const files = useSelector(state => state.files)
+  const activeDataset = useSelector(state => state.activeDataset)
   const report = useSelector(state => state.report)
   const queryStatus = useSelector(state => state.queryStatus)
   const { canWrite } = report
   const dispatch = useDispatch()
   useEffect(() => {
-    if (report && !(activeQuery)) {
-      dispatch(createQuery(reportId))
+    if (report && !(activeDataset)) {
+      dispatch(createDataset(reportId))
     }
-  }, [reportId, report, activeQuery, dispatch])
-  if (activeQuery) {
-    const closable = queries.length > 1 && canWrite
+  }, [reportId, report, activeDataset, dispatch])
+  if (activeDataset) {
+    const closable = datasets.length > 1 && canWrite
     return (
-      <div className={styles.querySection}>
+      <div className={styles.datasetSection}>
         <div className={styles.tabs}>
           <Tabs
             type='editable-card'
-            activeKey={activeQuery.id}
-            onChange={(queryId) => dispatch(setActiveQuery(queryId))}
+            activeKey={activeDataset.id}
+            onChange={(datasetId) => dispatch(setActiveDataset(datasetId))}
             hideAdd={!canWrite}
             onEdit={getOnTabEditHandler(dispatch, reportId)}
           >
-            {queries.map((query, i) => getTabPane(query, i, closable, queryStatus[query.id].changed))}
+            {datasets.map((dataset) => getTabPane(dataset, closable, queries, files, queryStatus))}
           </Tabs>
         </div>
-        <Query query={activeQuery} key={activeQuery.id} />
+        <Dataset dataset={activeDataset} />
+        {/* {activeDataset.queryId ? <Query query={activeDataset} key={activeDataset.id} /> : null} */}
+        {/* {<Query query={activeDataset} key={activeDataset.id} />} */}
       </div>
     )
   } else {
@@ -149,8 +169,8 @@ function Title () {
           )}
           onClick={() => reportStatus.edit && setEdit(true)}
         >{
-          reportStatus.edit && canWrite ? <EditOutlined className={styles.titleEditIcon} /> : null
-        }{reportStatus.title}
+            reportStatus.edit && canWrite ? <EditOutlined className={styles.titleEditIcon} /> : null
+          }{reportStatus.title}
         </span>
       </div>
     )
@@ -258,7 +278,7 @@ export default function ReportPage ({ edit }) {
       />
       <div className={styles.body}>
         <Kepler />
-        {edit ? <QuerySection reportId={id} /> : null}
+        {edit ? <DatasetSection reportId={id} /> : null}
       </div>
     </div>
   )

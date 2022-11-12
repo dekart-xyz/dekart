@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 import keplerGlReducer from '@dekart-xyz/kepler.gl/dist/reducers'
 import { ActionTypes as KeplerActionTypes } from '@dekart-xyz/kepler.gl/dist/actions'
-import { downloadJobResults, openReport, reportTitleChange, reportUpdate, runQuery, saveMap, updateQuery, reportsListUpdate, unsubscribeReports, streamError, httpError, newReport, setEnv, forkReport, newForkedReport, downloading, finishDownloading, setActiveQuery, queryChanged, newRelease, querySource } from './actions'
+import { openReport, reportTitleChange, reportUpdate, saveMap, reportsListUpdate, unsubscribeReports, streamError, httpError, newReport, setEnv, forkReport, newForkedReport, downloading, finishDownloading, setActiveDataset, queryChanged, newRelease, querySource, uploadFile, uploadFileProgress, uploadFileStateChange, downloadDataset } from './actions'
 import { Query } from '../proto/dekart_pb'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
@@ -12,8 +12,6 @@ const customKeplerGlReducer = keplerGlReducer.initialState({
 })
 
 function keplerGl (state, action) {
-  // console.log('keplerGl', state)
-  // console.log('keplerGl', action)
   return customKeplerGlReducer(state, action)
 }
 
@@ -39,6 +37,28 @@ function queries (state = [], action) {
   }
 }
 
+function files (state = [], action) {
+  switch (action.type) {
+    case openReport.name:
+      return []
+    case reportUpdate.name:
+      return action.filesList
+    default:
+      return state
+  }
+}
+
+function datasets (state = [], action) {
+  switch (action.type) {
+    case openReport.name:
+      return []
+    case reportUpdate.name:
+      return action.datasetsList
+    default:
+      return state
+  }
+}
+
 const defaultReportStatus = {
   dataAdded: false,
   canSave: false,
@@ -50,11 +70,6 @@ const defaultReportStatus = {
 }
 function reportStatus (state = defaultReportStatus, action) {
   switch (action.type) {
-    case downloadJobResults.name:
-      return {
-        ...state,
-        size: 0
-      }
     case forkReport.name:
     case saveMap.name:
       return {
@@ -114,24 +129,16 @@ function queryStatus (state = {}, action) {
         }
       }
       return state
-    case downloadJobResults.name:
-      return {
-        ...state,
-        [action.query.id]: {
-          ...state[action.query.id],
-          downloadingResults: true
-        }
-      }
-
-    case runQuery.name:
-    case updateQuery.name:
-      return {
-        ...state,
-        [action.queryId]: {
-          ...state[action.queryId],
-          canRun: false
-        }
-      }
+    case downloadDataset.name:
+      return action.dataset.queryId
+        ? {
+            ...state,
+            [action.dataset.queryId]: {
+              ...state[action.dataset.queryId],
+              downloadingResults: true
+            }
+          }
+        : state
     case queryChanged.name:
       return {
         ...state,
@@ -146,13 +153,18 @@ function queryStatus (state = {}, action) {
         state[action.queryId] &&
         state[action.queryId].querySourceId === action.querySourceId
       ) {
-        if (state[action.queryId].changed && action.queryText === state[action.queryId].queryText) {
-          return {
-            ...state,
-            [action.queryId]: {
-              ...state[action.queryId],
-              changed: false
+        if (state[action.queryId].changed) {
+          if (action.queryText === state[action.queryId].queryText) {
+            return {
+              ...state,
+              [action.queryId]: {
+                ...state[action.queryId],
+                changed: false
+              }
             }
+          } else {
+            // query text changed since last saved
+            return state
           }
         } else {
           return {
@@ -235,34 +247,34 @@ function httpErrorStatus (state = 0, action) {
   }
 }
 
-function downloadingQueryResults (state = [], action) {
-  const { query } = action
+function downloadingDatasets (state = [], action) {
+  const { dataset } = action
   switch (action.type) {
     case downloading.name:
-      return state.concat(query)
+      return state.concat(dataset)
     case finishDownloading.name:
-      return state.filter(q => q.id !== query.id)
+      return state.filter(d => d.id !== dataset.id)
     default:
       return state
   }
 }
 
-function activeQuery (state = null, action) {
-  const { queriesList, prevQueriesList } = action
+function activeDataset (state = null, action) {
+  const { datasetsList, prevDatasetsList } = action
   switch (action.type) {
     case openReport.name:
       return null
-    case setActiveQuery.name:
-      return action.query
+    case setActiveDataset.name:
+      return action.dataset
     case reportUpdate.name:
       if (!state) {
-        return queriesList[0] || state
+        return datasetsList[0] || state
       }
-      if (queriesList.length > prevQueriesList.length) {
-        return queriesList.slice(-1)[0]
+      if (datasetsList.length > prevDatasetsList.length) {
+        return datasetsList.slice(-1)[0]
       }
       return {
-        ...(queriesList.find(q => q.id === state.id) || queriesList[0])
+        ...(datasetsList.find(d => d.id === state.id) || datasetsList[0])
       }
     default:
       return state
@@ -278,16 +290,53 @@ function release (state = null, action) {
   }
 }
 
+function fileUploadStatus (state = {}, action) {
+  switch (action.type) {
+    case uploadFile.name:
+      return {
+        ...state,
+        [action.fileId]: {
+          readyState: 0,
+          loaded: 0,
+          total: action.file.size,
+          status: 0
+        }
+      }
+    case uploadFileStateChange.name:
+      return {
+        ...state,
+        [action.fileId]: {
+          ...state[action.fileId],
+          readyState: action.readyState,
+          status: action.status
+        }
+      }
+    case uploadFileProgress.name:
+      return {
+        ...state,
+        [action.fileId]: {
+          ...state[action.fileId],
+          loaded: action.loaded
+        }
+      }
+    default:
+      return state
+  }
+}
+
 export default combineReducers({
   keplerGl,
   report,
   queries,
   queryStatus,
-  activeQuery,
+  activeDataset,
   reportStatus,
   reportsList,
   env,
   httpErrorStatus,
-  downloadingQueryResults,
-  release
+  downloadingDatasets,
+  release,
+  datasets,
+  files,
+  fileUploadStatus
 })

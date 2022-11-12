@@ -1,0 +1,165 @@
+.file {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.fileInfo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-bottom: 60px;
+}
+
+.upload :global(.ant-upload) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.upload {
+    text-align: center;
+    user-select: none;
+    cursor: pointer;
+    flex: 1;
+    width: 100%;
+    position: relative;
+}
+
+.uploadSubtitle {
+    opacity: 0.45;
+}
+
+.uploadHeader {
+    font-size: 1.15em;
+}
+
+.uploadIcon {
+    color: rgb(64, 169, 255);
+    font-size: 4em;
+    text-align: center;
+}
+
+.uploadFileProgress {
+    flex: 1;
+}
+
+.uploadFileName {
+    margin-top: 5px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+    opacity: 0.65;
+}
+
+/* .status {
+    padding: 0 20px;
+    min-height: 60px;
+    display: flex;
+    flex-direction: row;
+    border-top: 1px solid rgb(217, 217, 217);
+    background-color: #F7F7F7;
+    align-items: center;
+    justify-content: center;
+} */
+
+.fileIcon {
+    position: relative;
+    width: 100px;
+    height: 100px;
+}
+
+.fileIconExtension {
+    position: absolute;
+    top: 20px;
+    padding: 0 10px;
+    left: 0;
+    background-color: #44946B;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+}
+
+.fileIconBody {
+    width: 80px;
+    margin-left: 10px;
+    height: 100px;
+    background:
+        linear-gradient(315deg, transparent 17px, #C9CCD4 0px),
+        linear-gradient(315deg, transparent 17px, #EFEEEE 0px);
+    background-size:
+        25px 25px,
+        80px 100px;
+    background-position:
+        bottom right,
+        bottom right;
+    background-repeat: no-repeat;
+}
+
+.fileStatus {
+    padding: 10px;
+    padding-left: 15px;
+    display: flex;
+    flex-direction: row;
+    border-top: 1px solid rgb(217, 217, 217);
+    background-color: #F7F7F7;
+}
+
+.success {
+    background-color: #F6FFED;
+    border-top-color: #B7EB8F;
+}
+
+.error {
+    background-color: #FFF2F0;
+    border-top-color: #FFCCC7;
+}
+
+.errorMessage {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+    font-size: 0.85em;
+    margin-left: 28px;
+}
+
+.button {
+    margin-left: 10px;
+}
+
+.icon {
+    font-size: 18px;
+    margin-right: 10px;
+}
+
+.message {
+    /* font-size: 1.1em; */
+    flex: 1;
+}
+
+.statusHead {
+    flex: 1;
+    margin-right: 10px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.status {
+    word-break: break-all;
+    flex: 1;
+    margin-right: 0px;
+    display: flex;
+    flex-direction: column;
+    min-height: 40px;
+}
+
+.errorStatus,
+.processed {
+    font-size: 0.8em
+}

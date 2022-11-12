@@ -46,6 +46,33 @@ Dekart.ArchiveReport = {
   responseType: proto_dekart_pb.ArchiveReportResponse
 };
 
+Dekart.CreateDataset = {
+  methodName: "CreateDataset",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.CreateDatasetRequest,
+  responseType: proto_dekart_pb.CreateDatasetResponse
+};
+
+Dekart.RemoveDataset = {
+  methodName: "RemoveDataset",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.RemoveDatasetRequest,
+  responseType: proto_dekart_pb.RemoveDatasetResponse
+};
+
+Dekart.CreateFile = {
+  methodName: "CreateFile",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.CreateFileRequest,
+  responseType: proto_dekart_pb.CreateFileResponse
+};
+
 Dekart.CreateQuery = {
   methodName: "CreateQuery",
   service: Dekart,
@@ -53,15 +80,6 @@ Dekart.CreateQuery = {
   responseStream: false,
   requestType: proto_dekart_pb.CreateQueryRequest,
   responseType: proto_dekart_pb.CreateQueryResponse
-};
-
-Dekart.UpdateQuery = {
-  methodName: "UpdateQuery",
-  service: Dekart,
-  requestStream: false,
-  responseStream: false,
-  requestType: proto_dekart_pb.UpdateQueryRequest,
-  responseType: proto_dekart_pb.UpdateQueryResponse
 };
 
 Dekart.RunQuery = {
@@ -80,15 +98,6 @@ Dekart.CancelQuery = {
   responseStream: false,
   requestType: proto_dekart_pb.CancelQueryRequest,
   responseType: proto_dekart_pb.CancelQueryResponse
-};
-
-Dekart.RemoveQuery = {
-  methodName: "RemoveQuery",
-  service: Dekart,
-  requestStream: false,
-  responseStream: false,
-  requestType: proto_dekart_pb.RemoveQueryRequest,
-  responseType: proto_dekart_pb.RemoveQueryResponse
 };
 
 Dekart.GetEnv = {
@@ -249,11 +258,11 @@ DekartClient.prototype.archiveReport = function archiveReport(requestMessage, me
   };
 };
 
-DekartClient.prototype.createQuery = function createQuery(requestMessage, metadata, callback) {
+DekartClient.prototype.createDataset = function createDataset(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
-  var client = grpc.unary(Dekart.CreateQuery, {
+  var client = grpc.unary(Dekart.CreateDataset, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
@@ -280,11 +289,73 @@ DekartClient.prototype.createQuery = function createQuery(requestMessage, metada
   };
 };
 
-DekartClient.prototype.updateQuery = function updateQuery(requestMessage, metadata, callback) {
+DekartClient.prototype.removeDataset = function removeDataset(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
-  var client = grpc.unary(Dekart.UpdateQuery, {
+  var client = grpc.unary(Dekart.RemoveDataset, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.createFile = function createFile(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.CreateFile, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.createQuery = function createQuery(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.CreateQuery, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
@@ -347,37 +418,6 @@ DekartClient.prototype.cancelQuery = function cancelQuery(requestMessage, metada
     callback = arguments[1];
   }
   var client = grpc.unary(Dekart.CancelQuery, {
-    request: requestMessage,
-    host: this.serviceHost,
-    metadata: metadata,
-    transport: this.options.transport,
-    debug: this.options.debug,
-    onEnd: function (response) {
-      if (callback) {
-        if (response.status !== grpc.Code.OK) {
-          var err = new Error(response.statusMessage);
-          err.code = response.status;
-          err.metadata = response.trailers;
-          callback(err, null);
-        } else {
-          callback(null, response.message);
-        }
-      }
-    }
-  });
-  return {
-    cancel: function () {
-      callback = null;
-      client.close();
-    }
-  };
-};
-
-DekartClient.prototype.removeQuery = function removeQuery(requestMessage, metadata, callback) {
-  if (arguments.length === 2) {
-    callback = arguments[1];
-  }
-  var client = grpc.unary(Dekart.RemoveQuery, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,

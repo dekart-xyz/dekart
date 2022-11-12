@@ -15,29 +15,40 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// CreateQuery in Report
+// CreateQuery in dataset
 func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) (*proto.CreateQueryResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	if req.Query == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "req.Query == nil")
+
+	reportID, err := s.getReportID(ctx, req.DatasetId, claims.Email)
+
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if reportID == nil {
+		err := fmt.Errorf("dataset not found or permission not granted")
+		log.Warn().Err(err).Str("dataset_id", req.DatasetId).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
 	id := newUUID()
-	result, err := s.db.ExecContext(ctx,
-		`insert into queries (id, report_id, query_text)
-		select
-			$1 as id,
-			id as report_id,
-			'' as query_text
-		from reports
-		where id=$2 and not archived and author_email=$3 limit 1
-		`,
+	_, err = s.db.ExecContext(ctx,
+		`insert into queries (id, query_text) values ($1, '')`,
 		id,
-		req.Query.ReportId,
-		claims.Email,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	result, err := s.db.ExecContext(ctx,
+		`update datasets set query_id=$1 where id=$2 and query_id is null`,
+		id,
+		req.DatasetId,
 	)
 	if err != nil {
 		log.Err(err).Send()
@@ -51,47 +62,12 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	}
 
 	if affectedRows == 0 {
-		err := fmt.Errorf("report=%s, author_email=%s not found", req.Query.ReportId, claims.Email)
-		log.Warn().Err(err).Send()
-		return nil, status.Errorf(codes.NotFound, err.Error())
+		log.Warn().Str("report", *reportID).Str("dataset", req.DatasetId).Msg("dataset query was already created")
 	}
-	go s.storeQuery(req.Query.ReportId, id, req.Query.QueryText, "")
-	s.reportStreams.Ping(req.Query.ReportId)
+	go s.storeQuery(*reportID, id, "", "")
+	s.reportStreams.Ping(*reportID)
 
-	res := &proto.CreateQueryResponse{
-		Query: &proto.Query{
-			Id:        id,
-			ReportId:  req.Query.ReportId,
-			QueryText: req.Query.QueryText,
-		},
-	}
-
-	return res, nil
-}
-
-func (s Server) getReportID(ctx context.Context, queryID string, email string) (*string, error) {
-	queryRows, err := s.db.QueryContext(ctx,
-		`select report_id from queries
-		where id=$1 and report_id in (select report_id from reports where author_email=$2)
-		limit 1`,
-		queryID,
-		email,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer queryRows.Close()
-	var reportID string
-	for queryRows.Next() {
-		err := queryRows.Scan(&reportID)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if reportID == "" {
-		return nil, nil
-	}
-	return &reportID, nil
+	return &proto.CreateQueryResponse{}, nil
 }
 
 // queryWasNotUpdated was not updated because it was changed
@@ -149,40 +125,6 @@ func (s Server) storeQuery(reportID string, queryID string, queryText string, pr
 	}
 	log.Debug().Msg("Query text updated in storage")
 	s.reportStreams.Ping(reportID)
-}
-
-// UpdateQuery by id implementation
-func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) (*proto.UpdateQueryResponse, error) {
-	claims := user.GetClaims(ctx)
-	if claims == nil {
-		return nil, Unauthenticated
-	}
-	if req.Query == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "req.Query == nil")
-	}
-
-	reportID, err := s.getReportID(ctx, req.Query.Id, claims.Email)
-
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	if reportID == nil {
-		err := fmt.Errorf("query not found id:%s", req.Query.Id)
-		log.Warn().Err(err).Send()
-		return nil, status.Error(codes.NotFound, err.Error())
-	}
-
-	go s.storeQuery(*reportID, req.Query.Id, req.Query.QueryText, req.Query.QuerySourceId)
-
-	res := &proto.UpdateQueryResponse{
-		Query: &proto.Query{
-			Id: req.Query.Id,
-		},
-	}
-
-	return res, nil
 }
 
 func (s Server) updateJobStatus(job job.Job, jobStatus chan int32) {
@@ -248,10 +190,14 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, Unauthenticated
 	}
 	queriesRows, err := s.db.QueryContext(ctx,
-		`select
-			report_id,
-			query_source_id
-		from queries where id=$1 and report_id in (select report_id from reports where author_email=$2) limit 1`,
+		`select 
+			reports.id,
+			queries.query_source_id
+		from queries
+			left join datasets on queries.id = datasets.query_id
+			left join reports on datasets.report_id = reports.id
+		where queries.id = $1 and author_email = $2
+		limit 1`,
 		req.QueryId,
 		claims.Email,
 	)
@@ -304,46 +250,6 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	}
 	res := &proto.RunQueryResponse{}
 	return res, nil
-}
-
-func (s Server) RemoveQuery(ctx context.Context, req *proto.RemoveQueryRequest) (*proto.RemoveQueryResponse, error) {
-	claims := user.GetClaims(ctx)
-	if claims == nil {
-		return nil, Unauthenticated
-	}
-	_, err := uuid.Parse(req.QueryId)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, err.Error())
-	}
-
-	reportID, err := s.getReportID(ctx, req.QueryId, claims.Email)
-
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	if reportID == nil {
-		err := fmt.Errorf("query not found id:%s", req.QueryId)
-		log.Warn().Err(err).Send()
-		return nil, status.Error(codes.NotFound, err.Error())
-	}
-
-	s.jobs.Cancel(req.QueryId)
-
-	_, err = s.db.ExecContext(ctx,
-		`delete from queries where id=$1`,
-		req.QueryId,
-	)
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	s.reportStreams.Ping(*reportID)
-
-	return &proto.RemoveQueryResponse{}, nil
-
 }
 
 // CancelQuery jobs

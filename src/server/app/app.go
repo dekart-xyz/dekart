@@ -56,13 +56,15 @@ func configureHTTP(dekartServer *dekart.Server) *mux.Router {
 	router := mux.NewRouter()
 	api := router.PathPrefix("/api/v1/").Subrouter()
 	api.Use(mux.CORSMethodMiddleware(router))
-	api.HandleFunc("/job-results/{id}.csv", func(w http.ResponseWriter, r *http.Request) {
+
+	api.HandleFunc("/dataset-source/{id}.csv", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		if r.Method == http.MethodOptions {
 			return
 		}
-		dekartServer.ServeQueryResult(w, r)
+		dekartServer.ServeDatasetSource(w, r)
 	}).Methods("GET", "OPTIONS")
+
 	api.HandleFunc("/query-source/{id}.sql", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		if r.Method == http.MethodOptions {
@@ -70,6 +72,14 @@ func configureHTTP(dekartServer *dekart.Server) *mux.Router {
 		}
 		dekartServer.ServeQuerySource(w, r)
 	}).Methods("GET", "OPTIONS")
+
+	api.HandleFunc("/file/{id}.csv", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.UploadFile(w, r)
+	}).Methods("POST", "OPTIONS")
 
 	staticPath := os.Getenv("DEKART_STATIC_FILES")
 

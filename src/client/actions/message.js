@@ -5,12 +5,12 @@ const style = { /* marginTop: 0 */ }
 
 message.config({ top: 40 })
 
-export function downloading (query) {
-  return { type: downloading.name, query }
+export function downloading (dataset) {
+  return { type: downloading.name, dataset }
 }
 
-export function finishDownloading (query) {
-  return { type: finishDownloading.name, query }
+export function finishDownloading (dataset) {
+  return { type: finishDownloading.name, dataset }
 }
 
 export function success (content) {

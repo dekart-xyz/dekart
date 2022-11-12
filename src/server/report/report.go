@@ -72,6 +72,12 @@ func (s *Streams) Deregister(reportID string, streamID string) {
 	delete(streamMap, streamID)
 }
 
+func (s *Streams) PingAll(reportIDs []string) {
+	for _, reportID := range reportIDs {
+		s.Ping(reportID)
+	}
+}
+
 // Ping about report update
 func (s *Streams) Ping(reportID string) {
 	s.mutex.Lock()
