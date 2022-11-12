@@ -13,8 +13,7 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
--
-        name: Docker meta
+      - name: Docker meta
         id: meta
         uses: docker/metadata-action@v4
         with:
