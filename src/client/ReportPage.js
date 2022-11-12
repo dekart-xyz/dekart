@@ -56,7 +56,6 @@ function getOnTabEditHandler (dispatch, reportId) {
           okType: 'danger',
           cancelText: 'No',
           onOk: () => dispatch(removeDataset(datasetId))
-          // onOk: () => dispatch(removeQuery(queryId))
         })
     }
   }

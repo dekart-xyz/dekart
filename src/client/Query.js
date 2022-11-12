@@ -109,7 +109,7 @@ function QueryEditor ({ queryId, queryText, onChange, canWrite }) {
           />
         )}
       </AutoSizer>
-      {queryText.length ? null : <DataDocumentationLink className={styles.dataDoc} />}
+      {queryText ? null : <DataDocumentationLink className={styles.dataDoc} />}
     </div>
   )
 }

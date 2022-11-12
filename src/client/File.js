@@ -32,7 +32,6 @@ function getStorageName (env) {
 }
 
 function FileStatus ({ file, fileToUpload, fileUploadStatus, children }) {
-  console.log('file', file)
   const env = useSelector(state => state.env)
   if (!env.loaded) {
     return null

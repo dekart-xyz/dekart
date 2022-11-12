@@ -34,10 +34,8 @@ type DekartClient interface {
 	CreateFile(ctx context.Context, in *CreateFileRequest, opts ...grpc.CallOption) (*CreateFileResponse, error)
 	// queries
 	CreateQuery(ctx context.Context, in *CreateQueryRequest, opts ...grpc.CallOption) (*CreateQueryResponse, error)
-	UpdateQuery(ctx context.Context, in *UpdateQueryRequest, opts ...grpc.CallOption) (*UpdateQueryResponse, error)
 	RunQuery(ctx context.Context, in *RunQueryRequest, opts ...grpc.CallOption) (*RunQueryResponse, error)
 	CancelQuery(ctx context.Context, in *CancelQueryRequest, opts ...grpc.CallOption) (*CancelQueryResponse, error)
-	RemoveQuery(ctx context.Context, in *RemoveQueryRequest, opts ...grpc.CallOption) (*RemoveQueryResponse, error)
 	GetEnv(ctx context.Context, in *GetEnvRequest, opts ...grpc.CallOption) (*GetEnvResponse, error)
 	// streams
 	GetReportStream(ctx context.Context, in *ReportStreamRequest, opts ...grpc.CallOption) (Dekart_GetReportStreamClient, error)
@@ -124,15 +122,6 @@ func (c *dekartClient) CreateQuery(ctx context.Context, in *CreateQueryRequest, 
 	return out, nil
 }
 
-func (c *dekartClient) UpdateQuery(ctx context.Context, in *UpdateQueryRequest, opts ...grpc.CallOption) (*UpdateQueryResponse, error) {
-	out := new(UpdateQueryResponse)
-	err := c.cc.Invoke(ctx, "/Dekart/UpdateQuery", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *dekartClient) RunQuery(ctx context.Context, in *RunQueryRequest, opts ...grpc.CallOption) (*RunQueryResponse, error) {
 	out := new(RunQueryResponse)
 	err := c.cc.Invoke(ctx, "/Dekart/RunQuery", in, out, opts...)
@@ -145,15 +134,6 @@ func (c *dekartClient) RunQuery(ctx context.Context, in *RunQueryRequest, opts .
 func (c *dekartClient) CancelQuery(ctx context.Context, in *CancelQueryRequest, opts ...grpc.CallOption) (*CancelQueryResponse, error) {
 	out := new(CancelQueryResponse)
 	err := c.cc.Invoke(ctx, "/Dekart/CancelQuery", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *dekartClient) RemoveQuery(ctx context.Context, in *RemoveQueryRequest, opts ...grpc.CallOption) (*RemoveQueryResponse, error) {
-	out := new(RemoveQueryResponse)
-	err := c.cc.Invoke(ctx, "/Dekart/RemoveQuery", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -249,10 +229,8 @@ type DekartServer interface {
 	CreateFile(context.Context, *CreateFileRequest) (*CreateFileResponse, error)
 	// queries
 	CreateQuery(context.Context, *CreateQueryRequest) (*CreateQueryResponse, error)
-	UpdateQuery(context.Context, *UpdateQueryRequest) (*UpdateQueryResponse, error)
 	RunQuery(context.Context, *RunQueryRequest) (*RunQueryResponse, error)
 	CancelQuery(context.Context, *CancelQueryRequest) (*CancelQueryResponse, error)
-	RemoveQuery(context.Context, *RemoveQueryRequest) (*RemoveQueryResponse, error)
 	GetEnv(context.Context, *GetEnvRequest) (*GetEnvResponse, error)
 	// streams
 	GetReportStream(*ReportStreamRequest, Dekart_GetReportStreamServer) error
@@ -288,17 +266,11 @@ func (UnimplementedDekartServer) CreateFile(context.Context, *CreateFileRequest)
 func (UnimplementedDekartServer) CreateQuery(context.Context, *CreateQueryRequest) (*CreateQueryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateQuery not implemented")
 }
-func (UnimplementedDekartServer) UpdateQuery(context.Context, *UpdateQueryRequest) (*UpdateQueryResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateQuery not implemented")
-}
 func (UnimplementedDekartServer) RunQuery(context.Context, *RunQueryRequest) (*RunQueryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RunQuery not implemented")
 }
 func (UnimplementedDekartServer) CancelQuery(context.Context, *CancelQueryRequest) (*CancelQueryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CancelQuery not implemented")
-}
-func (UnimplementedDekartServer) RemoveQuery(context.Context, *RemoveQueryRequest) (*RemoveQueryResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RemoveQuery not implemented")
 }
 func (UnimplementedDekartServer) GetEnv(context.Context, *GetEnvRequest) (*GetEnvResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetEnv not implemented")
@@ -466,24 +438,6 @@ func _Dekart_CreateQuery_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_UpdateQuery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateQueryRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DekartServer).UpdateQuery(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/Dekart/UpdateQuery",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).UpdateQuery(ctx, req.(*UpdateQueryRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Dekart_RunQuery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RunQueryRequest)
 	if err := dec(in); err != nil {
@@ -516,24 +470,6 @@ func _Dekart_CancelQuery_Handler(srv interface{}, ctx context.Context, dec func(
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DekartServer).CancelQuery(ctx, req.(*CancelQueryRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Dekart_RemoveQuery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RemoveQueryRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DekartServer).RemoveQuery(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/Dekart/RemoveQuery",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).RemoveQuery(ctx, req.(*RemoveQueryRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -638,20 +574,12 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Dekart_CreateQuery_Handler,
 		},
 		{
-			MethodName: "UpdateQuery",
-			Handler:    _Dekart_UpdateQuery_Handler,
-		},
-		{
 			MethodName: "RunQuery",
 			Handler:    _Dekart_RunQuery_Handler,
 		},
 		{
 			MethodName: "CancelQuery",
 			Handler:    _Dekart_CancelQuery_Handler,
-		},
-		{
-			MethodName: "RemoveQuery",
-			Handler:    _Dekart_RemoveQuery_Handler,
 		},
 		{
 			MethodName: "GetEnv",

@@ -249,6 +249,7 @@ export function saveMap () {
         const query = new Query()
         query.setId(id)
         query.setQueryText(status.queryText)
+        query.setQuerySourceId(status.querySourceId)
         queries.push(query)
       }
       return queries

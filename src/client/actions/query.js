@@ -1,9 +1,8 @@
-import { CancelQueryRequest, CreateQueryRequest, Query, RemoveQueryRequest, RunQueryRequest, UpdateQueryRequest } from '../../proto/dekart_pb'
+import { CancelQueryRequest, CreateQueryRequest, RunQueryRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { get } from '../lib/api'
 import { unary } from '../lib/grpc'
-import { setActiveDataset } from './dataset'
-import { error, success } from './message'
+import { error } from './message'
 
 export function queryChanged (queryId, queryText) {
   return (dispatch, getState) => {
@@ -13,45 +12,8 @@ export function queryChanged (queryId, queryText) {
   }
 }
 
-export function removeQuery (queryId) {
-  return async (dispatch, getState) => {
-    const { queries, activeDataset } = getState()
-    if (activeDataset.id === queryId) {
-      // removed active query
-      const queriesLeft = queries.filter(q => q.id !== queryId)
-      if (queriesLeft.length === 0) {
-        dispatch(error(new Error('Cannot remove last query')))
-        return
-      }
-      dispatch(setActiveDataset(queriesLeft.id))
-    }
-    dispatch({ type: removeQuery.name, queryId })
-
-    const request = new RemoveQueryRequest()
-    request.setQueryId(queryId)
-    try {
-      await unary(Dekart.RemoveQuery, request)
-      dispatch(success('Query Removed'))
-    } catch (err) {
-      dispatch(error(err))
-    }
-  }
-}
-
-// export function createQuery(reportId) {
-//   return (dispatch) => {
-//     dispatch({ type: createQuery.name })
-//     const request = new CreateQueryRequest()
-//     const query = new Query()
-//     query.setReportId(reportId)
-//     request.setQuery(query)
-//     unary(Dekart.CreateQuery, request).catch(err => dispatch(error(err)))
-//   }
-// }
-
 export function createQuery (datasetId) {
   return (dispatch) => {
-    console.log('createQuery', datasetId)
     dispatch({ type: createQuery.name })
     const request = new CreateQueryRequest()
     request.setDatasetId(datasetId)
@@ -59,24 +21,6 @@ export function createQuery (datasetId) {
   }
 }
 
-export function updateQuery (queryId, queryText) {
-  return async (dispatch, getState) => {
-    const { queryStatus } = getState()
-    dispatch({ type: updateQuery.name, queryId })
-    const request = new UpdateQueryRequest()
-    const query = new Query()
-    query.setId(queryId)
-    query.setQueryText(queryText)
-    query.setQuerySourceId(queryStatus[queryId].querySourceId)
-    request.setQuery(query)
-    try {
-      await unary(Dekart.UpdateQuery, request)
-    } catch (err) {
-      dispatch(error(err))
-      throw error
-    }
-  }
-}
 export function runQuery (queryId, queryText) {
   return async (dispatch) => {
     dispatch({ type: runQuery.name, queryId })

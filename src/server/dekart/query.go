@@ -21,9 +21,6 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	// if req.Query == nil {
-	// 	return nil, status.Errorf(codes.InvalidArgument, "req.Query == nil")
-	// }
 
 	reportID, err := s.getReportID(ctx, req.DatasetId, claims.Email)
 
@@ -66,47 +63,11 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 
 	if affectedRows == 0 {
 		log.Warn().Str("report", *reportID).Str("dataset", req.DatasetId).Msg("dataset query was already created")
-		// err := fmt.Errorf("report=%s, author_email=%s not found", req.Query.ReportId, claims.Email)
-		// log.Warn().Err(err).Send()
-		// return nil, status.Errorf(codes.NotFound, err.Error())
 	}
 	go s.storeQuery(*reportID, id, "", "")
 	s.reportStreams.Ping(*reportID)
 
-	// res := &proto.CreateQueryResponse{
-	// 	Query: &proto.Query{
-	// 		Id:        id,
-	// 		ReportId:  req.Query.ReportId,
-	// 		QueryText: req.Query.QueryText,
-	// 	},
-	// }
-
 	return &proto.CreateQueryResponse{}, nil
-}
-
-func (s Server) getReportIDLegacy(ctx context.Context, queryID string, email string) (*string, error) {
-	queryRows, err := s.db.QueryContext(ctx,
-		`select report_id from queries
-		where id=$1 and report_id in (select report_id from reports where author_email=$2)
-		limit 1`,
-		queryID,
-		email,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer queryRows.Close()
-	var reportID string
-	for queryRows.Next() {
-		err := queryRows.Scan(&reportID)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if reportID == "" {
-		return nil, nil
-	}
-	return &reportID, nil
 }
 
 // queryWasNotUpdated was not updated because it was changed
@@ -164,40 +125,6 @@ func (s Server) storeQuery(reportID string, queryID string, queryText string, pr
 	}
 	log.Debug().Msg("Query text updated in storage")
 	s.reportStreams.Ping(reportID)
-}
-
-// UpdateQuery by id implementation
-func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) (*proto.UpdateQueryResponse, error) {
-	claims := user.GetClaims(ctx)
-	if claims == nil {
-		return nil, Unauthenticated
-	}
-	if req.Query == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "req.Query == nil")
-	}
-
-	reportID, err := s.getReportIDLegacy(ctx, req.Query.Id, claims.Email)
-
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	if reportID == nil {
-		err := fmt.Errorf("query not found id:%s", req.Query.Id)
-		log.Warn().Err(err).Send()
-		return nil, status.Error(codes.NotFound, err.Error())
-	}
-
-	go s.storeQuery(*reportID, req.Query.Id, req.Query.QueryText, req.Query.QuerySourceId)
-
-	res := &proto.UpdateQueryResponse{
-		Query: &proto.Query{
-			Id: req.Query.Id,
-		},
-	}
-
-	return res, nil
 }
 
 func (s Server) updateJobStatus(job job.Job, jobStatus chan int32) {
@@ -323,46 +250,6 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	}
 	res := &proto.RunQueryResponse{}
 	return res, nil
-}
-
-func (s Server) RemoveQuery(ctx context.Context, req *proto.RemoveQueryRequest) (*proto.RemoveQueryResponse, error) {
-	claims := user.GetClaims(ctx)
-	if claims == nil {
-		return nil, Unauthenticated
-	}
-	_, err := uuid.Parse(req.QueryId)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, err.Error())
-	}
-
-	reportID, err := s.getReportIDLegacy(ctx, req.QueryId, claims.Email)
-
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	if reportID == nil {
-		err := fmt.Errorf("query not found id:%s", req.QueryId)
-		log.Warn().Err(err).Send()
-		return nil, status.Error(codes.NotFound, err.Error())
-	}
-
-	s.jobs.Cancel(req.QueryId)
-
-	_, err = s.db.ExecContext(ctx,
-		`delete from queries where id=$1`,
-		req.QueryId,
-	)
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	s.reportStreams.Ping(*reportID)
-
-	return &proto.RemoveQueryResponse{}, nil
-
 }
 
 // CancelQuery jobs

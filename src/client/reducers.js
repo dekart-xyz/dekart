@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 import keplerGlReducer from '@dekart-xyz/kepler.gl/dist/reducers'
 import { ActionTypes as KeplerActionTypes } from '@dekart-xyz/kepler.gl/dist/actions'
-import { openReport, reportTitleChange, reportUpdate, runQuery, saveMap, updateQuery, reportsListUpdate, unsubscribeReports, streamError, httpError, newReport, setEnv, forkReport, newForkedReport, downloading, finishDownloading, setActiveDataset, queryChanged, newRelease, querySource, uploadFile, uploadFileProgress, uploadFileStateChange, downloadDataset } from './actions'
+import { openReport, reportTitleChange, reportUpdate, runQuery, saveMap, reportsListUpdate, unsubscribeReports, streamError, httpError, newReport, setEnv, forkReport, newForkedReport, downloading, finishDownloading, setActiveDataset, queryChanged, newRelease, querySource, uploadFile, uploadFileProgress, uploadFileStateChange, downloadDataset } from './actions'
 import { Query } from '../proto/dekart_pb'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
@@ -12,8 +12,6 @@ const customKeplerGlReducer = keplerGlReducer.initialState({
 })
 
 function keplerGl (state, action) {
-  // console.log('keplerGl', state)
-  // console.log('keplerGl', action)
   return customKeplerGlReducer(state, action)
 }
 
@@ -146,15 +144,6 @@ function queryStatus (state = {}, action) {
             }
           }
         : state
-    case runQuery.name:
-    case updateQuery.name:
-      return {
-        ...state,
-        [action.queryId]: {
-          ...state[action.queryId],
-          canRun: false
-        }
-      }
     case queryChanged.name:
       return {
         ...state,
@@ -169,13 +158,18 @@ function queryStatus (state = {}, action) {
         state[action.queryId] &&
         state[action.queryId].querySourceId === action.querySourceId
       ) {
-        if (state[action.queryId].changed && action.queryText === state[action.queryId].queryText) {
-          return {
-            ...state,
-            [action.queryId]: {
-              ...state[action.queryId],
-              changed: false
+        if (state[action.queryId].changed) {
+          if (action.queryText === state[action.queryId].queryText) {
+            return {
+              ...state,
+              [action.queryId]: {
+                ...state[action.queryId],
+                changed: false
+              }
             }
+          } else {
+            // query text changed since last saved
+            return state
           }
         } else {
           return {
