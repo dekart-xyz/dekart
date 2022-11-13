@@ -195,7 +195,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 			queries.query_source_id
 		from queries
 			left join datasets on queries.id = datasets.query_id
-			left join reports on datasets.report_id = reports.id
+			left join reports on (datasets.report_id = reports.id or queries.report_id = reports.id)
 		where queries.id = $1 and author_email = $2
 		limit 1`,
 		req.QueryId,
