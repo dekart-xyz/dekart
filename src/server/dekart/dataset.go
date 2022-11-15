@@ -97,7 +97,27 @@ func (s Server) getReportID(ctx context.Context, datasetID string, email string)
 		}
 	}
 	if reportID == "" {
-		return nil, nil
+		// check legacy queries
+		queryRows, err := s.db.QueryContext(ctx,
+			`select report_id from queries
+			where id=$1 and report_id in (select report_id from reports where author_email=$2)
+			limit 1`,
+			datasetID,
+			email,
+		)
+		if err != nil {
+			return nil, err
+		}
+		defer queryRows.Close()
+		for queryRows.Next() {
+			err := queryRows.Scan(&reportID)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if reportID == "" {
+			return nil, nil
+		}
 	}
 	return &reportID, nil
 }
@@ -129,6 +149,16 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 
 	_, err = s.db.ExecContext(ctx,
 		`delete from datasets where id=$1`,
+		req.DatasetId,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	// legacy queries
+	_, err = s.db.ExecContext(ctx,
+		`delete from queries where id=$1`,
 		req.DatasetId,
 	)
 	if err != nil {
