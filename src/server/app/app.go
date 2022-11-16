@@ -40,16 +40,34 @@ func (m ResponseWriter) WriteHeader(statusCode int) {
 	}
 }
 
+var allowedOrigin string = os.Getenv("DEKART_CORS_ORIGIN")
+
 func configureGRPC(dekartServer *dekart.Server) *grpcweb.WrappedGrpcServer {
 	server := grpc.NewServer()
 	proto.RegisterDekartServer(server, dekartServer)
 	return grpcweb.WrapServer(
 		server,
 		grpcweb.WithOriginFunc(func(origin string) bool {
-			//TODO check origin
-			return true
+			if allowedOrigin == "" || allowedOrigin == "*" {
+				log.Warn().Msg("DEKART_CORS_ORIGIN is empty or *")
+				return true
+			}
+			result := origin == allowedOrigin
+			if !result {
+				log.Warn().Str("origin", origin).Str("allowed origin", allowedOrigin).Msg("Origin is not allowed")
+			}
+			return result
 		}),
 	)
+}
+
+func setOriginHeader(w http.ResponseWriter, r *http.Request) {
+	if allowedOrigin == "" || allowedOrigin == "*" {
+		log.Warn().Msg("DEKART_CORS_ORIGIN is empty or *")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+	} else {
+		w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
+	}
 }
 
 func configureHTTP(dekartServer *dekart.Server) *mux.Router {
@@ -58,7 +76,7 @@ func configureHTTP(dekartServer *dekart.Server) *mux.Router {
 	api.Use(mux.CORSMethodMiddleware(router))
 
 	api.HandleFunc("/dataset-source/{id}.csv", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		setOriginHeader(w, r)
 		if r.Method == http.MethodOptions {
 			return
 		}
@@ -66,7 +84,7 @@ func configureHTTP(dekartServer *dekart.Server) *mux.Router {
 	}).Methods("GET", "OPTIONS")
 
 	api.HandleFunc("/query-source/{id}.sql", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		setOriginHeader(w, r)
 		if r.Method == http.MethodOptions {
 			return
 		}
@@ -74,7 +92,7 @@ func configureHTTP(dekartServer *dekart.Server) *mux.Router {
 	}).Methods("GET", "OPTIONS")
 
 	api.HandleFunc("/file/{id}.csv", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		setOriginHeader(w, r)
 		if r.Method == http.MethodOptions {
 			return
 		}
