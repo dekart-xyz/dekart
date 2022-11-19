@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: "dekart"
       POSTGRES_DB: "dekart"
   dekart-bigquery:
-    image: dekartxyz/dekart:0.9
+    image: dekartxyz/dekart:0.10
     restart: always
     ports:
       - 8080:8080
@@ -28,8 +28,9 @@ services:
       DEKART_BIGQUERY_MAX_BYTES_BILLED: "53687091200"
       DEKART_MAPBOX_TOKEN: "${DEKART_MAPBOX_TOKEN}"
       GOOGLE_APPLICATION_CREDENTIALS: "${GOOGLE_APPLICATION_CREDENTIALS}"
+      DEKART_CORS_ORIGIN: "${DEKART_CORS_ORIGIN}"
   dekart-athena:
-    image: dekartxyz/dekart:0.9
+    image: dekartxyz/dekart:0.10
     restart: always
     ports:
       - 8080:8080
@@ -50,3 +51,4 @@ services:
       AWS_REGION: "${AWS_REGION}"
       AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
       AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+      DEKART_CORS_ORIGIN: "${DEKART_CORS_ORIGIN}"

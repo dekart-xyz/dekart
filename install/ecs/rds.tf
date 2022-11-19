@@ -34,7 +34,7 @@ resource "aws_db_instance" "dekart" {
   allocated_storage           = 20 # min size for gp2 storage_type type
   storage_type                = "gp2"
   engine                      = "postgres"
-  engine_version              = "14.1"
+  engine_version              = "14.3"
   instance_class              = "db.t3.micro"
   db_name                     = var.dekart_rds_db_name
   username                    = var.dekart_rds_username

@@ -72,6 +72,14 @@ resource "aws_ecs_task_definition" "dekart" {
           {
              "name": "DEKART_MAPBOX_TOKEN",
              "value": "${var.mapbox_token}"
+          },
+          {
+             "name": "DEKART_CORS_ORIGIN",
+             "value": "https://${aws_route53_record.dekart.name}"
+          },
+          {
+             "name": "DEKART_ALLOW_FILE_UPLOAD",
+             "value": "1"
           }
        ],
        "logconfiguration": {

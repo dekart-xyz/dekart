@@ -16,7 +16,7 @@ variable "dekart_deployment_name" {
   description = "prefix for your deployment resource names"
 }
 variable "dekart_version" {
-  default     = "0.9"
+  default     = "0.10.0-rc.4"
   description = "dekart version, see releases https://github.com/dekart-xyz/dekart/releases/"
 }
 variable "dekart_rds_db_name" {
@@ -24,7 +24,8 @@ variable "dekart_rds_db_name" {
   description = "RDS db name"
 }
 variable "dekart_rds_username" {
-  default = "RDS db username"
+  default     = "dekart"
+  description = "RDS db username"
 }
 
 # cognito

@@ -21,6 +21,7 @@ env_variables:
   DEKART_BIGQUERY_PROJECT_ID: "$PROJECT_ID"
   DEKART_BIGQUERY_MAX_BYTES_BILLED: "53687091200"
   DEKART_MAPBOX_TOKEN: "$MAPBOX_TOKEN"
+  DEKART_CORS_ORIGIN: "$CORS_ORIGIN"
 
 beta_settings:
   # see https://cloud.google.com/sql/docs/mysql/connect-app-engine-flexible
