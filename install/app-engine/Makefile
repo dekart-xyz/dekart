@@ -21,6 +21,7 @@ app-deploy:
 	BUCKET=${BUCKET} \
 	PROJECT_ID=${PROJECT_ID} \
 	MAPBOX_TOKEN=${MAPBOX_TOKEN} \
+	CORS_ORIGIN=${CORS_ORIGIN} \
 	envsubst < app.example.yaml > app.yaml
 	gcloud app deploy app.yaml
 

@@ -42,9 +42,9 @@ docker run \
   -e DEKART_ATHENA_CATALOG=${DEKART_ATHENA_CATALOG} \
   -e DEKART_ATHENA_S3_OUTPUT_LOCATION=${DEKART_ATHENA_S3_OUTPUT_LOCATION} \
   -e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
-  -e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
+  -e DEKART_CORS_ORIGIN=${DEKART_CORS_ORIGIN} \
   -p 8080:8080 \
-  dekartxyz/dekart:0.9
+  dekartxyz/dekart:0.10
 ```
 
 ### BigQuery
@@ -63,8 +63,9 @@ docker run \
   -e DEKART_CLOUD_STORAGE_BUCKET=${DEKART_CLOUD_STORAGE_BUCKET} \
   -e DEKART_BIGQUERY_PROJECT_ID=${DEKART_BIGQUERY_PROJECT_ID} \
   -e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
+  -e DEKART_CORS_ORIGIN=${DEKART_CORS_ORIGIN} \
   -p 8080:8080 \
-  dekartxyz/dekart:0.9
+  dekartxyz/dekart:0.10
 ```
 
 [Configuration details](https://dekart.xyz/docs/configuration/environment-variables/?ref=dokerhub)
