@@ -14,6 +14,14 @@
     padding-bottom: 60px;
 }
 
+.uploadFileInfo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
 .upload :global(.ant-upload) {
     position: absolute;
     top: 0;
@@ -59,17 +67,6 @@
     opacity: 0.65;
 }
 
-/* .status {
-    padding: 0 20px;
-    min-height: 60px;
-    display: flex;
-    flex-direction: row;
-    border-top: 1px solid rgb(217, 217, 217);
-    background-color: #F7F7F7;
-    align-items: center;
-    justify-content: center;
-} */
-
 .fileIcon {
     position: relative;
     width: 100px;
@@ -83,8 +80,10 @@
     left: 0;
     background-color: #44946B;
     color: white;
+    font-size: 0.8em;
     font-weight: bold;
     text-align: center;
+    text-transform: uppercase;
 }
 
 .fileIconBody {

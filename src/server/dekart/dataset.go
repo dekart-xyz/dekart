@@ -215,7 +215,7 @@ func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetReque
 func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	ctx := r.Context()
-	obj := s.storage.GetObject(fmt.Sprintf("%s.csv", vars["id"]))
+	obj := s.storage.GetObject(fmt.Sprintf("%s.%s", vars["id"], vars["extension"]))
 	ctreated, err := obj.GetCreatedAt(ctx)
 	if err != nil {
 		log.Err(err).Send()

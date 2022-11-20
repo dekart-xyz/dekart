@@ -7,11 +7,22 @@ import prettyBites from 'pretty-bytes'
 import { useSelector, useDispatch } from 'react-redux'
 import { uploadFile } from './actions'
 
-function FileIcon () {
+function getFileExtensionName (type) {
+  switch (type) {
+    case 'application/geo+json':
+      return 'geojson'
+    case 'text/csv':
+      return 'csv'
+    default:
+      return '???'
+  }
+}
+
+function FileIcon ({ fileInfo: { type } }) {
   return (
     <div className={styles.fileIcon}>
       <div className={styles.fileIconBody} />
-      <div className={styles.fileIconExtension}>CSV</div>
+      <div className={styles.fileIconExtension}>{getFileExtensionName(type)}</div>
     </div>
   )
 }
@@ -102,11 +113,13 @@ export default function File ({ file }) {
   let fileInfo = null
   if (file.fileStatus > 1) {
     fileInfo = {
-      name: file.name
+      name: file.name,
+      type: file.mimeType
     }
   } else if (fileToUpload) {
     fileInfo = {
-      name: fileToUpload.name
+      name: fileToUpload.name,
+      type: fileToUpload.type
     }
   }
   return (
@@ -115,7 +128,7 @@ export default function File ({ file }) {
         {fileInfo
           ? (
             <div className={styles.uploadFileInfo}>
-              <FileIcon />
+              <FileIcon fileInfo={fileInfo} />
               <div className={styles.uploadFileName}>{fileInfo.name}</div>
             </div>
             )
@@ -123,7 +136,7 @@ export default function File ({ file }) {
             <div className={styles.upload}>
               <Upload
                 maxCount={1}
-                accept='.csv'
+                accept='.csv,.geojson'
                 fileList={[]}
                 beforeUpload={(file) => {
                   setFileToUpload(file)
@@ -132,7 +145,7 @@ export default function File ({ file }) {
               >
                 <div className={styles.uploadIcon}><InboxOutlined /></div>
                 <div className={styles.uploadHeader}>Click or drag file to this area to upload</div>
-                <div className={styles.uploadSubtitle}>Supported format: .csv</div>
+                <div className={styles.uploadSubtitle}>Supported format: .csv .geojson</div>
               </Upload>
             </div>
             )}

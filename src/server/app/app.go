@@ -75,7 +75,7 @@ func configureHTTP(dekartServer *dekart.Server) *mux.Router {
 	api := router.PathPrefix("/api/v1/").Subrouter()
 	api.Use(mux.CORSMethodMiddleware(router))
 
-	api.HandleFunc("/dataset-source/{id}.csv", func(w http.ResponseWriter, r *http.Request) {
+	api.HandleFunc("/dataset-source/{id}.{extension:csv|geojson}", func(w http.ResponseWriter, r *http.Request) {
 		setOriginHeader(w, r)
 		if r.Method == http.MethodOptions {
 			return

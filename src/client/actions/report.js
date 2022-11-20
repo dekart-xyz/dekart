@@ -133,16 +133,20 @@ export function reportUpdate (reportStreamResponse) {
     let i = 0
     const { ALLOW_FILE_UPLOAD } = env.variables
     datasetsList.forEach((dataset) => {
+      let extension = 'csv'
       if (dataset.queryId) {
         i++
         const query = queriesList.find(q => q.id === dataset.queryId)
         if (shouldAddQuery(query, prevQueriesList, queriesList)) {
-          dispatch(downloadDataset(dataset, query.jobResultId, `Query ${i}`))
+          dispatch(downloadDataset(dataset, query.jobResultId, extension, `Query ${i}`))
         }
       } else if (dataset.fileId) {
         const file = filesList.find(f => f.id === dataset.fileId)
         if (shouldAddFile(file, prevFileList, filesList)) {
-          dispatch(downloadDataset(dataset, file.sourceId, file.name))
+          if (file.mimeType === 'application/geo+json') {
+            extension = 'geojson'
+          }
+          dispatch(downloadDataset(dataset, file.sourceId, extension, file.name))
         }
       } else if (!ALLOW_FILE_UPLOAD) {
         // create query right away
