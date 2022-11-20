@@ -3,7 +3,7 @@ import { Dekart } from '../../proto/dekart_pb_service'
 import { unary } from '../lib/grpc'
 import { downloading, error, finishDownloading, success } from './message'
 import { addDataToMap, toggleSidePanel } from '@dekart-xyz/kepler.gl/dist/actions'
-import { processCsvData } from '@dekart-xyz/kepler.gl/dist/processors'
+import { processCsvData, processGeojson } from '@dekart-xyz/kepler.gl/dist/processors'
 import { get } from '../lib/api'
 
 export function createDataset (reportId) {
@@ -50,15 +50,20 @@ export function removeDataset (datasetId) {
   }
 }
 
-export function downloadDataset (dataset, sourceId, label) {
+export function downloadDataset (dataset, sourceId, extension, label) {
   return async (dispatch, getState) => {
     dispatch({ type: downloadDataset.name, dataset })
     dispatch(downloading(dataset))
     let data
     try {
-      const res = await get(`/dataset-source/${sourceId}.csv`)
-      const csv = await res.text()
-      data = processCsvData(csv)
+      const res = await get(`/dataset-source/${sourceId}.${extension}`)
+      if (extension === 'csv') {
+        const csv = await res.text()
+        data = processCsvData(csv)
+      } else {
+        const json = await res.json()
+        data = processGeojson(json)
+      }
     } catch (err) {
       dispatch(error(err))
       return

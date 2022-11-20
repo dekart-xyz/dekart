@@ -61,11 +61,22 @@ func (s Server) setUploadError(reportIDs []string, fileSourceID string, err erro
 	s.reportStreams.PingAll(reportIDs)
 }
 
-func (s Server) moveFileToStorage(fileSourceID string, file multipart.File, reportIDs []string) {
+func getFileExtension(mimeType string) string {
+	switch mimeType {
+	case "text/csv":
+		return "csv"
+	case "application/geo+json":
+		return "geojson"
+	default:
+		return ""
+	}
+}
+
+func (s Server) moveFileToStorage(fileSourceID string, fileExtension string, file multipart.File, reportIDs []string) {
 	defer file.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
-	storageWriter := s.storage.GetObject(fmt.Sprintf("%s.csv", fileSourceID)).GetWriter(ctx)
+	storageWriter := s.storage.GetObject(fmt.Sprintf("%s.%s", fileSourceID, fileExtension)).GetWriter(ctx)
 	_, err := io.Copy(storageWriter, file)
 	if err != nil {
 		log.Err(err).Send()
@@ -123,6 +134,16 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	mimeType := handler.Header.Get("Content-Type")
+
+	fileExtension := getFileExtension(mimeType)
+
+	if fileExtension == "" {
+		err = fmt.Errorf("unsupported file type")
+		log.Warn().Err(err).Str("mimeType", mimeType).Send()
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	defer file.Close()
 	fileSourceID := newUUID()
 
@@ -130,7 +151,7 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 		`update files set name=$1, size=$2, mime_type=$3, file_status=2, file_source_id=$4 where id=$5`,
 		handler.Filename,
 		handler.Size,
-		handler.Header.Get("Content-Type"),
+		mimeType,
 		fileSourceID,
 		fileId,
 	)
@@ -138,7 +159,7 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 		log.Err(err).Send()
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	go s.moveFileToStorage(fileSourceID, file, reportIds)
+	go s.moveFileToStorage(fileSourceID, fileExtension, file, reportIds)
 	s.reportStreams.PingAll(reportIds)
 
 }
