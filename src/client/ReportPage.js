@@ -278,6 +278,7 @@ export default function ReportPage ({ edit }) {
       />
       <div className={styles.body}>
         <Kepler />
+        {report.authorEmail !== 'UNKNOWN_EMAIL' ? <div className={styles.author}>Author: {report.authorEmail}</div> : null}
         {edit ? <DatasetSection reportId={id} /> : null}
       </div>
     </div>

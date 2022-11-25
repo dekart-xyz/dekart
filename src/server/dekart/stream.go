@@ -112,7 +112,8 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 		`select
 			id,
 			case when title is null then 'Untitled' else title end as title,
-			archived
+			archived,
+			author_email
 		from reports
 		where author_email=$1
 		order by updated_at desc`,
@@ -135,6 +136,7 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			&report.Id,
 			&report.Title,
 			&report.Archived,
+			&report.AuthorEmail,
 		)
 		if err != nil {
 			log.Err(err).Send()

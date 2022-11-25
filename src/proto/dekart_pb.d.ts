@@ -243,6 +243,9 @@ export class Report extends jspb.Message {
   getCanWrite(): boolean;
   setCanWrite(value: boolean): void;
 
+  getAuthorEmail(): string;
+  setAuthorEmail(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Report.AsObject;
   static toObject(includeInstance: boolean, msg: Report): Report.AsObject;
@@ -260,6 +263,7 @@ export namespace Report {
     title: string,
     archived: boolean,
     canWrite: boolean,
+    authorEmail: string,
   }
 }
 

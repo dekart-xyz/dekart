@@ -81,6 +81,7 @@ message Report {
     string title = 3;
     bool archived = 4;
     bool can_write = 5;
+    string author_email = 6;
 }
 
 message Dataset {

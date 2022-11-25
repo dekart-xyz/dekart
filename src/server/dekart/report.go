@@ -32,7 +32,8 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			id,
 			case when map_config is null then '' else map_config end as map_config,
 			case when title is null then 'Untitled' else title end as title,
-			author_email = $2 as can_write
+			author_email = $2 as can_write,
+			author_email
 		from reports where id=$1 and not archived limit 1`,
 		reportID,
 		claims.Email,
@@ -50,6 +51,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			&report.MapConfig,
 			&report.Title,
 			&report.CanWrite,
+			&report.AuthorEmail,
 		)
 		if err != nil {
 			log.Err(err).Send()

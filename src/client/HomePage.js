@@ -38,6 +38,11 @@ const columns = [
     render: (t, report) => <a href={`/reports/${report.id}/source`}>{report.title}</a>,
     className: styles.titleColumn
   },
+  // {
+  //   dataIndex: 'author',
+  //   render: (t, report) => <div className={styles.author}>{report.authorEmail}</div>,
+  //   className: styles.authorColumn
+  // },
   {
     dataIndex: 'delete',
     render: (t, report) => <ArchiveButton report={report} />,
