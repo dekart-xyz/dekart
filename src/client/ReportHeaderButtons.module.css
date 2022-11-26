@@ -5,22 +5,25 @@
     justify-content: flex-end;
     align-items: center;
 }
+
 .reportHeaderButtons button {
-    margin-right: 10px;
+    margin-left: 10px;
+}
+
+.reportHeaderButtons :global .ant-btn-icon-only {
+    margin-left: 0;
 }
 
 .reportHeaderButtons :global .ant-btn-text {
-    color: rgba(255, 255, 255, 0.7)!important;
-    margin-right: 0px;
+    color: rgba(255, 255, 255, 0.7) !important;
+    /* margin-right: 0px; */
 }
 
 .reportHeaderButtons :global .ant-btn-text:active,
 .reportHeaderButtons :global .ant-btn-text:hover {
-    color: #fff!important;
+    color: #fff !important;
 }
 
 .reportHeaderButtons :global .ant-btn-text:disabled {
-    color: rgba(255, 255, 255, 0.5)!important;
+    color: rgba(255, 255, 255, 0.5) !important;
 }
-
-

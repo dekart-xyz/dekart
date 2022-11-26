@@ -1,0 +1,4 @@
+.modalFooter {
+    display: flex;
+    justify-content: space-between;
+}
