@@ -81,6 +81,14 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 			Type:  proto.GetEnvResponse_Variable_TYPE_STORAGE,
 			Value: defaultString(os.Getenv("DEKART_STORAGE"), "GCS"),
 		},
+		{
+			Type:  proto.GetEnvResponse_Variable_TYPE_REQUIRE_IAP,
+			Value: defaultString(os.Getenv("DEKART_REQUIRE_IAP"), ""),
+		},
+		{
+			Type:  proto.GetEnvResponse_Variable_TYPE_REQUIRE_AMAZON_OIDC,
+			Value: defaultString(os.Getenv("DEKART_REQUIRE_AMAZON_OIDC"), ""),
+		},
 	}
 	return &proto.GetEnvResponse{
 		Variables: variables,

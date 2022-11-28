@@ -1,8 +1,8 @@
 import { useHistory } from 'react-router'
 import styles from './ReportHeaderButtons.module.css'
 import Button from 'antd/es/button'
-import { saveMap, forkReport, copyUrlToClipboard } from './actions'
-import { CopyOutlined, FundProjectionScreenOutlined, EditOutlined, ConsoleSqlOutlined, ForkOutlined } from '@ant-design/icons'
+import { saveMap, forkReport } from './actions'
+import { FundProjectionScreenOutlined, EditOutlined, ConsoleSqlOutlined, ForkOutlined } from '@ant-design/icons'
 import { useDispatch } from 'react-redux'
 import ShareButton from './ShareButton'
 

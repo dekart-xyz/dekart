@@ -131,6 +131,8 @@ export namespace GetEnvResponse {
       TYPE_ALLOW_FILE_UPLOAD: 4;
       TYPE_DATASOURCE: 5;
       TYPE_STORAGE: 6;
+      TYPE_REQUIRE_AMAZON_OIDC: 7;
+      TYPE_REQUIRE_IAP: 8;
     }
 
     export const Type: TypeMap;

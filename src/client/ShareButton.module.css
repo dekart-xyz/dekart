@@ -2,3 +2,37 @@
     display: flex;
     justify-content: space-between;
 }
+
+.reportStatusIcon {
+    font-size: 2em;
+    position: relative;
+    top: -0.4em;
+}
+
+.reportStatusDetails {
+    margin-left: 10px;
+}
+
+.reportStatusDetailsText {
+    font-size: 1.2em;
+}
+
+.reportStatus {
+    padding: 20px;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+.reportAuthStatus {
+    font-size: 0.8em;
+    margin-top: 10px;
+}
+
+.origin {
+    font-weight: bold;
+}
+
+.authEnabled {
+    color: #00b300;
+}
