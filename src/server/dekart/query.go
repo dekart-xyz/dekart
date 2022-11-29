@@ -3,11 +3,12 @@ package dekart
 import (
 	"context"
 	"crypto/sha1"
+	"fmt"
+	"time"
+
 	"dekart/src/proto"
 	"dekart/src/server/job"
 	"dekart/src/server/user"
-	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -32,7 +33,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	if reportID == nil {
 		err := fmt.Errorf("dataset not found or permission not granted")
 		log.Warn().Err(err).Str("dataset_id", req.DatasetId).Send()
-		return nil, status.Error(codes.NotFound, err.Error())
+		return nil, status.Error(codes.NotFound, "Dataset not found or permission not granted")
 	}
 
 	id := newUUID()
@@ -220,7 +221,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	if reportID == "" {
 		err := fmt.Errorf("query not found id:%s", req.QueryId)
 		log.Warn().Err(err).Send()
-		return nil, status.Error(codes.NotFound, err.Error())
+		return nil, status.Error(codes.NotFound, "Query not found")
 	}
 
 	err = s.storeQuerySync(ctx, req.QueryId, req.QueryText, prevQuerySourceId)
@@ -285,7 +286,7 @@ func (s Server) CancelQuery(ctx context.Context, req *proto.CancelQueryRequest) 
 	}
 	if reportID == "" {
 		log.Warn().Str("QueryId", req.QueryId).Msg("Query not found")
-		return nil, status.Error(codes.NotFound, err.Error())
+		return nil, status.Errorf(codes.NotFound, "Query not found")
 	}
 
 	if ok := s.jobs.Cancel(req.QueryId); !ok {
