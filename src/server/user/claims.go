@@ -86,9 +86,14 @@ func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 	return userCtx
 }
 
-//GetClaims from the context
+// GetClaims from the context
 func GetClaims(ctx context.Context) *Claims {
-	return ctx.Value(contextKey).(*Claims)
+	value, isExist := ctx.Value(contextKey).(*Claims)
+	if isExist {
+		return value
+	}
+
+	return nil
 }
 
 func (c ClaimsCheck) getPublicKeyFromAmazon(token *jwt.Token) (interface{}, error) {

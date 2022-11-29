@@ -3,11 +3,12 @@ package dekart
 import (
 	"context"
 	"crypto/sha1"
+	"fmt"
+	"time"
+
 	"dekart/src/proto"
 	"dekart/src/server/job"
 	"dekart/src/server/user"
-	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -284,6 +285,7 @@ func (s Server) CancelQuery(ctx context.Context, req *proto.CancelQueryRequest) 
 		}
 	}
 	if reportID == "" {
+		err := fmt.Errorf("query not found id:%s", req.QueryId)
 		log.Warn().Str("QueryId", req.QueryId).Msg("Query not found")
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
