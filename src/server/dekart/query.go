@@ -33,7 +33,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	if reportID == nil {
 		err := fmt.Errorf("dataset not found or permission not granted")
 		log.Warn().Err(err).Str("dataset_id", req.DatasetId).Send()
-		return nil, status.Error(codes.NotFound, "Dataset not found or permission not granted")
+		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
 	id := newUUID()
