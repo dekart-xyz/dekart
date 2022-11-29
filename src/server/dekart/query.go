@@ -221,7 +221,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	if reportID == "" {
 		err := fmt.Errorf("query not found id:%s", req.QueryId)
 		log.Warn().Err(err).Send()
-		return nil, status.Error(codes.NotFound, "Query not found")
+		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
 	err = s.storeQuerySync(ctx, req.QueryId, req.QueryText, prevQuerySourceId)
@@ -285,8 +285,9 @@ func (s Server) CancelQuery(ctx context.Context, req *proto.CancelQueryRequest) 
 		}
 	}
 	if reportID == "" {
+		err := fmt.Errorf("query not found id:%s", req.QueryId)
 		log.Warn().Str("QueryId", req.QueryId).Msg("Query not found")
-		return nil, status.Error(codes.NotFound, "Query not found")
+		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
 	if ok := s.jobs.Cancel(req.QueryId); !ok {
