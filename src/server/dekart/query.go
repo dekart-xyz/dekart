@@ -286,7 +286,7 @@ func (s Server) CancelQuery(ctx context.Context, req *proto.CancelQueryRequest) 
 	}
 	if reportID == "" {
 		log.Warn().Str("QueryId", req.QueryId).Msg("Query not found")
-		return nil, status.Errorf(codes.NotFound, "Query not found")
+		return nil, status.Error(codes.NotFound, "Query not found")
 	}
 
 	if ok := s.jobs.Cancel(req.QueryId); !ok {
