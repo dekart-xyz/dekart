@@ -27,6 +27,7 @@ type DekartClient interface {
 	ForkReport(ctx context.Context, in *ForkReportRequest, opts ...grpc.CallOption) (*ForkReportResponse, error)
 	UpdateReport(ctx context.Context, in *UpdateReportRequest, opts ...grpc.CallOption) (*UpdateReportResponse, error)
 	ArchiveReport(ctx context.Context, in *ArchiveReportRequest, opts ...grpc.CallOption) (*ArchiveReportResponse, error)
+	SetDecoverable(ctx context.Context, in *SetDecoverableRequest, opts ...grpc.CallOption) (*SetDecoverableResponse, error)
 	// datasets
 	CreateDataset(ctx context.Context, in *CreateDatasetRequest, opts ...grpc.CallOption) (*CreateDatasetResponse, error)
 	RemoveDataset(ctx context.Context, in *RemoveDatasetRequest, opts ...grpc.CallOption) (*RemoveDatasetResponse, error)
@@ -80,6 +81,15 @@ func (c *dekartClient) UpdateReport(ctx context.Context, in *UpdateReportRequest
 func (c *dekartClient) ArchiveReport(ctx context.Context, in *ArchiveReportRequest, opts ...grpc.CallOption) (*ArchiveReportResponse, error) {
 	out := new(ArchiveReportResponse)
 	err := c.cc.Invoke(ctx, "/Dekart/ArchiveReport", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) SetDecoverable(ctx context.Context, in *SetDecoverableRequest, opts ...grpc.CallOption) (*SetDecoverableResponse, error) {
+	out := new(SetDecoverableResponse)
+	err := c.cc.Invoke(ctx, "/Dekart/SetDecoverable", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -222,6 +232,7 @@ type DekartServer interface {
 	ForkReport(context.Context, *ForkReportRequest) (*ForkReportResponse, error)
 	UpdateReport(context.Context, *UpdateReportRequest) (*UpdateReportResponse, error)
 	ArchiveReport(context.Context, *ArchiveReportRequest) (*ArchiveReportResponse, error)
+	SetDecoverable(context.Context, *SetDecoverableRequest) (*SetDecoverableResponse, error)
 	// datasets
 	CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error)
 	RemoveDataset(context.Context, *RemoveDatasetRequest) (*RemoveDatasetResponse, error)
@@ -253,6 +264,9 @@ func (UnimplementedDekartServer) UpdateReport(context.Context, *UpdateReportRequ
 }
 func (UnimplementedDekartServer) ArchiveReport(context.Context, *ArchiveReportRequest) (*ArchiveReportResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ArchiveReport not implemented")
+}
+func (UnimplementedDekartServer) SetDecoverable(context.Context, *SetDecoverableRequest) (*SetDecoverableResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetDecoverable not implemented")
 }
 func (UnimplementedDekartServer) CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateDataset not implemented")
@@ -362,6 +376,24 @@ func _Dekart_ArchiveReport_Handler(srv interface{}, ctx context.Context, dec fun
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DekartServer).ArchiveReport(ctx, req.(*ArchiveReportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_SetDecoverable_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetDecoverableRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).SetDecoverable(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Dekart/SetDecoverable",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).SetDecoverable(ctx, req.(*SetDecoverableRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -556,6 +588,10 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ArchiveReport",
 			Handler:    _Dekart_ArchiveReport_Handler,
+		},
+		{
+			MethodName: "SetDecoverable",
+			Handler:    _Dekart_SetDecoverable_Handler,
 		},
 		{
 			MethodName: "CreateDataset",

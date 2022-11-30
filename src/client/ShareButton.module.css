@@ -3,18 +3,40 @@
     justify-content: space-between;
 }
 
-.reportStatusIcon {
-    font-size: 2em;
+.discoverableStatusIcon {
+    font-size: 1.2em;
     position: relative;
-    top: -0.4em;
+    opacity: 0.65;
+    /* top: -0.4em; */
+}
+
+.reportStatusIcon {
+    font-size: 1.8em;
+    position: relative;
+    opacity: 0.65;
+    top: -0.3em;
 }
 
 .reportStatusDetails {
     margin-left: 10px;
 }
 
+.discoverableStatusLabel {
+    font-size: 1.2em;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
 .reportStatusDetailsText {
     font-size: 1.2em;
+}
+
+.discoverableStatus {
+    border-top: 1px solid #f0f0f0;
+    padding: 20px;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
 }
 
 .reportStatus {

@@ -8,6 +8,7 @@ service Dekart {
     rpc ForkReport(ForkReportRequest) returns (ForkReportResponse) {}
     rpc UpdateReport(UpdateReportRequest) returns (UpdateReportResponse) {}
     rpc ArchiveReport(ArchiveReportRequest) returns (ArchiveReportResponse) {}
+    rpc SetDecoverable(SetDecoverableRequest) returns (SetDecoverableResponse) {}
 
     // datasets
     rpc CreateDataset(CreateDatasetRequest) returns (CreateDatasetResponse) {}
@@ -26,6 +27,14 @@ service Dekart {
     // streams
     rpc GetReportStream(ReportStreamRequest) returns (stream ReportStreamResponse) {}
     rpc GetReportListStream(ReportListRequest) returns (stream ReportListResponse) {}
+}
+
+message SetDecoverableRequest {
+    string report_id = 1;
+    bool decoverable = 2;
+}
+
+message SetDecoverableResponse {
 }
 
 message RemoveDatasetRequest {
@@ -84,6 +93,7 @@ message Report {
     bool archived = 4;
     bool can_write = 5;
     string author_email = 6;
+    bool discoverable = 7; // report is discoverable by other users of the same instance
 }
 
 message Dataset {

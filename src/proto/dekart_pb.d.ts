@@ -3,6 +3,46 @@
 
 import * as jspb from "google-protobuf";
 
+export class SetDecoverableRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  getDecoverable(): boolean;
+  setDecoverable(value: boolean): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): SetDecoverableRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: SetDecoverableRequest): SetDecoverableRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: SetDecoverableRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): SetDecoverableRequest;
+  static deserializeBinaryFromReader(message: SetDecoverableRequest, reader: jspb.BinaryReader): SetDecoverableRequest;
+}
+
+export namespace SetDecoverableRequest {
+  export type AsObject = {
+    reportId: string,
+    decoverable: boolean,
+  }
+}
+
+export class SetDecoverableResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): SetDecoverableResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: SetDecoverableResponse): SetDecoverableResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: SetDecoverableResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): SetDecoverableResponse;
+  static deserializeBinaryFromReader(message: SetDecoverableResponse, reader: jspb.BinaryReader): SetDecoverableResponse;
+}
+
+export namespace SetDecoverableResponse {
+  export type AsObject = {
+  }
+}
+
 export class RemoveDatasetRequest extends jspb.Message {
   getDatasetId(): string;
   setDatasetId(value: string): void;
@@ -248,6 +288,9 @@ export class Report extends jspb.Message {
   getAuthorEmail(): string;
   setAuthorEmail(value: string): void;
 
+  getDiscoverable(): boolean;
+  setDiscoverable(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Report.AsObject;
   static toObject(includeInstance: boolean, msg: Report): Report.AsObject;
@@ -266,6 +309,7 @@ export namespace Report {
     archived: boolean,
     canWrite: boolean,
     authorEmail: string,
+    discoverable: boolean,
   }
 }
 

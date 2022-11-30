@@ -40,6 +40,15 @@ type DekartArchiveReport = {
   readonly responseType: typeof proto_dekart_pb.ArchiveReportResponse;
 };
 
+type DekartSetDecoverable = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.SetDecoverableRequest;
+  readonly responseType: typeof proto_dekart_pb.SetDecoverableResponse;
+};
+
 type DekartCreateDataset = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -127,6 +136,7 @@ export class Dekart {
   static readonly ForkReport: DekartForkReport;
   static readonly UpdateReport: DekartUpdateReport;
   static readonly ArchiveReport: DekartArchiveReport;
+  static readonly SetDecoverable: DekartSetDecoverable;
   static readonly CreateDataset: DekartCreateDataset;
   static readonly RemoveDataset: DekartRemoveDataset;
   static readonly CreateFile: DekartCreateFile;
@@ -205,6 +215,15 @@ export class DekartClient {
   archiveReport(
     requestMessage: proto_dekart_pb.ArchiveReportRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.ArchiveReportResponse|null) => void
+  ): UnaryResponse;
+  setDecoverable(
+    requestMessage: proto_dekart_pb.SetDecoverableRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.SetDecoverableResponse|null) => void
+  ): UnaryResponse;
+  setDecoverable(
+    requestMessage: proto_dekart_pb.SetDecoverableRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.SetDecoverableResponse|null) => void
   ): UnaryResponse;
   createDataset(
     requestMessage: proto_dekart_pb.CreateDatasetRequest,

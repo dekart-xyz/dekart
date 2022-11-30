@@ -1,12 +1,13 @@
 import Button from 'antd/es/button'
 import Modal from 'antd/es/modal'
-import { UsergroupAddOutlined, LinkOutlined, LockOutlined, InfoCircleOutlined } from '@ant-design/icons'
+import { UsergroupAddOutlined, LinkOutlined, LockOutlined, InfoCircleOutlined, FileSearchOutlined } from '@ant-design/icons'
 import { useState } from 'react'
 import styles from './ShareButton.module.css'
 import { copyUrlToClipboard } from './actions'
 import { useDispatch, useSelector } from 'react-redux'
 import Tooltip from 'antd/es/tooltip'
 import { getRef } from './lib/ref'
+import Switch from 'antd/es/switch'
 
 function CopyLinkButton () {
   const dispatch = useDispatch()
@@ -70,29 +71,38 @@ export default function ShareButton () {
           </div>
       }
       >
-        <div className={styles.reportStatus}>
-          {
+        {
                 authEnabled
                   ? (
-                    <><div className={styles.reportStatusIcon}><LockOutlined /></div>
-                      <div className={styles.reportStatusDetails}>
-                        <div className={styles.reportStatusDetailsText}> Everyone with a link and access to <span className={styles.origin}>{window.location.hostname}</span> can view this report</div>
-                        <div className={styles.reportAuthStatus}>
-                          <Tooltip title={<AuthTypeTitle authType={REQUIRE_IAP === '1' ? 'IAP' : 'AMAZON_OIDC'} />}>
-                            <span className={styles.authEnabled}>User authorization enabled</span>
-                          </Tooltip>
+                    <>
+                      <div className={styles.reportStatus}>
+                        <div className={styles.reportStatusIcon}><LockOutlined /></div>
+                        <div className={styles.reportStatusDetails}>
+                          <div className={styles.reportStatusDetailsText}> Everyone with a link and access to <span className={styles.origin}>{window.location.hostname}</span> can view this report</div>
+                          <div className={styles.reportAuthStatus}>
+                            <Tooltip title={<AuthTypeTitle authType={REQUIRE_IAP === '1' ? 'IAP' : 'AMAZON_OIDC'} />}>
+                              <span className={styles.authEnabled}>User authorization enabled</span>
+                            </Tooltip>
+                          </div>
                         </div>
+                      </div>
+                      <div className={styles.discoverableStatus}>
+                        <div className={styles.discoverableStatusIcon}><FileSearchOutlined /></div>
+                        <div className={styles.discoverableStatusLabel}>Make report discoverable by all users of <span className={styles.origin}>{window.location.hostname}</span> in Team Reports</div>
+                        <div className={styles.discoverableStatusControl}><Switch /></div>
                       </div>
                     </>
                     )
                   : (
-                    <><div className={styles.reportStatusIcon}><InfoCircleOutlined /></div>
-                      <div className={styles.reportStatusDetails}>
-                        <div className={styles.reportStatusDetailsText}> Everyone with access to <span className={styles.origin}>{window.location.hostname}</span> can edit this report</div>
+                    <>
+                      <div className={styles.reportStatus}>
+                        <div className={styles.reportStatusIcon}><InfoCircleOutlined /></div>
+                        <div className={styles.reportStatusDetails}>
+                          <div className={styles.reportStatusDetailsText}> Everyone with access to <span className={styles.origin}>{window.location.hostname}</span> can edit this report</div>
+                        </div>
                       </div>
                     </>)
                   }
-        </div>
       </Modal>
     </>
   )
