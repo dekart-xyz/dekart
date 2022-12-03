@@ -3,42 +3,42 @@
 
 import * as jspb from "google-protobuf";
 
-export class SetDecoverableRequest extends jspb.Message {
+export class SetDiscoverableRequest extends jspb.Message {
   getReportId(): string;
   setReportId(value: string): void;
 
-  getDecoverable(): boolean;
-  setDecoverable(value: boolean): void;
+  getDiscoverable(): boolean;
+  setDiscoverable(value: boolean): void;
 
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): SetDecoverableRequest.AsObject;
-  static toObject(includeInstance: boolean, msg: SetDecoverableRequest): SetDecoverableRequest.AsObject;
+  toObject(includeInstance?: boolean): SetDiscoverableRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: SetDiscoverableRequest): SetDiscoverableRequest.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: SetDecoverableRequest, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): SetDecoverableRequest;
-  static deserializeBinaryFromReader(message: SetDecoverableRequest, reader: jspb.BinaryReader): SetDecoverableRequest;
+  static serializeBinaryToWriter(message: SetDiscoverableRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): SetDiscoverableRequest;
+  static deserializeBinaryFromReader(message: SetDiscoverableRequest, reader: jspb.BinaryReader): SetDiscoverableRequest;
 }
 
-export namespace SetDecoverableRequest {
+export namespace SetDiscoverableRequest {
   export type AsObject = {
     reportId: string,
-    decoverable: boolean,
+    discoverable: boolean,
   }
 }
 
-export class SetDecoverableResponse extends jspb.Message {
+export class SetDiscoverableResponse extends jspb.Message {
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): SetDecoverableResponse.AsObject;
-  static toObject(includeInstance: boolean, msg: SetDecoverableResponse): SetDecoverableResponse.AsObject;
+  toObject(includeInstance?: boolean): SetDiscoverableResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: SetDiscoverableResponse): SetDiscoverableResponse.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: SetDecoverableResponse, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): SetDecoverableResponse;
-  static deserializeBinaryFromReader(message: SetDecoverableResponse, reader: jspb.BinaryReader): SetDecoverableResponse;
+  static serializeBinaryToWriter(message: SetDiscoverableResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): SetDiscoverableResponse;
+  static deserializeBinaryFromReader(message: SetDiscoverableResponse, reader: jspb.BinaryReader): SetDiscoverableResponse;
 }
 
-export namespace SetDecoverableResponse {
+export namespace SetDiscoverableResponse {
   export type AsObject = {
   }
 }

@@ -279,6 +279,43 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	return &proto.UpdateReportResponse{}, nil
 }
 
+func (s Server) SetDiscoverable(ctx context.Context, req *proto.SetDiscoverableRequest) (*proto.SetDiscoverableResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	_, err := uuid.Parse(req.ReportId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+	res, err := s.db.ExecContext(ctx,
+		`update reports set discoverable=$1 where id=$2 and author_email=$3`,
+		req.Discoverable,
+		req.ReportId,
+		claims.Email,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	affectedRows, err := res.RowsAffected()
+
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if affectedRows == 0 {
+		err := fmt.Errorf("report not found id:%s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	s.reportStreams.Ping(req.ReportId)
+
+	return &proto.SetDiscoverableResponse{}, nil
+}
+
 // ArchiveReport implementation
 func (s Server) ArchiveReport(ctx context.Context, req *proto.ArchiveReportRequest) (*proto.ArchiveReportResponse, error) {
 	claims := user.GetClaims(ctx)

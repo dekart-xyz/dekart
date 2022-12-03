@@ -46,13 +46,13 @@ Dekart.ArchiveReport = {
   responseType: proto_dekart_pb.ArchiveReportResponse
 };
 
-Dekart.SetDecoverable = {
-  methodName: "SetDecoverable",
+Dekart.SetDiscoverable = {
+  methodName: "SetDiscoverable",
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.SetDecoverableRequest,
-  responseType: proto_dekart_pb.SetDecoverableResponse
+  requestType: proto_dekart_pb.SetDiscoverableRequest,
+  responseType: proto_dekart_pb.SetDiscoverableResponse
 };
 
 Dekart.CreateDataset = {
@@ -267,11 +267,11 @@ DekartClient.prototype.archiveReport = function archiveReport(requestMessage, me
   };
 };
 
-DekartClient.prototype.setDecoverable = function setDecoverable(requestMessage, metadata, callback) {
+DekartClient.prototype.setDiscoverable = function setDiscoverable(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
-  var client = grpc.unary(Dekart.SetDecoverable, {
+  var client = grpc.unary(Dekart.SetDiscoverable, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,

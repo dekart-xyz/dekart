@@ -27,7 +27,7 @@ type DekartClient interface {
 	ForkReport(ctx context.Context, in *ForkReportRequest, opts ...grpc.CallOption) (*ForkReportResponse, error)
 	UpdateReport(ctx context.Context, in *UpdateReportRequest, opts ...grpc.CallOption) (*UpdateReportResponse, error)
 	ArchiveReport(ctx context.Context, in *ArchiveReportRequest, opts ...grpc.CallOption) (*ArchiveReportResponse, error)
-	SetDecoverable(ctx context.Context, in *SetDecoverableRequest, opts ...grpc.CallOption) (*SetDecoverableResponse, error)
+	SetDiscoverable(ctx context.Context, in *SetDiscoverableRequest, opts ...grpc.CallOption) (*SetDiscoverableResponse, error)
 	// datasets
 	CreateDataset(ctx context.Context, in *CreateDatasetRequest, opts ...grpc.CallOption) (*CreateDatasetResponse, error)
 	RemoveDataset(ctx context.Context, in *RemoveDatasetRequest, opts ...grpc.CallOption) (*RemoveDatasetResponse, error)
@@ -87,9 +87,9 @@ func (c *dekartClient) ArchiveReport(ctx context.Context, in *ArchiveReportReque
 	return out, nil
 }
 
-func (c *dekartClient) SetDecoverable(ctx context.Context, in *SetDecoverableRequest, opts ...grpc.CallOption) (*SetDecoverableResponse, error) {
-	out := new(SetDecoverableResponse)
-	err := c.cc.Invoke(ctx, "/Dekart/SetDecoverable", in, out, opts...)
+func (c *dekartClient) SetDiscoverable(ctx context.Context, in *SetDiscoverableRequest, opts ...grpc.CallOption) (*SetDiscoverableResponse, error) {
+	out := new(SetDiscoverableResponse)
+	err := c.cc.Invoke(ctx, "/Dekart/SetDiscoverable", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +232,7 @@ type DekartServer interface {
 	ForkReport(context.Context, *ForkReportRequest) (*ForkReportResponse, error)
 	UpdateReport(context.Context, *UpdateReportRequest) (*UpdateReportResponse, error)
 	ArchiveReport(context.Context, *ArchiveReportRequest) (*ArchiveReportResponse, error)
-	SetDecoverable(context.Context, *SetDecoverableRequest) (*SetDecoverableResponse, error)
+	SetDiscoverable(context.Context, *SetDiscoverableRequest) (*SetDiscoverableResponse, error)
 	// datasets
 	CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error)
 	RemoveDataset(context.Context, *RemoveDatasetRequest) (*RemoveDatasetResponse, error)
@@ -265,8 +265,8 @@ func (UnimplementedDekartServer) UpdateReport(context.Context, *UpdateReportRequ
 func (UnimplementedDekartServer) ArchiveReport(context.Context, *ArchiveReportRequest) (*ArchiveReportResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ArchiveReport not implemented")
 }
-func (UnimplementedDekartServer) SetDecoverable(context.Context, *SetDecoverableRequest) (*SetDecoverableResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SetDecoverable not implemented")
+func (UnimplementedDekartServer) SetDiscoverable(context.Context, *SetDiscoverableRequest) (*SetDiscoverableResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetDiscoverable not implemented")
 }
 func (UnimplementedDekartServer) CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateDataset not implemented")
@@ -380,20 +380,20 @@ func _Dekart_ArchiveReport_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_SetDecoverable_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SetDecoverableRequest)
+func _Dekart_SetDiscoverable_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetDiscoverableRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DekartServer).SetDecoverable(ctx, in)
+		return srv.(DekartServer).SetDiscoverable(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Dekart/SetDecoverable",
+		FullMethod: "/Dekart/SetDiscoverable",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).SetDecoverable(ctx, req.(*SetDecoverableRequest))
+		return srv.(DekartServer).SetDiscoverable(ctx, req.(*SetDiscoverableRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -590,8 +590,8 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Dekart_ArchiveReport_Handler,
 		},
 		{
-			MethodName: "SetDecoverable",
-			Handler:    _Dekart_SetDecoverable_Handler,
+			MethodName: "SetDiscoverable",
+			Handler:    _Dekart_SetDiscoverable_Handler,
 		},
 		{
 			MethodName: "CreateDataset",

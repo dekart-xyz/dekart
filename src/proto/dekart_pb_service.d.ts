@@ -40,13 +40,13 @@ type DekartArchiveReport = {
   readonly responseType: typeof proto_dekart_pb.ArchiveReportResponse;
 };
 
-type DekartSetDecoverable = {
+type DekartSetDiscoverable = {
   readonly methodName: string;
   readonly service: typeof Dekart;
   readonly requestStream: false;
   readonly responseStream: false;
-  readonly requestType: typeof proto_dekart_pb.SetDecoverableRequest;
-  readonly responseType: typeof proto_dekart_pb.SetDecoverableResponse;
+  readonly requestType: typeof proto_dekart_pb.SetDiscoverableRequest;
+  readonly responseType: typeof proto_dekart_pb.SetDiscoverableResponse;
 };
 
 type DekartCreateDataset = {
@@ -136,7 +136,7 @@ export class Dekart {
   static readonly ForkReport: DekartForkReport;
   static readonly UpdateReport: DekartUpdateReport;
   static readonly ArchiveReport: DekartArchiveReport;
-  static readonly SetDecoverable: DekartSetDecoverable;
+  static readonly SetDiscoverable: DekartSetDiscoverable;
   static readonly CreateDataset: DekartCreateDataset;
   static readonly RemoveDataset: DekartRemoveDataset;
   static readonly CreateFile: DekartCreateFile;
@@ -216,14 +216,14 @@ export class DekartClient {
     requestMessage: proto_dekart_pb.ArchiveReportRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.ArchiveReportResponse|null) => void
   ): UnaryResponse;
-  setDecoverable(
-    requestMessage: proto_dekart_pb.SetDecoverableRequest,
+  setDiscoverable(
+    requestMessage: proto_dekart_pb.SetDiscoverableRequest,
     metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.SetDecoverableResponse|null) => void
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.SetDiscoverableResponse|null) => void
   ): UnaryResponse;
-  setDecoverable(
-    requestMessage: proto_dekart_pb.SetDecoverableRequest,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.SetDecoverableResponse|null) => void
+  setDiscoverable(
+    requestMessage: proto_dekart_pb.SetDiscoverableRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.SetDiscoverableResponse|null) => void
   ): UnaryResponse;
   createDataset(
     requestMessage: proto_dekart_pb.CreateDatasetRequest,

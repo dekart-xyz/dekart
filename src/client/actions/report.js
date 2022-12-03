@@ -3,7 +3,7 @@ import { receiveMapConfig, removeDataset } from '@dekart-xyz/kepler.gl/dist/acti
 
 import { getReportStream, getStream, unary } from '../lib/grpc'
 import { error, streamError, success } from './message'
-import { ArchiveReportRequest, CreateReportRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File } from '../../proto/dekart_pb'
+import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { createQuery, downloadQuerySource } from './query'
 import { downloadDataset } from './dataset'
@@ -180,6 +180,20 @@ export function unsubscribeReports () {
 
 export function reportsListUpdate (reportsList) {
   return { type: reportsListUpdate.name, reportsList }
+}
+
+export function setDiscoverable (reportId, discoverable) {
+  return async (dispatch) => {
+    dispatch({ type: setDiscoverable.name })
+    const req = new SetDiscoverableRequest()
+    req.setReportId(reportId)
+    req.setDiscoverable(discoverable)
+    try {
+      await unary(Dekart.SetDiscoverable, req)
+    } catch (err) {
+      dispatch(error(err))
+    }
+  }
 }
 
 export function archiveReport (reportId, archive) {
