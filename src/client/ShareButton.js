@@ -38,12 +38,12 @@ function AuthTypeTitle ({ authType }) {
   )
 }
 
-export default function ShareButton () {
+export default function ShareButton ({ reportId, discoverable, canWrite }) {
   const [modalOpen, setModalOpen] = useState(false)
   const env = useSelector(state => state.env)
   const dispatch = useDispatch()
-  const discoverable = useSelector(state => state.report.discoverable)
-  const reportId = useSelector(state => state.report.id)
+  // const discoverable = useSelector(state => state.report.discoverable)
+  // const reportId = useSelector(state => state.report.id)
   const [discoverableSwitch, setDiscoverableSwitch] = useState(discoverable)
   const { REQUIRE_AMAZON_OIDC, REQUIRE_IAP } = env.variables
   const authEnabled = REQUIRE_AMAZON_OIDC === '1' || REQUIRE_IAP === '1'
@@ -90,20 +90,24 @@ export default function ShareButton () {
                           </div>
                         </div>
                       </div>
-                      <div className={styles.discoverableStatus}>
-                        <div className={styles.discoverableStatusIcon}><FileSearchOutlined /></div>
-                        <div className={styles.discoverableStatusLabel}>Make report discoverable by all users of <span className={styles.origin}>{window.location.hostname}</span> in Team Reports</div>
-                        <div className={styles.discoverableStatusControl}>
-                          <Switch
-                            checked={discoverable}
-                            onChange={(checked) => {
-                              setDiscoverableSwitch(checked)
-                              dispatch(setDiscoverable(reportId, checked))
-                            }}
-                            loading={discoverableSwitch !== discoverable}
-                          />
-                        </div>
-                      </div>
+                      {canWrite
+                        ? (
+                          <div className={styles.discoverableStatus}>
+                            <div className={styles.discoverableStatusIcon}><FileSearchOutlined /></div>
+                            <div className={styles.discoverableStatusLabel}>Make report discoverable by all users of <span className={styles.origin}>{window.location.hostname}</span> in Team Reports</div>
+                            <div className={styles.discoverableStatusControl}>
+                              <Switch
+                                checked={discoverable}
+                                onChange={(checked) => {
+                                  setDiscoverableSwitch(checked)
+                                  dispatch(setDiscoverable(reportId, checked))
+                                }}
+                                loading={discoverableSwitch !== discoverable}
+                              />
+                            </div>
+                          </div>
+                          )
+                        : null}
                     </>
                     )
                   : (

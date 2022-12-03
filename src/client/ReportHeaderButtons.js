@@ -30,7 +30,7 @@ function ForkButton ({ reportId, disabled, primary }) {
   )
 }
 
-export default function ReportHeaderButtons ({ edit, changed, canSave, reportId, canWrite }) {
+export default function ReportHeaderButtons ({ edit, changed, canSave, reportId, canWrite, discoverable }) {
   const dispatch = useDispatch()
   const history = useHistory()
   if (edit) {
@@ -39,7 +39,7 @@ export default function ReportHeaderButtons ({ edit, changed, canSave, reportId,
         <Button
           type='text'
           icon={<FundProjectionScreenOutlined />}
-          disabled={changed}
+          disabled={changed && canWrite}
           title='Present Mode'
           onClick={() => history.replace(`/reports/${reportId}`)}
         />
@@ -55,8 +55,8 @@ export default function ReportHeaderButtons ({ edit, changed, canSave, reportId,
               </Button>
             </>
             )
-          : <ForkButton reportId={reportId} primary disabled={!canSave} />}
-        <ShareButton />
+          : <ForkButton reportId={reportId} disabled={!canSave} />}
+        <ShareButton reportId={reportId} discoverable={discoverable} canWrite={canWrite} />
         {/* <CopyLinkButton /> */}
       </div>
     )

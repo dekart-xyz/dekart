@@ -114,7 +114,7 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			case when title is null then 'Untitled' else title end as title,
 			archived,
 			author_email,
-			discoverable,
+			discoverable
 		from reports
 		where author_email=$1
 		order by updated_at desc`,

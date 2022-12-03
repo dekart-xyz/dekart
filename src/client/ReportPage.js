@@ -270,6 +270,7 @@ export default function ReportPage ({ edit }) {
         title={(<Title />)}
         buttons={(<ReportHeaderButtons
           reportId={id}
+          discoverable={report.discoverable}
           canWrite={report.canWrite}
           changed={mapChanged || titleChanged || queryChanged}
           canSave={reportStatus.canSave}
