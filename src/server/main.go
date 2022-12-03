@@ -125,11 +125,11 @@ func startHttpServer(httpServer *http.Server) {
 	}
 }
 
-func waitForInterrupt() os.Signal {
+func waitForInterrupt() chan os.Signal {
 	var s = make(chan os.Signal, 1)
 	signal.Notify(s, syscall.SIGTERM)
 	signal.Notify(s, syscall.SIGINT)
-	return <-s
+	return s
 }
 
 func main() {
@@ -148,7 +148,7 @@ func main() {
 
 	go startHttpServer(httpServer)
 
-	sig := waitForInterrupt()
+	sig := <-waitForInterrupt()
 
 	// shutdown gracefully
 	log.Info().Str("signal", sig.String()).Msg("shutdown signal received")
@@ -170,6 +170,19 @@ func main() {
 		log.Debug().Msg("http server shutdown complete")
 	}()
 
-	wg.Wait()
-	log.Info().Msg("shutdown complete")
+	shutdown := make(chan bool)
+
+	go func() {
+		wg.Wait()
+		close(shutdown)
+	}()
+
+	select {
+	case <-shutdown:
+		log.Info().Msg("shutdown complete")
+		return
+	case <-waitForInterrupt():
+		log.Warn().Msg("shutdown forced")
+		return
+	}
 }
