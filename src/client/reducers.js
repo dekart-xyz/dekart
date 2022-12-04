@@ -214,11 +214,13 @@ function reportsList (state = defaultReportsList, action) {
     case unsubscribeReports.name:
       return defaultReportsList
     case reportsListUpdate.name:
+      console.log('reportsListUpdate', action)
       return {
         ...state,
         loaded: true,
-        reports: action.reportsList.filter(report => !report.archived),
-        archived: action.reportsList.filter(report => report.archived)
+        my: action.reportsList.filter(report => !report.archived && report.canWrite),
+        archived: action.reportsList.filter(report => report.archived),
+        discoverable: action.reportsList.filter(report => report.discoverable)
       }
     default:
       return state

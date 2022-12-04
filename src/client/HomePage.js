@@ -7,9 +7,10 @@ import Result from 'antd/es/result'
 import Table from 'antd/es/table'
 import { archiveReport, createReport, subscribeReports, testVersion, unsubscribeReports } from './actions'
 import { useDispatch, useSelector } from 'react-redux'
-import { PlusOutlined, GiftOutlined } from '@ant-design/icons'
+import { PlusOutlined, FileSearchOutlined, GiftOutlined, UsergroupAddOutlined } from '@ant-design/icons'
 import DataDocumentationLink from './DataDocumentationLink'
 import { getRef } from './lib/ref'
+import Switch from 'antd/es/switch'
 
 function Loading () {
   return null
@@ -38,11 +39,16 @@ const columns = [
     render: (t, report) => <a href={`/reports/${report.id}/source`}>{report.title}</a>,
     className: styles.titleColumn
   },
-  // {
-  //   dataIndex: 'author',
-  //   render: (t, report) => <div className={styles.author}>{report.authorEmail}</div>,
-  //   className: styles.authorColumn
-  // },
+  {
+    dataIndex: 'archivedTitle',
+    render: (t, report) => report.title,
+    className: styles.titleColumn
+  },
+  {
+    dataIndex: 'author',
+    render: (t, report) => <div className={styles.author}>{report.authorEmail}</div>,
+    className: styles.authorColumn
+  },
   {
     dataIndex: 'delete',
     render: (t, report) => <ArchiveButton report={report} />,
@@ -50,14 +56,35 @@ const columns = [
   }
 ]
 
-function Reports ({ reports, createReportButton, archived }) {
-  const [archivedFilter, setArchivedFilter] = useState('active')
-  useEffect(() => {
-    if (archived.length === 0) {
-      setArchivedFilter('active')
+function filterColumns (filter) {
+  return columns.filter(c => filter.includes(c.dataIndex))
+}
+
+function getColumns (reportFilter, archived) {
+  if (reportFilter === 'my') {
+    if (archived) {
+      return filterColumns(['archivedTitle', 'delete'])
     }
-  }, [archived, setArchivedFilter])
-  if (reports.length === 0) {
+    return filterColumns(['title', 'delete'])
+  } else {
+    return filterColumns(['title', 'author'])
+  }
+}
+
+function Reports ({ createReportButton, reportsList }) {
+  const [reportFilter, setReportFilter] = useState('my')
+  const [archived, setArchived] = useState(false)
+  useEffect(() => {
+    if (reportsList.archived.length === 0) {
+      setArchived(false)
+    }
+  }, [reportsList, setArchived])
+  useEffect(() => {
+    if (reportsList.my.length === 0 && reportsList.discoverable.length > 0) {
+      setReportFilter('discoverable')
+    }
+  }, [])
+  if (reportsList.my.length === 0 && reportsList.discoverable.length === 0) {
     return (
       <div className={styles.reports}>
         <Result
@@ -70,25 +97,70 @@ function Reports ({ reports, createReportButton, archived }) {
       </div>
     )
   } else {
+    const dataSource = reportFilter === 'my' ? archived ? reportsList.archived : reportsList.my : reportsList.discoverable
     return (
       <div className={styles.reports}>
         <div className={styles.reportsHeader}>
-          <Radio.Group value={archivedFilter} onChange={(e) => setArchivedFilter(e.target.value)}>
-            <Radio.Button value='active'>Active Reports</Radio.Button>
-            <Radio.Button value='archived' disabled={archived.length === 0}>Archived Reports</Radio.Button>
+          <Radio.Group value={reportFilter} onChange={(e) => setReportFilter(e.target.value)}>
+            <Radio.Button value='my'>My Reports</Radio.Button>
+            <Radio.Button value='discoverable'>Team Reports</Radio.Button>
           </Radio.Group>
+          {
+            reportFilter === 'my' && reportsList.archived.length
+              ? (
+                <div className={styles.archivedSwitch}>
+                  <div className={styles.archivedSwitchLabel}>Archived</div>
+                  <Switch checked={archived} onChange={(checked) => setArchived(checked)} />
+                </div>
+                )
+              : null
+          }
         </div>
-        <Table
-          dataSource={archivedFilter === 'active' ? reports : archived}
-          columns={columns}
-          showHeader={false}
-          rowClassName={styles.reportsRow}
-          pagination={false}
-          rowKey='id'
-        />
+        {dataSource.length
+          ? (
+            <Table
+              dataSource={dataSource}
+              columns={getColumns(reportFilter, archived)}
+              showHeader={false}
+              rowClassName={styles.reportsRow}
+              pagination={false}
+              rowKey='id'
+            />
+            )
+          : reportFilter === 'discoverable'
+            ? (<Onboarding
+              icon={<UsergroupAddOutlined />} title='Team reports enable you to share reports within a team or organization' steps={
+                <ol>
+                  <li>Open the report that you want to share and click on the "Share" button on the top right corner of the page</li>
+                  <li>In a pop-up window select the option to make the report discoverable.</li>
+                  <li>Shared reports will appear in this tab for all users.</li>
+                </ol>
+          }
+               />)
+            : (<Onboarding
+              icon={<FileSearchOutlined />} title='View, manage, and organize the reports that you have created ' steps={
+                <ol>
+                  <li>Click on the "Create Report" button in the top right corner</li>
+                  <li>Save the report and give it a relevant name.</li>
+                  <li>Your report will appear here.</li>
+                </ol>
+          }
+               />)}
       </div>
     )
   }
+}
+
+function Onboarding ({ icon, title, steps }) {
+  return (
+    <div className={styles.onboarding}>
+      <div className={styles.onboardingIcon}>{icon}</div>
+      <div className={styles.onboardingContent}>
+        <div className={styles.onboardingTitle}>{title}</div>
+        <div className={styles.onboardingSteps}>{steps}</div>
+      </div>
+    </div>
+  )
 }
 
 function NewVersion () {
@@ -126,15 +198,14 @@ export default function HomePage () {
   return (
     <div className={styles.homePage}>
       <Header
-        buttons={<div className={styles.headerButtons}>{reportsList.loaded && reportsList.reports.length ? createReportButton : null}</div>}
+        buttons={<div className={styles.headerButtons}>{reportsList.loaded && (reportsList.my.length || reportsList.discoverable.length) ? createReportButton : null}</div>}
       />
       <div className={styles.body}>
         <NewVersion />
         {
           reportsList.loaded
             ? <Reports
-                reports={reportsList.reports}
-                archived={reportsList.archived}
+                reportsList={reportsList}
                 createReportButton={createReportButton}
                 body={body}
               />

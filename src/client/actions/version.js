@@ -11,9 +11,9 @@ export function testVersion () {
         throw new Error(`Fetching releases: ${res.statusMessage}`)
       }
       const releases = await res.json()
-      const validReleases = releases.filter(({ draft, prerelease }) => !draft && !prerelease).filter(({ tag_name }) => {
-        if (tag_name.match(/^v/)) {
-          const releaseVersion = tag_name.slice(1)
+      const validReleases = releases.filter(({ draft, prerelease }) => !draft && !prerelease).filter(({ tag_name: tagName }) => {
+        if (tagName.match(/^v/)) {
+          const releaseVersion = tagName.slice(1)
           if (semver.valid(releaseVersion) && semver.gt(releaseVersion, version)) {
             return true
           }
