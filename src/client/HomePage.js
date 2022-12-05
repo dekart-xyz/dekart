@@ -72,19 +72,20 @@ function getColumns (reportFilter, archived) {
 }
 
 function Reports ({ createReportButton, reportsList }) {
-  const [reportFilter, setReportFilter] = useState('my')
   const [archived, setArchived] = useState(false)
+  const { loaded: envLoaded, authEnabled } = useSelector(state => state.env)
+  const [reportFilter, setReportFilter] = useState(
+    reportsList.my.length === 0 && reportsList.discoverable.length > 0 && authEnabled ? 'discoverable' : 'my'
+  )
   useEffect(() => {
     if (reportsList.archived.length === 0) {
       setArchived(false)
     }
   }, [reportsList, setArchived])
-  useEffect(() => {
-    if (reportsList.my.length === 0 && reportsList.discoverable.length > 0) {
-      setReportFilter('discoverable')
-    }
-  }, [])
-  if (reportsList.my.length === 0 && reportsList.discoverable.length === 0) {
+  if (!envLoaded) {
+    return null
+  }
+  if (reportsList.my.length === 0 && reportsList.discoverable.length === 0 && reportsList.archived.length === 0) {
     return (
       <div className={styles.reports}>
         <Result
@@ -101,10 +102,17 @@ function Reports ({ createReportButton, reportsList }) {
     return (
       <div className={styles.reports}>
         <div className={styles.reportsHeader}>
-          <Radio.Group value={reportFilter} onChange={(e) => setReportFilter(e.target.value)}>
-            <Radio.Button value='my'>My Reports</Radio.Button>
-            <Radio.Button value='discoverable'>Team Reports</Radio.Button>
-          </Radio.Group>
+          {authEnabled
+            ? (
+              <Radio.Group value={reportFilter} onChange={(e) => setReportFilter(e.target.value)}>
+                <Radio.Button value='my'>My Reports</Radio.Button>
+                <Radio.Button value='discoverable'>Team Reports</Radio.Button>
+              </Radio.Group>
+
+              )
+            : (
+              <div className={styles.reportsHeaderTitle}>Manage reports</div>
+              )}
           {
             reportFilter === 'my' && reportsList.archived.length
               ? (

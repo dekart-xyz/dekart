@@ -40,15 +40,11 @@ function AuthTypeTitle ({ authType }) {
 
 export default function ShareButton ({ reportId, discoverable, canWrite }) {
   const [modalOpen, setModalOpen] = useState(false)
-  const env = useSelector(state => state.env)
+  const { loaded: envLoaded, authEnabled, authType } = useSelector(state => state.env)
   const dispatch = useDispatch()
-  // const discoverable = useSelector(state => state.report.discoverable)
-  // const reportId = useSelector(state => state.report.id)
   const [discoverableSwitch, setDiscoverableSwitch] = useState(discoverable)
-  const { REQUIRE_AMAZON_OIDC, REQUIRE_IAP } = env.variables
-  const authEnabled = REQUIRE_AMAZON_OIDC === '1' || REQUIRE_IAP === '1'
 
-  if (!env.loaded) {
+  if (!envLoaded) {
     return null
   }
 
@@ -84,7 +80,7 @@ export default function ShareButton ({ reportId, discoverable, canWrite }) {
                         <div className={styles.reportStatusDetails}>
                           <div className={styles.reportStatusDetailsText}> Everyone with a link and access to <span className={styles.origin}>{window.location.hostname}</span> can view this report</div>
                           <div className={styles.reportAuthStatus}>
-                            <Tooltip title={<AuthTypeTitle authType={REQUIRE_IAP === '1' ? 'IAP' : 'AMAZON_OIDC'} />}>
+                            <Tooltip title={<AuthTypeTitle authType={authType} />}>
                               <span className={styles.authEnabled}>User authorization enabled</span>
                             </Tooltip>
                           </div>

@@ -220,20 +220,22 @@ function reportsList (state = defaultReportsList, action) {
         loaded: true,
         my: action.reportsList.filter(report => !report.archived && report.canWrite),
         archived: action.reportsList.filter(report => report.archived),
-        discoverable: action.reportsList.filter(report => report.discoverable)
+        discoverable: action.reportsList.filter(report => report.discoverable && !report.archived)
       }
     default:
       return state
   }
 }
 
-const defaultEnv = { loaded: false, variables: {} }
+const defaultEnv = { loaded: false, variables: {}, authEnabled: null, authType: 'UNSPECIFIED' }
 function env (state = defaultEnv, action) {
   switch (action.type) {
     case setEnv.name:
       return {
         loaded: true,
-        variables: action.variables
+        variables: action.variables,
+        authEnabled: action.variables.REQUIRE_AMAZON_OIDC === '1' || action.variables.REQUIRE_IAP === '1',
+        authType: action.variables.REQUIRE_IAP === '1' ? 'IAP' : action.variables.REQUIRE_AMAZON_OIDC ? 'AMAZON_OIDC' : 'NONE'
       }
     default:
       return state
