@@ -71,6 +71,51 @@ function getColumns (reportFilter, archived) {
   }
 }
 
+function FirstReportOnboarding ({ createReportButton }) {
+  return (
+    <>
+      <Result
+        status='success'
+        title='You are all set'
+        subTitle='Get ready to create you first map with Dekart'
+        extra={createReportButton}
+      />
+      <DataDocumentationLink />
+    </>
+  )
+}
+
+function ReportsHeader ({ authEnabled, reportFilter, setReportFilter, archived, setArchived, reportsList }) {
+  return (
+    <div className={styles.reportsHeader}>
+      {
+      authEnabled
+        ? (
+          <Radio.Group value={reportFilter} onChange={(e) => setReportFilter(e.target.value)}>
+            <Radio.Button value='my'>My Reports</Radio.Button>
+            <Radio.Button value='discoverable'>Team Reports</Radio.Button>
+          </Radio.Group>
+
+          )
+        : (
+          <div className={styles.reportsHeaderTitle}>Manage reports</div>
+          )
+      }
+      {
+        reportFilter === 'my' && reportsList.archived.length
+          ? (
+            <div className={styles.archivedSwitch}>
+              <div className={styles.archivedSwitchLabel}>Archived</div>
+              <Switch checked={archived} onChange={(checked) => setArchived(checked)} />
+            </div>
+            )
+          : null
+  }
+    </div>
+
+  )
+}
+
 function Reports ({ createReportButton, reportsList }) {
   const [archived, setArchived] = useState(false)
   const { loaded: envLoaded, authEnabled } = useSelector(state => state.env)
@@ -87,43 +132,20 @@ function Reports ({ createReportButton, reportsList }) {
   }
   if (reportsList.my.length === 0 && reportsList.discoverable.length === 0 && reportsList.archived.length === 0) {
     return (
-      <div className={styles.reports}>
-        <Result
-          status='success'
-          title='You are all set'
-          subTitle='Get ready to create you first map with Dekart'
-          extra={createReportButton}
-        />
-        <DataDocumentationLink />
-      </div>
+      <div className={styles.reports}><FirstReportOnboarding createReportButton={createReportButton} /></div>
     )
   } else {
     const dataSource = reportFilter === 'my' ? archived ? reportsList.archived : reportsList.my : reportsList.discoverable
     return (
       <div className={styles.reports}>
-        <div className={styles.reportsHeader}>
-          {authEnabled
-            ? (
-              <Radio.Group value={reportFilter} onChange={(e) => setReportFilter(e.target.value)}>
-                <Radio.Button value='my'>My Reports</Radio.Button>
-                <Radio.Button value='discoverable'>Team Reports</Radio.Button>
-              </Radio.Group>
-
-              )
-            : (
-              <div className={styles.reportsHeaderTitle}>Manage reports</div>
-              )}
-          {
-            reportFilter === 'my' && reportsList.archived.length
-              ? (
-                <div className={styles.archivedSwitch}>
-                  <div className={styles.archivedSwitchLabel}>Archived</div>
-                  <Switch checked={archived} onChange={(checked) => setArchived(checked)} />
-                </div>
-                )
-              : null
-          }
-        </div>
+        <ReportsHeader
+          authEnabled={authEnabled}
+          reportFilter={reportFilter}
+          setReportFilter={setReportFilter}
+          archived={archived}
+          setArchived={setArchived}
+          reportsList={reportsList}
+        />
         {dataSource.length
           ? (
             <Table
@@ -136,27 +158,41 @@ function Reports ({ createReportButton, reportsList }) {
             />
             )
           : reportFilter === 'discoverable'
-            ? (<Onboarding
-              icon={<UsergroupAddOutlined />} title='Team reports enable you to share reports within a team or organization' steps={
-                <ol>
-                  <li>Open the report that you want to share and click on the "Share" button on the top right corner of the page</li>
-                  <li>In a pop-up window select the option to make the report discoverable.</li>
-                  <li>Shared reports will appear in this tab for all users.</li>
-                </ol>
-          }
-               />)
-            : (<Onboarding
-              icon={<FileSearchOutlined />} title='View, manage, and organize the reports that you have created ' steps={
-                <ol>
-                  <li>Click on the "Create Report" button in the top right corner</li>
-                  <li>Save the report and give it a relevant name.</li>
-                  <li>Your report will appear here.</li>
-                </ol>
-          }
-               />)}
+            ? (<OnboardingDiscoverableReports />)
+            : (<OnboardingMyReports />)}
       </div>
     )
   }
+}
+
+function OnboardingMyReports () {
+  return (
+    <Onboarding
+      icon={<FileSearchOutlined />} title='View, manage, and organize the reports that you have created ' steps={
+        <ol>
+          <li>Click on the "Create Report" button in the top right corner</li>
+          <li>Save the report and give it a relevant name.</li>
+          <li>Your report will appear here.</li>
+        </ol>
+          }
+    />
+  )
+}
+
+function OnboardingDiscoverableReports () {
+  return (
+    <Onboarding
+      icon={<UsergroupAddOutlined />}
+      title='Team reports enable you to share reports within a team or organization'
+      steps={
+        <ol>
+          <li>Open the report that you want to share and click on the "Share" button on the top right corner of the page</li>
+          <li>In a pop-up window select the option to make the report discoverable.</li>
+          <li>Shared reports will appear in this tab for all users.</li>
+        </ol>
+            }
+    />
+  )
 }
 
 function Onboarding ({ icon, title, steps }) {

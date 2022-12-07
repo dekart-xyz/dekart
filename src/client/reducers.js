@@ -214,7 +214,6 @@ function reportsList (state = defaultReportsList, action) {
     case unsubscribeReports.name:
       return defaultReportsList
     case reportsListUpdate.name:
-      console.log('reportsListUpdate', action)
       return {
         ...state,
         loaded: true,

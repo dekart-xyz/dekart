@@ -3,7 +3,7 @@ import styles from './ReportHeaderButtons.module.css'
 import Button from 'antd/es/button'
 import { saveMap, forkReport } from './actions'
 import { FundProjectionScreenOutlined, EditOutlined, ConsoleSqlOutlined, ForkOutlined } from '@ant-design/icons'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import ShareButton from './ShareButton'
 
 function ForkButton ({ reportId, disabled, primary }) {
@@ -30,49 +30,54 @@ function ForkButton ({ reportId, disabled, primary }) {
   )
 }
 
-export default function ReportHeaderButtons ({ edit, changed, canSave, reportId, canWrite, discoverable }) {
+function EditModeButtons ({ changed }) {
   const dispatch = useDispatch()
   const history = useHistory()
-  if (edit) {
-    return (
-      <div className={styles.reportHeaderButtons}>
-        <Button
-          type='text'
-          icon={<FundProjectionScreenOutlined />}
-          disabled={changed && canWrite}
-          title='Present Mode'
-          onClick={() => history.replace(`/reports/${reportId}`)}
-        />
-        {canWrite
-          ? (
-            <>
-              <ForkButton reportId={reportId} disabled={!canSave} />
-              <Button
-                ghost
-                disabled={!canSave}
-                onClick={() => dispatch(saveMap())}
-              >Save{changed ? '*' : ''}
-              </Button>
-            </>
-            )
-          : <ForkButton reportId={reportId} disabled={!canSave} />}
-        <ShareButton reportId={reportId} discoverable={discoverable} canWrite={canWrite} />
-        {/* <CopyLinkButton /> */}
-      </div>
-    )
-  }
+  const { id, discoverable, canWrite } = useSelector(state => state.report)
+  const { canSave } = useSelector(state => state.reportStatus)
+
+  return (
+    <div className={styles.reportHeaderButtons}>
+      <Button
+        type='text'
+        icon={<FundProjectionScreenOutlined />}
+        disabled={changed && canWrite}
+        title='Present Mode'
+        onClick={() => history.replace(`/reports/${id}`)}
+      />
+      {canWrite
+        ? (
+          <>
+            <ForkButton reportId={id} disabled={!canSave} />
+            <Button
+              ghost
+              disabled={!canSave}
+              onClick={() => dispatch(saveMap())}
+            >Save{changed ? '*' : ''}
+            </Button>
+          </>
+          )
+        : <ForkButton reportId={id} disabled={!canSave} />}
+      <ShareButton reportId={id} discoverable={discoverable} canWrite={canWrite} />
+    </div>
+  )
+}
+
+function ViewModeButtons () {
+  const history = useHistory()
+  const { id, canWrite } = useSelector(state => state.report)
+  const { canSave } = useSelector(state => state.reportStatus)
   if (canWrite) {
     return (
       <div className={styles.reportHeaderButtons}>
-        <ForkButton reportId={reportId} disabled={!canSave} />
+        <ForkButton reportId={id} disabled={!canSave} />
         <Button
           type='primary'
           disabled={!canWrite}
           icon={<EditOutlined />}
-          onClick={() => history.replace(`/reports/${reportId}/source`)}
+          onClick={() => history.replace(`/reports/${id}/source`)}
         >Edit
         </Button>
-        {/* <CopyLinkButton /> */}
       </div>
     )
   }
@@ -81,11 +86,17 @@ export default function ReportHeaderButtons ({ edit, changed, canSave, reportId,
       <Button
         type='text'
         icon={<ConsoleSqlOutlined />}
-        onClick={() => history.replace(`/reports/${reportId}/source`)}
+        onClick={() => history.replace(`/reports/${id}/source`)}
         title='View SQL source'
       />
-      <ForkButton reportId={reportId} primary disabled={!canSave} />
-      {/* <CopyLinkButton /> */}
+      <ForkButton reportId={id} primary disabled={!canSave} />
     </div>
   )
+}
+
+export default function ReportHeaderButtons ({ edit, changed }) {
+  if (edit) {
+    return <EditModeButtons changed={changed} />
+  }
+  return <ViewModeButtons />
 }
