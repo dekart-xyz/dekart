@@ -24,12 +24,14 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/pkgerrors"
 )
 
 func configureLogger() {
 	rand.Seed(time.Now().UnixNano())
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	zerolog.ErrorStackFieldName = "stacktrace"
+	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 
 	pretty := os.Getenv("DEKART_LOG_PRETTY")
 	if pretty != "" {
