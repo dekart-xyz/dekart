@@ -3,6 +3,46 @@
 
 import * as jspb from "google-protobuf";
 
+export class SetDiscoverableRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  getDiscoverable(): boolean;
+  setDiscoverable(value: boolean): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): SetDiscoverableRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: SetDiscoverableRequest): SetDiscoverableRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: SetDiscoverableRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): SetDiscoverableRequest;
+  static deserializeBinaryFromReader(message: SetDiscoverableRequest, reader: jspb.BinaryReader): SetDiscoverableRequest;
+}
+
+export namespace SetDiscoverableRequest {
+  export type AsObject = {
+    reportId: string,
+    discoverable: boolean,
+  }
+}
+
+export class SetDiscoverableResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): SetDiscoverableResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: SetDiscoverableResponse): SetDiscoverableResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: SetDiscoverableResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): SetDiscoverableResponse;
+  static deserializeBinaryFromReader(message: SetDiscoverableResponse, reader: jspb.BinaryReader): SetDiscoverableResponse;
+}
+
+export namespace SetDiscoverableResponse {
+  export type AsObject = {
+  }
+}
+
 export class RemoveDatasetRequest extends jspb.Message {
   getDatasetId(): string;
   setDatasetId(value: string): void;
@@ -131,6 +171,8 @@ export namespace GetEnvResponse {
       TYPE_ALLOW_FILE_UPLOAD: 4;
       TYPE_DATASOURCE: 5;
       TYPE_STORAGE: 6;
+      TYPE_REQUIRE_AMAZON_OIDC: 7;
+      TYPE_REQUIRE_IAP: 8;
     }
 
     export const Type: TypeMap;
@@ -243,6 +285,12 @@ export class Report extends jspb.Message {
   getCanWrite(): boolean;
   setCanWrite(value: boolean): void;
 
+  getAuthorEmail(): string;
+  setAuthorEmail(value: string): void;
+
+  getDiscoverable(): boolean;
+  setDiscoverable(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Report.AsObject;
   static toObject(includeInstance: boolean, msg: Report): Report.AsObject;
@@ -260,6 +308,8 @@ export namespace Report {
     title: string,
     archived: boolean,
     canWrite: boolean,
+    authorEmail: string,
+    discoverable: boolean,
   }
 }
 

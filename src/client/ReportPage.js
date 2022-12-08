@@ -269,15 +269,13 @@ export default function ReportPage ({ edit }) {
       <Header
         title={(<Title />)}
         buttons={(<ReportHeaderButtons
-          reportId={id}
-          canWrite={report.canWrite}
           changed={mapChanged || titleChanged || queryChanged}
-          canSave={reportStatus.canSave}
           edit={edit}
                   />)}
       />
       <div className={styles.body}>
         <Kepler />
+        {report.authorEmail !== 'UNKNOWN_EMAIL' ? <div className={styles.author}>Author: {report.authorEmail}</div> : null}
         {edit ? <DatasetSection reportId={id} /> : null}
       </div>
     </div>

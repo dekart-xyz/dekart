@@ -21,8 +21,11 @@
 }
 
 .deleteColumn {
-    padding-top: 0!important;
-    padding-bottom: 0!important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    width: 300px;
+    text-align: right;
+
 }
 
 .reportsRow .deleteButton {
@@ -37,14 +40,15 @@
 
 .titleColumn {
     width: 600px;
-    padding-top: 10px!important;
-    padding-bottom: 10px!important;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
 }
 
 .reports {
     display: flex;
     flex-direction: column;
     align-items: center;
+    width: 900px;
 }
 
 .headerButtons {
@@ -53,8 +57,23 @@
     justify-content: flex-end;
 }
 
-.reportsHeader{
+.reportsHeader {
+    flex: 1;
+    width: 100%;
     margin-bottom: 20px;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.archivedSwitchLabel {
+    margin-right: 10px;
+}
+
+.archivedSwitch {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
 }
 
 .newReleaseTitle {
@@ -63,17 +82,63 @@
 }
 
 .newReleaseIcon {
-    color: #57B7D3!important;
+    color: #57B7D3 !important;
     font-size: 42px;
     position: absolute;
     left: 20px;
 }
+
+.authorColumn {
+    font-size: 0.9em;
+    opacity: 0.7;
+    width: 300px;
+    text-align: right;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
 .newRelease {
     background-color: white;
-    width: 712px;
+    width: 900px;
     padding: 20px;
-    padding-left:  82px;
+    padding-left: 82px;
     margin-bottom: 40px;
     position: relative;
     box-shadow: 0 5px 9px -1px #B1EDFF;
+}
+
+.onboarding {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    margin-top: 20px;
+    background-color: white;
+    padding: 20px;
+    border: 1px solid #F0F0F0;
+}
+
+.onboardingIcon {
+    font-size: 42px;
+    color: white;
+    background-color: #349DFE;
+    border-radius: 50%;
+    width: 70px;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 20px;
+}
+
+.onboardingSteps {
+    opacity: 0.7;
+}
+
+.onboardingTitle {
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+.reportsHeaderTitle {
+    font-size: 24px;
 }

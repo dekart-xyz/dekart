@@ -112,9 +112,12 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 		`select
 			id,
 			case when title is null then 'Untitled' else title end as title,
-			archived
+			archived,
+			author_email = $1 as can_write,
+			author_email,
+			discoverable
 		from reports
-		where author_email=$1
+		where author_email=$1 or (discoverable=true and archived=false)
 		order by updated_at desc`,
 		claims.Email,
 	)
@@ -135,6 +138,9 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			&report.Id,
 			&report.Title,
 			&report.Archived,
+			&report.CanWrite,
+			&report.AuthorEmail,
+			&report.Discoverable,
 		)
 		if err != nil {
 			log.Err(err).Send()

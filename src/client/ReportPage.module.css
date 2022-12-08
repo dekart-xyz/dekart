@@ -56,8 +56,21 @@
 
 .body {
     display: flex;
+    position: relative;
     flex-direction: row;
     flex: 1;
+}
+
+.author {
+    position: absolute;
+    height: 30px;
+    bottom: 0px;
+    left: 20px;
+    color: #6C7483;
+    font-size: 0.8em;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .tabs {
