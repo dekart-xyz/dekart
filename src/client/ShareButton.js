@@ -38,8 +38,7 @@ function AuthTypeTitle ({ authType }) {
   )
 }
 
-export default function ShareButton ({ reportId, discoverable, canWrite }) {
-  const [modalOpen, setModalOpen] = useState(false)
+function ModalContent ({ reportId, discoverable, canWrite }) {
   const { loaded: envLoaded, authEnabled, authType } = useSelector(state => state.env)
   const dispatch = useDispatch()
   const [discoverableSwitch, setDiscoverableSwitch] = useState(discoverable)
@@ -47,6 +46,55 @@ export default function ShareButton ({ reportId, discoverable, canWrite }) {
   if (!envLoaded) {
     return null
   }
+
+  if (authEnabled) {
+    return (
+      <>
+        <div className={styles.reportStatus}>
+          <div className={styles.reportStatusIcon}><LockOutlined /></div>
+          <div className={styles.reportStatusDetails}>
+            <div className={styles.reportStatusDetailsText}> Everyone with a link and access to <span className={styles.origin}>{window.location.hostname}</span> can view this report</div>
+            <div className={styles.reportAuthStatus}>
+              <Tooltip title={<AuthTypeTitle authType={authType} />}>
+                <span className={styles.authEnabled}>User authorization enabled</span>
+              </Tooltip>
+            </div>
+          </div>
+        </div>
+        {canWrite
+          ? (
+            <div className={styles.discoverableStatus}>
+              <div className={styles.discoverableStatusIcon}><FileSearchOutlined /></div>
+              <div className={styles.discoverableStatusLabel}>Make report discoverable by all users of <span className={styles.origin}>{window.location.hostname}</span> in Team Reports</div>
+              <div className={styles.discoverableStatusControl}>
+                <Switch
+                  checked={discoverable}
+                  onChange={(checked) => {
+                    setDiscoverableSwitch(checked)
+                    dispatch(setDiscoverable(reportId, checked))
+                  }}
+                  loading={discoverableSwitch !== discoverable}
+                />
+              </div>
+            </div>
+            )
+          : null}
+      </>
+    )
+  }
+
+  return (
+    <div className={styles.reportStatus}>
+      <div className={styles.reportStatusIcon}><InfoCircleOutlined /></div>
+      <div className={styles.reportStatusDetails}>
+        <div className={styles.reportStatusDetailsText}> Everyone with access to <span className={styles.origin}>{window.location.hostname}</span> can edit this report</div>
+      </div>
+    </div>
+  )
+}
+
+export default function ShareButton ({ reportId, discoverable, canWrite }) {
+  const [modalOpen, setModalOpen] = useState(false)
 
   return (
     <>
@@ -71,51 +119,7 @@ export default function ShareButton ({ reportId, discoverable, canWrite }) {
           </div>
       }
       >
-        {
-                authEnabled
-                  ? (
-                    <>
-                      <div className={styles.reportStatus}>
-                        <div className={styles.reportStatusIcon}><LockOutlined /></div>
-                        <div className={styles.reportStatusDetails}>
-                          <div className={styles.reportStatusDetailsText}> Everyone with a link and access to <span className={styles.origin}>{window.location.hostname}</span> can view this report</div>
-                          <div className={styles.reportAuthStatus}>
-                            <Tooltip title={<AuthTypeTitle authType={authType} />}>
-                              <span className={styles.authEnabled}>User authorization enabled</span>
-                            </Tooltip>
-                          </div>
-                        </div>
-                      </div>
-                      {canWrite
-                        ? (
-                          <div className={styles.discoverableStatus}>
-                            <div className={styles.discoverableStatusIcon}><FileSearchOutlined /></div>
-                            <div className={styles.discoverableStatusLabel}>Make report discoverable by all users of <span className={styles.origin}>{window.location.hostname}</span> in Team Reports</div>
-                            <div className={styles.discoverableStatusControl}>
-                              <Switch
-                                checked={discoverable}
-                                onChange={(checked) => {
-                                  setDiscoverableSwitch(checked)
-                                  dispatch(setDiscoverable(reportId, checked))
-                                }}
-                                loading={discoverableSwitch !== discoverable}
-                              />
-                            </div>
-                          </div>
-                          )
-                        : null}
-                    </>
-                    )
-                  : (
-                    <>
-                      <div className={styles.reportStatus}>
-                        <div className={styles.reportStatusIcon}><InfoCircleOutlined /></div>
-                        <div className={styles.reportStatusDetails}>
-                          <div className={styles.reportStatusDetailsText}> Everyone with access to <span className={styles.origin}>{window.location.hostname}</span> can edit this report</div>
-                        </div>
-                      </div>
-                    </>)
-                  }
+        <ModalContent reportId={reportId} discoverable={discoverable} canWrite={canWrite} />
       </Modal>
     </>
   )
