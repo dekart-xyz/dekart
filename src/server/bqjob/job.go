@@ -1,9 +1,7 @@
 package bqjob
 
 import (
-	"dekart/src/proto"
-	"dekart/src/server/job"
-	"dekart/src/server/storage"
+	"context"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -11,7 +9,9 @@ import (
 	"reflect"
 	"regexp"
 
-	"context"
+	"dekart/src/proto"
+	"dekart/src/server/job"
+	"dekart/src/server/storage"
 
 	"cloud.google.com/go/bigquery"
 	"google.golang.org/api/googleapi"
@@ -62,6 +62,10 @@ func (job *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 }
 
 func (job *Job) setJobStats(queryStatus *bigquery.JobStatus, table *bigquery.Table) error {
+	if table == nil {
+		return fmt.Errorf("table is nil")
+	}
+
 	tableMetadata, err := table.Metadata(job.GetCtx())
 	if err != nil {
 		return err
@@ -127,6 +131,12 @@ func (job *Job) getResultTable() (*bigquery.Table, error) {
 		job.Logger.Error().Err(err).Str("jobConfig", fmt.Sprintf("%v+", jobConfig)).Send()
 		return nil, err
 	}
+	if table == nil {
+		err := fmt.Errorf("destination table is nil")
+		job.Logger.Error().Err(err).Str("jobConfig", fmt.Sprintf("%v+", jobConfig)).Send()
+		return nil, err
+	}
+
 	return table, nil
 }
 
