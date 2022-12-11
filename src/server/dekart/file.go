@@ -144,7 +144,6 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	defer file.Close()
 	fileSourceID := newUUID()
 
 	_, err = s.db.ExecContext(ctx,
@@ -158,6 +157,8 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Err(err).Send()
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		file.Close()
+		return
 	}
 	go s.moveFileToStorage(fileSourceID, fileExtension, file, reportIds)
 	s.reportStreams.PingAll(reportIds)
