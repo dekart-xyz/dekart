@@ -3,7 +3,7 @@
   "version": "0.11.0-rc.3",
   "private": true,
   "dependencies": {
-    "@dekart-xyz/kepler.gl": "2.5.1-fix.2",
+    "@dekart-xyz/kepler.gl": "2.5.5-fix.0",
     "@improbable-eng/grpc-web": "^0.13.0",
     "@testing-library/jest-dom": "^5.11.6",
     "@testing-library/react": "^11.2.2",
@@ -20,6 +20,8 @@
     "react": "^17.0.1",
     "react-ace": "^9.2.1",
     "react-dom": "^17.0.1",
+    "react-palm": "^3.3.7",
+    "react-redux": "^7.1.3",
     "react-router-dom": "^5.2.0",
     "react-scripts": "^4.0.3",
     "react-virtualized": "^9.22.3",
