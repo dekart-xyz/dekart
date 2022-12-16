@@ -51,7 +51,6 @@
     min-width: 100px;
     text-align: center;
     position: relative;
-    /* flex: 1px; */
 }
 
 .body {
@@ -94,7 +93,6 @@
 }
 
 .datasetSection {
-    /* width: 500px; */
     min-width: 500px;
     height: 100%;
     display: flex;
@@ -162,11 +160,6 @@
 .query {
     display: none;
 }
-
-/* .activeDataset {
-    flex: 1;
-    display: flex;
-} */
 
 .keplerError {
     color: white;
