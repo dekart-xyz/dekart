@@ -16,6 +16,7 @@ import { Header } from './Header'
 import ReportHeaderButtons from './ReportHeaderButtons'
 import Downloading from './Downloading'
 import Dataset from './Dataset'
+import { Resizable } from 're-resizable'
 
 function TabIcon ({ query }) {
   let iconColor = 'transparent'
@@ -97,22 +98,27 @@ function DatasetSection ({ reportId }) {
   if (activeDataset) {
     const closable = datasets.length > 1 && canWrite
     return (
-      <div className={styles.datasetSection}>
-        <div className={styles.tabs}>
-          <Tabs
-            type='editable-card'
-            activeKey={activeDataset.id}
-            onChange={(datasetId) => dispatch(setActiveDataset(datasetId))}
-            hideAdd={!canWrite}
-            onEdit={getOnTabEditHandler(dispatch, reportId)}
-          >
-            {datasets.map((dataset) => getTabPane(dataset, closable, queries, files, queryStatus))}
-          </Tabs>
+      <Resizable
+        enable={{ top: false, right: false, bottom: false, left: true, topRight: false, bottomRight: false, bottomLeft: false, topLeft: false }}
+        className={styles.resizable}
+      >
+        <div className={styles.datasetSectionWrapper}>
+          <div className={styles.datasetSection}>
+            <div className={styles.tabs}>
+              <Tabs
+                type='editable-card'
+                activeKey={activeDataset.id}
+                onChange={(datasetId) => dispatch(setActiveDataset(datasetId))}
+                hideAdd={!canWrite}
+                onEdit={getOnTabEditHandler(dispatch, reportId)}
+              >
+                {datasets.map((dataset) => getTabPane(dataset, closable, queries, files, queryStatus))}
+              </Tabs>
+            </div>
+            <Dataset dataset={activeDataset} />
+          </div>
         </div>
-        <Dataset dataset={activeDataset} />
-        {/* {activeDataset.queryId ? <Query query={activeDataset} key={activeDataset.id} /> : null} */}
-        {/* {<Query query={activeDataset} key={activeDataset.id} />} */}
-      </div>
+      </Resizable>
     )
   } else {
     return null

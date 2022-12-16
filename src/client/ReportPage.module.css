@@ -82,8 +82,21 @@
     margin-bottom: 0 !important;
 }
 
+.resizable {
+    width: min(40%, 500px);
+    max-width: calc(100% - 400px);
+    padding-left: 0px;
+}
+
+.datasetSectionWrapper {
+    overflow: hidden;
+    height: 100%;
+}
+
 .datasetSection {
-    width: 500px;
+    /* width: 500px; */
+    min-width: 500px;
+    height: 100%;
     display: flex;
     flex-direction: column;
 }

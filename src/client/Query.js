@@ -29,7 +29,7 @@ function CancelButton ({ query }) {
 }
 function ShowDataTable ({ query }) {
   const dispatch = useDispatch()
-  const { downloadingResults } = useSelector(state => state.queryStatus[query.id])
+  const { downloadingResults, datasetId } = useSelector(state => state.queryStatus[query.id])
   if (downloadingResults) {
     return null
   }
@@ -37,7 +37,7 @@ function ShowDataTable ({ query }) {
     <Button
       size='small'
       type='ghost'
-      onClick={() => dispatch(showDataTable(query))}
+      onClick={() => dispatch(showDataTable(datasetId))}
     >Show Table
     </Button>
   )
