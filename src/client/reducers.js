@@ -115,11 +115,11 @@ function reportStatus (state = defaultReportStatus, action) {
   }
 }
 function queryStatus (state = {}, action) {
-  let queryId
   switch (action.type) {
     case KeplerActionTypes.ADD_DATA_TO_MAP:
       if (action.payload.datasets && action.payload.datasets.info) {
-        queryId = action.payload.datasets.info.id
+        const datasetId = action.payload.datasets.info.id
+        const queryId = Object.keys(state).find((queryId) => datasetId === state[queryId].datasetId)
         return {
           ...state,
           [queryId]: {
@@ -135,7 +135,8 @@ function queryStatus (state = {}, action) {
             ...state,
             [action.dataset.queryId]: {
               ...state[action.dataset.queryId],
-              downloadingResults: true
+              downloadingResults: true,
+              datasetId: action.dataset.id
             }
           }
         : state
