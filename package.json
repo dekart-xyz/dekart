@@ -1,6 +1,6 @@
 {
   "name": "dekart",
-  "version": "0.11.0-rc.5",
+  "version": "0.11.0-rc.6",
   "private": true,
   "dependencies": {
     "@dekart-xyz/kepler.gl": "2.5.5-fix.0",
