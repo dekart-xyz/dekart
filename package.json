@@ -63,6 +63,21 @@
     "standard": "^17.0.0"
   },
   "overrides": {
+    "@deck.gl/aggregation-layers": "8.6.5",
+    "@deck.gl/core": "8.6.5",
+    "@deck.gl/extensions": "8.6.5",
+    "@deck.gl/geo-layers": "8.6.5",
+    "@deck.gl/layers": "8.6.5",
+    "@deck.gl/mesh-layers": "8.6.5",
+    "@deck.gl/react": "8.6.5",
+    "deck.gl": "8.6.5",
+    "@luma.gl/shadertools": "8.5.10",
+    "@luma.gl/core": "8.5.10",
+    "@luma.gl/experimental": "8.5.10",
+    "@luma.gl/constants": "8.5.10",
+    "@luma.gl/engine": "8.5.10",
+    "@luma.gl/gltools": "8.5.10",
+    "@luma.gl/webgl": "8.5.10",
     "react-dev-utils": {
       "immer": "$immer"
     }
