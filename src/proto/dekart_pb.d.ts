@@ -3,6 +3,54 @@
 
 import * as jspb from "google-protobuf";
 
+export class GetUsageRequest extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetUsageRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: GetUsageRequest): GetUsageRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetUsageRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetUsageRequest;
+  static deserializeBinaryFromReader(message: GetUsageRequest, reader: jspb.BinaryReader): GetUsageRequest;
+}
+
+export namespace GetUsageRequest {
+  export type AsObject = {
+  }
+}
+
+export class GetUsageResponse extends jspb.Message {
+  getTotalReports(): number;
+  setTotalReports(value: number): void;
+
+  getTotalQueries(): number;
+  setTotalQueries(value: number): void;
+
+  getTotalFiles(): number;
+  setTotalFiles(value: number): void;
+
+  getTotalAuthors(): number;
+  setTotalAuthors(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetUsageResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: GetUsageResponse): GetUsageResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetUsageResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetUsageResponse;
+  static deserializeBinaryFromReader(message: GetUsageResponse, reader: jspb.BinaryReader): GetUsageResponse;
+}
+
+export namespace GetUsageResponse {
+  export type AsObject = {
+    totalReports: number,
+    totalQueries: number,
+    totalFiles: number,
+    totalAuthors: number,
+  }
+}
+
 export class SetDiscoverableRequest extends jspb.Message {
   getReportId(): string;
   setReportId(value: string): void;

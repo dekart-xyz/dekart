@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import Query from './Query'
 import { createQuery, createFile } from './actions'
 import File from './File'
+import { getDatasourceMeta } from './lib/datasource'
 
 function DatasetSelector ({ dataset }) {
   const dispatch = useDispatch()
@@ -11,17 +12,7 @@ function DatasetSelector ({ dataset }) {
   if (!env.loaded) {
     return null
   }
-  let datasource = ''
-  switch (env.variables.DATASOURCE) {
-    case 'BQ':
-      datasource = 'BigQuery'
-      break
-    case 'ATHENA':
-      datasource = 'Athena'
-      break
-    default:
-      datasource = 'Unknown'
-  }
+  const datasource = getDatasourceMeta(env.variables.DATASOURCE).name
   const { ALLOW_FILE_UPLOAD } = env.variables
   if (!ALLOW_FILE_UPLOAD) {
     return null

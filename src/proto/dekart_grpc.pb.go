@@ -41,6 +41,8 @@ type DekartClient interface {
 	// streams
 	GetReportStream(ctx context.Context, in *ReportStreamRequest, opts ...grpc.CallOption) (Dekart_GetReportStreamClient, error)
 	GetReportListStream(ctx context.Context, in *ReportListRequest, opts ...grpc.CallOption) (Dekart_GetReportListStreamClient, error)
+	//statistics
+	GetUsage(ctx context.Context, in *GetUsageRequest, opts ...grpc.CallOption) (*GetUsageResponse, error)
 }
 
 type dekartClient struct {
@@ -223,6 +225,15 @@ func (x *dekartGetReportListStreamClient) Recv() (*ReportListResponse, error) {
 	return m, nil
 }
 
+func (c *dekartClient) GetUsage(ctx context.Context, in *GetUsageRequest, opts ...grpc.CallOption) (*GetUsageResponse, error) {
+	out := new(GetUsageResponse)
+	err := c.cc.Invoke(ctx, "/Dekart/GetUsage", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DekartServer is the server API for Dekart service.
 // All implementations must embed UnimplementedDekartServer
 // for forward compatibility
@@ -246,6 +257,8 @@ type DekartServer interface {
 	// streams
 	GetReportStream(*ReportStreamRequest, Dekart_GetReportStreamServer) error
 	GetReportListStream(*ReportListRequest, Dekart_GetReportListStreamServer) error
+	//statistics
+	GetUsage(context.Context, *GetUsageRequest) (*GetUsageResponse, error)
 	mustEmbedUnimplementedDekartServer()
 }
 
@@ -294,6 +307,9 @@ func (UnimplementedDekartServer) GetReportStream(*ReportStreamRequest, Dekart_Ge
 }
 func (UnimplementedDekartServer) GetReportListStream(*ReportListRequest, Dekart_GetReportListStreamServer) error {
 	return status.Errorf(codes.Unimplemented, "method GetReportListStream not implemented")
+}
+func (UnimplementedDekartServer) GetUsage(context.Context, *GetUsageRequest) (*GetUsageResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUsage not implemented")
 }
 func (UnimplementedDekartServer) mustEmbedUnimplementedDekartServer() {}
 
@@ -566,6 +582,24 @@ func (x *dekartGetReportListStreamServer) Send(m *ReportListResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _Dekart_GetUsage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUsageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).GetUsage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Dekart/GetUsage",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).GetUsage(ctx, req.(*GetUsageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Dekart_ServiceDesc is the grpc.ServiceDesc for Dekart service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -620,6 +654,10 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetEnv",
 			Handler:    _Dekart_GetEnv_Handler,
+		},
+		{
+			MethodName: "GetUsage",
+			Handler:    _Dekart_GetUsage_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

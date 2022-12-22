@@ -12,6 +12,7 @@ import { QuestionOutlined, WarningOutlined } from '@ant-design/icons'
 import Result from 'antd/es/result'
 import { useSelector, useDispatch } from 'react-redux'
 import { getEnv } from './actions'
+import { getUsage } from './actions/usage'
 
 function AppRedirect () {
   const httpErrorStatus = useSelector(state => state.httpErrorStatus)
@@ -35,12 +36,17 @@ function RedirectToSource () {
 
 export default function App () {
   const env = useSelector(state => state.env)
+  const usage = useSelector(state => state.usage)
   const dispatch = useDispatch()
   useEffect(() => {
     if (!env.loaded) {
       dispatch(getEnv())
     }
+    if (!usage.loaded) {
+      dispatch(getUsage())
+    }
   })
+  console.log(usage)
   return (
     <Router>
       <Switch>

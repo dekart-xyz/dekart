@@ -136,6 +136,15 @@ Dekart.GetReportListStream = {
   responseType: proto_dekart_pb.ReportListResponse
 };
 
+Dekart.GetUsage = {
+  methodName: "GetUsage",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.GetUsageRequest,
+  responseType: proto_dekart_pb.GetUsageResponse
+};
+
 exports.Dekart = Dekart;
 
 function DekartClient(serviceHost, options) {
@@ -588,6 +597,37 @@ DekartClient.prototype.getReportListStream = function getReportListStream(reques
     },
     cancel: function () {
       listeners = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.getUsage = function getUsage(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.GetUsage, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
       client.close();
     }
   };

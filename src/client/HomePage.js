@@ -209,12 +209,14 @@ function Onboarding ({ icon, title, steps }) {
 
 function NewVersion () {
   const release = useSelector(state => state.release)
+  const env = useSelector(state => state.env)
+  const usage = useSelector(state => state.usage)
   const dispatch = useDispatch()
   useEffect(() => {
     dispatch(testVersion())
   }, [dispatch])
   if (release) {
-    const ref = getRef()
+    const ref = getRef(env, usage)
     return (
       <div className={styles.newRelease}>
         <GiftOutlined className={styles.newReleaseIcon} />

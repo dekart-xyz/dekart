@@ -3,6 +3,7 @@ import keplerGlReducer from '@dekart-xyz/kepler.gl/dist/reducers'
 import { ActionTypes as KeplerActionTypes } from '@dekart-xyz/kepler.gl/dist/actions'
 import { openReport, reportTitleChange, reportUpdate, saveMap, reportsListUpdate, unsubscribeReports, streamError, httpError, newReport, setEnv, forkReport, newForkedReport, downloading, finishDownloading, setActiveDataset, queryChanged, newRelease, querySource, uploadFile, uploadFileProgress, uploadFileStateChange, downloadDataset } from './actions'
 import { Query } from '../proto/dekart_pb'
+import { setUsage } from './actions/usage'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
   uiState: {
@@ -227,6 +228,19 @@ function reportsList (state = defaultReportsList, action) {
   }
 }
 
+const defaultUsage = { loaded: false, stats: null }
+function usage (state = defaultUsage, action) {
+  switch (action.type) {
+    case setUsage.name:
+      return {
+        loaded: true,
+        stats: action.stats
+      }
+    default:
+      return state
+  }
+}
+
 const defaultEnv = { loaded: false, variables: {}, authEnabled: null, authType: 'UNSPECIFIED' }
 function env (state = defaultEnv, action) {
   switch (action.type) {
@@ -342,5 +356,6 @@ export default combineReducers({
   release,
   datasets,
   files,
-  fileUploadStatus
+  fileUploadStatus,
+  usage
 })

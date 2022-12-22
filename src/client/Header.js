@@ -5,9 +5,10 @@ import { getRef } from './lib/ref'
 
 export function Header ({ buttons, title }) {
   const env = useSelector(state => state.env)
+  const usage = useSelector(state => state.usage)
   let homePage
   if (env.loaded) {
-    homePage = env.variables.UX_HOMEPAGE + '?ref=' + getRef()
+    homePage = env.variables.UX_HOMEPAGE + '?ref=' + getRef(env, usage)
   }
   return (
     <div className={styles.header}>
