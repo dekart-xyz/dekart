@@ -13,7 +13,6 @@ function getHostname (location) {
 }
 
 function getStats (env, usage) {
-  console.log(usage)
   return [
     getDatasourceMeta(env.variables.DATASOURCE).usageStatsId,
     usage.stats.totalReports,
@@ -26,6 +25,9 @@ function getStats (env, usage) {
 export function getRef (env, usage, location = window.location, v = version) {
   if (!env.loaded || !usage.loaded) {
     return 'dekart-unknown'
+  }
+  if (env.variables.DISABLE_USAGE_STATS === '1') {
+    return 'dekart-stats-disabled'
   }
   return `dekart-${v}-${getHostname(location)}-${getStats(env, usage)}`
 }

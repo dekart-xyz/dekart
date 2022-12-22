@@ -221,6 +221,7 @@ export namespace GetEnvResponse {
       TYPE_STORAGE: 6;
       TYPE_REQUIRE_AMAZON_OIDC: 7;
       TYPE_REQUIRE_IAP: 8;
+      TYPE_DISABLE_USAGE_STATS: 9;
     }
 
     export const Type: TypeMap;

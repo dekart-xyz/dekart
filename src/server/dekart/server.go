@@ -89,6 +89,10 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 			Type:  proto.GetEnvResponse_Variable_TYPE_REQUIRE_AMAZON_OIDC,
 			Value: defaultString(os.Getenv("DEKART_REQUIRE_AMAZON_OIDC"), ""),
 		},
+		{
+			Type:  proto.GetEnvResponse_Variable_TYPE_DISABLE_USAGE_STATS,
+			Value: defaultString(os.Getenv("DEKART_DISABLE_USAGE_STATS"), ""),
+		},
 	}
 	return &proto.GetEnvResponse{
 		Variables: variables,
