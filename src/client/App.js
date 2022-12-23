@@ -46,7 +46,6 @@ export default function App () {
       dispatch(getUsage())
     }
   })
-  console.log(usage)
   return (
     <Router>
       <Switch>
