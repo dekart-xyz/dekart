@@ -21,9 +21,7 @@ function CopyLinkButton () {
   )
 }
 
-const ref = getRef()
-
-function AuthTypeTitle ({ authType }) {
+function AuthTypeTitle ({ authType, referer }) {
   const { anchor, title } = {
     AMAZON_OIDC: { anchor: 'user-authorization-via-amazon-load-balancer', title: 'Amazon OIDC' },
     IAP: { anchor: 'user-authorization-via-google-iap', title: 'Google IAP' }
@@ -31,7 +29,7 @@ function AuthTypeTitle ({ authType }) {
   return (
     <><span>Users authorized via </span>
       <a
-        target='_blank' href={`https://dekart.xyz/docs/configuration/environment-variables/?ref=${ref}#${anchor}`} rel='noreferrer'
+        target='_blank' href={`https://dekart.xyz/docs/configuration/environment-variables/?ref=${referer}#${anchor}`} rel='noreferrer'
       >{title}
       </a> header
     </>
@@ -39,7 +37,9 @@ function AuthTypeTitle ({ authType }) {
 }
 
 function ModalContent ({ reportId, discoverable, canWrite }) {
-  const { loaded: envLoaded, authEnabled, authType } = useSelector(state => state.env)
+  const env = useSelector(state => state.env)
+  const usage = useSelector(state => state.usage)
+  const { loaded: envLoaded, authEnabled, authType } = env
   const dispatch = useDispatch()
   const [discoverableSwitch, setDiscoverableSwitch] = useState(discoverable)
 
@@ -55,7 +55,7 @@ function ModalContent ({ reportId, discoverable, canWrite }) {
           <div className={styles.reportStatusDetails}>
             <div className={styles.reportStatusDetailsText}> Everyone with a link and access to <span className={styles.origin}>{window.location.hostname}</span> can view this report</div>
             <div className={styles.reportAuthStatus}>
-              <Tooltip title={<AuthTypeTitle authType={authType} />}>
+              <Tooltip title={<AuthTypeTitle authType={authType} referer={getRef(env, usage)} />}>
                 <span className={styles.authEnabled}>User authorization enabled</span>
               </Tooltip>
             </div>

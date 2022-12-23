@@ -5,10 +5,8 @@ import { getRef } from './lib/ref'
 
 export default function DekartMenu () {
   const env = useSelector(state => state.env)
-  if (!env.loaded) {
-    return null
-  }
-  const ref = getRef()
+  const usage = useSelector(state => state.usage)
+  const ref = getRef(env, usage)
   return (
     <div className={styles.dekartMenu}>
       <Menu mode='horizontal' theme='dark'>

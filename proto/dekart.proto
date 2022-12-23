@@ -27,6 +27,18 @@ service Dekart {
     // streams
     rpc GetReportStream(ReportStreamRequest) returns (stream ReportStreamResponse) {}
     rpc GetReportListStream(ReportListRequest) returns (stream ReportListResponse) {}
+
+    //statistics
+    rpc GetUsage(GetUsageRequest) returns (GetUsageResponse) {}
+}
+
+message GetUsageRequest {}
+
+message GetUsageResponse {
+    int64 total_reports = 1;
+    int64 total_queries = 2;
+    int64 total_files = 3;
+    int64 total_authors = 4;
 }
 
 message SetDiscoverableRequest {
@@ -63,6 +75,7 @@ message GetEnvResponse {
             TYPE_STORAGE = 6;
             TYPE_REQUIRE_AMAZON_OIDC = 7;
             TYPE_REQUIRE_IAP = 8;
+            TYPE_DISABLE_USAGE_STATS = 9;
         }
         Type type = 1;
         string value = 2;
