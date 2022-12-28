@@ -35,7 +35,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "REACT_APP_CUSTOM_CODE=CUSTOM_CODE react-scripts build",
+    "build": "REACT_APP_CUSTOM_CODE=CUSTOM_CODE react-scripts --max_old_space_size=4096 build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "analyze": "source-map-explorer 'build/static/js/*.js'"
