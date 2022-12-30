@@ -34,6 +34,8 @@ function TabIcon ({ query }) {
       }
       iconColor = '#52c41a'
       break
+    default:
+      // do nothing
   }
   return (
     <span
@@ -58,6 +60,9 @@ function getOnTabEditHandler (dispatch, reportId) {
           cancelText: 'No',
           onOk: () => dispatch(removeDataset(datasetId))
         })
+        break
+      default:
+          // do nothing
     }
   }
 }
