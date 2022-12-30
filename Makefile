@@ -33,16 +33,22 @@ proto: proto-docker # build proto stubs
 		dekart-proto \
 		make proto-build
 
-build-docker-dev: # build docker for local use
+nodetest:
+	docker buildx build --platform=linux/amd64 -f ./Dockerfile --target nodetest .
+
+gotest:
+	docker buildx build -f ./Dockerfile --target gotest .
+
+docker: # build docker for local use
 	docker buildx build --push --tag ${DEKART_DOCKER_DEV_TAG} -o type=image --platform=linux/amd64 -f ./Dockerfile .
 
-docker-compose-up:
+up:
 	docker-compose  --env-file .env up
 
-docker-compose-rm:
+rm:
 	docker-compose rm
 
-run-dev-server:
+server:
 	go run ./src/server/main.go
 
 cloud-sql-proxy-docker:
@@ -54,6 +60,7 @@ cloud-sql-proxy: cloud-sql-proxy-docker
 		--env-file .env \
 		-p 5432:5432 \
 		cloud-sql-proxy
+
 prerelease:
 	npm version prerelease --preid=rc
 preminor:
@@ -65,6 +72,7 @@ patch: version
 patch: version
 release:
 	git push origin HEAD --tags
+
 test:
 	go test -v -count=1 ./src/server/**/
 

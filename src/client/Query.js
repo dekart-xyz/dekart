@@ -160,6 +160,8 @@ function QueryStatus ({ children, query }) {
       style = styles.success
       action = <ShowDataTable query={query} />
       break
+    default:
+      return null
   }
   return (
     <div className={[styles.queryStatus, style].join(' ')}>
