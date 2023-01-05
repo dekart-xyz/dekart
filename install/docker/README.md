@@ -44,7 +44,7 @@ docker run \
   -e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
   -e DEKART_CORS_ORIGIN=${DEKART_CORS_ORIGIN} \
   -p 8080:8080 \
-  dekartxyz/dekart:0.10
+  dekartxyz/dekart:0.11
 ```
 
 ### BigQuery
@@ -65,7 +65,7 @@ docker run \
   -e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
   -e DEKART_CORS_ORIGIN=${DEKART_CORS_ORIGIN} \
   -p 8080:8080 \
-  dekartxyz/dekart:0.10
+  dekartxyz/dekart:0.11
 ```
 
 [Configuration details](https://dekart.xyz/docs/configuration/environment-variables/?ref=dokerhub)
