@@ -52,7 +52,7 @@ func (d *Decoder) DecodeRows(undecoded []byte, csvRows chan []string) error {
 			err = fmt.Errorf("cannot convert datum to map")
 			return err
 		}
-		//TODO: create once?
+		// TODO: create once?
 		csvRow := make([]string, len(d.tableFields))
 		for i, name := range d.tableFields {
 			value := valuesMap[name]
@@ -60,14 +60,21 @@ func (d *Decoder) DecodeRows(undecoded []byte, csvRows chan []string) error {
 				csvRow[i] = ""
 				continue
 			}
-			valueMap, ok := value.(map[string]interface{})
-			if !ok {
-				err = fmt.Errorf("cannot convert value to map: value %+v", value)
-				return err
-			}
-			for _, v := range valueMap {
-				csvRow[i] = fmt.Sprintf("%v", v)
-				break
+
+			switch x := value.(type) {
+			case map[string]interface{}:
+				for _, v := range x {
+					csvRow[i] = fmt.Sprintf("%v", v)
+					break
+				}
+			case []interface{}:
+				csvRow[i] = fmt.Sprintf("%v", x)
+			case interface{}:
+				csvRow[i] = fmt.Sprintf("%v", x)
+			case nil:
+				csvRow[i] = ""
+			default:
+				return fmt.Errorf("incorrect type of data: %T", x)
 			}
 		}
 		csvRows <- csvRow
