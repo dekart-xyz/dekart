@@ -106,6 +106,7 @@ function DatasetSection ({ reportId }) {
       <Resizable
         enable={{ top: false, right: false, bottom: false, left: true, topRight: false, bottomRight: false, bottomLeft: false, topLeft: false }}
         className={styles.resizable}
+        defaultSize={{ width: 'min(40%, 500px)' }}
       >
         <div className={styles.datasetSectionWrapper}>
           <div className={styles.datasetSection}>
