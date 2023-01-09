@@ -93,7 +93,7 @@ function ReportsHeader ({ authEnabled, reportFilter, setReportFilter, archived, 
         ? (
           <Radio.Group value={reportFilter} onChange={(e) => setReportFilter(e.target.value)}>
             <Radio.Button value='my'>My Reports</Radio.Button>
-            <Radio.Button value='discoverable'>Team Reports</Radio.Button>
+            <Radio.Button value='discoverable'>Shared Reports</Radio.Button>
           </Radio.Group>
 
           )
@@ -183,7 +183,7 @@ function OnboardingDiscoverableReports () {
   return (
     <Onboarding
       icon={<UsergroupAddOutlined />}
-      title='Team reports enable you to share reports within a team or organization'
+      title='Shared reports helps your others to discover and reuse your reports'
       steps={
         <ol>
           <li>Open the report that you want to share and click on the "Share" button on the top right corner of the page</li>
@@ -244,7 +244,15 @@ export default function HomePage () {
   return (
     <div className={styles.homePage}>
       <Header
-        buttons={<div className={styles.headerButtons}>{reportsList.loaded && (reportsList.my.length || reportsList.discoverable.length) ? createReportButton : null}</div>}
+        buttons={
+          <div className={styles.headerButtons}>
+            {
+              reportsList.loaded && !(reportsList.my.length === 0 && reportsList.discoverable.length === 0 && reportsList.archived.length === 0)
+                ? createReportButton
+                : null
+            }
+          </div>
+      }
       />
       <div className={styles.body}>
         <NewVersion />
