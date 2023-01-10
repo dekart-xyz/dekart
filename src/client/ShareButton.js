@@ -65,7 +65,7 @@ function ModalContent ({ reportId, discoverable, canWrite }) {
           ? (
             <div className={styles.discoverableStatus}>
               <div className={styles.discoverableStatusIcon}><FileSearchOutlined /></div>
-              <div className={styles.discoverableStatusLabel}>Make report discoverable by all users of <span className={styles.origin}>{window.location.hostname}</span> in Team Reports</div>
+              <div className={styles.discoverableStatusLabel}>Make report discoverable by all users of <span className={styles.origin}>{window.location.hostname}</span> in Shared Reports</div>
               <div className={styles.discoverableStatusControl}>
                 <Switch
                   checked={discoverable}
