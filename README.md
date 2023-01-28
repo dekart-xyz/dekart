@@ -7,7 +7,7 @@ Dekart is an open-source data visualization and analytical tool for large scale 
 
 Visualize Data from BigQuery on a Kepler.gl map and share it with your team:
 
-* Beautiful, large Scale Map Visualizations using only SQL
+* Map Visualizations with SQL or file upload
 * Visualize up to 1 million rows
 * Save map and share link with your team
 * Support BigQuery and AWS Athena
@@ -15,6 +15,7 @@ Visualize Data from BigQuery on a Kepler.gl map and share it with your team:
 
 ## Self-hosting Dekart
 
+* [Deploy to AWS/ECS with Terraform](https://dekart.xyz/docs/self-hosting/aws-ecs-terraform/?ref=github)  and manage access with Google IAP
 * [Deploy to Google App Engine](https://dekart.xyz/docs/self-hosting/app-engine/?ref=github)  and manage access with Google IAP
 * [Run with Docker](https://dekart.xyz/docs/self-hosting/docker/?ref=github)
 * [Configuration](https://dekart.xyz/docs/configuration/environment-variables/?ref=github)
