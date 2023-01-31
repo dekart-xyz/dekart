@@ -26,6 +26,21 @@ RUN go build ./src/server
 FROM godeps as gotest
 RUN go test -v -count=1 ./src/server/**/
 
+FROM cypress/included:cypress-12.4.1-node-16.18.1-chrome-109.0.5414.74-1-ff-109.0-edge-109.0.1518.52-1 as e2etest
+WORKDIR /dekart
+RUN apt-get update && apt-get install  -y \
+    ca-certificates
+RUN update-ca-certificates
+ENV DEKART_PORT=3000
+ENV DEKART_STATIC_FILES=./build
+COPY --from=nodebuilder /source/build build
+COPY --from=gobuilder /source/server .
+ADD migrations migrations
+ADD cypress cypress
+ADD cypress.config.js .
+ADD package.json .
+ENTRYPOINT ["/bin/sh", "-c" , "/dekart/server & cypress run"]
+
 FROM ubuntu:18.04
 WORKDIR /dekart
 RUN apt-get update && apt-get install  -y \

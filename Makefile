@@ -39,6 +39,26 @@ nodetest:
 gotest:
 	docker buildx build -f ./Dockerfile --target gotest .
 
+e2etest:
+	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} -o type=image -f ./Dockerfile --target e2etest .
+	docker run -it --rm \
+	-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
+	-v $$(pwd)/cypress/videos:/dekart/cypress/videos/ \
+	-v $$(pwd)/cypress/screenshots:/dekart/cypress/screenshots/ \
+	-e GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} \
+	-e DEKART_POSTGRES_DB=${DEKART_POSTGRES_DB} \
+	-e DEKART_POSTGRES_USER=${DEKART_POSTGRES_USER} \
+	-e DEKART_POSTGRES_PASSWORD=${DEKART_POSTGRES_PASSWORD} \
+	-e DEKART_POSTGRES_PORT=${DEKART_POSTGRES_PORT} \
+	-e DEKART_POSTGRES_HOST=host.docker.internal \
+	-e DEKART_CLOUD_STORAGE_BUCKET=${DEKART_CLOUD_STORAGE_BUCKET} \
+	-e DEKART_BIGQUERY_PROJECT_ID=${DEKART_BIGQUERY_PROJECT_ID} \
+	-e DEKART_BIGQUERY_MAX_BYTES_BILLED=53687091200 \
+	-e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
+	-e DEKART_ALLOW_FILE_UPLOAD=1 \
+	${DEKART_DOCKER_E2E_TAG}
+
+
 docker: # build docker for local use
 	docker buildx build --push --tag ${DEKART_DOCKER_DEV_TAG} -o type=image --platform=linux/amd64 -f ./Dockerfile .
 
