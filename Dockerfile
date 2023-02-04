@@ -2,7 +2,7 @@ FROM node:16 as nodedeps
 WORKDIR /source
 ADD package.json .
 ADD package-lock.json .
-COPY --chmod=664 .npmrc .
+ADD .npmrc .
 ENV CI=true
 RUN npm i --legacy-peer-deps
 ADD public public

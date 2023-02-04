@@ -1,0 +1,7 @@
+{
+  "create_report": "Create Report",
+  "bigquery_query": "BigQuery query",
+  "simple_sql_query": "select geometry from`bigquery-public-data.geo_openstreetmap.planet_features_multipolygons` limit 10",
+  "execute": "Execute",
+  "ready": "Ready"
+}

@@ -68,11 +68,6 @@
     "source-map-explorer": "^2.5.1",
     "standard": "^17.0.0"
   },
-  "standard": {
-    "env": [
-      "mocha"
-    ]
-  },
   "overrides": {
     "@deck.gl/aggregation-layers": "8.6.5",
     "@deck.gl/core": "8.6.5",
