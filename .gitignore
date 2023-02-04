@@ -38,3 +38,7 @@ npm-debug.log*
 
 .eslintcache
 .npmrc
+
+# cypress
+cypress/videos
+cypress/screenshots

@@ -13,6 +13,7 @@
     "classnames": "^2.2.6",
     "copy-to-clipboard": "^3.3.1",
     "crypto-js": "^4.1.1",
+    "cypress": "^12.4.1",
     "google-protobuf": "^3.14.0",
     "immer": "^9.0.7",
     "luxon": "^1.25.0",
@@ -41,9 +42,13 @@
     "analyze": "source-map-explorer 'build/static/js/*.js'"
   },
   "eslintConfig": {
+    "globals": {
+      "cy": true
+    },
     "extends": [
       "react-app",
-      "react-app/jest"
+      "react-app/jest",
+      "plugin:cypress/recommended"
     ]
   },
   "browserslist": {
@@ -59,6 +64,7 @@
     ]
   },
   "devDependencies": {
+    "eslint-plugin-cypress": "^2.12.1",
     "source-map-explorer": "^2.5.1",
     "standard": "^17.0.0"
   },

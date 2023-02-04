@@ -4,21 +4,43 @@ on:
   pull_request:
     branches:
       - '**'
+env:
+  DEKART_POSTGRES_PASSWORD: dekart
+  DEKART_POSTGRES_USER: postgres
+  DEKART_POSTGRES_DB: dekart
+  GOOGLE_APPLICATION_CREDENTIALS: GOOGLE_APPLICATION_CREDENTIALS.json
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: ${{ env.DEKART_POSTGRES_PASSWORD }}
+          POSTGRES_USER: ${{ env.DEKART_POSTGRES_USER }}
+          POSTGRES_DB: ${{ env.DEKART_POSTGRES_DB }}
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5    
+        ports:
+          - 5432:5432
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
       - name: Create .npmrc
         run: |
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_GH_TOKEN }}" > .npmrc
           echo "@dekart-xyz:registry=https://npm.pkg.github.com" >> .npmrc
+      - name: Create google credentials
+        run: |
+          echo '${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}' > $GOOGLE_APPLICATION_CREDENTIALS
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
       - name: Client unit test
         uses: docker/build-push-action@v2
         with:
@@ -29,15 +51,27 @@ jobs:
         with:
           context: .
           target: gotest
-      - name: Server Build
-        uses: docker/build-push-action@v2
+      - name: E2E build
+        uses: docker/build-push-action@v4
         with:
           context: .
-          target: gobuilder
-      - name: Client Build
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          target: nodebuilder
-
-          
+          push: false
+          load: true
+          tags: e2etest:latest          
+          target: e2etest
+          cache-from: type=gha,scope=dekart
+          cache-to: type=gha,mode=max,scope=dekart
+      - name: E2E test
+        run: |
+          docker run -i \
+            --network="host" \
+            -v $(pwd)/$GOOGLE_APPLICATION_CREDENTIALS:/dekart/$GOOGLE_APPLICATION_CREDENTIALS \
+            -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
+            -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
+            -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
+            -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
+            -e DEKART_POSTGRES_HOST=localhost \
+            -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
+            -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
+            -e DEKART_ALLOW_FILE_UPLOAD=1 \
+            e2etest:latest
