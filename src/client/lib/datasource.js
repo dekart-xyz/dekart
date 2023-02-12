@@ -1,6 +1,11 @@
 
 export function getDatasourceMeta (datasource) {
   switch (datasource) {
+    case 'SNOWFLAKE':
+      return {
+        name: 'Snowflake',
+        usageStatsId: 3
+      }
     case 'BQ':
       return {
         name: 'BigQuery',

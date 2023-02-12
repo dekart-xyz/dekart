@@ -46,11 +46,15 @@ jobs:
         with:
           context: .
           target: nodetest
+          cache-from: type=gha,scope=dekart
+          cache-to: type=gha,mode=max,scope=dekart
       - name: Server unit test
         uses: docker/build-push-action@v2
         with:
           context: .
           target: gotest
+          cache-from: type=gha,scope=dekart
+          cache-to: type=gha,mode=max,scope=dekart
       - name: E2E build
         uses: docker/build-push-action@v4
         with:
