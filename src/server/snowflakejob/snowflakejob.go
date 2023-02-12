@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"sync"
 
 	"github.com/rs/zerolog/log"
 	sf "github.com/snowflakedb/gosnowflake"
@@ -18,8 +19,9 @@ import (
 
 type Job struct {
 	job.BasicJob
-	snowflakeDb   *sql.DB
-	storageObject storage.StorageObject
+	snowflakeDb    *sql.DB
+	storageObject  storage.StorageObject
+	dataSourceName string
 }
 
 type Store struct {
@@ -88,20 +90,26 @@ func (j *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 	j.Cancel()
 }
 
-func (j *Job) fetchQueryMetadata(queryIDChan chan string) {
+func (j *Job) fetchQueryMetadata(queryIDChan chan string, wg *sync.WaitGroup) {
 	ctx := j.GetCtx()
+	defer wg.Done()
 	select {
 	case queryID := <-queryIDChan:
-		fmt.Printf("Query ID: %v", queryID)
-		// var con interface{} = *j.snowflakeDb
-		// status, err := con.(sf.SnowflakeConnection).GetQueryStatus(ctx, queryID)
-		// if err != nil {
-		// 	j.Logger.Err(err).Send()
-		// 	j.CancelWithError(err)
-		// 	return
-		// }
-		// fmt.Printf("Query Status: %v", status)
-
+		conn, err := j.snowflakeDb.Driver().Open(j.dataSourceName)
+		if err != nil {
+			j.Logger.Err(err).Send()
+			j.CancelWithError(err)
+			return
+		}
+		status, err := conn.(sf.SnowflakeConnection).GetQueryStatus(ctx, queryID)
+		if err != nil {
+			j.Logger.Err(err).Send()
+			j.CancelWithError(err)
+			return
+		}
+		j.Lock()
+		j.ProcessedBytes = status.ScanBytes
+		j.Unlock()
 	case <-ctx.Done():
 		j.Logger.Debug().Msg("Context Done before queryID received")
 	}
@@ -114,7 +122,9 @@ func (j *Job) Run(storageObject storage.StorageObject) error {
 	j.Status() <- int32(proto.Query_JOB_STATUS_PENDING)
 	j.Status() <- int32(proto.Query_JOB_STATUS_RUNNING)
 	queryIDChan := make(chan string)
-	go j.fetchQueryMetadata(queryIDChan)
+	metadataWg := &sync.WaitGroup{}
+	metadataWg.Add(1)
+	go j.fetchQueryMetadata(queryIDChan, metadataWg)
 	rows, err := j.snowflakeDb.QueryContext(
 		sf.WithQueryIDChan(j.GetCtx(), queryIDChan),
 		j.QueryText,
@@ -166,20 +176,21 @@ func (j *Job) Run(storageObject storage.StorageObject) error {
 		}
 		csvRows <- csvRow
 	}
-	close(csvRows) //better to close in defer?
+	metadataWg.Wait() // do not close context until metadata is fetched
+	close(csvRows)    //better to close in defer?
 	return nil
 }
 
 func (s *Store) Create(reportID string, queryID string, queryText string) (job.Job, chan int32, error) {
 	s.Lock()
 	defer s.Unlock()
-
-	db, err := sql.Open("snowflake", fmt.Sprintf(
+	dataSourceName := fmt.Sprintf(
 		"%s:%s@EHFDLAI-%s",
 		os.Getenv("DEKART_SNOWFLAKE_USER"),
 		os.Getenv("DEKART_SNOWFLAKE_PASSWORD"),
 		os.Getenv("DEKART_SNOWFLAKE_ACCOUNT"),
-	))
+	)
+	db, err := sql.Open("snowflake", dataSourceName)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to connect to snowflake")
 		return nil, nil, err
@@ -191,7 +202,8 @@ func (s *Store) Create(reportID string, queryID string, queryText string) (job.J
 			QueryText: queryText,
 			Logger:    log.With().Str("reportID", reportID).Str("queryID", queryID).Logger(),
 		},
-		snowflakeDb: db,
+		snowflakeDb:    db,
+		dataSourceName: dataSourceName,
 	}
 	job.Init()
 	s.Jobs = append(s.Jobs, job)
