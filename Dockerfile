@@ -39,7 +39,7 @@ ADD migrations migrations
 ADD cypress cypress
 ADD cypress.config.js .
 ADD package.json .
-ENTRYPOINT ["/bin/sh", "-c" , "/dekart/server & cypress run"]
+ENTRYPOINT ["/bin/sh", "-c" , "/dekart/server & cypress run --spec cypress/e2e/bq"]
 
 FROM ubuntu:18.04
 WORKDIR /dekart

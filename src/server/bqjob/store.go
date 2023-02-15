@@ -11,13 +11,13 @@ import (
 // Store implements job.Store interface for BigQuery
 type Store struct {
 	job.BasicStore
-	Jobs []*Job
+	// Jobs []*Job
 }
 
 // NewStore instance
 func NewStore() *Store {
 	store := &Store{}
-	store.Jobs = make([]*Job, 0)
+	// store.Jobs = make([]*Job, 0)
 	return store
 }
 
@@ -35,8 +35,6 @@ func (s *Store) Create(reportID string, queryID string, queryText string) (job.J
 	} else {
 		log.Warn().Msgf("DEKART_BIGQUERY_MAX_BYTES_BILLED is not set! Use the maximum bytes billed setting to limit query costs. https://cloud.google.com/bigquery/docs/best-practices-costs#limit_query_costs_by_restricting_the_number_of_bytes_billed")
 	}
-	s.Lock()
-	defer s.Unlock()
 	job := &Job{
 		BasicJob: job.BasicJob{
 			ReportID:  reportID,
@@ -47,7 +45,7 @@ func (s *Store) Create(reportID string, queryID string, queryText string) (job.J
 		maxBytesBilled: maxBytesBilled,
 	}
 	job.Init()
-	s.Jobs = append(s.Jobs, job)
+	s.StoreJob(job)
 	go s.RemoveJobWhenDone(job)
 	return job, job.Status(), nil
 }

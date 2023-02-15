@@ -26,12 +26,10 @@ type Job struct {
 
 type Store struct {
 	job.BasicStore
-	Jobs []*Job
 }
 
 func NewStore() *Store {
 	store := &Store{}
-	store.Jobs = make([]*Job, 0)
 	return store
 }
 
@@ -182,8 +180,6 @@ func (j *Job) Run(storageObject storage.StorageObject) error {
 }
 
 func (s *Store) Create(reportID string, queryID string, queryText string) (job.Job, chan int32, error) {
-	s.Lock()
-	defer s.Unlock()
 	dataSourceName := fmt.Sprintf(
 		"%s:%s@EHFDLAI-%s",
 		os.Getenv("DEKART_SNOWFLAKE_USER"),
@@ -206,7 +202,7 @@ func (s *Store) Create(reportID string, queryID string, queryText string) (job.J
 		dataSourceName: dataSourceName,
 	}
 	job.Init()
-	s.Jobs = append(s.Jobs, job)
+	s.StoreJob(job)
 	go s.RemoveJobWhenDone(job)
 	return job, job.Status(), nil
 }

@@ -1,7 +1,11 @@
 {
   "create_report": "Create Report",
   "bigquery_query": "BigQuery query",
+  "athena_query": "Athena query",
+  "simple_athena_query": "SELECT * FROM planet WHERE type = 'node' AND tags['amenity'] IN ('hospital', 'clinic', 'doctors') limit 10",
   "simple_sql_query": "select geometry from`bigquery-public-data.geo_openstreetmap.planet_features_multipolygons` limit 10",
+  "simple_sql_query_limit_100k": "select geometry from`bigquery-public-data.geo_openstreetmap.planet_features_multipolygons` limit 100000",
   "execute": "Execute",
-  "ready": "Ready"
+  "ready": "Ready",
+  "cancel": "Cancel"
 }
