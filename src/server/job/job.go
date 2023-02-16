@@ -5,6 +5,7 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/storage"
 	"dekart/src/server/uuid"
+	"regexp"
 	"sync"
 	"time"
 
@@ -117,8 +118,10 @@ func (j *BasicJob) Err() string {
 	return j.err
 }
 
+var contextCancelledRe = regexp.MustCompile(`context canceled`)
+
 func (j *BasicJob) CancelWithError(err error) {
-	if err != context.Canceled {
+	if err != context.Canceled && !contextCancelledRe.MatchString(err.Error()) {
 		j.Lock()
 		j.err = err.Error()
 		j.Unlock()
