@@ -118,7 +118,6 @@ func (j *Job) Run(storageObject storage.StorageObject) error {
 	j.storageObject = storageObject
 	j.ProcessedBytes = 1
 	j.Status() <- int32(proto.Query_JOB_STATUS_PENDING)
-	j.Status() <- int32(proto.Query_JOB_STATUS_RUNNING)
 	queryIDChan := make(chan string)
 	metadataWg := &sync.WaitGroup{}
 	metadataWg.Add(1)
@@ -133,7 +132,7 @@ func (j *Job) Run(storageObject storage.StorageObject) error {
 		return err
 	}
 	defer rows.Close()
-	j.Status() <- int32(proto.Query_JOB_STATUS_READING_RESULTS)
+	j.Status() <- int32(proto.Query_JOB_STATUS_RUNNING)
 	csvRows := make(chan []string, 10) //j.TotalRows?
 
 	go j.write(csvRows)
@@ -149,6 +148,7 @@ func (j *Job) Run(storageObject storage.StorageObject) error {
 		}
 		if firstRow {
 			firstRow = false
+			j.Status() <- int32(proto.Query_JOB_STATUS_READING_RESULTS)
 			columnNames := make([]string, len(columnTypes))
 			for i, columnType := range columnTypes {
 				columnNames[i] = columnType.Name()
