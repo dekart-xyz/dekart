@@ -140,6 +140,32 @@ func (job *Job) getResultTable() (*bigquery.Table, error) {
 	return table, nil
 }
 
+func (job *Job) GetResultTableForScript() (*bigquery.Table, error){
+
+	client, err := bigquery.NewClient(job.GetCtx(), os.Getenv("DEKART_BIGQUERY_PROJECT_ID"))
+
+
+	jobFromJobId, err := client.JobFromID(job.GetCtx(), job.bigqueryJob.ID())
+	if err != nil{
+		return nil, err
+	}
+
+	cfg, err := jobFromJobId.Config()
+	queryConfig := cfg.(*bigquery.QueryConfig)
+
+	table := queryConfig.Dst
+
+	if table == nil {
+		err := fmt.Errorf("destination table is nil even when gathered from JobId")
+		job.Logger.Error().Err(err).Str("jobConfig", fmt.Sprintf("%v+", cfg)).Send()
+		return nil, err
+	}
+
+	return table, nil
+
+}
+
+
 func (job *Job) wait() {
 	queryStatus, err := job.bigqueryJob.Wait(job.GetCtx())
 	if err == context.Canceled {
@@ -160,8 +186,11 @@ func (job *Job) wait() {
 
 	table, err := job.getResultTable()
 	if err != nil {
-		job.CancelWithError(err)
-		return
+		table, err = job.GetResultTableForScript()
+		if err != nil{
+			job.CancelWithError(err)
+			return
+		}
 	}
 
 	err = job.setJobStats(queryStatus, table)
