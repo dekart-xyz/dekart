@@ -63,9 +63,9 @@ e2ebq:
 e2eathena:
 	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} -o type=image -f ./Dockerfile --target e2etest .
 	docker run -it --rm \
-	-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
 	-v $$(pwd)/cypress/videos:/dekart/cypress/videos/ \
 	-v $$(pwd)/cypress/screenshots:/dekart/cypress/screenshots/ \
+	-e DEKART_LOG_DEBUG=1 \
 	-e DEKART_POSTGRES_DB=${DEKART_POSTGRES_DB} \
 	-e DEKART_POSTGRES_USER=${DEKART_POSTGRES_USER} \
 	-e DEKART_POSTGRES_PASSWORD=${DEKART_POSTGRES_PASSWORD} \

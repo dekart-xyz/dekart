@@ -19,6 +19,7 @@ describe('cancelling query', () => {
     cy.get(`button:contains("${copy.athena_query}")`).click()
     cy.get('textarea').type(copy.simple_athena_query, { force: true })
     cy.get(`button:contains("${copy.execute}")`).click()
+    cy.get(`button:contains("${copy.execute}")`).should('be.disabled')
     cy.get(`button:contains("${copy.cancel}")`).should('be.visible')
     cy.get(`button:contains("${copy.cancel}")`).click()
     cy.get(`button:contains("${copy.execute}")`).should('be.enabled')
