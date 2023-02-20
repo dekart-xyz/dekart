@@ -116,7 +116,6 @@ func (j *Job) fetchQueryMetadata(queryIDChan chan string, wg *sync.WaitGroup) {
 
 func (j *Job) Run(storageObject storage.StorageObject) error {
 	j.storageObject = storageObject
-	j.ProcessedBytes = 1
 	j.Status() <- int32(proto.Query_JOB_STATUS_PENDING)
 	queryIDChan := make(chan string)
 	metadataWg := &sync.WaitGroup{}

@@ -10,6 +10,8 @@ env:
   DEKART_POSTGRES_DB: dekart
   GOOGLE_APPLICATION_CREDENTIALS: GOOGLE_APPLICATION_CREDENTIALS.json
   AWS_REGION: us-east-1
+  IMAGE_PATH: /tmp/e2etest.tar
+  IMAGE_CACHE_KEY: e2etest-${{ github.run_id }}-${{ github.run_attempt }}
 
 jobs:
   build:
@@ -30,7 +32,7 @@ jobs:
         with:
           context: .
           push: false
-          outputs: type=docker,dest=/tmp/e2etest.tar
+          outputs: type=docker,dest=${{ env.IMAGE_PATH }}
           load: true
           tags: e2etest:latest
           target: e2etest
@@ -39,8 +41,8 @@ jobs:
       - name: Cache docker image
         uses: actions/cache@v3
         with:
-          path: /tmp/e2etest.tar
-          key: e2etest-${{ github.run_id }}-${{ github.run_attempt }}                
+          path: ${{ env.IMAGE_PATH }}
+          key: ${{ env.IMAGE_CACHE_KEY }}
   bigquery:
     runs-on: ubuntu-latest
     needs: build
@@ -69,12 +71,12 @@ jobs:
       - name: Load Docker image from cache
         uses: actions/cache/restore@v3
         with:
-          path: /tmp/e2etest.tar
-          key: e2etest-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.IMAGE_PATH }}
+          key: ${{ env.IMAGE_CACHE_KEY }}
           fail-on-cache-miss: true
       - name: Load Docker image
         run: |
-          docker load --input /tmp/e2etest.tar
+          docker load --input ${{ env.IMAGE_PATH }}
           docker image ls -a        
       - name: E2E test BigQuery
         run: |
@@ -116,12 +118,12 @@ jobs:
       - name: Load Docker image from cache
         uses: actions/cache/restore@v3
         with:
-          path: /tmp/e2etest.tar
-          key: e2etest-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.IMAGE_PATH }}
+          key: ${{ env.IMAGE_CACHE_KEY }}
           fail-on-cache-miss: true
       - name: Load Docker image
         run: |
-          docker load --input /tmp/e2etest.tar
+          docker load --input ${{ env.IMAGE_PATH }}
           docker image ls -a        
       - name: E2E test Athena
         run: |
@@ -169,12 +171,12 @@ jobs:
       - name: Load Docker image from cache
         uses: actions/cache/restore@v3
         with:
-          path: /tmp/e2etest.tar
-          key: e2etest-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.IMAGE_PATH }}
+          key: ${{ env.IMAGE_CACHE_KEY }}
           fail-on-cache-miss: true
       - name: Load Docker image
         run: |
-          docker load --input /tmp/e2etest.tar
+          docker load --input ${{ env.IMAGE_PATH }}
           docker image ls -a        
       - name: E2E test Snowflake
         run: |
