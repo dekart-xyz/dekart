@@ -33,6 +33,7 @@ const All string = "AllReports"
 
 // Register to listen report updates
 func (s *Streams) Register(reportID string, streamID string, sequence int64) chan int64 {
+	log.Debug().Str("reportID", reportID).Str("streamID", streamID).Int64("sequence", sequence).Msgf("Register")
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	currentSequence, ok := s.sequence[reportID]
@@ -54,6 +55,7 @@ func (s *Streams) Register(reportID string, streamID string, sequence int64) cha
 	ch := make(chan int64)
 	streamMap[streamID] = ch
 	if currentSequence > sequence {
+		log.Debug().Str("reportID", reportID).Str("streamID", streamID).Int64("sequence", sequence).Int64("currentSequence", currentSequence).Msgf("Update outdated subscription")
 		go func() {
 			ch <- currentSequence
 		}()
@@ -63,6 +65,7 @@ func (s *Streams) Register(reportID string, streamID string, sequence int64) cha
 
 // Deregister from report updates
 func (s *Streams) Deregister(reportID string, streamID string) {
+	log.Debug().Str("reportID", reportID).Str("streamID", streamID).Msgf("Deregister")
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	streamMap, ok := s.channels[reportID]
@@ -80,6 +83,7 @@ func (s *Streams) PingAll(reportIDs []string) {
 
 // Ping about report update
 func (s *Streams) Ping(reportID string) {
+	log.Debug().Str("reportID", reportID).Msgf("Ping")
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	for _, rid := range []string{reportID, All} {
@@ -94,9 +98,10 @@ func (s *Streams) Ping(reportID string) {
 			continue
 		}
 		for _, ch := range streamMap {
-			go func(ch chan int64) {
+			log.Debug().Int64("sequence", s.sequence[rid]).Str("rid", rid).Msgf("Update subscriber")
+			go func(ch chan int64, rid string) {
 				ch <- s.sequence[rid]
-			}(ch)
+			}(ch, rid)
 		}
 	}
 }

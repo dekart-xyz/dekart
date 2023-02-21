@@ -11,13 +11,11 @@ import (
 // Store implements job.Store interface for BigQuery
 type Store struct {
 	job.BasicStore
-	// Jobs []*Job
 }
 
 // NewStore instance
 func NewStore() *Store {
 	store := &Store{}
-	// store.Jobs = make([]*Job, 0)
 	return store
 }
 

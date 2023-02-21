@@ -99,8 +99,10 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 	for {
 		select {
 		case sequence := <-ping:
+			log.Debug().Str("reportID", req.Report.Id).Int64("sequence", sequence).Msg("Sending report message")
 			return s.sendReportMessage(req.Report.Id, srv, sequence)
 		case <-ctx.Done():
+			log.Debug().Str("reportID", req.Report.Id).Msg("GetReportStream ctx done")
 			return nil
 		}
 	}

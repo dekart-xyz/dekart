@@ -63,7 +63,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	}
 
 	if affectedRows == 0 {
-		log.Warn().Str("report", *reportID).Str("dataset", req.DatasetId).Msg("dataset query was already created")
+		log.Warn().Str("reportID", *reportID).Str("dataset", req.DatasetId).Msg("dataset query was already created")
 	}
 	go s.storeQuery(*reportID, id, "", "")
 	s.reportStreams.Ping(*reportID)
@@ -132,7 +132,6 @@ func (s Server) updateJobStatus(job job.Job, jobStatus chan int32) {
 	for {
 		select {
 		case status := <-jobStatus:
-			log.Debug().Int32("status", status).Msg("updateJobStatus")
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			var err error
 			if status == int32(proto.Query_JOB_STATUS_RUNNING) {
@@ -179,7 +178,6 @@ func (s Server) updateJobStatus(job job.Job, jobStatus chan int32) {
 			}
 			s.reportStreams.Ping(job.GetReportID())
 		case <-job.GetCtx().Done():
-			log.Debug().Msg("updateJobStatus context done")
 			return
 		}
 	}
@@ -238,9 +236,8 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		}
 		return nil, status.Error(code, err.Error())
 	}
-	log.Debug().Str("report_id", reportID).Msg("before create job")
 	job, jobStatus, err := s.jobs.Create(reportID, req.QueryId, req.QueryText)
-	log.Debug().Str("job_id", job.GetID()).Msg("job created")
+	log.Debug().Str("jobID", job.GetID()).Msg("Job created")
 	if err != nil {
 		log.Error().Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())

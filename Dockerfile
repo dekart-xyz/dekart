@@ -6,7 +6,10 @@ ADD .npmrc .
 ENV CI=true
 RUN npm i --legacy-peer-deps
 ADD public public
-ADD src src
+ADD src/client src/client
+ADD src/proto src/proto
+ADD src/index.js src/index.js
+ADD src/setupTests.js src/setupTests.js
 
 FROM nodedeps as nodebuilder
 RUN npm run build
@@ -18,7 +21,9 @@ FROM golang:1.17 as godeps
 WORKDIR /source
 ADD go.mod .
 ADD go.sum .
-ADD src src
+RUN go mod download -x
+ADD src/proto src/proto
+ADD src/server src/server
 
 FROM godeps as gobuilder
 RUN go build ./src/server
