@@ -24,6 +24,7 @@ type Job struct {
 	storageObject       storage.StorageObject
 	maxReadStreamsCount int32
 	maxBytesBilled      int64
+	client 				*bigquery.Client
 }
 
 var contextCancelledRe = regexp.MustCompile(`context canceled`)
@@ -142,10 +143,9 @@ func (job *Job) getResultTable() (*bigquery.Table, error) {
 
 func (job *Job) GetResultTableForScript() (*bigquery.Table, error){
 
-	client, err := bigquery.NewClient(job.GetCtx(), os.Getenv("DEKART_BIGQUERY_PROJECT_ID"))
 
 
-	jobFromJobId, err := client.JobFromID(job.GetCtx(), job.bigqueryJob.ID())
+	jobFromJobId, err := job.client.JobFromID(job.GetCtx(), job.bigqueryJob.ID())
 	if err != nil{
 		return nil, err
 	}
@@ -254,6 +254,8 @@ func (job *Job) Run(storageObject storage.StorageObject) error {
 		job.Cancel()
 		return err
 	}
+	job.client = client
+
 	query := client.Query(job.QueryText)
 	query.MaxBytesBilled = job.maxBytesBilled
 
