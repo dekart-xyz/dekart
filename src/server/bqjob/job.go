@@ -156,7 +156,12 @@ func (job *Job) GetResultTableForScript() (*bigquery.Table, error){
 		return nil, err
 	}
 
-	queryConfig := cfg.(*bigquery.QueryConfig)
+	queryConfig, ok := cfg.(*bigquery.QueryConfig)
+	if !ok{
+		err := fmt.Errorf("was expecting QueryConfig type for configuration")
+		job.Logger.Error().Err(err).Str("jobConfig", fmt.Sprintf("%v+", cfg)).Send()
+		return nil, err
+	}
 
 	table := queryConfig.Dst
 
