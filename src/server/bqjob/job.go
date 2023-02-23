@@ -151,6 +151,11 @@ func (job *Job) GetResultTableForScript() (*bigquery.Table, error){
 	}
 
 	cfg, err := jobFromJobId.Config()
+
+	if err != nil{
+		return nil, err
+	}
+
 	queryConfig := cfg.(*bigquery.QueryConfig)
 
 	table := queryConfig.Dst
