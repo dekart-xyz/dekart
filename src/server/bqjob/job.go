@@ -24,6 +24,7 @@ type Job struct {
 	storageObject       storage.StorageObject
 	maxReadStreamsCount int32
 	maxBytesBilled      int64
+	client 				*bigquery.Client
 }
 
 var contextCancelledRe = regexp.MustCompile(`context canceled`)
@@ -140,6 +141,41 @@ func (job *Job) getResultTable() (*bigquery.Table, error) {
 	return table, nil
 }
 
+func (job *Job) GetResultTableForScript() (*bigquery.Table, error){
+
+
+
+	jobFromJobId, err := job.client.JobFromID(job.GetCtx(), job.bigqueryJob.ID())
+	if err != nil{
+		return nil, err
+	}
+
+	cfg, err := jobFromJobId.Config()
+
+	if err != nil{
+		return nil, err
+	}
+
+	queryConfig, ok := cfg.(*bigquery.QueryConfig)
+	if !ok{
+		err := fmt.Errorf("was expecting QueryConfig type for configuration")
+		job.Logger.Error().Err(err).Str("jobConfig", fmt.Sprintf("%v+", cfg)).Send()
+		return nil, err
+	}
+
+	table := queryConfig.Dst
+
+	if table == nil {
+		err := fmt.Errorf("destination table is nil even when gathered from JobId")
+		job.Logger.Error().Err(err).Str("jobConfig", fmt.Sprintf("%v+", cfg)).Send()
+		return nil, err
+	}
+
+	return table, nil
+
+}
+
+
 func (job *Job) wait() {
 	queryStatus, err := job.bigqueryJob.Wait(job.GetCtx())
 	if err == context.Canceled {
@@ -160,8 +196,11 @@ func (job *Job) wait() {
 
 	table, err := job.getResultTable()
 	if err != nil {
-		job.CancelWithError(err)
-		return
+		table, err = job.GetResultTableForScript()
+		if err != nil{
+			job.CancelWithError(err)
+			return
+		}
 	}
 
 	err = job.setJobStats(queryStatus, table)
@@ -215,6 +254,8 @@ func (job *Job) Run(storageObject storage.StorageObject) error {
 		job.Cancel()
 		return err
 	}
+	job.client = client
+
 	query := client.Query(job.QueryText)
 	query.MaxBytesBilled = job.maxBytesBilled
 
