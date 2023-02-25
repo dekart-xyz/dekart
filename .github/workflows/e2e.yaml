@@ -4,6 +4,9 @@ on:
   pull_request:
     branches:
       - '**'
+  pull_request_target:
+    branches:
+      - '**'
 env:
   DEKART_POSTGRES_PASSWORD: dekart
   DEKART_POSTGRES_USER: postgres
@@ -19,6 +22,8 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Create .npmrc
         run: |
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_GH_TOKEN }}" > .npmrc
@@ -196,7 +201,7 @@ jobs:
             -e DEKART_ALLOW_FILE_UPLOAD=1 \
             -e DEKART_CORS_ORIGIN=http://localhost:3000 \
             -e TEST_SPEC=cypress/e2e/snowflake \
-            -e DEKART_SNOWFLAKE_ACCOUNT=${{ secrets.SNOWFLAKE_ACCOUNT }} \
+            -e DEKART_SNOWFLAKE_ACCOUNT_ID=${{ secrets.SNOWFLAKE_ACCOUNT_ID }} \
             -e DEKART_SNOWFLAKE_USER=${{ secrets.SNOWFLAKE_USER }} \
             -e DEKART_SNOWFLAKE_PASSWORD=${{ secrets.SNOWFLAKE_PASSWORD }} \
             e2etest:latest

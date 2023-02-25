@@ -180,10 +180,10 @@ func (j *Job) Run(storageObject storage.StorageObject) error {
 
 func (s *Store) Create(reportID string, queryID string, queryText string) (job.Job, chan int32, error) {
 	dataSourceName := fmt.Sprintf(
-		"%s:%s@EHFDLAI-%s",
+		"%s:%s@%s",
 		os.Getenv("DEKART_SNOWFLAKE_USER"),
 		os.Getenv("DEKART_SNOWFLAKE_PASSWORD"),
-		os.Getenv("DEKART_SNOWFLAKE_ACCOUNT"),
+		os.Getenv("DEKART_SNOWFLAKE_ACCOUNT_ID"),
 	)
 	db, err := sql.Open("snowflake", dataSourceName)
 	if err != nil {

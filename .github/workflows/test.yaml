@@ -4,6 +4,9 @@ on:
   pull_request:
     branches:
       - '**'
+  pull_request_target:
+    branches:
+      - '**'
 
 jobs:
   node:
@@ -11,6 +14,8 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Create .npmrc
         run: |
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_GH_TOKEN }}" > .npmrc
@@ -29,6 +34,8 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Create .npmrc
         run: |
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_GH_TOKEN }}" > .npmrc

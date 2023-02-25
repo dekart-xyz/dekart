@@ -33,7 +33,6 @@ const All string = "AllReports"
 
 // Register to listen report updates
 func (s *Streams) Register(reportID string, streamID string, sequence int64) chan int64 {
-	log.Debug().Str("reportID", reportID).Str("streamID", streamID).Int64("sequence", sequence).Msgf("Register")
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	currentSequence, ok := s.sequence[reportID]
@@ -65,7 +64,6 @@ func (s *Streams) Register(reportID string, streamID string, sequence int64) cha
 
 // Deregister from report updates
 func (s *Streams) Deregister(reportID string, streamID string) {
-	log.Debug().Str("reportID", reportID).Str("streamID", streamID).Msgf("Deregister")
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	streamMap, ok := s.channels[reportID]
