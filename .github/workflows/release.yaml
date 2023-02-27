@@ -8,8 +8,10 @@ on:
 jobs:
   tests:
     uses: ./.github/workflows/test.yaml
+    secrets: inherit
   e2e_tests:
     uses: ./.github/workflows/e2e.yaml
+    secrets: inherit
   docker:
     needs: [tests, e2e_tests]
     runs-on: ubuntu-latest
