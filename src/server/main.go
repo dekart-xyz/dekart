@@ -17,7 +17,9 @@ import (
 	"dekart/src/server/bqjob"
 	"dekart/src/server/dekart"
 	"dekart/src/server/job"
+	"dekart/src/server/snowflakejob"
 	"dekart/src/server/storage"
+
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -106,6 +108,9 @@ func configureBucket() storage.Storage {
 func configureJobStore(bucket storage.Storage) job.Store {
 	var jobStore job.Store
 	switch os.Getenv("DEKART_DATASOURCE") {
+	case "SNOWFLAKE":
+		log.Info().Msg("Using Snowflake Datasource backend")
+		jobStore = snowflakejob.NewStore()
 	case "ATHENA":
 		log.Info().Msg("Using Athena Datasource backend")
 		jobStore = athenajob.NewStore(bucket)

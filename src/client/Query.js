@@ -167,7 +167,7 @@ function QueryStatus ({ children, query }) {
       <div className={styles.status}>
         <div className={styles.statusHead}>
           {icon}
-          <div className={styles.message}>{message}</div>
+          <div id='dekart-query-status-message' className={styles.message}>{message}</div>
           {action ? <div className={styles.action}>{action}</div> : null}
         </div>
         {errorMessage ? <div className={styles.errorMessage}>{errorMessage}</div> : null}

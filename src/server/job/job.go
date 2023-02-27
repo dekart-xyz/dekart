@@ -5,10 +5,12 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/storage"
 	"dekart/src/server/uuid"
+	"regexp"
 	"sync"
 	"time"
 
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 // Store is the interface for the job storage
@@ -116,8 +118,10 @@ func (j *BasicJob) Err() string {
 	return j.err
 }
 
+var contextCancelledRe = regexp.MustCompile(`context canceled`)
+
 func (j *BasicJob) CancelWithError(err error) {
-	if err != context.Canceled {
+	if err != context.Canceled && !contextCancelledRe.MatchString(err.Error()) {
 		j.Lock()
 		j.err = err.Error()
 		j.Unlock()
@@ -132,10 +136,18 @@ type BasicStore struct {
 	Jobs []Job
 }
 
+func (s *BasicStore) StoreJob(job Job) {
+	s.Lock()
+	s.Jobs = append(s.Jobs, job)
+	s.Unlock()
+}
+
 //RemoveJobWhenDone blocks until the job is finished
 func (s *BasicStore) RemoveJobWhenDone(job Job) {
 	<-job.GetCtx().Done()
+	log.Debug().Str("queryId", job.GetQueryID()).Msg("Removing job from store")
 	s.Lock()
+	log.Debug().Str("queryId", job.GetQueryID()).Int("jobs", len(s.Jobs)).Msg("lock acquired")
 	for i, j := range s.Jobs {
 		if job.GetID() == j.GetID() {
 			// removing job from slice
@@ -150,9 +162,12 @@ func (s *BasicStore) RemoveJobWhenDone(job Job) {
 
 func (s *BasicStore) Cancel(queryID string) bool {
 	s.Lock()
+	log.Debug().Str("queryID", queryID).Int("jobs", len(s.Jobs)).Msg("Canceling query in store")
 	defer s.Unlock()
 	for _, job := range s.Jobs {
+		log.Debug().Str("jobQueryID", job.GetQueryID()).Msg("Canceling query in store")
 		if job.GetQueryID() == queryID {
+			job.Status() <- int32(proto.Query_JOB_STATUS_UNSPECIFIED)
 			job.Cancel()
 			return true
 		}

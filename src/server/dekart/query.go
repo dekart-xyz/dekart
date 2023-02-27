@@ -63,7 +63,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	}
 
 	if affectedRows == 0 {
-		log.Warn().Str("report", *reportID).Str("dataset", req.DatasetId).Msg("dataset query was already created")
+		log.Warn().Str("reportID", *reportID).Str("dataset", req.DatasetId).Msg("dataset query was already created")
 	}
 	go s.storeQuery(*reportID, id, "", "")
 	s.reportStreams.Ping(*reportID)
@@ -132,7 +132,6 @@ func (s Server) updateJobStatus(job job.Job, jobStatus chan int32) {
 	for {
 		select {
 		case status := <-jobStatus:
-			log.Debug().Int32("status", status).Msg("job status")
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			var err error
 			if status == int32(proto.Query_JOB_STATUS_RUNNING) {
@@ -190,6 +189,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	log.Debug().Str("query_id", req.QueryId).Msg("RunQuery")
 	queriesRows, err := s.db.QueryContext(ctx,
 		`select 
 			reports.id,
@@ -236,8 +236,8 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		}
 		return nil, status.Error(code, err.Error())
 	}
-
 	job, jobStatus, err := s.jobs.Create(reportID, req.QueryId, req.QueryText)
+	log.Debug().Str("jobID", job.GetID()).Msg("Job created")
 	if err != nil {
 		log.Error().Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
@@ -259,14 +259,14 @@ func (s Server) CancelQuery(ctx context.Context, req *proto.CancelQueryRequest) 
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	log.Debug().Str("query_id", req.QueryId).Msg("CancelQuery")
 	_, err := uuid.Parse(req.QueryId)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
 	}
 	queriesRows, err := s.db.QueryContext(ctx,
 		`select 
-			reports.id,
-			queries.query_source_id
+			reports.id
 		from queries
 			left join datasets on queries.id = datasets.query_id
 			left join reports on (datasets.report_id = reports.id or queries.report_id = reports.id)
@@ -295,6 +295,7 @@ func (s Server) CancelQuery(ctx context.Context, req *proto.CancelQueryRequest) 
 	}
 
 	if ok := s.jobs.Cancel(req.QueryId); !ok {
+		log.Debug().Msg("Query was not canceled in memory store, trying to cancel in database")
 		_, err = s.db.ExecContext(
 			ctx,
 			`update queries set
@@ -308,6 +309,8 @@ func (s Server) CancelQuery(ctx context.Context, req *proto.CancelQueryRequest) 
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 		s.reportStreams.Ping(reportID)
+	} else {
+		log.Debug().Msg("Query canceled in memory store")
 	}
 	return &proto.CancelQueryResponse{}, nil
 }

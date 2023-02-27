@@ -19,7 +19,6 @@ type Store struct {
 	job.BasicStore
 	session        *session.Session
 	outputLocation string
-	Jobs           []*Job
 }
 
 func NewStore(storage storage.Storage) *Store {
@@ -36,15 +35,12 @@ func NewStore(storage storage.Storage) *Store {
 		session:        session,
 		outputLocation: fmt.Sprintf("s3://%s", outputLocation),
 	}
-	store.Jobs = make([]*Job, 0)
 	return store
 
 }
 
 // Create a new Athena job within the store
 func (s *Store) Create(reportID string, queryID string, queryText string) (job.Job, chan int32, error) {
-	s.Lock()
-	defer s.Unlock()
 	client := athena.New(s.session)
 	job := &Job{
 		BasicJob: job.BasicJob{
@@ -58,7 +54,7 @@ func (s *Store) Create(reportID string, queryID string, queryText string) (job.J
 		outputLocation: s.outputLocation,
 	}
 	job.Init()
-	s.Jobs = append(s.Jobs, job)
+	s.StoreJob(job)
 	go s.RemoveJobWhenDone(job)
 	return job, job.Status(), nil
 }
