@@ -1,0 +1,16 @@
+name: Pull Request
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  tests:
+    uses: ./.github/workflows/test.yaml
+    secrets: inherit
+  e2e_tests:
+    uses: ./.github/workflows/e2e.yaml
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    secrets: inherit
+  

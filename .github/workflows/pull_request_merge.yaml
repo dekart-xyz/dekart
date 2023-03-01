@@ -1,0 +1,17 @@
+name: Pull Request Merge
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  tests:
+    uses: ./.github/workflows/test.yaml
+    if: github.event.pull_request.merged == true
+    secrets: inherit
+  e2e_tests:
+    uses: ./.github/workflows/e2e.yaml
+    if: github.event.pull_request.merged == true
+    secrets: inherit
+  

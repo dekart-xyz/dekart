@@ -10,7 +10,7 @@ function DownloadingMessage () {
   const size = downloadingDatasets.reduce((size, { queryId, fileId }) => {
     if (queryId) {
       const query = queries.find(q => q.id === queryId)
-      return size + query.size
+      return size + query.resultSize
     }
     if (fileId) {
       const file = files.find(f => f.id === fileId)
