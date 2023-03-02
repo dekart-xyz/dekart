@@ -109,7 +109,7 @@ func (j *Job) fetchQueryMetadata(queryIDChan chan string, wg *sync.WaitGroup) {
 		j.ProcessedBytes = status.ScanBytes
 		j.Unlock()
 	case <-ctx.Done():
-		j.Logger.Debug().Msg("Context Done before queryID received")
+		j.Logger.Warn().Msg("Context Done before queryID received")
 	}
 
 }
