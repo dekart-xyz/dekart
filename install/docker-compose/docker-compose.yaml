@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: "dekart"
       POSTGRES_DB: "dekart"
   dekart-bigquery:
-    image: dekartxyz/dekart:0.11
+    image: dekartxyz/dekart:0.12
     restart: always
     ports:
       - 8080:8080
@@ -30,7 +30,7 @@ services:
       GOOGLE_APPLICATION_CREDENTIALS: "${GOOGLE_APPLICATION_CREDENTIALS}"
       DEKART_CORS_ORIGIN: "${DEKART_CORS_ORIGIN}"
   dekart-athena:
-    image: dekartxyz/dekart:0.11
+    image: dekartxyz/dekart:0.12
     restart: always
     ports:
       - 8080:8080
