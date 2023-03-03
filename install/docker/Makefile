@@ -16,7 +16,7 @@ athena:
 		-e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
 		-e DEKART_CORS_ORIGIN=${DEKART_CORS_ORIGIN} \
 		-p 8080:8080 \
-		dekartxyz/dekart:0.11
+		dekartxyz/dekart:0.12
 
 bigquery:
 	docker run -it --rm \
@@ -35,6 +35,6 @@ bigquery:
 		-e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
 		-e DEKART_CORS_ORIGIN=${DEKART_CORS_ORIGIN} \
 		-p 8080:8080 \
-		dekartxyz/dekart:0.11
+		dekartxyz/dekart:0.12
 
 
