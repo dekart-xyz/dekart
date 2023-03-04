@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths:
+      - './install/docker/README.md'
 
 jobs:
   dockerhub:

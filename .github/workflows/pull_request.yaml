@@ -6,11 +6,23 @@ on:
       - main
 
 jobs:
-  tests:
-    uses: ./.github/workflows/test.yaml
+  changes:
+    uses: ./.github/workflows/changes.yaml
+    permissions:
+      pull-requests: read
+  node_tests:
+    needs: changes
+    if: needs.changes.outputs.js == 'true'
+    uses: ./.github/workflows/node_test.yaml
+    secrets: inherit
+  go_tests:
+    needs: changes
+    if: needs.changes.outputs.go == 'true'
+    uses: ./.github/workflows/go_test.yaml
     secrets: inherit
   e2e_tests:
+    needs: changes
     uses: ./.github/workflows/e2e.yaml
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: needs.changes.outputs.e2e == 'true' && github.event.pull_request.head.repo.full_name == github.repository
     secrets: inherit
   
