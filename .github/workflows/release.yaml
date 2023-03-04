@@ -4,14 +4,11 @@ on:
   push:
     tags:
       - '**'
-
 jobs:
   node_tests:
-    needs: changes
     uses: ./.github/workflows/node_test.yaml
     secrets: inherit
   go_tests:
-    needs: changes
     uses: ./.github/workflows/go_test.yaml
     secrets: inherit
   e2e_tests:
