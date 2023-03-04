@@ -1,6 +1,5 @@
 # Dekart Docker image
-
-Dekart provides WebGL powered map visualizations capabilities for modern data warehouses like Snowflake, BigQuery and Amazon Athena with focus on large scale IoT datasets. Dekart is open-source project and you can run it on your own infrastructure.
+Dekart provides WebGL-powered map visualization capabilities for modern data warehouses with a focus on large-scale IoT datasets. Dekart is an open-source project and you can run it on your infrastructure.
 
 [Home Page](https://dekart.xyz?ref=dokerhub) | [GitHub](https://github.com/dekart/dekart?ref=dokerhub)
 
@@ -8,7 +7,7 @@ Dekart provides WebGL powered map visualizations capabilities for modern data wa
 
 * Create beautiful, fast WebGL map visualizations with SQL
 * Optimized for large query results, benchmarked at 1M+ points
-* Easy to save map and share link with your team
+* Easy to save a map and share a link with your team
 * Optimized for hosting in the cloud
 
 ## Supported data warehouses
