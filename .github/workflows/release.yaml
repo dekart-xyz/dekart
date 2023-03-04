@@ -6,14 +6,19 @@ on:
       - '**'
 
 jobs:
-  tests:
-    uses: ./.github/workflows/test.yaml
+  node_tests:
+    needs: changes
+    uses: ./.github/workflows/node_test.yaml
+    secrets: inherit
+  go_tests:
+    needs: changes
+    uses: ./.github/workflows/go_test.yaml
     secrets: inherit
   e2e_tests:
     uses: ./.github/workflows/e2e.yaml
     secrets: inherit
   docker:
-    needs: [tests, e2e_tests]
+    needs: [node_tests, go_tests, e2e_tests]
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repo
