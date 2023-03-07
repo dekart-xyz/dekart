@@ -8,6 +8,7 @@ on:
 jobs:
   changes:
     uses: ./.github/workflows/changes.yaml
+    if: startsWith(github.head_ref, 'release') != true
     permissions:
       pull-requests: read
   node_tests:

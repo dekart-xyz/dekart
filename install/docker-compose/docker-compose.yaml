@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: "dekart"
       POSTGRES_DB: "dekart"
   dekart-bigquery:
-    image: dekartxyz/dekart:0.11
+    image: dekartxyz/dekart:0.12
     restart: always
     ports:
       - 8080:8080
@@ -30,7 +30,7 @@ services:
       GOOGLE_APPLICATION_CREDENTIALS: "${GOOGLE_APPLICATION_CREDENTIALS}"
       DEKART_CORS_ORIGIN: "${DEKART_CORS_ORIGIN}"
   dekart-athena:
-    image: dekartxyz/dekart:0.11
+    image: dekartxyz/dekart:0.12
     restart: always
     ports:
       - 8080:8080
@@ -48,6 +48,30 @@ services:
       DEKART_DATASOURCE: "ATHENA"
       DEKART_ATHENA_CATALOG: "${DEKART_ATHENA_CATALOG}"
       DEKART_ATHENA_S3_OUTPUT_LOCATION: "${DEKART_ATHENA_S3_OUTPUT_LOCATION}"
+      AWS_REGION: "${AWS_REGION}"
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+      DEKART_CORS_ORIGIN: "${DEKART_CORS_ORIGIN}"
+  dekart-snowflake:
+    image: dekartxyz/dekart:0.12
+    restart: always
+    ports:
+      - 8080:8080
+    links:
+      - db
+    environment:
+      DEKART_POSTGRES_DB: "dekart"
+      DEKART_POSTGRES_USER: "dekart"
+      DEKART_POSTGRES_PASSWORD: "${DEKART_POSTGRES_PASSWORD}"
+      DEKART_POSTGRES_PORT: "5432"
+      DEKART_POSTGRES_HOST: "db"
+      DEKART_CLOUD_STORAGE_BUCKET: "${DEKART_CLOUD_STORAGE_BUCKET}"
+      DEKART_MAPBOX_TOKEN: "${DEKART_MAPBOX_TOKEN}"
+      DEKART_STORAGE: "S3"
+      DEKART_DATASOURCE: "SNOWFLAKE"
+      DEKART_SNOWFLAKE_ACCOUNT_ID: "${DEKART_SNOWFLAKE_ACCOUNT_ID}"
+      DEKART_SNOWFLAKE_USER: "${DEKART_SNOWFLAKE_USER}"
+      DEKART_SNOWFLAKE_PASSWORD: "${DEKART_SNOWFLAKE_PASSWORD}"
       AWS_REGION: "${AWS_REGION}"
       AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
       AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"

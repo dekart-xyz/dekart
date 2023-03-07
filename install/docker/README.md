@@ -1,25 +1,25 @@
 # Dekart Docker image
-
-Dekart is an open-source data visualization and analytical tool for large scale geo-spacial data. Dekart is based on Kepler.gl visualization and supports BigQuery and AWS Athena as a data source.
+Dekart provides WebGL-powered map visualization capabilities for modern data warehouses with a focus on large-scale IoT datasets. Dekart is an open-source project and you can run it on your infrastructure.
 
 [Home Page](https://dekart.xyz?ref=dokerhub) | [GitHub](https://github.com/dekart/dekart?ref=dokerhub)
 
 ## Features
 
-Visualize Data from BigQuery and AWS Athena on a Kepler.gl map and share it with your team:
+* Create beautiful, fast WebGL map visualizations with SQL
+* Optimized for large query results, benchmarked at 1M+ points
+* Easy to save a map and share a link with your team
+* Optimized for hosting in the cloud
 
-* Beautiful, large Scale Map Visualizations using only SQL
-* Can visualize up to 1 million rows
-* Easy to save map and share link with your team
-* Supports deployment to Google Cloud and AWS
+## Supported data warehouses
+
+* Amazon Athena
+* Google BigQuery
+* Snowflake
 
 ## Requirements
 
-* Google Cloud or AWS
-* BigQuery API Enabled or AWS Athena Workspace
-* Google CLoud Storage or AWS S3 bucket
-* PostgreSQL (for example Cloud SQL)
-* Service account credentials with access to all above
+* Google Cloud Storage or AWS S3 bucket for storing cache
+* PostgreSQL or similar (Cloud SQL, Amazon RDS, etc)
 * Mapbox Token
 
 ## Running docker
@@ -44,7 +44,7 @@ docker run \
   -e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
   -e DEKART_CORS_ORIGIN=${DEKART_CORS_ORIGIN} \
   -p 8080:8080 \
-  dekartxyz/dekart:0.11
+  dekartxyz/dekart:0.12
 ```
 
 ### BigQuery
@@ -65,13 +65,32 @@ docker run \
   -e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
   -e DEKART_CORS_ORIGIN=${DEKART_CORS_ORIGIN} \
   -p 8080:8080 \
-  dekartxyz/dekart:0.11
+  dekartxyz/dekart:0.12
 ```
 
-[Configuration details](https://dekart.xyz/docs/configuration/environment-variables/?ref=dokerhub)
+### Snowflake
 
-## Other options to run Dekart
+```bash
+docker run -it --rm \
+  -e AWS_REGION=${AWS_REGION} \
+  -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
+  -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
+  -e DEKART_POSTGRES_DB=${DEKART_POSTGRES_DB} \
+  -e DEKART_POSTGRES_USER=${DEKART_POSTGRES_USER} \
+  -e DEKART_POSTGRES_PASSWORD=${DEKART_POSTGRES_PASSWORD} \
+  -e DEKART_POSTGRES_PORT=${DEKART_POSTGRES_PORT} \
+  -e DEKART_POSTGRES_HOST=host.docker.internal \
+  -e DEKART_STORAGE=S3 \
+  -e DEKART_DATASOURCE=SNOWFLAKE \
+  -e DEKART_SNOWFLAKE_ACCOUNT_ID=${DEKART_SNOWFLAKE_ACCOUNT_ID} \
+  -e DEKART_SNOWFLAKE_USER=${DEKART_SNOWFLAKE_USER} \
+  -e DEKART_SNOWFLAKE_PASSWORD=${DEKART_SNOWFLAKE_PASSWORD} \
+  -e DEKART_CLOUD_STORAGE_BUCKET=${DEKART_CLOUD_STORAGE_BUCKET} \
+  -e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
+  -e DEKART_CORS_ORIGIN=${DEKART_CORS_ORIGIN} \
+  -p 8080:8080 \
+  dekartxyz/dekart:0.12
+```
 
-* [Google App Engine](https://dekart.xyz/docs/self-hosting/app-engine/?ref=dockerhub)
-* [docker-compose](https://dekart.xyz/docs/self-hosting/docker-compose/?ref=dockerhub)
+[Documentation](https://dekart.xyz/docs/?ref=dokerhub)
 
