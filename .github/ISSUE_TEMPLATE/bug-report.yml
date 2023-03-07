@@ -17,8 +17,6 @@ body:
 
         Please search to see if an issue already exists for the bug you encountered.
       options:
-        - label: I believe this is a new bug in dekart
-          required: true
         - label: I have searched the existing issues, and I could not find an existing issue for this bug
           required: true
   - type: textarea
@@ -26,13 +24,13 @@ body:
       label: Current Behavior
       description: A concise description of what you're experiencing.
     validations:
-      required: true
+      required: false
   - type: textarea
     attributes:
       label: Expected Behavior
       description: A concise description of what you expected to happen.
     validations:
-      required: true
+      required: false
   - type: textarea
     attributes:
       label: Steps To Reproduce
@@ -43,7 +41,7 @@ body:
         3. Run '...'
         4. See error...
     validations:
-      required: true
+      required: false
   - type: textarea
     id: logs
     attributes:
@@ -59,8 +57,12 @@ body:
       description: |
         examples:
           - **OS**: Ubuntu 20.04
+          - **Dekart version**: 0.12.0
+          - **Browser**: Google Chrome
       value: |
         - OS:
+        - Dekart version:
+        - Browser:
       render: markdown
     validations:
       required: false
