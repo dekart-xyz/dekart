@@ -28,13 +28,18 @@ Visualize Data from your data warehouse on a Kepler.gl map and share it with you
 * [Run with Docker](https://dekart.xyz/docs/self-hosting/docker/?ref=github)
 * [Configuration](https://dekart.xyz/docs/configuration/environment-variables/?ref=github)
 
+## Join the Dekart Community
+
+* Be part of the conversation in the [Dekart Community Slack](https://bit.ly/dekart-slack-community)
+* Raise topics and questions in [Dekart GitHub Discussions](https://github.com/dekart-xyz/dekart/discussions)
+
 ## Contributing
 
 * [Build from source](https://dekart.xyz/docs/contributing/build-from-source/?ref=github)
 * [Architecture Diagram](https://dekart.xyz/docs/contributing/architecture-overview/?ref=github)
 
 
-## Roadmap/Feedback
+## Roadmap & Feedback
 
 * If you like Dekart, please, give it ⭐️ on GitHub!
 * Please add 👍 to the issues in the [roadmap](https://github.com/dekart-xyz/dekart/projects/1).
