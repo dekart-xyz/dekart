@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"reflect"
 	"regexp"
 
 	"dekart/src/proto"
@@ -24,7 +23,7 @@ type Job struct {
 	storageObject       storage.StorageObject
 	maxReadStreamsCount int32
 	maxBytesBilled      int64
-	client 				*bigquery.Client
+	client              *bigquery.Client
 }
 
 var contextCancelledRe = regexp.MustCompile(`context canceled`)
@@ -120,61 +119,38 @@ func (job *Job) processApiErrors(err error) {
 	}
 }
 
-func (job *Job) getResultTable() (*bigquery.Table, error) {
-	jobConfig, err := job.bigqueryJob.Config()
+func getTableFromJob(job *bigquery.Job) (*bigquery.Table, error) {
+	cfg, err := job.Config()
 	if err != nil {
 		return nil, err
 	}
-	jobConfigVal := reflect.ValueOf(jobConfig).Elem()
-	table, ok := jobConfigVal.FieldByName("Dst").Interface().(*bigquery.Table)
-	if !ok {
-		err := fmt.Errorf("cannot get destination table from job config")
-		job.Logger.Error().Err(err).Str("jobConfig", fmt.Sprintf("%v+", jobConfig)).Send()
-		return nil, err
-	}
-	if table == nil {
-		err := fmt.Errorf("destination table is nil")
-		job.Logger.Error().Err(err).Str("jobConfig", fmt.Sprintf("%v+", jobConfig)).Send()
-		return nil, err
-	}
-
-	return table, nil
-}
-
-func (job *Job) GetResultTableForScript() (*bigquery.Table, error){
-
-
-
-	jobFromJobId, err := job.client.JobFromID(job.GetCtx(), job.bigqueryJob.ID())
-	if err != nil{
-		return nil, err
-	}
-
-	cfg, err := jobFromJobId.Config()
-
-	if err != nil{
-		return nil, err
-	}
-
 	queryConfig, ok := cfg.(*bigquery.QueryConfig)
-	if !ok{
-		err := fmt.Errorf("was expecting QueryConfig type for configuration")
-		job.Logger.Error().Err(err).Str("jobConfig", fmt.Sprintf("%v+", cfg)).Send()
-		return nil, err
+	if !ok {
+		return nil, fmt.Errorf("was expecting QueryConfig type for configuration")
 	}
-
-	table := queryConfig.Dst
-
-	if table == nil {
-		err := fmt.Errorf("destination table is nil even when gathered from JobId")
-		job.Logger.Error().Err(err).Str("jobConfig", fmt.Sprintf("%v+", cfg)).Send()
-		return nil, err
-	}
-
-	return table, nil
-
+	return queryConfig.Dst, nil
 }
 
+func (job *Job) getResultTable() (*bigquery.Table, error) {
+	table, err := getTableFromJob(job.bigqueryJob)
+	if err != nil {
+		return nil, err
+	}
+	if table == nil {
+		jobFromJobId, err := job.client.JobFromID(job.GetCtx(), job.bigqueryJob.ID())
+		if err != nil {
+			return nil, err
+		}
+		table, err = getTableFromJob(jobFromJobId)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if table == nil {
+		return nil, fmt.Errorf("result table is nil")
+	}
+	return table, nil
+}
 
 func (job *Job) wait() {
 	queryStatus, err := job.bigqueryJob.Wait(job.GetCtx())
@@ -196,11 +172,8 @@ func (job *Job) wait() {
 
 	table, err := job.getResultTable()
 	if err != nil {
-		table, err = job.GetResultTableForScript()
-		if err != nil{
-			job.CancelWithError(err)
-			return
-		}
+		job.CancelWithError(err)
+		return
 	}
 
 	err = job.setJobStats(queryStatus, table)
