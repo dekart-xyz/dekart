@@ -1,4 +1,5 @@
 import message from 'antd/es/message'
+import PermanentError from '../PermanentError'
 import StreamError from '../StreamError'
 
 const style = { /* marginTop: 0 */ }
@@ -21,12 +22,20 @@ export function success (content) {
   return { type: success.name }
 }
 
-export function error (err) {
+export function error (err, transitive = true) {
   console.error(err)
-  message.error({
-    content: err.message,
-    style
-  })
+  if (transitive) {
+    message.error({
+      content: err.message,
+      style
+    })
+  } else {
+    message.error({
+      content: (<PermanentError message={err.message} />),
+      duration: 10000,
+      style
+    })
+  }
   return { type: error.name }
 }
 
