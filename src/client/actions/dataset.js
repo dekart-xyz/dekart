@@ -73,15 +73,23 @@ export function downloadDataset (dataset, sourceId, extension, label) {
     if (i < 0) {
       return
     }
-    dispatch(addDataToMap({
-      datasets: {
-        info: {
-          label,
-          id: dataset.id
-        },
-        data
-      }
-    }))
+    try {
+      dispatch(addDataToMap({
+        datasets: {
+          info: {
+            label,
+            id: dataset.id
+          },
+          data
+        }
+      }))
+    } catch (err) {
+      dispatch(error(
+        new Error(`Failed to add data to map: ${err.message}`),
+        false
+      ))
+      return
+    }
     dispatch(finishDownloading(dataset))
     const { reportStatus } = getState()
     if (reportStatus.edit) {
