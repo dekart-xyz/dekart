@@ -132,9 +132,10 @@ func (s Server) updateJobStatus(job job.Job, jobStatus chan int32) {
 	for {
 		select {
 		case status := <-jobStatus:
+			log.Debug().Str("query_id", job.GetQueryID()).Int32("status", status).Msg("Job status changed")
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			var err error
-			if status == int32(proto.Query_JOB_STATUS_RUNNING) {
+			if status == int32(proto.Query_JOB_STATUS_PENDING) {
 				_, err = s.db.ExecContext(
 					ctx,
 					`update queries set
@@ -244,6 +245,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	}
 	obj := s.storage.GetObject(fmt.Sprintf("%s.csv", job.GetID()))
 	go s.updateJobStatus(job, jobStatus)
+	job.Status() <- int32(proto.Query_JOB_STATUS_PENDING)
 	err = job.Run(obj)
 	if err != nil {
 		log.Err(err).Send()
