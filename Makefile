@@ -39,7 +39,9 @@ nodetest:
 gotest:
 	docker buildx build -f ./Dockerfile --target gotest .
 
-e2ebq:
+e2e: bq athena snowflake
+	
+bq:
 	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} -o type=image -f ./Dockerfile --target e2etest .
 	docker run -it --rm \
 	-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
@@ -60,7 +62,7 @@ e2ebq:
 	-e TEST_SPEC=cypress/e2e/bq \
 	${DEKART_DOCKER_E2E_TAG}
 
-e2eathena:
+athena:
 	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} -o type=image -f ./Dockerfile --target e2etest .
 	docker run -it --rm \
 	-v $$(pwd)/cypress/videos:/dekart/cypress/videos/ \
@@ -86,7 +88,7 @@ e2eathena:
 	${DEKART_DOCKER_E2E_TAG}
 
 
-e2esnowflake:
+snowflake:
 	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} -o type=image -f ./Dockerfile --target e2etest .
 	docker run -it --rm \
 	-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \

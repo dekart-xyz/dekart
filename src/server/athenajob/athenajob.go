@@ -147,7 +147,6 @@ func (j *Job) Run(storageObject storage.StorageObject) error {
 	j.storageObject = storageObject
 	j.Unlock()
 
-	j.Status() <- int32(proto.Query_JOB_STATUS_PENDING)
 	queryString := j.GetQueryText()
 	out, err := j.client.StartQueryExecutionWithContext(j.GetCtx(), &athena.StartQueryExecutionInput{
 		QueryString: &queryString,

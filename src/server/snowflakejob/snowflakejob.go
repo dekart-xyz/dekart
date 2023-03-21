@@ -123,12 +123,12 @@ func (j *Job) fetchQueryMetadata(queryIDChan chan string, resultsReady chan bool
 
 func (j *Job) Run(storageObject storage.StorageObject) error {
 	j.storageObject = storageObject
-	j.Status() <- int32(proto.Query_JOB_STATUS_PENDING)
 	queryIDChan := make(chan string)
 	resultsReady := make(chan bool)
 	metadataWg := &sync.WaitGroup{}
 	metadataWg.Add(1)
 	go j.fetchQueryMetadata(queryIDChan, resultsReady, metadataWg)
+	j.Status() <- int32(proto.Query_JOB_STATUS_RUNNING)
 	rows, err := j.snowflakeDb.QueryContext(
 		sf.WithQueryIDChan(j.GetCtx(), queryIDChan),
 		j.QueryText,
@@ -139,7 +139,6 @@ func (j *Job) Run(storageObject storage.StorageObject) error {
 		return err
 	}
 	defer rows.Close()
-	j.Status() <- int32(proto.Query_JOB_STATUS_RUNNING)
 	csvRows := make(chan []string, 10) //j.TotalRows?
 
 	go j.write(csvRows)
