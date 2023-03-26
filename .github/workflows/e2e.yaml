@@ -81,6 +81,8 @@ jobs:
           docker run -i \
             --network="host" \
             -v $(pwd)/$GOOGLE_APPLICATION_CREDENTIALS:/dekart/$GOOGLE_APPLICATION_CREDENTIALS \
+            -v /tmp/cypress/videos:/dekart/cypress/videos/ \
+          	-v /tmp/cypress/screenshots:/dekart/cypress/screenshots/ \
             -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
             -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
             -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
@@ -90,7 +92,14 @@ jobs:
             -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
             -e DEKART_ALLOW_FILE_UPLOAD=1 \
             -e TEST_SPEC=cypress/e2e/bq \
+            -e CYPRESS_CI=1 \
             e2etest:latest
+      - name: Upload cypress artifacts
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: bigquery
+          path: /tmp/cypress
   athena:
     runs-on: ubuntu-latest
     needs: build
@@ -127,6 +136,8 @@ jobs:
         run: |
           docker run -i \
             --network="host" \
+            -v /tmp/cypress/videos:/dekart/cypress/videos/ \
+          	-v /tmp/cypress/screenshots:/dekart/cypress/screenshots/ \
             -e DEKART_LOG_DEBUG=1 \
             -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
             -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
@@ -143,7 +154,14 @@ jobs:
             -e DEKART_ALLOW_FILE_UPLOAD=1 \
             -e DEKART_CORS_ORIGIN=http://localhost:3000 \
             -e TEST_SPEC=cypress/e2e/athena \
+            -e CYPRESS_CI=1 \
             e2etest:latest
+      - name: Upload cypress artifacts
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: athena
+          path: /tmp/cypress
   snowflake:
     runs-on: ubuntu-latest
     needs: build
@@ -180,6 +198,8 @@ jobs:
         run: |
           docker run -i \
             --network="host" \
+            -v /tmp/cypress/videos:/dekart/cypress/videos/ \
+          	-v /tmp/cypress/screenshots:/dekart/cypress/screenshots/ \
             -e DEKART_LOG_DEBUG=1 \
             -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
             -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
@@ -194,7 +214,14 @@ jobs:
             -e DEKART_ALLOW_FILE_UPLOAD=1 \
             -e DEKART_CORS_ORIGIN=http://localhost:3000 \
             -e TEST_SPEC=cypress/e2e/snowflake \
+            -e CYPRESS_CI=1 \
             -e DEKART_SNOWFLAKE_ACCOUNT_ID=${{ secrets.SNOWFLAKE_ACCOUNT_ID }} \
             -e DEKART_SNOWFLAKE_USER=${{ secrets.SNOWFLAKE_USER }} \
             -e DEKART_SNOWFLAKE_PASSWORD=${{ secrets.SNOWFLAKE_PASSWORD }} \
             e2etest:latest
+      - name: Upload cypress artifacts
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: snowflake
+          path: /tmp/cypress

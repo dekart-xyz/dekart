@@ -196,7 +196,7 @@ export default function Query ({ query }) {
             ? (
               <Button
                 size='large'
-                disabled={!canRun}
+                disabled={!canRun || !queryText}
                 icon={<SendOutlined />}
                 onClick={() => dispatch(runQuery(query.id, queryText))}
               >Execute

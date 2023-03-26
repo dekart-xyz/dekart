@@ -25,6 +25,7 @@ function ForkButton ({ reportId, disabled, primary }) {
       icon={<ForkOutlined />}
       disabled={disabled}
       onClick={() => dispatch(forkReport(reportId))}
+      id='dekart-fork-button'
       title='Fork Report'
     />
   )
@@ -50,6 +51,7 @@ function EditModeButtons ({ changed }) {
           <>
             <ForkButton reportId={id} disabled={!canSave} />
             <Button
+              id='dekart-save-button'
               ghost
               disabled={!canSave}
               onClick={() => dispatch(saveMap())}

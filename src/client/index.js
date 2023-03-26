@@ -8,6 +8,7 @@ import thunk from 'redux-thunk'
 // import { createLogger } from 'redux-logger'
 import reducer from './reducers'
 import { taskMiddleware } from 'react-palm/tasks'
+import screenshotInit from './lib/screenshot'
 
 const store = createStore(
   reducer,
@@ -15,6 +16,7 @@ const store = createStore(
     applyMiddleware(taskMiddleware, thunk/*, createLogger() */)
   )
 )
+screenshotInit(store)
 
 ReactDOM.render(
   <Provider store={store}>

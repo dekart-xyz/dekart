@@ -5,7 +5,7 @@
   "snowflake_query": "Snowflake query",
   "simple_athena_query": "SELECT * FROM planet WHERE type = 'node' AND tags['amenity'] IN ('hospital', 'clinic', 'doctors') limit 10",
   "bigquery_script": "DECLARE var_Example INT64 DEFAULT 1; select ST_GEOGPOINT(-72, 51) as GeoPoint",
-  "simple_snowflake_query": "select v:city.coord.lat lat, v:city.coord.lon lon from SNOWFLAKE_SAMPLE_DATA.weather.daily_14_total limit 100",
+  "simple_snowflake_query": "SELECT ROUND(uniform(-90::float, 90::float, random()), 6) AS lat, ROUND(uniform(-180::float, 180::float, random()), 6) AS lon FROM TABLE(GENERATOR(ROWCOUNT => 100))",
   "simple_sql_query": "select geometry from`bigquery-public-data.geo_openstreetmap.planet_features_multipolygons` limit 10",
   "simple_sql_query_limit_100k": "select geometry from`bigquery-public-data.geo_openstreetmap.planet_features_multipolygons` limit 100000",
   "execute": "Execute",

@@ -31,7 +31,7 @@ RUN go build ./src/server
 FROM godeps as gotest
 RUN go test -v -count=1 ./src/server/**/
 
-FROM cypress/included:cypress-12.4.1-node-16.18.1-chrome-109.0.5414.74-1-ff-109.0-edge-109.0.1518.52-1 as e2etest
+FROM cypress/included:12.8.1 as e2etest
 WORKDIR /dekart
 RUN apt-get update && apt-get install  -y \
     ca-certificates
