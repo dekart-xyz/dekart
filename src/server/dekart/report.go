@@ -6,6 +6,7 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/user"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -97,26 +98,38 @@ func rollback(tx *sql.Tx) {
 	}
 }
 
+// updateDatasetIds updates the map config with new dataset ids when forked
+func updateDatasetIds(report *proto.Report, datasets []*proto.Dataset) (newMapConfig string, newDatasetIds []string) {
+	newMapConfig = report.MapConfig
+	newDatasetIds = make([]string, len(datasets))
+	for i, dataset := range datasets {
+		newID := newUUID()
+		newMapConfig = strings.ReplaceAll(newMapConfig, dataset.Id, newID)
+		newDatasetIds[i] = newID
+	}
+	return newMapConfig, newDatasetIds
+}
+
 func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Report, datasets []*proto.Dataset) error {
 	claims := user.GetClaims(ctx)
 	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return err
 	}
-
+	newMapConfig, newDatasetIds := updateDatasetIds(report, datasets)
 	_, err = tx.ExecContext(ctx,
 		"INSERT INTO reports (id, author_email, map_config, title) VALUES ($1, $2, $3, $4)",
 		report.Id,
 		claims.Email,
-		report.MapConfig,
+		newMapConfig,
 		report.Title,
 	)
 	if err != nil {
 		rollback(tx)
 		return err
 	}
-	for _, dataset := range datasets {
-		datasetId := newUUID()
+	for i, dataset := range datasets {
+		datasetId := newDatasetIds[i]
 		var queryId *string
 		var fileId *string
 		if dataset.QueryId != "" {

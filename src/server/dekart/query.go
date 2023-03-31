@@ -190,7 +190,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	log.Debug().Str("query_id", req.QueryId).Msg("RunQuery")
+	log.Debug().Str("query_id", req.QueryId).Int("QueryTextLen", len(req.QueryText)).Msg("RunQuery")
 	queriesRows, err := s.db.QueryContext(ctx,
 		`select 
 			reports.id,
