@@ -142,6 +142,10 @@ prerelease:
 	npm version prerelease --preid=rc
 preminor:
 	npm version preminor --preid=rc
+premajor:
+	npm version premajor --preid=rc
+prepatch:
+	npm version prepatch --preid=rc
 version:
 	npm version $(MAKECMDGOALS)
 minor: version
