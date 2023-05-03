@@ -53,14 +53,18 @@ func configureLogger() {
 }
 
 func configureDb() *sql.DB {
-	db, err := sql.Open("postgres", fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		os.Getenv("DEKART_POSTGRES_USER"),
-		os.Getenv("DEKART_POSTGRES_PASSWORD"),
-		os.Getenv("DEKART_POSTGRES_HOST"),
-		os.Getenv("DEKART_POSTGRES_PORT"),
-		os.Getenv("DEKART_POSTGRES_DB"),
-	))
+	url, ok := os.LookupEnv("DEKART_POSTGRES_URL")
+	if !ok {
+		url = fmt.Sprintf(
+			"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+			os.Getenv("DEKART_POSTGRES_USER"),
+			os.Getenv("DEKART_POSTGRES_PASSWORD"),
+			os.Getenv("DEKART_POSTGRES_HOST"),
+			os.Getenv("DEKART_POSTGRES_PORT"),
+			os.Getenv("DEKART_POSTGRES_DB"),
+		)
+	}
+	db, err := sql.Open("postgres", url)
 	if err != nil {
 		log.Fatal().Err(err).Send()
 	}
