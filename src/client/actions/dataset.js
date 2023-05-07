@@ -2,9 +2,10 @@ import { CreateDatasetRequest, RemoveDatasetRequest } from '../../proto/dekart_p
 import { Dekart } from '../../proto/dekart_pb_service'
 import { unary } from '../lib/grpc'
 import { downloading, error, finishDownloading, success } from './message'
-import { addDataToMap, toggleSidePanel } from '@dekart-xyz/kepler.gl/dist/actions'
+import { addDataToMap, toggleSidePanel, removeDataset as removeDatasetFromKepler } from '@dekart-xyz/kepler.gl/dist/actions'
 import { processCsvData, processGeojson } from '@dekart-xyz/kepler.gl/dist/processors'
 import { get } from '../lib/api'
+import { KeplerGlSchema } from '@dekart-xyz/kepler.gl/dist/schemas'
 
 export function createDataset (reportId) {
   return (dispatch) => {
@@ -50,6 +51,8 @@ export function removeDataset (datasetId) {
   }
 }
 
+const addedDatasets = []
+
 export function downloadDataset (dataset, sourceId, extension, label) {
   return async (dispatch, getState) => {
     dispatch({ type: downloadDataset.name, dataset })
@@ -68,21 +71,45 @@ export function downloadDataset (dataset, sourceId, extension, label) {
       dispatch(error(err))
       return
     }
-    const { datasets } = getState()
+    const { datasets, keplerGl } = getState()
     const i = datasets.findIndex(d => d.id === dataset.id)
     if (i < 0) {
       return
     }
     try {
-      dispatch(addDataToMap({
-        datasets: {
-          info: {
-            label,
-            id: dataset.id
+      if (addedDatasets.includes(dataset.id)) {
+        // kepler does not update datasets correctly
+        // so we have to remove and add again
+
+        // receive config
+        const config = KeplerGlSchema.getConfigToSave(keplerGl.kepler)
+
+        // remove dataset
+        dispatch(removeDatasetFromKepler(dataset.id))
+
+        // add dataset with previous config
+        dispatch(addDataToMap({
+          datasets: {
+            info: {
+              label,
+              id: dataset.id
+            },
+            data
           },
-          data
-        }
-      }))
+          config
+        }))
+      } else {
+        dispatch(addDataToMap({
+          datasets: {
+            info: {
+              label,
+              id: dataset.id
+            },
+            data
+          }
+        }))
+        addedDatasets.push(dataset.id)
+      }
     } catch (err) {
       dispatch(error(
         new Error(`Failed to add data to map: ${err.message}`),
