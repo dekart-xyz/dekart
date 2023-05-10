@@ -70,6 +70,10 @@ resource "aws_ecs_task_definition" "dekart" {
              "value": "${aws_s3_bucket.dekart_output.id}"
           },
           {
+             "name": "DEKART_ATHENA_WORKGROUP",
+             "value": "${var.athena_workgroup}"
+          },
+          {
              "name": "DEKART_MAPBOX_TOKEN",
              "value": "${var.mapbox_token}"
           },

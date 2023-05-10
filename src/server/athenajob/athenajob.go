@@ -147,12 +147,21 @@ func (j *Job) Run(storageObject storage.StorageObject) error {
 	j.storageObject = storageObject
 	j.Unlock()
 
+	var athenaWorkgroup *string
+	if os.Getenv("DEKART_ATHENA_WORKGROUP") == "" {
+		j.Logger.Warn().Msg("athena workgroup not set or empty, this will default to the primary workgroup")
+	} else {
+		athenaWorkgroup = aws.String(os.Getenv("DEKART_ATHENA_WORKGROUP"))
+		j.Logger.Debug().Msgf("athena workgroup set to %s", *athenaWorkgroup)
+	}
+
 	queryString := j.GetQueryText()
 	out, err := j.client.StartQueryExecutionWithContext(j.GetCtx(), &athena.StartQueryExecutionInput{
 		QueryString: &queryString,
 		ResultConfiguration: &athena.ResultConfiguration{
 			OutputLocation: &j.outputLocation,
 		},
+		WorkGroup: athenaWorkgroup,
 	})
 	if err != nil {
 		j.Logger.Error().Err(err).Msg("Error starting query execution")

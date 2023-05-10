@@ -45,3 +45,6 @@ variable "athena_catalog" {
   default = "AwsDataCatalog"
 }
 
+variable "athena_workgroup" {
+  default = "primary"
+}
