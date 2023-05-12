@@ -1,16 +1,18 @@
 # Dekart
-Dekart is an open-source data visualization and analytical tool for large scale geo-spatial data. Dekart is based on Kepler.gl visualization and supports Snowflake, BigQuery and AWS Athena as a data source.
+Dekart is open-source WebGL-powered map visualization and spatial analytics for modern data warehouses. It offers self-hosted alternative to CARTO and Foursquare Studio. We build it for data scientists, analysts, GIS professionals, and developers who need to visualize large datasets on a map.
+
 <a href="https://dekart.xyz/docs/about/screencast/?ref=github"><img src="./docs/files/screen.png"></a>
 <p align="center"><a href="https://dekart.xyz/docs/about/playground/?ref=github">Try Dekart with BigQuery Open Datasets</a></p>
 
 ## Features
 
-Visualize Data from your data warehouse on a Kepler.gl map and share it with your team:
+Create beautiful data-driven maps and share them with your team:
 
-* Map Visualizations with SQL or file upload
-* Visualize up to 1 million rows
-* Save map and share link with your team
-* Deploy on Google Cloud or AWS
+* State-of-the art WebGL-powered map visualization for Snowflake, BigQuery and Amazon Athena
+* Optimized for large query results, tested 100Mb/1M rows
+* Efficient query result caching on Amazon S3 or Google Cloud Storage
+* Side-by-side SQL editor and support for CSV and GeoJSON file uploads
+* Simple Docker-based deployment with native support for Amazon Cognito and Google IAP and AWS/GCP/Terraform examples
 
 ## Available data sources
 
@@ -20,34 +22,30 @@ Visualize Data from your data warehouse on a Kepler.gl map and share it with you
 * CSV (file upload)
 * GeoJSON (file upload)
 
-
 ## Self-hosting Dekart
 
 * [Deploy to AWS/ECS with Terraform](https://dekart.xyz/docs/self-hosting/aws-ecs-terraform/?ref=github)  and manage access with Google IAP
 * [Deploy to Google App Engine](https://dekart.xyz/docs/self-hosting/app-engine/?ref=github)  and manage access with Google IAP
 * [Run with Docker](https://dekart.xyz/docs/self-hosting/docker/?ref=github)
-* [Configuration](https://dekart.xyz/docs/configuration/environment-variables/?ref=github)
+* [Documentation](https://dekart.xyz/docs/configuration/environment-variables/?ref=github)
 
-## Join the Dekart Community
+## Support us building Dekart
 
-* Be part of the conversation in the [Dekart Community Slack](https://bit.ly/dekart-slack-community)
-* Raise topics and questions in [Dekart GitHub Discussions](https://github.com/dekart-xyz/dekart/discussions)
+* Give it ⭐️ on GitHub!
+* Be part of the conversation in the [Dekart Community Slack](https://bit.ly/dekart-slack)
+* Vote for new features by adding 👍 to items in the [Public Road map](https://github.com/dekart-xyz/dekart/projects/1).
+* Raise issues and feature requests in [Dekart GitHub Issues](https://github.com/dekart-xyz/dekart/issues/new/choose)
 
 ## Contributing
 
 * [Build from source](https://dekart.xyz/docs/contributing/build-from-source/?ref=github)
 * [Architecture Diagram](https://dekart.xyz/docs/contributing/architecture-overview/?ref=github)
+* [Contribution Guide](./CONTRIBUTING.md)
 
-
-## Roadmap & Feedback
-
-* If you like Dekart, please, give it ⭐️ on GitHub!
-* Please add 👍 to the issues in the [roadmap](https://github.com/dekart-xyz/dekart/projects/1).
-* In case of technical questions or feature request, please [create an issue](https://github.com/dekart-xyz/dekart/issues/new/choose).
 
 ## Name origin
 
-Dekart is variant of [Renatus Cartesius](https://en.wikipedia.org/wiki/René_Descartes) (French: [ʁəne dekaʁt]) name, common in Eastern Europe.
+Dekart is named after French mathematician René Descartes (French: [ʁəne dekaʁt], Latinized: Renatus Cartesius). Descartes was the name of a French family surname derived from the word des chartes, meaning "of the charts"; this was a reference to the family's involvement in the creation of maps and globes.
 
 ## License
 
