@@ -12,12 +12,14 @@ export function Header ({ buttons, title }) {
   }
   return (
     <div className={styles.header}>
-      <DekartMenu />
-      <div className={styles.middle}>
-        <div className={styles.dekartLinkHolder}><a target='_blank' rel='noopener noreferrer' className={styles.dekartLink} href={homePage}>Dekart</a></div>
-        {title ? (<div className={styles.title}>{title}</div>) : null}
+      <div className={styles.top}>
+        <DekartMenu />
+        <div className={styles.middle}>
+          <div className={styles.dekartLinkHolder}><a target='_blank' rel='noopener noreferrer' className={styles.dekartLink} href={homePage}>Dekart</a></div>
+        </div>
+        <div className={styles.buttons}>{buttons || null}</div>
       </div>
-      <div className={styles.buttons}>{buttons || null}</div>
+      {title ? (<div className={styles.title}>{title}</div>) : null}
     </div>
   )
 }

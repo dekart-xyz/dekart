@@ -1,5 +1,5 @@
 :global(.ant-menu-item) a.dekartLink {
-    color: #57B7D3!important;
+    color: #57B7D3 !important;
     font-size: 18px;
     font-weight: bold;
     cursor: pointer;
@@ -9,7 +9,11 @@
     background-color: transparent !important;
 }
 
-:global(.ant-menu-submenu) :global(.ant-menu){
+.dekartMenu :global(.ant-menu-overflow) {
+    display: block;
+}
+
+:global(.ant-menu-submenu) :global(.ant-menu) {
     background-color: #2B323B !important;
 }
 
