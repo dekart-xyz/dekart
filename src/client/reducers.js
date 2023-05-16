@@ -4,6 +4,7 @@ import { ActionTypes as KeplerActionTypes } from '@dekart-xyz/kepler.gl/dist/act
 import { openReport, reportTitleChange, reportUpdate, saveMap, reportsListUpdate, unsubscribeReports, streamError, httpError, newReport, setEnv, forkReport, newForkedReport, downloading, finishDownloading, setActiveDataset, queryChanged, newRelease, querySource, uploadFile, uploadFileProgress, uploadFileStateChange, downloadDataset } from './actions'
 import { Query } from '../proto/dekart_pb'
 import { setUsage } from './actions/usage'
+import { setUserMapboxAccessTokenUpdater } from '@dekart-xyz/kepler.gl/dist/reducers/ui-state-updaters'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
   uiState: {
@@ -13,7 +14,17 @@ const customKeplerGlReducer = keplerGlReducer.initialState({
 })
 
 function keplerGl (state, action) {
-  return customKeplerGlReducer(state, action)
+  const newState = customKeplerGlReducer(state, action)
+  switch (action.type) {
+    case KeplerActionTypes.REGISTER_ENTRY:
+      // set mapbox token for map export
+      newState.kepler.uiState = setUserMapboxAccessTokenUpdater(newState.kepler.uiState, {
+        payload: newState.kepler.mapStyle.mapboxApiAccessToken
+      })
+      return newState
+    default:
+      return newState
+  }
 }
 
 function report (state = null, action) {
