@@ -1,6 +1,6 @@
 import Button from 'antd/es/button'
 import Modal from 'antd/es/modal'
-import { UsergroupAddOutlined, LinkOutlined, LockOutlined, InfoCircleOutlined, FileSearchOutlined } from '@ant-design/icons'
+import { ExportOutlined, UsergroupAddOutlined, LinkOutlined, LockOutlined, InfoCircleOutlined, FileSearchOutlined } from '@ant-design/icons'
 import { useState } from 'react'
 import styles from './ShareButton.module.css'
 import { copyUrlToClipboard, setDiscoverable } from './actions'
@@ -8,6 +8,9 @@ import { useDispatch, useSelector } from 'react-redux'
 import Tooltip from 'antd/es/tooltip'
 import { getRef } from './lib/ref'
 import Switch from 'antd/es/switch'
+import { toggleModal } from '@dekart-xyz/kepler.gl/dist/actions/ui-state-actions'
+import { EXPORT_DATA_ID, EXPORT_IMAGE_ID, EXPORT_MAP_ID } from '@dekart-xyz/kepler.gl/dist/constants'
+import Dropdown from 'antd/es/dropdown'
 
 function CopyLinkButton () {
   const dispatch = useDispatch()
@@ -93,9 +96,43 @@ function ModalContent ({ reportId, discoverable, canWrite }) {
   )
 }
 
+function ExportDropdown ({ setModalOpen }) {
+  const dispatch = useDispatch()
+  const items = [
+    {
+      label: 'Map',
+      onClick: () => {
+        setModalOpen(false)
+        dispatch(toggleModal(EXPORT_MAP_ID))
+      }
+    },
+    {
+      label: 'Data',
+      onClick: () => {
+        setModalOpen(false)
+        dispatch(toggleModal(EXPORT_DATA_ID))
+      }
+    },
+    {
+      label: 'Image',
+      onClick: () => {
+        setModalOpen(false)
+        dispatch(toggleModal(EXPORT_IMAGE_ID))
+      }
+    }
+  ]
+  return (
+    <Dropdown menu={{ items }} placement='topLeft'>
+      <Button
+        icon={<ExportOutlined />}
+      >Export
+      </Button>
+    </Dropdown>
+  )
+}
+
 export default function ShareButton ({ reportId, discoverable, canWrite }) {
   const [modalOpen, setModalOpen] = useState(false)
-
   return (
     <>
       <Button
@@ -112,7 +149,10 @@ export default function ShareButton ({ reportId, discoverable, canWrite }) {
         bodyStyle={{ padding: '0px' }}
         footer={
           <div className={styles.modalFooter}>
+            <ExportDropdown setModalOpen={setModalOpen} />
+            <div className={styles.modalFooterSmallSpacer} />
             <CopyLinkButton />
+            <div className={styles.modalFooterSpacer} />
             <Button type='primary' onClick={() => setModalOpen(false)}>
               Done
             </Button>

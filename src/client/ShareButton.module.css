@@ -3,6 +3,14 @@
     justify-content: space-between;
 }
 
+.modalFooterSmallSpacer {
+    width: 10px;
+}
+
+.modalFooterSpacer {
+    flex: 1;
+}
+
 .discoverableStatusIcon {
     font-size: 1.2em;
     position: relative;
