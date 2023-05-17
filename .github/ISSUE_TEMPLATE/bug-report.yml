@@ -57,7 +57,7 @@ body:
       description: |
         examples:
           - **OS**: Ubuntu 20.04
-          - **Dekart version**: 0.12.0
+          - **Dekart version**: 0.13.0
           - **Browser**: Google Chrome
       value: |
         - OS:
