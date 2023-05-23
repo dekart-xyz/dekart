@@ -84,6 +84,14 @@ export function downloadDataset (dataset, sourceId, extension, label) {
         // receive config
         const config = KeplerGlSchema.getConfigToSave(keplerGl.kepler)
 
+        // filter for specific dataset
+        config.config.visState.layers = config.config.visState.layers.filter(
+          layer => layer.config.dataId === dataset.id
+        )
+        config.config.visState.filters = config.config.visState.filters.filter(
+          f => f.dataId.includes(dataset.id)
+        )
+
         // remove dataset
         dispatch(removeDatasetFromKepler(dataset.id))
 
@@ -96,6 +104,7 @@ export function downloadDataset (dataset, sourceId, extension, label) {
             },
             data
           },
+          options: { keepExistingConfig: true },
           config
         }))
       } else {
