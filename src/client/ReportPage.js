@@ -110,7 +110,7 @@ function DatasetSection ({ reportId }) {
       >
         <div className={styles.datasetSectionWrapper}>
           <div className={styles.datasetSection}>
-            <div className={styles.tabs}>
+            <div className={styles.tabs} id='dekart-report-page-tabs'>
               <Tabs
                 type='editable-card'
                 activeKey={activeDataset.id}
