@@ -29,11 +29,11 @@ Create beautiful data-driven maps and share them with your team:
 * [Run with Docker](https://dekart.xyz/docs/self-hosting/docker/?ref=github)
 * [Documentation](https://dekart.xyz/docs/configuration/environment-variables/?ref=github)
 
-## Support us building Dekart
+## Support us in building Dekart
 
 * Give it ⭐️ on GitHub!
 * Be part of the conversation in the [Dekart Community Slack](https://bit.ly/dekart-slack)
-* Vote for new features by adding 👍 to items in the [Public Road map](https://github.com/dekart-xyz/dekart/projects/1).
+* Vote for new features by adding 👍 to new items in the [Public Road map](https://github.com/orgs/dekart-xyz/projects/1/views/2?visibleFields=%5B%22Title%22%2C%22Status%22%2C44878637%5D).
 * Raise issues and feature requests in [Dekart GitHub Issues](https://github.com/dekart-xyz/dekart/issues/new/choose)
 
 ## Contributing
