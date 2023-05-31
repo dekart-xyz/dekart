@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"strings"
 
 	"dekart/src/proto"
 	"dekart/src/server/job"
@@ -14,6 +15,7 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"google.golang.org/api/googleapi"
+	"google.golang.org/api/option"
 )
 
 // Job implements the dekart.Job interface for BigQuery; concurrency safe.
@@ -219,10 +221,25 @@ func (job *Job) setMaxReadStreamsCount(queryText string) {
 	}
 }
 
+func getOauthScopes() []string {
+	scopes := []string{"https://www.googleapis.com/auth/bigquery"}
+	extraScopesRaw := os.Getenv("DEKART_GCP_EXTRA_OAUTH_SCOPES")
+	if extraScopesRaw != "" {
+		extraScopes := strings.Split(extraScopesRaw, ",")
+		scopes = append(scopes, extraScopes...)
+	}
+	return scopes
+
+}
+
 // Run implementation
 func (job *Job) Run(storageObject storage.StorageObject) error {
 	job.Logger.Debug().Msg("Run BigQuery Job")
-	client, err := bigquery.NewClient(job.GetCtx(), os.Getenv("DEKART_BIGQUERY_PROJECT_ID"))
+	client, err := bigquery.NewClient(
+		job.GetCtx(),
+		os.Getenv("DEKART_BIGQUERY_PROJECT_ID"),
+		option.WithScopes(getOauthScopes()...),
+	)
 	if err != nil {
 		job.Cancel()
 		return err
