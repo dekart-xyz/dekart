@@ -144,7 +144,6 @@ func (j *Job) Run(storageObject storage.StorageObject) error {
 	go j.write(csvRows)
 
 	firstRow := true
-
 	for rows.Next() {
 		columnTypes, err := rows.ColumnTypes()
 		if err != nil {
@@ -180,6 +179,10 @@ func (j *Job) Run(storageObject storage.StorageObject) error {
 			}
 		}
 		csvRows <- csvRow
+	}
+	if firstRow {
+		// unblock fetchQueryMetadata if no rows
+		resultsReady <- true
 	}
 	metadataWg.Wait() // do not close context until metadata is fetched
 	close(csvRows)    //better to close in defer?
