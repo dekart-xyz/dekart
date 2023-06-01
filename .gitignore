@@ -42,3 +42,6 @@ npm-debug.log*
 # cypress
 cypress/videos
 cypress/screenshots
+
+# IDE
+.idea
