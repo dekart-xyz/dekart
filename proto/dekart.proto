@@ -13,6 +13,7 @@ service Dekart {
     // datasets
     rpc CreateDataset(CreateDatasetRequest) returns (CreateDatasetResponse) {}
     rpc RemoveDataset(RemoveDatasetRequest) returns (RemoveDatasetResponse) {}
+    rpc UpdateDataset(UpdateDatasetRequest) returns (UpdateDatasetResponse) {}
 
     // files
     rpc CreateFile(CreateFileRequest) returns (CreateFileResponse) {}
@@ -116,6 +117,7 @@ message Dataset {
     int64 created_at = 4;
     int64 updated_at = 5;
     string file_id = 6;
+    string name = 7;
 }
 
 message Query {
@@ -191,6 +193,14 @@ message CancelQueryRequest {
 }
 
 message CancelQueryResponse {
+}
+
+message UpdateDatasetRequest {
+    string dataset_id = 1;
+    string name = 2;
+}
+
+message UpdateDatasetResponse {
 }
 
 message CreateDatasetRequest {

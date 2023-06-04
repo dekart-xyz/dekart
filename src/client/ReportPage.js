@@ -1,13 +1,12 @@
 import { useParams } from 'react-router-dom'
 import Input from 'antd/es/input'
-import Modal from 'antd/es/modal'
 import { useEffect, useState, Component } from 'react'
 import { KeplerGl } from '@dekart-xyz/kepler.gl/dist/components'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
 import { useDispatch, useSelector } from 'react-redux'
 import { closeReport, openReport, reportTitleChange, setActiveDataset, error, createDataset, removeDataset } from './actions'
-import { EditOutlined, WarningFilled } from '@ant-design/icons'
+import { EditOutlined, WarningFilled, MoreOutlined } from '@ant-design/icons'
 import { Query as QueryType } from '../proto/dekart_pb'
 import Tabs from 'antd/es/tabs'
 import { KeplerGlSchema } from '@dekart-xyz/kepler.gl/dist/schemas'
@@ -17,6 +16,8 @@ import ReportHeaderButtons from './ReportHeaderButtons'
 import Downloading from './Downloading'
 import Dataset from './Dataset'
 import { Resizable } from 're-resizable'
+import DatasetSettingsModal from './DatasetSettingsModal'
+import getDatasetName from './lib/getDatasetName'
 
 function TabIcon ({ query }) {
   let iconColor = 'transparent'
@@ -46,20 +47,21 @@ function TabIcon ({ query }) {
   )
 }
 
-function getOnTabEditHandler (dispatch, reportId) {
+function getOnTabEditHandler (dispatch, reportId, setSettingDatasetId) {
   return (datasetId, action) => {
     switch (action) {
       case 'add':
         // return dispatch(createQuery(reportId))
         return dispatch(createDataset(reportId))
       case 'remove':
-        Modal.confirm({
-          title: 'Remove dataset from report?',
-          okText: 'Yes',
-          okType: 'danger',
-          cancelText: 'No',
-          onOk: () => dispatch(removeDataset(datasetId))
-        })
+        setSettingDatasetId(datasetId)
+        // Modal.confirm({
+        //   title: 'Remove dataset from report?',
+        //   okText: 'Yes',
+        //   okType: 'danger',
+        //   cancelText: 'No',
+        //   onOk: () => dispatch(removeDataset(datasetId))
+        // })
         break
       default:
           // do nothing
@@ -67,23 +69,24 @@ function getOnTabEditHandler (dispatch, reportId) {
   }
 }
 
-function getTabPane (dataset, closable, queries, files, status) {
+function getTabPane (dataset, queries, files, status) {
   let changed = false
-  let title = 'New'
+  const title = getDatasetName(dataset, queries, files)
   let tabIcon = null
   if (dataset.queryId) {
-    const i = queries.findIndex(q => q.id === dataset.queryId)
     const query = queries.find(q => q.id === dataset.queryId)
     tabIcon = <TabIcon query={query} />
-    title = `Query ${i + 1}`
     changed = status.changed
-  } else if (dataset.fileId) {
-    const file = files.find(f => f.id === dataset.fileId)
-    if (file && file.name) {
-      title = file.name
-    }
   }
-  return (<Tabs.TabPane tab={<>{tabIcon}{`${title}${changed ? '*' : ''}`}</>} key={dataset.id} closable={closable} />)
+  // const editable = Boolean(dataset.queryId || dataset.fileId)
+  return (
+    <Tabs.TabPane
+      tab={<>{tabIcon}{`${title}${changed ? '*' : ''}`}</>}
+      key={dataset.id}
+      closable
+      closeIcon={<><MoreOutlined /></>}
+    />
+  )
 }
 
 function DatasetSection ({ reportId }) {
@@ -95,36 +98,40 @@ function DatasetSection ({ reportId }) {
   const queryStatus = useSelector(state => state.queryStatus)
   const { canWrite } = report
   const dispatch = useDispatch()
+  const [settingDatasetId, setSettingDatasetId] = useState(null)
+
   useEffect(() => {
     if (report && !(activeDataset)) {
       dispatch(createDataset(reportId))
     }
   }, [reportId, report, activeDataset, dispatch])
   if (activeDataset) {
-    const closable = datasets.length > 1 && canWrite
     return (
-      <Resizable
-        enable={{ top: false, right: false, bottom: false, left: true, topRight: false, bottomRight: false, bottomLeft: false, topLeft: false }}
-        className={styles.resizable}
-        defaultSize={{ width: 'min(40%, 500px)' }}
-      >
-        <div className={styles.datasetSectionWrapper}>
-          <div className={styles.datasetSection}>
-            <div className={styles.tabs} id='dekart-report-page-tabs'>
-              <Tabs
-                type='editable-card'
-                activeKey={activeDataset.id}
-                onChange={(datasetId) => dispatch(setActiveDataset(datasetId))}
-                hideAdd={!canWrite}
-                onEdit={getOnTabEditHandler(dispatch, reportId)}
-              >
-                {datasets.map((dataset) => getTabPane(dataset, closable, queries, files, queryStatus))}
-              </Tabs>
+      <>
+        <Resizable
+          enable={{ top: false, right: false, bottom: false, left: true, topRight: false, bottomRight: false, bottomLeft: false, topLeft: false }}
+          className={styles.resizable}
+          defaultSize={{ width: 'min(40%, 500px)' }}
+        >
+          <div className={styles.datasetSectionWrapper}>
+            <div className={styles.datasetSection}>
+              <div className={styles.tabs} id='dekart-report-page-tabs'>
+                <Tabs
+                  type={canWrite ? 'editable-card' : 'card'}
+                  activeKey={activeDataset.id}
+                  onChange={(datasetId) => dispatch(setActiveDataset(datasetId))}
+                  hideAdd={!canWrite}
+                  onEdit={getOnTabEditHandler(dispatch, reportId, setSettingDatasetId)}
+                >
+                  {datasets.map((dataset) => getTabPane(dataset, queries, files, queryStatus))}
+                </Tabs>
+              </div>
+              <Dataset dataset={activeDataset} />
             </div>
-            <Dataset dataset={activeDataset} />
           </div>
-        </div>
-      </Resizable>
+        </Resizable>
+        <DatasetSettingsModal settingDatasetId={settingDatasetId} setSettingDatasetId={setSettingDatasetId} />
+      </>
     )
   } else {
     return null

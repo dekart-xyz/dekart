@@ -381,6 +381,9 @@ export class Dataset extends jspb.Message {
   getFileId(): string;
   setFileId(value: string): void;
 
+  getName(): string;
+  setName(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Dataset.AsObject;
   static toObject(includeInstance: boolean, msg: Dataset): Dataset.AsObject;
@@ -399,6 +402,7 @@ export namespace Dataset {
     createdAt: number,
     updatedAt: number,
     fileId: string,
+    name: string,
   }
 }
 
@@ -666,6 +670,46 @@ export class CancelQueryResponse extends jspb.Message {
 }
 
 export namespace CancelQueryResponse {
+  export type AsObject = {
+  }
+}
+
+export class UpdateDatasetRequest extends jspb.Message {
+  getDatasetId(): string;
+  setDatasetId(value: string): void;
+
+  getName(): string;
+  setName(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): UpdateDatasetRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: UpdateDatasetRequest): UpdateDatasetRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: UpdateDatasetRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): UpdateDatasetRequest;
+  static deserializeBinaryFromReader(message: UpdateDatasetRequest, reader: jspb.BinaryReader): UpdateDatasetRequest;
+}
+
+export namespace UpdateDatasetRequest {
+  export type AsObject = {
+    datasetId: string,
+    name: string,
+  }
+}
+
+export class UpdateDatasetResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): UpdateDatasetResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: UpdateDatasetResponse): UpdateDatasetResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: UpdateDatasetResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): UpdateDatasetResponse;
+  static deserializeBinaryFromReader(message: UpdateDatasetResponse, reader: jspb.BinaryReader): UpdateDatasetResponse;
+}
+
+export namespace UpdateDatasetResponse {
   export type AsObject = {
   }
 }

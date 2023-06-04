@@ -1,4 +1,4 @@
-import { CreateDatasetRequest, RemoveDatasetRequest } from '../../proto/dekart_pb'
+import { CreateDatasetRequest, RemoveDatasetRequest, UpdateDatasetRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { unary } from '../lib/grpc'
 import { downloading, error, finishDownloading, success } from './message'
@@ -22,6 +22,25 @@ export function setActiveDataset (datasetId) {
     const dataset = datasets.find(d => d.id === datasetId) || datasets[0]
     if (dataset) {
       dispatch({ type: setActiveDataset.name, dataset })
+    }
+  }
+}
+
+export function updateDataset (datasetId, name) {
+  return async (dispatch, getState) => {
+    const { datasets } = getState()
+    const dataset = datasets.find(d => d.id === datasetId)
+    if (!dataset) {
+      return
+    }
+    dispatch({ type: updateDataset.name, datasetId, name })
+    const request = new UpdateDatasetRequest()
+    request.setDatasetId(datasetId)
+    request.setName(name)
+    try {
+      await unary(Dekart.UpdateDataset, request)
+    } catch (err) {
+      dispatch(error(err))
     }
   }
 }
