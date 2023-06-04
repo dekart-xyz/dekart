@@ -6,6 +6,7 @@ import { addDataToMap, toggleSidePanel, removeDataset as removeDatasetFromKepler
 import { processCsvData, processGeojson } from '@dekart-xyz/kepler.gl/dist/processors'
 import { get } from '../lib/api'
 import { KeplerGlSchema } from '@dekart-xyz/kepler.gl/dist/schemas'
+import getDatasetName from '../lib/getDatasetName'
 
 export function createDataset (reportId) {
   return (dispatch) => {
@@ -70,9 +71,7 @@ export function removeDataset (datasetId) {
   }
 }
 
-const addedDatasets = []
-
-export function downloadDataset (dataset, sourceId, extension, label) {
+export function downloadDataset (dataset, sourceId, extension, prevDatasetsList) {
   return async (dispatch, getState) => {
     dispatch({ type: downloadDataset.name, dataset })
     dispatch(downloading(dataset))
@@ -90,13 +89,16 @@ export function downloadDataset (dataset, sourceId, extension, label) {
       dispatch(error(err))
       return
     }
-    const { datasets, keplerGl } = getState()
+    const { datasets, files, queries, keplerGl } = getState()
+    const label = getDatasetName(dataset, queries, files)
+    const prevDataset = prevDatasetsList.find(d => d.id === dataset.id)
     const i = datasets.findIndex(d => d.id === dataset.id)
     if (i < 0) {
       return
     }
     try {
-      if (addedDatasets.includes(dataset.id)) {
+      if (prevDataset) {
+        const prevLabel = getDatasetName(prevDataset, queries, files)
         // kepler does not update datasets correctly
         // so we have to remove and add again
 
@@ -110,6 +112,16 @@ export function downloadDataset (dataset, sourceId, extension, label) {
         config.config.visState.filters = config.config.visState.filters.filter(
           f => f.dataId.includes(dataset.id)
         )
+
+        // update layer labels
+        if (prevDataset?.name !== dataset.name) {
+          config.config.visState.layers = config.config.visState.layers.map(layer => {
+            if (layer.config.label === prevLabel) {
+              layer.config.label = label
+            }
+            return layer
+          })
+        }
 
         // remove dataset
         dispatch(removeDatasetFromKepler(dataset.id))
@@ -136,7 +148,6 @@ export function downloadDataset (dataset, sourceId, extension, label) {
             data
           }
         }))
-        addedDatasets.push(dataset.id)
       }
     } catch (err) {
       dispatch(error(

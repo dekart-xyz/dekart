@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react'
 import getDatasetName from './lib/getDatasetName'
 import { removeDataset, updateDataset } from './actions'
 
-function ModalFooter ({ disabled, setDisabled, setSaving, datasetId, name, setSettingDatasetId }) {
+function ModalFooter ({ saving, setSaving, datasetId, name, setSettingDatasetId }) {
   const dispatch = useDispatch()
 
   const numDatasets = useSelector(state => state.datasets.length)
@@ -15,11 +15,10 @@ function ModalFooter ({ disabled, setDisabled, setSaving, datasetId, name, setSe
   return (
     <div className={styles.modalFooter}>
       <Button
-        disabled={disabled}
+        disabled={saving}
         onClick={() => {
-          setDisabled(true)
-          dispatch(updateDataset(datasetId, name))
           setSaving(true)
+          dispatch(updateDataset(datasetId, name))
         }}
       >
         Save
@@ -36,7 +35,7 @@ function ModalFooter ({ disabled, setDisabled, setSaving, datasetId, name, setSe
             onOk: () => dispatch(removeDataset(datasetId))
           })
         }}
-        disabled={numDatasets < 2 || disabled}
+        disabled={numDatasets < 2 || saving}
       >
         Delete Dataset
       </Button>
@@ -51,12 +50,7 @@ export default function DatasetSettingsModal ({ settingDatasetId, setSettingData
   const files = useSelector(state => state.files)
 
   const [name, setName] = useState(dataset?.name)
-  const [disabled, setDisabled] = useState(false)
   const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    setDisabled(false)
-  }, [dataset?.id])
 
   useEffect(() => {
     setName(dataset?.name)
@@ -79,8 +73,7 @@ export default function DatasetSettingsModal ({ settingDatasetId, setSettingData
       onCancel={() => setSettingDatasetId(null)}
       footer={
         <ModalFooter
-          disabled={disabled}
-          setDisabled={setDisabled}
+          saving={saving}
           setSaving={setSaving}
           datasetId={dataset.id}
           name={name}
@@ -93,7 +86,7 @@ export default function DatasetSettingsModal ({ settingDatasetId, setSettingData
           placeholder={getDatasetName(dataset, queries, files)}
           value={name}
           onChange={(e) => setName(e.target.value)}
-          disabled={disabled}
+          disabled={saving}
         />
       </div>
     </Modal>

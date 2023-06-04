@@ -5,7 +5,7 @@ import { KeplerGl } from '@dekart-xyz/kepler.gl/dist/components'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
 import { useDispatch, useSelector } from 'react-redux'
-import { closeReport, openReport, reportTitleChange, setActiveDataset, error, createDataset, removeDataset } from './actions'
+import { closeReport, openReport, reportTitleChange, setActiveDataset, error, createDataset } from './actions'
 import { EditOutlined, WarningFilled, MoreOutlined } from '@ant-design/icons'
 import { Query as QueryType } from '../proto/dekart_pb'
 import Tabs from 'antd/es/tabs'
@@ -51,20 +51,13 @@ function getOnTabEditHandler (dispatch, reportId, setSettingDatasetId) {
   return (datasetId, action) => {
     switch (action) {
       case 'add':
-        // return dispatch(createQuery(reportId))
         return dispatch(createDataset(reportId))
       case 'remove':
+        // opens settings modal
         setSettingDatasetId(datasetId)
-        // Modal.confirm({
-        //   title: 'Remove dataset from report?',
-        //   okText: 'Yes',
-        //   okType: 'danger',
-        //   cancelText: 'No',
-        //   onOk: () => dispatch(removeDataset(datasetId))
-        // })
         break
       default:
-          // do nothing
+        // do nothing
     }
   }
 }
@@ -78,7 +71,6 @@ function getTabPane (dataset, queries, files, status) {
     tabIcon = <TabIcon query={query} />
     changed = status.changed
   }
-  // const editable = Boolean(dataset.queryId || dataset.fileId)
   return (
     <Tabs.TabPane
       tab={<>{tabIcon}{`${title}${changed ? '*' : ''}`}</>}

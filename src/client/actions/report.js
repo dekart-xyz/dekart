@@ -8,6 +8,7 @@ import { Dekart } from '../../proto/dekart_pb_service'
 import { createQuery, downloadQuerySource } from './query'
 import { downloadDataset } from './dataset'
 import { shouldAddQuery } from '../lib/shouldAddQuery'
+import { shouldUpdateDataset } from '../lib/shouldUpdateDataset'
 
 let reportStreamCancelable
 
@@ -86,7 +87,7 @@ export function reportUpdate (reportStreamResponse) {
       prevDatasetsList,
       filesList
     })
-    if (report.mapConfig /*&& !prevReport */) {
+    if (report.mapConfig && !prevReport) {
       const parsedConfig = KeplerGlSchema.parseSavedConfig(JSON.parse(report.mapConfig))
       dispatch(receiveMapConfig(parsedConfig))
     }
@@ -114,23 +115,31 @@ export function reportUpdate (reportStreamResponse) {
       }
     })
 
-    let i = 0
     const { ALLOW_FILE_UPLOAD } = env.variables
     datasetsList.forEach((dataset) => {
       let extension = 'csv'
       if (dataset.queryId) {
-        i++
         const query = queriesList.find(q => q.id === dataset.queryId)
-        if (shouldAddQuery(query, prevQueriesList, queriesList)) {
-          dispatch(downloadDataset(dataset, query.jobResultId, extension, `Query ${i}`))
+        if (shouldAddQuery(query, prevQueriesList, queriesList) || shouldUpdateDataset(dataset, prevDatasetsList)) {
+          dispatch(downloadDataset(
+            dataset,
+            query.jobResultId,
+            extension,
+            prevDatasetsList
+          ))
         }
       } else if (dataset.fileId) {
         const file = filesList.find(f => f.id === dataset.fileId)
-        if (shouldAddFile(file, prevFileList, filesList)) {
+        if (shouldAddFile(file, prevFileList, filesList) || shouldUpdateDataset(dataset, prevDatasetsList)) {
           if (file.mimeType === 'application/geo+json') {
             extension = 'geojson'
           }
-          dispatch(downloadDataset(dataset, file.sourceId, extension, file.name))
+          dispatch(downloadDataset(
+            dataset,
+            file.sourceId,
+            extension,
+            prevDatasetsList
+          ))
         }
       } else if (!ALLOW_FILE_UPLOAD) {
         // create query right away
