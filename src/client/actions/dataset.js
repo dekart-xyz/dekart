@@ -163,3 +163,11 @@ export function downloadDataset (dataset, sourceId, extension, prevDatasetsList)
     }
   }
 }
+
+export function openDatasetSettingsModal (datasetId) {
+  return { type: openDatasetSettingsModal.name, datasetId }
+}
+
+export function closeDatasetSettingsModal (datasetId) {
+  return { type: closeDatasetSettingsModal.name, datasetId }
+}

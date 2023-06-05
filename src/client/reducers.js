@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 import keplerGlReducer from '@dekart-xyz/kepler.gl/dist/reducers'
 import { ActionTypes as KeplerActionTypes } from '@dekart-xyz/kepler.gl/dist/actions'
-import { openReport, reportTitleChange, reportUpdate, saveMap, reportsListUpdate, unsubscribeReports, streamError, httpError, newReport, setEnv, forkReport, newForkedReport, downloading, finishDownloading, setActiveDataset, queryChanged, newRelease, querySource, uploadFile, uploadFileProgress, uploadFileStateChange, downloadDataset } from './actions'
+import { openReport, reportTitleChange, reportUpdate, saveMap, reportsListUpdate, unsubscribeReports, streamError, httpError, newReport, setEnv, forkReport, newForkedReport, downloading, finishDownloading, setActiveDataset, queryChanged, newRelease, querySource, uploadFile, uploadFileProgress, uploadFileStateChange, downloadDataset, openDatasetSettingsModal, closeDatasetSettingsModal } from './actions'
 import { Query } from '../proto/dekart_pb'
 import { setUsage } from './actions/usage'
 import { setUserMapboxAccessTokenUpdater } from '@dekart-xyz/kepler.gl/dist/reducers/ui-state-updaters'
@@ -353,6 +353,23 @@ function fileUploadStatus (state = {}, action) {
   }
 }
 
+function datasetSettings (state = { datasetId: null, visible: false }, action) {
+  switch (action.type) {
+    case openDatasetSettingsModal.name:
+      return {
+        datasetId: action.datasetId,
+        visible: true
+      }
+    case closeDatasetSettingsModal.name:
+      return {
+        datasetId: null,
+        visible: false
+      }
+    default:
+      return state
+  }
+}
+
 export default combineReducers({
   keplerGl,
   report,
@@ -368,5 +385,6 @@ export default combineReducers({
   datasets,
   files,
   fileUploadStatus,
-  usage
+  usage,
+  datasetSettings
 })

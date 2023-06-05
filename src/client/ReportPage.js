@@ -5,7 +5,7 @@ import { KeplerGl } from '@dekart-xyz/kepler.gl/dist/components'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
 import { useDispatch, useSelector } from 'react-redux'
-import { closeReport, openReport, reportTitleChange, setActiveDataset, error, createDataset } from './actions'
+import { closeReport, openReport, reportTitleChange, setActiveDataset, error, createDataset, openDatasetSettingsModal } from './actions'
 import { EditOutlined, WarningFilled, MoreOutlined } from '@ant-design/icons'
 import { Query as QueryType } from '../proto/dekart_pb'
 import Tabs from 'antd/es/tabs'
@@ -47,14 +47,13 @@ function TabIcon ({ query }) {
   )
 }
 
-function getOnTabEditHandler (dispatch, reportId, setSettingDatasetId) {
+function getOnTabEditHandler (dispatch, reportId) {
   return (datasetId, action) => {
     switch (action) {
       case 'add':
         return dispatch(createDataset(reportId))
       case 'remove':
-        // opens settings modal
-        setSettingDatasetId(datasetId)
+        dispatch(openDatasetSettingsModal(datasetId))
         break
       default:
         // do nothing
@@ -90,7 +89,6 @@ function DatasetSection ({ reportId }) {
   const queryStatus = useSelector(state => state.queryStatus)
   const { canWrite } = report
   const dispatch = useDispatch()
-  const [settingDatasetId, setSettingDatasetId] = useState(null)
 
   useEffect(() => {
     if (report && !(activeDataset)) {
@@ -113,7 +111,7 @@ function DatasetSection ({ reportId }) {
                   activeKey={activeDataset.id}
                   onChange={(datasetId) => dispatch(setActiveDataset(datasetId))}
                   hideAdd={!canWrite}
-                  onEdit={getOnTabEditHandler(dispatch, reportId, setSettingDatasetId)}
+                  onEdit={getOnTabEditHandler(dispatch, reportId)}
                 >
                   {datasets.map((dataset) => getTabPane(dataset, queries, files, queryStatus))}
                 </Tabs>
@@ -122,7 +120,7 @@ function DatasetSection ({ reportId }) {
             </div>
           </div>
         </Resizable>
-        <DatasetSettingsModal settingDatasetId={settingDatasetId} setSettingDatasetId={setSettingDatasetId} />
+        <DatasetSettingsModal />
       </>
     )
   } else {

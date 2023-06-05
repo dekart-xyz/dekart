@@ -5,11 +5,10 @@ import Input from 'antd/es/input'
 import { useDispatch, useSelector } from 'react-redux'
 import { useState, useEffect } from 'react'
 import getDatasetName from './lib/getDatasetName'
-import { removeDataset, updateDataset } from './actions'
+import { closeDatasetSettingsModal, removeDataset, updateDataset } from './actions'
 
-function ModalFooter ({ saving, setSaving, datasetId, name, setSettingDatasetId }) {
+function ModalFooter ({ saving, setSaving, name, datasetId }) {
   const dispatch = useDispatch()
-
   const numDatasets = useSelector(state => state.datasets.length)
 
   return (
@@ -26,7 +25,7 @@ function ModalFooter ({ saving, setSaving, datasetId, name, setSettingDatasetId 
       <Button
         danger
         onClick={() => {
-          setSettingDatasetId(null)
+          dispatch(closeDatasetSettingsModal())
           Modal.confirm({
             title: 'Remove dataset from report?',
             okText: 'Yes',
@@ -44,10 +43,14 @@ function ModalFooter ({ saving, setSaving, datasetId, name, setSettingDatasetId 
   )
 }
 
-export default function DatasetSettingsModal ({ settingDatasetId, setSettingDatasetId }) {
-  const dataset = useSelector(state => state.datasets.find(d => d.id === settingDatasetId))
+export default function DatasetSettingsModal () {
+  const datasetId = useSelector(state => state.datasetSettings.datasetId)
+  const dataset = useSelector(state => state.datasets.find(d => d.id === datasetId))
   const queries = useSelector(state => state.queries)
   const files = useSelector(state => state.files)
+  const visible = useSelector(state => state.datasetSettings.visible)
+
+  const dispatch = useDispatch()
 
   const [name, setName] = useState(dataset?.name)
   const [saving, setSaving] = useState(false)
@@ -59,25 +62,24 @@ export default function DatasetSettingsModal ({ settingDatasetId, setSettingData
   useEffect(() => {
     if (saving && name === dataset?.name) {
       setSaving(false)
-      setSettingDatasetId(null)
+      dispatch(closeDatasetSettingsModal())
     }
-  }, [saving, dataset?.name, name])
+  }, [saving, dataset?.name, name, dispatch])
 
-  if (!dataset) {
+  if (!visible) {
     return null
   }
   return (
     <Modal
       open
       title='Dataset Settings'
-      onCancel={() => setSettingDatasetId(null)}
+      onCancel={() => dispatch(closeDatasetSettingsModal())}
       footer={
         <ModalFooter
           saving={saving}
           setSaving={setSaving}
           datasetId={dataset.id}
           name={name}
-          setSettingDatasetId={setSettingDatasetId}
         />
             }
     >
