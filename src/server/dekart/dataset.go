@@ -32,6 +32,7 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 			QueryId:   query.Id,
 			CreatedAt: query.CreatedAt,
 			UpdatedAt: query.UpdatedAt,
+			Name:      "",
 		})
 	}
 
@@ -42,7 +43,8 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 			query_id,
 			file_id,
 			created_at,
-			updated_at
+			updated_at,
+			name
 		from datasets where report_id=$1 order by created_at asc`,
 		reportID,
 	)
@@ -64,6 +66,7 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 			&fileId,
 			&createdAt,
 			&updatedAt,
+			&dataset.Name,
 		); err != nil {
 			log.Err(err).Msg("Error scanning dataset results")
 			return nil, err
@@ -120,6 +123,40 @@ func (s Server) getReportID(ctx context.Context, datasetID string, email string)
 		}
 	}
 	return &reportID, nil
+}
+
+func (s Server) UpdateDataset(ctx context.Context, req *proto.UpdateDatasetRequest) (*proto.UpdateDatasetResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+
+	reportID, err := s.getReportID(ctx, req.DatasetId, claims.Email)
+
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if reportID == nil {
+		err := fmt.Errorf("dataset not found id:%s", req.DatasetId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+
+	_, err = s.db.ExecContext(ctx,
+		`update datasets set name=$1 where id=$2`,
+		req.Name,
+		req.DatasetId,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	s.reportStreams.Ping(*reportID)
+
+	return &proto.UpdateDatasetResponse{}, nil
 }
 
 func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetRequest) (*proto.RemoveDatasetResponse, error) {
