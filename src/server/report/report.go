@@ -97,9 +97,9 @@ func (s *Streams) Ping(reportID string) {
 		}
 		for _, ch := range streamMap {
 			log.Debug().Int64("sequence", s.sequence[rid]).Str("rid", rid).Msgf("Update subscriber")
-			go func(ch chan int64, rid string) {
-				ch <- s.sequence[rid]
-			}(ch, rid)
+			go func(ch chan int64, sequence int64) {
+				ch <- sequence
+			}(ch, s.sequence[rid])
 		}
 	}
 }
