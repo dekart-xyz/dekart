@@ -15,7 +15,7 @@ export default function DekartMenu () {
         </Menu.Item>
         <Menu.SubMenu popupClassName={styles.subMenu} title='Support' key='community' active='yes'>
           <Menu.Item key='slack'>
-            <a target='_blank' rel='noopener noreferrer' href='https://bit.ly/dekart-slack'>Ask in Slack</a>
+            <a target='_blank' rel='noopener noreferrer' href='https://slack.dekart.xyz'>Ask in Slack</a>
           </Menu.Item>
           <Menu.Item key='issues'>
             <a target='_blank' rel='noopener noreferrer' href={'https://github.com/dekart-xyz/dekart/issues?ref=' + ref}>Report Issue</a>

@@ -13,7 +13,7 @@ body:
       description: >
         In other words, is this an error, flaw, failure or fault in our software?
 
-        If this is a request for help with using Dekart or querying data more efficiently, please join our [Dekart Community Slack](https://join.slack.com/t/dekartcommunity/shared_invite/zt-1oiygohg1-Wxzugs5y9NliJtSPO8XEoA) or open a [Discussion question](https://github.com/dekart-xyz/dekart/discussions).
+        If this is a request for help with using Dekart or querying data more efficiently, please join our [Dekart Community Slack](https://slack.dekart.xyz) or open a [Discussion question](https://github.com/dekart-xyz/dekart/discussions).
 
         Please search to see if an issue already exists for the bug you encountered.
       options:
