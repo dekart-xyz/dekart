@@ -32,7 +32,7 @@ Create beautiful data-driven maps and share them with your team:
 ## Support us in building Dekart
 
 * Give it ⭐️ on GitHub!
-* Be part of the conversation in the [Dekart Community Slack](https://bit.ly/dekart-slack)
+* Be part of the conversation in the [Dekart Community Slack](https://slack.dekart.xyz)
 * Vote for new features by adding 👍 to new items in the [Public Road map](https://github.com/orgs/dekart-xyz/projects/1/views/2?visibleFields=%5B%22Title%22%2C%22Status%22%2C44878637%5D).
 * Raise issues and feature requests in [Dekart GitHub Issues](https://github.com/dekart-xyz/dekart/issues/new/choose)
 
