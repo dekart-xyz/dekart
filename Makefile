@@ -129,6 +129,9 @@ rm:
 server:
 	go run ./src/server/main.go
 
+npm:
+	npm i --legacy-peer-deps
+
 cloud-sql-proxy-docker:
 	docker build -t cloud-sql-proxy -f ./cloud_sql_proxy/Dockerfile .
 
