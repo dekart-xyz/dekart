@@ -26,7 +26,7 @@ ADD src/proto src/proto
 ADD src/server src/server
 
 FROM godeps as gobuilder
-RUN go build ./src/server
+RUN CGO_ENABLED=0 go build ./src/server
 
 FROM godeps as gotest
 RUN go test -v -count=1 ./src/server/**/
