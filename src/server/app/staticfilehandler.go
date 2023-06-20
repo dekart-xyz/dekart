@@ -49,14 +49,9 @@ func NewStaticFilesHandler(staticPath string) StaticFilesHandler {
 
 //ServeHTTP implementation for reading static files from build folder
 func (h StaticFilesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
-	path, err := filepath.Abs(r.URL.Path)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+	path := filepath.Clean(r.URL.Path)
 	path = filepath.Join(h.staticPath, path)
-	_, err = os.Stat(path)
+	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
 		h.ServeIndex(ResponseWriter{w: w, statusCode: http.StatusNotFound}, r)
 		return

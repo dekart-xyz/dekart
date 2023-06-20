@@ -45,3 +45,4 @@ cypress/screenshots
 
 # IDE
 .idea
+testtmp*
