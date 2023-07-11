@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/bigquery v1.51.2
 	cloud.google.com/go/storage v1.30.1
 	github.com/aws/aws-sdk-go v1.44.285
-	github.com/golang-jwt/jwt v3.2.2+incompatible // supports old JWT specifications
+	github.com/golang-jwt/jwt v3.2.1+incompatible // supports old JWT specifications
 	github.com/golang-migrate/migrate/v4 v4.16.2
 	github.com/google/uuid v1.3.0
 	github.com/googleapis/gax-go/v2 v2.11.0
