@@ -128,6 +128,7 @@ func (c ClaimsCheck) getPublicKeyFromAmazon(token *jwt.Token) (interface{}, erro
 			c.publicKeys.Store(kid, publicKey)
 		}
 	}
+	log.Debug().Interface("kid", kid).Interface("publicKey", publicKey).Msg("public key")
 	return publicKey, nil
 }
 
@@ -140,7 +141,7 @@ func (c ClaimsCheck) validateJWTFromAmazonOIDC(ctx context.Context, header strin
 	// claims := make(jwt.MapClaims)
 	token, err := jwt.Parse(header, c.getPublicKeyFromAmazon)
 	if err != nil {
-		log.Error().Err(err).Send()
+		log.Error().Str("header", header).Err(err).Send()
 		return nil
 	}
 	mapClaims := token.Claims.(jwt.MapClaims)
