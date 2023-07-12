@@ -84,14 +84,6 @@ resource "aws_ecs_task_definition" "dekart" {
           {
              "name": "DEKART_ALLOW_FILE_UPLOAD",
              "value": "1"
-          },
-          {
-             "name": "DEKART_REQUIRE_AMAZON_OIDC",
-             "value": "1"
-          },
-          {
-             "name": "DEKART_LOG_DEBUG",
-             "value": "1"
           }
        ],
        "logconfiguration": {
