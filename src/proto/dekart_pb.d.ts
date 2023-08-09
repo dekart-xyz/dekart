@@ -222,6 +222,7 @@ export namespace GetEnvResponse {
       TYPE_REQUIRE_AMAZON_OIDC: 7;
       TYPE_REQUIRE_IAP: 8;
       TYPE_DISABLE_USAGE_STATS: 9;
+      TYPE_REQUIRE_GOOGLE_OAUTH: 10;
     }
 
     export const Type: TypeMap;

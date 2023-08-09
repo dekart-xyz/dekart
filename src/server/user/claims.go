@@ -23,41 +23,45 @@ type ContextKey string
 
 const contextKey ContextKey = "userDetails"
 
-// ClaimsCheck factory to add user claims to context
-type ClaimsCheck struct {
-	audience          string
-	requireIAP        bool
-	requireAmazonOIDC bool
-	devClaimsEmail    string
-	region            string
-	publicKeys        *sync.Map
+// ClaimsCheckConfig config for ClaimsCheck
+type ClaimsCheckConfig struct {
+	Audience           string
+	RequireIAP         bool
+	RequireAmazonOIDC  bool
+	RequireGoogleOAuth bool
+	DevClaimsEmail     string
+	Region             string
 }
 
+// ClaimsCheck factory to add user claims to context
+type ClaimsCheck struct {
+	ClaimsCheckConfig
+	publicKeys *sync.Map
+}
+
+var b2i = map[bool]int{false: 0, true: 1}
+
 // NewClaimsCheck creates Context
-func NewClaimsCheck(audience string, requireIAP bool, requireAmazonOIDC bool, region string, devClaimsEmail string) ClaimsCheck {
-	if requireIAP && requireAmazonOIDC {
-		log.Fatal().Msg("DEKART_REQUIRE_IAP and DEKART_REQUIRE_AMAZON_OIDC are mutually exclusive")
-	} else if requireIAP {
+func NewClaimsCheck(c ClaimsCheckConfig) ClaimsCheck {
+	if b2i[c.RequireIAP]+b2i[c.RequireAmazonOIDC]+b2i[c.RequireGoogleOAuth] > 1 {
+		log.Fatal().Msg("DEKART_REQUIRE_IAP and DEKART_REQUIRE_AMAZON_OIDC and DEKART_REQUIRE_GOOGLE_OAUTH are mutually exclusive")
+	} else if c.RequireIAP {
 		log.Info().Msgf("Dekart configured to require IAP")
-	} else if requireAmazonOIDC {
+	} else if c.RequireAmazonOIDC {
 		log.Info().Msgf("Dekart configured to require Amazon OIDC")
-		if region == "" {
+		if c.Region == "" {
 			log.Fatal().Msgf("Dekart AWS_REGION is required for OIDC")
 		}
 	} else {
 		log.Info().Msgf("All users can read/write all entities")
 	}
 
-	if devClaimsEmail != "" {
+	if c.DevClaimsEmail != "" {
 		log.Warn().Msgf("Use DEKART_DEV_CLAIMS_EMAIL only in development environment")
 	}
 
 	return ClaimsCheck{
-		audience,
-		requireIAP,
-		requireAmazonOIDC,
-		devClaimsEmail,
-		region,
+		c,
 		&sync.Map{},
 	}
 }
@@ -69,14 +73,16 @@ const UnknownEmail = "UNKNOWN_EMAIL"
 func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 	ctx := r.Context()
 	var claims *Claims
-	if c.devClaimsEmail != "" {
+	if c.DevClaimsEmail != "" {
 		claims = &Claims{
-			Email: c.devClaimsEmail,
+			Email: c.DevClaimsEmail,
 		}
-	} else if c.requireIAP {
+	} else if c.RequireIAP {
 		claims = c.validateJWTFromAppEngine(ctx, r.Header.Get("X-Goog-IAP-JWT-Assertion"))
-	} else if c.requireAmazonOIDC {
+	} else if c.RequireAmazonOIDC {
 		claims = c.validateJWTFromAmazonOIDC(ctx, r.Header.Get("x-amzn-oidc-data"))
+	} else if c.RequireGoogleOAuth {
+		claims = nil
 	} else {
 		claims = &Claims{
 			Email: UnknownEmail,
@@ -104,7 +110,7 @@ func (c ClaimsCheck) getPublicKeyFromAmazon(token *jwt.Token) (interface{}, erro
 		publicKey = publicKeyValue.(*ecdsa.PublicKey)
 	} else {
 		log.Debug().Interface("kid", kid).Msg("load public key")
-		url := fmt.Sprintf("https://public-keys.auth.elb.%s.amazonaws.com/%s", c.region, kid)
+		url := fmt.Sprintf("https://public-keys.auth.elb.%s.amazonaws.com/%s", c.Region, kid)
 		resp, err := http.Get(url)
 		if err != nil {
 			log.Error().Err(err).Send()
@@ -156,7 +162,7 @@ func (c ClaimsCheck) validateJWTFromAmazonOIDC(ctx context.Context, header strin
 // validateJWTFromAppEngine validates a JWT found in the
 // "x-goog-iap-jwt-assertion" header.
 func (c ClaimsCheck) validateJWTFromAppEngine(ctx context.Context, iapJWT string) *Claims {
-	payload, err := idtoken.Validate(ctx, iapJWT, c.audience)
+	payload, err := idtoken.Validate(ctx, iapJWT, c.Audience)
 	if err != nil {
 		log.Warn().Err(err).Msg("Error validating IAP JWT")
 		return nil

@@ -19,6 +19,13 @@ function AppRedirect () {
   const { newReportId } = useSelector(state => state.reportStatus)
 
   if (httpErrorStatus) {
+    if (httpErrorStatus === 401) {
+      const { REACT_APP_API_HOST } = process.env
+      const host = REACT_APP_API_HOST || ''
+      window.location.href = `${host}/api/v1/authenticate`
+      return null
+      // return <Redirect to={`${host}/api/v1/authenticate`} />
+    }
     return <Redirect to={`/${httpErrorStatus}`} />
   }
 

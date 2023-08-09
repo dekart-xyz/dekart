@@ -64,12 +64,14 @@ func TestValidateJWTFromAmazonOIDC(t *testing.T) {
 	tokenString := message + "." + encodedSignature
 
 	claimsCheck := ClaimsCheck{
-		audience:          "test-audience",
-		requireIAP:        false,
-		requireAmazonOIDC: true,
-		devClaimsEmail:    "",
-		region:            "us-east-1",
-		publicKeys:        &sync.Map{},
+		ClaimsCheckConfig{
+			Audience:          "test-audience",
+			RequireIAP:        false,
+			RequireAmazonOIDC: true,
+			DevClaimsEmail:    "",
+			Region:            "us-east-1",
+		},
+		&sync.Map{},
 	}
 
 	// Store the public key

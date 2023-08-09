@@ -123,13 +123,15 @@ func configureHTTP(dekartServer *dekart.Server) *mux.Router {
 func Configure(dekartServer *dekart.Server) *http.Server {
 	grpcServer := configureGRPC(dekartServer)
 	httpServer := configureHTTP(dekartServer)
-	claimsCheck := user.NewClaimsCheck(
-		os.Getenv("DEKART_IAP_JWT_AUD"),
-		os.Getenv("DEKART_REQUIRE_IAP") == "1",
-		os.Getenv("DEKART_REQUIRE_AMAZON_OIDC") == "1",
-		os.Getenv("AWS_REGION"),
-		os.Getenv("DEKART_DEV_CLAIMS_EMAIL"),
-	)
+
+	claimsCheck := user.NewClaimsCheck(user.ClaimsCheckConfig{
+		Audience:           os.Getenv("DEKART_IAP_JWT_AUD"),
+		RequireIAP:         os.Getenv("DEKART_REQUIRE_IAP") == "1",
+		RequireAmazonOIDC:  os.Getenv("DEKART_REQUIRE_AMAZON_OIDC") == "1",
+		RequireGoogleOAuth: os.Getenv("DEKART_REQUIRE_GOOGLE_OAUTH") == "1",
+		Region:             os.Getenv("AWS_REGION"),
+		DevClaimsEmail:     os.Getenv("DEKART_DEV_CLAIMS_EMAIL"),
+	})
 
 	port := os.Getenv("DEKART_PORT")
 	log.Info().Msgf("Starting dekart at :%s", port)
