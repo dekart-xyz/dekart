@@ -70,7 +70,7 @@ func setOriginHeader(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func configureHTTP(dekartServer *dekart.Server) *mux.Router {
+func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *mux.Router {
 	router := mux.NewRouter()
 	api := router.PathPrefix("/api/v1/").Subrouter()
 	api.Use(mux.CORSMethodMiddleware(router))
@@ -99,6 +99,16 @@ func configureHTTP(dekartServer *dekart.Server) *mux.Router {
 		dekartServer.UploadFile(w, r)
 	}).Methods("POST", "OPTIONS")
 
+	if claimsCheck.RequireGoogleOAuth {
+		api.HandleFunc("/authenticate", func(w http.ResponseWriter, r *http.Request) {
+			setOriginHeader(w, r)
+			if r.Method == http.MethodOptions {
+				return
+			}
+			claimsCheck.Authenticate(w, r)
+		}).Methods("GET", "OPTIONS")
+	}
+
 	staticPath := os.Getenv("DEKART_STATIC_FILES")
 
 	if staticPath != "" {
@@ -121,17 +131,19 @@ func configureHTTP(dekartServer *dekart.Server) *mux.Router {
 
 // Configure HTTP server with http and grpc
 func Configure(dekartServer *dekart.Server) *http.Server {
-	grpcServer := configureGRPC(dekartServer)
-	httpServer := configureHTTP(dekartServer)
-
 	claimsCheck := user.NewClaimsCheck(user.ClaimsCheckConfig{
-		Audience:           os.Getenv("DEKART_IAP_JWT_AUD"),
-		RequireIAP:         os.Getenv("DEKART_REQUIRE_IAP") == "1",
-		RequireAmazonOIDC:  os.Getenv("DEKART_REQUIRE_AMAZON_OIDC") == "1",
-		RequireGoogleOAuth: os.Getenv("DEKART_REQUIRE_GOOGLE_OAUTH") == "1",
-		Region:             os.Getenv("AWS_REGION"),
-		DevClaimsEmail:     os.Getenv("DEKART_DEV_CLAIMS_EMAIL"),
+		Audience:            os.Getenv("DEKART_IAP_JWT_AUD"),
+		RequireIAP:          os.Getenv("DEKART_REQUIRE_IAP") == "1",
+		RequireAmazonOIDC:   os.Getenv("DEKART_REQUIRE_AMAZON_OIDC") == "1",
+		RequireGoogleOAuth:  os.Getenv("DEKART_REQUIRE_GOOGLE_OAUTH") == "1",
+		Region:              os.Getenv("AWS_REGION"),
+		DevClaimsEmail:      os.Getenv("DEKART_DEV_CLAIMS_EMAIL"),
+		GoogleOAuthClientId: os.Getenv("DEKART_GOOGLE_OAUTH_CLIENT_ID"),
+		GoogleOAuthSecret:   os.Getenv("DEKART_GOOGLE_OAUTH_SECRET"),
 	})
+
+	grpcServer := configureGRPC(dekartServer)
+	httpServer := configureHTTP(dekartServer, claimsCheck)
 
 	port := os.Getenv("DEKART_PORT")
 	log.Info().Msgf("Starting dekart at :%s", port)

@@ -85,6 +85,18 @@ message GetEnvResponse {
     repeated Variable variables = 1;
 }
 
+message AuthState   {
+    enum Action {
+        ACTION_UNSPECIFIED = 0;
+        ACTION_REQUEST_CODE = 1;
+        ACTION_REQUEST_TOKEN = 2;
+    }
+    Action action = 1;
+    string auth_url = 2;
+    string ui_url = 3;
+    string secret = 4;
+}
+
 message ArchiveReportRequest {
     string report_id = 1;
     bool archive = 2;

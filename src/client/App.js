@@ -13,6 +13,7 @@ import Result from 'antd/es/result'
 import { useSelector, useDispatch } from 'react-redux'
 import { getEnv } from './actions'
 import { getUsage } from './actions/usage'
+import { AuthState } from '../proto/dekart_pb'
 
 function AppRedirect () {
   const httpErrorStatus = useSelector(state => state.httpErrorStatus)
@@ -21,10 +22,15 @@ function AppRedirect () {
   if (httpErrorStatus) {
     if (httpErrorStatus === 401) {
       const { REACT_APP_API_HOST } = process.env
-      const host = REACT_APP_API_HOST || ''
-      window.location.href = `${host}/api/v1/authenticate`
+      const req = new URL('/api/v1/authenticate', REACT_APP_API_HOST || window.location.href)
+      const state = new AuthState()
+      state.setAuthUrl(req.href)
+      state.setUiUrl(window.location.href)
+      state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
+      const stateBase64 = btoa(String.fromCharCode.apply(null, state.serializeBinary()))
+      req.searchParams.set('state', stateBase64)
+      window.location.href = req.href
       return null
-      // return <Redirect to={`${host}/api/v1/authenticate`} />
     }
     return <Redirect to={`/${httpErrorStatus}`} />
   }
