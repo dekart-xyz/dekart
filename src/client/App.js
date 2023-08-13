@@ -4,16 +4,34 @@ import {
   Switch,
   Route,
   Redirect,
-  useParams
+  useParams,
+  useLocation
 } from 'react-router-dom'
 import ReportPage from './ReportPage'
 import HomePage from './HomePage'
 import { QuestionOutlined, WarningOutlined } from '@ant-design/icons'
 import Result from 'antd/es/result'
 import { useSelector, useDispatch } from 'react-redux'
-import { getEnv } from './actions'
 import { getUsage } from './actions/usage'
-import { AuthState } from '../proto/dekart_pb'
+import { AuthState, RedirectState as DekartRedirectState } from '../proto/dekart_pb'
+import { getEnv } from './actions/env'
+
+function RedirectState () {
+  const location = useLocation()
+  const dispatch = useDispatch()
+  const params = new URLSearchParams(location.search)
+  if (params.has('redirect_state')) {
+    const redirectStateBase64 = params.get('redirect_state')
+    const redirectStateStr = atob(redirectStateBase64)
+    const redirectStateArr = [].map.call(redirectStateStr, x => x.charCodeAt(0))
+    const redirectStateBytes = new Uint8Array(redirectStateArr)
+    const redirectState = DekartRedirectState.deserializeBinary(redirectStateBytes)
+    params.delete('redirect_state')
+    location.search = params.toString()
+    return <Redirect to={location.href} />
+  }
+  return null
+}
 
 function AppRedirect () {
   const httpErrorStatus = useSelector(state => state.httpErrorStatus)
@@ -84,6 +102,7 @@ export default function App () {
           <Result icon={<QuestionOutlined />} title='404' subTitle='Page not found' />
         </Route>
       </Switch>
+      <RedirectState />
       <AppRedirect />
     </Router>
   )

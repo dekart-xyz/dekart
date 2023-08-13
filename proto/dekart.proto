@@ -85,6 +85,12 @@ message GetEnvResponse {
     repeated Variable variables = 1;
 }
 
+// RedirectState is used to pass state between the server and the UI via redirect
+message RedirectState {
+    string token_json = 1;
+    string error  = 2;
+}
+
 message AuthState   {
     enum Action {
         ACTION_UNSPECIFIED = 0;

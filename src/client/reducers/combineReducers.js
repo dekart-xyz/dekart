@@ -1,10 +1,17 @@
 import { combineReducers } from 'redux'
 import keplerGlReducer from '@dekart-xyz/kepler.gl/dist/reducers'
 import { ActionTypes as KeplerActionTypes } from '@dekart-xyz/kepler.gl/dist/actions'
-import { openReport, reportTitleChange, reportUpdate, saveMap, reportsListUpdate, unsubscribeReports, streamError, httpError, newReport, setEnv, forkReport, newForkedReport, downloading, finishDownloading, setActiveDataset, queryChanged, newRelease, querySource, uploadFile, uploadFileProgress, uploadFileStateChange, downloadDataset, openDatasetSettingsModal, closeDatasetSettingsModal } from './actions'
-import { Query } from '../proto/dekart_pb'
-import { setUsage } from './actions/usage'
+import { Query } from '../../proto/dekart_pb'
 import { setUserMapboxAccessTokenUpdater } from '@dekart-xyz/kepler.gl/dist/reducers/ui-state-updaters'
+import { redirectState } from './redirectState'
+import { openReport, reportUpdate, forkReport, saveMap, reportTitleChange, newReport, newForkedReport, unsubscribeReports, reportsListUpdate } from '../actions/report'
+import { downloading, finishDownloading, httpError, streamError } from '../actions/message'
+import { closeDatasetSettingsModal, downloadDataset, openDatasetSettingsModal, setActiveDataset } from '../actions/dataset'
+import { queryChanged, querySource } from '../actions/query'
+import { setUsage } from '../actions/usage'
+import { setEnv } from '../actions/env'
+import { newRelease } from '../actions/version'
+import { uploadFile, uploadFileProgress, uploadFileStateChange } from '../actions/file'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
   uiState: {
@@ -386,5 +393,6 @@ export default combineReducers({
   files,
   fileUploadStatus,
   usage,
-  datasetSettings
+  datasetSettings,
+  redirectState
 })

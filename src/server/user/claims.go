@@ -5,9 +5,11 @@ import (
 	"crypto/ecdsa"
 	pb "dekart/src/proto"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"sync"
 
 	"github.com/golang-jwt/jwt"
@@ -121,6 +123,12 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error decoding state", http.StatusBadRequest)
 		return
 	}
+
+	if err != nil {
+		log.Error().Err(err).Msg("Error decoding state")
+		http.Error(w, "Error decoding state", http.StatusBadRequest)
+		return
+	}
 	var state pb.AuthState
 	err = proto.Unmarshal(stateBin, &state)
 	if err != nil {
@@ -128,6 +136,13 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error unmarshalling state", http.StatusBadRequest)
 		return
 	}
+	uiURL, err := url.Parse(state.UiUrl)
+	if err != nil {
+		log.Error().Err(err).Msg("Error parsing ui url")
+		http.Error(w, "Error parsing ui url", http.StatusBadRequest)
+		return
+	}
+
 	log.Debug().Msgf("state action: %s", state.Action)
 	switch state.Action {
 	case pb.AuthState_ACTION_REQUEST_CODE:
@@ -171,7 +186,31 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Error exchanging code for token", http.StatusForbidden)
 			return
 		}
-		log.Debug().Msgf("token: %v", token)
+		tokenBin, err := json.Marshal(*token)
+		if err != nil {
+			log.Error().Err(err).Msg("Error marshalling token")
+			http.Error(w, "Error marshalling token", http.StatusInternalServerError)
+			return
+		}
+		// log.Debug().Msgf("token: %v", token)
+
+		redirectState := pb.RedirectState{
+			TokenJson: string(tokenBin),
+		}
+		redirectStateBin, err := proto.Marshal(&redirectState)
+		if err != nil {
+			log.Error().Err(err).Msg("Error marshalling redirect state")
+			http.Error(w, "Error marshalling redirect state", http.StatusInternalServerError)
+			return
+		}
+		log.Debug().Msgf("redirectStateBin: %v", redirectStateBin)
+		redirectStateBase64 := base64.StdEncoding.EncodeToString(redirectStateBin)
+		query := uiURL.Query()
+		query.Set("redirect_state", redirectStateBase64)
+		uiURL.RawQuery = query.Encode()
+		log.Debug().Msgf("redirecting to: %s", uiURL.String())
+		http.Redirect(w, r, uiURL.String(), http.StatusFound)
+		return
 	default:
 		log.Error().Msgf("Unknown action: %v", state.Action)
 		http.Error(w, "Unknown action", http.StatusBadRequest)

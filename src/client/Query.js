@@ -4,7 +4,6 @@ import { AutoSizer } from 'react-virtualized'
 import Button from 'antd/es/button'
 import styles from './Query.module.css'
 import { useDispatch, useSelector } from 'react-redux'
-import { cancelQuery, queryChanged, runQuery, showDataTable } from './actions'
 import 'ace-builds/src-noconflict/mode-sql'
 // import 'ace-builds/src-noconflict/theme-textmate'
 import 'ace-builds/src-noconflict/theme-sqlserver'
@@ -15,6 +14,7 @@ import { SendOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircle
 import { Duration } from 'luxon'
 import prettyBites from 'pretty-bytes'
 import DataDocumentationLink from './DataDocumentationLink'
+import { cancelQuery, queryChanged, runQuery } from './actions/query'
 
 function CancelButton ({ query }) {
   const dispatch = useDispatch()
@@ -37,7 +37,7 @@ function ShowDataTable ({ query }) {
     <Button
       size='small'
       type='ghost'
-      onClick={() => dispatch(showDataTable(datasetId))}
+      onClick={() => dispatch(ShowDataTable(datasetId))}
     >Show Table
     </Button>
   )

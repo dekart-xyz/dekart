@@ -229,6 +229,30 @@ export namespace GetEnvResponse {
   }
 }
 
+export class RedirectState extends jspb.Message {
+  getTokenJson(): string;
+  setTokenJson(value: string): void;
+
+  getError(): string;
+  setError(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): RedirectState.AsObject;
+  static toObject(includeInstance: boolean, msg: RedirectState): RedirectState.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: RedirectState, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RedirectState;
+  static deserializeBinaryFromReader(message: RedirectState, reader: jspb.BinaryReader): RedirectState;
+}
+
+export namespace RedirectState {
+  export type AsObject = {
+    tokenJson: string,
+    error: string,
+  }
+}
+
 export class AuthState extends jspb.Message {
   getAction(): AuthState.ActionMap[keyof AuthState.ActionMap];
   setAction(value: AuthState.ActionMap[keyof AuthState.ActionMap]): void;

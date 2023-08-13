@@ -1,10 +1,10 @@
 import { useHistory } from 'react-router'
 import styles from './ReportHeaderButtons.module.css'
 import Button from 'antd/es/button'
-import { saveMap, forkReport } from './actions'
 import { FundProjectionScreenOutlined, EditOutlined, ConsoleSqlOutlined, ForkOutlined } from '@ant-design/icons'
 import { useDispatch, useSelector } from 'react-redux'
 import ShareButton from './ShareButton'
+import { forkReport, saveMap } from './actions/report'
 
 function ForkButton ({ reportId, disabled, primary }) {
   const dispatch = useDispatch()
