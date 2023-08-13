@@ -3,7 +3,7 @@ import keplerGlReducer from '@dekart-xyz/kepler.gl/dist/reducers'
 import { ActionTypes as KeplerActionTypes } from '@dekart-xyz/kepler.gl/dist/actions'
 import { Query } from '../../proto/dekart_pb'
 import { setUserMapboxAccessTokenUpdater } from '@dekart-xyz/kepler.gl/dist/reducers/ui-state-updaters'
-import { redirectState } from './redirectState'
+import { token } from './token'
 import { openReport, reportUpdate, forkReport, saveMap, reportTitleChange, newReport, newForkedReport, unsubscribeReports, reportsListUpdate } from '../actions/report'
 import { downloading, finishDownloading, httpError, streamError } from '../actions/message'
 import { closeDatasetSettingsModal, downloadDataset, openDatasetSettingsModal, setActiveDataset } from '../actions/dataset'
@@ -12,6 +12,7 @@ import { setUsage } from '../actions/usage'
 import { setEnv } from '../actions/env'
 import { newRelease } from '../actions/version'
 import { uploadFile, uploadFileProgress, uploadFileStateChange } from '../actions/file'
+import { stream } from './stream'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
   uiState: {
@@ -394,5 +395,6 @@ export default combineReducers({
   fileUploadStatus,
   usage,
   datasetSettings,
-  redirectState
+  token,
+  stream
 })

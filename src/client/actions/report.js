@@ -1,7 +1,7 @@
 import { KeplerGlSchema } from '@dekart-xyz/kepler.gl/dist/schemas'
 import { receiveMapConfig, removeDataset } from '@dekart-xyz/kepler.gl/dist/actions'
 
-import { getReportStream, getStream, unary } from '../lib/grpc'
+import { getReportStream, getStream, stream, unary } from '../lib/grpc'
 import { error, streamError, success } from './message'
 import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
@@ -9,6 +9,7 @@ import { createQuery, downloadQuerySource } from './query'
 import { downloadDataset } from './dataset'
 import { shouldAddQuery } from '../lib/shouldAddQuery'
 import { shouldUpdateDataset } from '../lib/shouldUpdateDataset'
+import { message } from 'antd'
 
 let reportStreamCancelable
 
@@ -149,25 +150,32 @@ export function reportUpdate (reportStreamResponse) {
   }
 }
 
-let reportStreamListCancelable
-
 export function subscribeReports () {
   return (dispatch) => {
     dispatch({ type: subscribeReports.name })
     const request = new ReportListRequest()
-    reportStreamListCancelable = getStream(
-      Dekart.GetReportListStream,
-      request,
-      ({ reportsList }) => dispatch(reportsListUpdate(reportsList)),
-      (code, message) => dispatch(streamError(code, message))
-    )
+    dispatch(stream(Dekart.GetReportListStream, request, (message, err) => {
+      if (message) {
+        dispatch(reportsListUpdate(message.reportsList))
+      }
+      return err
+    }))
   }
+  // reportStreamListCancelable = getStream(
+  //   Dekart.GetReportListStream,
+  //   request,
+  //   ({ reportsList }) => dispatch(reportsListUpdate(reportsList)),
+  //   (code, message) => dispatch(streamError(code, message))
+  // )
 }
 
 export function unsubscribeReports () {
-  return dispatch => {
+  return (dispatch, getState) => {
+    const { stream } = getState()
     dispatch({ type: unsubscribeReports.name })
-    reportStreamListCancelable.cancel()
+    if (stream.cancelable) {
+      stream.cancelable.cancel()
+    }
   }
 }
 

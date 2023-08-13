@@ -1,4 +1,4 @@
 
-export function setRedirectState (state) {
-  return { type: setRedirectState.name, state }
+export function setRedirectState (redirectState) {
+  return { type: setRedirectState.name, redirectState }
 }

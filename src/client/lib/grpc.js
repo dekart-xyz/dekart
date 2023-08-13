@@ -1,6 +1,7 @@
 import { grpc } from '@improbable-eng/grpc-web'
 import { CreateReportRequest, ReportStreamRequest, Report, StreamOptions } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
+import { error, streamError } from '../actions/message'
 
 const { REACT_APP_API_HOST } = process.env
 const host = REACT_APP_API_HOST || ''
@@ -48,7 +49,51 @@ class CancelableRequest {
   }
 }
 
-export function getStream (endpoint, request, onMessage, onError, cancelable = new CancelableRequest(), sequence = 0, retryCount = 0) {
+class GrpcError extends Error {
+  constructor (message, code) {
+    super(message)
+    this.code = code
+    this.name = 'GrpcError'
+  }
+}
+
+export function stream (endpoint, request, cb) {
+  return async (dispatch, getState) => {
+    const { token } = getState()
+    const headers = new window.Headers()
+    if (token) {
+      headers.append('Authorization', `Bearer ${token.access_token}`)
+    }
+    const cancelable = getStream(
+      endpoint,
+      request,
+      (mes) => {
+        const err = cb(mes, null)
+        if (err) {
+          if (err instanceof GrpcError) {
+            // TODO: fix naming of streamError
+            dispatch(streamError(err.code, err.message))
+          } else {
+            dispatch(error(err))
+          }
+        }
+      },
+      (code, message) => {
+        const err = cb(null, new GrpcError(message, code))
+        if (err instanceof GrpcError) {
+          dispatch(streamError(err.code, err.message))
+        } else {
+          dispatch(error(err))
+        }
+      },
+      headers
+    )
+    dispatch({ type: stream.name, cancelable })
+  }
+}
+
+// getStream is a wrapper around grpc.invoke that handles reconnecting
+export function getStream (endpoint, request, onMessage, onError, metadata = {}, cancelable = new CancelableRequest(), sequence = 0, retryCount = 0) {
   const streamOptions = new StreamOptions()
   let currentSequence = sequence
   streamOptions.setSequence(currentSequence)
@@ -56,6 +101,7 @@ export function getStream (endpoint, request, onMessage, onError, cancelable = n
   cancelable.setInvokeRequest(grpc.invoke(endpoint, {
     host,
     request,
+    metadata,
     onMessage: (message) => {
       retryCount = 0
       if (!cancelable.canceled) {
@@ -69,7 +115,7 @@ export function getStream (endpoint, request, onMessage, onError, cancelable = n
         return
       }
       if (code === 0) {
-        getStream(endpoint, request, onMessage, onError, cancelable, currentSequence)
+        getStream(endpoint, request, onMessage, onError, metadata, cancelable, currentSequence)
       } else if (code === 2 && retryCount <= 4) {
         if (window.document.hidden) {
           const onVisibilityChange = () => {
@@ -79,7 +125,7 @@ export function getStream (endpoint, request, onMessage, onError, cancelable = n
           window.document.addEventListener('visibilitychange', onVisibilityChange, false)
         } else {
           retryCount++
-          setTimeout(() => getStream(endpoint, request, onMessage, onError, cancelable, currentSequence, retryCount + 1), 100 * Math.pow(2, retryCount))
+          setTimeout(() => getStream(endpoint, request, onMessage, onError, metadata, cancelable, currentSequence, retryCount + 1), 100 * Math.pow(2, retryCount))
         }
       } else {
         cancelable.cancel()

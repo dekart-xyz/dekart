@@ -15,6 +15,7 @@ import { useSelector, useDispatch } from 'react-redux'
 import { getUsage } from './actions/usage'
 import { AuthState, RedirectState as DekartRedirectState } from '../proto/dekart_pb'
 import { getEnv } from './actions/env'
+import { setRedirectState } from './actions/redirectState'
 
 function RedirectState () {
   const location = useLocation()
@@ -26,6 +27,7 @@ function RedirectState () {
     const redirectStateArr = [].map.call(redirectStateStr, x => x.charCodeAt(0))
     const redirectStateBytes = new Uint8Array(redirectStateArr)
     const redirectState = DekartRedirectState.deserializeBinary(redirectStateBytes)
+    dispatch(setRedirectState(redirectState))
     params.delete('redirect_state')
     location.search = params.toString()
     return <Redirect to={location.href} />
