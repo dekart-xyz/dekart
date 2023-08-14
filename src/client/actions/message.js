@@ -22,6 +22,14 @@ export function success (content) {
   return { type: success.name }
 }
 
+export function info (content) {
+  message.info({
+    content,
+    style
+  })
+  return { type: info.name }
+}
+
 export function error (err, transitive = true) {
   console.error(err)
   if (transitive) {
@@ -48,6 +56,9 @@ export function streamError (code, msg) {
     dispatch({ type: streamError.name })
     // https://github.com/grpc/grpc/blob/master/doc/statuscodes.md
     switch (code) {
+      case 1:
+        dispatch(info('Request cancelled'))
+        return
       case 5:
         dispatch(httpError(404))
         return

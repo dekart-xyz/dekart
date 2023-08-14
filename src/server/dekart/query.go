@@ -248,6 +248,10 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	job.Status() <- int32(proto.Query_JOB_STATUS_PENDING)
 	err = job.Run(obj)
 	if err != nil {
+		if err == context.Canceled {
+			log.Warn().Err(err).Send()
+			return nil, status.Error(codes.Canceled, err.Error())
+		}
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}

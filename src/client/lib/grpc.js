@@ -19,6 +19,7 @@ export function grpcCall (method, request, cb = (m, err) => err) {
         throw err
       }
     } catch (err) {
+      console.log(method)
       const cbErr = cb(null, err)
       if (cbErr instanceof GrpcError) {
         dispatch(streamError(cbErr.code, cbErr.message))
