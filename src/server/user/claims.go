@@ -103,7 +103,15 @@ func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 	} else if c.RequireAmazonOIDC {
 		claims = c.validateJWTFromAmazonOIDC(ctx, r.Header.Get("x-amzn-oidc-data"))
 	} else if c.RequireGoogleOAuth {
-		claims = nil
+		header := r.Header.Get("Authorization")
+		if header == "" {
+			claims = nil
+		} else {
+			//TODO: retrieve user email from Google OAuth
+			claims = &Claims{
+				Email: UnknownEmail,
+			}
+		}
 	} else {
 		claims = &Claims{
 			Email: UnknownEmail,
@@ -192,8 +200,6 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Error marshalling token", http.StatusInternalServerError)
 			return
 		}
-		// log.Debug().Msgf("token: %v", token)
-
 		redirectState := pb.RedirectState{
 			TokenJson: string(tokenBin),
 		}

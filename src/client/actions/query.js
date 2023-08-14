@@ -1,7 +1,7 @@
 import { CancelQueryRequest, CreateQueryRequest, RunQueryRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { get } from '../lib/api'
-import { unary } from '../lib/grpc'
+import { grpcCall } from '../lib/grpc'
 import { error } from './message'
 
 export function queryChanged (queryId, queryText) {
@@ -17,7 +17,7 @@ export function createQuery (datasetId) {
     dispatch({ type: createQuery.name })
     const request = new CreateQueryRequest()
     request.setDatasetId(datasetId)
-    unary(Dekart.CreateQuery, request).catch(err => dispatch(error(err)))
+    dispatch(grpcCall(Dekart.CreateQuery, request))
   }
 }
 
@@ -27,11 +27,7 @@ export function runQuery (queryId, queryText) {
     const request = new RunQueryRequest()
     request.setQueryId(queryId)
     request.setQueryText(queryText)
-    try {
-      await unary(Dekart.RunQuery, request)
-    } catch (err) {
-      dispatch(error(err))
-    }
+    dispatch(grpcCall(Dekart.RunQuery, request))
   }
 }
 
@@ -40,11 +36,7 @@ export function cancelQuery (queryId) {
     dispatch({ type: cancelQuery.name, queryId })
     const request = new CancelQueryRequest()
     request.setQueryId(queryId)
-    try {
-      await unary(Dekart.CancelQuery, request)
-    } catch (err) {
-      dispatch(error(err))
-    }
+    dispatch(grpcCall(Dekart.CancelQuery, request))
   }
 }
 

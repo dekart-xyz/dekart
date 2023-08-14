@@ -1,27 +1,33 @@
 import { KeplerGlSchema } from '@dekart-xyz/kepler.gl/dist/schemas'
 import { receiveMapConfig, removeDataset } from '@dekart-xyz/kepler.gl/dist/actions'
 
-import { getReportStream, getStream, stream, unary } from '../lib/grpc'
-import { error, streamError, success } from './message'
-import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File } from '../../proto/dekart_pb'
+import { grpcCall, grpcStream } from '../lib/grpc'
+import { success } from './message'
+import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { createQuery, downloadQuerySource } from './query'
 import { downloadDataset } from './dataset'
 import { shouldAddQuery } from '../lib/shouldAddQuery'
 import { shouldUpdateDataset } from '../lib/shouldUpdateDataset'
-import { message } from 'antd'
-
-let reportStreamCancelable
 
 export function closeReport (reportId) {
-  return (dispatch) => {
-    if (reportStreamCancelable) {
-      reportStreamCancelable.cancel()
+  return (dispatch, getState) => {
+    const { stream } = getState()
+    if (stream.cancelable) {
+      stream.cancelable.cancel()
     }
     dispatch({
       type: closeReport.name
     })
   }
+}
+
+function getReportStream (reportId, onMessage, onError) {
+  const report = new Report()
+  report.setId(reportId)
+  const request = new ReportStreamRequest()
+  request.setReport(report)
+  return grpcStream(Dekart.GetReportStream, request, onMessage)
 }
 
 export function openReport (reportId, edit) {
@@ -30,13 +36,15 @@ export function openReport (reportId, edit) {
       type: openReport.name,
       edit
     })
-    reportStreamCancelable = getReportStream(
+    dispatch(getReportStream(
       reportId,
-      (reportStreamResponse) => {
+      (reportStreamResponse, err) => {
+        if (err) {
+          return err
+        }
         dispatch(reportUpdate(reportStreamResponse))
-      },
-      (code, message) => dispatch(streamError(code, message))
-    )
+      }
+    ))
   }
 }
 
@@ -154,19 +162,13 @@ export function subscribeReports () {
   return (dispatch) => {
     dispatch({ type: subscribeReports.name })
     const request = new ReportListRequest()
-    dispatch(stream(Dekart.GetReportListStream, request, (message, err) => {
+    dispatch(grpcStream(Dekart.GetReportListStream, request, (message, err) => {
       if (message) {
         dispatch(reportsListUpdate(message.reportsList))
       }
       return err
     }))
   }
-  // reportStreamListCancelable = getStream(
-  //   Dekart.GetReportListStream,
-  //   request,
-  //   ({ reportsList }) => dispatch(reportsListUpdate(reportsList)),
-  //   (code, message) => dispatch(streamError(code, message))
-  // )
 }
 
 export function unsubscribeReports () {
@@ -189,11 +191,7 @@ export function setDiscoverable (reportId, discoverable) {
     const req = new SetDiscoverableRequest()
     req.setReportId(reportId)
     req.setDiscoverable(discoverable)
-    try {
-      await unary(Dekart.SetDiscoverable, req)
-    } catch (err) {
-      dispatch(error(err))
-    }
+    dispatch(grpcCall(Dekart.SetDiscoverable, req))
   }
 }
 
@@ -203,11 +201,7 @@ export function archiveReport (reportId, archive) {
     const req = new ArchiveReportRequest()
     req.setReportId(reportId)
     req.setArchive(archive)
-    try {
-      await unary(Dekart.ArchiveReport, req)
-    } catch (err) {
-      dispatch(error(err))
-    }
+    dispatch(grpcCall(Dekart.ArchiveReport, req))
   }
 }
 
@@ -224,27 +218,28 @@ export function forkReport (reportId) {
     dispatch({ type: forkReport.name })
     const request = new ForkReportRequest()
     request.setReportId(reportId)
-    try {
-      const { reportId } = await unary(Dekart.ForkReport, request)
+    dispatch(grpcCall(Dekart.ForkReport, request, (res, err) => {
+      if (err) {
+        return err
+      }
+      const { reportId } = res
       dispatch(newForkedReport(reportId))
       dispatch(success('Report Forked'))
-    } catch (err) {
-      dispatch(error(err))
-    }
+    }))
   }
 }
 
 export function createReport () {
   return async (dispatch) => {
     const request = new CreateReportRequest()
-    try {
-      const { report } = await unary(Dekart.CreateReport, request)
+    dispatch(grpcCall(Dekart.CreateReport, request, (res, err) => {
+      if (err) {
+        return err
+      }
+      const { report } = res
       dispatch(newReport(report.id))
-    } catch (err) {
-      dispatch(error(err))
-      throw err
-    }
-    dispatch(success('New Report Created'))
+      dispatch(success('New Report Created'))
+    }))
   }
 }
 
@@ -278,11 +273,11 @@ export function saveMap () {
     reportPayload.setTitle(reportStatus.title)
     request.setReport(reportPayload)
     request.setQueryList(queries)
-    try {
-      await unary(Dekart.UpdateReport, request)
+    dispatch(grpcCall(Dekart.UpdateReport, request, (res, err) => {
+      if (err) {
+        return err
+      }
       dispatch(success('Map Saved'))
-    } catch (err) {
-      dispatch(error(err))
-    }
+    }))
   }
 }

@@ -1,19 +1,43 @@
 import { grpc } from '@improbable-eng/grpc-web'
-import { CreateReportRequest, ReportStreamRequest, Report, StreamOptions } from '../../proto/dekart_pb'
-import { Dekart } from '../../proto/dekart_pb_service'
+import { StreamOptions } from '../../proto/dekart_pb'
 import { error, streamError } from '../actions/message'
 
 const { REACT_APP_API_HOST } = process.env
 const host = REACT_APP_API_HOST || ''
 
-export function unary (method, request) {
+export function grpcCall (method, request, cb = (m, err) => err) {
+  return async function (dispatch, getState) {
+    const { token } = getState()
+    const headers = new window.Headers()
+    if (token) {
+      headers.append('Authorization', `Bearer ${token.access_token}`)
+    }
+    try {
+      const response = await unary(method, request, headers)
+      const err = cb(response, null)
+      if (err) {
+        throw err
+      }
+    } catch (err) {
+      const cbErr = cb(null, err)
+      if (cbErr instanceof GrpcError) {
+        dispatch(streamError(cbErr.code, cbErr.message))
+      } else {
+        dispatch(error(cbErr))
+      }
+    }
+  }
+}
+
+function unary (method, request, metadata = new window.Headers()) {
   return new Promise((resolve, reject) => {
     grpc.unary(method, {
       host,
       request,
+      metadata,
       onEnd: response => {
         if (response.status) {
-          reject(new Error(response.statusMessage))
+          reject(new GrpcError(response.statusMessage, response.status))
           return
         }
         resolve(response.message.toObject())
@@ -23,10 +47,10 @@ export function unary (method, request) {
   })
 }
 
-export function createReport () {
-  const request = new CreateReportRequest()
-  return unary(Dekart.CreateReport, request)
-}
+// function createReport () {
+//   const request = new CreateReportRequest()
+//   return unary(Dekart.CreateReport, request)
+// }
 
 class CancelableRequest {
   constructor () {
@@ -57,7 +81,7 @@ class GrpcError extends Error {
   }
 }
 
-export function stream (endpoint, request, cb) {
+export function grpcStream (endpoint, request, cb) {
   return async (dispatch, getState) => {
     const { token } = getState()
     const headers = new window.Headers()
@@ -88,12 +112,12 @@ export function stream (endpoint, request, cb) {
       },
       headers
     )
-    dispatch({ type: stream.name, cancelable })
+    dispatch({ type: grpcStream.name, cancelable })
   }
 }
 
 // getStream is a wrapper around grpc.invoke that handles reconnecting
-export function getStream (endpoint, request, onMessage, onError, metadata = {}, cancelable = new CancelableRequest(), sequence = 0, retryCount = 0) {
+function getStream (endpoint, request, onMessage, onError, metadata = {}, cancelable = new CancelableRequest(), sequence = 0, retryCount = 0) {
   const streamOptions = new StreamOptions()
   let currentSequence = sequence
   streamOptions.setSequence(currentSequence)
@@ -135,12 +159,4 @@ export function getStream (endpoint, request, onMessage, onError, metadata = {},
     }
   }))
   return cancelable
-}
-
-export function getReportStream (reportId, onMessage, onError) {
-  const report = new Report()
-  report.setId(reportId)
-  const request = new ReportStreamRequest()
-  request.setReport(report)
-  return getStream(Dekart.GetReportStream, request, onMessage, onError)
 }
