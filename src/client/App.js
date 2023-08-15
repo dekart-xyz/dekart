@@ -17,10 +17,11 @@ import { AuthState, RedirectState as DekartRedirectState } from '../proto/dekart
 import { getEnv } from './actions/env'
 import { setRedirectState } from './actions/redirectState'
 
+// RedirectState reads states passed in the URL from the server
 function RedirectState () {
-  const location = useLocation()
   const dispatch = useDispatch()
-  const params = new URLSearchParams(location.search)
+  const url = new URL(window.location.href)
+  const params = new URLSearchParams(url.search)
   if (params.has('redirect_state')) {
     const redirectStateBase64 = params.get('redirect_state')
     const redirectStateStr = atob(redirectStateBase64)
@@ -28,9 +29,11 @@ function RedirectState () {
     const redirectStateBytes = new Uint8Array(redirectStateArr)
     const redirectState = DekartRedirectState.deserializeBinary(redirectStateBytes)
     dispatch(setRedirectState(redirectState))
+
+    // remove redirect_state from URL
     params.delete('redirect_state')
-    location.search = params.toString()
-    return <Redirect to={location.href} />
+    url.search = params.toString()
+    return <Redirect to={`${url.pathname}${url.search}`} /> // apparently receives only pathname and search
   }
   return null
 }
