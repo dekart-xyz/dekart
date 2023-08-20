@@ -5,7 +5,7 @@ import { Query } from '../../proto/dekart_pb'
 import { setUserMapboxAccessTokenUpdater } from '@dekart-xyz/kepler.gl/dist/reducers/ui-state-updaters'
 import { token } from './token'
 import { openReport, reportUpdate, forkReport, saveMap, reportTitleChange, newReport, newForkedReport, unsubscribeReports, reportsListUpdate } from '../actions/report'
-import { downloading, finishDownloading, httpError, streamError } from '../actions/message'
+import { downloading, finishDownloading, setHttpError, setStreamError } from '../actions/message'
 import { closeDatasetSettingsModal, downloadDataset, openDatasetSettingsModal, setActiveDataset } from '../actions/dataset'
 import { queryChanged, querySource } from '../actions/query'
 import { setUsage } from '../actions/usage'
@@ -13,6 +13,7 @@ import { setEnv } from '../actions/env'
 import { newRelease } from '../actions/version'
 import { uploadFile, uploadFileProgress, uploadFileStateChange } from '../actions/file'
 import { stream } from './stream'
+import { setRedirectState } from '../actions/redirectState'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
   uiState: {
@@ -114,7 +115,7 @@ function reportStatus (state = defaultReportStatus, action) {
         ...defaultReportStatus,
         edit: action.edit
       }
-    case streamError.name:
+    case setStreamError.name:
       return {
         ...state,
         online: false
@@ -275,10 +276,26 @@ function env (state = defaultEnv, action) {
   }
 }
 
-function httpErrorStatus (state = 0, action) {
+function httpError (state = {}, action) {
   switch (action.type) {
-    case httpError.name:
-      return action.status
+    case setHttpError.name:
+      return {
+        status: action.status,
+        message: action.message,
+        doNotAuthenticate: action.doNotAuthenticate
+      }
+    case setRedirectState.name: {
+      const err = action.redirectState.getError()
+      if (err) {
+        return {
+          status: 401,
+          message: err,
+          doNotAuthenticate: true
+        }
+      } else {
+        return {} // reset error
+      }
+    }
     default:
       return state
   }
@@ -387,7 +404,7 @@ export default combineReducers({
   reportStatus,
   reportsList,
   env,
-  httpErrorStatus,
+  httpError,
   downloadingDatasets,
   release,
   datasets,

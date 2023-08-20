@@ -1,7 +1,7 @@
 import { KeplerGlSchema } from '@dekart-xyz/kepler.gl/dist/schemas'
 import { receiveMapConfig, removeDataset } from '@dekart-xyz/kepler.gl/dist/actions'
 
-import { grpcCall, grpcStream } from '../lib/grpc'
+import { grpcCall, grpcStream } from './grpc'
 import { success } from './message'
 import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'

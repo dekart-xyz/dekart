@@ -1,5 +1,5 @@
 import { GetUsageRequest } from '../../proto/dekart_pb'
-import { grpcCall } from '../lib/grpc'
+import { grpcCall } from './grpc'
 import { Dekart } from '../../proto/dekart_pb_service'
 
 export function setUsage (stats) {

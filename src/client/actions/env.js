@@ -1,6 +1,6 @@
 import { GetEnvRequest, GetEnvResponse } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
-import { grpcCall } from '../lib/grpc'
+import { grpcCall } from './grpc'
 
 export function setEnv (variables) {
   return { type: setEnv.name, variables }

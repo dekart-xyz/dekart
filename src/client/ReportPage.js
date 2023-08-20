@@ -19,7 +19,7 @@ import DatasetSettingsModal from './DatasetSettingsModal'
 import getDatasetName from './lib/getDatasetName'
 import { createDataset, openDatasetSettingsModal, setActiveDataset } from './actions/dataset'
 import { closeReport, openReport, reportTitleChange } from './actions/report'
-import { error } from './actions/message'
+import { setError } from './actions/message'
 
 function TabIcon ({ query }) {
   let iconColor = 'transparent'
@@ -226,7 +226,7 @@ function Kepler () {
       <div className={styles.keplerBlock}>
         <AutoSizer>
           {({ height, width }) => (
-            <CatchKeplerError onError={(err) => dispatch(error(err))}>
+            <CatchKeplerError onError={(err) => dispatch(setError(err))}>
               <KeplerGl
                 id='kepler'
                 mapboxApiAccessToken={env.variables.MAPBOX_TOKEN}

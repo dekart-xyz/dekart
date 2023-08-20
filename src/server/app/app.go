@@ -68,13 +68,12 @@ func setOriginHeader(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
 	}
+	w.Header().Set("Access-Control-Allow-Headers", "Authorization")
 }
 
 func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *mux.Router {
 	router := mux.NewRouter()
 	api := router.PathPrefix("/api/v1/").Subrouter()
-	api.Use(mux.CORSMethodMiddleware(router))
-
 	api.HandleFunc("/dataset-source/{id}.{extension:csv|geojson}", func(w http.ResponseWriter, r *http.Request) {
 		setOriginHeader(w, r)
 		if r.Method == http.MethodOptions {
@@ -108,6 +107,7 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 			claimsCheck.Authenticate(w, r)
 		}).Methods("GET", "OPTIONS")
 	}
+	api.Use(mux.CORSMethodMiddleware(router))
 
 	staticPath := os.Getenv("DEKART_STATIC_FILES")
 

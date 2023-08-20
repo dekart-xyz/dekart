@@ -1,6 +1,6 @@
 import { grpc } from '@improbable-eng/grpc-web'
 import { StreamOptions } from '../../proto/dekart_pb'
-import { error, streamError } from '../actions/message'
+import { setError, setStreamError } from './message'
 
 const { REACT_APP_API_HOST } = process.env
 const host = REACT_APP_API_HOST || ''
@@ -19,12 +19,11 @@ export function grpcCall (method, request, cb = (m, err) => err) {
         throw err
       }
     } catch (err) {
-      console.log(method)
       const cbErr = cb(null, err)
       if (cbErr instanceof GrpcError) {
-        dispatch(streamError(cbErr.code, cbErr.message))
+        dispatch(setStreamError(cbErr.code, cbErr.message))
       } else {
-        dispatch(error(cbErr))
+        dispatch(setError(cbErr))
       }
     }
   }
@@ -47,11 +46,6 @@ function unary (method, request, metadata = new window.Headers()) {
     })
   })
 }
-
-// function createReport () {
-//   const request = new CreateReportRequest()
-//   return unary(Dekart.CreateReport, request)
-// }
 
 class CancelableRequest {
   constructor () {
@@ -97,18 +91,18 @@ export function grpcStream (endpoint, request, cb) {
         if (err) {
           if (err instanceof GrpcError) {
             // TODO: fix naming of streamError
-            dispatch(streamError(err.code, err.message))
+            dispatch(setStreamError(err.code, err.message))
           } else {
-            dispatch(error(err))
+            dispatch(setError(err))
           }
         }
       },
       (code, message) => {
         const err = cb(null, new GrpcError(message, code))
         if (err instanceof GrpcError) {
-          dispatch(streamError(err.code, err.message))
+          dispatch(setStreamError(err.code, err.message))
         } else {
-          dispatch(error(err))
+          dispatch(setError(err))
         }
       },
       headers

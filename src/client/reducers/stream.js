@@ -1,4 +1,4 @@
-import { grpcStream as streamAction } from '../lib/grpc'
+import { grpcStream as streamAction } from '../actions/grpc'
 
 const defaultStreamState = {
   cancelable: null

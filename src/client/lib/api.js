@@ -1,7 +1,7 @@
-export async function call (method, endpoint, body) {
+export async function get (endpoint, token = null) {
   const headers = {}
-  if (body) {
-    headers['Content-Type'] = 'application/json; charset=utf-8'
+  if (token) {
+    headers.Authorization = `Bearer ${token.access_token}`
   }
   const { REACT_APP_API_HOST } = process.env
   const host = REACT_APP_API_HOST || ''
@@ -10,16 +10,12 @@ export async function call (method, endpoint, body) {
   const res = await window.fetch(
     url,
     {
-      method: method,
-      body: body && JSON.stringify(body),
+      method: 'GET',
       headers
     }
   )
   if (!res.ok) {
-    throw new Error(`Http Error ${res.status} ${method} ${url}`)
+    throw new Error(`Http Error ${res.status} GET ${url}`)
   }
   return res
 }
-
-// export const post = call.bind(null, 'POST')
-export const get = call.bind(null, 'GET')

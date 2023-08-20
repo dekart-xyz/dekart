@@ -121,17 +121,50 @@ func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 	return userCtx
 }
 
+func (c ClaimsCheck) getAuthConfig(state *pb.AuthState) *oauth2.Config {
+	return &oauth2.Config{
+		ClientID:     c.GoogleOAuthClientId,
+		ClientSecret: c.GoogleOAuthSecret,
+		Scopes:       []string{bigquery.BigqueryScope, googleOAuth.UserinfoProfileScope, googleOAuth.UserinfoEmailScope},
+		Endpoint:     google.Endpoint,
+		RedirectURL:  state.AuthUrl,
+	}
+}
+
+func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.RedirectState {
+	//TODO: validate state checksum
+	code := r.URL.Query().Get("code")
+	authErr := r.URL.Query().Get("error")
+	redirectState := &pb.RedirectState{}
+	if authErr != "" {
+		log.Error().Str("authErr", authErr).Msg("Error authenticating")
+		redirectState.Error = authErr
+		return redirectState
+	}
+	var auth = c.getAuthConfig(state)
+	token, err := auth.Exchange(r.Context(), code)
+	if err != nil {
+		log.Error().Err(err).Msg("Error exchanging code for token")
+		redirectState.Error = "Error exchanging code for token"
+		return redirectState
+	}
+	tokenBin, err := json.Marshal(*token)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Error marshalling token")
+	}
+	redirectState.TokenJson = string(tokenBin)
+	return redirectState
+}
+
 // Authenticate redirects to Google OAuth
 func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 	stateBase64 := r.URL.Query().Get("state")
-	log.Debug().Msgf("stateBase64: %s", stateBase64)
 	stateBin, err := base64.StdEncoding.DecodeString(stateBase64)
 	if err != nil {
 		log.Error().Err(err).Msg("Error decoding state")
 		http.Error(w, "Error decoding state", http.StatusBadRequest)
 		return
 	}
-
 	if err != nil {
 		log.Error().Err(err).Msg("Error decoding state")
 		http.Error(w, "Error decoding state", http.StatusBadRequest)
@@ -151,7 +184,7 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Debug().Msgf("state action: %s", state.Action)
+	log.Debug().Msgf("Authenticate state action: %s", state.Action)
 	switch state.Action {
 	case pb.AuthState_ACTION_REQUEST_CODE:
 		state.Action = pb.AuthState_ACTION_REQUEST_TOKEN
@@ -163,58 +196,19 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		stateBase64 = base64.StdEncoding.EncodeToString(stateBin)
-		var auth = &oauth2.Config{
-			ClientID:     c.GoogleOAuthClientId,
-			ClientSecret: c.GoogleOAuthSecret,
-			Scopes:       []string{bigquery.BigqueryScope, googleOAuth.UserinfoProfileScope, googleOAuth.UserinfoEmailScope},
-			Endpoint:     google.Endpoint,
-			RedirectURL:  state.AuthUrl,
-		}
+		var auth = c.getAuthConfig(&state)
 		url := auth.AuthCodeURL(stateBase64)
 		http.Redirect(w, r, url, http.StatusFound)
 	case pb.AuthState_ACTION_REQUEST_TOKEN:
-		//TODO: validate state checksum
-		code := r.URL.Query().Get("code")
-		authErr := r.URL.Query().Get("error")
-		if authErr != "" {
-			log.Error().Str("authErr", authErr).Msg("Error authenticating")
-			http.Error(w, "Error authenticating", http.StatusForbidden)
-			return
-		}
-		var auth = &oauth2.Config{
-			ClientID:     c.GoogleOAuthClientId,
-			ClientSecret: c.GoogleOAuthSecret,
-			Scopes:       []string{bigquery.BigqueryScope, googleOAuth.UserinfoProfileScope, googleOAuth.UserinfoEmailScope},
-			Endpoint:     google.Endpoint,
-			RedirectURL:  state.AuthUrl,
-		}
-		token, err := auth.Exchange(r.Context(), code)
+		redirectState := c.requestToken(&state, r)
+		redirectStateBin, err := proto.Marshal(redirectState)
 		if err != nil {
-			log.Error().Err(err).Msg("Error exchanging code for token")
-			http.Error(w, "Error exchanging code for token", http.StatusForbidden)
-			return
+			log.Fatal().Err(err).Msg("Error marshalling token")
 		}
-		tokenBin, err := json.Marshal(*token)
-		if err != nil {
-			log.Error().Err(err).Msg("Error marshalling token")
-			http.Error(w, "Error marshalling token", http.StatusInternalServerError)
-			return
-		}
-		redirectState := pb.RedirectState{
-			TokenJson: string(tokenBin),
-		}
-		redirectStateBin, err := proto.Marshal(&redirectState)
-		if err != nil {
-			log.Error().Err(err).Msg("Error marshalling redirect state")
-			http.Error(w, "Error marshalling redirect state", http.StatusInternalServerError)
-			return
-		}
-		log.Debug().Msgf("redirectStateBin: %v", redirectStateBin)
 		redirectStateBase64 := base64.StdEncoding.EncodeToString(redirectStateBin)
 		query := uiURL.Query()
 		query.Set("redirect_state", redirectStateBase64)
 		uiURL.RawQuery = query.Encode()
-		log.Debug().Msgf("redirecting to: %s", uiURL.String())
 		http.Redirect(w, r, uiURL.String(), http.StatusFound)
 		return
 	default:
