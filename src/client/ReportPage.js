@@ -5,7 +5,6 @@ import { KeplerGl } from '@dekart-xyz/kepler.gl/dist/components'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
 import { useDispatch, useSelector } from 'react-redux'
-import { closeReport, openReport, reportTitleChange, setActiveDataset, error, createDataset, openDatasetSettingsModal } from './actions'
 import { EditOutlined, WarningFilled, MoreOutlined } from '@ant-design/icons'
 import { Query as QueryType } from '../proto/dekart_pb'
 import Tabs from 'antd/es/tabs'
@@ -18,6 +17,9 @@ import Dataset from './Dataset'
 import { Resizable } from 're-resizable'
 import DatasetSettingsModal from './DatasetSettingsModal'
 import getDatasetName from './lib/getDatasetName'
+import { createDataset, openDatasetSettingsModal, setActiveDataset } from './actions/dataset'
+import { closeReport, openReport, reportTitleChange } from './actions/report'
+import { setError } from './actions/message'
 
 function TabIcon ({ query }) {
   let iconColor = 'transparent'
@@ -224,7 +226,7 @@ function Kepler () {
       <div className={styles.keplerBlock}>
         <AutoSizer>
           {({ height, width }) => (
-            <CatchKeplerError onError={(err) => dispatch(error(err))}>
+            <CatchKeplerError onError={(err) => dispatch(setError(err))}>
               <KeplerGl
                 id='kepler'
                 mapboxApiAccessToken={env.variables.MAPBOX_TOKEN}

@@ -3,12 +3,18 @@ package dekart
 import (
 	"context"
 	"dekart/src/proto"
+	"dekart/src/server/user"
 	"fmt"
 
 	"github.com/rs/zerolog/log"
 )
 
 func (s Server) GetUsage(ctx context.Context, req *proto.GetUsageRequest) (*proto.GetUsageResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		log.Err(Unauthenticated).Send()
+		return nil, Unauthenticated
+	}
 	res := &proto.GetUsageResponse{}
 	usage, err := s.db.QueryContext(ctx,
 		`select

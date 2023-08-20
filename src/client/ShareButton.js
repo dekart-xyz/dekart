@@ -3,7 +3,6 @@ import Modal from 'antd/es/modal'
 import { ExportOutlined, UsergroupAddOutlined, LinkOutlined, LockOutlined, InfoCircleOutlined, FileSearchOutlined } from '@ant-design/icons'
 import { useState } from 'react'
 import styles from './ShareButton.module.css'
-import { copyUrlToClipboard, setDiscoverable } from './actions'
 import { useDispatch, useSelector } from 'react-redux'
 import Tooltip from 'antd/es/tooltip'
 import { getRef } from './lib/ref'
@@ -11,6 +10,8 @@ import Switch from 'antd/es/switch'
 import { toggleModal } from '@dekart-xyz/kepler.gl/dist/actions/ui-state-actions'
 import { EXPORT_DATA_ID, EXPORT_IMAGE_ID, EXPORT_MAP_ID } from '@dekart-xyz/kepler.gl/dist/constants'
 import Dropdown from 'antd/es/dropdown'
+import { copyUrlToClipboard } from './actions/clipboard'
+import { setDiscoverable } from './actions/report'
 
 function CopyLinkButton () {
   const dispatch = useDispatch()

@@ -5,7 +5,7 @@ import Button from 'antd/es/button'
 import { useState } from 'react'
 import prettyBites from 'pretty-bytes'
 import { useSelector, useDispatch } from 'react-redux'
-import { uploadFile } from './actions'
+import { uploadFile } from './actions/file'
 
 function getFileExtensionName (type) {
   switch (type) {

@@ -222,10 +222,75 @@ export namespace GetEnvResponse {
       TYPE_REQUIRE_AMAZON_OIDC: 7;
       TYPE_REQUIRE_IAP: 8;
       TYPE_DISABLE_USAGE_STATS: 9;
+      TYPE_REQUIRE_GOOGLE_OAUTH: 10;
     }
 
     export const Type: TypeMap;
   }
+}
+
+export class RedirectState extends jspb.Message {
+  getTokenJson(): string;
+  setTokenJson(value: string): void;
+
+  getError(): string;
+  setError(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): RedirectState.AsObject;
+  static toObject(includeInstance: boolean, msg: RedirectState): RedirectState.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: RedirectState, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RedirectState;
+  static deserializeBinaryFromReader(message: RedirectState, reader: jspb.BinaryReader): RedirectState;
+}
+
+export namespace RedirectState {
+  export type AsObject = {
+    tokenJson: string,
+    error: string,
+  }
+}
+
+export class AuthState extends jspb.Message {
+  getAction(): AuthState.ActionMap[keyof AuthState.ActionMap];
+  setAction(value: AuthState.ActionMap[keyof AuthState.ActionMap]): void;
+
+  getAuthUrl(): string;
+  setAuthUrl(value: string): void;
+
+  getUiUrl(): string;
+  setUiUrl(value: string): void;
+
+  getSecret(): string;
+  setSecret(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): AuthState.AsObject;
+  static toObject(includeInstance: boolean, msg: AuthState): AuthState.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: AuthState, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): AuthState;
+  static deserializeBinaryFromReader(message: AuthState, reader: jspb.BinaryReader): AuthState;
+}
+
+export namespace AuthState {
+  export type AsObject = {
+    action: AuthState.ActionMap[keyof AuthState.ActionMap],
+    authUrl: string,
+    uiUrl: string,
+    secret: string,
+  }
+
+  export interface ActionMap {
+    ACTION_UNSPECIFIED: 0;
+    ACTION_REQUEST_CODE: 1;
+    ACTION_REQUEST_TOKEN: 2;
+  }
+
+  export const Action: ActionMap;
 }
 
 export class ArchiveReportRequest extends jspb.Message {

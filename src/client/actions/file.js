@@ -1,7 +1,6 @@
 import { CreateFileRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
-import { unary } from '../lib/grpc'
-import { error } from './message'
+import { grpcCall } from './grpc'
 
 export function uploadFileProgress (fileId, loaded, total) {
   return {
@@ -48,6 +47,6 @@ export function createFile (datasetId) {
     dispatch({ type: createFile.name })
     const request = new CreateFileRequest()
     request.setDatasetId(datasetId)
-    unary(Dekart.CreateFile, request).catch(err => dispatch(error(err)))
+    dispatch(grpcCall(Dekart.CreateFile, request))
   }
 }

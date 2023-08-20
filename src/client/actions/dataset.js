@@ -1,7 +1,7 @@
 import { CreateDatasetRequest, RemoveDatasetRequest, UpdateDatasetRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
-import { unary } from '../lib/grpc'
-import { downloading, error, finishDownloading, success } from './message'
+import { grpcCall } from './grpc'
+import { downloading, setError, finishDownloading, success } from './message'
 import { addDataToMap, toggleSidePanel, removeDataset as removeDatasetFromKepler } from '@dekart-xyz/kepler.gl/dist/actions'
 import { processCsvData, processGeojson } from '@dekart-xyz/kepler.gl/dist/processors'
 import { get } from '../lib/api'
@@ -13,7 +13,7 @@ export function createDataset (reportId) {
     dispatch({ type: createDataset.name })
     const request = new CreateDatasetRequest()
     request.setReportId(reportId)
-    unary(Dekart.CreateDataset, request).catch(err => dispatch(error(err)))
+    dispatch(grpcCall(Dekart.CreateDataset, request))
   }
 }
 
@@ -38,11 +38,7 @@ export function updateDataset (datasetId, name) {
     const request = new UpdateDatasetRequest()
     request.setDatasetId(datasetId)
     request.setName(name)
-    try {
-      await unary(Dekart.UpdateDataset, request)
-    } catch (err) {
-      dispatch(error(err))
-    }
+    dispatch(grpcCall(Dekart.UpdateDataset, request))
   }
 }
 
@@ -53,7 +49,7 @@ export function removeDataset (datasetId) {
       // removed active query
       const datasetsLeft = datasets.filter(q => q.id !== datasetId)
       if (datasetsLeft.length === 0) {
-        dispatch(error(new Error('Cannot remove last dataset')))
+        dispatch(setError(new Error('Cannot remove last dataset')))
         return
       }
       dispatch(setActiveDataset(datasetsLeft.id))
@@ -62,12 +58,12 @@ export function removeDataset (datasetId) {
 
     const request = new RemoveDatasetRequest()
     request.setDatasetId(datasetId)
-    try {
-      await unary(Dekart.RemoveDataset, request)
+    dispatch(grpcCall(Dekart.RemoveDataset, request, (err, res) => {
+      if (err) {
+        return err
+      }
       dispatch(success('Dataset removed'))
-    } catch (err) {
-      dispatch(error(err))
-    }
+    }))
   }
 }
 
@@ -75,9 +71,10 @@ export function downloadDataset (dataset, sourceId, extension, prevDatasetsList)
   return async (dispatch, getState) => {
     dispatch({ type: downloadDataset.name, dataset })
     dispatch(downloading(dataset))
+    const { token } = getState()
     let data
     try {
-      const res = await get(`/dataset-source/${sourceId}.${extension}`)
+      const res = await get(`/dataset-source/${sourceId}.${extension}`, token)
       if (extension === 'csv') {
         const csv = await res.text()
         data = processCsvData(csv)
@@ -86,7 +83,7 @@ export function downloadDataset (dataset, sourceId, extension, prevDatasetsList)
         data = processGeojson(json)
       }
     } catch (err) {
-      dispatch(error(err))
+      dispatch(setError(err))
       return
     }
     const { datasets, files, queries, keplerGl } = getState()
@@ -150,7 +147,7 @@ export function downloadDataset (dataset, sourceId, extension, prevDatasetsList)
         }))
       }
     } catch (err) {
-      dispatch(error(
+      dispatch(setError(
         new Error(`Failed to add data to map: ${err.message}`),
         false
       ))

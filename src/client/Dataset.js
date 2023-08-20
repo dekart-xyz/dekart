@@ -2,9 +2,10 @@ import Button from 'antd/es/button'
 import styles from './Dataset.module.css'
 import { useDispatch, useSelector } from 'react-redux'
 import Query from './Query'
-import { createQuery, createFile } from './actions'
 import File from './File'
 import { getDatasourceMeta } from './lib/datasource'
+import { createQuery } from './actions/query'
+import { createFile } from './actions/file'
 
 function DatasetSelector ({ dataset }) {
   const dispatch = useDispatch()

@@ -5,12 +5,13 @@ import Button from 'antd/es/button'
 import Radio from 'antd/es/radio'
 import Result from 'antd/es/result'
 import Table from 'antd/es/table'
-import { archiveReport, createReport, subscribeReports, testVersion, unsubscribeReports } from './actions'
 import { useDispatch, useSelector } from 'react-redux'
 import { PlusOutlined, FileSearchOutlined, GiftOutlined, UsergroupAddOutlined } from '@ant-design/icons'
 import DataDocumentationLink from './DataDocumentationLink'
 import { getRef } from './lib/ref'
 import Switch from 'antd/es/switch'
+import { archiveReport, subscribeReports, unsubscribeReports, createReport } from './actions/report'
+import { testVersion } from './actions/version'
 
 function Loading () {
   return null

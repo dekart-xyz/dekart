@@ -77,11 +77,30 @@ message GetEnvResponse {
             TYPE_REQUIRE_AMAZON_OIDC = 7;
             TYPE_REQUIRE_IAP = 8;
             TYPE_DISABLE_USAGE_STATS = 9;
+            TYPE_REQUIRE_GOOGLE_OAUTH = 10;
         }
         Type type = 1;
         string value = 2;
     }
     repeated Variable variables = 1;
+}
+
+// RedirectState is used to pass state between the server and the UI via redirect
+message RedirectState {
+    string token_json = 1;
+    string error  = 2;
+}
+
+message AuthState   {
+    enum Action {
+        ACTION_UNSPECIFIED = 0;
+        ACTION_REQUEST_CODE = 1;
+        ACTION_REQUEST_TOKEN = 2;
+    }
+    Action action = 1;
+    string auth_url = 2;
+    string ui_url = 3;
+    string secret = 4;
 }
 
 message ArchiveReportRequest {

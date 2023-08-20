@@ -5,7 +5,7 @@ import Input from 'antd/es/input'
 import { useDispatch, useSelector } from 'react-redux'
 import { useState, useEffect } from 'react'
 import getDatasetName from './lib/getDatasetName'
-import { closeDatasetSettingsModal, removeDataset, updateDataset } from './actions'
+import { closeDatasetSettingsModal, removeDataset, updateDataset } from './actions/dataset'
 
 function ModalFooter ({ saving, setSaving, name, datasetId }) {
   const dispatch = useDispatch()

@@ -22,7 +22,15 @@ export function success (content) {
   return { type: success.name }
 }
 
-export function error (err, transitive = true) {
+export function info (content) {
+  message.info({
+    content,
+    style
+  })
+  return { type: info.name }
+}
+
+export function setError (err, transitive = true) {
   console.error(err)
   if (transitive) {
     message.error({
@@ -36,26 +44,29 @@ export function error (err, transitive = true) {
       style
     })
   }
-  return { type: error.name }
+  return { type: setError.name }
 }
 
-export function httpError (status) {
-  return { type: httpError.name, status }
+export function setHttpError (status, message = '', doNotAuthenticate = false) {
+  return { type: setHttpError.name, status, message, doNotAuthenticate }
 }
 
-export function streamError (code, msg) {
+export function setStreamError (code, msg) {
   return (dispatch) => {
-    dispatch({ type: streamError.name })
+    dispatch({ type: setStreamError.name })
     // https://github.com/grpc/grpc/blob/master/doc/statuscodes.md
     switch (code) {
+      case 1:
+        dispatch(info('Request cancelled'))
+        return
       case 5:
-        dispatch(httpError(404))
+        dispatch(setHttpError(404))
         return
       case 3:
-        dispatch(httpError(400))
+        dispatch(setHttpError(400))
         return
       case 16:
-        dispatch(httpError(401))
+        dispatch(setHttpError(401))
         return
       default:
         message.error({

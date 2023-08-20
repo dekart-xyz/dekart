@@ -7,6 +7,7 @@ import (
 	"dekart/src/server/job"
 	"dekart/src/server/report"
 	"dekart/src/server/storage"
+	"dekart/src/server/user"
 	"os"
 
 	"google.golang.org/grpc/codes"
@@ -22,7 +23,7 @@ type Server struct {
 	jobs job.Store
 }
 
-//Unauthenticated error returned when no user claims in context
+// Unauthenticated error returned when no user claims in context
 var Unauthenticated error = status.Error(codes.Unauthenticated, "UNAUTHENTICATED")
 
 // NewServer returns new Dekart Server
@@ -52,47 +53,65 @@ func defaultString(s, def string) string {
 
 // GetEnv variables to the client
 func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.GetEnvResponse, error) {
-	homePageUrl := os.Getenv("DEKART_UX_HOMEPAGE")
-	if homePageUrl == "" {
-		homePageUrl = "https://dekart.xyz/"
-	}
-	variables := []*proto.GetEnvResponse_Variable{
-		{
-			Type:  proto.GetEnvResponse_Variable_TYPE_MAPBOX_TOKEN,
-			Value: os.Getenv("DEKART_MAPBOX_TOKEN"),
-		},
-		{
-			Type:  proto.GetEnvResponse_Variable_TYPE_UX_DATA_DOCUMENTATION,
-			Value: os.Getenv("DEKART_UX_DATA_DOCUMENTATION"),
-		},
-		{
-			Type:  proto.GetEnvResponse_Variable_TYPE_UX_HOMEPAGE,
-			Value: homePageUrl,
-		},
-		{
-			Type:  proto.GetEnvResponse_Variable_TYPE_ALLOW_FILE_UPLOAD,
-			Value: os.Getenv("DEKART_ALLOW_FILE_UPLOAD"),
-		},
-		{
-			Type:  proto.GetEnvResponse_Variable_TYPE_DATASOURCE,
-			Value: defaultString(os.Getenv("DEKART_DATASOURCE"), "BQ"),
-		},
-		{
-			Type:  proto.GetEnvResponse_Variable_TYPE_STORAGE,
-			Value: defaultString(os.Getenv("DEKART_STORAGE"), "GCS"),
-		},
-		{
-			Type:  proto.GetEnvResponse_Variable_TYPE_REQUIRE_IAP,
-			Value: defaultString(os.Getenv("DEKART_REQUIRE_IAP"), ""),
-		},
-		{
-			Type:  proto.GetEnvResponse_Variable_TYPE_REQUIRE_AMAZON_OIDC,
-			Value: defaultString(os.Getenv("DEKART_REQUIRE_AMAZON_OIDC"), ""),
-		},
-		{
-			Type:  proto.GetEnvResponse_Variable_TYPE_DISABLE_USAGE_STATS,
-			Value: defaultString(os.Getenv("DEKART_DISABLE_USAGE_STATS"), ""),
-		},
+	claims := user.GetClaims(ctx)
+	var variables []*proto.GetEnvResponse_Variable
+	if claims == nil {
+		// unauthenticated user, no sensitive variables must be exposed
+		variables = []*proto.GetEnvResponse_Variable{
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_REQUIRE_GOOGLE_OAUTH,
+				Value: defaultString(os.Getenv("DEKART_REQUIRE_GOOGLE_OAUTH"), ""),
+			},
+		}
+	} else {
+		// authenticated user
+		homePageUrl := os.Getenv("DEKART_UX_HOMEPAGE")
+		if homePageUrl == "" {
+			homePageUrl = "https://dekart.xyz/"
+		}
+		variables = []*proto.GetEnvResponse_Variable{
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_MAPBOX_TOKEN,
+				Value: os.Getenv("DEKART_MAPBOX_TOKEN"),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_UX_DATA_DOCUMENTATION,
+				Value: os.Getenv("DEKART_UX_DATA_DOCUMENTATION"),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_UX_HOMEPAGE,
+				Value: homePageUrl,
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_ALLOW_FILE_UPLOAD,
+				Value: os.Getenv("DEKART_ALLOW_FILE_UPLOAD"),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_DATASOURCE,
+				Value: defaultString(os.Getenv("DEKART_DATASOURCE"), "BQ"),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_STORAGE,
+				Value: defaultString(os.Getenv("DEKART_STORAGE"), "GCS"),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_REQUIRE_IAP,
+				Value: defaultString(os.Getenv("DEKART_REQUIRE_IAP"), ""),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_REQUIRE_AMAZON_OIDC,
+				Value: defaultString(os.Getenv("DEKART_REQUIRE_AMAZON_OIDC"), ""),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_DISABLE_USAGE_STATS,
+				Value: defaultString(os.Getenv("DEKART_DISABLE_USAGE_STATS"), ""),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_REQUIRE_GOOGLE_OAUTH,
+				Value: defaultString(os.Getenv("DEKART_REQUIRE_GOOGLE_OAUTH"), ""),
+			},
+		}
+
 	}
 	return &proto.GetEnvResponse{
 		Variables: variables,

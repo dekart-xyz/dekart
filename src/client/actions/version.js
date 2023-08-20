@@ -1,4 +1,4 @@
-import { error } from './message'
+import { setError } from './message'
 import { version } from '../../../package.json'
 import semver from 'semver'
 
@@ -24,7 +24,7 @@ export function testVersion () {
         dispatch(newRelease(releases[0]))
       }
     } catch (err) {
-      dispatch(error(err))
+      dispatch(setError(err))
     }
   }
 }
