@@ -78,9 +78,6 @@ func NewClaimsCheck(c ClaimsCheckConfig) ClaimsCheck {
 		log.Warn().Msgf("Use DEKART_DEV_CLAIMS_EMAIL only in development environment")
 	}
 
-	// secretHash := sha256.Sum256([]byte(c.GoogleOAuthSecret))
-	// secret := base64.StdEncoding.EncodeToString(secretHash[:])
-
 	return ClaimsCheck{
 		c,
 		&sync.Map{},
@@ -132,7 +129,7 @@ func (c ClaimsCheck) getAuthConfig(state *pb.AuthState) *oauth2.Config {
 }
 
 func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.RedirectState {
-	//TODO: validate state checksum
+	//TODO: use JWT token as a state
 	code := r.URL.Query().Get("code")
 	authErr := r.URL.Query().Get("error")
 	redirectState := &pb.RedirectState{}
@@ -190,10 +187,7 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 		state.Action = pb.AuthState_ACTION_REQUEST_TOKEN
 		stateBin, err = proto.Marshal(&state)
 		if err != nil {
-			log.Error().Err(err).Msg("Error marshalling state")
-			//TODO: return error to client
-			http.Error(w, "Error marshalling state", http.StatusInternalServerError)
-			return
+			log.Fatal().Err(err).Msg("Error marshalling state")
 		}
 		stateBase64 = base64.StdEncoding.EncodeToString(stateBin)
 		var auth = c.getAuthConfig(&state)
@@ -215,58 +209,6 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 		log.Error().Msgf("Unknown action: %v", state.Action)
 		http.Error(w, "Unknown action", http.StatusBadRequest)
 	}
-	// AuthState.Unmarshal(stateBin)
-	// // oauth_error := r.URL.Query().Get("error")
-	// oauth_code := r.URL.Query().Get("code")
-	// if redirectUrl != "" {
-	// 	var auth = &oauth2.Config{
-	// 		ClientID:     c.GoogleOAuthClientId,
-	// 		ClientSecret: c.GoogleOAuthSecret,
-	// 		Scopes:       []string{bigquery.BigqueryScope, googleOAuth.UserinfoProfileScope, googleOAuth.UserinfoEmailScope},
-	// 		Endpoint:     google.Endpoint,
-	// 		RedirectURL:  r.URL.Query().Get("redirect_url"),
-	// 	}
-	// 	url := auth.AuthCodeURL("state", oauth2.AccessTypeOffline)
-	// 	log.Debug().Msgf("Redirecting to %s", url)
-	// 	http.Redirect(w, r, url, http.StatusFound)
-	// }
-	// if oauth_code != "" {
-	// 	log.Debug().Msgf("code: %s", oauth_code)
-	// 	// close request
-	// 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	// 	w.WriteHeader(http.StatusOK)
-	// 	w.Write([]byte("<html><body>Authenticated</body></html>"))
-
-	// 	var auth = &oauth2.Config{
-	// 		ClientID:     c.GoogleOAuthClientId,
-	// 		ClientSecret: c.GoogleOAuthSecret,
-	// 		Scopes:       []string{bigquery.BigqueryScope, googleOAuth.UserinfoProfileScope, googleOAuth.UserinfoEmailScope},
-	// 		Endpoint:     google.Endpoint,
-	// 		RedirectURL:  redirectUrl,
-	// 	}
-	// 	token, err := auth.Exchange(r.Context(), oauth_code)
-	// 	if err != nil {
-	// 		log.Error().Err(err).Msg("Error exchanging code for token")
-	// 		http.Error(w, "Error exchanging code for token", http.StatusInternalServerError)
-	// 		return
-	// 	}
-	// 	log.Debug().Interface("token", token).Msg("token")
-	// 	// client := auth.Client(r.Context(), token)
-	// 	// svc, err := googleOAuth.New(client)
-	// 	// if err != nil {
-	// 	// 	log.Error().Err(err).Msg("Error creating oauth2 service")
-	// 	// 	http.Error(w, "Error creating oauth2 service", http.StatusInternalServerError)
-	// 	// 	return
-	// 	// }
-	// 	// userinfo, err := svc.Userinfo.Get().Do()
-	// 	// if err != nil {
-	// 	// 	log.Error().Err(err).Msg("Error getting userinfo")
-	// 	// 	http.Error(w, "Error getting userinfo", http.StatusInternalServerError)
-	// 	// 	return
-	// 	// }
-	// 	// log.Debug().Interface("userinfo", userinfo).Msg("userinfo")
-	// 	// http.Redirect(w, r, redirectUrl, http.StatusFound)
-	// }
 }
 
 // GetClaims from the context

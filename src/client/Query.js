@@ -15,6 +15,7 @@ import { Duration } from 'luxon'
 import prettyBites from 'pretty-bytes'
 import DataDocumentationLink from './DataDocumentationLink'
 import { cancelQuery, queryChanged, runQuery } from './actions/query'
+import { showDataTable } from './actions/showDataTable'
 
 function CancelButton ({ query }) {
   const dispatch = useDispatch()
@@ -37,7 +38,7 @@ function ShowDataTable ({ query }) {
     <Button
       size='small'
       type='ghost'
-      onClick={() => dispatch(ShowDataTable(datasetId))}
+      onClick={() => dispatch(showDataTable(datasetId))}
     >Show Table
     </Button>
   )
