@@ -12,7 +12,7 @@ import (
 func (s Server) GetUsage(ctx context.Context, req *proto.GetUsageRequest) (*proto.GetUsageResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
-		log.Err(Unauthenticated).Send()
+		log.Debug().Err(Unauthenticated).Send()
 		return nil, Unauthenticated
 	}
 	res := &proto.GetUsageResponse{}
