@@ -34,6 +34,7 @@ type Job interface {
 	Run(storageObject storage.StorageObject) error
 	Status() chan int32
 	Cancel()
+	SetAccessToken(token string)
 }
 
 // BasicJob implements the common methods for Job
@@ -52,12 +53,19 @@ type BasicJob struct {
 	ProcessedBytes int64
 	ResultSize     int64
 	Logger         zerolog.Logger
+	AccessToken    string
 }
 
 func (j *BasicJob) Init() {
 	j.id = uuid.GetUUID()
 	j.ctx, j.cancel = context.WithTimeout(context.Background(), 10*time.Minute)
 	j.status = make(chan int32)
+}
+
+func (j *BasicJob) SetAccessToken(accessToken string) {
+	j.Lock()
+	defer j.Unlock()
+	j.AccessToken = accessToken
 }
 
 func (j *BasicJob) GetProcessedBytes() int64 {
@@ -142,7 +150,7 @@ func (s *BasicStore) StoreJob(job Job) {
 	s.Unlock()
 }
 
-//RemoveJobWhenDone blocks until the job is finished
+// RemoveJobWhenDone blocks until the job is finished
 func (s *BasicStore) RemoveJobWhenDone(job Job) {
 	<-job.GetCtx().Done()
 	log.Debug().Str("queryId", job.GetQueryID()).Msg("Removing job from store")

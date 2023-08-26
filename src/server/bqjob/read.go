@@ -10,6 +10,8 @@ import (
 	bqStorage "cloud.google.com/go/bigquery/storage/apiv1"
 	gax "github.com/googleapis/gax-go/v2"
 	"github.com/rs/zerolog"
+	"golang.org/x/oauth2"
+	"google.golang.org/api/option"
 	bqStoragePb "google.golang.org/genproto/googleapis/cloud/bigquery/storage/v1"
 	"google.golang.org/grpc"
 )
@@ -25,7 +27,15 @@ type Reader struct {
 }
 
 // create new Reader
-func NewReader(ctx context.Context, errors chan error, csvRows chan []string, table *bigquery.Table, logger zerolog.Logger, maxReadStreamsCount int32) (*Reader, error) {
+func NewReader(
+	ctx context.Context,
+	errors chan error,
+	csvRows chan []string,
+	table *bigquery.Table,
+	logger zerolog.Logger,
+	maxReadStreamsCount int32,
+	token *oauth2.Token,
+) (*Reader, error) {
 	r := &Reader{
 		ctx:                 ctx,
 		table:               table,
@@ -33,7 +43,14 @@ func NewReader(ctx context.Context, errors chan error, csvRows chan []string, ta
 		maxReadStreamsCount: maxReadStreamsCount,
 	}
 	var err error
-	r.bqReadClient, err = bqStorage.NewBigQueryReadClient(r.ctx)
+	if token != nil {
+		r.bqReadClient, err = bqStorage.NewBigQueryReadClient(
+			r.ctx,
+			option.WithTokenSource(oauth2.StaticTokenSource(token)),
+		)
+	} else {
+		r.bqReadClient, err = bqStorage.NewBigQueryReadClient(r.ctx)
+	}
 	if err != nil || r.bqReadClient == nil {
 		r.logger.Fatal().Err(err).Msg("cannot create bigquery read client")
 	}
@@ -111,10 +128,18 @@ func (r *Reader) newStreamReader(streamName string, csvRows chan []string, error
 	return &streamReader
 }
 
-func Read(ctx context.Context, errors chan error, csvRows chan []string, table *bigquery.Table, logger zerolog.Logger, maxReadStreamsCount int32) {
+func Read(
+	ctx context.Context,
+	errors chan error,
+	csvRows chan []string,
+	table *bigquery.Table,
+	logger zerolog.Logger,
+	maxReadStreamsCount int32,
+	token *oauth2.Token,
+) {
 	defer close(errors)
 	defer close(csvRows)
-	r, err := NewReader(ctx, errors, csvRows, table, logger, maxReadStreamsCount)
+	r, err := NewReader(ctx, errors, csvRows, table, logger, maxReadStreamsCount, token)
 	if err != nil {
 		errors <- err
 		return
