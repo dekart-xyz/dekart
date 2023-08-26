@@ -126,6 +126,16 @@ func CopyClaims(sourceCtx, destCtx context.Context) context.Context {
 	return context.WithValue(destCtx, contextKey, claims)
 }
 
+func GetTokenSource(ctx context.Context) oauth2.TokenSource {
+	claims := GetClaims(ctx)
+	if claims == nil || claims.AccessToken == "" {
+		return nil
+	}
+	return oauth2.StaticTokenSource(&oauth2.Token{
+		AccessToken: claims.AccessToken,
+	})
+}
+
 // GetContext Context with user claims
 func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 	ctx := r.Context()

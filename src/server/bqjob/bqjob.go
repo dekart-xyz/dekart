@@ -12,9 +12,9 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/job"
 	"dekart/src/server/storage"
+	"dekart/src/server/user"
 
 	"cloud.google.com/go/bigquery"
-	"golang.org/x/oauth2"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 )
@@ -27,17 +27,10 @@ type Job struct {
 	maxReadStreamsCount int32
 	maxBytesBilled      int64
 	client              *bigquery.Client
-	token               *oauth2.Token
 }
 
 var contextCancelledRe = regexp.MustCompile(`context canceled`)
 var orderByRe = regexp.MustCompile(`(?ims)order[\s]+by`)
-
-func (job *Job) SetAccessToken(accessToken string) {
-	job.token = &oauth2.Token{
-		AccessToken: accessToken,
-	}
-}
 
 func (job *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 	csvWriter.Flush()
@@ -205,7 +198,7 @@ func (job *Job) wait() {
 		table,
 		job.Logger,
 		job.maxReadStreamsCount,
-		job.token,
+		// job.token,
 	)
 
 	// write csvRows to storage
@@ -246,15 +239,12 @@ func (job *Job) Run(storageObject storage.StorageObject) error {
 	job.Logger.Debug().Msg("Run BigQuery Job")
 	var client *bigquery.Client = nil
 	var err error
-	if job.token != nil {
+	tokenSource := user.GetTokenSource(job.GetCtx())
+	if tokenSource != nil {
 		job.Logger.Debug().Msg("Using oauth2 token")
-		// oauthClient := oauth2.NewClient(job.GetCtx(), oauth2.StaticTokenSource(token))
-		// service, err := bigquery.NewService(job.GetCtx(), option.WithHTTPClient(oauthClient))
-		tokenSource := oauth2.StaticTokenSource(job.token)
 		client, err = bigquery.NewClient(
 			job.GetCtx(),
 			os.Getenv("DEKART_BIGQUERY_PROJECT_ID"),
-			// option.WithScopes(getOauthScopes()...),
 			option.WithTokenSource(tokenSource),
 		)
 	} else {

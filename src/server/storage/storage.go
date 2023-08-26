@@ -15,7 +15,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"golang.org/x/oauth2"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/api/option"
 )
@@ -81,17 +80,13 @@ func (o GoogleCloudStorageObject) CopyFromS3(ctx context.Context, source string)
 }
 
 func (o GoogleCloudStorageObject) getObject(ctx context.Context) *storage.ObjectHandle {
-	claims := user.GetClaims(ctx)
-	o.logger.Debug().Interface("claims", claims).Msg("claims")
+	tokenSource := user.GetTokenSource(ctx)
 	var client *storage.Client
 	var err error
-	if claims == nil || claims.AccessToken == "" {
+	if tokenSource == nil {
 		client, err = storage.NewClient(ctx)
 	} else {
-		token := oauth2.Token{
-			AccessToken: claims.AccessToken,
-		}
-		client, err = storage.NewClient(ctx, option.WithTokenSource(oauth2.StaticTokenSource(&token)))
+		client, err = storage.NewClient(ctx, option.WithTokenSource(tokenSource))
 	}
 	if err != nil {
 		log.Fatal().Err(err).Send()

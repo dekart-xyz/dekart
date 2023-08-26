@@ -2,6 +2,7 @@ package bqjob
 
 import (
 	"context"
+	"dekart/src/server/user"
 	"fmt"
 	"io"
 	"sync"
@@ -10,7 +11,6 @@ import (
 	bqStorage "cloud.google.com/go/bigquery/storage/apiv1"
 	gax "github.com/googleapis/gax-go/v2"
 	"github.com/rs/zerolog"
-	"golang.org/x/oauth2"
 	"google.golang.org/api/option"
 	bqStoragePb "google.golang.org/genproto/googleapis/cloud/bigquery/storage/v1"
 	"google.golang.org/grpc"
@@ -34,7 +34,7 @@ func NewReader(
 	table *bigquery.Table,
 	logger zerolog.Logger,
 	maxReadStreamsCount int32,
-	token *oauth2.Token,
+	// token *oauth2.Token,
 ) (*Reader, error) {
 	r := &Reader{
 		ctx:                 ctx,
@@ -43,10 +43,11 @@ func NewReader(
 		maxReadStreamsCount: maxReadStreamsCount,
 	}
 	var err error
-	if token != nil {
+	tokenSource := user.GetTokenSource(ctx)
+	if tokenSource != nil {
 		r.bqReadClient, err = bqStorage.NewBigQueryReadClient(
 			r.ctx,
-			option.WithTokenSource(oauth2.StaticTokenSource(token)),
+			option.WithTokenSource(tokenSource),
 		)
 	} else {
 		r.bqReadClient, err = bqStorage.NewBigQueryReadClient(r.ctx)
@@ -135,11 +136,11 @@ func Read(
 	table *bigquery.Table,
 	logger zerolog.Logger,
 	maxReadStreamsCount int32,
-	token *oauth2.Token,
+	// token *oauth2.Token,
 ) {
 	defer close(errors)
 	defer close(csvRows)
-	r, err := NewReader(ctx, errors, csvRows, table, logger, maxReadStreamsCount, token)
+	r, err := NewReader(ctx, errors, csvRows, table, logger, maxReadStreamsCount)
 	if err != nil {
 		errors <- err
 		return
