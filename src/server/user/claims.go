@@ -117,6 +117,15 @@ func (c ClaimsCheck) validateToken(ctx context.Context, header string) *Claims {
 	}
 }
 
+// CopyClaims from one context to another
+func CopyClaims(sourceCtx, destCtx context.Context) context.Context {
+	claims := GetClaims(sourceCtx)
+	if claims == nil {
+		return destCtx
+	}
+	return context.WithValue(destCtx, contextKey, claims)
+}
+
 // GetContext Context with user claims
 func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 	ctx := r.Context()
@@ -148,7 +157,7 @@ func (c ClaimsCheck) getAuthConfig(state *pb.AuthState) *oauth2.Config {
 	return &oauth2.Config{
 		ClientID:     c.GoogleOAuthClientId,
 		ClientSecret: c.GoogleOAuthSecret,
-		Scopes:       []string{bigquery.BigqueryScope, googleOAuth.UserinfoProfileScope, googleOAuth.UserinfoEmailScope},
+		Scopes:       []string{bigquery.BigqueryScope, googleOAuth.UserinfoProfileScope, googleOAuth.UserinfoEmailScope, "https://www.googleapis.com/auth/devstorage.read_write"},
 		Endpoint:     google.Endpoint,
 		RedirectURL:  authUrl,
 	}

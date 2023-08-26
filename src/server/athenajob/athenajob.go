@@ -1,6 +1,7 @@
 package athenajob
 
 import (
+	"context"
 	"dekart/src/proto"
 	"dekart/src/server/job"
 	"dekart/src/server/storage"
@@ -40,7 +41,7 @@ func NewStore(storage storage.Storage) *Store {
 }
 
 // Create a new Athena job within the store
-func (s *Store) Create(reportID string, queryID string, queryText string) (job.Job, chan int32, error) {
+func (s *Store) Create(reportID string, queryID string, queryText string, userCtx context.Context) (job.Job, chan int32, error) {
 	client := athena.New(s.session)
 	job := &Job{
 		BasicJob: job.BasicJob{
@@ -53,7 +54,7 @@ func (s *Store) Create(reportID string, queryID string, queryText string) (job.J
 		client:         client,
 		outputLocation: s.outputLocation,
 	}
-	job.Init()
+	job.Init(userCtx)
 	s.StoreJob(job)
 	go s.RemoveJobWhenDone(job)
 	return job, job.Status(), nil

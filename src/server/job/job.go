@@ -4,6 +4,7 @@ import (
 	"context"
 	"dekart/src/proto"
 	"dekart/src/server/storage"
+	"dekart/src/server/user"
 	"dekart/src/server/uuid"
 	"regexp"
 	"sync"
@@ -15,7 +16,7 @@ import (
 
 // Store is the interface for the job storage
 type Store interface {
-	Create(reportID string, queryID string, queryText string) (Job, chan int32, error)
+	Create(reportID string, queryID string, queryText string, userCtx context.Context) (Job, chan int32, error)
 	Cancel(queryID string) bool
 	CancelAll(ctx context.Context)
 }
@@ -56,9 +57,9 @@ type BasicJob struct {
 	AccessToken    string
 }
 
-func (j *BasicJob) Init() {
+func (j *BasicJob) Init(userCtx context.Context) {
 	j.id = uuid.GetUUID()
-	j.ctx, j.cancel = context.WithTimeout(context.Background(), 10*time.Minute)
+	j.ctx, j.cancel = context.WithTimeout(user.CopyClaims(userCtx, context.Background()), 10*time.Minute)
 	j.status = make(chan int32)
 }
 

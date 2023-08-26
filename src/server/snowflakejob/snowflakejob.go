@@ -189,7 +189,7 @@ func (j *Job) Run(storageObject storage.StorageObject) error {
 	return nil
 }
 
-func (s *Store) Create(reportID string, queryID string, queryText string) (job.Job, chan int32, error) {
+func (s *Store) Create(reportID string, queryID string, queryText string, userCtx context.Context) (job.Job, chan int32, error) {
 	dataSourceName := fmt.Sprintf(
 		"%s:%s@%s",
 		os.Getenv("DEKART_SNOWFLAKE_USER"),
@@ -211,7 +211,7 @@ func (s *Store) Create(reportID string, queryID string, queryText string) (job.J
 		snowflakeDb:    db,
 		dataSourceName: dataSourceName,
 	}
-	job.Init()
+	job.Init(userCtx)
 	s.StoreJob(job)
 	go s.RemoveJobWhenDone(job)
 	return job, job.Status(), nil

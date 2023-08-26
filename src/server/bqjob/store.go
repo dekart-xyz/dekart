@@ -1,6 +1,7 @@
 package bqjob
 
 import (
+	"context"
 	"dekart/src/server/job"
 	"os"
 	"strconv"
@@ -20,7 +21,7 @@ func NewStore() *Store {
 }
 
 // Create job on store
-func (s *Store) Create(reportID string, queryID string, queryText string) (job.Job, chan int32, error) {
+func (s *Store) Create(reportID string, queryID string, queryText string, userCtx context.Context) (job.Job, chan int32, error) {
 	maxBytesBilledStr := os.Getenv("DEKART_BIGQUERY_MAX_BYTES_BILLED")
 	var maxBytesBilled int64
 	var err error
@@ -42,7 +43,7 @@ func (s *Store) Create(reportID string, queryID string, queryText string) (job.J
 		},
 		maxBytesBilled: maxBytesBilled,
 	}
-	job.Init()
+	job.Init(userCtx)
 	s.StoreJob(job)
 	go s.RemoveJobWhenDone(job)
 	return job, job.Status(), nil
