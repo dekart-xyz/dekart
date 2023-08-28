@@ -34,7 +34,6 @@ func NewReader(
 	table *bigquery.Table,
 	logger zerolog.Logger,
 	maxReadStreamsCount int32,
-	// token *oauth2.Token,
 ) (*Reader, error) {
 	r := &Reader{
 		ctx:                 ctx,
@@ -136,7 +135,6 @@ func Read(
 	table *bigquery.Table,
 	logger zerolog.Logger,
 	maxReadStreamsCount int32,
-	// token *oauth2.Token,
 ) {
 	defer close(errors)
 	defer close(csvRows)

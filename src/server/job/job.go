@@ -62,12 +62,6 @@ func (j *BasicJob) Init(userCtx context.Context) {
 	j.status = make(chan int32)
 }
 
-// func (j *BasicJob) SetAccessToken(accessToken string) {
-// 	j.Lock()
-// 	defer j.Unlock()
-// 	j.AccessToken = accessToken
-// }
-
 func (j *BasicJob) GetProcessedBytes() int64 {
 	j.Lock()
 	defer j.Unlock()

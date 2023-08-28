@@ -243,10 +243,6 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		log.Error().Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	// if claims.AccessToken != "" {
-	// 	log.Debug().Str("accessToken", claims.AccessToken).Msg("Setting accessToken")
-	// 	job.SetAccessToken(claims.AccessToken)
-	// }
 	obj := s.storage.GetObject(fmt.Sprintf("%s.csv", job.GetID()))
 	go s.updateJobStatus(job, jobStatus)
 	job.Status() <- int32(proto.Query_JOB_STATUS_PENDING)

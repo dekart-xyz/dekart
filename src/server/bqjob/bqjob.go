@@ -198,7 +198,6 @@ func (job *Job) wait() {
 		table,
 		job.Logger,
 		job.maxReadStreamsCount,
-		// job.token,
 	)
 
 	// write csvRows to storage

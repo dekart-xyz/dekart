@@ -33,35 +33,25 @@ type Storage interface {
 
 // GoogleCloudStorage implements Storage interface for Google Cloud Storage
 type GoogleCloudStorage struct {
-	// bucket *storage.BucketHandle
 	bucketName string
 	logger     zerolog.Logger
 }
 
 func NewGoogleCloudStorage() GoogleCloudStorage {
-	// ctx := context.Background()
-	// client, err := storage.NewClient(ctx)
-	// if err != nil {
-	// 	log.Fatal().Err(err).Send()
-	// }
 	bucketName := os.Getenv("DEKART_CLOUD_STORAGE_BUCKET")
 	if bucketName == "" {
 		log.Fatal().Msg("DEKART_CLOUD_STORAGE_BUCKET is not set")
 	}
-	// bucket := client.Bucket(bucketName)
 	return GoogleCloudStorage{
 		bucketName,
-		// bucket:     bucket,
 		log.With().Str("DEKART_CLOUD_STORAGE_BUCKET", bucketName).Logger(),
 	}
 }
 
 func (s GoogleCloudStorage) GetObject(object string) StorageObject {
-	// obj := s.bucket.Object(object)
 	return GoogleCloudStorageObject{
 		s.bucketName,
 		object,
-		// obj,
 		s.logger.With().Str("GoogleCloudStorageObject", object).Logger(),
 	}
 }
@@ -70,8 +60,7 @@ func (s GoogleCloudStorage) GetObject(object string) StorageObject {
 type GoogleCloudStorageObject struct {
 	bucketName string
 	object     string
-	// obj        *storage.ObjectHandle
-	logger zerolog.Logger
+	logger     zerolog.Logger
 }
 
 func (o GoogleCloudStorageObject) CopyFromS3(ctx context.Context, source string) error {
