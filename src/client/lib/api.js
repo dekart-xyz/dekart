@@ -1,3 +1,12 @@
+
+export class ApiError extends Error {
+  constructor (url, status, errorDetails) {
+    super(`${status} GET ${url}`)
+    this.status = status
+    this.errorDetails = errorDetails
+  }
+}
+
 export async function get (endpoint, token = null) {
   const headers = {}
   if (token) {
@@ -15,7 +24,8 @@ export async function get (endpoint, token = null) {
     }
   )
   if (!res.ok) {
-    throw new Error(`Http Error ${res.status} GET ${url}`)
+    const errorDetails = await res.text()
+    throw new ApiError(url, res.status, errorDetails)
   }
   return res
 }

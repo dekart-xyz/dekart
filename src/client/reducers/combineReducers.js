@@ -268,8 +268,16 @@ function env (state = defaultEnv, action) {
       return {
         loaded: true,
         variables: action.variables,
-        authEnabled: action.variables.REQUIRE_AMAZON_OIDC === '1' || action.variables.REQUIRE_IAP === '1',
-        authType: action.variables.REQUIRE_IAP === '1' ? 'IAP' : action.variables.REQUIRE_AMAZON_OIDC ? 'AMAZON_OIDC' : 'NONE'
+        authEnabled: action.variables.REQUIRE_AMAZON_OIDC === '1' || action.variables.REQUIRE_IAP === '1' || action.variables.REQUIRE_GOOGLE_OAUTH === '1',
+        authType: (
+          action.variables.REQUIRE_IAP === '1'
+            ? 'IAP'
+            : action.variables.REQUIRE_AMAZON_OIDC
+              ? 'AMAZON_OIDC'
+              : action.variables.REQUIRE_GOOGLE_OAUTH
+                ? 'GOOGLE_OAUTH'
+                : 'NONE'
+        )
       }
     default:
       return state

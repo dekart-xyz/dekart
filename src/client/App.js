@@ -118,6 +118,9 @@ export default function App () {
         <Route path='/400'>
           <Result icon={<WarningOutlined />} title='400' subTitle='Bad Request' />
         </Route>
+        <Route path='/403'>
+          <Result icon={<WarningOutlined />} title='403' subTitle={errorMessage || 'Forbidden'} />
+        </Route>
         <Route path='/401'>
           <Result icon={<WarningOutlined />} title='401' subTitle={errorMessage || 'Unauthorized'} />
         </Route>

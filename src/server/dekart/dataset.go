@@ -255,14 +255,12 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	obj := s.storage.GetObject(fmt.Sprintf("%s.%s", vars["id"], vars["extension"]))
 	ctreated, err := obj.GetCreatedAt(ctx)
 	if err != nil {
-		log.Err(err).Send()
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		HttpError(w, err)
 		return
 	}
 	objectReader, err := obj.GetReader(ctx)
 	if err != nil {
-		log.Err(err).Send()
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		HttpError(w, err)
 		return
 	}
 	defer objectReader.Close()
@@ -270,8 +268,7 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "public, max-age=31536000")
 	w.Header().Set("Last-Modified", ctreated.Format(time.UnixDate))
 	if _, err := io.Copy(w, objectReader); err != nil {
-		log.Err(err).Send()
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		HttpError(w, err)
 		return
 	}
 }
