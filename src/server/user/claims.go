@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 
 	"github.com/golang-jwt/jwt"
@@ -19,12 +20,14 @@ import (
 	"google.golang.org/api/bigquery/v2"
 	"google.golang.org/api/idtoken"
 	googleOAuth "google.golang.org/api/oauth2/v2"
+	"google.golang.org/api/option"
 	"google.golang.org/protobuf/proto"
 )
 
 // Claims stores user detail received from request
 type Claims struct {
-	Email string
+	Email       string
+	AccessToken string
 }
 
 // ContextKey type
@@ -87,6 +90,53 @@ func NewClaimsCheck(c ClaimsCheckConfig) ClaimsCheck {
 // UnknownEmail is set as claims email when auth is not required
 const UnknownEmail = "UNKNOWN_EMAIL"
 
+// validateToken receives Bearer token and receives user details
+func (c ClaimsCheck) validateToken(ctx context.Context, header string) *Claims {
+	if header == "" {
+		return nil
+	}
+
+	authHeaderParts := strings.Split(header, " ")
+	if len(authHeaderParts) != 2 || strings.ToLower(authHeaderParts[0]) != "bearer" {
+		log.Warn().Msg("Invalid Authorization header format")
+		return nil
+	}
+
+	accessToken := authHeaderParts[1]
+	tokenInfo, err := c.getTokenInfo(ctx, &oauth2.Token{
+		AccessToken: accessToken,
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("Error getting token info")
+		return nil
+	}
+
+	return &Claims{
+		Email:       tokenInfo.Email,
+		AccessToken: accessToken,
+	}
+}
+
+// CopyClaims from one context to another
+func CopyClaims(sourceCtx, destCtx context.Context) context.Context {
+	claims := GetClaims(sourceCtx)
+	if claims == nil {
+		return destCtx
+	}
+	return context.WithValue(destCtx, contextKey, claims)
+}
+
+// GetTokenSource returns oauth2.TokenSource from context, returns nil if not found
+func GetTokenSource(ctx context.Context) oauth2.TokenSource {
+	claims := GetClaims(ctx)
+	if claims == nil || claims.AccessToken == "" {
+		return nil
+	}
+	return oauth2.StaticTokenSource(&oauth2.Token{
+		AccessToken: claims.AccessToken,
+	})
+}
+
 // GetContext Context with user claims
 func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 	ctx := r.Context()
@@ -100,15 +150,7 @@ func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 	} else if c.RequireAmazonOIDC {
 		claims = c.validateJWTFromAmazonOIDC(ctx, r.Header.Get("x-amzn-oidc-data"))
 	} else if c.RequireGoogleOAuth {
-		header := r.Header.Get("Authorization")
-		if header == "" {
-			claims = nil
-		} else {
-			//TODO: retrieve user email from Google OAuth
-			claims = &Claims{
-				Email: UnknownEmail,
-			}
-		}
+		claims = c.validateToken(ctx, r.Header.Get("Authorization"))
 	} else {
 		claims = &Claims{
 			Email: UnknownEmail,
@@ -119,30 +161,72 @@ func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 }
 
 func (c ClaimsCheck) getAuthConfig(state *pb.AuthState) *oauth2.Config {
+	authUrl := ""
+	if state != nil {
+		authUrl = state.AuthUrl
+	}
 	return &oauth2.Config{
 		ClientID:     c.GoogleOAuthClientId,
 		ClientSecret: c.GoogleOAuthSecret,
-		Scopes:       []string{bigquery.BigqueryScope, googleOAuth.UserinfoProfileScope, googleOAuth.UserinfoEmailScope},
+		Scopes:       []string{bigquery.BigqueryScope, googleOAuth.UserinfoProfileScope, googleOAuth.UserinfoEmailScope, "https://www.googleapis.com/auth/devstorage.read_write"},
 		Endpoint:     google.Endpoint,
-		RedirectURL:  state.AuthUrl,
+		RedirectURL:  authUrl,
 	}
 }
 
+func checkMissingScope(targetScopes []string, grantedScopes string) string {
+	for _, targetScope := range targetScopes {
+		if !strings.Contains(grantedScopes, targetScope) {
+			return targetScope
+		}
+	}
+	return ""
+}
+
+type Token struct {
+	Token *oauth2.Token          `json:"token"`
+	Info  *googleOAuth.Tokeninfo `json:"info"`
+}
+
+func (c ClaimsCheck) getTokenInfo(ctx context.Context, token *oauth2.Token) (*googleOAuth.Tokeninfo, error) {
+	var auth = c.getAuthConfig(nil)
+	client := auth.Client(ctx, token)
+	service, err := googleOAuth.NewService(ctx, option.WithHTTPClient(client))
+	if err != nil {
+		log.Error().Err(err).Msg("Error creating Google OAuth service")
+		return nil, err
+	}
+	tokenInfo, err := service.Tokeninfo().AccessToken(token.AccessToken).Do()
+	return tokenInfo, err
+}
+
 func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.RedirectState {
-	//TODO: use JWT token as a state
 	code := r.URL.Query().Get("code")
 	authErr := r.URL.Query().Get("error")
 	redirectState := &pb.RedirectState{}
+	ctx := r.Context()
 	if authErr != "" {
 		log.Error().Str("authErr", authErr).Msg("Error authenticating")
 		redirectState.Error = authErr
 		return redirectState
 	}
 	var auth = c.getAuthConfig(state)
-	token, err := auth.Exchange(r.Context(), code)
+	token, err := auth.Exchange(ctx, code)
 	if err != nil {
 		log.Error().Err(err).Msg("Error exchanging code for token")
 		redirectState.Error = "Error exchanging code for token"
+		return redirectState
+	}
+	tokenInfo, err := c.getTokenInfo(ctx, token)
+	if err != nil {
+		log.Error().Err(err).Msg("Error getting token info")
+		redirectState.Error = "Error getting token info"
+		return redirectState
+	}
+	missingScope := checkMissingScope(auth.Scopes, tokenInfo.Scope)
+	if missingScope != "" {
+		log.Warn().Str("missingScope", missingScope).Msg("Scope missing")
+		redirectState.Error = fmt.Sprintf("Scope %s missing", missingScope)
 		return redirectState
 	}
 	tokenBin, err := json.Marshal(*token)

@@ -31,20 +31,24 @@ export function info (content) {
 }
 
 export function setError (err, transitive = true) {
-  console.error(err)
-  if (transitive) {
-    message.error({
-      content: err.message,
-      style
-    })
-  } else {
-    message.error({
-      content: (<PermanentError message={err.message} />),
-      duration: 10000,
-      style
-    })
+  return (dispatch) => {
+    console.error(err)
+    if ([401, 403].includes(err.status)) {
+      dispatch(setHttpError(err.status, `${err.message}: ${err.errorDetails}`))
+    } else if (transitive) {
+      message.error({
+        content: err.message,
+        style
+      })
+    } else {
+      message.error({
+        content: (<PermanentError message={err.message} />),
+        duration: 10000,
+        style
+      })
+    }
+    return { type: setError.name }
   }
-  return { type: setError.name }
 }
 
 export function setHttpError (status, message = '', doNotAuthenticate = false) {

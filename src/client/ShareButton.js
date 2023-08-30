@@ -28,7 +28,8 @@ function CopyLinkButton () {
 function AuthTypeTitle ({ authType, referer }) {
   const { anchor, title } = {
     AMAZON_OIDC: { anchor: 'user-authorization-via-amazon-load-balancer', title: 'Amazon OIDC' },
-    IAP: { anchor: 'user-authorization-via-google-iap', title: 'Google IAP' }
+    IAP: { anchor: 'user-authorization-via-google-iap', title: 'Google IAP' },
+    GOOGLE_OAUTH: { anchor: '', title: 'Google OAuth 2.0 flow' }
   }[authType]
   return (
     <><span>Users authorized via </span>

@@ -12,6 +12,7 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/job"
 	"dekart/src/server/storage"
+	"dekart/src/server/user"
 
 	"cloud.google.com/go/bigquery"
 	"google.golang.org/api/googleapi"
@@ -235,15 +236,28 @@ func getOauthScopes() []string {
 // Run implementation
 func (job *Job) Run(storageObject storage.StorageObject) error {
 	job.Logger.Debug().Msg("Run BigQuery Job")
-	client, err := bigquery.NewClient(
-		job.GetCtx(),
-		os.Getenv("DEKART_BIGQUERY_PROJECT_ID"),
-		option.WithScopes(getOauthScopes()...),
-	)
+	var client *bigquery.Client = nil
+	var err error
+	tokenSource := user.GetTokenSource(job.GetCtx())
+	if tokenSource != nil {
+		job.Logger.Debug().Msg("Using oauth2 token")
+		client, err = bigquery.NewClient(
+			job.GetCtx(),
+			os.Getenv("DEKART_BIGQUERY_PROJECT_ID"),
+			option.WithTokenSource(tokenSource),
+		)
+	} else {
+		client, err = bigquery.NewClient(
+			job.GetCtx(),
+			os.Getenv("DEKART_BIGQUERY_PROJECT_ID"),
+			option.WithScopes(getOauthScopes()...),
+		)
+	}
 	if err != nil {
 		job.Cancel()
 		return err
 	}
+
 	job.client = client
 
 	query := client.Query(job.QueryText)

@@ -284,7 +284,7 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 
 	// save queries
 	for _, query := range req.Query {
-		go s.storeQuery(req.Report.Id, query.Id, query.QueryText, query.QuerySourceId)
+		go s.storeQuery(ctx, req.Report.Id, query.Id, query.QueryText, query.QuerySourceId)
 	}
 
 	s.reportStreams.Ping(req.Report.Id)

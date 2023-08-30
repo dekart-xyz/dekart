@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"dekart/src/server/user"
 	"io"
 	"net/url"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/api/option"
 )
 
 type StorageObject interface {
@@ -29,41 +31,36 @@ type Storage interface {
 	GetObject(string) StorageObject
 }
 
-//GoogleCloudStorage implements Storage interface for Google Cloud Storage
+// GoogleCloudStorage implements Storage interface for Google Cloud Storage
 type GoogleCloudStorage struct {
-	bucket *storage.BucketHandle
-	logger zerolog.Logger
+	bucketName string
+	logger     zerolog.Logger
 }
 
 func NewGoogleCloudStorage() GoogleCloudStorage {
-	ctx := context.Background()
-	client, err := storage.NewClient(ctx)
-	if err != nil {
-		log.Fatal().Err(err).Send()
-	}
 	bucketName := os.Getenv("DEKART_CLOUD_STORAGE_BUCKET")
 	if bucketName == "" {
 		log.Fatal().Msg("DEKART_CLOUD_STORAGE_BUCKET is not set")
 	}
-	bucket := client.Bucket(bucketName)
 	return GoogleCloudStorage{
-		bucket: bucket,
-		logger: log.With().Str("DEKART_CLOUD_STORAGE_BUCKET", bucketName).Logger(),
+		bucketName,
+		log.With().Str("DEKART_CLOUD_STORAGE_BUCKET", bucketName).Logger(),
 	}
 }
 
 func (s GoogleCloudStorage) GetObject(object string) StorageObject {
-	obj := s.bucket.Object(object)
 	return GoogleCloudStorageObject{
-		obj:    obj,
-		logger: s.logger.With().Str("GoogleCloudStorageObject", object).Logger(),
+		s.bucketName,
+		object,
+		s.logger.With().Str("GoogleCloudStorageObject", object).Logger(),
 	}
 }
 
-//GoogleCloudStorageObject implements StorageObject interface for Google Cloud Storage
+// GoogleCloudStorageObject implements StorageObject interface for Google Cloud Storage
 type GoogleCloudStorageObject struct {
-	obj    *storage.ObjectHandle
-	logger zerolog.Logger
+	bucketName string
+	object     string
+	logger     zerolog.Logger
 }
 
 func (o GoogleCloudStorageObject) CopyFromS3(ctx context.Context, source string) error {
@@ -71,18 +68,34 @@ func (o GoogleCloudStorageObject) CopyFromS3(ctx context.Context, source string)
 	return nil
 }
 
+func (o GoogleCloudStorageObject) getObject(ctx context.Context) *storage.ObjectHandle {
+	tokenSource := user.GetTokenSource(ctx)
+	var client *storage.Client
+	var err error
+	if tokenSource == nil {
+		client, err = storage.NewClient(ctx)
+	} else {
+		client, err = storage.NewClient(ctx, option.WithTokenSource(tokenSource))
+	}
+	if err != nil {
+		log.Fatal().Err(err).Send()
+	}
+	bucket := client.Bucket(o.bucketName)
+	return bucket.Object(o.object)
+}
+
 func (o GoogleCloudStorageObject) GetWriter(ctx context.Context) io.WriteCloser {
-	writer := o.obj.NewWriter(ctx)
+	writer := o.getObject(ctx).NewWriter(ctx)
 	writer.ChunkSize = 0
 	return writer
 }
 
 func (o GoogleCloudStorageObject) GetReader(ctx context.Context) (io.ReadCloser, error) {
-	return o.obj.NewReader(ctx)
+	return o.getObject(ctx).NewReader(ctx)
 }
 
 func (o GoogleCloudStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, error) {
-	attrs, err := o.obj.Attrs(ctx)
+	attrs, err := o.getObject(ctx).Attrs(ctx)
 	if err != nil {
 		o.logger.Error().Err(err).Msg("error getting attributes")
 		return nil, err
@@ -91,7 +104,7 @@ func (o GoogleCloudStorageObject) GetCreatedAt(ctx context.Context) (*time.Time,
 }
 
 func (o GoogleCloudStorageObject) GetSize(ctx context.Context) (*int64, error) {
-	attrs, err := o.obj.Attrs(ctx)
+	attrs, err := o.getObject(ctx).Attrs(ctx)
 	if err != nil {
 		o.logger.Error().Err(err).Msg("error getting attributes")
 		return nil, err

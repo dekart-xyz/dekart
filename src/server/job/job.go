@@ -4,6 +4,7 @@ import (
 	"context"
 	"dekart/src/proto"
 	"dekart/src/server/storage"
+	"dekart/src/server/user"
 	"dekart/src/server/uuid"
 	"regexp"
 	"sync"
@@ -15,7 +16,7 @@ import (
 
 // Store is the interface for the job storage
 type Store interface {
-	Create(reportID string, queryID string, queryText string) (Job, chan int32, error)
+	Create(reportID string, queryID string, queryText string, userCtx context.Context) (Job, chan int32, error)
 	Cancel(queryID string) bool
 	CancelAll(ctx context.Context)
 }
@@ -52,11 +53,12 @@ type BasicJob struct {
 	ProcessedBytes int64
 	ResultSize     int64
 	Logger         zerolog.Logger
+	// AccessToken    string
 }
 
-func (j *BasicJob) Init() {
+func (j *BasicJob) Init(userCtx context.Context) {
 	j.id = uuid.GetUUID()
-	j.ctx, j.cancel = context.WithTimeout(context.Background(), 10*time.Minute)
+	j.ctx, j.cancel = context.WithTimeout(user.CopyClaims(userCtx, context.Background()), 10*time.Minute)
 	j.status = make(chan int32)
 }
 
@@ -142,7 +144,7 @@ func (s *BasicStore) StoreJob(job Job) {
 	s.Unlock()
 }
 
-//RemoveJobWhenDone blocks until the job is finished
+// RemoveJobWhenDone blocks until the job is finished
 func (s *BasicStore) RemoveJobWhenDone(job Job) {
 	<-job.GetCtx().Done()
 	log.Debug().Str("queryId", job.GetQueryID()).Msg("Removing job from store")

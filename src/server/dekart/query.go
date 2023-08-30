@@ -65,7 +65,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	if affectedRows == 0 {
 		log.Warn().Str("reportID", *reportID).Str("dataset", req.DatasetId).Msg("dataset query was already created")
 	}
-	go s.storeQuery(*reportID, id, "", "")
+	go s.storeQuery(ctx, *reportID, id, "", "")
 	s.reportStreams.Ping(*reportID)
 
 	return &proto.CreateQueryResponse{}, nil
@@ -113,8 +113,8 @@ func (s Server) storeQuerySync(ctx context.Context, queryID string, queryText st
 	return nil
 }
 
-func (s Server) storeQuery(reportID string, queryID string, queryText string, prevQuerySourceId string) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+func (s Server) storeQuery(userCtx context.Context, reportID string, queryID string, queryText string, prevQuerySourceId string) {
+	ctx, cancel := context.WithTimeout(user.CopyClaims(userCtx, context.Background()), time.Second*5)
 	defer cancel()
 	err := s.storeQuerySync(ctx, queryID, queryText, prevQuerySourceId)
 	if _, ok := err.(*queryWasNotUpdated); ok {
@@ -237,7 +237,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		}
 		return nil, status.Error(code, err.Error())
 	}
-	job, jobStatus, err := s.jobs.Create(reportID, req.QueryId, req.QueryText)
+	job, jobStatus, err := s.jobs.Create(reportID, req.QueryId, req.QueryText, ctx)
 	log.Debug().Str("jobID", job.GetID()).Msg("Job created")
 	if err != nil {
 		log.Error().Err(err).Send()
