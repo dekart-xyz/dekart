@@ -5,7 +5,7 @@ import { setError, setStreamError } from './message'
 const { REACT_APP_API_HOST } = process.env
 const host = REACT_APP_API_HOST || ''
 
-export function grpcCall (method, request, cb = (m, err) => err) {
+export function grpcCall (method, request, resolve = () => {}, reject = (err) => err) {
   return async function (dispatch, getState) {
     const { token } = getState()
     const headers = new window.Headers()
@@ -14,16 +14,17 @@ export function grpcCall (method, request, cb = (m, err) => err) {
     }
     try {
       const response = await unary(method, request, headers)
-      const err = cb(response, null)
-      if (err) {
-        throw err
-      }
+      resolve(response)
+      // const err = cb(response, null)
+      // if (err) {
+      //   throw err
+      // }
     } catch (err) {
-      const cbErr = cb(null, err)
-      if (cbErr instanceof GrpcError) {
-        dispatch(setStreamError(cbErr.code, cbErr.message))
+      const passErr = reject(null, err)
+      if (passErr instanceof GrpcError) {
+        dispatch(setStreamError(passErr.code, passErr.message))
       } else {
-        dispatch(setError(cbErr))
+        dispatch(setError(passErr))
       }
     }
   }

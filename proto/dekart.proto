@@ -31,6 +31,50 @@ service Dekart {
 
     //statistics
     rpc GetUsage(GetUsageRequest) returns (GetUsageResponse) {}
+
+    //sources
+    rpc CreateSource(CreateSourceRequest) returns (CreateSourceResponse) {}
+    rpc UpdateSource(UpdateSourceRequest) returns (UpdateSourceResponse) {}
+    rpc TestConnection(TestConnectionRequest) returns (TestConnectionResponse) {}
+}
+
+message TestConnectionRequest {
+    Source source = 1;
+}
+
+message TestConnectionResponse {
+    bool success = 1;
+    string error = 2;
+}
+
+message RemoveSourceRequest {
+    string source_id = 1;
+}
+
+message RemoveSourceResponse {
+}
+
+message UpdateSourceRequest {
+    Source source = 1;
+}
+
+message UpdateSourceResponse {
+    Source source = 1;
+}
+
+message CreateSourceRequest {
+    string source_name = 2;
+}
+
+message CreateSourceResponse {
+    Source source = 1;
+}
+
+message Source {
+    string id = 1;
+    string source_name = 2;
+    string bigquery_project_id = 3;
+    string cloud_storage_bucket = 4;
 }
 
 message GetUsageRequest {}
@@ -78,6 +122,8 @@ message GetEnvResponse {
             TYPE_REQUIRE_IAP = 8;
             TYPE_DISABLE_USAGE_STATS = 9;
             TYPE_REQUIRE_GOOGLE_OAUTH = 10;
+            TYPE_BIGQUERY_PROJECT_ID = 11;
+            TYPE_CLOUD_STORAGE_BUCKET = 12;
         }
         Type type = 1;
         string value = 2;
@@ -256,6 +302,7 @@ message ReportStreamResponse {
     StreamOptions stream_options = 3;
     repeated Dataset datasets = 4;
     repeated File files = 5;
+    repeated Source sources = 6;
 }
 
 message ForkReportRequest {

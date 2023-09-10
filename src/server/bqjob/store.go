@@ -2,11 +2,15 @@ package bqjob
 
 import (
 	"context"
+	"dekart/src/proto"
 	"dekart/src/server/job"
+	"dekart/src/server/user"
 	"os"
 	"strconv"
 
+	"cloud.google.com/go/bigquery"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/api/option"
 )
 
 // Store implements job.Store interface for BigQuery
@@ -47,4 +51,33 @@ func (s *Store) Create(reportID string, queryID string, queryText string, userCt
 	s.StoreJob(job)
 	go s.RemoveJobWhenDone(job)
 	return job, job.Status(), nil
+}
+
+func (s *Store) TestConnection(ctx context.Context, req *proto.TestConnectionRequest) (*proto.TestConnectionResponse, error) {
+	tokenSource := user.GetTokenSource(ctx)
+	client, err := bigquery.NewClient(
+		ctx,
+		req.Source.BigqueryProjectId,
+		option.WithTokenSource(tokenSource),
+	)
+	if err != nil {
+		log.Debug().Err(err).Msg("bigquery.NewClient failed")
+		return &proto.TestConnectionResponse{
+			Success: false,
+			Error:   err.Error(),
+		}, nil
+	}
+	it := client.Datasets(ctx)
+	_, err = it.Next()
+	if err != nil {
+		log.Debug().Err(err).Msg("client.Datasets failed")
+		return &proto.TestConnectionResponse{
+			Success: false,
+			Error:   err.Error(),
+		}, nil
+	}
+
+	return &proto.TestConnectionResponse{
+		Success: true,
+	}, nil
 }

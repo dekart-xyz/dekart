@@ -21,6 +21,20 @@
     justify-content: center;
 }
 
+.datasource {
+    margin-left: 20px;
+    /* flex: 1; */
+    /* display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center; */
+}
+
+.datasource>* {
+    width: 200px;
+    display: block !important
+}
+
 .status {
     min-height: 60px;
     display: flex;
@@ -29,4 +43,20 @@
     background-color: #F7F7F7;
     align-items: center;
     justify-content: center;
+}
+
+.spacer {
+    flex: 1;
+}
+
+.modalFooter {
+    display: flex;
+    flex-direction: row;
+}
+
+.datasourceType {
+    width: 80px;
+    height: 80px;
+    background-image: url('./bigquery.svg');
+    margin-bottom: 30px;
 }

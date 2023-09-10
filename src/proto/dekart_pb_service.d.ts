@@ -148,6 +148,33 @@ type DekartGetUsage = {
   readonly responseType: typeof proto_dekart_pb.GetUsageResponse;
 };
 
+type DekartCreateSource = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.CreateSourceRequest;
+  readonly responseType: typeof proto_dekart_pb.CreateSourceResponse;
+};
+
+type DekartUpdateSource = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.UpdateSourceRequest;
+  readonly responseType: typeof proto_dekart_pb.UpdateSourceResponse;
+};
+
+type DekartTestConnection = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.TestConnectionRequest;
+  readonly responseType: typeof proto_dekart_pb.TestConnectionResponse;
+};
+
 export class Dekart {
   static readonly serviceName: string;
   static readonly CreateReport: DekartCreateReport;
@@ -166,6 +193,9 @@ export class Dekart {
   static readonly GetReportStream: DekartGetReportStream;
   static readonly GetReportListStream: DekartGetReportListStream;
   static readonly GetUsage: DekartGetUsage;
+  static readonly CreateSource: DekartCreateSource;
+  static readonly UpdateSource: DekartUpdateSource;
+  static readonly TestConnection: DekartTestConnection;
 }
 
 export type ServiceError = { message: string, code: number; metadata: grpc.Metadata }
@@ -327,6 +357,33 @@ export class DekartClient {
   getUsage(
     requestMessage: proto_dekart_pb.GetUsageRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetUsageResponse|null) => void
+  ): UnaryResponse;
+  createSource(
+    requestMessage: proto_dekart_pb.CreateSourceRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateSourceResponse|null) => void
+  ): UnaryResponse;
+  createSource(
+    requestMessage: proto_dekart_pb.CreateSourceRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateSourceResponse|null) => void
+  ): UnaryResponse;
+  updateSource(
+    requestMessage: proto_dekart_pb.UpdateSourceRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateSourceResponse|null) => void
+  ): UnaryResponse;
+  updateSource(
+    requestMessage: proto_dekart_pb.UpdateSourceRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateSourceResponse|null) => void
+  ): UnaryResponse;
+  testConnection(
+    requestMessage: proto_dekart_pb.TestConnectionRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.TestConnectionResponse|null) => void
+  ): UnaryResponse;
+  testConnection(
+    requestMessage: proto_dekart_pb.TestConnectionRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.TestConnectionResponse|null) => void
   ): UnaryResponse;
 }
 

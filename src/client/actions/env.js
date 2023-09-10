@@ -12,10 +12,7 @@ export function getEnv () {
   return async dispatch => {
     dispatch({ type: getEnv.name })
     const req = new GetEnvRequest()
-    dispatch(grpcCall(Dekart.GetEnv, req, (res, err) => {
-      if (err) {
-        return err
-      }
+    dispatch(grpcCall(Dekart.GetEnv, req, (res) => {
       const { variablesList } = res
       const variables = variablesList.reduce((variables, v) => {
         variables[typeToName[v.type]] = v.value

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"dekart/src/proto"
 	"dekart/src/server/user"
 	"io"
 	"net/url"
@@ -37,15 +38,35 @@ type GoogleCloudStorage struct {
 	logger     zerolog.Logger
 }
 
-func NewGoogleCloudStorage() GoogleCloudStorage {
+func NewGoogleCloudStorage() *GoogleCloudStorage {
 	bucketName := os.Getenv("DEKART_CLOUD_STORAGE_BUCKET")
 	if bucketName == "" {
-		log.Fatal().Msg("DEKART_CLOUD_STORAGE_BUCKET is not set")
+		log.Info().Msg("DEKART_CLOUD_STORAGE_BUCKET is not set, using user provided bucket")
+		return nil
 	}
-	return GoogleCloudStorage{
+	return &GoogleCloudStorage{
 		bucketName,
 		log.With().Str("DEKART_CLOUD_STORAGE_BUCKET", bucketName).Logger(),
 	}
+}
+
+func TestConnection(ctx context.Context, source *proto.Source) (*proto.TestConnectionResponse, error) {
+	tokenSource := user.GetTokenSource(ctx)
+	client, err := storage.NewClient(ctx, option.WithTokenSource(tokenSource))
+	if err != nil {
+		log.Fatal().Err(err).Send()
+	}
+	bucket := client.Bucket(source.CloudStorageBucket)
+	_, err = bucket.Attrs(ctx)
+	if err != nil {
+		return &proto.TestConnectionResponse{
+			Success: false,
+			Error:   err.Error(),
+		}, nil
+	}
+	return &proto.TestConnectionResponse{
+		Success: true,
+	}, nil
 }
 
 func (s GoogleCloudStorage) GetObject(object string) StorageObject {

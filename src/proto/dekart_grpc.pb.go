@@ -44,6 +44,10 @@ type DekartClient interface {
 	GetReportListStream(ctx context.Context, in *ReportListRequest, opts ...grpc.CallOption) (Dekart_GetReportListStreamClient, error)
 	//statistics
 	GetUsage(ctx context.Context, in *GetUsageRequest, opts ...grpc.CallOption) (*GetUsageResponse, error)
+	//sources
+	CreateSource(ctx context.Context, in *CreateSourceRequest, opts ...grpc.CallOption) (*CreateSourceResponse, error)
+	UpdateSource(ctx context.Context, in *UpdateSourceRequest, opts ...grpc.CallOption) (*UpdateSourceResponse, error)
+	TestConnection(ctx context.Context, in *TestConnectionRequest, opts ...grpc.CallOption) (*TestConnectionResponse, error)
 }
 
 type dekartClient struct {
@@ -244,6 +248,33 @@ func (c *dekartClient) GetUsage(ctx context.Context, in *GetUsageRequest, opts .
 	return out, nil
 }
 
+func (c *dekartClient) CreateSource(ctx context.Context, in *CreateSourceRequest, opts ...grpc.CallOption) (*CreateSourceResponse, error) {
+	out := new(CreateSourceResponse)
+	err := c.cc.Invoke(ctx, "/Dekart/CreateSource", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) UpdateSource(ctx context.Context, in *UpdateSourceRequest, opts ...grpc.CallOption) (*UpdateSourceResponse, error) {
+	out := new(UpdateSourceResponse)
+	err := c.cc.Invoke(ctx, "/Dekart/UpdateSource", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) TestConnection(ctx context.Context, in *TestConnectionRequest, opts ...grpc.CallOption) (*TestConnectionResponse, error) {
+	out := new(TestConnectionResponse)
+	err := c.cc.Invoke(ctx, "/Dekart/TestConnection", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DekartServer is the server API for Dekart service.
 // All implementations must embed UnimplementedDekartServer
 // for forward compatibility
@@ -270,6 +301,10 @@ type DekartServer interface {
 	GetReportListStream(*ReportListRequest, Dekart_GetReportListStreamServer) error
 	//statistics
 	GetUsage(context.Context, *GetUsageRequest) (*GetUsageResponse, error)
+	//sources
+	CreateSource(context.Context, *CreateSourceRequest) (*CreateSourceResponse, error)
+	UpdateSource(context.Context, *UpdateSourceRequest) (*UpdateSourceResponse, error)
+	TestConnection(context.Context, *TestConnectionRequest) (*TestConnectionResponse, error)
 	mustEmbedUnimplementedDekartServer()
 }
 
@@ -324,6 +359,15 @@ func (UnimplementedDekartServer) GetReportListStream(*ReportListRequest, Dekart_
 }
 func (UnimplementedDekartServer) GetUsage(context.Context, *GetUsageRequest) (*GetUsageResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUsage not implemented")
+}
+func (UnimplementedDekartServer) CreateSource(context.Context, *CreateSourceRequest) (*CreateSourceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateSource not implemented")
+}
+func (UnimplementedDekartServer) UpdateSource(context.Context, *UpdateSourceRequest) (*UpdateSourceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateSource not implemented")
+}
+func (UnimplementedDekartServer) TestConnection(context.Context, *TestConnectionRequest) (*TestConnectionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TestConnection not implemented")
 }
 func (UnimplementedDekartServer) mustEmbedUnimplementedDekartServer() {}
 
@@ -632,6 +676,60 @@ func _Dekart_GetUsage_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Dekart_CreateSource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateSourceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).CreateSource(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Dekart/CreateSource",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).CreateSource(ctx, req.(*CreateSourceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_UpdateSource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateSourceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).UpdateSource(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Dekart/UpdateSource",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).UpdateSource(ctx, req.(*UpdateSourceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_TestConnection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TestConnectionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).TestConnection(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Dekart/TestConnection",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).TestConnection(ctx, req.(*TestConnectionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Dekart_ServiceDesc is the grpc.ServiceDesc for Dekart service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -694,6 +792,18 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUsage",
 			Handler:    _Dekart_GetUsage_Handler,
+		},
+		{
+			MethodName: "CreateSource",
+			Handler:    _Dekart_CreateSource_Handler,
+		},
+		{
+			MethodName: "UpdateSource",
+			Handler:    _Dekart_UpdateSource_Handler,
+		},
+		{
+			MethodName: "TestConnection",
+			Handler:    _Dekart_TestConnection_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

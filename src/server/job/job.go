@@ -17,6 +17,7 @@ import (
 // Store is the interface for the job storage
 type Store interface {
 	Create(reportID string, queryID string, queryText string, userCtx context.Context) (Job, chan int32, error)
+	TestConnection(ctx context.Context, req *proto.TestConnectionRequest) (*proto.TestConnectionResponse, error)
 	Cancel(queryID string) bool
 	CancelAll(ctx context.Context)
 }
@@ -136,6 +137,11 @@ func (j *BasicJob) CancelWithError(err error) {
 type BasicStore struct {
 	sync.Mutex
 	Jobs []Job
+}
+
+func (s *BasicStore) TestConnection(ctx context.Context, req *proto.TestConnectionRequest) (*proto.TestConnectionResponse, error) {
+	log.Fatal().Msg("not implemented")
+	return nil, nil
 }
 
 func (s *BasicStore) StoreJob(job Job) {

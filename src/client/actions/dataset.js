@@ -58,10 +58,7 @@ export function removeDataset (datasetId) {
 
     const request = new RemoveDatasetRequest()
     request.setDatasetId(datasetId)
-    dispatch(grpcCall(Dekart.RemoveDataset, request, (err, res) => {
-      if (err) {
-        return err
-      }
+    dispatch(grpcCall(Dekart.RemoveDataset, request, (res) => {
       dispatch(success('Dataset removed'))
     }))
   }

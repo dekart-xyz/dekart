@@ -1,12 +1,18 @@
 import Button from 'antd/es/button'
 import styles from './Dataset.module.css'
+import Select from 'antd/es/select'
 import { useDispatch, useSelector } from 'react-redux'
 import Query from './Query'
 import File from './File'
 import { getDatasourceMeta } from './lib/datasource'
 import { createQuery } from './actions/query'
 import { createFile } from './actions/file'
+import { newConnection } from './actions/connection'
+import Dropdown from 'antd/es/dropdown'
+import { ConsoleSqlOutlined, UploadOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
+import ConnectionModal from './ConnectionModal'
 
+const NEW_DATASOURCE = 'NEW_DATASOURCE'
 function DatasetSelector ({ dataset }) {
   const dispatch = useDispatch()
   const env = useSelector(state => state.env)
@@ -14,19 +20,66 @@ function DatasetSelector ({ dataset }) {
     return null
   }
   const datasource = getDatasourceMeta(env.variables.DATASOURCE).name
-  const { ALLOW_FILE_UPLOAD } = env.variables
-  if (!ALLOW_FILE_UPLOAD) {
+  const { ALLOW_FILE_UPLOAD, BIGQUERY_PROJECT_ID, CLOUD_STORAGE_BUCKET } = env.variables
+  const userDefinedDatasource = BIGQUERY_PROJECT_ID === '' || CLOUD_STORAGE_BUCKET === ''
+  if (!ALLOW_FILE_UPLOAD && !userDefinedDatasource) {
     return null
   }
   return (
     <div className={styles.datasetSelector}>
       <div className={styles.selector}>
-        <div className={styles.selectorButtons}>
+        <div className={styles.datasourceType} />
+        <div className={styles.datasource}>
+          <Select
+            placeholder='Select data source'
+            onSelect={value => {
+              if (value === NEW_DATASOURCE) {
+                dispatch(newConnection())
+              }
+            }}
+            // defaultValue='lucy'
+            // style={{ width: 120 }}
+            // onChange={handleChange}
+            options={[
+              {
+                value: NEW_DATASOURCE,
+                label: 'New'
+              },
+              {
+                value: 'test',
+                label: 'BigQuery – Warehouse'
+              }
+            ]}
+          />
+        </div>
+        <ConnectionModal />
+        {/* <div className={styles.selectorButtons}>
           <Button block onClick={() => dispatch(createQuery(dataset.id))}>{datasource} query</Button>
-          <Button block onClick={() => dispatch(createFile(dataset.id))}>Upload file</Button>
+          {ALLOW_FILE_UPLOAD && <Button block onClick={() => dispatch(createFile(dataset.id))}>Upload file</Button>}
+        </div> */}
+      </div>
+      <div className={styles.status}>
+        <div className={styles.datasetTypeSelector}>
+          <Dropdown
+            menu={{
+              items: [
+                {
+                  label: 'SQL query',
+                  icon: <ConsoleSqlOutlined />
+                  // onClick: () => dispatch(createQuery(dataset.id))
+                },
+                {
+                  label: 'File upload',
+                  icon: <UploadOutlined />
+                  // onClick: () => dispatch(createFile(dataset.id))
+                }
+              ]
+            }}
+          >
+            <Button block type='primary'>Add data from...</Button>
+          </Dropdown>
         </div>
       </div>
-      <div className={styles.status}>Select data source</div>
     </div>
   )
 }

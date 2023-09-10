@@ -218,10 +218,7 @@ export function forkReport (reportId) {
     dispatch({ type: forkReport.name })
     const request = new ForkReportRequest()
     request.setReportId(reportId)
-    dispatch(grpcCall(Dekart.ForkReport, request, (res, err) => {
-      if (err) {
-        return err
-      }
+    dispatch(grpcCall(Dekart.ForkReport, request, (res) => {
       const { reportId } = res
       dispatch(newForkedReport(reportId))
       dispatch(success('Report Forked'))
@@ -232,10 +229,7 @@ export function forkReport (reportId) {
 export function createReport () {
   return async (dispatch) => {
     const request = new CreateReportRequest()
-    dispatch(grpcCall(Dekart.CreateReport, request, (res, err) => {
-      if (err) {
-        return err
-      }
+    dispatch(grpcCall(Dekart.CreateReport, request, (res) => {
       const { report } = res
       dispatch(newReport(report.id))
       dispatch(success('New Report Created'))
@@ -273,10 +267,7 @@ export function saveMap () {
     reportPayload.setTitle(reportStatus.title)
     request.setReport(reportPayload)
     request.setQueryList(queries)
-    dispatch(grpcCall(Dekart.UpdateReport, request, (res, err) => {
-      if (err) {
-        return err
-      }
+    dispatch(grpcCall(Dekart.UpdateReport, request, () => {
       dispatch(success('Map Saved'))
     }))
   }

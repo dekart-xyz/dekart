@@ -46,11 +46,14 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 		return status.Errorf(codes.Internal, err.Error())
 	}
 
+	sources, err := s.getSources(ctx)
+
 	res := proto.ReportStreamResponse{
 		Report:   report,
 		Queries:  queries,
 		Datasets: datasets,
 		Files:    files,
+		Sources:  sources,
 		StreamOptions: &proto.StreamOptions{
 			Sequence: sequence,
 		},

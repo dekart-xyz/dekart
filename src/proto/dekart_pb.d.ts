@@ -3,6 +3,206 @@
 
 import * as jspb from "google-protobuf";
 
+export class TestConnectionRequest extends jspb.Message {
+  hasSource(): boolean;
+  clearSource(): void;
+  getSource(): Source | undefined;
+  setSource(value?: Source): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): TestConnectionRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: TestConnectionRequest): TestConnectionRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: TestConnectionRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): TestConnectionRequest;
+  static deserializeBinaryFromReader(message: TestConnectionRequest, reader: jspb.BinaryReader): TestConnectionRequest;
+}
+
+export namespace TestConnectionRequest {
+  export type AsObject = {
+    source?: Source.AsObject,
+  }
+}
+
+export class TestConnectionResponse extends jspb.Message {
+  getSuccess(): boolean;
+  setSuccess(value: boolean): void;
+
+  getError(): string;
+  setError(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): TestConnectionResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: TestConnectionResponse): TestConnectionResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: TestConnectionResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): TestConnectionResponse;
+  static deserializeBinaryFromReader(message: TestConnectionResponse, reader: jspb.BinaryReader): TestConnectionResponse;
+}
+
+export namespace TestConnectionResponse {
+  export type AsObject = {
+    success: boolean,
+    error: string,
+  }
+}
+
+export class RemoveSourceRequest extends jspb.Message {
+  getSourceId(): string;
+  setSourceId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): RemoveSourceRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: RemoveSourceRequest): RemoveSourceRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: RemoveSourceRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RemoveSourceRequest;
+  static deserializeBinaryFromReader(message: RemoveSourceRequest, reader: jspb.BinaryReader): RemoveSourceRequest;
+}
+
+export namespace RemoveSourceRequest {
+  export type AsObject = {
+    sourceId: string,
+  }
+}
+
+export class RemoveSourceResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): RemoveSourceResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: RemoveSourceResponse): RemoveSourceResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: RemoveSourceResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RemoveSourceResponse;
+  static deserializeBinaryFromReader(message: RemoveSourceResponse, reader: jspb.BinaryReader): RemoveSourceResponse;
+}
+
+export namespace RemoveSourceResponse {
+  export type AsObject = {
+  }
+}
+
+export class UpdateSourceRequest extends jspb.Message {
+  hasSource(): boolean;
+  clearSource(): void;
+  getSource(): Source | undefined;
+  setSource(value?: Source): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): UpdateSourceRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: UpdateSourceRequest): UpdateSourceRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: UpdateSourceRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): UpdateSourceRequest;
+  static deserializeBinaryFromReader(message: UpdateSourceRequest, reader: jspb.BinaryReader): UpdateSourceRequest;
+}
+
+export namespace UpdateSourceRequest {
+  export type AsObject = {
+    source?: Source.AsObject,
+  }
+}
+
+export class UpdateSourceResponse extends jspb.Message {
+  hasSource(): boolean;
+  clearSource(): void;
+  getSource(): Source | undefined;
+  setSource(value?: Source): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): UpdateSourceResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: UpdateSourceResponse): UpdateSourceResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: UpdateSourceResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): UpdateSourceResponse;
+  static deserializeBinaryFromReader(message: UpdateSourceResponse, reader: jspb.BinaryReader): UpdateSourceResponse;
+}
+
+export namespace UpdateSourceResponse {
+  export type AsObject = {
+    source?: Source.AsObject,
+  }
+}
+
+export class CreateSourceRequest extends jspb.Message {
+  getSourceName(): string;
+  setSourceName(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CreateSourceRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: CreateSourceRequest): CreateSourceRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CreateSourceRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CreateSourceRequest;
+  static deserializeBinaryFromReader(message: CreateSourceRequest, reader: jspb.BinaryReader): CreateSourceRequest;
+}
+
+export namespace CreateSourceRequest {
+  export type AsObject = {
+    sourceName: string,
+  }
+}
+
+export class CreateSourceResponse extends jspb.Message {
+  hasSource(): boolean;
+  clearSource(): void;
+  getSource(): Source | undefined;
+  setSource(value?: Source): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CreateSourceResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: CreateSourceResponse): CreateSourceResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CreateSourceResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CreateSourceResponse;
+  static deserializeBinaryFromReader(message: CreateSourceResponse, reader: jspb.BinaryReader): CreateSourceResponse;
+}
+
+export namespace CreateSourceResponse {
+  export type AsObject = {
+    source?: Source.AsObject,
+  }
+}
+
+export class Source extends jspb.Message {
+  getId(): string;
+  setId(value: string): void;
+
+  getSourceName(): string;
+  setSourceName(value: string): void;
+
+  getBigqueryProjectId(): string;
+  setBigqueryProjectId(value: string): void;
+
+  getCloudStorageBucket(): string;
+  setCloudStorageBucket(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): Source.AsObject;
+  static toObject(includeInstance: boolean, msg: Source): Source.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: Source, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): Source;
+  static deserializeBinaryFromReader(message: Source, reader: jspb.BinaryReader): Source;
+}
+
+export namespace Source {
+  export type AsObject = {
+    id: string,
+    sourceName: string,
+    bigqueryProjectId: string,
+    cloudStorageBucket: string,
+  }
+}
+
 export class GetUsageRequest extends jspb.Message {
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetUsageRequest.AsObject;
@@ -223,6 +423,8 @@ export namespace GetEnvResponse {
       TYPE_REQUIRE_IAP: 8;
       TYPE_DISABLE_USAGE_STATS: 9;
       TYPE_REQUIRE_GOOGLE_OAUTH: 10;
+      TYPE_BIGQUERY_PROJECT_ID: 11;
+      TYPE_CLOUD_STORAGE_BUCKET: 12;
     }
 
     export const Type: TypeMap;
@@ -951,6 +1153,11 @@ export class ReportStreamResponse extends jspb.Message {
   setFilesList(value: Array<File>): void;
   addFiles(value?: File, index?: number): File;
 
+  clearSourcesList(): void;
+  getSourcesList(): Array<Source>;
+  setSourcesList(value: Array<Source>): void;
+  addSources(value?: Source, index?: number): Source;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): ReportStreamResponse.AsObject;
   static toObject(includeInstance: boolean, msg: ReportStreamResponse): ReportStreamResponse.AsObject;
@@ -968,6 +1175,7 @@ export namespace ReportStreamResponse {
     streamOptions?: StreamOptions.AsObject,
     datasetsList: Array<Dataset.AsObject>,
     filesList: Array<File.AsObject>,
+    sourcesList: Array<Source.AsObject>,
   }
 }
 

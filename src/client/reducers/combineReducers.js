@@ -14,6 +14,7 @@ import { newRelease } from '../actions/version'
 import { uploadFile, uploadFileProgress, uploadFileStateChange } from '../actions/file'
 import { stream } from './stream'
 import { setRedirectState } from '../actions/redirectState'
+import { connectionChanged, newConnection, testConnection, testConnectionResponse } from '../actions/connection'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
   uiState: {
@@ -403,6 +404,46 @@ function datasetSettings (state = { datasetId: null, visible: false }, action) {
   }
 }
 
+function connectionSettings (state = {
+  visible: false,
+  tested: false,
+  testing: false,
+  testSuccess: false,
+  testError: ''
+}, action) {
+  switch (action.type) {
+    case newConnection.name:
+      return {
+        ...state,
+        visible: true
+      }
+    case testConnection.name:
+      return {
+        ...state,
+        testing: true,
+        testSuccess: false,
+        testError: ''
+      }
+    case testConnectionResponse.name:
+      return {
+        ...state,
+        tested: true,
+        testing: false,
+        testSuccess: action.success,
+        testError: action.error
+      }
+    case connectionChanged.name:
+      return {
+        ...state,
+        tested: false,
+        testSuccess: false,
+        testError: ''
+      }
+    default:
+      return state
+  }
+}
+
 export default combineReducers({
   keplerGl,
   report,
@@ -420,6 +461,7 @@ export default combineReducers({
   fileUploadStatus,
   usage,
   datasetSettings,
+  connectionSettings,
   token,
   stream
 })
