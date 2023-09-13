@@ -39,13 +39,9 @@ func (s Server) getSources(ctx context.Context) ([]*proto.Source, error) {
 
 	rows, err := s.db.QueryContext(ctx,
 		`select
-			id,
 			source_name,
-			author_email,
 			bigquery_project_id,
-			cloud_storage_bucket,
-			created_at,
-			updated_at
+			cloud_storage_bucket
 		from sources where author_email=$1 order by created_at asc`,
 		claims.Email,
 	)
@@ -58,11 +54,12 @@ func (s Server) getSources(ctx context.Context) ([]*proto.Source, error) {
 		bigqueryProjectId := sql.NullString{}
 		cloudStorageBucket := sql.NullString{}
 		err := rows.Scan(
-			&source.Id,
 			&source.SourceName,
 			&bigqueryProjectId,
 			&cloudStorageBucket,
 		)
+		source.BigqueryProjectId = bigqueryProjectId.String
+		source.CloudStorageBucket = cloudStorageBucket.String
 		if err != nil {
 			log.Fatal().Err(err).Msg("scan failed")
 		}
@@ -90,5 +87,10 @@ func (s Server) CreateSource(ctx context.Context, req *proto.CreateSourceRequest
 		return nil, err
 	}
 
-	return nil, nil
+	return &proto.CreateSourceResponse{
+		Source: &proto.Source{
+			Id:         id,
+			SourceName: req.SourceName,
+		},
+	}, nil
 }

@@ -10,10 +10,13 @@ import { ConsoleSqlOutlined, UploadOutlined, CheckCircleTwoTone, ExclamationCirc
 import Tooltip from 'antd/es/tooltip'
 
 export default function ConnectionModal () {
-  const { visible, tested, testing, testError, testSuccess } = useSelector(state => state.connectionSettings)
+  const { dialog, test } = useSelector(state => state.connection)
+  const { visible, id } = dialog
+  const { tested, testing, error: testError, success: testSuccess } = test
   const dispatch = useDispatch()
   const [form] = Form.useForm()
   const [testConnectionEnabled, setTestConnectionEnabled] = useState(false)
+  const loading = !id
   if (!visible) {
     return null
   }
@@ -36,7 +39,7 @@ export default function ConnectionModal () {
               : null
           }
           <div className={styles.spacer} />
-          <Button type={tested && testSuccess ? 'primary' : 'default'} disabled={!tested}>
+          <Button type={tested && testSuccess ? 'primary' : 'default'} disabled={!tested || loading}>
             Save
           </Button>
           <Button>
@@ -48,6 +51,7 @@ export default function ConnectionModal () {
       <div className={styles.modalBody}>
         <Form
           form={form}
+          disabled={loading}
           layout='vertical' onValuesChange={(changedValues, allValues) => {
             if (changedValues.bigqueryProjectId || changedValues.cloudStorageBucket) {
               dispatch(connectionChanged(allValues))

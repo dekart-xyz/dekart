@@ -63,7 +63,7 @@ message UpdateSourceResponse {
 }
 
 message CreateSourceRequest {
-    string source_name = 2;
+    string source_name = 1;
 }
 
 message CreateSourceResponse {

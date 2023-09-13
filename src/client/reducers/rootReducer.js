@@ -1,9 +1,7 @@
 import { combineReducers } from 'redux'
-import keplerGlReducer from '@dekart-xyz/kepler.gl/dist/reducers'
 import { ActionTypes as KeplerActionTypes } from '@dekart-xyz/kepler.gl/dist/actions'
 import { Query } from '../../proto/dekart_pb'
 import { setUserMapboxAccessTokenUpdater } from '@dekart-xyz/kepler.gl/dist/reducers/ui-state-updaters'
-import { token } from './token'
 import { openReport, reportUpdate, forkReport, saveMap, reportTitleChange, newReport, newForkedReport, unsubscribeReports, reportsListUpdate } from '../actions/report'
 import { downloading, finishDownloading, setHttpError, setStreamError } from '../actions/message'
 import { closeDatasetSettingsModal, downloadDataset, openDatasetSettingsModal, setActiveDataset } from '../actions/dataset'
@@ -12,9 +10,11 @@ import { setUsage } from '../actions/usage'
 import { setEnv } from '../actions/env'
 import { newRelease } from '../actions/version'
 import { uploadFile, uploadFileProgress, uploadFileStateChange } from '../actions/file'
-import { stream } from './stream'
 import { setRedirectState } from '../actions/redirectState'
-import { connectionChanged, newConnection, testConnection, testConnectionResponse } from '../actions/connection'
+import keplerGlReducer from '@dekart-xyz/kepler.gl/dist/reducers'
+import stream from './streamReducer'
+import token from './tokenReducer'
+import connection from './connectionReducer'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
   uiState: {
@@ -404,46 +404,6 @@ function datasetSettings (state = { datasetId: null, visible: false }, action) {
   }
 }
 
-function connectionSettings (state = {
-  visible: false,
-  tested: false,
-  testing: false,
-  testSuccess: false,
-  testError: ''
-}, action) {
-  switch (action.type) {
-    case newConnection.name:
-      return {
-        ...state,
-        visible: true
-      }
-    case testConnection.name:
-      return {
-        ...state,
-        testing: true,
-        testSuccess: false,
-        testError: ''
-      }
-    case testConnectionResponse.name:
-      return {
-        ...state,
-        tested: true,
-        testing: false,
-        testSuccess: action.success,
-        testError: action.error
-      }
-    case connectionChanged.name:
-      return {
-        ...state,
-        tested: false,
-        testSuccess: false,
-        testError: ''
-      }
-    default:
-      return state
-  }
-}
-
 export default combineReducers({
   keplerGl,
   report,
@@ -461,7 +421,7 @@ export default combineReducers({
   fileUploadStatus,
   usage,
   datasetSettings,
-  connectionSettings,
+  connection,
   token,
   stream
 })

@@ -20,10 +20,10 @@ export function grpcCall (method, request, resolve = () => {}, reject = (err) =>
       //   throw err
       // }
     } catch (err) {
-      const passErr = reject(null, err)
+      const passErr = reject(err)
       if (passErr instanceof GrpcError) {
         dispatch(setStreamError(passErr.code, passErr.message))
-      } else {
+      } else if (passErr) {
         dispatch(setError(passErr))
       }
     }
