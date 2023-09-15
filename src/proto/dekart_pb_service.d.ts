@@ -139,6 +139,15 @@ type DekartGetReportListStream = {
   readonly responseType: typeof proto_dekart_pb.ReportListResponse;
 };
 
+type DekartGetUserStream = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: true;
+  readonly requestType: typeof proto_dekart_pb.GetUserStreamRequest;
+  readonly responseType: typeof proto_dekart_pb.GetUserStreamResponse;
+};
+
 type DekartGetUsage = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -164,6 +173,24 @@ type DekartUpdateSource = {
   readonly responseStream: false;
   readonly requestType: typeof proto_dekart_pb.UpdateSourceRequest;
   readonly responseType: typeof proto_dekart_pb.UpdateSourceResponse;
+};
+
+type DekartRemoveSource = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.RemoveSourceRequest;
+  readonly responseType: typeof proto_dekart_pb.RemoveSourceResponse;
+};
+
+type DekartGetSourceList = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.GetSourceListRequest;
+  readonly responseType: typeof proto_dekart_pb.GetSourceListResponse;
 };
 
 type DekartTestConnection = {
@@ -192,9 +219,12 @@ export class Dekart {
   static readonly GetEnv: DekartGetEnv;
   static readonly GetReportStream: DekartGetReportStream;
   static readonly GetReportListStream: DekartGetReportListStream;
+  static readonly GetUserStream: DekartGetUserStream;
   static readonly GetUsage: DekartGetUsage;
   static readonly CreateSource: DekartCreateSource;
   static readonly UpdateSource: DekartUpdateSource;
+  static readonly RemoveSource: DekartRemoveSource;
+  static readonly GetSourceList: DekartGetSourceList;
   static readonly TestConnection: DekartTestConnection;
 }
 
@@ -349,6 +379,7 @@ export class DekartClient {
   ): UnaryResponse;
   getReportStream(requestMessage: proto_dekart_pb.ReportStreamRequest, metadata?: grpc.Metadata): ResponseStream<proto_dekart_pb.ReportStreamResponse>;
   getReportListStream(requestMessage: proto_dekart_pb.ReportListRequest, metadata?: grpc.Metadata): ResponseStream<proto_dekart_pb.ReportListResponse>;
+  getUserStream(requestMessage: proto_dekart_pb.GetUserStreamRequest, metadata?: grpc.Metadata): ResponseStream<proto_dekart_pb.GetUserStreamResponse>;
   getUsage(
     requestMessage: proto_dekart_pb.GetUsageRequest,
     metadata: grpc.Metadata,
@@ -375,6 +406,24 @@ export class DekartClient {
   updateSource(
     requestMessage: proto_dekart_pb.UpdateSourceRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateSourceResponse|null) => void
+  ): UnaryResponse;
+  removeSource(
+    requestMessage: proto_dekart_pb.RemoveSourceRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.RemoveSourceResponse|null) => void
+  ): UnaryResponse;
+  removeSource(
+    requestMessage: proto_dekart_pb.RemoveSourceRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.RemoveSourceResponse|null) => void
+  ): UnaryResponse;
+  getSourceList(
+    requestMessage: proto_dekart_pb.GetSourceListRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetSourceListResponse|null) => void
+  ): UnaryResponse;
+  getSourceList(
+    requestMessage: proto_dekart_pb.GetSourceListRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetSourceListResponse|null) => void
   ): UnaryResponse;
   testConnection(
     requestMessage: proto_dekart_pb.TestConnectionRequest,

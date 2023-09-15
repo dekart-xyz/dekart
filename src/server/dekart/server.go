@@ -18,6 +18,7 @@ import (
 type Server struct {
 	db            *sql.DB
 	reportStreams *report.Streams
+	userStreams   *user.Streams
 	storage       storage.Storage
 	proto.UnimplementedDekartServer
 	jobs job.Store
@@ -32,6 +33,7 @@ func NewServer(db *sql.DB, storageBucket storage.Storage, jobs job.Store) *Serve
 	server := Server{
 		db:            db,
 		reportStreams: report.NewStreams(),
+		userStreams:   user.NewStreams(),
 		storage:       storageBucket,
 		jobs:          jobs,
 	}

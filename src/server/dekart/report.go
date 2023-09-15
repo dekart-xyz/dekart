@@ -27,6 +27,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		log.Fatal().Msg("getReport require claims")
+		return nil, nil
 	}
 	reportRows, err := s.db.QueryContext(ctx,
 		`select

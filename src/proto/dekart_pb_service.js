@@ -145,6 +145,15 @@ Dekart.GetReportListStream = {
   responseType: proto_dekart_pb.ReportListResponse
 };
 
+Dekart.GetUserStream = {
+  methodName: "GetUserStream",
+  service: Dekart,
+  requestStream: false,
+  responseStream: true,
+  requestType: proto_dekart_pb.GetUserStreamRequest,
+  responseType: proto_dekart_pb.GetUserStreamResponse
+};
+
 Dekart.GetUsage = {
   methodName: "GetUsage",
   service: Dekart,
@@ -170,6 +179,24 @@ Dekart.UpdateSource = {
   responseStream: false,
   requestType: proto_dekart_pb.UpdateSourceRequest,
   responseType: proto_dekart_pb.UpdateSourceResponse
+};
+
+Dekart.RemoveSource = {
+  methodName: "RemoveSource",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.RemoveSourceRequest,
+  responseType: proto_dekart_pb.RemoveSourceResponse
+};
+
+Dekart.GetSourceList = {
+  methodName: "GetSourceList",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.GetSourceListRequest,
+  responseType: proto_dekart_pb.GetSourceListResponse
 };
 
 Dekart.TestConnection = {
@@ -669,6 +696,45 @@ DekartClient.prototype.getReportListStream = function getReportListStream(reques
   };
 };
 
+DekartClient.prototype.getUserStream = function getUserStream(requestMessage, metadata) {
+  var listeners = {
+    data: [],
+    end: [],
+    status: []
+  };
+  var client = grpc.invoke(Dekart.GetUserStream, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onMessage: function (responseMessage) {
+      listeners.data.forEach(function (handler) {
+        handler(responseMessage);
+      });
+    },
+    onEnd: function (status, statusMessage, trailers) {
+      listeners.status.forEach(function (handler) {
+        handler({ code: status, details: statusMessage, metadata: trailers });
+      });
+      listeners.end.forEach(function (handler) {
+        handler({ code: status, details: statusMessage, metadata: trailers });
+      });
+      listeners = null;
+    }
+  });
+  return {
+    on: function (type, handler) {
+      listeners[type].push(handler);
+      return this;
+    },
+    cancel: function () {
+      listeners = null;
+      client.close();
+    }
+  };
+};
+
 DekartClient.prototype.getUsage = function getUsage(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
@@ -736,6 +802,68 @@ DekartClient.prototype.updateSource = function updateSource(requestMessage, meta
     callback = arguments[1];
   }
   var client = grpc.unary(Dekart.UpdateSource, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.removeSource = function removeSource(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.RemoveSource, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.getSourceList = function getSourceList(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.GetSourceList, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,

@@ -42,11 +42,14 @@ type DekartClient interface {
 	// streams
 	GetReportStream(ctx context.Context, in *ReportStreamRequest, opts ...grpc.CallOption) (Dekart_GetReportStreamClient, error)
 	GetReportListStream(ctx context.Context, in *ReportListRequest, opts ...grpc.CallOption) (Dekart_GetReportListStreamClient, error)
+	GetUserStream(ctx context.Context, in *GetUserStreamRequest, opts ...grpc.CallOption) (Dekart_GetUserStreamClient, error)
 	//statistics
 	GetUsage(ctx context.Context, in *GetUsageRequest, opts ...grpc.CallOption) (*GetUsageResponse, error)
 	//sources
 	CreateSource(ctx context.Context, in *CreateSourceRequest, opts ...grpc.CallOption) (*CreateSourceResponse, error)
 	UpdateSource(ctx context.Context, in *UpdateSourceRequest, opts ...grpc.CallOption) (*UpdateSourceResponse, error)
+	RemoveSource(ctx context.Context, in *RemoveSourceRequest, opts ...grpc.CallOption) (*RemoveSourceResponse, error)
+	GetSourceList(ctx context.Context, in *GetSourceListRequest, opts ...grpc.CallOption) (*GetSourceListResponse, error)
 	TestConnection(ctx context.Context, in *TestConnectionRequest, opts ...grpc.CallOption) (*TestConnectionResponse, error)
 }
 
@@ -239,6 +242,38 @@ func (x *dekartGetReportListStreamClient) Recv() (*ReportListResponse, error) {
 	return m, nil
 }
 
+func (c *dekartClient) GetUserStream(ctx context.Context, in *GetUserStreamRequest, opts ...grpc.CallOption) (Dekart_GetUserStreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Dekart_ServiceDesc.Streams[2], "/Dekart/GetUserStream", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &dekartGetUserStreamClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Dekart_GetUserStreamClient interface {
+	Recv() (*GetUserStreamResponse, error)
+	grpc.ClientStream
+}
+
+type dekartGetUserStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *dekartGetUserStreamClient) Recv() (*GetUserStreamResponse, error) {
+	m := new(GetUserStreamResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 func (c *dekartClient) GetUsage(ctx context.Context, in *GetUsageRequest, opts ...grpc.CallOption) (*GetUsageResponse, error) {
 	out := new(GetUsageResponse)
 	err := c.cc.Invoke(ctx, "/Dekart/GetUsage", in, out, opts...)
@@ -260,6 +295,24 @@ func (c *dekartClient) CreateSource(ctx context.Context, in *CreateSourceRequest
 func (c *dekartClient) UpdateSource(ctx context.Context, in *UpdateSourceRequest, opts ...grpc.CallOption) (*UpdateSourceResponse, error) {
 	out := new(UpdateSourceResponse)
 	err := c.cc.Invoke(ctx, "/Dekart/UpdateSource", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) RemoveSource(ctx context.Context, in *RemoveSourceRequest, opts ...grpc.CallOption) (*RemoveSourceResponse, error) {
+	out := new(RemoveSourceResponse)
+	err := c.cc.Invoke(ctx, "/Dekart/RemoveSource", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) GetSourceList(ctx context.Context, in *GetSourceListRequest, opts ...grpc.CallOption) (*GetSourceListResponse, error) {
+	out := new(GetSourceListResponse)
+	err := c.cc.Invoke(ctx, "/Dekart/GetSourceList", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -299,11 +352,14 @@ type DekartServer interface {
 	// streams
 	GetReportStream(*ReportStreamRequest, Dekart_GetReportStreamServer) error
 	GetReportListStream(*ReportListRequest, Dekart_GetReportListStreamServer) error
+	GetUserStream(*GetUserStreamRequest, Dekart_GetUserStreamServer) error
 	//statistics
 	GetUsage(context.Context, *GetUsageRequest) (*GetUsageResponse, error)
 	//sources
 	CreateSource(context.Context, *CreateSourceRequest) (*CreateSourceResponse, error)
 	UpdateSource(context.Context, *UpdateSourceRequest) (*UpdateSourceResponse, error)
+	RemoveSource(context.Context, *RemoveSourceRequest) (*RemoveSourceResponse, error)
+	GetSourceList(context.Context, *GetSourceListRequest) (*GetSourceListResponse, error)
 	TestConnection(context.Context, *TestConnectionRequest) (*TestConnectionResponse, error)
 	mustEmbedUnimplementedDekartServer()
 }
@@ -357,6 +413,9 @@ func (UnimplementedDekartServer) GetReportStream(*ReportStreamRequest, Dekart_Ge
 func (UnimplementedDekartServer) GetReportListStream(*ReportListRequest, Dekart_GetReportListStreamServer) error {
 	return status.Errorf(codes.Unimplemented, "method GetReportListStream not implemented")
 }
+func (UnimplementedDekartServer) GetUserStream(*GetUserStreamRequest, Dekart_GetUserStreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetUserStream not implemented")
+}
 func (UnimplementedDekartServer) GetUsage(context.Context, *GetUsageRequest) (*GetUsageResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUsage not implemented")
 }
@@ -365,6 +424,12 @@ func (UnimplementedDekartServer) CreateSource(context.Context, *CreateSourceRequ
 }
 func (UnimplementedDekartServer) UpdateSource(context.Context, *UpdateSourceRequest) (*UpdateSourceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateSource not implemented")
+}
+func (UnimplementedDekartServer) RemoveSource(context.Context, *RemoveSourceRequest) (*RemoveSourceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveSource not implemented")
+}
+func (UnimplementedDekartServer) GetSourceList(context.Context, *GetSourceListRequest) (*GetSourceListResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSourceList not implemented")
 }
 func (UnimplementedDekartServer) TestConnection(context.Context, *TestConnectionRequest) (*TestConnectionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method TestConnection not implemented")
@@ -658,6 +723,27 @@ func (x *dekartGetReportListStreamServer) Send(m *ReportListResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _Dekart_GetUserStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(GetUserStreamRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(DekartServer).GetUserStream(m, &dekartGetUserStreamServer{stream})
+}
+
+type Dekart_GetUserStreamServer interface {
+	Send(*GetUserStreamResponse) error
+	grpc.ServerStream
+}
+
+type dekartGetUserStreamServer struct {
+	grpc.ServerStream
+}
+
+func (x *dekartGetUserStreamServer) Send(m *GetUserStreamResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 func _Dekart_GetUsage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetUsageRequest)
 	if err := dec(in); err != nil {
@@ -708,6 +794,42 @@ func _Dekart_UpdateSource_Handler(srv interface{}, ctx context.Context, dec func
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DekartServer).UpdateSource(ctx, req.(*UpdateSourceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_RemoveSource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveSourceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).RemoveSource(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Dekart/RemoveSource",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).RemoveSource(ctx, req.(*RemoveSourceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_GetSourceList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSourceListRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).GetSourceList(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Dekart/GetSourceList",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).GetSourceList(ctx, req.(*GetSourceListRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -802,6 +924,14 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Dekart_UpdateSource_Handler,
 		},
 		{
+			MethodName: "RemoveSource",
+			Handler:    _Dekart_RemoveSource_Handler,
+		},
+		{
+			MethodName: "GetSourceList",
+			Handler:    _Dekart_GetSourceList_Handler,
+		},
+		{
 			MethodName: "TestConnection",
 			Handler:    _Dekart_TestConnection_Handler,
 		},
@@ -815,6 +945,11 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "GetReportListStream",
 			Handler:       _Dekart_GetReportListStream_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "GetUserStream",
+			Handler:       _Dekart_GetUserStream_Handler,
 			ServerStreams: true,
 		},
 	},

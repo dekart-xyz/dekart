@@ -28,6 +28,7 @@ service Dekart {
     // streams
     rpc GetReportStream(ReportStreamRequest) returns (stream ReportStreamResponse) {}
     rpc GetReportListStream(ReportListRequest) returns (stream ReportListResponse) {}
+    rpc GetUserStream(GetUserStreamRequest) returns (stream GetUserStreamResponse) {}
 
     //statistics
     rpc GetUsage(GetUsageRequest) returns (GetUsageResponse) {}
@@ -35,7 +36,24 @@ service Dekart {
     //sources
     rpc CreateSource(CreateSourceRequest) returns (CreateSourceResponse) {}
     rpc UpdateSource(UpdateSourceRequest) returns (UpdateSourceResponse) {}
+    rpc RemoveSource(RemoveSourceRequest) returns (RemoveSourceResponse) {}
+    rpc GetSourceList(GetSourceListRequest) returns (GetSourceListResponse) {}
     rpc TestConnection(TestConnectionRequest) returns (TestConnectionResponse) {}
+}
+
+message GetSourceListRequest {
+}
+
+message GetSourceListResponse {
+    repeated Source sources = 1;
+}
+
+message GetUserStreamRequest {
+    StreamOptions stream_options = 1;
+}
+message GetUserStreamResponse {
+    StreamOptions stream_options = 1;
+    int64 source_update = 2;
 }
 
 message TestConnectionRequest {

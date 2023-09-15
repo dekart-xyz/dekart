@@ -3,6 +3,92 @@
 
 import * as jspb from "google-protobuf";
 
+export class GetSourceListRequest extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetSourceListRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: GetSourceListRequest): GetSourceListRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetSourceListRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetSourceListRequest;
+  static deserializeBinaryFromReader(message: GetSourceListRequest, reader: jspb.BinaryReader): GetSourceListRequest;
+}
+
+export namespace GetSourceListRequest {
+  export type AsObject = {
+  }
+}
+
+export class GetSourceListResponse extends jspb.Message {
+  clearSourcesList(): void;
+  getSourcesList(): Array<Source>;
+  setSourcesList(value: Array<Source>): void;
+  addSources(value?: Source, index?: number): Source;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetSourceListResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: GetSourceListResponse): GetSourceListResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetSourceListResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetSourceListResponse;
+  static deserializeBinaryFromReader(message: GetSourceListResponse, reader: jspb.BinaryReader): GetSourceListResponse;
+}
+
+export namespace GetSourceListResponse {
+  export type AsObject = {
+    sourcesList: Array<Source.AsObject>,
+  }
+}
+
+export class GetUserStreamRequest extends jspb.Message {
+  hasStreamOptions(): boolean;
+  clearStreamOptions(): void;
+  getStreamOptions(): StreamOptions | undefined;
+  setStreamOptions(value?: StreamOptions): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetUserStreamRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: GetUserStreamRequest): GetUserStreamRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetUserStreamRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetUserStreamRequest;
+  static deserializeBinaryFromReader(message: GetUserStreamRequest, reader: jspb.BinaryReader): GetUserStreamRequest;
+}
+
+export namespace GetUserStreamRequest {
+  export type AsObject = {
+    streamOptions?: StreamOptions.AsObject,
+  }
+}
+
+export class GetUserStreamResponse extends jspb.Message {
+  hasStreamOptions(): boolean;
+  clearStreamOptions(): void;
+  getStreamOptions(): StreamOptions | undefined;
+  setStreamOptions(value?: StreamOptions): void;
+
+  getSourceUpdate(): number;
+  setSourceUpdate(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetUserStreamResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: GetUserStreamResponse): GetUserStreamResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetUserStreamResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetUserStreamResponse;
+  static deserializeBinaryFromReader(message: GetUserStreamResponse, reader: jspb.BinaryReader): GetUserStreamResponse;
+}
+
+export namespace GetUserStreamResponse {
+  export type AsObject = {
+    streamOptions?: StreamOptions.AsObject,
+    sourceUpdate: number,
+  }
+}
+
 export class TestConnectionRequest extends jspb.Message {
   hasSource(): boolean;
   clearSource(): void;

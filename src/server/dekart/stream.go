@@ -46,14 +46,11 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 		return status.Errorf(codes.Internal, err.Error())
 	}
 
-	sources, err := s.getSources(ctx)
-
 	res := proto.ReportStreamResponse{
 		Report:   report,
 		Queries:  queries,
 		Datasets: datasets,
 		Files:    files,
-		Sources:  sources,
 		StreamOptions: &proto.StreamOptions{
 			Sequence: sequence,
 		},
@@ -159,6 +156,53 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 		return status.Errorf(codes.Internal, err.Error())
 	}
 	return nil
+}
+
+func (s Server) sendUserStreamResponse(ctx context.Context, srv proto.Dekart_GetUserStreamServer, sequence int64) error {
+	sourceUpdate, err := s.getLastSourceUpdate(ctx)
+	if err != nil {
+		log.Err(err).Send()
+		return status.Errorf(codes.Internal, err.Error())
+	}
+
+	res := proto.GetUserStreamResponse{
+		StreamOptions: &proto.StreamOptions{
+			Sequence: sequence,
+		},
+		SourceUpdate: sourceUpdate,
+	}
+	err = srv.Send(&res)
+	if err != nil {
+		log.Err(err).Send()
+		return status.Errorf(codes.Internal, err.Error())
+	}
+	return nil
+}
+
+func (s Server) GetUserStream(req *proto.GetUserStreamRequest, srv proto.Dekart_GetUserStreamServer) error {
+	claims := user.GetClaims(srv.Context())
+	if claims == nil {
+		return Unauthenticated
+	}
+	if req.StreamOptions == nil {
+		err := fmt.Errorf("missing StreamOptions")
+		return status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	ping, streamID := s.userStreams.Register(*claims, req.StreamOptions.Sequence)
+	defer s.userStreams.Deregister(*claims, streamID)
+
+	ctx, cancel := context.WithTimeout(srv.Context(), 55*time.Second)
+	defer cancel()
+
+	for {
+		select {
+		case sequence := <-ping:
+			return s.sendUserStreamResponse(ctx, srv, sequence)
+		case <-ctx.Done():
+			return nil
+		}
+	}
 }
 
 // GetReportListStream streams list of reports

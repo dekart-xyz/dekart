@@ -70,6 +70,40 @@ func (s Server) getSources(ctx context.Context) ([]*proto.Source, error) {
 
 }
 
+func (s Server) GetSourceList(ctx context.Context, req *proto.GetSourceListRequest) (*proto.GetSourceListResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	sources, err := s.getSources(ctx)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	return &proto.GetSourceListResponse{
+		Sources: sources,
+	}, nil
+}
+
+func (s Server) getLastSourceUpdate(ctx context.Context) (int64, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return 0, Unauthenticated
+	}
+	var lastSourceUpdate int64
+	err := s.db.QueryRowContext(ctx,
+		`select
+			max(updated_at)
+		from sources where author_email=$1`,
+		claims.Email,
+	).Scan(&lastSourceUpdate)
+	if err != nil {
+		log.Err(err).Send()
+		return 0, err
+	}
+	return lastSourceUpdate, nil
+}
+
 func (s Server) CreateSource(ctx context.Context, req *proto.CreateSourceRequest) (*proto.CreateSourceResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
