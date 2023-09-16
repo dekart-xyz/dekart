@@ -90,13 +90,14 @@ func (s Server) getLastSourceUpdate(ctx context.Context) (int64, error) {
 	if claims == nil {
 		return 0, Unauthenticated
 	}
-	var lastSourceUpdate int64
+	var lastSourceUpdateDate sql.NullTime
 	err := s.db.QueryRowContext(ctx,
 		`select
 			max(updated_at)
 		from sources where author_email=$1`,
 		claims.Email,
-	).Scan(&lastSourceUpdate)
+	).Scan(&lastSourceUpdateDate)
+	lastSourceUpdate := lastSourceUpdateDate.Time.Unix()
 	if err != nil {
 		log.Err(err).Send()
 		return 0, err
@@ -120,6 +121,8 @@ func (s Server) CreateSource(ctx context.Context, req *proto.CreateSourceRequest
 		log.Err(err).Send()
 		return nil, err
 	}
+
+	s.userStreams.Ping([]string{claims.Email})
 
 	return &proto.CreateSourceResponse{
 		Source: &proto.Source{

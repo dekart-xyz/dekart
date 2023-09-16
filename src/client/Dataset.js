@@ -16,6 +16,7 @@ const NEW_DATASOURCE = 'NEW_DATASOURCE'
 function DatasetSelector ({ dataset }) {
   const dispatch = useDispatch()
   const env = useSelector(state => state.env)
+  const connectionList = useSelector(state => state.connection.list)
   if (!env.loaded) {
     return null
   }
@@ -45,10 +46,10 @@ function DatasetSelector ({ dataset }) {
                 value: NEW_DATASOURCE,
                 label: 'New'
               },
-              {
-                value: 'test',
-                label: 'BigQuery – Warehouse'
-              }
+              ...(connectionList.map(connection => ({
+                value: connection.id,
+                label: connection.sourceName
+              })))
             ]}
           />
         </div>

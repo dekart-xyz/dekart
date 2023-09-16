@@ -108,7 +108,17 @@ export function grpcStream (endpoint, request, cb) {
       },
       headers
     )
-    dispatch({ type: grpcStream.name, cancelable })
+    dispatch({ type: grpcStream.name, endpoint, cancelable })
+  }
+}
+
+export function grpcStreamCancel (endpoint) {
+  return (dispatch, getState) => {
+    const { stream } = getState()
+    if (stream[endpoint]) {
+      stream[endpoint].cancel()
+      dispatch({ type: grpcStreamCancel.name, endpoint })
+    }
   }
 }
 

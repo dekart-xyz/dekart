@@ -1,5 +1,5 @@
 import { combineReducers } from 'redux'
-import { connectionChanged, connectionCreated, newConnection, testConnection, testConnectionResponse } from '../actions/connection'
+import { connectionChanged, connectionCreated, newConnection, sourceListUpdate, testConnection, testConnectionResponse } from '../actions/connection'
 import { reportUpdate } from '../actions/report'
 
 function dialog (state = {
@@ -59,13 +59,8 @@ function test (state = {
 
 function list (state = [], action) {
   switch (action.type) {
-    case reportUpdate.name:
-      console.log('reportUpdate', action)
-      return []
-      // return [
-      //   ...state,
-      //   action.id
-      // ]
+    case sourceListUpdate.name:
+      return action.sourcesList
     default:
       return state
   }

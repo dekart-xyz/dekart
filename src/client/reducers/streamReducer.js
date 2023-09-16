@@ -1,13 +1,15 @@
-import { grpcStream as streamAction } from '../actions/grpc'
+import { grpcStream, grpcStreamCancel } from '../actions/grpc'
 
-const defaultStreamState = {
-  cancelable: null
-}
-
-export default function stream (state = defaultStreamState, action) {
+export default function stream (state = {}, action) {
   switch (action.type) {
-    case streamAction.name:
-      return { ...state, cancelable: action.cancelable }
+    case grpcStream.name: {
+      const { endpoint, cancelable } = action
+      return { ...state, [endpoint]: cancelable }
+    }
+    case grpcStreamCancel.name: {
+      const { endpoint } = action
+      return { ...state, [endpoint]: null }
+    }
     default:
       return state
   }

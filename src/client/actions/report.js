@@ -1,7 +1,7 @@
 import { KeplerGlSchema } from '@dekart-xyz/kepler.gl/dist/schemas'
 import { receiveMapConfig, removeDataset } from '@dekart-xyz/kepler.gl/dist/actions'
 
-import { grpcCall, grpcStream } from './grpc'
+import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
 import { success } from './message'
 import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
@@ -10,12 +10,9 @@ import { downloadDataset } from './dataset'
 import { shouldAddQuery } from '../lib/shouldAddQuery'
 import { shouldUpdateDataset } from '../lib/shouldUpdateDataset'
 
-export function closeReport (reportId) {
-  return (dispatch, getState) => {
-    const { stream } = getState()
-    if (stream.cancelable) {
-      stream.cancelable.cancel()
-    }
+export function closeReport () {
+  return (dispatch) => {
+    dispatch(grpcStreamCancel(Dekart.GetReportStream))
     dispatch({
       type: closeReport.name
     })
@@ -173,11 +170,8 @@ export function subscribeReports () {
 
 export function unsubscribeReports () {
   return (dispatch, getState) => {
-    const { stream } = getState()
+    dispatch(grpcStreamCancel(Dekart.GetReportListStream))
     dispatch({ type: unsubscribeReports.name })
-    if (stream.cancelable) {
-      stream.cancelable.cancel()
-    }
   }
 }
 

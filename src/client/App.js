@@ -16,6 +16,7 @@ import { getUsage } from './actions/usage'
 import { AuthState, RedirectState as DekartRedirectState } from '../proto/dekart_pb'
 import { getEnv } from './actions/env'
 import { setRedirectState } from './actions/redirectState'
+import { subscribeUserStream, unsubscribeUserStream } from './actions/user'
 
 // RedirectState reads states passed in the URL from the server
 function RedirectState () {
@@ -98,6 +99,12 @@ export default function App () {
       dispatch(getUsage())
     }
   }, [env, usage, dispatch, status])
+  useEffect(() => {
+    dispatch(subscribeUserStream())
+    return () => {
+      dispatch(unsubscribeUserStream())
+    }
+  }, [dispatch])
   return (
     <Router>
       <RedirectState />

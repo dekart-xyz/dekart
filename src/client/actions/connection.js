@@ -1,13 +1,14 @@
-import { CreateSourceRequest, Source, TestConnectionRequest } from '../../proto/dekart_pb'
+import { CreateSourceRequest, GetSourceListRequest, Source, TestConnectionRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 
 export function connectionCreated ({ id, sourceName }) {
+  console.log('connectionCreated', id, sourceName)
   return { type: connectionCreated.name, id, sourceName }
 }
 
 export function newConnection () {
-  return async (dispatch, getState) => {
+  return async (dispatch) => {
     dispatch({ type: newConnection.name })
     const sourceName = `New connection ${Date.now().toLocaleString()}}`
     const request = new CreateSourceRequest()
@@ -16,6 +17,22 @@ export function newConnection () {
       dispatch(grpcCall(Dekart.CreateSource, request, resolve))
     })
     dispatch(connectionCreated(res.source))
+  }
+}
+
+export function sourceListUpdate (sourcesList) {
+  return { type: sourceListUpdate.name, sourcesList }
+}
+
+export function getSourceList () {
+  return async (dispatch, getState) => {
+    dispatch({ type: getSourceList.name })
+    const request = new GetSourceListRequest()
+    const res = await new Promise((resolve) => {
+      dispatch(grpcCall(Dekart.GetSourceList, request, resolve))
+    })
+    console.log('getSourceList', res)
+    dispatch(sourceListUpdate(res.sourcesList))
   }
 }
 
