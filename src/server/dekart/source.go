@@ -74,6 +74,40 @@ func (s Server) getSources(ctx context.Context) ([]*proto.Source, error) {
 
 }
 
+func (s Server) UpdateSource(ctx context.Context, req *proto.UpdateSourceRequest) (*proto.UpdateSourceResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	res, err := s.db.ExecContext(ctx,
+		`update sources set
+			source_name=$1,
+			bigquery_project_id=$2,
+			cloud_storage_bucket=$3
+		where id=$4 and author_email=$5`,
+		req.Source.SourceName,
+		req.Source.BigqueryProjectId,
+		req.Source.CloudStorageBucket,
+		req.Source.Id,
+		claims.Email,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, err
+	}
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		log.Err(err).Send()
+		return nil, err
+	}
+	if rowsAffected == 0 {
+		return nil, status.Error(codes.NotFound, "source not found")
+	}
+	return &proto.UpdateSourceResponse{
+		Source: req.Source,
+	}, nil
+}
+
 func (s Server) GetSourceList(ctx context.Context, req *proto.GetSourceListRequest) (*proto.GetSourceListResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
