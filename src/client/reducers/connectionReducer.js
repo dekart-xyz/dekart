@@ -1,9 +1,9 @@
 import { combineReducers } from 'redux'
-import { connectionChanged, connectionCreated, newConnection, sourceListUpdate, testConnection, testConnectionResponse } from '../actions/connection'
-import { reportUpdate } from '../actions/report'
+import { connectionChanged, connectionCreated, newConnection, saveConnection, sourceListUpdate, sourceSaved, testConnection, testConnectionResponse } from '../actions/connection'
 
 function dialog (state = {
   visible: false,
+  loading: true,
   id: null
 }, action) {
   switch (action.type) {
@@ -11,12 +11,25 @@ function dialog (state = {
       return {
         ...state,
         visible: true,
-        id: null
+        id: null,
+        loading: true
       }
     case connectionCreated.name:
       return {
         ...state,
-        id: action.id
+        id: action.id,
+        loading: false
+      }
+    case saveConnection.name:
+      return {
+        ...state,
+        loading: true
+      }
+    case sourceSaved.name:
+      return {
+        ...state,
+        loading: false,
+        visible: false
       }
     default:
       return state

@@ -4,26 +4,31 @@ import Modal from 'antd/es/modal'
 import { useSelector, useDispatch } from 'react-redux'
 import Button from 'antd/es/button'
 import styles from './ConnectionModal.module.css'
-import { useState } from 'react'
-import { connectionChanged, testConnection } from './actions/connection'
+import { useState, useEffect } from 'react'
+import { connectionChanged, saveConnection, testConnection } from './actions/connection'
 import { ConsoleSqlOutlined, UploadOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
 import Tooltip from 'antd/es/tooltip'
 
 export default function ConnectionModal () {
   const { dialog, test } = useSelector(state => state.connection)
-  const { visible, id } = dialog
+  const { visible, id, loading } = dialog
+  const source = useSelector(state => state.connection.list.find(s => s.id === id))
   const { tested, testing, error: testError, success: testSuccess } = test
   const dispatch = useDispatch()
   const [form] = Form.useForm()
+  useEffect(() => {
+    if (source) {
+      form.setFieldsValue(source)
+    }
+  }, [source])
   const [testConnectionEnabled, setTestConnectionEnabled] = useState(false)
-  const loading = !id
   if (!visible) {
     return null
   }
   return (
     <Modal
       open
-      title='New connection'
+      title='Edit Connection'
       footer={(
         <div className={styles.modalFooter}>
           <Button
@@ -39,7 +44,11 @@ export default function ConnectionModal () {
               : null
           }
           <div className={styles.spacer} />
-          <Button type={tested && testSuccess ? 'primary' : 'default'} disabled={!tested || loading}>
+          <Button
+            type={tested && testSuccess ? 'primary' : 'default'} disabled={!tested || loading} onClick={() => {
+              dispatch(saveConnection(id, form.getFieldsValue()))
+            }}
+          >
             Save
           </Button>
           <Button>

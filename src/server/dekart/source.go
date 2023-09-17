@@ -39,6 +39,7 @@ func (s Server) getSources(ctx context.Context) ([]*proto.Source, error) {
 
 	rows, err := s.db.QueryContext(ctx,
 		`select
+			id,
 			source_name,
 			bigquery_project_id,
 			cloud_storage_bucket
@@ -51,13 +52,16 @@ func (s Server) getSources(ctx context.Context) ([]*proto.Source, error) {
 	defer rows.Close()
 	for rows.Next() {
 		source := proto.Source{}
+		ID := sql.NullString{}
 		bigqueryProjectId := sql.NullString{}
 		cloudStorageBucket := sql.NullString{}
 		err := rows.Scan(
+			&ID,
 			&source.SourceName,
 			&bigqueryProjectId,
 			&cloudStorageBucket,
 		)
+		source.Id = ID.String
 		source.BigqueryProjectId = bigqueryProjectId.String
 		source.CloudStorageBucket = cloudStorageBucket.String
 		if err != nil {

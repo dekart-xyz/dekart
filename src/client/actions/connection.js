@@ -1,16 +1,15 @@
-import { CreateSourceRequest, GetSourceListRequest, Source, TestConnectionRequest } from '../../proto/dekart_pb'
+import { CreateSourceRequest, GetSourceListRequest, Source, TestConnectionRequest, UpdateSourceRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 
 export function connectionCreated ({ id, sourceName }) {
-  console.log('connectionCreated', id, sourceName)
   return { type: connectionCreated.name, id, sourceName }
 }
 
 export function newConnection () {
   return async (dispatch) => {
     dispatch({ type: newConnection.name })
-    const sourceName = `New connection ${Date.now().toLocaleString()}}`
+    const sourceName = `New ${(new Date()).toLocaleString()}`
     const request = new CreateSourceRequest()
     request.setSourceName(sourceName)
     const res = await new Promise((resolve) => {
@@ -31,8 +30,28 @@ export function getSourceList () {
     const res = await new Promise((resolve) => {
       dispatch(grpcCall(Dekart.GetSourceList, request, resolve))
     })
-    console.log('getSourceList', res)
     dispatch(sourceListUpdate(res.sourcesList))
+  }
+}
+
+export function sourceSaved () {
+  return { type: sourceSaved.name }
+}
+
+export function saveConnection (id, sourceProps) {
+  return async (dispatch, getState) => {
+    dispatch({ type: saveConnection.name })
+    const request = new UpdateSourceRequest()
+    const source = new Source()
+    source.setId(id)
+    source.setSourceName(sourceProps.sourceName)
+    source.setBigqueryProjectId(sourceProps.bigqueryProjectId)
+    source.setCloudStorageBucket(sourceProps.cloudStorageBucket)
+    request.setSource(source)
+    await new Promise((resolve) => {
+      dispatch(grpcCall(Dekart.UpdateSource, request, resolve))
+    })
+    dispatch(sourceSaved())
   }
 }
 

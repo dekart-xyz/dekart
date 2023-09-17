@@ -9,7 +9,7 @@ import { createQuery } from './actions/query'
 import { createFile } from './actions/file'
 import { newConnection } from './actions/connection'
 import Dropdown from 'antd/es/dropdown'
-import { ConsoleSqlOutlined, UploadOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
+import { ConsoleSqlOutlined, UploadOutlined, MoreOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
 import ConnectionModal from './ConnectionModal'
 
 const NEW_DATASOURCE = 'NEW_DATASOURCE'
@@ -26,6 +26,7 @@ function DatasetSelector ({ dataset }) {
   if (!ALLOW_FILE_UPLOAD && !userDefinedDatasource) {
     return null
   }
+  console.log('connectionList', connectionList)
   return (
     <div className={styles.datasetSelector}>
       <div className={styles.selector}>
@@ -33,6 +34,7 @@ function DatasetSelector ({ dataset }) {
         <div className={styles.datasource}>
           <Select
             placeholder='Select data source'
+            className={styles.connectionSelect}
             onSelect={value => {
               if (value === NEW_DATASOURCE) {
                 dispatch(newConnection())
@@ -51,7 +53,7 @@ function DatasetSelector ({ dataset }) {
                 label: connection.sourceName
               })))
             ]}
-          />
+          /><Button className={styles.connectionEditButton} icon={<MoreOutlined />} />
         </div>
         <ConnectionModal />
         {/* <div className={styles.selectorButtons}>
