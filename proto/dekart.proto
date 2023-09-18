@@ -36,7 +36,7 @@ service Dekart {
     //sources
     rpc CreateSource(CreateSourceRequest) returns (CreateSourceResponse) {}
     rpc UpdateSource(UpdateSourceRequest) returns (UpdateSourceResponse) {}
-    rpc RemoveSource(RemoveSourceRequest) returns (RemoveSourceResponse) {}
+    rpc ArchiveSource(ArchiveSourceRequest) returns (ArchiveSourceResponse) {}
     rpc GetSourceList(GetSourceListRequest) returns (GetSourceListResponse) {}
     rpc TestConnection(TestConnectionRequest) returns (TestConnectionResponse) {}
 }
@@ -65,11 +65,11 @@ message TestConnectionResponse {
     string error = 2;
 }
 
-message RemoveSourceRequest {
+message ArchiveSourceRequest {
     string source_id = 1;
 }
 
-message RemoveSourceResponse {
+message ArchiveSourceResponse {
 }
 
 message UpdateSourceRequest {

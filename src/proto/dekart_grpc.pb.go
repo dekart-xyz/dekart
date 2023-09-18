@@ -48,7 +48,7 @@ type DekartClient interface {
 	//sources
 	CreateSource(ctx context.Context, in *CreateSourceRequest, opts ...grpc.CallOption) (*CreateSourceResponse, error)
 	UpdateSource(ctx context.Context, in *UpdateSourceRequest, opts ...grpc.CallOption) (*UpdateSourceResponse, error)
-	RemoveSource(ctx context.Context, in *RemoveSourceRequest, opts ...grpc.CallOption) (*RemoveSourceResponse, error)
+	ArchiveSource(ctx context.Context, in *ArchiveSourceRequest, opts ...grpc.CallOption) (*ArchiveSourceResponse, error)
 	GetSourceList(ctx context.Context, in *GetSourceListRequest, opts ...grpc.CallOption) (*GetSourceListResponse, error)
 	TestConnection(ctx context.Context, in *TestConnectionRequest, opts ...grpc.CallOption) (*TestConnectionResponse, error)
 }
@@ -301,9 +301,9 @@ func (c *dekartClient) UpdateSource(ctx context.Context, in *UpdateSourceRequest
 	return out, nil
 }
 
-func (c *dekartClient) RemoveSource(ctx context.Context, in *RemoveSourceRequest, opts ...grpc.CallOption) (*RemoveSourceResponse, error) {
-	out := new(RemoveSourceResponse)
-	err := c.cc.Invoke(ctx, "/Dekart/RemoveSource", in, out, opts...)
+func (c *dekartClient) ArchiveSource(ctx context.Context, in *ArchiveSourceRequest, opts ...grpc.CallOption) (*ArchiveSourceResponse, error) {
+	out := new(ArchiveSourceResponse)
+	err := c.cc.Invoke(ctx, "/Dekart/ArchiveSource", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -358,7 +358,7 @@ type DekartServer interface {
 	//sources
 	CreateSource(context.Context, *CreateSourceRequest) (*CreateSourceResponse, error)
 	UpdateSource(context.Context, *UpdateSourceRequest) (*UpdateSourceResponse, error)
-	RemoveSource(context.Context, *RemoveSourceRequest) (*RemoveSourceResponse, error)
+	ArchiveSource(context.Context, *ArchiveSourceRequest) (*ArchiveSourceResponse, error)
 	GetSourceList(context.Context, *GetSourceListRequest) (*GetSourceListResponse, error)
 	TestConnection(context.Context, *TestConnectionRequest) (*TestConnectionResponse, error)
 	mustEmbedUnimplementedDekartServer()
@@ -425,8 +425,8 @@ func (UnimplementedDekartServer) CreateSource(context.Context, *CreateSourceRequ
 func (UnimplementedDekartServer) UpdateSource(context.Context, *UpdateSourceRequest) (*UpdateSourceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateSource not implemented")
 }
-func (UnimplementedDekartServer) RemoveSource(context.Context, *RemoveSourceRequest) (*RemoveSourceResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RemoveSource not implemented")
+func (UnimplementedDekartServer) ArchiveSource(context.Context, *ArchiveSourceRequest) (*ArchiveSourceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ArchiveSource not implemented")
 }
 func (UnimplementedDekartServer) GetSourceList(context.Context, *GetSourceListRequest) (*GetSourceListResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetSourceList not implemented")
@@ -798,20 +798,20 @@ func _Dekart_UpdateSource_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_RemoveSource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RemoveSourceRequest)
+func _Dekart_ArchiveSource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ArchiveSourceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DekartServer).RemoveSource(ctx, in)
+		return srv.(DekartServer).ArchiveSource(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Dekart/RemoveSource",
+		FullMethod: "/Dekart/ArchiveSource",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).RemoveSource(ctx, req.(*RemoveSourceRequest))
+		return srv.(DekartServer).ArchiveSource(ctx, req.(*ArchiveSourceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -924,8 +924,8 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Dekart_UpdateSource_Handler,
 		},
 		{
-			MethodName: "RemoveSource",
-			Handler:    _Dekart_RemoveSource_Handler,
+			MethodName: "ArchiveSource",
+			Handler:    _Dekart_ArchiveSource_Handler,
 		},
 		{
 			MethodName: "GetSourceList",

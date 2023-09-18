@@ -1,9 +1,29 @@
-import { CreateSourceRequest, GetSourceListRequest, Source, TestConnectionRequest, UpdateSourceRequest } from '../../proto/dekart_pb'
+import { ArchiveSourceRequest, CreateSourceRequest, GetSourceListRequest, Source, TestConnectionRequest, UpdateSourceRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 
 export function connectionCreated ({ id, sourceName }) {
   return { type: connectionCreated.name, id, sourceName }
+}
+
+export function closeConnectionDialog () {
+  return { type: closeConnectionDialog.name }
+}
+
+export function editSource (id) {
+  return { type: editSource.name, id }
+}
+
+export function archiveSource (id) {
+  return async (dispatch) => {
+    dispatch({ type: archiveSource.name })
+    const request = new ArchiveSourceRequest()
+    request.setSourceId(id)
+    await new Promise((resolve) => {
+      dispatch(grpcCall(Dekart.ArchiveSource, request, resolve))
+    })
+    dispatch(sourceSaved())
+  }
 }
 
 export function newConnection () {

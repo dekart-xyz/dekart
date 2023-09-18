@@ -175,13 +175,13 @@ type DekartUpdateSource = {
   readonly responseType: typeof proto_dekart_pb.UpdateSourceResponse;
 };
 
-type DekartRemoveSource = {
+type DekartArchiveSource = {
   readonly methodName: string;
   readonly service: typeof Dekart;
   readonly requestStream: false;
   readonly responseStream: false;
-  readonly requestType: typeof proto_dekart_pb.RemoveSourceRequest;
-  readonly responseType: typeof proto_dekart_pb.RemoveSourceResponse;
+  readonly requestType: typeof proto_dekart_pb.ArchiveSourceRequest;
+  readonly responseType: typeof proto_dekart_pb.ArchiveSourceResponse;
 };
 
 type DekartGetSourceList = {
@@ -223,7 +223,7 @@ export class Dekart {
   static readonly GetUsage: DekartGetUsage;
   static readonly CreateSource: DekartCreateSource;
   static readonly UpdateSource: DekartUpdateSource;
-  static readonly RemoveSource: DekartRemoveSource;
+  static readonly ArchiveSource: DekartArchiveSource;
   static readonly GetSourceList: DekartGetSourceList;
   static readonly TestConnection: DekartTestConnection;
 }
@@ -407,14 +407,14 @@ export class DekartClient {
     requestMessage: proto_dekart_pb.UpdateSourceRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateSourceResponse|null) => void
   ): UnaryResponse;
-  removeSource(
-    requestMessage: proto_dekart_pb.RemoveSourceRequest,
+  archiveSource(
+    requestMessage: proto_dekart_pb.ArchiveSourceRequest,
     metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.RemoveSourceResponse|null) => void
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.ArchiveSourceResponse|null) => void
   ): UnaryResponse;
-  removeSource(
-    requestMessage: proto_dekart_pb.RemoveSourceRequest,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.RemoveSourceResponse|null) => void
+  archiveSource(
+    requestMessage: proto_dekart_pb.ArchiveSourceRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.ArchiveSourceResponse|null) => void
   ): UnaryResponse;
   getSourceList(
     requestMessage: proto_dekart_pb.GetSourceListRequest,

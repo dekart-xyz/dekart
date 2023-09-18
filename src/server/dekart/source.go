@@ -43,7 +43,7 @@ func (s Server) getSources(ctx context.Context) ([]*proto.Source, error) {
 			source_name,
 			bigquery_project_id,
 			cloud_storage_bucket
-		from sources where author_email=$1 order by created_at asc`,
+		from sources where author_email=$1 and archived=false order by created_at asc`,
 		claims.Email,
 	)
 	if err != nil {
@@ -106,6 +106,35 @@ func (s Server) UpdateSource(ctx context.Context, req *proto.UpdateSourceRequest
 	return &proto.UpdateSourceResponse{
 		Source: req.Source,
 	}, nil
+}
+
+func (s Server) ArchiveSource(ctx context.Context, req *proto.ArchiveSourceRequest) (*proto.ArchiveSourceResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	res, err := s.db.ExecContext(ctx,
+		`update sources set
+			archived=true,
+			updated_at=now()
+		where id=$1 and author_email=$2`,
+		req.SourceId,
+		claims.Email,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, err
+	}
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		log.Err(err).Send()
+		return nil, err
+	}
+	if rowsAffected == 0 {
+		return nil, status.Error(codes.NotFound, "source not found")
+	}
+	s.userStreams.Ping([]string{claims.Email})
+	return &proto.ArchiveSourceResponse{}, nil
 }
 
 func (s Server) GetSourceList(ctx context.Context, req *proto.GetSourceListRequest) (*proto.GetSourceListResponse, error) {

@@ -135,38 +135,38 @@ export namespace TestConnectionResponse {
   }
 }
 
-export class RemoveSourceRequest extends jspb.Message {
+export class ArchiveSourceRequest extends jspb.Message {
   getSourceId(): string;
   setSourceId(value: string): void;
 
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): RemoveSourceRequest.AsObject;
-  static toObject(includeInstance: boolean, msg: RemoveSourceRequest): RemoveSourceRequest.AsObject;
+  toObject(includeInstance?: boolean): ArchiveSourceRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: ArchiveSourceRequest): ArchiveSourceRequest.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: RemoveSourceRequest, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): RemoveSourceRequest;
-  static deserializeBinaryFromReader(message: RemoveSourceRequest, reader: jspb.BinaryReader): RemoveSourceRequest;
+  static serializeBinaryToWriter(message: ArchiveSourceRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): ArchiveSourceRequest;
+  static deserializeBinaryFromReader(message: ArchiveSourceRequest, reader: jspb.BinaryReader): ArchiveSourceRequest;
 }
 
-export namespace RemoveSourceRequest {
+export namespace ArchiveSourceRequest {
   export type AsObject = {
     sourceId: string,
   }
 }
 
-export class RemoveSourceResponse extends jspb.Message {
+export class ArchiveSourceResponse extends jspb.Message {
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): RemoveSourceResponse.AsObject;
-  static toObject(includeInstance: boolean, msg: RemoveSourceResponse): RemoveSourceResponse.AsObject;
+  toObject(includeInstance?: boolean): ArchiveSourceResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: ArchiveSourceResponse): ArchiveSourceResponse.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: RemoveSourceResponse, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): RemoveSourceResponse;
-  static deserializeBinaryFromReader(message: RemoveSourceResponse, reader: jspb.BinaryReader): RemoveSourceResponse;
+  static serializeBinaryToWriter(message: ArchiveSourceResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): ArchiveSourceResponse;
+  static deserializeBinaryFromReader(message: ArchiveSourceResponse, reader: jspb.BinaryReader): ArchiveSourceResponse;
 }
 
-export namespace RemoveSourceResponse {
+export namespace ArchiveSourceResponse {
   export type AsObject = {
   }
 }

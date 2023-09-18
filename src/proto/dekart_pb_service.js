@@ -181,13 +181,13 @@ Dekart.UpdateSource = {
   responseType: proto_dekart_pb.UpdateSourceResponse
 };
 
-Dekart.RemoveSource = {
-  methodName: "RemoveSource",
+Dekart.ArchiveSource = {
+  methodName: "ArchiveSource",
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.RemoveSourceRequest,
-  responseType: proto_dekart_pb.RemoveSourceResponse
+  requestType: proto_dekart_pb.ArchiveSourceRequest,
+  responseType: proto_dekart_pb.ArchiveSourceResponse
 };
 
 Dekart.GetSourceList = {
@@ -828,11 +828,11 @@ DekartClient.prototype.updateSource = function updateSource(requestMessage, meta
   };
 };
 
-DekartClient.prototype.removeSource = function removeSource(requestMessage, metadata, callback) {
+DekartClient.prototype.archiveSource = function archiveSource(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
-  var client = grpc.unary(Dekart.RemoveSource, {
+  var client = grpc.unary(Dekart.ArchiveSource, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,

@@ -5,7 +5,7 @@ import { useSelector, useDispatch } from 'react-redux'
 import Button from 'antd/es/button'
 import styles from './ConnectionModal.module.css'
 import { useState, useEffect } from 'react'
-import { connectionChanged, saveConnection, testConnection } from './actions/connection'
+import { archiveSource, closeConnectionDialog, connectionChanged, saveConnection, testConnection } from './actions/connection'
 import { ConsoleSqlOutlined, UploadOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
 import Tooltip from 'antd/es/tooltip'
 
@@ -29,6 +29,7 @@ export default function ConnectionModal () {
     <Modal
       open
       title='Edit Connection'
+      onCancel={() => dispatch(closeConnectionDialog())}
       footer={(
         <div className={styles.modalFooter}>
           <Button
@@ -51,9 +52,12 @@ export default function ConnectionModal () {
           >
             Save
           </Button>
-          <Button>
-            Cancel
+          <Button danger onClick={() => dispatch(archiveSource(id))}>
+            Archive
           </Button>
+          {/* <Button onClick={() => dispatch(closeConnectionDialog())}>
+            Cancel
+          </Button> */}
         </div>
           )}
     >

@@ -7,16 +7,18 @@ import File from './File'
 import { getDatasourceMeta } from './lib/datasource'
 import { createQuery } from './actions/query'
 import { createFile } from './actions/file'
-import { newConnection } from './actions/connection'
+import { editSource, newConnection } from './actions/connection'
 import Dropdown from 'antd/es/dropdown'
 import { ConsoleSqlOutlined, UploadOutlined, MoreOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
 import ConnectionModal from './ConnectionModal'
+import { useState } from 'react'
 
 const NEW_DATASOURCE = 'NEW_DATASOURCE'
 function DatasetSelector ({ dataset }) {
   const dispatch = useDispatch()
   const env = useSelector(state => state.env)
   const connectionList = useSelector(state => state.connection.list)
+  const [sourceId, setSourceId] = useState(null)
   if (!env.loaded) {
     return null
   }
@@ -35,10 +37,12 @@ function DatasetSelector ({ dataset }) {
           <Select
             placeholder='Select data source'
             className={styles.connectionSelect}
+            value={sourceId}
             onSelect={value => {
               if (value === NEW_DATASOURCE) {
+                setSourceId(null)
                 dispatch(newConnection())
-              }
+              } else { setSourceId(value) }
             }}
             // defaultValue='lucy'
             // style={{ width: 120 }}
@@ -53,7 +57,13 @@ function DatasetSelector ({ dataset }) {
                 label: connection.sourceName
               })))
             ]}
-          /><Button className={styles.connectionEditButton} icon={<MoreOutlined />} />
+          /><Button
+            type='text'
+            disabled={!sourceId}
+            className={styles.connectionEditButton} onClick={
+            () => dispatch(editSource(sourceId))
+          } icon={<MoreOutlined />}
+            />
         </div>
         <ConnectionModal />
         {/* <div className={styles.selectorButtons}>
