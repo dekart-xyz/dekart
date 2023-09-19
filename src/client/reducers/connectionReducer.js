@@ -1,5 +1,5 @@
 import { combineReducers } from 'redux'
-import { closeConnectionDialog, connectionChanged, connectionCreated, editSource, newConnection, saveConnection, sourceListUpdate, sourceSaved, testConnection, testConnectionResponse } from '../actions/connection'
+import { archiveSource, closeConnectionDialog, connectionChanged, connectionCreated, editSource, newConnection, saveConnection, selectSource, sourceListUpdate, sourceSaved, testConnection, testConnectionResponse } from '../actions/connection'
 
 function dialog (state = {
   visible: false,
@@ -41,7 +41,8 @@ function dialog (state = {
       return {
         ...state,
         loading: false,
-        visible: false
+        visible: false,
+        id: null
       }
     default:
       return state
@@ -91,10 +92,28 @@ function list (state = [], action) {
   }
 }
 
+function selectedSourceID (state = null, action) {
+  switch (action.type) {
+    case newConnection.name:
+      return null
+    case editSource.name:
+      return action.id
+    case connectionCreated.name:
+      return action.id
+    case selectSource.name:
+      return action.id
+    case archiveSource.name:
+      return null
+    default:
+      return state
+  }
+}
+
 export default combineReducers({
   dialog,
   test,
-  list
+  list,
+  selectedSourceID
 })
 
 // export function connectionSettings (state = {

@@ -14,6 +14,10 @@ export function editSource (id) {
   return { type: editSource.name, id }
 }
 
+export function selectSource (id) {
+  return { type: selectSource.name, id }
+}
+
 export function archiveSource (id) {
   return async (dispatch) => {
     dispatch({ type: archiveSource.name })

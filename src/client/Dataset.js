@@ -7,18 +7,18 @@ import File from './File'
 import { getDatasourceMeta } from './lib/datasource'
 import { createQuery } from './actions/query'
 import { createFile } from './actions/file'
-import { editSource, newConnection } from './actions/connection'
+import { editSource, newConnection, selectSource } from './actions/connection'
 import Dropdown from 'antd/es/dropdown'
 import { ConsoleSqlOutlined, UploadOutlined, MoreOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
 import ConnectionModal from './ConnectionModal'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 const NEW_DATASOURCE = 'NEW_DATASOURCE'
 function DatasetSelector ({ dataset }) {
   const dispatch = useDispatch()
   const env = useSelector(state => state.env)
   const connectionList = useSelector(state => state.connection.list)
-  const [sourceId, setSourceId] = useState(null)
+  const selectedSourceID = useSelector(state => state.connection.selectedSourceID)
   if (!env.loaded) {
     return null
   }
@@ -37,12 +37,13 @@ function DatasetSelector ({ dataset }) {
           <Select
             placeholder='Select data source'
             className={styles.connectionSelect}
-            value={sourceId}
+            value={selectedSourceID}
             onSelect={value => {
               if (value === NEW_DATASOURCE) {
-                setSourceId(null)
                 dispatch(newConnection())
-              } else { setSourceId(value) }
+              } else {
+                dispatch(selectSource(value))
+              }
             }}
             // defaultValue='lucy'
             // style={{ width: 120 }}
@@ -59,9 +60,9 @@ function DatasetSelector ({ dataset }) {
             ]}
           /><Button
             type='text'
-            disabled={!sourceId}
+            disabled={!selectedSourceID}
             className={styles.connectionEditButton} onClick={
-            () => dispatch(editSource(sourceId))
+            () => dispatch(editSource(selectedSourceID))
           } icon={<MoreOutlined />}
             />
         </div>

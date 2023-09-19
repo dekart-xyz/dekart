@@ -83,7 +83,8 @@ func (s Server) UpdateSource(ctx context.Context, req *proto.UpdateSourceRequest
 		`update sources set
 			source_name=$1,
 			bigquery_project_id=$2,
-			cloud_storage_bucket=$3
+			cloud_storage_bucket=$3,
+			updated_at=now()
 		where id=$4 and author_email=$5`,
 		req.Source.SourceName,
 		req.Source.BigqueryProjectId,
@@ -103,6 +104,7 @@ func (s Server) UpdateSource(ctx context.Context, req *proto.UpdateSourceRequest
 	if rowsAffected == 0 {
 		return nil, status.Error(codes.NotFound, "source not found")
 	}
+	s.userStreams.Ping([]string{claims.Email})
 	return &proto.UpdateSourceResponse{
 		Source: req.Source,
 	}, nil
