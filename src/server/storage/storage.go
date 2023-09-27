@@ -29,24 +29,28 @@ type StorageObject interface {
 }
 
 type Storage interface {
-	GetObject(string) StorageObject
+	GetObject(string, ...GetObjectOption) StorageObject
+	GetDefaultBucketName() string
 }
 
 // GoogleCloudStorage implements Storage interface for Google Cloud Storage
 type GoogleCloudStorage struct {
-	bucketName string
-	logger     zerolog.Logger
+	defaultBucketName string
+	logger            zerolog.Logger
+}
+
+func (s GoogleCloudStorage) GetDefaultBucketName() string {
+	return s.defaultBucketName
 }
 
 func NewGoogleCloudStorage() *GoogleCloudStorage {
-	bucketName := os.Getenv("DEKART_CLOUD_STORAGE_BUCKET")
-	if bucketName == "" {
+	defaultBucketName := os.Getenv("DEKART_CLOUD_STORAGE_BUCKET")
+	if defaultBucketName == "" {
 		log.Info().Msg("DEKART_CLOUD_STORAGE_BUCKET is not set, using user provided bucket")
-		return nil
 	}
 	return &GoogleCloudStorage{
-		bucketName,
-		log.With().Str("DEKART_CLOUD_STORAGE_BUCKET", bucketName).Logger(),
+		defaultBucketName,
+		log.With().Str("DEKART_CLOUD_STORAGE_BUCKET", defaultBucketName).Logger(),
 	}
 }
 
@@ -69,9 +73,32 @@ func TestConnection(ctx context.Context, source *proto.Source) (*proto.TestConne
 	}, nil
 }
 
-func (s GoogleCloudStorage) GetObject(object string) StorageObject {
+type GetObjectConfig struct {
+	bucketName string
+}
+
+type GetObjectOption interface {
+	apply(*GetObjectConfig)
+}
+
+type BucketNameOption struct {
+	BucketName string
+}
+
+func (o BucketNameOption) apply(options *GetObjectConfig) {
+	options.bucketName = o.BucketName
+}
+
+func (s GoogleCloudStorage) GetObject(object string, opt ...GetObjectOption) StorageObject {
+	conf := GetObjectConfig{}
+	for _, o := range opt {
+		o.apply(&conf)
+	}
+	if conf.bucketName == "" {
+		conf.bucketName = s.defaultBucketName
+	}
 	return GoogleCloudStorageObject{
-		s.bucketName,
+		conf.bucketName,
 		object,
 		s.logger.With().Str("GoogleCloudStorageObject", object).Logger(),
 	}
@@ -161,7 +188,11 @@ func NewS3Storage() Storage {
 	}
 }
 
-func (s S3Storage) GetObject(name string) StorageObject {
+func (s S3Storage) GetDefaultBucketName() string {
+	return s.bucketName
+}
+
+func (s S3Storage) GetObject(name string, opt ...GetObjectOption) StorageObject {
 	return S3StorageObject{
 		s,
 		name,

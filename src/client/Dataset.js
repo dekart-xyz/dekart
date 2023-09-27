@@ -45,9 +45,6 @@ function DatasetSelector ({ dataset }) {
                 dispatch(selectSource(value))
               }
             }}
-            // defaultValue='lucy'
-            // style={{ width: 120 }}
-            // onChange={handleChange}
             options={[
               {
                 value: NEW_DATASOURCE,
@@ -75,19 +72,29 @@ function DatasetSelector ({ dataset }) {
       <div className={styles.status}>
         <div className={styles.datasetTypeSelector}>
           <Dropdown
+            disabled={!selectedSourceID}
             menu={{
               items: [
                 {
                   label: 'SQL query',
-                  icon: <ConsoleSqlOutlined />
+                  icon: <ConsoleSqlOutlined />,
+                  key: 'sql'
                   // onClick: () => dispatch(createQuery(dataset.id))
                 },
                 {
                   label: 'File upload',
-                  icon: <UploadOutlined />
+                  icon: <UploadOutlined />,
+                  key: 'file'
                   // onClick: () => dispatch(createFile(dataset.id))
                 }
-              ]
+              ],
+              onClick: ({ key }) => {
+                if (key === 'sql') {
+                  dispatch(createQuery(dataset.id))
+                } else if (key === 'file') {
+                  dispatch(createFile(dataset.id))
+                }
+              }
             }}
           >
             <Button block type='primary'>Add data from...</Button>

@@ -208,13 +208,8 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 	return &proto.RemoveDatasetResponse{}, nil
 }
 
-func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetRequest) (*proto.CreateDatasetResponse, error) {
-	claims := user.GetClaims(ctx)
-	if claims == nil {
-		return nil, Unauthenticated
-	}
-	id := newUUID()
-	result, err := s.db.ExecContext(ctx,
+func insertDataset(ctx context.Context, db *sql.DB, datasetID string, reportID string, email string) (res sql.Result, err error) {
+	return db.ExecContext(ctx,
 		`insert into datasets (id, report_id)
 		select
 			$1 as id,
@@ -222,10 +217,37 @@ func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetReque
 		from reports
 		where id=$2 and not archived and author_email=$3 limit 1
 		`,
-		id,
-		req.ReportId,
-		claims.Email,
+		datasetID,
+		reportID,
+		email,
 	)
+}
+
+// func insertDatasetWithSource(ctx context.Context, db *sql.DB, datasetID string, reportID string, email string, sourceID string) (res sql.Result, err error) {
+// 	return db.ExecContext(ctx,
+// 		`insert into datasets (id, report_id, source_id)
+// 		select
+// 			$1 as id,
+// 			reports.id as report_id,
+// 			sources.id as source_id
+// 		from reports, sources on (reports.author_email = sources.author_email)
+// 		where reports.id=$2 and not reports.archived and reports.author_email=$3 and source_id=$4 limit 1
+// 		`,
+// 		datasetID,
+// 		reportID,
+// 		email,
+// 		sourceID,
+// 	)
+// }
+
+func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetRequest) (*proto.CreateDatasetResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	id := newUUID()
+	result, err := insertDataset(ctx, s.db, id, req.ReportId, claims.Email)
+
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())

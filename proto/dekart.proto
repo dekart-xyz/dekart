@@ -303,6 +303,7 @@ message CreateFileResponse {
 
 message CreateQueryRequest {
     string dataset_id = 1;
+    string source_id = 2;
 }
 
 message CreateQueryResponse {

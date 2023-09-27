@@ -6,6 +6,7 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
+	"fmt"
 
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
@@ -26,6 +27,53 @@ func (s Server) TestConnection(ctx context.Context, req *proto.TestConnectionReq
 		return res, nil
 	}
 	return storage.TestConnection(ctx, req.Source)
+}
+
+func (s Server) getSource(ctx context.Context, sourceID string) (*proto.Source, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		err := fmt.Errorf("unauthenticated sources request")
+		log.Err(err).Send()
+		return nil, err
+	}
+	res, err := s.db.QueryContext(ctx, `
+		select
+			id,
+			source_name,
+			bigquery_project_id,
+			cloud_storage_bucket
+		from sources where id=$1 and author_email=$2 and archived=false limit 1`,
+		sourceID,
+		claims.Email,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, err
+	}
+	defer res.Close()
+	source := proto.Source{}
+	for res.Next() {
+		ID := sql.NullString{}
+		bigqueryProjectId := sql.NullString{}
+		cloudStorageBucket := sql.NullString{}
+		err := res.Scan(
+			&ID,
+			&source.SourceName,
+			&bigqueryProjectId,
+			&cloudStorageBucket,
+		)
+		source.Id = ID.String
+		source.BigqueryProjectId = bigqueryProjectId.String
+		source.CloudStorageBucket = cloudStorageBucket.String
+		if err != nil {
+			log.Err(err).Send()
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+	if source.Id == "" {
+		return nil, nil
+	}
+	return &source, nil
 }
 
 func (s Server) getSources(ctx context.Context) ([]*proto.Source, error) {

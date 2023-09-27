@@ -21,7 +21,6 @@ export default function ConnectionModal () {
       form.setFieldsValue(source)
     }
   }, [source])
-  const [testConnectionEnabled, setTestConnectionEnabled] = useState(false)
   if (!visible) {
     return null
   }
@@ -33,7 +32,7 @@ export default function ConnectionModal () {
       footer={(
         <div className={styles.modalFooter}>
           <Button
-            type='primary' disabled={!testConnectionEnabled || testing || tested} loading={testing} onClick={() => {
+            type='primary' disabled={testing || tested} loading={testing} onClick={() => {
               dispatch(testConnection(form.getFieldsValue()))
             }}
           >
@@ -69,7 +68,6 @@ export default function ConnectionModal () {
             if (changedValues.bigqueryProjectId || changedValues.cloudStorageBucket) {
               dispatch(connectionChanged(allValues))
             }
-            setTestConnectionEnabled(allValues.sourceName && allValues.bigqueryProjectId && allValues.cloudStorageBucket)
           }}
         >
           <Form.Item label='Connection Name' name='sourceName' required>

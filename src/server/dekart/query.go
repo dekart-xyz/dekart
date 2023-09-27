@@ -8,6 +8,7 @@ import (
 
 	"dekart/src/proto"
 	"dekart/src/server/job"
+	"dekart/src/server/storage"
 	"dekart/src/server/user"
 
 	"github.com/google/uuid"
@@ -36,10 +37,47 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
+	bucketName := s.storage.GetDefaultBucketName()
+
+	if bucketName == "" {
+		source, err := s.getSource(ctx, req.SourceId)
+		if err != nil {
+			log.Err(err).Send()
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		if source == nil {
+			err := fmt.Errorf("source not found id:%s", req.SourceId)
+			log.Warn().Err(err).Send()
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+		bucketName = source.CloudStorageBucket
+		log.Debug().Str("bucketName", bucketName).Msg("Bucket name from source")
+	}
+
+	if err != nil {
+		log.Err(err).Send()
+		return nil, err
+	}
+
 	id := newUUID()
+
+	err = s.storeQuerySync(ctx, bucketName, id, "", "")
+
+	if err != nil {
+		if _, ok := err.(*queryWasNotUpdated); !ok {
+			log.Err(err).Msg("Error updating query text")
+			return &proto.CreateQueryResponse{}, status.Error(codes.Internal, err.Error())
+		}
+		log.Warn().Msg("Query text not updated")
+	}
+
 	_, err = s.db.ExecContext(ctx,
-		`insert into queries (id, query_text) values ($1, '')`,
+		`insert into queries (id, query_text, source_id) values (
+			$1,
+			'', 
+			case when $2 = '' then null else CAST($2 AS uuid) end)`,
 		id,
+		req.SourceId,
 	)
 	if err != nil {
 		log.Err(err).Send()
@@ -65,7 +103,17 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	if affectedRows == 0 {
 		log.Warn().Str("reportID", *reportID).Str("dataset", req.DatasetId).Msg("dataset query was already created")
 	}
-	go s.storeQuery(ctx, *reportID, id, "", "")
+
+	// go s.storeQuery(ctx, *reportID, id, "", "")
+
+	// if _, ok := err.(*queryWasNotUpdated); ok {
+	// 	log.Warn().Msg("Query text not updated")
+	// 	return
+	// } else if err != nil {
+	// 	log.Err(err).Msg("Error updating query text")
+	// 	return
+	// }
+
 	s.reportStreams.Ping(*reportID)
 
 	return &proto.CreateQueryResponse{}, nil
@@ -78,12 +126,12 @@ func (e *queryWasNotUpdated) Error() string {
 	return "query was not updated"
 }
 
-func (s Server) storeQuerySync(ctx context.Context, queryID string, queryText string, prevQuerySourceId string) error {
+func (s Server) storeQuerySync(ctx context.Context, bucketName, queryID string, queryText string, prevQuerySourceId string) error {
 	h := sha1.New()
 	queryTextByte := []byte(queryText)
 	h.Write(queryTextByte)
 	newQuerySourceId := fmt.Sprintf("%x", h.Sum(nil))
-	storageWriter := s.storage.GetObject(fmt.Sprintf("%s.sql", newQuerySourceId)).GetWriter(ctx)
+	storageWriter := s.storage.GetObject(fmt.Sprintf("%s.sql", newQuerySourceId), storage.BucketNameOption{BucketName: bucketName}).GetWriter(ctx)
 	_, err := storageWriter.Write(queryTextByte)
 	if err != nil {
 		log.Err(err).Msg("Error writing query_text to storage")
@@ -116,7 +164,7 @@ func (s Server) storeQuerySync(ctx context.Context, queryID string, queryText st
 func (s Server) storeQuery(userCtx context.Context, reportID string, queryID string, queryText string, prevQuerySourceId string) {
 	ctx, cancel := context.WithTimeout(user.CopyClaims(userCtx, context.Background()), time.Second*5)
 	defer cancel()
-	err := s.storeQuerySync(ctx, queryID, queryText, prevQuerySourceId)
+	err := s.storeQuerySync(ctx, "", queryID, queryText, prevQuerySourceId)
 	if _, ok := err.(*queryWasNotUpdated); ok {
 		log.Warn().Msg("Query text not updated")
 		return
@@ -225,7 +273,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	err = s.storeQuerySync(ctx, req.QueryId, req.QueryText, prevQuerySourceId)
+	err = s.storeQuerySync(ctx, "", req.QueryId, req.QueryText, prevQuerySourceId)
 
 	if err != nil {
 		code := codes.Internal

@@ -13,10 +13,12 @@ export function queryChanged (queryId, queryText) {
 }
 
 export function createQuery (datasetId) {
-  return (dispatch) => {
+  return (dispatch, store) => {
+    const { selectedSourceID } = store().connection
     dispatch({ type: createQuery.name })
     const request = new CreateQueryRequest()
     request.setDatasetId(datasetId)
+    request.setSourceId(selectedSourceID)
     dispatch(grpcCall(Dekart.CreateQuery, request))
   }
 }
