@@ -17,7 +17,14 @@ func (s Server) ServeQuerySource(w http.ResponseWriter, r *http.Request) {
 	if claims == nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 	}
-	obj := s.storage.GetObject(fmt.Sprintf("%s.sql", vars["id"]))
+
+	bucketName, err := s.getBucketNameFromSourceID(ctx, vars["source"])
+	if err != nil {
+		HttpError(w, err)
+		return
+	}
+
+	obj := s.storage.GetObject(bucketName, fmt.Sprintf("%s.sql", vars["id"]))
 	created, err := obj.GetCreatedAt(ctx)
 	if err != nil {
 		HttpError(w, err)

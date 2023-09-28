@@ -29,6 +29,26 @@ func (s Server) TestConnection(ctx context.Context, req *proto.TestConnectionReq
 	return storage.TestConnection(ctx, req.Source)
 }
 
+func (s Server) getBucketNameFromSourceID(ctx context.Context, sourceID string) (string, error) {
+	bucketName := storage.GetDefaultBucketName()
+	if sourceID == "default" {
+		return bucketName, nil
+	}
+	if sourceID != "" {
+		source, err := s.getSource(ctx, sourceID)
+		if err != nil {
+			log.Err(err).Send()
+			return "", err
+		}
+		if source == nil {
+			log.Warn().Msgf("source not found id:%s", sourceID)
+			return "", nil
+		}
+		bucketName = source.CloudStorageBucket
+	}
+	return bucketName, nil
+}
+
 func (s Server) getSource(ctx context.Context, sourceID string) (*proto.Source, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {

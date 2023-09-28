@@ -76,7 +76,7 @@ func (s Server) moveFileToStorage(fileSourceID string, fileExtension string, fil
 	defer file.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
-	storageWriter := s.storage.GetObject(fmt.Sprintf("%s.%s", fileSourceID, fileExtension)).GetWriter(ctx)
+	storageWriter := s.storage.GetObject("", fmt.Sprintf("%s.%s", fileSourceID, fileExtension)).GetWriter(ctx)
 	_, err := io.Copy(storageWriter, file)
 	if err != nil {
 		log.Err(err).Send()

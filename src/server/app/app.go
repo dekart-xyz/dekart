@@ -82,7 +82,15 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		dekartServer.ServeDatasetSource(w, r)
 	}).Methods("GET", "OPTIONS")
 
-	api.HandleFunc("/query-source/{id}.sql", func(w http.ResponseWriter, r *http.Request) {
+	// api.HandleFunc("/query-source/{id}.sql", func(w http.ResponseWriter, r *http.Request) {
+	// 	setOriginHeader(w, r)
+	// 	if r.Method == http.MethodOptions {
+	// 		return
+	// 	}
+	// 	dekartServer.ServeQuerySource(w, r)
+	// }).Methods("GET", "OPTIONS")
+
+	api.HandleFunc("/query-source/{source}/{id}.sql", func(w http.ResponseWriter, r *http.Request) {
 		setOriginHeader(w, r)
 		if r.Method == http.MethodOptions {
 			return

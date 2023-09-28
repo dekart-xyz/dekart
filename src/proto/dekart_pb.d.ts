@@ -799,6 +799,9 @@ export class Query extends jspb.Message {
   getQuerySourceId(): string;
   setQuerySourceId(value: string): void;
 
+  getSourceId(): string;
+  setSourceId(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Query.AsObject;
   static toObject(includeInstance: boolean, msg: Query): Query.AsObject;
@@ -824,6 +827,7 @@ export namespace Query {
     updatedAt: number,
     querySource: Query.QuerySourceMap[keyof Query.QuerySourceMap],
     querySourceId: string,
+    sourceId: string,
   }
 
   export interface JobStatusMap {

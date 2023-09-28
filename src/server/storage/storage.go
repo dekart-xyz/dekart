@@ -29,8 +29,23 @@ type StorageObject interface {
 }
 
 type Storage interface {
-	GetObject(string, ...GetObjectOption) StorageObject
-	GetDefaultBucketName() string
+	GetObject(string, string) StorageObject
+}
+
+func GetBucketName(userBucketName string) string {
+	defaultBucketName := GetDefaultBucketName()
+	if userBucketName != "" {
+		log.Debug().Str("userBucketName", userBucketName).Msg("using user provided bucket")
+		return userBucketName
+	}
+	if defaultBucketName == "" {
+		log.Warn().Msg("DEKART_CLOUD_STORAGE_BUCKET and userBucketName are not set")
+	}
+	return defaultBucketName
+}
+
+func GetDefaultBucketName() string {
+	return os.Getenv("DEKART_CLOUD_STORAGE_BUCKET")
 }
 
 // GoogleCloudStorage implements Storage interface for Google Cloud Storage
@@ -89,16 +104,12 @@ func (o BucketNameOption) apply(options *GetObjectConfig) {
 	options.bucketName = o.BucketName
 }
 
-func (s GoogleCloudStorage) GetObject(object string, opt ...GetObjectOption) StorageObject {
-	conf := GetObjectConfig{}
-	for _, o := range opt {
-		o.apply(&conf)
-	}
-	if conf.bucketName == "" {
-		conf.bucketName = s.defaultBucketName
+func (s GoogleCloudStorage) GetObject(bucketName, object string) StorageObject {
+	if bucketName == "" {
+		log.Warn().Msg("bucketName is not set")
 	}
 	return GoogleCloudStorageObject{
-		conf.bucketName,
+		bucketName,
 		object,
 		s.logger.With().Str("GoogleCloudStorageObject", object).Logger(),
 	}
@@ -192,7 +203,7 @@ func (s S3Storage) GetDefaultBucketName() string {
 	return s.bucketName
 }
 
-func (s S3Storage) GetObject(name string, opt ...GetObjectOption) StorageObject {
+func (s S3Storage) GetObject(bucketName string, name string) StorageObject {
 	return S3StorageObject{
 		s,
 		name,

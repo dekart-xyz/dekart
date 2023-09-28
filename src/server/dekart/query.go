@@ -3,12 +3,12 @@ package dekart
 import (
 	"context"
 	"crypto/sha1"
+	"database/sql"
 	"fmt"
 	"time"
 
 	"dekart/src/proto"
 	"dekart/src/server/job"
-	"dekart/src/server/storage"
 	"dekart/src/server/user"
 
 	"github.com/google/uuid"
@@ -37,26 +37,10 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	bucketName := s.storage.GetDefaultBucketName()
-
-	if bucketName == "" {
-		source, err := s.getSource(ctx, req.SourceId)
-		if err != nil {
-			log.Err(err).Send()
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-		if source == nil {
-			err := fmt.Errorf("source not found id:%s", req.SourceId)
-			log.Warn().Err(err).Send()
-			return nil, status.Error(codes.NotFound, err.Error())
-		}
-		bucketName = source.CloudStorageBucket
-		log.Debug().Str("bucketName", bucketName).Msg("Bucket name from source")
-	}
-
+	bucketName, err := s.getBucketNameFromSourceID(ctx, req.SourceId)
 	if err != nil {
 		log.Err(err).Send()
-		return nil, err
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	id := newUUID()
@@ -131,7 +115,7 @@ func (s Server) storeQuerySync(ctx context.Context, bucketName, queryID string, 
 	queryTextByte := []byte(queryText)
 	h.Write(queryTextByte)
 	newQuerySourceId := fmt.Sprintf("%x", h.Sum(nil))
-	storageWriter := s.storage.GetObject(fmt.Sprintf("%s.sql", newQuerySourceId), storage.BucketNameOption{BucketName: bucketName}).GetWriter(ctx)
+	storageWriter := s.storage.GetObject(bucketName, fmt.Sprintf("%s.sql", newQuerySourceId)).GetWriter(ctx)
 	_, err := storageWriter.Write(queryTextByte)
 	if err != nil {
 		log.Err(err).Msg("Error writing query_text to storage")
@@ -242,7 +226,8 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	queriesRows, err := s.db.QueryContext(ctx,
 		`select 
 			reports.id,
-			queries.query_source_id
+			queries.query_source_id,
+			queries.source_id
 		from queries
 			left join datasets on queries.id = datasets.query_id
 			left join reports on (datasets.report_id = reports.id or queries.report_id = reports.id)
@@ -259,8 +244,9 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	defer queriesRows.Close()
 	var reportID string
 	var prevQuerySourceId string
+	var sourceID sql.NullString
 	for queriesRows.Next() {
-		err := queriesRows.Scan(&reportID, &prevQuerySourceId)
+		err := queriesRows.Scan(&reportID, &prevQuerySourceId, &sourceID)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, status.Error(codes.Internal, err.Error())
@@ -273,7 +259,14 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	err = s.storeQuerySync(ctx, "", req.QueryId, req.QueryText, prevQuerySourceId)
+	bucketName, err := s.getBucketNameFromSourceID(ctx, sourceID.String)
+
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.storeQuerySync(ctx, bucketName, req.QueryId, req.QueryText, prevQuerySourceId)
 
 	if err != nil {
 		code := codes.Internal
@@ -291,7 +284,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		log.Error().Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	obj := s.storage.GetObject(fmt.Sprintf("%s.csv", job.GetID()))
+	obj := s.storage.GetObject(bucketName, fmt.Sprintf("%s.csv", job.GetID()))
 	go s.updateJobStatus(job, jobStatus)
 	job.Status() <- int32(proto.Query_JOB_STATUS_PENDING)
 	err = job.Run(obj)
