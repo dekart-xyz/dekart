@@ -37,7 +37,10 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	bucketName, err := s.getBucketNameFromSourceID(ctx, req.SourceId)
+	source, err := s.getSource(ctx, req.SourceId)
+
+	bucketName := s.getBucketNameFromSource(source)
+
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
@@ -259,7 +262,9 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	bucketName, err := s.getBucketNameFromSourceID(ctx, sourceID.String)
+	source, err := s.getSource(ctx, sourceID.String)
+
+	bucketName := s.getBucketNameFromSource(source)
 
 	if err != nil {
 		log.Err(err).Send()
@@ -287,7 +292,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	obj := s.storage.GetObject(bucketName, fmt.Sprintf("%s.csv", job.GetID()))
 	go s.updateJobStatus(job, jobStatus)
 	job.Status() <- int32(proto.Query_JOB_STATUS_PENDING)
-	err = job.Run(obj)
+	err = job.Run(obj, source)
 	if err != nil {
 		if err == context.Canceled {
 			log.Warn().Err(err).Send()

@@ -234,7 +234,7 @@ func getOauthScopes() []string {
 }
 
 // Run implementation
-func (job *Job) Run(storageObject storage.StorageObject) error {
+func (job *Job) Run(storageObject storage.StorageObject, source *proto.Source) error {
 	job.Logger.Debug().Msg("Run BigQuery Job")
 	var client *bigquery.Client = nil
 	var err error
@@ -243,13 +243,14 @@ func (job *Job) Run(storageObject storage.StorageObject) error {
 		job.Logger.Debug().Msg("Using oauth2 token")
 		client, err = bigquery.NewClient(
 			job.GetCtx(),
-			os.Getenv("DEKART_BIGQUERY_PROJECT_ID"),
+			//start here: use source
+			source.BigqueryProjectId,
 			option.WithTokenSource(tokenSource),
 		)
 	} else {
 		client, err = bigquery.NewClient(
 			job.GetCtx(),
-			os.Getenv("DEKART_BIGQUERY_PROJECT_ID"),
+			source.BigqueryProjectId,
 			option.WithScopes(getOauthScopes()...),
 		)
 	}

@@ -2938,7 +2938,8 @@ proto.Source.toObject = function(includeInstance, msg) {
     id: jspb.Message.getFieldWithDefault(msg, 1, ""),
     sourceName: jspb.Message.getFieldWithDefault(msg, 2, ""),
     bigqueryProjectId: jspb.Message.getFieldWithDefault(msg, 3, ""),
-    cloudStorageBucket: jspb.Message.getFieldWithDefault(msg, 4, "")
+    cloudStorageBucket: jspb.Message.getFieldWithDefault(msg, 4, ""),
+    isDefault: jspb.Message.getBooleanFieldWithDefault(msg, 5, false)
   };
 
   if (includeInstance) {
@@ -2990,6 +2991,10 @@ proto.Source.deserializeBinaryFromReader = function(msg, reader) {
     case 4:
       var value = /** @type {string} */ (reader.readString());
       msg.setCloudStorageBucket(value);
+      break;
+    case 5:
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setIsDefault(value);
       break;
     default:
       reader.skipField();
@@ -3045,6 +3050,13 @@ proto.Source.serializeBinaryToWriter = function(message, writer) {
   if (f.length > 0) {
     writer.writeString(
       4,
+      f
+    );
+  }
+  f = message.getIsDefault();
+  if (f) {
+    writer.writeBool(
+      5,
       f
     );
   }
@@ -3120,6 +3132,24 @@ proto.Source.prototype.getCloudStorageBucket = function() {
  */
 proto.Source.prototype.setCloudStorageBucket = function(value) {
   return jspb.Message.setProto3StringField(this, 4, value);
+};
+
+
+/**
+ * optional bool is_default = 5;
+ * @return {boolean}
+ */
+proto.Source.prototype.getIsDefault = function() {
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 5, false));
+};
+
+
+/**
+ * @param {boolean} value
+ * @return {!proto.Source} returns this
+ */
+proto.Source.prototype.setIsDefault = function(value) {
+  return jspb.Message.setProto3BooleanField(this, 5, value);
 };
 
 

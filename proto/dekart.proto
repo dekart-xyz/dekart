@@ -93,6 +93,7 @@ message Source {
     string source_name = 2;
     string bigquery_project_id = 3;
     string cloud_storage_bucket = 4;
+    bool is_default = 5;
 }
 
 message GetUsageRequest {}

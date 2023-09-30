@@ -143,7 +143,7 @@ func (j *Job) wait() {
 	j.Cancel()
 }
 
-func (j *Job) Run(storageObject storage.StorageObject) error {
+func (j *Job) Run(storageObject storage.StorageObject, source *proto.Source) error {
 	j.Lock()
 	j.storageObject = storageObject
 	j.Unlock()

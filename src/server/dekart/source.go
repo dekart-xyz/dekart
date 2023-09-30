@@ -7,6 +7,7 @@ import (
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
 	"fmt"
+	"os"
 
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
@@ -29,24 +30,17 @@ func (s Server) TestConnection(ctx context.Context, req *proto.TestConnectionReq
 	return storage.TestConnection(ctx, req.Source)
 }
 
-func (s Server) getBucketNameFromSourceID(ctx context.Context, sourceID string) (string, error) {
-	bucketName := storage.GetDefaultBucketName()
-	if sourceID == "default" {
-		return bucketName, nil
+func (s Server) getBucketNameFromSource(source *proto.Source) string {
+	if source == nil {
+		return storage.GetDefaultBucketName()
 	}
-	if sourceID != "" {
-		source, err := s.getSource(ctx, sourceID)
-		if err != nil {
-			log.Err(err).Send()
-			return "", err
-		}
-		if source == nil {
-			log.Warn().Msgf("source not found id:%s", sourceID)
-			return "", nil
-		}
-		bucketName = source.CloudStorageBucket
+
+	bucketName := source.CloudStorageBucket
+
+	if bucketName == "" {
+		log.Warn().Msgf("source %s has no bucket name", source.Id)
 	}
-	return bucketName, nil
+	return bucketName
 }
 
 func (s Server) getSource(ctx context.Context, sourceID string) (*proto.Source, error) {
@@ -56,6 +50,17 @@ func (s Server) getSource(ctx context.Context, sourceID string) (*proto.Source, 
 		log.Err(err).Send()
 		return nil, err
 	}
+
+	if sourceID == "default" || sourceID == "" {
+		return &proto.Source{
+			Id:                 "default",
+			SourceName:         "default",
+			CloudStorageBucket: storage.GetDefaultBucketName(),
+			BigqueryProjectId:  os.Getenv("DEKART_BIGQUERY_PROJECT_ID"),
+			IsDefault:          true,
+		}, nil
+	}
+
 	res, err := s.db.QueryContext(ctx, `
 		select
 			id,
@@ -91,6 +96,7 @@ func (s Server) getSource(ctx context.Context, sourceID string) (*proto.Source, 
 		}
 	}
 	if source.Id == "" {
+		log.Warn().Msgf("source not found id:%s", sourceID)
 		return nil, nil
 	}
 	return &source, nil

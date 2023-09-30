@@ -18,7 +18,10 @@ func (s Server) ServeQuerySource(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 	}
 
-	bucketName, err := s.getBucketNameFromSourceID(ctx, vars["source"])
+	source, err := s.getSource(ctx, vars["source"])
+
+	bucketName := s.getBucketNameFromSource(source)
+
 	if err != nil {
 		HttpError(w, err)
 		return

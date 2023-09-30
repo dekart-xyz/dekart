@@ -270,6 +270,9 @@ export class Source extends jspb.Message {
   getCloudStorageBucket(): string;
   setCloudStorageBucket(value: string): void;
 
+  getIsDefault(): boolean;
+  setIsDefault(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Source.AsObject;
   static toObject(includeInstance: boolean, msg: Source): Source.AsObject;
@@ -286,6 +289,7 @@ export namespace Source {
     sourceName: string,
     bigqueryProjectId: string,
     cloudStorageBucket: string,
+    isDefault: boolean,
   }
 }
 
