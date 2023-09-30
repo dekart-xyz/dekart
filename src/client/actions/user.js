@@ -13,6 +13,7 @@ export function subscribeUserStream () {
     // const request = new ReportListRequest()
     console.log('subscribeUserStream')
     dispatch(grpcStream(Dekart.GetUserStream, request, (message, err) => {
+      console.log('subscribeUserStream message', message, err)
       if (message) {
         if (prevRes.sourceUpdate !== message.sourceUpdate) {
           prevRes.sourceUpdate = message.sourceUpdate
