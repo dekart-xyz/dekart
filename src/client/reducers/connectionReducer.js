@@ -92,28 +92,10 @@ function list (state = [], action) {
   }
 }
 
-function selectedSourceID (state = null, action) {
-  switch (action.type) {
-    case newConnection.name:
-      return null
-    case editSource.name:
-      return action.id
-    case connectionCreated.name:
-      return action.id
-    case selectSource.name:
-      return action.id
-    case archiveSource.name:
-      return null
-    default:
-      return state
-  }
-}
-
 export default combineReducers({
   dialog,
   test,
-  list,
-  selectedSourceID
+  list
 })
 
 // export function connectionSettings (state = {

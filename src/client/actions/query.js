@@ -13,12 +13,10 @@ export function queryChanged (queryId, queryText) {
 }
 
 export function createQuery (datasetId) {
-  return (dispatch, store) => {
-    const { selectedSourceID } = store().connection
+  return (dispatch) => {
     dispatch({ type: createQuery.name })
     const request = new CreateQueryRequest()
     request.setDatasetId(datasetId)
-    request.setSourceId(selectedSourceID)
     dispatch(grpcCall(Dekart.CreateQuery, request))
   }
 }
@@ -55,7 +53,7 @@ export function downloadQuerySource (query) {
       return
     }
     try {
-      const res = await get(`/query-source/${query.sourceId || 'default'}/${query.querySourceId}.sql`, token)
+      const res = await get(`/query-source/${query.id}/${query.querySourceId}.sql`, token)
       const queryText = await res.text()
       dispatch(querySource(query.id, query.querySourceId, queryText))
     } catch (err) {

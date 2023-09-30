@@ -43,6 +43,38 @@ func (s Server) getBucketNameFromSource(source *proto.Source) string {
 	return bucketName
 }
 
+func (s Server) getSourceFromDatasetID(ctx context.Context, datasetID string) (*proto.Source, error) {
+	var sourceID sql.NullString
+	err := s.db.QueryRowContext(ctx,
+		`select
+			source_id
+		from datasets
+		where id=$1 limit 1`,
+		datasetID,
+	).Scan(&sourceID)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, err
+	}
+	return s.getSource(ctx, sourceID.String)
+}
+
+func (s Server) getSourceFromQueryID(ctx context.Context, queryID string) (*proto.Source, error) {
+	var sourceID sql.NullString
+	err := s.db.QueryRowContext(ctx,
+		`select
+			source_id
+		from queries join datasets on (queries.id=datasets.query_id)
+		where queries.id=$1 limit 1`,
+		queryID,
+	).Scan(&sourceID)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, err
+	}
+	return s.getSource(ctx, sourceID.String)
+}
+
 func (s Server) getSource(ctx context.Context, sourceID string) (*proto.Source, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {

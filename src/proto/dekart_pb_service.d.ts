@@ -67,13 +67,22 @@ type DekartRemoveDataset = {
   readonly responseType: typeof proto_dekart_pb.RemoveDatasetResponse;
 };
 
-type DekartUpdateDataset = {
+type DekartUpdateDatasetName = {
   readonly methodName: string;
   readonly service: typeof Dekart;
   readonly requestStream: false;
   readonly responseStream: false;
-  readonly requestType: typeof proto_dekart_pb.UpdateDatasetRequest;
-  readonly responseType: typeof proto_dekart_pb.UpdateDatasetResponse;
+  readonly requestType: typeof proto_dekart_pb.UpdateDatasetNameRequest;
+  readonly responseType: typeof proto_dekart_pb.UpdateDatasetNameResponse;
+};
+
+type DekartUpdateDatasetSource = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.UpdateDatasetSourceRequest;
+  readonly responseType: typeof proto_dekart_pb.UpdateDatasetSourceResponse;
 };
 
 type DekartCreateFile = {
@@ -211,7 +220,8 @@ export class Dekart {
   static readonly SetDiscoverable: DekartSetDiscoverable;
   static readonly CreateDataset: DekartCreateDataset;
   static readonly RemoveDataset: DekartRemoveDataset;
-  static readonly UpdateDataset: DekartUpdateDataset;
+  static readonly UpdateDatasetName: DekartUpdateDatasetName;
+  static readonly UpdateDatasetSource: DekartUpdateDatasetSource;
   static readonly CreateFile: DekartCreateFile;
   static readonly CreateQuery: DekartCreateQuery;
   static readonly RunQuery: DekartRunQuery;
@@ -323,14 +333,23 @@ export class DekartClient {
     requestMessage: proto_dekart_pb.RemoveDatasetRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.RemoveDatasetResponse|null) => void
   ): UnaryResponse;
-  updateDataset(
-    requestMessage: proto_dekart_pb.UpdateDatasetRequest,
+  updateDatasetName(
+    requestMessage: proto_dekart_pb.UpdateDatasetNameRequest,
     metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateDatasetResponse|null) => void
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateDatasetNameResponse|null) => void
   ): UnaryResponse;
-  updateDataset(
-    requestMessage: proto_dekart_pb.UpdateDatasetRequest,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateDatasetResponse|null) => void
+  updateDatasetName(
+    requestMessage: proto_dekart_pb.UpdateDatasetNameRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateDatasetNameResponse|null) => void
+  ): UnaryResponse;
+  updateDatasetSource(
+    requestMessage: proto_dekart_pb.UpdateDatasetSourceRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateDatasetSourceResponse|null) => void
+  ): UnaryResponse;
+  updateDatasetSource(
+    requestMessage: proto_dekart_pb.UpdateDatasetSourceRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateDatasetSourceResponse|null) => void
   ): UnaryResponse;
   createFile(
     requestMessage: proto_dekart_pb.CreateFileRequest,

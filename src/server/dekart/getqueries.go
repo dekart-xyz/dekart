@@ -33,7 +33,6 @@ func rowsToQueries(queryRows *sql.Rows) ([]*proto.Query, error) {
 			&updatedAt,
 			&query.QuerySource,
 			&query.QuerySourceId,
-			&query.SourceId,
 		); err != nil {
 			log.Fatal().Err(err).Send()
 		}
@@ -88,8 +87,7 @@ func (s Server) getQueries(ctx context.Context, datasets []*proto.Dataset) ([]*p
 				created_at,
 				updated_at,
 				query_source,
-				query_source_id,
-				source_id
+				query_source_id
 			from queries where id = ANY($1) order by created_at asc`,
 			pq.Array(queryIds),
 		)
@@ -122,8 +120,7 @@ func (s Server) getQueriesLegacy(ctx context.Context, reportID string) ([]*proto
 			created_at,
 			updated_at,
 			query_source,
-			query_source_id,
-			source_id
+			query_source_id
 		from queries where report_id=$1 order by created_at asc`,
 		reportID,
 	)

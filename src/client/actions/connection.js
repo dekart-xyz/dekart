@@ -1,5 +1,6 @@
 import { ArchiveSourceRequest, CreateSourceRequest, GetSourceListRequest, Source, TestConnectionRequest, UpdateSourceRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
+import { updateDataset, updateDatasetSource } from './dataset'
 import { grpcCall } from './grpc'
 
 export function connectionCreated ({ id, sourceName }) {
@@ -30,7 +31,7 @@ export function archiveSource (id) {
   }
 }
 
-export function newConnection () {
+export function newConnection (datasetId) {
   return async (dispatch) => {
     dispatch({ type: newConnection.name })
     const sourceName = `New ${(new Date()).toLocaleString()}`
@@ -39,6 +40,7 @@ export function newConnection () {
     const res = await new Promise((resolve) => {
       dispatch(grpcCall(Dekart.CreateSource, request, resolve))
     })
+    dispatch(updateDatasetSource(datasetId, res.source.id))
     dispatch(connectionCreated(res.source))
   }
 }

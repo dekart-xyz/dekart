@@ -37,7 +37,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	source, err := s.getSource(ctx, req.SourceId)
+	source, err := s.getSourceFromDatasetID(ctx, req.DatasetId)
 
 	bucketName := s.getBucketNameFromSource(source)
 
@@ -59,12 +59,8 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	}
 
 	_, err = s.db.ExecContext(ctx,
-		`insert into queries (id, query_text, source_id) values (
-			$1,
-			'', 
-			case when $2 = '' then null else CAST($2 AS uuid) end)`,
+		`insert into queries (id, query_text) values ($1, '')`,
 		id,
-		req.SourceId,
 	)
 	if err != nil {
 		log.Err(err).Send()
@@ -127,7 +123,7 @@ func (s Server) storeQuerySync(ctx context.Context, bucketName, queryID string, 
 	}
 	err = storageWriter.Close()
 	if err != nil {
-		log.Err(err).Msg("Error writing query_text to storage")
+		log.Err(err).Str("bucketName", bucketName).Msg("Error writing query_text to storage")
 		return err
 	}
 
@@ -230,7 +226,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		`select 
 			reports.id,
 			queries.query_source_id,
-			queries.source_id
+			datasets.source_id
 		from queries
 			left join datasets on queries.id = datasets.query_id
 			left join reports on (datasets.report_id = reports.id or queries.report_id = reports.id)

@@ -26,7 +26,8 @@ const (
 	Dekart_SetDiscoverable_FullMethodName     = "/Dekart/SetDiscoverable"
 	Dekart_CreateDataset_FullMethodName       = "/Dekart/CreateDataset"
 	Dekart_RemoveDataset_FullMethodName       = "/Dekart/RemoveDataset"
-	Dekart_UpdateDataset_FullMethodName       = "/Dekart/UpdateDataset"
+	Dekart_UpdateDatasetName_FullMethodName   = "/Dekart/UpdateDatasetName"
+	Dekart_UpdateDatasetSource_FullMethodName = "/Dekart/UpdateDatasetSource"
 	Dekart_CreateFile_FullMethodName          = "/Dekart/CreateFile"
 	Dekart_CreateQuery_FullMethodName         = "/Dekart/CreateQuery"
 	Dekart_RunQuery_FullMethodName            = "/Dekart/RunQuery"
@@ -56,7 +57,9 @@ type DekartClient interface {
 	// datasets
 	CreateDataset(ctx context.Context, in *CreateDatasetRequest, opts ...grpc.CallOption) (*CreateDatasetResponse, error)
 	RemoveDataset(ctx context.Context, in *RemoveDatasetRequest, opts ...grpc.CallOption) (*RemoveDatasetResponse, error)
-	UpdateDataset(ctx context.Context, in *UpdateDatasetRequest, opts ...grpc.CallOption) (*UpdateDatasetResponse, error)
+	// rpc UpdateDataset(UpdateDatasetRequest) returns (UpdateDatasetResponse) {}
+	UpdateDatasetName(ctx context.Context, in *UpdateDatasetNameRequest, opts ...grpc.CallOption) (*UpdateDatasetNameResponse, error)
+	UpdateDatasetSource(ctx context.Context, in *UpdateDatasetSourceRequest, opts ...grpc.CallOption) (*UpdateDatasetSourceResponse, error)
 	// files
 	CreateFile(ctx context.Context, in *CreateFileRequest, opts ...grpc.CallOption) (*CreateFileResponse, error)
 	// queries
@@ -149,9 +152,18 @@ func (c *dekartClient) RemoveDataset(ctx context.Context, in *RemoveDatasetReque
 	return out, nil
 }
 
-func (c *dekartClient) UpdateDataset(ctx context.Context, in *UpdateDatasetRequest, opts ...grpc.CallOption) (*UpdateDatasetResponse, error) {
-	out := new(UpdateDatasetResponse)
-	err := c.cc.Invoke(ctx, Dekart_UpdateDataset_FullMethodName, in, out, opts...)
+func (c *dekartClient) UpdateDatasetName(ctx context.Context, in *UpdateDatasetNameRequest, opts ...grpc.CallOption) (*UpdateDatasetNameResponse, error) {
+	out := new(UpdateDatasetNameResponse)
+	err := c.cc.Invoke(ctx, Dekart_UpdateDatasetName_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) UpdateDatasetSource(ctx context.Context, in *UpdateDatasetSourceRequest, opts ...grpc.CallOption) (*UpdateDatasetSourceResponse, error) {
+	out := new(UpdateDatasetSourceResponse)
+	err := c.cc.Invoke(ctx, Dekart_UpdateDatasetSource_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -366,7 +378,9 @@ type DekartServer interface {
 	// datasets
 	CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error)
 	RemoveDataset(context.Context, *RemoveDatasetRequest) (*RemoveDatasetResponse, error)
-	UpdateDataset(context.Context, *UpdateDatasetRequest) (*UpdateDatasetResponse, error)
+	// rpc UpdateDataset(UpdateDatasetRequest) returns (UpdateDatasetResponse) {}
+	UpdateDatasetName(context.Context, *UpdateDatasetNameRequest) (*UpdateDatasetNameResponse, error)
+	UpdateDatasetSource(context.Context, *UpdateDatasetSourceRequest) (*UpdateDatasetSourceResponse, error)
 	// files
 	CreateFile(context.Context, *CreateFileRequest) (*CreateFileResponse, error)
 	// queries
@@ -414,8 +428,11 @@ func (UnimplementedDekartServer) CreateDataset(context.Context, *CreateDatasetRe
 func (UnimplementedDekartServer) RemoveDataset(context.Context, *RemoveDatasetRequest) (*RemoveDatasetResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RemoveDataset not implemented")
 }
-func (UnimplementedDekartServer) UpdateDataset(context.Context, *UpdateDatasetRequest) (*UpdateDatasetResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateDataset not implemented")
+func (UnimplementedDekartServer) UpdateDatasetName(context.Context, *UpdateDatasetNameRequest) (*UpdateDatasetNameResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateDatasetName not implemented")
+}
+func (UnimplementedDekartServer) UpdateDatasetSource(context.Context, *UpdateDatasetSourceRequest) (*UpdateDatasetSourceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateDatasetSource not implemented")
 }
 func (UnimplementedDekartServer) CreateFile(context.Context, *CreateFileRequest) (*CreateFileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateFile not implemented")
@@ -598,20 +615,38 @@ func _Dekart_RemoveDataset_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_UpdateDataset_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateDatasetRequest)
+func _Dekart_UpdateDatasetName_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateDatasetNameRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DekartServer).UpdateDataset(ctx, in)
+		return srv.(DekartServer).UpdateDatasetName(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Dekart_UpdateDataset_FullMethodName,
+		FullMethod: Dekart_UpdateDatasetName_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).UpdateDataset(ctx, req.(*UpdateDatasetRequest))
+		return srv.(DekartServer).UpdateDatasetName(ctx, req.(*UpdateDatasetNameRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_UpdateDatasetSource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateDatasetSourceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).UpdateDatasetSource(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_UpdateDatasetSource_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).UpdateDatasetSource(ctx, req.(*UpdateDatasetSourceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -913,8 +948,12 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Dekart_RemoveDataset_Handler,
 		},
 		{
-			MethodName: "UpdateDataset",
-			Handler:    _Dekart_UpdateDataset_Handler,
+			MethodName: "UpdateDatasetName",
+			Handler:    _Dekart_UpdateDatasetName_Handler,
+		},
+		{
+			MethodName: "UpdateDatasetSource",
+			Handler:    _Dekart_UpdateDatasetSource_Handler,
 		},
 		{
 			MethodName: "CreateFile",

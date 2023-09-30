@@ -1,4 +1,4 @@
-import { CreateDatasetRequest, RemoveDatasetRequest, UpdateDatasetRequest } from '../../proto/dekart_pb'
+import { CreateDatasetRequest, RemoveDatasetRequest, UpdateDatasetNameRequest, UpdateDatasetRequest, UpdateDatasetSourceRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { downloading, setError, finishDownloading, success } from './message'
@@ -27,18 +27,33 @@ export function setActiveDataset (datasetId) {
   }
 }
 
-export function updateDataset (datasetId, name) {
+export function updateDatasetName (datasetId, name) {
   return async (dispatch, getState) => {
     const { datasets } = getState()
     const dataset = datasets.find(d => d.id === datasetId)
     if (!dataset) {
       return
     }
-    dispatch({ type: updateDataset.name, datasetId, name })
-    const request = new UpdateDatasetRequest()
+    dispatch({ type: updateDatasetName.name, datasetId, name })
+    const request = new UpdateDatasetNameRequest()
     request.setDatasetId(datasetId)
     request.setName(name)
-    dispatch(grpcCall(Dekart.UpdateDataset, request))
+    dispatch(grpcCall(Dekart.UpdateDatasetName, request))
+  }
+}
+
+export function updateDatasetSource (datasetId, sourceId) {
+  return async (dispatch, getState) => {
+    const { datasets } = getState()
+    const dataset = datasets.find(d => d.id === datasetId)
+    if (!dataset) {
+      return
+    }
+    dispatch({ type: updateDatasetSource.name, datasetId })
+    const request = new UpdateDatasetSourceRequest()
+    request.setDatasetId(datasetId)
+    request.setSourceId(sourceId)
+    dispatch(grpcCall(Dekart.UpdateDatasetSource, request))
   }
 }
 
@@ -71,7 +86,7 @@ export function downloadDataset (dataset, sourceId, extension, prevDatasetsList)
     const { token } = getState()
     let data
     try {
-      const res = await get(`/dataset-source/${sourceId}.${extension}`, token)
+      const res = await get(`/dataset-source/${dataset.id}/${sourceId}.${extension}`, token)
       if (extension === 'csv') {
         const csv = await res.text()
         data = processCsvData(csv)

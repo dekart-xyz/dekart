@@ -12,13 +12,13 @@ import Dropdown from 'antd/es/dropdown'
 import { ConsoleSqlOutlined, UploadOutlined, MoreOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
 import ConnectionModal from './ConnectionModal'
 import { useEffect, useState } from 'react'
+import { updateDataset, updateDatasetSource } from './actions/dataset'
 
 const NEW_DATASOURCE = 'NEW_DATASOURCE'
 function DatasetSelector ({ dataset }) {
   const dispatch = useDispatch()
   const env = useSelector(state => state.env)
   const connectionList = useSelector(state => state.connection.list)
-  const selectedSourceID = useSelector(state => state.connection.selectedSourceID)
   if (!env.loaded) {
     return null
   }
@@ -28,7 +28,6 @@ function DatasetSelector ({ dataset }) {
   if (!ALLOW_FILE_UPLOAD && !userDefinedDatasource) {
     return null
   }
-  console.log('connectionList', connectionList)
   return (
     <div className={styles.datasetSelector}>
       <div className={styles.selector}>
@@ -37,12 +36,12 @@ function DatasetSelector ({ dataset }) {
           <Select
             placeholder='Select data source'
             className={styles.connectionSelect}
-            value={selectedSourceID}
+            value={dataset.sourceId || null}
             onSelect={value => {
               if (value === NEW_DATASOURCE) {
-                dispatch(newConnection())
+                dispatch(newConnection(dataset.id))
               } else {
-                dispatch(selectSource(value))
+                dispatch(updateDatasetSource(dataset.id, value))
               }
             }}
             options={[
@@ -57,9 +56,9 @@ function DatasetSelector ({ dataset }) {
             ]}
           /><Button
             type='text'
-            disabled={!selectedSourceID}
+            disabled={!dataset.sourceId}
             className={styles.connectionEditButton} onClick={
-            () => dispatch(editSource(selectedSourceID))
+            () => dispatch(editSource(dataset.sourceId))
           } icon={<MoreOutlined />}
             />
         </div>
@@ -72,7 +71,7 @@ function DatasetSelector ({ dataset }) {
       <div className={styles.status}>
         <div className={styles.datasetTypeSelector}>
           <Dropdown
-            disabled={!selectedSourceID}
+            disabled={!dataset.sourceId}
             menu={{
               items: [
                 {

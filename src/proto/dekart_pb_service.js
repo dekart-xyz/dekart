@@ -73,13 +73,22 @@ Dekart.RemoveDataset = {
   responseType: proto_dekart_pb.RemoveDatasetResponse
 };
 
-Dekart.UpdateDataset = {
-  methodName: "UpdateDataset",
+Dekart.UpdateDatasetName = {
+  methodName: "UpdateDatasetName",
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.UpdateDatasetRequest,
-  responseType: proto_dekart_pb.UpdateDatasetResponse
+  requestType: proto_dekart_pb.UpdateDatasetNameRequest,
+  responseType: proto_dekart_pb.UpdateDatasetNameResponse
+};
+
+Dekart.UpdateDatasetSource = {
+  methodName: "UpdateDatasetSource",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.UpdateDatasetSourceRequest,
+  responseType: proto_dekart_pb.UpdateDatasetSourceResponse
 };
 
 Dekart.CreateFile = {
@@ -432,11 +441,42 @@ DekartClient.prototype.removeDataset = function removeDataset(requestMessage, me
   };
 };
 
-DekartClient.prototype.updateDataset = function updateDataset(requestMessage, metadata, callback) {
+DekartClient.prototype.updateDatasetName = function updateDatasetName(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
-  var client = grpc.unary(Dekart.UpdateDataset, {
+  var client = grpc.unary(Dekart.UpdateDatasetName, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.updateDatasetSource = function updateDatasetSource(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.UpdateDatasetSource, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,

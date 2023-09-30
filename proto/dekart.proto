@@ -13,7 +13,9 @@ service Dekart {
     // datasets
     rpc CreateDataset(CreateDatasetRequest) returns (CreateDatasetResponse) {}
     rpc RemoveDataset(RemoveDatasetRequest) returns (RemoveDatasetResponse) {}
-    rpc UpdateDataset(UpdateDatasetRequest) returns (UpdateDatasetResponse) {}
+    // rpc UpdateDataset(UpdateDatasetRequest) returns (UpdateDatasetResponse) {}
+    rpc UpdateDatasetName(UpdateDatasetNameRequest) returns (UpdateDatasetNameResponse) {}
+    rpc UpdateDatasetSource(UpdateDatasetSourceRequest) returns (UpdateDatasetSourceResponse) {}
 
     // files
     rpc CreateFile(CreateFileRequest) returns (CreateFileResponse) {}
@@ -202,6 +204,7 @@ message Dataset {
     int64 updated_at = 5;
     string file_id = 6;
     string name = 7;
+    string source_id = 8;
 }
 
 message Query {
@@ -235,7 +238,6 @@ message Query {
     }
     QuerySource query_source = 13;
     string query_source_id = 14;
-    string source_id = 15;
 }
 
 message File {
@@ -279,12 +281,20 @@ message CancelQueryRequest {
 message CancelQueryResponse {
 }
 
-message UpdateDatasetRequest {
+message UpdateDatasetNameRequest {
     string dataset_id = 1;
     string name = 2;
 }
 
-message UpdateDatasetResponse {
+message UpdateDatasetNameResponse {
+}
+
+message UpdateDatasetSourceRequest {
+    string dataset_id = 1;
+    string source_id = 2;
+}
+
+message UpdateDatasetSourceResponse {
 }
 
 message CreateDatasetRequest {
@@ -304,7 +314,6 @@ message CreateFileResponse {
 
 message CreateQueryRequest {
     string dataset_id = 1;
-    string source_id = 2;
 }
 
 message CreateQueryResponse {

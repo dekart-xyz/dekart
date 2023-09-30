@@ -44,7 +44,8 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 			file_id,
 			created_at,
 			updated_at,
-			name
+			name,
+			source_id
 		from datasets where report_id=$1 order by created_at asc`,
 		reportID,
 	)
@@ -60,6 +61,7 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 		var updatedAt time.Time
 		var queryId sql.NullString
 		var fileId sql.NullString
+		var sourceID sql.NullString
 		if err := datasetRows.Scan(
 			&dataset.Id,
 			&queryId,
@@ -67,6 +69,7 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 			&createdAt,
 			&updatedAt,
 			&dataset.Name,
+			&sourceID,
 		); err != nil {
 			log.Err(err).Msg("Error scanning dataset results")
 			return nil, err
@@ -75,6 +78,7 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 		dataset.UpdatedAt = updatedAt.Unix()
 		dataset.QueryId = queryId.String
 		dataset.FileId = fileId.String
+		dataset.SourceId = sourceID.String
 		datasets = append(datasets, &dataset)
 	}
 	return datasets, nil
@@ -125,7 +129,7 @@ func (s Server) getReportID(ctx context.Context, datasetID string, email string)
 	return &reportID, nil
 }
 
-func (s Server) UpdateDataset(ctx context.Context, req *proto.UpdateDatasetRequest) (*proto.UpdateDatasetResponse, error) {
+func (s Server) UpdateDatasetName(ctx context.Context, req *proto.UpdateDatasetNameRequest) (*proto.UpdateDatasetNameResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
@@ -145,7 +149,10 @@ func (s Server) UpdateDataset(ctx context.Context, req *proto.UpdateDatasetReque
 	}
 
 	_, err = s.db.ExecContext(ctx,
-		`update datasets set name=$1 where id=$2`,
+		`update
+			datasets set
+			name = $1
+			where id=$2`,
 		req.Name,
 		req.DatasetId,
 	)
@@ -156,7 +163,44 @@ func (s Server) UpdateDataset(ctx context.Context, req *proto.UpdateDatasetReque
 
 	s.reportStreams.Ping(*reportID)
 
-	return &proto.UpdateDatasetResponse{}, nil
+	return &proto.UpdateDatasetNameResponse{}, nil
+}
+
+func (s Server) UpdateDatasetSource(ctx context.Context, req *proto.UpdateDatasetSourceRequest) (*proto.UpdateDatasetSourceResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+
+	reportID, err := s.getReportID(ctx, req.DatasetId, claims.Email)
+
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if reportID == nil {
+		err := fmt.Errorf("dataset not found id:%s", req.DatasetId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+
+	_, err = s.db.ExecContext(ctx,
+		`update
+			datasets set
+			source_id = $1
+			where id=$2`,
+		req.SourceId,
+		req.DatasetId,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	s.reportStreams.Ping(*reportID)
+
+	return &proto.UpdateDatasetSourceResponse{}, nil
 }
 
 func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetRequest) (*proto.RemoveDatasetResponse, error) {
@@ -274,7 +318,24 @@ func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetReque
 func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	ctx := r.Context()
-	obj := s.storage.GetObject("", fmt.Sprintf("%s.%s", vars["id"], vars["extension"]))
+
+	source, err := s.getSourceFromDatasetID(ctx, vars["dataset"])
+
+	if err != nil {
+		HttpError(w, err)
+		return
+	}
+
+	if source == nil {
+		err := fmt.Errorf("source not found id:%s", vars["dataset"])
+		log.Warn().Err(err).Send()
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	bucketName := s.getBucketNameFromSource(source)
+
+	obj := s.storage.GetObject(bucketName, fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
 	ctreated, err := obj.GetCreatedAt(ctx)
 	if err != nil {
 		HttpError(w, err)
