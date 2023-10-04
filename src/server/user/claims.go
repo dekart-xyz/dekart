@@ -121,6 +121,7 @@ func (c ClaimsCheck) validateToken(ctx context.Context, header string) *Claims {
 func CopyClaims(sourceCtx, destCtx context.Context) context.Context {
 	claims := GetClaims(sourceCtx)
 	if claims == nil {
+		log.Debug().Msg("No claims found in source context")
 		return destCtx
 	}
 	return context.WithValue(destCtx, contextKey, claims)
@@ -129,6 +130,7 @@ func CopyClaims(sourceCtx, destCtx context.Context) context.Context {
 // GetTokenSource returns oauth2.TokenSource from context, returns nil if not found
 func GetTokenSource(ctx context.Context) oauth2.TokenSource {
 	claims := GetClaims(ctx)
+	log.Debug().Interface("claims", claims).Msg("GetTokenSource claims")
 	if claims == nil || claims.AccessToken == "" {
 		return nil
 	}

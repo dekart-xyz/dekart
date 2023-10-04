@@ -75,6 +75,22 @@ func (s Server) getSourceFromQueryID(ctx context.Context, queryID string) (*prot
 	return s.getSource(ctx, sourceID.String)
 }
 
+func (s Server) getSourceFromFileID(ctx context.Context, fileID string) (*proto.Source, error) {
+	var sourceID sql.NullString
+	err := s.db.QueryRowContext(ctx,
+		`select
+			source_id
+		from files join datasets on (files.id=datasets.file_id)
+		where files.id=$1 limit 1`,
+		fileID,
+	).Scan(&sourceID)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, err
+	}
+	return s.getSource(ctx, sourceID.String)
+}
+
 func (s Server) getSource(ctx context.Context, sourceID string) (*proto.Source, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {

@@ -129,6 +129,7 @@ func (o GoogleCloudStorageObject) CopyFromS3(ctx context.Context, source string)
 
 func (o GoogleCloudStorageObject) getObject(ctx context.Context) *storage.ObjectHandle {
 	tokenSource := user.GetTokenSource(ctx)
+	log.Debug().Interface("tokenSource", tokenSource).Msg("getObject tokenSource")
 	var client *storage.Client
 	var err error
 	if tokenSource == nil {
