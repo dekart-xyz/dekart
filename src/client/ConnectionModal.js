@@ -5,22 +5,22 @@ import { useSelector, useDispatch } from 'react-redux'
 import Button from 'antd/es/button'
 import styles from './ConnectionModal.module.css'
 import { useState, useEffect } from 'react'
-import { archiveSource, closeConnectionDialog, connectionChanged, saveConnection, testConnection } from './actions/connection'
+import { archiveConnection as archiveConnection, closeConnectionDialog, connectionChanged, saveConnection, testConnection } from './actions/connection'
 import { ConsoleSqlOutlined, UploadOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
 import Tooltip from 'antd/es/tooltip'
 
 export default function ConnectionModal () {
   const { dialog, test } = useSelector(state => state.connection)
   const { visible, id, loading } = dialog
-  const source = useSelector(state => state.connection.list.find(s => s.id === id))
+  const connection = useSelector(state => state.connection.list.find(s => s.id === id))
   const { tested, testing, error: testError, success: testSuccess } = test
   const dispatch = useDispatch()
   const [form] = Form.useForm()
   useEffect(() => {
-    if (source) {
-      form.setFieldsValue(source)
+    if (connection) {
+      form.setFieldsValue(connection)
     }
-  }, [source])
+  }, [connection])
   if (!visible) {
     return null
   }
@@ -51,7 +51,7 @@ export default function ConnectionModal () {
           >
             Save
           </Button>
-          <Button danger onClick={() => dispatch(archiveSource(id))}>
+          <Button danger onClick={() => dispatch(archiveConnection(id))}>
             Archive
           </Button>
           {/* <Button onClick={() => dispatch(closeConnectionDialog())}>
@@ -70,7 +70,7 @@ export default function ConnectionModal () {
             }
           }}
         >
-          <Form.Item label='Connection Name' name='sourceName' required>
+          <Form.Item label='Connection Name' name='connectionName' required>
             <Input />
           </Form.Item>
           <Form.Item label='Google Cloud project ID' extra='used to access BigQuery' required name='bigqueryProjectId'>

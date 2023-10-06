@@ -1,6 +1,6 @@
-CREATE TABLE IF NOT EXISTS sources (
+CREATE TABLE IF NOT EXISTS connections (
   id uuid NOT NULL,
-  source_name text NOT NULL,
+  connection_name text NOT NULL,
   author_email text default 'UNKNOWN_EMAIL',
   bigquery_project_id text default NULL,
   cloud_storage_bucket text default NULL,

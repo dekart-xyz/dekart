@@ -19,29 +19,29 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Dekart_CreateReport_FullMethodName        = "/Dekart/CreateReport"
-	Dekart_ForkReport_FullMethodName          = "/Dekart/ForkReport"
-	Dekart_UpdateReport_FullMethodName        = "/Dekart/UpdateReport"
-	Dekart_ArchiveReport_FullMethodName       = "/Dekart/ArchiveReport"
-	Dekart_SetDiscoverable_FullMethodName     = "/Dekart/SetDiscoverable"
-	Dekart_CreateDataset_FullMethodName       = "/Dekart/CreateDataset"
-	Dekart_RemoveDataset_FullMethodName       = "/Dekart/RemoveDataset"
-	Dekart_UpdateDatasetName_FullMethodName   = "/Dekart/UpdateDatasetName"
-	Dekart_UpdateDatasetSource_FullMethodName = "/Dekart/UpdateDatasetSource"
-	Dekart_CreateFile_FullMethodName          = "/Dekart/CreateFile"
-	Dekart_CreateQuery_FullMethodName         = "/Dekart/CreateQuery"
-	Dekart_RunQuery_FullMethodName            = "/Dekart/RunQuery"
-	Dekart_CancelQuery_FullMethodName         = "/Dekart/CancelQuery"
-	Dekart_GetEnv_FullMethodName              = "/Dekart/GetEnv"
-	Dekart_GetReportStream_FullMethodName     = "/Dekart/GetReportStream"
-	Dekart_GetReportListStream_FullMethodName = "/Dekart/GetReportListStream"
-	Dekart_GetUserStream_FullMethodName       = "/Dekart/GetUserStream"
-	Dekart_GetUsage_FullMethodName            = "/Dekart/GetUsage"
-	Dekart_CreateSource_FullMethodName        = "/Dekart/CreateSource"
-	Dekart_UpdateSource_FullMethodName        = "/Dekart/UpdateSource"
-	Dekart_ArchiveSource_FullMethodName       = "/Dekart/ArchiveSource"
-	Dekart_GetSourceList_FullMethodName       = "/Dekart/GetSourceList"
-	Dekart_TestConnection_FullMethodName      = "/Dekart/TestConnection"
+	Dekart_CreateReport_FullMethodName            = "/Dekart/CreateReport"
+	Dekart_ForkReport_FullMethodName              = "/Dekart/ForkReport"
+	Dekart_UpdateReport_FullMethodName            = "/Dekart/UpdateReport"
+	Dekart_ArchiveReport_FullMethodName           = "/Dekart/ArchiveReport"
+	Dekart_SetDiscoverable_FullMethodName         = "/Dekart/SetDiscoverable"
+	Dekart_CreateDataset_FullMethodName           = "/Dekart/CreateDataset"
+	Dekart_RemoveDataset_FullMethodName           = "/Dekart/RemoveDataset"
+	Dekart_UpdateDatasetName_FullMethodName       = "/Dekart/UpdateDatasetName"
+	Dekart_UpdateDatasetConnection_FullMethodName = "/Dekart/UpdateDatasetConnection"
+	Dekart_CreateFile_FullMethodName              = "/Dekart/CreateFile"
+	Dekart_CreateQuery_FullMethodName             = "/Dekart/CreateQuery"
+	Dekart_RunQuery_FullMethodName                = "/Dekart/RunQuery"
+	Dekart_CancelQuery_FullMethodName             = "/Dekart/CancelQuery"
+	Dekart_GetEnv_FullMethodName                  = "/Dekart/GetEnv"
+	Dekart_GetReportStream_FullMethodName         = "/Dekart/GetReportStream"
+	Dekart_GetReportListStream_FullMethodName     = "/Dekart/GetReportListStream"
+	Dekart_GetUserStream_FullMethodName           = "/Dekart/GetUserStream"
+	Dekart_GetUsage_FullMethodName                = "/Dekart/GetUsage"
+	Dekart_CreateConnection_FullMethodName        = "/Dekart/CreateConnection"
+	Dekart_UpdateConnection_FullMethodName        = "/Dekart/UpdateConnection"
+	Dekart_ArchiveConnection_FullMethodName       = "/Dekart/ArchiveConnection"
+	Dekart_GetConnectionList_FullMethodName       = "/Dekart/GetConnectionList"
+	Dekart_TestConnection_FullMethodName          = "/Dekart/TestConnection"
 )
 
 // DekartClient is the client API for Dekart service.
@@ -59,7 +59,7 @@ type DekartClient interface {
 	RemoveDataset(ctx context.Context, in *RemoveDatasetRequest, opts ...grpc.CallOption) (*RemoveDatasetResponse, error)
 	// rpc UpdateDataset(UpdateDatasetRequest) returns (UpdateDatasetResponse) {}
 	UpdateDatasetName(ctx context.Context, in *UpdateDatasetNameRequest, opts ...grpc.CallOption) (*UpdateDatasetNameResponse, error)
-	UpdateDatasetSource(ctx context.Context, in *UpdateDatasetSourceRequest, opts ...grpc.CallOption) (*UpdateDatasetSourceResponse, error)
+	UpdateDatasetConnection(ctx context.Context, in *UpdateDatasetConnectionRequest, opts ...grpc.CallOption) (*UpdateDatasetConnectionResponse, error)
 	// files
 	CreateFile(ctx context.Context, in *CreateFileRequest, opts ...grpc.CallOption) (*CreateFileResponse, error)
 	// queries
@@ -73,11 +73,11 @@ type DekartClient interface {
 	GetUserStream(ctx context.Context, in *GetUserStreamRequest, opts ...grpc.CallOption) (Dekart_GetUserStreamClient, error)
 	//statistics
 	GetUsage(ctx context.Context, in *GetUsageRequest, opts ...grpc.CallOption) (*GetUsageResponse, error)
-	//sources
-	CreateSource(ctx context.Context, in *CreateSourceRequest, opts ...grpc.CallOption) (*CreateSourceResponse, error)
-	UpdateSource(ctx context.Context, in *UpdateSourceRequest, opts ...grpc.CallOption) (*UpdateSourceResponse, error)
-	ArchiveSource(ctx context.Context, in *ArchiveSourceRequest, opts ...grpc.CallOption) (*ArchiveSourceResponse, error)
-	GetSourceList(ctx context.Context, in *GetSourceListRequest, opts ...grpc.CallOption) (*GetSourceListResponse, error)
+	//connections
+	CreateConnection(ctx context.Context, in *CreateConnectionRequest, opts ...grpc.CallOption) (*CreateConnectionResponse, error)
+	UpdateConnection(ctx context.Context, in *UpdateConnectionRequest, opts ...grpc.CallOption) (*UpdateConnectionResponse, error)
+	ArchiveConnection(ctx context.Context, in *ArchiveConnectionRequest, opts ...grpc.CallOption) (*ArchiveConnectionResponse, error)
+	GetConnectionList(ctx context.Context, in *GetConnectionListRequest, opts ...grpc.CallOption) (*GetConnectionListResponse, error)
 	TestConnection(ctx context.Context, in *TestConnectionRequest, opts ...grpc.CallOption) (*TestConnectionResponse, error)
 }
 
@@ -161,9 +161,9 @@ func (c *dekartClient) UpdateDatasetName(ctx context.Context, in *UpdateDatasetN
 	return out, nil
 }
 
-func (c *dekartClient) UpdateDatasetSource(ctx context.Context, in *UpdateDatasetSourceRequest, opts ...grpc.CallOption) (*UpdateDatasetSourceResponse, error) {
-	out := new(UpdateDatasetSourceResponse)
-	err := c.cc.Invoke(ctx, Dekart_UpdateDatasetSource_FullMethodName, in, out, opts...)
+func (c *dekartClient) UpdateDatasetConnection(ctx context.Context, in *UpdateDatasetConnectionRequest, opts ...grpc.CallOption) (*UpdateDatasetConnectionResponse, error) {
+	out := new(UpdateDatasetConnectionResponse)
+	err := c.cc.Invoke(ctx, Dekart_UpdateDatasetConnection_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -320,36 +320,36 @@ func (c *dekartClient) GetUsage(ctx context.Context, in *GetUsageRequest, opts .
 	return out, nil
 }
 
-func (c *dekartClient) CreateSource(ctx context.Context, in *CreateSourceRequest, opts ...grpc.CallOption) (*CreateSourceResponse, error) {
-	out := new(CreateSourceResponse)
-	err := c.cc.Invoke(ctx, Dekart_CreateSource_FullMethodName, in, out, opts...)
+func (c *dekartClient) CreateConnection(ctx context.Context, in *CreateConnectionRequest, opts ...grpc.CallOption) (*CreateConnectionResponse, error) {
+	out := new(CreateConnectionResponse)
+	err := c.cc.Invoke(ctx, Dekart_CreateConnection_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *dekartClient) UpdateSource(ctx context.Context, in *UpdateSourceRequest, opts ...grpc.CallOption) (*UpdateSourceResponse, error) {
-	out := new(UpdateSourceResponse)
-	err := c.cc.Invoke(ctx, Dekart_UpdateSource_FullMethodName, in, out, opts...)
+func (c *dekartClient) UpdateConnection(ctx context.Context, in *UpdateConnectionRequest, opts ...grpc.CallOption) (*UpdateConnectionResponse, error) {
+	out := new(UpdateConnectionResponse)
+	err := c.cc.Invoke(ctx, Dekart_UpdateConnection_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *dekartClient) ArchiveSource(ctx context.Context, in *ArchiveSourceRequest, opts ...grpc.CallOption) (*ArchiveSourceResponse, error) {
-	out := new(ArchiveSourceResponse)
-	err := c.cc.Invoke(ctx, Dekart_ArchiveSource_FullMethodName, in, out, opts...)
+func (c *dekartClient) ArchiveConnection(ctx context.Context, in *ArchiveConnectionRequest, opts ...grpc.CallOption) (*ArchiveConnectionResponse, error) {
+	out := new(ArchiveConnectionResponse)
+	err := c.cc.Invoke(ctx, Dekart_ArchiveConnection_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *dekartClient) GetSourceList(ctx context.Context, in *GetSourceListRequest, opts ...grpc.CallOption) (*GetSourceListResponse, error) {
-	out := new(GetSourceListResponse)
-	err := c.cc.Invoke(ctx, Dekart_GetSourceList_FullMethodName, in, out, opts...)
+func (c *dekartClient) GetConnectionList(ctx context.Context, in *GetConnectionListRequest, opts ...grpc.CallOption) (*GetConnectionListResponse, error) {
+	out := new(GetConnectionListResponse)
+	err := c.cc.Invoke(ctx, Dekart_GetConnectionList_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -380,7 +380,7 @@ type DekartServer interface {
 	RemoveDataset(context.Context, *RemoveDatasetRequest) (*RemoveDatasetResponse, error)
 	// rpc UpdateDataset(UpdateDatasetRequest) returns (UpdateDatasetResponse) {}
 	UpdateDatasetName(context.Context, *UpdateDatasetNameRequest) (*UpdateDatasetNameResponse, error)
-	UpdateDatasetSource(context.Context, *UpdateDatasetSourceRequest) (*UpdateDatasetSourceResponse, error)
+	UpdateDatasetConnection(context.Context, *UpdateDatasetConnectionRequest) (*UpdateDatasetConnectionResponse, error)
 	// files
 	CreateFile(context.Context, *CreateFileRequest) (*CreateFileResponse, error)
 	// queries
@@ -394,11 +394,11 @@ type DekartServer interface {
 	GetUserStream(*GetUserStreamRequest, Dekart_GetUserStreamServer) error
 	//statistics
 	GetUsage(context.Context, *GetUsageRequest) (*GetUsageResponse, error)
-	//sources
-	CreateSource(context.Context, *CreateSourceRequest) (*CreateSourceResponse, error)
-	UpdateSource(context.Context, *UpdateSourceRequest) (*UpdateSourceResponse, error)
-	ArchiveSource(context.Context, *ArchiveSourceRequest) (*ArchiveSourceResponse, error)
-	GetSourceList(context.Context, *GetSourceListRequest) (*GetSourceListResponse, error)
+	//connections
+	CreateConnection(context.Context, *CreateConnectionRequest) (*CreateConnectionResponse, error)
+	UpdateConnection(context.Context, *UpdateConnectionRequest) (*UpdateConnectionResponse, error)
+	ArchiveConnection(context.Context, *ArchiveConnectionRequest) (*ArchiveConnectionResponse, error)
+	GetConnectionList(context.Context, *GetConnectionListRequest) (*GetConnectionListResponse, error)
 	TestConnection(context.Context, *TestConnectionRequest) (*TestConnectionResponse, error)
 	mustEmbedUnimplementedDekartServer()
 }
@@ -431,8 +431,8 @@ func (UnimplementedDekartServer) RemoveDataset(context.Context, *RemoveDatasetRe
 func (UnimplementedDekartServer) UpdateDatasetName(context.Context, *UpdateDatasetNameRequest) (*UpdateDatasetNameResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateDatasetName not implemented")
 }
-func (UnimplementedDekartServer) UpdateDatasetSource(context.Context, *UpdateDatasetSourceRequest) (*UpdateDatasetSourceResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateDatasetSource not implemented")
+func (UnimplementedDekartServer) UpdateDatasetConnection(context.Context, *UpdateDatasetConnectionRequest) (*UpdateDatasetConnectionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateDatasetConnection not implemented")
 }
 func (UnimplementedDekartServer) CreateFile(context.Context, *CreateFileRequest) (*CreateFileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateFile not implemented")
@@ -461,17 +461,17 @@ func (UnimplementedDekartServer) GetUserStream(*GetUserStreamRequest, Dekart_Get
 func (UnimplementedDekartServer) GetUsage(context.Context, *GetUsageRequest) (*GetUsageResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUsage not implemented")
 }
-func (UnimplementedDekartServer) CreateSource(context.Context, *CreateSourceRequest) (*CreateSourceResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateSource not implemented")
+func (UnimplementedDekartServer) CreateConnection(context.Context, *CreateConnectionRequest) (*CreateConnectionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateConnection not implemented")
 }
-func (UnimplementedDekartServer) UpdateSource(context.Context, *UpdateSourceRequest) (*UpdateSourceResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateSource not implemented")
+func (UnimplementedDekartServer) UpdateConnection(context.Context, *UpdateConnectionRequest) (*UpdateConnectionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateConnection not implemented")
 }
-func (UnimplementedDekartServer) ArchiveSource(context.Context, *ArchiveSourceRequest) (*ArchiveSourceResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ArchiveSource not implemented")
+func (UnimplementedDekartServer) ArchiveConnection(context.Context, *ArchiveConnectionRequest) (*ArchiveConnectionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ArchiveConnection not implemented")
 }
-func (UnimplementedDekartServer) GetSourceList(context.Context, *GetSourceListRequest) (*GetSourceListResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetSourceList not implemented")
+func (UnimplementedDekartServer) GetConnectionList(context.Context, *GetConnectionListRequest) (*GetConnectionListResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetConnectionList not implemented")
 }
 func (UnimplementedDekartServer) TestConnection(context.Context, *TestConnectionRequest) (*TestConnectionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method TestConnection not implemented")
@@ -633,20 +633,20 @@ func _Dekart_UpdateDatasetName_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_UpdateDatasetSource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateDatasetSourceRequest)
+func _Dekart_UpdateDatasetConnection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateDatasetConnectionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DekartServer).UpdateDatasetSource(ctx, in)
+		return srv.(DekartServer).UpdateDatasetConnection(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Dekart_UpdateDatasetSource_FullMethodName,
+		FullMethod: Dekart_UpdateDatasetConnection_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).UpdateDatasetSource(ctx, req.(*UpdateDatasetSourceRequest))
+		return srv.(DekartServer).UpdateDatasetConnection(ctx, req.(*UpdateDatasetConnectionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -822,74 +822,74 @@ func _Dekart_GetUsage_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_CreateSource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateSourceRequest)
+func _Dekart_CreateConnection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateConnectionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DekartServer).CreateSource(ctx, in)
+		return srv.(DekartServer).CreateConnection(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Dekart_CreateSource_FullMethodName,
+		FullMethod: Dekart_CreateConnection_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).CreateSource(ctx, req.(*CreateSourceRequest))
+		return srv.(DekartServer).CreateConnection(ctx, req.(*CreateConnectionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_UpdateSource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateSourceRequest)
+func _Dekart_UpdateConnection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateConnectionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DekartServer).UpdateSource(ctx, in)
+		return srv.(DekartServer).UpdateConnection(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Dekart_UpdateSource_FullMethodName,
+		FullMethod: Dekart_UpdateConnection_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).UpdateSource(ctx, req.(*UpdateSourceRequest))
+		return srv.(DekartServer).UpdateConnection(ctx, req.(*UpdateConnectionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_ArchiveSource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ArchiveSourceRequest)
+func _Dekart_ArchiveConnection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ArchiveConnectionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DekartServer).ArchiveSource(ctx, in)
+		return srv.(DekartServer).ArchiveConnection(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Dekart_ArchiveSource_FullMethodName,
+		FullMethod: Dekart_ArchiveConnection_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).ArchiveSource(ctx, req.(*ArchiveSourceRequest))
+		return srv.(DekartServer).ArchiveConnection(ctx, req.(*ArchiveConnectionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_GetSourceList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetSourceListRequest)
+func _Dekart_GetConnectionList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetConnectionListRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DekartServer).GetSourceList(ctx, in)
+		return srv.(DekartServer).GetConnectionList(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Dekart_GetSourceList_FullMethodName,
+		FullMethod: Dekart_GetConnectionList_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).GetSourceList(ctx, req.(*GetSourceListRequest))
+		return srv.(DekartServer).GetConnectionList(ctx, req.(*GetConnectionListRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -952,8 +952,8 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Dekart_UpdateDatasetName_Handler,
 		},
 		{
-			MethodName: "UpdateDatasetSource",
-			Handler:    _Dekart_UpdateDatasetSource_Handler,
+			MethodName: "UpdateDatasetConnection",
+			Handler:    _Dekart_UpdateDatasetConnection_Handler,
 		},
 		{
 			MethodName: "CreateFile",
@@ -980,20 +980,20 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Dekart_GetUsage_Handler,
 		},
 		{
-			MethodName: "CreateSource",
-			Handler:    _Dekart_CreateSource_Handler,
+			MethodName: "CreateConnection",
+			Handler:    _Dekart_CreateConnection_Handler,
 		},
 		{
-			MethodName: "UpdateSource",
-			Handler:    _Dekart_UpdateSource_Handler,
+			MethodName: "UpdateConnection",
+			Handler:    _Dekart_UpdateConnection_Handler,
 		},
 		{
-			MethodName: "ArchiveSource",
-			Handler:    _Dekart_ArchiveSource_Handler,
+			MethodName: "ArchiveConnection",
+			Handler:    _Dekart_ArchiveConnection_Handler,
 		},
 		{
-			MethodName: "GetSourceList",
-			Handler:    _Dekart_GetSourceList_Handler,
+			MethodName: "GetConnectionList",
+			Handler:    _Dekart_GetConnectionList_Handler,
 		},
 		{
 			MethodName: "TestConnection",

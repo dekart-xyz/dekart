@@ -131,14 +131,14 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	source, err := s.getSourceFromFileID(ctx, fileId)
+	connection, err := s.getConnectionFromFileID(ctx, fileId)
 
 	if err != nil {
 		log.Err(err).Send()
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
-	bucketName := s.getBucketNameFromSource(source)
+	bucketName := s.getBucketNameFromConnection(connection)
 
 	file, handler, err := r.FormFile("file")
 	if err != nil {
@@ -264,7 +264,7 @@ func (s Server) getFiles(ctx context.Context, datasets []*proto.Dataset) ([]*pro
 		for fileRows.Next() {
 			file := proto.File{}
 
-			var sourceId sql.NullString
+			var fileSourceID sql.NullString
 			var createdAt time.Time
 			var updatedAt time.Time
 
@@ -274,7 +274,7 @@ func (s Server) getFiles(ctx context.Context, datasets []*proto.Dataset) ([]*pro
 				&file.Size,
 				&file.MimeType,
 				&file.FileStatus,
-				&sourceId,
+				&fileSourceID,
 				&file.UploadError,
 				&createdAt,
 				&updatedAt,
@@ -282,7 +282,7 @@ func (s Server) getFiles(ctx context.Context, datasets []*proto.Dataset) ([]*pro
 				log.Error().Err(err).Msg("scan file list failed")
 				return nil, err
 			}
-			file.SourceId = sourceId.String
+			file.SourceId = fileSourceID.String
 			file.CreatedAt = createdAt.Unix()
 			file.UpdatedAt = updatedAt.Unix()
 			files = append(files, &file)

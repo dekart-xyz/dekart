@@ -57,7 +57,7 @@ func (s *Store) TestConnection(ctx context.Context, req *proto.TestConnectionReq
 	tokenSource := user.GetTokenSource(ctx)
 	client, err := bigquery.NewClient(
 		ctx,
-		req.Source.BigqueryProjectId,
+		req.Connection.BigqueryProjectId,
 		option.WithTokenSource(tokenSource),
 	)
 	if err != nil {

@@ -1,103 +1,103 @@
-import { ArchiveSourceRequest, CreateSourceRequest, GetSourceListRequest, Source, TestConnectionRequest, UpdateSourceRequest } from '../../proto/dekart_pb'
+import { ArchiveConnectionRequest, CreateConnectionRequest, GetConnectionListRequest, Connection, TestConnectionRequest, UpdateConnectionRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
-import { updateDataset, updateDatasetSource } from './dataset'
+import { updateDatasetConnection } from './dataset'
 import { grpcCall } from './grpc'
 
-export function connectionCreated ({ id, sourceName }) {
-  return { type: connectionCreated.name, id, sourceName }
+export function connectionCreated ({ id, connectionName }) {
+  return { type: connectionCreated.name, id, connectionName }
 }
 
 export function closeConnectionDialog () {
   return { type: closeConnectionDialog.name }
 }
 
-export function editSource (id) {
-  return { type: editSource.name, id }
+export function editConnection (id) {
+  return { type: editConnection.name, id }
 }
 
-export function selectSource (id) {
-  return { type: selectSource.name, id }
+export function selectConnection (id) {
+  return { type: selectConnection.name, id }
 }
 
-export function archiveSource (id) {
+export function archiveConnection (id) {
   return async (dispatch) => {
-    dispatch({ type: archiveSource.name })
-    const request = new ArchiveSourceRequest()
-    request.setSourceId(id)
+    dispatch({ type: archiveConnection.name })
+    const request = new ArchiveConnectionRequest()
+    request.setConnectionId(id)
     await new Promise((resolve) => {
-      dispatch(grpcCall(Dekart.ArchiveSource, request, resolve))
+      dispatch(grpcCall(Dekart.ArchiveConnection, request, resolve))
     })
-    dispatch(sourceSaved())
+    dispatch(connectionSaved())
   }
 }
 
 export function newConnection (datasetId) {
   return async (dispatch) => {
     dispatch({ type: newConnection.name })
-    const sourceName = `New ${(new Date()).toLocaleString()}`
-    const request = new CreateSourceRequest()
-    request.setSourceName(sourceName)
+    const connectionName = `New ${(new Date()).toLocaleString()}`
+    const request = new CreateConnectionRequest()
+    request.setConnectionName(connectionName)
     const res = await new Promise((resolve) => {
-      dispatch(grpcCall(Dekart.CreateSource, request, resolve))
+      dispatch(grpcCall(Dekart.CreateConnection, request, resolve))
     })
-    dispatch(updateDatasetSource(datasetId, res.source.id))
-    dispatch(connectionCreated(res.source))
+    dispatch(updateDatasetConnection(datasetId, res.connection.id))
+    dispatch(connectionCreated(res.connection))
   }
 }
 
-export function sourceListUpdate (sourcesList) {
-  return { type: sourceListUpdate.name, sourcesList }
+export function connectionListUpdate (connectionsList) {
+  return { type: connectionListUpdate.name, connectionsList }
 }
 
-export function getSourceList () {
+export function getConnectionsList () {
   return async (dispatch, getState) => {
-    dispatch({ type: getSourceList.name })
-    const request = new GetSourceListRequest()
+    dispatch({ type: getConnectionsList.name })
+    const request = new GetConnectionListRequest()
     const res = await new Promise((resolve) => {
-      dispatch(grpcCall(Dekart.GetSourceList, request, resolve))
+      dispatch(grpcCall(Dekart.GetConnectionList, request, resolve))
     })
-    dispatch(sourceListUpdate(res.sourcesList))
+    dispatch(connectionListUpdate(res.connectionsList))
   }
 }
 
-export function sourceSaved () {
-  return { type: sourceSaved.name }
+export function connectionSaved () {
+  return { type: connectionSaved.name }
 }
 
-export function saveConnection (id, sourceProps) {
+export function saveConnection (id, connectionProps) {
   return async (dispatch, getState) => {
     dispatch({ type: saveConnection.name })
-    const request = new UpdateSourceRequest()
-    const source = new Source()
-    source.setId(id)
-    source.setSourceName(sourceProps.sourceName)
-    source.setBigqueryProjectId(sourceProps.bigqueryProjectId)
-    source.setCloudStorageBucket(sourceProps.cloudStorageBucket)
-    request.setSource(source)
+    const request = new UpdateConnectionRequest()
+    const connection = new Connection()
+    connection.setId(id)
+    connection.setConnectionName(connectionProps.connectionName)
+    connection.setBigqueryProjectId(connectionProps.bigqueryProjectId)
+    connection.setCloudStorageBucket(connectionProps.cloudStorageBucket)
+    request.setConnection(connection)
     await new Promise((resolve) => {
-      dispatch(grpcCall(Dekart.UpdateSource, request, resolve))
+      dispatch(grpcCall(Dekart.UpdateConnection, request, resolve))
     })
-    dispatch(sourceSaved())
+    dispatch(connectionSaved())
   }
 }
 
-export function connectionChanged ({ sourceName, bigqueryProjectId, cloudStorageBucket }) {
-  return { type: connectionChanged.name, sourceName, bigqueryProjectId, cloudStorageBucket }
+export function connectionChanged ({ connectionName, bigqueryProjectId, cloudStorageBucket }) {
+  return { type: connectionChanged.name, connectionName, bigqueryProjectId, cloudStorageBucket }
 }
 
 export function testConnectionResponse ({ success, error }) {
   return { type: testConnectionResponse.name, success, error }
 }
 
-export function testConnection ({ sourceName, bigqueryProjectId, cloudStorageBucket }) {
+export function testConnection ({ connectionName, bigqueryProjectId, cloudStorageBucket }) {
   return async (dispatch, getState) => {
     dispatch({ type: testConnection.name })
     const request = new TestConnectionRequest()
-    const source = new Source()
-    source.setSourceName(sourceName)
-    source.setBigqueryProjectId(bigqueryProjectId)
-    source.setCloudStorageBucket(cloudStorageBucket)
-    request.setSource(source)
+    const connection = new Connection()
+    connection.setConnectionName(connectionName)
+    connection.setBigqueryProjectId(bigqueryProjectId)
+    connection.setCloudStorageBucket(cloudStorageBucket)
+    request.setConnection(connection)
     const res = await new Promise((resolve) => {
       dispatch(grpcCall(Dekart.TestConnection, request, resolve))
     })

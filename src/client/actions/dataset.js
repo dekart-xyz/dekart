@@ -1,4 +1,4 @@
-import { CreateDatasetRequest, RemoveDatasetRequest, UpdateDatasetNameRequest, UpdateDatasetRequest, UpdateDatasetSourceRequest } from '../../proto/dekart_pb'
+import { CreateDatasetRequest, RemoveDatasetRequest, UpdateDatasetConnectionRequest, UpdateDatasetNameRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { downloading, setError, finishDownloading, success } from './message'
@@ -42,18 +42,18 @@ export function updateDatasetName (datasetId, name) {
   }
 }
 
-export function updateDatasetSource (datasetId, sourceId) {
+export function updateDatasetConnection (datasetId, connectionId) {
   return async (dispatch, getState) => {
     const { datasets } = getState()
     const dataset = datasets.find(d => d.id === datasetId)
     if (!dataset) {
       return
     }
-    dispatch({ type: updateDatasetSource.name, datasetId })
-    const request = new UpdateDatasetSourceRequest()
+    dispatch({ type: updateDatasetConnection.name, datasetId })
+    const request = new UpdateDatasetConnectionRequest()
     request.setDatasetId(datasetId)
-    request.setSourceId(sourceId)
-    dispatch(grpcCall(Dekart.UpdateDatasetSource, request))
+    request.setConnectionId(connectionId)
+    dispatch(grpcCall(Dekart.UpdateDatasetConnection, request))
   }
 }
 
@@ -79,14 +79,14 @@ export function removeDataset (datasetId) {
   }
 }
 
-export function downloadDataset (dataset, sourceId, extension, prevDatasetsList) {
+export function downloadDataset (dataset, connectionId, extension, prevDatasetsList) {
   return async (dispatch, getState) => {
     dispatch({ type: downloadDataset.name, dataset })
     dispatch(downloading(dataset))
     const { token } = getState()
     let data
     try {
-      const res = await get(`/dataset-source/${dataset.id}/${sourceId}.${extension}`, token)
+      const res = await get(`/dataset-source/${dataset.id}/${connectionId}.${extension}`, token)
       if (extension === 'csv') {
         const csv = await res.text()
         data = processCsvData(csv)

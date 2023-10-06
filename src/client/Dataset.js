@@ -7,12 +7,12 @@ import File from './File'
 import { getDatasourceMeta } from './lib/datasource'
 import { createQuery } from './actions/query'
 import { createFile } from './actions/file'
-import { editSource, newConnection, selectSource } from './actions/connection'
+import { editConnection, newConnection } from './actions/connection'
 import Dropdown from 'antd/es/dropdown'
 import { ConsoleSqlOutlined, UploadOutlined, MoreOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
 import ConnectionModal from './ConnectionModal'
 import { useEffect, useState } from 'react'
-import { updateDataset, updateDatasetSource } from './actions/dataset'
+import { updateDataset, updateDatasetConnection } from './actions/dataset'
 
 const NEW_DATASOURCE = 'NEW_DATASOURCE'
 function DatasetSelector ({ dataset }) {
@@ -22,7 +22,7 @@ function DatasetSelector ({ dataset }) {
   if (!env.loaded) {
     return null
   }
-  const datasource = getDatasourceMeta(env.variables.DATASOURCE).name
+  // const datasource = getDatasourceMeta(env.variables.DATASOURCE).name
   const { ALLOW_FILE_UPLOAD, BIGQUERY_PROJECT_ID, CLOUD_STORAGE_BUCKET } = env.variables
   const userDefinedDatasource = BIGQUERY_PROJECT_ID === '' || CLOUD_STORAGE_BUCKET === ''
   if (!ALLOW_FILE_UPLOAD && !userDefinedDatasource) {
@@ -36,12 +36,12 @@ function DatasetSelector ({ dataset }) {
           <Select
             placeholder='Select data source'
             className={styles.connectionSelect}
-            value={dataset.sourceId || null}
+            value={dataset.connectionId || null}
             onSelect={value => {
               if (value === NEW_DATASOURCE) {
                 dispatch(newConnection(dataset.id))
               } else {
-                dispatch(updateDatasetSource(dataset.id, value))
+                dispatch(updateDatasetConnection(dataset.id, value))
               }
             }}
             options={[
@@ -51,14 +51,14 @@ function DatasetSelector ({ dataset }) {
               },
               ...(connectionList.map(connection => ({
                 value: connection.id,
-                label: connection.sourceName
+                label: connection.connectionName
               })))
             ]}
           /><Button
             type='text'
-            disabled={!dataset.sourceId}
+            disabled={!dataset.connectionId}
             className={styles.connectionEditButton} onClick={
-            () => dispatch(editSource(dataset.sourceId))
+            () => dispatch(editConnection(dataset.connectionId))
           } icon={<MoreOutlined />}
             />
         </div>
@@ -71,7 +71,7 @@ function DatasetSelector ({ dataset }) {
       <div className={styles.status}>
         <div className={styles.datasetTypeSelector}>
           <Dropdown
-            disabled={!dataset.sourceId}
+            disabled={!dataset.connectionId}
             menu={{
               items: [
                 {

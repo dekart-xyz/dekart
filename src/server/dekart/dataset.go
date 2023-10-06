@@ -45,7 +45,7 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 			created_at,
 			updated_at,
 			name,
-			source_id
+			connection_id
 		from datasets where report_id=$1 order by created_at asc`,
 		reportID,
 	)
@@ -61,7 +61,7 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 		var updatedAt time.Time
 		var queryId sql.NullString
 		var fileId sql.NullString
-		var sourceID sql.NullString
+		var connectionID sql.NullString
 		if err := datasetRows.Scan(
 			&dataset.Id,
 			&queryId,
@@ -69,7 +69,7 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 			&createdAt,
 			&updatedAt,
 			&dataset.Name,
-			&sourceID,
+			&connectionID,
 		); err != nil {
 			log.Err(err).Msg("Error scanning dataset results")
 			return nil, err
@@ -78,7 +78,7 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 		dataset.UpdatedAt = updatedAt.Unix()
 		dataset.QueryId = queryId.String
 		dataset.FileId = fileId.String
-		dataset.SourceId = sourceID.String
+		dataset.ConnectionId = connectionID.String
 		datasets = append(datasets, &dataset)
 	}
 	return datasets, nil
@@ -166,7 +166,7 @@ func (s Server) UpdateDatasetName(ctx context.Context, req *proto.UpdateDatasetN
 	return &proto.UpdateDatasetNameResponse{}, nil
 }
 
-func (s Server) UpdateDatasetSource(ctx context.Context, req *proto.UpdateDatasetSourceRequest) (*proto.UpdateDatasetSourceResponse, error) {
+func (s Server) UpdateDatasetConnection(ctx context.Context, req *proto.UpdateDatasetConnectionRequest) (*proto.UpdateDatasetConnectionResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
@@ -188,9 +188,9 @@ func (s Server) UpdateDatasetSource(ctx context.Context, req *proto.UpdateDatase
 	_, err = s.db.ExecContext(ctx,
 		`update
 			datasets set
-			source_id = $1
+			connection_id = $1
 			where id=$2`,
-		req.SourceId,
+		req.ConnectionId,
 		req.DatasetId,
 	)
 	if err != nil {
@@ -200,7 +200,7 @@ func (s Server) UpdateDatasetSource(ctx context.Context, req *proto.UpdateDatase
 
 	s.reportStreams.Ping(*reportID)
 
-	return &proto.UpdateDatasetSourceResponse{}, nil
+	return &proto.UpdateDatasetConnectionResponse{}, nil
 }
 
 func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetRequest) (*proto.RemoveDatasetResponse, error) {
@@ -267,23 +267,6 @@ func insertDataset(ctx context.Context, db *sql.DB, datasetID string, reportID s
 	)
 }
 
-// func insertDatasetWithSource(ctx context.Context, db *sql.DB, datasetID string, reportID string, email string, sourceID string) (res sql.Result, err error) {
-// 	return db.ExecContext(ctx,
-// 		`insert into datasets (id, report_id, source_id)
-// 		select
-// 			$1 as id,
-// 			reports.id as report_id,
-// 			sources.id as source_id
-// 		from reports, sources on (reports.author_email = sources.author_email)
-// 		where reports.id=$2 and not reports.archived and reports.author_email=$3 and source_id=$4 limit 1
-// 		`,
-// 		datasetID,
-// 		reportID,
-// 		email,
-// 		sourceID,
-// 	)
-// }
-
 func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetRequest) (*proto.CreateDatasetResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
@@ -319,24 +302,24 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	ctx := r.Context()
 
-	source, err := s.getSourceFromDatasetID(ctx, vars["dataset"])
+	connection, err := s.getConnectionFromDatasetID(ctx, vars["dataset"])
 
 	if err != nil {
 		HttpError(w, err)
 		return
 	}
 
-	if source == nil {
-		err := fmt.Errorf("source not found id:%s", vars["dataset"])
+	if connection == nil {
+		err := fmt.Errorf("connection not found id:%s", vars["dataset"])
 		log.Warn().Err(err).Send()
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
-	bucketName := s.getBucketNameFromSource(source)
+	bucketName := s.getBucketNameFromConnection(connection)
 
 	obj := s.storage.GetObject(bucketName, fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
-	ctreated, err := obj.GetCreatedAt(ctx)
+	created, err := obj.GetCreatedAt(ctx)
 	if err != nil {
 		HttpError(w, err)
 		return
@@ -349,7 +332,7 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	defer objectReader.Close()
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Cache-Control", "public, max-age=31536000")
-	w.Header().Set("Last-Modified", ctreated.Format(time.UnixDate))
+	w.Header().Set("Last-Modified", created.Format(time.UnixDate))
 	if _, err := io.Copy(w, objectReader); err != nil {
 		HttpError(w, err)
 		return

@@ -1,5 +1,5 @@
 import { combineReducers } from 'redux'
-import { archiveSource, closeConnectionDialog, connectionChanged, connectionCreated, editSource, newConnection, saveConnection, selectSource, sourceListUpdate, sourceSaved, testConnection, testConnectionResponse } from '../actions/connection'
+import { closeConnectionDialog, connectionChanged, connectionCreated, connectionListUpdate, connectionSaved, editConnection, newConnection, saveConnection, testConnection, testConnectionResponse } from '../actions/connection'
 
 function dialog (state = {
   visible: false,
@@ -12,7 +12,7 @@ function dialog (state = {
         ...state,
         visible: false
       }
-    case editSource.name:
+    case editConnection.name:
       return {
         ...state,
         id: action.id,
@@ -37,7 +37,7 @@ function dialog (state = {
         ...state,
         loading: true
       }
-    case sourceSaved.name:
+    case connectionSaved.name:
       return {
         ...state,
         loading: false,
@@ -85,8 +85,8 @@ function test (state = {
 
 function list (state = [], action) {
   switch (action.type) {
-    case sourceListUpdate.name:
-      return action.sourcesList
+    case connectionListUpdate.name:
+      return action.connectionsList
     default:
       return state
   }
@@ -97,43 +97,3 @@ export default combineReducers({
   test,
   list
 })
-
-// export function connectionSettings (state = {
-//   visible: false,
-//   tested: false,
-//   testing: false,
-//   testSuccess: false,
-//   testError: ''
-// }, action) {
-//   switch (action.type) {
-//     case newConnection.name:
-//       return {
-//         ...state,
-//         visible: true
-//       }
-//     case testConnection.name:
-//       return {
-//         ...state,
-//         testing: true,
-//         testSuccess: false,
-//         testError: ''
-//       }
-//     case testConnectionResponse.name:
-//       return {
-//         ...state,
-//         tested: true,
-//         testing: false,
-//         testSuccess: action.success,
-//         testError: action.error
-//       }
-//     case connectionChanged.name:
-//       return {
-//         ...state,
-//         tested: false,
-//         testSuccess: false,
-//         testError: ''
-//       }
-//     default:
-//       return state
-//   }
-// }

@@ -37,9 +37,9 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	source, err := s.getSourceFromDatasetID(ctx, req.DatasetId)
+	connection, err := s.getConnectionFromDatasetID(ctx, req.DatasetId)
 
-	bucketName := s.getBucketNameFromSource(source)
+	bucketName := s.getBucketNameFromConnection(connection)
 
 	if err != nil {
 		log.Err(err).Send()
@@ -226,7 +226,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		`select 
 			reports.id,
 			queries.query_source_id,
-			datasets.source_id
+			datasets.connection_id
 		from queries
 			left join datasets on queries.id = datasets.query_id
 			left join reports on (datasets.report_id = reports.id or queries.report_id = reports.id)
@@ -243,9 +243,9 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	defer queriesRows.Close()
 	var reportID string
 	var prevQuerySourceId string
-	var sourceID sql.NullString
+	var connectionID sql.NullString
 	for queriesRows.Next() {
-		err := queriesRows.Scan(&reportID, &prevQuerySourceId, &sourceID)
+		err := queriesRows.Scan(&reportID, &prevQuerySourceId, &connectionID)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, status.Error(codes.Internal, err.Error())
@@ -258,9 +258,9 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	source, err := s.getSource(ctx, sourceID.String)
+	connection, err := s.getConnection(ctx, connectionID.String)
 
-	bucketName := s.getBucketNameFromSource(source)
+	bucketName := s.getBucketNameFromConnection(connection)
 
 	if err != nil {
 		log.Err(err).Send()
@@ -288,7 +288,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	obj := s.storage.GetObject(bucketName, fmt.Sprintf("%s.csv", job.GetID()))
 	go s.updateJobStatus(job, jobStatus)
 	job.Status() <- int32(proto.Query_JOB_STATUS_PENDING)
-	err = job.Run(obj, source)
+	err = job.Run(obj, connection)
 	if err != nil {
 		if err == context.Canceled {
 			log.Warn().Err(err).Send()

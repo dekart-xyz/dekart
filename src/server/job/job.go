@@ -33,7 +33,7 @@ type Job interface {
 	GetResultSize() int64
 	GetCtx() context.Context
 	Err() string
-	Run(storageObject storage.StorageObject, source *proto.Source) error
+	Run(storageObject storage.StorageObject, connection *proto.Connection) error
 	Status() chan int32
 	Cancel()
 }

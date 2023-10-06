@@ -76,13 +76,13 @@ type DekartUpdateDatasetName = {
   readonly responseType: typeof proto_dekart_pb.UpdateDatasetNameResponse;
 };
 
-type DekartUpdateDatasetSource = {
+type DekartUpdateDatasetConnection = {
   readonly methodName: string;
   readonly service: typeof Dekart;
   readonly requestStream: false;
   readonly responseStream: false;
-  readonly requestType: typeof proto_dekart_pb.UpdateDatasetSourceRequest;
-  readonly responseType: typeof proto_dekart_pb.UpdateDatasetSourceResponse;
+  readonly requestType: typeof proto_dekart_pb.UpdateDatasetConnectionRequest;
+  readonly responseType: typeof proto_dekart_pb.UpdateDatasetConnectionResponse;
 };
 
 type DekartCreateFile = {
@@ -166,40 +166,40 @@ type DekartGetUsage = {
   readonly responseType: typeof proto_dekart_pb.GetUsageResponse;
 };
 
-type DekartCreateSource = {
+type DekartCreateConnection = {
   readonly methodName: string;
   readonly service: typeof Dekart;
   readonly requestStream: false;
   readonly responseStream: false;
-  readonly requestType: typeof proto_dekart_pb.CreateSourceRequest;
-  readonly responseType: typeof proto_dekart_pb.CreateSourceResponse;
+  readonly requestType: typeof proto_dekart_pb.CreateConnectionRequest;
+  readonly responseType: typeof proto_dekart_pb.CreateConnectionResponse;
 };
 
-type DekartUpdateSource = {
+type DekartUpdateConnection = {
   readonly methodName: string;
   readonly service: typeof Dekart;
   readonly requestStream: false;
   readonly responseStream: false;
-  readonly requestType: typeof proto_dekart_pb.UpdateSourceRequest;
-  readonly responseType: typeof proto_dekart_pb.UpdateSourceResponse;
+  readonly requestType: typeof proto_dekart_pb.UpdateConnectionRequest;
+  readonly responseType: typeof proto_dekart_pb.UpdateConnectionResponse;
 };
 
-type DekartArchiveSource = {
+type DekartArchiveConnection = {
   readonly methodName: string;
   readonly service: typeof Dekart;
   readonly requestStream: false;
   readonly responseStream: false;
-  readonly requestType: typeof proto_dekart_pb.ArchiveSourceRequest;
-  readonly responseType: typeof proto_dekart_pb.ArchiveSourceResponse;
+  readonly requestType: typeof proto_dekart_pb.ArchiveConnectionRequest;
+  readonly responseType: typeof proto_dekart_pb.ArchiveConnectionResponse;
 };
 
-type DekartGetSourceList = {
+type DekartGetConnectionList = {
   readonly methodName: string;
   readonly service: typeof Dekart;
   readonly requestStream: false;
   readonly responseStream: false;
-  readonly requestType: typeof proto_dekart_pb.GetSourceListRequest;
-  readonly responseType: typeof proto_dekart_pb.GetSourceListResponse;
+  readonly requestType: typeof proto_dekart_pb.GetConnectionListRequest;
+  readonly responseType: typeof proto_dekart_pb.GetConnectionListResponse;
 };
 
 type DekartTestConnection = {
@@ -221,7 +221,7 @@ export class Dekart {
   static readonly CreateDataset: DekartCreateDataset;
   static readonly RemoveDataset: DekartRemoveDataset;
   static readonly UpdateDatasetName: DekartUpdateDatasetName;
-  static readonly UpdateDatasetSource: DekartUpdateDatasetSource;
+  static readonly UpdateDatasetConnection: DekartUpdateDatasetConnection;
   static readonly CreateFile: DekartCreateFile;
   static readonly CreateQuery: DekartCreateQuery;
   static readonly RunQuery: DekartRunQuery;
@@ -231,10 +231,10 @@ export class Dekart {
   static readonly GetReportListStream: DekartGetReportListStream;
   static readonly GetUserStream: DekartGetUserStream;
   static readonly GetUsage: DekartGetUsage;
-  static readonly CreateSource: DekartCreateSource;
-  static readonly UpdateSource: DekartUpdateSource;
-  static readonly ArchiveSource: DekartArchiveSource;
-  static readonly GetSourceList: DekartGetSourceList;
+  static readonly CreateConnection: DekartCreateConnection;
+  static readonly UpdateConnection: DekartUpdateConnection;
+  static readonly ArchiveConnection: DekartArchiveConnection;
+  static readonly GetConnectionList: DekartGetConnectionList;
   static readonly TestConnection: DekartTestConnection;
 }
 
@@ -342,14 +342,14 @@ export class DekartClient {
     requestMessage: proto_dekart_pb.UpdateDatasetNameRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateDatasetNameResponse|null) => void
   ): UnaryResponse;
-  updateDatasetSource(
-    requestMessage: proto_dekart_pb.UpdateDatasetSourceRequest,
+  updateDatasetConnection(
+    requestMessage: proto_dekart_pb.UpdateDatasetConnectionRequest,
     metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateDatasetSourceResponse|null) => void
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateDatasetConnectionResponse|null) => void
   ): UnaryResponse;
-  updateDatasetSource(
-    requestMessage: proto_dekart_pb.UpdateDatasetSourceRequest,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateDatasetSourceResponse|null) => void
+  updateDatasetConnection(
+    requestMessage: proto_dekart_pb.UpdateDatasetConnectionRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateDatasetConnectionResponse|null) => void
   ): UnaryResponse;
   createFile(
     requestMessage: proto_dekart_pb.CreateFileRequest,
@@ -408,41 +408,41 @@ export class DekartClient {
     requestMessage: proto_dekart_pb.GetUsageRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetUsageResponse|null) => void
   ): UnaryResponse;
-  createSource(
-    requestMessage: proto_dekart_pb.CreateSourceRequest,
+  createConnection(
+    requestMessage: proto_dekart_pb.CreateConnectionRequest,
     metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateSourceResponse|null) => void
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateConnectionResponse|null) => void
   ): UnaryResponse;
-  createSource(
-    requestMessage: proto_dekart_pb.CreateSourceRequest,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateSourceResponse|null) => void
+  createConnection(
+    requestMessage: proto_dekart_pb.CreateConnectionRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateConnectionResponse|null) => void
   ): UnaryResponse;
-  updateSource(
-    requestMessage: proto_dekart_pb.UpdateSourceRequest,
+  updateConnection(
+    requestMessage: proto_dekart_pb.UpdateConnectionRequest,
     metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateSourceResponse|null) => void
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateConnectionResponse|null) => void
   ): UnaryResponse;
-  updateSource(
-    requestMessage: proto_dekart_pb.UpdateSourceRequest,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateSourceResponse|null) => void
+  updateConnection(
+    requestMessage: proto_dekart_pb.UpdateConnectionRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateConnectionResponse|null) => void
   ): UnaryResponse;
-  archiveSource(
-    requestMessage: proto_dekart_pb.ArchiveSourceRequest,
+  archiveConnection(
+    requestMessage: proto_dekart_pb.ArchiveConnectionRequest,
     metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.ArchiveSourceResponse|null) => void
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.ArchiveConnectionResponse|null) => void
   ): UnaryResponse;
-  archiveSource(
-    requestMessage: proto_dekart_pb.ArchiveSourceRequest,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.ArchiveSourceResponse|null) => void
+  archiveConnection(
+    requestMessage: proto_dekart_pb.ArchiveConnectionRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.ArchiveConnectionResponse|null) => void
   ): UnaryResponse;
-  getSourceList(
-    requestMessage: proto_dekart_pb.GetSourceListRequest,
+  getConnectionList(
+    requestMessage: proto_dekart_pb.GetConnectionListRequest,
     metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetSourceListResponse|null) => void
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetConnectionListResponse|null) => void
   ): UnaryResponse;
-  getSourceList(
-    requestMessage: proto_dekart_pb.GetSourceListRequest,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetSourceListResponse|null) => void
+  getConnectionList(
+    requestMessage: proto_dekart_pb.GetConnectionListRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetConnectionListResponse|null) => void
   ): UnaryResponse;
   testConnection(
     requestMessage: proto_dekart_pb.TestConnectionRequest,

@@ -121,7 +121,7 @@ func (j *Job) fetchQueryMetadata(queryIDChan chan string, resultsReady chan bool
 
 }
 
-func (j *Job) Run(storageObject storage.StorageObject, source *proto.Source) error {
+func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connection) error {
 	j.storageObject = storageObject
 	queryIDChan := make(chan string)
 	resultsReady := make(chan bool)

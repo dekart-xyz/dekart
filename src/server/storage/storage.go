@@ -69,13 +69,13 @@ func NewGoogleCloudStorage() *GoogleCloudStorage {
 	}
 }
 
-func TestConnection(ctx context.Context, source *proto.Source) (*proto.TestConnectionResponse, error) {
+func TestConnection(ctx context.Context, connection *proto.Connection) (*proto.TestConnectionResponse, error) {
 	tokenSource := user.GetTokenSource(ctx)
 	client, err := storage.NewClient(ctx, option.WithTokenSource(tokenSource))
 	if err != nil {
 		log.Fatal().Err(err).Send()
 	}
-	bucket := client.Bucket(source.CloudStorageBucket)
+	bucket := client.Bucket(connection.CloudStorageBucket)
 	_, err = bucket.Attrs(ctx)
 	if err != nil {
 		return &proto.TestConnectionResponse{

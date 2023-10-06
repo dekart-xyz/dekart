@@ -15,7 +15,7 @@ service Dekart {
     rpc RemoveDataset(RemoveDatasetRequest) returns (RemoveDatasetResponse) {}
     // rpc UpdateDataset(UpdateDatasetRequest) returns (UpdateDatasetResponse) {}
     rpc UpdateDatasetName(UpdateDatasetNameRequest) returns (UpdateDatasetNameResponse) {}
-    rpc UpdateDatasetSource(UpdateDatasetSourceRequest) returns (UpdateDatasetSourceResponse) {}
+    rpc UpdateDatasetConnection(UpdateDatasetConnectionRequest) returns (UpdateDatasetConnectionResponse) {}
 
     // files
     rpc CreateFile(CreateFileRequest) returns (CreateFileResponse) {}
@@ -35,19 +35,19 @@ service Dekart {
     //statistics
     rpc GetUsage(GetUsageRequest) returns (GetUsageResponse) {}
 
-    //sources
-    rpc CreateSource(CreateSourceRequest) returns (CreateSourceResponse) {}
-    rpc UpdateSource(UpdateSourceRequest) returns (UpdateSourceResponse) {}
-    rpc ArchiveSource(ArchiveSourceRequest) returns (ArchiveSourceResponse) {}
-    rpc GetSourceList(GetSourceListRequest) returns (GetSourceListResponse) {}
+    //connections
+    rpc CreateConnection(CreateConnectionRequest) returns (CreateConnectionResponse) {}
+    rpc UpdateConnection(UpdateConnectionRequest) returns (UpdateConnectionResponse) {}
+    rpc ArchiveConnection(ArchiveConnectionRequest) returns (ArchiveConnectionResponse) {}
+    rpc GetConnectionList(GetConnectionListRequest) returns (GetConnectionListResponse) {}
     rpc TestConnection(TestConnectionRequest) returns (TestConnectionResponse) {}
 }
 
-message GetSourceListRequest {
+message GetConnectionListRequest {
 }
 
-message GetSourceListResponse {
-    repeated Source sources = 1;
+message GetConnectionListResponse {
+    repeated Connection connections = 1;
 }
 
 message GetUserStreamRequest {
@@ -55,11 +55,11 @@ message GetUserStreamRequest {
 }
 message GetUserStreamResponse {
     StreamOptions stream_options = 1;
-    int64 source_update = 2;
+    int64 connection_update = 2;
 }
 
 message TestConnectionRequest {
-    Source source = 1;
+    Connection connection = 1;
 }
 
 message TestConnectionResponse {
@@ -67,32 +67,32 @@ message TestConnectionResponse {
     string error = 2;
 }
 
-message ArchiveSourceRequest {
-    string source_id = 1;
+message ArchiveConnectionRequest {
+    string connection_id = 1;
 }
 
-message ArchiveSourceResponse {
+message ArchiveConnectionResponse {
 }
 
-message UpdateSourceRequest {
-    Source source = 1;
+message UpdateConnectionRequest {
+    Connection connection = 1;
 }
 
-message UpdateSourceResponse {
-    Source source = 1;
+message UpdateConnectionResponse {
+    Connection connection = 1;
 }
 
-message CreateSourceRequest {
-    string source_name = 1;
+message CreateConnectionRequest {
+    string connection_name = 1;
 }
 
-message CreateSourceResponse {
-    Source source = 1;
+message CreateConnectionResponse {
+    Connection connection = 1;
 }
 
-message Source {
+message Connection {
     string id = 1;
-    string source_name = 2;
+    string connection_name = 2;
     string bigquery_project_id = 3;
     string cloud_storage_bucket = 4;
     bool is_default = 5;
@@ -204,7 +204,7 @@ message Dataset {
     int64 updated_at = 5;
     string file_id = 6;
     string name = 7;
-    string source_id = 8;
+    string connection_id = 8;
 }
 
 message Query {
@@ -289,12 +289,12 @@ message UpdateDatasetNameRequest {
 message UpdateDatasetNameResponse {
 }
 
-message UpdateDatasetSourceRequest {
+message UpdateDatasetConnectionRequest {
     string dataset_id = 1;
-    string source_id = 2;
+    string connection_id = 2;
 }
 
-message UpdateDatasetSourceResponse {
+message UpdateDatasetConnectionResponse {
 }
 
 message CreateDatasetRequest {
@@ -331,7 +331,7 @@ message ReportStreamResponse {
     StreamOptions stream_options = 3;
     repeated Dataset datasets = 4;
     repeated File files = 5;
-    repeated Source sources = 6;
+    repeated Connection connections = 6;
 }
 
 message ForkReportRequest {

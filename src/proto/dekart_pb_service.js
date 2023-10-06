@@ -82,13 +82,13 @@ Dekart.UpdateDatasetName = {
   responseType: proto_dekart_pb.UpdateDatasetNameResponse
 };
 
-Dekart.UpdateDatasetSource = {
-  methodName: "UpdateDatasetSource",
+Dekart.UpdateDatasetConnection = {
+  methodName: "UpdateDatasetConnection",
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.UpdateDatasetSourceRequest,
-  responseType: proto_dekart_pb.UpdateDatasetSourceResponse
+  requestType: proto_dekart_pb.UpdateDatasetConnectionRequest,
+  responseType: proto_dekart_pb.UpdateDatasetConnectionResponse
 };
 
 Dekart.CreateFile = {
@@ -172,40 +172,40 @@ Dekart.GetUsage = {
   responseType: proto_dekart_pb.GetUsageResponse
 };
 
-Dekart.CreateSource = {
-  methodName: "CreateSource",
+Dekart.CreateConnection = {
+  methodName: "CreateConnection",
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.CreateSourceRequest,
-  responseType: proto_dekart_pb.CreateSourceResponse
+  requestType: proto_dekart_pb.CreateConnectionRequest,
+  responseType: proto_dekart_pb.CreateConnectionResponse
 };
 
-Dekart.UpdateSource = {
-  methodName: "UpdateSource",
+Dekart.UpdateConnection = {
+  methodName: "UpdateConnection",
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.UpdateSourceRequest,
-  responseType: proto_dekart_pb.UpdateSourceResponse
+  requestType: proto_dekart_pb.UpdateConnectionRequest,
+  responseType: proto_dekart_pb.UpdateConnectionResponse
 };
 
-Dekart.ArchiveSource = {
-  methodName: "ArchiveSource",
+Dekart.ArchiveConnection = {
+  methodName: "ArchiveConnection",
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.ArchiveSourceRequest,
-  responseType: proto_dekart_pb.ArchiveSourceResponse
+  requestType: proto_dekart_pb.ArchiveConnectionRequest,
+  responseType: proto_dekart_pb.ArchiveConnectionResponse
 };
 
-Dekart.GetSourceList = {
-  methodName: "GetSourceList",
+Dekart.GetConnectionList = {
+  methodName: "GetConnectionList",
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.GetSourceListRequest,
-  responseType: proto_dekart_pb.GetSourceListResponse
+  requestType: proto_dekart_pb.GetConnectionListRequest,
+  responseType: proto_dekart_pb.GetConnectionListResponse
 };
 
 Dekart.TestConnection = {
@@ -472,11 +472,11 @@ DekartClient.prototype.updateDatasetName = function updateDatasetName(requestMes
   };
 };
 
-DekartClient.prototype.updateDatasetSource = function updateDatasetSource(requestMessage, metadata, callback) {
+DekartClient.prototype.updateDatasetConnection = function updateDatasetConnection(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
-  var client = grpc.unary(Dekart.UpdateDatasetSource, {
+  var client = grpc.unary(Dekart.UpdateDatasetConnection, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
@@ -806,11 +806,11 @@ DekartClient.prototype.getUsage = function getUsage(requestMessage, metadata, ca
   };
 };
 
-DekartClient.prototype.createSource = function createSource(requestMessage, metadata, callback) {
+DekartClient.prototype.createConnection = function createConnection(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
-  var client = grpc.unary(Dekart.CreateSource, {
+  var client = grpc.unary(Dekart.CreateConnection, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
@@ -837,11 +837,11 @@ DekartClient.prototype.createSource = function createSource(requestMessage, meta
   };
 };
 
-DekartClient.prototype.updateSource = function updateSource(requestMessage, metadata, callback) {
+DekartClient.prototype.updateConnection = function updateConnection(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
-  var client = grpc.unary(Dekart.UpdateSource, {
+  var client = grpc.unary(Dekart.UpdateConnection, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
@@ -868,11 +868,11 @@ DekartClient.prototype.updateSource = function updateSource(requestMessage, meta
   };
 };
 
-DekartClient.prototype.archiveSource = function archiveSource(requestMessage, metadata, callback) {
+DekartClient.prototype.archiveConnection = function archiveConnection(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
-  var client = grpc.unary(Dekart.ArchiveSource, {
+  var client = grpc.unary(Dekart.ArchiveConnection, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
@@ -899,11 +899,11 @@ DekartClient.prototype.archiveSource = function archiveSource(requestMessage, me
   };
 };
 
-DekartClient.prototype.getSourceList = function getSourceList(requestMessage, metadata, callback) {
+DekartClient.prototype.getConnectionList = function getConnectionList(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
-  var client = grpc.unary(Dekart.GetSourceList, {
+  var client = grpc.unary(Dekart.GetConnectionList, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
