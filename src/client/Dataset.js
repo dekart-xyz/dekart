@@ -34,7 +34,7 @@ function DatasetSelector ({ dataset }) {
         <div className={styles.datasourceType} />
         <div className={styles.datasource}>
           <Select
-            placeholder='Select data source'
+            placeholder='Select connection'
             className={styles.connectionSelect}
             value={dataset.connectionId || null}
             onSelect={value => {
@@ -57,6 +57,7 @@ function DatasetSelector ({ dataset }) {
           /><Button
             type='text'
             disabled={!dataset.connectionId}
+            title='Edit connection'
             className={styles.connectionEditButton} onClick={
             () => dispatch(editConnection(dataset.connectionId))
           } icon={<MoreOutlined />}
