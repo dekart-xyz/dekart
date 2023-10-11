@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/gorilla/mux"
 )
 
@@ -20,12 +22,13 @@ func (s Server) ServeQuerySource(w http.ResponseWriter, r *http.Request) {
 
 	connection, err := s.getConnectionFromQueryID(ctx, vars["query"])
 
-	bucketName := s.getBucketNameFromConnection(connection)
-
 	if err != nil {
+		log.Err(err).Msg("Error getting connection from query id")
 		HttpError(w, err)
 		return
 	}
+
+	bucketName := s.getBucketNameFromConnection(connection)
 
 	obj := s.storage.GetObject(bucketName, fmt.Sprintf("%s.sql", vars["source"]))
 	created, err := obj.GetCreatedAt(ctx)

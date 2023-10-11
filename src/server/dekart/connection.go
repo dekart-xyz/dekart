@@ -6,7 +6,6 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
-	"fmt"
 	"os"
 
 	"github.com/rs/zerolog/log"
@@ -91,13 +90,8 @@ func (s Server) getConnectionFromFileID(ctx context.Context, fileID string) (*pr
 	return s.getConnection(ctx, connectionID.String)
 }
 
+// getConnection gets connection by id; it does not check if user has access to it or if it is archived
 func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.Connection, error) {
-	claims := user.GetClaims(ctx)
-	if claims == nil {
-		err := fmt.Errorf("unauthenticated request")
-		log.Err(err).Send()
-		return nil, err
-	}
 
 	if connectionID == "default" || connectionID == "" {
 		return &proto.Connection{
@@ -115,9 +109,8 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 			connection_name,
 			bigquery_project_id,
 			cloud_storage_bucket
-		from connections where id=$1 and author_email=$2 and archived=false limit 1`,
+		from connections where id=$1 limit 1`,
 		connectionID,
-		claims.Email,
 	)
 	if err != nil {
 		log.Err(err).Send()
@@ -150,6 +143,7 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 	return &connection, nil
 }
 
+// getConnections gets all connections for user
 func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error) {
 
 	connections := make([]*proto.Connection, 0)
