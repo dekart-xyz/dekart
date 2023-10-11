@@ -1,5 +1,6 @@
 import { combineReducers } from 'redux'
 import { closeConnectionDialog, connectionChanged, connectionCreated, connectionListUpdate, connectionSaved, editConnection, newConnection, saveConnection, testConnection, testConnectionResponse } from '../actions/connection'
+import { setEnv } from '../actions/env'
 
 function dialog (state = {
   visible: false,
@@ -92,8 +93,21 @@ function list (state = [], action) {
   }
 }
 
+// userDefined when connection is not configured in Dekart via env variables
+function userDefined (state = false, action) {
+  switch (action.type) {
+    case setEnv.name: {
+      const { BIGQUERY_PROJECT_ID, CLOUD_STORAGE_BUCKET } = action.variables
+      return BIGQUERY_PROJECT_ID === '' || CLOUD_STORAGE_BUCKET === ''
+    }
+    default:
+      return state
+  }
+}
+
 export default combineReducers({
   dialog,
   test,
-  list
+  list,
+  userDefined
 })

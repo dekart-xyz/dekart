@@ -8,14 +8,16 @@ describe('update dataset', () => {
     cy.get(`button:contains("${copy.create_report}")`).click()
 
     // first query
-    cy.get(`button:contains("${copy.bigquery_query}")`).click()
+    cy.get('button:contains("Add data from...")').click()
+    cy.get('span:contains("SQL query")').click()
     cy.get('textarea').type('SELECT primary_type, district, latitude, longitude, date from `bigquery-public-data.chicago_crime.crime` limit 1', { force: true })
     cy.get(`button:contains("${copy.execute}")`).click()
     cy.get(`span:contains("${copy.ready}")`, { timeout: 20000 }).should('be.visible')
 
     // second query
     cy.get('#dekart-report-page-tabs button.ant-tabs-nav-add:first').click({ force: true })
-    cy.get(`button:contains("${copy.bigquery_query}")`).click()
+    cy.get('button:contains("Add data from...")').click()
+    cy.get('span:contains("SQL query")').click()
     cy.get('textarea').type('SELECT primary_type, district, latitude, longitude, date from `bigquery-public-data.chicago_crime.crime` limit 2', { force: true })
     cy.get(`button:contains("${copy.execute}")`).click()
     cy.get(`span:contains("${copy.ready}")`, { timeout: 20000 }).should('be.visible')
