@@ -10,7 +10,7 @@ export function getDatasourceMeta (datasource) {
     case 'BQ':
       return {
         name: 'BigQuery',
-        style: 'bigQuery',
+        style: 'bigquery',
         usageStatsId: 2
       }
     case 'ATHENA':

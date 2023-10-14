@@ -15,6 +15,41 @@ import { useEffect, useState } from 'react'
 import { updateDataset, updateDatasetConnection } from './actions/dataset'
 import Datasource from './Datasource'
 
+function DatasetTypeSelector ({ dataset }) {
+  const dispatch = useDispatch()
+  const userDefinedConnection = useSelector(state => state.connection.userDefined)
+  return (
+    <div className={styles.datasetTypeSelector}>
+      <Dropdown
+        disabled={!dataset.connectionId && userDefinedConnection}
+        menu={{
+          items: [
+            {
+              label: 'SQL query',
+              icon: <ConsoleSqlOutlined />,
+              key: 'sql'
+            },
+            {
+              label: 'File upload',
+              icon: <UploadOutlined />,
+              key: 'file'
+            }
+          ],
+          onClick: ({ key }) => {
+            if (key === 'sql') {
+              dispatch(createQuery(dataset.id))
+            } else if (key === 'file') {
+              dispatch(createFile(dataset.id))
+            }
+          }
+        }}
+      >
+        <Button block type='primary'>Add data from...</Button>
+      </Dropdown>
+    </div>
+  )
+}
+
 const NEW_DATASOURCE = 'NEW_DATASOURCE'
 function DatasetSelector ({ dataset }) {
   const dispatch = useDispatch()
@@ -33,10 +68,10 @@ function DatasetSelector ({ dataset }) {
   return (
     <div className={styles.datasetSelector}>
       <div className={styles.selector}>
-        <Datasource />
         {userDefinedConnection
           ? (
             <>
+              <Datasource />
               <div className={styles.datasource}>
                 <Select
                   placeholder='Select connection'
@@ -71,38 +106,18 @@ function DatasetSelector ({ dataset }) {
               <ConnectionModal />
             </>
             )
-          : null}
+          : <DatasetTypeSelector dataset={dataset} />}
       </div>
-      <div className={styles.status}>
-        <div className={styles.datasetTypeSelector}>
-          <Dropdown
-            disabled={!dataset.connectionId && userDefinedConnection}
-            menu={{
-              items: [
-                {
-                  label: 'SQL query',
-                  icon: <ConsoleSqlOutlined />,
-                  key: 'sql'
-                },
-                {
-                  label: 'File upload',
-                  icon: <UploadOutlined />,
-                  key: 'file'
-                }
-              ],
-              onClick: ({ key }) => {
-                if (key === 'sql') {
-                  dispatch(createQuery(dataset.id))
-                } else if (key === 'file') {
-                  dispatch(createFile(dataset.id))
-                }
-              }
-            }}
-          >
-            <Button block type='primary'>Add data from...</Button>
-          </Dropdown>
-        </div>
-      </div>
+      {
+        userDefinedConnection
+          ? (
+            <div className={styles.status}>
+              <DatasetTypeSelector dataset={dataset} />
+            </div>
+
+            )
+          : null
+      }
     </div>
   )
 }
