@@ -70,10 +70,3 @@
     display: flex;
     flex-direction: row;
 }
-
-.datasourceType {
-    width: 80px;
-    height: 80px;
-    background-image: url('./bigquery.svg');
-    margin-bottom: 30px;
-}

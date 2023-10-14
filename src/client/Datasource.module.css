@@ -1,0 +1,22 @@
+.datasource {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 30px;
+}
+
+.datasource>div {
+    width: 80px;
+    height: 80px;
+}
+
+.bigquery {
+    background-image: url('./bigquery.svg');
+}
+
+.snowflake {
+    background-image: url('./snowflake.svg');
+}
+
+.athena {
+    background-image: url('./athena.svg');
+}

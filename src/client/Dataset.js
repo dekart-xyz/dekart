@@ -13,6 +13,7 @@ import { ConsoleSqlOutlined, UploadOutlined, MoreOutlined, CheckCircleTwoTone, E
 import ConnectionModal from './ConnectionModal'
 import { useEffect, useState } from 'react'
 import { updateDataset, updateDatasetConnection } from './actions/dataset'
+import Datasource from './Datasource'
 
 const NEW_DATASOURCE = 'NEW_DATASOURCE'
 function DatasetSelector ({ dataset }) {
@@ -32,7 +33,7 @@ function DatasetSelector ({ dataset }) {
   return (
     <div className={styles.datasetSelector}>
       <div className={styles.selector}>
-        <div className={styles.datasourceType} />
+        <Datasource />
         {userDefinedConnection
           ? (
             <>
