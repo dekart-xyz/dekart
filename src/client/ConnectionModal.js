@@ -5,12 +5,14 @@ import { useSelector, useDispatch } from 'react-redux'
 import Button from 'antd/es/button'
 import styles from './ConnectionModal.module.css'
 import { useState, useEffect } from 'react'
-import { archiveConnection as archiveConnection, closeConnectionDialog, connectionChanged, saveConnection, testConnection } from './actions/connection'
+import { archiveConnection, closeConnectionDialog, connectionChanged, saveConnection, testConnection } from './actions/connection'
 import { ConsoleSqlOutlined, UploadOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
 import Tooltip from 'antd/es/tooltip'
 
 export default function ConnectionModal () {
   const { dialog, test } = useSelector(state => state.connection)
+  const env = useSelector(state => state.env)
+  const { BIGQUERY_PROJECT_ID, CLOUD_STORAGE_BUCKET } = env.variables
   const { visible, id, loading } = dialog
   const connection = useSelector(state => state.connection.list.find(s => s.id === id))
   const { tested, testing, error: testError, success: testSuccess } = test
@@ -20,7 +22,13 @@ export default function ConnectionModal () {
     if (connection) {
       form.setFieldsValue(connection)
     }
-  }, [connection])
+    if (BIGQUERY_PROJECT_ID) {
+      form.setFieldsValue({ bigqueryProjectId: BIGQUERY_PROJECT_ID })
+    }
+    if (CLOUD_STORAGE_BUCKET) {
+      form.setFieldsValue({ cloudStorageBucket: CLOUD_STORAGE_BUCKET })
+    }
+  }, [connection, BIGQUERY_PROJECT_ID, CLOUD_STORAGE_BUCKET])
   if (!visible) {
     return null
   }
@@ -74,10 +82,10 @@ export default function ConnectionModal () {
             <Input />
           </Form.Item>
           <Form.Item label='Google Cloud project ID' extra='used to access BigQuery' required name='bigqueryProjectId'>
-            <Input />
+            <Input readOnly={BIGQUERY_PROJECT_ID} />
           </Form.Item>
           <Form.Item label='Google Cloud Storage bucket' extra='where queries, files and query results stored' required name='cloudStorageBucket'>
-            <Input placeholder='my-company-storage-bucket' />
+            <Input placeholder='my-company-storage-bucket' readOnly={CLOUD_STORAGE_BUCKET} />
           </Form.Item>
         </Form>
       </div>

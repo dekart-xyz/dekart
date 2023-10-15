@@ -32,7 +32,7 @@ export function archiveConnection (id) {
 }
 
 export function newConnection (datasetId) {
-  return async (dispatch) => {
+  return async (dispatch, getState) => {
     dispatch({ type: newConnection.name })
     const connectionName = `Untitled connection ${(new Date()).toLocaleString()}`
     const request = new CreateConnectionRequest()
