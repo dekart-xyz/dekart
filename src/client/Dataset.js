@@ -18,6 +18,8 @@ import Datasource from './Datasource'
 function DatasetTypeSelector ({ dataset }) {
   const dispatch = useDispatch()
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
+  const env = useSelector(state => state.env)
+  const { ALLOW_FILE_UPLOAD } = env.variables
   return (
     <div className={styles.datasetTypeSelector}>
       <Dropdown
@@ -32,6 +34,8 @@ function DatasetTypeSelector ({ dataset }) {
             {
               label: 'File upload',
               icon: <UploadOutlined />,
+              title: !ALLOW_FILE_UPLOAD ? 'File upload is disabled in Dekart configuration' : null,
+              disabled: !ALLOW_FILE_UPLOAD,
               key: 'file'
             }
           ],
@@ -61,7 +65,6 @@ function DatasetSelector ({ dataset }) {
   }
   // const datasource = getDatasourceMeta(env.variables.DATASOURCE).name
   const { ALLOW_FILE_UPLOAD } = env.variables
-  // const userDefinedConnection = BIGQUERY_PROJECT_ID === '' || CLOUD_STORAGE_BUCKET === ''
   if (!ALLOW_FILE_UPLOAD && !userDefinedConnection) {
     return null
   }

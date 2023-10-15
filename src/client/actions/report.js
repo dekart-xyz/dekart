@@ -83,7 +83,7 @@ function shouldDownloadQueryText (query, prevQueriesList, queriesList) {
 export function reportUpdate (reportStreamResponse) {
   const { report, queriesList, datasetsList, filesList } = reportStreamResponse
   return async (dispatch, getState) => {
-    const { queries: prevQueriesList, datasets: prevDatasetsList, report: prevReport, files: prevFileList, env } = getState()
+    const { queries: prevQueriesList, datasets: prevDatasetsList, report: prevReport, files: prevFileList, env, connection } = getState()
     dispatch({
       type: reportUpdate.name,
       report,
@@ -147,7 +147,7 @@ export function reportUpdate (reportStreamResponse) {
             prevDatasetsList
           ))
         }
-      } else if (!ALLOW_FILE_UPLOAD) {
+      } else if (!ALLOW_FILE_UPLOAD && !connection.userDefined) {
         // create query right away
         dispatch(createQuery(dataset.id))
       }
