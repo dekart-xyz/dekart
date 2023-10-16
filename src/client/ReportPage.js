@@ -77,7 +77,7 @@ function getTabPane (dataset, queries, files, status) {
       tab={<>{tabIcon}{`${title}${changed ? '*' : ''}`}</>}
       key={dataset.id}
       closable
-      closeIcon={<><MoreOutlined /></>}
+      closeIcon={<span title='Dataset setting'><MoreOutlined /></span>}
     />
   )
 }
@@ -179,6 +179,7 @@ function Title () {
             }
           )}
           onClick={() => reportStatus.edit && setEdit(true)}
+          title='Click to edit report title'
         >{
             reportStatus.edit && canWrite ? <EditOutlined className={styles.titleEditIcon} /> : null
           }{reportStatus.title}

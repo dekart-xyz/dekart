@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/gorilla/mux"
 )
 
@@ -17,7 +19,18 @@ func (s Server) ServeQuerySource(w http.ResponseWriter, r *http.Request) {
 	if claims == nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 	}
-	obj := s.storage.GetObject(fmt.Sprintf("%s.sql", vars["id"]))
+
+	connection, err := s.getConnectionFromQueryID(ctx, vars["query"])
+
+	if err != nil {
+		log.Err(err).Msg("Error getting connection from query id")
+		HttpError(w, err)
+		return
+	}
+
+	bucketName := s.getBucketNameFromConnection(connection)
+
+	obj := s.storage.GetObject(bucketName, fmt.Sprintf("%s.sql", vars["source"]))
 	created, err := obj.GetCreatedAt(ctx)
 	if err != nil {
 		HttpError(w, err)

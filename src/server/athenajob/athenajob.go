@@ -28,7 +28,7 @@ func NewStore(storage storage.Storage) *Store {
 		WithS3ForcePathStyle(true)
 	outputLocation := os.Getenv("DEKART_ATHENA_S3_OUTPUT_LOCATION")
 	if outputLocation == "" {
-		log.Fatal().Msgf("athena data source require DEKART_ATHENA_S3_OUTPUT_LOCATION")
+		log.Fatal().Msgf("athena data connection require DEKART_ATHENA_S3_OUTPUT_LOCATION")
 	}
 
 	session := session.Must(session.NewSession(conf))
@@ -143,7 +143,7 @@ func (j *Job) wait() {
 	j.Cancel()
 }
 
-func (j *Job) Run(storageObject storage.StorageObject) error {
+func (j *Job) Run(storageObject storage.StorageObject, conn *proto.Connection) error {
 	j.Lock()
 	j.storageObject = storageObject
 	j.Unlock()

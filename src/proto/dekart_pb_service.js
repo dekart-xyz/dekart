@@ -73,13 +73,22 @@ Dekart.RemoveDataset = {
   responseType: proto_dekart_pb.RemoveDatasetResponse
 };
 
-Dekart.UpdateDataset = {
-  methodName: "UpdateDataset",
+Dekart.UpdateDatasetName = {
+  methodName: "UpdateDatasetName",
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.UpdateDatasetRequest,
-  responseType: proto_dekart_pb.UpdateDatasetResponse
+  requestType: proto_dekart_pb.UpdateDatasetNameRequest,
+  responseType: proto_dekart_pb.UpdateDatasetNameResponse
+};
+
+Dekart.UpdateDatasetConnection = {
+  methodName: "UpdateDatasetConnection",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.UpdateDatasetConnectionRequest,
+  responseType: proto_dekart_pb.UpdateDatasetConnectionResponse
 };
 
 Dekart.CreateFile = {
@@ -145,6 +154,15 @@ Dekart.GetReportListStream = {
   responseType: proto_dekart_pb.ReportListResponse
 };
 
+Dekart.GetUserStream = {
+  methodName: "GetUserStream",
+  service: Dekart,
+  requestStream: false,
+  responseStream: true,
+  requestType: proto_dekart_pb.GetUserStreamRequest,
+  responseType: proto_dekart_pb.GetUserStreamResponse
+};
+
 Dekart.GetUsage = {
   methodName: "GetUsage",
   service: Dekart,
@@ -152,6 +170,51 @@ Dekart.GetUsage = {
   responseStream: false,
   requestType: proto_dekart_pb.GetUsageRequest,
   responseType: proto_dekart_pb.GetUsageResponse
+};
+
+Dekart.CreateConnection = {
+  methodName: "CreateConnection",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.CreateConnectionRequest,
+  responseType: proto_dekart_pb.CreateConnectionResponse
+};
+
+Dekart.UpdateConnection = {
+  methodName: "UpdateConnection",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.UpdateConnectionRequest,
+  responseType: proto_dekart_pb.UpdateConnectionResponse
+};
+
+Dekart.ArchiveConnection = {
+  methodName: "ArchiveConnection",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.ArchiveConnectionRequest,
+  responseType: proto_dekart_pb.ArchiveConnectionResponse
+};
+
+Dekart.GetConnectionList = {
+  methodName: "GetConnectionList",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.GetConnectionListRequest,
+  responseType: proto_dekart_pb.GetConnectionListResponse
+};
+
+Dekart.TestConnection = {
+  methodName: "TestConnection",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.TestConnectionRequest,
+  responseType: proto_dekart_pb.TestConnectionResponse
 };
 
 exports.Dekart = Dekart;
@@ -378,11 +441,42 @@ DekartClient.prototype.removeDataset = function removeDataset(requestMessage, me
   };
 };
 
-DekartClient.prototype.updateDataset = function updateDataset(requestMessage, metadata, callback) {
+DekartClient.prototype.updateDatasetName = function updateDatasetName(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
-  var client = grpc.unary(Dekart.UpdateDataset, {
+  var client = grpc.unary(Dekart.UpdateDatasetName, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.updateDatasetConnection = function updateDatasetConnection(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.UpdateDatasetConnection, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
@@ -642,11 +736,205 @@ DekartClient.prototype.getReportListStream = function getReportListStream(reques
   };
 };
 
+DekartClient.prototype.getUserStream = function getUserStream(requestMessage, metadata) {
+  var listeners = {
+    data: [],
+    end: [],
+    status: []
+  };
+  var client = grpc.invoke(Dekart.GetUserStream, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onMessage: function (responseMessage) {
+      listeners.data.forEach(function (handler) {
+        handler(responseMessage);
+      });
+    },
+    onEnd: function (status, statusMessage, trailers) {
+      listeners.status.forEach(function (handler) {
+        handler({ code: status, details: statusMessage, metadata: trailers });
+      });
+      listeners.end.forEach(function (handler) {
+        handler({ code: status, details: statusMessage, metadata: trailers });
+      });
+      listeners = null;
+    }
+  });
+  return {
+    on: function (type, handler) {
+      listeners[type].push(handler);
+      return this;
+    },
+    cancel: function () {
+      listeners = null;
+      client.close();
+    }
+  };
+};
+
 DekartClient.prototype.getUsage = function getUsage(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
   var client = grpc.unary(Dekart.GetUsage, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.createConnection = function createConnection(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.CreateConnection, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.updateConnection = function updateConnection(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.UpdateConnection, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.archiveConnection = function archiveConnection(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.ArchiveConnection, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.getConnectionList = function getConnectionList(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.GetConnectionList, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.testConnection = function testConnection(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.TestConnection, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,

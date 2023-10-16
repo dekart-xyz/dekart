@@ -24,8 +24,8 @@ describe('fork', () => {
     let originalColor
     cy.visit('/')
     cy.get(`button:contains("${copy.create_report}")`).click()
-    cy.get(`button:contains("${copy.snowflake_query}")`).should('be.visible')
-    cy.get(`button:contains("${copy.snowflake_query}")`).click()
+    cy.get('button:contains("Add data from...")').click()
+    cy.get('span:contains("SQL query")').click()
     cy.get('textarea').type('select 0 as lat, 0 as lon', { force: true })
     cy.get(`button:contains("${copy.execute}")`).click()
     cy.get('div:contains("1 rows")', { timeout: 20000 }).should('be.visible')

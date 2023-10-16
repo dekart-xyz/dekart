@@ -18,6 +18,7 @@ import (
 type Server struct {
 	db            *sql.DB
 	reportStreams *report.Streams
+	userStreams   *user.Streams
 	storage       storage.Storage
 	proto.UnimplementedDekartServer
 	jobs job.Store
@@ -32,6 +33,7 @@ func NewServer(db *sql.DB, storageBucket storage.Storage, jobs job.Store) *Serve
 	server := Server{
 		db:            db,
 		reportStreams: report.NewStreams(),
+		userStreams:   user.NewStreams(),
 		storage:       storageBucket,
 		jobs:          jobs,
 	}
@@ -109,6 +111,14 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_REQUIRE_GOOGLE_OAUTH,
 				Value: defaultString(os.Getenv("DEKART_REQUIRE_GOOGLE_OAUTH"), ""),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_BIGQUERY_PROJECT_ID,
+				Value: defaultString(os.Getenv("DEKART_BIGQUERY_PROJECT_ID"), ""),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_CLOUD_STORAGE_BUCKET,
+				Value: defaultString(os.Getenv("DEKART_CLOUD_STORAGE_BUCKET"), ""),
 			},
 		}
 

@@ -256,14 +256,16 @@ export default function HomePage () {
       }
       />
       <div className={styles.body}>
-        <NewVersion />
         {
           reportsList.loaded
-            ? <Reports
+            ? (
+              <><NewVersion /><Reports
                 reportsList={reportsList}
                 createReportButton={createReportButton}
                 body={body}
-              />
+                              />
+              </>
+              )
             : <Loading />
         }
       </div>

@@ -1,7 +1,7 @@
 import { KeplerGlSchema } from '@dekart-xyz/kepler.gl/dist/schemas'
 import { receiveMapConfig, removeDataset } from '@dekart-xyz/kepler.gl/dist/actions'
 
-import { grpcCall, grpcStream } from './grpc'
+import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
 import { success } from './message'
 import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
@@ -10,12 +10,9 @@ import { downloadDataset } from './dataset'
 import { shouldAddQuery } from '../lib/shouldAddQuery'
 import { shouldUpdateDataset } from '../lib/shouldUpdateDataset'
 
-export function closeReport (reportId) {
-  return (dispatch, getState) => {
-    const { stream } = getState()
-    if (stream.cancelable) {
-      stream.cancelable.cancel()
-    }
+export function closeReport () {
+  return (dispatch) => {
+    dispatch(grpcStreamCancel(Dekart.GetReportStream))
     dispatch({
       type: closeReport.name
     })
@@ -86,7 +83,7 @@ function shouldDownloadQueryText (query, prevQueriesList, queriesList) {
 export function reportUpdate (reportStreamResponse) {
   const { report, queriesList, datasetsList, filesList } = reportStreamResponse
   return async (dispatch, getState) => {
-    const { queries: prevQueriesList, datasets: prevDatasetsList, report: prevReport, files: prevFileList, env } = getState()
+    const { queries: prevQueriesList, datasets: prevDatasetsList, report: prevReport, files: prevFileList, env, connection } = getState()
     dispatch({
       type: reportUpdate.name,
       report,
@@ -150,7 +147,7 @@ export function reportUpdate (reportStreamResponse) {
             prevDatasetsList
           ))
         }
-      } else if (!ALLOW_FILE_UPLOAD) {
+      } else if (!ALLOW_FILE_UPLOAD && !connection.userDefined) {
         // create query right away
         dispatch(createQuery(dataset.id))
       }
@@ -173,11 +170,8 @@ export function subscribeReports () {
 
 export function unsubscribeReports () {
   return (dispatch, getState) => {
-    const { stream } = getState()
+    dispatch(grpcStreamCancel(Dekart.GetReportListStream))
     dispatch({ type: unsubscribeReports.name })
-    if (stream.cancelable) {
-      stream.cancelable.cancel()
-    }
   }
 }
 
@@ -218,10 +212,7 @@ export function forkReport (reportId) {
     dispatch({ type: forkReport.name })
     const request = new ForkReportRequest()
     request.setReportId(reportId)
-    dispatch(grpcCall(Dekart.ForkReport, request, (res, err) => {
-      if (err) {
-        return err
-      }
+    dispatch(grpcCall(Dekart.ForkReport, request, (res) => {
       const { reportId } = res
       dispatch(newForkedReport(reportId))
       dispatch(success('Report Forked'))
@@ -232,10 +223,7 @@ export function forkReport (reportId) {
 export function createReport () {
   return async (dispatch) => {
     const request = new CreateReportRequest()
-    dispatch(grpcCall(Dekart.CreateReport, request, (res, err) => {
-      if (err) {
-        return err
-      }
+    dispatch(grpcCall(Dekart.CreateReport, request, (res) => {
       const { report } = res
       dispatch(newReport(report.id))
       dispatch(success('New Report Created'))
@@ -273,10 +261,7 @@ export function saveMap () {
     reportPayload.setTitle(reportStatus.title)
     request.setReport(reportPayload)
     request.setQueryList(queries)
-    dispatch(grpcCall(Dekart.UpdateReport, request, (res, err) => {
-      if (err) {
-        return err
-      }
+    dispatch(grpcCall(Dekart.UpdateReport, request, () => {
       dispatch(success('Map Saved'))
     }))
   }

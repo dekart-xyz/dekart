@@ -5,7 +5,8 @@ describe('cancelling query', () => {
   it('should cancels query', () => {
     cy.visit('/')
     cy.get(`button:contains("${copy.create_report}")`).click()
-    cy.get(`button:contains("${copy.bigquery_query}")`).click()
+    cy.get('button:contains("Add data from...")').click()
+    cy.get('span:contains("SQL query")').click()
     cy.get('textarea').type(copy.simple_sql_query, { force: true })
     cy.get(`button:contains("${copy.execute}")`).click()
     cy.get(`button:contains("${copy.cancel}")`).should('be.visible')

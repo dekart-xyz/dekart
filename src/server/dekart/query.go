@@ -3,6 +3,7 @@ package dekart
 import (
 	"context"
 	"crypto/sha1"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -36,7 +37,27 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
+	connection, err := s.getConnectionFromDatasetID(ctx, req.DatasetId)
+
+	bucketName := s.getBucketNameFromConnection(connection)
+
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	id := newUUID()
+
+	err = s.storeQuerySync(ctx, bucketName, id, "", "")
+
+	if err != nil {
+		if _, ok := err.(*queryWasNotUpdated); !ok {
+			log.Err(err).Msg("Error updating query text")
+			return &proto.CreateQueryResponse{}, status.Error(codes.Internal, err.Error())
+		}
+		log.Warn().Msg("Query text not updated")
+	}
+
 	_, err = s.db.ExecContext(ctx,
 		`insert into queries (id, query_text) values ($1, '')`,
 		id,
@@ -65,7 +86,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	if affectedRows == 0 {
 		log.Warn().Str("reportID", *reportID).Str("dataset", req.DatasetId).Msg("dataset query was already created")
 	}
-	go s.storeQuery(ctx, *reportID, id, "", "")
+
 	s.reportStreams.Ping(*reportID)
 
 	return &proto.CreateQueryResponse{}, nil
@@ -78,12 +99,12 @@ func (e *queryWasNotUpdated) Error() string {
 	return "query was not updated"
 }
 
-func (s Server) storeQuerySync(ctx context.Context, queryID string, queryText string, prevQuerySourceId string) error {
+func (s Server) storeQuerySync(ctx context.Context, bucketName, queryID string, queryText string, prevQuerySourceId string) error {
 	h := sha1.New()
 	queryTextByte := []byte(queryText)
 	h.Write(queryTextByte)
 	newQuerySourceId := fmt.Sprintf("%x", h.Sum(nil))
-	storageWriter := s.storage.GetObject(fmt.Sprintf("%s.sql", newQuerySourceId)).GetWriter(ctx)
+	storageWriter := s.storage.GetObject(bucketName, fmt.Sprintf("%s.sql", newQuerySourceId)).GetWriter(ctx)
 	_, err := storageWriter.Write(queryTextByte)
 	if err != nil {
 		log.Err(err).Msg("Error writing query_text to storage")
@@ -92,7 +113,7 @@ func (s Server) storeQuerySync(ctx context.Context, queryID string, queryText st
 	}
 	err = storageWriter.Close()
 	if err != nil {
-		log.Err(err).Msg("Error writing query_text to storage")
+		log.Err(err).Str("bucketName", bucketName).Msg("Error writing query_text to storage")
 		return err
 	}
 
@@ -116,7 +137,7 @@ func (s Server) storeQuerySync(ctx context.Context, queryID string, queryText st
 func (s Server) storeQuery(userCtx context.Context, reportID string, queryID string, queryText string, prevQuerySourceId string) {
 	ctx, cancel := context.WithTimeout(user.CopyClaims(userCtx, context.Background()), time.Second*5)
 	defer cancel()
-	err := s.storeQuerySync(ctx, queryID, queryText, prevQuerySourceId)
+	err := s.storeQuerySync(ctx, "", queryID, queryText, prevQuerySourceId)
 	if _, ok := err.(*queryWasNotUpdated); ok {
 		log.Warn().Msg("Query text not updated")
 		return
@@ -194,7 +215,8 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	queriesRows, err := s.db.QueryContext(ctx,
 		`select 
 			reports.id,
-			queries.query_source_id
+			queries.query_source_id,
+			datasets.connection_id
 		from queries
 			left join datasets on queries.id = datasets.query_id
 			left join reports on (datasets.report_id = reports.id or queries.report_id = reports.id)
@@ -211,8 +233,9 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	defer queriesRows.Close()
 	var reportID string
 	var prevQuerySourceId string
+	var connectionID sql.NullString
 	for queriesRows.Next() {
-		err := queriesRows.Scan(&reportID, &prevQuerySourceId)
+		err := queriesRows.Scan(&reportID, &prevQuerySourceId, &connectionID)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, status.Error(codes.Internal, err.Error())
@@ -225,7 +248,16 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	err = s.storeQuerySync(ctx, req.QueryId, req.QueryText, prevQuerySourceId)
+	connection, err := s.getConnection(ctx, connectionID.String)
+
+	bucketName := s.getBucketNameFromConnection(connection)
+
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.storeQuerySync(ctx, bucketName, req.QueryId, req.QueryText, prevQuerySourceId)
 
 	if err != nil {
 		code := codes.Internal
@@ -243,10 +275,10 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		log.Error().Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	obj := s.storage.GetObject(fmt.Sprintf("%s.csv", job.GetID()))
+	obj := s.storage.GetObject(bucketName, fmt.Sprintf("%s.csv", job.GetID()))
 	go s.updateJobStatus(job, jobStatus)
 	job.Status() <- int32(proto.Query_JOB_STATUS_PENDING)
-	err = job.Run(obj)
+	err = job.Run(obj, connection)
 	if err != nil {
 		if err == context.Canceled {
 			log.Warn().Err(err).Send()

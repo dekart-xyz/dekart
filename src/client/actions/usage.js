@@ -10,10 +10,7 @@ export function getUsage () {
   return async dispatch => {
     dispatch({ type: getUsage.name })
     const req = new GetUsageRequest()
-    dispatch(grpcCall(Dekart.GetUsage, req, (stats, err) => {
-      if (err) {
-        return err
-      }
+    dispatch(grpcCall(Dekart.GetUsage, req, (stats) => {
       dispatch(setUsage(stats))
     }))
   }

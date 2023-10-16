@@ -6,7 +6,7 @@ import { createStore, applyMiddleware, compose } from 'redux'
 import { Provider } from 'react-redux'
 import thunk from 'redux-thunk'
 // import { createLogger } from 'redux-logger'
-import reducer from './reducers/combineReducers'
+import reducer from './reducers/rootReducer'
 import { taskMiddleware } from 'react-palm/tasks'
 import screenshotInit from './lib/screenshot'
 

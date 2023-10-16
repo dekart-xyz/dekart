@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"dekart/src/proto"
 	"dekart/src/server/user"
 	"io"
 	"net/url"
@@ -28,29 +29,86 @@ type StorageObject interface {
 }
 
 type Storage interface {
-	GetObject(string) StorageObject
+	GetObject(string, string) StorageObject
+}
+
+func GetBucketName(userBucketName string) string {
+	defaultBucketName := GetDefaultBucketName()
+	if userBucketName != "" {
+		return userBucketName
+	}
+	if defaultBucketName == "" {
+		log.Warn().Msg("DEKART_CLOUD_STORAGE_BUCKET and userBucketName are not set")
+	}
+	return defaultBucketName
+}
+
+func GetDefaultBucketName() string {
+	return os.Getenv("DEKART_CLOUD_STORAGE_BUCKET")
 }
 
 // GoogleCloudStorage implements Storage interface for Google Cloud Storage
 type GoogleCloudStorage struct {
+	defaultBucketName string
+	logger            zerolog.Logger
+}
+
+func (s GoogleCloudStorage) GetDefaultBucketName() string {
+	return s.defaultBucketName
+}
+
+func NewGoogleCloudStorage() *GoogleCloudStorage {
+	defaultBucketName := os.Getenv("DEKART_CLOUD_STORAGE_BUCKET")
+	if defaultBucketName == "" {
+		log.Info().Msg("DEKART_CLOUD_STORAGE_BUCKET is not set, using user provided bucket")
+	}
+	return &GoogleCloudStorage{
+		defaultBucketName,
+		log.With().Str("DEKART_CLOUD_STORAGE_BUCKET", defaultBucketName).Logger(),
+	}
+}
+
+func TestConnection(ctx context.Context, connection *proto.Connection) (*proto.TestConnectionResponse, error) {
+	tokenSource := user.GetTokenSource(ctx)
+	client, err := storage.NewClient(ctx, option.WithTokenSource(tokenSource))
+	if err != nil {
+		log.Fatal().Err(err).Send()
+	}
+	bucket := client.Bucket(connection.CloudStorageBucket)
+	_, err = bucket.Attrs(ctx)
+	if err != nil {
+		return &proto.TestConnectionResponse{
+			Success: false,
+			Error:   err.Error(),
+		}, nil
+	}
+	return &proto.TestConnectionResponse{
+		Success: true,
+	}, nil
+}
+
+type GetObjectConfig struct {
 	bucketName string
-	logger     zerolog.Logger
 }
 
-func NewGoogleCloudStorage() GoogleCloudStorage {
-	bucketName := os.Getenv("DEKART_CLOUD_STORAGE_BUCKET")
+type GetObjectOption interface {
+	apply(*GetObjectConfig)
+}
+
+type BucketNameOption struct {
+	BucketName string
+}
+
+func (o BucketNameOption) apply(options *GetObjectConfig) {
+	options.bucketName = o.BucketName
+}
+
+func (s GoogleCloudStorage) GetObject(bucketName, object string) StorageObject {
 	if bucketName == "" {
-		log.Fatal().Msg("DEKART_CLOUD_STORAGE_BUCKET is not set")
+		log.Warn().Msg("bucketName is not set")
 	}
-	return GoogleCloudStorage{
-		bucketName,
-		log.With().Str("DEKART_CLOUD_STORAGE_BUCKET", bucketName).Logger(),
-	}
-}
-
-func (s GoogleCloudStorage) GetObject(object string) StorageObject {
 	return GoogleCloudStorageObject{
-		s.bucketName,
+		bucketName,
 		object,
 		s.logger.With().Str("GoogleCloudStorageObject", object).Logger(),
 	}
@@ -140,7 +198,11 @@ func NewS3Storage() Storage {
 	}
 }
 
-func (s S3Storage) GetObject(name string) StorageObject {
+func (s S3Storage) GetDefaultBucketName() string {
+	return s.bucketName
+}
+
+func (s S3Storage) GetObject(bucketName string, name string) StorageObject {
 	return S3StorageObject{
 		s,
 		name,

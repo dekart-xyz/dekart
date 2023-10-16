@@ -100,7 +100,7 @@ func (s Server) getQueries(ctx context.Context, datasets []*proto.Dataset) ([]*p
 	return make([]*proto.Query, 0), nil
 }
 
-//getQueriesLegacy is used to get queries which are not associated with a dataset
+// getQueriesLegacy is used to get queries which are not associated with a dataset
 func (s Server) getQueriesLegacy(ctx context.Context, reportID string) ([]*proto.Query, error) {
 	queryRows, err := s.db.QueryContext(ctx,
 		`select

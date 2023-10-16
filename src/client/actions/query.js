@@ -53,7 +53,7 @@ export function downloadQuerySource (query) {
       return
     }
     try {
-      const res = await get(`/query-source/${query.querySourceId}.sql`, token)
+      const res = await get(`/query-source/${query.id}/${query.querySourceId}.sql`, token)
       const queryText = await res.text()
       dispatch(querySource(query.id, query.querySourceId, queryText))
     } catch (err) {
