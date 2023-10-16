@@ -87,16 +87,6 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		log.Warn().Str("reportID", *reportID).Str("dataset", req.DatasetId).Msg("dataset query was already created")
 	}
 
-	// go s.storeQuery(ctx, *reportID, id, "", "")
-
-	// if _, ok := err.(*queryWasNotUpdated); ok {
-	// 	log.Warn().Msg("Query text not updated")
-	// 	return
-	// } else if err != nil {
-	// 	log.Err(err).Msg("Error updating query text")
-	// 	return
-	// }
-
 	s.reportStreams.Ping(*reportID)
 
 	return &proto.CreateQueryResponse{}, nil

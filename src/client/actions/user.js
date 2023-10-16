@@ -10,17 +10,12 @@ export function subscribeUserStream () {
     const prevRes = {
       connectionUpdate: 0
     }
-    // const request = new ReportListRequest()
-    console.log('subscribeUserStream')
     dispatch(grpcStream(Dekart.GetUserStream, request, (message, err) => {
-      console.log('subscribeUserStream message', message, err)
       if (message) {
         if (prevRes.connectionUpdate !== message.connectionUpdate) {
           prevRes.connectionUpdate = message.connectionUpdate
-          console.log('subscribeUserStream getConnectionsList')
           dispatch(getConnectionsList())
         }
-        // dispatch(reportsListUpdate(message.reportsList))
       }
       return err
     }))

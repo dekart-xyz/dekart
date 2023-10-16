@@ -243,7 +243,6 @@ func (job *Job) Run(storageObject storage.StorageObject, conn *proto.Connection)
 		job.Logger.Debug().Msg("Using oauth2 token")
 		client, err = bigquery.NewClient(
 			job.GetCtx(),
-			//start here: use source
 			conn.BigqueryProjectId,
 			option.WithTokenSource(tokenSource),
 		)

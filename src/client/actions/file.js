@@ -25,11 +25,14 @@ export function uploadFile (fileId, file) {
     dispatch({ type: uploadFile.name, fileId, file })
     const formData = new window.FormData()
     formData.append('file', file)
+
     const { REACT_APP_API_HOST } = process.env
     const host = REACT_APP_API_HOST || ''
     const url = `${host}/api/v1/file/${fileId}.csv`
-    const request = new window.XMLHttpRequest()
+
     const { token } = getState()
+
+    const request = new window.XMLHttpRequest()
 
     request.upload.addEventListener('progress', (event) => {
       dispatch(uploadFileProgress(fileId, event.loaded, event.total))
@@ -37,11 +40,13 @@ export function uploadFile (fileId, file) {
     request.addEventListener('readystatechange', (event) => {
       dispatch(uploadFileStateChange(fileId, request.readyState, request.status))
     })
+
     request.open('POST', url)
+
     if (token) {
-      console.log('uploadFile token', token)
       request.setRequestHeader('Authorization', `Bearer ${token.access_token}`)
     }
+
     request.timeout = 3600 * 1000 // 1 hour
     request.multipart = true
     request.send(formData)

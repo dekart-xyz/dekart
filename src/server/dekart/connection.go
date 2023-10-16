@@ -143,7 +143,7 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 	return &connection, nil
 }
 
-// getConnections gets all connections for user
+// getConnections list for connections created by user
 func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error) {
 
 	connections := make([]*proto.Connection, 0)

@@ -99,12 +99,9 @@ export default function App () {
       dispatch(getUsage())
     }
   }, [env, usage, dispatch, status])
-  console.log('App render')
   useEffect(() => {
-    console.log('App subscribeUserStream')
     dispatch(subscribeUserStream())
     return () => {
-      console.log('App unsubscribe')
       dispatch(unsubscribeUserStream())
     }
   }, [dispatch])

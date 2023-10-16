@@ -35,7 +35,6 @@ type Storage interface {
 func GetBucketName(userBucketName string) string {
 	defaultBucketName := GetDefaultBucketName()
 	if userBucketName != "" {
-		log.Debug().Str("userBucketName", userBucketName).Msg("using user provided bucket")
 		return userBucketName
 	}
 	if defaultBucketName == "" {
@@ -129,7 +128,6 @@ func (o GoogleCloudStorageObject) CopyFromS3(ctx context.Context, source string)
 
 func (o GoogleCloudStorageObject) getObject(ctx context.Context) *storage.ObjectHandle {
 	tokenSource := user.GetTokenSource(ctx)
-	log.Debug().Interface("tokenSource", tokenSource).Msg("getObject tokenSource")
 	var client *storage.Client
 	var err error
 	if tokenSource == nil {

@@ -4,22 +4,23 @@ import Select from 'antd/es/select'
 import { useDispatch, useSelector } from 'react-redux'
 import Query from './Query'
 import File from './File'
-import { getDatasourceMeta } from './lib/datasource'
 import { createQuery } from './actions/query'
 import { createFile } from './actions/file'
 import { editConnection, newConnection } from './actions/connection'
 import Dropdown from 'antd/es/dropdown'
-import { ConsoleSqlOutlined, UploadOutlined, MoreOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
+import { ConsoleSqlOutlined, UploadOutlined, MoreOutlined } from '@ant-design/icons'
 import ConnectionModal from './ConnectionModal'
-import { useEffect, useState } from 'react'
-import { updateDataset, updateDatasetConnection } from './actions/dataset'
 import Datasource from './Datasource'
+import { updateDatasetConnection } from './actions/dataset'
 
-function DatasetTypeSelector ({ dataset }) {
+function DatasetType ({ dataset }) {
   const dispatch = useDispatch()
+
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
+
   const env = useSelector(state => state.env)
   const { ALLOW_FILE_UPLOAD } = env.variables
+
   return (
     <div className={styles.datasetTypeSelector}>
       <Dropdown
@@ -55,6 +56,7 @@ function DatasetTypeSelector ({ dataset }) {
 }
 
 const NEW_DATASOURCE = 'NEW_DATASOURCE'
+
 function DatasetSelector ({ dataset }) {
   const dispatch = useDispatch()
   const env = useSelector(state => state.env)
@@ -109,13 +111,13 @@ function DatasetSelector ({ dataset }) {
               <ConnectionModal />
             </>
             )
-          : <DatasetTypeSelector dataset={dataset} />}
+          : <DatasetType dataset={dataset} />}
       </div>
       {
         userDefinedConnection
           ? (
             <div className={styles.status}>
-              <DatasetTypeSelector dataset={dataset} />
+              <DatasetType dataset={dataset} />
             </div>
 
             )

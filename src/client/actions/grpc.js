@@ -15,10 +15,6 @@ export function grpcCall (method, request, resolve = () => {}, reject = (err) =>
     try {
       const response = await unary(method, request, headers)
       resolve(response)
-      // const err = cb(response, null)
-      // if (err) {
-      //   throw err
-      // }
     } catch (err) {
       const passErr = reject(err)
       if (passErr instanceof GrpcError) {

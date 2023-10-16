@@ -79,7 +79,6 @@ func (s *Streams) Deregister(claims Claims, streamID string) {
 
 // Ping about report update
 func (s *Streams) Ping(users []string) {
-	// log.Debug().Str("reportID", reportID).Msgf("Ping")
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	for _, user := range users {
@@ -94,7 +93,6 @@ func (s *Streams) Ping(users []string) {
 			continue
 		}
 		for _, ch := range streamMap {
-			log.Debug().Int64("sequence", s.sequence[user]).Str("user", user).Msgf("Update subscriber")
 			go func(ch chan int64, sequence int64) {
 				ch <- sequence
 			}(ch, s.sequence[user])

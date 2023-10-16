@@ -8,9 +8,8 @@ export default function Datasource () {
     return null
   }
   const { DATASOURCE } = env.variables
-  const { style } = getDatasourceMeta(DATASOURCE)
 
-  console.log('style', style, DATASOURCE)
+  const { style } = getDatasourceMeta(DATASOURCE)
 
   return (
     <div className={styles.datasource}>

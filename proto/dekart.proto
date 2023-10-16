@@ -13,7 +13,6 @@ service Dekart {
     // datasets
     rpc CreateDataset(CreateDatasetRequest) returns (CreateDatasetResponse) {}
     rpc RemoveDataset(RemoveDatasetRequest) returns (RemoveDatasetResponse) {}
-    // rpc UpdateDataset(UpdateDatasetRequest) returns (UpdateDatasetResponse) {}
     rpc UpdateDatasetName(UpdateDatasetNameRequest) returns (UpdateDatasetNameResponse) {}
     rpc UpdateDatasetConnection(UpdateDatasetConnectionRequest) returns (UpdateDatasetConnectionResponse) {}
 

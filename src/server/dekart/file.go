@@ -116,7 +116,6 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	log.Debug().Interface("claims", claims).Msg("UploadFile claims")
 	reportIds, err := s.getFileReports(ctx, fileId, claims)
 
 	if err != nil {

@@ -121,7 +121,6 @@ func (c ClaimsCheck) validateToken(ctx context.Context, header string) *Claims {
 func CopyClaims(sourceCtx, destCtx context.Context) context.Context {
 	claims := GetClaims(sourceCtx)
 	if claims == nil {
-		log.Debug().Msg("No claims found in source context")
 		return destCtx
 	}
 	return context.WithValue(destCtx, contextKey, claims)

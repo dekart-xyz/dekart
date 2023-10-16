@@ -4,20 +4,59 @@ import Modal from 'antd/es/modal'
 import { useSelector, useDispatch } from 'react-redux'
 import Button from 'antd/es/button'
 import styles from './ConnectionModal.module.css'
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { archiveConnection, closeConnectionDialog, connectionChanged, saveConnection, testConnection } from './actions/connection'
-import { ConsoleSqlOutlined, UploadOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
+import { CheckCircleTwoTone, ExclamationCircleTwoTone } from '@ant-design/icons'
 import Tooltip from 'antd/es/tooltip'
 
-export default function ConnectionModal () {
+function Footer ({ form }) {
   const { dialog, test } = useSelector(state => state.connection)
+  const { tested, testing, error: testError, success: testSuccess } = test
+  const { id, loading } = dialog
+
+  const dispatch = useDispatch()
+
+  return (
+    <div className={styles.modalFooter}>
+      <Button
+        type='primary' disabled={testing || tested} loading={testing} onClick={() => {
+          dispatch(testConnection(form.getFieldsValue()))
+        }}
+      >
+        Test Connection
+      </Button>
+      {
+    tested
+      ? <div className={styles.testStatus}>{testError ? <Tooltip title={testError}><ExclamationCircleTwoTone twoToneColor='#f5222d' /></Tooltip> : <CheckCircleTwoTone twoToneColor='#52c41a' />}</div>
+      : null
+  }
+      <div className={styles.spacer} />
+      <Button
+        type={tested && testSuccess ? 'primary' : 'default'} disabled={!tested || loading} onClick={() => {
+          dispatch(saveConnection(id, form.getFieldsValue()))
+        }}
+      >
+        Save
+      </Button>
+      <Button danger onClick={() => dispatch(archiveConnection(id))}>
+        Archive
+      </Button>
+    </div>
+  )
+}
+
+export default function ConnectionModal () {
+  const { dialog } = useSelector(state => state.connection)
+  const { visible, id, loading } = dialog
+
   const env = useSelector(state => state.env)
   const { BIGQUERY_PROJECT_ID, CLOUD_STORAGE_BUCKET } = env.variables
-  const { visible, id, loading } = dialog
+
   const connection = useSelector(state => state.connection.list.find(s => s.id === id))
-  const { tested, testing, error: testError, success: testSuccess } = test
+
   const dispatch = useDispatch()
   const [form] = Form.useForm()
+
   useEffect(() => {
     if (connection) {
       form.setFieldsValue(connection)
@@ -29,6 +68,7 @@ export default function ConnectionModal () {
       form.setFieldsValue({ cloudStorageBucket: CLOUD_STORAGE_BUCKET })
     }
   }, [connection, BIGQUERY_PROJECT_ID, CLOUD_STORAGE_BUCKET])
+
   if (!visible) {
     return null
   }
@@ -37,36 +77,7 @@ export default function ConnectionModal () {
       open
       title='Edit Connection'
       onCancel={() => dispatch(closeConnectionDialog())}
-      footer={(
-        <div className={styles.modalFooter}>
-          <Button
-            type='primary' disabled={testing || tested} loading={testing} onClick={() => {
-              dispatch(testConnection(form.getFieldsValue()))
-            }}
-          >
-            Test Connection
-          </Button>
-          {
-            tested
-              ? <div className={styles.testStatus}>{testError ? <Tooltip title={testError}><ExclamationCircleTwoTone twoToneColor='#f5222d' /></Tooltip> : <CheckCircleTwoTone twoToneColor='#52c41a' />}</div>
-              : null
-          }
-          <div className={styles.spacer} />
-          <Button
-            type={tested && testSuccess ? 'primary' : 'default'} disabled={!tested || loading} onClick={() => {
-              dispatch(saveConnection(id, form.getFieldsValue()))
-            }}
-          >
-            Save
-          </Button>
-          <Button danger onClick={() => dispatch(archiveConnection(id))}>
-            Archive
-          </Button>
-          {/* <Button onClick={() => dispatch(closeConnectionDialog())}>
-            Cancel
-          </Button> */}
-        </div>
-          )}
+      footer={<Footer form={form} />}
     >
       <div className={styles.modalBody}>
         <Form
