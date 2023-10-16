@@ -67,7 +67,7 @@ export default function ConnectionModal () {
     if (CLOUD_STORAGE_BUCKET) {
       form.setFieldsValue({ cloudStorageBucket: CLOUD_STORAGE_BUCKET })
     }
-  }, [connection, BIGQUERY_PROJECT_ID, CLOUD_STORAGE_BUCKET])
+  }, [connection, BIGQUERY_PROJECT_ID, CLOUD_STORAGE_BUCKET, form])
 
   if (!visible) {
     return null
