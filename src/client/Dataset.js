@@ -13,7 +13,7 @@ import ConnectionModal from './ConnectionModal'
 import Datasource from './Datasource'
 import { updateDatasetConnection } from './actions/dataset'
 
-function DatasetType ({ dataset }) {
+function DatasetTypeSelector ({ dataset }) {
   const dispatch = useDispatch()
 
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
@@ -111,13 +111,13 @@ function DatasetSelector ({ dataset }) {
               <ConnectionModal />
             </>
             )
-          : <DatasetType dataset={dataset} />}
+          : <DatasetTypeSelector dataset={dataset} />}
       </div>
       {
         userDefinedConnection
           ? (
             <div className={styles.status}>
-              <DatasetType dataset={dataset} />
+              <DatasetTypeSelector dataset={dataset} />
             </div>
 
             )

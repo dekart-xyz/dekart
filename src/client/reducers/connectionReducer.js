@@ -97,8 +97,8 @@ function list (state = [], action) {
 function userDefined (state = false, action) {
   switch (action.type) {
     case setEnv.name: {
-      const { BIGQUERY_PROJECT_ID, CLOUD_STORAGE_BUCKET } = action.variables
-      return BIGQUERY_PROJECT_ID === '' || CLOUD_STORAGE_BUCKET === ''
+      const { BIGQUERY_PROJECT_ID, CLOUD_STORAGE_BUCKET, DATASOURCE } = action.variables
+      return (BIGQUERY_PROJECT_ID === '' && DATASOURCE === 'BQ') || CLOUD_STORAGE_BUCKET === ''
     }
     default:
       return state
