@@ -160,6 +160,7 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 
 func (s Server) sendUserStreamResponse(ctx context.Context, srv proto.Dekart_GetUserStreamServer, sequence int64) error {
 	connectionUpdate, err := s.getLastConnectionUpdate(ctx)
+	claims := user.GetClaims(srv.Context())
 	if err != nil {
 		log.Err(err).Send()
 		return status.Errorf(codes.Internal, err.Error())
@@ -169,7 +170,8 @@ func (s Server) sendUserStreamResponse(ctx context.Context, srv proto.Dekart_Get
 		StreamOptions: &proto.StreamOptions{
 			Sequence: sequence,
 		},
-		ConnectionUpdate: connectionUpdate,
+		ConnectionUpdate:   connectionUpdate,
+		SubscriptionActive: claims.SubscriptionActive,
 	}
 	err = srv.Send(&res)
 	if err != nil {

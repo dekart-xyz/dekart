@@ -106,6 +106,7 @@ require (
 	github.com/segmentio/encoding v0.3.5 // indirect
 	github.com/segmentio/parquet-go v0.0.0-20221020201645-63215c8128ff // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
+	github.com/stripe/stripe-go/v76 v76.4.0 // indirect
 	github.com/zeebo/xxh3 v1.0.2 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect

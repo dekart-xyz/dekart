@@ -55,6 +55,9 @@ message GetUserStreamRequest {
 message GetUserStreamResponse {
     StreamOptions stream_options = 1;
     int64 connection_update = 2;
+
+    // cloud
+    bool subscription_active = 103;
 }
 
 message TestConnectionRequest {
@@ -217,7 +220,7 @@ message Query {
         JOB_STATUS_RUNNING = 2;
         JOB_STATUS_DONE_LEGACY = 3;  // legacy for backwards compatibility
         JOB_STATUS_READING_RESULTS = 4; // job is done proccessing results
-        JOB_STATUS_DONE = 5; 
+        JOB_STATUS_DONE = 5;
     }
 
     JobStatus job_status = 4;

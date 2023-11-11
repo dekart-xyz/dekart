@@ -1674,7 +1674,8 @@ proto.GetUserStreamResponse.prototype.toObject = function(opt_includeInstance) {
 proto.GetUserStreamResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
     streamOptions: (f = msg.getStreamOptions()) && proto.StreamOptions.toObject(includeInstance, f),
-    connectionUpdate: jspb.Message.getFieldWithDefault(msg, 2, 0)
+    connectionUpdate: jspb.Message.getFieldWithDefault(msg, 2, 0),
+    subscriptionActive: jspb.Message.getBooleanFieldWithDefault(msg, 103, false)
   };
 
   if (includeInstance) {
@@ -1720,6 +1721,10 @@ proto.GetUserStreamResponse.deserializeBinaryFromReader = function(msg, reader) 
       var value = /** @type {number} */ (reader.readInt64());
       msg.setConnectionUpdate(value);
       break;
+    case 103:
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setSubscriptionActive(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -1761,6 +1766,13 @@ proto.GetUserStreamResponse.serializeBinaryToWriter = function(message, writer) 
   if (f !== 0) {
     writer.writeInt64(
       2,
+      f
+    );
+  }
+  f = message.getSubscriptionActive();
+  if (f) {
+    writer.writeBool(
+      103,
       f
     );
   }
@@ -1819,6 +1831,24 @@ proto.GetUserStreamResponse.prototype.getConnectionUpdate = function() {
  */
 proto.GetUserStreamResponse.prototype.setConnectionUpdate = function(value) {
   return jspb.Message.setProto3IntField(this, 2, value);
+};
+
+
+/**
+ * optional bool subscription_active = 103;
+ * @return {boolean}
+ */
+proto.GetUserStreamResponse.prototype.getSubscriptionActive = function() {
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 103, false));
+};
+
+
+/**
+ * @param {boolean} value
+ * @return {!proto.GetUserStreamResponse} returns this
+ */
+proto.GetUserStreamResponse.prototype.setSubscriptionActive = function(value) {
+  return jspb.Message.setProto3BooleanField(this, 103, value);
 };
 
 

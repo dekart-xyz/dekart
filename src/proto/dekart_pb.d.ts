@@ -72,6 +72,9 @@ export class GetUserStreamResponse extends jspb.Message {
   getConnectionUpdate(): number;
   setConnectionUpdate(value: number): void;
 
+  getSubscriptionActive(): boolean;
+  setSubscriptionActive(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetUserStreamResponse.AsObject;
   static toObject(includeInstance: boolean, msg: GetUserStreamResponse): GetUserStreamResponse.AsObject;
@@ -86,6 +89,7 @@ export namespace GetUserStreamResponse {
   export type AsObject = {
     streamOptions?: StreamOptions.AsObject,
     connectionUpdate: number,
+    subscriptionActive: boolean,
   }
 }
 
