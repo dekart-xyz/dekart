@@ -17,6 +17,7 @@ import { AuthState, RedirectState as DekartRedirectState } from '../proto/dekart
 import { getEnv } from './actions/env'
 import { setRedirectState } from './actions/redirectState'
 import { subscribeUserStream, unsubscribeUserStream } from './actions/user'
+import SubscriptionPage from './SubscribtionPage'
 
 // RedirectState reads states passed in the URL from the server
 function RedirectState () {
@@ -47,7 +48,12 @@ function RedirectState () {
 function AppRedirect () {
   const httpError = useSelector(state => state.httpError)
   const { newReportId } = useSelector(state => state.reportStatus)
+  const user = useSelector(state => state.user)
   const location = useLocation()
+
+  if (user && !user.subscriptionActive) {
+    return <Redirect to='/subscription' push />
+  }
 
   if (httpError.status === 401 && httpError.doNotAuthenticate === false) {
     const { REACT_APP_API_HOST } = process.env
@@ -121,6 +127,9 @@ export default function App () {
         </Route>
         <Route path='/reports/:id'>
           <ReportPage />
+        </Route>
+        <Route path='/subscription'>
+          <SubscriptionPage />
         </Route>
         <Route path='/400'>
           <Result icon={<WarningOutlined />} title='400' subTitle='Bad Request' />
