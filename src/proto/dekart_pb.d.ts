@@ -3,6 +3,42 @@
 
 import * as jspb from "google-protobuf";
 
+export class CreateSubscriptionRequest extends jspb.Message {
+  getPlanType(): PlanTypeMap[keyof PlanTypeMap];
+  setPlanType(value: PlanTypeMap[keyof PlanTypeMap]): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CreateSubscriptionRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: CreateSubscriptionRequest): CreateSubscriptionRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CreateSubscriptionRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CreateSubscriptionRequest;
+  static deserializeBinaryFromReader(message: CreateSubscriptionRequest, reader: jspb.BinaryReader): CreateSubscriptionRequest;
+}
+
+export namespace CreateSubscriptionRequest {
+  export type AsObject = {
+    planType: PlanTypeMap[keyof PlanTypeMap],
+  }
+}
+
+export class CreateSubscriptionResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CreateSubscriptionResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: CreateSubscriptionResponse): CreateSubscriptionResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CreateSubscriptionResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CreateSubscriptionResponse;
+  static deserializeBinaryFromReader(message: CreateSubscriptionResponse, reader: jspb.BinaryReader): CreateSubscriptionResponse;
+}
+
+export namespace CreateSubscriptionResponse {
+  export type AsObject = {
+  }
+}
+
 export class GetConnectionListRequest extends jspb.Message {
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetConnectionListRequest.AsObject;
@@ -75,6 +111,9 @@ export class GetUserStreamResponse extends jspb.Message {
   getSubscriptionActive(): boolean;
   setSubscriptionActive(value: boolean): void;
 
+  getSubscriptionUpdate(): number;
+  setSubscriptionUpdate(value: number): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetUserStreamResponse.AsObject;
   static toObject(includeInstance: boolean, msg: GetUserStreamResponse): GetUserStreamResponse.AsObject;
@@ -90,6 +129,7 @@ export namespace GetUserStreamResponse {
     streamOptions?: StreamOptions.AsObject,
     connectionUpdate: number,
     subscriptionActive: boolean,
+    subscriptionUpdate: number,
   }
 }
 
@@ -1394,4 +1434,12 @@ export namespace CreateReportResponse {
     report?: Report.AsObject,
   }
 }
+
+export interface PlanTypeMap {
+  TYPE_UNSPECIFIED: 0;
+  TYPE_PERSONAL: 1;
+  TYPE_TEAM: 2;
+}
+
+export const PlanType: PlanTypeMap;
 

@@ -217,6 +217,15 @@ Dekart.TestConnection = {
   responseType: proto_dekart_pb.TestConnectionResponse
 };
 
+Dekart.CreateSubscription = {
+  methodName: "CreateSubscription",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.CreateSubscriptionRequest,
+  responseType: proto_dekart_pb.CreateSubscriptionResponse
+};
+
 exports.Dekart = Dekart;
 
 function DekartClient(serviceHost, options) {
@@ -935,6 +944,37 @@ DekartClient.prototype.testConnection = function testConnection(requestMessage, 
     callback = arguments[1];
   }
   var client = grpc.unary(Dekart.TestConnection, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.createSubscription = function createSubscription(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.CreateSubscription, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,

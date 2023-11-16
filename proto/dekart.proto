@@ -40,6 +40,25 @@ service Dekart {
     rpc ArchiveConnection(ArchiveConnectionRequest) returns (ArchiveConnectionResponse) {}
     rpc GetConnectionList(GetConnectionListRequest) returns (GetConnectionListResponse) {}
     rpc TestConnection(TestConnectionRequest) returns (TestConnectionResponse) {}
+
+    //ClOUD
+
+    //subscriptions
+    rpc CreateSubscription(CreateSubscriptionRequest) returns (CreateSubscriptionResponse) {}
+
+}
+
+enum PlanType {
+    TYPE_UNSPECIFIED = 0;
+    TYPE_PERSONAL = 1;
+    TYPE_TEAM = 2;
+}
+
+message CreateSubscriptionRequest {
+    PlanType plan_type = 1;
+}
+
+message CreateSubscriptionResponse {
 }
 
 message GetConnectionListRequest {
@@ -58,6 +77,7 @@ message GetUserStreamResponse {
 
     // cloud
     bool subscription_active = 103;
+    int64 subscription_update = 104;
 }
 
 message TestConnectionRequest {

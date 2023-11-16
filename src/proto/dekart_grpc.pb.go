@@ -42,6 +42,7 @@ const (
 	Dekart_ArchiveConnection_FullMethodName       = "/Dekart/ArchiveConnection"
 	Dekart_GetConnectionList_FullMethodName       = "/Dekart/GetConnectionList"
 	Dekart_TestConnection_FullMethodName          = "/Dekart/TestConnection"
+	Dekart_CreateSubscription_FullMethodName      = "/Dekart/CreateSubscription"
 )
 
 // DekartClient is the client API for Dekart service.
@@ -78,6 +79,8 @@ type DekartClient interface {
 	ArchiveConnection(ctx context.Context, in *ArchiveConnectionRequest, opts ...grpc.CallOption) (*ArchiveConnectionResponse, error)
 	GetConnectionList(ctx context.Context, in *GetConnectionListRequest, opts ...grpc.CallOption) (*GetConnectionListResponse, error)
 	TestConnection(ctx context.Context, in *TestConnectionRequest, opts ...grpc.CallOption) (*TestConnectionResponse, error)
+	//subscriptions
+	CreateSubscription(ctx context.Context, in *CreateSubscriptionRequest, opts ...grpc.CallOption) (*CreateSubscriptionResponse, error)
 }
 
 type dekartClient struct {
@@ -364,6 +367,15 @@ func (c *dekartClient) TestConnection(ctx context.Context, in *TestConnectionReq
 	return out, nil
 }
 
+func (c *dekartClient) CreateSubscription(ctx context.Context, in *CreateSubscriptionRequest, opts ...grpc.CallOption) (*CreateSubscriptionResponse, error) {
+	out := new(CreateSubscriptionResponse)
+	err := c.cc.Invoke(ctx, Dekart_CreateSubscription_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DekartServer is the server API for Dekart service.
 // All implementations must embed UnimplementedDekartServer
 // for forward compatibility
@@ -398,6 +410,8 @@ type DekartServer interface {
 	ArchiveConnection(context.Context, *ArchiveConnectionRequest) (*ArchiveConnectionResponse, error)
 	GetConnectionList(context.Context, *GetConnectionListRequest) (*GetConnectionListResponse, error)
 	TestConnection(context.Context, *TestConnectionRequest) (*TestConnectionResponse, error)
+	//subscriptions
+	CreateSubscription(context.Context, *CreateSubscriptionRequest) (*CreateSubscriptionResponse, error)
 	mustEmbedUnimplementedDekartServer()
 }
 
@@ -473,6 +487,9 @@ func (UnimplementedDekartServer) GetConnectionList(context.Context, *GetConnecti
 }
 func (UnimplementedDekartServer) TestConnection(context.Context, *TestConnectionRequest) (*TestConnectionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method TestConnection not implemented")
+}
+func (UnimplementedDekartServer) CreateSubscription(context.Context, *CreateSubscriptionRequest) (*CreateSubscriptionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateSubscription not implemented")
 }
 func (UnimplementedDekartServer) mustEmbedUnimplementedDekartServer() {}
 
@@ -910,6 +927,24 @@ func _Dekart_TestConnection_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Dekart_CreateSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateSubscriptionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).CreateSubscription(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_CreateSubscription_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).CreateSubscription(ctx, req.(*CreateSubscriptionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Dekart_ServiceDesc is the grpc.ServiceDesc for Dekart service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -996,6 +1031,10 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "TestConnection",
 			Handler:    _Dekart_TestConnection_Handler,
+		},
+		{
+			MethodName: "CreateSubscription",
+			Handler:    _Dekart_CreateSubscription_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

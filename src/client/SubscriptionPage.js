@@ -1,12 +1,14 @@
 import Card from 'antd/es/card'
 import { Header } from './Header'
-import styles from './SubscribtionPage.module.css'
+import styles from './SubscriptionPage.module.css'
 import Tag from 'antd/es/tag'
-import { GithubOutlined, HomeOutlined, TeamOutlined, CheckCircleOutlined, HighlightOutlined, ExportOutlined } from '@ant-design/icons'
+import { GithubOutlined, HomeOutlined, TeamOutlined, CheckCircleOutlined, HighlightOutlined, LockFilled, CheckCircleFilled } from '@ant-design/icons'
 import Title from 'antd/es/typography/Title'
 import Text from 'antd/es/typography/Text'
 import Button from 'antd/es/button'
 import { useState } from 'react'
+import { createSubscription } from './actions/subscription'
+import { useDispatch, useSelector } from 'react-redux'
 
 function PlanTitle ({ name, price, icon, color, description }) {
   return (
@@ -26,6 +28,7 @@ function PlanTitle ({ name, price, icon, color, description }) {
 
 function Plan ({ title, children, action }) {
   const [hover, setHover] = useState(false)
+  const dispatch = useDispatch()
   return (
     <Card
       hoverable
@@ -34,17 +37,33 @@ function Plan ({ title, children, action }) {
       onMouseLeave={() => setHover(false)} // Add onMouseLeave event
       title={title}
       style={{ width: 300 }}
-      actions={[<Button key='1' type={hover ? 'primary' : 'default'} ghost={hover}>{action}</Button>]}
+      actions={[
+        <Button
+          key='1' type={hover ? 'primary' : 'default'} onClick={() => {
+            dispatch(createSubscription())
+          }} ghost={hover}
+        >{action}
+        </Button>
+      ]}
     >{children}
     </Card>
   )
 }
 
 export default function SubscriptionPage () {
+  const user = useSelector(state => state.user)
   return (
     <div className={styles.subscriptionPage}>
       <Header />
       <div className={styles.body}>
+        <div className={styles.title}>
+          <Title>
+            {user && user.subscriptionActive ? <span className={styles.titleCheck}><CheckCircleFilled /></span> : <span className={styles.titleLock}><LockFilled /></span>}
+            {/* <span className={styles.titleLock}><LockFilled /></span>
+            <span className={styles.titleCheck}><CheckCircleFilled /></span> */}
+            <> Subscription</>
+          </Title>
+        </div>
         <div className={styles.plans}>
           <Plan
             title={<PlanTitle
@@ -79,10 +98,10 @@ export default function SubscriptionPage () {
           <Plan
             title={<PlanTitle
               icon={<GithubOutlined />}
-              name='self-hosted'
-              price='~$65/month'
+              name='community'
+              price='self-hosted'
             // color='geekblue'
-              description='estimated cost of self-hosting'
+              description='estimated cost ~$65/month'
                    />}
             action={<>Go to documentation</>}
           >

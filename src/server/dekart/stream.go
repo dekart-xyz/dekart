@@ -159,8 +159,17 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 }
 
 func (s Server) sendUserStreamResponse(ctx context.Context, srv proto.Dekart_GetUserStreamServer, sequence int64) error {
+
+	// subscription
+	claims := user.GetClaims(ctx)
+	subscriptionActive, subscriptionUpdate, err := s.getSubsciptionActive(ctx, claims.Email)
+	if err != nil {
+		log.Err(err).Send()
+		return status.Errorf(codes.Internal, err.Error())
+	}
+
+	// connection update
 	connectionUpdate, err := s.getLastConnectionUpdate(ctx)
-	claims := user.GetClaims(srv.Context())
 	if err != nil {
 		log.Err(err).Send()
 		return status.Errorf(codes.Internal, err.Error())
@@ -171,7 +180,8 @@ func (s Server) sendUserStreamResponse(ctx context.Context, srv proto.Dekart_Get
 			Sequence: sequence,
 		},
 		ConnectionUpdate:   connectionUpdate,
-		SubscriptionActive: claims.SubscriptionActive,
+		SubscriptionActive: subscriptionActive,
+		SubscriptionUpdate: subscriptionUpdate,
 	}
 	err = srv.Send(&res)
 	if err != nil {

@@ -26,9 +26,8 @@ import (
 
 // Claims stores user detail received from request
 type Claims struct {
-	Email              string
-	AccessToken        string
-	SubscriptionActive bool
+	Email       string
+	AccessToken string
 }
 
 // ContextKey type

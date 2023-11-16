@@ -17,7 +17,7 @@ import { AuthState, RedirectState as DekartRedirectState } from '../proto/dekart
 import { getEnv } from './actions/env'
 import { setRedirectState } from './actions/redirectState'
 import { subscribeUserStream, unsubscribeUserStream } from './actions/user'
-import SubscriptionPage from './SubscribtionPage'
+import SubscriptionPage from './SubscriptionPage'
 
 // RedirectState reads states passed in the URL from the server
 function RedirectState () {

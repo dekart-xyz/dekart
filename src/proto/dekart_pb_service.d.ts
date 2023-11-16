@@ -211,6 +211,15 @@ type DekartTestConnection = {
   readonly responseType: typeof proto_dekart_pb.TestConnectionResponse;
 };
 
+type DekartCreateSubscription = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.CreateSubscriptionRequest;
+  readonly responseType: typeof proto_dekart_pb.CreateSubscriptionResponse;
+};
+
 export class Dekart {
   static readonly serviceName: string;
   static readonly CreateReport: DekartCreateReport;
@@ -236,6 +245,7 @@ export class Dekart {
   static readonly ArchiveConnection: DekartArchiveConnection;
   static readonly GetConnectionList: DekartGetConnectionList;
   static readonly TestConnection: DekartTestConnection;
+  static readonly CreateSubscription: DekartCreateSubscription;
 }
 
 export type ServiceError = { message: string, code: number; metadata: grpc.Metadata }
@@ -452,6 +462,15 @@ export class DekartClient {
   testConnection(
     requestMessage: proto_dekart_pb.TestConnectionRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.TestConnectionResponse|null) => void
+  ): UnaryResponse;
+  createSubscription(
+    requestMessage: proto_dekart_pb.CreateSubscriptionRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateSubscriptionResponse|null) => void
+  ): UnaryResponse;
+  createSubscription(
+    requestMessage: proto_dekart_pb.CreateSubscriptionRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateSubscriptionResponse|null) => void
   ): UnaryResponse;
 }
 
