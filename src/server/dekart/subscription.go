@@ -17,16 +17,42 @@ import (
 )
 
 func (s Server) getSubsciptionActive(ctx context.Context, email string) (bool, int64, error) {
-	var active bool
 	var lastUpdated sql.NullTime
+	var customerID sql.NullString
 	err := s.db.QueryRowContext(ctx, `
-		select count(id) > 0, MAX(updated_at) from subscriptions where owner_email=$1 and not archived
-	`, email).Scan(&active, &lastUpdated)
+		select updated_at, customer_id from subscriptions where owner_email=$1 and not archived
+	`, email).Scan(&lastUpdated, &customerID)
+
 	if err != nil {
+		if err == sql.ErrNoRows {
+			// No subscription
+			return false, 0, nil
+		}
 		log.Err(err).Send()
 		return false, 0, status.Error(codes.Internal, err.Error())
 	}
-	return active, lastUpdated.Time.Unix(), nil
+	if customerID.Valid {
+		stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
+		params := &stripe.CustomerParams{}
+		params.AddExpand("subscriptions")
+		c, err := customer.Get(customerID.String, params)
+
+		if err != nil {
+			log.Err(err).Send()
+			return false, 0, status.Error(codes.Internal, err.Error())
+		}
+		if c.Subscriptions == nil {
+			return false, 0, nil
+		}
+		for _, subcription := range c.Subscriptions.Data {
+			if subcription.Status == "active" {
+				return true, lastUpdated.Time.Unix(), nil
+			}
+		}
+		// no active subscription
+		return false, lastUpdated.Time.Unix(), nil
+	}
+	return lastUpdated.Valid, lastUpdated.Time.Unix(), nil
 }
 
 type ContextKey string
@@ -55,7 +81,7 @@ func (s Server) SetSubsciptionContext(ctx context.Context) context.Context {
 // 	return active
 // }
 
-func createCheckoutSession(ctx context.Context, req *proto.CreateSubscriptionRequest) (*stripe.CheckoutSession, error) {
+func (s Server) createCheckoutSession(ctx context.Context, req *proto.CreateSubscriptionRequest) (*stripe.CheckoutSession, error) {
 	claims := user.GetClaims(ctx)
 	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 	customerParams := &stripe.CustomerParams{
@@ -66,6 +92,17 @@ func createCheckoutSession(ctx context.Context, req *proto.CreateSubscriptionReq
 		log.Err(err).Send()
 		return nil, err
 	}
+	id := newUUID()
+	_, err = s.db.ExecContext(ctx, `insert into subscriptions (id, owner_email, customer_id) values ($1, $2, $3)`,
+		id,
+		claims.Email,
+		customer.ID,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	params := &stripe.CheckoutSessionParams{
 		Customer: stripe.String(customer.ID),
 		Mode:     stripe.String(string(stripe.CheckoutSessionModeSubscription)),
@@ -104,13 +141,13 @@ func (s Server) CreateSubscription(ctx context.Context, req *proto.CreateSubscri
 		return &proto.CreateSubscriptionResponse{}, nil
 	case proto.PlanType_TYPE_TEAM:
 		// return nil, status.Error(codes.Unimplemented, "Team subscription is not implemented")
-		s, err := createCheckoutSession(ctx, req)
+		session, err := s.createCheckoutSession(ctx, req)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 		return &proto.CreateSubscriptionResponse{
-			RedirectUrl: s.URL,
+			RedirectUrl: session.URL,
 		}, nil
 	}
 	return nil, status.Error(codes.InvalidArgument, "Unknown plan type")

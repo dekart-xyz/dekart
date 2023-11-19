@@ -56,65 +56,69 @@ export default function SubscriptionPage () {
   return (
     <div className={styles.subscriptionPage}>
       <Header />
-      <div className={styles.body}>
-        <div className={styles.title}>
-          <Title>
-            {user && user.subscriptionActive ? <span className={styles.titleCheck}><CheckCircleFilled /></span> : <span className={styles.titleLock}><LockFilled /></span>}
-            {/* <span className={styles.titleLock}><LockFilled /></span>
-            <span className={styles.titleCheck}><CheckCircleFilled /></span> */}
-            <> Subscription</>
-          </Title>
-        </div>
-        <div className={styles.plans}>
-          <Plan
-            title={<PlanTitle
-              icon={<HomeOutlined />}
-              name='personal'
-              price='$0'
-            // color='geekblue'
-              description='requires use of personal email'
-                   />}
-            planType={PlanType.TYPE_PERSONAL}
-            action='Choose personal'
-          >
-            <p><Text type='success'><CheckCircleOutlined /> Access to private datasets</Text></p>
-            <p><Text><CheckCircleOutlined /> <s>SSO with company email</s></Text></p>
-            <p><Text><HighlightOutlined /> Requires Google Cloud access</Text></p>
-            <p><Text><HighlightOutlined /> Requires Google Cloud Storage</Text></p>
-          </Plan>
-          <Plan
-            title={<PlanTitle
-              icon={<TeamOutlined />}
-              name='team'
-              price='$100/month'
-              // color='rgb(87, 183, 211)'
-              description='for teams up to 20 people'
-                   />}
-            planType={PlanType.TYPE_TEAM}
-            action='Choose team'
-          >
-            <p><Text type='success'><CheckCircleOutlined /> Access to private datasets</Text></p>
-            <p><Text type='success'><CheckCircleOutlined /> SSO with company email</Text></p>
-            <p><Text><HighlightOutlined /> Requires Google Cloud access</Text></p>
-            <p><Text><HighlightOutlined /> Requires Google Cloud Storage</Text></p>
-          </Plan>
-          <Plan
-            title={<PlanTitle
-              icon={<GithubOutlined />}
-              name='community'
-              price='self-hosted'
-            // color='geekblue'
-              description='estimated cost ~$65/month'
-                   />}
-            action={<>Go to documentation</>}
-          >
-            <p><Text><HighlightOutlined /> Requires Google Cloud access</Text></p>
-            <p><Text><HighlightOutlined /> Requires deployment on premice</Text></p>
-            <p><Text><HighlightOutlined /> Requires configuration</Text></p>
-            <p><Text><HighlightOutlined /> Requires Google Cloud Storage</Text></p>
-          </Plan>
-        </div>
-      </div>
+      {
+        user
+          ? (
+            <div className={styles.body}>
+              <div className={styles.title}>
+                <Title>
+                  {user.subscriptionActive ? <span className={styles.titleCheck}><CheckCircleFilled /></span> : <span className={styles.titleLock}><LockFilled /></span>}
+                  <> Subscription</>
+                </Title>
+              </div>
+              <div className={styles.plans}>
+                <Plan
+                  title={<PlanTitle
+                    icon={<HomeOutlined />}
+                    name='personal'
+                    price='$0'
+                // color='geekblue'
+                    description='requires use of personal email'
+                         />}
+                  planType={PlanType.TYPE_PERSONAL}
+                  action='Choose personal'
+                >
+                  <p><Text type='success'><CheckCircleOutlined /> Access to private datasets</Text></p>
+                  <p><Text><CheckCircleOutlined /> <s>SSO with company email</s></Text></p>
+                  <p><Text><HighlightOutlined /> Requires Google Cloud access</Text></p>
+                  <p><Text><HighlightOutlined /> Requires Google Cloud Storage</Text></p>
+                </Plan>
+                <Plan
+                  title={<PlanTitle
+                    icon={<TeamOutlined />}
+                    name='team'
+                    price='$100/month'
+                // color='rgb(87, 183, 211)'
+                    description='for teams up to 20 people'
+                         />}
+                  planType={PlanType.TYPE_TEAM}
+                  action='Choose team'
+                >
+                  <p><Text type='success'><CheckCircleOutlined /> Access to private datasets</Text></p>
+                  <p><Text type='success'><CheckCircleOutlined /> SSO with company email</Text></p>
+                  <p><Text><HighlightOutlined /> Requires Google Cloud access</Text></p>
+                  <p><Text><HighlightOutlined /> Requires Google Cloud Storage</Text></p>
+                </Plan>
+                <Plan
+                  title={<PlanTitle
+                    icon={<GithubOutlined />}
+                    name='community'
+                    price='self-hosted'
+                // color='geekblue'
+                    description='estimated cost ~$65/month'
+                         />}
+                  action={<>Go to documentation</>}
+                >
+                  <p><Text><HighlightOutlined /> Requires Google Cloud access</Text></p>
+                  <p><Text><HighlightOutlined /> Requires deployment on premice</Text></p>
+                  <p><Text><HighlightOutlined /> Requires configuration</Text></p>
+                  <p><Text><HighlightOutlined /> Requires Google Cloud Storage</Text></p>
+                </Plan>
+              </div>
+            </div>
+            )
+          : null
+      }
     </div>
   )
 }
