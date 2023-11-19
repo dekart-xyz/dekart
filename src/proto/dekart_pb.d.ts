@@ -7,6 +7,9 @@ export class CreateSubscriptionRequest extends jspb.Message {
   getPlanType(): PlanTypeMap[keyof PlanTypeMap];
   setPlanType(value: PlanTypeMap[keyof PlanTypeMap]): void;
 
+  getUiUrl(): string;
+  setUiUrl(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CreateSubscriptionRequest.AsObject;
   static toObject(includeInstance: boolean, msg: CreateSubscriptionRequest): CreateSubscriptionRequest.AsObject;
@@ -20,10 +23,14 @@ export class CreateSubscriptionRequest extends jspb.Message {
 export namespace CreateSubscriptionRequest {
   export type AsObject = {
     planType: PlanTypeMap[keyof PlanTypeMap],
+    uiUrl: string,
   }
 }
 
 export class CreateSubscriptionResponse extends jspb.Message {
+  getRedirectUrl(): string;
+  setRedirectUrl(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CreateSubscriptionResponse.AsObject;
   static toObject(includeInstance: boolean, msg: CreateSubscriptionResponse): CreateSubscriptionResponse.AsObject;
@@ -36,6 +43,7 @@ export class CreateSubscriptionResponse extends jspb.Message {
 
 export namespace CreateSubscriptionResponse {
   export type AsObject = {
+    redirectUrl: string,
   }
 }
 

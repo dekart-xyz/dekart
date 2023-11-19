@@ -9,6 +9,7 @@ import Button from 'antd/es/button'
 import { useState } from 'react'
 import { createSubscription } from './actions/subscription'
 import { useDispatch, useSelector } from 'react-redux'
+import { PlanType } from '../proto/dekart_pb'
 
 function PlanTitle ({ name, price, icon, color, description }) {
   return (
@@ -26,7 +27,7 @@ function PlanTitle ({ name, price, icon, color, description }) {
   )
 }
 
-function Plan ({ title, children, action }) {
+function Plan ({ title, children, action, planType }) {
   const [hover, setHover] = useState(false)
   const dispatch = useDispatch()
   return (
@@ -40,7 +41,7 @@ function Plan ({ title, children, action }) {
       actions={[
         <Button
           key='1' type={hover ? 'primary' : 'default'} onClick={() => {
-            dispatch(createSubscription())
+            dispatch(createSubscription(planType))
           }} ghost={hover}
         >{action}
         </Button>
@@ -73,6 +74,7 @@ export default function SubscriptionPage () {
             // color='geekblue'
               description='requires use of personal email'
                    />}
+            planType={PlanType.TYPE_PERSONAL}
             action='Choose personal'
           >
             <p><Text type='success'><CheckCircleOutlined /> Access to private datasets</Text></p>
@@ -88,6 +90,7 @@ export default function SubscriptionPage () {
               // color='rgb(87, 183, 211)'
               description='for teams up to 20 people'
                    />}
+            planType={PlanType.TYPE_TEAM}
             action='Choose team'
           >
             <p><Text type='success'><CheckCircleOutlined /> Access to private datasets</Text></p>

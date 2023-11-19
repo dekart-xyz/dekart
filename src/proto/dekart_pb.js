@@ -1306,7 +1306,8 @@ proto.CreateSubscriptionRequest.prototype.toObject = function(opt_includeInstanc
  */
 proto.CreateSubscriptionRequest.toObject = function(includeInstance, msg) {
   var f, obj = {
-    planType: jspb.Message.getFieldWithDefault(msg, 1, 0)
+    planType: jspb.Message.getFieldWithDefault(msg, 1, 0),
+    uiUrl: jspb.Message.getFieldWithDefault(msg, 2, "")
   };
 
   if (includeInstance) {
@@ -1347,6 +1348,10 @@ proto.CreateSubscriptionRequest.deserializeBinaryFromReader = function(msg, read
       var value = /** @type {!proto.PlanType} */ (reader.readEnum());
       msg.setPlanType(value);
       break;
+    case 2:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setUiUrl(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -1383,6 +1388,13 @@ proto.CreateSubscriptionRequest.serializeBinaryToWriter = function(message, writ
       f
     );
   }
+  f = message.getUiUrl();
+  if (f.length > 0) {
+    writer.writeString(
+      2,
+      f
+    );
+  }
 };
 
 
@@ -1401,6 +1413,24 @@ proto.CreateSubscriptionRequest.prototype.getPlanType = function() {
  */
 proto.CreateSubscriptionRequest.prototype.setPlanType = function(value) {
   return jspb.Message.setProto3EnumField(this, 1, value);
+};
+
+
+/**
+ * optional string ui_url = 2;
+ * @return {string}
+ */
+proto.CreateSubscriptionRequest.prototype.getUiUrl = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 2, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.CreateSubscriptionRequest} returns this
+ */
+proto.CreateSubscriptionRequest.prototype.setUiUrl = function(value) {
+  return jspb.Message.setProto3StringField(this, 2, value);
 };
 
 
@@ -1436,7 +1466,7 @@ proto.CreateSubscriptionResponse.prototype.toObject = function(opt_includeInstan
  */
 proto.CreateSubscriptionResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
-
+    redirectUrl: jspb.Message.getFieldWithDefault(msg, 1, "")
   };
 
   if (includeInstance) {
@@ -1473,6 +1503,10 @@ proto.CreateSubscriptionResponse.deserializeBinaryFromReader = function(msg, rea
     }
     var field = reader.getFieldNumber();
     switch (field) {
+    case 1:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setRedirectUrl(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -1502,6 +1536,31 @@ proto.CreateSubscriptionResponse.prototype.serializeBinary = function() {
  */
 proto.CreateSubscriptionResponse.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
+  f = message.getRedirectUrl();
+  if (f.length > 0) {
+    writer.writeString(
+      1,
+      f
+    );
+  }
+};
+
+
+/**
+ * optional string redirect_url = 1;
+ * @return {string}
+ */
+proto.CreateSubscriptionResponse.prototype.getRedirectUrl = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 1, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.CreateSubscriptionResponse} returns this
+ */
+proto.CreateSubscriptionResponse.prototype.setRedirectUrl = function(value) {
+  return jspb.Message.setProto3StringField(this, 1, value);
 };
 
 

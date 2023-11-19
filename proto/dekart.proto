@@ -41,7 +41,7 @@ service Dekart {
     rpc GetConnectionList(GetConnectionListRequest) returns (GetConnectionListResponse) {}
     rpc TestConnection(TestConnectionRequest) returns (TestConnectionResponse) {}
 
-    //ClOUD
+    //CLOUD
 
     //subscriptions
     rpc CreateSubscription(CreateSubscriptionRequest) returns (CreateSubscriptionResponse) {}
@@ -56,9 +56,11 @@ enum PlanType {
 
 message CreateSubscriptionRequest {
     PlanType plan_type = 1;
+    string ui_url = 2;
 }
 
 message CreateSubscriptionResponse {
+    string redirect_url = 1;
 }
 
 message GetConnectionListRequest {
