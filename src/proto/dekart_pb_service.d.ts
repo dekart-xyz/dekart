@@ -220,6 +220,24 @@ type DekartCreateSubscription = {
   readonly responseType: typeof proto_dekart_pb.CreateSubscriptionResponse;
 };
 
+type DekartGetSubscription = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.GetSubscriptionRequest;
+  readonly responseType: typeof proto_dekart_pb.GetSubscriptionResponse;
+};
+
+type DekartCancelSubscription = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.CancelSubscriptionRequest;
+  readonly responseType: typeof proto_dekart_pb.CancelSubscriptionResponse;
+};
+
 export class Dekart {
   static readonly serviceName: string;
   static readonly CreateReport: DekartCreateReport;
@@ -246,6 +264,8 @@ export class Dekart {
   static readonly GetConnectionList: DekartGetConnectionList;
   static readonly TestConnection: DekartTestConnection;
   static readonly CreateSubscription: DekartCreateSubscription;
+  static readonly GetSubscription: DekartGetSubscription;
+  static readonly CancelSubscription: DekartCancelSubscription;
 }
 
 export type ServiceError = { message: string, code: number; metadata: grpc.Metadata }
@@ -471,6 +491,24 @@ export class DekartClient {
   createSubscription(
     requestMessage: proto_dekart_pb.CreateSubscriptionRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateSubscriptionResponse|null) => void
+  ): UnaryResponse;
+  getSubscription(
+    requestMessage: proto_dekart_pb.GetSubscriptionRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetSubscriptionResponse|null) => void
+  ): UnaryResponse;
+  getSubscription(
+    requestMessage: proto_dekart_pb.GetSubscriptionRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetSubscriptionResponse|null) => void
+  ): UnaryResponse;
+  cancelSubscription(
+    requestMessage: proto_dekart_pb.CancelSubscriptionRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CancelSubscriptionResponse|null) => void
+  ): UnaryResponse;
+  cancelSubscription(
+    requestMessage: proto_dekart_pb.CancelSubscriptionRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CancelSubscriptionResponse|null) => void
   ): UnaryResponse;
 }
 

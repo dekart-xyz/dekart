@@ -162,7 +162,7 @@ func (s Server) sendUserStreamResponse(ctx context.Context, srv proto.Dekart_Get
 
 	// subscription
 	claims := user.GetClaims(ctx)
-	subscriptionActive, subscriptionUpdate, err := s.getSubsciptionActive(ctx, claims.Email)
+	sub, err := s.getSubsciptionActive(ctx, claims.Email)
 	if err != nil {
 		log.Err(err).Send()
 		return status.Errorf(codes.Internal, err.Error())
@@ -180,8 +180,8 @@ func (s Server) sendUserStreamResponse(ctx context.Context, srv proto.Dekart_Get
 			Sequence: sequence,
 		},
 		ConnectionUpdate:   connectionUpdate,
-		SubscriptionActive: subscriptionActive,
-		SubscriptionUpdate: subscriptionUpdate,
+		SubscriptionActive: sub.Active,
+		SubscriptionUpdate: sub.UpdatedAt,
 	}
 	err = srv.Send(&res)
 	if err != nil {

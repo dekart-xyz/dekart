@@ -24,9 +24,6 @@ export default function DekartMenu () {
             <a target='_blank' rel='noopener noreferrer' href={'https://dekart.xyz/docs/?ref=' + ref}>Documentation</a>
           </Menu.Item>
         </Menu.SubMenu>
-        <Menu.Item key='contribute'>
-          <a target='_blank' rel='noopener noreferrer' href={'https://dekart.xyz/support-project/?ref=' + ref}>Contribute 💜</a>
-        </Menu.Item>
       </Menu>
     </div>
   )

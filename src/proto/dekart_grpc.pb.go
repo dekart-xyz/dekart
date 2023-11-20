@@ -43,6 +43,8 @@ const (
 	Dekart_GetConnectionList_FullMethodName       = "/Dekart/GetConnectionList"
 	Dekart_TestConnection_FullMethodName          = "/Dekart/TestConnection"
 	Dekart_CreateSubscription_FullMethodName      = "/Dekart/CreateSubscription"
+	Dekart_GetSubscription_FullMethodName         = "/Dekart/GetSubscription"
+	Dekart_CancelSubscription_FullMethodName      = "/Dekart/CancelSubscription"
 )
 
 // DekartClient is the client API for Dekart service.
@@ -81,6 +83,8 @@ type DekartClient interface {
 	TestConnection(ctx context.Context, in *TestConnectionRequest, opts ...grpc.CallOption) (*TestConnectionResponse, error)
 	//subscriptions
 	CreateSubscription(ctx context.Context, in *CreateSubscriptionRequest, opts ...grpc.CallOption) (*CreateSubscriptionResponse, error)
+	GetSubscription(ctx context.Context, in *GetSubscriptionRequest, opts ...grpc.CallOption) (*GetSubscriptionResponse, error)
+	CancelSubscription(ctx context.Context, in *CancelSubscriptionRequest, opts ...grpc.CallOption) (*CancelSubscriptionResponse, error)
 }
 
 type dekartClient struct {
@@ -376,6 +380,24 @@ func (c *dekartClient) CreateSubscription(ctx context.Context, in *CreateSubscri
 	return out, nil
 }
 
+func (c *dekartClient) GetSubscription(ctx context.Context, in *GetSubscriptionRequest, opts ...grpc.CallOption) (*GetSubscriptionResponse, error) {
+	out := new(GetSubscriptionResponse)
+	err := c.cc.Invoke(ctx, Dekart_GetSubscription_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) CancelSubscription(ctx context.Context, in *CancelSubscriptionRequest, opts ...grpc.CallOption) (*CancelSubscriptionResponse, error) {
+	out := new(CancelSubscriptionResponse)
+	err := c.cc.Invoke(ctx, Dekart_CancelSubscription_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DekartServer is the server API for Dekart service.
 // All implementations must embed UnimplementedDekartServer
 // for forward compatibility
@@ -412,6 +434,8 @@ type DekartServer interface {
 	TestConnection(context.Context, *TestConnectionRequest) (*TestConnectionResponse, error)
 	//subscriptions
 	CreateSubscription(context.Context, *CreateSubscriptionRequest) (*CreateSubscriptionResponse, error)
+	GetSubscription(context.Context, *GetSubscriptionRequest) (*GetSubscriptionResponse, error)
+	CancelSubscription(context.Context, *CancelSubscriptionRequest) (*CancelSubscriptionResponse, error)
 	mustEmbedUnimplementedDekartServer()
 }
 
@@ -490,6 +514,12 @@ func (UnimplementedDekartServer) TestConnection(context.Context, *TestConnection
 }
 func (UnimplementedDekartServer) CreateSubscription(context.Context, *CreateSubscriptionRequest) (*CreateSubscriptionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateSubscription not implemented")
+}
+func (UnimplementedDekartServer) GetSubscription(context.Context, *GetSubscriptionRequest) (*GetSubscriptionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSubscription not implemented")
+}
+func (UnimplementedDekartServer) CancelSubscription(context.Context, *CancelSubscriptionRequest) (*CancelSubscriptionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CancelSubscription not implemented")
 }
 func (UnimplementedDekartServer) mustEmbedUnimplementedDekartServer() {}
 
@@ -945,6 +975,42 @@ func _Dekart_CreateSubscription_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Dekart_GetSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSubscriptionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).GetSubscription(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_GetSubscription_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).GetSubscription(ctx, req.(*GetSubscriptionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_CancelSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelSubscriptionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).CancelSubscription(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_CancelSubscription_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).CancelSubscription(ctx, req.(*CancelSubscriptionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Dekart_ServiceDesc is the grpc.ServiceDesc for Dekart service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1035,6 +1101,14 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateSubscription",
 			Handler:    _Dekart_CreateSubscription_Handler,
+		},
+		{
+			MethodName: "GetSubscription",
+			Handler:    _Dekart_GetSubscription_Handler,
+		},
+		{
+			MethodName: "CancelSubscription",
+			Handler:    _Dekart_CancelSubscription_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

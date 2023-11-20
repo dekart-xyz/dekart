@@ -45,7 +45,27 @@ service Dekart {
 
     //subscriptions
     rpc CreateSubscription(CreateSubscriptionRequest) returns (CreateSubscriptionResponse) {}
+    rpc GetSubscription(GetSubscriptionRequest) returns (GetSubscriptionResponse) {}
+    rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse) {}
 
+}
+
+message CancelSubscriptionRequest {
+}
+
+message CancelSubscriptionResponse {}
+
+message GetSubscriptionRequest {
+}
+
+message Subscription {
+    PlanType plan_type = 2;
+    bool active = 3;
+    int64 updated_at = 4;
+}
+
+message GetSubscriptionResponse {
+    Subscription subscription = 1;
 }
 
 enum PlanType {

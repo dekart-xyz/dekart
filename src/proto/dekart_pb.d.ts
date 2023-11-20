@@ -3,6 +3,104 @@
 
 import * as jspb from "google-protobuf";
 
+export class CancelSubscriptionRequest extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CancelSubscriptionRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: CancelSubscriptionRequest): CancelSubscriptionRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CancelSubscriptionRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CancelSubscriptionRequest;
+  static deserializeBinaryFromReader(message: CancelSubscriptionRequest, reader: jspb.BinaryReader): CancelSubscriptionRequest;
+}
+
+export namespace CancelSubscriptionRequest {
+  export type AsObject = {
+  }
+}
+
+export class CancelSubscriptionResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CancelSubscriptionResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: CancelSubscriptionResponse): CancelSubscriptionResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CancelSubscriptionResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CancelSubscriptionResponse;
+  static deserializeBinaryFromReader(message: CancelSubscriptionResponse, reader: jspb.BinaryReader): CancelSubscriptionResponse;
+}
+
+export namespace CancelSubscriptionResponse {
+  export type AsObject = {
+  }
+}
+
+export class GetSubscriptionRequest extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetSubscriptionRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: GetSubscriptionRequest): GetSubscriptionRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetSubscriptionRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetSubscriptionRequest;
+  static deserializeBinaryFromReader(message: GetSubscriptionRequest, reader: jspb.BinaryReader): GetSubscriptionRequest;
+}
+
+export namespace GetSubscriptionRequest {
+  export type AsObject = {
+  }
+}
+
+export class Subscription extends jspb.Message {
+  getPlanType(): PlanTypeMap[keyof PlanTypeMap];
+  setPlanType(value: PlanTypeMap[keyof PlanTypeMap]): void;
+
+  getActive(): boolean;
+  setActive(value: boolean): void;
+
+  getUpdatedAt(): number;
+  setUpdatedAt(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): Subscription.AsObject;
+  static toObject(includeInstance: boolean, msg: Subscription): Subscription.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: Subscription, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): Subscription;
+  static deserializeBinaryFromReader(message: Subscription, reader: jspb.BinaryReader): Subscription;
+}
+
+export namespace Subscription {
+  export type AsObject = {
+    planType: PlanTypeMap[keyof PlanTypeMap],
+    active: boolean,
+    updatedAt: number,
+  }
+}
+
+export class GetSubscriptionResponse extends jspb.Message {
+  hasSubscription(): boolean;
+  clearSubscription(): void;
+  getSubscription(): Subscription | undefined;
+  setSubscription(value?: Subscription): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetSubscriptionResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: GetSubscriptionResponse): GetSubscriptionResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetSubscriptionResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetSubscriptionResponse;
+  static deserializeBinaryFromReader(message: GetSubscriptionResponse, reader: jspb.BinaryReader): GetSubscriptionResponse;
+}
+
+export namespace GetSubscriptionResponse {
+  export type AsObject = {
+    subscription?: Subscription.AsObject,
+  }
+}
+
 export class CreateSubscriptionRequest extends jspb.Message {
   getPlanType(): PlanTypeMap[keyof PlanTypeMap];
   setPlanType(value: PlanTypeMap[keyof PlanTypeMap]): void;
