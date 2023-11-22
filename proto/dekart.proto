@@ -157,16 +157,19 @@ message RedirectState {
     string error  = 2;
 }
 
+// AuthState is used to pass state between UI, auth endpoint and Google OAuth via redirect
 message AuthState   {
-    enum Action {
+    enum Action { // auth endpoint actions
         ACTION_UNSPECIFIED = 0;
         ACTION_REQUEST_CODE = 1;
         ACTION_REQUEST_TOKEN = 2;
+        ACTION_REVOKE = 3;
     }
     Action action = 1;
-    string auth_url = 2;
-    string ui_url = 3;
-    string secret = 4;
+    string auth_url = 2; // dekart backend url to handle auth request
+    string ui_url = 3; // dekart frontend url to redirect to after auth
+    string token_json = 4; // token json to revoke
+    bool switch_account = 5; // if true, user will be requested to switch account
 }
 
 message ArchiveReportRequest {
@@ -217,7 +220,7 @@ message Query {
         JOB_STATUS_RUNNING = 2;
         JOB_STATUS_DONE_LEGACY = 3;  // legacy for backwards compatibility
         JOB_STATUS_READING_RESULTS = 4; // job is done proccessing results
-        JOB_STATUS_DONE = 5; 
+        JOB_STATUS_DONE = 5;
     }
 
     JobStatus job_status = 4;

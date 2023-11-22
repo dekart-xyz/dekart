@@ -106,6 +106,7 @@ func (c ClaimsCheck) validateToken(ctx context.Context, header string) *Claims {
 	tokenInfo, err := c.getTokenInfo(ctx, &oauth2.Token{
 		AccessToken: accessToken,
 	})
+	log.Debug().Interface("tokenInfo", tokenInfo).Send()
 	if err != nil {
 		log.Error().Err(err).Msg("Error getting token info")
 		return nil
@@ -165,6 +166,15 @@ func (c ClaimsCheck) getAuthConfig(state *pb.AuthState) *oauth2.Config {
 	authUrl := ""
 	if state != nil {
 		authUrl = state.AuthUrl
+		// if state.Action == pb.AuthState_ACTION_LOGOUT {
+		// 	return &oauth2.Config{
+		// 		ClientID:     c.GoogleOAuthClientId,
+		// 		ClientSecret: c.GoogleOAuthSecret,
+		// 		Scopes:       []string{bigquery.BigqueryScope, googleOAuth.UserinfoProfileScope, googleOAuth.UserinfoEmailScope, "https://www.googleapis.com/auth/devstorage.read_write"},
+		// 		Endpoint:     google.Endpoint,
+		// 		RedirectURL:  authUrl,
+		// 	}
+		// }
 	}
 	return &oauth2.Config{
 		ClientID:     c.GoogleOAuthClientId,
@@ -268,7 +278,7 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug().Msgf("Authenticate state action: %s", state.Action)
 	switch state.Action {
-	case pb.AuthState_ACTION_REQUEST_CODE:
+	case pb.AuthState_ACTION_REQUEST_CODE: // request code from google
 		state.Action = pb.AuthState_ACTION_REQUEST_TOKEN
 		stateBin, err = proto.Marshal(&state)
 		if err != nil {
@@ -276,9 +286,14 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 		}
 		stateBase64 = base64.StdEncoding.EncodeToString(stateBin)
 		var auth = c.getAuthConfig(&state)
-		url := auth.AuthCodeURL(stateBase64)
+		var url string
+		if state.GetSwitchAccount() {
+			url = auth.AuthCodeURL(stateBase64, oauth2.SetAuthURLParam("prompt", "select_account"))
+		} else {
+			url = auth.AuthCodeURL(stateBase64)
+		}
 		http.Redirect(w, r, url, http.StatusFound)
-	case pb.AuthState_ACTION_REQUEST_TOKEN:
+	case pb.AuthState_ACTION_REQUEST_TOKEN: // exchange code for token and redirect to ui
 		redirectState := c.requestToken(&state, r)
 		redirectStateBin, err := proto.Marshal(redirectState)
 		if err != nil {
@@ -289,6 +304,39 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 		query.Set("redirect_state", redirectStateBase64)
 		uiURL.RawQuery = query.Encode()
 		http.Redirect(w, r, uiURL.String(), http.StatusFound)
+		return
+	case pb.AuthState_ACTION_REVOKE:
+		// switch google account
+		tokenJson := state.TokenJson
+		var token oauth2.Token
+		err := json.Unmarshal([]byte(tokenJson), &token)
+		if err != nil {
+			log.Error().Err(err).Msg("Error unmarshalling token")
+			http.Error(w, "Error unmarshalling token", http.StatusBadRequest)
+			return
+		}
+		revokeURL := "https://oauth2.googleapis.com/revoke"
+		response, err := http.PostForm(revokeURL, url.Values{"token": {token.AccessToken}})
+		if err != nil {
+			log.Error().Err(err).Msg("Error revoking token")
+			http.Error(w, "Error revoking token", http.StatusBadRequest)
+			return
+		}
+		defer response.Body.Close()
+
+		http.Redirect(w, r, uiURL.String(), http.StatusFound)
+
+		// state.Action = pb.AuthState_ACTION_REQUEST_TOKEN
+		// stateBin, err = proto.Marshal(&state)
+		// if err != nil {
+		// 	log.Fatal().Err(err).Msg("Error marshalling state")
+		// }
+		// stateBase64 = base64.StdEncoding.EncodeToString(stateBin)
+		// var auth = c.getAuthConfig(&state)
+		// auth.
+		// url := auth.AuthCodeURL(stateBase64, oauth2.SetAuthURLParam("prompt", "select_account"))
+		// http.Redirect(w, r, url, http.StatusFound)
+
 		return
 	default:
 		log.Error().Msgf("Unknown action: %v", state.Action)

@@ -18,6 +18,24 @@
     background: linear-gradient(180deg, #2B323B 70%, #25272F 100%);
 }
 
+.user {
+    padding: 0px 0px 0px 10px;
+    border-left: rgba(255, 255, 255, 0.35) 1px solid;
+    margin-left: 10px;
+    margin-top: 7px;
+}
+
+.user > :global(.ant-avatar) {
+    background-color: rgb(87, 183, 211);
+    cursor: default;
+    user-select: none;
+    /* transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);; */
+}
+
+/* .user > :global(.ant-avatar:hover) {
+    background-color: rgb(24, 144, 255);
+} */
+
 .top {
     display: flex;
     flex-direction: row;

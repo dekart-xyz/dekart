@@ -4804,7 +4804,8 @@ proto.AuthState.toObject = function(includeInstance, msg) {
     action: jspb.Message.getFieldWithDefault(msg, 1, 0),
     authUrl: jspb.Message.getFieldWithDefault(msg, 2, ""),
     uiUrl: jspb.Message.getFieldWithDefault(msg, 3, ""),
-    secret: jspb.Message.getFieldWithDefault(msg, 4, "")
+    tokenJson: jspb.Message.getFieldWithDefault(msg, 4, ""),
+    switchAccount: jspb.Message.getBooleanFieldWithDefault(msg, 5, false)
   };
 
   if (includeInstance) {
@@ -4855,7 +4856,11 @@ proto.AuthState.deserializeBinaryFromReader = function(msg, reader) {
       break;
     case 4:
       var value = /** @type {string} */ (reader.readString());
-      msg.setSecret(value);
+      msg.setTokenJson(value);
+      break;
+    case 5:
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setSwitchAccount(value);
       break;
     default:
       reader.skipField();
@@ -4907,10 +4912,17 @@ proto.AuthState.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
-  f = message.getSecret();
+  f = message.getTokenJson();
   if (f.length > 0) {
     writer.writeString(
       4,
+      f
+    );
+  }
+  f = message.getSwitchAccount();
+  if (f) {
+    writer.writeBool(
+      5,
       f
     );
   }
@@ -4923,7 +4935,8 @@ proto.AuthState.serializeBinaryToWriter = function(message, writer) {
 proto.AuthState.Action = {
   ACTION_UNSPECIFIED: 0,
   ACTION_REQUEST_CODE: 1,
-  ACTION_REQUEST_TOKEN: 2
+  ACTION_REQUEST_TOKEN: 2,
+  ACTION_REVOKE: 3
 };
 
 /**
@@ -4981,10 +4994,10 @@ proto.AuthState.prototype.setUiUrl = function(value) {
 
 
 /**
- * optional string secret = 4;
+ * optional string token_json = 4;
  * @return {string}
  */
-proto.AuthState.prototype.getSecret = function() {
+proto.AuthState.prototype.getTokenJson = function() {
   return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 4, ""));
 };
 
@@ -4993,8 +5006,26 @@ proto.AuthState.prototype.getSecret = function() {
  * @param {string} value
  * @return {!proto.AuthState} returns this
  */
-proto.AuthState.prototype.setSecret = function(value) {
+proto.AuthState.prototype.setTokenJson = function(value) {
   return jspb.Message.setProto3StringField(this, 4, value);
+};
+
+
+/**
+ * optional bool switch_account = 5;
+ * @return {boolean}
+ */
+proto.AuthState.prototype.getSwitchAccount = function() {
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 5, false));
+};
+
+
+/**
+ * @param {boolean} value
+ * @return {!proto.AuthState} returns this
+ */
+proto.AuthState.prototype.setSwitchAccount = function(value) {
+  return jspb.Message.setProto3BooleanField(this, 5, value);
 };
 
 

@@ -555,8 +555,11 @@ export class AuthState extends jspb.Message {
   getUiUrl(): string;
   setUiUrl(value: string): void;
 
-  getSecret(): string;
-  setSecret(value: string): void;
+  getTokenJson(): string;
+  setTokenJson(value: string): void;
+
+  getSwitchAccount(): boolean;
+  setSwitchAccount(value: boolean): void;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): AuthState.AsObject;
@@ -573,13 +576,15 @@ export namespace AuthState {
     action: AuthState.ActionMap[keyof AuthState.ActionMap],
     authUrl: string,
     uiUrl: string,
-    secret: string,
+    tokenJson: string,
+    switchAccount: boolean,
   }
 
   export interface ActionMap {
     ACTION_UNSPECIFIED: 0;
     ACTION_REQUEST_CODE: 1;
     ACTION_REQUEST_TOKEN: 2;
+    ACTION_REVOKE: 3;
   }
 
   export const Action: ActionMap;
