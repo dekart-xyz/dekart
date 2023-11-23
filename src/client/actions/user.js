@@ -3,6 +3,13 @@ import { Dekart } from '../../proto/dekart_pb_service'
 import { getConnectionsList } from './connection'
 import { grpcStream, grpcStreamCancel } from './grpc'
 
+export function userStreamUpdate (userStream) {
+  return {
+    type: userStreamUpdate.name,
+    userStream
+  }
+}
+
 export function subscribeUserStream () {
   return (dispatch) => {
     dispatch({ type: subscribeUserStream.name })
@@ -12,6 +19,7 @@ export function subscribeUserStream () {
     }
     dispatch(grpcStream(Dekart.GetUserStream, request, (message, err) => {
       if (message) {
+        dispatch(userStreamUpdate(message))
         if (prevRes.connectionUpdate !== message.connectionUpdate) {
           prevRes.connectionUpdate = message.connectionUpdate
           dispatch(getConnectionsList())

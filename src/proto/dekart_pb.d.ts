@@ -72,6 +72,9 @@ export class GetUserStreamResponse extends jspb.Message {
   getConnectionUpdate(): number;
   setConnectionUpdate(value: number): void;
 
+  getEmail(): string;
+  setEmail(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetUserStreamResponse.AsObject;
   static toObject(includeInstance: boolean, msg: GetUserStreamResponse): GetUserStreamResponse.AsObject;
@@ -86,6 +89,7 @@ export namespace GetUserStreamResponse {
   export type AsObject = {
     streamOptions?: StreamOptions.AsObject,
     connectionUpdate: number,
+    email: string,
   }
 }
 
@@ -555,8 +559,8 @@ export class AuthState extends jspb.Message {
   getUiUrl(): string;
   setUiUrl(value: string): void;
 
-  getTokenJson(): string;
-  setTokenJson(value: string): void;
+  getAccessTokenToRevoke(): string;
+  setAccessTokenToRevoke(value: string): void;
 
   getSwitchAccount(): boolean;
   setSwitchAccount(value: boolean): void;
@@ -576,7 +580,7 @@ export namespace AuthState {
     action: AuthState.ActionMap[keyof AuthState.ActionMap],
     authUrl: string,
     uiUrl: string,
-    tokenJson: string,
+    accessTokenToRevoke: string,
     switchAccount: boolean,
   }
 

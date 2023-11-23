@@ -55,6 +55,7 @@ message GetUserStreamRequest {
 message GetUserStreamResponse {
     StreamOptions stream_options = 1;
     int64 connection_update = 2;
+    string email = 3;
 }
 
 message TestConnectionRequest {
@@ -168,7 +169,7 @@ message AuthState   {
     Action action = 1;
     string auth_url = 2; // dekart backend url to handle auth request
     string ui_url = 3; // dekart frontend url to redirect to after auth
-    string token_json = 4; // token json to revoke
+    string access_token_to_revoke = 4; // access token to revoke
     bool switch_account = 5; // if true, user will be requested to switch account
 }
 

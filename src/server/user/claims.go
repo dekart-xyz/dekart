@@ -229,6 +229,7 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 		return redirectState
 	}
 	tokenInfo, err := c.getTokenInfo(ctx, token)
+	log.Debug().Interface("tokenInfo", tokenInfo).Send()
 	if err != nil {
 		log.Error().Err(err).Msg("Error getting token info")
 		redirectState.Error = "Error getting token info"
@@ -247,6 +248,8 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 	redirectState.TokenJson = string(tokenBin)
 	return redirectState
 }
+
+const tokenRevokeURL = "https://oauth2.googleapis.com/revoke"
 
 // Authenticate redirects to Google OAuth
 func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
@@ -306,37 +309,14 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, uiURL.String(), http.StatusFound)
 		return
 	case pb.AuthState_ACTION_REVOKE:
-		// switch google account
-		tokenJson := state.TokenJson
-		var token oauth2.Token
-		err := json.Unmarshal([]byte(tokenJson), &token)
-		if err != nil {
-			log.Error().Err(err).Msg("Error unmarshalling token")
-			http.Error(w, "Error unmarshalling token", http.StatusBadRequest)
-			return
-		}
-		revokeURL := "https://oauth2.googleapis.com/revoke"
-		response, err := http.PostForm(revokeURL, url.Values{"token": {token.AccessToken}})
+		response, err := http.PostForm(tokenRevokeURL, url.Values{"token": {state.AccessTokenToRevoke}})
 		if err != nil {
 			log.Error().Err(err).Msg("Error revoking token")
 			http.Error(w, "Error revoking token", http.StatusBadRequest)
 			return
 		}
 		defer response.Body.Close()
-
 		http.Redirect(w, r, uiURL.String(), http.StatusFound)
-
-		// state.Action = pb.AuthState_ACTION_REQUEST_TOKEN
-		// stateBin, err = proto.Marshal(&state)
-		// if err != nil {
-		// 	log.Fatal().Err(err).Msg("Error marshalling state")
-		// }
-		// stateBase64 = base64.StdEncoding.EncodeToString(stateBin)
-		// var auth = c.getAuthConfig(&state)
-		// auth.
-		// url := auth.AuthCodeURL(stateBase64, oauth2.SetAuthURLParam("prompt", "select_account"))
-		// http.Redirect(w, r, url, http.StatusFound)
-
 		return
 	default:
 		log.Error().Msgf("Unknown action: %v", state.Action)

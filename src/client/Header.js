@@ -7,12 +7,25 @@ import Dropdown from 'antd/es/dropdown'
 import { AuthState } from '../proto/dekart_pb'
 import { authRedirect } from './lib/api'
 
+function getSignature (email) {
+  if (!email) {
+    return '?'
+  }
+  const parts = email.split('@')
+  if (parts.length !== 2) {
+    return '?'
+  }
+  const nameAr = parts[0].split('.')
+  return nameAr.map(n => n[0]).join('')
+}
+
 export function Header ({ buttons, title }) {
   const env = useSelector(state => state.env)
   const { authType } = env
   const token = useSelector(state => state.token)
-  console.log('authType', authType)
   const usage = useSelector(state => state.usage)
+  const user = useSelector(state => state.user)
+  console.log('user', user)
   let homePage
   if (env.loaded && usage.loaded) {
     homePage = env.variables.UX_HOMEPAGE + '?ref=' + getRef(env, usage)
@@ -28,31 +41,36 @@ export function Header ({ buttons, title }) {
         {authType === 'GOOGLE_OAUTH' && usage.loaded
           ? (
             <div className={styles.user}>
-              <Dropdown menu={{
-                items: [
-                  {
-                    label: 'Swicth account',
-                    onClick: () => {
-                      const state = new AuthState()
-                      state.setUiUrl(window.location.href)
-                      state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
-                      state.setSwitchAccount(true)
-                      authRedirect(state)
+              <Dropdown
+                overlayClassName={styles.userDropdown} menu={{
+                  items: [
+                    {
+                      label: user && user.email,
+                      disabled: true
+                    },
+                    {
+                      label: 'Swicth account',
+                      onClick: () => {
+                        const state = new AuthState()
+                        state.setUiUrl(window.location.href)
+                        state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
+                        state.setSwitchAccount(true)
+                        authRedirect(state)
+                      }
+                    },
+                    {
+                      label: 'Sign out',
+                      onClick: () => {
+                        const state = new AuthState()
+                        state.setUiUrl(window.location.href)
+                        state.setAction(AuthState.Action.ACTION_REVOKE)
+                        state.setAccessTokenToRevoke(token.access_token)
+                        authRedirect(state)
+                      }
                     }
-                  },
-                  {
-                    label: 'Sign out',
-                    onClick: () => {
-                      const state = new AuthState()
-                      state.setUiUrl(window.location.href)
-                      state.setAction(AuthState.Action.ACTION_REVOKE)
-                      state.setTokenJson(JSON.stringify(token))
-                      authRedirect(state)
-                    }
-                  }
-                ]
-              }}
-              ><Avatar>U</Avatar>
+                  ]
+                }}
+              ><Avatar>{getSignature(user && user.email)}</Avatar>
               </Dropdown>
 
             </div>
