@@ -55,7 +55,7 @@ message GetUserStreamRequest {
 message GetUserStreamResponse {
     StreamOptions stream_options = 1;
     int64 connection_update = 2;
-    string email = 3;
+    string email = 3; // user email used to show user icon in UI
 }
 
 message TestConnectionRequest {
@@ -162,9 +162,9 @@ message RedirectState {
 message AuthState   {
     enum Action { // auth endpoint actions
         ACTION_UNSPECIFIED = 0;
-        ACTION_REQUEST_CODE = 1;
-        ACTION_REQUEST_TOKEN = 2;
-        ACTION_REVOKE = 3;
+        ACTION_REQUEST_CODE = 1; // request auth code from Google OAuth (invoked by UI)
+        ACTION_REQUEST_TOKEN = 2; // request access token from Google OAuth (used as callback from Google OAuth)
+        ACTION_REVOKE = 3; // revoke access token (invoked by UI)
     }
     Action action = 1;
     string auth_url = 2; // dekart backend url to handle auth request

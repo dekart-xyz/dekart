@@ -29,16 +29,11 @@
     background-color: rgb(87, 183, 211);
     cursor: default;
     user-select: none;
-    /* transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);; */
 }
 
 .userDropdown :global(li.ant-dropdown-menu-item-disabled) {
     cursor: default!important;
 }
-
-/* .user > :global(.ant-avatar:hover) {
-    background-color: rgb(24, 144, 255);
-} */
 
 .top {
     display: flex;

@@ -25,7 +25,6 @@ export function Header ({ buttons, title }) {
   const token = useSelector(state => state.token)
   const usage = useSelector(state => state.usage)
   const user = useSelector(state => state.user)
-  console.log('user', user)
   let homePage
   if (env.loaded && usage.loaded) {
     homePage = env.variables.UX_HOMEPAGE + '?ref=' + getRef(env, usage)

@@ -30,8 +30,9 @@ export async function get (endpoint, token = null) {
   return res
 }
 
+const { REACT_APP_API_HOST } = process.env // this never changes, passed during build
+
 export function authRedirect (state) {
-  const { REACT_APP_API_HOST } = process.env
   const req = new URL('/api/v1/authenticate', REACT_APP_API_HOST || window.location.href)
   state.setAuthUrl(req.href)
   const stateBase64 = btoa(String.fromCharCode.apply(null, state.serializeBinary()))
