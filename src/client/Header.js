@@ -19,12 +19,53 @@ function getSignature (email) {
   return nameAr.map(n => n[0]).join('')
 }
 
+function User () {
+  const token = useSelector(state => state.token)
+  const user = useSelector(state => state.user)
+  if (!user || !token) {
+    return null
+  }
+  return (
+    <div className={styles.user}>
+      <Dropdown
+        overlayClassName={styles.userDropdown} menu={{
+          items: [
+            {
+              label: user && user.email,
+              disabled: true
+            },
+            {
+              label: 'Swicth account',
+              onClick: () => {
+                const state = new AuthState()
+                state.setUiUrl(window.location.href)
+                state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
+                state.setSwitchAccount(true)
+                authRedirect(state)
+              }
+            },
+            {
+              label: 'Sign out',
+              onClick: () => {
+                const state = new AuthState()
+                state.setUiUrl(window.location.href)
+                state.setAction(AuthState.Action.ACTION_REVOKE)
+                state.setAccessTokenToRevoke(token.access_token)
+                authRedirect(state)
+              }
+            }
+          ]
+        }}
+      ><Avatar>{getSignature(user && user.email)}</Avatar>
+      </Dropdown>
+
+    </div>
+  )
+}
+
 export function Header ({ buttons, title }) {
   const env = useSelector(state => state.env)
-  const { authType } = env
-  const token = useSelector(state => state.token)
   const usage = useSelector(state => state.usage)
-  const user = useSelector(state => state.user)
   let homePage
   if (env.loaded && usage.loaded) {
     homePage = env.variables.UX_HOMEPAGE + '?ref=' + getRef(env, usage)
@@ -37,44 +78,7 @@ export function Header ({ buttons, title }) {
           <div className={styles.dekartLinkHolder}><a target='_blank' rel='noopener noreferrer' className={styles.dekartLink} href={homePage}>Dekart</a></div>
         </div>
         <div className={styles.buttons}>{buttons || null}</div>
-        {authType === 'GOOGLE_OAUTH' && usage.loaded
-          ? (
-            <div className={styles.user}>
-              <Dropdown
-                overlayClassName={styles.userDropdown} menu={{
-                  items: [
-                    {
-                      label: user && user.email,
-                      disabled: true
-                    },
-                    {
-                      label: 'Swicth account',
-                      onClick: () => {
-                        const state = new AuthState()
-                        state.setUiUrl(window.location.href)
-                        state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
-                        state.setSwitchAccount(true)
-                        authRedirect(state)
-                      }
-                    },
-                    {
-                      label: 'Sign out',
-                      onClick: () => {
-                        const state = new AuthState()
-                        state.setUiUrl(window.location.href)
-                        state.setAction(AuthState.Action.ACTION_REVOKE)
-                        state.setAccessTokenToRevoke(token.access_token)
-                        authRedirect(state)
-                      }
-                    }
-                  ]
-                }}
-              ><Avatar>{getSignature(user && user.email)}</Avatar>
-              </Dropdown>
-
-            </div>
-            )
-          : null}
+        <User />
       </div>
       {title ? (<div className={styles.title}>{title}</div>) : null}
     </div>

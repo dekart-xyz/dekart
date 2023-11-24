@@ -47,14 +47,20 @@ function RedirectState () {
 
 function AppRedirect () {
   const httpError = useSelector(state => state.httpError)
+  const { status, doNotAuthenticate } = httpError
   const { newReportId } = useSelector(state => state.reportStatus)
   const location = useLocation()
 
-  if (httpError.status === 401 && httpError.doNotAuthenticate === false) {
-    const state = new AuthState()
-    state.setUiUrl(window.location.href)
-    state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
-    authRedirect(state)
+  useEffect(() => {
+    if (status === 401 && doNotAuthenticate === false) {
+      const state = new AuthState()
+      state.setUiUrl(window.location.href)
+      state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
+      authRedirect(state)
+    }
+  }, [status, doNotAuthenticate])
+
+  if (status === 401 && doNotAuthenticate === false) {
     return null
   }
 

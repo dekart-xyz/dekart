@@ -106,7 +106,6 @@ func (c ClaimsCheck) validateToken(ctx context.Context, header string) *Claims {
 	tokenInfo, err := c.getTokenInfo(ctx, &oauth2.Token{
 		AccessToken: accessToken,
 	})
-	log.Debug().Interface("tokenInfo", tokenInfo).Send()
 	if err != nil {
 		log.Error().Err(err).Msg("Error getting token info")
 		return nil
@@ -166,15 +165,6 @@ func (c ClaimsCheck) getAuthConfig(state *pb.AuthState) *oauth2.Config {
 	authUrl := ""
 	if state != nil {
 		authUrl = state.AuthUrl
-		// if state.Action == pb.AuthState_ACTION_LOGOUT {
-		// 	return &oauth2.Config{
-		// 		ClientID:     c.GoogleOAuthClientId,
-		// 		ClientSecret: c.GoogleOAuthSecret,
-		// 		Scopes:       []string{bigquery.BigqueryScope, googleOAuth.UserinfoProfileScope, googleOAuth.UserinfoEmailScope, "https://www.googleapis.com/auth/devstorage.read_write"},
-		// 		Endpoint:     google.Endpoint,
-		// 		RedirectURL:  authUrl,
-		// 	}
-		// }
 	}
 	return &oauth2.Config{
 		ClientID:     c.GoogleOAuthClientId,
@@ -229,7 +219,6 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 		return redirectState
 	}
 	tokenInfo, err := c.getTokenInfo(ctx, token)
-	log.Debug().Interface("tokenInfo", tokenInfo).Send()
 	if err != nil {
 		log.Error().Err(err).Msg("Error getting token info")
 		redirectState.Error = "Error getting token info"
