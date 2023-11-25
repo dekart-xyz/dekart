@@ -63,6 +63,63 @@ function Plan ({ title, children, action, planType }) {
   )
 }
 
+function Plans () {
+  const subscription = useSelector(state => state.subscription)
+  if (!subscription) {
+    return null
+  }
+  return (
+    <div className={styles.plans}>
+      <Plan
+        title={<PlanTitle
+          icon={<HomeOutlined />}
+          name='personal'
+          selected={subscription.planType === PlanType.TYPE_PERSONAL}
+          price='$0'
+          description='requires use of personal email'
+               />}
+        planType={PlanType.TYPE_PERSONAL}
+        action='Choose personal'
+      >
+        <p><Text type='success'><CheckCircleOutlined /> Access to private datasets</Text></p>
+        <p><Text><CheckCircleOutlined /> <s>SSO with company email</s></Text></p>
+        <p><Text><HighlightOutlined /> Requires Google Cloud access</Text></p>
+        <p><Text><HighlightOutlined /> Requires Google Cloud Storage</Text></p>
+      </Plan>
+      <Plan
+        title={<PlanTitle
+          icon={<TeamOutlined />}
+          name='team'
+          price='$100/month'
+          description='for teams up to 20 people'
+               />}
+        planType={PlanType.TYPE_TEAM}
+        action='Choose team'
+      >
+        <p><Text type='success'><CheckCircleOutlined /> Access to private datasets</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> SSO with company email</Text></p>
+        <p><Text><HighlightOutlined /> Requires Google Cloud access</Text></p>
+        <p><Text><HighlightOutlined /> Requires Google Cloud Storage</Text></p>
+      </Plan>
+      <Plan
+        title={<PlanTitle
+          icon={<GithubOutlined />}
+          name='community'
+          price='self-hosted'
+          // color='geekblue'
+          description='estimated cost ~$65/month'
+               />}
+        action={<>Go to documentation</>}
+      >
+        <p><Text><HighlightOutlined /> Requires Google Cloud access</Text></p>
+        <p><Text><HighlightOutlined /> Requires deployment on premice</Text></p>
+        <p><Text><HighlightOutlined /> Requires configuration</Text></p>
+        <p><Text><HighlightOutlined /> Requires Google Cloud Storage</Text></p>
+      </Plan>
+    </div>
+  )
+}
+
 export default function SubscriptionPage () {
   const user = useSelector(state => state.user)
   const subscription = useSelector(state => state.subscription)
@@ -95,64 +152,7 @@ export default function SubscriptionPage () {
                   <> Subscription</>
                 </Title>
               </div>
-              <div className={styles.plans}>
-                {
-                  subscription
-                    ? (
-                      <>
-                        <Plan
-                          title={<PlanTitle
-                            icon={<HomeOutlined />}
-                            name='personal'
-                            selected={subscription.planType === PlanType.TYPE_PERSONAL}
-                            price='$0'
-                // color='geekblue'
-                            description='requires use of personal email'
-                                 />}
-                          planType={PlanType.TYPE_PERSONAL}
-                          action='Choose personal'
-                        >
-                          <p><Text type='success'><CheckCircleOutlined /> Access to private datasets</Text></p>
-                          <p><Text><CheckCircleOutlined /> <s>SSO with company email</s></Text></p>
-                          <p><Text><HighlightOutlined /> Requires Google Cloud access</Text></p>
-                          <p><Text><HighlightOutlined /> Requires Google Cloud Storage</Text></p>
-                        </Plan>
-                        <Plan
-                          title={<PlanTitle
-                            icon={<TeamOutlined />}
-                            name='team'
-                            price='$100/month'
-                // color='rgb(87, 183, 211)'
-                            description='for teams up to 20 people'
-                                 />}
-                          planType={PlanType.TYPE_TEAM}
-                          action='Choose team'
-                        >
-                          <p><Text type='success'><CheckCircleOutlined /> Access to private datasets</Text></p>
-                          <p><Text type='success'><CheckCircleOutlined /> SSO with company email</Text></p>
-                          <p><Text><HighlightOutlined /> Requires Google Cloud access</Text></p>
-                          <p><Text><HighlightOutlined /> Requires Google Cloud Storage</Text></p>
-                        </Plan>
-                        <Plan
-                          title={<PlanTitle
-                            icon={<GithubOutlined />}
-                            name='community'
-                            price='self-hosted'
-                // color='geekblue'
-                            description='estimated cost ~$65/month'
-                                 />}
-                          action={<>Go to documentation</>}
-                        >
-                          <p><Text><HighlightOutlined /> Requires Google Cloud access</Text></p>
-                          <p><Text><HighlightOutlined /> Requires deployment on premice</Text></p>
-                          <p><Text><HighlightOutlined /> Requires configuration</Text></p>
-                          <p><Text><HighlightOutlined /> Requires Google Cloud Storage</Text></p>
-                        </Plan>
-                      </>
-                      )
-                    : null
-                }
-              </div>
+              <Plans />
               {subscription && subscription.active
                 ? (
                   <div className={styles.bottomPannel}>

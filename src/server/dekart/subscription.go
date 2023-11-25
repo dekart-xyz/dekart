@@ -16,7 +16,10 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s Server) getSubsciptionActive(ctx context.Context, email string) (*proto.Subscription, error) {
+func (s Server) getSubsciptionActive(
+	ctx context.Context,
+	email string,
+) (*proto.Subscription, error) {
 	var createdAt sql.NullTime
 	var customerID sql.NullString
 	var planType proto.PlanType
@@ -131,7 +134,7 @@ func (s Server) createCheckoutSession(ctx context.Context, req *proto.CreateSubs
 		Mode:     stripe.String(string(stripe.CheckoutSessionModeSubscription)),
 		LineItems: []*stripe.CheckoutSessionLineItemParams{
 			{
-				Price:    stripe.String("price_1ODLzrCnpQUpbHMFAnP2ZWm2"),
+				Price:    stripe.String(os.Getenv("STRIPE_PRICE_ID")),
 				Quantity: stripe.Int64(1),
 			},
 		},

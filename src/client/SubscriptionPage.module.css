@@ -18,7 +18,6 @@
 
 .planTitle {
     text-align: center;
-    /* min-height: 180px; */
 }
 
 .planTitleText {
@@ -31,7 +30,6 @@
     border-radius: 1em;
 }
 .planTitleDescription {
-    /* opacity: 0.5; */
     white-space: pre-line;
 }
 .title {
