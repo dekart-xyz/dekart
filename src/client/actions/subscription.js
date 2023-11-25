@@ -1,4 +1,4 @@
-import { CancelSubscriptionRequest, CreateSubscriptionRequest, PlanType } from '../../proto/dekart_pb'
+import { CancelSubscriptionRequest, CreateSubscriptionRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { success } from './message'
