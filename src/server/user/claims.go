@@ -238,6 +238,8 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 	return redirectState
 }
 
+const tokenRevokeURL = "https://oauth2.googleapis.com/revoke"
+
 // Authenticate redirects to Google OAuth
 func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 	stateBase64 := r.URL.Query().Get("state")
@@ -268,7 +270,7 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug().Msgf("Authenticate state action: %s", state.Action)
 	switch state.Action {
-	case pb.AuthState_ACTION_REQUEST_CODE:
+	case pb.AuthState_ACTION_REQUEST_CODE: // request code from google
 		state.Action = pb.AuthState_ACTION_REQUEST_TOKEN
 		stateBin, err = proto.Marshal(&state)
 		if err != nil {
@@ -276,9 +278,14 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 		}
 		stateBase64 = base64.StdEncoding.EncodeToString(stateBin)
 		var auth = c.getAuthConfig(&state)
-		url := auth.AuthCodeURL(stateBase64)
+		var url string
+		if state.GetSwitchAccount() {
+			url = auth.AuthCodeURL(stateBase64, oauth2.SetAuthURLParam("prompt", "select_account"))
+		} else {
+			url = auth.AuthCodeURL(stateBase64)
+		}
 		http.Redirect(w, r, url, http.StatusFound)
-	case pb.AuthState_ACTION_REQUEST_TOKEN:
+	case pb.AuthState_ACTION_REQUEST_TOKEN: // exchange code for token and redirect to ui
 		redirectState := c.requestToken(&state, r)
 		redirectStateBin, err := proto.Marshal(redirectState)
 		if err != nil {
@@ -288,6 +295,16 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 		query := uiURL.Query()
 		query.Set("redirect_state", redirectStateBase64)
 		uiURL.RawQuery = query.Encode()
+		http.Redirect(w, r, uiURL.String(), http.StatusFound)
+		return
+	case pb.AuthState_ACTION_REVOKE:
+		response, err := http.PostForm(tokenRevokeURL, url.Values{"token": {state.AccessTokenToRevoke}})
+		if err != nil {
+			log.Error().Err(err).Msg("Error revoking token")
+			http.Error(w, "Error revoking token", http.StatusBadRequest)
+			return
+		}
+		defer response.Body.Close()
 		http.Redirect(w, r, uiURL.String(), http.StatusFound)
 		return
 	default:

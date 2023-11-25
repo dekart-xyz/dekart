@@ -57,7 +57,6 @@ type DekartClient interface {
 	// datasets
 	CreateDataset(ctx context.Context, in *CreateDatasetRequest, opts ...grpc.CallOption) (*CreateDatasetResponse, error)
 	RemoveDataset(ctx context.Context, in *RemoveDatasetRequest, opts ...grpc.CallOption) (*RemoveDatasetResponse, error)
-	// rpc UpdateDataset(UpdateDatasetRequest) returns (UpdateDatasetResponse) {}
 	UpdateDatasetName(ctx context.Context, in *UpdateDatasetNameRequest, opts ...grpc.CallOption) (*UpdateDatasetNameResponse, error)
 	UpdateDatasetConnection(ctx context.Context, in *UpdateDatasetConnectionRequest, opts ...grpc.CallOption) (*UpdateDatasetConnectionResponse, error)
 	// files
@@ -378,7 +377,6 @@ type DekartServer interface {
 	// datasets
 	CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error)
 	RemoveDataset(context.Context, *RemoveDatasetRequest) (*RemoveDatasetResponse, error)
-	// rpc UpdateDataset(UpdateDatasetRequest) returns (UpdateDatasetResponse) {}
 	UpdateDatasetName(context.Context, *UpdateDatasetNameRequest) (*UpdateDatasetNameResponse, error)
 	UpdateDatasetConnection(context.Context, *UpdateDatasetConnectionRequest) (*UpdateDatasetConnectionResponse, error)
 	// files

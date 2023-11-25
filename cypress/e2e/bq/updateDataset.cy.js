@@ -27,6 +27,7 @@ describe('update dataset', () => {
 
     // update second query
     cy.get('textarea:first').clear({ force: true })
+    cy.get('textarea:first').invoke('val', '')
     cy.get('textarea:first').type('SELECT primary_type, district, latitude, longitude, date from `bigquery-public-data.chicago_crime.crime` limit 3', { force: true })
     cy.get(`button:contains("${copy.execute}")`).click()
     cy.get(`button:contains("${copy.cancel}")`).should('be.visible')
