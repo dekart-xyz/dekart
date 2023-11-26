@@ -2764,6 +2764,7 @@ proto.GetUserStreamResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
     streamOptions: (f = msg.getStreamOptions()) && proto.StreamOptions.toObject(includeInstance, f),
     connectionUpdate: jspb.Message.getFieldWithDefault(msg, 2, 0),
+    email: jspb.Message.getFieldWithDefault(msg, 3, ""),
     subscriptionActive: jspb.Message.getBooleanFieldWithDefault(msg, 103, false),
     subscriptionUpdate: jspb.Message.getFieldWithDefault(msg, 104, 0)
   };
@@ -2810,6 +2811,10 @@ proto.GetUserStreamResponse.deserializeBinaryFromReader = function(msg, reader) 
     case 2:
       var value = /** @type {number} */ (reader.readInt64());
       msg.setConnectionUpdate(value);
+      break;
+    case 3:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setEmail(value);
       break;
     case 103:
       var value = /** @type {boolean} */ (reader.readBool());
@@ -2860,6 +2865,13 @@ proto.GetUserStreamResponse.serializeBinaryToWriter = function(message, writer) 
   if (f !== 0) {
     writer.writeInt64(
       2,
+      f
+    );
+  }
+  f = message.getEmail();
+  if (f.length > 0) {
+    writer.writeString(
+      3,
       f
     );
   }
@@ -2932,6 +2944,24 @@ proto.GetUserStreamResponse.prototype.getConnectionUpdate = function() {
  */
 proto.GetUserStreamResponse.prototype.setConnectionUpdate = function(value) {
   return jspb.Message.setProto3IntField(this, 2, value);
+};
+
+
+/**
+ * optional string email = 3;
+ * @return {string}
+ */
+proto.GetUserStreamResponse.prototype.getEmail = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 3, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.GetUserStreamResponse} returns this
+ */
+proto.GetUserStreamResponse.prototype.setEmail = function(value) {
+  return jspb.Message.setProto3StringField(this, 3, value);
 };
 
 
@@ -5953,7 +5983,8 @@ proto.AuthState.toObject = function(includeInstance, msg) {
     action: jspb.Message.getFieldWithDefault(msg, 1, 0),
     authUrl: jspb.Message.getFieldWithDefault(msg, 2, ""),
     uiUrl: jspb.Message.getFieldWithDefault(msg, 3, ""),
-    secret: jspb.Message.getFieldWithDefault(msg, 4, "")
+    accessTokenToRevoke: jspb.Message.getFieldWithDefault(msg, 4, ""),
+    switchAccount: jspb.Message.getBooleanFieldWithDefault(msg, 5, false)
   };
 
   if (includeInstance) {
@@ -6004,7 +6035,11 @@ proto.AuthState.deserializeBinaryFromReader = function(msg, reader) {
       break;
     case 4:
       var value = /** @type {string} */ (reader.readString());
-      msg.setSecret(value);
+      msg.setAccessTokenToRevoke(value);
+      break;
+    case 5:
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setSwitchAccount(value);
       break;
     default:
       reader.skipField();
@@ -6056,10 +6091,17 @@ proto.AuthState.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
-  f = message.getSecret();
+  f = message.getAccessTokenToRevoke();
   if (f.length > 0) {
     writer.writeString(
       4,
+      f
+    );
+  }
+  f = message.getSwitchAccount();
+  if (f) {
+    writer.writeBool(
+      5,
       f
     );
   }
@@ -6072,7 +6114,8 @@ proto.AuthState.serializeBinaryToWriter = function(message, writer) {
 proto.AuthState.Action = {
   ACTION_UNSPECIFIED: 0,
   ACTION_REQUEST_CODE: 1,
-  ACTION_REQUEST_TOKEN: 2
+  ACTION_REQUEST_TOKEN: 2,
+  ACTION_REVOKE: 3
 };
 
 /**
@@ -6130,10 +6173,10 @@ proto.AuthState.prototype.setUiUrl = function(value) {
 
 
 /**
- * optional string secret = 4;
+ * optional string access_token_to_revoke = 4;
  * @return {string}
  */
-proto.AuthState.prototype.getSecret = function() {
+proto.AuthState.prototype.getAccessTokenToRevoke = function() {
   return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 4, ""));
 };
 
@@ -6142,8 +6185,26 @@ proto.AuthState.prototype.getSecret = function() {
  * @param {string} value
  * @return {!proto.AuthState} returns this
  */
-proto.AuthState.prototype.setSecret = function(value) {
+proto.AuthState.prototype.setAccessTokenToRevoke = function(value) {
   return jspb.Message.setProto3StringField(this, 4, value);
+};
+
+
+/**
+ * optional bool switch_account = 5;
+ * @return {boolean}
+ */
+proto.AuthState.prototype.getSwitchAccount = function() {
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 5, false));
+};
+
+
+/**
+ * @param {boolean} value
+ * @return {!proto.AuthState} returns this
+ */
+proto.AuthState.prototype.setSwitchAccount = function(value) {
+  return jspb.Message.setProto3BooleanField(this, 5, value);
 };
 
 

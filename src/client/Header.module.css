@@ -18,6 +18,23 @@
     background: linear-gradient(180deg, #2B323B 70%, #25272F 100%);
 }
 
+.user {
+    padding: 0px 0px 0px 10px;
+    border-left: rgba(255, 255, 255, 0.35) 1px solid;
+    margin-left: 10px;
+    margin-top: 7px;
+}
+
+.user > :global(.ant-avatar) {
+    background-color: rgb(87, 183, 211);
+    cursor: default;
+    user-select: none;
+}
+
+.userDropdown :global(li.ant-dropdown-menu-item-disabled) {
+    cursor: default!important;
+}
+
 .top {
     display: flex;
     flex-direction: row;

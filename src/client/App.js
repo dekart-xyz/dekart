@@ -17,6 +17,7 @@ import { AuthState, RedirectState as DekartRedirectState } from '../proto/dekart
 import { getEnv } from './actions/env'
 import { setRedirectState } from './actions/redirectState'
 import { subscribeUserStream, unsubscribeUserStream } from './actions/user'
+import { authRedirect } from './lib/api'
 import SubscriptionPage from './SubscriptionPage'
 
 // RedirectState reads states passed in the URL from the server
@@ -47,25 +48,26 @@ function RedirectState () {
 
 function AppRedirect () {
   const httpError = useSelector(state => state.httpError)
+  const { status, doNotAuthenticate } = httpError
   const { newReportId } = useSelector(state => state.reportStatus)
   const user = useSelector(state => state.user)
   const location = useLocation()
 
-  if (user && !user.subscriptionActive) {
-    return <Redirect to='/subscription' push />
+  useEffect(() => {
+    if (status === 401 && doNotAuthenticate === false) {
+      const state = new AuthState()
+      state.setUiUrl(window.location.href)
+      state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
+      authRedirect(state)
+    }
+  }, [status, doNotAuthenticate])
+
+  if (status === 401 && doNotAuthenticate === false) {
+    return null
   }
 
-  if (httpError.status === 401 && httpError.doNotAuthenticate === false) {
-    const { REACT_APP_API_HOST } = process.env
-    const req = new URL('/api/v1/authenticate', REACT_APP_API_HOST || window.location.href)
-    const state = new AuthState()
-    state.setAuthUrl(req.href)
-    state.setUiUrl(window.location.href)
-    state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
-    const stateBase64 = btoa(String.fromCharCode.apply(null, state.serializeBinary()))
-    req.searchParams.set('state', stateBase64)
-    window.location.href = req.href
-    return null
+  if (user && !user.subscriptionActive) {
+    return <Redirect to='/subscription' push />
   }
 
   if (httpError.status && location.pathname !== `/${httpError.status}`) {
