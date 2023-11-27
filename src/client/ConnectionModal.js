@@ -32,6 +32,7 @@ function Footer ({ form }) {
   }
       <div className={styles.spacer} />
       <Button
+        id='saveConnection'
         type={tested && testSuccess ? 'primary' : 'default'} disabled={!tested || loading} onClick={() => {
           dispatch(saveConnection(id, form.getFieldsValue()))
         }}
