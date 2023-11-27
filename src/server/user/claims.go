@@ -12,7 +12,6 @@ import (
 	"net/url"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/rs/zerolog/log"
@@ -45,6 +44,7 @@ type ClaimsCheckConfig struct {
 	GoogleOAuthClientId string
 	GoogleOAuthSecret   string
 	DevClaimsEmail      string
+	DevRefreshToken     string
 	Region              string
 }
 
@@ -69,13 +69,18 @@ func validateConfig(c ClaimsCheckConfig) {
 			log.Fatal().Msgf("Dekart AWS_REGION is required for OIDC")
 		}
 	case c.RequireGoogleOAuth:
-		if c.DevClaimsEmail == "" {
+		if c.DevClaimsEmail != "" {
+			log.Warn().Msgf("DEKART_DEV_CLAIMS_EMAIL is ignored when DEKART_REQUIRE_GOOGLE_OAUTH is set")
+		}
+		if c.DevRefreshToken == "" {
 			if c.GoogleOAuthClientId == "" {
 				log.Fatal().Msgf("Dekart DEKART_GOOGLE_OAUTH_CLIENT_ID is required for Google OAuth")
 			}
 			if c.GoogleOAuthSecret == "" {
 				log.Fatal().Msgf("Dekart DEKART_GOOGLE_OAUTH_SECRET is required for Google OAuth")
 			}
+		} else {
+			log.Warn().Msgf("Use DEKART_DEV_REFRESH_TOKEN only in development environment")
 		}
 		log.Info().Msgf("Dekart configured to require Google OAuth")
 	default:
@@ -104,13 +109,6 @@ func (c ClaimsCheck) validateAuthToken(ctx context.Context, header string) *Clai
 		return nil
 	}
 
-	// check dev claims email after checking header to force redirect flow in dev mode
-	if c.DevClaimsEmail != "" {
-		return &Claims{
-			Email: c.DevClaimsEmail,
-		}
-	}
-
 	authHeaderParts := strings.Split(header, " ")
 	if len(authHeaderParts) != 2 || strings.ToLower(authHeaderParts[0]) != "bearer" {
 		log.Warn().Msg("Invalid Authorization header format")
@@ -118,6 +116,7 @@ func (c ClaimsCheck) validateAuthToken(ctx context.Context, header string) *Clai
 	}
 
 	accessToken := authHeaderParts[1]
+
 	tokenInfo, err := c.getTokenInfo(ctx, &oauth2.Token{
 		AccessToken: accessToken,
 	})
@@ -251,14 +250,25 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 
 const tokenRevokeURL = "https://oauth2.googleapis.com/revoke"
 
-func (c ClaimsCheck) requestDevToken() *pb.RedirectState {
+// requestDevToken returns a token from DEKART_DEV_REFRESH_TOKEN
+func (c ClaimsCheck) requestDevToken(state *pb.AuthState, r *http.Request) *pb.RedirectState {
 	redirectState := &pb.RedirectState{}
-	token := &oauth2.Token{
-		AccessToken:  "fake-access-token",
-		TokenType:    "Bearer",
-		RefreshToken: "fake-refresh-token",
-		Expiry:       time.Now().Add(time.Hour),
+	ctx := r.Context()
+	auth := c.getAuthConfig(state)
+
+	// Create a token source
+	tokenSource := auth.TokenSource(ctx, &oauth2.Token{
+		RefreshToken: c.DevRefreshToken,
+	})
+
+	// Get a new token
+	token, err := tokenSource.Token()
+	if err != nil {
+		log.Error().Err(err).Msg("Error exchanging code for token")
+		redirectState.Error = "Error exchanging code for token"
+		return redirectState
 	}
+
 	tokenBin, err := json.Marshal(*token)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Error marshalling token")
@@ -295,7 +305,7 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if c.DevClaimsEmail != "" && state.Action == pb.AuthState_ACTION_REQUEST_CODE {
+	if c.DevRefreshToken != "" && state.Action == pb.AuthState_ACTION_REQUEST_CODE {
 		//skip request code from google
 		state.Action = pb.AuthState_ACTION_REQUEST_TOKEN
 		log.Debug().Msg("Skip request code from google, use dev token")
@@ -320,9 +330,8 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, url, http.StatusFound)
 	case pb.AuthState_ACTION_REQUEST_TOKEN: // exchange code for token and redirect to ui
 		var redirectState *pb.RedirectState
-		if c.DevClaimsEmail != "" {
-			//skip request token from google in dev mode
-			redirectState = c.requestDevToken()
+		if c.DevRefreshToken != "" {
+			redirectState = c.requestDevToken(&state, r)
 		} else {
 			redirectState = c.requestToken(&state, r)
 		}

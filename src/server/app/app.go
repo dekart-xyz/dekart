@@ -138,6 +138,7 @@ func Configure(dekartServer *dekart.Server) *http.Server {
 		RequireGoogleOAuth:  os.Getenv("DEKART_REQUIRE_GOOGLE_OAUTH") == "1",
 		Region:              os.Getenv("AWS_REGION"),
 		DevClaimsEmail:      os.Getenv("DEKART_DEV_CLAIMS_EMAIL"),
+		DevRefreshToken:     os.Getenv("DEKART_DEV_REFRESH_TOKEN"),
 		GoogleOAuthClientId: os.Getenv("DEKART_GOOGLE_OAUTH_CLIENT_ID"),
 		GoogleOAuthSecret:   os.Getenv("DEKART_GOOGLE_OAUTH_SECRET"),
 	})
