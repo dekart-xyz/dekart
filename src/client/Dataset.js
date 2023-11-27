@@ -80,6 +80,7 @@ function DatasetSelector ({ dataset }) {
               <div className={styles.datasource}>
                 <Select
                   placeholder='Select connection'
+                  id='dekart-connection-select'
                   className={styles.connectionSelect}
                   value={dataset.connectionId || null}
                   onSelect={value => {

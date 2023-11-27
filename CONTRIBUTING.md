@@ -11,3 +11,13 @@
 7. Update documentation
 8. Create PR for the main branch
 9. Create a new release on GitHub
+
+## Getting dev Google Auth refresh token
+
+1. Go to https://developers.google.com/oauthplayground/
+2. Click on the gear icon (⚙️) in the top right corner and check 'Use your own OAuth credentials'.
+4. Make to allowed URI is set to `https://developers.google.com/oauthplayground` for the OAuth 2.0 Client IDs
+3. Use following scopes `https://www.googleapis.com/auth/bigquery,https://www.googleapis.com/auth/userinfo.profile,https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/devstorage.read_write`
+3. Click Authorize APIs
+4. Use refresh token to as `DEKART_DEV_REFRESH_TOKEN`
+
