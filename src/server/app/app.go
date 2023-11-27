@@ -118,6 +118,7 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		router.HandleFunc("/reports/{id}", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/reports/{id}/edit", staticFilesHandler.ServeIndex) // deprecated
 		router.HandleFunc("/reports/{id}/source", staticFilesHandler.ServeIndex)
+		router.HandleFunc("/subscription", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/400", func(w http.ResponseWriter, r *http.Request) {
 			staticFilesHandler.ServeIndex(ResponseWriter{w: w, statusCode: http.StatusBadRequest}, r)
 		})
