@@ -35,6 +35,12 @@ function User () {
               disabled: true
             },
             {
+              label: 'Manage subscription',
+              onClick: () => {
+                window.location.href = '/subscription'
+              }
+            },
+            {
               label: 'Swicth account',
               onClick: () => {
                 const state = new AuthState()
