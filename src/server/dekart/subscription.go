@@ -183,7 +183,6 @@ func (s Server) CreateSubscription(ctx context.Context, req *proto.CreateSubscri
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	log.Debug().Msgf("CreateSubscription: %s", req.PlanType)
 	switch req.PlanType {
 	case proto.PlanType_TYPE_PERSONAL:
 		_, err := s.db.ExecContext(ctx, `insert into subscription_log (owner_email, plan_type) values ($1, $2)`,
@@ -199,7 +198,6 @@ func (s Server) CreateSubscription(ctx context.Context, req *proto.CreateSubscri
 			RedirectUrl: "/", // redirect to home page
 		}, nil
 	case proto.PlanType_TYPE_TEAM:
-		// return nil, status.Error(codes.Unimplemented, "Team subscription is not implemented")
 		session, err := s.createCheckoutSession(ctx, req)
 		if err != nil {
 			log.Err(err).Send()

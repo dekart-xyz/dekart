@@ -32,6 +32,7 @@ export async function get (endpoint, token = null) {
 
 const { REACT_APP_API_HOST } = process.env // this never changes, passed during build
 
+// authRedirect will redirect the browser to the authentication endpoint
 export function authRedirect (state) {
   const req = new URL('/api/v1/authenticate', REACT_APP_API_HOST || window.location.href)
   state.setAuthUrl(req.href)

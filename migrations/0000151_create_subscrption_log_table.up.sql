@@ -6,3 +6,4 @@ create table IF NOT EXISTS subscription_log (
     created_at timestamptz DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX idx_subscriptions_owner_email ON subscription_log(owner_email);
+CREATE INDEX idx_subscription_log_created_at ON subscription_log (created_at);
