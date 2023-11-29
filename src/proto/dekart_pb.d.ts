@@ -3,6 +3,148 @@
 
 import * as jspb from "google-protobuf";
 
+export class CancelSubscriptionRequest extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CancelSubscriptionRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: CancelSubscriptionRequest): CancelSubscriptionRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CancelSubscriptionRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CancelSubscriptionRequest;
+  static deserializeBinaryFromReader(message: CancelSubscriptionRequest, reader: jspb.BinaryReader): CancelSubscriptionRequest;
+}
+
+export namespace CancelSubscriptionRequest {
+  export type AsObject = {
+  }
+}
+
+export class CancelSubscriptionResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CancelSubscriptionResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: CancelSubscriptionResponse): CancelSubscriptionResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CancelSubscriptionResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CancelSubscriptionResponse;
+  static deserializeBinaryFromReader(message: CancelSubscriptionResponse, reader: jspb.BinaryReader): CancelSubscriptionResponse;
+}
+
+export namespace CancelSubscriptionResponse {
+  export type AsObject = {
+  }
+}
+
+export class GetSubscriptionRequest extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetSubscriptionRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: GetSubscriptionRequest): GetSubscriptionRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetSubscriptionRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetSubscriptionRequest;
+  static deserializeBinaryFromReader(message: GetSubscriptionRequest, reader: jspb.BinaryReader): GetSubscriptionRequest;
+}
+
+export namespace GetSubscriptionRequest {
+  export type AsObject = {
+  }
+}
+
+export class Subscription extends jspb.Message {
+  getPlanType(): PlanTypeMap[keyof PlanTypeMap];
+  setPlanType(value: PlanTypeMap[keyof PlanTypeMap]): void;
+
+  getActive(): boolean;
+  setActive(value: boolean): void;
+
+  getUpdatedAt(): number;
+  setUpdatedAt(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): Subscription.AsObject;
+  static toObject(includeInstance: boolean, msg: Subscription): Subscription.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: Subscription, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): Subscription;
+  static deserializeBinaryFromReader(message: Subscription, reader: jspb.BinaryReader): Subscription;
+}
+
+export namespace Subscription {
+  export type AsObject = {
+    planType: PlanTypeMap[keyof PlanTypeMap],
+    active: boolean,
+    updatedAt: number,
+  }
+}
+
+export class GetSubscriptionResponse extends jspb.Message {
+  hasSubscription(): boolean;
+  clearSubscription(): void;
+  getSubscription(): Subscription | undefined;
+  setSubscription(value?: Subscription): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetSubscriptionResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: GetSubscriptionResponse): GetSubscriptionResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetSubscriptionResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetSubscriptionResponse;
+  static deserializeBinaryFromReader(message: GetSubscriptionResponse, reader: jspb.BinaryReader): GetSubscriptionResponse;
+}
+
+export namespace GetSubscriptionResponse {
+  export type AsObject = {
+    subscription?: Subscription.AsObject,
+  }
+}
+
+export class CreateSubscriptionRequest extends jspb.Message {
+  getPlanType(): PlanTypeMap[keyof PlanTypeMap];
+  setPlanType(value: PlanTypeMap[keyof PlanTypeMap]): void;
+
+  getUiUrl(): string;
+  setUiUrl(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CreateSubscriptionRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: CreateSubscriptionRequest): CreateSubscriptionRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CreateSubscriptionRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CreateSubscriptionRequest;
+  static deserializeBinaryFromReader(message: CreateSubscriptionRequest, reader: jspb.BinaryReader): CreateSubscriptionRequest;
+}
+
+export namespace CreateSubscriptionRequest {
+  export type AsObject = {
+    planType: PlanTypeMap[keyof PlanTypeMap],
+    uiUrl: string,
+  }
+}
+
+export class CreateSubscriptionResponse extends jspb.Message {
+  getRedirectUrl(): string;
+  setRedirectUrl(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CreateSubscriptionResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: CreateSubscriptionResponse): CreateSubscriptionResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CreateSubscriptionResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CreateSubscriptionResponse;
+  static deserializeBinaryFromReader(message: CreateSubscriptionResponse, reader: jspb.BinaryReader): CreateSubscriptionResponse;
+}
+
+export namespace CreateSubscriptionResponse {
+  export type AsObject = {
+    redirectUrl: string,
+  }
+}
+
 export class GetConnectionListRequest extends jspb.Message {
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetConnectionListRequest.AsObject;
@@ -72,6 +214,15 @@ export class GetUserStreamResponse extends jspb.Message {
   getConnectionUpdate(): number;
   setConnectionUpdate(value: number): void;
 
+  getEmail(): string;
+  setEmail(value: string): void;
+
+  getSubscriptionActive(): boolean;
+  setSubscriptionActive(value: boolean): void;
+
+  getSubscriptionUpdate(): number;
+  setSubscriptionUpdate(value: number): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetUserStreamResponse.AsObject;
   static toObject(includeInstance: boolean, msg: GetUserStreamResponse): GetUserStreamResponse.AsObject;
@@ -86,6 +237,9 @@ export namespace GetUserStreamResponse {
   export type AsObject = {
     streamOptions?: StreamOptions.AsObject,
     connectionUpdate: number,
+    email: string,
+    subscriptionActive: boolean,
+    subscriptionUpdate: number,
   }
 }
 
@@ -555,8 +709,11 @@ export class AuthState extends jspb.Message {
   getUiUrl(): string;
   setUiUrl(value: string): void;
 
-  getSecret(): string;
-  setSecret(value: string): void;
+  getAccessTokenToRevoke(): string;
+  setAccessTokenToRevoke(value: string): void;
+
+  getSwitchAccount(): boolean;
+  setSwitchAccount(value: boolean): void;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): AuthState.AsObject;
@@ -573,13 +730,15 @@ export namespace AuthState {
     action: AuthState.ActionMap[keyof AuthState.ActionMap],
     authUrl: string,
     uiUrl: string,
-    secret: string,
+    accessTokenToRevoke: string,
+    switchAccount: boolean,
   }
 
   export interface ActionMap {
     ACTION_UNSPECIFIED: 0;
     ACTION_REQUEST_CODE: 1;
     ACTION_REQUEST_TOKEN: 2;
+    ACTION_REVOKE: 3;
   }
 
   export const Action: ActionMap;
@@ -1390,4 +1549,12 @@ export namespace CreateReportResponse {
     report?: Report.AsObject,
   }
 }
+
+export interface PlanTypeMap {
+  TYPE_UNSPECIFIED: 0;
+  TYPE_PERSONAL: 1;
+  TYPE_TEAM: 2;
+}
+
+export const PlanType: PlanTypeMap;
 

@@ -15,6 +15,8 @@ import keplerGlReducer from '@dekart-xyz/kepler.gl/dist/reducers'
 import stream from './streamReducer'
 import token from './tokenReducer'
 import connection from './connectionReducer'
+import user from './userReducer'
+import subscription from './subscriptionReducer'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
   uiState: {
@@ -423,5 +425,7 @@ export default combineReducers({
   datasetSettings,
   connection,
   token,
-  stream
+  stream,
+  user,
+  subscription
 })

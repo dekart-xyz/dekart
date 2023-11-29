@@ -1,25 +1,17 @@
-// ***********************************************
-// This example commands.js shows you how to
-// create various custom commands and overwrite
-// existing commands.
-//
-// For more comprehensive examples of custom
-// commands please read more here:
-// https://on.cypress.io/custom-commands
-// ***********************************************
-//
-//
-// -- This is a parent command --
-// Cypress.Commands.add('login', (email, password) => { ... })
-//
-//
-// -- This is a child command --
-// Cypress.Commands.add('drag', { prevSubject: 'element'}, (subject, options) => { ... })
-//
-//
-// -- This is a dual command --
-// Cypress.Commands.add('dismiss', { prevSubject: 'optional'}, (subject, options) => { ... })
-//
-//
-// -- This will overwrite an existing command --
-// Cypress.Commands.overwrite('visit', (originalFn, url, options) => { ... })
+// custom cypress commands
+// see https://on.cypress.io/custom-commands
+/* eslint-disable no-undef */
+
+Cypress.Commands.add('subscribe', () => {
+  cy.visit('/')
+  cy.get('h1').should('contain', 'Subscription')
+  cy.get('button:contains("Choose personal")').click()
+})
+
+Cypress.Commands.add('unsubscribe', () => {
+  cy.visit('/subscription')
+  cy.get('button:contains("Manage subscription")').click()
+  cy.get('.ant-dropdown-menu-title-content:contains("Cancel subscription")').click()
+  cy.get('button:contains("Yes")').click()
+  cy.get('span:contains("Subscription canceled")').should('be.visible')
+})

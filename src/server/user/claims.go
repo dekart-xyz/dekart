@@ -44,6 +44,7 @@ type ClaimsCheckConfig struct {
 	GoogleOAuthClientId string
 	GoogleOAuthSecret   string
 	DevClaimsEmail      string
+	DevRefreshToken     string
 	Region              string
 }
 
@@ -55,32 +56,44 @@ type ClaimsCheck struct {
 
 var b2i = map[bool]int{false: 0, true: 1}
 
-// NewClaimsCheck creates Context
-func NewClaimsCheck(c ClaimsCheckConfig) ClaimsCheck {
+func validateConfig(c ClaimsCheckConfig) {
 	if b2i[c.RequireIAP]+b2i[c.RequireAmazonOIDC]+b2i[c.RequireGoogleOAuth] > 1 {
 		log.Fatal().Msg("DEKART_REQUIRE_IAP and DEKART_REQUIRE_AMAZON_OIDC and DEKART_REQUIRE_GOOGLE_OAUTH are mutually exclusive")
-	} else if c.RequireIAP {
+	}
+	switch {
+	case c.RequireIAP:
 		log.Info().Msgf("Dekart configured to require IAP")
-	} else if c.RequireAmazonOIDC {
+	case c.RequireAmazonOIDC:
 		log.Info().Msgf("Dekart configured to require Amazon OIDC")
 		if c.Region == "" {
 			log.Fatal().Msgf("Dekart AWS_REGION is required for OIDC")
 		}
-	} else if c.RequireGoogleOAuth {
-		if c.GoogleOAuthClientId == "" {
-			log.Fatal().Msgf("Dekart DEKART_GOOGLE_OAUTH_CLIENT_ID is required for Google OAuth")
+	case c.RequireGoogleOAuth:
+		if c.DevClaimsEmail != "" {
+			log.Warn().Msgf("DEKART_DEV_CLAIMS_EMAIL is ignored when DEKART_REQUIRE_GOOGLE_OAUTH is set")
 		}
-		if c.GoogleOAuthSecret == "" {
-			log.Fatal().Msgf("Dekart DEKART_GOOGLE_OAUTH_SECRET is required for Google OAuth")
+		if c.DevRefreshToken == "" {
+			if c.GoogleOAuthClientId == "" {
+				log.Fatal().Msgf("Dekart DEKART_GOOGLE_OAUTH_CLIENT_ID is required for Google OAuth")
+			}
+			if c.GoogleOAuthSecret == "" {
+				log.Fatal().Msgf("Dekart DEKART_GOOGLE_OAUTH_SECRET is required for Google OAuth")
+			}
+		} else {
+			log.Warn().Msgf("Use DEKART_DEV_REFRESH_TOKEN only in development environment")
 		}
-	} else {
+		log.Info().Msgf("Dekart configured to require Google OAuth")
+	default:
 		log.Info().Msgf("All users can read/write all entities")
 	}
 
 	if c.DevClaimsEmail != "" {
 		log.Warn().Msgf("Use DEKART_DEV_CLAIMS_EMAIL only in development environment")
 	}
+}
 
+func NewClaimsCheck(c ClaimsCheckConfig) ClaimsCheck {
+	validateConfig(c)
 	return ClaimsCheck{
 		c,
 		&sync.Map{},
@@ -90,8 +103,8 @@ func NewClaimsCheck(c ClaimsCheckConfig) ClaimsCheck {
 // UnknownEmail is set as claims email when auth is not required
 const UnknownEmail = "UNKNOWN_EMAIL"
 
-// validateToken receives Bearer token and receives user details
-func (c ClaimsCheck) validateToken(ctx context.Context, header string) *Claims {
+// validateAuthToken receives Bearer token and fetches user details
+func (c ClaimsCheck) validateAuthToken(ctx context.Context, header string) *Claims {
 	if header == "" {
 		return nil
 	}
@@ -103,6 +116,7 @@ func (c ClaimsCheck) validateToken(ctx context.Context, header string) *Claims {
 	}
 
 	accessToken := authHeaderParts[1]
+
 	tokenInfo, err := c.getTokenInfo(ctx, &oauth2.Token{
 		AccessToken: accessToken,
 	})
@@ -142,16 +156,12 @@ func GetTokenSource(ctx context.Context) oauth2.TokenSource {
 func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 	ctx := r.Context()
 	var claims *Claims
-	if c.DevClaimsEmail != "" {
-		claims = &Claims{
-			Email: c.DevClaimsEmail,
-		}
-	} else if c.RequireIAP {
+	if c.RequireIAP {
 		claims = c.validateJWTFromAppEngine(ctx, r.Header.Get("X-Goog-IAP-JWT-Assertion"))
 	} else if c.RequireAmazonOIDC {
 		claims = c.validateJWTFromAmazonOIDC(ctx, r.Header.Get("x-amzn-oidc-data"))
 	} else if c.RequireGoogleOAuth {
-		claims = c.validateToken(ctx, r.Header.Get("Authorization"))
+		claims = c.validateAuthToken(ctx, r.Header.Get("Authorization"))
 	} else {
 		claims = &Claims{
 			Email: UnknownEmail,
@@ -212,6 +222,7 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 		return redirectState
 	}
 	var auth = c.getAuthConfig(state)
+	log.Debug().Interface("auth", auth).Msg("auth")
 	token, err := auth.Exchange(ctx, code)
 	if err != nil {
 		log.Error().Err(err).Msg("Error exchanging code for token")
@@ -230,6 +241,35 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 		redirectState.Error = fmt.Sprintf("Scope %s missing", missingScope)
 		return redirectState
 	}
+	tokenBin, err := json.Marshal(*token)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Error marshalling token")
+	}
+	redirectState.TokenJson = string(tokenBin)
+	return redirectState
+}
+
+const tokenRevokeURL = "https://oauth2.googleapis.com/revoke"
+
+// requestDevToken returns a token from DEKART_DEV_REFRESH_TOKEN
+func (c ClaimsCheck) requestDevToken(state *pb.AuthState, r *http.Request) *pb.RedirectState {
+	redirectState := &pb.RedirectState{}
+	ctx := r.Context()
+	auth := c.getAuthConfig(state)
+
+	// Create a token source
+	tokenSource := auth.TokenSource(ctx, &oauth2.Token{
+		RefreshToken: c.DevRefreshToken,
+	})
+
+	// Get a new token
+	token, err := tokenSource.Token()
+	if err != nil {
+		log.Error().Err(err).Msg("Error exchanging code for token")
+		redirectState.Error = "Error exchanging code for token"
+		return redirectState
+	}
+
 	tokenBin, err := json.Marshal(*token)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Error marshalling token")
@@ -266,9 +306,15 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if c.DevRefreshToken != "" && state.Action == pb.AuthState_ACTION_REQUEST_CODE {
+		//skip request code from google
+		state.Action = pb.AuthState_ACTION_REQUEST_TOKEN
+		log.Debug().Msg("Skip request code from google, use dev token")
+	}
+
 	log.Debug().Msgf("Authenticate state action: %s", state.Action)
 	switch state.Action {
-	case pb.AuthState_ACTION_REQUEST_CODE:
+	case pb.AuthState_ACTION_REQUEST_CODE: // request code from google
 		state.Action = pb.AuthState_ACTION_REQUEST_TOKEN
 		stateBin, err = proto.Marshal(&state)
 		if err != nil {
@@ -276,10 +322,20 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 		}
 		stateBase64 = base64.StdEncoding.EncodeToString(stateBin)
 		var auth = c.getAuthConfig(&state)
-		url := auth.AuthCodeURL(stateBase64)
+		var url string
+		if state.GetSwitchAccount() {
+			url = auth.AuthCodeURL(stateBase64, oauth2.SetAuthURLParam("prompt", "select_account"))
+		} else {
+			url = auth.AuthCodeURL(stateBase64)
+		}
 		http.Redirect(w, r, url, http.StatusFound)
-	case pb.AuthState_ACTION_REQUEST_TOKEN:
-		redirectState := c.requestToken(&state, r)
+	case pb.AuthState_ACTION_REQUEST_TOKEN: // exchange code for token and redirect to ui
+		var redirectState *pb.RedirectState
+		if c.DevRefreshToken != "" {
+			redirectState = c.requestDevToken(&state, r)
+		} else {
+			redirectState = c.requestToken(&state, r)
+		}
 		redirectStateBin, err := proto.Marshal(redirectState)
 		if err != nil {
 			log.Fatal().Err(err).Msg("Error marshalling token")
@@ -288,6 +344,16 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 		query := uiURL.Query()
 		query.Set("redirect_state", redirectStateBase64)
 		uiURL.RawQuery = query.Encode()
+		http.Redirect(w, r, uiURL.String(), http.StatusFound)
+		return
+	case pb.AuthState_ACTION_REVOKE:
+		response, err := http.PostForm(tokenRevokeURL, url.Values{"token": {state.AccessTokenToRevoke}})
+		if err != nil {
+			log.Error().Err(err).Msg("Error revoking token")
+			http.Error(w, "Error revoking token", http.StatusBadRequest)
+			return
+		}
+		defer response.Body.Close()
 		http.Redirect(w, r, uiURL.String(), http.StatusFound)
 		return
 	default:
@@ -344,6 +410,11 @@ func (c ClaimsCheck) getPublicKeyFromAmazon(token *jwt.Token) (interface{}, erro
 // validateJWTFromAmazonOIDC parses and validates token from x-amzn-oidc-data
 // see https://docs.aws.amazon.com/elasticloadbalancing/latest/application/listener-authenticate-users.html
 func (c ClaimsCheck) validateJWTFromAmazonOIDC(ctx context.Context, header string) *Claims {
+	if c.DevClaimsEmail != "" {
+		return &Claims{
+			Email: c.DevClaimsEmail,
+		}
+	}
 	if header == "" {
 		return nil
 	}
@@ -366,6 +437,12 @@ func (c ClaimsCheck) validateJWTFromAmazonOIDC(ctx context.Context, header strin
 // validateJWTFromAppEngine validates a JWT found in the
 // "x-goog-iap-jwt-assertion" header.
 func (c ClaimsCheck) validateJWTFromAppEngine(ctx context.Context, iapJWT string) *Claims {
+	if c.DevClaimsEmail != "" {
+		return &Claims{
+			Email: c.DevClaimsEmail,
+		}
+	}
+
 	payload, err := idtoken.Validate(ctx, iapJWT, c.Audience)
 	if err != nil {
 		log.Warn().Err(err).Msg("Error validating IAP JWT")
