@@ -17,6 +17,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
 
@@ -75,13 +76,24 @@ func TestConnection(ctx context.Context, connection *proto.Connection) (*proto.T
 		log.Fatal().Err(err).Send()
 	}
 	bucket := client.Bucket(connection.CloudStorageBucket)
-	_, err = bucket.Attrs(ctx)
+
+	// Try to list the objects in the bucket
+	it := bucket.Objects(ctx, nil)
+	_, err = it.Next()
 	if err != nil {
+		if err == iterator.Done {
+			// The bucket is empty, but we have the necessary permission
+			return &proto.TestConnectionResponse{
+				Success: true,
+			}, nil
+		}
+		// We got an error, so we don't have the necessary permission
 		return &proto.TestConnectionResponse{
 			Success: false,
 			Error:   err.Error(),
 		}, nil
 	}
+
 	return &proto.TestConnectionResponse{
 		Success: true,
 	}, nil
