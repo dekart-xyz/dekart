@@ -143,7 +143,7 @@ up:
 	docker-compose  --env-file .env up
 
 rm:
-	docker-compose rm
+	docker-compose rm -f
 
 server:
 	go run ./src/server/main.go

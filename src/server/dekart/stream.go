@@ -118,7 +118,25 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			author_email = $1 as can_write,
 			author_email,
 			discoverable
-		from reports
+		from reports as r
+		join (
+			-- current user organization members
+			SELECT
+				DISTINCT ON (email)
+				organization_id,
+				email,
+				active
+			FROM organization_log
+			-- current user organization
+			where organization_id in (
+				SELECT organization_id
+				FROM organization_log
+				WHERE email = $1
+				ORDER BY created_at DESC
+				LIMIT 1
+			)
+			ORDER BY email, created_at DESC
+		) as o on r.author_email = o.email
 		where author_email=$1 or (discoverable=true and archived=false)
 		order by updated_at desc`,
 		claims.Email,
@@ -162,7 +180,7 @@ func (s Server) sendUserStreamResponse(ctx context.Context, srv proto.Dekart_Get
 	claims := user.GetClaims(ctx)
 
 	// subscription
-	sub, err := s.getSubsciptionActive(ctx, claims.Email)
+	sub, err := s.getSubscription(ctx, claims.Email)
 	if err != nil {
 		log.Err(err).Send()
 		return status.Errorf(codes.Internal, err.Error())

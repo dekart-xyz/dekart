@@ -222,7 +222,6 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 		return redirectState
 	}
 	var auth = c.getAuthConfig(state)
-	log.Debug().Interface("auth", auth).Msg("auth")
 	token, err := auth.Exchange(ctx, code)
 	if err != nil {
 		log.Error().Err(err).Msg("Error exchanging code for token")

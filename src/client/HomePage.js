@@ -12,6 +12,7 @@ import { getRef } from './lib/ref'
 import Switch from 'antd/es/switch'
 import { archiveReport, subscribeReports, unsubscribeReports, createReport } from './actions/report'
 import { testVersion } from './actions/version'
+import { PlanType } from '../proto/dekart_pb'
 
 function Loading () {
   return null
@@ -86,11 +87,15 @@ function FirstReportOnboarding ({ createReportButton }) {
   )
 }
 
-function ReportsHeader ({ authEnabled, reportFilter, setReportFilter, archived, setArchived, reportsList }) {
+function ReportsHeader ({ reportFilter, setReportFilter, archived, setArchived, reportsList }) {
+  const subscription = useSelector(state => state.subscription)
+  if (!subscription) {
+    return null
+  }
   return (
     <div className={styles.reportsHeader}>
       {
-      authEnabled
+      subscription.planType !== PlanType.TYPE_PERSONAL
         ? (
           <Radio.Group value={reportFilter} onChange={(e) => setReportFilter(e.target.value)}>
             <Radio.Button value='my'>My Reports</Radio.Button>
