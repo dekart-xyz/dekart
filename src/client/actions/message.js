@@ -51,8 +51,8 @@ export function setError (err, transitive = true) {
   }
 }
 
-export function setHttpError (status, message = '', doNotAuthenticate = false) {
-  return { type: setHttpError.name, status, message, doNotAuthenticate }
+export function setHttpError (status, message = '') {
+  return { type: setHttpError.name, status, message}
 }
 
 export function setStreamError (code, msg) {
