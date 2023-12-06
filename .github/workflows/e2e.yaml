@@ -21,7 +21,7 @@ jobs:
         run: |
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_GH_TOKEN }}" > .npmrc
           echo "@dekart-xyz:registry=https://npm.pkg.github.com" >> .npmrc
-    - name: Set up QEMU
+      - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -78,7 +78,7 @@ jobs:
           docker run -i \
             --network="host" \
             -v /tmp/cypress/videos:/dekart/cypress/videos/ \
-          	-v /tmp/cypress/screenshots:/dekart/cypress/screenshots/ \
+            -v /tmp/cypress/screenshots:/dekart/cypress/screenshots/ \
             -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
             -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
             -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
