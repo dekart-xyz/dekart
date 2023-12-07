@@ -58,6 +58,12 @@ message CancelSubscriptionResponse {}
 message GetSubscriptionRequest {
 }
 
+message Organization {
+    string id = 1;
+    string name = 2;
+    bool personal = 3;
+}
+
 message Subscription {
     PlanType plan_type = 2;
     bool active = 3;
@@ -265,7 +271,7 @@ message Query {
         JOB_STATUS_PENDING = 1;
         JOB_STATUS_RUNNING = 2;
         JOB_STATUS_DONE_LEGACY = 3;  // legacy for backwards compatibility
-        JOB_STATUS_READING_RESULTS = 4; // job is done proccessing results
+        JOB_STATUS_READING_RESULTS = 4; // job is done processing results
         JOB_STATUS_DONE = 5;
     }
 

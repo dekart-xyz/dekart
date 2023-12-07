@@ -63,6 +63,7 @@ function AppRedirect () {
   }, [status, doNotAuthenticate])
 
   if (status === 401 && doNotAuthenticate === false) {
+    // redirect to authentication endpoint from useEffect
     return null
   }
 

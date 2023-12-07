@@ -40,7 +40,26 @@ gotest:
 	docker buildx build -f ./Dockerfile --target gotest .
 
 e2e: bq athena snowflake
-	
+
+google-oauth:
+	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} -o type=image -f ./Dockerfile --target e2etest .
+	docker run -it --rm \
+	-v $$(pwd)/cypress/videos:/dekart/cypress/videos/ \
+	-v $$(pwd)/cypress/screenshots:/dekart/cypress/screenshots/ \
+	-e DEKART_POSTGRES_DB=${DEKART_POSTGRES_DB} \
+	-e DEKART_POSTGRES_USER=${DEKART_POSTGRES_USER} \
+	-e DEKART_POSTGRES_PASSWORD=${DEKART_POSTGRES_PASSWORD} \
+	-e DEKART_POSTGRES_PORT=${DEKART_POSTGRES_PORT} \
+	-e DEKART_POSTGRES_HOST=host.docker.internal \
+	-e DEKART_ALLOW_FILE_UPLOAD=1 \
+	-e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
+	-e DEKART_GOOGLE_OAUTH_CLIENT_ID=${DEKART_GOOGLE_OAUTH_CLIENT_ID} \
+	-e DEKART_GOOGLE_OAUTH_SECRET=${DEKART_GOOGLE_OAUTH_SECRET} \
+	-e DEKART_DEV_REFRESH_TOKEN=${DEKART_DEV_REFRESH_TOKEN} \
+	-e TEST_SPEC=cypress/e2e/google-oauth \
+	-e CYPRESS_CI=1 \
+	${DEKART_DOCKER_E2E_TAG}
+
 bq:
 	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} -o type=image -f ./Dockerfile --target e2etest .
 	docker run -it --rm \
@@ -124,7 +143,7 @@ up:
 	docker-compose  --env-file .env up
 
 rm:
-	docker-compose rm
+	docker-compose rm -f
 
 server:
 	go run ./src/server/main.go

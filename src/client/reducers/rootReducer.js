@@ -289,12 +289,18 @@ function env (state = defaultEnv, action) {
 
 function httpError (state = {}, action) {
   switch (action.type) {
-    case setHttpError.name:
-      return {
-        status: action.status,
-        message: action.message,
-        doNotAuthenticate: action.doNotAuthenticate
+    case setHttpError.name: {
+      if (action.status === 401 && state.doNotAuthenticate) {
+        // just keep showing auth error, do not override it with other 401
+        return state
+      } else {
+        return {
+          status: action.status,
+          message: action.message,
+          doNotAuthenticate: false
+        }
       }
+    }
     case setRedirectState.name: {
       const err = action.redirectState.getError()
       if (err) {

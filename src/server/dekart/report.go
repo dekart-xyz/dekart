@@ -37,7 +37,27 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			author_email = $2 as can_write,
 			author_email,
 			discoverable
-		from reports where id=$1 and not archived limit 1`,
+		from reports as r
+		join (
+			-- current user organization members
+			SELECT
+				DISTINCT ON (email)
+				organization_id,
+				email,
+				active
+ 			FROM organization_log
+			-- current user organization
+			where organization_id in (
+				SELECT organization_id
+				FROM organization_log
+				WHERE email = $2
+				ORDER BY created_at DESC
+				LIMIT 1
+			)
+ 			ORDER BY email, created_at DESC
+		) as o on r.author_email = o.email
+		where id=$1 and not archived
+		limit 1`,
 		reportID,
 		claims.Email,
 	)
@@ -142,7 +162,7 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 						query_text,
 						query_source,
 						query_source_id
-					) select 
+					) select
 						$1,
 						query_text,
 						query_source,
@@ -167,7 +187,7 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 					size,
 					mime_type,
 					file_status,
-					upload_error					
+					upload_error
 				) select
 					$1,
 					file_source_id,
@@ -175,7 +195,7 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 					size,
 					mime_type,
 					file_status,
-					upload_error					
+					upload_error
 				from files where id=$2`, newFileID, dataset.FileId)
 			if err != nil {
 				log.Debug().Err(err).Send()

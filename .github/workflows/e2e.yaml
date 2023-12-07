@@ -59,9 +59,6 @@ jobs:
         ports:
           - 5432:5432
     steps:
-      - name: Create google credentials
-        run: |
-          echo '${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}' > $GOOGLE_APPLICATION_CREDENTIALS
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
@@ -81,7 +78,7 @@ jobs:
           docker run -i \
             --network="host" \
             -v /tmp/cypress/videos:/dekart/cypress/videos/ \
-          	-v /tmp/cypress/screenshots:/dekart/cypress/screenshots/ \
+            -v /tmp/cypress/screenshots:/dekart/cypress/screenshots/ \
             -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
             -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
             -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
