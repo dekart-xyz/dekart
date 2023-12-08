@@ -35,7 +35,7 @@ function User () {
               disabled: true
             },
             {
-              label: 'Swicth account',
+              label: 'Switch account',
               onClick: () => {
                 const state = new AuthState()
                 state.setUiUrl(window.location.href)
