@@ -3,6 +3,42 @@
 
 import * as jspb from "google-protobuf";
 
+export class RunAllQueriesRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): RunAllQueriesRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: RunAllQueriesRequest): RunAllQueriesRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: RunAllQueriesRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RunAllQueriesRequest;
+  static deserializeBinaryFromReader(message: RunAllQueriesRequest, reader: jspb.BinaryReader): RunAllQueriesRequest;
+}
+
+export namespace RunAllQueriesRequest {
+  export type AsObject = {
+    reportId: string,
+  }
+}
+
+export class RunAllQueriesResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): RunAllQueriesResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: RunAllQueriesResponse): RunAllQueriesResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: RunAllQueriesResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RunAllQueriesResponse;
+  static deserializeBinaryFromReader(message: RunAllQueriesResponse, reader: jspb.BinaryReader): RunAllQueriesResponse;
+}
+
+export namespace RunAllQueriesResponse {
+  export type AsObject = {
+  }
+}
+
 export class GetConnectionListRequest extends jspb.Message {
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetConnectionListRequest.AsObject;

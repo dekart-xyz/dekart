@@ -1,4 +1,4 @@
-import { CancelQueryRequest, CreateQueryRequest, RunQueryRequest } from '../../proto/dekart_pb'
+import { CancelQueryRequest, CreateQueryRequest, RunAllQueriesRequest, RunQueryRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { get } from '../lib/api'
 import { grpcCall } from './grpc'
@@ -28,6 +28,15 @@ export function runQuery (queryId, queryText) {
     request.setQueryId(queryId)
     request.setQueryText(queryText)
     dispatch(grpcCall(Dekart.RunQuery, request))
+  }
+}
+
+export function runAllQueries () {
+  return async (dispatch, getState) => {
+    const reportId = getState().report.id
+    const request = new RunAllQueriesRequest()
+    request.setReportId(reportId)
+    dispatch(grpcCall(Dekart.RunAllQueries, request))
   }
 }
 

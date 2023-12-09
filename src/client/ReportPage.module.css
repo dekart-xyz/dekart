@@ -26,7 +26,6 @@
     display: block;
     font-size: 16px;
     padding: 5px 12px;
-    padding-right: 39px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -45,6 +44,7 @@
 
 .titleTextEdit {
     cursor: pointer;
+    padding-right: 39px;
 }
 
 .title {
