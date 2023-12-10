@@ -58,7 +58,7 @@ function ModalContent ({ reportId, discoverable, canWrite }) {
         <div className={styles.reportStatus}>
           <div className={styles.reportStatusIcon}><LockOutlined /></div>
           <div className={styles.reportStatusDetails}>
-            <div className={styles.reportStatusDetailsText}> Everyone with a link and access to <span className={styles.origin}>{window.location.hostname}</span> can view this report</div>
+            <div className={styles.reportStatusDetailsText}> Everyone with a link can view this report</div>
             <div className={styles.reportAuthStatus}>
               <Tooltip title={<AuthTypeTitle authType={authType} referer={getRef(env, usage)} />}>
                 <span className={styles.authEnabled}>User authorization enabled</span>
@@ -70,7 +70,7 @@ function ModalContent ({ reportId, discoverable, canWrite }) {
           ? (
             <div className={styles.discoverableStatus}>
               <div className={styles.discoverableStatusIcon}><FileSearchOutlined /></div>
-              <div className={styles.discoverableStatusLabel}>Make report discoverable by all users of <span className={styles.origin}>{window.location.hostname}</span> in Shared Reports</div>
+              <div className={styles.discoverableStatusLabel}>Allow everyone to discover and refresh report</div>
               <div className={styles.discoverableStatusControl}>
                 <Switch
                   checked={discoverable}
@@ -92,7 +92,7 @@ function ModalContent ({ reportId, discoverable, canWrite }) {
     <div className={styles.reportStatus}>
       <div className={styles.reportStatusIcon}><InfoCircleOutlined /></div>
       <div className={styles.reportStatusDetails}>
-        <div className={styles.reportStatusDetailsText}> Everyone with access to <span className={styles.origin}>{window.location.hostname}</span> can edit this report</div>
+        <div className={styles.reportStatusDetailsText}>Everyone can edit report</div>
       </div>
     </div>
   )
@@ -138,11 +138,12 @@ export default function ShareButton ({ reportId, discoverable, canWrite }) {
   return (
     <>
       <Button
-        type='primary'
         icon={<UsergroupAddOutlined />}
+        ghost
+        type='text'
+        title='Share and export'
         onClick={() => setModalOpen(true)}
-      >Share
-      </Button>
+      />
       <Modal
         title='Share report'
         visible={modalOpen}

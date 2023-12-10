@@ -32,6 +32,7 @@ const (
 	Dekart_CreateQuery_FullMethodName             = "/Dekart/CreateQuery"
 	Dekart_RunQuery_FullMethodName                = "/Dekart/RunQuery"
 	Dekart_CancelQuery_FullMethodName             = "/Dekart/CancelQuery"
+	Dekart_RunAllQueries_FullMethodName           = "/Dekart/RunAllQueries"
 	Dekart_GetEnv_FullMethodName                  = "/Dekart/GetEnv"
 	Dekart_GetReportStream_FullMethodName         = "/Dekart/GetReportStream"
 	Dekart_GetReportListStream_FullMethodName     = "/Dekart/GetReportListStream"
@@ -65,6 +66,7 @@ type DekartClient interface {
 	CreateQuery(ctx context.Context, in *CreateQueryRequest, opts ...grpc.CallOption) (*CreateQueryResponse, error)
 	RunQuery(ctx context.Context, in *RunQueryRequest, opts ...grpc.CallOption) (*RunQueryResponse, error)
 	CancelQuery(ctx context.Context, in *CancelQueryRequest, opts ...grpc.CallOption) (*CancelQueryResponse, error)
+	RunAllQueries(ctx context.Context, in *RunAllQueriesRequest, opts ...grpc.CallOption) (*RunAllQueriesResponse, error)
 	GetEnv(ctx context.Context, in *GetEnvRequest, opts ...grpc.CallOption) (*GetEnvResponse, error)
 	// streams
 	GetReportStream(ctx context.Context, in *ReportStreamRequest, opts ...grpc.CallOption) (Dekart_GetReportStreamClient, error)
@@ -199,6 +201,15 @@ func (c *dekartClient) RunQuery(ctx context.Context, in *RunQueryRequest, opts .
 func (c *dekartClient) CancelQuery(ctx context.Context, in *CancelQueryRequest, opts ...grpc.CallOption) (*CancelQueryResponse, error) {
 	out := new(CancelQueryResponse)
 	err := c.cc.Invoke(ctx, Dekart_CancelQuery_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) RunAllQueries(ctx context.Context, in *RunAllQueriesRequest, opts ...grpc.CallOption) (*RunAllQueriesResponse, error) {
+	out := new(RunAllQueriesResponse)
+	err := c.cc.Invoke(ctx, Dekart_RunAllQueries_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -385,6 +396,7 @@ type DekartServer interface {
 	CreateQuery(context.Context, *CreateQueryRequest) (*CreateQueryResponse, error)
 	RunQuery(context.Context, *RunQueryRequest) (*RunQueryResponse, error)
 	CancelQuery(context.Context, *CancelQueryRequest) (*CancelQueryResponse, error)
+	RunAllQueries(context.Context, *RunAllQueriesRequest) (*RunAllQueriesResponse, error)
 	GetEnv(context.Context, *GetEnvRequest) (*GetEnvResponse, error)
 	// streams
 	GetReportStream(*ReportStreamRequest, Dekart_GetReportStreamServer) error
@@ -443,6 +455,9 @@ func (UnimplementedDekartServer) RunQuery(context.Context, *RunQueryRequest) (*R
 }
 func (UnimplementedDekartServer) CancelQuery(context.Context, *CancelQueryRequest) (*CancelQueryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CancelQuery not implemented")
+}
+func (UnimplementedDekartServer) RunAllQueries(context.Context, *RunAllQueriesRequest) (*RunAllQueriesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RunAllQueries not implemented")
 }
 func (UnimplementedDekartServer) GetEnv(context.Context, *GetEnvRequest) (*GetEnvResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetEnv not implemented")
@@ -721,6 +736,24 @@ func _Dekart_CancelQuery_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Dekart_RunAllQueries_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RunAllQueriesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).RunAllQueries(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_RunAllQueries_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).RunAllQueries(ctx, req.(*RunAllQueriesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Dekart_GetEnv_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetEnvRequest)
 	if err := dec(in); err != nil {
@@ -968,6 +1001,10 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CancelQuery",
 			Handler:    _Dekart_CancelQuery_Handler,
+		},
+		{
+			MethodName: "RunAllQueries",
+			Handler:    _Dekart_RunAllQueries_Handler,
 		},
 		{
 			MethodName: "GetEnv",

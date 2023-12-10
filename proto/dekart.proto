@@ -23,6 +23,7 @@ service Dekart {
     rpc CreateQuery(CreateQueryRequest) returns (CreateQueryResponse) {}
     rpc RunQuery(RunQueryRequest) returns (RunQueryResponse) {}
     rpc CancelQuery(CancelQueryRequest) returns (CancelQueryResponse) {}
+    rpc RunAllQueries(RunAllQueriesRequest) returns (RunAllQueriesResponse) {}
 
     rpc GetEnv(GetEnvRequest) returns (GetEnvResponse) {}
 
@@ -40,6 +41,13 @@ service Dekart {
     rpc ArchiveConnection(ArchiveConnectionRequest) returns (ArchiveConnectionResponse) {}
     rpc GetConnectionList(GetConnectionListRequest) returns (GetConnectionListResponse) {}
     rpc TestConnection(TestConnectionRequest) returns (TestConnectionResponse) {}
+}
+
+message RunAllQueriesRequest {
+    string report_id = 1;
+}
+
+message RunAllQueriesResponse {
 }
 
 message GetConnectionListRequest {

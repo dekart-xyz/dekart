@@ -1,10 +1,12 @@
 import { useHistory } from 'react-router'
 import styles from './ReportHeaderButtons.module.css'
 import Button from 'antd/es/button'
-import { FundProjectionScreenOutlined, EditOutlined, ConsoleSqlOutlined, ForkOutlined } from '@ant-design/icons'
+import { FundProjectionScreenOutlined, EditOutlined, ConsoleSqlOutlined, ForkOutlined, ReloadOutlined, LoadingOutlined } from '@ant-design/icons'
 import { useDispatch, useSelector } from 'react-redux'
 import ShareButton from './ShareButton'
 import { forkReport, saveMap } from './actions/report'
+import { runAllQueries } from './actions/query'
+import { Query } from '../proto/dekart_pb'
 
 function ForkButton ({ reportId, disabled, primary }) {
   const dispatch = useDispatch()
@@ -31,6 +33,37 @@ function ForkButton ({ reportId, disabled, primary }) {
   )
 }
 
+function RefreshButton () {
+  const { discoverable, canWrite } = useSelector(state => state.report)
+  const queries = useSelector(state => state.queries)
+  const loadingNumber = queries.reduce((loadingNumber, q) => {
+    switch (q.jobStatus) {
+      case Query.JobStatus.JOB_STATUS_PENDING:
+      case Query.JobStatus.JOB_STATUS_RUNNING:
+        return loadingNumber + 1
+      default:
+        return loadingNumber
+    }
+  }, 0)
+  const dispatch = useDispatch()
+  if (!canWrite && !discoverable) {
+    return null
+  }
+  return (
+    <Button
+      type='text'
+      icon={loadingNumber ? <LoadingOutlined /> : <ReloadOutlined />}
+      title='Re-run all queries'
+      onClick={() => {
+        if (loadingNumber) {
+          return
+        }
+        dispatch(runAllQueries())
+      }}
+    />
+  )
+}
+
 function EditModeButtons ({ changed }) {
   const dispatch = useDispatch()
   const history = useHistory()
@@ -39,6 +72,7 @@ function EditModeButtons ({ changed }) {
 
   return (
     <div className={styles.reportHeaderButtons}>
+      <RefreshButton />
       <Button
         type='text'
         icon={<FundProjectionScreenOutlined />}
@@ -46,12 +80,14 @@ function EditModeButtons ({ changed }) {
         title='Present Mode'
         onClick={() => history.replace(`/reports/${id}`)}
       />
+      <ShareButton reportId={id} discoverable={discoverable} canWrite={canWrite} />
       {canWrite
         ? (
           <>
             <ForkButton reportId={id} disabled={!canSave} />
             <Button
               id='dekart-save-button'
+              type={changed ? 'primary' : 'default'}
               ghost
               disabled={!canSave}
               onClick={() => dispatch(saveMap())}
@@ -60,7 +96,6 @@ function EditModeButtons ({ changed }) {
           </>
           )
         : <ForkButton reportId={id} disabled={!canSave} />}
-      <ShareButton reportId={id} discoverable={discoverable} canWrite={canWrite} />
     </div>
   )
 }
@@ -72,6 +107,7 @@ function ViewModeButtons () {
   if (canWrite) {
     return (
       <div className={styles.reportHeaderButtons}>
+        <RefreshButton />
         <ForkButton reportId={id} disabled={!canSave} />
         <Button
           type='primary'
@@ -85,13 +121,14 @@ function ViewModeButtons () {
   }
   return (
     <div className={styles.reportHeaderButtons}>
+      <RefreshButton />
       <Button
         type='text'
         icon={<ConsoleSqlOutlined />}
         onClick={() => history.replace(`/reports/${id}/source`)}
         title='View SQL source'
       />
-      <ForkButton reportId={id} primary disabled={!canSave} />
+      <ForkButton reportId={id} disabled={!canSave} />
     </div>
   )
 }

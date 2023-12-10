@@ -121,6 +121,15 @@ type DekartCancelQuery = {
   readonly responseType: typeof proto_dekart_pb.CancelQueryResponse;
 };
 
+type DekartRunAllQueries = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.RunAllQueriesRequest;
+  readonly responseType: typeof proto_dekart_pb.RunAllQueriesResponse;
+};
+
 type DekartGetEnv = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -226,6 +235,7 @@ export class Dekart {
   static readonly CreateQuery: DekartCreateQuery;
   static readonly RunQuery: DekartRunQuery;
   static readonly CancelQuery: DekartCancelQuery;
+  static readonly RunAllQueries: DekartRunAllQueries;
   static readonly GetEnv: DekartGetEnv;
   static readonly GetReportStream: DekartGetReportStream;
   static readonly GetReportListStream: DekartGetReportListStream;
@@ -386,6 +396,15 @@ export class DekartClient {
   cancelQuery(
     requestMessage: proto_dekart_pb.CancelQueryRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CancelQueryResponse|null) => void
+  ): UnaryResponse;
+  runAllQueries(
+    requestMessage: proto_dekart_pb.RunAllQueriesRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.RunAllQueriesResponse|null) => void
+  ): UnaryResponse;
+  runAllQueries(
+    requestMessage: proto_dekart_pb.RunAllQueriesRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.RunAllQueriesResponse|null) => void
   ): UnaryResponse;
   getEnv(
     requestMessage: proto_dekart_pb.GetEnvRequest,
