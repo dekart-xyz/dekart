@@ -142,7 +142,7 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 						query_text,
 						query_source,
 						query_source_id
-					) select 
+					) select
 						$1,
 						query_text,
 						query_source,
@@ -167,7 +167,7 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 					size,
 					mime_type,
 					file_status,
-					upload_error					
+					upload_error
 				) select
 					$1,
 					file_source_id,
@@ -175,7 +175,7 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 					size,
 					mime_type,
 					file_status,
-					upload_error					
+					upload_error
 				from files where id=$2`, newFileID, dataset.FileId)
 			if err != nil {
 				log.Debug().Err(err).Send()

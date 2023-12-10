@@ -80,7 +80,7 @@ func (s Server) storeQuerySync(ctx context.Context, bucketName, queryID string, 
 	}
 
 	result, err := s.db.ExecContext(ctx,
-		`update queries set query_source_id=$1, query_source=$2 where id=$3 and query_source_id=$4`,
+		`update queries set query_source_id=$1, query_source=$2, updated_at=now() where id=$3 and query_source_id=$4`,
 		newQuerySourceId,
 		proto.Query_QUERY_SOURCE_STORAGE,
 		queryID,

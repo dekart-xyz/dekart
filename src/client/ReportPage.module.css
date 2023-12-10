@@ -61,11 +61,28 @@
     flex: 1;
 }
 
+.map {
+    /* flex: 1; */
+    /* position: relative; */
+}
+
 .author {
     position: absolute;
     height: 30px;
     bottom: 0px;
     left: 20px;
+    color: #6C7483;
+    font-size: 0.8em;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.lastUpdated {
+    position: absolute;
+    height: 30px;
+    bottom: 0px;
+    left: 50%;
     color: #6C7483;
     font-size: 0.8em;
     display: flex;

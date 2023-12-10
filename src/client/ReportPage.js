@@ -217,29 +217,24 @@ function Kepler () {
   const dispatch = useDispatch()
   if (!env.loaded) {
     return (
-      <div className={styles.keplerFlex}>
-        <div className={styles.keplerBlock} />
-      </div>
+      <div className={styles.keplerBlock} />
     )
   }
   return (
-    <div className={styles.keplerFlex}>
-      <div className={styles.keplerBlock}>
-        <AutoSizer>
-          {({ height, width }) => (
-            <CatchKeplerError onError={(err) => dispatch(setError(err))}>
-              <KeplerGl
-                id='kepler'
-                mapboxApiAccessToken={env.variables.MAPBOX_TOKEN}
-                width={width}
-                height={height}
-              />
-            </CatchKeplerError>
-          )}
-        </AutoSizer>
-      </div>
+    <div className={styles.keplerBlock}>
+      <AutoSizer>
+        {({ height, width }) => (
+          <CatchKeplerError onError={(err) => dispatch(setError(err))}>
+            <KeplerGl
+              id='kepler'
+              mapboxApiAccessToken={env.variables.MAPBOX_TOKEN}
+              width={width}
+              height={height}
+            />
+          </CatchKeplerError>
+        )}
+      </AutoSizer>
     </div>
-
   )
 }
 
@@ -250,6 +245,21 @@ export default function ReportPage ({ edit }) {
   const report = useSelector(state => state.report)
   const envLoaded = useSelector(state => state.env.loaded)
   const { mapConfig, title } = report || {}
+  // const datasets = useSelector(state => state.datasets || [])
+  // if (datasets.length > 0) {
+  //   debugger
+  // }
+  const files = useSelector(state => state.files || [])
+  const queries = useSelector(state => state.queries || [])
+  const updatedAt = [].concat(files, queries).reduce((updatedAt, item) => {
+    console.log('item', item)
+    if (item.updatedAt > updatedAt) {
+      return item.updatedAt
+    }
+    return updatedAt
+  }, 0)
+  const updatedAtDate = new Date(updatedAt * 1000)
+  console.log('lastUpdated', updatedAt)
   const reportStatus = useSelector(state => state.reportStatus)
   const queryChanged = useSelector(state => Object.values(state.queryStatus).reduce((queryChanged, queryStatus) => {
     return queryStatus.changed || queryChanged
@@ -286,8 +296,11 @@ export default function ReportPage ({ edit }) {
                   />)}
       />
       <div className={styles.body}>
-        <Kepler />
-        {report.authorEmail !== 'UNKNOWN_EMAIL' ? <div className={styles.author}>Author: {report.authorEmail}</div> : null}
+        <div className={styles.keplerFlex}>
+          <Kepler />
+          {report.authorEmail !== 'UNKNOWN_EMAIL' ? <div className={styles.author} title='Report author'>{report.authorEmail}</div> : null}
+          {updatedAt ? <div className={styles.lastUpdated} title={`Data updated at: ${updatedAtDate.toUTCString()} (UTC)`}>{updatedAtDate.toLocaleString()}</div> : null}
+        </div>
         {edit ? <DatasetSection reportId={id} /> : null}
       </div>
     </div>
