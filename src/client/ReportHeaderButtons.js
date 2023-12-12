@@ -40,12 +40,24 @@ function RefreshButton () {
     switch (q.jobStatus) {
       case Query.JobStatus.JOB_STATUS_PENDING:
       case Query.JobStatus.JOB_STATUS_RUNNING:
+      case Query.JobStatus.JOB_STATUS_READING_RESULTS:
         return loadingNumber + 1
       default:
         return loadingNumber
     }
   }, 0)
+  const completedQueries = queries.reduce((n, q) => {
+    switch (q.jobStatus) {
+      case Query.JobStatus.JOB_STATUS_DONE:
+        return n + 1
+      default:
+        return n
+    }
+  }, 0)
   const dispatch = useDispatch()
+  if (completedQueries === 0 && loadingNumber === 0) {
+    return null
+  }
   if (!canWrite && !discoverable) {
     return null
   }

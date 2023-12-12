@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-// ResponseWriter implementation which allows to oweride status code
+// ResponseWriter implementation which allows to override status code
 type ResponseWriter struct {
 	w          http.ResponseWriter
 	statusCode int

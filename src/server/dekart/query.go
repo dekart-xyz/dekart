@@ -104,9 +104,10 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 		from queries
 			left join datasets on queries.id = datasets.query_id
 			left join reports on (datasets.report_id = reports.id or queries.report_id = reports.id)
-		where reports.id = $1 and (author_email = $2 or reports.discoverable)`,
+		where reports.id = $1 and (author_email = $2 or reports.discoverable) and job_status = $3`,
 		req.ReportId,
 		claims.Email,
+		int32(proto.Query_JOB_STATUS_DONE),
 	)
 
 	if err != nil {

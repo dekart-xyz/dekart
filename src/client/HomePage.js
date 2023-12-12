@@ -37,7 +37,7 @@ function ArchiveButton ({ report }) {
 const columns = [
   {
     dataIndex: 'title',
-    render: (t, report) => <a href={`/reports/${report.id}/source`}>{report.title}</a>,
+    render: (t, report) => <a href={`/reports/${report.id}`}>{report.title}</a>,
     className: styles.titleColumn
   },
   {
