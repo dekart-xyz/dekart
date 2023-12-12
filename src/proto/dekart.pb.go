@@ -158,7 +158,7 @@ const (
 	Query_JOB_STATUS_PENDING         Query_JobStatus = 1
 	Query_JOB_STATUS_RUNNING         Query_JobStatus = 2
 	Query_JOB_STATUS_DONE_LEGACY     Query_JobStatus = 3 // legacy for backwards compatibility
-	Query_JOB_STATUS_READING_RESULTS Query_JobStatus = 4 // job is done proccessing results
+	Query_JOB_STATUS_READING_RESULTS Query_JobStatus = 4 // job is done processing results
 	Query_JOB_STATUS_DONE            Query_JobStatus = 5
 )
 

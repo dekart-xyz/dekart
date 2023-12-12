@@ -20,6 +20,8 @@ import getDatasetName from './lib/getDatasetName'
 import { createDataset, openDatasetSettingsModal, setActiveDataset } from './actions/dataset'
 import { closeReport, openReport, reportTitleChange } from './actions/report'
 import { setError } from './actions/message'
+import Tooltip from 'antd/es/tooltip'
+import prettyBites from 'pretty-bytes'
 
 function TabIcon ({ query }) {
   let iconColor = 'transparent'
@@ -28,6 +30,8 @@ function TabIcon ({ query }) {
   }
   switch (query.jobStatus) {
     case QueryType.JobStatus.JOB_STATUS_RUNNING:
+    case QueryType.JobStatus.JOB_STATUS_PENDING:
+    case QueryType.JobStatus.JOB_STATUS_READING_RESULTS:
       iconColor = '#B8B8B8'
       break
     case QueryType.JobStatus.JOB_STATUS_DONE:
@@ -63,18 +67,42 @@ function getOnTabEditHandler (dispatch, reportId) {
   }
 }
 
+function getQueryTooltip (query) {
+  if (!query) {
+    return null
+  }
+  if (query.jobStatus !== QueryType.JobStatus.JOB_STATUS_DONE) {
+    return null
+  }
+  const updatedAt = new Date(query.updatedAt * 1000)
+
+  const processed = query.bytesProcessed ? `Processed ${prettyBites(query.bytesProcessed)}` : 'cached'
+  return (
+    <span className={styles.queryTooltip}>
+      <span title={updatedAt.toISOString()}>{updatedAt.toLocaleString()}</span>
+      <span>{processed}</span>
+      {
+        query.resultSize ? <span>Result {prettyBites(query.resultSize)}</span> : null
+      }
+    </span>
+  )
+}
+
 function getTabPane (dataset, queries, files, status) {
   let changed = false
   const title = getDatasetName(dataset, queries, files)
   let tabIcon = null
+  let tooltip = null
   if (dataset.queryId) {
     const query = queries.find(q => q.id === dataset.queryId)
+    tooltip = getQueryTooltip(query)
     tabIcon = <TabIcon query={query} />
     changed = status.changed
   }
+  const tabTitle = `${title}${changed ? '*' : ''}`
   return (
     <Tabs.TabPane
-      tab={<>{tabIcon}{`${title}${changed ? '*' : ''}`}</>}
+      tab={<Tooltip placement='bottom' title={tooltip}>{tabIcon}{tabTitle}</Tooltip>}
       key={dataset.id}
       closable
       closeIcon={<span title='Dataset setting'><MoreOutlined /></span>}
@@ -217,29 +245,24 @@ function Kepler () {
   const dispatch = useDispatch()
   if (!env.loaded) {
     return (
-      <div className={styles.keplerFlex}>
-        <div className={styles.keplerBlock} />
-      </div>
+      <div className={styles.keplerBlock} />
     )
   }
   return (
-    <div className={styles.keplerFlex}>
-      <div className={styles.keplerBlock}>
-        <AutoSizer>
-          {({ height, width }) => (
-            <CatchKeplerError onError={(err) => dispatch(setError(err))}>
-              <KeplerGl
-                id='kepler'
-                mapboxApiAccessToken={env.variables.MAPBOX_TOKEN}
-                width={width}
-                height={height}
-              />
-            </CatchKeplerError>
-          )}
-        </AutoSizer>
-      </div>
+    <div className={styles.keplerBlock}>
+      <AutoSizer>
+        {({ height, width }) => (
+          <CatchKeplerError onError={(err) => dispatch(setError(err))}>
+            <KeplerGl
+              id='kepler'
+              mapboxApiAccessToken={env.variables.MAPBOX_TOKEN}
+              width={width}
+              height={height}
+            />
+          </CatchKeplerError>
+        )}
+      </AutoSizer>
     </div>
-
   )
 }
 
@@ -250,6 +273,15 @@ export default function ReportPage ({ edit }) {
   const report = useSelector(state => state.report)
   const envLoaded = useSelector(state => state.env.loaded)
   const { mapConfig, title } = report || {}
+  const files = useSelector(state => state.files || [])
+  const queries = useSelector(state => state.queries || [])
+  const updatedAt = [].concat(files, queries).reduce((updatedAt, item) => {
+    if (item.updatedAt > updatedAt) {
+      return item.updatedAt
+    }
+    return updatedAt
+  }, 0)
+  const updatedAtDate = new Date(updatedAt * 1000)
   const reportStatus = useSelector(state => state.reportStatus)
   const queryChanged = useSelector(state => Object.values(state.queryStatus).reduce((queryChanged, queryStatus) => {
     return queryStatus.changed || queryChanged
@@ -286,8 +318,14 @@ export default function ReportPage ({ edit }) {
                   />)}
       />
       <div className={styles.body}>
-        <Kepler />
-        {report.authorEmail !== 'UNKNOWN_EMAIL' ? <div className={styles.author}>Author: {report.authorEmail}</div> : null}
+        <div className={styles.keplerFlex}>
+          <Kepler />
+          <div className={styles.meta}>
+            {updatedAt ? <span className={styles.lastUpdated} title={`${updatedAtDate.toISOString()}`}>{updatedAtDate.toLocaleString()}</span> : null}
+            {updatedAt && report.authorEmail !== 'UNKNOWN_EMAIL' ? <span className={styles.dot}> | </span> : null}
+            {report.authorEmail !== 'UNKNOWN_EMAIL' ? <span className={styles.author} title='Report author'>{report.authorEmail}</span> : null}
+          </div>
+        </div>
         {edit ? <DatasetSection reportId={id} /> : null}
       </div>
     </div>

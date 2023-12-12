@@ -26,7 +26,8 @@ func (s Server) updateJobStatus(job job.Job, jobStatus chan int32) {
 						job_started = CURRENT_TIMESTAMP,
 						total_rows = 0,
 						bytes_processed = 0,
-						result_size = 0
+						result_size = 0,
+						updated_at=now()
 					where id  = $2`,
 					status,
 					job.GetQueryID(),
@@ -43,7 +44,8 @@ func (s Server) updateJobStatus(job job.Job, jobStatus chan int32) {
 						job_result_id = $4,
 						total_rows = $5,
 						bytes_processed = $6,
-						result_size = $7
+						result_size = $7,
+						updated_at=now()
 					where id  = $2`,
 					status,
 					job.GetQueryID(),
