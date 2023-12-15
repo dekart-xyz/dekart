@@ -93,6 +93,15 @@ function list (state = [], action) {
   }
 }
 
+function listLoaded (state = false, action) {
+  switch (action.type) {
+    case connectionListUpdate.name:
+      return true
+    default:
+      return state
+  }
+}
+
 // userDefined when connection is not configured in Dekart via env variables
 function userDefined (state = false, action) {
   switch (action.type) {
@@ -109,5 +118,6 @@ export default combineReducers({
   dialog,
   test,
   list,
-  userDefined
+  userDefined,
+  listLoaded
 })

@@ -6,12 +6,14 @@ import Radio from 'antd/es/radio'
 import Result from 'antd/es/result'
 import Table from 'antd/es/table'
 import { useDispatch, useSelector } from 'react-redux'
-import { PlusOutlined, FileSearchOutlined, GiftOutlined, UsergroupAddOutlined } from '@ant-design/icons'
+import { PlusOutlined, FileSearchOutlined, GiftOutlined, UsergroupAddOutlined, ApiTwoTone } from '@ant-design/icons'
 import DataDocumentationLink from './DataDocumentationLink'
 import { getRef } from './lib/ref'
 import Switch from 'antd/es/switch'
 import { archiveReport, subscribeReports, unsubscribeReports, createReport } from './actions/report'
 import { testVersion } from './actions/version'
+import { newConnection } from './actions/connection'
+import ConnectionModal from './ConnectionModal'
 
 function Loading () {
   return null
@@ -86,6 +88,21 @@ function FirstReportOnboarding ({ createReportButton }) {
   )
 }
 
+function FirstConnectionOnboarding () {
+  const dispatch = useDispatch()
+  return (
+    <>
+      <Result
+        status='success'
+        icon={<ApiTwoTone />}
+        title='Ready to connect!'
+        subTitle='Before you can create a map, you need to connect to your Google Cloud account.'
+        extra={<Button type='primary' onClick={() => { dispatch(newConnection()) }}>Create connection</Button>}
+      />
+    </>
+  )
+}
+
 function ReportsHeader ({ authEnabled, reportFilter, setReportFilter, archived, setArchived, reportsList }) {
   return (
     <div className={styles.reportsHeader}>
@@ -120,6 +137,8 @@ function ReportsHeader ({ authEnabled, reportFilter, setReportFilter, archived, 
 function Reports ({ createReportButton, reportsList }) {
   const [archived, setArchived] = useState(false)
   const { loaded: envLoaded, authEnabled } = useSelector(state => state.env)
+  const connectionList = useSelector(state => state.connection.list)
+  const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const [reportFilter, setReportFilter] = useState(
     reportsList.my.length === 0 && reportsList.discoverable.length > 0 && authEnabled ? 'discoverable' : 'my'
   )
@@ -130,6 +149,13 @@ function Reports ({ createReportButton, reportsList }) {
   }, [reportsList, setArchived])
   if (!envLoaded) {
     return null
+  }
+  if (userDefinedConnection && connectionList.length === 0) {
+    return (
+      <div className={styles.reports}>
+        <FirstConnectionOnboarding />
+      </div>
+    )
   }
   if (reportsList.my.length === 0 && reportsList.discoverable.length === 0 && reportsList.archived.length === 0) {
     return (
@@ -234,6 +260,7 @@ function NewVersion () {
 
 export default function HomePage () {
   const reportsList = useSelector(state => state.reportsList)
+  const connectionsLoaded = useSelector(state => state.connection.listLoaded)
   const dispatch = useDispatch()
   const body = useRef()
   useEffect(() => {
@@ -257,13 +284,16 @@ export default function HomePage () {
       />
       <div className={styles.body}>
         {
-          reportsList.loaded
+          reportsList.loaded && connectionsLoaded
             ? (
-              <><NewVersion /><Reports
-                reportsList={reportsList}
-                createReportButton={createReportButton}
-                body={body}
-                              />
+              <>
+                <NewVersion />
+                <ConnectionModal />
+                <Reports
+                  reportsList={reportsList}
+                  createReportButton={createReportButton}
+                  body={body}
+                />
               </>
               )
             : <Loading />

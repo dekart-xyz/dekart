@@ -45,8 +45,9 @@ export function newConnection (datasetId) {
     const res = await new Promise((resolve) => {
       dispatch(grpcCall(Dekart.CreateConnection, request, resolve))
     })
-
-    dispatch(updateDatasetConnection(datasetId, res.connection.id))
+    if (datasetId) {
+      dispatch(updateDatasetConnection(datasetId, res.connection.id))
+    }
     dispatch(connectionCreated(res.connection))
   }
 }
