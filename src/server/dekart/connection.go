@@ -7,6 +7,7 @@ import (
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
 	"os"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
@@ -158,36 +159,87 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 			id,
 			connection_name,
 			bigquery_project_id,
-			cloud_storage_bucket
-		from connections where author_email=$1 and archived=false order by created_at asc`,
+			cloud_storage_bucket,
+			is_default,
+			created_at,
+			updated_at
+		from connections where author_email=$1 and archived=false order by created_at desc`,
 		claims.Email,
 	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("select from connections failed")
 	}
 	defer rows.Close()
+	lastDefault := time.Time{}
+	lastDefaultIndex := -1
 	for rows.Next() {
 		connection := proto.Connection{}
 		ID := sql.NullString{}
 		bigqueryProjectId := sql.NullString{}
 		cloudStorageBucket := sql.NullString{}
+		isDefault := false
+		createdAt := time.Time{}
+		updatedAt := time.Time{}
 		err := rows.Scan(
 			&ID,
 			&connection.ConnectionName,
 			&bigqueryProjectId,
 			&cloudStorageBucket,
+			&isDefault,
+			&createdAt,
+			&updatedAt,
 		)
-		connection.Id = ID.String
-		connection.BigqueryProjectId = bigqueryProjectId.String
-		connection.CloudStorageBucket = cloudStorageBucket.String
 		if err != nil {
 			log.Fatal().Err(err).Msg("scan failed")
 		}
+		if isDefault {
+			if lastDefaultIndex == -1 {
+				lastDefaultIndex = len(connections)
+			}
+			// is_default is not a unique constraint, so there can be multiple default connections
+			// this is design decision to avoid race conditions when updating default connection
+			if lastDefault.Before(updatedAt) {
+				lastDefault = updatedAt
+				lastDefaultIndex = len(connections)
+			}
+		}
+		connection.Id = ID.String
+		connection.BigqueryProjectId = bigqueryProjectId.String
+		connection.CloudStorageBucket = cloudStorageBucket.String
 		connections = append(connections, &connection)
+	}
+
+	if lastDefaultIndex != -1 {
+		connections[lastDefaultIndex].IsDefault = true
+	} else if len(connections) > 0 {
+		// if no default connection is set, set the first one as default
+		connections[len(connections)-1].IsDefault = true
 	}
 
 	return connections, nil
 
+}
+
+func (s Server) SetDefaultConnection(ctx context.Context, req *proto.SetDefaultConnectionRequest) (*proto.SetDefaultConnectionResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	_, err := s.db.ExecContext(ctx,
+		`update connections set
+			is_default=true,
+			updated_at=now()
+		where id=$1 and author_email=$2`,
+		req.ConnectionId,
+		claims.Email,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, err
+	}
+	//TODO: ping all users
+	s.userStreams.Ping([]string{claims.Email})
+	return &proto.SetDefaultConnectionResponse{}, nil
 }
 
 func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectionRequest) (*proto.UpdateConnectionResponse, error) {

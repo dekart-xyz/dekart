@@ -41,6 +41,14 @@ service Dekart {
     rpc ArchiveConnection(ArchiveConnectionRequest) returns (ArchiveConnectionResponse) {}
     rpc GetConnectionList(GetConnectionListRequest) returns (GetConnectionListResponse) {}
     rpc TestConnection(TestConnectionRequest) returns (TestConnectionResponse) {}
+    rpc SetDefaultConnection(SetDefaultConnectionRequest) returns (SetDefaultConnectionResponse) {}
+}
+
+message SetDefaultConnectionRequest {
+    string connection_id = 1;
+}
+
+message SetDefaultConnectionResponse {
 }
 
 message RunAllQueriesRequest {

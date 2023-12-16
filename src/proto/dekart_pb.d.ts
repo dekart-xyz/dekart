@@ -3,6 +3,42 @@
 
 import * as jspb from "google-protobuf";
 
+export class SetDefaultConnectionRequest extends jspb.Message {
+  getConnectionId(): string;
+  setConnectionId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): SetDefaultConnectionRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: SetDefaultConnectionRequest): SetDefaultConnectionRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: SetDefaultConnectionRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): SetDefaultConnectionRequest;
+  static deserializeBinaryFromReader(message: SetDefaultConnectionRequest, reader: jspb.BinaryReader): SetDefaultConnectionRequest;
+}
+
+export namespace SetDefaultConnectionRequest {
+  export type AsObject = {
+    connectionId: string,
+  }
+}
+
+export class SetDefaultConnectionResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): SetDefaultConnectionResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: SetDefaultConnectionResponse): SetDefaultConnectionResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: SetDefaultConnectionResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): SetDefaultConnectionResponse;
+  static deserializeBinaryFromReader(message: SetDefaultConnectionResponse, reader: jspb.BinaryReader): SetDefaultConnectionResponse;
+}
+
+export namespace SetDefaultConnectionResponse {
+  export type AsObject = {
+  }
+}
+
 export class RunAllQueriesRequest extends jspb.Message {
   getReportId(): string;
   setReportId(value: string): void;

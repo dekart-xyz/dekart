@@ -12,14 +12,14 @@ import { getRef } from './lib/ref'
 import Switch from 'antd/es/switch'
 import { archiveReport, subscribeReports, unsubscribeReports, createReport } from './actions/report'
 import { testVersion } from './actions/version'
-import { newConnection } from './actions/connection'
+import { editConnection, newConnection, setDefaultConnection } from './actions/connection'
 import ConnectionModal from './ConnectionModal'
 
 function Loading () {
   return null
 }
 
-function ArchiveButton ({ report }) {
+function ArchiveReportButton ({ report }) {
   const dispatch = useDispatch()
   const [disabled, setDisabled] = useState(false)
   return (
@@ -54,10 +54,52 @@ const columns = [
   },
   {
     dataIndex: 'delete',
-    render: (t, report) => <ArchiveButton report={report} />,
+    render: (t, report) => <ArchiveReportButton report={report} />,
+    className: styles.deleteColumn
+  },
+  {
+    dataIndex: 'connectionName',
+    render: (t, connection) => <OpenConnectionButton connection={connection} />,
+    className: styles.titleColumn
+  },
+  {
+    dataIndex: 'setDefault',
+    render: (t, connection) => <SetDefault connection={connection} />,
     className: styles.deleteColumn
   }
 ]
+
+function SetDefault ({ connection }) {
+  const dispatch = useDispatch()
+  if (connection.isDefault) {
+    return (
+      <div className={styles.defaultConnection}>Default</div>
+    )
+  }
+  return (
+    <Button
+      type='text'
+      className={styles.deleteButton}
+      onClick={() => {
+        dispatch(setDefaultConnection(connection.id))
+      }}
+    >Set default
+    </Button>
+  )
+}
+
+function OpenConnectionButton ({ connection }) {
+  const dispatch = useDispatch()
+  return (
+    <Button
+      type='link'
+      onClick={() => {
+        dispatch(editConnection(connection.id))
+      }}
+    >{connection.connectionName}
+    </Button>
+  )
+}
 
 function filterColumns (filter) {
   return columns.filter(c => filter.includes(c.dataIndex))
@@ -69,6 +111,8 @@ function getColumns (reportFilter, archived) {
       return filterColumns(['archivedTitle', 'delete'])
     }
     return filterColumns(['title', 'delete'])
+  } else if (reportFilter === 'connections') {
+    return filterColumns(['connectionName', 'setDefault'])
   } else {
     return filterColumns(['title', 'author'])
   }
@@ -103,7 +147,13 @@ function FirstConnectionOnboarding () {
   )
 }
 
-function ReportsHeader ({ authEnabled, reportFilter, setReportFilter, archived, setArchived, reportsList }) {
+function ReportsHeader (
+  { reportFilter, setReportFilter, archived, setArchived }
+) {
+  const { authEnabled } = useSelector(state => state.env)
+  const connectionList = useSelector(state => state.connection.list)
+  const reportsList = useSelector(state => state.reportsList)
+  const dispatch = useDispatch()
   return (
     <div className={styles.reportsHeader}>
       {
@@ -112,12 +162,24 @@ function ReportsHeader ({ authEnabled, reportFilter, setReportFilter, archived, 
           <Radio.Group value={reportFilter} onChange={(e) => setReportFilter(e.target.value)}>
             <Radio.Button value='my'>My Reports</Radio.Button>
             <Radio.Button value='discoverable'>Shared Reports</Radio.Button>
+            {
+              connectionList ? <Radio.Button value='connections'>Connections</Radio.Button> : null
+            }
           </Radio.Group>
 
           )
         : (
           <div className={styles.reportsHeaderTitle}>Manage reports</div>
           )
+      }
+      {
+        reportFilter === 'connections'
+          ? (
+            <div className={styles.rightCornerAction}>
+              <Button onClick={() => { dispatch(newConnection()) }}>Create connection</Button>
+            </div>
+            )
+          : null
       }
       {
         reportFilter === 'my' && reportsList.archived.length
@@ -128,14 +190,15 @@ function ReportsHeader ({ authEnabled, reportFilter, setReportFilter, archived, 
             </div>
             )
           : null
-  }
+      }
     </div>
 
   )
 }
 
-function Reports ({ createReportButton, reportsList }) {
+function Reports ({ createReportButton }) {
   const [archived, setArchived] = useState(false)
+  const reportsList = useSelector(state => state.reportsList)
   const { loaded: envLoaded, authEnabled } = useSelector(state => state.env)
   const connectionList = useSelector(state => state.connection.list)
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
@@ -162,16 +225,22 @@ function Reports ({ createReportButton, reportsList }) {
       <div className={styles.reports}><FirstReportOnboarding createReportButton={createReportButton} /></div>
     )
   } else {
-    const dataSource = reportFilter === 'my' ? archived ? reportsList.archived : reportsList.my : reportsList.discoverable
+    // const dataSource = reportFilter === 'my' ? archived ? reportsList.archived : reportsList.my : reportsList.discoverable
+    let dataSource = []
+    if (reportFilter === 'my') {
+      dataSource = archived ? reportsList.archived : reportsList.my
+    } else if (reportFilter === 'connections') {
+      dataSource = connectionList
+    } else {
+      dataSource = reportsList.discoverable
+    }
     return (
       <div className={styles.reports}>
         <ReportsHeader
-          authEnabled={authEnabled}
           reportFilter={reportFilter}
           setReportFilter={setReportFilter}
           archived={archived}
           setArchived={setArchived}
-          reportsList={reportsList}
         />
         {dataSource.length
           ? (
