@@ -48,8 +48,13 @@ const columns = [
     className: styles.titleColumn
   },
   {
-    dataIndex: 'author',
-    render: (t, report) => <div className={styles.author}>{report.authorEmail}</div>,
+    dataIndex: 'author', // used for reports and connections
+    render: (t, item) => <div
+      title={
+      `Created by ${item.authorEmail} at ${new Date(item.createdAt * 1000).toLocaleString()}, last updated at ${new Date(item.updatedAt * 1000).toLocaleString()}`
+    } className={styles.author}
+                         >{item.authorEmail}
+    </div>,
     className: styles.authorColumn
   },
   {
@@ -102,7 +107,8 @@ function OpenConnectionButton ({ connection }) {
 }
 
 function filterColumns (filter) {
-  return columns.filter(c => filter.includes(c.dataIndex))
+  return filter.map(f => columns.find(c => c.dataIndex === f))
+  // return columns.filter(c => filter.includes(c.dataIndex))
 }
 
 function getColumns (reportFilter, archived) {
@@ -112,7 +118,7 @@ function getColumns (reportFilter, archived) {
     }
     return filterColumns(['title', 'delete'])
   } else if (reportFilter === 'connections') {
-    return filterColumns(['connectionName', 'setDefault'])
+    return filterColumns(['connectionName', 'author', 'setDefault'])
   } else {
     return filterColumns(['title', 'author'])
   }

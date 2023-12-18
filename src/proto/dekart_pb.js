@@ -3563,7 +3563,10 @@ proto.Connection.toObject = function(includeInstance, msg) {
     connectionName: jspb.Message.getFieldWithDefault(msg, 2, ""),
     bigqueryProjectId: jspb.Message.getFieldWithDefault(msg, 3, ""),
     cloudStorageBucket: jspb.Message.getFieldWithDefault(msg, 4, ""),
-    isDefault: jspb.Message.getBooleanFieldWithDefault(msg, 5, false)
+    isDefault: jspb.Message.getBooleanFieldWithDefault(msg, 5, false),
+    authorEmail: jspb.Message.getFieldWithDefault(msg, 6, ""),
+    createdAt: jspb.Message.getFieldWithDefault(msg, 7, 0),
+    updatedAt: jspb.Message.getFieldWithDefault(msg, 8, 0)
   };
 
   if (includeInstance) {
@@ -3619,6 +3622,18 @@ proto.Connection.deserializeBinaryFromReader = function(msg, reader) {
     case 5:
       var value = /** @type {boolean} */ (reader.readBool());
       msg.setIsDefault(value);
+      break;
+    case 6:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setAuthorEmail(value);
+      break;
+    case 7:
+      var value = /** @type {number} */ (reader.readInt64());
+      msg.setCreatedAt(value);
+      break;
+    case 8:
+      var value = /** @type {number} */ (reader.readInt64());
+      msg.setUpdatedAt(value);
       break;
     default:
       reader.skipField();
@@ -3681,6 +3696,27 @@ proto.Connection.serializeBinaryToWriter = function(message, writer) {
   if (f) {
     writer.writeBool(
       5,
+      f
+    );
+  }
+  f = message.getAuthorEmail();
+  if (f.length > 0) {
+    writer.writeString(
+      6,
+      f
+    );
+  }
+  f = message.getCreatedAt();
+  if (f !== 0) {
+    writer.writeInt64(
+      7,
+      f
+    );
+  }
+  f = message.getUpdatedAt();
+  if (f !== 0) {
+    writer.writeInt64(
+      8,
       f
     );
   }
@@ -3774,6 +3810,60 @@ proto.Connection.prototype.getIsDefault = function() {
  */
 proto.Connection.prototype.setIsDefault = function(value) {
   return jspb.Message.setProto3BooleanField(this, 5, value);
+};
+
+
+/**
+ * optional string author_email = 6;
+ * @return {string}
+ */
+proto.Connection.prototype.getAuthorEmail = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 6, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.Connection} returns this
+ */
+proto.Connection.prototype.setAuthorEmail = function(value) {
+  return jspb.Message.setProto3StringField(this, 6, value);
+};
+
+
+/**
+ * optional int64 created_at = 7;
+ * @return {number}
+ */
+proto.Connection.prototype.getCreatedAt = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 7, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.Connection} returns this
+ */
+proto.Connection.prototype.setCreatedAt = function(value) {
+  return jspb.Message.setProto3IntField(this, 7, value);
+};
+
+
+/**
+ * optional int64 updated_at = 8;
+ * @return {number}
+ */
+proto.Connection.prototype.getUpdatedAt = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 8, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.Connection} returns this
+ */
+proto.Connection.prototype.setUpdatedAt = function(value) {
+  return jspb.Message.setProto3IntField(this, 8, value);
 };
 
 
@@ -6270,7 +6360,9 @@ proto.Report.toObject = function(includeInstance, msg) {
     archived: jspb.Message.getBooleanFieldWithDefault(msg, 4, false),
     canWrite: jspb.Message.getBooleanFieldWithDefault(msg, 5, false),
     authorEmail: jspb.Message.getFieldWithDefault(msg, 6, ""),
-    discoverable: jspb.Message.getBooleanFieldWithDefault(msg, 7, false)
+    discoverable: jspb.Message.getBooleanFieldWithDefault(msg, 7, false),
+    createdAt: jspb.Message.getFieldWithDefault(msg, 8, 0),
+    updatedAt: jspb.Message.getFieldWithDefault(msg, 9, 0)
   };
 
   if (includeInstance) {
@@ -6334,6 +6426,14 @@ proto.Report.deserializeBinaryFromReader = function(msg, reader) {
     case 7:
       var value = /** @type {boolean} */ (reader.readBool());
       msg.setDiscoverable(value);
+      break;
+    case 8:
+      var value = /** @type {number} */ (reader.readInt64());
+      msg.setCreatedAt(value);
+      break;
+    case 9:
+      var value = /** @type {number} */ (reader.readInt64());
+      msg.setUpdatedAt(value);
       break;
     default:
       reader.skipField();
@@ -6410,6 +6510,20 @@ proto.Report.serializeBinaryToWriter = function(message, writer) {
   if (f) {
     writer.writeBool(
       7,
+      f
+    );
+  }
+  f = message.getCreatedAt();
+  if (f !== 0) {
+    writer.writeInt64(
+      8,
+      f
+    );
+  }
+  f = message.getUpdatedAt();
+  if (f !== 0) {
+    writer.writeInt64(
+      9,
       f
     );
   }
@@ -6539,6 +6653,42 @@ proto.Report.prototype.getDiscoverable = function() {
  */
 proto.Report.prototype.setDiscoverable = function(value) {
   return jspb.Message.setProto3BooleanField(this, 7, value);
+};
+
+
+/**
+ * optional int64 created_at = 8;
+ * @return {number}
+ */
+proto.Report.prototype.getCreatedAt = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 8, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.Report} returns this
+ */
+proto.Report.prototype.setCreatedAt = function(value) {
+  return jspb.Message.setProto3IntField(this, 8, value);
+};
+
+
+/**
+ * optional int64 updated_at = 9;
+ * @return {number}
+ */
+proto.Report.prototype.getUpdatedAt = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 9, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.Report} returns this
+ */
+proto.Report.prototype.setUpdatedAt = function(value) {
+  return jspb.Message.setProto3IntField(this, 9, value);
 };
 
 

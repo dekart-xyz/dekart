@@ -349,6 +349,15 @@ export class Connection extends jspb.Message {
   getIsDefault(): boolean;
   setIsDefault(value: boolean): void;
 
+  getAuthorEmail(): string;
+  setAuthorEmail(value: string): void;
+
+  getCreatedAt(): number;
+  setCreatedAt(value: number): void;
+
+  getUpdatedAt(): number;
+  setUpdatedAt(value: number): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Connection.AsObject;
   static toObject(includeInstance: boolean, msg: Connection): Connection.AsObject;
@@ -366,6 +375,9 @@ export namespace Connection {
     bigqueryProjectId: string,
     cloudStorageBucket: string,
     isDefault: boolean,
+    authorEmail: string,
+    createdAt: number,
+    updatedAt: number,
   }
 }
 
@@ -778,6 +790,12 @@ export class Report extends jspb.Message {
   getDiscoverable(): boolean;
   setDiscoverable(value: boolean): void;
 
+  getCreatedAt(): number;
+  setCreatedAt(value: number): void;
+
+  getUpdatedAt(): number;
+  setUpdatedAt(value: number): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Report.AsObject;
   static toObject(includeInstance: boolean, msg: Report): Report.AsObject;
@@ -797,6 +815,8 @@ export namespace Report {
     canWrite: boolean,
     authorEmail: string,
     discoverable: boolean,
+    createdAt: number,
+    updatedAt: number,
   }
 }
 

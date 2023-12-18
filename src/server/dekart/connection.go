@@ -162,7 +162,8 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 			cloud_storage_bucket,
 			is_default,
 			created_at,
-			updated_at
+			updated_at,
+			author_email
 		from connections where author_email=$1 and archived=false order by created_at desc`,
 		claims.Email,
 	)
@@ -188,6 +189,7 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 			&isDefault,
 			&createdAt,
 			&updatedAt,
+			&connection.AuthorEmail,
 		)
 		if err != nil {
 			log.Fatal().Err(err).Msg("scan failed")
@@ -206,6 +208,8 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 		connection.Id = ID.String
 		connection.BigqueryProjectId = bigqueryProjectId.String
 		connection.CloudStorageBucket = cloudStorageBucket.String
+		connection.UpdatedAt = updatedAt.Unix()
+		connection.CreatedAt = createdAt.Unix()
 		connections = append(connections, &connection)
 	}
 
