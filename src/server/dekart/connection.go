@@ -146,14 +146,7 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 
 // getConnections list for connections created by user
 func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error) {
-
 	connections := make([]*proto.Connection, 0)
-	claims := user.GetClaims(ctx)
-	if claims == nil {
-		log.Warn().Msg("unauthenticated getConnections request")
-		return connections, nil
-	}
-
 	rows, err := s.db.QueryContext(ctx,
 		`select
 			id,
@@ -164,8 +157,7 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 			created_at,
 			updated_at,
 			author_email
-		from connections where author_email=$1 and archived=false order by created_at desc`,
-		claims.Email,
+		from connections where archived=false order by created_at desc`,
 	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("select from connections failed")
@@ -233,16 +225,14 @@ func (s Server) SetDefaultConnection(ctx context.Context, req *proto.SetDefaultC
 		`update connections set
 			is_default=true,
 			updated_at=now()
-		where id=$1 and author_email=$2`,
+		where id=$1`,
 		req.ConnectionId,
-		claims.Email,
 	)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, err
 	}
-	//TODO: ping all users
-	s.userStreams.Ping([]string{claims.Email})
+	s.userStreams.PingAll()
 	return &proto.SetDefaultConnectionResponse{}, nil
 }
 
@@ -257,12 +247,11 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 			bigquery_project_id=$2,
 			cloud_storage_bucket=$3,
 			updated_at=now()
-		where id=$4 and author_email=$5`,
+		where id=$4`,
 		req.Connection.ConnectionName,
 		req.Connection.BigqueryProjectId,
 		req.Connection.CloudStorageBucket,
 		req.Connection.Id,
-		claims.Email,
 	)
 	if err != nil {
 		log.Err(err).Send()
@@ -276,7 +265,7 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 	if rowsAffected == 0 {
 		return nil, status.Error(codes.NotFound, "connection not found")
 	}
-	s.userStreams.Ping([]string{claims.Email})
+	s.userStreams.PingAll()
 	return &proto.UpdateConnectionResponse{
 		Connection: req.Connection,
 	}, nil
@@ -356,7 +345,7 @@ func (s Server) ArchiveConnection(ctx context.Context, req *proto.ArchiveConnect
 		return nil, err
 	}
 
-	s.userStreams.Ping([]string{claims.Email})
+	s.userStreams.PingAll()
 	s.reportStreams.PingAll(reports)
 	return &proto.ArchiveConnectionResponse{}, nil
 }
@@ -385,8 +374,7 @@ func (s Server) getLastConnectionUpdate(ctx context.Context) (int64, error) {
 	err := s.db.QueryRowContext(ctx,
 		`select
 			max(updated_at)
-		from connections where author_email=$1`,
-		claims.Email,
+		from connections`,
 	).Scan(&lastConnectionUpdateDate)
 	lastConnectionUpdate := lastConnectionUpdateDate.Time.Unix()
 	if err != nil {
@@ -413,7 +401,7 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 		return nil, err
 	}
 
-	s.userStreams.Ping([]string{claims.Email})
+	s.userStreams.PingAll()
 
 	return &proto.CreateConnectionResponse{
 		Connection: &proto.Connection{

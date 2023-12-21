@@ -11,6 +11,7 @@ import { shouldAddQuery } from '../lib/shouldAddQuery'
 import { shouldUpdateDataset } from '../lib/shouldUpdateDataset'
 
 export function closeReport () {
+  console.log('closeReport')
   return (dispatch) => {
     dispatch(grpcStreamCancel(Dekart.GetReportStream))
     dispatch({

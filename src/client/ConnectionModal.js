@@ -8,7 +8,6 @@ import { useEffect } from 'react'
 import { archiveConnection, closeConnectionDialog, connectionChanged, saveConnection, testConnection } from './actions/connection'
 import { CheckCircleTwoTone, ExclamationCircleTwoTone } from '@ant-design/icons'
 import Tooltip from 'antd/es/tooltip'
-import Switch from 'antd/es/switch'
 
 function Footer ({ form }) {
   const { dialog, test } = useSelector(state => state.connection)
