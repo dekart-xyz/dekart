@@ -113,7 +113,6 @@ function OpenConnectionButton ({ connection }) {
 
 function filterColumns (filter) {
   return filter.map(f => columns.find(c => c.dataIndex === f))
-  // return columns.filter(c => filter.includes(c.dataIndex))
 }
 
 function getColumns (reportFilter, archived) {
@@ -216,9 +215,6 @@ function Reports ({ createReportButton, reportFilter }) {
   const { loaded: envLoaded } = useSelector(state => state.env)
   const connectionList = useSelector(state => state.connection.list)
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
-  // const [reportFilter, setReportFilter] = useState(
-  //   reportsList.my.length === 0 && reportsList.discoverable.length > 0 && authEnabled ? 'discoverable' : 'my'
-  // )
   useEffect(() => {
     if (reportsList.archived.length === 0) {
       setArchived(false)
@@ -239,7 +235,6 @@ function Reports ({ createReportButton, reportFilter }) {
       <div className={styles.reports}><FirstReportOnboarding createReportButton={createReportButton} /></div>
     )
   } else {
-    // const dataSource = reportFilter === 'my' ? archived ? reportsList.archived : reportsList.my : reportsList.discoverable
     let dataSource = []
     if (reportFilter === 'my') {
       dataSource = archived ? reportsList.archived : reportsList.my
@@ -252,7 +247,6 @@ function Reports ({ createReportButton, reportFilter }) {
       <div className={styles.reports}>
         <ReportsHeader
           reportFilter={reportFilter}
-          // setReportFilter={setReportFilter}
           archived={archived}
           setArchived={setArchived}
         />

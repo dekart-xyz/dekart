@@ -12,9 +12,20 @@ export default function DekartMenu () {
   return (
     <div className={styles.dekartMenu}>
       <Menu mode='horizontal' theme='dark'>
-        <Menu.Item key='home'>
-          <Link to='/'><MenuOutlined /></Link>
-        </Menu.Item>
+        <Menu.SubMenu popupClassName={styles.subMenu} title={<MenuOutlined />} key='home' active='yes'>
+          <Menu.Item key='my'>
+            <Link to='/'>My Reports</Link>
+          </Menu.Item>
+          <Menu.Item key='shared'>
+            <Link to='/shared'>Shared reports</Link>
+          </Menu.Item>
+          <Menu.Item key='connections'>
+            <Link to='/connections'>Connections</Link>
+          </Menu.Item>
+        </Menu.SubMenu>
+        {/* <Menu.Item key='home'>
+          <Link to='/' title='Connections'><MenuOutlined /></Link>
+        </Menu.Item> */}
         <Menu.SubMenu popupClassName={styles.subMenu} title={<MessageOutlined />} key='community' active='yes'>
           <Menu.Item key='slack'>
             <a target='_blank' rel='noopener noreferrer' href='https://slack.dekart.xyz'>Ask in Slack</a>

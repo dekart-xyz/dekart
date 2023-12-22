@@ -117,7 +117,6 @@ func (s *Streams) PingAll() {
 		}
 		for _, ch := range streamMap {
 			go func(ch chan int64, sequence int64, user string) {
-				log.Debug().Str("user", user).Int64("sequence", sequence).Msg("PingAll sending sequence")
 				ch <- sequence
 			}(ch, s.sequence[user], user)
 		}
