@@ -128,14 +128,15 @@ function getColumns (reportFilter, archived) {
   }
 }
 
-function FirstReportOnboarding ({ createReportButton }) {
+function FirstReportOnboarding () {
+  const dispatch = useDispatch()
   return (
     <>
       <Result
         status='success'
         title='You are all set'
         subTitle='Get ready to create you first map with Dekart'
-        extra={createReportButton}
+        extra={<Button icon={<PlusOutlined />} type='primary' onClick={() => dispatch(createReport())}>Create Report</Button>}
       />
       <DataDocumentationLink />
     </>
@@ -158,7 +159,7 @@ function FirstConnectionOnboarding () {
 }
 
 function ReportsHeader (
-  { reportFilter, setReportFilter, archived, setArchived }
+  { reportFilter, archived, setArchived }
 ) {
   const { authEnabled } = useSelector(state => state.env)
   const connectionList = useSelector(state => state.connection.list)
@@ -172,9 +173,23 @@ function ReportsHeader (
       {
       authEnabled
         ? (
-          <Radio.Group value={reportFilter} onChange={(e) => history.push(`/${e.target.value === 'my' ? '' : e.target.value}`)}>
+          <Radio.Group
+            value={reportFilter} onChange={(e) => {
+              switch (e.target.value) {
+                case 'my':
+                  history.push('/')
+                  break
+                case 'discoverable':
+                  history.push('/shared')
+                  break
+                case 'connections':
+                  history.push('/connections')
+                  break
+              }
+            }}
+          >
             <Radio.Button value='my'>My Reports</Radio.Button>
-            <Radio.Button value='shared'>Shared Reports</Radio.Button>
+            <Radio.Button value='discoverable'>Shared Reports</Radio.Button>
             {
               connectionList && userDefinedConnection ? <Radio.Button value='connections'>Connections</Radio.Button> : null
             }
@@ -185,25 +200,27 @@ function ReportsHeader (
           <div className={styles.reportsHeaderTitle}>Manage reports</div>
           )
       }
-      {
-        reportFilter === 'connections'
-          ? (
-            <div className={styles.rightCornerAction}>
-              <Button onClick={() => { dispatch(newConnection()) }}>Create connection</Button>
-            </div>
-            )
-          : null
-      }
-      {
-        reportFilter === 'my' && reportsList.archived.length
-          ? (
-            <div className={styles.archivedSwitch}>
-              <div className={styles.archivedSwitchLabel}>Archived</div>
-              <Switch checked={archived} onChange={(checked) => setArchived(checked)} />
-            </div>
-            )
-          : null
-      }
+      <div className={styles.rightCornerAction}>
+        {
+          reportFilter === 'connections'
+            ? <Button onClick={() => { dispatch(newConnection()) }}>New Connection</Button>
+            : (
+              <>
+                {
+                  reportFilter === 'my'
+                    ? (
+                      <div className={styles.archivedSwitch}>
+                        <div className={styles.archivedSwitchLabel}>Archived</div>
+                        <Switch checked={archived} disabled={reportsList.archived.length === 0} onChange={(checked) => setArchived(checked)} />
+                      </div>
+                      )
+                    : null
+                }
+                <Button onClick={() => dispatch(createReport())}>New Report</Button>
+              </>
+              )
+        }
+      </div>
     </div>
 
   )
@@ -274,7 +291,7 @@ function OnboardingMyReports () {
     <Onboarding
       icon={<FileSearchOutlined />} title='View, manage, and organize the reports that you have created ' steps={
         <ol>
-          <li>Click on the "Create Report" button in the top right corner</li>
+          <li>Click on the "New Report" button in the top right corner</li>
           <li>Save the report and give it a relevant name.</li>
           <li>Your report will appear here.</li>
         </ol>
@@ -344,21 +361,10 @@ export default function HomePage ({ reportFilter }) {
     dispatch(subscribeReports())
     return () => dispatch(unsubscribeReports())
   }, [dispatch])
-  const createReportButton = <Button icon={<PlusOutlined />} type='primary' onClick={() => dispatch(createReport())}>Create Report</Button>
 
   return (
     <div className={styles.homePage}>
-      <Header
-        buttons={
-          <div className={styles.headerButtons}>
-            {
-              reportsList.loaded && !(reportsList.my.length === 0 && reportsList.discoverable.length === 0 && reportsList.archived.length === 0)
-                ? createReportButton
-                : null
-            }
-          </div>
-      }
-      />
+      <Header />
       <div className={styles.body}>
         {
           reportsList.loaded && connectionsLoaded
@@ -368,7 +374,6 @@ export default function HomePage ({ reportFilter }) {
                 <ConnectionModal />
                 <Reports
                   reportsList={reportsList}
-                  createReportButton={createReportButton}
                   body={body}
                   reportFilter={reportFilter}
                 />

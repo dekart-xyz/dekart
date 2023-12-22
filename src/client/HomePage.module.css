@@ -152,3 +152,10 @@
 .reportsHeaderTitle {
     font-size: 24px;
 }
+
+.rightCornerAction {
+    display: flex;
+    flex-direction: row;
+    align-items: right;
+    gap: 10px;
+}
