@@ -185,6 +185,8 @@ function ReportsHeader (
                 case 'connections':
                   history.push('/connections')
                   break
+                default:
+                  // do nothing
               }
             }}
           >

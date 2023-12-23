@@ -2,9 +2,8 @@ import Menu from 'antd/es/menu'
 import styles from './DekartMenu.module.css'
 import { useDispatch, useSelector } from 'react-redux'
 import { getRef } from './lib/ref'
-import { MenuOutlined, MessageOutlined, PlusOutlined } from '@ant-design/icons'
+import { MenuOutlined, MessageOutlined } from '@ant-design/icons'
 import { Link } from 'react-router-dom/cjs/react-router-dom'
-import Button from 'antd/es/button'
 import { createReport } from './actions/report'
 
 export default function DekartMenu () {
