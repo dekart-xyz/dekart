@@ -64,7 +64,6 @@ function DatasetSelector ({ dataset }) {
   if (!env.loaded) {
     return null
   }
-  const defaultConnection = connectionList.find(c => c.isDefault)
   const { ALLOW_FILE_UPLOAD } = env.variables
   if (!ALLOW_FILE_UPLOAD && !userDefinedConnection) {
     return null
@@ -81,7 +80,7 @@ function DatasetSelector ({ dataset }) {
                   placeholder='Select connection'
                   id='dekart-connection-select'
                   className={styles.connectionSelect}
-                  value={dataset?.connectionId || defaultConnection?.id}
+                  value={dataset.connectionId || null}
                   onSelect={value => {
                     dispatch(updateDatasetConnection(dataset.id, value))
                   }}

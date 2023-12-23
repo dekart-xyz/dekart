@@ -216,6 +216,24 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 
 }
 
+func (s Server) getDefaultConnection(ctx context.Context) (*proto.Connection, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	connections, err := s.getConnections(ctx)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, err
+	}
+	for _, connection := range connections {
+		if connection.IsDefault {
+			return connection, nil
+		}
+	}
+	return nil, nil
+}
+
 func (s Server) SetDefaultConnection(ctx context.Context, req *proto.SetDefaultConnectionRequest) (*proto.SetDefaultConnectionResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
