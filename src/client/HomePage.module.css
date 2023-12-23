@@ -20,6 +20,16 @@
     display: block;
 }
 
+.popconfirmTitle {
+    font-weight: bold;
+}
+
+.popconfirmDescription {
+    margin-top: 10px;
+    font-size: 0.8em;
+    max-width: 200px;
+}
+
 .deleteColumn {
     padding-top: 0 !important;
     padding-bottom: 0 !important;
@@ -141,4 +151,11 @@
 
 .reportsHeaderTitle {
     font-size: 24px;
+}
+
+.rightCornerAction {
+    display: flex;
+    flex-direction: row;
+    align-items: right;
+    gap: 10px;
 }

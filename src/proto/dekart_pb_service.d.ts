@@ -220,6 +220,15 @@ type DekartTestConnection = {
   readonly responseType: typeof proto_dekart_pb.TestConnectionResponse;
 };
 
+type DekartSetDefaultConnection = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.SetDefaultConnectionRequest;
+  readonly responseType: typeof proto_dekart_pb.SetDefaultConnectionResponse;
+};
+
 export class Dekart {
   static readonly serviceName: string;
   static readonly CreateReport: DekartCreateReport;
@@ -246,6 +255,7 @@ export class Dekart {
   static readonly ArchiveConnection: DekartArchiveConnection;
   static readonly GetConnectionList: DekartGetConnectionList;
   static readonly TestConnection: DekartTestConnection;
+  static readonly SetDefaultConnection: DekartSetDefaultConnection;
 }
 
 export type ServiceError = { message: string, code: number; metadata: grpc.Metadata }
@@ -471,6 +481,15 @@ export class DekartClient {
   testConnection(
     requestMessage: proto_dekart_pb.TestConnectionRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.TestConnectionResponse|null) => void
+  ): UnaryResponse;
+  setDefaultConnection(
+    requestMessage: proto_dekart_pb.SetDefaultConnectionRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.SetDefaultConnectionResponse|null) => void
+  ): UnaryResponse;
+  setDefaultConnection(
+    requestMessage: proto_dekart_pb.SetDefaultConnectionRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.SetDefaultConnectionResponse|null) => void
   ): UnaryResponse;
 }
 

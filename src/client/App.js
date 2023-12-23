@@ -86,6 +86,7 @@ export default function App () {
   const status = useSelector(state => state.httpError.status)
   const env = useSelector(state => state.env)
   const usage = useSelector(state => state.usage)
+  const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const dispatch = useDispatch()
   useEffect(() => {
     if (window.location.pathname.startsWith('/401')) {
@@ -114,7 +115,13 @@ export default function App () {
       <AppRedirect />
       <Switch>
         <Route exact path='/'>
-          <HomePage />
+          <HomePage reportFilter='my' />
+        </Route>
+        <Route exact path='/shared'>
+          <HomePage reportFilter='discoverable' />
+        </Route>
+        <Route exact path='/connections'>
+          {userDefinedConnection ? <HomePage reportFilter='connections' /> : <Redirect to='/' />}
         </Route>
         <Route path='/reports/:id/edit'>
           <RedirectToSource />

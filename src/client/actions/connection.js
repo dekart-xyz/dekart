@@ -1,4 +1,4 @@
-import { ArchiveConnectionRequest, CreateConnectionRequest, GetConnectionListRequest, Connection, TestConnectionRequest, UpdateConnectionRequest } from '../../proto/dekart_pb'
+import { ArchiveConnectionRequest, CreateConnectionRequest, GetConnectionListRequest, Connection, TestConnectionRequest, UpdateConnectionRequest, SetDefaultConnectionRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { updateDatasetConnection } from './dataset'
 import { grpcCall } from './grpc'
@@ -17,6 +17,21 @@ export function editConnection (id) {
 
 export function selectConnection (id) {
   return { type: selectConnection.name, id }
+}
+
+export function setDefaultConnection (id) {
+  return async (dispatch) => {
+    dispatch({ type: setDefaultConnection.name })
+
+    const request = new SetDefaultConnectionRequest()
+    request.setConnectionId(id)
+
+    await new Promise((resolve) => {
+      dispatch(grpcCall(Dekart.SetDefaultConnection, request, resolve))
+    })
+
+    dispatch(connectionSaved())
+  }
 }
 
 export function archiveConnection (id) {
@@ -45,8 +60,9 @@ export function newConnection (datasetId) {
     const res = await new Promise((resolve) => {
       dispatch(grpcCall(Dekart.CreateConnection, request, resolve))
     })
-
-    dispatch(updateDatasetConnection(datasetId, res.connection.id))
+    if (datasetId) {
+      dispatch(updateDatasetConnection(datasetId, res.connection.id))
+    }
     dispatch(connectionCreated(res.connection))
   }
 }

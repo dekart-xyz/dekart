@@ -115,6 +115,8 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		staticFilesHandler := NewStaticFilesHandler(staticPath)
 
 		router.HandleFunc("/", staticFilesHandler.ServeIndex)
+		router.HandleFunc("/shared", staticFilesHandler.ServeIndex)
+		router.HandleFunc("/connections", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/reports/{id}", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/reports/{id}/edit", staticFilesHandler.ServeIndex) // deprecated
 		router.HandleFunc("/reports/{id}/source", staticFilesHandler.ServeIndex)
