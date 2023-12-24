@@ -111,8 +111,9 @@ export function grpcStream (endpoint, request, cb) {
 export function grpcStreamCancel (endpoint) {
   return (dispatch, getState) => {
     const { stream } = getState()
-    if (stream[endpoint]) {
-      stream[endpoint].cancel()
+    const streamObj = stream[endpoint.methodName]
+    if (streamObj) {
+      streamObj.cancel()
       dispatch({ type: grpcStreamCancel.name, endpoint })
     }
   }

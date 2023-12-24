@@ -21,7 +21,7 @@ import (
 
 func (s Server) getFileReports(ctx context.Context, fileId string, claims *user.Claims) ([]string, error) {
 	fileRows, err := s.db.QueryContext(ctx,
-		`select 
+		`select
 			reports.id
 		from files
 			left join datasets on files.id = datasets.file_id
@@ -50,7 +50,7 @@ func (s Server) setUploadError(reportIDs []string, fileSourceID string, err erro
 	defer cancel()
 	_, err = s.db.ExecContext(
 		ctx,
-		`update files set upload_error=$1 where file_source_id=$2`,
+		`update files set upload_error=$1, updated_at=now() where file_source_id=$2`,
 		err.Error(),
 		fileSourceID,
 	)
@@ -92,7 +92,7 @@ func (s Server) moveFileToStorage(reqCtx context.Context, fileSourceID string, f
 	}
 	log.Debug().Msgf("file %s.csv moved to storage", fileSourceID)
 	_, err = s.db.ExecContext(ctx,
-		`update files set file_status=3 where file_source_id=$1`,
+		`update files set file_status=3, updated_at=now() where file_source_id=$1`,
 		fileSourceID,
 	)
 	if err != nil {
@@ -158,7 +158,7 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 	fileSourceID := newUUID()
 
 	_, err = s.db.ExecContext(ctx,
-		`update files set name=$1, size=$2, mime_type=$3, file_status=2, file_source_id=$4 where id=$5`,
+		`update files set name=$1, size=$2, mime_type=$3, file_status=2, file_source_id=$4, updated_at=now() where id=$5`,
 		handler.Filename,
 		handler.Size,
 		mimeType,
@@ -207,7 +207,7 @@ func (s Server) CreateFile(ctx context.Context, req *proto.CreateFileRequest) (*
 	}
 
 	result, err := s.db.ExecContext(ctx,
-		`update datasets set file_id=$1 where id=$2 and file_id is null`,
+		`update datasets set file_id=$1, updated_at=now() where id=$2 and file_id is null`,
 		id,
 		req.DatasetId,
 	)

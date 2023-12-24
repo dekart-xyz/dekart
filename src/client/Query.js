@@ -5,17 +5,16 @@ import Button from 'antd/es/button'
 import styles from './Query.module.css'
 import { useDispatch, useSelector } from 'react-redux'
 import 'ace-builds/src-noconflict/mode-sql'
-// import 'ace-builds/src-noconflict/theme-textmate'
 import 'ace-builds/src-noconflict/theme-sqlserver'
 import 'ace-builds/src-noconflict/ext-language_tools'
 import 'ace-builds/webpack-resolver'
 import { Query as QueryType } from '../proto/dekart_pb'
 import { SendOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
 import { Duration } from 'luxon'
-import prettyBites from 'pretty-bytes'
 import DataDocumentationLink from './DataDocumentationLink'
 import { cancelQuery, queryChanged, runQuery } from './actions/query'
 import { showDataTable } from './actions/showDataTable'
+import Tooltip from 'antd/es/tooltip'
 
 function CancelButton ({ query }) {
   const dispatch = useDispatch()
@@ -76,14 +75,6 @@ function StatusActions ({ query }) {
   )
 }
 
-function Processed ({ query }) {
-  if (query.bytesProcessed) {
-    return (<span className={styles.processed}>({prettyBites(query.bytesProcessed)} processed)</span>)
-  } else {
-    return (<span className={styles.processed}>(cached)</span>)
-  }
-}
-
 function QueryEditor ({ queryId, queryText, onChange, canWrite }) {
   return (
     <div className={styles.editor}>
@@ -116,7 +107,7 @@ function QueryEditor ({ queryId, queryText, onChange, canWrite }) {
 }
 
 function QueryStatus ({ children, query }) {
-  let message, errorMessage, action, style
+  let message, errorMessage, action, style, tooltip
   let icon = null
   if (query.jobError) {
     message = 'Error'
@@ -126,6 +117,7 @@ function QueryStatus ({ children, query }) {
   }
   switch (query.jobStatus) {
     case QueryType.JobStatus.JOB_STATUS_PENDING:
+      icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
       message = 'Pending'
       style = styles.info
       action = <StatusActions query={query} />
@@ -145,7 +137,7 @@ function QueryStatus ({ children, query }) {
         break
       }
       icon = <CheckCircleTwoTone className={styles.icon} twoToneColor='#52c41a' />
-      message = <span>Ready <Processed query={query} /></span>
+      message = <span>Ready</span>
       style = styles.success
       action = <ShowDataTable query={query} />
       break
@@ -157,7 +149,7 @@ function QueryStatus ({ children, query }) {
       break
     case QueryType.JobStatus.JOB_STATUS_DONE:
       icon = <CheckCircleTwoTone className={styles.icon} twoToneColor='#52c41a' />
-      message = <span>Ready <Processed query={query} /></span>
+      message = <span>Ready</span>
       style = styles.success
       action = <ShowDataTable query={query} />
       break
@@ -167,8 +159,11 @@ function QueryStatus ({ children, query }) {
     <div className={[styles.queryStatus, style].join(' ')}>
       <div className={styles.status}>
         <div className={styles.statusHead}>
-          {icon}
-          <div id='dekart-query-status-message' className={styles.message}>{message}</div>
+          <Tooltip title={tooltip} className={styles.tooltip}>
+            {icon}
+            <div id='dekart-query-status-message' className={styles.message}>{message}</div>
+          </Tooltip>
+          <div className={styles.spacer} />
           {action ? <div className={styles.action}>{action}</div> : null}
         </div>
         {errorMessage ? <div className={styles.errorMessage}>{errorMessage}</div> : null}

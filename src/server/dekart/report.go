@@ -36,7 +36,9 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			case when title is null then 'Untitled' else title end as title,
 			author_email = $2 as can_write,
 			author_email,
-			discoverable
+			discoverable,
+			created_at,
+			updated_at
 		from reports as r
 		join (
 			-- current user organization members
@@ -69,6 +71,8 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 	report := &proto.Report{}
 
 	for reportRows.Next() {
+		createdAt := time.Time{}
+		updatedAt := time.Time{}
 		err = reportRows.Scan(
 			&report.Id,
 			&report.MapConfig,
@@ -76,11 +80,15 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			&report.CanWrite,
 			&report.AuthorEmail,
 			&report.Discoverable,
+			&createdAt,
+			&updatedAt,
 		)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, err
 		}
+		report.CreatedAt = createdAt.Unix()
+		report.UpdatedAt = updatedAt.Unix()
 	}
 	if report.Id == "" {
 		return nil, nil // not found

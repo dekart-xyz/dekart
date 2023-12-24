@@ -2,13 +2,10 @@ package dekart
 
 import (
 	"context"
-	"crypto/sha1"
 	"database/sql"
 	"fmt"
-	"time"
 
 	"dekart/src/proto"
-	"dekart/src/server/job"
 	"dekart/src/server/user"
 
 	"github.com/google/uuid"
@@ -68,7 +65,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	}
 
 	result, err := s.db.ExecContext(ctx,
-		`update datasets set query_id=$1 where id=$2 and query_id is null`,
+		`update datasets set query_id=$1, updated_at=now() where id=$2 and query_id is null`,
 		id,
 		req.DatasetId,
 	)
@@ -92,117 +89,119 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	return &proto.CreateQueryResponse{}, nil
 }
 
-// queryWasNotUpdated was not updated because it was changed
-type queryWasNotUpdated struct{}
-
-func (e *queryWasNotUpdated) Error() string {
-	return "query was not updated"
-}
-
-func (s Server) storeQuerySync(ctx context.Context, bucketName, queryID string, queryText string, prevQuerySourceId string) error {
-	h := sha1.New()
-	queryTextByte := []byte(queryText)
-	h.Write(queryTextByte)
-	newQuerySourceId := fmt.Sprintf("%x", h.Sum(nil))
-	storageWriter := s.storage.GetObject(bucketName, fmt.Sprintf("%s.sql", newQuerySourceId)).GetWriter(ctx)
-	_, err := storageWriter.Write(queryTextByte)
-	if err != nil {
-		log.Err(err).Msg("Error writing query_text to storage")
-		storageWriter.Close()
-		return err
-	}
-	err = storageWriter.Close()
-	if err != nil {
-		log.Err(err).Str("bucketName", bucketName).Msg("Error writing query_text to storage")
-		return err
+func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesRequest) (*proto.RunAllQueriesResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
 	}
 
-	result, err := s.db.ExecContext(ctx,
-		`update queries set query_source_id=$1, query_source=$2 where id=$3 and query_source_id=$4`,
-		newQuerySourceId,
-		proto.Query_QUERY_SOURCE_STORAGE,
-		queryID,
-		prevQuerySourceId,
+	// get all queries from report
+	queriesRows, err := s.db.QueryContext(ctx,
+		`select
+			queries.id,
+			queries.query_source_id,
+			datasets.connection_id
+		from queries
+			left join datasets on queries.id = datasets.query_id
+			left join reports on (datasets.report_id = reports.id or queries.report_id = reports.id)
+		where reports.id = $1 and (author_email = $2 or reports.discoverable) and job_status = $3`,
+		req.ReportId,
+		claims.Email,
+		int32(proto.Query_JOB_STATUS_DONE),
 	)
+
 	if err != nil {
-		return err
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
 	}
-	affectedRows, _ := result.RowsAffected()
-	if affectedRows == 0 {
-		return &queryWasNotUpdated{}
+	defer queriesRows.Close()
+
+	var queries []query
+	var querySourceIds []string
+
+	for queriesRows.Next() {
+		var queryID string
+		var querySourceId string
+		var connectionID sql.NullString
+		err := queriesRows.Scan(&queryID, &querySourceId, &connectionID)
+		if err != nil {
+			log.Err(err).Send()
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		querySourceIds = append(querySourceIds, querySourceId)
+		connection, err := s.getConnection(ctx, connectionID.String)
+		if err != nil {
+			log.Err(err).Send()
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		bucketName := s.getBucketNameFromConnection(connection)
+		queries = append(queries, query{
+			reportID:   req.ReportId,
+			queryID:    queryID,
+			connection: connection,
+			bucketName: bucketName,
+		})
 	}
-	return nil
-}
 
-func (s Server) storeQuery(userCtx context.Context, reportID string, queryID string, queryText string, prevQuerySourceId string) {
-	ctx, cancel := context.WithTimeout(user.CopyClaims(userCtx, context.Background()), time.Second*5)
-	defer cancel()
-	err := s.storeQuerySync(ctx, "", queryID, queryText, prevQuerySourceId)
-	if _, ok := err.(*queryWasNotUpdated); ok {
-		log.Warn().Msg("Query text not updated")
-		return
-	} else if err != nil {
-		log.Err(err).Msg("Error updating query text")
-		return
+	if len(queries) == 0 {
+		err := fmt.Errorf("queries not found report_id:%s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
 	}
-	log.Debug().Msg("Query text updated in storage")
-	s.reportStreams.Ping(reportID)
-}
 
-func (s Server) updateJobStatus(job job.Job, jobStatus chan int32) {
-	for {
-		select {
-		case status := <-jobStatus:
-			log.Debug().Str("query_id", job.GetQueryID()).Int32("status", status).Msg("Job status changed")
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			var err error
-			if status == int32(proto.Query_JOB_STATUS_PENDING) {
-				_, err = s.db.ExecContext(
-					ctx,
-					`update queries set
-						job_status = $1,
-						job_error = $3,
-						job_result_id = $4,
-						job_started = CURRENT_TIMESTAMP,
-						total_rows = 0,
-						bytes_processed = 0,
-						result_size = 0
-					where id  = $2`,
-					status,
-					job.GetQueryID(),
-					job.Err(),
-					job.GetResultID(),
-				)
+	res := make(chan error, len(queries))
 
-			} else {
-				_, err = s.db.ExecContext(
-					ctx,
-					`update queries set
-						job_status = $1,
-						job_error = $3,
-						job_result_id = $4,
-						total_rows = $5,
-						bytes_processed = $6,
-						result_size = $7
-					where id  = $2`,
-					status,
-					job.GetQueryID(),
-					job.Err(),
-					job.GetResultID(),
-					job.GetTotalRows(),
-					job.GetProcessedBytes(),
-					job.GetResultSize(),
-				)
-			}
-			cancel()
+	for i := range queries {
+		go func(i int) {
+			queryText, err := s.getQueryText(ctx, querySourceIds[i], queries[i].bucketName)
 			if err != nil {
-				log.Fatal().Err(err).Send()
+				res <- err
+				return
 			}
-			s.reportStreams.Ping(job.GetReportID())
-		case <-job.GetCtx().Done():
-			return
+			queries[i].queryText = queryText
+			err = s.runQuery(ctx, queries[i])
+			res <- err
+		}(i)
+	}
+
+	for range queries {
+		err := <-res
+		if err != nil {
+			if err == context.Canceled {
+				log.Warn().Err(err).Send()
+				return nil, status.Error(codes.Canceled, err.Error())
+			}
+			log.Err(err).Send()
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 	}
+
+	return &proto.RunAllQueriesResponse{}, nil
+}
+
+type query struct {
+	reportID   string
+	queryID    string
+	queryText  string
+	connection *proto.Connection
+	bucketName string
+}
+
+func (s Server) runQuery(ctx context.Context, i query) error {
+	job, jobStatus, err := s.jobs.Create(i.reportID, i.queryID, i.queryText, ctx)
+	log.Debug().Str("jobID", job.GetID()).Msg("Job created")
+	if err != nil {
+		log.Error().Err(err).Send()
+		return err
+	}
+	obj := s.storage.GetObject(i.bucketName, fmt.Sprintf("%s.csv", job.GetID()))
+	go s.updateJobStatus(job, jobStatus)
+	job.Status() <- int32(proto.Query_JOB_STATUS_PENDING)
+	err = job.Run(obj, i.connection)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // RunQuery job against database
@@ -213,7 +212,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	}
 	log.Debug().Str("query_id", req.QueryId).Int("QueryTextLen", len(req.QueryText)).Msg("RunQuery")
 	queriesRows, err := s.db.QueryContext(ctx,
-		`select 
+		`select
 			reports.id,
 			queries.query_source_id,
 			datasets.connection_id
@@ -269,16 +268,15 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		}
 		return nil, status.Error(code, err.Error())
 	}
-	job, jobStatus, err := s.jobs.Create(reportID, req.QueryId, req.QueryText, ctx)
-	log.Debug().Str("jobID", job.GetID()).Msg("Job created")
-	if err != nil {
-		log.Error().Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	obj := s.storage.GetObject(bucketName, fmt.Sprintf("%s.csv", job.GetID()))
-	go s.updateJobStatus(job, jobStatus)
-	job.Status() <- int32(proto.Query_JOB_STATUS_PENDING)
-	err = job.Run(obj, connection)
+
+	err = s.runQuery(ctx, query{
+		reportID:   reportID,
+		queryID:    req.QueryId,
+		queryText:  req.QueryText,
+		connection: connection,
+		bucketName: bucketName,
+	})
+
 	if err != nil {
 		if err == context.Canceled {
 			log.Warn().Err(err).Send()
@@ -287,6 +285,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+
 	res := &proto.RunQueryResponse{}
 	return res, nil
 }
@@ -303,7 +302,7 @@ func (s Server) CancelQuery(ctx context.Context, req *proto.CancelQueryRequest) 
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
 	}
 	queriesRows, err := s.db.QueryContext(ctx,
-		`select 
+		`select
 			reports.id
 		from queries
 			left join datasets on queries.id = datasets.query_id
@@ -337,7 +336,7 @@ func (s Server) CancelQuery(ctx context.Context, req *proto.CancelQueryRequest) 
 		_, err = s.db.ExecContext(
 			ctx,
 			`update queries set
-				job_status = $1
+				job_status = $1, updated_at=now()
 			where id  = $2`,
 			int32(proto.Query_JOB_STATUS_UNSPECIFIED),
 			req.QueryId,

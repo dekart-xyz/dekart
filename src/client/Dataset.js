@@ -6,12 +6,12 @@ import Query from './Query'
 import File from './File'
 import { createQuery } from './actions/query'
 import { createFile } from './actions/file'
-import { editConnection, newConnection } from './actions/connection'
 import Dropdown from 'antd/es/dropdown'
 import { ConsoleSqlOutlined, UploadOutlined, MoreOutlined } from '@ant-design/icons'
 import ConnectionModal from './ConnectionModal'
 import Datasource from './Datasource'
 import { updateDatasetConnection } from './actions/dataset'
+import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 
 function DatasetTypeSelector ({ dataset }) {
   const dispatch = useDispatch()
@@ -55,17 +55,15 @@ function DatasetTypeSelector ({ dataset }) {
   )
 }
 
-const NEW_DATASOURCE = 'NEW_DATASOURCE'
-
 function DatasetSelector ({ dataset }) {
   const dispatch = useDispatch()
   const env = useSelector(state => state.env)
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const connectionList = useSelector(state => state.connection.list)
+  const history = useHistory()
   if (!env.loaded) {
     return null
   }
-  // const datasource = getDatasourceMeta(env.variables.DATASOURCE).name
   const { ALLOW_FILE_UPLOAD } = env.variables
   if (!ALLOW_FILE_UPLOAD && !userDefinedConnection) {
     return null
@@ -84,17 +82,9 @@ function DatasetSelector ({ dataset }) {
                   className={styles.connectionSelect}
                   value={dataset.connectionId || null}
                   onSelect={value => {
-                    if (value === NEW_DATASOURCE) {
-                      dispatch(newConnection(dataset.id))
-                    } else {
-                      dispatch(updateDatasetConnection(dataset.id, value))
-                    }
+                    dispatch(updateDatasetConnection(dataset.id, value))
                   }}
                   options={[
-                    {
-                      value: NEW_DATASOURCE,
-                      label: 'New'
-                    },
                     ...(connectionList.map(connection => ({
                       value: connection.id,
                       label: connection.connectionName
@@ -102,11 +92,11 @@ function DatasetSelector ({ dataset }) {
                   ]}
                 /><Button
                   type='text'
-                  disabled={!dataset.connectionId}
-                  title='Edit connection'
-                  className={styles.connectionEditButton} onClick={
-              () => dispatch(editConnection(dataset.connectionId))
-            } icon={<MoreOutlined />}
+                  title='Edit connections'
+                  className={styles.connectionEditButton} icon={<MoreOutlined />}
+                  onClick={() => {
+                    history.push('/connections')
+                  }}
                   />
               </div>
               <ConnectionModal />

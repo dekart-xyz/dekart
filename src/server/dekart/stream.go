@@ -117,7 +117,9 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			archived,
 			author_email = $1 as can_write,
 			author_email,
-			discoverable
+			discoverable,
+			updated_at,
+			created_at
 		from reports as r
 		join (
 			-- current user organization members
@@ -154,6 +156,8 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 	}
 	for reportRows.Next() {
 		report := proto.Report{}
+		createdAt := time.Time{}
+		updatedAt := time.Time{}
 		err = reportRows.Scan(
 			&report.Id,
 			&report.Title,
@@ -161,11 +165,15 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			&report.CanWrite,
 			&report.AuthorEmail,
 			&report.Discoverable,
+			&updatedAt,
+			&createdAt,
 		)
 		if err != nil {
 			log.Err(err).Send()
 			return status.Errorf(codes.Internal, err.Error())
 		}
+		report.CreatedAt = createdAt.Unix()
+		report.UpdatedAt = updatedAt.Unix()
 		res.Reports = append(res.Reports, &report)
 	}
 	err = srv.Send(&res)

@@ -1,0 +1,1 @@
+ALTER TABLE connections ADD COLUMN is_default boolean default false;

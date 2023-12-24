@@ -23,6 +23,7 @@ service Dekart {
     rpc CreateQuery(CreateQueryRequest) returns (CreateQueryResponse) {}
     rpc RunQuery(RunQueryRequest) returns (RunQueryResponse) {}
     rpc CancelQuery(CancelQueryRequest) returns (CancelQueryResponse) {}
+    rpc RunAllQueries(RunAllQueriesRequest) returns (RunAllQueriesResponse) {}
 
     rpc GetEnv(GetEnvRequest) returns (GetEnvResponse) {}
 
@@ -40,6 +41,7 @@ service Dekart {
     rpc ArchiveConnection(ArchiveConnectionRequest) returns (ArchiveConnectionResponse) {}
     rpc GetConnectionList(GetConnectionListRequest) returns (GetConnectionListResponse) {}
     rpc TestConnection(TestConnectionRequest) returns (TestConnectionResponse) {}
+    rpc SetDefaultConnection(SetDefaultConnectionRequest) returns (SetDefaultConnectionResponse) {}
 
     //CLOUD
 
@@ -47,6 +49,20 @@ service Dekart {
     rpc CreateSubscription(CreateSubscriptionRequest) returns (CreateSubscriptionResponse) {}
     rpc GetSubscription(GetSubscriptionRequest) returns (GetSubscriptionResponse) {}
     rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse) {}
+}
+
+message SetDefaultConnectionRequest {
+    string connection_id = 1;
+}
+
+message SetDefaultConnectionResponse {
+}
+
+message RunAllQueriesRequest {
+    string report_id = 1;
+}
+
+message RunAllQueriesResponse {
 
 }
 
@@ -147,6 +163,9 @@ message Connection {
     string bigquery_project_id = 3;
     string cloud_storage_bucket = 4;
     bool is_default = 5;
+    string author_email = 6;
+    int64 created_at = 7;
+    int64 updated_at = 8;
 }
 
 message GetUsageRequest {}
@@ -248,6 +267,8 @@ message Report {
     bool can_write = 5;
     string author_email = 6;
     bool discoverable = 7; // report is discoverable by other users of the same instance
+    int64 created_at = 8;
+    int64 updated_at = 9;
 }
 
 message Dataset {

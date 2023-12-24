@@ -6,6 +6,7 @@ import Avatar from 'antd/es/avatar'
 import Dropdown from 'antd/es/dropdown'
 import { AuthState } from '../proto/dekart_pb'
 import { authRedirect } from './lib/api'
+import classNames from 'classnames'
 
 function getSignature (email) {
   if (!email) {
@@ -19,14 +20,18 @@ function getSignature (email) {
   return nameAr.map(n => n[0]).join('')
 }
 
-function User () {
+function User ({ buttonDivider }) {
   const token = useSelector(state => state.token)
   const user = useSelector(state => state.user)
   if (!user || !token) {
     return null
   }
   return (
-    <div className={styles.user}>
+    <div className={classNames(
+      styles.user,
+      { [styles.buttonDivider]: buttonDivider }
+    )}
+    >
       <Dropdown
         overlayClassName={styles.userDropdown} menu={{
           items: [
@@ -41,7 +46,7 @@ function User () {
               }
             },
             {
-              label: 'Swicth account',
+              label: 'Switch account',
               onClick: () => {
                 const state = new AuthState()
                 state.setUiUrl(window.location.href)
@@ -84,7 +89,7 @@ export function Header ({ buttons, title }) {
           <div className={styles.dekartLinkHolder}><a target='_blank' rel='noopener noreferrer' className={styles.dekartLink} href={homePage}>Dekart</a></div>
         </div>
         <div className={styles.buttons}>{buttons || null}</div>
-        <User />
+        <User buttonDivider={Boolean(buttons)} />
       </div>
       {title ? (<div className={styles.title}>{title}</div>) : null}
     </div>
