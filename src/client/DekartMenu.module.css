@@ -21,6 +21,9 @@
 .dekartMenu :global(.ant-menu-item-active) {
     background-color: transparent !important;
 }
+.subMenu :global(.ant-menu-item-divider) {
+    opacity: 0.3;
+}
 
 .dekartMenu {
     flex: 1;

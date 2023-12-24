@@ -44,6 +44,7 @@
 
 .titleTextEdit {
     cursor: pointer;
+    padding-right: 39px;
 }
 
 .title {
@@ -60,16 +61,13 @@
     flex: 1;
 }
 
-.author {
+.meta {
     position: absolute;
-    height: 30px;
+    height: 20px;
     bottom: 0px;
     left: 20px;
     color: #6C7483;
-    font-size: 0.8em;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+    font-size: 0.7em;
 }
 
 .tabs {
@@ -124,6 +122,12 @@
     bottom: 0;
     left: 0;
     right: 0;
+}
+
+.queryTooltip span{
+    display: block;
+    font-size: 0.8em;
+    white-space: nowrap;
 }
 
 .keplerFlex {

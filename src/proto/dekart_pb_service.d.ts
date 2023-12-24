@@ -121,6 +121,15 @@ type DekartCancelQuery = {
   readonly responseType: typeof proto_dekart_pb.CancelQueryResponse;
 };
 
+type DekartRunAllQueries = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.RunAllQueriesRequest;
+  readonly responseType: typeof proto_dekart_pb.RunAllQueriesResponse;
+};
+
 type DekartGetEnv = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -211,6 +220,15 @@ type DekartTestConnection = {
   readonly responseType: typeof proto_dekart_pb.TestConnectionResponse;
 };
 
+type DekartSetDefaultConnection = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.SetDefaultConnectionRequest;
+  readonly responseType: typeof proto_dekart_pb.SetDefaultConnectionResponse;
+};
+
 type DekartCreateSubscription = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -253,6 +271,7 @@ export class Dekart {
   static readonly CreateQuery: DekartCreateQuery;
   static readonly RunQuery: DekartRunQuery;
   static readonly CancelQuery: DekartCancelQuery;
+  static readonly RunAllQueries: DekartRunAllQueries;
   static readonly GetEnv: DekartGetEnv;
   static readonly GetReportStream: DekartGetReportStream;
   static readonly GetReportListStream: DekartGetReportListStream;
@@ -263,6 +282,7 @@ export class Dekart {
   static readonly ArchiveConnection: DekartArchiveConnection;
   static readonly GetConnectionList: DekartGetConnectionList;
   static readonly TestConnection: DekartTestConnection;
+  static readonly SetDefaultConnection: DekartSetDefaultConnection;
   static readonly CreateSubscription: DekartCreateSubscription;
   static readonly GetSubscription: DekartGetSubscription;
   static readonly CancelSubscription: DekartCancelSubscription;
@@ -417,6 +437,15 @@ export class DekartClient {
     requestMessage: proto_dekart_pb.CancelQueryRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CancelQueryResponse|null) => void
   ): UnaryResponse;
+  runAllQueries(
+    requestMessage: proto_dekart_pb.RunAllQueriesRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.RunAllQueriesResponse|null) => void
+  ): UnaryResponse;
+  runAllQueries(
+    requestMessage: proto_dekart_pb.RunAllQueriesRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.RunAllQueriesResponse|null) => void
+  ): UnaryResponse;
   getEnv(
     requestMessage: proto_dekart_pb.GetEnvRequest,
     metadata: grpc.Metadata,
@@ -482,6 +511,15 @@ export class DekartClient {
   testConnection(
     requestMessage: proto_dekart_pb.TestConnectionRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.TestConnectionResponse|null) => void
+  ): UnaryResponse;
+  setDefaultConnection(
+    requestMessage: proto_dekart_pb.SetDefaultConnectionRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.SetDefaultConnectionResponse|null) => void
+  ): UnaryResponse;
+  setDefaultConnection(
+    requestMessage: proto_dekart_pb.SetDefaultConnectionRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.SetDefaultConnectionResponse|null) => void
   ): UnaryResponse;
   createSubscription(
     requestMessage: proto_dekart_pb.CreateSubscriptionRequest,

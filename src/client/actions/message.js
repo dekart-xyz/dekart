@@ -2,9 +2,9 @@ import message from 'antd/es/message'
 import PermanentError from '../PermanentError'
 import StreamError from '../StreamError'
 
-const style = { /* marginTop: 0 */ }
+const style = {}
 
-message.config({ top: 40 })
+message.config({ top: 100 })
 
 export function downloading (dataset) {
   return { type: downloading.name, dataset }
@@ -52,7 +52,7 @@ export function setError (err, transitive = true) {
 }
 
 export function setHttpError (status, message = '') {
-  return { type: setHttpError.name, status, message}
+  return { type: setHttpError.name, status, message }
 }
 
 export function setStreamError (code, msg) {

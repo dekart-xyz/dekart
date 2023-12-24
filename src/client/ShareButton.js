@@ -117,11 +117,12 @@ export default function ShareButton ({ reportId, discoverable, canWrite }) {
   return (
     <>
       <Button
-        type='primary'
         icon={<UsergroupAddOutlined />}
+        ghost
+        type='text'
+        title='Share and export'
         onClick={() => setModalOpen(true)}
-      >Share
-      </Button>
+      />
       <Modal
         title='Share report'
         visible={modalOpen}

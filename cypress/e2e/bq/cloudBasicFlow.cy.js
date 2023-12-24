@@ -10,12 +10,8 @@ describe('cloud basic flow', () => {
   })
 
   it('should make simple bigquery query and get ready status', () => {
-    // create new report
-    cy.get(`button:contains("${copy.create_report}")`).click()
-
     // create connection
-    cy.get('#dekart-connection-select').click()
-    cy.get('div.ant-select-item-option-content:contains("New")').click()
+    cy.get('button:contains("Create connection")').click()
     const randomConnectionName = `test-${Math.floor(Math.random() * 1000000)}`
     cy.get('div.ant-modal-title').should('contain', 'Edit Connection')
     cy.get('input#connectionName').clear()
@@ -25,6 +21,9 @@ describe('cloud basic flow', () => {
     cy.get('button:contains("Test Connection")').click()
     cy.get('button#saveConnection').should('be.enabled')
     cy.get('button#saveConnection').click()
+
+    // create new report
+    cy.get(`button:contains("${copy.create_report}")`).click()
 
     // run query
     cy.get('button:contains("Add data from...")').click()

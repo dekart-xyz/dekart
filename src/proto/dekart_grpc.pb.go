@@ -32,6 +32,7 @@ const (
 	Dekart_CreateQuery_FullMethodName             = "/Dekart/CreateQuery"
 	Dekart_RunQuery_FullMethodName                = "/Dekart/RunQuery"
 	Dekart_CancelQuery_FullMethodName             = "/Dekart/CancelQuery"
+	Dekart_RunAllQueries_FullMethodName           = "/Dekart/RunAllQueries"
 	Dekart_GetEnv_FullMethodName                  = "/Dekart/GetEnv"
 	Dekart_GetReportStream_FullMethodName         = "/Dekart/GetReportStream"
 	Dekart_GetReportListStream_FullMethodName     = "/Dekart/GetReportListStream"
@@ -42,6 +43,7 @@ const (
 	Dekart_ArchiveConnection_FullMethodName       = "/Dekart/ArchiveConnection"
 	Dekart_GetConnectionList_FullMethodName       = "/Dekart/GetConnectionList"
 	Dekart_TestConnection_FullMethodName          = "/Dekart/TestConnection"
+	Dekart_SetDefaultConnection_FullMethodName    = "/Dekart/SetDefaultConnection"
 	Dekart_CreateSubscription_FullMethodName      = "/Dekart/CreateSubscription"
 	Dekart_GetSubscription_FullMethodName         = "/Dekart/GetSubscription"
 	Dekart_CancelSubscription_FullMethodName      = "/Dekart/CancelSubscription"
@@ -68,6 +70,7 @@ type DekartClient interface {
 	CreateQuery(ctx context.Context, in *CreateQueryRequest, opts ...grpc.CallOption) (*CreateQueryResponse, error)
 	RunQuery(ctx context.Context, in *RunQueryRequest, opts ...grpc.CallOption) (*RunQueryResponse, error)
 	CancelQuery(ctx context.Context, in *CancelQueryRequest, opts ...grpc.CallOption) (*CancelQueryResponse, error)
+	RunAllQueries(ctx context.Context, in *RunAllQueriesRequest, opts ...grpc.CallOption) (*RunAllQueriesResponse, error)
 	GetEnv(ctx context.Context, in *GetEnvRequest, opts ...grpc.CallOption) (*GetEnvResponse, error)
 	// streams
 	GetReportStream(ctx context.Context, in *ReportStreamRequest, opts ...grpc.CallOption) (Dekart_GetReportStreamClient, error)
@@ -81,6 +84,7 @@ type DekartClient interface {
 	ArchiveConnection(ctx context.Context, in *ArchiveConnectionRequest, opts ...grpc.CallOption) (*ArchiveConnectionResponse, error)
 	GetConnectionList(ctx context.Context, in *GetConnectionListRequest, opts ...grpc.CallOption) (*GetConnectionListResponse, error)
 	TestConnection(ctx context.Context, in *TestConnectionRequest, opts ...grpc.CallOption) (*TestConnectionResponse, error)
+	SetDefaultConnection(ctx context.Context, in *SetDefaultConnectionRequest, opts ...grpc.CallOption) (*SetDefaultConnectionResponse, error)
 	//subscriptions
 	CreateSubscription(ctx context.Context, in *CreateSubscriptionRequest, opts ...grpc.CallOption) (*CreateSubscriptionResponse, error)
 	GetSubscription(ctx context.Context, in *GetSubscriptionRequest, opts ...grpc.CallOption) (*GetSubscriptionResponse, error)
@@ -206,6 +210,15 @@ func (c *dekartClient) RunQuery(ctx context.Context, in *RunQueryRequest, opts .
 func (c *dekartClient) CancelQuery(ctx context.Context, in *CancelQueryRequest, opts ...grpc.CallOption) (*CancelQueryResponse, error) {
 	out := new(CancelQueryResponse)
 	err := c.cc.Invoke(ctx, Dekart_CancelQuery_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) RunAllQueries(ctx context.Context, in *RunAllQueriesRequest, opts ...grpc.CallOption) (*RunAllQueriesResponse, error) {
+	out := new(RunAllQueriesResponse)
+	err := c.cc.Invoke(ctx, Dekart_RunAllQueries_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -371,6 +384,15 @@ func (c *dekartClient) TestConnection(ctx context.Context, in *TestConnectionReq
 	return out, nil
 }
 
+func (c *dekartClient) SetDefaultConnection(ctx context.Context, in *SetDefaultConnectionRequest, opts ...grpc.CallOption) (*SetDefaultConnectionResponse, error) {
+	out := new(SetDefaultConnectionResponse)
+	err := c.cc.Invoke(ctx, Dekart_SetDefaultConnection_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *dekartClient) CreateSubscription(ctx context.Context, in *CreateSubscriptionRequest, opts ...grpc.CallOption) (*CreateSubscriptionResponse, error) {
 	out := new(CreateSubscriptionResponse)
 	err := c.cc.Invoke(ctx, Dekart_CreateSubscription_FullMethodName, in, out, opts...)
@@ -419,6 +441,7 @@ type DekartServer interface {
 	CreateQuery(context.Context, *CreateQueryRequest) (*CreateQueryResponse, error)
 	RunQuery(context.Context, *RunQueryRequest) (*RunQueryResponse, error)
 	CancelQuery(context.Context, *CancelQueryRequest) (*CancelQueryResponse, error)
+	RunAllQueries(context.Context, *RunAllQueriesRequest) (*RunAllQueriesResponse, error)
 	GetEnv(context.Context, *GetEnvRequest) (*GetEnvResponse, error)
 	// streams
 	GetReportStream(*ReportStreamRequest, Dekart_GetReportStreamServer) error
@@ -432,6 +455,7 @@ type DekartServer interface {
 	ArchiveConnection(context.Context, *ArchiveConnectionRequest) (*ArchiveConnectionResponse, error)
 	GetConnectionList(context.Context, *GetConnectionListRequest) (*GetConnectionListResponse, error)
 	TestConnection(context.Context, *TestConnectionRequest) (*TestConnectionResponse, error)
+	SetDefaultConnection(context.Context, *SetDefaultConnectionRequest) (*SetDefaultConnectionResponse, error)
 	//subscriptions
 	CreateSubscription(context.Context, *CreateSubscriptionRequest) (*CreateSubscriptionResponse, error)
 	GetSubscription(context.Context, *GetSubscriptionRequest) (*GetSubscriptionResponse, error)
@@ -482,6 +506,9 @@ func (UnimplementedDekartServer) RunQuery(context.Context, *RunQueryRequest) (*R
 func (UnimplementedDekartServer) CancelQuery(context.Context, *CancelQueryRequest) (*CancelQueryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CancelQuery not implemented")
 }
+func (UnimplementedDekartServer) RunAllQueries(context.Context, *RunAllQueriesRequest) (*RunAllQueriesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RunAllQueries not implemented")
+}
 func (UnimplementedDekartServer) GetEnv(context.Context, *GetEnvRequest) (*GetEnvResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetEnv not implemented")
 }
@@ -511,6 +538,9 @@ func (UnimplementedDekartServer) GetConnectionList(context.Context, *GetConnecti
 }
 func (UnimplementedDekartServer) TestConnection(context.Context, *TestConnectionRequest) (*TestConnectionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method TestConnection not implemented")
+}
+func (UnimplementedDekartServer) SetDefaultConnection(context.Context, *SetDefaultConnectionRequest) (*SetDefaultConnectionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetDefaultConnection not implemented")
 }
 func (UnimplementedDekartServer) CreateSubscription(context.Context, *CreateSubscriptionRequest) (*CreateSubscriptionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateSubscription not implemented")
@@ -768,6 +798,24 @@ func _Dekart_CancelQuery_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Dekart_RunAllQueries_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RunAllQueriesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).RunAllQueries(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_RunAllQueries_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).RunAllQueries(ctx, req.(*RunAllQueriesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Dekart_GetEnv_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetEnvRequest)
 	if err := dec(in); err != nil {
@@ -957,6 +1005,24 @@ func _Dekart_TestConnection_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Dekart_SetDefaultConnection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetDefaultConnectionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).SetDefaultConnection(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_SetDefaultConnection_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).SetDefaultConnection(ctx, req.(*SetDefaultConnectionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Dekart_CreateSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateSubscriptionRequest)
 	if err := dec(in); err != nil {
@@ -1071,6 +1137,10 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Dekart_CancelQuery_Handler,
 		},
 		{
+			MethodName: "RunAllQueries",
+			Handler:    _Dekart_RunAllQueries_Handler,
+		},
+		{
 			MethodName: "GetEnv",
 			Handler:    _Dekart_GetEnv_Handler,
 		},
@@ -1097,6 +1167,10 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "TestConnection",
 			Handler:    _Dekart_TestConnection_Handler,
+		},
+		{
+			MethodName: "SetDefaultConnection",
+			Handler:    _Dekart_SetDefaultConnection_Handler,
 		},
 		{
 			MethodName: "CreateSubscription",
