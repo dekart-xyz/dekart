@@ -91,6 +91,7 @@ function Plans () {
           icon={<TeamOutlined />}
           name='team'
           price='$100/month'
+          selected={subscription.planType === PlanType.TYPE_TEAM}
           description='for teams up to 20 people'
                />}
         planType={PlanType.TYPE_TEAM}

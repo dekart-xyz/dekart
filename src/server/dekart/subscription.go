@@ -136,10 +136,15 @@ func (s Server) createCheckoutSession(ctx context.Context, req *proto.CreateSubs
 		log.Err(err).Send()
 		return nil, err
 	}
-	_, err = s.db.ExecContext(ctx, `insert into subscription_log (owner_email, customer_id) values ($1, $2, $3)`,
-		claims.Email,
-		customer.ID,
+	org, err := s.createOrganization(ctx, true)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	_, err = s.db.ExecContext(ctx, `insert into subscription_log (organization_id, plan_type, customer_id) values ($1, $2, $3)`,
+		org.Id,
 		req.PlanType,
+		customer.ID,
 	)
 	if err != nil {
 		log.Err(err).Send()
