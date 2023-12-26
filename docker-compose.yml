@@ -8,16 +8,6 @@ services:
       POSTGRES_PASSWORD: "${DEKART_POSTGRES_PASSWORD}"
       POSTGRES_USER: "${DEKART_POSTGRES_USER}"
       POSTGRES_DB: "${DEKART_POSTGRES_DB}"
-
-  timescale:
-    image: timescale/timescaledb-ha:pg14-latest
-    ports:
-      - "54321:5432"
-    environment:
-      POSTGRES_PASSWORD: "${DEKART_DATA_POSTGRES_PASSWORD}"
-      POSTGRES_USER: "${DEKART_DATA_POSTGRES_USER}"
-      POSTGRES_DB: "${DEKART_DATA_POSTGRES_LIKE_DB}"
-
   adminer:
       image: adminer
       restart: always
