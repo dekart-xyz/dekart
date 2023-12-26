@@ -61,7 +61,7 @@ func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connect
 
 	rows, err := j.postgresDB.QueryContext(j.GetCtx(), j.QueryText)
 	if err != nil {
-		j.Logger.Error().Err(err).Msg("Error executing query")
+		j.Logger.Error().Err(err).Str("queryText", j.QueryText).Msg("Error executing query")
 		j.CancelWithError(err)
 		return err
 	}
@@ -99,7 +99,8 @@ func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connect
 		err = rows.Scan(values...)
 		if err != nil {
 			j.Logger.Error().Err(err).Msg("Error scanning rows")
-			// continue //todo: maybe we should not continue here
+			j.Logger.Warn().Err(err).Msg("Error scanning row, continuing with next")
+			continue
 		}
 
 		for i := range columnTypes {
@@ -144,7 +145,7 @@ func (j *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 	csvWriter.Flush()
 	err := storageWriter.Close()
 	if err != nil {
-		// maybe we should not close when context is canceled in job.write()
+		// Ensure all resources are properly released even when context is canceled
 		if err == context.Canceled {
 			return
 		}
