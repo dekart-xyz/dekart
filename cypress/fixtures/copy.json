@@ -8,6 +8,8 @@
   "simple_snowflake_query": "SELECT ROUND(uniform(-90::float, 90::float, random()), 6) AS lat, ROUND(uniform(-180::float, 180::float, random()), 6) AS lon FROM TABLE(GENERATOR(ROWCOUNT => 100))",
   "simple_sql_query": "select geometry from`bigquery-public-data.geo_openstreetmap.planet_features_multipolygons` limit 10",
   "simple_sql_query_limit_100k": "select geometry from`bigquery-public-data.geo_openstreetmap.planet_features_multipolygons` limit 100000",
+  "simple_pg_query": "SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name LIMIT 1",
+  "simple_pg_query_long": "SELECT 1, pg_sleep(60)",
   "execute": "Execute",
   "ready": "Ready",
   "cancel": "Cancel",
