@@ -168,7 +168,7 @@ function ReportsHeader (
   const dispatch = useDispatch()
   const history = useHistory()
 
-  const subscription = useSelector(state => state.subscription)
+  const subscription = useSelector(state => state.organization.subscription)
   if (!subscription) {
     return null
   }

@@ -46,7 +46,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 				DISTINCT ON (email)
 				organization_id,
 				email,
-				active
+				user_status
  			FROM organization_log
 			-- current user organization
 			where organization_id in (
@@ -57,7 +57,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 				LIMIT 1
 			)
  			ORDER BY email, created_at DESC
-		) as o on r.author_email = o.email
+		) as o on r.author_email = o.email and o.user_status = 2
 		where id=$1 and not archived
 		limit 1`,
 		reportID,

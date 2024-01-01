@@ -127,7 +127,7 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 				DISTINCT ON (email)
 				organization_id,
 				email,
-				active
+				user_status
 			FROM organization_log
 			-- current user organization
 			where organization_id in (
@@ -138,7 +138,7 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 				LIMIT 1
 			)
 			ORDER BY email, created_at DESC
-		) as o on r.author_email = o.email
+		) as o on r.author_email = o.email and o.user_status = 2
 		where author_email=$1 or (discoverable=true and archived=false)
 		order by updated_at desc`,
 		claims.Email,
@@ -201,6 +201,13 @@ func (s Server) sendUserStreamResponse(ctx context.Context, srv proto.Dekart_Get
 		return status.Errorf(codes.Internal, err.Error())
 	}
 
+	// organization update
+	organizationUpdate, err := s.getLastOrganizationUpdate(ctx, sub.OrganizationId)
+	if err != nil {
+		log.Err(err).Send()
+		return status.Errorf(codes.Internal, err.Error())
+	}
+
 	res := proto.GetUserStreamResponse{
 		StreamOptions: &proto.StreamOptions{
 			Sequence: sequence,
@@ -209,6 +216,7 @@ func (s Server) sendUserStreamResponse(ctx context.Context, srv proto.Dekart_Get
 		Email:              claims.Email,
 		SubscriptionActive: sub.Active,
 		SubscriptionUpdate: sub.UpdatedAt,
+		OrganizationUpdate: organizationUpdate,
 	}
 	err = srv.Send(&res)
 	if err != nil {

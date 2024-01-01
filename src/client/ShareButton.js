@@ -14,7 +14,7 @@ import { PlanType } from '../proto/dekart_pb'
 
 function CopyLinkButton () {
   const dispatch = useDispatch()
-  const subscription = useSelector(state => state.subscription)
+  const subscription = useSelector(state => state.organization.subscription)
   if (!subscription) {
     return null
   }
@@ -32,7 +32,7 @@ function CopyLinkButton () {
 function ModalContent ({ reportId, discoverable, canWrite }) {
   const dispatch = useDispatch()
   const [discoverableSwitch, setDiscoverableSwitch] = useState(discoverable)
-  const subscription = useSelector(state => state.subscription)
+  const subscription = useSelector(state => state.organization.subscription)
 
   if (!subscription) {
     return null

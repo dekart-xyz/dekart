@@ -25,25 +25,27 @@ func (s Server) getSubscription(
 	var createdAt sql.NullTime
 	var customerID sql.NullString
 	var planType proto.PlanType
+	var organizationID string
 	var cancelled bool
 	err := s.db.QueryRowContext(ctx, `
 		SELECT
 			s.created_at,
 			s.customer_id,
 			s.plan_type,
-			s.cancelled
-			-- o.name AS organization_name,
-			-- l.email AS user_email
+			s.cancelled,
+			s.organization_id
 		FROM
 			subscription_log AS s
 		JOIN
-			(SELECT * FROM organization_log WHERE email = $1 ORDER BY created_at DESC LIMIT 1) AS l ON s.organization_id = l.organization_id
+			(
+				SELECT * FROM organization_log WHERE email = $1 ORDER BY created_at DESC LIMIT 1
+			) AS l ON s.organization_id = l.organization_id AND l.user_status = 2
 		JOIN
 			organizations AS o ON s.organization_id = o.id
 		ORDER BY
 			s.created_at DESC
 		LIMIT 1;
-	`, email).Scan(&createdAt, &customerID, &planType, &cancelled)
+	`, email).Scan(&createdAt, &customerID, &planType, &cancelled, &organizationID)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -80,9 +82,10 @@ func (s Server) getSubscription(
 		for _, subscription := range c.Subscriptions.Data {
 			if subscription.Status == "active" {
 				return &proto.Subscription{
-					Active:    true,
-					PlanType:  planType,
-					UpdatedAt: createdAt.Time.Unix(),
+					Active:         true,
+					PlanType:       planType,
+					UpdatedAt:      createdAt.Time.Unix(),
+					OrganizationId: organizationID,
 				}, nil
 			}
 		}
@@ -93,15 +96,21 @@ func (s Server) getSubscription(
 		}, nil
 	}
 	return &proto.Subscription{
-		Active:    !cancelled,
-		PlanType:  planType,
-		UpdatedAt: createdAt.Time.Unix(),
+		Active:         !cancelled,
+		PlanType:       planType,
+		UpdatedAt:      createdAt.Time.Unix(),
+		OrganizationId: organizationID,
 	}, nil
 }
 
 type ContextKey string
 
 const contextKey ContextKey = "subscription"
+
+type SubscriptionInfo struct {
+	Active         bool
+	OrganizationId string
+}
 
 func (s Server) SetSubscriptionContext(ctx context.Context) context.Context {
 	claims := user.GetClaims(ctx)
@@ -113,17 +122,29 @@ func (s Server) SetSubscriptionContext(ctx context.Context) context.Context {
 		log.Err(err).Send()
 		return ctx
 	}
-	ctx = context.WithValue(ctx, contextKey, sub.Active)
+	if sub == nil {
+		ctx = context.WithValue(ctx, contextKey, SubscriptionInfo{
+			Active: false,
+		})
+	} else {
+		ctx = context.WithValue(ctx, contextKey, SubscriptionInfo{
+			Active:         sub.Active,
+			OrganizationId: sub.OrganizationId,
+		})
+	}
 	return ctx
 }
 
-// func checkSubscription(ctx context.Context) bool {
-// 	active, ok := ctx.Value(contextKey).(bool)
-// 	if !ok {
-// 		return false
-// 	}
-// 	return active
-// }
+func checkSubscription(ctx context.Context) SubscriptionInfo {
+	sub, ok := ctx.Value(contextKey).(SubscriptionInfo)
+	if !ok {
+		log.Error().Msg("SubscriptionInfo not found in context")
+		return SubscriptionInfo{
+			Active: false,
+		}
+	}
+	return sub
+}
 
 func (s Server) createCheckoutSession(ctx context.Context, req *proto.CreateSubscriptionRequest) (*stripe.CheckoutSession, error) {
 	claims := user.GetClaims(ctx)
@@ -241,9 +262,9 @@ func (s Server) createOrganization(ctx context.Context, personal bool) (*proto.O
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	_, err = s.db.ExecContext(ctx, `
-		INSERT INTO organization_log (organization_id, email, active, admin)
+		INSERT INTO organization_log (organization_id, email, user_status, authored_by)
 		VALUES ($1, $2, $3, $4)
-	`, organizationID, claims.Email, true, true)
+	`, organizationID, claims.Email, proto.UserStatus_USER_STATUS_ACTIVE, claims.Email)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())

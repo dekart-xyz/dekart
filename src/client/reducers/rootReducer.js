@@ -16,7 +16,7 @@ import stream from './streamReducer'
 import token from './tokenReducer'
 import connection from './connectionReducer'
 import user from './userReducer'
-import subscription from './subscriptionReducer'
+import organization from './organizationReducer'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
   uiState: {
@@ -433,5 +433,5 @@ export default combineReducers({
   token,
   stream,
   user,
-  subscription
+  organization
 })

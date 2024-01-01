@@ -49,6 +49,53 @@ service Dekart {
     rpc CreateSubscription(CreateSubscriptionRequest) returns (CreateSubscriptionResponse) {}
     rpc GetSubscription(GetSubscriptionRequest) returns (GetSubscriptionResponse) {}
     rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse) {}
+
+    //organizations
+    rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {}
+    rpc AddUser(AddUserRequest) returns (AddUserResponse) {}
+    rpc RemoveUser(RemoveUserRequest) returns (RemoveUserResponse) {}
+    rpc ConfirmJoinOrganization(ConfirmJoinOrganizationRequest) returns (ConfirmJoinOrganizationResponse) {}
+}
+
+message ConfirmJoinOrganizationRequest {
+}
+
+message ConfirmJoinOrganizationResponse {
+}
+
+message RemoveUserRequest {
+    string email = 1;
+}
+
+message RemoveUserResponse {
+}
+
+message AddUserRequest {
+    string email = 1;
+}
+
+message AddUserResponse {
+}
+
+message ListUsersRequest {
+}
+
+message ListUsersResponse {
+    repeated User users = 1;
+}
+
+enum UserStatus {
+    USER_STATUS_UNSPECIFIED = 0;
+    USER_STATUS_PENDING = 1;
+    USER_STATUS_ACTIVE = 2;
+    USER_STATUS_REMOVED = 3;
+}
+
+message User {
+    string email = 1;
+    bool active = 2;
+    int64 updated_at = 3;
+    UserStatus status = 4;
 }
 
 message SetDefaultConnectionRequest {
@@ -84,6 +131,7 @@ message Subscription {
     PlanType plan_type = 2;
     bool active = 3;
     int64 updated_at = 4;
+    string organization_id = 5;
 }
 
 message GetSubscriptionResponse {
@@ -123,6 +171,7 @@ message GetUserStreamResponse {
     // cloud
     bool subscription_active = 103;
     int64 subscription_update = 104;
+    int64 organization_update = 105;
 }
 
 message TestConnectionRequest {

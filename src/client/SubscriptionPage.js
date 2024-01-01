@@ -7,7 +7,7 @@ import Title from 'antd/es/typography/Title'
 import Text from 'antd/es/typography/Text'
 import Button from 'antd/es/button'
 import { useState } from 'react'
-import { cancelSubscription, createSubscription } from './actions/subscription'
+import { cancelSubscription, createSubscription } from './actions/organization'
 import { useDispatch, useSelector } from 'react-redux'
 import { PlanType } from '../proto/dekart_pb'
 import Dropdown from 'antd/es/dropdown'
@@ -32,7 +32,7 @@ function PlanTitle ({ name, price, icon, color, description, selected }) {
 function Plan ({ title, children, action, planType }) {
   const [hover, setHover] = useState(false)
   const dispatch = useDispatch()
-  const subscription = useSelector(state => state.subscription)
+  const subscription = useSelector(state => state.organization.subscription)
   return (
     <Card
       hoverable
@@ -64,7 +64,7 @@ function Plan ({ title, children, action, planType }) {
 }
 
 function Plans () {
-  const subscription = useSelector(state => state.subscription)
+  const subscription = useSelector(state => state.organization.subscription)
   if (!subscription) {
     return null
   }
@@ -123,7 +123,9 @@ function Plans () {
 
 export default function SubscriptionPage () {
   const user = useSelector(state => state.user)
-  const subscription = useSelector(state => state.subscription)
+  const subscription = useSelector(state => state.organization.subscription)
+  // const state = useSelector(state => state)
+  // console.log(state)
   const dispatch = useDispatch()
   const menuProps = {
     items: [{

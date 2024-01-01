@@ -19,6 +19,7 @@ import { setRedirectState } from './actions/redirectState'
 import { subscribeUserStream, unsubscribeUserStream } from './actions/user'
 import { authRedirect } from './lib/api'
 import SubscriptionPage from './SubscriptionPage'
+import TeamPage from './TeamPage'
 
 // RedirectState reads states passed in the URL from the server
 function RedirectState () {
@@ -68,6 +69,7 @@ function AppRedirect () {
   }
 
   if (user && !user.subscriptionActive) {
+    console.log('redirecting to subscription', user)
     return <Redirect to='/subscription' push />
   }
 
@@ -137,6 +139,9 @@ export default function App () {
         </Route>
         <Route path='/reports/:id'>
           <ReportPage />
+        </Route>
+        <Route path='/team'>
+          <TeamPage />
         </Route>
         <Route path='/subscription'>
           <SubscriptionPage />

@@ -9,9 +9,9 @@ create table IF NOT EXISTS organizations (
 create table IF NOT EXISTS organization_log (
     organization_id uuid not null,
     email varchar(255) not null,
-    active boolean not null,
-    admin boolean not null,
+    user_status int not null default 0,
     created_at timestamptz DEFAULT CURRENT_TIMESTAMP,
+    authored_by varchar(255) not null,
     FOREIGN KEY (organization_id) REFERENCES organizations(id)
 );
 

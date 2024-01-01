@@ -47,6 +47,10 @@ const (
 	Dekart_CreateSubscription_FullMethodName      = "/Dekart/CreateSubscription"
 	Dekart_GetSubscription_FullMethodName         = "/Dekart/GetSubscription"
 	Dekart_CancelSubscription_FullMethodName      = "/Dekart/CancelSubscription"
+	Dekart_ListUsers_FullMethodName               = "/Dekart/ListUsers"
+	Dekart_AddUser_FullMethodName                 = "/Dekart/AddUser"
+	Dekart_RemoveUser_FullMethodName              = "/Dekart/RemoveUser"
+	Dekart_ConfirmJoinOrganization_FullMethodName = "/Dekart/ConfirmJoinOrganization"
 )
 
 // DekartClient is the client API for Dekart service.
@@ -89,6 +93,11 @@ type DekartClient interface {
 	CreateSubscription(ctx context.Context, in *CreateSubscriptionRequest, opts ...grpc.CallOption) (*CreateSubscriptionResponse, error)
 	GetSubscription(ctx context.Context, in *GetSubscriptionRequest, opts ...grpc.CallOption) (*GetSubscriptionResponse, error)
 	CancelSubscription(ctx context.Context, in *CancelSubscriptionRequest, opts ...grpc.CallOption) (*CancelSubscriptionResponse, error)
+	//organizations
+	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
+	AddUser(ctx context.Context, in *AddUserRequest, opts ...grpc.CallOption) (*AddUserResponse, error)
+	RemoveUser(ctx context.Context, in *RemoveUserRequest, opts ...grpc.CallOption) (*RemoveUserResponse, error)
+	ConfirmJoinOrganization(ctx context.Context, in *ConfirmJoinOrganizationRequest, opts ...grpc.CallOption) (*ConfirmJoinOrganizationResponse, error)
 }
 
 type dekartClient struct {
@@ -420,6 +429,42 @@ func (c *dekartClient) CancelSubscription(ctx context.Context, in *CancelSubscri
 	return out, nil
 }
 
+func (c *dekartClient) ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error) {
+	out := new(ListUsersResponse)
+	err := c.cc.Invoke(ctx, Dekart_ListUsers_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) AddUser(ctx context.Context, in *AddUserRequest, opts ...grpc.CallOption) (*AddUserResponse, error) {
+	out := new(AddUserResponse)
+	err := c.cc.Invoke(ctx, Dekart_AddUser_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) RemoveUser(ctx context.Context, in *RemoveUserRequest, opts ...grpc.CallOption) (*RemoveUserResponse, error) {
+	out := new(RemoveUserResponse)
+	err := c.cc.Invoke(ctx, Dekart_RemoveUser_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) ConfirmJoinOrganization(ctx context.Context, in *ConfirmJoinOrganizationRequest, opts ...grpc.CallOption) (*ConfirmJoinOrganizationResponse, error) {
+	out := new(ConfirmJoinOrganizationResponse)
+	err := c.cc.Invoke(ctx, Dekart_ConfirmJoinOrganization_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DekartServer is the server API for Dekart service.
 // All implementations must embed UnimplementedDekartServer
 // for forward compatibility
@@ -460,6 +505,11 @@ type DekartServer interface {
 	CreateSubscription(context.Context, *CreateSubscriptionRequest) (*CreateSubscriptionResponse, error)
 	GetSubscription(context.Context, *GetSubscriptionRequest) (*GetSubscriptionResponse, error)
 	CancelSubscription(context.Context, *CancelSubscriptionRequest) (*CancelSubscriptionResponse, error)
+	//organizations
+	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
+	AddUser(context.Context, *AddUserRequest) (*AddUserResponse, error)
+	RemoveUser(context.Context, *RemoveUserRequest) (*RemoveUserResponse, error)
+	ConfirmJoinOrganization(context.Context, *ConfirmJoinOrganizationRequest) (*ConfirmJoinOrganizationResponse, error)
 	mustEmbedUnimplementedDekartServer()
 }
 
@@ -550,6 +600,18 @@ func (UnimplementedDekartServer) GetSubscription(context.Context, *GetSubscripti
 }
 func (UnimplementedDekartServer) CancelSubscription(context.Context, *CancelSubscriptionRequest) (*CancelSubscriptionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CancelSubscription not implemented")
+}
+func (UnimplementedDekartServer) ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListUsers not implemented")
+}
+func (UnimplementedDekartServer) AddUser(context.Context, *AddUserRequest) (*AddUserResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddUser not implemented")
+}
+func (UnimplementedDekartServer) RemoveUser(context.Context, *RemoveUserRequest) (*RemoveUserResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveUser not implemented")
+}
+func (UnimplementedDekartServer) ConfirmJoinOrganization(context.Context, *ConfirmJoinOrganizationRequest) (*ConfirmJoinOrganizationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ConfirmJoinOrganization not implemented")
 }
 func (UnimplementedDekartServer) mustEmbedUnimplementedDekartServer() {}
 
@@ -1077,6 +1139,78 @@ func _Dekart_CancelSubscription_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Dekart_ListUsers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListUsersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).ListUsers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_ListUsers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).ListUsers(ctx, req.(*ListUsersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_AddUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).AddUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_AddUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).AddUser(ctx, req.(*AddUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_RemoveUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).RemoveUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_RemoveUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).RemoveUser(ctx, req.(*RemoveUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_ConfirmJoinOrganization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConfirmJoinOrganizationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).ConfirmJoinOrganization(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_ConfirmJoinOrganization_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).ConfirmJoinOrganization(ctx, req.(*ConfirmJoinOrganizationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Dekart_ServiceDesc is the grpc.ServiceDesc for Dekart service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1183,6 +1317,22 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CancelSubscription",
 			Handler:    _Dekart_CancelSubscription_Handler,
+		},
+		{
+			MethodName: "ListUsers",
+			Handler:    _Dekart_ListUsers_Handler,
+		},
+		{
+			MethodName: "AddUser",
+			Handler:    _Dekart_AddUser_Handler,
+		},
+		{
+			MethodName: "RemoveUser",
+			Handler:    _Dekart_RemoveUser_Handler,
+		},
+		{
+			MethodName: "ConfirmJoinOrganization",
+			Handler:    _Dekart_ConfirmJoinOrganization_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
