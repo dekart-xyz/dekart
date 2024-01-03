@@ -1,4 +1,4 @@
-.subscriptionPage {
+.organizationPage {
     width: 100%;
     height: 100%;
     position: absolute;
@@ -47,9 +47,41 @@
     color: #52C41A;
 }
 
+.body {
+    padding: 20px;
+    display: flex;
+    flex: 1;
+    overflow: scroll;
+    align-items: center;
+    flex-direction: column;
+    padding-top: 30px;
+}
+
 .bottomPanel {
     display: flex;
     flex-direction: row;
     justify-content: center;
     margin-top: 30px;
+}
+
+.inviteUsers {
+    margin-bottom: 20px;
+    padding: 10px;
+}
+
+.inviteUsersInput {
+    width: calc(100% - 100px)!important;
+}
+
+.inviteUsersButton {
+    width: 100px;
+}
+
+.teamTab {
+    width: 600px;
+    /* display: flex; */
+    flex: 1;
+    overflow: scroll;
+    align-items: center;
+    flex-direction: column;
 }

@@ -20,6 +20,7 @@ import { subscribeUserStream, unsubscribeUserStream } from './actions/user'
 import { authRedirect } from './lib/api'
 import SubscriptionPage from './SubscriptionPage'
 import TeamPage from './TeamPage'
+import OrganizationPage from './OrganizationPage'
 
 // RedirectState reads states passed in the URL from the server
 function RedirectState () {
@@ -69,8 +70,7 @@ function AppRedirect () {
   }
 
   if (user && !user.subscriptionActive) {
-    console.log('redirecting to subscription', user)
-    return <Redirect to='/subscription' push />
+    return <Redirect to='/organization/plan' push />
   }
 
   if (httpError.status && location.pathname !== `/${httpError.status}`) {
@@ -143,9 +143,18 @@ export default function App () {
         <Route path='/team'>
           <TeamPage />
         </Route>
-        <Route path='/subscription'>
-          <SubscriptionPage />
+        <Route path='/organization/team'>
+          <OrganizationPage tab='team' />
         </Route>
+        <Route path='/organization/plan'>
+          <OrganizationPage tab='plan' />
+        </Route>
+        <Route path='/organization/invites'>
+          <OrganizationPage tab='invites' />
+        </Route>
+        {/* <Route path='/subscription'>
+          <SubscriptionPage />
+        </Route> */}
         <Route path='/400'>
           <Result icon={<WarningOutlined />} title='400' subTitle='Bad Request' />
         </Route>

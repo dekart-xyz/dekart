@@ -1,17 +1,93 @@
-import Card from 'antd/es/card'
+import Tabs from 'antd/es/tabs'
 import { Header } from './Header'
-import styles from './SubscriptionPage.module.css'
+import styles from './OrganizationPage.module.css'
+import Card from 'antd/es/card'
 import Tag from 'antd/es/tag'
 import { GithubOutlined, HomeOutlined, TeamOutlined, CheckCircleOutlined, HighlightOutlined, LockFilled, CheckCircleFilled, DownOutlined } from '@ant-design/icons'
 import Title from 'antd/es/typography/Title'
 import Text from 'antd/es/typography/Text'
 import Button from 'antd/es/button'
 import { useState } from 'react'
-import { cancelSubscription, createSubscription } from './actions/organization'
+import { cancelSubscription, createSubscription, addUser, removeUser } from './actions/organization'
 import { useDispatch, useSelector } from 'react-redux'
 import { PlanType } from '../proto/dekart_pb'
 import Dropdown from 'antd/es/dropdown'
 import Modal from 'antd/es/modal/Modal'
+import { useHistory } from 'react-router-dom/cjs/react-router-dom'
+import Table from 'antd/es/table'
+import Input from 'antd/es/input'
+import Radio from 'antd/es/radio'
+
+const emailRegex = /^[a-zA-Z0-9._%+\-@]*$/
+
+function TeamTab () {
+  const users = useSelector(state => state.organization.users)
+  const user = useSelector(state => state.user)
+  const dispatch = useDispatch()
+  const [email, setEmail] = useState('')
+  if (!users) {
+    return null
+  }
+  return (
+    <div className={styles.teamTab}>
+      <div className={styles.inviteUsers}>
+        <Input.Group compact>
+          <Input
+            className={styles.inviteUsersInput}
+            placeholder='Email' value={email} onChange={(e) => {
+              const value = e.target.value
+              console.log(value, emailRegex.test(value))
+              if (emailRegex.test(value)) {
+                setEmail(value)
+              }
+            }}
+          />
+          <Button
+            className={styles.inviteUsersButton} type='primary' onClick={() => {
+              if (email) {
+                dispatch(addUser(email))
+                setEmail('')
+              }
+            }}
+          >Invite user
+          </Button>
+        </Input.Group>
+      </div>
+      <div className={styles.userTable}>
+        <Table
+          showHeader={false}
+          pagination={false}
+          dataSource={users}
+          rowKey='email'
+          columns={[
+            {
+              title: 'Email',
+              dataIndex: 'email',
+              key: 'email'
+            },
+            {
+              title: 'Status',
+              dataIndex: 'status',
+              key: 'status',
+              render: (status) => <Tag>{['Unknown', 'Pending', 'Active', 'Removed'][status]}</Tag>
+            },
+            {
+              title: 'Active',
+              dataIndex: 'active',
+              render: (a, u) => <Button
+                disabled={u.email === user.email}
+                type='text' onClick={() => {
+                  dispatch(removeUser(u.email))
+                }}
+                                >Remove
+                                </Button>
+            }
+          ]}
+        />
+      </div>
+    </div>
+  )
+}
 
 function PlanTitle ({ name, price, icon, color, description, selected }) {
   return (
@@ -107,13 +183,12 @@ function Plans () {
           icon={<GithubOutlined />}
           name='community'
           price='self-hosted'
-          // color='geekblue'
           description='estimated cost ~$65/month'
                />}
         action={<>Go to documentation</>}
       >
         <p><Text><HighlightOutlined /> Requires Google Cloud access</Text></p>
-        <p><Text><HighlightOutlined /> Requires deployment on premice</Text></p>
+        <p><Text><HighlightOutlined /> Requires deployment on premise</Text></p>
         <p><Text><HighlightOutlined /> Requires configuration</Text></p>
         <p><Text><HighlightOutlined /> Requires Google Cloud Storage</Text></p>
       </Plan>
@@ -121,12 +196,15 @@ function Plans () {
   )
 }
 
-export default function SubscriptionPage () {
+function SubscriptionTab () {
   const user = useSelector(state => state.user)
   const subscription = useSelector(state => state.organization.subscription)
   // const state = useSelector(state => state)
   // console.log(state)
   const dispatch = useDispatch()
+  if (!user) {
+    return null
+  }
   const menuProps = {
     items: [{
       label: 'Cancel subscription',
@@ -143,37 +221,70 @@ export default function SubscriptionPage () {
     }]
   }
   return (
-    <div className={styles.subscriptionPage}>
-      <Header />
-      {
-        user
-          ? (
-            <div className={styles.body}>
-              <div className={styles.title}>
-                <Title>
-                  {user.subscriptionActive ? <span className={styles.titleCheck}><CheckCircleFilled /></span> : <span className={styles.titleLock}><LockFilled /></span>}
-                  <> Subscription</>
-                </Title>
-              </div>
-              <Plans />
-              {subscription && subscription.active
-                ? (
-                  <div className={styles.bottomPanel}>
-                    <div className={styles.manageSubscription}>
-                      <Dropdown menu={menuProps}>
-                        <Button>
-                          Manage subscription
-                          <DownOutlined />
-                        </Button>
-                      </Dropdown>
-                    </div>
-                  </div>
-                  )
-                : null}
+    <div className={styles.subscriptionTab}>
+      {/* <div className={styles.title}>
+        <Title>
+          {user.subscriptionActive ? <span className={styles.titleCheck}><CheckCircleFilled /></span> : <span className={styles.titleLock}><LockFilled /></span>}
+          <> Subscription</>
+        </Title>
+      </div> */}
+      <Plans />
+      {subscription && subscription.active
+        ? (
+          <div className={styles.bottomPanel}>
+            <div className={styles.manageSubscription}>
+              <Dropdown menu={menuProps}>
+                <Button>
+                  Manage subscription
+                  <DownOutlined />
+                </Button>
+              </Dropdown>
             </div>
-            )
-          : null
-      }
+          </div>
+          )
+        : null}
+    </div>
+  )
+}
+
+export default function OrganizationPage ({ tab }) {
+  const subscription = useSelector(state => state.organization.subscription)
+  const teamPlan = subscription?.planType === PlanType.TYPE_TEAM
+  const user = useSelector(state => state.user)
+  const history = useHistory()
+  return (
+    <div className={styles.organizationPage}>
+      <Header />
+      <div className={styles.body}>
+        {/* <Radio.Group>
+          <Radio.Button value='my'>Plan</Radio.Button>
+          <Radio.Button value='discoverable'>Team</Radio.Button>
+        </Radio.Group> */}
+
+        {/* <div className={styles.title}><Title level={3}>Manage organization</Title></div> */}
+        {
+          user
+            ? (
+              <Tabs
+                activeKey={tab} centered onChange={(activeKey) => {
+                  history.push('/organization/' + activeKey)
+                }}
+              >
+                <Tabs.TabPane tab='Plan' key='plan'>
+                  <SubscriptionTab />
+                </Tabs.TabPane>
+                <Tabs.TabPane tab='Members' key='team' disabled={!teamPlan}>
+                  <TeamTab />
+                </Tabs.TabPane>
+                {/* <Tabs.TabPane tab='Invites' key='invites'>
+            Content of Tab Pane 3
+          </Tabs.TabPane> */}
+              </Tabs>
+              )
+            : null
+        }
+
+      </div>
     </div>
   )
 }
