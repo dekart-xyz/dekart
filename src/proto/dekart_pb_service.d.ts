@@ -229,6 +229,24 @@ type DekartSetDefaultConnection = {
   readonly responseType: typeof proto_dekart_pb.SetDefaultConnectionResponse;
 };
 
+type DekartGetInvites = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.GetInvitesRequest;
+  readonly responseType: typeof proto_dekart_pb.GetInvitesResponse;
+};
+
+type DekartRespondToInvite = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.RespondToInviteRequest;
+  readonly responseType: typeof proto_dekart_pb.RespondToInviteResponse;
+};
+
 type DekartCreateSubscription = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -283,15 +301,6 @@ type DekartRemoveUser = {
   readonly responseType: typeof proto_dekart_pb.RemoveUserResponse;
 };
 
-type DekartConfirmJoinOrganization = {
-  readonly methodName: string;
-  readonly service: typeof Dekart;
-  readonly requestStream: false;
-  readonly responseStream: false;
-  readonly requestType: typeof proto_dekart_pb.ConfirmJoinOrganizationRequest;
-  readonly responseType: typeof proto_dekart_pb.ConfirmJoinOrganizationResponse;
-};
-
 export class Dekart {
   static readonly serviceName: string;
   static readonly CreateReport: DekartCreateReport;
@@ -319,13 +328,14 @@ export class Dekart {
   static readonly GetConnectionList: DekartGetConnectionList;
   static readonly TestConnection: DekartTestConnection;
   static readonly SetDefaultConnection: DekartSetDefaultConnection;
+  static readonly GetInvites: DekartGetInvites;
+  static readonly RespondToInvite: DekartRespondToInvite;
   static readonly CreateSubscription: DekartCreateSubscription;
   static readonly GetSubscription: DekartGetSubscription;
   static readonly CancelSubscription: DekartCancelSubscription;
   static readonly ListUsers: DekartListUsers;
   static readonly AddUser: DekartAddUser;
   static readonly RemoveUser: DekartRemoveUser;
-  static readonly ConfirmJoinOrganization: DekartConfirmJoinOrganization;
 }
 
 export type ServiceError = { message: string, code: number; metadata: grpc.Metadata }
@@ -561,6 +571,24 @@ export class DekartClient {
     requestMessage: proto_dekart_pb.SetDefaultConnectionRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.SetDefaultConnectionResponse|null) => void
   ): UnaryResponse;
+  getInvites(
+    requestMessage: proto_dekart_pb.GetInvitesRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetInvitesResponse|null) => void
+  ): UnaryResponse;
+  getInvites(
+    requestMessage: proto_dekart_pb.GetInvitesRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetInvitesResponse|null) => void
+  ): UnaryResponse;
+  respondToInvite(
+    requestMessage: proto_dekart_pb.RespondToInviteRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.RespondToInviteResponse|null) => void
+  ): UnaryResponse;
+  respondToInvite(
+    requestMessage: proto_dekart_pb.RespondToInviteRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.RespondToInviteResponse|null) => void
+  ): UnaryResponse;
   createSubscription(
     requestMessage: proto_dekart_pb.CreateSubscriptionRequest,
     metadata: grpc.Metadata,
@@ -614,15 +642,6 @@ export class DekartClient {
   removeUser(
     requestMessage: proto_dekart_pb.RemoveUserRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.RemoveUserResponse|null) => void
-  ): UnaryResponse;
-  confirmJoinOrganization(
-    requestMessage: proto_dekart_pb.ConfirmJoinOrganizationRequest,
-    metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.ConfirmJoinOrganizationResponse|null) => void
-  ): UnaryResponse;
-  confirmJoinOrganization(
-    requestMessage: proto_dekart_pb.ConfirmJoinOrganizationRequest,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.ConfirmJoinOrganizationResponse|null) => void
   ): UnaryResponse;
 }
 

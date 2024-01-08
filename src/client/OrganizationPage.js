@@ -3,12 +3,12 @@ import { Header } from './Header'
 import styles from './OrganizationPage.module.css'
 import Card from 'antd/es/card'
 import Tag from 'antd/es/tag'
-import { GithubOutlined, HomeOutlined, TeamOutlined, CheckCircleOutlined, HighlightOutlined, LockFilled, CheckCircleFilled, DownOutlined } from '@ant-design/icons'
+import { GithubOutlined, HomeOutlined, TeamOutlined, CheckCircleOutlined, HighlightOutlined, UsergroupAddOutlined, InboxOutlined, CheckCircleFilled, DownOutlined } from '@ant-design/icons'
 import Title from 'antd/es/typography/Title'
 import Text from 'antd/es/typography/Text'
 import Button from 'antd/es/button'
-import { useState } from 'react'
-import { cancelSubscription, createSubscription, addUser, removeUser } from './actions/organization'
+import { useCallback, useState } from 'react'
+import { cancelSubscription, createSubscription, addUser, removeUser, respondToInvite } from './actions/organization'
 import { useDispatch, useSelector } from 'react-redux'
 import { PlanType } from '../proto/dekart_pb'
 import Dropdown from 'antd/es/dropdown'
@@ -16,15 +16,20 @@ import Modal from 'antd/es/modal/Modal'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 import Table from 'antd/es/table'
 import Input from 'antd/es/input'
-import Radio from 'antd/es/radio'
-
-const emailRegex = /^[a-zA-Z0-9._%+\-@]*$/
+import Onboarding from './Onboarding'
+import Badge from 'antd/es/badge'
 
 function TeamTab () {
   const users = useSelector(state => state.organization.users)
   const user = useSelector(state => state.user)
   const dispatch = useDispatch()
   const [email, setEmail] = useState('')
+  const addUserCb = useCallback(() => {
+    if (email) {
+      dispatch(addUser(email))
+      setEmail('')
+    }
+  }, [dispatch, email])
   if (!users) {
     return null
   }
@@ -34,21 +39,16 @@ function TeamTab () {
         <Input.Group compact>
           <Input
             className={styles.inviteUsersInput}
-            placeholder='Email' value={email} onChange={(e) => {
-              const value = e.target.value
-              console.log(value, emailRegex.test(value))
-              if (emailRegex.test(value)) {
-                setEmail(value)
-              }
-            }}
+            name='email'
+            type='email'
+            autoComplete='email'
+            aria-label='Email'
+            pattern='^[a-zA-Z0-9._%+\-@]*$'
+            placeholder='Email' value={email} onChange={(e) => setEmail(e.target.value)}
+            onPressEnter={addUserCb}
           />
           <Button
-            className={styles.inviteUsersButton} type='primary' onClick={() => {
-              if (email) {
-                dispatch(addUser(email))
-                setEmail('')
-              }
-            }}
+            className={styles.inviteUsersButton} type='primary' onClick={addUserCb}
           >Invite user
           </Button>
         </Input.Group>
@@ -57,13 +57,15 @@ function TeamTab () {
         <Table
           showHeader={false}
           pagination={false}
-          dataSource={users}
+          dataSource={users.filter(u => u.status !== 3)}
+          rowClassName={styles.userListRow}
           rowKey='email'
           columns={[
             {
               title: 'Email',
               dataIndex: 'email',
-              key: 'email'
+              key: 'email',
+              className: styles.emailColumn
             },
             {
               title: 'Status',
@@ -74,8 +76,11 @@ function TeamTab () {
             {
               title: 'Active',
               dataIndex: 'active',
+              className: styles.removeButtonColumn,
               render: (a, u) => <Button
                 disabled={u.email === user.email}
+                title={u.email === user.email ? 'You cannot remove yourself' : undefined}
+                className={styles.removeButton}
                 type='text' onClick={() => {
                   dispatch(removeUser(u.email))
                 }}
@@ -199,8 +204,6 @@ function Plans () {
 function SubscriptionTab () {
   const user = useSelector(state => state.user)
   const subscription = useSelector(state => state.organization.subscription)
-  // const state = useSelector(state => state)
-  // console.log(state)
   const dispatch = useDispatch()
   if (!user) {
     return null
@@ -247,10 +250,72 @@ function SubscriptionTab () {
   )
 }
 
+function InvitesTab () {
+  const invites = useSelector(state => state.organization.invites)
+  const dispatch = useDispatch()
+  return (
+    <div className={styles.invitesTab}>
+      {invites.length === 0
+        ? (
+          <Onboarding
+            icon={<InboxOutlined />}
+            title='Users of existing team can invite you to join'
+            steps={
+              <ol>
+                <li>User of existing team can invite by adding your email in "Members" tab</li>
+                <li>Once you email added you can accept it here</li>
+              </ol>
+            }
+          />
+          )
+        : (
+          <div className={styles.inviteList}>
+            <Table
+              dataSource={invites}
+              pagination={false}
+              showHeader={false}
+              columns={[
+                {
+                  key: 'invite',
+                  className: styles.organizationNameColumn,
+                  render: (invite) => (
+                    <>
+                      <div className={styles.organizationName}>{invite.organization.name}</div>
+                      <div className={styles.inviterEmail}>invited by {invite.inviterEmail}</div>
+                    </>)
+                },
+                {
+                  title: 'Actions',
+                  key: 'actions',
+                  render: (invite) => (
+                    <>
+                      <Button
+                        ghost
+                        type='primary'
+                        className={styles.acceptButton} onClick={() => dispatch(respondToInvite(invite.organization.id, true))}
+                      >Accept
+                      </Button>
+                      <Button
+                        type='danger'
+                        ghost onClick={() => dispatch(respondToInvite(invite.organization.id, false))}
+                      >Decline
+                      </Button>
+                    </>)
+                }
+              ]}
+            />
+
+          </div>)}
+
+    </div>
+  )
+}
+
 export default function OrganizationPage ({ tab }) {
   const subscription = useSelector(state => state.organization.subscription)
   const teamPlan = subscription?.planType === PlanType.TYPE_TEAM
   const user = useSelector(state => state.user)
+  const invites = useSelector(state => state.organization.invites)
   const history = useHistory()
   return (
     <div className={styles.organizationPage}>
@@ -276,9 +341,9 @@ export default function OrganizationPage ({ tab }) {
                 <Tabs.TabPane tab='Members' key='team' disabled={!teamPlan}>
                   <TeamTab />
                 </Tabs.TabPane>
-                {/* <Tabs.TabPane tab='Invites' key='invites'>
-            Content of Tab Pane 3
-          </Tabs.TabPane> */}
+                <Tabs.TabPane tab={<><span className={styles.invitesTabName}>Invites</span><Badge count={invites.length} /></>} key='invites'>
+                  <InvitesTab />
+                </Tabs.TabPane>
               </Tabs>
               )
             : null

@@ -70,6 +70,7 @@ function AppRedirect () {
   }
 
   if (user && !user.subscriptionActive) {
+    //! (/^\/organization/.test(location.pathname))
     return <Redirect to='/organization/plan' push />
   }
 

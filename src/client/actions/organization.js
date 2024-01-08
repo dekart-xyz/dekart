@@ -1,4 +1,4 @@
-import { AddUserRequest, CancelSubscriptionRequest, CreateSubscriptionRequest, ListUsersRequest, RemoveUserRequest } from '../../proto/dekart_pb'
+import { AddUserRequest, CancelSubscriptionRequest, CreateSubscriptionRequest, GetInvitesRequest, ListUsersRequest, RemoveUserRequest, RespondToInviteRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { success } from './message'
@@ -15,6 +15,36 @@ export function createSubscription (planType) {
       } else {
         success('Subscription created')
       }
+    }))
+  }
+}
+
+export function respondToInvite (organizationId, accept) {
+  return (dispatch) => {
+    dispatch({ type: respondToInvite.name })
+    const request = new RespondToInviteRequest()
+    request.setOrganizationId(organizationId)
+    request.setAccept(accept)
+    dispatch(grpcCall(Dekart.RespondToInvite, request, () => {
+      success('Invite accepted')
+    }))
+  }
+}
+
+export function invitesUpdate (invitesList) {
+  return {
+    type: invitesUpdate.name,
+    invitesList
+  }
+}
+
+export function getInvites () {
+  return (dispatch) => {
+    dispatch({ type: getInvites.name })
+    const request = new GetInvitesRequest()
+    dispatch(grpcCall(Dekart.GetInvites, request, (response) => {
+      console.log(response)
+      dispatch(invitesUpdate(response.invitesList))
     }))
   }
 }

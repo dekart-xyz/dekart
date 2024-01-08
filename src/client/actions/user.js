@@ -2,7 +2,7 @@ import { GetUserStreamRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { getConnectionsList } from './connection'
 import { grpcStream, grpcStreamCancel } from './grpc'
-import { getSubscription, listUsers } from './organization'
+import { getInvites, getSubscription, listUsers } from './organization'
 
 export function userStreamUpdate (userStream) {
   return {
@@ -18,7 +18,8 @@ export function subscribeUserStream () {
     const prevRes = {
       connectionUpdate: 0,
       subscriptionUpdate: -1,
-      organizationUpdate: -1
+      organizationUpdate: -1,
+      organizationInviteUpdate: 0
     }
     dispatch(grpcStream(Dekart.GetUserStream, request, (message, err) => {
       if (message) {
@@ -34,6 +35,10 @@ export function subscribeUserStream () {
         if (prevRes.organizationUpdate !== message.organizationUpdate) {
           prevRes.organizationUpdate = message.organizationUpdate
           dispatch(listUsers())
+        }
+        if (prevRes.organizationInviteUpdate !== message.organizationInviteUpdate) {
+          prevRes.organizationInviteUpdate = message.organizationInviteUpdate
+          dispatch(getInvites())
         }
       }
       return err

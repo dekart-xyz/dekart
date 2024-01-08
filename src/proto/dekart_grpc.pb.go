@@ -44,13 +44,14 @@ const (
 	Dekart_GetConnectionList_FullMethodName       = "/Dekart/GetConnectionList"
 	Dekart_TestConnection_FullMethodName          = "/Dekart/TestConnection"
 	Dekart_SetDefaultConnection_FullMethodName    = "/Dekart/SetDefaultConnection"
+	Dekart_GetInvites_FullMethodName              = "/Dekart/GetInvites"
+	Dekart_RespondToInvite_FullMethodName         = "/Dekart/RespondToInvite"
 	Dekart_CreateSubscription_FullMethodName      = "/Dekart/CreateSubscription"
 	Dekart_GetSubscription_FullMethodName         = "/Dekart/GetSubscription"
 	Dekart_CancelSubscription_FullMethodName      = "/Dekart/CancelSubscription"
 	Dekart_ListUsers_FullMethodName               = "/Dekart/ListUsers"
 	Dekart_AddUser_FullMethodName                 = "/Dekart/AddUser"
 	Dekart_RemoveUser_FullMethodName              = "/Dekart/RemoveUser"
-	Dekart_ConfirmJoinOrganization_FullMethodName = "/Dekart/ConfirmJoinOrganization"
 )
 
 // DekartClient is the client API for Dekart service.
@@ -89,6 +90,9 @@ type DekartClient interface {
 	GetConnectionList(ctx context.Context, in *GetConnectionListRequest, opts ...grpc.CallOption) (*GetConnectionListResponse, error)
 	TestConnection(ctx context.Context, in *TestConnectionRequest, opts ...grpc.CallOption) (*TestConnectionResponse, error)
 	SetDefaultConnection(ctx context.Context, in *SetDefaultConnectionRequest, opts ...grpc.CallOption) (*SetDefaultConnectionResponse, error)
+	//user
+	GetInvites(ctx context.Context, in *GetInvitesRequest, opts ...grpc.CallOption) (*GetInvitesResponse, error)
+	RespondToInvite(ctx context.Context, in *RespondToInviteRequest, opts ...grpc.CallOption) (*RespondToInviteResponse, error)
 	//subscriptions
 	CreateSubscription(ctx context.Context, in *CreateSubscriptionRequest, opts ...grpc.CallOption) (*CreateSubscriptionResponse, error)
 	GetSubscription(ctx context.Context, in *GetSubscriptionRequest, opts ...grpc.CallOption) (*GetSubscriptionResponse, error)
@@ -97,7 +101,6 @@ type DekartClient interface {
 	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
 	AddUser(ctx context.Context, in *AddUserRequest, opts ...grpc.CallOption) (*AddUserResponse, error)
 	RemoveUser(ctx context.Context, in *RemoveUserRequest, opts ...grpc.CallOption) (*RemoveUserResponse, error)
-	ConfirmJoinOrganization(ctx context.Context, in *ConfirmJoinOrganizationRequest, opts ...grpc.CallOption) (*ConfirmJoinOrganizationResponse, error)
 }
 
 type dekartClient struct {
@@ -402,6 +405,24 @@ func (c *dekartClient) SetDefaultConnection(ctx context.Context, in *SetDefaultC
 	return out, nil
 }
 
+func (c *dekartClient) GetInvites(ctx context.Context, in *GetInvitesRequest, opts ...grpc.CallOption) (*GetInvitesResponse, error) {
+	out := new(GetInvitesResponse)
+	err := c.cc.Invoke(ctx, Dekart_GetInvites_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) RespondToInvite(ctx context.Context, in *RespondToInviteRequest, opts ...grpc.CallOption) (*RespondToInviteResponse, error) {
+	out := new(RespondToInviteResponse)
+	err := c.cc.Invoke(ctx, Dekart_RespondToInvite_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *dekartClient) CreateSubscription(ctx context.Context, in *CreateSubscriptionRequest, opts ...grpc.CallOption) (*CreateSubscriptionResponse, error) {
 	out := new(CreateSubscriptionResponse)
 	err := c.cc.Invoke(ctx, Dekart_CreateSubscription_FullMethodName, in, out, opts...)
@@ -456,15 +477,6 @@ func (c *dekartClient) RemoveUser(ctx context.Context, in *RemoveUserRequest, op
 	return out, nil
 }
 
-func (c *dekartClient) ConfirmJoinOrganization(ctx context.Context, in *ConfirmJoinOrganizationRequest, opts ...grpc.CallOption) (*ConfirmJoinOrganizationResponse, error) {
-	out := new(ConfirmJoinOrganizationResponse)
-	err := c.cc.Invoke(ctx, Dekart_ConfirmJoinOrganization_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // DekartServer is the server API for Dekart service.
 // All implementations must embed UnimplementedDekartServer
 // for forward compatibility
@@ -501,6 +513,9 @@ type DekartServer interface {
 	GetConnectionList(context.Context, *GetConnectionListRequest) (*GetConnectionListResponse, error)
 	TestConnection(context.Context, *TestConnectionRequest) (*TestConnectionResponse, error)
 	SetDefaultConnection(context.Context, *SetDefaultConnectionRequest) (*SetDefaultConnectionResponse, error)
+	//user
+	GetInvites(context.Context, *GetInvitesRequest) (*GetInvitesResponse, error)
+	RespondToInvite(context.Context, *RespondToInviteRequest) (*RespondToInviteResponse, error)
 	//subscriptions
 	CreateSubscription(context.Context, *CreateSubscriptionRequest) (*CreateSubscriptionResponse, error)
 	GetSubscription(context.Context, *GetSubscriptionRequest) (*GetSubscriptionResponse, error)
@@ -509,7 +524,6 @@ type DekartServer interface {
 	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
 	AddUser(context.Context, *AddUserRequest) (*AddUserResponse, error)
 	RemoveUser(context.Context, *RemoveUserRequest) (*RemoveUserResponse, error)
-	ConfirmJoinOrganization(context.Context, *ConfirmJoinOrganizationRequest) (*ConfirmJoinOrganizationResponse, error)
 	mustEmbedUnimplementedDekartServer()
 }
 
@@ -592,6 +606,12 @@ func (UnimplementedDekartServer) TestConnection(context.Context, *TestConnection
 func (UnimplementedDekartServer) SetDefaultConnection(context.Context, *SetDefaultConnectionRequest) (*SetDefaultConnectionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetDefaultConnection not implemented")
 }
+func (UnimplementedDekartServer) GetInvites(context.Context, *GetInvitesRequest) (*GetInvitesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetInvites not implemented")
+}
+func (UnimplementedDekartServer) RespondToInvite(context.Context, *RespondToInviteRequest) (*RespondToInviteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RespondToInvite not implemented")
+}
 func (UnimplementedDekartServer) CreateSubscription(context.Context, *CreateSubscriptionRequest) (*CreateSubscriptionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateSubscription not implemented")
 }
@@ -609,9 +629,6 @@ func (UnimplementedDekartServer) AddUser(context.Context, *AddUserRequest) (*Add
 }
 func (UnimplementedDekartServer) RemoveUser(context.Context, *RemoveUserRequest) (*RemoveUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RemoveUser not implemented")
-}
-func (UnimplementedDekartServer) ConfirmJoinOrganization(context.Context, *ConfirmJoinOrganizationRequest) (*ConfirmJoinOrganizationResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ConfirmJoinOrganization not implemented")
 }
 func (UnimplementedDekartServer) mustEmbedUnimplementedDekartServer() {}
 
@@ -1085,6 +1102,42 @@ func _Dekart_SetDefaultConnection_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Dekart_GetInvites_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetInvitesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).GetInvites(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_GetInvites_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).GetInvites(ctx, req.(*GetInvitesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_RespondToInvite_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RespondToInviteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).RespondToInvite(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_RespondToInvite_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).RespondToInvite(ctx, req.(*RespondToInviteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Dekart_CreateSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateSubscriptionRequest)
 	if err := dec(in); err != nil {
@@ -1193,24 +1246,6 @@ func _Dekart_RemoveUser_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_ConfirmJoinOrganization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ConfirmJoinOrganizationRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DekartServer).ConfirmJoinOrganization(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Dekart_ConfirmJoinOrganization_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).ConfirmJoinOrganization(ctx, req.(*ConfirmJoinOrganizationRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // Dekart_ServiceDesc is the grpc.ServiceDesc for Dekart service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1307,6 +1342,14 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Dekart_SetDefaultConnection_Handler,
 		},
 		{
+			MethodName: "GetInvites",
+			Handler:    _Dekart_GetInvites_Handler,
+		},
+		{
+			MethodName: "RespondToInvite",
+			Handler:    _Dekart_RespondToInvite_Handler,
+		},
+		{
 			MethodName: "CreateSubscription",
 			Handler:    _Dekart_CreateSubscription_Handler,
 		},
@@ -1329,10 +1372,6 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RemoveUser",
 			Handler:    _Dekart_RemoveUser_Handler,
-		},
-		{
-			MethodName: "ConfirmJoinOrganization",
-			Handler:    _Dekart_ConfirmJoinOrganization_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

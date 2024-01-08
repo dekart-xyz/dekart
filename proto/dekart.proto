@@ -45,6 +45,10 @@ service Dekart {
 
     //CLOUD
 
+    //user
+    rpc GetInvites(GetInvitesRequest) returns (GetInvitesResponse) {}
+    rpc RespondToInvite(RespondToInviteRequest) returns (RespondToInviteResponse) {}
+
     //subscriptions
     rpc CreateSubscription(CreateSubscriptionRequest) returns (CreateSubscriptionResponse) {}
     rpc GetSubscription(GetSubscriptionRequest) returns (GetSubscriptionResponse) {}
@@ -54,13 +58,29 @@ service Dekart {
     rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {}
     rpc AddUser(AddUserRequest) returns (AddUserResponse) {}
     rpc RemoveUser(RemoveUserRequest) returns (RemoveUserResponse) {}
-    rpc ConfirmJoinOrganization(ConfirmJoinOrganizationRequest) returns (ConfirmJoinOrganizationResponse) {}
 }
 
-message ConfirmJoinOrganizationRequest {
+
+message RespondToInviteRequest {
+    string organization_id = 1;
+    bool accept = 2;
 }
 
-message ConfirmJoinOrganizationResponse {
+message RespondToInviteResponse {
+
+}
+
+message GetInvitesRequest {
+}
+
+message OrganizationInvite {
+    Organization organization = 1;
+    int64 created_at = 2;
+    string inviter_email = 3;
+}
+
+message GetInvitesResponse {
+    repeated OrganizationInvite invites = 1;
 }
 
 message RemoveUserRequest {
@@ -172,6 +192,7 @@ message GetUserStreamResponse {
     bool subscription_active = 103;
     int64 subscription_update = 104;
     int64 organization_update = 105;
+    int64 organization_invite_update = 106;
 }
 
 message TestConnectionRequest {

@@ -235,6 +235,24 @@ Dekart.SetDefaultConnection = {
   responseType: proto_dekart_pb.SetDefaultConnectionResponse
 };
 
+Dekart.GetInvites = {
+  methodName: "GetInvites",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.GetInvitesRequest,
+  responseType: proto_dekart_pb.GetInvitesResponse
+};
+
+Dekart.RespondToInvite = {
+  methodName: "RespondToInvite",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.RespondToInviteRequest,
+  responseType: proto_dekart_pb.RespondToInviteResponse
+};
+
 Dekart.CreateSubscription = {
   methodName: "CreateSubscription",
   service: Dekart,
@@ -287,15 +305,6 @@ Dekart.RemoveUser = {
   responseStream: false,
   requestType: proto_dekart_pb.RemoveUserRequest,
   responseType: proto_dekart_pb.RemoveUserResponse
-};
-
-Dekart.ConfirmJoinOrganization = {
-  methodName: "ConfirmJoinOrganization",
-  service: Dekart,
-  requestStream: false,
-  responseStream: false,
-  requestType: proto_dekart_pb.ConfirmJoinOrganizationRequest,
-  responseType: proto_dekart_pb.ConfirmJoinOrganizationResponse
 };
 
 exports.Dekart = Dekart;
@@ -1104,6 +1113,68 @@ DekartClient.prototype.setDefaultConnection = function setDefaultConnection(requ
   };
 };
 
+DekartClient.prototype.getInvites = function getInvites(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.GetInvites, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.respondToInvite = function respondToInvite(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.RespondToInvite, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
 DekartClient.prototype.createSubscription = function createSubscription(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
@@ -1264,37 +1335,6 @@ DekartClient.prototype.removeUser = function removeUser(requestMessage, metadata
     callback = arguments[1];
   }
   var client = grpc.unary(Dekart.RemoveUser, {
-    request: requestMessage,
-    host: this.serviceHost,
-    metadata: metadata,
-    transport: this.options.transport,
-    debug: this.options.debug,
-    onEnd: function (response) {
-      if (callback) {
-        if (response.status !== grpc.Code.OK) {
-          var err = new Error(response.statusMessage);
-          err.code = response.status;
-          err.metadata = response.trailers;
-          callback(err, null);
-        } else {
-          callback(null, response.message);
-        }
-      }
-    }
-  });
-  return {
-    cancel: function () {
-      callback = null;
-      client.close();
-    }
-  };
-};
-
-DekartClient.prototype.confirmJoinOrganization = function confirmJoinOrganization(requestMessage, metadata, callback) {
-  if (arguments.length === 2) {
-    callback = arguments[1];
-  }
-  var client = grpc.unary(Dekart.ConfirmJoinOrganization, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,

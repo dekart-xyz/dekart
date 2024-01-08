@@ -208,15 +208,23 @@ func (s Server) sendUserStreamResponse(ctx context.Context, srv proto.Dekart_Get
 		return status.Errorf(codes.Internal, err.Error())
 	}
 
+	//invitations
+	organizationInviteUpdate, err := s.getLastOrganizationInviteUpdate(ctx)
+	if err != nil {
+		log.Err(err).Send()
+		return status.Errorf(codes.Internal, err.Error())
+	}
+
 	res := proto.GetUserStreamResponse{
 		StreamOptions: &proto.StreamOptions{
 			Sequence: sequence,
 		},
-		ConnectionUpdate:   connectionUpdate,
-		Email:              claims.Email,
-		SubscriptionActive: sub.Active,
-		SubscriptionUpdate: sub.UpdatedAt,
-		OrganizationUpdate: organizationUpdate,
+		ConnectionUpdate:         connectionUpdate,
+		Email:                    claims.Email,
+		SubscriptionActive:       sub.Active,
+		SubscriptionUpdate:       sub.UpdatedAt,
+		OrganizationUpdate:       organizationUpdate,
+		OrganizationInviteUpdate: organizationInviteUpdate,
 	}
 	err = srv.Send(&res)
 	if err != nil {

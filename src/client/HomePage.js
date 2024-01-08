@@ -17,6 +17,7 @@ import ConnectionModal from './ConnectionModal'
 import Tooltip from 'antd/es/tooltip'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 import { PlanType } from '../proto/dekart_pb'
+import Onboarding from './Onboarding'
 
 function Loading () {
   return null
@@ -320,18 +321,6 @@ function OnboardingDiscoverableReports () {
         </ol>
             }
     />
-  )
-}
-
-function Onboarding ({ icon, title, steps }) {
-  return (
-    <div className={styles.onboarding}>
-      <div className={styles.onboardingIcon}>{icon}</div>
-      <div className={styles.onboardingContent}>
-        <div className={styles.onboardingTitle}>{title}</div>
-        <div className={styles.onboardingSteps}>{steps}</div>
-      </div>
-    </div>
   )
 }
 
