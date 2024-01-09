@@ -69,13 +69,16 @@ function AppRedirect () {
     return null
   }
 
-  if (user && !user.subscriptionActive) {
-    //! (/^\/organization/.test(location.pathname))
-    return <Redirect to='/organization/plan' push />
+  if (httpError.status) {
+    return <Redirect to={`/${httpError.status}`} push />
   }
 
-  if (httpError.status && location.pathname !== `/${httpError.status}`) {
-    return <Redirect to={`/${httpError.status}`} push />
+  if (user &&
+    !user.subscriptionActive &&
+    !httpError.status &&
+    !(['/organization/invites'].includes(location.pathname))
+  ) {
+    return <Redirect to='/organization/plan' push />
   }
 
   if (newReportId) {

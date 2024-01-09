@@ -36,16 +36,43 @@ func (s Server) getSubscription(
 			s.organization_id
 		FROM
 			subscription_log AS s
-		JOIN
-			(
-				SELECT * FROM organization_log WHERE email = $1 ORDER BY created_at DESC LIMIT 1
-			) AS l ON s.organization_id = l.organization_id AND l.user_status = 2
-		JOIN
-			organizations AS o ON s.organization_id = o.id
-		ORDER BY
-			s.created_at DESC
+		JOIN organization_log AS o ON s.organization_id = o.organization_id
+		JOIN (
+			SELECT
+				organization_id,
+				email,
+				max(created_at) as created_at
+			FROM
+				organization_log
+			WHERE
+				email = $1
+			group by
+				organization_id, email
+		) AS l ON o.organization_id = l.organization_id AND o.created_at = l.created_at
+		WHERE
+			o.user_status = 2
+		ORDER BY o.created_at DESC
 		LIMIT 1;
 	`, email).Scan(&createdAt, &customerID, &planType, &cancelled, &organizationID)
+	// err := s.db.QueryRowContext(ctx, `
+	// 	SELECT
+	// 		s.created_at,
+	// 		s.customer_id,
+	// 		s.plan_type,
+	// 		s.cancelled,
+	// 		s.organization_id
+	// 	FROM
+	// 		subscription_log AS s
+	// 	JOIN
+	// 		(
+	// 			SELECT * FROM organization_log WHERE email = $1 ORDER BY created_at DESC LIMIT 1
+	// 		) AS l ON s.organization_id = l.organization_id AND l.user_status = 2
+	// 	JOIN
+	// 		organizations AS o ON s.organization_id = o.id
+	// 	ORDER BY
+	// 		s.created_at DESC
+	// 	LIMIT 1;
+	// `, email).Scan(&createdAt, &customerID, &planType, &cancelled, &organizationID)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -226,28 +253,6 @@ func (s Server) CancelSubscription(ctx context.Context, req *proto.CancelSubscri
 	s.userStreams.Ping([]string{claims.Email})
 	return &proto.CancelSubscriptionResponse{}, nil
 }
-
-// func (s Server) getOrganization(ctx context.Context) (*proto.Organization, error) {
-// 	claims := user.GetClaims(ctx)
-// 	var organization proto.Organization
-// 	err := s.db.QueryRowContext(ctx, `
-// 		SELECT o.id, o.name, o.personal
-// 		FROM organizations o
-// 		INNER JOIN organization_log ol ON o.id = ol.organization_id
-// 		WHERE ol.email = $1 AND ol.active = true
-// 		ORDER BY ol.created_at DESC
-// 		LIMIT 1
-// 	`, claims.Email).Scan(&organization.Id, &organization.Name, &organization.Personal)
-// 	if err != nil {
-// 		if err == sql.ErrNoRows {
-// 			return nil, status.Error(codes.NotFound, "Organization not found")
-// 		}
-// 		log.Err(err).Send()
-// 		return nil, status.Error(codes.Internal, err.Error())
-// 	}
-
-// 	return &organization, nil
-// }
 
 func (s Server) createOrganization(ctx context.Context, personal bool) (*proto.Organization, error) {
 	claims := user.GetClaims(ctx)

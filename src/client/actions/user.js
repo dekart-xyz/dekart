@@ -24,17 +24,20 @@ export function subscribeUserStream () {
     dispatch(grpcStream(Dekart.GetUserStream, request, (message, err) => {
       if (message) {
         dispatch(userStreamUpdate(message))
-        if (prevRes.connectionUpdate !== message.connectionUpdate) {
-          prevRes.connectionUpdate = message.connectionUpdate
-          dispatch(getConnectionsList())
+        if (message.subscriptionActive) {
+          // update only when subscription is active to avoid 404 errors
+          if (prevRes.connectionUpdate !== message.connectionUpdate) {
+            prevRes.connectionUpdate = message.connectionUpdate
+            dispatch(getConnectionsList())
+          }
+          if (prevRes.organizationUpdate !== message.organizationUpdate) {
+            prevRes.organizationUpdate = message.organizationUpdate
+            dispatch(listUsers())
+          }
         }
         if (prevRes.subscriptionUpdate !== message.subscriptionUpdate) {
           prevRes.subscriptionUpdate = message.subscriptionUpdate
           dispatch(getSubscription())
-        }
-        if (prevRes.organizationUpdate !== message.organizationUpdate) {
-          prevRes.organizationUpdate = message.organizationUpdate
-          dispatch(listUsers())
         }
         if (prevRes.organizationInviteUpdate !== message.organizationInviteUpdate) {
           prevRes.organizationInviteUpdate = message.organizationInviteUpdate

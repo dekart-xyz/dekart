@@ -52,6 +52,9 @@ export function setError (err, transitive = true) {
 }
 
 export function setHttpError (status, message = '') {
+  if (status === 404) {
+    console.trace('404')
+  }
   return { type: setHttpError.name, status, message }
 }
 

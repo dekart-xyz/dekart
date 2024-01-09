@@ -1,7 +1,7 @@
 import { AddUserRequest, CancelSubscriptionRequest, CreateSubscriptionRequest, GetInvitesRequest, ListUsersRequest, RemoveUserRequest, RespondToInviteRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { grpcCall } from './grpc'
-import { success } from './message'
+import { info, success } from './message'
 
 export function createSubscription (planType) {
   return (dispatch) => {
@@ -26,7 +26,14 @@ export function respondToInvite (organizationId, accept) {
     request.setOrganizationId(organizationId)
     request.setAccept(accept)
     dispatch(grpcCall(Dekart.RespondToInvite, request, () => {
-      success('Invite accepted')
+      if (accept) {
+        success('Invite accepted')
+        // setTimeout(() => {
+        //   window.location.href = '/'
+        // }, 1000)
+      } else {
+        info('Invite declined')
+      }
     }))
   }
 }

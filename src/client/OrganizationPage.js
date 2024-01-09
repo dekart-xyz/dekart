@@ -7,7 +7,7 @@ import { GithubOutlined, HomeOutlined, TeamOutlined, CheckCircleOutlined, Highli
 import Title from 'antd/es/typography/Title'
 import Text from 'antd/es/typography/Text'
 import Button from 'antd/es/button'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { cancelSubscription, createSubscription, addUser, removeUser, respondToInvite } from './actions/organization'
 import { useDispatch, useSelector } from 'react-redux'
 import { PlanType } from '../proto/dekart_pb'
@@ -252,7 +252,21 @@ function SubscriptionTab () {
 
 function InvitesTab () {
   const invites = useSelector(state => state.organization.invites)
+  const user = useSelector(state => state.user)
+  const subscriptionActive = user?.subscriptionActive
+  const prevSubscriptionActiveRef = useRef()
   const dispatch = useDispatch()
+  const history = useHistory()
+  useEffect(() => {
+    prevSubscriptionActiveRef.current = true
+  }, [])
+  useEffect(() => {
+    if (subscriptionActive && !prevSubscriptionActiveRef.current) {
+      history.push('/')
+    } else {
+      prevSubscriptionActiveRef.current = subscriptionActive
+    }
+  }, [subscriptionActive, history])
   return (
     <div className={styles.invitesTab}>
       {invites.length === 0
