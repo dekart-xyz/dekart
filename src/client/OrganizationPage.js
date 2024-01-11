@@ -110,7 +110,7 @@ function PlanTitle ({ name, price, icon, color, description, selected }) {
   )
 }
 
-function Plan ({ title, children, action, planType }) {
+function Plan ({ title, children, action, planType, cancelAt }) {
   const [hover, setHover] = useState(false)
   const dispatch = useDispatch()
   const subscription = useSelector(state => state.organization.subscription)
@@ -125,10 +125,13 @@ function Plan ({ title, children, action, planType }) {
       actions={[
         subscription.planType === planType
           ? (
-            <Button
-              key='1' disabled
-            >Current plan
-            </Button>
+            <>
+              <Button
+                key='1' disabled
+              >Current plan
+              </Button>
+              {cancelAt ? (<div className={styles.cancelAt}>Cancels {(new Date(1000 * cancelAt)).toLocaleString()}</div>) : null}
+            </>
             )
           : (
             <Button
@@ -177,6 +180,7 @@ function Plans () {
                />}
         planType={PlanType.TYPE_TEAM}
         action='Choose team'
+        cancelAt={subscription?.cancelAt}
       >
         <p><Text type='success'><CheckCircleOutlined /> Access to private datasets</Text></p>
         <p><Text type='success'><CheckCircleOutlined /> SSO with company email</Text></p>
@@ -225,6 +229,13 @@ function SubscriptionTab () {
   }
   return (
     <div className={styles.subscriptionTab}>
+      {/* {subscription?.active && subscription.cancelAt
+        ? (
+          <div className={styles.cancelsAt}>
+            <Text type='secondary'>Your subscription will be cancelled on {subscription.cancelsAt}</Text>
+          </div>
+          )
+        : null} */}
       {/* <div className={styles.title}>
         <Title>
           {user.subscriptionActive ? <span className={styles.titleCheck}><CheckCircleFilled /></span> : <span className={styles.titleLock}><LockFilled /></span>}

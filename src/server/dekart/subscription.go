@@ -6,14 +6,13 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/user"
 	"os"
-	"strings"
 
 	"github.com/rs/zerolog/log"
 	"github.com/stripe/stripe-go/v76"
 	"github.com/stripe/stripe-go/v76/checkout/session"
 	"github.com/stripe/stripe-go/v76/customer"
+	"github.com/stripe/stripe-go/v76/subscription"
 
-	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -54,25 +53,6 @@ func (s Server) getSubscription(
 		ORDER BY o.created_at DESC
 		LIMIT 1;
 	`, email).Scan(&createdAt, &customerID, &planType, &cancelled, &organizationID)
-	// err := s.db.QueryRowContext(ctx, `
-	// 	SELECT
-	// 		s.created_at,
-	// 		s.customer_id,
-	// 		s.plan_type,
-	// 		s.cancelled,
-	// 		s.organization_id
-	// 	FROM
-	// 		subscription_log AS s
-	// 	JOIN
-	// 		(
-	// 			SELECT * FROM organization_log WHERE email = $1 ORDER BY created_at DESC LIMIT 1
-	// 		) AS l ON s.organization_id = l.organization_id AND l.user_status = 2
-	// 	JOIN
-	// 		organizations AS o ON s.organization_id = o.id
-	// 	ORDER BY
-	// 		s.created_at DESC
-	// 	LIMIT 1;
-	// `, email).Scan(&createdAt, &customerID, &planType, &cancelled, &organizationID)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -109,10 +89,14 @@ func (s Server) getSubscription(
 		for _, subscription := range c.Subscriptions.Data {
 			if subscription.Status == "active" {
 				return &proto.Subscription{
-					Active:         true,
-					PlanType:       planType,
-					UpdatedAt:      createdAt.Time.Unix(),
-					OrganizationId: organizationID,
+					Active:               true,
+					PlanType:             planType,
+					UpdatedAt:            createdAt.Time.Unix(),
+					OrganizationId:       organizationID,
+					CustomerId:           customerID.String,
+					StripeSubscriptionId: subscription.ID,
+					StripeCustomerEmail:  c.Email,
+					CancelAt:             subscription.CancelAt,
 				}, nil
 			}
 		}
@@ -189,10 +173,11 @@ func (s Server) createCheckoutSession(ctx context.Context, req *proto.CreateSubs
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	_, err = s.db.ExecContext(ctx, `insert into subscription_log (organization_id, plan_type, customer_id) values ($1, $2, $3)`,
+	_, err = s.db.ExecContext(ctx, `insert into subscription_log (organization_id, plan_type, customer_id, authored_by) values ($1, $2, $3, $4)`,
 		org.Id,
 		req.PlanType,
 		customer.ID,
+		claims.Email,
 	)
 	if err != nil {
 		log.Err(err).Send()
@@ -236,49 +221,64 @@ func (s Server) CancelSubscription(ctx context.Context, req *proto.CancelSubscri
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	_, err := s.db.ExecContext(ctx, `
-			INSERT INTO subscription_log (organization_id, cancelled)
-			SELECT organization_id, true
+	sub, err := s.getSubscription(ctx, claims.Email)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if sub == nil || !sub.Active {
+		return nil, status.Error(codes.NotFound, "Subscription not found")
+	}
+	if sub.PlanType == proto.PlanType_TYPE_PERSONAL {
+		_, err := s.db.ExecContext(ctx, `
+			INSERT INTO subscription_log (organization_id, cancelled, authored_by)
+			SELECT organization_id, true, $1
 			FROM organization_log
 			WHERE email = $1
 			ORDER BY created_at DESC
 			LIMIT 1
 		`,
-		claims.Email,
-	)
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
+			claims.Email,
+		)
+		if err != nil {
+			log.Err(err).Send()
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		s.userStreams.PingAll()
 	}
-	s.userStreams.Ping([]string{claims.Email})
-	return &proto.CancelSubscriptionResponse{}, nil
-}
+	if sub.PlanType == proto.PlanType_TYPE_TEAM {
 
-func (s Server) createOrganization(ctx context.Context, personal bool) (*proto.Organization, error) {
-	claims := user.GetClaims(ctx)
-	name := strings.Split(claims.Email, "@")[0]
-	organizationID := uuid.New()
-	_, err := s.db.ExecContext(ctx, `
-		INSERT INTO organizations (id, name, personal)
-		VALUES ($1, $2, $3)
-	`, organizationID, name, personal)
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
+		// cancel stripe subscription
+		stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
+		params := &stripe.SubscriptionParams{
+			CancelAtPeriodEnd: stripe.Bool(true),
+		}
+		_, err := subscription.Update(sub.StripeSubscriptionId, params)
+		if err != nil {
+			log.Err(err).Send()
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		// update subscription log to reflect cancellation
+		_, err = s.db.ExecContext(ctx, `
+			INSERT INTO subscription_log (organization_id, payment_cancelled, authored_by)
+			VALUES ($1, true, $2)
+		`,
+			sub.OrganizationId,
+			claims.Email,
+		)
+		if err != nil {
+			log.Err(err).Send()
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		s.userStreams.PingAll()
+
+		return &proto.CancelSubscriptionResponse{
+			// RedirectUrl: session.URL,
+		}, nil
 	}
-	_, err = s.db.ExecContext(ctx, `
-		INSERT INTO organization_log (organization_id, email, user_status, authored_by)
-		VALUES ($1, $2, $3, $4)
-	`, organizationID, claims.Email, proto.UserStatus_USER_STATUS_ACTIVE, claims.Email)
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	return &proto.Organization{
-		Id:       organizationID.String(),
-		Name:     claims.Email,
-		Personal: personal,
-	}, nil
+	return &proto.CancelSubscriptionResponse{}, nil
 }
 
 func (s Server) CreateSubscription(ctx context.Context, req *proto.CreateSubscriptionRequest) (*proto.CreateSubscriptionResponse, error) {
@@ -293,9 +293,10 @@ func (s Server) CreateSubscription(ctx context.Context, req *proto.CreateSubscri
 			log.Err(err).Send()
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-		_, err = s.db.ExecContext(ctx, `insert into subscription_log (organization_id, plan_type) values ($1, $2)`,
+		_, err = s.db.ExecContext(ctx, `insert into subscription_log (organization_id, plan_type, authored_by) values ($1, $2, $3)`,
 			org.Id,
 			req.PlanType,
+			claims.Email,
 		)
 		if err != nil {
 			log.Err(err).Send()

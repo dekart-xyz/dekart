@@ -3929,7 +3929,7 @@ proto.CancelSubscriptionRequest.prototype.toObject = function(opt_includeInstanc
  */
 proto.CancelSubscriptionRequest.toObject = function(includeInstance, msg) {
   var f, obj = {
-
+    uiUrl: jspb.Message.getFieldWithDefault(msg, 1, "")
   };
 
   if (includeInstance) {
@@ -3966,6 +3966,10 @@ proto.CancelSubscriptionRequest.deserializeBinaryFromReader = function(msg, read
     }
     var field = reader.getFieldNumber();
     switch (field) {
+    case 1:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setUiUrl(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -3995,6 +3999,31 @@ proto.CancelSubscriptionRequest.prototype.serializeBinary = function() {
  */
 proto.CancelSubscriptionRequest.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
+  f = message.getUiUrl();
+  if (f.length > 0) {
+    writer.writeString(
+      1,
+      f
+    );
+  }
+};
+
+
+/**
+ * optional string ui_url = 1;
+ * @return {string}
+ */
+proto.CancelSubscriptionRequest.prototype.getUiUrl = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 1, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.CancelSubscriptionRequest} returns this
+ */
+proto.CancelSubscriptionRequest.prototype.setUiUrl = function(value) {
+  return jspb.Message.setProto3StringField(this, 1, value);
 };
 
 
@@ -4030,7 +4059,7 @@ proto.CancelSubscriptionResponse.prototype.toObject = function(opt_includeInstan
  */
 proto.CancelSubscriptionResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
-
+    redirectUrl: jspb.Message.getFieldWithDefault(msg, 1, "")
   };
 
   if (includeInstance) {
@@ -4067,6 +4096,10 @@ proto.CancelSubscriptionResponse.deserializeBinaryFromReader = function(msg, rea
     }
     var field = reader.getFieldNumber();
     switch (field) {
+    case 1:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setRedirectUrl(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -4096,6 +4129,31 @@ proto.CancelSubscriptionResponse.prototype.serializeBinary = function() {
  */
 proto.CancelSubscriptionResponse.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
+  f = message.getRedirectUrl();
+  if (f.length > 0) {
+    writer.writeString(
+      1,
+      f
+    );
+  }
+};
+
+
+/**
+ * optional string redirect_url = 1;
+ * @return {string}
+ */
+proto.CancelSubscriptionResponse.prototype.getRedirectUrl = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 1, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.CancelSubscriptionResponse} returns this
+ */
+proto.CancelSubscriptionResponse.prototype.setRedirectUrl = function(value) {
+  return jspb.Message.setProto3StringField(this, 1, value);
 };
 
 
@@ -4425,7 +4483,11 @@ proto.Subscription.toObject = function(includeInstance, msg) {
     planType: jspb.Message.getFieldWithDefault(msg, 2, 0),
     active: jspb.Message.getBooleanFieldWithDefault(msg, 3, false),
     updatedAt: jspb.Message.getFieldWithDefault(msg, 4, 0),
-    organizationId: jspb.Message.getFieldWithDefault(msg, 5, "")
+    organizationId: jspb.Message.getFieldWithDefault(msg, 5, ""),
+    customerId: jspb.Message.getFieldWithDefault(msg, 6, ""),
+    stripeSubscriptionId: jspb.Message.getFieldWithDefault(msg, 7, ""),
+    stripeCustomerEmail: jspb.Message.getFieldWithDefault(msg, 8, ""),
+    cancelAt: jspb.Message.getFieldWithDefault(msg, 9, 0)
   };
 
   if (includeInstance) {
@@ -4477,6 +4539,22 @@ proto.Subscription.deserializeBinaryFromReader = function(msg, reader) {
     case 5:
       var value = /** @type {string} */ (reader.readString());
       msg.setOrganizationId(value);
+      break;
+    case 6:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setCustomerId(value);
+      break;
+    case 7:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setStripeSubscriptionId(value);
+      break;
+    case 8:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setStripeCustomerEmail(value);
+      break;
+    case 9:
+      var value = /** @type {number} */ (reader.readInt64());
+      msg.setCancelAt(value);
       break;
     default:
       reader.skipField();
@@ -4532,6 +4610,34 @@ proto.Subscription.serializeBinaryToWriter = function(message, writer) {
   if (f.length > 0) {
     writer.writeString(
       5,
+      f
+    );
+  }
+  f = message.getCustomerId();
+  if (f.length > 0) {
+    writer.writeString(
+      6,
+      f
+    );
+  }
+  f = message.getStripeSubscriptionId();
+  if (f.length > 0) {
+    writer.writeString(
+      7,
+      f
+    );
+  }
+  f = message.getStripeCustomerEmail();
+  if (f.length > 0) {
+    writer.writeString(
+      8,
+      f
+    );
+  }
+  f = message.getCancelAt();
+  if (f !== 0) {
+    writer.writeInt64(
+      9,
       f
     );
   }
@@ -4607,6 +4713,78 @@ proto.Subscription.prototype.getOrganizationId = function() {
  */
 proto.Subscription.prototype.setOrganizationId = function(value) {
   return jspb.Message.setProto3StringField(this, 5, value);
+};
+
+
+/**
+ * optional string customer_id = 6;
+ * @return {string}
+ */
+proto.Subscription.prototype.getCustomerId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 6, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.Subscription} returns this
+ */
+proto.Subscription.prototype.setCustomerId = function(value) {
+  return jspb.Message.setProto3StringField(this, 6, value);
+};
+
+
+/**
+ * optional string stripe_subscription_id = 7;
+ * @return {string}
+ */
+proto.Subscription.prototype.getStripeSubscriptionId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 7, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.Subscription} returns this
+ */
+proto.Subscription.prototype.setStripeSubscriptionId = function(value) {
+  return jspb.Message.setProto3StringField(this, 7, value);
+};
+
+
+/**
+ * optional string stripe_customer_email = 8;
+ * @return {string}
+ */
+proto.Subscription.prototype.getStripeCustomerEmail = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 8, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.Subscription} returns this
+ */
+proto.Subscription.prototype.setStripeCustomerEmail = function(value) {
+  return jspb.Message.setProto3StringField(this, 8, value);
+};
+
+
+/**
+ * optional int64 cancel_at = 9;
+ * @return {number}
+ */
+proto.Subscription.prototype.getCancelAt = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 9, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.Subscription} returns this
+ */
+proto.Subscription.prototype.setCancelAt = function(value) {
+  return jspb.Message.setProto3IntField(this, 9, value);
 };
 
 

@@ -82,7 +82,9 @@ export function cancelSubscription () {
   return (dispatch) => {
     dispatch({ type: cancelSubscription.name })
     const request = new CancelSubscriptionRequest()
-    dispatch(grpcCall(Dekart.CancelSubscription, request, () => {
+    request.setUiUrl(window.location.href)
+    dispatch(grpcCall(Dekart.CancelSubscription, request, (res) => {
+      console.log('cancelSubscription', res)
       success('Subscription canceled')
     }))
   }

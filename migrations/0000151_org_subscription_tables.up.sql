@@ -18,6 +18,8 @@ create table IF NOT EXISTS organization_log (
 create table IF NOT EXISTS subscription_log (
     customer_id varchar(255) default null,
     cancelled boolean not null default false,
+    payment_cancelled boolean not null default false,
+    authored_by varchar(255) not null,
     plan_type int not null default 0,
     organization_id uuid not null,
     created_at timestamptz DEFAULT CURRENT_TIMESTAMP,

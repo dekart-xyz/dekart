@@ -326,6 +326,9 @@ export namespace RunAllQueriesResponse {
 }
 
 export class CancelSubscriptionRequest extends jspb.Message {
+  getUiUrl(): string;
+  setUiUrl(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CancelSubscriptionRequest.AsObject;
   static toObject(includeInstance: boolean, msg: CancelSubscriptionRequest): CancelSubscriptionRequest.AsObject;
@@ -338,10 +341,14 @@ export class CancelSubscriptionRequest extends jspb.Message {
 
 export namespace CancelSubscriptionRequest {
   export type AsObject = {
+    uiUrl: string,
   }
 }
 
 export class CancelSubscriptionResponse extends jspb.Message {
+  getRedirectUrl(): string;
+  setRedirectUrl(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CancelSubscriptionResponse.AsObject;
   static toObject(includeInstance: boolean, msg: CancelSubscriptionResponse): CancelSubscriptionResponse.AsObject;
@@ -354,6 +361,7 @@ export class CancelSubscriptionResponse extends jspb.Message {
 
 export namespace CancelSubscriptionResponse {
   export type AsObject = {
+    redirectUrl: string,
   }
 }
 
@@ -414,6 +422,18 @@ export class Subscription extends jspb.Message {
   getOrganizationId(): string;
   setOrganizationId(value: string): void;
 
+  getCustomerId(): string;
+  setCustomerId(value: string): void;
+
+  getStripeSubscriptionId(): string;
+  setStripeSubscriptionId(value: string): void;
+
+  getStripeCustomerEmail(): string;
+  setStripeCustomerEmail(value: string): void;
+
+  getCancelAt(): number;
+  setCancelAt(value: number): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Subscription.AsObject;
   static toObject(includeInstance: boolean, msg: Subscription): Subscription.AsObject;
@@ -430,6 +450,10 @@ export namespace Subscription {
     active: boolean,
     updatedAt: number,
     organizationId: string,
+    customerId: string,
+    stripeSubscriptionId: string,
+    stripeCustomerEmail: string,
+    cancelAt: number,
   }
 }
 

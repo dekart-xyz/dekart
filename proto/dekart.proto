@@ -134,9 +134,12 @@ message RunAllQueriesResponse {
 }
 
 message CancelSubscriptionRequest {
+    string ui_url = 1;
 }
 
-message CancelSubscriptionResponse {}
+message CancelSubscriptionResponse {
+    string redirect_url = 1;
+}
 
 message GetSubscriptionRequest {
 }
@@ -150,8 +153,12 @@ message Organization {
 message Subscription {
     PlanType plan_type = 2;
     bool active = 3;
-    int64 updated_at = 4;
+    int64 updated_at = 4; //seconds
     string organization_id = 5;
+    string customer_id = 6;
+    string stripe_subscription_id = 7;
+    string stripe_customer_email = 8;
+    int64 cancel_at = 9; //seconds
 }
 
 message GetSubscriptionResponse {

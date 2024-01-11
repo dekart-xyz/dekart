@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/user"
+	"strings"
 
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -62,6 +64,33 @@ func (s Server) RespondToInvite(ctx context.Context, req *proto.RespondToInviteR
 	}
 	s.userStreams.PingAll()
 	return &proto.RespondToInviteResponse{}, nil
+}
+
+func (s Server) createOrganization(ctx context.Context, personal bool) (*proto.Organization, error) {
+	claims := user.GetClaims(ctx)
+	name := strings.Split(claims.Email, "@")[0]
+	organizationID := uuid.New()
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO organizations (id, name, personal)
+		VALUES ($1, $2, $3)
+	`, organizationID, name, personal)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	_, err = s.db.ExecContext(ctx, `
+		INSERT INTO organization_log (organization_id, email, user_status, authored_by)
+		VALUES ($1, $2, $3, $4)
+	`, organizationID, claims.Email, proto.UserStatus_USER_STATUS_ACTIVE, claims.Email)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	return &proto.Organization{
+		Id:       organizationID.String(),
+		Name:     claims.Email,
+		Personal: personal,
+	}, nil
 }
 
 func (s Server) GetInvites(ctx context.Context, req *proto.GetInvitesRequest) (*proto.GetInvitesResponse, error) {
