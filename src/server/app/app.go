@@ -154,7 +154,7 @@ func Configure(dekartServer *dekart.Server) *http.Server {
 	log.Info().Msgf("Starting dekart at :%s", port)
 	return &http.Server{
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			reqWithClaims := r.WithContext(dekartServer.SetSubscriptionContext(claimsCheck.GetContext(r)))
+			reqWithClaims := r.WithContext(dekartServer.SetOrganizationContext(claimsCheck.GetContext(r)))
 			if grpcServer.IsAcceptableGrpcCorsRequest(r) || grpcServer.IsGrpcWebRequest(r) {
 				grpcServer.ServeHTTP(w, reqWithClaims)
 			} else {

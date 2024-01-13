@@ -51,18 +51,53 @@ service Dekart {
 
     //subscriptions
     rpc CreateSubscription(CreateSubscriptionRequest) returns (CreateSubscriptionResponse) {}
-    rpc GetSubscription(GetSubscriptionRequest) returns (GetSubscriptionResponse) {}
     rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse) {}
 
     //organizations
-    rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {}
-    rpc AddUser(AddUserRequest) returns (AddUserResponse) {}
-    rpc RemoveUser(RemoveUserRequest) returns (RemoveUserResponse) {}
+    rpc CreateOrganization(CreateOrganizationRequest) returns (CreateOrganizationResponse) {}
+    rpc UpdateOrganization(UpdateOrganizationRequest) returns (UpdateOrganizationResponse) {}
+    rpc GetOrganization(GetOrganizationRequest) returns (GetOrganizationResponse) {}
+    rpc UpdateOrganizationUser(UpdateOrganizationUserRequest) returns (UpdateOrganizationUserResponse) {}
 }
 
+message UpdateOrganizationUserRequest {
+    string email = 1;
+    enum UserUpdateType {
+        USER_UPDATE_TYPE_UNSPECIFIED = 0;
+        USER_UPDATE_TYPE_ADD = 1;
+        USER_UPDATE_TYPE_REMOVE = 2;
+    }
+    UserUpdateType user_update_type = 2;
+}
+
+message UpdateOrganizationUserResponse {
+}
+
+message GetOrganizationRequest {
+}
+
+message GetOrganizationResponse {
+    Organization organization = 1;
+    Subscription subscription = 2;
+    repeated User users = 3;
+}
+
+message CreateOrganizationRequest {
+    string organization_name = 1;
+}
+
+message CreateOrganizationResponse {
+}
+
+message UpdateOrganizationRequest {
+    string organization_name = 1;
+}
+
+message UpdateOrganizationResponse {
+}
 
 message RespondToInviteRequest {
-    string organization_id = 1;
+    string invite_id = 1;
     bool accept = 2;
 }
 
@@ -74,34 +109,15 @@ message GetInvitesRequest {
 }
 
 message OrganizationInvite {
-    Organization organization = 1;
-    int64 created_at = 2;
+    string organization_id = 1;
+    string invite_id = 2;
     string inviter_email = 3;
+    string organization_name = 4;
+    int64 created_at = 5;
 }
 
 message GetInvitesResponse {
     repeated OrganizationInvite invites = 1;
-}
-
-message RemoveUserRequest {
-    string email = 1;
-}
-
-message RemoveUserResponse {
-}
-
-message AddUserRequest {
-    string email = 1;
-}
-
-message AddUserResponse {
-}
-
-message ListUsersRequest {
-}
-
-message ListUsersResponse {
-    repeated User users = 1;
 }
 
 enum UserStatus {
@@ -113,9 +129,8 @@ enum UserStatus {
 
 message User {
     string email = 1;
-    bool active = 2;
-    int64 updated_at = 3;
-    UserStatus status = 4;
+    int64 updated_at = 2;
+    UserStatus status = 3;
 }
 
 message SetDefaultConnectionRequest {
@@ -141,28 +156,18 @@ message CancelSubscriptionResponse {
     string redirect_url = 1;
 }
 
-message GetSubscriptionRequest {
-}
-
 message Organization {
     string id = 1;
     string name = 2;
-    bool personal = 3;
 }
 
 message Subscription {
     PlanType plan_type = 2;
-    bool active = 3;
     int64 updated_at = 4; //seconds
-    string organization_id = 5;
     string customer_id = 6;
     string stripe_subscription_id = 7;
     string stripe_customer_email = 8;
     int64 cancel_at = 9; //seconds
-}
-
-message GetSubscriptionResponse {
-    Subscription subscription = 1;
 }
 
 enum PlanType {
@@ -196,10 +201,9 @@ message GetUserStreamResponse {
     string email = 3; // user email used to show user icon in UI
 
     // cloud
-    bool subscription_active = 103;
-    int64 subscription_update = 104;
-    int64 organization_update = 105;
-    int64 organization_invite_update = 106;
+    string organization_id = 101;
+    PlanType plan_type = 102;
+    int64 organization_update = 103; // includes invites, members and subscription
 }
 
 message TestConnectionRequest {

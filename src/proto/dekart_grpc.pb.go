@@ -47,11 +47,11 @@ const (
 	Dekart_GetInvites_FullMethodName              = "/Dekart/GetInvites"
 	Dekart_RespondToInvite_FullMethodName         = "/Dekart/RespondToInvite"
 	Dekart_CreateSubscription_FullMethodName      = "/Dekart/CreateSubscription"
-	Dekart_GetSubscription_FullMethodName         = "/Dekart/GetSubscription"
 	Dekart_CancelSubscription_FullMethodName      = "/Dekart/CancelSubscription"
-	Dekart_ListUsers_FullMethodName               = "/Dekart/ListUsers"
-	Dekart_AddUser_FullMethodName                 = "/Dekart/AddUser"
-	Dekart_RemoveUser_FullMethodName              = "/Dekart/RemoveUser"
+	Dekart_CreateOrganization_FullMethodName      = "/Dekart/CreateOrganization"
+	Dekart_UpdateOrganization_FullMethodName      = "/Dekart/UpdateOrganization"
+	Dekart_GetOrganization_FullMethodName         = "/Dekart/GetOrganization"
+	Dekart_UpdateOrganizationUser_FullMethodName  = "/Dekart/UpdateOrganizationUser"
 )
 
 // DekartClient is the client API for Dekart service.
@@ -95,12 +95,12 @@ type DekartClient interface {
 	RespondToInvite(ctx context.Context, in *RespondToInviteRequest, opts ...grpc.CallOption) (*RespondToInviteResponse, error)
 	//subscriptions
 	CreateSubscription(ctx context.Context, in *CreateSubscriptionRequest, opts ...grpc.CallOption) (*CreateSubscriptionResponse, error)
-	GetSubscription(ctx context.Context, in *GetSubscriptionRequest, opts ...grpc.CallOption) (*GetSubscriptionResponse, error)
 	CancelSubscription(ctx context.Context, in *CancelSubscriptionRequest, opts ...grpc.CallOption) (*CancelSubscriptionResponse, error)
 	//organizations
-	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
-	AddUser(ctx context.Context, in *AddUserRequest, opts ...grpc.CallOption) (*AddUserResponse, error)
-	RemoveUser(ctx context.Context, in *RemoveUserRequest, opts ...grpc.CallOption) (*RemoveUserResponse, error)
+	CreateOrganization(ctx context.Context, in *CreateOrganizationRequest, opts ...grpc.CallOption) (*CreateOrganizationResponse, error)
+	UpdateOrganization(ctx context.Context, in *UpdateOrganizationRequest, opts ...grpc.CallOption) (*UpdateOrganizationResponse, error)
+	GetOrganization(ctx context.Context, in *GetOrganizationRequest, opts ...grpc.CallOption) (*GetOrganizationResponse, error)
+	UpdateOrganizationUser(ctx context.Context, in *UpdateOrganizationUserRequest, opts ...grpc.CallOption) (*UpdateOrganizationUserResponse, error)
 }
 
 type dekartClient struct {
@@ -432,15 +432,6 @@ func (c *dekartClient) CreateSubscription(ctx context.Context, in *CreateSubscri
 	return out, nil
 }
 
-func (c *dekartClient) GetSubscription(ctx context.Context, in *GetSubscriptionRequest, opts ...grpc.CallOption) (*GetSubscriptionResponse, error) {
-	out := new(GetSubscriptionResponse)
-	err := c.cc.Invoke(ctx, Dekart_GetSubscription_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *dekartClient) CancelSubscription(ctx context.Context, in *CancelSubscriptionRequest, opts ...grpc.CallOption) (*CancelSubscriptionResponse, error) {
 	out := new(CancelSubscriptionResponse)
 	err := c.cc.Invoke(ctx, Dekart_CancelSubscription_FullMethodName, in, out, opts...)
@@ -450,27 +441,36 @@ func (c *dekartClient) CancelSubscription(ctx context.Context, in *CancelSubscri
 	return out, nil
 }
 
-func (c *dekartClient) ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error) {
-	out := new(ListUsersResponse)
-	err := c.cc.Invoke(ctx, Dekart_ListUsers_FullMethodName, in, out, opts...)
+func (c *dekartClient) CreateOrganization(ctx context.Context, in *CreateOrganizationRequest, opts ...grpc.CallOption) (*CreateOrganizationResponse, error) {
+	out := new(CreateOrganizationResponse)
+	err := c.cc.Invoke(ctx, Dekart_CreateOrganization_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *dekartClient) AddUser(ctx context.Context, in *AddUserRequest, opts ...grpc.CallOption) (*AddUserResponse, error) {
-	out := new(AddUserResponse)
-	err := c.cc.Invoke(ctx, Dekart_AddUser_FullMethodName, in, out, opts...)
+func (c *dekartClient) UpdateOrganization(ctx context.Context, in *UpdateOrganizationRequest, opts ...grpc.CallOption) (*UpdateOrganizationResponse, error) {
+	out := new(UpdateOrganizationResponse)
+	err := c.cc.Invoke(ctx, Dekart_UpdateOrganization_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *dekartClient) RemoveUser(ctx context.Context, in *RemoveUserRequest, opts ...grpc.CallOption) (*RemoveUserResponse, error) {
-	out := new(RemoveUserResponse)
-	err := c.cc.Invoke(ctx, Dekart_RemoveUser_FullMethodName, in, out, opts...)
+func (c *dekartClient) GetOrganization(ctx context.Context, in *GetOrganizationRequest, opts ...grpc.CallOption) (*GetOrganizationResponse, error) {
+	out := new(GetOrganizationResponse)
+	err := c.cc.Invoke(ctx, Dekart_GetOrganization_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) UpdateOrganizationUser(ctx context.Context, in *UpdateOrganizationUserRequest, opts ...grpc.CallOption) (*UpdateOrganizationUserResponse, error) {
+	out := new(UpdateOrganizationUserResponse)
+	err := c.cc.Invoke(ctx, Dekart_UpdateOrganizationUser_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -518,12 +518,12 @@ type DekartServer interface {
 	RespondToInvite(context.Context, *RespondToInviteRequest) (*RespondToInviteResponse, error)
 	//subscriptions
 	CreateSubscription(context.Context, *CreateSubscriptionRequest) (*CreateSubscriptionResponse, error)
-	GetSubscription(context.Context, *GetSubscriptionRequest) (*GetSubscriptionResponse, error)
 	CancelSubscription(context.Context, *CancelSubscriptionRequest) (*CancelSubscriptionResponse, error)
 	//organizations
-	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
-	AddUser(context.Context, *AddUserRequest) (*AddUserResponse, error)
-	RemoveUser(context.Context, *RemoveUserRequest) (*RemoveUserResponse, error)
+	CreateOrganization(context.Context, *CreateOrganizationRequest) (*CreateOrganizationResponse, error)
+	UpdateOrganization(context.Context, *UpdateOrganizationRequest) (*UpdateOrganizationResponse, error)
+	GetOrganization(context.Context, *GetOrganizationRequest) (*GetOrganizationResponse, error)
+	UpdateOrganizationUser(context.Context, *UpdateOrganizationUserRequest) (*UpdateOrganizationUserResponse, error)
 	mustEmbedUnimplementedDekartServer()
 }
 
@@ -615,20 +615,20 @@ func (UnimplementedDekartServer) RespondToInvite(context.Context, *RespondToInvi
 func (UnimplementedDekartServer) CreateSubscription(context.Context, *CreateSubscriptionRequest) (*CreateSubscriptionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateSubscription not implemented")
 }
-func (UnimplementedDekartServer) GetSubscription(context.Context, *GetSubscriptionRequest) (*GetSubscriptionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetSubscription not implemented")
-}
 func (UnimplementedDekartServer) CancelSubscription(context.Context, *CancelSubscriptionRequest) (*CancelSubscriptionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CancelSubscription not implemented")
 }
-func (UnimplementedDekartServer) ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListUsers not implemented")
+func (UnimplementedDekartServer) CreateOrganization(context.Context, *CreateOrganizationRequest) (*CreateOrganizationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateOrganization not implemented")
 }
-func (UnimplementedDekartServer) AddUser(context.Context, *AddUserRequest) (*AddUserResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AddUser not implemented")
+func (UnimplementedDekartServer) UpdateOrganization(context.Context, *UpdateOrganizationRequest) (*UpdateOrganizationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateOrganization not implemented")
 }
-func (UnimplementedDekartServer) RemoveUser(context.Context, *RemoveUserRequest) (*RemoveUserResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RemoveUser not implemented")
+func (UnimplementedDekartServer) GetOrganization(context.Context, *GetOrganizationRequest) (*GetOrganizationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetOrganization not implemented")
+}
+func (UnimplementedDekartServer) UpdateOrganizationUser(context.Context, *UpdateOrganizationUserRequest) (*UpdateOrganizationUserResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateOrganizationUser not implemented")
 }
 func (UnimplementedDekartServer) mustEmbedUnimplementedDekartServer() {}
 
@@ -1156,24 +1156,6 @@ func _Dekart_CreateSubscription_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_GetSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetSubscriptionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DekartServer).GetSubscription(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Dekart_GetSubscription_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).GetSubscription(ctx, req.(*GetSubscriptionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Dekart_CancelSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CancelSubscriptionRequest)
 	if err := dec(in); err != nil {
@@ -1192,56 +1174,74 @@ func _Dekart_CancelSubscription_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_ListUsers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListUsersRequest)
+func _Dekart_CreateOrganization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateOrganizationRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DekartServer).ListUsers(ctx, in)
+		return srv.(DekartServer).CreateOrganization(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Dekart_ListUsers_FullMethodName,
+		FullMethod: Dekart_CreateOrganization_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).ListUsers(ctx, req.(*ListUsersRequest))
+		return srv.(DekartServer).CreateOrganization(ctx, req.(*CreateOrganizationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_AddUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AddUserRequest)
+func _Dekart_UpdateOrganization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateOrganizationRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DekartServer).AddUser(ctx, in)
+		return srv.(DekartServer).UpdateOrganization(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Dekart_AddUser_FullMethodName,
+		FullMethod: Dekart_UpdateOrganization_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).AddUser(ctx, req.(*AddUserRequest))
+		return srv.(DekartServer).UpdateOrganization(ctx, req.(*UpdateOrganizationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_RemoveUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RemoveUserRequest)
+func _Dekart_GetOrganization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOrganizationRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DekartServer).RemoveUser(ctx, in)
+		return srv.(DekartServer).GetOrganization(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Dekart_RemoveUser_FullMethodName,
+		FullMethod: Dekart_GetOrganization_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).RemoveUser(ctx, req.(*RemoveUserRequest))
+		return srv.(DekartServer).GetOrganization(ctx, req.(*GetOrganizationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_UpdateOrganizationUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateOrganizationUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).UpdateOrganizationUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_UpdateOrganizationUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).UpdateOrganizationUser(ctx, req.(*UpdateOrganizationUserRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1354,24 +1354,24 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Dekart_CreateSubscription_Handler,
 		},
 		{
-			MethodName: "GetSubscription",
-			Handler:    _Dekart_GetSubscription_Handler,
-		},
-		{
 			MethodName: "CancelSubscription",
 			Handler:    _Dekart_CancelSubscription_Handler,
 		},
 		{
-			MethodName: "ListUsers",
-			Handler:    _Dekart_ListUsers_Handler,
+			MethodName: "CreateOrganization",
+			Handler:    _Dekart_CreateOrganization_Handler,
 		},
 		{
-			MethodName: "AddUser",
-			Handler:    _Dekart_AddUser_Handler,
+			MethodName: "UpdateOrganization",
+			Handler:    _Dekart_UpdateOrganization_Handler,
 		},
 		{
-			MethodName: "RemoveUser",
-			Handler:    _Dekart_RemoveUser_Handler,
+			MethodName: "GetOrganization",
+			Handler:    _Dekart_GetOrganization_Handler,
+		},
+		{
+			MethodName: "UpdateOrganizationUser",
+			Handler:    _Dekart_UpdateOrganizationUser_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

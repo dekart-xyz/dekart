@@ -256,15 +256,6 @@ type DekartCreateSubscription = {
   readonly responseType: typeof proto_dekart_pb.CreateSubscriptionResponse;
 };
 
-type DekartGetSubscription = {
-  readonly methodName: string;
-  readonly service: typeof Dekart;
-  readonly requestStream: false;
-  readonly responseStream: false;
-  readonly requestType: typeof proto_dekart_pb.GetSubscriptionRequest;
-  readonly responseType: typeof proto_dekart_pb.GetSubscriptionResponse;
-};
-
 type DekartCancelSubscription = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -274,31 +265,40 @@ type DekartCancelSubscription = {
   readonly responseType: typeof proto_dekart_pb.CancelSubscriptionResponse;
 };
 
-type DekartListUsers = {
+type DekartCreateOrganization = {
   readonly methodName: string;
   readonly service: typeof Dekart;
   readonly requestStream: false;
   readonly responseStream: false;
-  readonly requestType: typeof proto_dekart_pb.ListUsersRequest;
-  readonly responseType: typeof proto_dekart_pb.ListUsersResponse;
+  readonly requestType: typeof proto_dekart_pb.CreateOrganizationRequest;
+  readonly responseType: typeof proto_dekart_pb.CreateOrganizationResponse;
 };
 
-type DekartAddUser = {
+type DekartUpdateOrganization = {
   readonly methodName: string;
   readonly service: typeof Dekart;
   readonly requestStream: false;
   readonly responseStream: false;
-  readonly requestType: typeof proto_dekart_pb.AddUserRequest;
-  readonly responseType: typeof proto_dekart_pb.AddUserResponse;
+  readonly requestType: typeof proto_dekart_pb.UpdateOrganizationRequest;
+  readonly responseType: typeof proto_dekart_pb.UpdateOrganizationResponse;
 };
 
-type DekartRemoveUser = {
+type DekartGetOrganization = {
   readonly methodName: string;
   readonly service: typeof Dekart;
   readonly requestStream: false;
   readonly responseStream: false;
-  readonly requestType: typeof proto_dekart_pb.RemoveUserRequest;
-  readonly responseType: typeof proto_dekart_pb.RemoveUserResponse;
+  readonly requestType: typeof proto_dekart_pb.GetOrganizationRequest;
+  readonly responseType: typeof proto_dekart_pb.GetOrganizationResponse;
+};
+
+type DekartUpdateOrganizationUser = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.UpdateOrganizationUserRequest;
+  readonly responseType: typeof proto_dekart_pb.UpdateOrganizationUserResponse;
 };
 
 export class Dekart {
@@ -331,11 +331,11 @@ export class Dekart {
   static readonly GetInvites: DekartGetInvites;
   static readonly RespondToInvite: DekartRespondToInvite;
   static readonly CreateSubscription: DekartCreateSubscription;
-  static readonly GetSubscription: DekartGetSubscription;
   static readonly CancelSubscription: DekartCancelSubscription;
-  static readonly ListUsers: DekartListUsers;
-  static readonly AddUser: DekartAddUser;
-  static readonly RemoveUser: DekartRemoveUser;
+  static readonly CreateOrganization: DekartCreateOrganization;
+  static readonly UpdateOrganization: DekartUpdateOrganization;
+  static readonly GetOrganization: DekartGetOrganization;
+  static readonly UpdateOrganizationUser: DekartUpdateOrganizationUser;
 }
 
 export type ServiceError = { message: string, code: number; metadata: grpc.Metadata }
@@ -598,15 +598,6 @@ export class DekartClient {
     requestMessage: proto_dekart_pb.CreateSubscriptionRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateSubscriptionResponse|null) => void
   ): UnaryResponse;
-  getSubscription(
-    requestMessage: proto_dekart_pb.GetSubscriptionRequest,
-    metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetSubscriptionResponse|null) => void
-  ): UnaryResponse;
-  getSubscription(
-    requestMessage: proto_dekart_pb.GetSubscriptionRequest,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetSubscriptionResponse|null) => void
-  ): UnaryResponse;
   cancelSubscription(
     requestMessage: proto_dekart_pb.CancelSubscriptionRequest,
     metadata: grpc.Metadata,
@@ -616,32 +607,41 @@ export class DekartClient {
     requestMessage: proto_dekart_pb.CancelSubscriptionRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CancelSubscriptionResponse|null) => void
   ): UnaryResponse;
-  listUsers(
-    requestMessage: proto_dekart_pb.ListUsersRequest,
+  createOrganization(
+    requestMessage: proto_dekart_pb.CreateOrganizationRequest,
     metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.ListUsersResponse|null) => void
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateOrganizationResponse|null) => void
   ): UnaryResponse;
-  listUsers(
-    requestMessage: proto_dekart_pb.ListUsersRequest,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.ListUsersResponse|null) => void
+  createOrganization(
+    requestMessage: proto_dekart_pb.CreateOrganizationRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateOrganizationResponse|null) => void
   ): UnaryResponse;
-  addUser(
-    requestMessage: proto_dekart_pb.AddUserRequest,
+  updateOrganization(
+    requestMessage: proto_dekart_pb.UpdateOrganizationRequest,
     metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.AddUserResponse|null) => void
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateOrganizationResponse|null) => void
   ): UnaryResponse;
-  addUser(
-    requestMessage: proto_dekart_pb.AddUserRequest,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.AddUserResponse|null) => void
+  updateOrganization(
+    requestMessage: proto_dekart_pb.UpdateOrganizationRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateOrganizationResponse|null) => void
   ): UnaryResponse;
-  removeUser(
-    requestMessage: proto_dekart_pb.RemoveUserRequest,
+  getOrganization(
+    requestMessage: proto_dekart_pb.GetOrganizationRequest,
     metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.RemoveUserResponse|null) => void
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetOrganizationResponse|null) => void
   ): UnaryResponse;
-  removeUser(
-    requestMessage: proto_dekart_pb.RemoveUserRequest,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.RemoveUserResponse|null) => void
+  getOrganization(
+    requestMessage: proto_dekart_pb.GetOrganizationRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetOrganizationResponse|null) => void
+  ): UnaryResponse;
+  updateOrganizationUser(
+    requestMessage: proto_dekart_pb.UpdateOrganizationUserRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateOrganizationUserResponse|null) => void
+  ): UnaryResponse;
+  updateOrganizationUser(
+    requestMessage: proto_dekart_pb.UpdateOrganizationUserRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateOrganizationUserResponse|null) => void
   ): UnaryResponse;
 }
 

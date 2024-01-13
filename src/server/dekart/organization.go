@@ -5,246 +5,58 @@ import (
 	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/user"
-	"strings"
 
-	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s Server) RespondToInvite(ctx context.Context, req *proto.RespondToInviteRequest) (*proto.RespondToInviteResponse, error) {
+func (s Server) CreateOrganization(ctx context.Context, req *proto.CreateOrganizationRequest) (*proto.CreateOrganizationResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	organizationID := req.OrganizationId
-	var userStatus int32
-	if condition := req.Accept; condition {
-		userStatus = int32(proto.UserStatus_USER_STATUS_ACTIVE)
-	} else {
-		userStatus = int32(proto.UserStatus_USER_STATUS_REMOVED)
-
-	}
-	res, err := s.db.ExecContext(ctx, `
-		INSERT INTO organization_log (organization_id, email, user_status, authored_by)
-		SELECT
-			ol.organization_id,
-			ol.email,
-			$3,
-			ol.email
-		from organization_log as ol
-		join (
-			SELECT
-				organization_id,
-				email,
-				max(created_at) as created_at
-			FROM
-				organization_log
-			WHERE
-				email = $2 and organization_id = $1
-			group by
-				organization_id, email
-		) as la on ol.organization_id = la.organization_id and ol.created_at = la.created_at and ol.email = la.email
-		WHERE ol.user_status = 1
-	`, organizationID, claims.Email, userStatus)
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	rowsAffected, err := res.RowsAffected()
-
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	if rowsAffected == 0 {
-		return nil, status.Error(codes.NotFound, "Invite not found")
-	}
-	s.userStreams.PingAll()
-	return &proto.RespondToInviteResponse{}, nil
-}
-
-func (s Server) createOrganization(ctx context.Context, personal bool) (*proto.Organization, error) {
-	claims := user.GetClaims(ctx)
-	name := strings.Split(claims.Email, "@")[0]
-	organizationID := uuid.New()
+	organizationID := newUUID()
 	_, err := s.db.ExecContext(ctx, `
-		INSERT INTO organizations (id, name, personal)
+		INSERT INTO organizations (id, name)
 		VALUES ($1, $2, $3)
-	`, organizationID, name, personal)
+	`, organizationID, req.OrganizationName)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	_, err = s.db.ExecContext(ctx, `
-		INSERT INTO organization_log (organization_id, email, user_status, authored_by)
-		VALUES ($1, $2, $3, $4)
-	`, organizationID, claims.Email, proto.UserStatus_USER_STATUS_ACTIVE, claims.Email)
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	return &proto.Organization{
-		Id:       organizationID.String(),
-		Name:     claims.Email,
-		Personal: personal,
-	}, nil
-}
-
-func (s Server) GetInvites(ctx context.Context, req *proto.GetInvitesRequest) (*proto.GetInvitesResponse, error) {
-	claims := user.GetClaims(ctx)
-	if claims == nil {
-		return nil, Unauthenticated
-	}
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT
-			ol.created_at,
-			ol.organization_id,
-			o.name,
-			ol.authored_by
-		from organization_log as ol
-		join organizations as o on ol.organization_id = o.id
-		join (
-			SELECT
-			organization_id,
-			email,
-			max(created_at) as created_at
-		FROM
-			organization_log
-		WHERE
-			email = $1
-		group by
-			organization_id, email
-		) as la on ol.organization_id = la.organization_id and ol.created_at = la.created_at and ol.email = la.email
-		where ol.user_status = 1
-`, claims.Email)
-
-	if err != nil {
-		log.Err(err).Send()
-		return nil, err
-	}
-	defer rows.Close()
-	invites := make([]*proto.OrganizationInvite, 0)
-	for rows.Next() {
-		invite := proto.OrganizationInvite{}
-		organization := proto.Organization{}
-		createdAt := sql.NullTime{}
-		err := rows.Scan(&createdAt, &organization.Id, &organization.Name, &invite.InviterEmail)
-		if err != nil {
-			log.Err(err).Send()
-			return nil, err
-		}
-		invite.CreatedAt = createdAt.Time.Unix()
-		invite.Organization = &organization
-		invites = append(invites, &invite)
-	}
-	return &proto.GetInvitesResponse{
-		Invites: invites,
-	}, nil
-}
-
-func (s Server) getLastOrganizationInviteUpdate(ctx context.Context) (int64, error) {
-	claims := user.GetClaims(ctx)
-	var createdAt sql.NullTime
-	err := s.db.QueryRowContext(ctx, `
-		SELECT
-			max(o.created_at)
-		from organization_log as o
-		join (
-			SELECT
-			organization_id,
-			email,
-			max(created_at) as created_at
-		FROM
-			organization_log
-		WHERE
-			email = $1
-		group by
-			organization_id, email
-		) as l on o.organization_id = l.organization_id and o.created_at = l.created_at and o.email = l.email
-		where o.user_status = 1
-		`, claims.Email).Scan(&createdAt)
-	if err != nil {
-		log.Err(err).Send()
-		return 0, err
-	}
-	return createdAt.Time.Unix(), nil
-}
-
-func (s Server) AddUser(ctx context.Context, req *proto.AddUserRequest) (*proto.AddUserResponse, error) {
-	claims := user.GetClaims(ctx)
-	if claims == nil {
-		return nil, Unauthenticated
-	}
-	sub := checkSubscription(ctx)
-	if !sub.Active {
-		return nil, status.Error(codes.NotFound, "Subscription not found")
-	}
-	organizationID := sub.OrganizationId
-	_, err := s.db.ExecContext(
-		ctx,
-		`
-			INSERT INTO organization_log (organization_id, email, user_status, authored_by)
-			VALUES ($1, $2, $3, $4)
-		`,
-		organizationID,
-		req.Email,
-		proto.UserStatus_USER_STATUS_PENDING,
-		claims.Email,
-	)
+		INSERT INTO organization_log (organization_id, email, status, authored_by)
+		VALUES ($1, $2, 1, $2)
+	`, organizationID, claims.Email)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	s.userStreams.PingAll()
-	return &proto.AddUserResponse{}, nil
+	return &proto.CreateOrganizationResponse{}, nil
 }
 
-func (s Server) RemoveUser(ctx context.Context, req *proto.RemoveUserRequest) (*proto.RemoveUserResponse, error) {
+func (s Server) UpdateOrganization(ctx context.Context, req *proto.UpdateOrganizationRequest) (*proto.UpdateOrganizationResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	sub := checkSubscription(ctx)
-	if !sub.Active {
-		return nil, status.Error(codes.NotFound, "Subscription not found")
-	}
-	organizationID := sub.OrganizationId
-	_, err := s.db.ExecContext(ctx, `
-		INSERT INTO organization_log (organization_id, email, user_status, authored_by)
-		VALUES ($1, $2, $3, $4)
-	`, organizationID, req.Email, proto.UserStatus_USER_STATUS_REMOVED, claims.Email)
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	s.userStreams.PingAll()
-	return &proto.RemoveUserResponse{}, nil
-}
-
-func (s Server) getLastOrganizationUpdate(ctx context.Context, organizationID string) (int64, error) {
+	organizationID := checkOrganization(ctx).ID
 	if organizationID == "" {
-		return 0, nil
+		return nil, status.Error(codes.NotFound, "Organization not found")
 	}
-	var createdAt sql.NullTime
-	err := s.db.QueryRowContext(ctx, `
-		SELECT
-			created_at
-		FROM
-			organization_log
-		WHERE
-			organization_id = $1
-		ORDER BY
-			created_at DESC
-		LIMIT 1
-		`, organizationID).Scan(&createdAt)
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE organizations
+		SET name = $2, updated_at = now()
+		WHERE id = $1
+	`, organizationID, req.OrganizationName)
 	if err != nil {
 		log.Err(err).Send()
-		return 0, err
+		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return createdAt.Time.Unix(), nil
+	s.userStreams.PingAll()
+	return &proto.UpdateOrganizationResponse{}, nil
 }
 
 func (s Server) getOrganizationUsers(ctx context.Context, organizationID string) ([]*proto.User, error) {
@@ -254,8 +66,10 @@ func (s Server) getOrganizationUsers(ctx context.Context, organizationID string)
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT
 			ol.email,
-			ol.user_status,
-			ol.created_at
+			ol.status,
+			ol.created_at,
+			cl.accepted,
+			oll.authored_by
 		FROM
 			organization_log ol
 		JOIN
@@ -270,6 +84,7 @@ func (s Server) getOrganizationUsers(ctx context.Context, organizationID string)
 				email) subq
 		ON
 			ol.email = subq.email AND ol.created_at = subq.max_created_at
+		LEFT JOIN confirmation_log AS cl ON ol.id = cl.organization_log_id
 		ORDER BY
 			ol.created_at DESC
 		`, organizationID)
@@ -280,33 +95,225 @@ func (s Server) getOrganizationUsers(ctx context.Context, organizationID string)
 	defer rows.Close()
 	for rows.Next() {
 		var updatedAt sql.NullTime
+		var accepted sql.NullBool
+		var status int32
+		var authoredBy string
 		user := proto.User{}
-		err := rows.Scan(&user.Email, &user.Status, &updatedAt)
-		user.UpdatedAt = updatedAt.Time.Unix()
+		err := rows.Scan(&user.Email, &status, &updatedAt, &accepted, &authoredBy)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, err
+		}
+		if status == 1 {
+			if accepted.Valid && accepted.Bool || user.Email == authoredBy {
+				user.Status = proto.UserStatus_USER_STATUS_ACTIVE
+			} else {
+				user.Status = proto.UserStatus_USER_STATUS_PENDING
+			}
+		} else {
+			user.Status = proto.UserStatus_USER_STATUS_REMOVED
 		}
 		users = append(users, &user)
 	}
 	return users, nil
 }
 
-func (s Server) ListUsers(ctx context.Context, req *proto.ListUsersRequest) (*proto.ListUsersResponse, error) {
+func (s Server) getUserOrganization(ctx context.Context, email string) (*proto.Organization, error) {
+	organization := proto.Organization{}
+	err := s.db.QueryRowContext(ctx, `
+		SELECT
+			o.id,
+			o.name
+		FROM organizations AS o
+		JOIN organization_log AS ol ON o.id = ol.organization_id
+		JOIN (
+			SELECT
+				organization_id,
+				MAX(created_at) AS created_at
+			FROM organization_log
+			WHERE email = $1
+			GROUP BY organization_id
+		) AS oll ON ol.organization_id = oll.organization_id AND ol.created_at = oll.created_at
+		LEFT JOIN confirmation_log AS cl ON ol.id = cl.organization_log_id AND cl.authored_by = ol.email
+		WHERE ol.status = 1 AND (ol.authored_by = $1 OR cl.accepted = TRUE)
+		ORDER BY ol.created_at DESC
+		LIMIT 1
+	`, email).Scan(&organization.Id, &organization.Name)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, err
+	}
+	return &organization, nil
+}
+
+const organizationInfoKey = "organizationInfo"
+
+type OrganizationInfo struct {
+	ID       string
+	PlanType proto.PlanType
+	Name     string
+}
+
+func (s Server) SetOrganizationContext(ctx context.Context) context.Context {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return ctx
+	}
+	organization, err := s.getUserOrganization(ctx, claims.Email)
+	if err != nil {
+		log.Err(err).Send()
+		return ctx
+	}
+	var organizationId string
+	var planType proto.PlanType
+	var name string
+	if organization != nil {
+		organizationId = organization.Id
+		name = organization.Name
+		subscription, err := s.getSubscription(ctx, organizationId)
+		if err != nil {
+			log.Err(err).Send()
+			return ctx
+		}
+		if subscription != nil {
+			planType = subscription.PlanType
+		}
+	}
+	ctx = context.WithValue(ctx, organizationInfoKey, OrganizationInfo{
+		ID:       organizationId,
+		PlanType: planType,
+		Name:     name,
+	})
+	return ctx
+}
+
+func checkOrganization(ctx context.Context) OrganizationInfo {
+	organizationInfo, ok := ctx.Value(organizationInfoKey).(OrganizationInfo)
+	if !ok {
+		log.Error().Msgf("organizationInfo not found in context")
+	}
+	return organizationInfo
+}
+
+func (s Server) GetOrganization(ctx context.Context, req *proto.GetOrganizationRequest) (*proto.GetOrganizationResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	sub := checkSubscription(ctx)
-	if !sub.Active {
-		return nil, status.Error(codes.NotFound, "Subscription not found")
+	organizationInfo := checkOrganization(ctx)
+	if organizationInfo.ID == "" {
+		return nil, status.Error(codes.NotFound, "Organization not found")
 	}
-	user, err := s.getOrganizationUsers(ctx, sub.OrganizationId)
+	subscription, err := s.getSubscription(ctx, organizationInfo.ID)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return &proto.ListUsersResponse{
-		Users: user,
+	users, err := s.getOrganizationUsers(ctx, organizationInfo.ID)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	return &proto.GetOrganizationResponse{
+		Organization: &proto.Organization{
+			Id:   organizationInfo.ID,
+			Name: organizationInfo.Name,
+		},
+		Subscription: subscription,
+		Users:        users,
 	}, nil
+}
+
+func (s Server) UpdateOrganizationUser(ctx context.Context, req *proto.UpdateOrganizationUserRequest) (*proto.UpdateOrganizationUserResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	organizationInfo := checkOrganization(ctx)
+	if organizationInfo.ID == "" {
+		return nil, status.Error(codes.NotFound, "Organization not found")
+	}
+	if req.UserUpdateType == proto.UpdateOrganizationUserRequest_USER_UPDATE_TYPE_UNSPECIFIED {
+		return nil, status.Error(codes.InvalidArgument, "User update type not specified")
+	}
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO organization_log (organization_id, email, status, authored_by)
+		VALUES ($1, $2, $3, $4)
+	`, organizationInfo.ID, req.Email, req.UserUpdateType, claims.Email)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	s.userStreams.PingAll()
+	return &proto.UpdateOrganizationUserResponse{}, nil
+}
+
+func (s Server) GetInvites(ctx context.Context, req *proto.GetInvitesRequest) (*proto.GetInvitesResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT
+			ol.created_at,
+			o.organization_id,
+			ol.id,
+			o.name,
+			ol.authored_by
+		FROM
+			organization_log ol
+		JOIN
+			(SELECT
+				organization_id,
+				max(created_at) as max_created_at
+			FROM
+				organization_log
+			WHERE
+				email = $1
+			GROUP BY
+				organization_id) subq
+		ON ol.organization_id=subq.organization_id AND ol.created_at = subq.max_created_at
+		JOIN organizations AS o ON ol.organization_id = o.id
+		LEFT JOIN confirmation_log AS cl ON ol.id = cl.organization_log_id AND cl.authored_by = ol.email
+		WHERE ol.status = 1 AND ol.authored_by != $1 AND cl.accepted is null
+		ORDER BY ol.created_at DESC
+		`, claims.Email)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, err
+	}
+	defer rows.Close()
+	invites := make([]*proto.OrganizationInvite, 0)
+	for rows.Next() {
+		invite := proto.OrganizationInvite{}
+		createdAt := sql.NullTime{}
+		err := rows.Scan(&createdAt, &invite.OrganizationId, &invite.InviteId, &invite.OrganizationName, &invite.InviterEmail)
+		if err != nil {
+			log.Err(err).Send()
+			return nil, err
+		}
+		invite.CreatedAt = createdAt.Time.Unix()
+		invites = append(invites, &invite)
+	}
+	return &proto.GetInvitesResponse{
+		Invites: invites,
+	}, nil
+}
+
+func (s Server) RespondToInvite(ctx context.Context, req *proto.RespondToInviteRequest) (*proto.RespondToInviteResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO confirmation_log (organization_log_id, accepted, authored_by)
+		VALUES (
+			$1, $2, $3
+	`, req.InviteId, req.Accept, claims.Email)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	s.userStreams.PingAll()
+	return &proto.RespondToInviteResponse{}, nil
 }

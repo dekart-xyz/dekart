@@ -262,15 +262,6 @@ Dekart.CreateSubscription = {
   responseType: proto_dekart_pb.CreateSubscriptionResponse
 };
 
-Dekart.GetSubscription = {
-  methodName: "GetSubscription",
-  service: Dekart,
-  requestStream: false,
-  responseStream: false,
-  requestType: proto_dekart_pb.GetSubscriptionRequest,
-  responseType: proto_dekart_pb.GetSubscriptionResponse
-};
-
 Dekart.CancelSubscription = {
   methodName: "CancelSubscription",
   service: Dekart,
@@ -280,31 +271,40 @@ Dekart.CancelSubscription = {
   responseType: proto_dekart_pb.CancelSubscriptionResponse
 };
 
-Dekart.ListUsers = {
-  methodName: "ListUsers",
+Dekart.CreateOrganization = {
+  methodName: "CreateOrganization",
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.ListUsersRequest,
-  responseType: proto_dekart_pb.ListUsersResponse
+  requestType: proto_dekart_pb.CreateOrganizationRequest,
+  responseType: proto_dekart_pb.CreateOrganizationResponse
 };
 
-Dekart.AddUser = {
-  methodName: "AddUser",
+Dekart.UpdateOrganization = {
+  methodName: "UpdateOrganization",
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.AddUserRequest,
-  responseType: proto_dekart_pb.AddUserResponse
+  requestType: proto_dekart_pb.UpdateOrganizationRequest,
+  responseType: proto_dekart_pb.UpdateOrganizationResponse
 };
 
-Dekart.RemoveUser = {
-  methodName: "RemoveUser",
+Dekart.GetOrganization = {
+  methodName: "GetOrganization",
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.RemoveUserRequest,
-  responseType: proto_dekart_pb.RemoveUserResponse
+  requestType: proto_dekart_pb.GetOrganizationRequest,
+  responseType: proto_dekart_pb.GetOrganizationResponse
+};
+
+Dekart.UpdateOrganizationUser = {
+  methodName: "UpdateOrganizationUser",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.UpdateOrganizationUserRequest,
+  responseType: proto_dekart_pb.UpdateOrganizationUserResponse
 };
 
 exports.Dekart = Dekart;
@@ -1206,37 +1206,6 @@ DekartClient.prototype.createSubscription = function createSubscription(requestM
   };
 };
 
-DekartClient.prototype.getSubscription = function getSubscription(requestMessage, metadata, callback) {
-  if (arguments.length === 2) {
-    callback = arguments[1];
-  }
-  var client = grpc.unary(Dekart.GetSubscription, {
-    request: requestMessage,
-    host: this.serviceHost,
-    metadata: metadata,
-    transport: this.options.transport,
-    debug: this.options.debug,
-    onEnd: function (response) {
-      if (callback) {
-        if (response.status !== grpc.Code.OK) {
-          var err = new Error(response.statusMessage);
-          err.code = response.status;
-          err.metadata = response.trailers;
-          callback(err, null);
-        } else {
-          callback(null, response.message);
-        }
-      }
-    }
-  });
-  return {
-    cancel: function () {
-      callback = null;
-      client.close();
-    }
-  };
-};
-
 DekartClient.prototype.cancelSubscription = function cancelSubscription(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
@@ -1268,11 +1237,11 @@ DekartClient.prototype.cancelSubscription = function cancelSubscription(requestM
   };
 };
 
-DekartClient.prototype.listUsers = function listUsers(requestMessage, metadata, callback) {
+DekartClient.prototype.createOrganization = function createOrganization(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
-  var client = grpc.unary(Dekart.ListUsers, {
+  var client = grpc.unary(Dekart.CreateOrganization, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
@@ -1299,11 +1268,11 @@ DekartClient.prototype.listUsers = function listUsers(requestMessage, metadata, 
   };
 };
 
-DekartClient.prototype.addUser = function addUser(requestMessage, metadata, callback) {
+DekartClient.prototype.updateOrganization = function updateOrganization(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
-  var client = grpc.unary(Dekart.AddUser, {
+  var client = grpc.unary(Dekart.UpdateOrganization, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
@@ -1330,11 +1299,42 @@ DekartClient.prototype.addUser = function addUser(requestMessage, metadata, call
   };
 };
 
-DekartClient.prototype.removeUser = function removeUser(requestMessage, metadata, callback) {
+DekartClient.prototype.getOrganization = function getOrganization(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
-  var client = grpc.unary(Dekart.RemoveUser, {
+  var client = grpc.unary(Dekart.GetOrganization, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.updateOrganizationUser = function updateOrganizationUser(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.UpdateOrganizationUser, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
