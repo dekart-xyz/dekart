@@ -201,15 +201,7 @@ func (s Server) sendUserStreamResponse(ctx context.Context, srv proto.Dekart_Get
 		return status.Errorf(codes.Internal, err.Error())
 	}
 
-	// organization update
-	organizationUpdate, err := s.getLastOrganizationUpdate(ctx, sub.OrganizationId)
-	if err != nil {
-		log.Err(err).Send()
-		return status.Errorf(codes.Internal, err.Error())
-	}
-
-	//invitations
-	organizationInviteUpdate, err := s.getLastOrganizationInviteUpdate(ctx)
+	organizationUpdate, err := s.getOrganizationUpdate(ctx)
 	if err != nil {
 		log.Err(err).Send()
 		return status.Errorf(codes.Internal, err.Error())
@@ -219,12 +211,9 @@ func (s Server) sendUserStreamResponse(ctx context.Context, srv proto.Dekart_Get
 		StreamOptions: &proto.StreamOptions{
 			Sequence: sequence,
 		},
-		ConnectionUpdate:         connectionUpdate,
-		Email:                    claims.Email,
-		SubscriptionActive:       sub.Active,
-		SubscriptionUpdate:       sub.UpdatedAt,
-		OrganizationUpdate:       organizationUpdate,
-		OrganizationInviteUpdate: organizationInviteUpdate,
+		ConnectionUpdate:   connectionUpdate,
+		Email:              claims.Email,
+		OrganizationUpdate: organizationUpdate,
 	}
 	err = srv.Send(&res)
 	if err != nil {

@@ -11,6 +11,31 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// getOrganizationUpdate for simplicity, we just get the max updated_at from the all tables.
+func (s Server) getOrganizationUpdate(ctx context.Context) (int64, error) {
+	var updated_at sql.NullTime
+	err := s.db.QueryRowContext(ctx, `
+		SELECT max(updated_at) FROM (
+			SELECT
+				max(updated_at) as updated_at
+			FROM organizations
+			UNION
+			SELECT
+				max(created_at) as updated_at
+			FROM organization_log
+			UNION
+			SELECT
+				max(created_at) as updated_at
+			FROM confirmation_log
+		)
+	`).Scan(&updated_at)
+	if err != nil {
+		log.Err(err).Send()
+		return 0, err
+	}
+	return updated_at.Time.Unix(), nil
+}
+
 func (s Server) CreateOrganization(ctx context.Context, req *proto.CreateOrganizationRequest) (*proto.CreateOrganizationResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
