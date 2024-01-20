@@ -8,6 +8,8 @@ ifneq (,$(wildcard ./.env))
 endif
 
 UNAME := $(shell uname -m)
+DEKART_DOCKER_DEV_TAG ?= dekart-dev
+DEKART_DOCKER_E2E_TAG ?= dekart-e2e
 
 proto-clean:
 	rm -rf ./src/proto/*.go
@@ -134,7 +136,29 @@ snowflake:
 	-e TEST_SPEC=cypress/e2e/snowflake \
 	${DEKART_DOCKER_E2E_TAG}
 
-
+postgres:
+	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} -o type=image -f ./Dockerfile --target e2etest .
+	docker run -it --rm \
+	-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
+	-e GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} \
+	-v $$(pwd)/cypress/videos:/dekart/cypress/videos/ \
+	-v $$(pwd)/cypress/screenshots:/dekart/cypress/screenshots/ \
+	-e DEKART_POSTGRES_DB=${DEKART_POSTGRES_DB} \
+	-e DEKART_POSTGRES_USER=${DEKART_POSTGRES_USER} \
+	-e DEKART_POSTGRES_PASSWORD=${DEKART_POSTGRES_PASSWORD} \
+	-e DEKART_POSTGRES_PORT=${DEKART_POSTGRES_PORT} \
+	-e DEKART_POSTGRES_HOST=host.docker.internal \
+	-e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
+	-e DEKART_STORAGE=GCS \
+	\
+	-e DEKART_DATASOURCE=PG \
+	-e DEKART_POSTGRES_DATA_CONNECTION=${DEKART_POSTGRES_DATA_CONNECTION} \
+	\
+	-e DEKART_CLOUD_STORAGE_BUCKET=${DEKART_CLOUD_STORAGE_BUCKET} \
+	-e DEKART_ALLOW_FILE_UPLOAD=1 \
+	-e DEKART_CORS_ORIGIN=http://localhost:3000 \
+	-e TEST_SPEC=cypress/e2e/pg \
+	${DEKART_DOCKER_E2E_TAG}
 
 docker: # build docker for local use
 	docker buildx build --push --tag ${DEKART_DOCKER_DEV_TAG} -o type=image --platform=linux/amd64 -f ./Dockerfile .
