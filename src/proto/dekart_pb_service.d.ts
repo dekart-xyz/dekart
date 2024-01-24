@@ -229,15 +229,6 @@ type DekartSetDefaultConnection = {
   readonly responseType: typeof proto_dekart_pb.SetDefaultConnectionResponse;
 };
 
-type DekartGetInvites = {
-  readonly methodName: string;
-  readonly service: typeof Dekart;
-  readonly requestStream: false;
-  readonly responseStream: false;
-  readonly requestType: typeof proto_dekart_pb.GetInvitesRequest;
-  readonly responseType: typeof proto_dekart_pb.GetInvitesResponse;
-};
-
 type DekartRespondToInvite = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -328,7 +319,6 @@ export class Dekart {
   static readonly GetConnectionList: DekartGetConnectionList;
   static readonly TestConnection: DekartTestConnection;
   static readonly SetDefaultConnection: DekartSetDefaultConnection;
-  static readonly GetInvites: DekartGetInvites;
   static readonly RespondToInvite: DekartRespondToInvite;
   static readonly CreateSubscription: DekartCreateSubscription;
   static readonly CancelSubscription: DekartCancelSubscription;
@@ -570,15 +560,6 @@ export class DekartClient {
   setDefaultConnection(
     requestMessage: proto_dekart_pb.SetDefaultConnectionRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.SetDefaultConnectionResponse|null) => void
-  ): UnaryResponse;
-  getInvites(
-    requestMessage: proto_dekart_pb.GetInvitesRequest,
-    metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetInvitesResponse|null) => void
-  ): UnaryResponse;
-  getInvites(
-    requestMessage: proto_dekart_pb.GetInvitesRequest,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetInvitesResponse|null) => void
   ): UnaryResponse;
   respondToInvite(
     requestMessage: proto_dekart_pb.RespondToInviteRequest,

@@ -19,7 +19,7 @@ export default function DekartMenu () {
       <Menu mode='horizontal' theme='dark'>
         <Menu.SubMenu
           popupClassName={styles.subMenu} title={<MenuOutlined />} key='home' active='yes' disabled={
-          !(user && user.subscriptionActive)
+          !(user && user.planType)
         }
         >
           <Menu.Item key='my'>

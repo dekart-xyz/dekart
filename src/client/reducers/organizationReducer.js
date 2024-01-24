@@ -1,35 +1,22 @@
-import { invitesUpdate, subscriptionUpdate, usersListUpdate } from '../actions/organization'
-import { combineReducers } from 'redux'
+import { organizationUpdate } from '../actions/organization'
 
-function subscription (state = null, action) {
+export default function organization (state = {
+  id: null,
+  name: null,
+  subscription: null,
+  users: [],
+  invites: []
+}, action) {
   switch (action.type) {
-    case subscriptionUpdate.name:
-      return action.subscription
+    case organizationUpdate.name:
+      return {
+        id: action.organization ? action.organization.id : null,
+        name: action.organization ? action.organization.name : null,
+        subscription: action.subscription || null,
+        users: action.usersList || [],
+        invites: action.invitesList || []
+      }
     default:
       return state
   }
 }
-
-function users (state = null, action) {
-  switch (action.type) {
-    case usersListUpdate.name:
-      return action.usersList
-    default:
-      return state
-  }
-}
-
-function invites (state = [], action) {
-  switch (action.type) {
-    case invitesUpdate.name:
-      return action.invitesList
-    default:
-      return state
-  }
-}
-
-export default combineReducers({
-  subscription,
-  users,
-  invites
-})

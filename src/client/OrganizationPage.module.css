@@ -69,6 +69,15 @@
     padding: 10px;
 }
 
+.organizationTabHeader {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 600px;
+    margin-bottom: 20px;
+}
+
 .inviteUsersInput {
     width: calc(100% - 100px)!important;
 }
@@ -114,6 +123,24 @@
 
 .organizationNameColumn {
     min-width: 600px;
+}
+
+/* .organization {
+    width: 600px;
+} */
+
+.joinSelect{
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+}
+
+.organizationSteps {
+    margin-bottom: 30px;
+    width: 600px;
 }
 
 /* .userListRow .removeButton {

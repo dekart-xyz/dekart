@@ -83,6 +83,11 @@ export class GetOrganizationResponse extends jspb.Message {
   setUsersList(value: Array<User>): void;
   addUsers(value?: User, index?: number): User;
 
+  clearInvitesList(): void;
+  getInvitesList(): Array<OrganizationInvite>;
+  setInvitesList(value: Array<OrganizationInvite>): void;
+  addInvites(value?: OrganizationInvite, index?: number): OrganizationInvite;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetOrganizationResponse.AsObject;
   static toObject(includeInstance: boolean, msg: GetOrganizationResponse): GetOrganizationResponse.AsObject;
@@ -98,6 +103,7 @@ export namespace GetOrganizationResponse {
     organization?: Organization.AsObject,
     subscription?: Subscription.AsObject,
     usersList: Array<User.AsObject>,
+    invitesList: Array<OrganizationInvite.AsObject>,
   }
 }
 

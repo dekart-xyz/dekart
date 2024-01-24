@@ -41,19 +41,20 @@ func (s Server) CreateOrganization(ctx context.Context, req *proto.CreateOrganiz
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	log.Debug().Msgf("CreateOrganization: %v", req)
 	organizationID := newUUID()
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO organizations (id, name)
-		VALUES ($1, $2, $3)
+		VALUES ($1, $2)
 	`, organizationID, req.OrganizationName)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	_, err = s.db.ExecContext(ctx, `
-		INSERT INTO organization_log (organization_id, email, status, authored_by)
-		VALUES ($1, $2, 1, $2)
-	`, organizationID, claims.Email)
+		INSERT INTO organization_log (organization_id, email, status, authored_by, id)
+		VALUES ($1, $2, 1, $2, $3)
+	`, organizationID, claims.Email, newUUID())
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
@@ -94,7 +95,7 @@ func (s Server) getOrganizationUsers(ctx context.Context, organizationID string)
 			ol.status,
 			ol.created_at,
 			cl.accepted,
-			oll.authored_by
+			ol.authored_by
 		FROM
 			organization_log ol
 		JOIN
@@ -144,8 +145,7 @@ func (s Server) getOrganizationUsers(ctx context.Context, organizationID string)
 }
 
 func (s Server) getUserOrganization(ctx context.Context, email string) (*proto.Organization, error) {
-	organization := proto.Organization{}
-	err := s.db.QueryRowContext(ctx, `
+	res, err := s.db.QueryContext(ctx, `
 		SELECT
 			o.id,
 			o.name
@@ -163,15 +163,27 @@ func (s Server) getUserOrganization(ctx context.Context, email string) (*proto.O
 		WHERE ol.status = 1 AND (ol.authored_by = $1 OR cl.accepted = TRUE)
 		ORDER BY ol.created_at DESC
 		LIMIT 1
-	`, email).Scan(&organization.Id, &organization.Name)
+	`, email)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, err
 	}
-	return &organization, nil
+	defer res.Close()
+	if res.Next() {
+		organization := proto.Organization{}
+		err := res.Scan(&organization.Id, &organization.Name)
+		if err != nil {
+			log.Err(err).Send()
+			return nil, err
+		}
+		return &organization, nil
+	}
+	return nil, nil
 }
 
-const organizationInfoKey = "organizationInfo"
+type organizationInfoKeyType string
+
+const organizationInfoKey organizationInfoKeyType = "organizationInfo"
 
 type OrganizationInfo struct {
 	ID       string
@@ -204,6 +216,7 @@ func (s Server) SetOrganizationContext(ctx context.Context) context.Context {
 			planType = subscription.PlanType
 		}
 	}
+
 	ctx = context.WithValue(ctx, organizationInfoKey, OrganizationInfo{
 		ID:       organizationId,
 		PlanType: planType,
@@ -225,9 +238,16 @@ func (s Server) GetOrganization(ctx context.Context, req *proto.GetOrganizationR
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	invites, err := s.getInvites(ctx, claims.Email)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 	organizationInfo := checkOrganization(ctx)
 	if organizationInfo.ID == "" {
-		return nil, status.Error(codes.NotFound, "Organization not found")
+		return &proto.GetOrganizationResponse{
+			Invites: invites,
+		}, nil
 	}
 	subscription, err := s.getSubscription(ctx, organizationInfo.ID)
 	if err != nil {
@@ -239,6 +259,7 @@ func (s Server) GetOrganization(ctx context.Context, req *proto.GetOrganizationR
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+
 	return &proto.GetOrganizationResponse{
 		Organization: &proto.Organization{
 			Id:   organizationInfo.ID,
@@ -246,6 +267,7 @@ func (s Server) GetOrganization(ctx context.Context, req *proto.GetOrganizationR
 		},
 		Subscription: subscription,
 		Users:        users,
+		Invites:      invites,
 	}, nil
 }
 
@@ -259,12 +281,13 @@ func (s Server) UpdateOrganizationUser(ctx context.Context, req *proto.UpdateOrg
 		return nil, status.Error(codes.NotFound, "Organization not found")
 	}
 	if req.UserUpdateType == proto.UpdateOrganizationUserRequest_USER_UPDATE_TYPE_UNSPECIFIED {
+		log.Error().Msgf("User update type not specified")
 		return nil, status.Error(codes.InvalidArgument, "User update type not specified")
 	}
 	_, err := s.db.ExecContext(ctx, `
-		INSERT INTO organization_log (organization_id, email, status, authored_by)
-		VALUES ($1, $2, $3, $4)
-	`, organizationInfo.ID, req.Email, req.UserUpdateType, claims.Email)
+		INSERT INTO organization_log (id, organization_id, email, status, authored_by)
+		VALUES ($1, $2, $3, $4, $5)
+	`, newUUID(), organizationInfo.ID, req.Email, req.UserUpdateType, claims.Email)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
@@ -273,15 +296,11 @@ func (s Server) UpdateOrganizationUser(ctx context.Context, req *proto.UpdateOrg
 	return &proto.UpdateOrganizationUserResponse{}, nil
 }
 
-func (s Server) GetInvites(ctx context.Context, req *proto.GetInvitesRequest) (*proto.GetInvitesResponse, error) {
-	claims := user.GetClaims(ctx)
-	if claims == nil {
-		return nil, Unauthenticated
-	}
+func (s Server) getInvites(ctx context.Context, email string) ([]*proto.OrganizationInvite, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT
 			ol.created_at,
-			o.organization_id,
+			o.id,
 			ol.id,
 			o.name,
 			ol.authored_by
@@ -302,7 +321,7 @@ func (s Server) GetInvites(ctx context.Context, req *proto.GetInvitesRequest) (*
 		LEFT JOIN confirmation_log AS cl ON ol.id = cl.organization_log_id AND cl.authored_by = ol.email
 		WHERE ol.status = 1 AND ol.authored_by != $1 AND cl.accepted is null
 		ORDER BY ol.created_at DESC
-		`, claims.Email)
+		`, email)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, err
@@ -320,9 +339,7 @@ func (s Server) GetInvites(ctx context.Context, req *proto.GetInvitesRequest) (*
 		invite.CreatedAt = createdAt.Time.Unix()
 		invites = append(invites, &invite)
 	}
-	return &proto.GetInvitesResponse{
-		Invites: invites,
-	}, nil
+	return invites, nil
 }
 
 func (s Server) RespondToInvite(ctx context.Context, req *proto.RespondToInviteRequest) (*proto.RespondToInviteResponse, error) {
@@ -332,8 +349,7 @@ func (s Server) RespondToInvite(ctx context.Context, req *proto.RespondToInviteR
 	}
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO confirmation_log (organization_log_id, accepted, authored_by)
-		VALUES (
-			$1, $2, $3
+		VALUES ($1, $2, $3)
 	`, req.InviteId, req.Accept, claims.Email)
 	if err != nil {
 		log.Err(err).Send()

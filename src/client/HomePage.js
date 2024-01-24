@@ -205,7 +205,7 @@ function ReportsHeader (
 
           )
         : (
-          <div className={styles.reportsHeaderTitle}>Manage reports</div>
+          <div className={styles.reportsHeaderTitle}>{reportFilter === 'connections' ? 'Manage connection' : 'Manage reports'}</div>
           )
       }
       <div className={styles.rightCornerAction}>
@@ -357,7 +357,7 @@ export default function HomePage ({ reportFilter }) {
     dispatch(subscribeReports())
     return () => dispatch(unsubscribeReports())
   }, [dispatch])
-
+  console.log(reportsList, connectionsLoaded)
   return (
     <div className={styles.homePage}>
       <Header />

@@ -40,28 +40,11 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			created_at,
 			updated_at
 		from reports as r
-		join (
-			-- current user organization members
-			SELECT
-				DISTINCT ON (email)
-				organization_id,
-				email,
-				user_status
- 			FROM organization_log
-			-- current user organization
-			where organization_id in (
-				SELECT organization_id
-				FROM organization_log
-				WHERE email = $2
-				ORDER BY created_at DESC
-				LIMIT 1
-			)
- 			ORDER BY email, created_at DESC
-		) as o on r.author_email = o.email and o.user_status = 2
-		where id=$1 and not archived
+		where id=$1 and not archived and organization_id=$3
 		limit 1`,
 		reportID,
 		claims.Email,
+		checkOrganization(ctx).ID,
 	)
 	if err != nil {
 		log.Err(err).Send()
@@ -102,11 +85,15 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	if checkOrganization(ctx).ID == "" {
+		return nil, status.Error(codes.NotFound, "Organization not found")
+	}
 	id := newUUID()
 	_, err := s.db.ExecContext(ctx,
-		"INSERT INTO reports (id, author_email) VALUES ($1, $2)",
+		"INSERT INTO reports (id, author_email, organization_id) VALUES ($1, $2, $3)",
 		id,
 		claims.Email,
+		checkOrganization(ctx).ID,
 	)
 	if err != nil {
 		log.Err(err).Send()
@@ -147,11 +134,12 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 	}
 	newMapConfig, newDatasetIds := updateDatasetIds(report, datasets)
 	_, err = tx.ExecContext(ctx,
-		"INSERT INTO reports (id, author_email, map_config, title) VALUES ($1, $2, $3, $4)",
+		"INSERT INTO reports (id, author_email, map_config, title, organization_id) VALUES ($1, $2, $3, $4, $5)",
 		report.Id,
 		claims.Email,
 		newMapConfig,
 		report.Title,
+		checkOrganization(ctx).ID,
 	)
 	if err != nil {
 		rollback(tx)
@@ -235,6 +223,9 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	if checkOrganization(ctx).ID == "" {
+		return nil, status.Error(codes.NotFound, "Organization not found")
+	}
 
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
@@ -286,11 +277,12 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 		`update
 			reports
 		set map_config=$1, title=$2
-		where id=$3 and author_email=$4`,
+		where id=$3 and author_email=$4 and organization_id=$5`,
 		req.Report.MapConfig,
 		req.Report.Title,
 		req.Report.Id,
 		claims.Email,
+		checkOrganization(ctx).ID,
 	)
 	if err != nil {
 		log.Err(err).Send()
@@ -331,10 +323,11 @@ func (s Server) SetDiscoverable(ctx context.Context, req *proto.SetDiscoverableR
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
 	}
 	res, err := s.db.ExecContext(ctx,
-		`update reports set discoverable=$1 where id=$2 and author_email=$3`,
+		`update reports set discoverable=$1 where id=$2 and author_email=$3 and organization_id=$4`,
 		req.Discoverable,
 		req.ReportId,
 		claims.Email,
+		checkOrganization(ctx).ID,
 	)
 	if err != nil {
 		log.Err(err).Send()
@@ -369,10 +362,11 @@ func (s Server) ArchiveReport(ctx context.Context, req *proto.ArchiveReportReque
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
 	}
 	result, err := s.db.ExecContext(ctx,
-		"update reports set archived=$1 where id=$2 and author_email=$3",
+		"update reports set archived=$1 where id=$2 and author_email=$3 and organization_id=$4",
 		req.Archive,
 		req.ReportId,
 		claims.Email,
+		checkOrganization(ctx).ID,
 	)
 	if err != nil {
 		log.Err(err).Send()

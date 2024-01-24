@@ -44,7 +44,6 @@ const (
 	Dekart_GetConnectionList_FullMethodName       = "/Dekart/GetConnectionList"
 	Dekart_TestConnection_FullMethodName          = "/Dekart/TestConnection"
 	Dekart_SetDefaultConnection_FullMethodName    = "/Dekart/SetDefaultConnection"
-	Dekart_GetInvites_FullMethodName              = "/Dekart/GetInvites"
 	Dekart_RespondToInvite_FullMethodName         = "/Dekart/RespondToInvite"
 	Dekart_CreateSubscription_FullMethodName      = "/Dekart/CreateSubscription"
 	Dekart_CancelSubscription_FullMethodName      = "/Dekart/CancelSubscription"
@@ -91,7 +90,6 @@ type DekartClient interface {
 	TestConnection(ctx context.Context, in *TestConnectionRequest, opts ...grpc.CallOption) (*TestConnectionResponse, error)
 	SetDefaultConnection(ctx context.Context, in *SetDefaultConnectionRequest, opts ...grpc.CallOption) (*SetDefaultConnectionResponse, error)
 	//user
-	GetInvites(ctx context.Context, in *GetInvitesRequest, opts ...grpc.CallOption) (*GetInvitesResponse, error)
 	RespondToInvite(ctx context.Context, in *RespondToInviteRequest, opts ...grpc.CallOption) (*RespondToInviteResponse, error)
 	//subscriptions
 	CreateSubscription(ctx context.Context, in *CreateSubscriptionRequest, opts ...grpc.CallOption) (*CreateSubscriptionResponse, error)
@@ -405,15 +403,6 @@ func (c *dekartClient) SetDefaultConnection(ctx context.Context, in *SetDefaultC
 	return out, nil
 }
 
-func (c *dekartClient) GetInvites(ctx context.Context, in *GetInvitesRequest, opts ...grpc.CallOption) (*GetInvitesResponse, error) {
-	out := new(GetInvitesResponse)
-	err := c.cc.Invoke(ctx, Dekart_GetInvites_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *dekartClient) RespondToInvite(ctx context.Context, in *RespondToInviteRequest, opts ...grpc.CallOption) (*RespondToInviteResponse, error) {
 	out := new(RespondToInviteResponse)
 	err := c.cc.Invoke(ctx, Dekart_RespondToInvite_FullMethodName, in, out, opts...)
@@ -514,7 +503,6 @@ type DekartServer interface {
 	TestConnection(context.Context, *TestConnectionRequest) (*TestConnectionResponse, error)
 	SetDefaultConnection(context.Context, *SetDefaultConnectionRequest) (*SetDefaultConnectionResponse, error)
 	//user
-	GetInvites(context.Context, *GetInvitesRequest) (*GetInvitesResponse, error)
 	RespondToInvite(context.Context, *RespondToInviteRequest) (*RespondToInviteResponse, error)
 	//subscriptions
 	CreateSubscription(context.Context, *CreateSubscriptionRequest) (*CreateSubscriptionResponse, error)
@@ -605,9 +593,6 @@ func (UnimplementedDekartServer) TestConnection(context.Context, *TestConnection
 }
 func (UnimplementedDekartServer) SetDefaultConnection(context.Context, *SetDefaultConnectionRequest) (*SetDefaultConnectionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetDefaultConnection not implemented")
-}
-func (UnimplementedDekartServer) GetInvites(context.Context, *GetInvitesRequest) (*GetInvitesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetInvites not implemented")
 }
 func (UnimplementedDekartServer) RespondToInvite(context.Context, *RespondToInviteRequest) (*RespondToInviteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RespondToInvite not implemented")
@@ -1102,24 +1087,6 @@ func _Dekart_SetDefaultConnection_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_GetInvites_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetInvitesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DekartServer).GetInvites(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Dekart_GetInvites_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).GetInvites(ctx, req.(*GetInvitesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Dekart_RespondToInvite_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RespondToInviteRequest)
 	if err := dec(in); err != nil {
@@ -1340,10 +1307,6 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetDefaultConnection",
 			Handler:    _Dekart_SetDefaultConnection_Handler,
-		},
-		{
-			MethodName: "GetInvites",
-			Handler:    _Dekart_GetInvites_Handler,
 		},
 		{
 			MethodName: "RespondToInvite",

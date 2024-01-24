@@ -21,7 +21,6 @@ func (s Server) getSubscription(ctx context.Context, organizationId string) (*pr
 	var createdAt sql.NullTime
 	var customerID sql.NullString
 	var planType proto.PlanType
-	var cancelled bool
 	var paymentCancelled bool
 
 	err := s.db.QueryRowContext(ctx, `
@@ -29,18 +28,23 @@ func (s Server) getSubscription(ctx context.Context, organizationId string) (*pr
 			created_at,
 			customer_id,
 			plan_type,
-			cancelled,
 			payment_cancelled,
 			created_at
-		FROM organization_log
-		WHERE organization_id = $1`,
+		FROM subscription_log
+		WHERE organization_id = $1
+		ORDER BY created_at DESC
+		LIMIT 1
+		`,
 		organizationId,
-	).Scan(&createdAt, &customerID, &planType, &cancelled, &paymentCancelled, &createdAt)
+	).Scan(&createdAt, &customerID, &planType, &paymentCancelled, &createdAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
 	if err != nil {
 		log.Err(err).Send()
 		return nil, err
 	}
-	if !cancelled && customerID.Valid {
+	if planType == proto.PlanType_TYPE_TEAM {
 		stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 		params := &stripe.CustomerParams{}
 		params.AddExpand("subscriptions")
@@ -89,7 +93,7 @@ type SubscriptionInfo struct {
 	OrganizationId string
 }
 
-func (s Server) createCheckoutSession(ctx context.Context, req *proto.CreateSubscriptionRequest) (*stripe.CheckoutSession, error) {
+func (s Server) createCheckoutSession(ctx context.Context, organizationID string, req *proto.CreateSubscriptionRequest) (*stripe.CheckoutSession, error) {
 	claims := user.GetClaims(ctx)
 	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 	customerParams := &stripe.CustomerParams{
@@ -100,13 +104,8 @@ func (s Server) createCheckoutSession(ctx context.Context, req *proto.CreateSubs
 		log.Err(err).Send()
 		return nil, err
 	}
-	org, err := s.createOrganization(ctx, true)
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
-	}
 	_, err = s.db.ExecContext(ctx, `insert into subscription_log (organization_id, plan_type, customer_id, authored_by) values ($1, $2, $3, $4)`,
-		org.Id,
+		organizationID,
 		req.PlanType,
 		customer.ID,
 		claims.Email,
@@ -158,13 +157,10 @@ func (s Server) CancelSubscription(ctx context.Context, req *proto.CancelSubscri
 
 	if sub.PlanType == proto.PlanType_TYPE_PERSONAL {
 		_, err := s.db.ExecContext(ctx, `
-			INSERT INTO subscription_log (organization_id, cancelled, authored_by)
-			SELECT organization_id, true, $1
-			FROM organization_log
-			WHERE email = $1
-			ORDER BY created_at DESC
-			LIMIT 1
+			INSERT INTO subscription_log (organization_id, authored_by)
+			VALUES ($1, $2)
 		`,
+			checkOrganization(ctx).ID,
 			claims.Email,
 		)
 		if err != nil {
@@ -188,10 +184,12 @@ func (s Server) CancelSubscription(ctx context.Context, req *proto.CancelSubscri
 
 		// update subscription log to reflect cancellation
 		_, err = s.db.ExecContext(ctx, `
-			INSERT INTO subscription_log (organization_id, payment_cancelled, authored_by)
-			VALUES ($1, true, $2)
+			INSERT INTO subscription_log (organization_id, customer_id,  payment_cancelled, plan_type, authored_by)
+			VALUES ($1, $2, true, $3, $4)
 		`,
 			organizationInfo.ID,
+			sub.CustomerId,
+			sub.PlanType,
 			claims.Email,
 		)
 		if err != nil {
@@ -231,7 +229,7 @@ func (s Server) CreateSubscription(ctx context.Context, req *proto.CreateSubscri
 			RedirectUrl: "/", // redirect to home page
 		}, nil
 	case proto.PlanType_TYPE_TEAM:
-		session, err := s.createCheckoutSession(ctx, req)
+		session, err := s.createCheckoutSession(ctx, organizationInfo.ID, req)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, status.Error(codes.Internal, err.Error())

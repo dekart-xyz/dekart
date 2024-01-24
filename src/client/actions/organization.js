@@ -1,38 +1,78 @@
-import { AddUserRequest, CancelSubscriptionRequest, CreateSubscriptionRequest, GetInvitesRequest, ListUsersRequest, RemoveUserRequest, RespondToInviteRequest } from '../../proto/dekart_pb'
+import { CancelSubscriptionRequest, CreateOrganizationRequest, CreateSubscriptionRequest, GetInvitesRequest, GetOrganizationRequest, ListUsersRequest, RemoveUserRequest, RespondToInviteRequest, UpdateOrganizationRequest, UpdateOrganizationUserRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { info, success } from './message'
 
-export function createSubscription (planType) {
+export function respondToInvite (inviteId, accept) {
   return (dispatch) => {
-    dispatch({ type: createSubscription.name })
-    const request = new CreateSubscriptionRequest()
-    request.setPlanType(planType)
-    request.setUiUrl(window.location.href)
-    dispatch(grpcCall(Dekart.CreateSubscription, request, (response) => {
-      if (response.redirectUrl) {
-        window.location.href = response.redirectUrl
+    dispatch({ type: respondToInvite.name })
+    const request = new RespondToInviteRequest()
+    request.setInviteId(inviteId)
+    request.setAccept(accept)
+    dispatch(grpcCall(Dekart.RespondToInvite, request, () => {
+      if (accept) {
+        window.location.href = '/'
       } else {
-        success('Subscription created')
+        info('Invite declined')
       }
     }))
   }
 }
 
-export function respondToInvite (organizationId, accept) {
+export function createOrganization (name) {
   return (dispatch) => {
-    dispatch({ type: respondToInvite.name })
-    const request = new RespondToInviteRequest()
-    request.setOrganizationId(organizationId)
-    request.setAccept(accept)
-    dispatch(grpcCall(Dekart.RespondToInvite, request, () => {
-      if (accept) {
-        success('Invite accepted')
-        // setTimeout(() => {
-        //   window.location.href = '/'
-        // }, 1000)
+    dispatch({ type: createOrganization.name })
+    const request = new CreateOrganizationRequest()
+    request.setOrganizationName(name)
+    dispatch(grpcCall(Dekart.CreateOrganization, request, () => {
+      success('Organization created')
+    }))
+  }
+}
+
+export function updateOrganization (name) {
+  return (dispatch) => {
+    dispatch({ type: updateOrganization.name })
+    const request = new UpdateOrganizationRequest()
+    request.setOrganizationName(name)
+    dispatch(grpcCall(Dekart.UpdateOrganization, request, () => {
+      success('Organization updated')
+    }))
+  }
+}
+
+export function organizationUpdate ({ organization, subscription, usersList, invitesList }) {
+  return {
+    type: organizationUpdate.name,
+    organization,
+    subscription,
+    usersList,
+    invitesList
+  }
+}
+
+export function getOrganization () {
+  return (dispatch) => {
+    dispatch({ type: getOrganization.name })
+    const request = new GetOrganizationRequest()
+    dispatch(grpcCall(Dekart.GetOrganization, request, (response) => {
+      console.log(response)
+      dispatch(organizationUpdate(response))
+    }))
+  }
+}
+
+export function createSubscription (plantType) {
+  return (dispatch) => {
+    dispatch({ type: createSubscription.name })
+    const request = new CreateSubscriptionRequest()
+    request.setPlanType(plantType)
+    request.setUiUrl(window.location.href)
+    dispatch(grpcCall(Dekart.CreateSubscription, request, (res) => {
+      if (res.redirectUrl) {
+        window.location.href = res.redirectUrl
       } else {
-        info('Invite declined')
+        success('Subscription created')
       }
     }))
   }
@@ -56,24 +96,16 @@ export function getInvites () {
   }
 }
 
-export function removeUser (email) {
+export function updateOrganizationUser (email, userUpdateType) {
   return (dispatch) => {
-    dispatch({ type: removeUser.name })
-    const request = new RemoveUserRequest()
+    dispatch({ type: updateOrganizationUser.name })
+    const request = new UpdateOrganizationUserRequest()
     request.setEmail(email)
-    dispatch(grpcCall(Dekart.RemoveUser, request, () => {
-      success('User removed')
-    }))
-  }
-}
-
-export function addUser (email) {
-  return (dispatch) => {
-    dispatch({ type: addUser.name })
-    const request = new AddUserRequest()
-    request.setEmail(email)
-    dispatch(grpcCall(Dekart.AddUser, request, () => {
-      success('User added')
+    request.setUserUpdateType(userUpdateType)
+    dispatch(grpcCall(Dekart.UpdateOrganizationUser, request, () => {
+      if (userUpdateType === UpdateOrganizationUserRequest.UserUpdateType.USER_UPDATE_TYPE_ADD) {
+        success('User invited')
+      }
     }))
   }
 }

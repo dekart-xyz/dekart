@@ -157,10 +157,12 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 			created_at,
 			updated_at,
 			author_email
-		from connections where archived=false order by created_at desc`,
+		from connections where archived=false and organization_id=$1 order by created_at desc`,
+		checkOrganization(ctx).ID,
 	)
 	if err != nil {
-		log.Fatal().Err(err).Msg("select from connections failed")
+		log.Err(err).Send()
+		return nil, err
 	}
 	defer rows.Close()
 	lastDefault := time.Time{}
@@ -323,13 +325,15 @@ func (s Server) ArchiveConnection(ctx context.Context, req *proto.ArchiveConnect
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	organizationInfo := checkOrganization(ctx)
 	res, err := s.db.ExecContext(ctx,
 		`update connections set
 			archived=true,
 			updated_at=now()
-		where id=$1 and author_email=$2`,
+		where id=$1 and author_email=$2 and organization_id=$3`,
 		req.ConnectionId,
 		claims.Email,
+		organizationInfo.ID,
 	)
 	if err != nil {
 		log.Err(err).Send()
@@ -407,12 +411,16 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	if checkOrganization(ctx).ID == "" {
+		return nil, status.Error(codes.NotFound, "organization not found")
+	}
 	id := newUUID()
 	_, err := s.db.ExecContext(ctx,
-		"INSERT INTO connections (id, connection_name,  author_email) VALUES ($1, $2, $3)",
+		"INSERT INTO connections (id, connection_name,  author_email, organization_id) VALUES ($1, $2, $3, $4)",
 		id,
 		req.ConnectionName,
 		claims.Email,
+		checkOrganization(ctx).ID,
 	)
 	if err != nil {
 		log.Err(err).Send()

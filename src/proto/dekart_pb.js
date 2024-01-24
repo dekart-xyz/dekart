@@ -2137,7 +2137,7 @@ proto.GetOrganizationRequest.serializeBinaryToWriter = function(message, writer)
  * @private {!Array<number>}
  * @const
  */
-proto.GetOrganizationResponse.repeatedFields_ = [3];
+proto.GetOrganizationResponse.repeatedFields_ = [3,4];
 
 
 
@@ -2173,7 +2173,9 @@ proto.GetOrganizationResponse.toObject = function(includeInstance, msg) {
     organization: (f = msg.getOrganization()) && proto.Organization.toObject(includeInstance, f),
     subscription: (f = msg.getSubscription()) && proto.Subscription.toObject(includeInstance, f),
     usersList: jspb.Message.toObjectList(msg.getUsersList(),
-    proto.User.toObject, includeInstance)
+    proto.User.toObject, includeInstance),
+    invitesList: jspb.Message.toObjectList(msg.getInvitesList(),
+    proto.OrganizationInvite.toObject, includeInstance)
   };
 
   if (includeInstance) {
@@ -2224,6 +2226,11 @@ proto.GetOrganizationResponse.deserializeBinaryFromReader = function(msg, reader
       var value = new proto.User;
       reader.readMessage(value,proto.User.deserializeBinaryFromReader);
       msg.addUsers(value);
+      break;
+    case 4:
+      var value = new proto.OrganizationInvite;
+      reader.readMessage(value,proto.OrganizationInvite.deserializeBinaryFromReader);
+      msg.addInvites(value);
       break;
     default:
       reader.skipField();
@@ -2276,6 +2283,14 @@ proto.GetOrganizationResponse.serializeBinaryToWriter = function(message, writer
       3,
       f,
       proto.User.serializeBinaryToWriter
+    );
+  }
+  f = message.getInvitesList();
+  if (f.length > 0) {
+    writer.writeRepeatedMessage(
+      4,
+      f,
+      proto.OrganizationInvite.serializeBinaryToWriter
     );
   }
 };
@@ -2390,6 +2405,44 @@ proto.GetOrganizationResponse.prototype.addUsers = function(opt_value, opt_index
  */
 proto.GetOrganizationResponse.prototype.clearUsersList = function() {
   return this.setUsersList([]);
+};
+
+
+/**
+ * repeated OrganizationInvite invites = 4;
+ * @return {!Array<!proto.OrganizationInvite>}
+ */
+proto.GetOrganizationResponse.prototype.getInvitesList = function() {
+  return /** @type{!Array<!proto.OrganizationInvite>} */ (
+    jspb.Message.getRepeatedWrapperField(this, proto.OrganizationInvite, 4));
+};
+
+
+/**
+ * @param {!Array<!proto.OrganizationInvite>} value
+ * @return {!proto.GetOrganizationResponse} returns this
+*/
+proto.GetOrganizationResponse.prototype.setInvitesList = function(value) {
+  return jspb.Message.setRepeatedWrapperField(this, 4, value);
+};
+
+
+/**
+ * @param {!proto.OrganizationInvite=} opt_value
+ * @param {number=} opt_index
+ * @return {!proto.OrganizationInvite}
+ */
+proto.GetOrganizationResponse.prototype.addInvites = function(opt_value, opt_index) {
+  return jspb.Message.addToRepeatedWrapperField(this, 4, opt_value, proto.OrganizationInvite, opt_index);
+};
+
+
+/**
+ * Clears the list making it empty but non-null.
+ * @return {!proto.GetOrganizationResponse} returns this
+ */
+proto.GetOrganizationResponse.prototype.clearInvitesList = function() {
+  return this.setInvitesList([]);
 };
 
 

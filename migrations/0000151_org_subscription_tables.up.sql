@@ -26,7 +26,6 @@ create table IF NOT EXISTS confirmation_log (
 
 create table IF NOT EXISTS subscription_log (
     customer_id varchar(255) default null,
-    cancelled boolean not null default false,
     payment_cancelled boolean not null default false,
     authored_by varchar(255) not null,
     plan_type int not null default 0,
@@ -37,3 +36,11 @@ create table IF NOT EXISTS subscription_log (
 
 CREATE INDEX idx_subscription_log_created_at ON subscription_log (created_at);
 CREATE INDEX idx_organization_log_created_at ON organization_log (created_at);
+
+ALTER TABLE reports
+ADD COLUMN organization_id uuid
+REFERENCES organizations(id);
+
+ALTER TABLE connections
+ADD COLUMN organization_id uuid
+REFERENCES organizations(id);

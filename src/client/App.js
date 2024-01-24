@@ -18,8 +18,6 @@ import { getEnv } from './actions/env'
 import { setRedirectState } from './actions/redirectState'
 import { subscribeUserStream, unsubscribeUserStream } from './actions/user'
 import { authRedirect } from './lib/api'
-import SubscriptionPage from './SubscriptionPage'
-import TeamPage from './TeamPage'
 import OrganizationPage from './OrganizationPage'
 
 // RedirectState reads states passed in the URL from the server
@@ -73,12 +71,8 @@ function AppRedirect () {
     return <Redirect to={`/${httpError.status}`} push />
   }
 
-  if (user &&
-    !user.subscriptionActive &&
-    !httpError.status &&
-    !(['/organization/invites'].includes(location.pathname))
-  ) {
-    return <Redirect to='/organization/plan' push />
+  if (user && !user.planType) {
+    return <Redirect to='/organization' push />
   }
 
   if (newReportId) {
@@ -144,21 +138,9 @@ export default function App () {
         <Route path='/reports/:id'>
           <ReportPage />
         </Route>
-        <Route path='/team'>
-          <TeamPage />
+        <Route path='/organization'>
+          <OrganizationPage />
         </Route>
-        <Route path='/organization/team'>
-          <OrganizationPage tab='team' />
-        </Route>
-        <Route path='/organization/plan'>
-          <OrganizationPage tab='plan' />
-        </Route>
-        <Route path='/organization/invites'>
-          <OrganizationPage tab='invites' />
-        </Route>
-        {/* <Route path='/subscription'>
-          <SubscriptionPage />
-        </Route> */}
         <Route path='/400'>
           <Result icon={<WarningOutlined />} title='400' subTitle='Bad Request' />
         </Route>

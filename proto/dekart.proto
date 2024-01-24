@@ -46,7 +46,6 @@ service Dekart {
     //CLOUD
 
     //user
-    rpc GetInvites(GetInvitesRequest) returns (GetInvitesResponse) {}
     rpc RespondToInvite(RespondToInviteRequest) returns (RespondToInviteResponse) {}
 
     //subscriptions
@@ -80,6 +79,7 @@ message GetOrganizationResponse {
     Organization organization = 1;
     Subscription subscription = 2;
     repeated User users = 3;
+    repeated OrganizationInvite invites = 4;
 }
 
 message CreateOrganizationRequest {
