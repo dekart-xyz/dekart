@@ -9,6 +9,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/stripe/stripe-go/v76"
+	bs "github.com/stripe/stripe-go/v76/billingportal/session"
 	"github.com/stripe/stripe-go/v76/checkout/session"
 	"github.com/stripe/stripe-go/v76/customer"
 	"github.com/stripe/stripe-go/v76/subscription"
@@ -84,20 +85,12 @@ func (s Server) getSubscription(ctx context.Context, organizationId string) (*pr
 	}, nil
 }
 
-type ContextKey string
-
-const contextKey ContextKey = "subscription"
-
-type SubscriptionInfo struct {
-	Active         bool
-	OrganizationId string
-}
-
-func (s Server) createCheckoutSession(ctx context.Context, organizationID string, req *proto.CreateSubscriptionRequest) (*stripe.CheckoutSession, error) {
+func (s Server) createCheckoutSession(ctx context.Context, org OrganizationInfo, req *proto.CreateSubscriptionRequest) (*stripe.CheckoutSession, error) {
 	claims := user.GetClaims(ctx)
 	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 	customerParams := &stripe.CustomerParams{
 		Email: stripe.String(claims.Email),
+		Name:  stripe.String(org.Name),
 	}
 	customer, err := customer.New(customerParams)
 	if err != nil {
@@ -105,7 +98,7 @@ func (s Server) createCheckoutSession(ctx context.Context, organizationID string
 		return nil, err
 	}
 	_, err = s.db.ExecContext(ctx, `insert into subscription_log (organization_id, plan_type, customer_id, authored_by) values ($1, $2, $3, $4)`,
-		organizationID,
+		org.ID,
 		req.PlanType,
 		customer.ID,
 		claims.Email,
@@ -204,6 +197,50 @@ func (s Server) CancelSubscription(ctx context.Context, req *proto.CancelSubscri
 	return &proto.CancelSubscriptionResponse{}, nil
 }
 
+func (s Server) GetStripePortalSession(ctx context.Context, req *proto.GetStripePortalSessionRequest) (*proto.GetStripePortalSessionResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	organizationInfo := checkOrganization(ctx)
+	if organizationInfo.ID == "" {
+		return nil, status.Error(codes.NotFound, "Organization not found")
+	}
+
+	sub, err := s.getSubscription(ctx, organizationInfo.ID)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if sub == nil {
+		return nil, status.Error(codes.NotFound, "Subscription not found")
+	}
+	if sub.PlanType == proto.PlanType_TYPE_UNSPECIFIED {
+		return nil, status.Error(codes.NotFound, "Subscription not found")
+	}
+
+	if sub.PlanType == proto.PlanType_TYPE_PERSONAL {
+		return nil, status.Error(codes.NotFound, "Subscription not found")
+	}
+	if sub.PlanType == proto.PlanType_TYPE_TEAM {
+		stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
+		params := &stripe.BillingPortalSessionParams{
+			Customer:  stripe.String(sub.CustomerId),
+			ReturnURL: stripe.String(req.UiUrl),
+		}
+		session, err := bs.New(params)
+		if err != nil {
+			log.Err(err).Send()
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		return &proto.GetStripePortalSessionResponse{
+			Url: session.URL,
+		}, nil
+	}
+	return nil, status.Error(codes.Internal, "Unknown plan type")
+}
+
 func (s Server) CreateSubscription(ctx context.Context, req *proto.CreateSubscriptionRequest) (*proto.CreateSubscriptionResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
@@ -229,7 +266,7 @@ func (s Server) CreateSubscription(ctx context.Context, req *proto.CreateSubscri
 			RedirectUrl: "/", // redirect to home page
 		}, nil
 	case proto.PlanType_TYPE_TEAM:
-		session, err := s.createCheckoutSession(ctx, organizationInfo.ID, req)
+		session, err := s.createCheckoutSession(ctx, organizationInfo, req)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, status.Error(codes.Internal, err.Error())

@@ -1,7 +1,18 @@
-import { CancelSubscriptionRequest, CreateOrganizationRequest, CreateSubscriptionRequest, GetInvitesRequest, GetOrganizationRequest, ListUsersRequest, RemoveUserRequest, RespondToInviteRequest, UpdateOrganizationRequest, UpdateOrganizationUserRequest } from '../../proto/dekart_pb'
+import { CancelSubscriptionRequest, CreateOrganizationRequest, CreateSubscriptionRequest, GetInvitesRequest, GetOrganizationRequest, GetStripePortalSessionRequest, ListUsersRequest, RemoveUserRequest, RespondToInviteRequest, UpdateOrganizationRequest, UpdateOrganizationUserRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { info, success } from './message'
+
+export function redirectToCustomerPortal () {
+  return (dispatch) => {
+    dispatch({ type: redirectToCustomerPortal.name })
+    const request = new GetStripePortalSessionRequest()
+    request.setUiUrl(window.location.href)
+    dispatch(grpcCall(Dekart.GetStripePortalSession, request, (res) => {
+      window.location.href = res.url
+    }))
+  }
+}
 
 export function respondToInvite (inviteId, accept) {
   return (dispatch) => {

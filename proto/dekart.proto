@@ -51,12 +51,21 @@ service Dekart {
     //subscriptions
     rpc CreateSubscription(CreateSubscriptionRequest) returns (CreateSubscriptionResponse) {}
     rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse) {}
+    rpc GetStripePortalSession(GetStripePortalSessionRequest) returns (GetStripePortalSessionResponse) {}
 
     //organizations
     rpc CreateOrganization(CreateOrganizationRequest) returns (CreateOrganizationResponse) {}
     rpc UpdateOrganization(UpdateOrganizationRequest) returns (UpdateOrganizationResponse) {}
     rpc GetOrganization(GetOrganizationRequest) returns (GetOrganizationResponse) {}
     rpc UpdateOrganizationUser(UpdateOrganizationUserRequest) returns (UpdateOrganizationUserResponse) {}
+}
+
+message GetStripePortalSessionRequest {
+    string ui_url = 1;
+}
+
+message GetStripePortalSessionResponse {
+    string url = 1;
 }
 
 message UpdateOrganizationUserRequest {

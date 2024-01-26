@@ -256,6 +256,15 @@ type DekartCancelSubscription = {
   readonly responseType: typeof proto_dekart_pb.CancelSubscriptionResponse;
 };
 
+type DekartGetStripePortalSession = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.GetStripePortalSessionRequest;
+  readonly responseType: typeof proto_dekart_pb.GetStripePortalSessionResponse;
+};
+
 type DekartCreateOrganization = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -322,6 +331,7 @@ export class Dekart {
   static readonly RespondToInvite: DekartRespondToInvite;
   static readonly CreateSubscription: DekartCreateSubscription;
   static readonly CancelSubscription: DekartCancelSubscription;
+  static readonly GetStripePortalSession: DekartGetStripePortalSession;
   static readonly CreateOrganization: DekartCreateOrganization;
   static readonly UpdateOrganization: DekartUpdateOrganization;
   static readonly GetOrganization: DekartGetOrganization;
@@ -587,6 +597,15 @@ export class DekartClient {
   cancelSubscription(
     requestMessage: proto_dekart_pb.CancelSubscriptionRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CancelSubscriptionResponse|null) => void
+  ): UnaryResponse;
+  getStripePortalSession(
+    requestMessage: proto_dekart_pb.GetStripePortalSessionRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetStripePortalSessionResponse|null) => void
+  ): UnaryResponse;
+  getStripePortalSession(
+    requestMessage: proto_dekart_pb.GetStripePortalSessionRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetStripePortalSessionResponse|null) => void
   ): UnaryResponse;
   createOrganization(
     requestMessage: proto_dekart_pb.CreateOrganizationRequest,

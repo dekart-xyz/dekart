@@ -8,7 +8,7 @@ import Title from 'antd/es/typography/Title'
 import Text from 'antd/es/typography/Text'
 import Button from 'antd/es/button'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { cancelSubscription, createOrganization, updateOrganization, createSubscription, updateOrganizationUser, respondToInvite } from './actions/organization'
+import { cancelSubscription, createOrganization, updateOrganization, createSubscription, updateOrganizationUser, respondToInvite, redirectToCustomerPortal } from './actions/organization'
 import { useDispatch, useSelector } from 'react-redux'
 import { PlanType, UpdateOrganizationUserRequest } from '../proto/dekart_pb'
 import Dropdown from 'antd/es/dropdown'
@@ -264,19 +264,27 @@ function SubscriptionTab () {
     return null
   }
   const menuProps = {
-    items: [{
-      label: 'Cancel subscription',
-      danger: true,
-      onClick: () => {
-        Modal.confirm({
-          title: 'Cancel subscription?',
-          okText: 'Yes',
-          okType: 'danger',
-          cancelText: 'No',
-          onOk: () => dispatch(cancelSubscription())
-        })
+    items: [
+      {
+        label: 'Cancel subscription',
+        danger: true,
+        onClick: () => {
+          Modal.confirm({
+            title: 'Cancel subscription?',
+            okText: 'Yes',
+            okType: 'danger',
+            cancelText: 'No',
+            onOk: () => dispatch(cancelSubscription())
+          })
+        }
+      },
+      {
+        label: 'Payment & invoices',
+        onClick: () => {
+          dispatch(redirectToCustomerPortal())
+        }
       }
-    }]
+    ]
   }
   return (
     <div className={styles.subscriptionTab}>

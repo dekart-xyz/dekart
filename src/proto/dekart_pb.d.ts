@@ -3,6 +3,46 @@
 
 import * as jspb from "google-protobuf";
 
+export class GetStripePortalSessionRequest extends jspb.Message {
+  getUiUrl(): string;
+  setUiUrl(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetStripePortalSessionRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: GetStripePortalSessionRequest): GetStripePortalSessionRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetStripePortalSessionRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetStripePortalSessionRequest;
+  static deserializeBinaryFromReader(message: GetStripePortalSessionRequest, reader: jspb.BinaryReader): GetStripePortalSessionRequest;
+}
+
+export namespace GetStripePortalSessionRequest {
+  export type AsObject = {
+    uiUrl: string,
+  }
+}
+
+export class GetStripePortalSessionResponse extends jspb.Message {
+  getUrl(): string;
+  setUrl(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetStripePortalSessionResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: GetStripePortalSessionResponse): GetStripePortalSessionResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetStripePortalSessionResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetStripePortalSessionResponse;
+  static deserializeBinaryFromReader(message: GetStripePortalSessionResponse, reader: jspb.BinaryReader): GetStripePortalSessionResponse;
+}
+
+export namespace GetStripePortalSessionResponse {
+  export type AsObject = {
+    url: string,
+  }
+}
+
 export class UpdateOrganizationUserRequest extends jspb.Message {
   getEmail(): string;
   setEmail(value: string): void;

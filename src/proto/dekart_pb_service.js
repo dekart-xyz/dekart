@@ -262,6 +262,15 @@ Dekart.CancelSubscription = {
   responseType: proto_dekart_pb.CancelSubscriptionResponse
 };
 
+Dekart.GetStripePortalSession = {
+  methodName: "GetStripePortalSession",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.GetStripePortalSessionRequest,
+  responseType: proto_dekart_pb.GetStripePortalSessionResponse
+};
+
 Dekart.CreateOrganization = {
   methodName: "CreateOrganization",
   service: Dekart,
@@ -1171,6 +1180,37 @@ DekartClient.prototype.cancelSubscription = function cancelSubscription(requestM
     callback = arguments[1];
   }
   var client = grpc.unary(Dekart.CancelSubscription, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.getStripePortalSession = function getStripePortalSession(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.GetStripePortalSession, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,

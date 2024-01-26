@@ -69,6 +69,10 @@
     padding: 10px;
 }
 
+.cancelAt {
+    margin-top: 10px;
+}
+
 .organizationTabHeader {
     display: flex;
     flex-direction: row;
