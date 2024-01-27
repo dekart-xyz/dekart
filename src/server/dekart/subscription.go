@@ -252,6 +252,10 @@ func (s Server) CreateSubscription(ctx context.Context, req *proto.CreateSubscri
 	}
 	switch req.PlanType {
 	case proto.PlanType_TYPE_PERSONAL:
+		if organizationInfo.PlanType != proto.PlanType_TYPE_UNSPECIFIED {
+			// you cannot downgrade from team to personal
+			return nil, status.Error(codes.InvalidArgument, "Organization already has a subscription")
+		}
 		_, err := s.db.ExecContext(ctx, `insert into subscription_log (organization_id, plan_type, authored_by) values ($1, $2, $3)`,
 			organizationInfo.ID,
 			req.PlanType,
@@ -266,6 +270,10 @@ func (s Server) CreateSubscription(ctx context.Context, req *proto.CreateSubscri
 			RedirectUrl: "/", // redirect to home page
 		}, nil
 	case proto.PlanType_TYPE_TEAM:
+		if organizationInfo.PlanType == proto.PlanType_TYPE_TEAM {
+			// do not allow to overwrite existing subscription
+			return nil, status.Error(codes.InvalidArgument, "Organization already has a subscription")
+		}
 		session, err := s.createCheckoutSession(ctx, organizationInfo, req)
 		if err != nil {
 			log.Err(err).Send()

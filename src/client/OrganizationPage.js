@@ -21,11 +21,11 @@ import Badge from 'antd/es/badge'
 import Steps from 'antd/es/steps'
 import Radio from 'antd/es/radio'
 import Form from 'antd/es/form'
+import organization from './reducers/organizationReducer'
 
 function Invites () {
   const organization = useSelector(state => state.organization)
   const invites = organization.invites
-  console.log(invites)
   const dispatch = useDispatch()
   return (
     <div className={styles.invites}>
@@ -123,6 +123,7 @@ function TeamTab () {
         <Table
           showHeader={false}
           pagination={false}
+          loading={!users.length}
           dataSource={users.filter(u => u.status !== 3)}
           rowClassName={styles.userListRow}
           rowKey='email'
@@ -143,19 +144,22 @@ function TeamTab () {
               title: 'Active',
               dataIndex: 'active',
               className: styles.removeButtonColumn,
-              render: (a, u) => <Button
-                disabled={u.email === user.email}
-                title={u.email === user.email ? 'You cannot remove yourself' : undefined}
-                className={styles.removeButton}
-                type='text' onClick={() => {
-                  dispatch(updateOrganizationUser(u.email, UpdateOrganizationUserRequest.UserUpdateType.USER_UPDATE_TYPE_REMOVE))
-                }}
-                                >Remove
-                                </Button>
+              render: (a, u) => (
+                <Button
+                  disabled={u.email === user.email}
+                  title={u.email === user.email ? 'You cannot remove yourself' : undefined}
+                  className={styles.removeButton}
+                  type='text' onClick={() => {
+                    dispatch(updateOrganizationUser(u.email, UpdateOrganizationUserRequest.UserUpdateType.USER_UPDATE_TYPE_REMOVE))
+                  }}
+                >Remove
+                </Button>
+              )
             }
           ]}
         />
       </div>
+
     </div>
   )
 }
@@ -180,6 +184,37 @@ function Plan ({ title, children, action, planType, cancelAt }) {
   const [hover, setHover] = useState(false)
   const user = useSelector(state => state.user)
   const dispatch = useDispatch()
+  const [waitForRedirect, setWaitForRedirect] = useState(false)
+  let actionButton = (
+    <Button
+      key='1' type={hover ? 'primary' : 'default'}
+      disabled={waitForRedirect} loading={waitForRedirect}
+      onClick={() => {
+        setWaitForRedirect(true)
+        dispatch(createSubscription(planType))
+      }} ghost={hover}
+    >Choose plan
+    </Button>
+  )
+  if (user.planType === PlanType.TYPE_TEAM && planType === PlanType.TYPE_PERSONAL) {
+    actionButton = (
+      <Button disabled title='Downgrading from Team to Personal is not supported'>Choose plan</Button>
+    )
+  }
+  if (user.planType === PlanType.TYPE_TEAM && planType === PlanType.TYPE_TEAM) {
+    actionButton = (
+      <>
+        <Button
+          disabled={waitForRedirect} loading={waitForRedirect} onClick={() => {
+            setWaitForRedirect(true)
+            dispatch(redirectToCustomerPortal())
+          }}
+        >Manage subscription
+        </Button>
+        {cancelAt ? (<div className={styles.cancelAt}>Cancels {(new Date(1000 * cancelAt)).toLocaleString()}</div>) : null}
+      </>
+    )
+  }
   // const subscription = useSelector(state => state.organization.subscription)
   return (
     <Card
@@ -189,26 +224,7 @@ function Plan ({ title, children, action, planType, cancelAt }) {
       onMouseLeave={() => setHover(false)}
       title={title}
       style={{ width: 300 }}
-      actions={[
-        user.planType === planType
-          ? (
-            <>
-              <Button
-                key='1' disabled
-              >Current plan
-              </Button>
-              {cancelAt ? (<div className={styles.cancelAt}>Cancels {(new Date(1000 * cancelAt)).toLocaleString()}</div>) : null}
-            </>
-            )
-          : (
-            <Button
-              key='1' type={hover ? 'primary' : 'default'} onClick={() => {
-                dispatch(createSubscription(planType))
-              }} ghost={hover}
-            >{action}
-            </Button>
-            )
-      ]}
+      actions={[actionButton]}
     >{children}
     </Card>
   )
@@ -230,10 +246,10 @@ function Plans () {
         planType={PlanType.TYPE_PERSONAL}
         action='Choose personal'
       >
-        <p><Text type='success'><CheckCircleOutlined /> Access to private datasets</Text></p>
-        <p><Text><CheckCircleOutlined /> <s>SSO with company email</s></Text></p>
-        <p><Text><HighlightOutlined /> Requires Google Cloud access</Text></p>
-        <p><Text><HighlightOutlined /> Requires Google Cloud Storage</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> Query data from BigQuery</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> Access private datasets</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> Unlimited maps</Text></p>
+        <p><Text>No collaborators</Text></p>
       </Plan>
       <Plan
         title={<PlanTitle
@@ -247,10 +263,10 @@ function Plans () {
         action='Choose team'
         cancelAt={organization?.subscription?.cancelAt}
       >
-        <p><Text type='success'><CheckCircleOutlined /> Access to private datasets</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> SSO with company email</Text></p>
-        <p><Text><HighlightOutlined /> Requires Google Cloud access</Text></p>
-        <p><Text><HighlightOutlined /> Requires Google Cloud Storage</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> Query data from BigQuery</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> Access private datasets</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> Unlimited maps</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> Up to 20 collaborators</Text></p>
       </Plan>
     </div>
   )
@@ -258,34 +274,34 @@ function Plans () {
 
 function SubscriptionTab () {
   const user = useSelector(state => state.user)
-  const subscription = useSelector(state => state.organization.subscription)
-  const dispatch = useDispatch()
+  // const subscription = useSelector(state => state.organization.subscription)
+  // const dispatch = useDispatch()
   if (!user) {
     return null
   }
-  const menuProps = {
-    items: [
-      {
-        label: 'Cancel subscription',
-        danger: true,
-        onClick: () => {
-          Modal.confirm({
-            title: 'Cancel subscription?',
-            okText: 'Yes',
-            okType: 'danger',
-            cancelText: 'No',
-            onOk: () => dispatch(cancelSubscription())
-          })
-        }
-      },
-      {
-        label: 'Payment & invoices',
-        onClick: () => {
-          dispatch(redirectToCustomerPortal())
-        }
-      }
-    ]
-  }
+  // const menuProps = {
+  //   items: [
+  //     {
+  //       label: 'Cancel subscription',
+  //       danger: true,
+  //       onClick: () => {
+  //         Modal.confirm({
+  //           title: 'Cancel subscription?',
+  //           okText: 'Yes',
+  //           okType: 'danger',
+  //           cancelText: 'No',
+  //           onOk: () => dispatch(cancelSubscription())
+  //         })
+  //       }
+  //     },
+  //     {
+  //       label: 'Payment & invoices',
+  //       onClick: () => {
+  //         dispatch(redirectToCustomerPortal())
+  //       }
+  //     }
+  //   ]
+  // }
   return (
     <div className={styles.subscriptionTab}>
       {/* {subscription?.active && subscription.cancelAt
@@ -302,7 +318,7 @@ function SubscriptionTab () {
         </Title>
       </div> */}
       <Plans />
-      {subscription && subscription.planType
+      {/* {subscription && subscription.planType
         ? (
           <div className={styles.bottomPanel}>
             <div className={styles.manageSubscription}>
@@ -315,7 +331,7 @@ function SubscriptionTab () {
             </div>
           </div>
           )
-        : null}
+        : null} */}
     </div>
   )
 }
@@ -511,11 +527,9 @@ export function Organization () {
       <div className={styles.organizationSteps}>
         <Steps
           type='navigation'
-        // progressDot={<> </>}
           size='default'
           current={step}
           onChange={(current) => {
-            console.log(current)
             setStep(current)
           }}
           className='site-navigation-steps'
