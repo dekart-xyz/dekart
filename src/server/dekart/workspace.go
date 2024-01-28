@@ -11,9 +11,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// getWorkspaceUpdate for simplicity, we just get the max updated_at from the all tables.
 func (s Server) getWorkspaceUpdate(ctx context.Context) (int64, error) {
 	var updated_at sql.NullTime
+	// for simplicity, we just get the max updated_at from the all tables.
 	err := s.db.QueryRowContext(ctx, `
 		SELECT max(updated_at) FROM (
 			SELECT

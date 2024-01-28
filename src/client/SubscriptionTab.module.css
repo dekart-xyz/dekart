@@ -1,0 +1,25 @@
+.plans {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 20px;
+    gap: 20px;
+}
+
+.planTitle {
+    text-align: center;
+}
+
+.planTitleText {
+    margin-bottom: 20px;
+}
+
+.planTitleText :global(.ant-tag) {
+    font-size: 0.91em;
+    line-height: 1.8em;
+    border-radius: 1em;
+}
+.planTitleDescription {
+    white-space: pre-line;
+}

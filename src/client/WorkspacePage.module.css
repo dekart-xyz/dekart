@@ -7,46 +7,6 @@
     flex-direction: column;
 }
 
-.plans {
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    flex-wrap: wrap;
-    margin-top: 20px;
-    gap: 20px;
-}
-
-.planTitle {
-    text-align: center;
-}
-
-.planTitleText {
-    margin-bottom: 20px;
-}
-
-.planTitleText :global(.ant-tag) {
-    font-size: 0.91em;
-    line-height: 1.8em;
-    border-radius: 1em;
-}
-.planTitleDescription {
-    white-space: pre-line;
-}
-.title {
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    margin-top: 30px;
-}
-
-.titleLock {
-    opacity: 0.5;
-}
-
-.titleCheck {
-    color: #52C41A;
-}
-
 .body {
     padding: 20px;
     display: flex;
@@ -55,18 +15,6 @@
     align-items: center;
     flex-direction: column;
     padding-top: 30px;
-}
-
-.bottomPanel {
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    margin-top: 30px;
-}
-
-.inviteUsers {
-    margin-bottom: 20px;
-    padding: 10px;
 }
 
 .cancelAt {
@@ -82,38 +30,6 @@
     margin-bottom: 20px;
 }
 
-.inviteUsersInput {
-    width: calc(100% - 100px)!important;
-}
-
-.inviteUsersButton {
-    width: 100px;
-}
-
-.teamTab {
-    width: 600px;
-    /* display: flex; */
-    flex: 1;
-    overflow: scroll;
-    align-items: center;
-    flex-direction: column;
-}
-
-.removeButtonColumn {
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-    width: 300px;
-    text-align: right;
-
-}
-
-.emailColumn {
-    width: 100%;
-}
-
-.invitesTabName + span {
-    margin-left: 5px;
-}
 
 .acceptButton {
     margin-right: 10px
@@ -129,10 +45,6 @@
     min-width: 600px;
 }
 
-/* .workspace {
-    width: 600px;
-} */
-
 .joinSelect{
     width: 100%;
     display: flex;
@@ -147,12 +59,3 @@
     width: 600px;
 }
 
-/* .userListRow .removeButton {
-    opacity: 0;
-    pointer-events: none;
-}
-
-.userListRow:hover .removeButton {
-    opacity: 1;
-    pointer-events: all;
-} */
