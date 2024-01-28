@@ -1,7 +1,7 @@
 import { Header } from './Header'
 import styles from './WorkspacePage.module.css'
 import Card from 'antd/es/card'
-import { HomeOutlined, TeamOutlined, InboxOutlined, CreditCardOutlined } from '@ant-design/icons'
+import { HomeOutlined, TeamOutlined, InboxOutlined, CreditCardOutlined, RocketTwoTone } from '@ant-design/icons'
 import Title from 'antd/es/typography/Title'
 import Button from 'antd/es/button'
 import { useEffect, useState } from 'react'
@@ -17,6 +17,7 @@ import Radio from 'antd/es/radio'
 import Form from 'antd/es/form'
 import SubscriptionTab from './SubscriptionTab'
 import MembersTab from './MembersTab'
+import Result from 'antd/es/result'
 
 function Invites () {
   const workspace = useSelector(state => state.workspace)
@@ -135,16 +136,16 @@ function UpdateWorkspaceForm () {
   )
 }
 
-function WorkspaceTab () {
+function WorkspaceTab ({ nextStep, setNextStep }) {
   const user = useSelector(state => state.user)
   const workspace = useSelector(state => state.workspace)
   const invites = workspace.invites
-  const [radioValue, setRadioValue] = useState('workspace')
+  // const [radioValue, setRadioValue] = useState('workspace')
   if (user.workspaceId && user.workspaceId !== workspace.id) {
     return null
   }
   let form = workspace.id ? <UpdateWorkspaceForm /> : <CreateWorkspaceForm />
-  if (radioValue === 'invites') {
+  if (nextStep === 'invites') {
     form = <Invites />
   }
 
@@ -155,8 +156,8 @@ function WorkspaceTab () {
           <Title level={4}>Create workspace or join existing one</Title>
         </div>
         <div><Radio.Group
-          value={radioValue}
-          onChange={(e) => setRadioValue(e.target.value)}
+          value={nextStep}
+          onChange={(e) => setNextStep(e.target.value)}
           options={[
             { label: workspace.id ? 'Update' : 'Create', value: 'workspace' },
             { label: <Badge color='blue' count={invites.length} offset={[14, -10]}>Join</Badge>, value: 'invites' }
@@ -172,7 +173,7 @@ function WorkspaceTab () {
   )
 }
 
-export function Workspace () {
+export function Workspace ({ nextStep, setNextStep }) {
   const user = useSelector(state => state.user)
   const workspaceId = user?.workspaceId
   const planType = user?.planType
@@ -221,18 +222,44 @@ export function Workspace () {
           ]}
         />
       </div>
-      {([<WorkspaceTab key={0} />, <SubscriptionTab key={1} />, <MembersTab key={2} />])[step]}
+      {([<WorkspaceTab key={0} nextStep={nextStep} setNextStep={setNextStep} />, <SubscriptionTab key={1} />, <MembersTab key={2} />])[step]}
     </div>
   )
 }
 
-export default function WorkspacePage ({ tab }) {
+function WelcomeScreen ({ setNextStep }) {
+  const workspace = useSelector(state => state.workspace)
+  const invites = workspace.invites
+  return (
+    <Result
+      status='success'
+      icon={<RocketTwoTone />}
+      title='Get started!'
+      subTitle="Let's find you a workspace to create your first report"
+      extra={[
+        <Button type='primary' key='1' onClick={() => setNextStep('workspace')}>
+          Create workspace
+        </Button>,
+        <Button key='2' onClick={() => setNextStep('invites')}><Badge color='blue' count={invites.length} offset={[14, -10]}>Join existing workspace</Badge></Button>
+      ]}
+    />
+  )
+}
+
+export default function WorkspacePage () {
+  const user = useSelector(state => state.user)
+  const workspaceId = user?.workspaceId
+  const [nextStep, setNextStep] = useState(null)
   return (
     <div className={styles.workspacePage}>
       <Header />
-      <div className={styles.body}>
-        <Workspace />
-      </div>
+      {user
+        ? (
+          <div className={styles.body}>
+            {workspaceId || nextStep ? <Workspace nextStep={nextStep} setNextStep={setNextStep} /> : <WelcomeScreen setNextStep={setNextStep} />}
+          </div>
+          )
+        : null}
     </div>
   )
 }
