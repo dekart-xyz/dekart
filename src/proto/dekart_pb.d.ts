@@ -43,27 +43,27 @@ export namespace GetStripePortalSessionResponse {
   }
 }
 
-export class UpdateOrganizationUserRequest extends jspb.Message {
+export class UpdateWorkspaceUserRequest extends jspb.Message {
   getEmail(): string;
   setEmail(value: string): void;
 
-  getUserUpdateType(): UpdateOrganizationUserRequest.UserUpdateTypeMap[keyof UpdateOrganizationUserRequest.UserUpdateTypeMap];
-  setUserUpdateType(value: UpdateOrganizationUserRequest.UserUpdateTypeMap[keyof UpdateOrganizationUserRequest.UserUpdateTypeMap]): void;
+  getUserUpdateType(): UpdateWorkspaceUserRequest.UserUpdateTypeMap[keyof UpdateWorkspaceUserRequest.UserUpdateTypeMap];
+  setUserUpdateType(value: UpdateWorkspaceUserRequest.UserUpdateTypeMap[keyof UpdateWorkspaceUserRequest.UserUpdateTypeMap]): void;
 
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): UpdateOrganizationUserRequest.AsObject;
-  static toObject(includeInstance: boolean, msg: UpdateOrganizationUserRequest): UpdateOrganizationUserRequest.AsObject;
+  toObject(includeInstance?: boolean): UpdateWorkspaceUserRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: UpdateWorkspaceUserRequest): UpdateWorkspaceUserRequest.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: UpdateOrganizationUserRequest, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): UpdateOrganizationUserRequest;
-  static deserializeBinaryFromReader(message: UpdateOrganizationUserRequest, reader: jspb.BinaryReader): UpdateOrganizationUserRequest;
+  static serializeBinaryToWriter(message: UpdateWorkspaceUserRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): UpdateWorkspaceUserRequest;
+  static deserializeBinaryFromReader(message: UpdateWorkspaceUserRequest, reader: jspb.BinaryReader): UpdateWorkspaceUserRequest;
 }
 
-export namespace UpdateOrganizationUserRequest {
+export namespace UpdateWorkspaceUserRequest {
   export type AsObject = {
     email: string,
-    userUpdateType: UpdateOrganizationUserRequest.UserUpdateTypeMap[keyof UpdateOrganizationUserRequest.UserUpdateTypeMap],
+    userUpdateType: UpdateWorkspaceUserRequest.UserUpdateTypeMap[keyof UpdateWorkspaceUserRequest.UserUpdateTypeMap],
   }
 
   export interface UserUpdateTypeMap {
@@ -75,43 +75,43 @@ export namespace UpdateOrganizationUserRequest {
   export const UserUpdateType: UserUpdateTypeMap;
 }
 
-export class UpdateOrganizationUserResponse extends jspb.Message {
+export class UpdateWorkspaceUserResponse extends jspb.Message {
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): UpdateOrganizationUserResponse.AsObject;
-  static toObject(includeInstance: boolean, msg: UpdateOrganizationUserResponse): UpdateOrganizationUserResponse.AsObject;
+  toObject(includeInstance?: boolean): UpdateWorkspaceUserResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: UpdateWorkspaceUserResponse): UpdateWorkspaceUserResponse.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: UpdateOrganizationUserResponse, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): UpdateOrganizationUserResponse;
-  static deserializeBinaryFromReader(message: UpdateOrganizationUserResponse, reader: jspb.BinaryReader): UpdateOrganizationUserResponse;
+  static serializeBinaryToWriter(message: UpdateWorkspaceUserResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): UpdateWorkspaceUserResponse;
+  static deserializeBinaryFromReader(message: UpdateWorkspaceUserResponse, reader: jspb.BinaryReader): UpdateWorkspaceUserResponse;
 }
 
-export namespace UpdateOrganizationUserResponse {
+export namespace UpdateWorkspaceUserResponse {
   export type AsObject = {
   }
 }
 
-export class GetOrganizationRequest extends jspb.Message {
+export class GetWorkspaceRequest extends jspb.Message {
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): GetOrganizationRequest.AsObject;
-  static toObject(includeInstance: boolean, msg: GetOrganizationRequest): GetOrganizationRequest.AsObject;
+  toObject(includeInstance?: boolean): GetWorkspaceRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: GetWorkspaceRequest): GetWorkspaceRequest.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: GetOrganizationRequest, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): GetOrganizationRequest;
-  static deserializeBinaryFromReader(message: GetOrganizationRequest, reader: jspb.BinaryReader): GetOrganizationRequest;
+  static serializeBinaryToWriter(message: GetWorkspaceRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetWorkspaceRequest;
+  static deserializeBinaryFromReader(message: GetWorkspaceRequest, reader: jspb.BinaryReader): GetWorkspaceRequest;
 }
 
-export namespace GetOrganizationRequest {
+export namespace GetWorkspaceRequest {
   export type AsObject = {
   }
 }
 
-export class GetOrganizationResponse extends jspb.Message {
-  hasOrganization(): boolean;
-  clearOrganization(): void;
-  getOrganization(): Organization | undefined;
-  setOrganization(value?: Organization): void;
+export class GetWorkspaceResponse extends jspb.Message {
+  hasWorkspace(): boolean;
+  clearWorkspace(): void;
+  getWorkspace(): Workspace | undefined;
+  setWorkspace(value?: Workspace): void;
 
   hasSubscription(): boolean;
   clearSubscription(): void;
@@ -124,97 +124,97 @@ export class GetOrganizationResponse extends jspb.Message {
   addUsers(value?: User, index?: number): User;
 
   clearInvitesList(): void;
-  getInvitesList(): Array<OrganizationInvite>;
-  setInvitesList(value: Array<OrganizationInvite>): void;
-  addInvites(value?: OrganizationInvite, index?: number): OrganizationInvite;
+  getInvitesList(): Array<WorkspaceInvite>;
+  setInvitesList(value: Array<WorkspaceInvite>): void;
+  addInvites(value?: WorkspaceInvite, index?: number): WorkspaceInvite;
 
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): GetOrganizationResponse.AsObject;
-  static toObject(includeInstance: boolean, msg: GetOrganizationResponse): GetOrganizationResponse.AsObject;
+  toObject(includeInstance?: boolean): GetWorkspaceResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: GetWorkspaceResponse): GetWorkspaceResponse.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: GetOrganizationResponse, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): GetOrganizationResponse;
-  static deserializeBinaryFromReader(message: GetOrganizationResponse, reader: jspb.BinaryReader): GetOrganizationResponse;
+  static serializeBinaryToWriter(message: GetWorkspaceResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetWorkspaceResponse;
+  static deserializeBinaryFromReader(message: GetWorkspaceResponse, reader: jspb.BinaryReader): GetWorkspaceResponse;
 }
 
-export namespace GetOrganizationResponse {
+export namespace GetWorkspaceResponse {
   export type AsObject = {
-    organization?: Organization.AsObject,
+    workspace?: Workspace.AsObject,
     subscription?: Subscription.AsObject,
     usersList: Array<User.AsObject>,
-    invitesList: Array<OrganizationInvite.AsObject>,
+    invitesList: Array<WorkspaceInvite.AsObject>,
   }
 }
 
-export class CreateOrganizationRequest extends jspb.Message {
-  getOrganizationName(): string;
-  setOrganizationName(value: string): void;
+export class CreateWorkspaceRequest extends jspb.Message {
+  getWorkspaceName(): string;
+  setWorkspaceName(value: string): void;
 
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): CreateOrganizationRequest.AsObject;
-  static toObject(includeInstance: boolean, msg: CreateOrganizationRequest): CreateOrganizationRequest.AsObject;
+  toObject(includeInstance?: boolean): CreateWorkspaceRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: CreateWorkspaceRequest): CreateWorkspaceRequest.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: CreateOrganizationRequest, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): CreateOrganizationRequest;
-  static deserializeBinaryFromReader(message: CreateOrganizationRequest, reader: jspb.BinaryReader): CreateOrganizationRequest;
+  static serializeBinaryToWriter(message: CreateWorkspaceRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CreateWorkspaceRequest;
+  static deserializeBinaryFromReader(message: CreateWorkspaceRequest, reader: jspb.BinaryReader): CreateWorkspaceRequest;
 }
 
-export namespace CreateOrganizationRequest {
+export namespace CreateWorkspaceRequest {
   export type AsObject = {
-    organizationName: string,
+    workspaceName: string,
   }
 }
 
-export class CreateOrganizationResponse extends jspb.Message {
+export class CreateWorkspaceResponse extends jspb.Message {
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): CreateOrganizationResponse.AsObject;
-  static toObject(includeInstance: boolean, msg: CreateOrganizationResponse): CreateOrganizationResponse.AsObject;
+  toObject(includeInstance?: boolean): CreateWorkspaceResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: CreateWorkspaceResponse): CreateWorkspaceResponse.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: CreateOrganizationResponse, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): CreateOrganizationResponse;
-  static deserializeBinaryFromReader(message: CreateOrganizationResponse, reader: jspb.BinaryReader): CreateOrganizationResponse;
+  static serializeBinaryToWriter(message: CreateWorkspaceResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CreateWorkspaceResponse;
+  static deserializeBinaryFromReader(message: CreateWorkspaceResponse, reader: jspb.BinaryReader): CreateWorkspaceResponse;
 }
 
-export namespace CreateOrganizationResponse {
+export namespace CreateWorkspaceResponse {
   export type AsObject = {
   }
 }
 
-export class UpdateOrganizationRequest extends jspb.Message {
-  getOrganizationName(): string;
-  setOrganizationName(value: string): void;
+export class UpdateWorkspaceRequest extends jspb.Message {
+  getWorkspaceName(): string;
+  setWorkspaceName(value: string): void;
 
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): UpdateOrganizationRequest.AsObject;
-  static toObject(includeInstance: boolean, msg: UpdateOrganizationRequest): UpdateOrganizationRequest.AsObject;
+  toObject(includeInstance?: boolean): UpdateWorkspaceRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: UpdateWorkspaceRequest): UpdateWorkspaceRequest.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: UpdateOrganizationRequest, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): UpdateOrganizationRequest;
-  static deserializeBinaryFromReader(message: UpdateOrganizationRequest, reader: jspb.BinaryReader): UpdateOrganizationRequest;
+  static serializeBinaryToWriter(message: UpdateWorkspaceRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): UpdateWorkspaceRequest;
+  static deserializeBinaryFromReader(message: UpdateWorkspaceRequest, reader: jspb.BinaryReader): UpdateWorkspaceRequest;
 }
 
-export namespace UpdateOrganizationRequest {
+export namespace UpdateWorkspaceRequest {
   export type AsObject = {
-    organizationName: string,
+    workspaceName: string,
   }
 }
 
-export class UpdateOrganizationResponse extends jspb.Message {
+export class UpdateWorkspaceResponse extends jspb.Message {
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): UpdateOrganizationResponse.AsObject;
-  static toObject(includeInstance: boolean, msg: UpdateOrganizationResponse): UpdateOrganizationResponse.AsObject;
+  toObject(includeInstance?: boolean): UpdateWorkspaceResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: UpdateWorkspaceResponse): UpdateWorkspaceResponse.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: UpdateOrganizationResponse, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): UpdateOrganizationResponse;
-  static deserializeBinaryFromReader(message: UpdateOrganizationResponse, reader: jspb.BinaryReader): UpdateOrganizationResponse;
+  static serializeBinaryToWriter(message: UpdateWorkspaceResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): UpdateWorkspaceResponse;
+  static deserializeBinaryFromReader(message: UpdateWorkspaceResponse, reader: jspb.BinaryReader): UpdateWorkspaceResponse;
 }
 
-export namespace UpdateOrganizationResponse {
+export namespace UpdateWorkspaceResponse {
   export type AsObject = {
   }
 }
@@ -275,9 +275,9 @@ export namespace GetInvitesRequest {
   }
 }
 
-export class OrganizationInvite extends jspb.Message {
-  getOrganizationId(): string;
-  setOrganizationId(value: string): void;
+export class WorkspaceInvite extends jspb.Message {
+  getWorkspaceId(): string;
+  setWorkspaceId(value: string): void;
 
   getInviteId(): string;
   setInviteId(value: string): void;
@@ -285,37 +285,37 @@ export class OrganizationInvite extends jspb.Message {
   getInviterEmail(): string;
   setInviterEmail(value: string): void;
 
-  getOrganizationName(): string;
-  setOrganizationName(value: string): void;
+  getWorkspaceName(): string;
+  setWorkspaceName(value: string): void;
 
   getCreatedAt(): number;
   setCreatedAt(value: number): void;
 
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): OrganizationInvite.AsObject;
-  static toObject(includeInstance: boolean, msg: OrganizationInvite): OrganizationInvite.AsObject;
+  toObject(includeInstance?: boolean): WorkspaceInvite.AsObject;
+  static toObject(includeInstance: boolean, msg: WorkspaceInvite): WorkspaceInvite.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: OrganizationInvite, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): OrganizationInvite;
-  static deserializeBinaryFromReader(message: OrganizationInvite, reader: jspb.BinaryReader): OrganizationInvite;
+  static serializeBinaryToWriter(message: WorkspaceInvite, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): WorkspaceInvite;
+  static deserializeBinaryFromReader(message: WorkspaceInvite, reader: jspb.BinaryReader): WorkspaceInvite;
 }
 
-export namespace OrganizationInvite {
+export namespace WorkspaceInvite {
   export type AsObject = {
-    organizationId: string,
+    workspaceId: string,
     inviteId: string,
     inviterEmail: string,
-    organizationName: string,
+    workspaceName: string,
     createdAt: number,
   }
 }
 
 export class GetInvitesResponse extends jspb.Message {
   clearInvitesList(): void;
-  getInvitesList(): Array<OrganizationInvite>;
-  setInvitesList(value: Array<OrganizationInvite>): void;
-  addInvites(value?: OrganizationInvite, index?: number): OrganizationInvite;
+  getInvitesList(): Array<WorkspaceInvite>;
+  setInvitesList(value: Array<WorkspaceInvite>): void;
+  addInvites(value?: WorkspaceInvite, index?: number): WorkspaceInvite;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetInvitesResponse.AsObject;
@@ -329,7 +329,7 @@ export class GetInvitesResponse extends jspb.Message {
 
 export namespace GetInvitesResponse {
   export type AsObject = {
-    invitesList: Array<OrganizationInvite.AsObject>,
+    invitesList: Array<WorkspaceInvite.AsObject>,
   }
 }
 
@@ -473,7 +473,7 @@ export namespace CancelSubscriptionResponse {
   }
 }
 
-export class Organization extends jspb.Message {
+export class Workspace extends jspb.Message {
   getId(): string;
   setId(value: string): void;
 
@@ -481,16 +481,16 @@ export class Organization extends jspb.Message {
   setName(value: string): void;
 
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): Organization.AsObject;
-  static toObject(includeInstance: boolean, msg: Organization): Organization.AsObject;
+  toObject(includeInstance?: boolean): Workspace.AsObject;
+  static toObject(includeInstance: boolean, msg: Workspace): Workspace.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: Organization, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): Organization;
-  static deserializeBinaryFromReader(message: Organization, reader: jspb.BinaryReader): Organization;
+  static serializeBinaryToWriter(message: Workspace, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): Workspace;
+  static deserializeBinaryFromReader(message: Workspace, reader: jspb.BinaryReader): Workspace;
 }
 
-export namespace Organization {
+export namespace Workspace {
   export type AsObject = {
     id: string,
     name: string,
@@ -653,14 +653,14 @@ export class GetUserStreamResponse extends jspb.Message {
   getEmail(): string;
   setEmail(value: string): void;
 
-  getOrganizationId(): string;
-  setOrganizationId(value: string): void;
+  getWorkspaceId(): string;
+  setWorkspaceId(value: string): void;
 
   getPlanType(): PlanTypeMap[keyof PlanTypeMap];
   setPlanType(value: PlanTypeMap[keyof PlanTypeMap]): void;
 
-  getOrganizationUpdate(): number;
-  setOrganizationUpdate(value: number): void;
+  getWorkspaceUpdate(): number;
+  setWorkspaceUpdate(value: number): void;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetUserStreamResponse.AsObject;
@@ -677,9 +677,9 @@ export namespace GetUserStreamResponse {
     streamOptions?: StreamOptions.AsObject,
     connectionUpdate: number,
     email: string,
-    organizationId: string,
+    workspaceId: string,
     planType: PlanTypeMap[keyof PlanTypeMap],
-    organizationUpdate: number,
+    workspaceUpdate: number,
   }
 }
 

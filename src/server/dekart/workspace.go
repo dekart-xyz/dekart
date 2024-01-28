@@ -11,18 +11,18 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// getOrganizationUpdate for simplicity, we just get the max updated_at from the all tables.
-func (s Server) getOrganizationUpdate(ctx context.Context) (int64, error) {
+// getWorkspaceUpdate for simplicity, we just get the max updated_at from the all tables.
+func (s Server) getWorkspaceUpdate(ctx context.Context) (int64, error) {
 	var updated_at sql.NullTime
 	err := s.db.QueryRowContext(ctx, `
 		SELECT max(updated_at) FROM (
 			SELECT
 				max(updated_at) as updated_at
-			FROM organizations
+			FROM workspaces
 			UNION
 			SELECT
 				max(created_at) as updated_at
-			FROM organization_log
+			FROM workspace_log
 			UNION
 			SELECT
 				max(created_at) as updated_at
@@ -36,59 +36,59 @@ func (s Server) getOrganizationUpdate(ctx context.Context) (int64, error) {
 	return updated_at.Time.Unix(), nil
 }
 
-func (s Server) CreateOrganization(ctx context.Context, req *proto.CreateOrganizationRequest) (*proto.CreateOrganizationResponse, error) {
+func (s Server) CreateWorkspace(ctx context.Context, req *proto.CreateWorkspaceRequest) (*proto.CreateWorkspaceResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	log.Debug().Msgf("CreateOrganization: %v", req)
-	organizationID := newUUID()
+	log.Debug().Msgf("CreateWorkspace: %v", req)
+	workspaceID := newUUID()
 	_, err := s.db.ExecContext(ctx, `
-		INSERT INTO organizations (id, name)
+		INSERT INTO workspaces (id, name)
 		VALUES ($1, $2)
-	`, organizationID, req.OrganizationName)
+	`, workspaceID, req.WorkspaceName)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	_, err = s.db.ExecContext(ctx, `
-		INSERT INTO organization_log (organization_id, email, status, authored_by, id)
+		INSERT INTO workspace_log (workspace_id, email, status, authored_by, id)
 		VALUES ($1, $2, 1, $2, $3)
-	`, organizationID, claims.Email, newUUID())
+	`, workspaceID, claims.Email, newUUID())
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	s.userStreams.PingAll()
-	return &proto.CreateOrganizationResponse{}, nil
+	return &proto.CreateWorkspaceResponse{}, nil
 }
 
-func (s Server) UpdateOrganization(ctx context.Context, req *proto.UpdateOrganizationRequest) (*proto.UpdateOrganizationResponse, error) {
+func (s Server) UpdateWorkspace(ctx context.Context, req *proto.UpdateWorkspaceRequest) (*proto.UpdateWorkspaceResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	organizationID := checkOrganization(ctx).ID
-	if organizationID == "" {
-		return nil, status.Error(codes.NotFound, "Organization not found")
+	workspaceID := checkWorkspace(ctx).ID
+	if workspaceID == "" {
+		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
 	_, err := s.db.ExecContext(ctx, `
-		UPDATE organizations
+		UPDATE workspaces
 		SET name = $2, updated_at = now()
 		WHERE id = $1
-	`, organizationID, req.OrganizationName)
+	`, workspaceID, req.WorkspaceName)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	s.userStreams.PingAll()
-	return &proto.UpdateOrganizationResponse{}, nil
+	return &proto.UpdateWorkspaceResponse{}, nil
 }
 
-func (s Server) getOrganizationUsers(ctx context.Context, organizationID string) ([]*proto.User, error) {
+func (s Server) getWorkspaceUsers(ctx context.Context, workspaceID string) ([]*proto.User, error) {
 	users := make([]*proto.User, 0)
 	// In this query, the subquery (aliased as subq) gets the maximum created_at for each email.
-	//The main query then joins organization_log with this subquery on email and created_at, effectively getting the active value at the time of the last log for each user.
+	//The main query then joins workspace_log with this subquery on email and created_at, effectively getting the active value at the time of the last log for each user.
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT
 			ol.email,
@@ -97,23 +97,23 @@ func (s Server) getOrganizationUsers(ctx context.Context, organizationID string)
 			cl.accepted,
 			ol.authored_by
 		FROM
-			organization_log ol
+			workspace_log ol
 		JOIN
 			(SELECT
 				email,
 				max(created_at) as max_created_at
 			FROM
-				organization_log
+				workspace_log
 			WHERE
-				organization_id = $1
+				workspace_id = $1
 			GROUP BY
 				email) subq
 		ON
 			ol.email = subq.email AND ol.created_at = subq.max_created_at
-		LEFT JOIN confirmation_log AS cl ON ol.id = cl.organization_log_id
+		LEFT JOIN confirmation_log AS cl ON ol.id = cl.workspace_log_id
 		ORDER BY
 			ol.created_at DESC
-		`, organizationID)
+		`, workspaceID)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, err
@@ -144,22 +144,22 @@ func (s Server) getOrganizationUsers(ctx context.Context, organizationID string)
 	return users, nil
 }
 
-func (s Server) getUserOrganization(ctx context.Context, email string) (*proto.Organization, error) {
+func (s Server) getUserWorkspace(ctx context.Context, email string) (*proto.Workspace, error) {
 	res, err := s.db.QueryContext(ctx, `
 		SELECT
 			o.id,
 			o.name
-		FROM organizations AS o
-		JOIN organization_log AS ol ON o.id = ol.organization_id
+		FROM workspaces AS o
+		JOIN workspace_log AS ol ON o.id = ol.workspace_id
 		JOIN (
 			SELECT
-				organization_id,
+				workspace_id,
 				MAX(created_at) AS created_at
-			FROM organization_log
+			FROM workspace_log
 			WHERE email = $1
-			GROUP BY organization_id
-		) AS oll ON ol.organization_id = oll.organization_id AND ol.created_at = oll.created_at
-		LEFT JOIN confirmation_log AS cl ON ol.id = cl.organization_log_id AND cl.authored_by = ol.email
+			GROUP BY workspace_id
+		) AS oll ON ol.workspace_id = oll.workspace_id AND ol.created_at = oll.created_at
+		LEFT JOIN confirmation_log AS cl ON ol.id = cl.workspace_log_id AND cl.authored_by = ol.email
 		WHERE ol.status = 1 AND (ol.authored_by = $1 OR cl.accepted = TRUE)
 		ORDER BY ol.created_at DESC
 		LIMIT 1
@@ -170,44 +170,44 @@ func (s Server) getUserOrganization(ctx context.Context, email string) (*proto.O
 	}
 	defer res.Close()
 	if res.Next() {
-		organization := proto.Organization{}
-		err := res.Scan(&organization.Id, &organization.Name)
+		workspace := proto.Workspace{}
+		err := res.Scan(&workspace.Id, &workspace.Name)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, err
 		}
-		return &organization, nil
+		return &workspace, nil
 	}
 	return nil, nil
 }
 
-type organizationInfoKeyType string
+type workspaceInfoKeyType string
 
-const organizationInfoKey organizationInfoKeyType = "organizationInfo"
+const workspaceInfoKey workspaceInfoKeyType = "workspaceInfo"
 
-type OrganizationInfo struct {
+type WorkspaceInfo struct {
 	ID       string
 	PlanType proto.PlanType
 	Name     string
 }
 
-func (s Server) SetOrganizationContext(ctx context.Context) context.Context {
+func (s Server) SetWorkspaceContext(ctx context.Context) context.Context {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return ctx
 	}
-	organization, err := s.getUserOrganization(ctx, claims.Email)
+	workspace, err := s.getUserWorkspace(ctx, claims.Email)
 	if err != nil {
 		log.Err(err).Send()
 		return ctx
 	}
-	var organizationId string
+	var workspaceId string
 	var planType proto.PlanType
 	var name string
-	if organization != nil {
-		organizationId = organization.Id
-		name = organization.Name
-		subscription, err := s.getSubscription(ctx, organizationId)
+	if workspace != nil {
+		workspaceId = workspace.Id
+		name = workspace.Name
+		subscription, err := s.getSubscription(ctx, workspaceId)
 		if err != nil {
 			log.Err(err).Send()
 			return ctx
@@ -217,23 +217,23 @@ func (s Server) SetOrganizationContext(ctx context.Context) context.Context {
 		}
 	}
 
-	ctx = context.WithValue(ctx, organizationInfoKey, OrganizationInfo{
-		ID:       organizationId,
+	ctx = context.WithValue(ctx, workspaceInfoKey, WorkspaceInfo{
+		ID:       workspaceId,
 		PlanType: planType,
 		Name:     name,
 	})
 	return ctx
 }
 
-func checkOrganization(ctx context.Context) OrganizationInfo {
-	organizationInfo, ok := ctx.Value(organizationInfoKey).(OrganizationInfo)
+func checkWorkspace(ctx context.Context) WorkspaceInfo {
+	workspaceInfo, ok := ctx.Value(workspaceInfoKey).(WorkspaceInfo)
 	if !ok {
-		log.Error().Msgf("organizationInfo not found in context")
+		log.Error().Msgf("workspaceInfo not found in context")
 	}
-	return organizationInfo
+	return workspaceInfo
 }
 
-func (s Server) GetOrganization(ctx context.Context, req *proto.GetOrganizationRequest) (*proto.GetOrganizationResponse, error) {
+func (s Server) GetWorkspace(ctx context.Context, req *proto.GetWorkspaceRequest) (*proto.GetWorkspaceResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
@@ -243,27 +243,27 @@ func (s Server) GetOrganization(ctx context.Context, req *proto.GetOrganizationR
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	organizationInfo := checkOrganization(ctx)
-	if organizationInfo.ID == "" {
-		return &proto.GetOrganizationResponse{
+	workspaceInfo := checkWorkspace(ctx)
+	if workspaceInfo.ID == "" {
+		return &proto.GetWorkspaceResponse{
 			Invites: invites,
 		}, nil
 	}
-	subscription, err := s.getSubscription(ctx, organizationInfo.ID)
+	subscription, err := s.getSubscription(ctx, workspaceInfo.ID)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	users, err := s.getOrganizationUsers(ctx, organizationInfo.ID)
+	users, err := s.getWorkspaceUsers(ctx, workspaceInfo.ID)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return &proto.GetOrganizationResponse{
-		Organization: &proto.Organization{
-			Id:   organizationInfo.ID,
-			Name: organizationInfo.Name,
+	return &proto.GetWorkspaceResponse{
+		Workspace: &proto.Workspace{
+			Id:   workspaceInfo.ID,
+			Name: workspaceInfo.Name,
 		},
 		Subscription: subscription,
 		Users:        users,
@@ -271,32 +271,32 @@ func (s Server) GetOrganization(ctx context.Context, req *proto.GetOrganizationR
 	}, nil
 }
 
-func (s Server) UpdateOrganizationUser(ctx context.Context, req *proto.UpdateOrganizationUserRequest) (*proto.UpdateOrganizationUserResponse, error) {
+func (s Server) UpdateWorkspaceUser(ctx context.Context, req *proto.UpdateWorkspaceUserRequest) (*proto.UpdateWorkspaceUserResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	organizationInfo := checkOrganization(ctx)
-	if organizationInfo.ID == "" {
-		return nil, status.Error(codes.NotFound, "Organization not found")
+	workspaceInfo := checkWorkspace(ctx)
+	if workspaceInfo.ID == "" {
+		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
-	if req.UserUpdateType == proto.UpdateOrganizationUserRequest_USER_UPDATE_TYPE_UNSPECIFIED {
+	if req.UserUpdateType == proto.UpdateWorkspaceUserRequest_USER_UPDATE_TYPE_UNSPECIFIED {
 		log.Error().Msgf("User update type not specified")
 		return nil, status.Error(codes.InvalidArgument, "User update type not specified")
 	}
 	_, err := s.db.ExecContext(ctx, `
-		INSERT INTO organization_log (id, organization_id, email, status, authored_by)
+		INSERT INTO workspace_log (id, workspace_id, email, status, authored_by)
 		VALUES ($1, $2, $3, $4, $5)
-	`, newUUID(), organizationInfo.ID, req.Email, req.UserUpdateType, claims.Email)
+	`, newUUID(), workspaceInfo.ID, req.Email, req.UserUpdateType, claims.Email)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	s.userStreams.PingAll()
-	return &proto.UpdateOrganizationUserResponse{}, nil
+	return &proto.UpdateWorkspaceUserResponse{}, nil
 }
 
-func (s Server) getInvites(ctx context.Context, email string) ([]*proto.OrganizationInvite, error) {
+func (s Server) getInvites(ctx context.Context, email string) ([]*proto.WorkspaceInvite, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT
 			ol.created_at,
@@ -305,20 +305,20 @@ func (s Server) getInvites(ctx context.Context, email string) ([]*proto.Organiza
 			o.name,
 			ol.authored_by
 		FROM
-			organization_log ol
+			workspace_log ol
 		JOIN
 			(SELECT
-				organization_id,
+				workspace_id,
 				max(created_at) as max_created_at
 			FROM
-				organization_log
+				workspace_log
 			WHERE
 				email = $1
 			GROUP BY
-				organization_id) subq
-		ON ol.organization_id=subq.organization_id AND ol.created_at = subq.max_created_at
-		JOIN organizations AS o ON ol.organization_id = o.id
-		LEFT JOIN confirmation_log AS cl ON ol.id = cl.organization_log_id AND cl.authored_by = ol.email
+				workspace_id) subq
+		ON ol.workspace_id=subq.workspace_id AND ol.created_at = subq.max_created_at
+		JOIN workspaces AS o ON ol.workspace_id = o.id
+		LEFT JOIN confirmation_log AS cl ON ol.id = cl.workspace_log_id AND cl.authored_by = ol.email
 		WHERE ol.status = 1 AND ol.authored_by != $1 AND cl.accepted is null
 		ORDER BY ol.created_at DESC
 		`, email)
@@ -327,11 +327,11 @@ func (s Server) getInvites(ctx context.Context, email string) ([]*proto.Organiza
 		return nil, err
 	}
 	defer rows.Close()
-	invites := make([]*proto.OrganizationInvite, 0)
+	invites := make([]*proto.WorkspaceInvite, 0)
 	for rows.Next() {
-		invite := proto.OrganizationInvite{}
+		invite := proto.WorkspaceInvite{}
 		createdAt := sql.NullTime{}
-		err := rows.Scan(&createdAt, &invite.OrganizationId, &invite.InviteId, &invite.OrganizationName, &invite.InviterEmail)
+		err := rows.Scan(&createdAt, &invite.WorkspaceId, &invite.InviteId, &invite.WorkspaceName, &invite.InviterEmail)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, err
@@ -348,7 +348,7 @@ func (s Server) RespondToInvite(ctx context.Context, req *proto.RespondToInviteR
 		return nil, Unauthenticated
 	}
 	_, err := s.db.ExecContext(ctx, `
-		INSERT INTO confirmation_log (organization_log_id, accepted, authored_by)
+		INSERT INTO confirmation_log (workspace_log_id, accepted, authored_by)
 		VALUES ($1, $2, $3)
 	`, req.InviteId, req.Accept, claims.Email)
 	if err != nil {

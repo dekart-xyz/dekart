@@ -265,40 +265,40 @@ type DekartGetStripePortalSession = {
   readonly responseType: typeof proto_dekart_pb.GetStripePortalSessionResponse;
 };
 
-type DekartCreateOrganization = {
+type DekartCreateWorkspace = {
   readonly methodName: string;
   readonly service: typeof Dekart;
   readonly requestStream: false;
   readonly responseStream: false;
-  readonly requestType: typeof proto_dekart_pb.CreateOrganizationRequest;
-  readonly responseType: typeof proto_dekart_pb.CreateOrganizationResponse;
+  readonly requestType: typeof proto_dekart_pb.CreateWorkspaceRequest;
+  readonly responseType: typeof proto_dekart_pb.CreateWorkspaceResponse;
 };
 
-type DekartUpdateOrganization = {
+type DekartUpdateWorkspace = {
   readonly methodName: string;
   readonly service: typeof Dekart;
   readonly requestStream: false;
   readonly responseStream: false;
-  readonly requestType: typeof proto_dekart_pb.UpdateOrganizationRequest;
-  readonly responseType: typeof proto_dekart_pb.UpdateOrganizationResponse;
+  readonly requestType: typeof proto_dekart_pb.UpdateWorkspaceRequest;
+  readonly responseType: typeof proto_dekart_pb.UpdateWorkspaceResponse;
 };
 
-type DekartGetOrganization = {
+type DekartGetWorkspace = {
   readonly methodName: string;
   readonly service: typeof Dekart;
   readonly requestStream: false;
   readonly responseStream: false;
-  readonly requestType: typeof proto_dekart_pb.GetOrganizationRequest;
-  readonly responseType: typeof proto_dekart_pb.GetOrganizationResponse;
+  readonly requestType: typeof proto_dekart_pb.GetWorkspaceRequest;
+  readonly responseType: typeof proto_dekart_pb.GetWorkspaceResponse;
 };
 
-type DekartUpdateOrganizationUser = {
+type DekartUpdateWorkspaceUser = {
   readonly methodName: string;
   readonly service: typeof Dekart;
   readonly requestStream: false;
   readonly responseStream: false;
-  readonly requestType: typeof proto_dekart_pb.UpdateOrganizationUserRequest;
-  readonly responseType: typeof proto_dekart_pb.UpdateOrganizationUserResponse;
+  readonly requestType: typeof proto_dekart_pb.UpdateWorkspaceUserRequest;
+  readonly responseType: typeof proto_dekart_pb.UpdateWorkspaceUserResponse;
 };
 
 export class Dekart {
@@ -332,10 +332,10 @@ export class Dekart {
   static readonly CreateSubscription: DekartCreateSubscription;
   static readonly CancelSubscription: DekartCancelSubscription;
   static readonly GetStripePortalSession: DekartGetStripePortalSession;
-  static readonly CreateOrganization: DekartCreateOrganization;
-  static readonly UpdateOrganization: DekartUpdateOrganization;
-  static readonly GetOrganization: DekartGetOrganization;
-  static readonly UpdateOrganizationUser: DekartUpdateOrganizationUser;
+  static readonly CreateWorkspace: DekartCreateWorkspace;
+  static readonly UpdateWorkspace: DekartUpdateWorkspace;
+  static readonly GetWorkspace: DekartGetWorkspace;
+  static readonly UpdateWorkspaceUser: DekartUpdateWorkspaceUser;
 }
 
 export type ServiceError = { message: string, code: number; metadata: grpc.Metadata }
@@ -607,41 +607,41 @@ export class DekartClient {
     requestMessage: proto_dekart_pb.GetStripePortalSessionRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetStripePortalSessionResponse|null) => void
   ): UnaryResponse;
-  createOrganization(
-    requestMessage: proto_dekart_pb.CreateOrganizationRequest,
+  createWorkspace(
+    requestMessage: proto_dekart_pb.CreateWorkspaceRequest,
     metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateOrganizationResponse|null) => void
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateWorkspaceResponse|null) => void
   ): UnaryResponse;
-  createOrganization(
-    requestMessage: proto_dekart_pb.CreateOrganizationRequest,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateOrganizationResponse|null) => void
+  createWorkspace(
+    requestMessage: proto_dekart_pb.CreateWorkspaceRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateWorkspaceResponse|null) => void
   ): UnaryResponse;
-  updateOrganization(
-    requestMessage: proto_dekart_pb.UpdateOrganizationRequest,
+  updateWorkspace(
+    requestMessage: proto_dekart_pb.UpdateWorkspaceRequest,
     metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateOrganizationResponse|null) => void
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateWorkspaceResponse|null) => void
   ): UnaryResponse;
-  updateOrganization(
-    requestMessage: proto_dekart_pb.UpdateOrganizationRequest,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateOrganizationResponse|null) => void
+  updateWorkspace(
+    requestMessage: proto_dekart_pb.UpdateWorkspaceRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateWorkspaceResponse|null) => void
   ): UnaryResponse;
-  getOrganization(
-    requestMessage: proto_dekart_pb.GetOrganizationRequest,
+  getWorkspace(
+    requestMessage: proto_dekart_pb.GetWorkspaceRequest,
     metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetOrganizationResponse|null) => void
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetWorkspaceResponse|null) => void
   ): UnaryResponse;
-  getOrganization(
-    requestMessage: proto_dekart_pb.GetOrganizationRequest,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetOrganizationResponse|null) => void
+  getWorkspace(
+    requestMessage: proto_dekart_pb.GetWorkspaceRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetWorkspaceResponse|null) => void
   ): UnaryResponse;
-  updateOrganizationUser(
-    requestMessage: proto_dekart_pb.UpdateOrganizationUserRequest,
+  updateWorkspaceUser(
+    requestMessage: proto_dekart_pb.UpdateWorkspaceUserRequest,
     metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateOrganizationUserResponse|null) => void
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateWorkspaceUserResponse|null) => void
   ): UnaryResponse;
-  updateOrganizationUser(
-    requestMessage: proto_dekart_pb.UpdateOrganizationUserRequest,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateOrganizationUserResponse|null) => void
+  updateWorkspaceUser(
+    requestMessage: proto_dekart_pb.UpdateWorkspaceUserRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateWorkspaceUserResponse|null) => void
   ): UnaryResponse;
 }
 

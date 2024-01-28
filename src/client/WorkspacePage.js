@@ -1,19 +1,15 @@
-import Tabs from 'antd/es/tabs'
 import { Header } from './Header'
-import styles from './OrganizationPage.module.css'
+import styles from './WorkspacePage.module.css'
 import Card from 'antd/es/card'
 import Tag from 'antd/es/tag'
-import { GithubOutlined, HomeOutlined, TeamOutlined, CheckCircleOutlined, HighlightOutlined, UsergroupAddOutlined, InboxOutlined, CheckCircleFilled, DownOutlined } from '@ant-design/icons'
+import { HomeOutlined, TeamOutlined, CheckCircleOutlined, InboxOutlined, CreditCardOutlined } from '@ant-design/icons'
 import Title from 'antd/es/typography/Title'
 import Text from 'antd/es/typography/Text'
 import Button from 'antd/es/button'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { cancelSubscription, createOrganization, updateOrganization, createSubscription, updateOrganizationUser, respondToInvite, redirectToCustomerPortal } from './actions/organization'
+import { useCallback, useEffect, useState } from 'react'
+import { createWorkspace, updateWorkspace, createSubscription, updateWorkspaceUser, respondToInvite, redirectToCustomerPortal } from './actions/workspace'
 import { useDispatch, useSelector } from 'react-redux'
-import { PlanType, UpdateOrganizationUserRequest } from '../proto/dekart_pb'
-import Dropdown from 'antd/es/dropdown'
-import Modal from 'antd/es/modal/Modal'
-import { useHistory } from 'react-router-dom/cjs/react-router-dom'
+import { PlanType, UpdateWorkspaceUserRequest } from '../proto/dekart_pb'
 import Table from 'antd/es/table'
 import Input from 'antd/es/input'
 import Onboarding from './Onboarding'
@@ -21,11 +17,10 @@ import Badge from 'antd/es/badge'
 import Steps from 'antd/es/steps'
 import Radio from 'antd/es/radio'
 import Form from 'antd/es/form'
-import organization from './reducers/organizationReducer'
 
 function Invites () {
-  const organization = useSelector(state => state.organization)
-  const invites = organization.invites
+  const workspace = useSelector(state => state.workspace)
+  const invites = workspace.invites
   const dispatch = useDispatch()
   return (
     <div className={styles.invites}>
@@ -51,10 +46,10 @@ function Invites () {
               columns={[
                 {
                   key: 'invite',
-                  className: styles.organizationNameColumn,
+                  className: styles.workspaceNameColumn,
                   render: (invite) => (
                     <>
-                      <div className={styles.organizationName}>Join <i>{invite.organizationName}</i></div>
+                      <div className={styles.workspaceName}>Join <i>{invite.workspaceName}</i></div>
                       <div className={styles.inviterEmail}>invited by {invite.inviterEmail}</div>
                     </>)
                 },
@@ -86,13 +81,13 @@ function Invites () {
 }
 
 function TeamTab () {
-  const users = useSelector(state => state.organization.users)
+  const users = useSelector(state => state.workspace.users)
   const user = useSelector(state => state.user)
   const dispatch = useDispatch()
   const [email, setEmail] = useState('')
   const addUserCb = useCallback(() => {
     if (email) {
-      dispatch(updateOrganizationUser(email, UpdateOrganizationUserRequest.UserUpdateType.USER_UPDATE_TYPE_ADD))
+      dispatch(updateWorkspaceUser(email, UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_ADD))
       setEmail('')
     }
   }, [dispatch, email])
@@ -150,7 +145,7 @@ function TeamTab () {
                   title={u.email === user.email ? 'You cannot remove yourself' : undefined}
                   className={styles.removeButton}
                   type='text' onClick={() => {
-                    dispatch(updateOrganizationUser(u.email, UpdateOrganizationUserRequest.UserUpdateType.USER_UPDATE_TYPE_REMOVE))
+                    dispatch(updateWorkspaceUser(u.email, UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_REMOVE))
                   }}
                 >Remove
                 </Button>
@@ -201,6 +196,11 @@ function Plan ({ title, children, action, planType, cancelAt }) {
       <Button disabled title='Downgrading from Team to Personal is not supported'>Choose plan</Button>
     )
   }
+  if (user.planType === PlanType.TYPE_PERSONAL && planType === PlanType.TYPE_PERSONAL) {
+    actionButton = (
+      <Button disabled>Current plan</Button>
+    )
+  }
   if (user.planType === PlanType.TYPE_TEAM && planType === PlanType.TYPE_TEAM) {
     actionButton = (
       <>
@@ -215,7 +215,7 @@ function Plan ({ title, children, action, planType, cancelAt }) {
       </>
     )
   }
-  // const subscription = useSelector(state => state.organization.subscription)
+  // const subscription = useSelector(state => state.workspace.subscription)
   return (
     <Card
       hoverable
@@ -232,7 +232,7 @@ function Plan ({ title, children, action, planType, cancelAt }) {
 
 function Plans () {
   const user = useSelector(state => state.user)
-  const organization = useSelector(state => state.organization)
+  const workspace = useSelector(state => state.workspace)
   return (
     <div className={styles.plans}>
       <Plan
@@ -241,14 +241,14 @@ function Plans () {
           name='personal'
           selected={user.planType === PlanType.TYPE_PERSONAL}
           price='$0'
-          description='requires use of personal email'
+          description='for personal use and evaluation'
                />}
         planType={PlanType.TYPE_PERSONAL}
         action='Choose personal'
       >
-        <p><Text type='success'><CheckCircleOutlined /> Query data from BigQuery</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> Access private datasets</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> Unlimited maps</Text></p>
+        <p><Text><CheckCircleOutlined /> Query data from BigQuery</Text></p>
+        <p><Text><CheckCircleOutlined /> Access private datasets</Text></p>
+        <p><Text><CheckCircleOutlined /> Unlimited maps</Text></p>
         <p><Text>No collaborators</Text></p>
       </Plan>
       <Plan
@@ -261,11 +261,11 @@ function Plans () {
                />}
         planType={PlanType.TYPE_TEAM}
         action='Choose team'
-        cancelAt={organization?.subscription?.cancelAt}
+        cancelAt={workspace?.subscription?.cancelAt}
       >
-        <p><Text type='success'><CheckCircleOutlined /> Query data from BigQuery</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> Access private datasets</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> Unlimited maps</Text></p>
+        <p><Text><CheckCircleOutlined /> Query data from BigQuery</Text></p>
+        <p><Text><CheckCircleOutlined /> Access private datasets</Text></p>
+        <p><Text><CheckCircleOutlined /> Unlimited maps</Text></p>
         <p><Text type='success'><CheckCircleOutlined /> Up to 20 collaborators</Text></p>
       </Plan>
     </div>
@@ -274,69 +274,17 @@ function Plans () {
 
 function SubscriptionTab () {
   const user = useSelector(state => state.user)
-  // const subscription = useSelector(state => state.organization.subscription)
-  // const dispatch = useDispatch()
   if (!user) {
     return null
   }
-  // const menuProps = {
-  //   items: [
-  //     {
-  //       label: 'Cancel subscription',
-  //       danger: true,
-  //       onClick: () => {
-  //         Modal.confirm({
-  //           title: 'Cancel subscription?',
-  //           okText: 'Yes',
-  //           okType: 'danger',
-  //           cancelText: 'No',
-  //           onOk: () => dispatch(cancelSubscription())
-  //         })
-  //       }
-  //     },
-  //     {
-  //       label: 'Payment & invoices',
-  //       onClick: () => {
-  //         dispatch(redirectToCustomerPortal())
-  //       }
-  //     }
-  //   ]
-  // }
   return (
     <div className={styles.subscriptionTab}>
-      {/* {subscription?.active && subscription.cancelAt
-        ? (
-          <div className={styles.cancelsAt}>
-            <Text type='secondary'>Your subscription will be cancelled on {subscription.cancelsAt}</Text>
-          </div>
-          )
-        : null} */}
-      {/* <div className={styles.title}>
-        <Title>
-          {user.subscriptionActive ? <span className={styles.titleCheck}><CheckCircleFilled /></span> : <span className={styles.titleLock}><LockFilled /></span>}
-          <> Subscription</>
-        </Title>
-      </div> */}
       <Plans />
-      {/* {subscription && subscription.planType
-        ? (
-          <div className={styles.bottomPanel}>
-            <div className={styles.manageSubscription}>
-              <Dropdown menu={menuProps}>
-                <Button>
-                  Manage subscription
-                  <DownOutlined />
-                </Button>
-              </Dropdown>
-            </div>
-          </div>
-          )
-        : null} */}
     </div>
   )
 }
 
-function CreateOrganizationForm () {
+function CreateWorkspaceForm () {
   const [disabled, setDisabled] = useState(false)
   const dispatch = useDispatch()
   return (
@@ -345,11 +293,11 @@ function CreateOrganizationForm () {
         disabled={disabled}
         layout='vertical' onFinish={(values) => {
           setDisabled(true)
-          dispatch(createOrganization(values.name))
+          dispatch(createWorkspace(values.name))
         }}
       >
-        <Form.Item name='name' rules={[{ required: true, message: 'Organization name is required' }]}>
-          <Input placeholder='Organization name' />
+        <Form.Item name='name' rules={[{ required: true, message: 'Workspace name is required' }]}>
+          <Input placeholder='Workspace name' />
         </Form.Item>
         <Form.Item>
           <Button type='primary' htmlType='submit'>
@@ -361,24 +309,24 @@ function CreateOrganizationForm () {
   )
 }
 
-function UpdateOrganizationForm () {
-  const organization = useSelector(state => state.organization)
+function UpdateWorkspaceForm () {
+  const workspace = useSelector(state => state.workspace)
   const [disabled, setDisabled] = useState(false)
   const dispatch = useDispatch()
   useEffect(() => {
     setDisabled(false)
-  }, [organization])
+  }, [workspace])
   return (
     <Card>
       <Form
         disabled={disabled}
-        initialValues={{ name: organization.name }}
+        initialValues={{ name: workspace.name }}
         layout='vertical' onFinish={(values) => {
           setDisabled(true)
-          dispatch(updateOrganization(values.name))
+          dispatch(updateWorkspace(values.name))
         }}
       >
-        <Form.Item name='name' label='Organization name' rules={[{ required: true, message: 'Organization name is required' }]}>
+        <Form.Item name='name' label='Workspace name' rules={[{ required: true, message: 'Workspace name is required' }]}>
           <Input />
         </Form.Item>
         <Form.Item>
@@ -391,21 +339,21 @@ function UpdateOrganizationForm () {
   )
 }
 
-function OrganizationTab () {
-  // // const invites = useSelector(state => state.organization.invites)
+function WorkspaceTab () {
+  // // const invites = useSelector(state => state.workspace.invites)
   const user = useSelector(state => state.user)
-  const organization = useSelector(state => state.organization)
-  const invites = organization.invites
+  const workspace = useSelector(state => state.workspace)
+  const invites = workspace.invites
   // const subscriptionActive = user?.subscriptionActive
   // const prevSubscriptionActiveRef = useRef()
   // const dispatch = useDispatch()
   // const history = useHistory()
   // const [disabled, setDisabled] = useState(false)
-  const [radioValue, setRadioValue] = useState('organization')
-  if (user.organizationId && user.organizationId !== organization.id) {
+  const [radioValue, setRadioValue] = useState('workspace')
+  if (user.workspaceId && user.workspaceId !== workspace.id) {
     return null
   }
-  let form = organization.id ? <UpdateOrganizationForm /> : <CreateOrganizationForm />
+  let form = workspace.id ? <UpdateWorkspaceForm /> : <CreateWorkspaceForm />
   if (radioValue === 'invites') {
     form = <Invites />
   }
@@ -420,17 +368,17 @@ function OrganizationTab () {
   //   }
   // }, [subscriptionActive, history])
   return (
-    <div className={styles.organizationTab}>
-      <div className={styles.organizationTabHeader}>
+    <div className={styles.workspaceTab}>
+      <div className={styles.workspaceTabHeader}>
         <div>
-          <Title level={4}>Create organization or join existing one</Title>
+          <Title level={4}>Create workspace or join existing one</Title>
         </div>
         <div><Radio.Group
           value={radioValue}
           onChange={(e) => setRadioValue(e.target.value)}
           // size='sm'
           options={[
-            { label: organization.id ? 'Update' : 'Create', value: 'organization' },
+            { label: workspace.id ? 'Update' : 'Create', value: 'workspace' },
             { label: <Badge color='blue' count={invites.length} offset={[14, -10]}>Join</Badge>, value: 'invites' }
           ]}
         // onChange={onChange4}
@@ -440,12 +388,12 @@ function OrganizationTab () {
              />
         </div>
       </div>
-      <div className={styles.organizationTabBody}>{form}</div>
+      <div className={styles.workspaceTabBody}>{form}</div>
 
     </div>
   )
   // return (
-  //   <div className={styles.organizationTab}>
+  //   <div className={styles.workspaceTab}>
   //     {invites.length === 0
   //       ? (
   //         <Onboarding
@@ -468,10 +416,10 @@ function OrganizationTab () {
   //             columns={[
   //               {
   //                 key: 'invite',
-  //                 className: styles.organizationNameColumn,
+  //                 className: styles.workspaceNameColumn,
   //                 render: (invite) => (
   //                   <>
-  //                     <div className={styles.organizationName}>{invite.organization.name}</div>
+  //                     <div className={styles.workspaceName}>{invite.workspace.name}</div>
   //                     <div className={styles.inviterEmail}>invited by {invite.inviterEmail}</div>
   //                   </>)
   //               },
@@ -483,12 +431,12 @@ function OrganizationTab () {
   //                     <Button
   //                       ghost
   //                       type='primary'
-  //                       className={styles.acceptButton} onClick={() => dispatch(respondToInvite(invite.organization.id, true))}
+  //                       className={styles.acceptButton} onClick={() => dispatch(respondToInvite(invite.workspace.id, true))}
   //                     >Accept
   //                     </Button>
   //                     <Button
   //                       type='danger'
-  //                       ghost onClick={() => dispatch(respondToInvite(invite.organization.id, false))}
+  //                       ghost onClick={() => dispatch(respondToInvite(invite.workspace.id, false))}
   //                     >Decline
   //                     </Button>
   //                   </>)
@@ -502,29 +450,29 @@ function OrganizationTab () {
   // )
 }
 
-export function Organization () {
+export function Workspace () {
   const user = useSelector(state => state.user)
-  const organizationId = user?.organizationId
+  const workspaceId = user?.workspaceId
   const planType = user?.planType
   const [step, setStep] = useState(0)
 
-  // move to the next step if organizationId is set
+  // move to the next step if workspaceId is set
   useEffect(() => {
-    if (organizationId) {
+    if (workspaceId) {
       if (planType === PlanType.TYPE_TEAM) {
         setStep(2)
       } else {
         setStep(1)
       }
     }
-  }, [organizationId, planType])
+  }, [workspaceId, planType])
 
   if (!user) {
     return null
   }
   return (
-    <div className={styles.organization}>
-      <div className={styles.organizationSteps}>
+    <div className={styles.workspace}>
+      <div className={styles.workspaceSteps}>
         <Steps
           type='navigation'
           size='default'
@@ -535,13 +483,13 @@ export function Organization () {
           className='site-navigation-steps'
           items={[
             {
-              title: 'Organization',
-              icon: <TeamOutlined />
+              title: 'Workspace',
+              icon: <HomeOutlined />
             },
             {
-              title: 'Plan',
-              icon: <TeamOutlined />,
-              disabled: !user.organizationId
+              title: 'Billing',
+              icon: <CreditCardOutlined />,
+              disabled: !user.workspaceId
             },
             {
               title: 'Members',
@@ -551,22 +499,22 @@ export function Organization () {
           ]}
         />
       </div>
-      {([<OrganizationTab key={0} />, <SubscriptionTab key={1} />, <TeamTab key={2} />])[step]}
+      {([<WorkspaceTab key={0} />, <SubscriptionTab key={1} />, <TeamTab key={2} />])[step]}
     </div>
   )
 }
 
-export default function OrganizationPage ({ tab }) {
-  // const subscription = useSelector(state => state.organization.subscription)
+export default function WorkspacePage ({ tab }) {
+  // const subscription = useSelector(state => state.workspace.subscription)
   // const teamPlan = subscription?.planType === PlanType.TYPE_TEAM
   // const user = useSelector(state => state.user)
-  // const invites = useSelector(state => state.organization.invites)
+  // const invites = useSelector(state => state.workspace.invites)
   // const history = useHistory()
   return (
-    <div className={styles.organizationPage}>
+    <div className={styles.workspacePage}>
       <Header />
       <div className={styles.body}>
-        <Organization />
+        <Workspace />
       </div>
     </div>
   )

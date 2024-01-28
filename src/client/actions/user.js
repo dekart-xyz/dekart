@@ -2,7 +2,7 @@ import { GetUserStreamRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { getConnectionsList } from './connection'
 import { grpcStream, grpcStreamCancel } from './grpc'
-import { getInvites, getOrganization, getSubscription, listUsers } from './organization'
+import { getWorkspace } from './workspace'
 
 export function userStreamUpdate (userStream) {
   return {
@@ -17,14 +17,14 @@ export function subscribeUserStream () {
     const request = new GetUserStreamRequest()
     const prevRes = {
       connectionUpdate: 0,
-      organizationUpdate: -1
+      workspaceUpdate: -1
     }
     dispatch(grpcStream(Dekart.GetUserStream, request, (message, err) => {
       if (message) {
         dispatch(userStreamUpdate(message))
-        if (prevRes.organizationUpdate !== message.organizationUpdate) {
-          prevRes.organizationUpdate = message.organizationUpdate
-          dispatch(getOrganization())
+        if (prevRes.workspaceUpdate !== message.workspaceUpdate) {
+          prevRes.workspaceUpdate = message.workspaceUpdate
+          dispatch(getWorkspace())
         }
         if (message.planType > 0) {
           // update only when subscription is active to avoid 404 errors

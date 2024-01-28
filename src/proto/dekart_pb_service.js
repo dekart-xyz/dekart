@@ -271,40 +271,40 @@ Dekart.GetStripePortalSession = {
   responseType: proto_dekart_pb.GetStripePortalSessionResponse
 };
 
-Dekart.CreateOrganization = {
-  methodName: "CreateOrganization",
+Dekart.CreateWorkspace = {
+  methodName: "CreateWorkspace",
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.CreateOrganizationRequest,
-  responseType: proto_dekart_pb.CreateOrganizationResponse
+  requestType: proto_dekart_pb.CreateWorkspaceRequest,
+  responseType: proto_dekart_pb.CreateWorkspaceResponse
 };
 
-Dekart.UpdateOrganization = {
-  methodName: "UpdateOrganization",
+Dekart.UpdateWorkspace = {
+  methodName: "UpdateWorkspace",
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.UpdateOrganizationRequest,
-  responseType: proto_dekart_pb.UpdateOrganizationResponse
+  requestType: proto_dekart_pb.UpdateWorkspaceRequest,
+  responseType: proto_dekart_pb.UpdateWorkspaceResponse
 };
 
-Dekart.GetOrganization = {
-  methodName: "GetOrganization",
+Dekart.GetWorkspace = {
+  methodName: "GetWorkspace",
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.GetOrganizationRequest,
-  responseType: proto_dekart_pb.GetOrganizationResponse
+  requestType: proto_dekart_pb.GetWorkspaceRequest,
+  responseType: proto_dekart_pb.GetWorkspaceResponse
 };
 
-Dekart.UpdateOrganizationUser = {
-  methodName: "UpdateOrganizationUser",
+Dekart.UpdateWorkspaceUser = {
+  methodName: "UpdateWorkspaceUser",
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.UpdateOrganizationUserRequest,
-  responseType: proto_dekart_pb.UpdateOrganizationUserResponse
+  requestType: proto_dekart_pb.UpdateWorkspaceUserRequest,
+  responseType: proto_dekart_pb.UpdateWorkspaceUserResponse
 };
 
 exports.Dekart = Dekart;
@@ -1237,11 +1237,11 @@ DekartClient.prototype.getStripePortalSession = function getStripePortalSession(
   };
 };
 
-DekartClient.prototype.createOrganization = function createOrganization(requestMessage, metadata, callback) {
+DekartClient.prototype.createWorkspace = function createWorkspace(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
-  var client = grpc.unary(Dekart.CreateOrganization, {
+  var client = grpc.unary(Dekart.CreateWorkspace, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
@@ -1268,11 +1268,11 @@ DekartClient.prototype.createOrganization = function createOrganization(requestM
   };
 };
 
-DekartClient.prototype.updateOrganization = function updateOrganization(requestMessage, metadata, callback) {
+DekartClient.prototype.updateWorkspace = function updateWorkspace(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
-  var client = grpc.unary(Dekart.UpdateOrganization, {
+  var client = grpc.unary(Dekart.UpdateWorkspace, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
@@ -1299,11 +1299,11 @@ DekartClient.prototype.updateOrganization = function updateOrganization(requestM
   };
 };
 
-DekartClient.prototype.getOrganization = function getOrganization(requestMessage, metadata, callback) {
+DekartClient.prototype.getWorkspace = function getWorkspace(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
-  var client = grpc.unary(Dekart.GetOrganization, {
+  var client = grpc.unary(Dekart.GetWorkspace, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
@@ -1330,11 +1330,11 @@ DekartClient.prototype.getOrganization = function getOrganization(requestMessage
   };
 };
 
-DekartClient.prototype.updateOrganizationUser = function updateOrganizationUser(requestMessage, metadata, callback) {
+DekartClient.prototype.updateWorkspaceUser = function updateWorkspaceUser(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
-  var client = grpc.unary(Dekart.UpdateOrganizationUser, {
+  var client = grpc.unary(Dekart.UpdateWorkspaceUser, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,

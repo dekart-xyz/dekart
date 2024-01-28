@@ -1,6 +1,6 @@
-import { organizationUpdate } from '../actions/organization'
+import { workspaceUpdate } from '../actions/workspace'
 
-export default function organization (state = {
+export default function workspace (state = {
   id: null,
   name: null,
   subscription: null,
@@ -8,10 +8,10 @@ export default function organization (state = {
   invites: []
 }, action) {
   switch (action.type) {
-    case organizationUpdate.name:
+    case workspaceUpdate.name:
       return {
-        id: action.organization ? action.organization.id : null,
-        name: action.organization ? action.organization.name : null,
+        id: action.workspace ? action.workspace.id : null,
+        name: action.workspace ? action.workspace.name : null,
         subscription: action.subscription || null,
         users: action.usersList || [],
         invites: action.invitesList || []

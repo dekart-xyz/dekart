@@ -1,4 +1,4 @@
-import { CancelSubscriptionRequest, CreateOrganizationRequest, CreateSubscriptionRequest, GetInvitesRequest, GetOrganizationRequest, GetStripePortalSessionRequest, ListUsersRequest, RemoveUserRequest, RespondToInviteRequest, UpdateOrganizationRequest, UpdateOrganizationUserRequest } from '../../proto/dekart_pb'
+import { CancelSubscriptionRequest, CreateWorkspaceRequest, CreateSubscriptionRequest, GetInvitesRequest, GetWorkspaceRequest, GetStripePortalSessionRequest, ListUsersRequest, RespondToInviteRequest, UpdateWorkspaceRequest, UpdateWorkspaceUserRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { info, success } from './message'
@@ -30,45 +30,45 @@ export function respondToInvite (inviteId, accept) {
   }
 }
 
-export function createOrganization (name) {
+export function createWorkspace (name) {
   return (dispatch) => {
-    dispatch({ type: createOrganization.name })
-    const request = new CreateOrganizationRequest()
-    request.setOrganizationName(name)
-    dispatch(grpcCall(Dekart.CreateOrganization, request, () => {
-      success('Organization created')
+    dispatch({ type: createWorkspace.name })
+    const request = new CreateWorkspaceRequest()
+    request.setWorkspaceName(name)
+    dispatch(grpcCall(Dekart.CreateWorkspace, request, () => {
+      success('Workspace created')
     }))
   }
 }
 
-export function updateOrganization (name) {
+export function updateWorkspace (name) {
   return (dispatch) => {
-    dispatch({ type: updateOrganization.name })
-    const request = new UpdateOrganizationRequest()
-    request.setOrganizationName(name)
-    dispatch(grpcCall(Dekart.UpdateOrganization, request, () => {
-      success('Organization updated')
+    dispatch({ type: updateWorkspace.name })
+    const request = new UpdateWorkspaceRequest()
+    request.setWorkspaceName(name)
+    dispatch(grpcCall(Dekart.UpdateWorkspace, request, () => {
+      success('Workspace updated')
     }))
   }
 }
 
-export function organizationUpdate ({ organization, subscription, usersList, invitesList }) {
+export function workspaceUpdate ({ workspace, subscription, usersList, invitesList }) {
   return {
-    type: organizationUpdate.name,
-    organization,
+    type: workspaceUpdate.name,
+    workspace,
     subscription,
     usersList,
     invitesList
   }
 }
 
-export function getOrganization () {
+export function getWorkspace () {
   return (dispatch) => {
-    dispatch({ type: getOrganization.name })
-    const request = new GetOrganizationRequest()
-    dispatch(grpcCall(Dekart.GetOrganization, request, (response) => {
+    dispatch({ type: getWorkspace.name })
+    const request = new GetWorkspaceRequest()
+    dispatch(grpcCall(Dekart.GetWorkspace, request, (response) => {
       console.log(response)
-      dispatch(organizationUpdate(response))
+      dispatch(workspaceUpdate(response))
     }))
   }
 }
@@ -107,14 +107,14 @@ export function getInvites () {
   }
 }
 
-export function updateOrganizationUser (email, userUpdateType) {
+export function updateWorkspaceUser (email, userUpdateType) {
   return (dispatch) => {
-    dispatch({ type: updateOrganizationUser.name })
-    const request = new UpdateOrganizationUserRequest()
+    dispatch({ type: updateWorkspaceUser.name })
+    const request = new UpdateWorkspaceUserRequest()
     request.setEmail(email)
     request.setUserUpdateType(userUpdateType)
-    dispatch(grpcCall(Dekart.UpdateOrganizationUser, request, () => {
-      if (userUpdateType === UpdateOrganizationUserRequest.UserUpdateType.USER_UPDATE_TYPE_ADD) {
+    dispatch(grpcCall(Dekart.UpdateWorkspaceUser, request, () => {
+      if (userUpdateType === UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_ADD) {
         success('User invited')
       }
     }))

@@ -4,8 +4,7 @@ import {
   Switch,
   Route,
   Redirect,
-  useParams,
-  useLocation
+  useParams
 } from 'react-router-dom'
 import ReportPage from './ReportPage'
 import HomePage from './HomePage'
@@ -18,7 +17,7 @@ import { getEnv } from './actions/env'
 import { setRedirectState } from './actions/redirectState'
 import { subscribeUserStream, unsubscribeUserStream } from './actions/user'
 import { authRedirect } from './lib/api'
-import OrganizationPage from './OrganizationPage'
+import WorkspacePage from './WorkspacePage'
 
 // RedirectState reads states passed in the URL from the server
 function RedirectState () {
@@ -51,7 +50,6 @@ function AppRedirect () {
   const { status, doNotAuthenticate } = httpError
   const { newReportId } = useSelector(state => state.reportStatus)
   const user = useSelector(state => state.user)
-  const location = useLocation()
 
   useEffect(() => {
     if (status === 401 && doNotAuthenticate === false) {
@@ -72,7 +70,7 @@ function AppRedirect () {
   }
 
   if (user && !user.planType) {
-    return <Redirect to='/organization' push />
+    return <Redirect to='/workspace' push />
   }
 
   if (newReportId) {
@@ -138,8 +136,8 @@ export default function App () {
         <Route path='/reports/:id'>
           <ReportPage />
         </Route>
-        <Route path='/organization'>
-          <OrganizationPage />
+        <Route path='/workspace'>
+          <WorkspacePage />
         </Route>
         <Route path='/400'>
           <Result icon={<WarningOutlined />} title='400' subTitle='Bad Request' />

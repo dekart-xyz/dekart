@@ -18,7 +18,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s Server) getSubscription(ctx context.Context, organizationId string) (*proto.Subscription, error) {
+func (s Server) getSubscription(ctx context.Context, workspaceId string) (*proto.Subscription, error) {
 	var createdAt sql.NullTime
 	var customerID sql.NullString
 	var planType proto.PlanType
@@ -32,11 +32,11 @@ func (s Server) getSubscription(ctx context.Context, organizationId string) (*pr
 			payment_cancelled,
 			created_at
 		FROM subscription_log
-		WHERE organization_id = $1
+		WHERE workspace_id = $1
 		ORDER BY created_at DESC
 		LIMIT 1
 		`,
-		organizationId,
+		workspaceId,
 	).Scan(&createdAt, &customerID, &planType, &paymentCancelled, &createdAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -85,20 +85,20 @@ func (s Server) getSubscription(ctx context.Context, organizationId string) (*pr
 	}, nil
 }
 
-func (s Server) createCheckoutSession(ctx context.Context, org OrganizationInfo, req *proto.CreateSubscriptionRequest) (*stripe.CheckoutSession, error) {
+func (s Server) createCheckoutSession(ctx context.Context, ws WorkspaceInfo, req *proto.CreateSubscriptionRequest) (*stripe.CheckoutSession, error) {
 	claims := user.GetClaims(ctx)
 	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 	customerParams := &stripe.CustomerParams{
 		Email: stripe.String(claims.Email),
-		Name:  stripe.String(org.Name),
+		Name:  stripe.String(ws.Name),
 	}
 	customer, err := customer.New(customerParams)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, err
 	}
-	_, err = s.db.ExecContext(ctx, `insert into subscription_log (organization_id, plan_type, customer_id, authored_by) values ($1, $2, $3, $4)`,
-		org.ID,
+	_, err = s.db.ExecContext(ctx, `insert into subscription_log (workspace_id, plan_type, customer_id, authored_by) values ($1, $2, $3, $4)`,
+		ws.ID,
 		req.PlanType,
 		customer.ID,
 		claims.Email,
@@ -130,12 +130,12 @@ func (s Server) CancelSubscription(ctx context.Context, req *proto.CancelSubscri
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	organizationInfo := checkOrganization(ctx)
-	if organizationInfo.ID == "" {
-		return nil, status.Error(codes.NotFound, "Organization not found")
+	workspaceInfo := checkWorkspace(ctx)
+	if workspaceInfo.ID == "" {
+		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
 
-	sub, err := s.getSubscription(ctx, organizationInfo.ID)
+	sub, err := s.getSubscription(ctx, workspaceInfo.ID)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
@@ -150,10 +150,10 @@ func (s Server) CancelSubscription(ctx context.Context, req *proto.CancelSubscri
 
 	if sub.PlanType == proto.PlanType_TYPE_PERSONAL {
 		_, err := s.db.ExecContext(ctx, `
-			INSERT INTO subscription_log (organization_id, authored_by)
+			INSERT INTO subscription_log (workspace_id, authored_by)
 			VALUES ($1, $2)
 		`,
-			checkOrganization(ctx).ID,
+			checkWorkspace(ctx).ID,
 			claims.Email,
 		)
 		if err != nil {
@@ -177,10 +177,10 @@ func (s Server) CancelSubscription(ctx context.Context, req *proto.CancelSubscri
 
 		// update subscription log to reflect cancellation
 		_, err = s.db.ExecContext(ctx, `
-			INSERT INTO subscription_log (organization_id, customer_id,  payment_cancelled, plan_type, authored_by)
+			INSERT INTO subscription_log (workspace_id, customer_id,  payment_cancelled, plan_type, authored_by)
 			VALUES ($1, $2, true, $3, $4)
 		`,
-			organizationInfo.ID,
+			workspaceInfo.ID,
 			sub.CustomerId,
 			sub.PlanType,
 			claims.Email,
@@ -202,12 +202,12 @@ func (s Server) GetStripePortalSession(ctx context.Context, req *proto.GetStripe
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	organizationInfo := checkOrganization(ctx)
-	if organizationInfo.ID == "" {
-		return nil, status.Error(codes.NotFound, "Organization not found")
+	workspaceInfo := checkWorkspace(ctx)
+	if workspaceInfo.ID == "" {
+		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
 
-	sub, err := s.getSubscription(ctx, organizationInfo.ID)
+	sub, err := s.getSubscription(ctx, workspaceInfo.ID)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
@@ -246,18 +246,18 @@ func (s Server) CreateSubscription(ctx context.Context, req *proto.CreateSubscri
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	organizationInfo := checkOrganization(ctx)
-	if organizationInfo.ID == "" {
-		return nil, status.Error(codes.NotFound, "Organization not found")
+	workspaceInfo := checkWorkspace(ctx)
+	if workspaceInfo.ID == "" {
+		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
 	switch req.PlanType {
 	case proto.PlanType_TYPE_PERSONAL:
-		if organizationInfo.PlanType != proto.PlanType_TYPE_UNSPECIFIED {
+		if workspaceInfo.PlanType != proto.PlanType_TYPE_UNSPECIFIED {
 			// you cannot downgrade from team to personal
-			return nil, status.Error(codes.InvalidArgument, "Organization already has a subscription")
+			return nil, status.Error(codes.InvalidArgument, "Workspace already has a subscription")
 		}
-		_, err := s.db.ExecContext(ctx, `insert into subscription_log (organization_id, plan_type, authored_by) values ($1, $2, $3)`,
-			organizationInfo.ID,
+		_, err := s.db.ExecContext(ctx, `insert into subscription_log (workspace_id, plan_type, authored_by) values ($1, $2, $3)`,
+			workspaceInfo.ID,
 			req.PlanType,
 			claims.Email,
 		)
@@ -270,11 +270,11 @@ func (s Server) CreateSubscription(ctx context.Context, req *proto.CreateSubscri
 			RedirectUrl: "/", // redirect to home page
 		}, nil
 	case proto.PlanType_TYPE_TEAM:
-		if organizationInfo.PlanType == proto.PlanType_TYPE_TEAM {
+		if workspaceInfo.PlanType == proto.PlanType_TYPE_TEAM {
 			// do not allow to overwrite existing subscription
-			return nil, status.Error(codes.InvalidArgument, "Organization already has a subscription")
+			return nil, status.Error(codes.InvalidArgument, "Workspace already has a subscription")
 		}
-		session, err := s.createCheckoutSession(ctx, organizationInfo, req)
+		session, err := s.createCheckoutSession(ctx, workspaceInfo, req)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, status.Error(codes.Internal, err.Error())

@@ -53,11 +53,11 @@ service Dekart {
     rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse) {}
     rpc GetStripePortalSession(GetStripePortalSessionRequest) returns (GetStripePortalSessionResponse) {}
 
-    //organizations
-    rpc CreateOrganization(CreateOrganizationRequest) returns (CreateOrganizationResponse) {}
-    rpc UpdateOrganization(UpdateOrganizationRequest) returns (UpdateOrganizationResponse) {}
-    rpc GetOrganization(GetOrganizationRequest) returns (GetOrganizationResponse) {}
-    rpc UpdateOrganizationUser(UpdateOrganizationUserRequest) returns (UpdateOrganizationUserResponse) {}
+    //workspace
+    rpc CreateWorkspace(CreateWorkspaceRequest) returns (CreateWorkspaceResponse) {}
+    rpc UpdateWorkspace(UpdateWorkspaceRequest) returns (UpdateWorkspaceResponse) {}
+    rpc GetWorkspace(GetWorkspaceRequest) returns (GetWorkspaceResponse) {}
+    rpc UpdateWorkspaceUser(UpdateWorkspaceUserRequest) returns (UpdateWorkspaceUserResponse) {}
 }
 
 message GetStripePortalSessionRequest {
@@ -68,7 +68,7 @@ message GetStripePortalSessionResponse {
     string url = 1;
 }
 
-message UpdateOrganizationUserRequest {
+message UpdateWorkspaceUserRequest {
     string email = 1;
     enum UserUpdateType {
         USER_UPDATE_TYPE_UNSPECIFIED = 0;
@@ -78,31 +78,31 @@ message UpdateOrganizationUserRequest {
     UserUpdateType user_update_type = 2;
 }
 
-message UpdateOrganizationUserResponse {
+message UpdateWorkspaceUserResponse {
 }
 
-message GetOrganizationRequest {
+message GetWorkspaceRequest {
 }
 
-message GetOrganizationResponse {
-    Organization organization = 1;
+message GetWorkspaceResponse {
+    Workspace Workspace = 1;
     Subscription subscription = 2;
     repeated User users = 3;
-    repeated OrganizationInvite invites = 4;
+    repeated WorkspaceInvite invites = 4;
 }
 
-message CreateOrganizationRequest {
-    string organization_name = 1;
+message CreateWorkspaceRequest {
+    string workspace_name = 1;
 }
 
-message CreateOrganizationResponse {
+message CreateWorkspaceResponse {
 }
 
-message UpdateOrganizationRequest {
-    string organization_name = 1;
+message UpdateWorkspaceRequest {
+    string workspace_name = 1;
 }
 
-message UpdateOrganizationResponse {
+message UpdateWorkspaceResponse {
 }
 
 message RespondToInviteRequest {
@@ -117,16 +117,16 @@ message RespondToInviteResponse {
 message GetInvitesRequest {
 }
 
-message OrganizationInvite {
-    string organization_id = 1;
+message WorkspaceInvite {
+    string workspace_id = 1;
     string invite_id = 2;
     string inviter_email = 3;
-    string organization_name = 4;
+    string workspace_name = 4;
     int64 created_at = 5;
 }
 
 message GetInvitesResponse {
-    repeated OrganizationInvite invites = 1;
+    repeated WorkspaceInvite invites = 1;
 }
 
 enum UserStatus {
@@ -165,7 +165,7 @@ message CancelSubscriptionResponse {
     string redirect_url = 1;
 }
 
-message Organization {
+message Workspace {
     string id = 1;
     string name = 2;
 }
@@ -210,9 +210,9 @@ message GetUserStreamResponse {
     string email = 3; // user email used to show user icon in UI
 
     // cloud
-    string organization_id = 101;
+    string workspace_id = 101;
     PlanType plan_type = 102;
-    int64 organization_update = 103; // includes invites, members and subscription
+    int64 Workspace_update = 103; // includes invites, members and subscription
 }
 
 message TestConnectionRequest {

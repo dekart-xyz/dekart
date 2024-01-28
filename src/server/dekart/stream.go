@@ -110,7 +110,7 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 
 func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportListStreamServer, sequence int64) error {
 	claims := user.GetClaims(ctx)
-	if checkOrganization(ctx).ID == "" {
+	if checkWorkspace(ctx).ID == "" {
 		return nil
 	}
 	reportRows, err := s.db.QueryContext(ctx,
@@ -124,10 +124,10 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			updated_at,
 			created_at
 		from reports as r
-		where (author_email=$1 or (discoverable=true and archived=false)) and organization_id=$2
+		where (author_email=$1 or (discoverable=true and archived=false)) and workspace_id=$2
 		order by updated_at desc`,
 		claims.Email,
-		checkOrganization(ctx).ID,
+		checkWorkspace(ctx).ID,
 	)
 	if err != nil {
 		log.Err(err).Send()
@@ -171,7 +171,7 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 }
 
 func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.Dekart_GetUserStreamServer, sequence int64) error {
-	ctx := s.SetOrganizationContext(incomingCtx) // this is needed as organization could have been changed
+	ctx := s.SetWorkspaceContext(incomingCtx) // this is needed as workspace could have been changed
 	claims := user.GetClaims(ctx)
 
 	// connection update
@@ -181,7 +181,7 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 		return status.Errorf(codes.Internal, err.Error())
 	}
 
-	organizationUpdate, err := s.getOrganizationUpdate(ctx)
+	workspaceUpdate, err := s.getWorkspaceUpdate(ctx)
 	if err != nil {
 		log.Err(err).Send()
 		return status.Errorf(codes.Internal, err.Error())
@@ -191,11 +191,11 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 		StreamOptions: &proto.StreamOptions{
 			Sequence: sequence,
 		},
-		ConnectionUpdate:   connectionUpdate,
-		Email:              claims.Email,
-		OrganizationUpdate: organizationUpdate,
-		OrganizationId:     checkOrganization(ctx).ID,
-		PlanType:           checkOrganization(ctx).PlanType,
+		ConnectionUpdate: connectionUpdate,
+		Email:            claims.Email,
+		WorkspaceUpdate:  workspaceUpdate,
+		WorkspaceId:      checkWorkspace(ctx).ID,
+		PlanType:         checkWorkspace(ctx).PlanType,
 	}
 	err = srv.Send(&res)
 	if err != nil {

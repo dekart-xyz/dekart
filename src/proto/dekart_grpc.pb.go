@@ -48,10 +48,10 @@ const (
 	Dekart_CreateSubscription_FullMethodName      = "/Dekart/CreateSubscription"
 	Dekart_CancelSubscription_FullMethodName      = "/Dekart/CancelSubscription"
 	Dekart_GetStripePortalSession_FullMethodName  = "/Dekart/GetStripePortalSession"
-	Dekart_CreateOrganization_FullMethodName      = "/Dekart/CreateOrganization"
-	Dekart_UpdateOrganization_FullMethodName      = "/Dekart/UpdateOrganization"
-	Dekart_GetOrganization_FullMethodName         = "/Dekart/GetOrganization"
-	Dekart_UpdateOrganizationUser_FullMethodName  = "/Dekart/UpdateOrganizationUser"
+	Dekart_CreateWorkspace_FullMethodName         = "/Dekart/CreateWorkspace"
+	Dekart_UpdateWorkspace_FullMethodName         = "/Dekart/UpdateWorkspace"
+	Dekart_GetWorkspace_FullMethodName            = "/Dekart/GetWorkspace"
+	Dekart_UpdateWorkspaceUser_FullMethodName     = "/Dekart/UpdateWorkspaceUser"
 )
 
 // DekartClient is the client API for Dekart service.
@@ -96,11 +96,11 @@ type DekartClient interface {
 	CreateSubscription(ctx context.Context, in *CreateSubscriptionRequest, opts ...grpc.CallOption) (*CreateSubscriptionResponse, error)
 	CancelSubscription(ctx context.Context, in *CancelSubscriptionRequest, opts ...grpc.CallOption) (*CancelSubscriptionResponse, error)
 	GetStripePortalSession(ctx context.Context, in *GetStripePortalSessionRequest, opts ...grpc.CallOption) (*GetStripePortalSessionResponse, error)
-	//organizations
-	CreateOrganization(ctx context.Context, in *CreateOrganizationRequest, opts ...grpc.CallOption) (*CreateOrganizationResponse, error)
-	UpdateOrganization(ctx context.Context, in *UpdateOrganizationRequest, opts ...grpc.CallOption) (*UpdateOrganizationResponse, error)
-	GetOrganization(ctx context.Context, in *GetOrganizationRequest, opts ...grpc.CallOption) (*GetOrganizationResponse, error)
-	UpdateOrganizationUser(ctx context.Context, in *UpdateOrganizationUserRequest, opts ...grpc.CallOption) (*UpdateOrganizationUserResponse, error)
+	//workspace
+	CreateWorkspace(ctx context.Context, in *CreateWorkspaceRequest, opts ...grpc.CallOption) (*CreateWorkspaceResponse, error)
+	UpdateWorkspace(ctx context.Context, in *UpdateWorkspaceRequest, opts ...grpc.CallOption) (*UpdateWorkspaceResponse, error)
+	GetWorkspace(ctx context.Context, in *GetWorkspaceRequest, opts ...grpc.CallOption) (*GetWorkspaceResponse, error)
+	UpdateWorkspaceUser(ctx context.Context, in *UpdateWorkspaceUserRequest, opts ...grpc.CallOption) (*UpdateWorkspaceUserResponse, error)
 }
 
 type dekartClient struct {
@@ -441,36 +441,36 @@ func (c *dekartClient) GetStripePortalSession(ctx context.Context, in *GetStripe
 	return out, nil
 }
 
-func (c *dekartClient) CreateOrganization(ctx context.Context, in *CreateOrganizationRequest, opts ...grpc.CallOption) (*CreateOrganizationResponse, error) {
-	out := new(CreateOrganizationResponse)
-	err := c.cc.Invoke(ctx, Dekart_CreateOrganization_FullMethodName, in, out, opts...)
+func (c *dekartClient) CreateWorkspace(ctx context.Context, in *CreateWorkspaceRequest, opts ...grpc.CallOption) (*CreateWorkspaceResponse, error) {
+	out := new(CreateWorkspaceResponse)
+	err := c.cc.Invoke(ctx, Dekart_CreateWorkspace_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *dekartClient) UpdateOrganization(ctx context.Context, in *UpdateOrganizationRequest, opts ...grpc.CallOption) (*UpdateOrganizationResponse, error) {
-	out := new(UpdateOrganizationResponse)
-	err := c.cc.Invoke(ctx, Dekart_UpdateOrganization_FullMethodName, in, out, opts...)
+func (c *dekartClient) UpdateWorkspace(ctx context.Context, in *UpdateWorkspaceRequest, opts ...grpc.CallOption) (*UpdateWorkspaceResponse, error) {
+	out := new(UpdateWorkspaceResponse)
+	err := c.cc.Invoke(ctx, Dekart_UpdateWorkspace_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *dekartClient) GetOrganization(ctx context.Context, in *GetOrganizationRequest, opts ...grpc.CallOption) (*GetOrganizationResponse, error) {
-	out := new(GetOrganizationResponse)
-	err := c.cc.Invoke(ctx, Dekart_GetOrganization_FullMethodName, in, out, opts...)
+func (c *dekartClient) GetWorkspace(ctx context.Context, in *GetWorkspaceRequest, opts ...grpc.CallOption) (*GetWorkspaceResponse, error) {
+	out := new(GetWorkspaceResponse)
+	err := c.cc.Invoke(ctx, Dekart_GetWorkspace_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *dekartClient) UpdateOrganizationUser(ctx context.Context, in *UpdateOrganizationUserRequest, opts ...grpc.CallOption) (*UpdateOrganizationUserResponse, error) {
-	out := new(UpdateOrganizationUserResponse)
-	err := c.cc.Invoke(ctx, Dekart_UpdateOrganizationUser_FullMethodName, in, out, opts...)
+func (c *dekartClient) UpdateWorkspaceUser(ctx context.Context, in *UpdateWorkspaceUserRequest, opts ...grpc.CallOption) (*UpdateWorkspaceUserResponse, error) {
+	out := new(UpdateWorkspaceUserResponse)
+	err := c.cc.Invoke(ctx, Dekart_UpdateWorkspaceUser_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -519,11 +519,11 @@ type DekartServer interface {
 	CreateSubscription(context.Context, *CreateSubscriptionRequest) (*CreateSubscriptionResponse, error)
 	CancelSubscription(context.Context, *CancelSubscriptionRequest) (*CancelSubscriptionResponse, error)
 	GetStripePortalSession(context.Context, *GetStripePortalSessionRequest) (*GetStripePortalSessionResponse, error)
-	//organizations
-	CreateOrganization(context.Context, *CreateOrganizationRequest) (*CreateOrganizationResponse, error)
-	UpdateOrganization(context.Context, *UpdateOrganizationRequest) (*UpdateOrganizationResponse, error)
-	GetOrganization(context.Context, *GetOrganizationRequest) (*GetOrganizationResponse, error)
-	UpdateOrganizationUser(context.Context, *UpdateOrganizationUserRequest) (*UpdateOrganizationUserResponse, error)
+	//workspace
+	CreateWorkspace(context.Context, *CreateWorkspaceRequest) (*CreateWorkspaceResponse, error)
+	UpdateWorkspace(context.Context, *UpdateWorkspaceRequest) (*UpdateWorkspaceResponse, error)
+	GetWorkspace(context.Context, *GetWorkspaceRequest) (*GetWorkspaceResponse, error)
+	UpdateWorkspaceUser(context.Context, *UpdateWorkspaceUserRequest) (*UpdateWorkspaceUserResponse, error)
 	mustEmbedUnimplementedDekartServer()
 }
 
@@ -618,17 +618,17 @@ func (UnimplementedDekartServer) CancelSubscription(context.Context, *CancelSubs
 func (UnimplementedDekartServer) GetStripePortalSession(context.Context, *GetStripePortalSessionRequest) (*GetStripePortalSessionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetStripePortalSession not implemented")
 }
-func (UnimplementedDekartServer) CreateOrganization(context.Context, *CreateOrganizationRequest) (*CreateOrganizationResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateOrganization not implemented")
+func (UnimplementedDekartServer) CreateWorkspace(context.Context, *CreateWorkspaceRequest) (*CreateWorkspaceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateWorkspace not implemented")
 }
-func (UnimplementedDekartServer) UpdateOrganization(context.Context, *UpdateOrganizationRequest) (*UpdateOrganizationResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateOrganization not implemented")
+func (UnimplementedDekartServer) UpdateWorkspace(context.Context, *UpdateWorkspaceRequest) (*UpdateWorkspaceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateWorkspace not implemented")
 }
-func (UnimplementedDekartServer) GetOrganization(context.Context, *GetOrganizationRequest) (*GetOrganizationResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetOrganization not implemented")
+func (UnimplementedDekartServer) GetWorkspace(context.Context, *GetWorkspaceRequest) (*GetWorkspaceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetWorkspace not implemented")
 }
-func (UnimplementedDekartServer) UpdateOrganizationUser(context.Context, *UpdateOrganizationUserRequest) (*UpdateOrganizationUserResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateOrganizationUser not implemented")
+func (UnimplementedDekartServer) UpdateWorkspaceUser(context.Context, *UpdateWorkspaceUserRequest) (*UpdateWorkspaceUserResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateWorkspaceUser not implemented")
 }
 func (UnimplementedDekartServer) mustEmbedUnimplementedDekartServer() {}
 
@@ -1174,74 +1174,74 @@ func _Dekart_GetStripePortalSession_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_CreateOrganization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateOrganizationRequest)
+func _Dekart_CreateWorkspace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateWorkspaceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DekartServer).CreateOrganization(ctx, in)
+		return srv.(DekartServer).CreateWorkspace(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Dekart_CreateOrganization_FullMethodName,
+		FullMethod: Dekart_CreateWorkspace_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).CreateOrganization(ctx, req.(*CreateOrganizationRequest))
+		return srv.(DekartServer).CreateWorkspace(ctx, req.(*CreateWorkspaceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_UpdateOrganization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateOrganizationRequest)
+func _Dekart_UpdateWorkspace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateWorkspaceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DekartServer).UpdateOrganization(ctx, in)
+		return srv.(DekartServer).UpdateWorkspace(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Dekart_UpdateOrganization_FullMethodName,
+		FullMethod: Dekart_UpdateWorkspace_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).UpdateOrganization(ctx, req.(*UpdateOrganizationRequest))
+		return srv.(DekartServer).UpdateWorkspace(ctx, req.(*UpdateWorkspaceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_GetOrganization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetOrganizationRequest)
+func _Dekart_GetWorkspace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetWorkspaceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DekartServer).GetOrganization(ctx, in)
+		return srv.(DekartServer).GetWorkspace(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Dekart_GetOrganization_FullMethodName,
+		FullMethod: Dekart_GetWorkspace_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).GetOrganization(ctx, req.(*GetOrganizationRequest))
+		return srv.(DekartServer).GetWorkspace(ctx, req.(*GetWorkspaceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_UpdateOrganizationUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateOrganizationUserRequest)
+func _Dekart_UpdateWorkspaceUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateWorkspaceUserRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DekartServer).UpdateOrganizationUser(ctx, in)
+		return srv.(DekartServer).UpdateWorkspaceUser(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Dekart_UpdateOrganizationUser_FullMethodName,
+		FullMethod: Dekart_UpdateWorkspaceUser_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).UpdateOrganizationUser(ctx, req.(*UpdateOrganizationUserRequest))
+		return srv.(DekartServer).UpdateWorkspaceUser(ctx, req.(*UpdateWorkspaceUserRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1358,20 +1358,20 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Dekart_GetStripePortalSession_Handler,
 		},
 		{
-			MethodName: "CreateOrganization",
-			Handler:    _Dekart_CreateOrganization_Handler,
+			MethodName: "CreateWorkspace",
+			Handler:    _Dekart_CreateWorkspace_Handler,
 		},
 		{
-			MethodName: "UpdateOrganization",
-			Handler:    _Dekart_UpdateOrganization_Handler,
+			MethodName: "UpdateWorkspace",
+			Handler:    _Dekart_UpdateWorkspace_Handler,
 		},
 		{
-			MethodName: "GetOrganization",
-			Handler:    _Dekart_GetOrganization_Handler,
+			MethodName: "GetWorkspace",
+			Handler:    _Dekart_GetWorkspace_Handler,
 		},
 		{
-			MethodName: "UpdateOrganizationUser",
-			Handler:    _Dekart_UpdateOrganizationUser_Handler,
+			MethodName: "UpdateWorkspaceUser",
+			Handler:    _Dekart_UpdateWorkspaceUser_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

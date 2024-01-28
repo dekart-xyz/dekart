@@ -120,8 +120,7 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		router.HandleFunc("/reports/{id}", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/reports/{id}/edit", staticFilesHandler.ServeIndex) // deprecated
 		router.HandleFunc("/reports/{id}/source", staticFilesHandler.ServeIndex)
-		router.HandleFunc("/organization/plan", staticFilesHandler.ServeIndex)
-		router.HandleFunc("/organization/team", staticFilesHandler.ServeIndex)
+		router.HandleFunc("/workspace", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/400", func(w http.ResponseWriter, r *http.Request) {
 			staticFilesHandler.ServeIndex(ResponseWriter{w: w, statusCode: http.StatusBadRequest}, r)
 		})
@@ -154,7 +153,7 @@ func Configure(dekartServer *dekart.Server) *http.Server {
 	log.Info().Msgf("Starting dekart at :%s", port)
 	return &http.Server{
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			reqWithClaims := r.WithContext(dekartServer.SetOrganizationContext(claimsCheck.GetContext(r)))
+			reqWithClaims := r.WithContext(dekartServer.SetWorkspaceContext(claimsCheck.GetContext(r)))
 			if grpcServer.IsAcceptableGrpcCorsRequest(r) || grpcServer.IsGrpcWebRequest(r) {
 				grpcServer.ServeHTTP(w, reqWithClaims)
 			} else {

@@ -87,11 +87,11 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 func (s Server) getReportID(ctx context.Context, datasetID string, email string) (*string, error) {
 	datasetRows, err := s.db.QueryContext(ctx,
 		`select report_id from datasets
-		where id=$1 and report_id in (select report_id from reports where author_email=$2 and organization_id=$3)
+		where id=$1 and report_id in (select report_id from reports where author_email=$2 and workspace_id=$3)
 		limit 1`,
 		datasetID,
 		email,
-		checkOrganization(ctx).ID,
+		checkWorkspace(ctx).ID,
 	)
 	if err != nil {
 		return nil, err
@@ -108,11 +108,11 @@ func (s Server) getReportID(ctx context.Context, datasetID string, email string)
 		// check legacy queries
 		queryRows, err := s.db.QueryContext(ctx,
 			`select report_id from queries
-			where id=$1 and report_id in (select report_id from reports where author_email=$2 and organization_id=$3)
+			where id=$1 and report_id in (select report_id from reports where author_email=$2 and workspace_id=$3)
 			limit 1`,
 			datasetID,
 			email,
-			checkOrganization(ctx).ID,
+			checkWorkspace(ctx).ID,
 		)
 		if err != nil {
 			return nil, err
@@ -268,12 +268,12 @@ func (s Server) insertDataset(ctx context.Context, reportID string) (res sql.Res
 			$1 as id,
 			id as report_id
 		from reports
-		where id=$2 and not archived and author_email=$3 and organization_id=$4 limit 1
+		where id=$2 and not archived and author_email=$3 and workspace_id=$4 limit 1
 		`,
 			id,
 			reportID,
 			claims.Email,
-			checkOrganization(ctx).ID,
+			checkWorkspace(ctx).ID,
 		)
 	}
 	return s.db.ExecContext(ctx,
@@ -283,13 +283,13 @@ func (s Server) insertDataset(ctx context.Context, reportID string) (res sql.Res
 		id as report_id,
 		$4 as connection_id
 	from reports
-	where id=$2 and not archived and author_email=$3 and organization_id=$5 limit 1
+	where id=$2 and not archived and author_email=$3 and workspace_id=$5 limit 1
 	`,
 		id,
 		reportID,
 		claims.Email,
 		connection.Id,
-		checkOrganization(ctx).ID,
+		checkWorkspace(ctx).ID,
 	)
 }
 
