@@ -169,7 +169,7 @@ function ReportsHeader (
   const dispatch = useDispatch()
   const history = useHistory()
 
-  const subscription = useSelector(state => state.organization.subscription)
+  const subscription = useSelector(state => state.workspace?.subscription)
   if (!subscription) {
     return null
   }

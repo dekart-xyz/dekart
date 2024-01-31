@@ -17,6 +17,20 @@
     padding-top: 30px;
 }
 
+.workspace {
+    width: 900px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.workspaceTab {
+    width: 600px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
 .cancelAt {
     margin-top: 10px;
 }
@@ -28,8 +42,12 @@
     align-items: center;
     width: 600px;
     margin-bottom: 20px;
+    padding: 0 20px;
 }
 
+.workspaceTabBody {
+    width: 100%;
+}
 
 .acceptButton {
     margin-right: 10px
@@ -42,7 +60,11 @@
 }
 
 .workspaceNameColumn {
-    min-width: 600px;
+    min-width: 400px;
+}
+
+.inviteActionsColumn {
+    width: 200px;
 }
 
 .joinSelect{
@@ -56,6 +78,10 @@
 
 .workspaceSteps {
     margin-bottom: 30px;
-    width: 600px;
+    max-width: 600px;
+    width: 100%;
 }
 
+:global(.ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled)) .joinRadioItem {
+    color: white !important;
+}

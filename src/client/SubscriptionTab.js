@@ -97,9 +97,9 @@ function Plans () {
         planType={PlanType.TYPE_PERSONAL}
         action='Choose personal'
       >
-        <p><Text><CheckCircleOutlined /> Query data from BigQuery</Text></p>
-        <p><Text><CheckCircleOutlined /> Access private datasets</Text></p>
-        <p><Text><CheckCircleOutlined /> Unlimited maps</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Query data from BigQuery</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text> Access private datasets</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text> Unlimited maps</Text></p>
         <p><Text>No collaborators</Text></p>
       </Plan>
       <Plan
@@ -114,9 +114,9 @@ function Plans () {
         action='Choose team'
         cancelAt={workspace?.subscription?.cancelAt}
       >
-        <p><Text><CheckCircleOutlined /> Query data from BigQuery</Text></p>
-        <p><Text><CheckCircleOutlined /> Access private datasets</Text></p>
-        <p><Text><CheckCircleOutlined /> Unlimited maps</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text> Query data from BigQuery</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text> Access private datasets</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text> Unlimited maps</Text></p>
         <p><Text type='success'><CheckCircleOutlined /> Up to 20 collaborators</Text></p>
       </Plan>
     </div>

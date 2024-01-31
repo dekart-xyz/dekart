@@ -133,6 +133,8 @@ func (s Server) getWorkspaceUsers(ctx context.Context, workspaceID string) ([]*p
 		if status == 1 {
 			if accepted.Valid && accepted.Bool || user.Email == authoredBy {
 				user.Status = proto.UserStatus_USER_STATUS_ACTIVE
+			} else if accepted.Valid {
+				user.Status = proto.UserStatus_USER_STATUS_REJECTED
 			} else {
 				user.Status = proto.UserStatus_USER_STATUS_PENDING
 			}

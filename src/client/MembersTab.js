@@ -61,7 +61,7 @@ export default function MembersTab () {
               title: 'Status',
               dataIndex: 'status',
               key: 'status',
-              render: (status) => <Tag>{['Unknown', 'Pending', 'Active', 'Removed'][status]}</Tag>
+              render: (status) => <Tag>{['Unknown', 'Pending', 'Active', 'Removed', 'Rejected'][status]}</Tag>
             },
             {
               title: 'Active',

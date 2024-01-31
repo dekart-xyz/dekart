@@ -23,3 +23,7 @@
 .planTitleDescription {
     white-space: pre-line;
 }
+
+.cancelAt {
+    margin-top: 10px;
+}

@@ -14,7 +14,7 @@ import { PlanType } from '../proto/dekart_pb'
 
 function CopyLinkButton () {
   const dispatch = useDispatch()
-  const subscription = useSelector(state => state.organization.subscription)
+  const subscription = useSelector(state => state.workspace.subscription)
   if (!subscription) {
     return null
   }
@@ -32,7 +32,7 @@ function CopyLinkButton () {
 function ModalContent ({ reportId, discoverable, canWrite }) {
   const dispatch = useDispatch()
   const [discoverableSwitch, setDiscoverableSwitch] = useState(discoverable)
-  const subscription = useSelector(state => state.organization.subscription)
+  const subscription = useSelector(state => state.workspace.subscription)
 
   if (!subscription) {
     return null
@@ -46,7 +46,7 @@ function ModalContent ({ reportId, discoverable, canWrite }) {
           ? (
             <div className={styles.reportStatusDetails}>
               <div className={styles.reportStatusDetailsText}> Only you can access this report</div>
-              <div className={styles.manageSubscription}><a href='/subscription' target='_blank'>Manage subscription</a></div>
+              <div className={styles.manageSubscription}><a href='/workspace' target='_blank'>Manage workspace</a></div>
             </div>
             )
           : (

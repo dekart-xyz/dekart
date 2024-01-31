@@ -1,7 +1,7 @@
 import { Header } from './Header'
 import styles from './WorkspacePage.module.css'
 import Card from 'antd/es/card'
-import { HomeOutlined, TeamOutlined, InboxOutlined, CreditCardOutlined, RocketTwoTone } from '@ant-design/icons'
+import { AppstoreTwoTone, TeamOutlined, CreditCardOutlined, RocketTwoTone } from '@ant-design/icons'
 import Title from 'antd/es/typography/Title'
 import Button from 'antd/es/button'
 import { useEffect, useState } from 'react'
@@ -28,12 +28,12 @@ function Invites () {
       {invites.length === 0
         ? (
           <Onboarding
-            icon={<InboxOutlined />}
-            title='Users of existing team can invite you to join'
+            icon={<TeamOutlined />}
+            title='Awaiting an Invitation?'
             steps={
               <ol>
-                <li>User of existing team can invite by adding your email in "Members" tab</li>
-                <li>Once you email added you can accept it here</li>
+                <li>Ask a current member to send an invite to your email from the "Members" tab.</li>
+                <li>Once they've sent it, you'll be able to accept the invitation here.</li>
               </ol>
             }
           />
@@ -57,6 +57,7 @@ function Invites () {
                 {
                   title: 'Actions',
                   key: 'actions',
+                  className: styles.inviteActionsColumn,
                   render: (invite) => (
                     <>
                       <Button
@@ -140,7 +141,6 @@ function WorkspaceTab ({ nextStep, setNextStep }) {
   const user = useSelector(state => state.user)
   const workspace = useSelector(state => state.workspace)
   const invites = workspace.invites
-  // const [radioValue, setRadioValue] = useState('workspace')
   if (user.workspaceId && user.workspaceId !== workspace.id) {
     return null
   }
@@ -149,23 +149,34 @@ function WorkspaceTab ({ nextStep, setNextStep }) {
     form = <Invites />
   }
 
+  let title = 'Create workspace'
+  if (nextStep === 'invites') {
+    title = 'Join workspace'
+  } else if (workspace.id) {
+    title = 'Update workspace'
+  }
+
   return (
     <div className={styles.workspaceTab}>
       <div className={styles.workspaceTabHeader}>
         <div>
-          <Title level={4}>Create workspace or join existing one</Title>
+          <Title level={4}>{title}</Title>
         </div>
-        <div><Radio.Group
-          value={nextStep}
-          onChange={(e) => setNextStep(e.target.value)}
-          options={[
-            { label: workspace.id ? 'Update' : 'Create', value: 'workspace' },
-            { label: <Badge color='blue' count={invites.length} offset={[14, -10]}>Join</Badge>, value: 'invites' }
-          ]}
-          optionType='button'
-          buttonStyle='solid'
-             />
-        </div>
+        {user.workspaceId
+          ? null
+          : (
+            <div><Radio.Group
+              value={nextStep}
+              onChange={(e) => setNextStep(e.target.value)}
+              options={[
+                { label: 'Create', value: 'workspace' },
+                { label: <Badge color='blue' count={invites.length} offset={[14, -10]}><span className={styles.joinRadioItem}>Join</span></Badge>, value: 'invites' }
+              ]}
+              optionType='button'
+              buttonStyle='solid'
+                 />
+            </div>
+            )}
       </div>
       <div className={styles.workspaceTabBody}>{form}</div>
 
@@ -207,7 +218,7 @@ export function Workspace ({ nextStep, setNextStep }) {
           items={[
             {
               title: 'Workspace',
-              icon: <HomeOutlined />
+              icon: <AppstoreTwoTone />
             },
             {
               title: 'Billing',

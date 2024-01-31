@@ -2015,6 +2015,7 @@ export interface UserStatusMap {
   USER_STATUS_PENDING: 1;
   USER_STATUS_ACTIVE: 2;
   USER_STATUS_REMOVED: 3;
+  USER_STATUS_REJECTED: 4;
 }
 
 export const UserStatus: UserStatusMap;
