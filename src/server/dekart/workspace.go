@@ -85,6 +85,20 @@ func (s Server) UpdateWorkspace(ctx context.Context, req *proto.UpdateWorkspaceR
 	return &proto.UpdateWorkspaceResponse{}, nil
 }
 
+func (s Server) countActiveWorkspaceUsers(ctx context.Context, workspaceID string) (int64, error) {
+	users, err := s.getWorkspaceUsers(ctx, workspaceID)
+	if err != nil {
+		return 0, err
+	}
+	var count int64
+	for _, user := range users {
+		if user.Status == proto.UserStatus_USER_STATUS_ACTIVE || user.Status == proto.UserStatus_USER_STATUS_PENDING {
+			count++
+		}
+	}
+	return count, nil
+}
+
 func (s Server) getWorkspaceUsers(ctx context.Context, workspaceID string) ([]*proto.User, error) {
 	users := make([]*proto.User, 0)
 	// In this query, the subquery (aliased as subq) gets the maximum created_at for each email.
@@ -188,9 +202,10 @@ type workspaceInfoKeyType string
 const workspaceInfoKey workspaceInfoKeyType = "workspaceInfo"
 
 type WorkspaceInfo struct {
-	ID       string
-	PlanType proto.PlanType
-	Name     string
+	ID              string
+	PlanType        proto.PlanType
+	Name            string
+	AddedUsersCount int64
 }
 
 func (s Server) SetWorkspaceContext(ctx context.Context) context.Context {
@@ -206,6 +221,7 @@ func (s Server) SetWorkspaceContext(ctx context.Context) context.Context {
 	var workspaceId string
 	var planType proto.PlanType
 	var name string
+	var addedUsersCount int64 = 0
 	if workspace != nil {
 		workspaceId = workspace.Id
 		name = workspace.Name
@@ -217,12 +233,18 @@ func (s Server) SetWorkspaceContext(ctx context.Context) context.Context {
 		if subscription != nil {
 			planType = subscription.PlanType
 		}
+		addedUsersCount, err = s.countActiveWorkspaceUsers(ctx, workspaceId)
+		if err != nil {
+			log.Err(err).Send()
+			return ctx
+		}
 	}
 
 	ctx = context.WithValue(ctx, workspaceInfoKey, WorkspaceInfo{
-		ID:       workspaceId,
-		PlanType: planType,
-		Name:     name,
+		ID:              workspaceId,
+		PlanType:        planType,
+		Name:            name,
+		AddedUsersCount: addedUsersCount,
 	})
 	return ctx
 }
@@ -267,9 +289,10 @@ func (s Server) GetWorkspace(ctx context.Context, req *proto.GetWorkspaceRequest
 			Id:   workspaceInfo.ID,
 			Name: workspaceInfo.Name,
 		},
-		Subscription: subscription,
-		Users:        users,
-		Invites:      invites,
+		Subscription:    subscription,
+		Users:           users,
+		Invites:         invites,
+		AddedUsersCount: workspaceInfo.AddedUsersCount,
 	}, nil
 }
 
@@ -285,6 +308,19 @@ func (s Server) UpdateWorkspaceUser(ctx context.Context, req *proto.UpdateWorksp
 	if req.UserUpdateType == proto.UpdateWorkspaceUserRequest_USER_UPDATE_TYPE_UNSPECIFIED {
 		log.Error().Msgf("User update type not specified")
 		return nil, status.Error(codes.InvalidArgument, "User update type not specified")
+	}
+	if req.UserUpdateType == proto.UpdateWorkspaceUserRequest_USER_UPDATE_TYPE_REMOVE {
+		if claims.Email == req.Email {
+			return nil, status.Error(codes.InvalidArgument, "Cannot remove yourself")
+		}
+	}
+	if req.UserUpdateType == proto.UpdateWorkspaceUserRequest_USER_UPDATE_TYPE_ADD {
+		if workspaceInfo.PlanType == proto.PlanType_TYPE_PERSONAL && workspaceInfo.AddedUsersCount > 0 {
+			return nil, status.Error(codes.InvalidArgument, "Cannot add more users to personal workspace")
+		}
+		if workspaceInfo.PlanType == proto.PlanType_TYPE_TEAM && workspaceInfo.AddedUsersCount > 20 {
+			return nil, status.Error(codes.InvalidArgument, "Cannot add more users to team workspace")
+		}
 	}
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO workspace_log (id, workspace_id, email, status, authored_by)

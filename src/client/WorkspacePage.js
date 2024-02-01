@@ -184,8 +184,19 @@ function WorkspaceTab ({ nextStep, setNextStep }) {
   )
 }
 
+function getMembersSubTitle (addedUsersCount, planType) {
+  if (isNaN(addedUsersCount)) {
+    return ''
+  }
+  if (planType === PlanType.TYPE_TEAM) {
+    return `(${addedUsersCount} of 20)`
+  }
+  return `(${addedUsersCount})`
+}
+
 export function Workspace ({ nextStep, setNextStep }) {
   const user = useSelector(state => state.user)
+  const addedUsersCount = useSelector(state => state.workspace.addedUsersCount)
   const workspaceId = user?.workspaceId
   const planType = user?.planType
   const [step, setStep] = useState(0)
@@ -228,7 +239,8 @@ export function Workspace ({ nextStep, setNextStep }) {
             {
               title: 'Members',
               icon: <TeamOutlined />,
-              disabled: user.planType !== PlanType.TYPE_TEAM
+              disabled: user.planType !== PlanType.TYPE_TEAM,
+              subTitle: getMembersSubTitle(addedUsersCount, planType)
             }
           ]}
         />

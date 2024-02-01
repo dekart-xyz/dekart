@@ -256,6 +256,9 @@ func (s Server) CreateSubscription(ctx context.Context, req *proto.CreateSubscri
 			// you cannot downgrade from team to personal
 			return nil, status.Error(codes.InvalidArgument, "Workspace already has a subscription")
 		}
+		if workspaceInfo.AddedUsersCount > 1 {
+			return nil, status.Error(codes.InvalidArgument, "Workspace has more than one user, cannot downgrade to personal plan")
+		}
 		_, err := s.db.ExecContext(ctx, `insert into subscription_log (workspace_id, plan_type, authored_by) values ($1, $2, $3)`,
 			workspaceInfo.ID,
 			req.PlanType,

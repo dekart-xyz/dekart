@@ -2479,7 +2479,8 @@ proto.GetWorkspaceResponse.toObject = function(includeInstance, msg) {
     usersList: jspb.Message.toObjectList(msg.getUsersList(),
     proto.User.toObject, includeInstance),
     invitesList: jspb.Message.toObjectList(msg.getInvitesList(),
-    proto.WorkspaceInvite.toObject, includeInstance)
+    proto.WorkspaceInvite.toObject, includeInstance),
+    addedUsersCount: jspb.Message.getFieldWithDefault(msg, 5, 0)
   };
 
   if (includeInstance) {
@@ -2535,6 +2536,10 @@ proto.GetWorkspaceResponse.deserializeBinaryFromReader = function(msg, reader) {
       var value = new proto.WorkspaceInvite;
       reader.readMessage(value,proto.WorkspaceInvite.deserializeBinaryFromReader);
       msg.addInvites(value);
+      break;
+    case 5:
+      var value = /** @type {number} */ (reader.readInt64());
+      msg.setAddedUsersCount(value);
       break;
     default:
       reader.skipField();
@@ -2595,6 +2600,13 @@ proto.GetWorkspaceResponse.serializeBinaryToWriter = function(message, writer) {
       4,
       f,
       proto.WorkspaceInvite.serializeBinaryToWriter
+    );
+  }
+  f = message.getAddedUsersCount();
+  if (f !== 0) {
+    writer.writeInt64(
+      5,
+      f
     );
   }
 };
@@ -2747,6 +2759,24 @@ proto.GetWorkspaceResponse.prototype.addInvites = function(opt_value, opt_index)
  */
 proto.GetWorkspaceResponse.prototype.clearInvitesList = function() {
   return this.setInvitesList([]);
+};
+
+
+/**
+ * optional int64 added_users_count = 5;
+ * @return {number}
+ */
+proto.GetWorkspaceResponse.prototype.getAddedUsersCount = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 5, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.GetWorkspaceResponse} returns this
+ */
+proto.GetWorkspaceResponse.prototype.setAddedUsersCount = function(value) {
+  return jspb.Message.setProto3IntField(this, 5, value);
 };
 
 
@@ -6322,7 +6352,7 @@ proto.GetUserStreamResponse.prototype.setPlanType = function(value) {
 
 
 /**
- * optional int64 Workspace_update = 103;
+ * optional int64 workspace_update = 103;
  * @return {number}
  */
 proto.GetUserStreamResponse.prototype.getWorkspaceUpdate = function() {

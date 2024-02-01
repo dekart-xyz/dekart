@@ -128,6 +128,9 @@ export class GetWorkspaceResponse extends jspb.Message {
   setInvitesList(value: Array<WorkspaceInvite>): void;
   addInvites(value?: WorkspaceInvite, index?: number): WorkspaceInvite;
 
+  getAddedUsersCount(): number;
+  setAddedUsersCount(value: number): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetWorkspaceResponse.AsObject;
   static toObject(includeInstance: boolean, msg: GetWorkspaceResponse): GetWorkspaceResponse.AsObject;
@@ -144,6 +147,7 @@ export namespace GetWorkspaceResponse {
     subscription?: Subscription.AsObject,
     usersList: Array<User.AsObject>,
     invitesList: Array<WorkspaceInvite.AsObject>,
+    addedUsersCount: number,
   }
 }
 

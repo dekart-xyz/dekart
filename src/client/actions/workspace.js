@@ -52,13 +52,14 @@ export function updateWorkspace (name) {
   }
 }
 
-export function workspaceUpdate ({ workspace, subscription, usersList, invitesList }) {
+export function workspaceUpdate ({ workspace, subscription, usersList, invitesList, addedUsersCount }) {
   return {
     type: workspaceUpdate.name,
     workspace,
     subscription,
     usersList,
-    invitesList
+    invitesList,
+    addedUsersCount
   }
 }
 

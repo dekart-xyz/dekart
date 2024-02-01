@@ -26,7 +26,7 @@ function PlanTitle ({ name, price, icon, color, description, selected }) {
   )
 }
 
-function Plan ({ title, children, action, planType, cancelAt }) {
+function Plan ({ title, children, planType, cancelAt, addedUsersCount }) {
   const [hover, setHover] = useState(false)
   const user = useSelector(state => state.user)
   const dispatch = useDispatch()
@@ -42,17 +42,20 @@ function Plan ({ title, children, action, planType, cancelAt }) {
     >Choose plan
     </Button>
   )
-  if (user.planType === PlanType.TYPE_TEAM && planType === PlanType.TYPE_PERSONAL) {
-    actionButton = (
-      <Button disabled title='Downgrading from Team to Personal is not supported'>Choose plan</Button>
-    )
+  if (planType === PlanType.TYPE_PERSONAL) {
+    if (user.planType === PlanType.TYPE_TEAM) {
+      actionButton = (
+        <Button disabled title='Downgrading from Team to Personal is not supported'>Choose plan</Button>
+      )
+    } else if (user.planType === PlanType.TYPE_PERSONAL) {
+      actionButton = <Button disabled>Current plan</Button>
+    } else if (addedUsersCount > 1) {
+      actionButton = (
+        <Button disabled title='Workspace has more then one member'>Choose plan</Button>
+      )
+    }
   }
-  if (user.planType === PlanType.TYPE_PERSONAL && planType === PlanType.TYPE_PERSONAL) {
-    actionButton = (
-      <Button disabled>Current plan</Button>
-    )
-  }
-  if (user.planType === PlanType.TYPE_TEAM && planType === PlanType.TYPE_TEAM) {
+  if (planType === PlanType.TYPE_TEAM && user.planType === PlanType.TYPE_TEAM) {
     actionButton = (
       <>
         <Button
@@ -87,6 +90,7 @@ function Plans () {
   return (
     <div className={styles.plans}>
       <Plan
+        addedUsersCount={workspace.addedUsersCount}
         title={<PlanTitle
           icon={<HomeOutlined />}
           name='personal'
@@ -95,7 +99,6 @@ function Plans () {
           description='for personal use and evaluation'
                />}
         planType={PlanType.TYPE_PERSONAL}
-        action='Choose personal'
       >
         <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Query data from BigQuery</Text></p>
         <p><Text type='success'><CheckCircleOutlined /> </Text><Text> Access private datasets</Text></p>
@@ -103,6 +106,7 @@ function Plans () {
         <p><Text>No collaborators</Text></p>
       </Plan>
       <Plan
+        addedUsersCount={workspace.addedUsersCount}
         title={<PlanTitle
           icon={<TeamOutlined />}
           name='team'
@@ -111,7 +115,6 @@ function Plans () {
           description='for teams up to 20 people'
                />}
         planType={PlanType.TYPE_TEAM}
-        action='Choose team'
         cancelAt={workspace?.subscription?.cancelAt}
       >
         <p><Text type='success'><CheckCircleOutlined /> </Text><Text> Query data from BigQuery</Text></p>

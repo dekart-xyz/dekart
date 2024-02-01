@@ -89,6 +89,7 @@ message GetWorkspaceResponse {
     Subscription subscription = 2;
     repeated User users = 3;
     repeated WorkspaceInvite invites = 4;
+    int64 added_users_count = 5; // to not duplicate count logic in UI
 }
 
 message CreateWorkspaceRequest {
@@ -213,7 +214,7 @@ message GetUserStreamResponse {
     // cloud
     string workspace_id = 101;
     PlanType plan_type = 102;
-    int64 Workspace_update = 103; // includes invites, members and subscription
+    int64 workspace_update = 103; // includes invites, members and subscription
 }
 
 message TestConnectionRequest {

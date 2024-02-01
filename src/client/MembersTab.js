@@ -10,6 +10,7 @@ import Tag from 'antd/es/tag'
 
 export default function MembersTab () {
   const users = useSelector(state => state.workspace.users)
+  const addedUsersCount = useSelector(state => state.workspace.addedUsersCount)
   const user = useSelector(state => state.user)
   const dispatch = useDispatch()
   const [email, setEmail] = useState('')
@@ -37,6 +38,7 @@ export default function MembersTab () {
             onPressEnter={addUserCb}
           />
           <Button
+            disabled={addedUsersCount > 1}
             className={styles.inviteUsersButton} type='primary' onClick={addUserCb}
           >Invite user
           </Button>
