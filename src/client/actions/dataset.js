@@ -9,7 +9,7 @@ import { KeplerGlSchema } from '@dekart-xyz/kepler.gl/dist/schemas'
 import getDatasetName from '../lib/getDatasetName'
 
 export function createDataset (reportId) {
-  return (dispatch) => {
+  return (dispatch, getState) => {
     dispatch({ type: createDataset.name })
     const request = new CreateDatasetRequest()
     request.setReportId(reportId)

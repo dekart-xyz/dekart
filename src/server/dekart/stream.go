@@ -115,11 +115,15 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			id,
 			case when title is null then 'Untitled' else title end as title,
 			archived,
-			author_email = $1 as can_write,
+			(author_email = $1) or allow_edit as can_write,
+			author_email = $1 as is_author,
 			author_email,
-			discoverable
+			discoverable,
+			allow_edit,
+			updated_at,
+			created_at
 		from reports
-		where author_email=$1 or (discoverable=true and archived=false)
+		where author_email=$1 or (discoverable=true and archived=false) or allow_edit=true
 		order by updated_at desc`,
 		claims.Email,
 	)
@@ -136,18 +140,26 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 	}
 	for reportRows.Next() {
 		report := proto.Report{}
+		createdAt := time.Time{}
+		updatedAt := time.Time{}
 		err = reportRows.Scan(
 			&report.Id,
 			&report.Title,
 			&report.Archived,
 			&report.CanWrite,
+			&report.IsAuthor,
 			&report.AuthorEmail,
 			&report.Discoverable,
+			&report.AllowEdit,
+			&updatedAt,
+			&createdAt,
 		)
 		if err != nil {
 			log.Err(err).Send()
 			return status.Errorf(codes.Internal, err.Error())
 		}
+		report.CreatedAt = createdAt.Unix()
+		report.UpdatedAt = updatedAt.Unix()
 		res.Reports = append(res.Reports, &report)
 	}
 	err = srv.Send(&res)

@@ -4,11 +4,9 @@ import copy from '../../fixtures/copy.json'
 describe('basic query flow', () => {
   it('should make simple bigquery query and get ready status', () => {
     cy.visit('/')
-    cy.get(`button:contains("${copy.create_report}")`).click()
 
     // create connection
-    cy.get('#dekart-connection-select').click()
-    cy.get('div.ant-select-item-option-content:contains("New")').click()
+    cy.get('button:contains("Create connection")').click()
     const randomConnectionName = `test-${Math.floor(Math.random() * 1000000)}`
     cy.get('div.ant-modal-title').should('contain', 'Edit Connection')
     cy.get('input#connectionName').clear()

@@ -99,3 +99,26 @@ func (s *Streams) Ping(users []string) {
 		}
 	}
 }
+
+// Ping all connected users
+func (s *Streams) PingAll() {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	for user := range s.channels {
+		sequence, ok := s.sequence[user]
+		if !ok {
+			//initial sequence in register is sequence=1
+			sequence = 1
+		}
+		s.sequence[user] = sequence + 1
+		streamMap, ok := s.channels[user]
+		if !ok {
+			continue
+		}
+		for _, ch := range streamMap {
+			go func(ch chan int64, sequence int64, user string) {
+				ch <- sequence
+			}(ch, s.sequence[user], user)
+		}
+	}
+}

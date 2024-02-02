@@ -87,7 +87,7 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 func (s Server) getReportID(ctx context.Context, datasetID string, email string) (*string, error) {
 	datasetRows, err := s.db.QueryContext(ctx,
 		`select report_id from datasets
-		where id=$1 and report_id in (select report_id from reports where author_email=$2)
+		where id=$1 and report_id in (select report_id from reports where author_email=$2 or allow_edit)
 		limit 1`,
 		datasetID,
 		email,
@@ -107,7 +107,7 @@ func (s Server) getReportID(ctx context.Context, datasetID string, email string)
 		// check legacy queries
 		queryRows, err := s.db.QueryContext(ctx,
 			`select report_id from queries
-			where id=$1 and report_id in (select report_id from reports where author_email=$2)
+			where id=$1 and report_id in (select report_id from reports where author_email=$2 or allow_edit)
 			limit 1`,
 			datasetID,
 			email,
@@ -252,18 +252,40 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 	return &proto.RemoveDatasetResponse{}, nil
 }
 
-func insertDataset(ctx context.Context, db *sql.DB, datasetID string, reportID string, email string) (res sql.Result, err error) {
-	return db.ExecContext(ctx,
-		`insert into datasets (id, report_id)
+func (s Server) insertDataset(ctx context.Context, reportID string) (res sql.Result, err error) {
+	id := newUUID()
+	claims := user.GetClaims(ctx)
+	connection, err := s.getDefaultConnection(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if connection == nil {
+		return s.db.ExecContext(ctx,
+			`insert into datasets (id, report_id)
 		select
 			$1 as id,
 			id as report_id
 		from reports
-		where id=$2 and not archived and author_email=$3 limit 1
+		where id=$2 and not archived and (author_email=$3 or allow_edit) limit 1
 		`,
-		datasetID,
+			id,
+			reportID,
+			claims.Email,
+		)
+	}
+	return s.db.ExecContext(ctx,
+		`insert into datasets (id, report_id, connection_id)
+	select
+		$1 as id,
+		id as report_id,
+		$4 as connection_id
+	from reports
+	where id=$2 and not archived and (author_email=$3 or allow_edit) limit 1
+	`,
+		id,
 		reportID,
-		email,
+		claims.Email,
+		connection.Id,
 	)
 }
 
@@ -272,8 +294,7 @@ func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetReque
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	id := newUUID()
-	result, err := insertDataset(ctx, s.db, id, req.ReportId, claims.Email)
+	result, err := s.insertDataset(ctx, req.ReportId)
 
 	if err != nil {
 		log.Err(err).Send()

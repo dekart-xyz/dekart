@@ -41,6 +41,14 @@ service Dekart {
     rpc ArchiveConnection(ArchiveConnectionRequest) returns (ArchiveConnectionResponse) {}
     rpc GetConnectionList(GetConnectionListRequest) returns (GetConnectionListResponse) {}
     rpc TestConnection(TestConnectionRequest) returns (TestConnectionResponse) {}
+    rpc SetDefaultConnection(SetDefaultConnectionRequest) returns (SetDefaultConnectionResponse) {}
+}
+
+message SetDefaultConnectionRequest {
+    string connection_id = 1;
+}
+
+message SetDefaultConnectionResponse {
 }
 
 message RunAllQueriesRequest {
@@ -104,6 +112,9 @@ message Connection {
     string bigquery_project_id = 3;
     string cloud_storage_bucket = 4;
     bool is_default = 5;
+    string author_email = 6;
+    int64 created_at = 7;
+    int64 updated_at = 8;
 }
 
 message GetUsageRequest {}
@@ -117,7 +128,8 @@ message GetUsageResponse {
 
 message SetDiscoverableRequest {
     string report_id = 1;
-    bool discoverable = 2;
+    bool discoverable = 2; // report is discoverable by other users of the same instance
+    bool allow_edit = 3; // allow other users to edit the report
 }
 
 message SetDiscoverableResponse {
@@ -205,6 +217,10 @@ message Report {
     bool can_write = 5;
     string author_email = 6;
     bool discoverable = 7; // report is discoverable by other users of the same instance
+    bool allow_edit = 8; // allow other users to edit the report
+    bool is_author = 9; // user is the author of the report
+    int64 created_at = 10;
+    int64 updated_at = 11;
 }
 
 message Dataset {
@@ -270,7 +286,7 @@ message File {
 }
 
 message UpdateReportRequest {
-    Report report = 1;
+    Report report = 1; // MapConfig, Title, Id will be used for update
     repeated Query query = 2;
 }
 

@@ -7,6 +7,7 @@ import (
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
 	"os"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
@@ -145,49 +146,112 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 
 // getConnections list for connections created by user
 func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error) {
-
 	connections := make([]*proto.Connection, 0)
-	claims := user.GetClaims(ctx)
-	if claims == nil {
-		log.Warn().Msg("unauthenticated getConnections request")
-		return connections, nil
-	}
-
 	rows, err := s.db.QueryContext(ctx,
 		`select
 			id,
 			connection_name,
 			bigquery_project_id,
-			cloud_storage_bucket
-		from connections where author_email=$1 and archived=false order by created_at asc`,
-		claims.Email,
+			cloud_storage_bucket,
+			is_default,
+			created_at,
+			updated_at,
+			author_email
+		from connections where archived=false order by created_at desc`,
 	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("select from connections failed")
 	}
 	defer rows.Close()
+	lastDefault := time.Time{}
+	lastDefaultIndex := -1
 	for rows.Next() {
 		connection := proto.Connection{}
 		ID := sql.NullString{}
 		bigqueryProjectId := sql.NullString{}
 		cloudStorageBucket := sql.NullString{}
+		isDefault := false
+		createdAt := time.Time{}
+		updatedAt := time.Time{}
 		err := rows.Scan(
 			&ID,
 			&connection.ConnectionName,
 			&bigqueryProjectId,
 			&cloudStorageBucket,
+			&isDefault,
+			&createdAt,
+			&updatedAt,
+			&connection.AuthorEmail,
 		)
-		connection.Id = ID.String
-		connection.BigqueryProjectId = bigqueryProjectId.String
-		connection.CloudStorageBucket = cloudStorageBucket.String
 		if err != nil {
 			log.Fatal().Err(err).Msg("scan failed")
 		}
+		if isDefault {
+			if lastDefaultIndex == -1 {
+				lastDefaultIndex = len(connections)
+			}
+			// is_default is not a unique constraint, so there can be multiple default connections
+			// this is design decision to avoid race conditions when updating default connection
+			if lastDefault.Before(updatedAt) {
+				lastDefault = updatedAt
+				lastDefaultIndex = len(connections)
+			}
+		}
+		connection.Id = ID.String
+		connection.BigqueryProjectId = bigqueryProjectId.String
+		connection.CloudStorageBucket = cloudStorageBucket.String
+		connection.UpdatedAt = updatedAt.Unix()
+		connection.CreatedAt = createdAt.Unix()
 		connections = append(connections, &connection)
+	}
+
+	if lastDefaultIndex != -1 {
+		connections[lastDefaultIndex].IsDefault = true
+	} else if len(connections) > 0 {
+		// if no default connection is set, set the first one as default
+		connections[len(connections)-1].IsDefault = true
 	}
 
 	return connections, nil
 
+}
+
+func (s Server) getDefaultConnection(ctx context.Context) (*proto.Connection, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	connections, err := s.getConnections(ctx)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, err
+	}
+	for _, connection := range connections {
+		if connection.IsDefault {
+			return connection, nil
+		}
+	}
+	return nil, nil
+}
+
+func (s Server) SetDefaultConnection(ctx context.Context, req *proto.SetDefaultConnectionRequest) (*proto.SetDefaultConnectionResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	_, err := s.db.ExecContext(ctx,
+		`update connections set
+			is_default=true,
+			updated_at=now()
+		where id=$1`,
+		req.ConnectionId,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, err
+	}
+	s.userStreams.PingAll()
+	return &proto.SetDefaultConnectionResponse{}, nil
 }
 
 func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectionRequest) (*proto.UpdateConnectionResponse, error) {
@@ -201,12 +265,11 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 			bigquery_project_id=$2,
 			cloud_storage_bucket=$3,
 			updated_at=now()
-		where id=$4 and author_email=$5`,
+		where id=$4`,
 		req.Connection.ConnectionName,
 		req.Connection.BigqueryProjectId,
 		req.Connection.CloudStorageBucket,
 		req.Connection.Id,
-		claims.Email,
 	)
 	if err != nil {
 		log.Err(err).Send()
@@ -220,7 +283,7 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 	if rowsAffected == 0 {
 		return nil, status.Error(codes.NotFound, "connection not found")
 	}
-	s.userStreams.Ping([]string{claims.Email})
+	s.userStreams.PingAll()
 	return &proto.UpdateConnectionResponse{
 		Connection: req.Connection,
 	}, nil
@@ -300,7 +363,7 @@ func (s Server) ArchiveConnection(ctx context.Context, req *proto.ArchiveConnect
 		return nil, err
 	}
 
-	s.userStreams.Ping([]string{claims.Email})
+	s.userStreams.PingAll()
 	s.reportStreams.PingAll(reports)
 	return &proto.ArchiveConnectionResponse{}, nil
 }
@@ -329,8 +392,7 @@ func (s Server) getLastConnectionUpdate(ctx context.Context) (int64, error) {
 	err := s.db.QueryRowContext(ctx,
 		`select
 			max(updated_at)
-		from connections where author_email=$1`,
-		claims.Email,
+		from connections`,
 	).Scan(&lastConnectionUpdateDate)
 	lastConnectionUpdate := lastConnectionUpdateDate.Time.Unix()
 	if err != nil {
@@ -357,7 +419,7 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 		return nil, err
 	}
 
-	s.userStreams.Ping([]string{claims.Email})
+	s.userStreams.PingAll()
 
 	return &proto.CreateConnectionResponse{
 		Connection: &proto.Connection{
