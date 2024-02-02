@@ -26,7 +26,7 @@ func (s Server) getFileReports(ctx context.Context, fileId string, claims *user.
 		from files
 			left join datasets on files.id = datasets.file_id
 			left join reports on datasets.report_id = reports.id
-		where files.id = $1 and author_email = $2`,
+		where files.id = $1 and (author_email = $2 or allow_edit)`,
 		fileId,
 		claims.Email,
 	)

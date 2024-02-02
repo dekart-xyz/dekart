@@ -436,6 +436,9 @@ export class SetDiscoverableRequest extends jspb.Message {
   getDiscoverable(): boolean;
   setDiscoverable(value: boolean): void;
 
+  getAllowEdit(): boolean;
+  setAllowEdit(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): SetDiscoverableRequest.AsObject;
   static toObject(includeInstance: boolean, msg: SetDiscoverableRequest): SetDiscoverableRequest.AsObject;
@@ -450,6 +453,7 @@ export namespace SetDiscoverableRequest {
   export type AsObject = {
     reportId: string,
     discoverable: boolean,
+    allowEdit: boolean,
   }
 }
 
@@ -790,6 +794,12 @@ export class Report extends jspb.Message {
   getDiscoverable(): boolean;
   setDiscoverable(value: boolean): void;
 
+  getAllowEdit(): boolean;
+  setAllowEdit(value: boolean): void;
+
+  getIsAuthor(): boolean;
+  setIsAuthor(value: boolean): void;
+
   getCreatedAt(): number;
   setCreatedAt(value: number): void;
 
@@ -815,6 +825,8 @@ export namespace Report {
     canWrite: boolean,
     authorEmail: string,
     discoverable: boolean,
+    allowEdit: boolean,
+    isAuthor: boolean,
     createdAt: number,
     updatedAt: number,
   }

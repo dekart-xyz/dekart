@@ -34,9 +34,11 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			id,
 			case when map_config is null then '' else map_config end as map_config,
 			case when title is null then 'Untitled' else title end as title,
-			author_email = $2 as can_write,
+			(author_email = $2) or allow_edit as can_write,
+			author_email = $2 as is_author,
 			author_email,
 			discoverable,
+			allow_edit,
 			created_at,
 			updated_at
 		from reports where id=$1 and not archived limit 1`,
@@ -58,8 +60,10 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			&report.MapConfig,
 			&report.Title,
 			&report.CanWrite,
+			&report.IsAuthor,
 			&report.AuthorEmail,
 			&report.Discoverable,
+			&report.AllowEdit,
 			&createdAt,
 			&updatedAt,
 		)
@@ -266,7 +270,7 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 		`update
 			reports
 		set map_config=$1, title=$2
-		where id=$3 and author_email=$4`,
+		where id=$3 and (author_email=$4 or allow_edit)`,
 		req.Report.MapConfig,
 		req.Report.Title,
 		req.Report.Id,
@@ -311,8 +315,9 @@ func (s Server) SetDiscoverable(ctx context.Context, req *proto.SetDiscoverableR
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
 	}
 	res, err := s.db.ExecContext(ctx,
-		`update reports set discoverable=$1 where id=$2 and author_email=$3`,
+		`update reports set discoverable=$1, allow_edit=$2 where id=$3 and author_email=$4`, // only author can change discoverable and allow_edit
 		req.Discoverable,
+		req.AllowEdit,
 		req.ReportId,
 		claims.Email,
 	)
@@ -349,7 +354,7 @@ func (s Server) ArchiveReport(ctx context.Context, req *proto.ArchiveReportReque
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
 	}
 	result, err := s.db.ExecContext(ctx,
-		"update reports set archived=$1 where id=$2 and author_email=$3",
+		"update reports set archived=$1 where id=$2 and author_email=$3", // only author can archive
 		req.Archive,
 		req.ReportId,
 		claims.Email,

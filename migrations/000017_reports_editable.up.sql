@@ -1,0 +1,1 @@
+ALTER TABLE reports ADD COLUMN allow_edit boolean default false;

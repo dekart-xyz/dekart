@@ -1,7 +1,7 @@
 import Button from 'antd/es/button'
 import Modal from 'antd/es/modal'
-import { ExportOutlined, UsergroupAddOutlined, LinkOutlined, LockOutlined, InfoCircleOutlined, FileSearchOutlined } from '@ant-design/icons'
-import { useState } from 'react'
+import { EditOutlined, ExportOutlined, UsergroupAddOutlined, LinkOutlined, LockOutlined, InfoCircleOutlined, FileSearchOutlined } from '@ant-design/icons'
+import { useEffect, useState } from 'react'
 import styles from './ShareButton.module.css'
 import { useDispatch, useSelector } from 'react-redux'
 import Tooltip from 'antd/es/tooltip'
@@ -41,12 +41,21 @@ function AuthTypeTitle ({ authType, referer }) {
   )
 }
 
-function ModalContent ({ reportId, discoverable, canWrite }) {
+function ModalContent ({ reportId, discoverable, isAuthor, allowEdit }) {
   const env = useSelector(state => state.env)
   const usage = useSelector(state => state.usage)
   const { loaded: envLoaded, authEnabled, authType } = env
   const dispatch = useDispatch()
   const [discoverableSwitch, setDiscoverableSwitch] = useState(discoverable)
+  const [allowEditSwitch, setAllowEditSwitch] = useState(allowEdit)
+
+  // when changed by another user, reset state
+  useEffect(() => {
+    setDiscoverableSwitch(discoverable)
+  }, [discoverable])
+  useEffect(() => {
+    setAllowEditSwitch(allowEdit)
+  }, [allowEdit])
 
   if (!envLoaded) {
     return null
@@ -58,7 +67,19 @@ function ModalContent ({ reportId, discoverable, canWrite }) {
         <div className={styles.reportStatus}>
           <div className={styles.reportStatusIcon}><LockOutlined /></div>
           <div className={styles.reportStatusDetails}>
-            <div className={styles.reportStatusDetailsText}> Everyone with a link can view this report</div>
+            <div className={styles.reportStatusDetailsText}>{(() => {
+              switch (true) {
+                case discoverable && allowEdit:
+                  return 'Everyone can view and edit report'
+                case !discoverable && allowEdit:
+                  return 'Everyone with link can edit report'
+                case discoverable && !allowEdit:
+                  return 'Everyone with link can view and refresh report'
+                default:
+                  return 'Everyone with a link can view report'
+              }
+            })()}
+            </div>
             <div className={styles.reportAuthStatus}>
               <Tooltip title={<AuthTypeTitle authType={authType} referer={getRef(env, usage)} />}>
                 <span className={styles.authEnabled}>User authorization enabled</span>
@@ -66,24 +87,38 @@ function ModalContent ({ reportId, discoverable, canWrite }) {
             </div>
           </div>
         </div>
-        {canWrite
-          ? (
-            <div className={styles.discoverableStatus}>
-              <div className={styles.discoverableStatusIcon}><FileSearchOutlined /></div>
-              <div className={styles.discoverableStatusLabel}>Allow everyone to discover and refresh report</div>
-              <div className={styles.discoverableStatusControl}>
-                <Switch
-                  checked={discoverable}
-                  onChange={(checked) => {
-                    setDiscoverableSwitch(checked)
-                    dispatch(setDiscoverable(reportId, checked))
-                  }}
-                  loading={discoverableSwitch !== discoverable}
-                />
-              </div>
-            </div>
-            )
-          : null}
+        <div className={styles.boolStatus}>
+          <div className={styles.boolStatusIcon}><FileSearchOutlined /></div>
+          <div className={styles.boolStatusLabel}>Allow everyone to discover and refresh report</div>
+          <div className={styles.boolStatusControl}>
+            <Switch
+              checked={discoverable}
+              disabled={!isAuthor}
+              title={!isAuthor ? 'Only the author can change this setting' : undefined}
+              onChange={(checked) => {
+                setDiscoverableSwitch(checked)
+                dispatch(setDiscoverable(reportId, checked, allowEdit))
+              }}
+              loading={discoverableSwitch !== discoverable}
+            />
+          </div>
+        </div>
+        <div className={styles.boolStatus}>
+          <div className={styles.boolStatusIcon}><EditOutlined /></div>
+          <div className={styles.boolStatusLabel}>Allow everyone to edit the report</div>
+          <div className={styles.boolStatusControl}>
+            <Switch
+              checked={allowEdit}
+              disabled={!isAuthor}
+              title={!isAuthor ? 'Only the author can change this setting' : undefined}
+              onChange={(checked) => {
+                setAllowEditSwitch(checked)
+                dispatch(setDiscoverable(reportId, discoverable, checked))
+              }}
+              loading={allowEditSwitch !== allowEdit}
+            />
+          </div>
+        </div>
       </>
     )
   }
@@ -133,7 +168,7 @@ function ExportDropdown ({ setModalOpen }) {
   )
 }
 
-export default function ShareButton ({ reportId, discoverable, canWrite }) {
+export default function ShareButton ({ reportId, discoverable, isAuthor, allowEdit }) {
   const [modalOpen, setModalOpen] = useState(false)
   return (
     <>
@@ -162,7 +197,7 @@ export default function ShareButton ({ reportId, discoverable, canWrite }) {
           </div>
       }
       >
-        <ModalContent reportId={reportId} discoverable={discoverable} canWrite={canWrite} />
+        <ModalContent reportId={reportId} discoverable={discoverable} isAuthor={isAuthor} allowEdit={allowEdit} />
       </Modal>
     </>
   )

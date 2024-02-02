@@ -79,7 +79,7 @@ function RefreshButton () {
 function EditModeButtons ({ changed }) {
   const dispatch = useDispatch()
   const history = useHistory()
-  const { id, discoverable, canWrite } = useSelector(state => state.report)
+  const { id, discoverable, canWrite, allowEdit, isAuthor } = useSelector(state => state.report)
   const { canSave } = useSelector(state => state.reportStatus)
 
   return (
@@ -92,7 +92,7 @@ function EditModeButtons ({ changed }) {
         title='Present Mode'
         onClick={() => history.replace(`/reports/${id}`)}
       />
-      <ShareButton reportId={id} discoverable={discoverable} canWrite={canWrite} />
+      <ShareButton reportId={id} discoverable={discoverable} isAuthor={isAuthor} allowEdit={allowEdit} />
       {canWrite
         ? (
           <>

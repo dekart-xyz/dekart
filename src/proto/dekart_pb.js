@@ -4221,7 +4221,8 @@ proto.SetDiscoverableRequest.prototype.toObject = function(opt_includeInstance) 
 proto.SetDiscoverableRequest.toObject = function(includeInstance, msg) {
   var f, obj = {
     reportId: jspb.Message.getFieldWithDefault(msg, 1, ""),
-    discoverable: jspb.Message.getBooleanFieldWithDefault(msg, 2, false)
+    discoverable: jspb.Message.getBooleanFieldWithDefault(msg, 2, false),
+    allowEdit: jspb.Message.getBooleanFieldWithDefault(msg, 3, false)
   };
 
   if (includeInstance) {
@@ -4266,6 +4267,10 @@ proto.SetDiscoverableRequest.deserializeBinaryFromReader = function(msg, reader)
       var value = /** @type {boolean} */ (reader.readBool());
       msg.setDiscoverable(value);
       break;
+    case 3:
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setAllowEdit(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -4309,6 +4314,13 @@ proto.SetDiscoverableRequest.serializeBinaryToWriter = function(message, writer)
       f
     );
   }
+  f = message.getAllowEdit();
+  if (f) {
+    writer.writeBool(
+      3,
+      f
+    );
+  }
 };
 
 
@@ -4345,6 +4357,24 @@ proto.SetDiscoverableRequest.prototype.getDiscoverable = function() {
  */
 proto.SetDiscoverableRequest.prototype.setDiscoverable = function(value) {
   return jspb.Message.setProto3BooleanField(this, 2, value);
+};
+
+
+/**
+ * optional bool allow_edit = 3;
+ * @return {boolean}
+ */
+proto.SetDiscoverableRequest.prototype.getAllowEdit = function() {
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 3, false));
+};
+
+
+/**
+ * @param {boolean} value
+ * @return {!proto.SetDiscoverableRequest} returns this
+ */
+proto.SetDiscoverableRequest.prototype.setAllowEdit = function(value) {
+  return jspb.Message.setProto3BooleanField(this, 3, value);
 };
 
 
@@ -6361,8 +6391,10 @@ proto.Report.toObject = function(includeInstance, msg) {
     canWrite: jspb.Message.getBooleanFieldWithDefault(msg, 5, false),
     authorEmail: jspb.Message.getFieldWithDefault(msg, 6, ""),
     discoverable: jspb.Message.getBooleanFieldWithDefault(msg, 7, false),
-    createdAt: jspb.Message.getFieldWithDefault(msg, 8, 0),
-    updatedAt: jspb.Message.getFieldWithDefault(msg, 9, 0)
+    allowEdit: jspb.Message.getBooleanFieldWithDefault(msg, 8, false),
+    isAuthor: jspb.Message.getBooleanFieldWithDefault(msg, 9, false),
+    createdAt: jspb.Message.getFieldWithDefault(msg, 10, 0),
+    updatedAt: jspb.Message.getFieldWithDefault(msg, 11, 0)
   };
 
   if (includeInstance) {
@@ -6428,10 +6460,18 @@ proto.Report.deserializeBinaryFromReader = function(msg, reader) {
       msg.setDiscoverable(value);
       break;
     case 8:
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setAllowEdit(value);
+      break;
+    case 9:
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setIsAuthor(value);
+      break;
+    case 10:
       var value = /** @type {number} */ (reader.readInt64());
       msg.setCreatedAt(value);
       break;
-    case 9:
+    case 11:
       var value = /** @type {number} */ (reader.readInt64());
       msg.setUpdatedAt(value);
       break;
@@ -6513,17 +6553,31 @@ proto.Report.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
+  f = message.getAllowEdit();
+  if (f) {
+    writer.writeBool(
+      8,
+      f
+    );
+  }
+  f = message.getIsAuthor();
+  if (f) {
+    writer.writeBool(
+      9,
+      f
+    );
+  }
   f = message.getCreatedAt();
   if (f !== 0) {
     writer.writeInt64(
-      8,
+      10,
       f
     );
   }
   f = message.getUpdatedAt();
   if (f !== 0) {
     writer.writeInt64(
-      9,
+      11,
       f
     );
   }
@@ -6657,11 +6711,47 @@ proto.Report.prototype.setDiscoverable = function(value) {
 
 
 /**
- * optional int64 created_at = 8;
+ * optional bool allow_edit = 8;
+ * @return {boolean}
+ */
+proto.Report.prototype.getAllowEdit = function() {
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 8, false));
+};
+
+
+/**
+ * @param {boolean} value
+ * @return {!proto.Report} returns this
+ */
+proto.Report.prototype.setAllowEdit = function(value) {
+  return jspb.Message.setProto3BooleanField(this, 8, value);
+};
+
+
+/**
+ * optional bool is_author = 9;
+ * @return {boolean}
+ */
+proto.Report.prototype.getIsAuthor = function() {
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 9, false));
+};
+
+
+/**
+ * @param {boolean} value
+ * @return {!proto.Report} returns this
+ */
+proto.Report.prototype.setIsAuthor = function(value) {
+  return jspb.Message.setProto3BooleanField(this, 9, value);
+};
+
+
+/**
+ * optional int64 created_at = 10;
  * @return {number}
  */
 proto.Report.prototype.getCreatedAt = function() {
-  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 8, 0));
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 10, 0));
 };
 
 
@@ -6670,16 +6760,16 @@ proto.Report.prototype.getCreatedAt = function() {
  * @return {!proto.Report} returns this
  */
 proto.Report.prototype.setCreatedAt = function(value) {
-  return jspb.Message.setProto3IntField(this, 8, value);
+  return jspb.Message.setProto3IntField(this, 10, value);
 };
 
 
 /**
- * optional int64 updated_at = 9;
+ * optional int64 updated_at = 11;
  * @return {number}
  */
 proto.Report.prototype.getUpdatedAt = function() {
-  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 9, 0));
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 11, 0));
 };
 
 
@@ -6688,7 +6778,7 @@ proto.Report.prototype.getUpdatedAt = function() {
  * @return {!proto.Report} returns this
  */
 proto.Report.prototype.setUpdatedAt = function(value) {
-  return jspb.Message.setProto3IntField(this, 9, value);
+  return jspb.Message.setProto3IntField(this, 11, value);
 };
 
 
