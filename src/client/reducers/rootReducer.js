@@ -241,7 +241,7 @@ function reportsList (state = defaultReportsList, action) {
       return {
         ...state,
         loaded: true,
-        my: action.reportsList.filter(report => !report.archived && report.canWrite),
+        my: action.reportsList.filter(report => !report.archived && report.isAuthor),
         archived: action.reportsList.filter(report => report.archived),
         discoverable: action.reportsList.filter(report => report.discoverable && !report.archived)
       }
