@@ -8,8 +8,6 @@ ifneq (,$(wildcard ./.env))
 endif
 
 UNAME := $(shell uname -m)
-DEKART_DOCKER_DEV_TAG ?= dekart-dev
-DEKART_DOCKER_E2E_TAG ?= dekart-e2e
 
 proto-clean:
 	rm -rf ./src/proto/*.go
