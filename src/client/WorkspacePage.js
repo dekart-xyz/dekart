@@ -1,7 +1,7 @@
 import { Header } from './Header'
 import styles from './WorkspacePage.module.css'
 import Card from 'antd/es/card'
-import Icon, { AppstoreTwoTone, TeamOutlined, CreditCardOutlined, RocketTwoTone } from '@ant-design/icons'
+import { AppstoreTwoTone, TeamOutlined, CreditCardOutlined } from '@ant-design/icons'
 import Title from 'antd/es/typography/Title'
 import Button from 'antd/es/button'
 import { useEffect, useState } from 'react'

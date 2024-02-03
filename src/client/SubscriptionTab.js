@@ -34,6 +34,7 @@ function Plan ({ title, children, planType, cancelAt, addedUsersCount }) {
   let actionButton = (
     <Button
       key='1' type={hover ? 'primary' : 'default'}
+      id={`dekart-${planType}-choose-plan`}
       disabled={waitForRedirect} loading={waitForRedirect}
       onClick={() => {
         setWaitForRedirect(true)
