@@ -17,6 +17,13 @@
     padding-top: 30px;
 }
 
+.rocketIcon {
+    background-image: url('./rocket.svg');
+    display: inline-block;
+    width: 64px;
+    height: 64px;
+}
+
 .workspace {
     width: 900px;
     display: flex;
