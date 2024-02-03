@@ -12,11 +12,16 @@ export default function DekartMenu () {
   const dispatch = useDispatch()
   const { authEnabled } = env
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
+  const user = useSelector(state => state.user)
   const ref = getRef(env, usage)
   return (
     <div className={styles.dekartMenu}>
       <Menu mode='horizontal' theme='dark'>
-        <Menu.SubMenu popupClassName={styles.subMenu} title={<MenuOutlined />} key='home' active='yes' href='/'>
+        <Menu.SubMenu
+          popupClassName={styles.subMenu} title={<MenuOutlined />} key='home' active='yes' disabled={
+          !(user && user.planType)
+        }
+        >
           <Menu.Item key='my'>
             <Link to='/'>{authEnabled ? 'My Reports' : 'Reports'}</Link>
           </Menu.Item>

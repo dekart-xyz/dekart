@@ -7,6 +7,7 @@ import Dropdown from 'antd/es/dropdown'
 import { AuthState } from '../proto/dekart_pb'
 import { authRedirect } from './lib/api'
 import classNames from 'classnames'
+import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 
 function getSignature (email) {
   if (!email) {
@@ -23,6 +24,7 @@ function getSignature (email) {
 function User ({ buttonDivider }) {
   const token = useSelector(state => state.token)
   const user = useSelector(state => state.user)
+  const history = useHistory()
   if (!user || !token) {
     return null
   }
@@ -40,9 +42,9 @@ function User ({ buttonDivider }) {
               disabled: true
             },
             {
-              label: 'Manage subscription',
+              label: 'Manage workspace',
               onClick: () => {
-                window.location.href = '/subscription'
+                history.push('/workspace')
               }
             },
             {

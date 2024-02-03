@@ -17,6 +17,7 @@ import ConnectionModal from './ConnectionModal'
 import Tooltip from 'antd/es/tooltip'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 import { PlanType } from '../proto/dekart_pb'
+import Onboarding from './Onboarding'
 
 function Loading () {
   return null
@@ -168,7 +169,7 @@ function ReportsHeader (
   const dispatch = useDispatch()
   const history = useHistory()
 
-  const subscription = useSelector(state => state.subscription)
+  const subscription = useSelector(state => state.workspace?.subscription)
   if (!subscription) {
     return null
   }
@@ -204,7 +205,7 @@ function ReportsHeader (
 
           )
         : (
-          <div className={styles.reportsHeaderTitle}>Manage reports</div>
+          <div className={styles.reportsHeaderTitle}>{reportFilter === 'connections' ? 'Manage connection' : 'Manage reports'}</div>
           )
       }
       <div className={styles.rightCornerAction}>
@@ -323,18 +324,6 @@ function OnboardingDiscoverableReports () {
   )
 }
 
-function Onboarding ({ icon, title, steps }) {
-  return (
-    <div className={styles.onboarding}>
-      <div className={styles.onboardingIcon}>{icon}</div>
-      <div className={styles.onboardingContent}>
-        <div className={styles.onboardingTitle}>{title}</div>
-        <div className={styles.onboardingSteps}>{steps}</div>
-      </div>
-    </div>
-  )
-}
-
 function NewVersion () {
   const release = useSelector(state => state.release)
   const env = useSelector(state => state.env)
@@ -368,7 +357,7 @@ export default function HomePage ({ reportFilter }) {
     dispatch(subscribeReports())
     return () => dispatch(unsubscribeReports())
   }, [dispatch])
-
+  console.log(reportsList, connectionsLoaded)
   return (
     <div className={styles.homePage}>
       <Header />

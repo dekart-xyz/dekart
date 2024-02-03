@@ -14,7 +14,7 @@ import { PlanType } from '../proto/dekart_pb'
 
 function CopyLinkButton () {
   const dispatch = useDispatch()
-  const subscription = useSelector(state => state.subscription)
+  const subscription = useSelector(state => state.workspace.subscription)
   if (!subscription) {
     return null
   }
@@ -32,7 +32,8 @@ function CopyLinkButton () {
 function ModalContent ({ reportId, discoverable, canWrite }) {
   const dispatch = useDispatch()
   const [discoverableSwitch, setDiscoverableSwitch] = useState(discoverable)
-  const subscription = useSelector(state => state.subscription)
+  const subscription = useSelector(state => state.workspace.subscription)
+  const workspaceName = useSelector(state => state.workspace.name)
 
   if (!subscription) {
     return null
@@ -46,12 +47,12 @@ function ModalContent ({ reportId, discoverable, canWrite }) {
           ? (
             <div className={styles.reportStatusDetails}>
               <div className={styles.reportStatusDetailsText}> Only you can access this report</div>
-              <div className={styles.manageSubscription}><a href='/subscription' target='_blank'>Manage subscription</a></div>
+              <div className={styles.manageSubscription}><a href='/workspace' target='_blank'>Manage workspace</a></div>
             </div>
             )
           : (
             <div className={styles.reportStatusDetails}>
-              <div className={styles.reportStatusDetailsText}> Everyone with a link and access to <span className={styles.origin}>{window.location.hostname}</span> can view this report</div>
+              <div className={styles.reportStatusDetailsText}> Everyone with a link and access to <span className={styles.origin}>{workspaceName}</span> workspace can view this report</div>
             </div>
             )}
       </div>
@@ -59,7 +60,7 @@ function ModalContent ({ reportId, discoverable, canWrite }) {
         ? (
           <div className={styles.discoverableStatus}>
             <div className={styles.discoverableStatusIcon}><FileSearchOutlined /></div>
-            <div className={styles.discoverableStatusLabel}>Make report discoverable by all users of <span className={styles.origin}>{window.location.hostname}</span> in Shared Reports</div>
+            <div className={styles.discoverableStatusLabel}>Make report discoverable by all users of <span className={styles.origin}>{workspaceName}</span> workspace in <a href='/shared'>Shared Reports</a></div>
             <div className={styles.discoverableStatusControl}>
               <Switch
                 checked={discoverable}

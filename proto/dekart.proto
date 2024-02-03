@@ -45,10 +45,103 @@ service Dekart {
 
     //CLOUD
 
+    //user
+    rpc RespondToInvite(RespondToInviteRequest) returns (RespondToInviteResponse) {}
+
     //subscriptions
     rpc CreateSubscription(CreateSubscriptionRequest) returns (CreateSubscriptionResponse) {}
-    rpc GetSubscription(GetSubscriptionRequest) returns (GetSubscriptionResponse) {}
     rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse) {}
+    rpc GetStripePortalSession(GetStripePortalSessionRequest) returns (GetStripePortalSessionResponse) {}
+
+    //workspace
+    rpc CreateWorkspace(CreateWorkspaceRequest) returns (CreateWorkspaceResponse) {}
+    rpc UpdateWorkspace(UpdateWorkspaceRequest) returns (UpdateWorkspaceResponse) {}
+    rpc GetWorkspace(GetWorkspaceRequest) returns (GetWorkspaceResponse) {}
+    rpc UpdateWorkspaceUser(UpdateWorkspaceUserRequest) returns (UpdateWorkspaceUserResponse) {}
+}
+
+message GetStripePortalSessionRequest {
+    string ui_url = 1;
+}
+
+message GetStripePortalSessionResponse {
+    string url = 1;
+}
+
+message UpdateWorkspaceUserRequest {
+    string email = 1;
+    enum UserUpdateType {
+        USER_UPDATE_TYPE_UNSPECIFIED = 0;
+        USER_UPDATE_TYPE_ADD = 1;
+        USER_UPDATE_TYPE_REMOVE = 2;
+    }
+    UserUpdateType user_update_type = 2;
+}
+
+message UpdateWorkspaceUserResponse {
+}
+
+message GetWorkspaceRequest {
+}
+
+message GetWorkspaceResponse {
+    Workspace Workspace = 1;
+    Subscription subscription = 2;
+    repeated User users = 3;
+    repeated WorkspaceInvite invites = 4;
+    int64 added_users_count = 5; // to not duplicate count logic in UI
+}
+
+message CreateWorkspaceRequest {
+    string workspace_name = 1;
+}
+
+message CreateWorkspaceResponse {
+}
+
+message UpdateWorkspaceRequest {
+    string workspace_name = 1;
+}
+
+message UpdateWorkspaceResponse {
+}
+
+message RespondToInviteRequest {
+    string invite_id = 1;
+    bool accept = 2;
+}
+
+message RespondToInviteResponse {
+
+}
+
+message GetInvitesRequest {
+}
+
+message WorkspaceInvite {
+    string workspace_id = 1;
+    string invite_id = 2;
+    string inviter_email = 3;
+    string workspace_name = 4;
+    int64 created_at = 5;
+}
+
+message GetInvitesResponse {
+    repeated WorkspaceInvite invites = 1;
+}
+
+enum UserStatus {
+    USER_STATUS_UNSPECIFIED = 0;
+    USER_STATUS_PENDING = 1;
+    USER_STATUS_ACTIVE = 2;
+    USER_STATUS_REMOVED = 3;
+    USER_STATUS_REJECTED = 4;
+}
+
+message User {
+    string email = 1;
+    int64 updated_at = 2;
+    UserStatus status = 3;
 }
 
 message SetDefaultConnectionRequest {
@@ -67,27 +160,25 @@ message RunAllQueriesResponse {
 }
 
 message CancelSubscriptionRequest {
+    string ui_url = 1;
 }
 
-message CancelSubscriptionResponse {}
-
-message GetSubscriptionRequest {
+message CancelSubscriptionResponse {
+    string redirect_url = 1;
 }
 
-message Organization {
+message Workspace {
     string id = 1;
     string name = 2;
-    bool personal = 3;
 }
 
 message Subscription {
     PlanType plan_type = 2;
-    bool active = 3;
-    int64 updated_at = 4;
-}
-
-message GetSubscriptionResponse {
-    Subscription subscription = 1;
+    int64 updated_at = 4; //seconds
+    string customer_id = 6;
+    string stripe_subscription_id = 7;
+    string stripe_customer_email = 8;
+    int64 cancel_at = 9; //seconds
 }
 
 enum PlanType {
@@ -121,8 +212,9 @@ message GetUserStreamResponse {
     string email = 3; // user email used to show user icon in UI
 
     // cloud
-    bool subscription_active = 103;
-    int64 subscription_update = 104;
+    string workspace_id = 101;
+    PlanType plan_type = 102;
+    int64 workspace_update = 103; // includes invites, members and subscription
 }
 
 message TestConnectionRequest {

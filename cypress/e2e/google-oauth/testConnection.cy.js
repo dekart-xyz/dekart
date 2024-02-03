@@ -1,5 +1,4 @@
 /* eslint-disable no-undef */
-import copy from '../../fixtures/copy.json'
 
 describe('basic query flow', () => {
   it('should make simple bigquery query and get ready status', () => {

@@ -44,9 +44,14 @@ const (
 	Dekart_GetConnectionList_FullMethodName       = "/Dekart/GetConnectionList"
 	Dekart_TestConnection_FullMethodName          = "/Dekart/TestConnection"
 	Dekart_SetDefaultConnection_FullMethodName    = "/Dekart/SetDefaultConnection"
+	Dekart_RespondToInvite_FullMethodName         = "/Dekart/RespondToInvite"
 	Dekart_CreateSubscription_FullMethodName      = "/Dekart/CreateSubscription"
-	Dekart_GetSubscription_FullMethodName         = "/Dekart/GetSubscription"
 	Dekart_CancelSubscription_FullMethodName      = "/Dekart/CancelSubscription"
+	Dekart_GetStripePortalSession_FullMethodName  = "/Dekart/GetStripePortalSession"
+	Dekart_CreateWorkspace_FullMethodName         = "/Dekart/CreateWorkspace"
+	Dekart_UpdateWorkspace_FullMethodName         = "/Dekart/UpdateWorkspace"
+	Dekart_GetWorkspace_FullMethodName            = "/Dekart/GetWorkspace"
+	Dekart_UpdateWorkspaceUser_FullMethodName     = "/Dekart/UpdateWorkspaceUser"
 )
 
 // DekartClient is the client API for Dekart service.
@@ -85,10 +90,17 @@ type DekartClient interface {
 	GetConnectionList(ctx context.Context, in *GetConnectionListRequest, opts ...grpc.CallOption) (*GetConnectionListResponse, error)
 	TestConnection(ctx context.Context, in *TestConnectionRequest, opts ...grpc.CallOption) (*TestConnectionResponse, error)
 	SetDefaultConnection(ctx context.Context, in *SetDefaultConnectionRequest, opts ...grpc.CallOption) (*SetDefaultConnectionResponse, error)
+	//user
+	RespondToInvite(ctx context.Context, in *RespondToInviteRequest, opts ...grpc.CallOption) (*RespondToInviteResponse, error)
 	//subscriptions
 	CreateSubscription(ctx context.Context, in *CreateSubscriptionRequest, opts ...grpc.CallOption) (*CreateSubscriptionResponse, error)
-	GetSubscription(ctx context.Context, in *GetSubscriptionRequest, opts ...grpc.CallOption) (*GetSubscriptionResponse, error)
 	CancelSubscription(ctx context.Context, in *CancelSubscriptionRequest, opts ...grpc.CallOption) (*CancelSubscriptionResponse, error)
+	GetStripePortalSession(ctx context.Context, in *GetStripePortalSessionRequest, opts ...grpc.CallOption) (*GetStripePortalSessionResponse, error)
+	//workspace
+	CreateWorkspace(ctx context.Context, in *CreateWorkspaceRequest, opts ...grpc.CallOption) (*CreateWorkspaceResponse, error)
+	UpdateWorkspace(ctx context.Context, in *UpdateWorkspaceRequest, opts ...grpc.CallOption) (*UpdateWorkspaceResponse, error)
+	GetWorkspace(ctx context.Context, in *GetWorkspaceRequest, opts ...grpc.CallOption) (*GetWorkspaceResponse, error)
+	UpdateWorkspaceUser(ctx context.Context, in *UpdateWorkspaceUserRequest, opts ...grpc.CallOption) (*UpdateWorkspaceUserResponse, error)
 }
 
 type dekartClient struct {
@@ -393,6 +405,15 @@ func (c *dekartClient) SetDefaultConnection(ctx context.Context, in *SetDefaultC
 	return out, nil
 }
 
+func (c *dekartClient) RespondToInvite(ctx context.Context, in *RespondToInviteRequest, opts ...grpc.CallOption) (*RespondToInviteResponse, error) {
+	out := new(RespondToInviteResponse)
+	err := c.cc.Invoke(ctx, Dekart_RespondToInvite_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *dekartClient) CreateSubscription(ctx context.Context, in *CreateSubscriptionRequest, opts ...grpc.CallOption) (*CreateSubscriptionResponse, error) {
 	out := new(CreateSubscriptionResponse)
 	err := c.cc.Invoke(ctx, Dekart_CreateSubscription_FullMethodName, in, out, opts...)
@@ -402,18 +423,54 @@ func (c *dekartClient) CreateSubscription(ctx context.Context, in *CreateSubscri
 	return out, nil
 }
 
-func (c *dekartClient) GetSubscription(ctx context.Context, in *GetSubscriptionRequest, opts ...grpc.CallOption) (*GetSubscriptionResponse, error) {
-	out := new(GetSubscriptionResponse)
-	err := c.cc.Invoke(ctx, Dekart_GetSubscription_FullMethodName, in, out, opts...)
+func (c *dekartClient) CancelSubscription(ctx context.Context, in *CancelSubscriptionRequest, opts ...grpc.CallOption) (*CancelSubscriptionResponse, error) {
+	out := new(CancelSubscriptionResponse)
+	err := c.cc.Invoke(ctx, Dekart_CancelSubscription_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *dekartClient) CancelSubscription(ctx context.Context, in *CancelSubscriptionRequest, opts ...grpc.CallOption) (*CancelSubscriptionResponse, error) {
-	out := new(CancelSubscriptionResponse)
-	err := c.cc.Invoke(ctx, Dekart_CancelSubscription_FullMethodName, in, out, opts...)
+func (c *dekartClient) GetStripePortalSession(ctx context.Context, in *GetStripePortalSessionRequest, opts ...grpc.CallOption) (*GetStripePortalSessionResponse, error) {
+	out := new(GetStripePortalSessionResponse)
+	err := c.cc.Invoke(ctx, Dekart_GetStripePortalSession_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) CreateWorkspace(ctx context.Context, in *CreateWorkspaceRequest, opts ...grpc.CallOption) (*CreateWorkspaceResponse, error) {
+	out := new(CreateWorkspaceResponse)
+	err := c.cc.Invoke(ctx, Dekart_CreateWorkspace_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) UpdateWorkspace(ctx context.Context, in *UpdateWorkspaceRequest, opts ...grpc.CallOption) (*UpdateWorkspaceResponse, error) {
+	out := new(UpdateWorkspaceResponse)
+	err := c.cc.Invoke(ctx, Dekart_UpdateWorkspace_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) GetWorkspace(ctx context.Context, in *GetWorkspaceRequest, opts ...grpc.CallOption) (*GetWorkspaceResponse, error) {
+	out := new(GetWorkspaceResponse)
+	err := c.cc.Invoke(ctx, Dekart_GetWorkspace_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) UpdateWorkspaceUser(ctx context.Context, in *UpdateWorkspaceUserRequest, opts ...grpc.CallOption) (*UpdateWorkspaceUserResponse, error) {
+	out := new(UpdateWorkspaceUserResponse)
+	err := c.cc.Invoke(ctx, Dekart_UpdateWorkspaceUser_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -456,10 +513,17 @@ type DekartServer interface {
 	GetConnectionList(context.Context, *GetConnectionListRequest) (*GetConnectionListResponse, error)
 	TestConnection(context.Context, *TestConnectionRequest) (*TestConnectionResponse, error)
 	SetDefaultConnection(context.Context, *SetDefaultConnectionRequest) (*SetDefaultConnectionResponse, error)
+	//user
+	RespondToInvite(context.Context, *RespondToInviteRequest) (*RespondToInviteResponse, error)
 	//subscriptions
 	CreateSubscription(context.Context, *CreateSubscriptionRequest) (*CreateSubscriptionResponse, error)
-	GetSubscription(context.Context, *GetSubscriptionRequest) (*GetSubscriptionResponse, error)
 	CancelSubscription(context.Context, *CancelSubscriptionRequest) (*CancelSubscriptionResponse, error)
+	GetStripePortalSession(context.Context, *GetStripePortalSessionRequest) (*GetStripePortalSessionResponse, error)
+	//workspace
+	CreateWorkspace(context.Context, *CreateWorkspaceRequest) (*CreateWorkspaceResponse, error)
+	UpdateWorkspace(context.Context, *UpdateWorkspaceRequest) (*UpdateWorkspaceResponse, error)
+	GetWorkspace(context.Context, *GetWorkspaceRequest) (*GetWorkspaceResponse, error)
+	UpdateWorkspaceUser(context.Context, *UpdateWorkspaceUserRequest) (*UpdateWorkspaceUserResponse, error)
 	mustEmbedUnimplementedDekartServer()
 }
 
@@ -542,14 +606,29 @@ func (UnimplementedDekartServer) TestConnection(context.Context, *TestConnection
 func (UnimplementedDekartServer) SetDefaultConnection(context.Context, *SetDefaultConnectionRequest) (*SetDefaultConnectionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetDefaultConnection not implemented")
 }
+func (UnimplementedDekartServer) RespondToInvite(context.Context, *RespondToInviteRequest) (*RespondToInviteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RespondToInvite not implemented")
+}
 func (UnimplementedDekartServer) CreateSubscription(context.Context, *CreateSubscriptionRequest) (*CreateSubscriptionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateSubscription not implemented")
 }
-func (UnimplementedDekartServer) GetSubscription(context.Context, *GetSubscriptionRequest) (*GetSubscriptionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetSubscription not implemented")
-}
 func (UnimplementedDekartServer) CancelSubscription(context.Context, *CancelSubscriptionRequest) (*CancelSubscriptionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CancelSubscription not implemented")
+}
+func (UnimplementedDekartServer) GetStripePortalSession(context.Context, *GetStripePortalSessionRequest) (*GetStripePortalSessionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetStripePortalSession not implemented")
+}
+func (UnimplementedDekartServer) CreateWorkspace(context.Context, *CreateWorkspaceRequest) (*CreateWorkspaceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateWorkspace not implemented")
+}
+func (UnimplementedDekartServer) UpdateWorkspace(context.Context, *UpdateWorkspaceRequest) (*UpdateWorkspaceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateWorkspace not implemented")
+}
+func (UnimplementedDekartServer) GetWorkspace(context.Context, *GetWorkspaceRequest) (*GetWorkspaceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetWorkspace not implemented")
+}
+func (UnimplementedDekartServer) UpdateWorkspaceUser(context.Context, *UpdateWorkspaceUserRequest) (*UpdateWorkspaceUserResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateWorkspaceUser not implemented")
 }
 func (UnimplementedDekartServer) mustEmbedUnimplementedDekartServer() {}
 
@@ -1023,6 +1102,24 @@ func _Dekart_SetDefaultConnection_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Dekart_RespondToInvite_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RespondToInviteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).RespondToInvite(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_RespondToInvite_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).RespondToInvite(ctx, req.(*RespondToInviteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Dekart_CreateSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateSubscriptionRequest)
 	if err := dec(in); err != nil {
@@ -1041,24 +1138,6 @@ func _Dekart_CreateSubscription_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_GetSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetSubscriptionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DekartServer).GetSubscription(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Dekart_GetSubscription_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).GetSubscription(ctx, req.(*GetSubscriptionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Dekart_CancelSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CancelSubscriptionRequest)
 	if err := dec(in); err != nil {
@@ -1073,6 +1152,96 @@ func _Dekart_CancelSubscription_Handler(srv interface{}, ctx context.Context, de
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DekartServer).CancelSubscription(ctx, req.(*CancelSubscriptionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_GetStripePortalSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetStripePortalSessionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).GetStripePortalSession(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_GetStripePortalSession_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).GetStripePortalSession(ctx, req.(*GetStripePortalSessionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_CreateWorkspace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateWorkspaceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).CreateWorkspace(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_CreateWorkspace_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).CreateWorkspace(ctx, req.(*CreateWorkspaceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_UpdateWorkspace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateWorkspaceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).UpdateWorkspace(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_UpdateWorkspace_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).UpdateWorkspace(ctx, req.(*UpdateWorkspaceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_GetWorkspace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetWorkspaceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).GetWorkspace(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_GetWorkspace_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).GetWorkspace(ctx, req.(*GetWorkspaceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_UpdateWorkspaceUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateWorkspaceUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).UpdateWorkspaceUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_UpdateWorkspaceUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).UpdateWorkspaceUser(ctx, req.(*UpdateWorkspaceUserRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1173,16 +1342,36 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Dekart_SetDefaultConnection_Handler,
 		},
 		{
+			MethodName: "RespondToInvite",
+			Handler:    _Dekart_RespondToInvite_Handler,
+		},
+		{
 			MethodName: "CreateSubscription",
 			Handler:    _Dekart_CreateSubscription_Handler,
 		},
 		{
-			MethodName: "GetSubscription",
-			Handler:    _Dekart_GetSubscription_Handler,
-		},
-		{
 			MethodName: "CancelSubscription",
 			Handler:    _Dekart_CancelSubscription_Handler,
+		},
+		{
+			MethodName: "GetStripePortalSession",
+			Handler:    _Dekart_GetStripePortalSession_Handler,
+		},
+		{
+			MethodName: "CreateWorkspace",
+			Handler:    _Dekart_CreateWorkspace_Handler,
+		},
+		{
+			MethodName: "UpdateWorkspace",
+			Handler:    _Dekart_UpdateWorkspace_Handler,
+		},
+		{
+			MethodName: "GetWorkspace",
+			Handler:    _Dekart_GetWorkspace_Handler,
+		},
+		{
+			MethodName: "UpdateWorkspaceUser",
+			Handler:    _Dekart_UpdateWorkspaceUser_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

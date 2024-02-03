@@ -110,6 +110,9 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 
 func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportListStreamServer, sequence int64) error {
 	claims := user.GetClaims(ctx)
+	if checkWorkspace(ctx).ID == "" {
+		return nil
+	}
 	reportRows, err := s.db.QueryContext(ctx,
 		`select
 			id,
@@ -121,27 +124,10 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			updated_at,
 			created_at
 		from reports as r
-		join (
-			-- current user organization members
-			SELECT
-				DISTINCT ON (email)
-				organization_id,
-				email,
-				active
-			FROM organization_log
-			-- current user organization
-			where organization_id in (
-				SELECT organization_id
-				FROM organization_log
-				WHERE email = $1
-				ORDER BY created_at DESC
-				LIMIT 1
-			)
-			ORDER BY email, created_at DESC
-		) as o on r.author_email = o.email
-		where author_email=$1 or (discoverable=true and archived=false)
+		where (author_email=$1 or (discoverable=true and archived=false)) and workspace_id=$2
 		order by updated_at desc`,
 		claims.Email,
+		checkWorkspace(ctx).ID,
 	)
 	if err != nil {
 		log.Err(err).Send()
@@ -184,18 +170,18 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 	return nil
 }
 
-func (s Server) sendUserStreamResponse(ctx context.Context, srv proto.Dekart_GetUserStreamServer, sequence int64) error {
+func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.Dekart_GetUserStreamServer, sequence int64) error {
+	ctx := s.SetWorkspaceContext(incomingCtx) // this is needed as workspace could have been changed
 	claims := user.GetClaims(ctx)
 
-	// subscription
-	sub, err := s.getSubscription(ctx, claims.Email)
+	// connection update
+	connectionUpdate, err := s.getLastConnectionUpdate(ctx)
 	if err != nil {
 		log.Err(err).Send()
 		return status.Errorf(codes.Internal, err.Error())
 	}
 
-	// connection update
-	connectionUpdate, err := s.getLastConnectionUpdate(ctx)
+	workspaceUpdate, err := s.getWorkspaceUpdate(ctx)
 	if err != nil {
 		log.Err(err).Send()
 		return status.Errorf(codes.Internal, err.Error())
@@ -205,10 +191,11 @@ func (s Server) sendUserStreamResponse(ctx context.Context, srv proto.Dekart_Get
 		StreamOptions: &proto.StreamOptions{
 			Sequence: sequence,
 		},
-		ConnectionUpdate:   connectionUpdate,
-		Email:              claims.Email,
-		SubscriptionActive: sub.Active,
-		SubscriptionUpdate: sub.UpdatedAt,
+		ConnectionUpdate: connectionUpdate,
+		Email:            claims.Email,
+		WorkspaceUpdate:  workspaceUpdate,
+		WorkspaceId:      checkWorkspace(ctx).ID,
+		PlanType:         checkWorkspace(ctx).PlanType,
 	}
 	err = srv.Send(&res)
 	if err != nil {
