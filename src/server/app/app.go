@@ -109,8 +109,13 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 	}
 	api.Use(mux.CORSMethodMiddleware(router))
 
-	staticPath := os.Getenv("DEKART_STATIC_FILES")
+	// Health check
+	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}).Methods("GET")
 
+	// Serve static files
+	staticPath := os.Getenv("DEKART_STATIC_FILES")
 	if staticPath != "" {
 		staticFilesHandler := NewStaticFilesHandler(staticPath)
 
@@ -124,9 +129,6 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		router.HandleFunc("/400", func(w http.ResponseWriter, r *http.Request) {
 			staticFilesHandler.ServeIndex(ResponseWriter{w: w, statusCode: http.StatusBadRequest}, r)
 		})
-		router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
-		}).Methods("GET")
 		router.PathPrefix("/").Handler(staticFilesHandler)
 	} else {
 		log.Warn().Msg("DEKART_STATIC_FILES is empty; UI will not be served")

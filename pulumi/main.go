@@ -59,11 +59,21 @@ func main() {
 			return err
 		}
 
+		versionId := time.Now().Format("20060102150405")
+
 		// Create App Engine Flexible App Version
-		_, err = appengine.NewFlexibleAppVersion(ctx, "dekart-cloud", &appengine.FlexibleAppVersionArgs{
-			Service:   pulumi.String("default"),
-			Runtime:   pulumi.String("custom"),
-			VersionId: pulumi.String(time.Now().Format("20060102150405")), // Get the current time and format it as a string
+		ver, err := appengine.NewFlexibleAppVersion(ctx, "dekart-cloud", &appengine.FlexibleAppVersionArgs{
+			Service:       pulumi.String("default"),
+			Runtime:       pulumi.String("custom"),
+			ServingStatus: pulumi.String("SERVING"),
+			VersionId:     pulumi.String(versionId), // Get the current time and format it as a string
+			Handlers: appengine.FlexibleAppVersionHandlerArray{
+				appengine.FlexibleAppVersionHandlerArgs{
+					UrlRegex:      pulumi.String("/.*"),
+					Script:        &appengine.FlexibleAppVersionHandlerScriptArgs{ScriptPath: pulumi.String("./*")},
+					SecurityLevel: pulumi.String("SECURE_ALWAYS"),
+				},
+			},
 			EnvVariables: pulumi.StringMap{
 				"DEKART_LOG_DEBUG":              pulumi.String("1"),
 				"DEKART_POSTGRES_DB":            databaseName,
@@ -86,20 +96,48 @@ func main() {
 					Image: pulumi.String(fmt.Sprintf("europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart@%s", imageDigest)),
 				},
 			},
+			// AutomaticScaling: &appengine.FlexibleAppVersionAutomaticScalingArgs{
+			// 	MinTotalInstances: pulumi.Int(0),
+			// 	MaxTotalInstances: pulumi.Int(1),
+			// },
 			ManualScaling: &appengine.FlexibleAppVersionManualScalingArgs{
 				Instances: pulumi.Int(1),
 			},
 			Resources: &appengine.FlexibleAppVersionResourcesArgs{
 				MemoryGb: pulumi.Float64(2.0),
 			},
-			LivenessCheck:  &appengine.FlexibleAppVersionLivenessCheckArgs{Path: pulumi.String("/health")},
-			ReadinessCheck: &appengine.FlexibleAppVersionReadinessCheckArgs{Path: pulumi.String("/health")},
+			LivenessCheck: &appengine.FlexibleAppVersionLivenessCheckArgs{
+				Path:          pulumi.String("/health"),
+				CheckInterval: pulumi.String("60s"),
+			},
+			ReadinessCheck: &appengine.FlexibleAppVersionReadinessCheckArgs{
+				Path:          pulumi.String("/health"),
+				CheckInterval: pulumi.String("60s"),
+			},
 			BetaSettings: pulumi.StringMap{
 				"cloud_sql_instances": db.ConnectionName.ApplyT(func(cn string) string {
 					return fmt.Sprintf("%s=tcp:5432", cn)
 				}).(pulumi.StringOutput),
 			},
+			NoopOnDestroy: pulumi.Bool(false),
 		})
+
+		if err != nil {
+			return err
+		}
+
+		// Split traffic to the new version
+		allocations := pulumi.StringMap{}
+		allocations[versionId] = pulumi.String("1.0")
+
+		_, err = appengine.NewEngineSplitTraffic(ctx, "dekart-cloud-split", &appengine.EngineSplitTrafficArgs{
+			Service:        ver.Service,
+			MigrateTraffic: pulumi.Bool(false), // immediately move 100% of traffic to the new version (default is true, which would move traffic gradually over time
+			Split: appengine.EngineSplitTrafficSplitArgs{
+				Allocations: allocations,
+			},
+		})
+
 		if err != nil {
 			return err
 		}

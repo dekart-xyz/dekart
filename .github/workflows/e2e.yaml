@@ -46,7 +46,7 @@ jobs:
     needs: build
     services:
       postgres:
-        image: postgres
+        image: postgres:15
         env:
           POSTGRES_PASSWORD: ${{ env.DEKART_POSTGRES_PASSWORD }}
           POSTGRES_USER: ${{ env.DEKART_POSTGRES_USER }}
