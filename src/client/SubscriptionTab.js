@@ -97,14 +97,15 @@ function Plans () {
           name='personal'
           selected={user.planType === PlanType.TYPE_PERSONAL}
           price='$0'
-          description='for personal use and evaluation'
+          description='unlimited single person use'
                />}
         planType={PlanType.TYPE_PERSONAL}
       >
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Query data from BigQuery</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text> Access private datasets</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text> Unlimited maps</Text></p>
-        <p><Text>No collaborators</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Unlimited BigQuery connections</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Upload GeoJSON/CSV</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Unlimited WebGL maps</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Google SSO</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Single user access</Text></p>
       </Plan>
       <Plan
         addedUsersCount={workspace.addedUsersCount}
@@ -118,10 +119,11 @@ function Plans () {
         planType={PlanType.TYPE_TEAM}
         cancelAt={workspace?.subscription?.cancelAt}
       >
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text> Query data from BigQuery</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text> Access private datasets</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text> Unlimited maps</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> Up to 20 collaborators</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Unlimited BigQuery connections</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Upload GeoJSON/CSV</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Unlimited WebGL maps</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Google SSO</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Add up to 20 collaborators</Text></p>
       </Plan>
     </div>
   )
