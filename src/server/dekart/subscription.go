@@ -117,8 +117,9 @@ func (s Server) createCheckoutSession(ctx context.Context, ws WorkspaceInfo, req
 				Quantity: stripe.Int64(1),
 			},
 		},
-		SuccessURL: stripe.String(req.UiUrl),
-		CancelURL:  stripe.String(req.UiUrl),
+		SuccessURL:          stripe.String(req.UiUrl),
+		CancelURL:           stripe.String(req.UiUrl),
+		AllowPromotionCodes: stripe.Bool(true),
 	}
 
 	return session.New(params)
