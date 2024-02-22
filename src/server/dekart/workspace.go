@@ -27,7 +27,7 @@ func (s Server) getWorkspaceUpdate(ctx context.Context) (int64, error) {
 			SELECT
 				max(created_at) as updated_at
 			FROM confirmation_log
-		)
+		) max_updated_at
 	`).Scan(&updated_at)
 	if err != nil {
 		log.Err(err).Send()
