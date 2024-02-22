@@ -6,42 +6,11 @@ env:
   DEKART_POSTGRES_PASSWORD: dekart
   DEKART_POSTGRES_USER: postgres
   DEKART_POSTGRES_DB: dekart
-  AWS_REGION: us-east-1
   IMAGE_CACHE_KEY: e2etest-${{ github.run_id }}-${{ github.run_attempt }}
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out the repo
-        uses: actions/checkout@v2
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v0
-        with:
-          service_account_key: ${{ secrets.PRIVATE_GITHUB_ACTIONS_DEKART_CLOUD }}
-          project_id: dekart-cloud
-      - name: Configure Docker to use the gcloud command-line tool as a credential helper
-        run: gcloud auth configure-docker europe-west3-docker.pkg.dev
-      - name: Create .npmrc
-        run: |
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_GH_TOKEN }}" > .npmrc
-          echo "@dekart-xyz:registry=https://npm.pkg.github.com" >> .npmrc
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      - name: E2E build
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:${{ env.IMAGE_CACHE_KEY }}
-          target: e2etest
-          cache-from: type=registry,ref=europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:buildcache
-          cache-to: type=registry,ref=europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:buildcache,mode=max
   cloud:
     runs-on: ubuntu-latest
-    needs: build
     services:
       postgres:
         image: postgres:15

@@ -59,7 +59,11 @@ func main() {
 			return err
 		}
 
-		versionId := time.Now().Format("20060102150405")
+		versionId := os.Getenv("VERSION_ID")
+
+		if versionId == "" {
+			versionId = time.Now().Format("200601021504")
+		}
 
 		// Create App Engine Flexible App Version
 		ver, err := appengine.NewFlexibleAppVersion(ctx, "dekart-cloud", &appengine.FlexibleAppVersionArgs{

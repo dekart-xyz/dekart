@@ -1,25 +1,12 @@
-
-name: Push to main
+name: Release
 
 on:
-  push:
-    branches:
-      - main
+  release:
+    types: [published]
 
 jobs:
-  build:
-    with:
-      build_app: true
-      build_e2e: true
-    uses: ./.github/workflows/build.yaml
-    secrets: inherit
-  e2e_tests:
-    needs: [build]
-    uses: ./.github/workflows/e2e.yaml
-    secrets: inherit
-  pulumi_preview:
+  deploy:
     runs-on: ubuntu-latest
-    needs: build
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -48,10 +35,11 @@ jobs:
       - name: pulumi preview
         uses: pulumi/actions@v5
         with:
-          command: preview
+          command: up
           cloud-url: gs://dekart-cloud-pulumi
           stack-name: prod
           work-dir: ./pulumi
         env:
           PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
           IMAGE_DIGEST: ${{ steps.get_digest.outputs.digest }}
+          VERSION_ID: ${{ github.event.release.tag_name }}

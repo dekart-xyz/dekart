@@ -23,8 +23,15 @@ jobs:
     if: needs.changes.outputs.go == 'true'
     uses: ./.github/workflows/go_test.yaml
     secrets: inherit
-  e2e_tests:
+  build:
     needs: changes
+    if: needs.changes.outputs.e2e == 'true'
+    with:
+      build_e2e: true
+    uses: ./.github/workflows/build.yaml
+    secrets: inherit
+  e2e_tests:
+    needs: [changes, build]
     uses: ./.github/workflows/e2e.yaml
     if: needs.changes.outputs.e2e == 'true' && github.event.pull_request.head.repo.full_name == github.repository
     secrets: inherit
