@@ -15,8 +15,8 @@ func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
 		cfg := config.New(ctx, "")
 
-		imageDigest := os.Getenv("IMAGE_DIGEST")
-		ctx.Log.Info(fmt.Sprintf("Using image digest: %s", imageDigest), nil)
+		image := os.Getenv("IMAGE_DIGEST")
+		ctx.Log.Info(fmt.Sprintf("Using image digest: %s", image), nil)
 
 		// Create a PostgreSQL Cloud SQL Database Instance
 		db, err := sql.NewDatabaseInstance(ctx, "cloud-db", &sql.DatabaseInstanceArgs{
@@ -97,7 +97,7 @@ func main() {
 			},
 			Deployment: &appengine.FlexibleAppVersionDeploymentArgs{
 				Container: &appengine.FlexibleAppVersionDeploymentContainerArgs{
-					Image: pulumi.String(fmt.Sprintf("europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart@%s", imageDigest)),
+					Image: pulumi.String(image),
 				},
 			},
 			// AutomaticScaling: &appengine.FlexibleAppVersionAutomaticScalingArgs{
