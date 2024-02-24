@@ -3,6 +3,7 @@ config:
   dekart-cloud:DEKART_GOOGLE_OAUTH_CLIENT_ID: 398860824064-rqa4t679cocjcsg2do0kseh6otsm5dq2.apps.googleusercontent.com
   dekart-cloud:DEKART_GOOGLE_OAUTH_SECRET:
     secure: v1:0pu91gVe+g/prMot:y42ya0oIF13krubezdtcDXRa0PAAIWKRZp18YJLpV7QOiAbpQT+fw+cFHu8spBcBrXgY
+  dekart-cloud:DEKART_HTML_CUSTOM_CODE: <script defer data-domain="cloud.dekart.xyz" src="https://plausible.io/js/script.js"></script>
   dekart-cloud:DEKART_MAPBOX_TOKEN: pk.eyJ1IjoidmxhZGktZGVrYXJ0IiwiYSI6ImNsc3Fid2JiODB2cWQya25zcW5mdHl0Z3cifQ.kQSyxta1j8UpoldFdwaE4Q
   dekart-cloud:DEKART_POSTGRES_PASSWORD:
     secure: v1:GAjnlwqNVA6EbZCN:Hyq7MdOVYJiItb2a69Te1SDT2TeguxeEhmyL6aLahnnHO2xwEXTH+0Xh
