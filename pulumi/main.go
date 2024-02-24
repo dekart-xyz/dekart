@@ -94,6 +94,7 @@ func main() {
 				"STRIPE_SECRET_KEY":             cfg.RequireSecret("STRIPE_SECRET_KEY"),
 				"STRIPE_PRICE_ID":               pulumi.String(cfg.Require("STRIPE_PRICE_ID")),
 				"DEKART_MAPBOX_TOKEN":           pulumi.String(cfg.Require("DEKART_MAPBOX_TOKEN")),
+				"DEKART_HTML_CUSTOM_CODE":       pulumi.String(cfg.Require("DEKART_HTML_CUSTOM_CODE")),
 			},
 			Deployment: &appengine.FlexibleAppVersionDeploymentArgs{
 				Container: &appengine.FlexibleAppVersionDeploymentContainerArgs{
