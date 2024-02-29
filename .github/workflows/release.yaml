@@ -48,9 +48,10 @@ jobs:
         id: docker_build
         uses: docker/build-push-action@v4
         with:
-          cache-from: type=gha,scope=dekart
-          cache-to: type=gha,mode=max,scope=dekart
           push: true
           context: .
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=dekartxyz/dekart:buildcache
+          cache-to: type=registry,ref=dekartxyz/dekart:buildcache,mode=max
+

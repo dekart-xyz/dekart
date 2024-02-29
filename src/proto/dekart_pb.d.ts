@@ -607,6 +607,7 @@ export namespace GetEnvResponse {
       TYPE_REQUIRE_GOOGLE_OAUTH: 10;
       TYPE_BIGQUERY_PROJECT_ID: 11;
       TYPE_CLOUD_STORAGE_BUCKET: 12;
+      TYPE_UX_ACCESS_ERROR_INFO_HTML: 13;
     }
 
     export const Type: TypeMap;

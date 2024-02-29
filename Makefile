@@ -162,7 +162,10 @@ docker: # build docker for local use
 	docker buildx build --push --tag ${DEKART_DOCKER_DEV_TAG} -o type=image --platform=linux/amd64 -f ./Dockerfile .
 
 up:
-	docker-compose  --env-file .env up
+	docker-compose  --env-file .env --profile local up
+
+cloudsql:
+	docker-compose  --env-file .env --profile cloudsql up
 
 rm:
 	docker-compose rm
@@ -172,16 +175,6 @@ server:
 
 npm:
 	npm i --legacy-peer-deps
-
-cloud-sql-proxy-docker:
-	docker build -t cloud-sql-proxy -f ./cloud_sql_proxy/Dockerfile .
-
-cloud-sql-proxy: cloud-sql-proxy-docker
-	docker run -it --rm \
-		-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
-		--env-file .env \
-		-p 5432:5432 \
-		cloud-sql-proxy
 
 prerelease:
 	npm version prerelease --preid=rc
