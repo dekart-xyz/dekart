@@ -2,6 +2,8 @@ version: "3.9"
 services:
   db:
     image: postgres
+    profiles:
+      - local
     ports:
       - "5432:5432"
     environment:

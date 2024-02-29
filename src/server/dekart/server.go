@@ -69,7 +69,7 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 		// authenticated user
 		homePageUrl := os.Getenv("DEKART_UX_HOMEPAGE")
 		if homePageUrl == "" {
-			homePageUrl = "https://dekart.xyz/"
+			homePageUrl = "https://dekart.xyz/cloud/"
 		}
 		variables = []*proto.GetEnvResponse_Variable{
 			{
@@ -79,6 +79,10 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_UX_DATA_DOCUMENTATION,
 				Value: os.Getenv("DEKART_UX_DATA_DOCUMENTATION"),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_UX_ACCESS_ERROR_INFO_HTML,
+				Value: os.Getenv("DEKART_UX_ACCESS_ERROR_INFO_HTML"),
 			},
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_UX_HOMEPAGE,
