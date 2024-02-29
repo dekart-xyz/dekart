@@ -23,6 +23,11 @@
     word-break: break-all;
 }
 
+.errorInfoHtml {
+    margin-left: 28px;
+    padding: 10px 0;
+}
+
 .status {
     flex: 1;
     margin-right: 0px;
