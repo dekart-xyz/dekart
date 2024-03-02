@@ -200,7 +200,8 @@ function SampleQuery ({ queryId }) {
         type='link' onClick={() => {
           dispatch(queryChanged(queryId, UX_SAMPLE_QUERY_SQL))
         }}
-      >Sample Query
+        title='Try running a sample query'
+      >Try sample SQL query
       </Button>
     </div>
   )
