@@ -1,12 +1,15 @@
 import { useHistory } from 'react-router'
 import styles from './ReportHeaderButtons.module.css'
 import Button from 'antd/es/button'
-import { FundProjectionScreenOutlined, EditOutlined, ConsoleSqlOutlined, ForkOutlined, ReloadOutlined, LoadingOutlined } from '@ant-design/icons'
+import { FundProjectionScreenOutlined, DownloadOutlined, EditOutlined, ConsoleSqlOutlined, ForkOutlined, ReloadOutlined, LoadingOutlined } from '@ant-design/icons'
 import { useDispatch, useSelector } from 'react-redux'
 import ShareButton from './ShareButton'
 import { forkReport, saveMap } from './actions/report'
 import { runAllQueries } from './actions/query'
 import { Query } from '../proto/dekart_pb'
+import { toggleModal } from '@dekart-xyz/kepler.gl/dist/actions/ui-state-actions'
+import { EXPORT_DATA_ID, EXPORT_IMAGE_ID, EXPORT_MAP_ID } from '@dekart-xyz/kepler.gl/dist/constants'
+import Dropdown from 'antd/es/dropdown'
 
 function ForkButton ({ reportId, disabled, primary }) {
   const dispatch = useDispatch()
@@ -92,6 +95,7 @@ function EditModeButtons ({ changed }) {
         title='Present Mode'
         onClick={() => history.replace(`/reports/${id}`)}
       />
+      <ExportDropdown />
       <ShareButton reportId={id} discoverable={discoverable} isAuthor={isAuthor} allowEdit={allowEdit} />
       {canWrite
         ? (
@@ -112,6 +116,45 @@ function EditModeButtons ({ changed }) {
   )
 }
 
+function ExportDropdown () {
+  const dispatch = useDispatch()
+  const items = [
+    {
+      label: 'Export:',
+      disabled: true
+    },
+    {
+      type: 'divider'
+    },
+    {
+      label: 'Map',
+      onClick: () => {
+        dispatch(toggleModal(EXPORT_MAP_ID))
+      }
+    },
+    {
+      label: 'Data',
+      onClick: () => {
+        dispatch(toggleModal(EXPORT_DATA_ID))
+      }
+    },
+    {
+      label: 'Image',
+      onClick: () => {
+        dispatch(toggleModal(EXPORT_IMAGE_ID))
+      }
+    }
+  ]
+  return (
+    <Dropdown menu={{ items }} placement='topLeft'>
+      <Button
+        type='text'
+        icon={<DownloadOutlined />}
+      />
+    </Dropdown>
+  )
+}
+
 function ViewModeButtons () {
   const history = useHistory()
   const { id, discoverable, canWrite, allowEdit, isAuthor } = useSelector(state => state.report)
@@ -120,6 +163,7 @@ function ViewModeButtons () {
     return (
       <div className={styles.reportHeaderButtons}>
         <RefreshButton />
+        <ExportDropdown />
         <ShareButton reportId={id} discoverable={discoverable} isAuthor={isAuthor} allowEdit={allowEdit} />
         <ForkButton reportId={id} disabled={!canSave} />
         <Button
@@ -142,6 +186,7 @@ function ViewModeButtons () {
         onClick={() => history.replace(`/reports/${id}/source`)}
         title='View SQL source'
       />
+      <ExportDropdown />
       <ShareButton reportId={id} discoverable={discoverable} isAuthor={isAuthor} allowEdit={allowEdit} />
       <ForkButton reportId={id} disabled={!canSave} />
     </div>
