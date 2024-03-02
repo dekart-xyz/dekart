@@ -608,6 +608,8 @@ export namespace GetEnvResponse {
       TYPE_BIGQUERY_PROJECT_ID: 11;
       TYPE_CLOUD_STORAGE_BUCKET: 12;
       TYPE_UX_ACCESS_ERROR_INFO_HTML: 13;
+      TYPE_UX_NOT_FOUND_ERROR_INFO_HTML: 14;
+      TYPE_UX_SAMPLE_QUERY_SQL: 15;
     }
 
     export const Type: TypeMap;

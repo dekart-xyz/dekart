@@ -101,7 +101,7 @@ function QueryEditor ({ queryId, queryText, onChange, canWrite }) {
           />
         )}
       </AutoSizer>
-      {queryText ? null : <DataDocumentationLink className={styles.dataDoc} />}
+      {queryText ? null : <SampleQuery queryId={queryId} />}
     </div>
   )
 }
@@ -115,7 +115,9 @@ function QueryStatus ({ children, query }) {
     style = styles.error
     errorMessage = query.jobError
     if (env.variables.UX_ACCESS_ERROR_INFO_HTML && errorMessage.includes('Error 403')) {
-      errorInfoHtml = env.variables.UX_ACCESS_ERROR_INFO_HTML
+      errorInfoHtml = ''
+    } else if (env.variables.UX_NOT_FOUND_ERROR_INFO_HTML && errorMessage.includes('Error 404')) {
+      errorInfoHtml = env.variables.UX_NOT_FOUND_ERROR_INFO_HTML
     }
     icon = <ExclamationCircleTwoTone className={styles.icon} twoToneColor='#F66B55' />
   }
@@ -175,6 +177,32 @@ function QueryStatus ({ children, query }) {
       </div>
       {children ? <div className={styles.button}>{children}</div> : null}
 
+    </div>
+  )
+}
+
+function SampleQuery ({ queryId }) {
+  const UX_SAMPLE_QUERY_SQL = useSelector(state => state.env.variables.UX_SAMPLE_QUERY_SQL)
+  const queryStatus = useSelector(state => state.queryStatus[queryId])
+  const downloadingSource = queryStatus?.downloadingSource
+  const dispatch = useDispatch()
+  if (downloadingSource) {
+    // do not show sample query while downloading source
+    return null
+  }
+  if (!UX_SAMPLE_QUERY_SQL) {
+    // no sample query, show data documentation link
+    return <DataDocumentationLink className={styles.dataDoc} />
+  }
+  return (
+    <div className={styles.sampleQuery}>
+      <Button
+        type='link' onClick={() => {
+          dispatch(queryChanged(queryId, UX_SAMPLE_QUERY_SQL))
+        }}
+        title='Try running a sample query'
+      >Try sample SQL query
+      </Button>
     </div>
   )
 }
