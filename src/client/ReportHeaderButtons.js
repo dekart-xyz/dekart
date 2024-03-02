@@ -114,12 +114,13 @@ function EditModeButtons ({ changed }) {
 
 function ViewModeButtons () {
   const history = useHistory()
-  const { id, canWrite } = useSelector(state => state.report)
+  const { id, discoverable, canWrite, allowEdit, isAuthor } = useSelector(state => state.report)
   const { canSave } = useSelector(state => state.reportStatus)
   if (canWrite) {
     return (
       <div className={styles.reportHeaderButtons}>
         <RefreshButton />
+        <ShareButton reportId={id} discoverable={discoverable} isAuthor={isAuthor} allowEdit={allowEdit} />
         <ForkButton reportId={id} disabled={!canSave} />
         <Button
           type='primary'
@@ -128,6 +129,7 @@ function ViewModeButtons () {
           onClick={() => history.replace(`/reports/${id}/source`)}
         >Edit
         </Button>
+
       </div>
     )
   }
@@ -140,6 +142,7 @@ function ViewModeButtons () {
         onClick={() => history.replace(`/reports/${id}/source`)}
         title='View SQL source'
       />
+      <ShareButton reportId={id} discoverable={discoverable} isAuthor={isAuthor} allowEdit={allowEdit} />
       <ForkButton reportId={id} disabled={!canSave} />
     </div>
   )
