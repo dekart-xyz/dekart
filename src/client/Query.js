@@ -115,7 +115,9 @@ function QueryStatus ({ children, query }) {
     style = styles.error
     errorMessage = query.jobError
     if (env.variables.UX_ACCESS_ERROR_INFO_HTML && errorMessage.includes('Error 403')) {
-      errorInfoHtml = env.variables.UX_ACCESS_ERROR_INFO_HTML
+      errorInfoHtml = ''
+    } else if (env.variables.UX_NOT_FOUND_ERROR_INFO_HTML && errorMessage.includes('Error 404')) {
+      errorInfoHtml = env.variables.UX_NOT_FOUND_ERROR_INFO_HTML
     }
     icon = <ExclamationCircleTwoTone className={styles.icon} twoToneColor='#F66B55' />
   }
