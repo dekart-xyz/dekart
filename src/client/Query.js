@@ -101,7 +101,7 @@ function QueryEditor ({ queryId, queryText, onChange, canWrite }) {
           />
         )}
       </AutoSizer>
-      {queryText ? null : <DataDocumentationLink className={styles.dataDoc} />}
+      {queryText ? null : <SampleQuery queryId={queryId} />}
     </div>
   )
 }
@@ -177,6 +177,31 @@ function QueryStatus ({ children, query }) {
       </div>
       {children ? <div className={styles.button}>{children}</div> : null}
 
+    </div>
+  )
+}
+
+function SampleQuery ({ queryId }) {
+  const UX_SAMPLE_QUERY_SQL = useSelector(state => state.env.variables.UX_SAMPLE_QUERY_SQL)
+  const queryStatus = useSelector(state => state.queryStatus[queryId])
+  const downloadingSource = queryStatus?.downloadingSource
+  const dispatch = useDispatch()
+  if (downloadingSource) {
+    // do not show sample query while downloading source
+    return null
+  }
+  if (!UX_SAMPLE_QUERY_SQL) {
+    // no sample query, show data documentation link
+    return <DataDocumentationLink className={styles.dataDoc} />
+  }
+  return (
+    <div className={styles.sampleQuery}>
+      <Button
+        type='link' onClick={() => {
+          dispatch(queryChanged(queryId, UX_SAMPLE_QUERY_SQL))
+        }}
+      >Sample Query
+      </Button>
     </div>
   )
 }
