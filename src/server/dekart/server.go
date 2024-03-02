@@ -85,6 +85,14 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 				Value: os.Getenv("DEKART_UX_ACCESS_ERROR_INFO_HTML"),
 			},
 			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_UX_NOT_FOUND_ERROR_INFO_HTML,
+				Value: os.Getenv("DEKART_UX_NOT_FOUND_ERROR_INFO_HTML"),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_UX_SAMPLE_QUERY_SQL,
+				Value: os.Getenv("DEKART_UX_SAMPLE_QUERY_SQL"),
+			},
+			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_UX_HOMEPAGE,
 				Value: homePageUrl,
 			},
