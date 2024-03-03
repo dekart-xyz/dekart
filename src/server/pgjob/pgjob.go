@@ -11,6 +11,7 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/job"
 	"dekart/src/server/storage"
+
 	_ "github.com/lib/pq" // postgres driver
 	"github.com/rs/zerolog/log"
 )
@@ -27,7 +28,7 @@ type Store struct {
 }
 
 func NewStore() *Store {
-	dbConnStr := os.Getenv("DEKART_POSTGRES_DATA_CONNECTION")
+	dbConnStr := os.Getenv("DEKART_POSTGRES_DATASOURCE_CONNECTION")
 	db, err := sql.Open("postgres", dbConnStr)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect to postgres")

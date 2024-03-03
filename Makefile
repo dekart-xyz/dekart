@@ -189,8 +189,6 @@ version:
 minor: version
 patch: version
 patch: version
-release:
-	git push origin HEAD --tags
 
 test:
 	go test -v -count=1 ./src/server/**/
