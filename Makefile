@@ -8,8 +8,6 @@ ifneq (,$(wildcard ./.env))
 endif
 
 UNAME := $(shell uname -m)
-DEKART_DOCKER_DEV_TAG ?= dekart-dev
-DEKART_DOCKER_E2E_TAG ?= dekart-e2e
 
 proto-clean:
 	rm -rf ./src/proto/*.go
@@ -191,8 +189,6 @@ version:
 minor: version
 patch: version
 patch: version
-release:
-	git push origin HEAD --tags
 
 test:
 	go test -v -count=1 ./src/server/**/
