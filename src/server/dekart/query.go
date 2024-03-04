@@ -104,7 +104,7 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 		from queries
 			left join datasets on queries.id = datasets.query_id
 			left join reports on (datasets.report_id = reports.id or queries.report_id = reports.id)
-		where reports.id = $1 and (author_email = $2 or reports.discoverable) and workspace_id=$4 and job_status = $3`,
+		where reports.id = $1 and (author_email = $2 or reports.discoverable or reports.allow_edit) and workspace_id=$4 and job_status = $3`,
 		req.ReportId,
 		claims.Email,
 		int32(proto.Query_JOB_STATUS_DONE),
@@ -220,7 +220,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		from queries
 			left join datasets on queries.id = datasets.query_id
 			left join reports on (datasets.report_id = reports.id or queries.report_id = reports.id)
-		where queries.id = $1 and author_email = $2 and workspace_id=$3
+		where queries.id = $1 and (author_email = $2 or reports.allow_edit) and workspace_id=$3
 		limit 1`,
 		req.QueryId,
 		claims.Email,
@@ -309,7 +309,7 @@ func (s Server) CancelQuery(ctx context.Context, req *proto.CancelQueryRequest) 
 		from queries
 			left join datasets on queries.id = datasets.query_id
 			left join reports on (datasets.report_id = reports.id or queries.report_id = reports.id)
-		where queries.id = $1 and author_email = $2 and workspace_id=$3
+		where queries.id = $1 and (author_email = $2 or reports.allow_edit) and workspace_id=$3
 		limit 1`,
 		req.QueryId,
 		claims.Email,

@@ -1,5 +1,5 @@
 # Dekart Docker image
-Dekart is open-source WebGL-powered map visualization and spatial analytics for modern data warehouses. It offers self-hosted alternative to CARTO and Foursquare Studio. We build it for data scientists, analysts, GIS professionals, and developers who need to visualize large datasets on a map.
+Dekart is an open-source WebGL-powered map visualization and spatial analytics for modern data warehouses. It offers self-hosted alternative to CARTO and Foursquare Studio. We build it for data scientists, analysts, GIS professionals, and developers who need to visualize large datasets on a map.
 
 [Home Page](https://dekart.xyz?ref=dokerhub) | [GitHub](https://github.com/dekart/dekart?ref=dokerhub)
 
@@ -50,7 +50,7 @@ docker run \
   -e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
   -e DEKART_CORS_ORIGIN=${DEKART_CORS_ORIGIN} \
   -p 8080:8080 \
-  dekartxyz/dekart:0.15
+  dekartxyz/dekart:0.16
 ```
 
 ### BigQuery
@@ -71,7 +71,7 @@ docker run \
   -e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
   -e DEKART_CORS_ORIGIN=${DEKART_CORS_ORIGIN} \
   -p 8080:8080 \
-  dekartxyz/dekart:0.15
+  dekartxyz/dekart:0.16
 ```
 
 ### Snowflake
@@ -95,7 +95,7 @@ docker run -it --rm \
   -e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
   -e DEKART_CORS_ORIGIN=${DEKART_CORS_ORIGIN} \
   -p 8080:8080 \
-  dekartxyz/dekart:0.15
+  dekartxyz/dekart:0.16
 ```
 
 [Documentation](https://dekart.xyz/docs/?ref=dokerhub)

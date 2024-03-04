@@ -179,12 +179,13 @@ export function reportsListUpdate (reportsList) {
   return { type: reportsListUpdate.name, reportsList }
 }
 
-export function setDiscoverable (reportId, discoverable) {
+export function setDiscoverable (reportId, discoverable, allowEdit) {
   return async (dispatch) => {
     dispatch({ type: setDiscoverable.name })
     const req = new SetDiscoverableRequest()
     req.setReportId(reportId)
     req.setDiscoverable(discoverable)
+    req.setAllowEdit(allowEdit)
     dispatch(grpcCall(Dekart.SetDiscoverable, req))
   }
 }

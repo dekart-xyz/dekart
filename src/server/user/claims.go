@@ -143,7 +143,6 @@ func CopyClaims(sourceCtx, destCtx context.Context) context.Context {
 // GetTokenSource returns oauth2.TokenSource from context, returns nil if not found
 func GetTokenSource(ctx context.Context) oauth2.TokenSource {
 	claims := GetClaims(ctx)
-	log.Debug().Interface("claims", claims).Msg("GetTokenSource claims")
 	if claims == nil || claims.AccessToken == "" {
 		return nil
 	}

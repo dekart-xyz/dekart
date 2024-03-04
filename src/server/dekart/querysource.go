@@ -99,7 +99,16 @@ func (s Server) storeQuerySync(ctx context.Context, bucketName, queryID string, 
 func (s Server) storeQuery(userCtx context.Context, reportID string, queryID string, queryText string, prevQuerySourceId string) {
 	ctx, cancel := context.WithTimeout(user.CopyClaims(userCtx, context.Background()), time.Second*5)
 	defer cancel()
-	err := s.storeQuerySync(ctx, "", queryID, queryText, prevQuerySourceId)
+	connection, err := s.getConnectionFromQueryID(ctx, queryID)
+
+	if err != nil {
+		log.Err(err).Msg("Error getting connection from query id")
+		return
+	}
+
+	bucketName := s.getBucketNameFromConnection(connection)
+
+	err = s.storeQuerySync(ctx, bucketName, queryID, queryText, prevQuerySourceId)
 	if _, ok := err.(*queryWasNotUpdated); ok {
 		log.Warn().Msg("Query text not updated")
 		return

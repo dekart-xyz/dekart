@@ -958,6 +958,9 @@ export class SetDiscoverableRequest extends jspb.Message {
   getDiscoverable(): boolean;
   setDiscoverable(value: boolean): void;
 
+  getAllowEdit(): boolean;
+  setAllowEdit(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): SetDiscoverableRequest.AsObject;
   static toObject(includeInstance: boolean, msg: SetDiscoverableRequest): SetDiscoverableRequest.AsObject;
@@ -972,6 +975,7 @@ export namespace SetDiscoverableRequest {
   export type AsObject = {
     reportId: string,
     discoverable: boolean,
+    allowEdit: boolean,
   }
 }
 
@@ -1125,6 +1129,9 @@ export namespace GetEnvResponse {
       TYPE_REQUIRE_GOOGLE_OAUTH: 10;
       TYPE_BIGQUERY_PROJECT_ID: 11;
       TYPE_CLOUD_STORAGE_BUCKET: 12;
+      TYPE_UX_ACCESS_ERROR_INFO_HTML: 13;
+      TYPE_UX_NOT_FOUND_ERROR_INFO_HTML: 14;
+      TYPE_UX_SAMPLE_QUERY_SQL: 15;
     }
 
     export const Type: TypeMap;
@@ -1312,6 +1319,12 @@ export class Report extends jspb.Message {
   getDiscoverable(): boolean;
   setDiscoverable(value: boolean): void;
 
+  getAllowEdit(): boolean;
+  setAllowEdit(value: boolean): void;
+
+  getIsAuthor(): boolean;
+  setIsAuthor(value: boolean): void;
+
   getCreatedAt(): number;
   setCreatedAt(value: number): void;
 
@@ -1337,6 +1350,8 @@ export namespace Report {
     canWrite: boolean,
     authorEmail: string,
     discoverable: boolean,
+    allowEdit: boolean,
+    isAuthor: boolean,
     createdAt: number,
     updatedAt: number,
   }

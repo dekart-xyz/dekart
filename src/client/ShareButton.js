@@ -1,16 +1,14 @@
 import Button from 'antd/es/button'
 import Modal from 'antd/es/modal'
-import { ExportOutlined, UsergroupAddOutlined, LinkOutlined, LockOutlined, FileSearchOutlined } from '@ant-design/icons'
-import { useState } from 'react'
+import { EditOutlined, UsergroupAddOutlined, LinkOutlined, LockOutlined, FileSearchOutlined } from '@ant-design/icons'
+import { useEffect, useState, getRef } from 'react'
 import styles from './ShareButton.module.css'
 import { useDispatch, useSelector } from 'react-redux'
 import Switch from 'antd/es/switch'
-import { toggleModal } from '@dekart-xyz/kepler.gl/dist/actions/ui-state-actions'
-import { EXPORT_DATA_ID, EXPORT_IMAGE_ID, EXPORT_MAP_ID } from '@dekart-xyz/kepler.gl/dist/constants'
-import Dropdown from 'antd/es/dropdown'
 import { copyUrlToClipboard } from './actions/clipboard'
 import { setDiscoverable } from './actions/report'
 import { PlanType } from '../proto/dekart_pb'
+import Tooltip from 'antd/es/tooltip'
 
 function CopyLinkButton () {
   const dispatch = useDispatch()
@@ -28,14 +26,41 @@ function CopyLinkButton () {
     </Button>
   )
 }
+function AuthTypeTitle ({ authType, referer }) {
+  const { anchor, title } = {
+    AMAZON_OIDC: { anchor: 'user-authorization-via-amazon-load-balancer', title: 'Amazon OIDC' },
+    IAP: { anchor: 'user-authorization-via-google-iap', title: 'Google IAP' },
+    GOOGLE_OAUTH: { anchor: '', title: 'Google OAuth 2.0 flow' }
+  }[authType]
+  return (
+    <><span>Users authorized via </span>
+      <a
+        target='_blank' href={`https://dekart.xyz/docs/configuration/environment-variables/?ref=${referer}#${anchor}`} rel='noreferrer'
+      >{title}
+      </a> header
+    </>
+  )
+}
 
-function ModalContent ({ reportId, discoverable, canWrite }) {
+function ModalContent ({ reportId, discoverable, isAuthor, allowEdit }) {
   const dispatch = useDispatch()
   const [discoverableSwitch, setDiscoverableSwitch] = useState(discoverable)
   const subscription = useSelector(state => state.workspace.subscription)
   const workspaceName = useSelector(state => state.workspace.name)
+  const env = useSelector(state => state.env)
+  const usage = useSelector(state => state.usage)
+  const { loaded: envLoaded, authType } = env
+  const [allowEditSwitch, setAllowEditSwitch] = useState(allowEdit)
 
-  if (!subscription) {
+  // when changed by another user, reset state
+  useEffect(() => {
+    setDiscoverableSwitch(discoverable)
+  }, [discoverable])
+  useEffect(() => {
+    setAllowEditSwitch(allowEdit)
+  }, [allowEdit])
+
+  if (!subscription || !envLoaded) {
     return null
   }
 
@@ -46,74 +71,76 @@ function ModalContent ({ reportId, discoverable, canWrite }) {
         {subscription.planType === PlanType.TYPE_PERSONAL
           ? (
             <div className={styles.reportStatusDetails}>
-              <div className={styles.reportStatusDetailsText}> Only you can access this report</div>
-              <div className={styles.manageSubscription}><a href='/workspace' target='_blank'>Manage workspace</a></div>
+              <div className={styles.reportStatusDetailsText}> Only you can access workspace</div>
+              <div className={styles.manageSubscription}><a href='/workspace' target='_blank'>Add users to workspace</a></div>
             </div>
             )
           : (
             <div className={styles.reportStatusDetails}>
-              <div className={styles.reportStatusDetailsText}> Everyone with a link and access to <span className={styles.origin}>{workspaceName}</span> workspace can view this report</div>
+              <div className={styles.reportStatusDetailsText}>{(() => {
+                switch (true) {
+                  case discoverable && allowEdit:
+                    return <>Everyone with access to <span className={styles.origin}>{workspaceName}</span> workspace can view and edit report</>
+                  case !discoverable && allowEdit:
+                    return <>Everyone with a link and access to <span className={styles.origin}>{workspaceName}</span> workspace can view and edit report</>
+                  case discoverable && !allowEdit:
+                    return <>Everyone with access to <span className={styles.origin}>{workspaceName}</span> workspace can view and refresh report</>
+                  default:
+                    return <>Everyone with a link and access to <span className={styles.origin}>{workspaceName}</span> workspace can view report</>
+                }
+              })()}
+              </div>
+              <div className={styles.reportAuthStatus}>
+                <Tooltip title={<AuthTypeTitle authType={authType} referer={getRef(env, usage)} />}>
+                  <span className={styles.authEnabled}>User authorization enabled</span>
+                </Tooltip>
+              </div>
             </div>
             )}
       </div>
-      {canWrite && subscription.planType !== PlanType.TYPE_PERSONAL
+      {subscription.planType === PlanType.TYPE_TEAM
         ? (
-          <div className={styles.discoverableStatus}>
-            <div className={styles.discoverableStatusIcon}><FileSearchOutlined /></div>
-            <div className={styles.discoverableStatusLabel}>Make report discoverable by all users of <span className={styles.origin}>{workspaceName}</span> workspace in <a href='/shared'>Shared Reports</a></div>
-            <div className={styles.discoverableStatusControl}>
-              <Switch
-                checked={discoverable}
-                onChange={(checked) => {
-                  setDiscoverableSwitch(checked)
-                  dispatch(setDiscoverable(reportId, checked))
-                }}
-                loading={discoverableSwitch !== discoverable}
-              />
+          <>
+            <div className={styles.boolStatus}>
+              <div className={styles.boolStatusIcon}><FileSearchOutlined /></div>
+              <div className={styles.boolStatusLabel}>Allow everyone to discover and refresh report</div>
+              <div className={styles.boolStatusControl}>
+                <Switch
+                  checked={discoverable}
+                  disabled={!isAuthor}
+                  title={!isAuthor ? 'Only the author can change this setting' : undefined}
+                  onChange={(checked) => {
+                    setDiscoverableSwitch(checked)
+                    dispatch(setDiscoverable(reportId, checked, allowEdit))
+                  }}
+                  loading={discoverableSwitch !== discoverable}
+                />
+              </div>
             </div>
-          </div>
+            <div className={styles.boolStatus}>
+              <div className={styles.boolStatusIcon}><EditOutlined /></div>
+              <div className={styles.boolStatusLabel}>Allow everyone to edit the report</div>
+              <div className={styles.boolStatusControl}>
+                <Switch
+                  checked={allowEdit}
+                  disabled={!isAuthor}
+                  title={!isAuthor ? 'Only the author can change this setting' : undefined}
+                  onChange={(checked) => {
+                    setAllowEditSwitch(checked)
+                    dispatch(setDiscoverable(reportId, discoverable, checked))
+                  }}
+                  loading={allowEditSwitch !== allowEdit}
+                />
+              </div>
+            </div>
+          </>
           )
         : null}
     </>
   )
 }
 
-function ExportDropdown ({ setModalOpen }) {
-  const dispatch = useDispatch()
-  const items = [
-    {
-      label: 'Map',
-      onClick: () => {
-        setModalOpen(false)
-        dispatch(toggleModal(EXPORT_MAP_ID))
-      }
-    },
-    {
-      label: 'Data',
-      onClick: () => {
-        setModalOpen(false)
-        dispatch(toggleModal(EXPORT_DATA_ID))
-      }
-    },
-    {
-      label: 'Image',
-      onClick: () => {
-        setModalOpen(false)
-        dispatch(toggleModal(EXPORT_IMAGE_ID))
-      }
-    }
-  ]
-  return (
-    <Dropdown menu={{ items }} placement='topLeft'>
-      <Button
-        icon={<ExportOutlined />}
-      >Export
-      </Button>
-    </Dropdown>
-  )
-}
-
-export default function ShareButton ({ reportId, discoverable, canWrite }) {
+export default function ShareButton ({ reportId, discoverable, isAuthor, allowEdit }) {
   const [modalOpen, setModalOpen] = useState(false)
   return (
     <>
@@ -121,7 +148,7 @@ export default function ShareButton ({ reportId, discoverable, canWrite }) {
         icon={<UsergroupAddOutlined />}
         ghost
         type='text'
-        title='Share and export'
+        title='Share report'
         onClick={() => setModalOpen(true)}
       />
       <Modal
@@ -132,8 +159,6 @@ export default function ShareButton ({ reportId, discoverable, canWrite }) {
         bodyStyle={{ padding: '0px' }}
         footer={
           <div className={styles.modalFooter}>
-            <ExportDropdown setModalOpen={setModalOpen} />
-            <div className={styles.modalFooterSmallSpacer} />
             <CopyLinkButton />
             <div className={styles.modalFooterSpacer} />
             <Button type='primary' onClick={() => setModalOpen(false)}>
@@ -142,7 +167,7 @@ export default function ShareButton ({ reportId, discoverable, canWrite }) {
           </div>
       }
       >
-        <ModalContent reportId={reportId} discoverable={discoverable} canWrite={canWrite} />
+        <ModalContent reportId={reportId} discoverable={discoverable} isAuthor={isAuthor} allowEdit={allowEdit} />
       </Modal>
     </>
   )
