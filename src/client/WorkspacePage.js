@@ -191,7 +191,7 @@ function getMembersSubTitle (addedUsersCount, planType) {
   if (planType === PlanType.TYPE_TEAM) {
     return `(${addedUsersCount} of 20)`
   }
-  return `(${addedUsersCount})`
+  return '(team plan)'
 }
 
 export function Workspace ({ nextStep, setNextStep }) {

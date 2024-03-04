@@ -53,6 +53,10 @@ func (s Server) getConnectionFromDatasetID(ctx context.Context, datasetID string
 		datasetID,
 	).Scan(&connectionID)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			// legacy query
+			return s.getConnection(ctx, "")
+		}
 		log.Err(err).Send()
 		return nil, err
 	}
@@ -69,6 +73,10 @@ func (s Server) getConnectionFromQueryID(ctx context.Context, queryID string) (*
 		queryID,
 	).Scan(&connectionID)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			// legacy query
+			return s.getConnection(ctx, "")
+		}
 		log.Err(err).Send()
 		return nil, err
 	}

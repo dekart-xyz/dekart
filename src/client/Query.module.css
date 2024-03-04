@@ -23,6 +23,11 @@
     word-break: break-all;
 }
 
+.errorInfoHtml {
+    margin-left: 28px;
+    padding: 10px 0;
+}
+
 .status {
     flex: 1;
     margin-right: 0px;
@@ -93,6 +98,15 @@
 }
 
 .dataDoc {
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    text-align: center;
+}
+
+.sampleQuery {
     position: absolute;
     bottom: 10px;
     left: 0;

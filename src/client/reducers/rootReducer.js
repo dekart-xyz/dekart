@@ -1,11 +1,10 @@
 import { combineReducers } from 'redux'
 import { ActionTypes as KeplerActionTypes } from '@dekart-xyz/kepler.gl/dist/actions'
-import { Query } from '../../proto/dekart_pb'
 import { setUserMapboxAccessTokenUpdater } from '@dekart-xyz/kepler.gl/dist/reducers/ui-state-updaters'
 import { openReport, reportUpdate, forkReport, saveMap, reportTitleChange, newReport, newForkedReport, unsubscribeReports, reportsListUpdate } from '../actions/report'
 import { downloading, finishDownloading, setHttpError, setStreamError } from '../actions/message'
-import { closeDatasetSettingsModal, downloadDataset, openDatasetSettingsModal, setActiveDataset } from '../actions/dataset'
-import { queryChanged, querySource } from '../actions/query'
+import { closeDatasetSettingsModal, openDatasetSettingsModal, setActiveDataset } from '../actions/dataset'
+import { queries, queryStatus } from './queryReducer'
 import { setUsage } from '../actions/usage'
 import { setEnv } from '../actions/env'
 import { newRelease } from '../actions/version'
@@ -45,17 +44,6 @@ function report (state = null, action) {
       return null
     case reportUpdate.name:
       return action.report
-    default:
-      return state
-  }
-}
-
-function queries (state = [], action) {
-  switch (action.type) {
-    case openReport.name:
-      return []
-    case reportUpdate.name:
-      return action.queriesList
     default:
       return state
   }
@@ -138,101 +126,6 @@ function reportStatus (state = defaultReportStatus, action) {
       return state
   }
 }
-function queryStatus (state = {}, action) {
-  switch (action.type) {
-    case KeplerActionTypes.ADD_DATA_TO_MAP:
-      if (action.payload.datasets && action.payload.datasets.info) {
-        const datasetId = action.payload.datasets.info.id
-        const queryId = Object.keys(state).find((queryId) => datasetId === state[queryId].datasetId)
-        return {
-          ...state,
-          [queryId]: {
-            ...state[queryId],
-            downloadingResults: false
-          }
-        }
-      }
-      return state
-    case downloadDataset.name:
-      return action.dataset.queryId
-        ? {
-            ...state,
-            [action.dataset.queryId]: {
-              ...state[action.dataset.queryId],
-              downloadingResults: true,
-              datasetId: action.dataset.id
-            }
-          }
-        : state
-    case queryChanged.name:
-      return {
-        ...state,
-        [action.queryId]: {
-          ...state[action.queryId],
-          changed: action.changed,
-          queryText: action.queryText
-        }
-      }
-    case querySource.name:
-      if (
-        state[action.queryId] &&
-        state[action.queryId].querySourceId === action.querySourceId
-      ) {
-        if (state[action.queryId].changed) {
-          if (action.queryText === state[action.queryId].queryText) {
-            return {
-              ...state,
-              [action.queryId]: {
-                ...state[action.queryId],
-                changed: false
-              }
-            }
-          } else {
-            // query text changed since last saved
-            return state
-          }
-        } else {
-          return {
-            ...state,
-            [action.queryId]: {
-              ...state[action.queryId],
-              queryText: action.queryText
-            }
-          }
-        }
-      }
-      return state
-    case reportUpdate.name:
-      return action.queriesList.reduce(function (queryStatus, query) {
-        queryStatus[query.id] = {
-          canRun: [Query.JobStatus.JOB_STATUS_UNSPECIFIED, Query.JobStatus.JOB_STATUS_DONE, Query.JobStatus.JOB_STATUS_DONE_LEGACY].includes(query.jobStatus),
-          downloadingResults: false,
-          querySourceId: query.querySourceId,
-          querySource: query.querySource
-        }
-        const wasChanged = state[query.id] ? state[query.id].changed : false
-        if (query.querySource === Query.QuerySource.QUERY_SOURCE_INLINE) {
-          // if it was not changed query will update to remote state
-          // otherwise compare remote state to local state
-          const changed = wasChanged ? state[query.id].queryText !== query.queryText : false
-          const queryText = wasChanged ? state[query.id].queryText : query.queryText
-          Object.assign(queryStatus[query.id], {
-            changed,
-            queryText
-          })
-        } else {
-          Object.assign(queryStatus[query.id], {
-            changed: wasChanged,
-            queryText: state[query.id] ? state[query.id].queryText : ''
-          })
-        }
-        return queryStatus
-      }, {})
-    default:
-      return state
-  }
-}
-
 const defaultReportsList = { loaded: false, reports: [] }
 function reportsList (state = defaultReportsList, action) {
   switch (action.type) {
@@ -242,7 +135,7 @@ function reportsList (state = defaultReportsList, action) {
       return {
         ...state,
         loaded: true,
-        my: action.reportsList.filter(report => !report.archived && report.canWrite),
+        my: action.reportsList.filter(report => !report.archived && report.isAuthor),
         archived: action.reportsList.filter(report => report.archived),
         discoverable: action.reportsList.filter(report => report.discoverable && !report.archived)
       }

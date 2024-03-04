@@ -11,7 +11,7 @@
     flex: 1;
 }
 
-.discoverableStatusIcon {
+.boolStatusIcon {
     font-size: 1.2em;
     position: relative;
     opacity: 0.65;
@@ -29,7 +29,8 @@
     margin-left: 10px;
 }
 
-.discoverableStatusLabel {
+.boolStatusLabel {
+    flex: 1;
     font-size: 1.2em;
     margin-left: 10px;
     margin-right: 10px;
@@ -39,7 +40,7 @@
     font-size: 1.2em;
 }
 
-.discoverableStatus {
+.boolStatus {
     border-top: 1px solid #f0f0f0;
     padding: 20px;
     display: flex;

@@ -118,13 +118,15 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			id,
 			case when title is null then 'Untitled' else title end as title,
 			archived,
-			author_email = $1 as can_write,
+			(author_email = $1) or allow_edit as can_write,
+			author_email = $1 as is_author,
 			author_email,
 			discoverable,
+			allow_edit,
 			updated_at,
 			created_at
 		from reports as r
-		where (author_email=$1 or (discoverable=true and archived=false)) and workspace_id=$2
+		where (author_email=$1 or (discoverable=true and archived=false) or allow_edit=true) and workspace_id=$2
 		order by updated_at desc`,
 		claims.Email,
 		checkWorkspace(ctx).ID,
@@ -149,8 +151,10 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			&report.Title,
 			&report.Archived,
 			&report.CanWrite,
+			&report.IsAuthor,
 			&report.AuthorEmail,
 			&report.Discoverable,
+			&report.AllowEdit,
 			&updatedAt,
 			&createdAt,
 		)

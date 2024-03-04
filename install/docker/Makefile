@@ -17,7 +17,7 @@ athena:
 		-e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
 		-e DEKART_CORS_ORIGIN=${DEKART_CORS_ORIGIN} \
 		-p 8080:8080 \
-		dekartxyz/dekart:0.15
+		dekartxyz/dekart:0.16
 
 bigquery:
 	docker run -it --rm \
@@ -36,7 +36,7 @@ bigquery:
 		-e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
 		-e DEKART_CORS_ORIGIN=${DEKART_CORS_ORIGIN} \
 		-p 8080:8080 \
-		dekartxyz/dekart:0.15
+		dekartxyz/dekart:0.16
 
 snowflake:
 	docker run -it --rm \
@@ -57,5 +57,5 @@ snowflake:
 		-e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
 		-e DEKART_CORS_ORIGIN=${DEKART_CORS_ORIGIN} \
 		-p 8080:8080 \
-		dekartxyz/dekart:0.15
+		dekartxyz/dekart:0.16
 

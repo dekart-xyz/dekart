@@ -101,18 +101,24 @@ function QueryEditor ({ queryId, queryText, onChange, canWrite }) {
           />
         )}
       </AutoSizer>
-      {queryText ? null : <DataDocumentationLink className={styles.dataDoc} />}
+      {queryText ? null : <SampleQuery queryId={queryId} />}
     </div>
   )
 }
 
 function QueryStatus ({ children, query }) {
-  let message, errorMessage, action, style, tooltip
+  const env = useSelector(state => state.env)
+  let message, errorMessage, action, style, tooltip, errorInfoHtml
   let icon = null
   if (query.jobError) {
     message = 'Error'
     style = styles.error
     errorMessage = query.jobError
+    if (env.variables.UX_ACCESS_ERROR_INFO_HTML && errorMessage.includes('Error 403')) {
+      errorInfoHtml = ''
+    } else if (env.variables.UX_NOT_FOUND_ERROR_INFO_HTML && errorMessage.includes('Error 404')) {
+      errorInfoHtml = env.variables.UX_NOT_FOUND_ERROR_INFO_HTML
+    }
     icon = <ExclamationCircleTwoTone className={styles.icon} twoToneColor='#F66B55' />
   }
   switch (query.jobStatus) {
@@ -167,9 +173,36 @@ function QueryStatus ({ children, query }) {
           {action ? <div className={styles.action}>{action}</div> : null}
         </div>
         {errorMessage ? <div className={styles.errorMessage}>{errorMessage}</div> : null}
+        {errorInfoHtml ? <div className={styles.errorInfoHtml} dangerouslySetInnerHTML={{ __html: errorInfoHtml }} /> : null}
       </div>
       {children ? <div className={styles.button}>{children}</div> : null}
 
+    </div>
+  )
+}
+
+function SampleQuery ({ queryId }) {
+  const UX_SAMPLE_QUERY_SQL = useSelector(state => state.env.variables.UX_SAMPLE_QUERY_SQL)
+  const queryStatus = useSelector(state => state.queryStatus[queryId])
+  const downloadingSource = queryStatus?.downloadingSource
+  const dispatch = useDispatch()
+  if (downloadingSource) {
+    // do not show sample query while downloading source
+    return null
+  }
+  if (!UX_SAMPLE_QUERY_SQL) {
+    // no sample query, show data documentation link
+    return <DataDocumentationLink className={styles.dataDoc} />
+  }
+  return (
+    <div className={styles.sampleQuery}>
+      <Button
+        type='link' onClick={() => {
+          dispatch(queryChanged(queryId, UX_SAMPLE_QUERY_SQL))
+        }}
+        title='Try running a sample query'
+      >Try sample SQL query
+      </Button>
     </div>
   )
 }

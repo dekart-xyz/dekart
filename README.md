@@ -19,6 +19,7 @@ Create beautiful data-driven maps and share them with your team:
 * Snowflake ❄️
 * BigQuery
 * AWS Athena
+* Postgres
 * CSV (file upload)
 * GeoJSON (file upload)
 

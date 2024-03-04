@@ -17,6 +17,7 @@ import (
 	"dekart/src/server/bqjob"
 	"dekart/src/server/dekart"
 	"dekart/src/server/job"
+	"dekart/src/server/pgjob"
 	"dekart/src/server/snowflakejob"
 	"dekart/src/server/storage"
 
@@ -118,6 +119,9 @@ func configureJobStore(bucket storage.Storage) job.Store {
 	case "ATHENA":
 		log.Info().Msg("Using Athena Datasource backend")
 		jobStore = athenajob.NewStore(bucket)
+	case "PG":
+		log.Info().Msg("Using Postgres LIKE Datasource backend")
+		jobStore = pgjob.NewStore()
 	case "BQ", "":
 		log.Info().Msg("Using BigQuery Datasource backend")
 		jobStore = bqjob.NewStore()

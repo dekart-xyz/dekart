@@ -271,7 +271,8 @@ message GetUsageResponse {
 
 message SetDiscoverableRequest {
     string report_id = 1;
-    bool discoverable = 2;
+    bool discoverable = 2; // report is discoverable by other users of the same instance
+    bool allow_edit = 3; // allow other users to edit the report
 }
 
 message SetDiscoverableResponse {
@@ -307,6 +308,9 @@ message GetEnvResponse {
             TYPE_REQUIRE_GOOGLE_OAUTH = 10;
             TYPE_BIGQUERY_PROJECT_ID = 11;
             TYPE_CLOUD_STORAGE_BUCKET = 12;
+            TYPE_UX_ACCESS_ERROR_INFO_HTML = 13;
+            TYPE_UX_NOT_FOUND_ERROR_INFO_HTML = 14;
+            TYPE_UX_SAMPLE_QUERY_SQL = 15;
         }
         Type type = 1;
         string value = 2;
@@ -359,8 +363,10 @@ message Report {
     bool can_write = 5;
     string author_email = 6;
     bool discoverable = 7; // report is discoverable by other users of the same instance
-    int64 created_at = 8;
-    int64 updated_at = 9;
+    bool allow_edit = 8; // allow other users to edit the report
+    bool is_author = 9; // user is the author of the report
+    int64 created_at = 10;
+    int64 updated_at = 11;
 }
 
 message Dataset {
@@ -426,7 +432,7 @@ message File {
 }
 
 message UpdateReportRequest {
-    Report report = 1;
+    Report report = 1; // MapConfig, Title, Id will be used for update
     repeated Query query = 2;
 }
 

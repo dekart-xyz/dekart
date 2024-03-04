@@ -6,12 +6,10 @@ import Radio from 'antd/es/radio'
 import Result from 'antd/es/result'
 import Table from 'antd/es/table'
 import { useDispatch, useSelector } from 'react-redux'
-import { PlusOutlined, FileSearchOutlined, GiftOutlined, UsergroupAddOutlined, ApiTwoTone } from '@ant-design/icons'
+import { PlusOutlined, FileSearchOutlined, UsergroupAddOutlined, ApiTwoTone } from '@ant-design/icons'
 import DataDocumentationLink from './DataDocumentationLink'
-import { getRef } from './lib/ref'
 import Switch from 'antd/es/switch'
 import { archiveReport, subscribeReports, unsubscribeReports, createReport } from './actions/report'
-import { testVersion } from './actions/version'
 import { editConnection, newConnection, setDefaultConnection } from './actions/connection'
 import ConnectionModal from './ConnectionModal'
 import Tooltip from 'antd/es/tooltip'
@@ -324,30 +322,6 @@ function OnboardingDiscoverableReports () {
   )
 }
 
-function NewVersion () {
-  const release = useSelector(state => state.release)
-  const env = useSelector(state => state.env)
-  const usage = useSelector(state => state.usage)
-  const dispatch = useDispatch()
-  useEffect(() => {
-    dispatch(testVersion())
-  }, [dispatch])
-  if (release) {
-    const ref = getRef(env, usage)
-    return (
-      <div className={styles.newRelease}>
-        <GiftOutlined className={styles.newReleaseIcon} />
-        <div className={styles.newReleaseTitle}>New release {release.tag_name} available</div>
-        <div>
-          <Button type='primary' href={'https://dekart.xyz/docs/self-hosting/upgrade/?ref=' + ref}>Update</Button>
-          <Button type='link' href={release.html_url + '?ref=' + ref}>Release Notes</Button>
-        </div>
-      </div>
-    )
-  }
-  return null
-}
-
 export default function HomePage ({ reportFilter }) {
   const reportsList = useSelector(state => state.reportsList)
   const connectionsLoaded = useSelector(state => state.connection.listLoaded)
@@ -366,7 +340,6 @@ export default function HomePage ({ reportFilter }) {
           reportsList.loaded && connectionsLoaded
             ? (
               <>
-                <NewVersion />
                 <ConnectionModal />
                 <Reports
                   reportsList={reportsList}

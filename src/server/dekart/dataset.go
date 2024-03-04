@@ -87,7 +87,7 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 func (s Server) getReportID(ctx context.Context, datasetID string, email string) (*string, error) {
 	datasetRows, err := s.db.QueryContext(ctx,
 		`select report_id from datasets
-		where id=$1 and report_id in (select report_id from reports where author_email=$2 and workspace_id=$3)
+		where id=$1 and report_id in (select report_id from reports where (author_email=$2 or allow_edit) and workspace_id=$3)
 		limit 1`,
 		datasetID,
 		email,
@@ -108,7 +108,7 @@ func (s Server) getReportID(ctx context.Context, datasetID string, email string)
 		// check legacy queries
 		queryRows, err := s.db.QueryContext(ctx,
 			`select report_id from queries
-			where id=$1 and report_id in (select report_id from reports where author_email=$2 and workspace_id=$3)
+			where id=$1 and report_id in (select report_id from reports where (author_email=$2 or allow_edit) and workspace_id=$3)
 			limit 1`,
 			datasetID,
 			email,
@@ -268,7 +268,7 @@ func (s Server) insertDataset(ctx context.Context, reportID string) (res sql.Res
 			$1 as id,
 			id as report_id
 		from reports
-		where id=$2 and not archived and author_email=$3 and workspace_id=$4 limit 1
+		where id=$2 and not archived and (author_email=$3 or allow_edit) and workspace_id=$4 limit 1
 		`,
 			id,
 			reportID,
@@ -278,12 +278,12 @@ func (s Server) insertDataset(ctx context.Context, reportID string) (res sql.Res
 	}
 	return s.db.ExecContext(ctx,
 		`insert into datasets (id, report_id, connection_id)
-	select
-		$1 as id,
-		id as report_id,
-		$4 as connection_id
-	from reports
-	where id=$2 and not archived and author_email=$3 and workspace_id=$5 limit 1
+			select
+				$1 as id,
+				id as report_id,
+				$4 as connection_id
+			from reports
+			where id=$2 and not archived and (author_email=$3 or allow_edit) and workspace_id=$5 limit 1
 	`,
 		id,
 		reportID,
