@@ -15,9 +15,8 @@ import { useSelector, useDispatch } from 'react-redux'
 import { getUsage } from './actions/usage'
 import { AuthState, RedirectState as DekartRedirectState } from '../proto/dekart_pb'
 import { getEnv } from './actions/env'
-import { setRedirectState } from './actions/redirectState'
+import { authRedirect, setRedirectState } from './actions/redirect'
 import { subscribeUserStream, unsubscribeUserStream } from './actions/user'
-import { authRedirect } from './lib/api'
 
 // RedirectState reads states passed in the URL from the server
 function RedirectState () {
@@ -50,15 +49,16 @@ function AppRedirect () {
   const { status, doNotAuthenticate } = httpError
   const { newReportId } = useSelector(state => state.reportStatus)
   const location = useLocation()
+  const dispatch = useDispatch()
 
   useEffect(() => {
     if (status === 401 && doNotAuthenticate === false) {
       const state = new AuthState()
       state.setUiUrl(window.location.href)
       state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
-      authRedirect(state)
+      dispatch(authRedirect(state))
     }
-  }, [status, doNotAuthenticate])
+  }, [status, doNotAuthenticate, dispatch])
 
   if (status === 401 && doNotAuthenticate === false) {
     // redirect to authentication endpoint from useEffect
