@@ -1,4 +1,4 @@
-import { setRedirectState } from '../actions/redirectState'
+import { setRedirectState } from '../actions/redirect'
 
 export default function token (state = null, action) {
   switch (action.type) {

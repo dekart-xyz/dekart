@@ -1,12 +1,12 @@
 import styles from './Header.module.css'
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import DekartMenu from './DekartMenu'
 import { getRef } from './lib/ref'
 import Avatar from 'antd/es/avatar'
 import Dropdown from 'antd/es/dropdown'
 import { AuthState } from '../proto/dekart_pb'
-import { authRedirect } from './lib/api'
 import classNames from 'classnames'
+import { authRedirect } from './actions/redirect'
 
 function getSignature (email) {
   if (!email) {
@@ -23,6 +23,7 @@ function getSignature (email) {
 function User ({ buttonDivider }) {
   const token = useSelector(state => state.token)
   const user = useSelector(state => state.user)
+  const dispatch = useDispatch()
   if (!user || !token) {
     return null
   }
@@ -46,7 +47,7 @@ function User ({ buttonDivider }) {
                 state.setUiUrl(window.location.href)
                 state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
                 state.setSwitchAccount(true)
-                authRedirect(state)
+                dispatch(authRedirect(state))
               }
             },
             {
@@ -56,7 +57,7 @@ function User ({ buttonDivider }) {
                 state.setUiUrl(window.location.href)
                 state.setAction(AuthState.Action.ACTION_REVOKE)
                 state.setAccessTokenToRevoke(token.access_token)
-                authRedirect(state)
+                dispatch(authRedirect(state))
               }
             }
           ]

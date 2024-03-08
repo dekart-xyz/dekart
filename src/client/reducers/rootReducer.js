@@ -2,19 +2,19 @@ import { combineReducers } from 'redux'
 import { ActionTypes as KeplerActionTypes } from '@dekart-xyz/kepler.gl/dist/actions'
 import { setUserMapboxAccessTokenUpdater } from '@dekart-xyz/kepler.gl/dist/reducers/ui-state-updaters'
 import { openReport, reportUpdate, forkReport, saveMap, reportTitleChange, newReport, newForkedReport, unsubscribeReports, reportsListUpdate } from '../actions/report'
-import { downloading, finishDownloading, setHttpError, setStreamError } from '../actions/message'
+import { downloading, finishDownloading, setStreamError } from '../actions/message'
 import { closeDatasetSettingsModal, openDatasetSettingsModal, setActiveDataset } from '../actions/dataset'
 import { queries, queryStatus } from './queryReducer'
 import { setUsage } from '../actions/usage'
 import { setEnv } from '../actions/env'
 import { newRelease } from '../actions/version'
 import { uploadFile, uploadFileProgress, uploadFileStateChange } from '../actions/file'
-import { setRedirectState } from '../actions/redirectState'
 import keplerGlReducer from '@dekart-xyz/kepler.gl/dist/reducers'
 import stream from './streamReducer'
 import token from './tokenReducer'
 import connection from './connectionReducer'
 import user from './userReducer'
+import httpError from './httpErrorReducer'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
   uiState: {
@@ -174,37 +174,6 @@ function env (state = defaultEnv, action) {
                 : 'NONE'
         )
       }
-    default:
-      return state
-  }
-}
-
-function httpError (state = {}, action) {
-  switch (action.type) {
-    case setHttpError.name: {
-      if (action.status === 401 && state.doNotAuthenticate) {
-        // just keep showing auth error, do not override it with other 401
-        return state
-      } else {
-        return {
-          status: action.status,
-          message: action.message,
-          doNotAuthenticate: false
-        }
-      }
-    }
-    case setRedirectState.name: {
-      const err = action.redirectState.getError()
-      if (err) {
-        return {
-          status: 401,
-          message: err,
-          doNotAuthenticate: true
-        }
-      } else {
-        return {} // reset error
-      }
-    }
     default:
       return state
   }
