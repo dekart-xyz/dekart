@@ -6,7 +6,7 @@ import Radio from 'antd/es/radio'
 import Result from 'antd/es/result'
 import Table from 'antd/es/table'
 import { useDispatch, useSelector } from 'react-redux'
-import { PlusOutlined, FileSearchOutlined, GiftOutlined, UsergroupAddOutlined, ApiTwoTone } from '@ant-design/icons'
+import { PlusOutlined, FileSearchOutlined, UnlockTwoTone, GiftOutlined, UsergroupAddOutlined, ApiTwoTone } from '@ant-design/icons'
 import DataDocumentationLink from './DataDocumentationLink'
 import { getRef } from './lib/ref'
 import Switch from 'antd/es/switch'
@@ -16,6 +16,8 @@ import { editConnection, newConnection, setDefaultConnection } from './actions/c
 import ConnectionModal from './ConnectionModal'
 import Tooltip from 'antd/es/tooltip'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
+import { AuthState } from '../proto/dekart_pb'
+import { authRedirect } from './actions/redirect'
 
 function Loading () {
   return null
@@ -234,6 +236,11 @@ function Reports ({ createReportButton, reportFilter }) {
   const { loaded: envLoaded } = useSelector(state => state.env)
   const connectionList = useSelector(state => state.connection.list)
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
+  // const user = useSelector(state => state.user)
+  // const needSensitiveScopes = useSelector(state => state.env.needSensitiveScopes)
+  // const sensitiveScopesGranted = user?.sensitiveScopesGranted
+  // const sensitiveScopesGrantedOnce = user?.sensitiveScopesGrantedOnce
+  // const dispatch = useDispatch()
   useEffect(() => {
     if (reportsList.archived.length === 0) {
       setArchived(false)
@@ -242,6 +249,27 @@ function Reports ({ createReportButton, reportFilter }) {
   if (!envLoaded) {
     return null
   }
+  // if (needSensitiveScopes && !sensitiveScopesGranted && !sensitiveScopesGrantedOnce) {
+  //   return (
+  //     <div className={styles.reports}>
+  //       <Result
+  //         icon={<UnlockTwoTone />}
+  //         title='Grant Access'
+  //         subTitle='Connect and visualize your data from Google Cloud.'
+  //         extra={<Button
+  //           type='primary' onClick={() => {
+  //             const state = new AuthState()
+  //             state.setUiUrl(window.location.href)
+  //             state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
+  //             state.setSensitiveScope(true)
+  //             dispatch(authRedirect(state))
+  //           }}
+  //                >Continue
+  //                </Button>}
+  //       />
+  //     </div>
+  //   )
+  // }
   if (userDefinedConnection && connectionList.length === 0) {
     return (
       <div className={styles.reports}>

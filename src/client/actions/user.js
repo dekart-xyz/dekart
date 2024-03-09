@@ -19,6 +19,7 @@ export function subscribeUserStream () {
     }
     dispatch(grpcStream(Dekart.GetUserStream, request, (message, err) => {
       if (message) {
+        console.log('message', message)
         dispatch(userStreamUpdate(message))
         if (prevRes.connectionUpdate !== message.connectionUpdate) {
           prevRes.connectionUpdate = message.connectionUpdate

@@ -162,7 +162,7 @@ func main() {
 	jobStore := configureJobStore(bucket)
 
 	dekartServer := dekart.NewServer(db, bucket, jobStore)
-	httpServer := app.Configure(dekartServer)
+	httpServer := app.Configure(dekartServer, db)
 
 	go startHttpServer(httpServer)
 
