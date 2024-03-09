@@ -18,6 +18,7 @@ import { getEnv } from './actions/env'
 import { authRedirect, setRedirectState } from './actions/redirect'
 import { subscribeUserStream, unsubscribeUserStream } from './actions/user'
 import GrantScopesPage from './GrantScopesPage'
+import { loadLocalStorage } from './actions/localStorage'
 
 // RedirectState reads states passed in the URL from the server
 function RedirectState () {
@@ -49,10 +50,10 @@ function AppRedirect () {
   const httpError = useSelector(state => state.httpError)
   const { status, doNotAuthenticate } = httpError
   const { newReportId } = useSelector(state => state.reportStatus)
-  const user = useSelector(state => state.user)
+  const userStream = useSelector(state => state.user.stream)
   const needSensitiveScopes = useSelector(state => state.env.needSensitiveScopes)
-  const sensitiveScopesGranted = user?.sensitiveScopesGranted
-  const sensitiveScopesGrantedOnce = user?.sensitiveScopesGrantedOnce
+  const sensitiveScopesGranted = userStream?.sensitiveScopesGranted
+  const sensitiveScopesGrantedOnce = useSelector(state => state.user.sensitiveScopesGrantedOnce)
   const location = useLocation()
   const dispatch = useDispatch()
 
@@ -79,7 +80,7 @@ function AppRedirect () {
     return <Redirect to={`/reports/${newReportId}/source`} push />
   }
 
-  if (user && needSensitiveScopes && !sensitiveScopesGranted) {
+  if (userStream && needSensitiveScopes && !sensitiveScopesGranted) {
     return <Redirect to='/grant-scopes' push />
   }
 
@@ -107,12 +108,10 @@ export default function App () {
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const dispatch = useDispatch()
   const visitedPages = React.useRef(['/'])
-  // const location = useLocation()
 
-  // // keep track of visited pages
-  // useEffect(() => {
-  //   visitedPages.current.push(location.pathname)
-  // }, [location])
+  useEffect(() => {
+    dispatch(loadLocalStorage())
+  }, [dispatch])
 
   useEffect(() => {
     if (window.location.pathname.startsWith('/401')) {

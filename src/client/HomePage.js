@@ -16,8 +16,6 @@ import { editConnection, newConnection, setDefaultConnection } from './actions/c
 import ConnectionModal from './ConnectionModal'
 import Tooltip from 'antd/es/tooltip'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
-import { AuthState } from '../proto/dekart_pb'
-import { authRedirect } from './actions/redirect'
 
 function Loading () {
   return null
@@ -153,7 +151,7 @@ function FirstConnectionOnboarding () {
         status='success'
         icon={<ApiTwoTone />}
         title='Ready to connect!'
-        subTitle='Before you can create a map, you need to connect to your Google Cloud account.'
+        subTitle={<>Before you can create a map, select Google Cloud <b>Project ID</b> and <b>Storage Bucket</b>.</>}
         extra={<Button type='primary' onClick={() => { dispatch(newConnection()) }}>Create connection</Button>}
       />
     </>
@@ -236,11 +234,6 @@ function Reports ({ createReportButton, reportFilter }) {
   const { loaded: envLoaded } = useSelector(state => state.env)
   const connectionList = useSelector(state => state.connection.list)
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
-  // const user = useSelector(state => state.user)
-  // const needSensitiveScopes = useSelector(state => state.env.needSensitiveScopes)
-  // const sensitiveScopesGranted = user?.sensitiveScopesGranted
-  // const sensitiveScopesGrantedOnce = user?.sensitiveScopesGrantedOnce
-  // const dispatch = useDispatch()
   useEffect(() => {
     if (reportsList.archived.length === 0) {
       setArchived(false)
@@ -249,27 +242,6 @@ function Reports ({ createReportButton, reportFilter }) {
   if (!envLoaded) {
     return null
   }
-  // if (needSensitiveScopes && !sensitiveScopesGranted && !sensitiveScopesGrantedOnce) {
-  //   return (
-  //     <div className={styles.reports}>
-  //       <Result
-  //         icon={<UnlockTwoTone />}
-  //         title='Grant Access'
-  //         subTitle='Connect and visualize your data from Google Cloud.'
-  //         extra={<Button
-  //           type='primary' onClick={() => {
-  //             const state = new AuthState()
-  //             state.setUiUrl(window.location.href)
-  //             state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
-  //             state.setSensitiveScope(true)
-  //             dispatch(authRedirect(state))
-  //           }}
-  //                >Continue
-  //                </Button>}
-  //       />
-  //     </div>
-  //   )
-  // }
   if (userDefinedConnection && connectionList.length === 0) {
     return (
       <div className={styles.reports}>

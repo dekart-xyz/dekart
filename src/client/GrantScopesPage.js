@@ -4,7 +4,7 @@ import Result from 'antd/es/result'
 import Button from 'antd/es/button'
 import { useDispatch, useSelector } from 'react-redux'
 import { requestSensitiveScopes } from './actions/redirect'
-import { UnlockTwoTone } from '@ant-design/icons'
+import { CloudTwoTone } from '@ant-design/icons'
 import { useEffect } from 'react'
 import { Redirect } from 'react-router-dom/cjs/react-router-dom'
 
@@ -14,32 +14,32 @@ function getLastPage (visitedPages) {
 
 export default function GrantScopesPage ({ visitedPages }) {
   const dispatch = useDispatch()
-  const user = useSelector(state => state.user)
-  // const needSensitiveScopes = useSelector(state => state.env.needSensitiveScopes)
-  // const sensitiveScopesGranted = user?.sensitiveScopesGranted
-  // const sensitiveScopesGrantedOnce = user?.sensitiveScopesGrantedOnce
+  const userStream = useSelector(state => state.user.stream)
+  const sensitiveScopesGrantedOnce = useSelector(state => state.user.sensitiveScopesGrantedOnce)
 
   useEffect(() => {
-    if (!user || user.sensitiveScopesGranted) {
+    if (
+      !userStream || // userStream is not yet loaded
+      userStream.sensitiveScopesGranted // user has already granted sensitive scopes
+    ) {
       return
     }
-    if (user.sensitiveScopesGrantedOnce) {
-      console.log('Requesting sensitive scopes', visitedPages.current)
+    if (sensitiveScopesGrantedOnce) { // user has granted sensitive scopes once, request them right away without onboarding
       dispatch(requestSensitiveScopes(getLastPage(visitedPages)))
     }
   }
-  , [dispatch, user, visitedPages])
+  , [dispatch, userStream, visitedPages])
 
-  if (!user) {
+  if (!userStream) {
     return null
   }
 
-  if (user.sensitiveScopesGranted) {
+  if (userStream.sensitiveScopesGranted) {
     // user shouldn't be here
     return <Redirect to='/' push />
   }
 
-  if (user.sensitiveScopesGrantedOnce) {
+  if (sensitiveScopesGrantedOnce) {
     // user will be automatically redirected to the auth page in useEffect above
     return null
   }
@@ -49,15 +49,15 @@ export default function GrantScopesPage ({ visitedPages }) {
       <Header />
       <div className={styles.body}>
         <Result
-          icon={<UnlockTwoTone />}
-          title='Grant Access'
-          subTitle='Connect and visualize your data from Google Cloud.'
+          icon={<CloudTwoTone />}
+          title='Grant access to Google Cloud'
+          subTitle={<>Dekart needs access to your <b>BigQuery</b> and <b>Google Cloud Storage</b> to query and store results.<br /> Your token is not stored in Dekart. You can revoke access by signing out of Dekart anytime.</>}
           extra={(
             <Button
               type='primary' onClick={() => {
                 dispatch(requestSensitiveScopes(getLastPage(visitedPages)))
               }}
-            >Continue
+            >Continue to Google
             </Button>
           )}
         />
