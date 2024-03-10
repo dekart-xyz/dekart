@@ -9,8 +9,8 @@ endif
 
 UNAME := $(shell uname -m)
 
-pulumi-up:
-	cd pulumi && pulumi up --debug
+pulumi-preview:
+	cd pulumi && pulumi preview --debug
 
 proto-clean:
 	rm -rf ./src/proto/*.go

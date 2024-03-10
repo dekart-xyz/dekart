@@ -26,6 +26,8 @@ require (
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
+	github.com/pulumi/pulumi-gcp/sdk/v7 v7.13.0
+	github.com/pulumi/pulumi/sdk/v3 v3.107.0
 	github.com/snowflakedb/gosnowflake v1.6.22
 	github.com/stretchr/testify v1.8.4
 	github.com/stripe/stripe-go/v76 v76.5.0
