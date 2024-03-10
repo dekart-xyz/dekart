@@ -28,7 +28,7 @@ export default function GrantScopesPage ({ visitedPages }) {
       dispatch(requestSensitiveScopes(getLastPage(visitedPages)))
     }
   }
-  , [dispatch, userStream, visitedPages])
+  , [dispatch, userStream, visitedPages, sensitiveScopesGrantedOnce])
 
   if (!userStream) {
     return null

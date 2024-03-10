@@ -6,7 +6,7 @@ import Radio from 'antd/es/radio'
 import Result from 'antd/es/result'
 import Table from 'antd/es/table'
 import { useDispatch, useSelector } from 'react-redux'
-import { PlusOutlined, FileSearchOutlined, UnlockTwoTone, GiftOutlined, UsergroupAddOutlined, ApiTwoTone } from '@ant-design/icons'
+import { PlusOutlined, FileSearchOutlined, GiftOutlined, UsergroupAddOutlined, ApiTwoTone } from '@ant-design/icons'
 import DataDocumentationLink from './DataDocumentationLink'
 import { getRef } from './lib/ref'
 import Switch from 'antd/es/switch'
@@ -151,7 +151,7 @@ function FirstConnectionOnboarding () {
         status='success'
         icon={<ApiTwoTone />}
         title='Ready to connect!'
-        subTitle={<>Before you can create a map, select Google Cloud <b>Project ID</b> and <b>Storage Bucket</b>.</>}
+        subTitle={<>Next step, select <b>Project ID</b> for BigQuery billing and <b>Storage Bucket</b> name to store your query results.</>}
         extra={<Button type='primary' onClick={() => { dispatch(newConnection()) }}>Create connection</Button>}
       />
     </>
