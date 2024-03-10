@@ -12,10 +12,18 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestValidateJWTFromAmazonOIDC(t *testing.T) {
+	// Create a new mock database
+	db, _, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
 	// Generate a new private key
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
@@ -72,6 +80,7 @@ func TestValidateJWTFromAmazonOIDC(t *testing.T) {
 			Region:            "us-east-1",
 		},
 		&sync.Map{},
+		db,
 	}
 
 	// Store the public key

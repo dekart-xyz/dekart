@@ -23,6 +23,7 @@ require (
 )
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/snowflakedb/gosnowflake v1.6.22
 	github.com/stretchr/testify v1.8.1
 	golang.org/x/oauth2 v0.9.0
