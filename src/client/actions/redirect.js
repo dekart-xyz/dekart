@@ -10,7 +10,6 @@ export function requestSensitiveScopes (returnPath) {
     url.pathname = returnPath
     const state = new AuthState()
     state.setUiUrl(url.href)
-    console.log('setUiUrl', url.href)
     state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
     state.setSensitiveScope(true)
     dispatch(authRedirect(state))

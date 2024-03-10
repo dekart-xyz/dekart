@@ -192,10 +192,9 @@ func (c ClaimsCheck) getAuthConfig(state *pb.AuthState) *oauth2.Config {
 	return &oauth2.Config{
 		ClientID:     c.GoogleOAuthClientId,
 		ClientSecret: c.GoogleOAuthSecret,
-		// Scopes:       []string{bigquery.BigqueryScope, googleOAuth.UserinfoProfileScope, googleOAuth.UserinfoEmailScope, "https://www.googleapis.com/auth/devstorage.read_write"},
-		Scopes:      scope,
-		Endpoint:    google.Endpoint,
-		RedirectURL: authUrl,
+		Scopes:       scope,
+		Endpoint:     google.Endpoint,
+		RedirectURL:  authUrl,
 	}
 }
 
