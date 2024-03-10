@@ -1,6 +1,7 @@
 package app
 
 import (
+	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/dekart"
 	"dekart/src/server/user"
@@ -138,7 +139,7 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 }
 
 // Configure HTTP server with http and grpc
-func Configure(dekartServer *dekart.Server) *http.Server {
+func Configure(dekartServer *dekart.Server, db *sql.DB) *http.Server {
 	claimsCheck := user.NewClaimsCheck(user.ClaimsCheckConfig{
 		Audience:            os.Getenv("DEKART_IAP_JWT_AUD"),
 		RequireIAP:          os.Getenv("DEKART_REQUIRE_IAP") == "1",
@@ -149,7 +150,7 @@ func Configure(dekartServer *dekart.Server) *http.Server {
 		DevRefreshToken:     os.Getenv("DEKART_DEV_REFRESH_TOKEN"),
 		GoogleOAuthClientId: os.Getenv("DEKART_GOOGLE_OAUTH_CLIENT_ID"),
 		GoogleOAuthSecret:   os.Getenv("DEKART_GOOGLE_OAUTH_SECRET"),
-	})
+	}, db)
 
 	grpcServer := configureGRPC(dekartServer)
 	httpServer := configureHTTP(dekartServer, claimsCheck)

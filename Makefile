@@ -164,17 +164,18 @@ postgres:
 docker: # build docker for local use
 	docker buildx build --push --tag ${DEKART_DOCKER_DEV_TAG} -o type=image --platform=linux/amd64 -f ./Dockerfile .
 
+up-and-down:
+	docker-compose  --env-file .env --profile local up; docker-compose --env-file .env --profile local down --volumes
+
+
 up:
 	docker-compose  --env-file .env --profile local up
 
+down:
+	docker-compose --env-file .env --profile local down --volumes
+
 cloudsql:
 	docker-compose  --env-file .env --profile cloudsql up
-
-rm:
-	docker-compose  rm -f
-
-up-and-rm:
-	docker-compose --env-file .env up; docker-compose rm -f
 
 server:
 	go run ./src/server/main.go

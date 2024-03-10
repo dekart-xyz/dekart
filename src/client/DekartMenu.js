@@ -1,7 +1,7 @@
 import Menu from 'antd/es/menu'
 import styles from './DekartMenu.module.css'
 import { useDispatch, useSelector } from 'react-redux'
-import { getRef } from './lib/ref'
+import { getUrlRef } from './lib/ref'
 import { MenuOutlined, MessageOutlined } from '@ant-design/icons'
 import { Link } from 'react-router-dom/cjs/react-router-dom'
 import { createReport } from './actions/report'
@@ -12,14 +12,14 @@ export default function DekartMenu () {
   const dispatch = useDispatch()
   const { authEnabled } = env
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
-  const user = useSelector(state => state.user)
-  const ref = getRef(env, usage)
+  const userStream = useSelector(state => state.user.stream)
+  const ref = getUrlRef(env, usage)
   return (
     <div className={styles.dekartMenu}>
       <Menu mode='horizontal' theme='dark'>
         <Menu.SubMenu
           popupClassName={styles.subMenu} title={<MenuOutlined />} key='home' active='yes' disabled={
-          !(user && user.planType)
+          !(userStream && userStream.planType)
         }
         >
           <Menu.Item key='my'>

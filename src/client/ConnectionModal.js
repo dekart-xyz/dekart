@@ -93,7 +93,7 @@ export default function ConnectionModal () {
           <Form.Item label='Connection Name' name='connectionName' required>
             <Input />
           </Form.Item>
-          <Form.Item label='Google Cloud project ID' extra='used to access BigQuery' required name='bigqueryProjectId'>
+          <Form.Item label='Google Cloud project ID' extra='used to bill BigQuery jobs' required name='bigqueryProjectId'>
             <Input readOnly={BIGQUERY_PROJECT_ID} />
           </Form.Item>
           <Form.Item label='Google Cloud Storage bucket' extra='where queries, files and query results stored' required name='cloudStorageBucket'>

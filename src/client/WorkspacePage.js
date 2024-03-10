@@ -138,10 +138,10 @@ function UpdateWorkspaceForm () {
 }
 
 function WorkspaceTab ({ nextStep, setNextStep }) {
-  const user = useSelector(state => state.user)
+  const userStream = useSelector(state => state.user.stream)
   const workspace = useSelector(state => state.workspace)
   const invites = workspace.invites
-  if (user.workspaceId && user.workspaceId !== workspace.id) {
+  if (userStream.workspaceId && userStream.workspaceId !== workspace.id) {
     return null
   }
   let form = workspace.id ? <UpdateWorkspaceForm /> : <CreateWorkspaceForm />
@@ -162,7 +162,7 @@ function WorkspaceTab ({ nextStep, setNextStep }) {
         <div>
           <Title level={4}>{title}</Title>
         </div>
-        {user.workspaceId
+        {userStream.workspaceId
           ? null
           : (
             <div><Radio.Group
@@ -195,10 +195,10 @@ function getMembersSubTitle (addedUsersCount, planType) {
 }
 
 export function Workspace ({ nextStep, setNextStep }) {
-  const user = useSelector(state => state.user)
+  const userStream = useSelector(state => state.user.stream)
   const addedUsersCount = useSelector(state => state.workspace.addedUsersCount)
-  const workspaceId = user?.workspaceId
-  const planType = user?.planType
+  const workspaceId = userStream?.workspaceId
+  const planType = userStream?.planType
   const [step, setStep] = useState(0)
 
   // move to the next step if workspaceId is set
@@ -212,7 +212,7 @@ export function Workspace ({ nextStep, setNextStep }) {
     }
   }, [workspaceId, planType])
 
-  if (!user) {
+  if (!userStream) {
     return null
   }
   return (
@@ -234,12 +234,12 @@ export function Workspace ({ nextStep, setNextStep }) {
             {
               title: 'Billing',
               icon: <CreditCardOutlined />,
-              disabled: !user.workspaceId
+              disabled: !userStream.workspaceId
             },
             {
               title: 'Members',
               icon: <TeamOutlined />,
-              disabled: user.planType !== PlanType.TYPE_TEAM,
+              disabled: userStream.planType !== PlanType.TYPE_TEAM,
               subTitle: getMembersSubTitle(addedUsersCount, planType)
             }
           ]}
@@ -272,13 +272,13 @@ function WelcomeScreen ({ setNextStep }) {
 }
 
 export default function WorkspacePage () {
-  const user = useSelector(state => state.user)
-  const workspaceId = user?.workspaceId
+  const userStream = useSelector(state => state.user.stream)
+  const workspaceId = userStream?.workspaceId
   const [nextStep, setNextStep] = useState(null)
   return (
     <div className={styles.workspacePage}>
       <Header />
-      {user
+      {userStream
         ? (
           <div className={styles.body}>
             {workspaceId || nextStep ? <Workspace nextStep={nextStep} setNextStep={setNextStep} /> : <WelcomeScreen setNextStep={setNextStep} />}

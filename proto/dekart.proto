@@ -210,6 +210,8 @@ message GetUserStreamResponse {
     StreamOptions stream_options = 1;
     int64 connection_update = 2;
     string email = 3; // user email used to show user icon in UI
+    bool sensitive_scopes_granted = 4; // user has granted sensitive scopes
+    bool sensitive_scopes_granted_once = 5; // user has granted sensitive scopes at least once, now we request all scopes at once
 
     // cloud
     string workspace_id = 101;
@@ -337,6 +339,7 @@ message AuthState   {
     string ui_url = 3; // dekart frontend url to redirect to after auth
     string access_token_to_revoke = 4; // access token to revoke
     bool switch_account = 5; // if true, user will be requested to switch account
+    bool sensitive_scope = 6; // if true, user will be requested to grant sensitive scope
 }
 
 message ArchiveReportRequest {

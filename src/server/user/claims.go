@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"crypto/ecdsa"
+	"database/sql"
 	pb "dekart/src/proto"
 	"encoding/base64"
 	"encoding/json"
@@ -26,8 +27,9 @@ import (
 
 // Claims stores user detail received from request
 type Claims struct {
-	Email       string
-	AccessToken string
+	Email                  string
+	AccessToken            string
+	SensitiveScopesGranted bool
 }
 
 // ContextKey type
@@ -52,6 +54,7 @@ type ClaimsCheckConfig struct {
 type ClaimsCheck struct {
 	ClaimsCheckConfig
 	publicKeys *sync.Map
+	db         *sql.DB
 }
 
 var b2i = map[bool]int{false: 0, true: 1}
@@ -92,11 +95,12 @@ func validateConfig(c ClaimsCheckConfig) {
 	}
 }
 
-func NewClaimsCheck(c ClaimsCheckConfig) ClaimsCheck {
+func NewClaimsCheck(c ClaimsCheckConfig, db *sql.DB) ClaimsCheck {
 	validateConfig(c)
 	return ClaimsCheck{
 		c,
 		&sync.Map{},
+		db,
 	}
 }
 
@@ -120,14 +124,17 @@ func (c ClaimsCheck) validateAuthToken(ctx context.Context, header string) *Clai
 	tokenInfo, err := c.getTokenInfo(ctx, &oauth2.Token{
 		AccessToken: accessToken,
 	})
+
 	if err != nil {
 		log.Error().Err(err).Msg("Error getting token info")
 		return nil
 	}
+	missingSensitiveScope := checkMissingScope(sensitiveScope, tokenInfo.Scope)
 
 	return &Claims{
-		Email:       tokenInfo.Email,
-		AccessToken: accessToken,
+		Email:                  tokenInfo.Email,
+		AccessToken:            accessToken,
+		SensitiveScopesGranted: missingSensitiveScope == "",
 	}
 }
 
@@ -170,15 +177,22 @@ func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 	return userCtx
 }
 
+var infoScope = []string{googleOAuth.UserinfoProfileScope, googleOAuth.UserinfoEmailScope}
+var sensitiveScope = []string{googleOAuth.UserinfoProfileScope, googleOAuth.UserinfoEmailScope, "https://www.googleapis.com/auth/devstorage.read_write", bigquery.BigqueryScope}
+
 func (c ClaimsCheck) getAuthConfig(state *pb.AuthState) *oauth2.Config {
 	authUrl := ""
+	scope := infoScope
 	if state != nil {
 		authUrl = state.AuthUrl
+		if state.SensitiveScope {
+			scope = sensitiveScope
+		}
 	}
 	return &oauth2.Config{
 		ClientID:     c.GoogleOAuthClientId,
 		ClientSecret: c.GoogleOAuthSecret,
-		Scopes:       []string{bigquery.BigqueryScope, googleOAuth.UserinfoProfileScope, googleOAuth.UserinfoEmailScope, "https://www.googleapis.com/auth/devstorage.read_write"},
+		Scopes:       scope,
 		Endpoint:     google.Endpoint,
 		RedirectURL:  authUrl,
 	}
@@ -210,6 +224,11 @@ func (c ClaimsCheck) getTokenInfo(ctx context.Context, token *oauth2.Token) (*go
 	return tokenInfo, err
 }
 
+func HasAllSensitiveScopes(scope string) bool {
+	missingSensitiveScope := checkMissingScope(sensitiveScope, scope)
+	return missingSensitiveScope == ""
+}
+
 func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.RedirectState {
 	code := r.URL.Query().Get("code")
 	authErr := r.URL.Query().Get("error")
@@ -233,12 +252,29 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 		redirectState.Error = "Error getting token info"
 		return redirectState
 	}
+
+	// check if required scopes are granted by the user
 	missingScope := checkMissingScope(auth.Scopes, tokenInfo.Scope)
 	if missingScope != "" {
 		log.Warn().Str("missingScope", missingScope).Msg("Scope missing")
 		redirectState.Error = fmt.Sprintf("Scope %s missing", missingScope)
 		return redirectState
 	}
+
+	// update user sensitive scope requested to not show the scope onboarding again
+	missingSensitiveScope := checkMissingScope(sensitiveScope, tokenInfo.Scope)
+	if missingSensitiveScope == "" { // if all sensitive scopes are granted
+		_, err = c.db.ExecContext(
+			ctx,
+			"INSERT INTO users (email, sensitive_scope) VALUES ($1, $2) ON CONFLICT (email) DO UPDATE SET sensitive_scope = $2 , updated_at = CURRENT_TIMESTAMP",
+			tokenInfo.Email,
+			tokenInfo.Scope,
+		)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Error marshalling token")
+		}
+	}
+
 	tokenBin, err := json.Marshal(*token)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Error marshalling token")
@@ -280,11 +316,6 @@ func (c ClaimsCheck) requestDevToken(state *pb.AuthState, r *http.Request) *pb.R
 func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 	stateBase64 := r.URL.Query().Get("state")
 	stateBin, err := base64.StdEncoding.DecodeString(stateBase64)
-	if err != nil {
-		log.Error().Err(err).Msg("Error decoding state")
-		http.Error(w, "Error decoding state", http.StatusBadRequest)
-		return
-	}
 	if err != nil {
 		log.Error().Err(err).Msg("Error decoding state")
 		http.Error(w, "Error decoding state", http.StatusBadRequest)

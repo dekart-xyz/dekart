@@ -11,7 +11,7 @@ import Tag from 'antd/es/tag'
 export default function MembersTab () {
   const users = useSelector(state => state.workspace.users)
   const addedUsersCount = useSelector(state => state.workspace.addedUsersCount)
-  const user = useSelector(state => state.user)
+  const userStream = useSelector(state => state.user.stream)
   const dispatch = useDispatch()
   const [email, setEmail] = useState('')
   const addUserCb = useCallback(() => {
@@ -71,8 +71,8 @@ export default function MembersTab () {
               className: styles.removeButtonColumn,
               render: (a, u) => (
                 <Button
-                  disabled={u.email === user.email}
-                  title={u.email === user.email ? 'You cannot remove yourself' : undefined}
+                  disabled={u.email === userStream.email}
+                  title={u.email === userStream.email ? 'You cannot remove yourself' : undefined}
                   className={styles.removeButton}
                   type='text' onClick={() => {
                     dispatch(updateWorkspaceUser(u.email, UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_REMOVE))

@@ -191,17 +191,40 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 		return status.Errorf(codes.Internal, err.Error())
 	}
 
-	res := proto.GetUserStreamResponse{
+	// query from db user scopes
+	res, err := s.db.QueryContext(ctx,
+		`select sensitive_scope from users where email=$1`,
+		claims.Email,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return status.Errorf(codes.Internal, err.Error())
+	}
+
+	defer res.Close()
+	sensitiveScopesGranted := ""
+	for res.Next() {
+		err = res.Scan(&sensitiveScopesGranted)
+		if err != nil {
+			log.Err(err).Send()
+			return status.Errorf(codes.Internal, err.Error())
+		}
+	}
+
+	response := proto.GetUserStreamResponse{
 		StreamOptions: &proto.StreamOptions{
 			Sequence: sequence,
 		},
-		ConnectionUpdate: connectionUpdate,
-		Email:            claims.Email,
-		WorkspaceUpdate:  workspaceUpdate,
-		WorkspaceId:      checkWorkspace(ctx).ID,
-		PlanType:         checkWorkspace(ctx).PlanType,
+		ConnectionUpdate:           connectionUpdate,
+		Email:                      claims.Email,
+		WorkspaceUpdate:            workspaceUpdate,
+		WorkspaceId:                checkWorkspace(ctx).ID,
+		PlanType:                   checkWorkspace(ctx).PlanType,
+		SensitiveScopesGranted:     claims.SensitiveScopesGranted,                      // current token scopes
+		SensitiveScopesGrantedOnce: user.HasAllSensitiveScopes(sensitiveScopesGranted), // granted before to app
 	}
-	err = srv.Send(&res)
+
+	err = srv.Send(&response)
 	if err != nil {
 		log.Err(err).Send()
 		return status.Errorf(codes.Internal, err.Error())

@@ -1,7 +1,7 @@
 import Button from 'antd/es/button'
 import Modal from 'antd/es/modal'
 import { EditOutlined, UsergroupAddOutlined, LinkOutlined, LockOutlined, FileSearchOutlined } from '@ant-design/icons'
-import { useEffect, useState, getRef } from 'react'
+import { useEffect, useState } from 'react'
 import styles from './ShareButton.module.css'
 import { useDispatch, useSelector } from 'react-redux'
 import Switch from 'antd/es/switch'
@@ -9,6 +9,7 @@ import { copyUrlToClipboard } from './actions/clipboard'
 import { setDiscoverable } from './actions/report'
 import { PlanType } from '../proto/dekart_pb'
 import Tooltip from 'antd/es/tooltip'
+import { getUrlRef } from './lib/ref'
 
 function CopyLinkButton () {
   const dispatch = useDispatch()
@@ -91,7 +92,7 @@ function ModalContent ({ reportId, discoverable, isAuthor, allowEdit }) {
               })()}
               </div>
               <div className={styles.reportAuthStatus}>
-                <Tooltip title={<AuthTypeTitle authType={authType} referer={getRef(env, usage)} />}>
+                <Tooltip title={<AuthTypeTitle authType={authType} referer={getUrlRef(env, usage)} />}>
                   <span className={styles.authEnabled}>User authorization enabled</span>
                 </Tooltip>
               </div>
