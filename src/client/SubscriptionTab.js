@@ -28,7 +28,7 @@ function PlanTitle ({ name, price, icon, color, description, selected }) {
 
 function Plan ({ title, children, planType, cancelAt, addedUsersCount }) {
   const [hover, setHover] = useState(false)
-  const user = useSelector(state => state.user)
+  const userStream = useSelector(state => state.user.stream)
   const dispatch = useDispatch()
   const [waitForRedirect, setWaitForRedirect] = useState(false)
   let actionButton = (
@@ -44,11 +44,11 @@ function Plan ({ title, children, planType, cancelAt, addedUsersCount }) {
     </Button>
   )
   if (planType === PlanType.TYPE_PERSONAL) {
-    if (user.planType === PlanType.TYPE_TEAM) {
+    if (userStream.planType === PlanType.TYPE_TEAM) {
       actionButton = (
         <Button disabled title='Downgrading from Team to Personal is not supported'>Choose plan</Button>
       )
-    } else if (user.planType === PlanType.TYPE_PERSONAL) {
+    } else if (userStream.planType === PlanType.TYPE_PERSONAL) {
       actionButton = <Button disabled>Current plan</Button>
     } else if (addedUsersCount > 1) {
       actionButton = (
@@ -56,7 +56,7 @@ function Plan ({ title, children, planType, cancelAt, addedUsersCount }) {
       )
     }
   }
-  if (planType === PlanType.TYPE_TEAM && user.planType === PlanType.TYPE_TEAM) {
+  if (planType === PlanType.TYPE_TEAM && userStream.planType === PlanType.TYPE_TEAM) {
     actionButton = (
       <>
         <Button
@@ -86,7 +86,7 @@ function Plan ({ title, children, planType, cancelAt, addedUsersCount }) {
 }
 
 function Plans () {
-  const user = useSelector(state => state.user)
+  const userStream = useSelector(state => state.user.stream)
   const workspace = useSelector(state => state.workspace)
   return (
     <div className={styles.plans}>
@@ -95,7 +95,7 @@ function Plans () {
         title={<PlanTitle
           icon={<HomeOutlined />}
           name='personal'
-          selected={user.planType === PlanType.TYPE_PERSONAL}
+          selected={userStream.planType === PlanType.TYPE_PERSONAL}
           price='$0'
           description='unlimited single person use'
                />}
@@ -113,7 +113,7 @@ function Plans () {
           icon={<TeamOutlined />}
           name='team'
           price='$100/month'
-          selected={user.planType === PlanType.TYPE_TEAM}
+          selected={userStream.planType === PlanType.TYPE_TEAM}
           description='for teams up to 20 people'
                />}
         planType={PlanType.TYPE_TEAM}
@@ -130,8 +130,8 @@ function Plans () {
 }
 
 export default function SubscriptionTab () {
-  const user = useSelector(state => state.user)
-  if (!user) {
+  const userStream = useSelector(state => state.user.stream)
+  if (!userStream) {
     return null
   }
   return (

@@ -61,6 +61,7 @@ export function setHttpError (status, message = '') {
 export function setStreamError (code, msg) {
   return (dispatch) => {
     dispatch({ type: setStreamError.name })
+    console.error(code)
     // https://github.com/grpc/grpc/blob/master/doc/statuscodes.md
     switch (code) {
       case 1:

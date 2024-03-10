@@ -151,7 +151,7 @@ function FirstConnectionOnboarding () {
         status='success'
         icon={<ApiTwoTone />}
         title='Ready to connect!'
-        subTitle='Before you can create a map, you need to connect to your Google Cloud account.'
+        subTitle={<>Next step, select <b>Project ID</b> for BigQuery billing and <b>Storage Bucket</b> name to store your query results.</>}
         extra={<Button type='primary' onClick={() => { dispatch(newConnection()) }}>Create connection</Button>}
       />
     </>
@@ -331,7 +331,6 @@ export default function HomePage ({ reportFilter }) {
     dispatch(subscribeReports())
     return () => dispatch(unsubscribeReports())
   }, [dispatch])
-  console.log(reportsList, connectionsLoaded)
   return (
     <div className={styles.homePage}>
       <Header />

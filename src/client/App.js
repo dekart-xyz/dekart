@@ -14,10 +14,12 @@ import { useSelector, useDispatch } from 'react-redux'
 import { getUsage } from './actions/usage'
 import { AuthState, RedirectState as DekartRedirectState } from '../proto/dekart_pb'
 import { getEnv } from './actions/env'
-import { setRedirectState } from './actions/redirectState'
+import { authRedirect, setRedirectState } from './actions/redirect'
 import { subscribeUserStream, unsubscribeUserStream } from './actions/user'
-import { authRedirect } from './lib/api'
 import WorkspacePage from './WorkspacePage'
+import GrantScopesPage from './GrantScopesPage'
+import { loadLocalStorage } from './actions/localStorage'
+import { useLocation } from 'react-router-dom/cjs/react-router-dom'
 
 // RedirectState reads states passed in the URL from the server
 function RedirectState () {
@@ -42,26 +44,31 @@ function RedirectState () {
     url.search = params.toString()
     return <Redirect to={`${url.pathname}${url.search}`} /> // apparently receives only pathname and search
   }
-  return null
+  return <AppRedirect />
 }
 
 function AppRedirect () {
   const httpError = useSelector(state => state.httpError)
   const { status, doNotAuthenticate } = httpError
   const { newReportId } = useSelector(state => state.reportStatus)
-  const user = useSelector(state => state.user)
+  const userStream = useSelector(state => state.user.stream)
+  const needSensitiveScopes = useSelector(state => state.env.needSensitiveScopes)
+  const sensitiveScopesGranted = userStream?.sensitiveScopesGranted
+  const sensitiveScopesGrantedOnce = useSelector(state => state.user.sensitiveScopesGrantedOnce)
+  const dispatch = useDispatch()
 
   useEffect(() => {
     if (status === 401 && doNotAuthenticate === false) {
       const state = new AuthState()
       state.setUiUrl(window.location.href)
       state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
-      authRedirect(state)
+      state.setSensitiveScope(sensitiveScopesGrantedOnce) // if user has granted sensitive scopes once, request them right away without onboarding
+      dispatch(authRedirect(state))
     }
-  }, [status, doNotAuthenticate])
+  }, [status, doNotAuthenticate, dispatch, sensitiveScopesGrantedOnce])
 
   if (status === 401 && doNotAuthenticate === false) {
-    // redirect to authentication endpoint from useEffect
+    // redirect to authentication endpoint from useEffect above
     return null
   }
 
@@ -69,12 +76,16 @@ function AppRedirect () {
     return <Redirect to={`/${httpError.status}`} push />
   }
 
-  if (user && !user.planType) {
+  if (userStream && !userStream.planType) {
     return <Redirect to='/workspace' push />
   }
 
   if (newReportId) {
     return <Redirect to={`/reports/${newReportId}/source`} push />
+  }
+
+  if (userStream && needSensitiveScopes && !sensitiveScopesGranted) {
+    return <Redirect to='/grant-scopes' push />
   }
 
   return null
@@ -85,6 +96,14 @@ function RedirectToSource () {
   return <Redirect to={`/reports/${id}/source`} />
 }
 
+function PageHistory ({ visitedPages }) {
+  const location = useLocation()
+  useEffect(() => {
+    visitedPages.current.push(location.pathname)
+  }, [location, visitedPages])
+  return null
+}
+
 export default function App () {
   const errorMessage = useSelector(state => state.httpError.message)
   const status = useSelector(state => state.httpError.status)
@@ -92,6 +111,12 @@ export default function App () {
   const usage = useSelector(state => state.usage)
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const dispatch = useDispatch()
+  const visitedPages = React.useRef(['/'])
+
+  useEffect(() => {
+    dispatch(loadLocalStorage())
+  }, [dispatch])
+
   useEffect(() => {
     if (window.location.pathname.startsWith('/401')) {
       // do not load env and usage on 401 page
@@ -115,11 +140,14 @@ export default function App () {
   }, [dispatch])
   return (
     <Router>
+      <PageHistory visitedPages={visitedPages} />
       <RedirectState />
-      <AppRedirect />
       <Switch>
         <Route exact path='/'>
           <HomePage reportFilter='my' />
+        </Route>
+        <Route exact path='/grant-scopes'>
+          <GrantScopesPage visitedPages={visitedPages} />
         </Route>
         <Route exact path='/shared'>
           <HomePage reportFilter='discoverable' />

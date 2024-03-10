@@ -68,7 +68,6 @@ export function getWorkspace () {
     dispatch({ type: getWorkspace.name })
     const request = new GetWorkspaceRequest()
     dispatch(grpcCall(Dekart.GetWorkspace, request, (response) => {
-      console.log(response)
       dispatch(workspaceUpdate(response))
     }))
   }

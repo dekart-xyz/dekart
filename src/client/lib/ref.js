@@ -22,7 +22,7 @@ function getStats (env, usage) {
   ].join('-')
 }
 
-export function getRef (env, usage, location = window.location, v = version) {
+export function getUrlRef (env, usage, location = window.location, v = version) {
   if (!env.loaded || !usage.loaded) {
     return 'dekart-unknown'
   }

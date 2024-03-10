@@ -2,6 +2,7 @@ import { GetUserStreamRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { getConnectionsList } from './connection'
 import { grpcStream, grpcStreamCancel } from './grpc'
+import { updateLocalStorage } from './localStorage'
 import { getWorkspace } from './workspace'
 
 export function userStreamUpdate (userStream) {
@@ -21,6 +22,7 @@ export function subscribeUserStream () {
     }
     dispatch(grpcStream(Dekart.GetUserStream, request, (message, err) => {
       if (message) {
+        dispatch(updateLocalStorage('sensitiveScopesGrantedOnce', message.sensitiveScopesGrantedOnce))
         dispatch(userStreamUpdate(message))
         if (prevRes.workspaceUpdate !== message.workspaceUpdate) {
           prevRes.workspaceUpdate = message.workspaceUpdate

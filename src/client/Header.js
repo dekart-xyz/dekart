@@ -1,13 +1,13 @@
 import styles from './Header.module.css'
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import DekartMenu from './DekartMenu'
-import { getRef } from './lib/ref'
+import { getUrlRef } from './lib/ref'
 import Avatar from 'antd/es/avatar'
 import Dropdown from 'antd/es/dropdown'
 import { AuthState } from '../proto/dekart_pb'
-import { authRedirect } from './lib/api'
 import classNames from 'classnames'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
+import { authRedirect } from './actions/redirect'
 
 function getSignature (email) {
   if (!email) {
@@ -23,9 +23,10 @@ function getSignature (email) {
 
 function User ({ buttonDivider }) {
   const token = useSelector(state => state.token)
-  const user = useSelector(state => state.user)
   const history = useHistory()
-  if (!user || !token) {
+  const userStream = useSelector(state => state.user.stream)
+  const dispatch = useDispatch()
+  if (!userStream || !token) {
     return null
   }
   return (
@@ -38,7 +39,7 @@ function User ({ buttonDivider }) {
         overlayClassName={styles.userDropdown} menu={{
           items: [
             {
-              label: user && user.email,
+              label: userStream && userStream.email,
               disabled: true
             },
             {
@@ -54,7 +55,7 @@ function User ({ buttonDivider }) {
                 state.setUiUrl(window.location.href)
                 state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
                 state.setSwitchAccount(true)
-                authRedirect(state)
+                dispatch(authRedirect(state))
               }
             },
             {
@@ -64,12 +65,12 @@ function User ({ buttonDivider }) {
                 state.setUiUrl(window.location.href)
                 state.setAction(AuthState.Action.ACTION_REVOKE)
                 state.setAccessTokenToRevoke(token.access_token)
-                authRedirect(state)
+                dispatch(authRedirect(state))
               }
             }
           ]
         }}
-      ><Avatar>{getSignature(user && user.email)}</Avatar>
+      ><Avatar>{getSignature(userStream && userStream.email)}</Avatar>
       </Dropdown>
 
     </div>
@@ -81,7 +82,7 @@ export function Header ({ buttons, title }) {
   const usage = useSelector(state => state.usage)
   let homePage
   if (env.loaded && usage.loaded) {
-    homePage = env.variables.UX_HOMEPAGE + '?ref=' + getRef(env, usage)
+    homePage = env.variables.UX_HOMEPAGE + '?ref=' + getUrlRef(env, usage)
   }
   return (
     <div className={styles.header}>
