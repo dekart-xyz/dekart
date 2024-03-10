@@ -1,12 +1,31 @@
+import { combineReducers } from 'redux'
 import { userStreamUpdate } from '../actions/user'
+import { localStorageInit } from '../actions/localStorage'
 
-export default function user (state = null, action) {
+function stream (state = null, action) {
   switch (action.type) {
     case userStreamUpdate.name:
       return {
-        email: action.userStream.email
+        email: action.userStream.email,
+        sensitiveScopesGranted: action.userStream.sensitiveScopesGranted
       }
     default:
       return state
   }
 }
+
+function sensitiveScopesGrantedOnce (state = false, action) {
+  switch (action.type) {
+    case localStorageInit.name:
+      return action.current.sensitiveScopesGrantedOnce
+    case userStreamUpdate.name:
+      return action.userStream.sensitiveScopesGrantedOnce
+    default:
+      return state
+  }
+}
+
+export default combineReducers({
+  stream,
+  sensitiveScopesGrantedOnce
+})

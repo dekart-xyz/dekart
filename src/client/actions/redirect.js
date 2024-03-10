@@ -1,6 +1,19 @@
+import { AuthState } from '../../proto/dekart_pb'
 
 export function setRedirectState (redirectState) {
   return { type: setRedirectState.name, redirectState }
+}
+
+export function requestSensitiveScopes (returnPath) {
+  return async (dispatch) => {
+    const url = new URL(window.location.href)
+    url.pathname = returnPath
+    const state = new AuthState()
+    state.setUiUrl(url.href)
+    state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
+    state.setSensitiveScope(true)
+    dispatch(authRedirect(state))
+  }
 }
 
 const { REACT_APP_API_HOST } = process.env // this never changes, passed during build

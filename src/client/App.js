@@ -17,6 +17,8 @@ import { AuthState, RedirectState as DekartRedirectState } from '../proto/dekart
 import { getEnv } from './actions/env'
 import { authRedirect, setRedirectState } from './actions/redirect'
 import { subscribeUserStream, unsubscribeUserStream } from './actions/user'
+import GrantScopesPage from './GrantScopesPage'
+import { loadLocalStorage } from './actions/localStorage'
 
 // RedirectState reads states passed in the URL from the server
 function RedirectState () {
@@ -41,13 +43,17 @@ function RedirectState () {
     url.search = params.toString()
     return <Redirect to={`${url.pathname}${url.search}`} /> // apparently receives only pathname and search
   }
-  return null
+  return <AppRedirect />
 }
 
 function AppRedirect () {
   const httpError = useSelector(state => state.httpError)
   const { status, doNotAuthenticate } = httpError
   const { newReportId } = useSelector(state => state.reportStatus)
+  const userStream = useSelector(state => state.user.stream)
+  const needSensitiveScopes = useSelector(state => state.env.needSensitiveScopes)
+  const sensitiveScopesGranted = userStream?.sensitiveScopesGranted
+  const sensitiveScopesGrantedOnce = useSelector(state => state.user.sensitiveScopesGrantedOnce)
   const location = useLocation()
   const dispatch = useDispatch()
 
@@ -56,12 +62,13 @@ function AppRedirect () {
       const state = new AuthState()
       state.setUiUrl(window.location.href)
       state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
+      state.setSensitiveScope(sensitiveScopesGrantedOnce) // if user has granted sensitive scopes once, request them right away without onboarding
       dispatch(authRedirect(state))
     }
-  }, [status, doNotAuthenticate, dispatch])
+  }, [status, doNotAuthenticate, dispatch, sensitiveScopesGrantedOnce])
 
   if (status === 401 && doNotAuthenticate === false) {
-    // redirect to authentication endpoint from useEffect
+    // redirect to authentication endpoint from useEffect above
     return null
   }
 
@@ -73,12 +80,24 @@ function AppRedirect () {
     return <Redirect to={`/reports/${newReportId}/source`} push />
   }
 
+  if (userStream && needSensitiveScopes && !sensitiveScopesGranted) {
+    return <Redirect to='/grant-scopes' push />
+  }
+
   return null
 }
 
 function RedirectToSource () {
   const { id } = useParams()
   return <Redirect to={`/reports/${id}/source`} />
+}
+
+function PageHistory ({ visitedPages }) {
+  const location = useLocation()
+  useEffect(() => {
+    visitedPages.current.push(location.pathname)
+  }, [location, visitedPages])
+  return null
 }
 
 export default function App () {
@@ -88,6 +107,12 @@ export default function App () {
   const usage = useSelector(state => state.usage)
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const dispatch = useDispatch()
+  const visitedPages = React.useRef(['/'])
+
+  useEffect(() => {
+    dispatch(loadLocalStorage())
+  }, [dispatch])
+
   useEffect(() => {
     if (window.location.pathname.startsWith('/401')) {
       // do not load env and usage on 401 page
@@ -111,11 +136,14 @@ export default function App () {
   }, [dispatch])
   return (
     <Router>
+      <PageHistory visitedPages={visitedPages} />
       <RedirectState />
-      <AppRedirect />
       <Switch>
         <Route exact path='/'>
           <HomePage reportFilter='my' />
+        </Route>
+        <Route exact path='/grant-scopes'>
+          <GrantScopesPage visitedPages={visitedPages} />
         </Route>
         <Route exact path='/shared'>
           <HomePage reportFilter='discoverable' />

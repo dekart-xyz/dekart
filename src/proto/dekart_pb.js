@@ -2225,7 +2225,9 @@ proto.GetUserStreamResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
     streamOptions: (f = msg.getStreamOptions()) && proto.StreamOptions.toObject(includeInstance, f),
     connectionUpdate: jspb.Message.getFieldWithDefault(msg, 2, 0),
-    email: jspb.Message.getFieldWithDefault(msg, 3, "")
+    email: jspb.Message.getFieldWithDefault(msg, 3, ""),
+    sensitiveScopesGranted: jspb.Message.getBooleanFieldWithDefault(msg, 4, false),
+    sensitiveScopesGrantedOnce: jspb.Message.getBooleanFieldWithDefault(msg, 5, false)
   };
 
   if (includeInstance) {
@@ -2275,6 +2277,14 @@ proto.GetUserStreamResponse.deserializeBinaryFromReader = function(msg, reader) 
       var value = /** @type {string} */ (reader.readString());
       msg.setEmail(value);
       break;
+    case 4:
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setSensitiveScopesGranted(value);
+      break;
+    case 5:
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setSensitiveScopesGrantedOnce(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -2323,6 +2333,20 @@ proto.GetUserStreamResponse.serializeBinaryToWriter = function(message, writer) 
   if (f.length > 0) {
     writer.writeString(
       3,
+      f
+    );
+  }
+  f = message.getSensitiveScopesGranted();
+  if (f) {
+    writer.writeBool(
+      4,
+      f
+    );
+  }
+  f = message.getSensitiveScopesGrantedOnce();
+  if (f) {
+    writer.writeBool(
+      5,
       f
     );
   }
@@ -2399,6 +2423,42 @@ proto.GetUserStreamResponse.prototype.getEmail = function() {
  */
 proto.GetUserStreamResponse.prototype.setEmail = function(value) {
   return jspb.Message.setProto3StringField(this, 3, value);
+};
+
+
+/**
+ * optional bool sensitive_scopes_granted = 4;
+ * @return {boolean}
+ */
+proto.GetUserStreamResponse.prototype.getSensitiveScopesGranted = function() {
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 4, false));
+};
+
+
+/**
+ * @param {boolean} value
+ * @return {!proto.GetUserStreamResponse} returns this
+ */
+proto.GetUserStreamResponse.prototype.setSensitiveScopesGranted = function(value) {
+  return jspb.Message.setProto3BooleanField(this, 4, value);
+};
+
+
+/**
+ * optional bool sensitive_scopes_granted_once = 5;
+ * @return {boolean}
+ */
+proto.GetUserStreamResponse.prototype.getSensitiveScopesGrantedOnce = function() {
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 5, false));
+};
+
+
+/**
+ * @param {boolean} value
+ * @return {!proto.GetUserStreamResponse} returns this
+ */
+proto.GetUserStreamResponse.prototype.setSensitiveScopesGrantedOnce = function(value) {
+  return jspb.Message.setProto3BooleanField(this, 5, value);
 };
 
 
@@ -5508,7 +5568,8 @@ proto.AuthState.toObject = function(includeInstance, msg) {
     authUrl: jspb.Message.getFieldWithDefault(msg, 2, ""),
     uiUrl: jspb.Message.getFieldWithDefault(msg, 3, ""),
     accessTokenToRevoke: jspb.Message.getFieldWithDefault(msg, 4, ""),
-    switchAccount: jspb.Message.getBooleanFieldWithDefault(msg, 5, false)
+    switchAccount: jspb.Message.getBooleanFieldWithDefault(msg, 5, false),
+    sensitiveScope: jspb.Message.getBooleanFieldWithDefault(msg, 6, false)
   };
 
   if (includeInstance) {
@@ -5564,6 +5625,10 @@ proto.AuthState.deserializeBinaryFromReader = function(msg, reader) {
     case 5:
       var value = /** @type {boolean} */ (reader.readBool());
       msg.setSwitchAccount(value);
+      break;
+    case 6:
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setSensitiveScope(value);
       break;
     default:
       reader.skipField();
@@ -5626,6 +5691,13 @@ proto.AuthState.serializeBinaryToWriter = function(message, writer) {
   if (f) {
     writer.writeBool(
       5,
+      f
+    );
+  }
+  f = message.getSensitiveScope();
+  if (f) {
+    writer.writeBool(
+      6,
       f
     );
   }
@@ -5729,6 +5801,24 @@ proto.AuthState.prototype.getSwitchAccount = function() {
  */
 proto.AuthState.prototype.setSwitchAccount = function(value) {
   return jspb.Message.setProto3BooleanField(this, 5, value);
+};
+
+
+/**
+ * optional bool sensitive_scope = 6;
+ * @return {boolean}
+ */
+proto.AuthState.prototype.getSensitiveScope = function() {
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 6, false));
+};
+
+
+/**
+ * @param {boolean} value
+ * @return {!proto.AuthState} returns this
+ */
+proto.AuthState.prototype.setSensitiveScope = function(value) {
+  return jspb.Message.setProto3BooleanField(this, 6, value);
 };
 
 

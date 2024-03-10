@@ -147,6 +147,12 @@ export class GetUserStreamResponse extends jspb.Message {
   getEmail(): string;
   setEmail(value: string): void;
 
+  getSensitiveScopesGranted(): boolean;
+  setSensitiveScopesGranted(value: boolean): void;
+
+  getSensitiveScopesGrantedOnce(): boolean;
+  setSensitiveScopesGrantedOnce(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetUserStreamResponse.AsObject;
   static toObject(includeInstance: boolean, msg: GetUserStreamResponse): GetUserStreamResponse.AsObject;
@@ -162,6 +168,8 @@ export namespace GetUserStreamResponse {
     streamOptions?: StreamOptions.AsObject,
     connectionUpdate: number,
     email: string,
+    sensitiveScopesGranted: boolean,
+    sensitiveScopesGrantedOnce: boolean,
   }
 }
 
@@ -656,6 +664,9 @@ export class AuthState extends jspb.Message {
   getSwitchAccount(): boolean;
   setSwitchAccount(value: boolean): void;
 
+  getSensitiveScope(): boolean;
+  setSensitiveScope(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): AuthState.AsObject;
   static toObject(includeInstance: boolean, msg: AuthState): AuthState.AsObject;
@@ -673,6 +684,7 @@ export namespace AuthState {
     uiUrl: string,
     accessTokenToRevoke: string,
     switchAccount: boolean,
+    sensitiveScope: boolean,
   }
 
   export interface ActionMap {

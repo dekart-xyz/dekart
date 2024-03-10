@@ -22,9 +22,9 @@ function getSignature (email) {
 
 function User ({ buttonDivider }) {
   const token = useSelector(state => state.token)
-  const user = useSelector(state => state.user)
+  const userStream = useSelector(state => state.user.stream)
   const dispatch = useDispatch()
-  if (!user || !token) {
+  if (!userStream || !token) {
     return null
   }
   return (
@@ -37,7 +37,7 @@ function User ({ buttonDivider }) {
         overlayClassName={styles.userDropdown} menu={{
           items: [
             {
-              label: user && user.email,
+              label: userStream && userStream.email,
               disabled: true
             },
             {
@@ -62,7 +62,7 @@ function User ({ buttonDivider }) {
             }
           ]
         }}
-      ><Avatar>{getSignature(user && user.email)}</Avatar>
+      ><Avatar>{getSignature(userStream && userStream.email)}</Avatar>
       </Dropdown>
 
     </div>

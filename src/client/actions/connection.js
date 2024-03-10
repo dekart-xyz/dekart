@@ -49,11 +49,19 @@ export function archiveConnection (id) {
   }
 }
 
+function getDefaultName (connectionsList, suffix = 0) {
+  const name = suffix ? `BigQuery (${suffix})` : 'BigQuery'
+  if (connectionsList.find(c => c.connectionName === name)) {
+    return getDefaultName(connectionsList, suffix + 1)
+  }
+  return name
+}
+
 export function newConnection (datasetId) {
   return async (dispatch, getState) => {
     dispatch({ type: newConnection.name })
 
-    const connectionName = `Untitled connection ${(new Date()).toLocaleString()}`
+    const connectionName = getDefaultName(getState().connection.list)
     const request = new CreateConnectionRequest()
     request.setConnectionName(connectionName)
 

@@ -172,7 +172,8 @@ function env (state = defaultEnv, action) {
               : action.variables.REQUIRE_GOOGLE_OAUTH
                 ? 'GOOGLE_OAUTH'
                 : 'NONE'
-        )
+        ),
+        needSensitiveScopes: action.variables.REQUIRE_GOOGLE_OAUTH
       }
     default:
       return state
