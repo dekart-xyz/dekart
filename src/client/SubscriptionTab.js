@@ -96,7 +96,7 @@ function Plans () {
           icon={<HomeOutlined />}
           name='personal'
           selected={userStream.planType === PlanType.TYPE_PERSONAL}
-          price='$0'
+          price='Free'
           description='unlimited single person use'
                />}
         planType={PlanType.TYPE_PERSONAL}
@@ -119,11 +119,11 @@ function Plans () {
         planType={PlanType.TYPE_TEAM}
         cancelAt={workspace?.subscription?.cancelAt}
       >
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Unlimited BigQuery connections</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Upload GeoJSON/CSV</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Unlimited WebGL maps</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Google SSO</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Add up to 20 collaborators</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Everything from Personal plan</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Invite up to 20 collaborators</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Share and manage access</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Manage access to reports</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Live report editing</Text></p>
       </Plan>
     </div>
   )

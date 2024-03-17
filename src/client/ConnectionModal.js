@@ -50,9 +50,6 @@ export default function ConnectionModal () {
   const { dialog } = useSelector(state => state.connection)
   const { visible, id, loading } = dialog
 
-  const env = useSelector(state => state.env)
-  const { BIGQUERY_PROJECT_ID, CLOUD_STORAGE_BUCKET } = env.variables
-
   const connection = useSelector(state => state.connection.list.find(s => s.id === id))
 
   const dispatch = useDispatch()
@@ -62,13 +59,7 @@ export default function ConnectionModal () {
     if (connection) {
       form.setFieldsValue(connection)
     }
-    if (BIGQUERY_PROJECT_ID) {
-      form.setFieldsValue({ bigqueryProjectId: BIGQUERY_PROJECT_ID })
-    }
-    if (CLOUD_STORAGE_BUCKET) {
-      form.setFieldsValue({ cloudStorageBucket: CLOUD_STORAGE_BUCKET })
-    }
-  }, [connection, BIGQUERY_PROJECT_ID, CLOUD_STORAGE_BUCKET, form])
+  }, [connection, form])
 
   if (!visible) {
     return null
@@ -94,10 +85,10 @@ export default function ConnectionModal () {
             <Input />
           </Form.Item>
           <Form.Item label='Google Cloud project ID' extra='used to bill BigQuery jobs' required name='bigqueryProjectId'>
-            <Input readOnly={BIGQUERY_PROJECT_ID} />
+            <Input />
           </Form.Item>
           <Form.Item label='Google Cloud Storage bucket' extra='where queries, files and query results stored' required name='cloudStorageBucket'>
-            <Input placeholder='my-company-storage-bucket' readOnly={CLOUD_STORAGE_BUCKET} />
+            <Input placeholder='my-company-storage-bucket' />
           </Form.Item>
         </Form>
       </div>

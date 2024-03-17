@@ -6,8 +6,12 @@ import Avatar from 'antd/es/avatar'
 import Dropdown from 'antd/es/dropdown'
 import { AuthState } from '../proto/dekart_pb'
 import classNames from 'classnames'
+import { GlobalOutlined } from '@ant-design/icons'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 import { authRedirect } from './actions/redirect'
+import Button from 'antd/es/button'
+import Tooltip from 'antd/es/tooltip'
+import { switchPlayground } from './actions/user'
 
 function getSignature (email) {
   if (!email) {
@@ -77,6 +81,34 @@ function User ({ buttonDivider }) {
   )
 }
 
+export function PlaygroundMode () {
+  const isPlayground = useSelector(state => state.user.stream?.isPlayground)
+  const dispatch = useDispatch()
+
+  if (!isPlayground) {
+    return null
+  }
+
+  return (
+    <div className={styles.playground}>
+      <Tooltip title={
+        (
+          <div className={styles.playgroundTooltip}>
+            <div>Public playground mode is enabled. Only public datasets are accessible.</div>
+            <Button
+              size='small' type='link' onClick={() => dispatch(switchPlayground(false))}
+            >Switch to private workspace
+            </Button>
+          </div>
+        )
+      }
+      >
+        <Button type='link' size='small' className={styles.playgroundButton}><GlobalOutlined /> Playground Mode</Button>
+      </Tooltip>
+    </div>
+  )
+}
+
 export function Header ({ buttons, title }) {
   const env = useSelector(state => state.env)
   const usage = useSelector(state => state.usage)
@@ -87,7 +119,10 @@ export function Header ({ buttons, title }) {
   return (
     <div className={styles.header}>
       <div className={styles.top}>
-        <DekartMenu />
+        <div className={styles.left}>
+          <DekartMenu />
+          <PlaygroundMode />
+        </div>
         <div className={styles.middle}>
           <div className={styles.dekartLinkHolder}><a target='_blank' rel='noopener noreferrer' className={styles.dekartLink} href={homePage}>Dekart</a></div>
         </div>

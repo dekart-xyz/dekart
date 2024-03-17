@@ -74,7 +74,7 @@ func getFileExtension(mimeType string) string {
 
 func (s Server) moveFileToStorage(reqCtx context.Context, fileSourceID string, fileExtension string, file multipart.File, reportIDs []string, bucketName string) {
 	defer file.Close()
-	ctx, cancel := context.WithTimeout(user.CopyClaims(reqCtx, context.Background()), 10*time.Minute)
+	ctx, cancel := context.WithTimeout(user.CopyUserContext(reqCtx, context.Background()), 10*time.Minute)
 	defer cancel()
 
 	storageWriter := s.storage.GetObject(bucketName, fmt.Sprintf("%s.%s", fileSourceID, fileExtension)).GetWriter(ctx)

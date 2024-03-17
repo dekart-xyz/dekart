@@ -197,20 +197,37 @@ func (s Server) getUserWorkspace(ctx context.Context, email string) (*proto.Work
 	return nil, nil
 }
 
-type workspaceInfoKeyType string
-
-const workspaceInfoKey workspaceInfoKeyType = "workspaceInfo"
-
-type WorkspaceInfo struct {
-	ID              string
-	PlanType        proto.PlanType
-	Name            string
-	AddedUsersCount int64
+func (s Server) checkPlaygroundUser(ctx context.Context, email string) (bool, error) {
+	var isPlayground bool
+	err := s.db.QueryRowContext(ctx, `
+		SELECT is_playground
+		FROM users
+		WHERE email = $1
+	`, email).Scan(&isPlayground)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		log.Err(err).Send()
+		return false, err
+	}
+	return isPlayground, nil
 }
 
 func (s Server) SetWorkspaceContext(ctx context.Context) context.Context {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
+		return ctx
+	}
+	isPlayground, err := s.checkPlaygroundUser(ctx, claims.Email)
+	if err != nil {
+		log.Err(err).Send()
+		return ctx
+	}
+	if isPlayground {
+		ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{
+			IsPlayground: true,
+		})
 		return ctx
 	}
 	workspace, err := s.getUserWorkspace(ctx, claims.Email)
@@ -240,7 +257,7 @@ func (s Server) SetWorkspaceContext(ctx context.Context) context.Context {
 		}
 	}
 
-	ctx = context.WithValue(ctx, workspaceInfoKey, WorkspaceInfo{
+	ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{
 		ID:              workspaceId,
 		PlanType:        planType,
 		Name:            name,
@@ -249,12 +266,8 @@ func (s Server) SetWorkspaceContext(ctx context.Context) context.Context {
 	return ctx
 }
 
-func checkWorkspace(ctx context.Context) WorkspaceInfo {
-	workspaceInfo, ok := ctx.Value(workspaceInfoKey).(WorkspaceInfo)
-	if !ok {
-		log.Error().Msgf("workspaceInfo not found in context")
-	}
-	return workspaceInfo
+func checkWorkspace(ctx context.Context) user.WorkspaceInfo {
+	return user.CheckWorkspaceCtx(ctx)
 }
 
 func (s Server) GetWorkspace(ctx context.Context, req *proto.GetWorkspaceRequest) (*proto.GetWorkspaceResponse, error) {

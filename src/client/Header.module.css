@@ -15,6 +15,34 @@
     align-items: center;
 }
 
+.left {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.playgroundButton > span {
+    color: #2B323B!important;
+    font-size: 0.8em;
+}
+
+.playgroundTooltip div {
+    padding: 7px;
+}
+.playgroundTooltip {
+    font-size: 0.8em;
+}
+
+.playground {
+    text-align: center;
+    margin-left: 10px;
+    background: rgb(87, 183, 211);
+    font-size: 0.8em;
+    display: absolute;
+    bottom: 0;
+    border-radius: 3px;
+}
+
 .header {
     padding: 5px 10px 5px 10px;
     background: linear-gradient(180deg, #2B323B 70%, #25272F 100%);

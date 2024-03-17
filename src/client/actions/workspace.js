@@ -101,7 +101,6 @@ export function getInvites () {
     dispatch({ type: getInvites.name })
     const request = new GetInvitesRequest()
     dispatch(grpcCall(Dekart.GetInvites, request, (response) => {
-      console.log(response)
       dispatch(invitesUpdate(response.invitesList))
     }))
   }
@@ -127,7 +126,6 @@ export function cancelSubscription () {
     const request = new CancelSubscriptionRequest()
     request.setUiUrl(window.location.href)
     dispatch(grpcCall(Dekart.CancelSubscription, request, (res) => {
-      console.log('cancelSubscription', res)
       success('Subscription canceled')
     }))
   }

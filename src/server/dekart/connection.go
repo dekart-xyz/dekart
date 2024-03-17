@@ -385,6 +385,10 @@ func (s Server) GetConnectionList(ctx context.Context, req *proto.GetConnectionL
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	if checkWorkspace(ctx).ID == "" {
+		log.Warn().Msg("workspace not found when getting connection list")
+		return nil, status.Error(codes.NotFound, "workspace not found")
+	}
 	connections, err := s.getConnections(ctx)
 	if err != nil {
 		log.Err(err).Send()

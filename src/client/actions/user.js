@@ -1,7 +1,7 @@
-import { GetUserStreamRequest } from '../../proto/dekart_pb'
+import { GetUserStreamRequest, SwitchPlaygroundRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { getConnectionsList } from './connection'
-import { grpcStream, grpcStreamCancel } from './grpc'
+import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
 import { updateLocalStorage } from './localStorage'
 import { getWorkspace } from './workspace'
 
@@ -37,6 +37,17 @@ export function subscribeUserStream () {
         }
       }
       return err
+    }))
+  }
+}
+
+export function switchPlayground (isPlayground) {
+  return (dispatch, getState) => {
+    const request = new SwitchPlaygroundRequest()
+    request.setIsPlayground(isPlayground)
+    dispatch(grpcCall(Dekart.SwitchPlayground, request, () => {
+      // reload page to apply new permissions
+      window.location.href = '/'
     }))
   }
 }

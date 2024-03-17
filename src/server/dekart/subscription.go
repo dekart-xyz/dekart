@@ -85,7 +85,7 @@ func (s Server) getSubscription(ctx context.Context, workspaceId string) (*proto
 	}, nil
 }
 
-func (s Server) createCheckoutSession(ctx context.Context, ws WorkspaceInfo, req *proto.CreateSubscriptionRequest) (*stripe.CheckoutSession, error) {
+func (s Server) createCheckoutSession(ctx context.Context, ws user.WorkspaceInfo, req *proto.CreateSubscriptionRequest) (*stripe.CheckoutSession, error) {
 	claims := user.GetClaims(ctx)
 	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 	customerParams := &stripe.CustomerParams{

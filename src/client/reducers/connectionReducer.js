@@ -1,6 +1,6 @@
 import { combineReducers } from 'redux'
 import { closeConnectionDialog, connectionChanged, connectionCreated, connectionListUpdate, connectionSaved, editConnection, newConnection, saveConnection, testConnection, testConnectionResponse } from '../actions/connection'
-import { setEnv } from '../actions/env'
+import { userStreamUpdate } from '../actions/user'
 
 function dialog (state = {
   visible: false,
@@ -102,13 +102,14 @@ function listLoaded (state = false, action) {
   }
 }
 
-// userDefined when connection is not configured in Dekart via env variables
-function userDefined (state = false, action) {
+// in cloud it's always user defined, except for playground
+function userDefined (state = true, action) {
   switch (action.type) {
-    case setEnv.name: {
-      const { BIGQUERY_PROJECT_ID, CLOUD_STORAGE_BUCKET, DATASOURCE } = action.variables
-      return (BIGQUERY_PROJECT_ID === '' && DATASOURCE === 'BQ') || CLOUD_STORAGE_BUCKET === ''
-    }
+    case userStreamUpdate.name:
+      if (action.userStream.isPlayground) {
+        return false // user switched to playground, no longer user defined connection
+      }
+      return state
     default:
       return state
   }

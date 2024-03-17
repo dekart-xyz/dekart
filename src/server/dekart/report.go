@@ -29,8 +29,11 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 		log.Fatal().Msg("getReport require claims")
 		return nil, nil
 	}
-	reportRows, err := s.db.QueryContext(ctx,
-		`select
+	var reportRows *sql.Rows
+	var err error
+	if checkWorkspace(ctx).ID == "" {
+		reportRows, err = s.db.QueryContext(ctx,
+			`select
 			id,
 			case when map_config is null then '' else map_config end as map_config,
 			case when title is null then 'Untitled' else title end as title,
@@ -40,14 +43,36 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			discoverable,
 			allow_edit,
 			created_at,
-			updated_at
+			updated_at,
+			is_playground
 		from reports as r
-		where id=$1 and not archived and workspace_id=$3
+		where id=$1 and not archived and is_playground=true
 		limit 1`,
-		reportID,
-		claims.Email,
-		checkWorkspace(ctx).ID,
-	)
+			reportID,
+			claims.Email,
+		)
+	} else {
+		reportRows, err = s.db.QueryContext(ctx,
+			`select
+			id,
+			case when map_config is null then '' else map_config end as map_config,
+			case when title is null then 'Untitled' else title end as title,
+			(author_email = $2) or allow_edit as can_write,
+			author_email = $2 as is_author,
+			author_email,
+			discoverable,
+			allow_edit,
+			created_at,
+			updated_at,
+			is_playground
+		from reports as r
+		where id=$1 and not archived and (workspace_id=$3 or is_playground)
+		limit 1`,
+			reportID,
+			claims.Email,
+			checkWorkspace(ctx).ID,
+		)
+	}
 	if err != nil {
 		log.Err(err).Send()
 		return nil, err
@@ -69,10 +94,16 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			&report.AllowEdit,
 			&createdAt,
 			&updatedAt,
+			&report.IsPlayground,
 		)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, err
+		}
+		if report.IsPlayground && !checkWorkspace(ctx).IsPlayground {
+			// report is playground but user is not in playground
+			report.AllowEdit = false
+			report.CanWrite = false
 		}
 		report.CreatedAt = createdAt.Unix()
 		report.UpdatedAt = updatedAt.Unix()
@@ -89,16 +120,26 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	if checkWorkspace(ctx).ID == "" {
+	if checkWorkspace(ctx).ID == "" && !checkWorkspace(ctx).IsPlayground {
 		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
 	id := newUUID()
-	_, err := s.db.ExecContext(ctx,
-		"INSERT INTO reports (id, author_email, workspace_id) VALUES ($1, $2, $3)",
-		id,
-		claims.Email,
-		checkWorkspace(ctx).ID,
-	)
+	var err error
+	if checkWorkspace(ctx).IsPlayground {
+		_, err = s.db.ExecContext(ctx,
+			"INSERT INTO reports (id, author_email, is_playground) VALUES ($1, $2, true)",
+			id,
+			claims.Email,
+		)
+	} else {
+		_, err = s.db.ExecContext(ctx,
+			"INSERT INTO reports (id, author_email, workspace_id) VALUES ($1, $2, $3)",
+			id,
+			claims.Email,
+			checkWorkspace(ctx).ID,
+		)
+
+	}
 	if err != nil {
 		log.Err(err).Send()
 		return nil, err
@@ -137,14 +178,24 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 		return err
 	}
 	newMapConfig, newDatasetIds := updateDatasetIds(report, datasets)
-	_, err = tx.ExecContext(ctx,
-		"INSERT INTO reports (id, author_email, map_config, title, workspace_id) VALUES ($1, $2, $3, $4, $5)",
-		report.Id,
-		claims.Email,
-		newMapConfig,
-		report.Title,
-		checkWorkspace(ctx).ID,
-	)
+	if checkWorkspace(ctx).IsPlayground {
+		_, err = tx.ExecContext(ctx,
+			"INSERT INTO reports (id, author_email, map_config, title, is_playground) VALUES ($1, $2, $3, $4, true)",
+			report.Id,
+			claims.Email,
+			newMapConfig,
+			report.Title,
+		)
+	} else {
+		_, err = tx.ExecContext(ctx,
+			"INSERT INTO reports (id, author_email, map_config, title, workspace_id) VALUES ($1, $2, $3, $4, $5)",
+			report.Id,
+			claims.Email,
+			newMapConfig,
+			report.Title,
+			checkWorkspace(ctx).ID,
+		)
+	}
 	if err != nil {
 		rollback(tx)
 		return err
@@ -277,17 +328,32 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	if req.Report == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "req.Report == nil")
 	}
-	result, err := s.db.ExecContext(ctx,
-		`update
+	var result sql.Result
+	var err error
+	if checkWorkspace(ctx).IsPlayground {
+		result, err = s.db.ExecContext(ctx,
+			`update
+			reports
+		set map_config=$1, title=$2
+		where id=$3 and author_email=$4 and is_playground=true`,
+			req.Report.MapConfig,
+			req.Report.Title,
+			req.Report.Id,
+			claims.Email,
+		)
+	} else {
+		result, err = s.db.ExecContext(ctx,
+			`update
 			reports
 		set map_config=$1, title=$2
 		where id=$3 and (author_email=$4 or allow_edit) and workspace_id=$5`,
-		req.Report.MapConfig,
-		req.Report.Title,
-		req.Report.Id,
-		claims.Email,
-		checkWorkspace(ctx).ID,
-	)
+			req.Report.MapConfig,
+			req.Report.Title,
+			req.Report.Id,
+			claims.Email,
+			checkWorkspace(ctx).ID,
+		)
+	}
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
@@ -321,6 +387,10 @@ func (s Server) SetDiscoverable(ctx context.Context, req *proto.SetDiscoverableR
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
+	}
+	if checkWorkspace(ctx).ID == "" {
+		log.Warn().Msg("Workspace not found")
+		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
@@ -366,13 +436,23 @@ func (s Server) ArchiveReport(ctx context.Context, req *proto.ArchiveReportReque
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
 	}
-	result, err := s.db.ExecContext(ctx,
-		"update reports set archived=$1 where id=$2 and author_email=$3 and workspace_id=$4",
-		req.Archive,
-		req.ReportId,
-		claims.Email,
-		checkWorkspace(ctx).ID,
-	)
+	var result sql.Result
+	if checkWorkspace(ctx).IsPlayground {
+		result, err = s.db.ExecContext(ctx,
+			"update reports set archived=$1 where id=$2 and author_email=$3 and is_playground=true",
+			req.Archive,
+			req.ReportId,
+			claims.Email,
+		)
+	} else {
+		result, err = s.db.ExecContext(ctx,
+			"update reports set archived=$1 where id=$2 and author_email=$3 and workspace_id=$4",
+			req.Archive,
+			req.ReportId,
+			claims.Email,
+			checkWorkspace(ctx).ID,
+		)
+	}
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
