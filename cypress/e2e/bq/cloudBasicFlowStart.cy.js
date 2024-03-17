@@ -2,7 +2,26 @@
 import copy from '../../fixtures/copy.json'
 
 describe('cloud basic flow', () => {
-  it('should make simple bigquery query and get ready status', () => {
+  it('create playground report', () => {
+    cy.visit('/playground')
+    cy.get('button:contains("Playground Mode")').should('be.visible')
+
+    // create new report
+    cy.get(`button:contains("${copy.create_report}")`).click()
+
+    // run query
+    cy.get('textarea').type(copy.simple_sql_query, { force: true })
+    cy.get(`button:contains("${copy.execute}")`).click()
+    cy.get(`span:contains("${copy.ready}")`, { timeout: 20000 }).should('be.visible')
+    cy.get(`span:contains("${copy.downloading}")`).should('contain', 'kB') // size of result shown
+
+    cy.get('button#dekart-playground-mode-button').click()
+    cy.get('button:contains("Switch to private workspace")').click()
+
+    cy.get('button:contains("Create workspace")').should('be.visible')
+  })
+
+  it('create workspace', () => {
     // create workspace
     cy.visit('/')
     cy.get('button:contains("Create workspace")').click()

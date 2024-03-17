@@ -103,7 +103,7 @@ export function PlaygroundMode () {
         )
       }
       >
-        <Button type='link' size='small' className={styles.playgroundButton}><GlobalOutlined /> Playground Mode</Button>
+        <Button id='dekart-playground-mode-button' type='link' size='small' className={styles.playgroundButton}><GlobalOutlined /> Playground Mode</Button>
       </Tooltip>
     </div>
   )

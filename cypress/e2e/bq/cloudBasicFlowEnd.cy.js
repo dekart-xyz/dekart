@@ -2,7 +2,7 @@
 import copy from '../../fixtures/copy.json'
 
 describe('cloud basic flow', () => {
-  it('should make simple bigquery query and get ready status', () => {
+  it('create private report', () => {
     // create connection
     cy.visit('/')
     cy.get('button:contains("Create connection")').click()
