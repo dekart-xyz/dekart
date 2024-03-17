@@ -7,7 +7,6 @@ env:
   DEKART_POSTGRES_USER: postgres
   DEKART_POSTGRES_DB: dekart
   IMAGE_CACHE_KEY: e2etest-${{ github.run_id }}-${{ github.run_attempt }}
-
 jobs:
   cloud:
     runs-on: ubuntu-latest
@@ -31,6 +30,7 @@ jobs:
         with:
           service_account_key: ${{ secrets.PRIVATE_GITHUB_ACTIONS_DEKART_CLOUD }}
           project_id: dekart-cloud
+          export_default_credentials: true
       - name: Configure Docker to use the gcloud command-line tool as a credential helper
         run: gcloud auth configure-docker europe-west3-docker.pkg.dev
       - name: Set up QEMU
@@ -41,12 +41,19 @@ jobs:
         run: |
           docker run -i \
             --network="host" \
+            -v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
             -v /tmp/cypress/videos:/dekart/cypress/videos/ \
             -v /tmp/cypress/screenshots:/dekart/cypress/screenshots/ \
+            -e DEKART_LOG_DEBUG=1 \
+            -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
             -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
             -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
             -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
             -e DEKART_POSTGRES_HOST=localhost \
+            -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
+            -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
+            -e DEKART_STORAGE=GCS \
+            -e DEKART_DATASOURCE=BQ \
             -e DEKART_ALLOW_FILE_UPLOAD=1 \
             -e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
             -e DEKART_GOOGLE_OAUTH_CLIENT_ID=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }} \
@@ -59,12 +66,19 @@ jobs:
         run: |
           docker run -i \
             --network="host" \
+            -v $(pwd)/$GOOGLE_APPLICATION_CREDENTIALS:/dekart/$GOOGLE_APPLICATION_CREDENTIALS \
             -v /tmp/cypress/videos:/dekart/cypress/videos/ \
             -v /tmp/cypress/screenshots:/dekart/cypress/screenshots/ \
+            -e DEKART_LOG_DEBUG=1 \
+            -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
             -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
             -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
             -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
             -e DEKART_POSTGRES_HOST=localhost \
+            -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
+            -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
+            -e DEKART_STORAGE=GCS \
+            -e DEKART_DATASOURCE=BQ \
             -e DEKART_ALLOW_FILE_UPLOAD=1 \
             -e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
             -e DEKART_GOOGLE_OAUTH_CLIENT_ID=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }} \
