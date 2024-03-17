@@ -85,14 +85,26 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 }
 
 func (s Server) getReportID(ctx context.Context, datasetID string, email string) (*string, error) {
-	datasetRows, err := s.db.QueryContext(ctx,
-		`select report_id from datasets
-		where id=$1 and report_id in (select report_id from reports where (author_email=$2 or allow_edit) and workspace_id=$3)
-		limit 1`,
-		datasetID,
-		email,
-		checkWorkspace(ctx).ID,
-	)
+	var datasetRows *sql.Rows
+	var err error
+	if checkWorkspace(ctx).IsPlayground {
+		datasetRows, err = s.db.QueryContext(ctx,
+			`select report_id from datasets
+			where id=$1 and report_id in (select report_id from reports where author_email=$2 and is_playground=true)
+			limit 1`,
+			datasetID,
+			email,
+		)
+	} else {
+		datasetRows, err = s.db.QueryContext(ctx,
+			`select report_id from datasets
+			where id=$1 and report_id in (select report_id from reports where (author_email=$2 or allow_edit) and workspace_id=$3)
+			limit 1`,
+			datasetID,
+			email,
+			checkWorkspace(ctx).ID,
+		)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -257,6 +269,20 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 func (s Server) insertDataset(ctx context.Context, reportID string) (res sql.Result, err error) {
 	id := newUUID()
 	claims := user.GetClaims(ctx)
+	if checkWorkspace(ctx).IsPlayground {
+		return s.db.ExecContext(ctx,
+			`insert into datasets (id, report_id)
+			select
+				$1 as id,
+				id as report_id
+			from reports
+			where id=$2 and not archived and author_email=$3 or allow_edit and is_playground=true limit 1
+			`,
+			id,
+			reportID,
+			claims.Email,
+		)
+	}
 	connection, err := s.getDefaultConnection(ctx)
 	if err != nil {
 		return nil, err
@@ -339,6 +365,11 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 		log.Warn().Err(err).Send()
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
+	}
+
+	if connection.Id == "default" {
+		// dataset has no connection, it means it's a playground dataset
+		ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{IsPlayground: true})
 	}
 
 	bucketName := s.getBucketNameFromConnection(connection)

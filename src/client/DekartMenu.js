@@ -18,21 +18,46 @@ export default function DekartMenu () {
     <div className={styles.dekartMenu}>
       <Menu mode='horizontal' theme='dark'>
         <Menu.SubMenu
-          popupClassName={styles.subMenu} title={<MenuOutlined />} key='home' active='yes' disabled={
-          !(userStream && userStream.planType)
-        }
+          popupClassName={styles.subMenu} title={<MenuOutlined />} key='home' active='yes'
         >
+          {
+            !userStream?.planType
+              ? (
+                <Menu.Item key='playground'>
+                  <Link to='/playground'>Playground</Link>
+                </Menu.Item>
+                )
+              : null
+          }
           <Menu.Item key='my'>
             <Link to='/'>{authEnabled ? 'My Reports' : 'Reports'}</Link>
           </Menu.Item>
-          <Menu.Item key='shared' disabled={!authEnabled}>
-            <Link to='/shared'>Shared reports</Link>
-          </Menu.Item>
+          {(userStream && userStream.planType)
+            ? (
+              <Menu.Item key='shared' disabled={!authEnabled}>
+                <Link to='/shared'>Shared reports</Link>
+              </Menu.Item>
+              )
+            : null}
+
           {userDefinedConnection
             ? <Menu.Item key='connections'><Link to='/connections'>Connections</Link></Menu.Item>
             : null}
-          <Menu.Divider />
-          <Menu.Item key='create' onClick={() => dispatch(createReport())}>New Report</Menu.Item>
+          {
+            (
+              (userStream && userStream.planType) || // subscribed
+              userStream?.isPlayground // in playground
+            )
+              ? (
+                <>
+                  <Menu.Divider />
+                  <Menu.Item key='create' onClick={() => dispatch(createReport())}>New Report</Menu.Item>
+                </>
+                )
+              : null
+
+          }
+
         </Menu.SubMenu>
         <Menu.SubMenu popupClassName={styles.subMenu} title={<MessageOutlined />} key='community' active='yes'>
           <Menu.Item key='slack'>

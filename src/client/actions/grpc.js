@@ -143,7 +143,10 @@ function getStream (endpoint, request, onMessage, onError, metadata = {}, cancel
       }
       if (code === 0) {
         getStream(endpoint, request, onMessage, onError, metadata, cancelable, currentSequence)
-      } else if (code === 2 && retryCount <= 4) {
+      } else if (
+        (code === 2) &&
+        retryCount <= 4
+      ) {
         if (window.document.hidden) {
           const onVisibilityChange = () => {
             window.document.removeEventListener('visibilitychange', onVisibilityChange, false)
@@ -156,7 +159,6 @@ function getStream (endpoint, request, onMessage, onError, metadata = {}, cancel
         }
       } else {
         cancelable.cancel()
-        // console.error('GRPC stream error', code, message)
         onError(code, message)
       }
     }

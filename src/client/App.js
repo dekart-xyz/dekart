@@ -15,7 +15,7 @@ import { getUsage } from './actions/usage'
 import { AuthState, RedirectState as DekartRedirectState } from '../proto/dekart_pb'
 import { getEnv } from './actions/env'
 import { authRedirect, setRedirectState } from './actions/redirect'
-import { subscribeUserStream, unsubscribeUserStream } from './actions/user'
+import { subscribeUserStream, switchPlayground, unsubscribeUserStream } from './actions/user'
 import WorkspacePage from './WorkspacePage'
 import GrantScopesPage from './GrantScopesPage'
 import { loadLocalStorage } from './actions/localStorage'
@@ -55,6 +55,8 @@ function AppRedirect () {
   const needSensitiveScopes = useSelector(state => state.env.needSensitiveScopes)
   const sensitiveScopesGranted = userStream?.sensitiveScopesGranted
   const sensitiveScopesGrantedOnce = useSelector(state => state.user.sensitiveScopesGrantedOnce)
+  const reportOpened = useSelector(state => state.reportStatus.opened)
+  const report = useSelector(state => state.report)
   const dispatch = useDispatch()
 
   useEffect(() => {
@@ -76,7 +78,13 @@ function AppRedirect () {
     return <Redirect to={`/${httpError.status}`} push />
   }
 
-  if (userStream && !userStream.planType) {
+  if (
+    userStream &&
+    !userStream.planType &&
+    !userStream.isPlayground &&
+    !(reportOpened && !report) && // report is being loaded
+    !(report?.isPlayground) // playground report
+  ) {
     return <Redirect to='/workspace' push />
   }
 
@@ -84,7 +92,14 @@ function AppRedirect () {
     return <Redirect to={`/reports/${newReportId}/source`} push />
   }
 
-  if (userStream && needSensitiveScopes && !sensitiveScopesGranted) {
+  if (
+    userStream &&
+    needSensitiveScopes &&
+    !sensitiveScopesGranted &&
+    !userStream.isPlayground &&
+    !(reportOpened && !report) && // report is being loaded
+    !(report?.isPlayground) // playground report
+  ) {
     return <Redirect to='/grant-scopes' push />
   }
 
@@ -101,6 +116,14 @@ function PageHistory ({ visitedPages }) {
   useEffect(() => {
     visitedPages.current.push(location.pathname)
   }, [location, visitedPages])
+  return null
+}
+
+function SwitchToPlayground () {
+  const dispatch = useDispatch()
+  useEffect(() => {
+    dispatch(switchPlayground(true))
+  }, [dispatch])
   return null
 }
 
@@ -143,6 +166,9 @@ export default function App () {
       <PageHistory visitedPages={visitedPages} />
       <RedirectState />
       <Switch>
+        <Route exact path='/playground'>
+          <SwitchToPlayground />
+        </Route>
         <Route exact path='/'>
           <HomePage reportFilter='my' />
         </Route>

@@ -58,6 +58,14 @@ service Dekart {
     rpc UpdateWorkspace(UpdateWorkspaceRequest) returns (UpdateWorkspaceResponse) {}
     rpc GetWorkspace(GetWorkspaceRequest) returns (GetWorkspaceResponse) {}
     rpc UpdateWorkspaceUser(UpdateWorkspaceUserRequest) returns (UpdateWorkspaceUserResponse) {}
+    rpc SwitchPlayground(SwitchPlaygroundRequest) returns (SwitchPlaygroundResponse) {}
+}
+
+message SwitchPlaygroundRequest {
+    bool is_playground = 1; // true - switch to playground, false - switch to workspace
+}
+
+message SwitchPlaygroundResponse {
 }
 
 message GetStripePortalSessionRequest {
@@ -217,6 +225,7 @@ message GetUserStreamResponse {
     string workspace_id = 101;
     PlanType plan_type = 102;
     int64 workspace_update = 103; // includes invites, members and subscription
+    bool is_playground = 104; // true - playground, false - workspace
 }
 
 message TestConnectionRequest {
@@ -370,6 +379,9 @@ message Report {
     bool is_author = 9; // user is the author of the report
     int64 created_at = 10;
     int64 updated_at = 11;
+
+    // cloud
+    bool is_playground = 101; // true - playground, false - workspace
 }
 
 message Dataset {

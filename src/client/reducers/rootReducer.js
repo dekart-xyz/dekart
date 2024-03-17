@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 import { ActionTypes as KeplerActionTypes } from '@dekart-xyz/kepler.gl/dist/actions'
 import { setUserMapboxAccessTokenUpdater } from '@dekart-xyz/kepler.gl/dist/reducers/ui-state-updaters'
-import { openReport, reportUpdate, forkReport, saveMap, reportTitleChange, newReport, newForkedReport, unsubscribeReports, reportsListUpdate } from '../actions/report'
+import { openReport, reportUpdate, forkReport, saveMap, reportTitleChange, newReport, newForkedReport, unsubscribeReports, reportsListUpdate, closeReport } from '../actions/report'
 import { downloading, finishDownloading, setStreamError } from '../actions/message'
 import { closeDatasetSettingsModal, openDatasetSettingsModal, setActiveDataset } from '../actions/dataset'
 import { queries, queryStatus } from './queryReducer'
@@ -42,6 +42,8 @@ function report (state = null, action) {
   switch (action.type) {
     case openReport.name:
       return null
+    case closeReport.name:
+      return null
     case reportUpdate.name:
       return action.report
     default:
@@ -78,7 +80,8 @@ const defaultReportStatus = {
   edit: false,
   online: false,
   newReportId: null,
-  lastUpdated: 0
+  lastUpdated: 0,
+  opened: false
 }
 function reportStatus (state = defaultReportStatus, action) {
   switch (action.type) {
@@ -104,8 +107,11 @@ function reportStatus (state = defaultReportStatus, action) {
     case openReport.name:
       return {
         ...defaultReportStatus,
-        edit: action.edit
+        edit: action.edit,
+        opened: true
       }
+    case closeReport.name:
+      return defaultReportStatus
     case setStreamError.name:
       return {
         ...state,

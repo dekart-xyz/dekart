@@ -82,7 +82,8 @@ function RefreshButton () {
 function EditModeButtons ({ changed }) {
   const dispatch = useDispatch()
   const history = useHistory()
-  const { id, discoverable, canWrite, allowEdit, isAuthor } = useSelector(state => state.report)
+  const { id, discoverable, canWrite, allowEdit, isAuthor, isPlayground } = useSelector(state => state.report)
+  const userStream = useSelector(state => state.user.stream)
   const { canSave } = useSelector(state => state.reportStatus)
 
   return (
@@ -111,7 +112,7 @@ function EditModeButtons ({ changed }) {
             </Button>
           </>
           )
-        : <ForkButton reportId={id} disabled={!canSave} />}
+        : <ForkButton reportId={id} disabled={!canSave || (isPlayground && !userStream?.isPlayground)} />}
     </div>
   )
 }
@@ -157,7 +158,8 @@ function ExportDropdown () {
 
 function ViewModeButtons () {
   const history = useHistory()
-  const { id, discoverable, canWrite, allowEdit, isAuthor } = useSelector(state => state.report)
+  const { id, discoverable, canWrite, allowEdit, isAuthor, isPlayground } = useSelector(state => state.report)
+  const userStream = useSelector(state => state.user.stream)
   const { canSave } = useSelector(state => state.reportStatus)
   if (canWrite) {
     return (
@@ -188,7 +190,7 @@ function ViewModeButtons () {
       />
       <ExportDropdown />
       <ShareButton reportId={id} discoverable={discoverable} isAuthor={isAuthor} allowEdit={allowEdit} />
-      <ForkButton reportId={id} disabled={!canSave} />
+      <ForkButton reportId={id} disabled={!canSave || (isPlayground && !userStream?.isPlayground)} />
     </div>
   )
 }

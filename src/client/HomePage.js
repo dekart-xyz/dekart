@@ -167,15 +167,15 @@ function ReportsHeader (
   const dispatch = useDispatch()
   const history = useHistory()
 
-  const subscription = useSelector(state => state.workspace?.subscription)
-  if (!subscription) {
+  const userStream = useSelector(state => state.user.stream)
+  if (!userStream) {
     return null
   }
 
   return (
     <div className={styles.reportsHeader}>
       {
-      subscription.planType !== PlanType.TYPE_PERSONAL
+      userStream.planType === PlanType.TYPE_TEAM
         ? (
           <Radio.Group
             value={reportFilter} onChange={(e) => {
@@ -203,7 +203,7 @@ function ReportsHeader (
 
           )
         : (
-          <div className={styles.reportsHeaderTitle}>{reportFilter === 'connections' ? 'Manage connection' : 'Manage reports'}</div>
+          <div className={styles.reportsHeaderTitle}>{reportFilter === 'connections' ? 'Connection' : 'Reports'}</div>
           )
       }
       <div className={styles.rightCornerAction}>
@@ -324,6 +324,7 @@ function OnboardingDiscoverableReports () {
 
 export default function HomePage ({ reportFilter }) {
   const reportsList = useSelector(state => state.reportsList)
+  const isPlayground = useSelector(state => state.user.stream?.isPlayground)
   const connectionsLoaded = useSelector(state => state.connection.listLoaded)
   const dispatch = useDispatch()
   const body = useRef()
@@ -336,7 +337,7 @@ export default function HomePage ({ reportFilter }) {
       <Header />
       <div className={styles.body}>
         {
-          reportsList.loaded && connectionsLoaded
+          reportsList.loaded && (connectionsLoaded || isPlayground)
             ? (
               <>
                 <ConnectionModal />

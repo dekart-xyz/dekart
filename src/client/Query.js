@@ -183,10 +183,11 @@ function QueryStatus ({ children, query }) {
 
 function SampleQuery ({ queryId }) {
   const UX_SAMPLE_QUERY_SQL = useSelector(state => state.env.variables.UX_SAMPLE_QUERY_SQL)
+  const isPlayground = useSelector(state => state.user.stream?.isPlayground)
   const queryStatus = useSelector(state => state.queryStatus[queryId])
   const downloadingSource = queryStatus?.downloadingSource
   const dispatch = useDispatch()
-  if (downloadingSource) {
+  if (downloadingSource || !isPlayground) {
     // do not show sample query while downloading source
     return null
   }

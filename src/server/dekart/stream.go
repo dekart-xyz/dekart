@@ -2,6 +2,7 @@ package dekart
 
 import (
 	"context"
+	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/report"
 	"dekart/src/server/user"
@@ -110,27 +111,47 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 
 func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportListStreamServer, sequence int64) error {
 	claims := user.GetClaims(ctx)
+
+	var err error
+	var reportRows *sql.Rows
 	if checkWorkspace(ctx).ID == "" {
-		return nil
+		reportRows, err = s.db.QueryContext(ctx,
+			`select
+				id,
+				case when title is null then 'Untitled' else title end as title,
+				archived,
+				(author_email = $1) or allow_edit as can_write,
+				author_email = $1 as is_author,
+				author_email,
+				discoverable,
+				allow_edit,
+				updated_at,
+				created_at
+			from reports as r
+			where author_email=$1 and is_playground=true
+			order by updated_at desc`,
+			claims.Email,
+		)
+	} else {
+		reportRows, err = s.db.QueryContext(ctx,
+			`select
+				id,
+				case when title is null then 'Untitled' else title end as title,
+				archived,
+				(author_email = $1) or allow_edit as can_write,
+				author_email = $1 as is_author,
+				author_email,
+				discoverable,
+				allow_edit,
+				updated_at,
+				created_at
+			from reports as r
+			where (author_email=$1 or (discoverable=true and archived=false) or allow_edit=true) and workspace_id=$2
+			order by updated_at desc`,
+			claims.Email,
+			checkWorkspace(ctx).ID,
+		)
 	}
-	reportRows, err := s.db.QueryContext(ctx,
-		`select
-			id,
-			case when title is null then 'Untitled' else title end as title,
-			archived,
-			(author_email = $1) or allow_edit as can_write,
-			author_email = $1 as is_author,
-			author_email,
-			discoverable,
-			allow_edit,
-			updated_at,
-			created_at
-		from reports as r
-		where (author_email=$1 or (discoverable=true and archived=false) or allow_edit=true) and workspace_id=$2
-		order by updated_at desc`,
-		claims.Email,
-		checkWorkspace(ctx).ID,
-	)
 	if err != nil {
 		log.Err(err).Send()
 		return status.Errorf(codes.Internal, err.Error())
@@ -193,7 +214,7 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 
 	// query from db user scopes
 	res, err := s.db.QueryContext(ctx,
-		`select sensitive_scope from users where email=$1`,
+		`select sensitive_scope, is_playground from users where email=$1`,
 		claims.Email,
 	)
 	if err != nil {
@@ -203,8 +224,9 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 
 	defer res.Close()
 	sensitiveScopesGranted := ""
+	isPlayground := false
 	for res.Next() {
-		err = res.Scan(&sensitiveScopesGranted)
+		err = res.Scan(&sensitiveScopesGranted, &isPlayground)
 		if err != nil {
 			log.Err(err).Send()
 			return status.Errorf(codes.Internal, err.Error())
@@ -222,6 +244,7 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 		PlanType:                   checkWorkspace(ctx).PlanType,
 		SensitiveScopesGranted:     claims.SensitiveScopesGranted,                      // current token scopes
 		SensitiveScopesGrantedOnce: user.HasAllSensitiveScopes(sensitiveScopesGranted), // granted before to app
+		IsPlayground:               isPlayground,
 	}
 
 	err = srv.Send(&response)

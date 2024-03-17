@@ -3,6 +3,42 @@
 
 import * as jspb from "google-protobuf";
 
+export class SwitchPlaygroundRequest extends jspb.Message {
+  getIsPlayground(): boolean;
+  setIsPlayground(value: boolean): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): SwitchPlaygroundRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: SwitchPlaygroundRequest): SwitchPlaygroundRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: SwitchPlaygroundRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): SwitchPlaygroundRequest;
+  static deserializeBinaryFromReader(message: SwitchPlaygroundRequest, reader: jspb.BinaryReader): SwitchPlaygroundRequest;
+}
+
+export namespace SwitchPlaygroundRequest {
+  export type AsObject = {
+    isPlayground: boolean,
+  }
+}
+
+export class SwitchPlaygroundResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): SwitchPlaygroundResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: SwitchPlaygroundResponse): SwitchPlaygroundResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: SwitchPlaygroundResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): SwitchPlaygroundResponse;
+  static deserializeBinaryFromReader(message: SwitchPlaygroundResponse, reader: jspb.BinaryReader): SwitchPlaygroundResponse;
+}
+
+export namespace SwitchPlaygroundResponse {
+  export type AsObject = {
+  }
+}
+
 export class GetStripePortalSessionRequest extends jspb.Message {
   getUiUrl(): string;
   setUiUrl(value: string): void;
@@ -672,6 +708,9 @@ export class GetUserStreamResponse extends jspb.Message {
   getWorkspaceUpdate(): number;
   setWorkspaceUpdate(value: number): void;
 
+  getIsPlayground(): boolean;
+  setIsPlayground(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetUserStreamResponse.AsObject;
   static toObject(includeInstance: boolean, msg: GetUserStreamResponse): GetUserStreamResponse.AsObject;
@@ -692,6 +731,7 @@ export namespace GetUserStreamResponse {
     workspaceId: string,
     planType: PlanTypeMap[keyof PlanTypeMap],
     workspaceUpdate: number,
+    isPlayground: boolean,
   }
 }
 
@@ -1343,6 +1383,9 @@ export class Report extends jspb.Message {
   getUpdatedAt(): number;
   setUpdatedAt(value: number): void;
 
+  getIsPlayground(): boolean;
+  setIsPlayground(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Report.AsObject;
   static toObject(includeInstance: boolean, msg: Report): Report.AsObject;
@@ -1366,6 +1409,7 @@ export namespace Report {
     isAuthor: boolean,
     createdAt: number,
     updatedAt: number,
+    isPlayground: boolean,
   }
 }
 
