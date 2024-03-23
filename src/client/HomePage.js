@@ -136,10 +136,10 @@ function FirstReportOnboarding () {
       <Result
         status='success'
         title='You are all set'
-        subTitle='Get ready to create you first map with Dekart'
+        subTitle='Everything is ready to start your data analysis.'
         extra={(
           <>
-            <Button icon={<PlusOutlined />} type='primary' onClick={() => dispatch(createReport())}>Create Report</Button>
+            <Button icon={<PlusOutlined />} type='primary' onClick={() => dispatch(createReport())}>Create report</Button>
             {isPlayground
               ? (
                 <div className={styles.stepBySetLink}><a target='_blank' href='https://dekart.xyz/docs/about/playground/#quick-start' rel='noreferrer'>Check step-by-step guide</a></div>
@@ -161,7 +161,7 @@ function FirstConnectionOnboarding () {
         status='success'
         icon={<ApiTwoTone />}
         title='Ready to connect!'
-        subTitle={<>Next step, select <b>Project ID</b> for BigQuery billing and <b>Storage Bucket</b> name to store your query results.</>}
+        subTitle={<>Select <b>Project ID</b> for BigQuery billing and <b>Storage Bucket</b> name to store your query results.</>}
         extra={<Button type='primary' onClick={() => { dispatch(newConnection()) }}>Create connection</Button>}
       />
     </>

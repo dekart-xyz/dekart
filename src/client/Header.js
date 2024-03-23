@@ -12,6 +12,7 @@ import { authRedirect } from './actions/redirect'
 import Button from 'antd/es/button'
 import Tooltip from 'antd/es/tooltip'
 import { switchPlayground } from './actions/user'
+import localStorageReset from './actions/localStorage'
 
 function getSignature (email) {
   if (!email) {
@@ -55,6 +56,7 @@ function User ({ buttonDivider }) {
             {
               label: 'Switch account',
               onClick: () => {
+                dispatch(localStorageReset())
                 const state = new AuthState()
                 state.setUiUrl(window.location.href)
                 state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
@@ -65,6 +67,7 @@ function User ({ buttonDivider }) {
             {
               label: 'Sign out',
               onClick: () => {
+                dispatch(localStorageReset())
                 const state = new AuthState()
                 state.setUiUrl(window.location.href)
                 state.setAction(AuthState.Action.ACTION_REVOKE)

@@ -24,15 +24,22 @@ export default function DekartMenu () {
             !userStream?.planType
               ? (
                 <Menu.Item key='playground'>
-                  <Link to='/playground'>Playground</Link>
+                  <Link to='/playground'>Playground Mode</Link>
                 </Menu.Item>
                 )
               : null
           }
-          <Menu.Item key='my'>
-            <Link to='/'>{authEnabled ? 'My Reports' : 'Reports'}</Link>
-          </Menu.Item>
-          {(userStream && userStream.planType)
+          {
+            userStream?.planType
+              ? (
+                <Menu.Item key='my'>
+                  <Link to='/'>{authEnabled ? 'My Reports' : 'Reports'}</Link>
+                </Menu.Item>
+                )
+              : null
+          }
+
+          {userStream?.planType
             ? (
               <Menu.Item key='shared' disabled={!authEnabled}>
                 <Link to='/shared'>Shared reports</Link>

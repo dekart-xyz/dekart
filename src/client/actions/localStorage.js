@@ -7,6 +7,14 @@ const initialState = {
 
 let current = initialState
 
+export default function localStorageReset () {
+  window.localStorage.removeItem(LOCAL_STORAGE_KEY)
+  return {
+    type: localStorageReset.name,
+    current: initialState
+  }
+}
+
 export function localStorageInit () {
   return {
     type: localStorageInit.name,
