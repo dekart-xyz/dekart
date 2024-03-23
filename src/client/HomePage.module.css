@@ -127,3 +127,7 @@
     align-items: right;
     gap: 10px;
 }
+
+.stepBySetLink {
+    margin-top: 15px;
+}

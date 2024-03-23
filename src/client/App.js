@@ -20,6 +20,7 @@ import WorkspacePage from './WorkspacePage'
 import GrantScopesPage from './GrantScopesPage'
 import { loadLocalStorage } from './actions/localStorage'
 import { useLocation } from 'react-router-dom/cjs/react-router-dom'
+import { Button } from 'antd'
 
 // RedirectState reads states passed in the URL from the server
 function RedirectState () {
@@ -127,6 +128,28 @@ function SwitchToPlayground () {
   return null
 }
 
+function NotFoundPage () {
+  const dispatch = useDispatch()
+  const workspaceId = useSelector(state => state.user.stream?.workspaceId)
+  return (
+    <Result
+      icon={<QuestionOutlined />} title='404' subTitle={
+        <>
+          <p>Page not found</p>
+          {!workspaceId
+            ? (
+              <div>
+                <p>To access private reports join workspace.</p>
+                <Button onClick={() => dispatch(switchPlayground(false, '/workspace'))}>Join workspace</Button>
+              </div>
+              )
+            : null}
+        </>
+      }
+    />
+  )
+}
+
 export default function App () {
   const errorMessage = useSelector(state => state.httpError.message)
   const status = useSelector(state => state.httpError.status)
@@ -203,7 +226,7 @@ export default function App () {
           <Result icon={<WarningOutlined />} title='401' subTitle={errorMessage || 'Unauthorized'} />
         </Route>
         <Route path='*'>
-          <Result icon={<QuestionOutlined />} title='404' subTitle='Page not found' />
+          <NotFoundPage />
         </Route>
       </Switch>
     </Router>

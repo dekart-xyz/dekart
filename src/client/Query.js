@@ -15,6 +15,7 @@ import DataDocumentationLink from './DataDocumentationLink'
 import { cancelQuery, queryChanged, runQuery } from './actions/query'
 import { showDataTable } from './actions/showDataTable'
 import Tooltip from 'antd/es/tooltip'
+import { switchPlayground } from './actions/user'
 
 function CancelButton ({ query }) {
   const dispatch = useDispatch()
@@ -101,7 +102,25 @@ function QueryEditor ({ queryId, queryText, onChange, canWrite }) {
           />
         )}
       </AutoSizer>
-      {queryText ? null : <SampleQuery queryId={queryId} />}
+      {queryText && queryText.trim().length ? null : <SampleQuery queryId={queryId} />}
+    </div>
+  )
+}
+
+function PlaygroundWarning ({ jobError }) {
+  const isPlayground = useSelector(state => state.user.stream?.isPlayground)
+  const dispatch = useDispatch()
+  let showPlaygroundWarning = false
+  if (jobError && jobError.includes('Error 40') && isPlayground) {
+    showPlaygroundWarning = true
+  }
+  if (!showPlaygroundWarning) {
+    return null
+  }
+  return (
+    <div className={styles.playgroundWarning}>
+      <p>You are in Playground Mode. To access private datasets create free workspace and configure connection</p>
+      <Button type='link' onClick={() => dispatch(switchPlayground(false))}>Switch to workspace</Button>
     </div>
   )
 }
@@ -174,6 +193,7 @@ function QueryStatus ({ children, query }) {
         </div>
         {errorMessage ? <div className={styles.errorMessage}>{errorMessage}</div> : null}
         {errorInfoHtml ? <div className={styles.errorInfoHtml} dangerouslySetInnerHTML={{ __html: errorInfoHtml }} /> : null}
+        <PlaygroundWarning jobError={query.jobError} />
       </div>
       {children ? <div className={styles.button}>{children}</div> : null}
 
@@ -197,13 +217,14 @@ function SampleQuery ({ queryId }) {
   }
   return (
     <div className={styles.sampleQuery}>
-      <Button
-        type='link' onClick={() => {
-          dispatch(queryChanged(queryId, UX_SAMPLE_QUERY_SQL))
-        }}
-        title='Try running a sample query'
-      >Try sample SQL query
-      </Button>
+      <Tooltip title={<>Don't know where to start?<br />Try running public dataset query.</>}>
+        <Button
+          type='link' onClick={() => {
+            dispatch(queryChanged(queryId, UX_SAMPLE_QUERY_SQL))
+          }}
+        >💡 Start with a sample query
+        </Button>
+      </Tooltip>
     </div>
   )
 }

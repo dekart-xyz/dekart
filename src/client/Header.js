@@ -94,7 +94,7 @@ export function PlaygroundMode () {
       <Tooltip title={
         (
           <div className={styles.playgroundTooltip}>
-            <div>Public playground mode is enabled. Only public datasets are accessible.</div>
+            <div>Public playground mode is enabled. Your queries are public. Only public datasets are accessible.</div>
             <Button
               size='small' type='link' onClick={() => dispatch(switchPlayground(false))}
             >Switch to private workspace
@@ -124,7 +124,7 @@ export function Header ({ buttons, title }) {
           <PlaygroundMode />
         </div>
         <div className={styles.middle}>
-          <div className={styles.dekartLinkHolder}><a target='_blank' rel='noopener noreferrer' className={styles.dekartLink} href={homePage}>Dekart</a></div>
+          <div className={styles.dekartLinkHolder}><a rel='noopener noreferrer' className={styles.dekartLink} href={homePage}>Dekart</a></div>
         </div>
         <div className={styles.buttons}>{buttons || null}</div>
         <User buttonDivider={Boolean(buttons)} />
