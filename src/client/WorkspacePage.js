@@ -234,7 +234,7 @@ export function Workspace ({ nextStep, setNextStep }) {
               icon: <AppstoreTwoTone />
             },
             {
-              title: 'Billing',
+              title: 'Plan',
               icon: <CreditCardOutlined />,
               disabled: !userStream.workspaceId
             },

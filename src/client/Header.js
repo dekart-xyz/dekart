@@ -6,7 +6,7 @@ import Avatar from 'antd/es/avatar'
 import Dropdown from 'antd/es/dropdown'
 import { AuthState } from '../proto/dekart_pb'
 import classNames from 'classnames'
-import { GlobalOutlined } from '@ant-design/icons'
+import { GlobalOutlined, LockOutlined } from '@ant-design/icons'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 import { authRedirect } from './actions/redirect'
 import Button from 'antd/es/button'
@@ -81,6 +81,20 @@ function User ({ buttonDivider }) {
   )
 }
 
+export function Workspace () {
+  const workspaceName = useSelector(state => state.workspace?.name)
+  const isPlayground = useSelector(state => state.user.stream?.isPlayground)
+  const history = useHistory()
+  if (!workspaceName || isPlayground) {
+    return null
+  }
+  return (
+    <div className={styles.workspace}>
+      <Tooltip title={<>You are in private workspace.<br />Click to manage workspace access.</>}><Button type='link' size='small' onClick={() => history.push('/workspace')} className={styles.workspaceButton}><LockOutlined />{workspaceName}</Button></Tooltip>
+    </div>
+  )
+}
+
 export function PlaygroundMode () {
   const isPlayground = useSelector(state => state.user.stream?.isPlayground)
   const dispatch = useDispatch()
@@ -121,6 +135,7 @@ export function Header ({ buttons, title }) {
       <div className={styles.top}>
         <div className={styles.left}>
           <DekartMenu />
+          <Workspace />
           <PlaygroundMode />
         </div>
         <div className={styles.middle}>
