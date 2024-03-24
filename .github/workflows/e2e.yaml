@@ -6,7 +6,7 @@ env:
   DEKART_POSTGRES_PASSWORD: dekart
   DEKART_POSTGRES_USER: postgres
   DEKART_POSTGRES_DB: dekart
-  IMAGE_CACHE_KEY: e2etest-${{ github.run_id }}-${{ github.run_attempt }}
+  IMAGE_CACHE_KEY: e2etest-${{ github.run_id }}
 jobs:
   cloud:
     runs-on: ubuntu-latest
