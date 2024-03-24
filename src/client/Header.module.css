@@ -21,6 +21,21 @@
     align-items: center;
 }
 
+.workspace {
+    text-align: center;
+    margin-left: 10px;
+    background: rgb(15, 150, 104);
+    font-size: 0.8em;
+    display: absolute;
+    bottom: 0;
+    border-radius: 3px;
+}
+
+.workspaceButton > span {
+    color: white!important;
+    font-size: 0.8em;
+}
+
 .playgroundButton > span {
     color: #2B323B!important;
     font-size: 0.8em;

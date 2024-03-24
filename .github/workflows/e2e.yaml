@@ -6,7 +6,7 @@ env:
   DEKART_POSTGRES_PASSWORD: dekart
   DEKART_POSTGRES_USER: postgres
   DEKART_POSTGRES_DB: dekart
-  IMAGE_CACHE_KEY: e2etest-${{ github.run_id }}-${{ github.run_attempt }}
+  IMAGE_CACHE_KEY: e2etest-${{ github.run_id }}
 jobs:
   cloud:
     runs-on: ubuntu-latest
@@ -59,6 +59,7 @@ jobs:
             -e DEKART_GOOGLE_OAUTH_CLIENT_ID=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }} \
             -e DEKART_GOOGLE_OAUTH_SECRET=${{ secrets.GOOGLE_OAUTH_SECRET }} \
             -e DEKART_DEV_REFRESH_TOKEN=${{ secrets.DEV_REFRESH_TOKEN_INFO }} \
+          	-e DEKART_CORS_ORIGIN=http://localhost:3000 \
             -e TEST_SPEC=cypress/e2e/bq/cloudBasicFlowStart.cy.js \
             -e CYPRESS_CI=1 \
             europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:${{ env.IMAGE_CACHE_KEY }}
@@ -84,6 +85,7 @@ jobs:
             -e DEKART_GOOGLE_OAUTH_CLIENT_ID=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }} \
             -e DEKART_GOOGLE_OAUTH_SECRET=${{ secrets.GOOGLE_OAUTH_SECRET }} \
             -e DEKART_DEV_REFRESH_TOKEN=${{ secrets.DEV_REFRESH_TOKEN }} \
+            -e DEKART_CORS_ORIGIN=http://localhost:3000 \
             -e TEST_SPEC=cypress/e2e/bq/cloudBasicFlowEnd.cy.js \
             -e CYPRESS_CI=1 \
             europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:${{ env.IMAGE_CACHE_KEY }}

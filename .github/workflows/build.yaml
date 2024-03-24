@@ -14,7 +14,7 @@ on:
 
 
 env:
-  IMAGE_CACHE_KEY: e2etest-${{ github.run_id }}-${{ github.run_attempt }}
+  IMAGE_CACHE_KEY: e2etest-${{ github.run_id }}
 
 jobs:
   build:

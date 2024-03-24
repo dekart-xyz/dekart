@@ -54,8 +54,8 @@ const columns = [
     render: (t, item) => (
       <div
         title={
-      `Created by ${item.authorEmail} at ${new Date(item.createdAt * 1000).toLocaleString()}, last updated at ${new Date(item.updatedAt * 1000).toLocaleString()}`
-    } className={styles.author}
+          `Created by ${item.authorEmail} at ${new Date(item.createdAt * 1000).toLocaleString()}, last updated at ${new Date(item.updatedAt * 1000).toLocaleString()}`
+        } className={styles.author}
       >{item.authorEmail}
       </div>),
     className: styles.authorColumn
@@ -129,14 +129,24 @@ function getColumns (reportFilter, archived) {
 }
 
 function FirstReportOnboarding () {
+  const isPlayground = useSelector(state => state.user.stream?.isPlayground)
   const dispatch = useDispatch()
   return (
     <>
       <Result
         status='success'
         title='You are all set'
-        subTitle='Get ready to create you first map with Dekart'
-        extra={<Button icon={<PlusOutlined />} type='primary' onClick={() => dispatch(createReport())}>Create Report</Button>}
+        subTitle='Everything is ready to start your data analysis.'
+        extra={(
+          <>
+            <Button icon={<PlusOutlined />} type='primary' onClick={() => dispatch(createReport())}>Create report</Button>
+            {isPlayground
+              ? (
+                <div className={styles.stepBySetLink}><a target='_blank' href='https://dekart.xyz/docs/about/playground/#quick-start' rel='noreferrer'>Check step-by-step guide</a></div>
+                )
+              : null}
+          </>
+        )}
       />
       <DataDocumentationLink />
     </>
@@ -151,7 +161,7 @@ function FirstConnectionOnboarding () {
         status='success'
         icon={<ApiTwoTone />}
         title='Ready to connect!'
-        subTitle={<>Next step, select <b>Project ID</b> for BigQuery billing and <b>Storage Bucket</b> name to store your query results.</>}
+        subTitle={<>Select <b>Project ID</b> for BigQuery billing and <b>Storage Bucket</b> name to store your query results.</>}
         extra={<Button type='primary' onClick={() => { dispatch(newConnection()) }}>Create connection</Button>}
       />
     </>
@@ -175,36 +185,36 @@ function ReportsHeader (
   return (
     <div className={styles.reportsHeader}>
       {
-      userStream.planType === PlanType.TYPE_TEAM
-        ? (
-          <Radio.Group
-            value={reportFilter} onChange={(e) => {
-              switch (e.target.value) {
-                case 'my':
-                  history.push('/')
-                  break
-                case 'discoverable':
-                  history.push('/shared')
-                  break
-                case 'connections':
-                  history.push('/connections')
-                  break
-                default:
+        userStream.planType === PlanType.TYPE_TEAM
+          ? (
+            <Radio.Group
+              value={reportFilter} onChange={(e) => {
+                switch (e.target.value) {
+                  case 'my':
+                    history.push('/')
+                    break
+                  case 'discoverable':
+                    history.push('/shared')
+                    break
+                  case 'connections':
+                    history.push('/connections')
+                    break
+                  default:
                   // do nothing
+                }
+              }}
+            >
+              <Radio.Button value='my'>My Reports</Radio.Button>
+              <Radio.Button value='discoverable'>Shared Reports</Radio.Button>
+              {
+                connectionList && userDefinedConnection ? <Radio.Button value='connections'>Connections</Radio.Button> : null
               }
-            }}
-          >
-            <Radio.Button value='my'>My Reports</Radio.Button>
-            <Radio.Button value='discoverable'>Shared Reports</Radio.Button>
-            {
-              connectionList && userDefinedConnection ? <Radio.Button value='connections'>Connections</Radio.Button> : null
-            }
-          </Radio.Group>
+            </Radio.Group>
 
-          )
-        : (
-          <div className={styles.reportsHeaderTitle}>{reportFilter === 'connections' ? 'Connection' : 'Reports'}</div>
-          )
+            )
+          : (
+            <div className={styles.reportsHeaderTitle}>{reportFilter === 'connections' ? 'Connection' : 'Reports'}</div>
+            )
       }
       <div className={styles.rightCornerAction}>
         {
@@ -301,7 +311,7 @@ function OnboardingMyReports () {
           <li>Save the report and give it a relevant name.</li>
           <li>Your report will appear here.</li>
         </ol>
-          }
+      }
     />
   )
 }
@@ -317,7 +327,7 @@ function OnboardingDiscoverableReports () {
           <li>In a pop-up window select the option to make the report discoverable.</li>
           <li>Shared reports will appear in this tab for all users.</li>
         </ol>
-            }
+      }
     />
   )
 }

@@ -106,8 +106,11 @@ function listLoaded (state = false, action) {
 function userDefined (state = true, action) {
   switch (action.type) {
     case userStreamUpdate.name:
-      if (action.userStream.isPlayground) {
-        return false // user switched to playground, no longer user defined connection
+      if (
+        action.userStream.isPlayground || // user switched to playground, no longer user defined connection
+        !action.userStream.planType // user is not yet in workspace
+      ) {
+        return false
       }
       return state
     default:

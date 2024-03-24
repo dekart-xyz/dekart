@@ -5,6 +5,7 @@ import { getUrlRef } from './lib/ref'
 import { MenuOutlined, MessageOutlined } from '@ant-design/icons'
 import { Link } from 'react-router-dom/cjs/react-router-dom'
 import { createReport } from './actions/report'
+import { switchPlayground } from './actions/user'
 
 export default function DekartMenu () {
   const env = useSelector(state => state.env)
@@ -21,18 +22,16 @@ export default function DekartMenu () {
           popupClassName={styles.subMenu} title={<MenuOutlined />} key='home' active='yes'
         >
           {
-            !userStream?.planType
+            userStream?.planType
               ? (
-                <Menu.Item key='playground'>
-                  <Link to='/playground'>Playground</Link>
+                <Menu.Item key='my'>
+                  <Link to='/'>{authEnabled ? 'My Reports' : 'Reports'}</Link>
                 </Menu.Item>
                 )
               : null
           }
-          <Menu.Item key='my'>
-            <Link to='/'>{authEnabled ? 'My Reports' : 'Reports'}</Link>
-          </Menu.Item>
-          {(userStream && userStream.planType)
+
+          {userStream?.planType
             ? (
               <Menu.Item key='shared' disabled={!authEnabled}>
                 <Link to='/shared'>Shared reports</Link>
@@ -43,6 +42,18 @@ export default function DekartMenu () {
           {userDefinedConnection
             ? <Menu.Item key='connections'><Link to='/connections'>Connections</Link></Menu.Item>
             : null}
+          <Menu.Item key='playground'>
+            <Link to={userStream?.isPlayground ? '/' : '/playground'}>Playground</Link>
+          </Menu.Item>
+          {
+            userStream?.isPlayground
+              ? (
+                <Menu.Item key='workspace' onClick={() => dispatch(switchPlayground(false, '/'))}>
+                  Private Workspace
+                </Menu.Item>
+                )
+              : null
+          }
           {
             (
               (userStream && userStream.planType) || // subscribed
