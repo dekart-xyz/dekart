@@ -2,7 +2,7 @@
 import copy from '../../fixtures/copy.json'
 
 describe('cloud basic flow', () => {
-  it('create private report', () => {
+  it('with private token', () => {
     // create connection
     cy.visit('/')
     cy.get('button:contains("Create connection")').click()

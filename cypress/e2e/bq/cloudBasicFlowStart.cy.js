@@ -2,7 +2,7 @@
 import copy from '../../fixtures/copy.json'
 
 describe('cloud basic flow', () => {
-  it('create playground report', () => {
+  it('with info token', () => {
     cy.visit('/playground')
     cy.get('button:contains("Playground Mode")').should('be.visible')
 
@@ -15,13 +15,12 @@ describe('cloud basic flow', () => {
     cy.get(`span:contains("${copy.ready}")`, { timeout: 20000 }).should('be.visible')
     cy.get(`span:contains("${copy.downloading}")`).should('contain', 'kB') // size of result shown
 
+    // switch to private workspace
     cy.get('button#dekart-playground-mode-button').click()
     cy.get('button:contains("Switch to private workspace")').click()
 
     cy.get('button:contains("Create workspace")').should('be.visible')
-  })
 
-  it('create workspace', () => {
     // create workspace
     cy.visit('/')
     cy.get('button:contains("Create workspace")').click()
