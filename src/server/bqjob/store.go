@@ -29,14 +29,17 @@ func (s *Store) Create(reportID string, queryID string, queryText string, userCt
 	maxBytesBilledStr := os.Getenv("DEKART_BIGQUERY_MAX_BYTES_BILLED")
 	var maxBytesBilled int64
 	var err error
-	if maxBytesBilledStr != "" {
-		maxBytesBilled, err = strconv.ParseInt(maxBytesBilledStr, 10, 64)
-		if err != nil {
-			log.Fatal().Msgf("Cannot parse DEKART_BIGQUERY_MAX_BYTES_BILLED")
-			return nil, nil, err
+	if user.CheckWorkspaceCtx(userCtx).IsPlayground {
+		// In playground mode, we don't want to allow users to run queries that could cost us money.
+		if maxBytesBilledStr != "" {
+			maxBytesBilled, err = strconv.ParseInt(maxBytesBilledStr, 10, 64)
+			if err != nil {
+				log.Fatal().Msgf("Cannot parse DEKART_BIGQUERY_MAX_BYTES_BILLED")
+				return nil, nil, err
+			}
+		} else {
+			log.Warn().Msgf("DEKART_BIGQUERY_MAX_BYTES_BILLED is not set! Use the maximum bytes billed setting to limit query costs. https://cloud.google.com/bigquery/docs/best-practices-costs#limit_query_costs_by_restricting_the_number_of_bytes_billed")
 		}
-	} else {
-		log.Warn().Msgf("DEKART_BIGQUERY_MAX_BYTES_BILLED is not set! Use the maximum bytes billed setting to limit query costs. https://cloud.google.com/bigquery/docs/best-practices-costs#limit_query_costs_by_restricting_the_number_of_bytes_billed")
 	}
 	job := &Job{
 		BasicJob: job.BasicJob{

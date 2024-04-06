@@ -99,6 +99,7 @@ func main() {
 				"DEKART_BIGQUERY_PROJECT_ID":       pulumi.String("dekart-playground"),
 				"DEKART_CLOUD_STORAGE_BUCKET":      pulumi.String("dekart-playground"),
 				"DEKART_BIGQUERY_MAX_BYTES_BILLED": pulumi.String("4294967296"),
+				"DEKART_UX_SAMPLE_QUERY_SQL":       pulumi.String("SELECT primary_type, district, latitude, longitude, date from `bigquery-public-data.chicago_crime.crime` WHERE  Rand() < 5 / 100.0"),
 			},
 			Deployment: &appengine.FlexibleAppVersionDeploymentArgs{
 				Container: &appengine.FlexibleAppVersionDeploymentContainerArgs{
