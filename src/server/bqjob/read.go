@@ -2,6 +2,7 @@ package bqjob
 
 import (
 	"context"
+	"dekart/src/server/job"
 	"dekart/src/server/user"
 	"fmt"
 	"io"
@@ -93,8 +94,8 @@ func (r *Reader) getTableFields() []string {
 func (r *Reader) getStreams() ([]*bqStoragePb.ReadStream, error) {
 	readStreams := r.session.GetStreams()
 	if len(readStreams) == 0 {
-		err := fmt.Errorf("no streams in read session")
-		r.logger.Error().Err(err).Send()
+		err := &job.EmptyResultError{}
+		r.logger.Debug().Err(err).Send()
 		return readStreams, err
 	}
 	r.logger.Debug().Int32("maxReadStreamsCount", r.maxReadStreamsCount).Msgf("Number of Streams %d", len(readStreams))
@@ -110,8 +111,8 @@ type StreamReader struct {
 	logger     zerolog.Logger
 }
 
-func (r *StreamReader) read(proccessWaitGroup *sync.WaitGroup) {
-	go r.proccessStreamResponse(proccessWaitGroup)
+func (r *StreamReader) read(processWaitGroup *sync.WaitGroup) {
+	go r.processStreamResponse(processWaitGroup)
 	go r.readStream()
 }
 
@@ -152,13 +153,13 @@ func Read(
 		return
 	}
 
-	var proccessWaitGroup sync.WaitGroup
+	var processWaitGroup sync.WaitGroup
 	for _, stream := range readStreams {
-		proccessWaitGroup.Add(1)
-		r.newStreamReader(stream.Name, csvRows, errors, logger).read(&proccessWaitGroup)
+		processWaitGroup.Add(1)
+		r.newStreamReader(stream.Name, csvRows, errors, logger).read(&processWaitGroup)
 	}
 
-	proccessWaitGroup.Wait() // to close channels and client, see defer statements
+	processWaitGroup.Wait() // to close channels and client, see defer statements
 	r.logger.Debug().Msg("All Reading Streams Done")
 }
 
@@ -202,9 +203,9 @@ func (r *StreamReader) readStream() {
 	}
 }
 
-func (r *StreamReader) proccessStreamResponse(proccessWaitGroup *sync.WaitGroup) {
-	defer proccessWaitGroup.Done()
-	defer r.logger.Debug().Str("readStream", r.streamName).Msg("proccessStreamResponse Done")
+func (r *StreamReader) processStreamResponse(processWaitGroup *sync.WaitGroup) {
+	defer processWaitGroup.Done()
+	defer r.logger.Debug().Str("readStream", r.streamName).Msg("processStreamResponse Done")
 	var err error
 	for {
 		select {
