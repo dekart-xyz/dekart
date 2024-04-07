@@ -14,6 +14,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+type EmptyResultError struct{}
+
+func (e *EmptyResultError) Error() string {
+	return "Empty result"
+}
+
 // Store is the interface for the job storage
 type Store interface {
 	Create(reportID string, queryID string, queryText string, userCtx context.Context) (Job, chan int32, error)
