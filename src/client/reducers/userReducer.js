@@ -23,7 +23,19 @@ function sensitiveScopesGrantedOnce (state = false, action) {
   }
 }
 
+function loginHint (state = null, action) {
+  switch (action.type) {
+    case localStorageInit.name:
+      return action.current.loginHint || state
+    case userStreamUpdate.name:
+      return action.userStream.email
+    default:
+      return state
+  }
+}
+
 export default combineReducers({
   stream,
-  sensitiveScopesGrantedOnce
+  sensitiveScopesGrantedOnce,
+  loginHint
 })
