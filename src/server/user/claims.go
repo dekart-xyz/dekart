@@ -354,6 +354,8 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 		var url string
 		if state.GetSwitchAccount() {
 			url = auth.AuthCodeURL(stateBase64, oauth2.SetAuthURLParam("prompt", "select_account"))
+		} else if state.LoginHint != "" {
+			url = auth.AuthCodeURL(stateBase64, oauth2.SetAuthURLParam("login_hint", state.LoginHint))
 		} else {
 			url = auth.AuthCodeURL(stateBase64)
 		}

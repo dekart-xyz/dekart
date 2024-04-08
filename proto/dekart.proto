@@ -197,6 +197,7 @@ message AuthState   {
     string access_token_to_revoke = 4; // access token to revoke
     bool switch_account = 5; // if true, user will be requested to switch account
     bool sensitive_scope = 6; // if true, user will be requested to grant sensitive scope
+    string login_hint = 7; // login hint for Google OAuth
 }
 
 message ArchiveReportRequest {

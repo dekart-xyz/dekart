@@ -20,8 +20,12 @@ const { REACT_APP_API_HOST } = process.env // this never changes, passed during 
 
 // authRedirect will redirect the browser to the authentication endpoint
 export function authRedirect (state) {
-  return async (dispatch) => {
+  return async (dispatch, getState) => {
     dispatch({ type: authRedirect.name })
+    const loginHint = getState().user.loginHint
+    if (loginHint) {
+      state.setLoginHint(loginHint)
+    }
     const req = new URL('/api/v1/authenticate', REACT_APP_API_HOST || window.location.href)
     state.setAuthUrl(req.href)
     const stateBase64 = btoa(String.fromCharCode.apply(null, state.serializeBinary()))

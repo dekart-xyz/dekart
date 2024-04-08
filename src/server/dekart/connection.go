@@ -168,6 +168,9 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 		from connections where archived=false order by created_at desc`,
 	)
 	if err != nil {
+		if err == context.Canceled {
+			return nil, err
+		}
 		log.Fatal().Err(err).Msg("select from connections failed")
 	}
 	defer rows.Close()
