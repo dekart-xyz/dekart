@@ -2,7 +2,8 @@
 const LOCAL_STORAGE_KEY = 'dekart-local-storage-v1'
 
 const initialState = {
-  sensitiveScopesGrantedOnce: false
+  sensitiveScopesGrantedOnce: false,
+  loginHint: null
 }
 
 let current = initialState

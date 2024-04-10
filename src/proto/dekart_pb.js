@@ -5569,7 +5569,8 @@ proto.AuthState.toObject = function(includeInstance, msg) {
     uiUrl: jspb.Message.getFieldWithDefault(msg, 3, ""),
     accessTokenToRevoke: jspb.Message.getFieldWithDefault(msg, 4, ""),
     switchAccount: jspb.Message.getBooleanFieldWithDefault(msg, 5, false),
-    sensitiveScope: jspb.Message.getBooleanFieldWithDefault(msg, 6, false)
+    sensitiveScope: jspb.Message.getBooleanFieldWithDefault(msg, 6, false),
+    loginHint: jspb.Message.getFieldWithDefault(msg, 7, "")
   };
 
   if (includeInstance) {
@@ -5629,6 +5630,10 @@ proto.AuthState.deserializeBinaryFromReader = function(msg, reader) {
     case 6:
       var value = /** @type {boolean} */ (reader.readBool());
       msg.setSensitiveScope(value);
+      break;
+    case 7:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setLoginHint(value);
       break;
     default:
       reader.skipField();
@@ -5698,6 +5703,13 @@ proto.AuthState.serializeBinaryToWriter = function(message, writer) {
   if (f) {
     writer.writeBool(
       6,
+      f
+    );
+  }
+  f = message.getLoginHint();
+  if (f.length > 0) {
+    writer.writeString(
+      7,
       f
     );
   }
@@ -5819,6 +5831,24 @@ proto.AuthState.prototype.getSensitiveScope = function() {
  */
 proto.AuthState.prototype.setSensitiveScope = function(value) {
   return jspb.Message.setProto3BooleanField(this, 6, value);
+};
+
+
+/**
+ * optional string login_hint = 7;
+ * @return {string}
+ */
+proto.AuthState.prototype.getLoginHint = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 7, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.AuthState} returns this
+ */
+proto.AuthState.prototype.setLoginHint = function(value) {
+  return jspb.Message.setProto3StringField(this, 7, value);
 };
 
 

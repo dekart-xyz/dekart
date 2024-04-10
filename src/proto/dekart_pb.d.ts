@@ -667,6 +667,9 @@ export class AuthState extends jspb.Message {
   getSensitiveScope(): boolean;
   setSensitiveScope(value: boolean): void;
 
+  getLoginHint(): string;
+  setLoginHint(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): AuthState.AsObject;
   static toObject(includeInstance: boolean, msg: AuthState): AuthState.AsObject;
@@ -685,6 +688,7 @@ export namespace AuthState {
     accessTokenToRevoke: string,
     switchAccount: boolean,
     sensitiveScope: boolean,
+    loginHint: string,
   }
 
   export interface ActionMap {
