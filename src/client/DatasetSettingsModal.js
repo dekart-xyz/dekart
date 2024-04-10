@@ -15,6 +15,7 @@ function ModalFooter ({ saving, setSaving, name, datasetId }) {
     <div className={styles.modalFooter}>
       <Button
         disabled={saving}
+        id='dekart-save-dataset-name-button'
         onClick={() => {
           setSaving(true)
           dispatch(updateDatasetName(datasetId, name))
@@ -89,6 +90,7 @@ export default function DatasetSettingsModal () {
           value={name}
           onChange={(e) => setName(e.target.value)}
           disabled={saving}
+          id='dekart-dataset-name-input'
         />
       </div>
     </Modal>
