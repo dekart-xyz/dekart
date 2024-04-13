@@ -169,8 +169,10 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 		checkWorkspace(ctx).ID,
 	)
 	if err != nil {
-		log.Err(err).Send()
-		return nil, err
+		if err == context.Canceled {
+			return nil, err
+		}
+		log.Fatal().Err(err).Msg("select from connections failed")
 	}
 	defer rows.Close()
 	lastDefault := time.Time{}

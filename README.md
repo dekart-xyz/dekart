@@ -1,23 +1,26 @@
 # Dekart
-Dekart is open-source WebGL-powered map visualization and spatial analytics for modern data warehouses. It offers self-hosted alternative to CARTO and Foursquare Studio. We build it for data scientists, analysts, GIS professionals, and developers who need to visualize large datasets on a map.
+Open-source, self-hosted version of [Dekart Cloud](https://dekart.xyz): WebGL-powered map analytics for BigQuery and Snowflake. Lightweight alternative to CARTO and Foursquare Studio for data scientists, analysts and engineers who work with large datasets.
 
-<a href="https://dekart.xyz/docs/about/screencast/?ref=github"><img src="./docs/files/screen.png"></a>
-<p align="center"><a href="https://dekart.xyz/docs/about/playground/?ref=github">Try Dekart with BigQuery Open Datasets</a></p>
+<a href="https://cloud.dekart.xyz/reports/bef92772-5ad8-4b6a-8d94-72f45f44bf92/source"><img src="./docs/files/screen.png"></a>
+<p align="center"><a href="https://dekart.xyz/docs/about/playground/?ref=github">BigQuery Playground</a> | <a href="https://cloud.dekart.xyz/playground">Live demo</a></p>
 
 ## Features
 
 Create beautiful data-driven maps and share them with your team:
 
-* State-of-the art WebGL-powered map visualization for Snowflake, BigQuery and Amazon Athena
+* State-of-the art WebGL-powered map visualization
 * Optimized for large query results, tested 100Mb/1M rows
 * Efficient query result caching on Amazon S3 or Google Cloud Storage
-* Side-by-side SQL editor and support for CSV and GeoJSON file uploads
-* Simple Docker-based deployment with native support for Amazon Cognito and Google IAP and AWS/GCP/Terraform examples
+* Live editing of maps with other team members
+* Side-by-side SQL editor
+* Support for CSV and GeoJSON file uploads
+* Export to PNG, CSV and HTML maps
+* Simple Docker-based deployment with SSO support
 
 ## Available data sources
 
-* Snowflake ❄️
-* BigQuery
+* BigQuery ([setup in Dekart Cloud](https://cloud.dekart.xyz/))
+* Snowflake
 * AWS Athena
 * Postgres
 * CSV (file upload)
