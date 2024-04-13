@@ -134,9 +134,8 @@ func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connect
 		j.QueryText,
 	)
 	if err != nil {
-		j.Logger.Error().Err(err).Msg("Error starting query execution")
 		j.CancelWithError(err)
-		return err
+		return nil // it's ok, since these are query errors
 	}
 	defer rows.Close()
 	csvRows := make(chan []string, 10) //j.TotalRows?

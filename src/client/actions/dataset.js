@@ -2,7 +2,7 @@ import { CreateDatasetRequest, RemoveDatasetRequest, UpdateDatasetConnectionRequ
 import { Dekart } from '../../proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { downloading, setError, finishDownloading, success } from './message'
-import { addDataToMap, toggleSidePanel, removeDataset as removeDatasetFromKepler } from '@dekart-xyz/kepler.gl/dist/actions'
+import { addDataToMap, toggleSidePanel, removeDataset as removeDatasetFromKepler, reorderLayer } from '@dekart-xyz/kepler.gl/dist/actions'
 import { processCsvData, processGeojson } from '@dekart-xyz/kepler.gl/dist/processors'
 import { get } from '../lib/api'
 import { KeplerGlSchema } from '@dekart-xyz/kepler.gl/dist/schemas'
@@ -79,14 +79,14 @@ export function removeDataset (datasetId) {
   }
 }
 
-export function downloadDataset (dataset, connectionId, extension, prevDatasetsList) {
+export function downloadDataset (dataset, sourceId, extension, prevDatasetsList) {
   return async (dispatch, getState) => {
     dispatch({ type: downloadDataset.name, dataset })
     dispatch(downloading(dataset))
     const { token } = getState()
     let data
     try {
-      const res = await get(`/dataset-source/${dataset.id}/${connectionId}.${extension}`, token)
+      const res = await get(`/dataset-source/${dataset.id}/${sourceId}.${extension}`, token)
       if (extension === 'csv') {
         const csv = await res.text()
         data = processCsvData(csv)
@@ -100,7 +100,9 @@ export function downloadDataset (dataset, connectionId, extension, prevDatasetsL
     }
     const { datasets, files, queries, keplerGl } = getState()
     const label = getDatasetName(dataset, queries, files)
-    const prevDataset = prevDatasetsList.find(d => d.id === dataset.id)
+    // check if dataset was already added to kepler
+    const addedDatasets = getState().keplerGl.kepler.visState.datasets
+    const prevDataset = prevDatasetsList.find(d => d.id in addedDatasets)
     const i = datasets.findIndex(d => d.id === dataset.id)
     if (i < 0) {
       return
@@ -113,6 +115,11 @@ export function downloadDataset (dataset, connectionId, extension, prevDatasetsL
 
         // receive config
         const config = KeplerGlSchema.getConfigToSave(keplerGl.kepler)
+
+        // remember layer order, because kepler will reshuffle layers after adding dataset
+        const layerOrder = [].concat(getState().keplerGl.kepler.visState.layerOrder)
+        const layersAr = getState().keplerGl.kepler.visState.layers.map(layer => layer.id)
+        const layerIdOrder = layerOrder.map(id => layersAr[id])
 
         // filter for specific dataset
         config.config.visState.layers = config.config.visState.layers.filter(
@@ -147,6 +154,13 @@ export function downloadDataset (dataset, connectionId, extension, prevDatasetsL
           options: { keepExistingConfig: true },
           config
         }))
+
+        // restore layer order
+        const newLayersAr = getState().keplerGl.kepler.visState.layers.map(layer => layer.id)
+        if (newLayersAr.length === layerIdOrder.length) {
+          const newOrder = layerIdOrder.map(id => newLayersAr.indexOf(id))
+          dispatch(reorderLayer(newOrder))
+        }
       } else {
         dispatch(addDataToMap({
           datasets: {

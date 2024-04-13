@@ -202,6 +202,10 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 	}
 	for i, dataset := range datasets {
 		datasetId := newDatasetIds[i]
+		var connectionId *string
+		if dataset.ConnectionId != "" {
+			connectionId = &dataset.ConnectionId
+		}
 		var queryId *string
 		var fileId *string
 		if dataset.QueryId != "" {
@@ -212,12 +216,24 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 						id,
 						query_text,
 						query_source,
-						query_source_id
+						query_source_id,
+						job_status,
+						job_result_id,
+						job_error,
+						total_rows,
+						bytes_processed,
+						result_size
 					) select
 						$1,
 						query_text,
 						query_source,
-						query_source_id
+						query_source_id,
+						job_status,
+						job_result_id,
+						job_error,
+						total_rows,
+						bytes_processed,
+						result_size
 					from queries where id=$2`,
 				newQueryID,
 				dataset.QueryId,
@@ -255,13 +271,14 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 			}
 		}
 		_, err = tx.ExecContext(ctx, `
-			INSERT INTO datasets (id, report_id, query_id, file_id, created_at)
-			VALUES($1, $2, $3, $4, $5)`,
+			INSERT INTO datasets (id, report_id, query_id, file_id, name, connection_id)
+			VALUES($1, $2, $3, $4, $5, $6)`,
 			datasetId,
 			report.Id,
 			queryId,
 			fileId,
-			time.Unix(dataset.CreatedAt, 0),
+			dataset.Name,
+			connectionId,
 		)
 		if err != nil {
 			log.Debug().Err(err).Send()
