@@ -22,6 +22,7 @@ type Job struct {
 	snowflakeDb    *sql.DB
 	storageObject  storage.StorageObject
 	dataSourceName string
+	queryID        string
 }
 
 type Store struct {
@@ -81,8 +82,6 @@ func (j *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 	j.Logger.Debug().Msg("Writing Done")
 	j.Lock()
 	j.ResultSize = *resultSize
-	jobID := j.GetID()
-	j.ResultID = &jobID
 	j.Unlock()
 	j.Status() <- int32(proto.Query_JOB_STATUS_DONE)
 	j.Cancel()
@@ -111,6 +110,7 @@ func (j *Job) fetchQueryMetadata(queryIDChan chan string, resultsReady chan bool
 				return
 			}
 			j.Lock()
+			j.ResultID = &queryID
 			j.ProcessedBytes = status.ScanBytes
 			j.Unlock()
 			return
@@ -129,6 +129,8 @@ func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connect
 	metadataWg.Add(1)
 	go j.fetchQueryMetadata(queryIDChan, resultsReady, metadataWg)
 	j.Status() <- int32(proto.Query_JOB_STATUS_RUNNING)
+	// TODO will this just work: queryID = rows1.(sf.SnowflakeRows).GetQueryID()
+	// https://pkg.go.dev/github.com/snowflakedb/gosnowflake#hdr-Fetch_Results_by_Query_ID
 	rows, err := j.snowflakeDb.QueryContext(
 		sf.WithQueryIDChan(j.GetCtx(), queryIDChan),
 		j.QueryText,
@@ -138,53 +140,64 @@ func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connect
 		return nil // it's ok, since these are query errors
 	}
 	defer rows.Close()
-	csvRows := make(chan []string, 10) //j.TotalRows?
 
-	go j.write(csvRows)
+	_, isSnowflakeStorageObject := j.storageObject.(storage.SnowflakeStorageObject)
 
-	firstRow := true
-	for rows.Next() {
-		columnTypes, err := rows.ColumnTypes()
-		if err != nil {
-			j.Logger.Error().Err(err).Msg("Error getting column types")
-			j.CancelWithError(err)
-			return err
+	if isSnowflakeStorageObject {
+		resultsReady <- true
+		defer (func() {
+			j.Status() <- int32(proto.Query_JOB_STATUS_DONE)
+		})()
+	} else {
+
+		csvRows := make(chan []string, 10) //j.TotalRows?
+		go j.write(csvRows)
+
+		firstRow := true
+		for rows.Next() {
+			columnTypes, err := rows.ColumnTypes()
+			if err != nil {
+				j.Logger.Error().Err(err).Msg("Error getting column types")
+				j.CancelWithError(err)
+				return err
+			}
+			if firstRow {
+				firstRow = false
+				resultsReady <- true
+				j.Status() <- int32(proto.Query_JOB_STATUS_READING_RESULTS)
+				columnNames := make([]string, len(columnTypes))
+				for i, columnType := range columnTypes {
+					columnNames[i] = columnType.Name()
+				}
+				csvRows <- columnNames
+			}
+
+			csvRow := make([]string, len(columnTypes))
+			values := make([]interface{}, len(columnTypes))
+			for i := range columnTypes {
+				values[i] = new(sql.NullString)
+			}
+			rows.Scan(values...)
+
+			for i := range columnTypes {
+				value := values[i]
+				switch x := value.(type) {
+				case *sql.NullString:
+					csvRow[i] = x.String
+				default:
+					return fmt.Errorf("incorrect type of data: %T", x)
+				}
+			}
+			csvRows <- csvRow
 		}
 		if firstRow {
-			firstRow = false
+			// unblock fetchQueryMetadata if no rows
 			resultsReady <- true
-			j.Status() <- int32(proto.Query_JOB_STATUS_READING_RESULTS)
-			columnNames := make([]string, len(columnTypes))
-			for i, columnType := range columnTypes {
-				columnNames[i] = columnType.Name()
-			}
-			csvRows <- columnNames
 		}
-
-		csvRow := make([]string, len(columnTypes))
-		values := make([]interface{}, len(columnTypes))
-		for i := range columnTypes {
-			values[i] = new(sql.NullString)
-		}
-		rows.Scan(values...)
-
-		for i := range columnTypes {
-			value := values[i]
-			switch x := value.(type) {
-			case *sql.NullString:
-				csvRow[i] = x.String
-			default:
-				return fmt.Errorf("incorrect type of data: %T", x)
-			}
-		}
-		csvRows <- csvRow
+		defer close(csvRows)
 	}
-	if firstRow {
-		// unblock fetchQueryMetadata if no rows
-		resultsReady <- true
-	}
+
 	metadataWg.Wait() // do not close context until metadata is fetched
-	close(csvRows)    //better to close in defer?
 	return nil
 }
 

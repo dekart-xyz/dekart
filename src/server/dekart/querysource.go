@@ -3,6 +3,7 @@ package dekart
 import (
 	"context"
 	"crypto/sha1"
+	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/user"
 	"fmt"
@@ -66,26 +67,39 @@ func (s Server) storeQuerySync(ctx context.Context, bucketName, queryID string, 
 	queryTextByte := []byte(queryText)
 	h.Write(queryTextByte)
 	newQuerySourceId := fmt.Sprintf("%x", h.Sum(nil))
-	storageWriter := s.storage.GetObject(bucketName, fmt.Sprintf("%s.sql", newQuerySourceId)).GetWriter(ctx)
-	_, err := storageWriter.Write(queryTextByte)
-	if err != nil {
-		log.Err(err).Msg("Error writing query_text to storage")
-		storageWriter.Close()
-		return err
-	}
-	err = storageWriter.Close()
-	if err != nil {
-		log.Err(err).Str("bucketName", bucketName).Msg("Error writing query_text to storage")
-		return err
-	}
+	var result sql.Result
+	var err error
+	if s.storage.CanSaveQuery() {
+		storageWriter := s.storage.GetObject(bucketName, fmt.Sprintf("%s.sql", newQuerySourceId)).GetWriter(ctx)
+		_, err = storageWriter.Write(queryTextByte)
+		if err != nil {
+			log.Err(err).Msg("Error writing query_text to storage")
+			storageWriter.Close()
+			return err
+		}
+		err = storageWriter.Close()
+		if err != nil {
+			log.Err(err).Str("bucketName", bucketName).Msg("Error writing query_text to storage")
+			return err
+		}
 
-	result, err := s.db.ExecContext(ctx,
-		`update queries set query_source_id=$1, query_source=$2, updated_at=now() where id=$3 and query_source_id=$4`,
-		newQuerySourceId,
-		proto.Query_QUERY_SOURCE_STORAGE,
-		queryID,
-		prevQuerySourceId,
-	)
+		result, err = s.db.ExecContext(ctx,
+			`update queries set query_source_id=$1, query_source=$2, updated_at=now() where id=$3 and query_source_id=$4`,
+			newQuerySourceId,
+			proto.Query_QUERY_SOURCE_STORAGE,
+			queryID,
+			prevQuerySourceId,
+		)
+	} else {
+		result, err = s.db.ExecContext(ctx,
+			`update queries set query_text=$1, query_source_id=$2, query_source=$3, updated_at=now() where id=$4 and query_source_id=$5`,
+			queryText,
+			newQuerySourceId,
+			proto.Query_QUERY_SOURCE_INLINE,
+			queryID,
+			prevQuerySourceId,
+		)
+	}
 	if err != nil {
 		return err
 	}

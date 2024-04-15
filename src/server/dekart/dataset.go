@@ -340,11 +340,11 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	bucketName := s.getBucketNameFromConnection(connection)
 
 	obj := s.storage.GetObject(bucketName, fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
-	created, err := obj.GetCreatedAt(ctx)
-	if err != nil {
-		HttpError(w, err)
-		return
-	}
+	// created, err := obj.GetCreatedAt(ctx)
+	// if err != nil {
+	// 	HttpError(w, err)
+	// 	return
+	// }
 	objectReader, err := obj.GetReader(ctx)
 	if err != nil {
 		HttpError(w, err)
@@ -352,8 +352,9 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	}
 	defer objectReader.Close()
 	w.Header().Set("Content-Type", "text/csv")
-	w.Header().Set("Cache-Control", "public, max-age=31536000")
-	w.Header().Set("Last-Modified", created.Format(time.UnixDate))
+	//TODO: fix cache control
+	// w.Header().Set("Cache-Control", "public, max-age=31536000")
+	// w.Header().Set("Last-Modified", created.Format(time.UnixDate))
 	if _, err := io.Copy(w, objectReader); err != nil {
 		HttpError(w, err)
 		return
