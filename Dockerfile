@@ -49,11 +49,25 @@ ENTRYPOINT /bin/sh -c /dekart/server & cypress run --spec ${TEST_SPEC}
 FROM ubuntu:18.04
 WORKDIR /dekart
 RUN apt-get update && apt-get install  -y \
+    postgresql postgresql-contrib \
     ca-certificates
 RUN update-ca-certificates
 COPY --from=nodebuilder /source/build build
 COPY --from=gobuilder /source/server .
 ADD migrations migrations
+
+# Initialize PostgreSQL
+USER postgres
+RUN service postgresql start &&\
+    psql --command "CREATE USER dekart WITH SUPERUSER PASSWORD 'dekart';" &&\
+    createdb -O dekart dekart
+
+USER root
 ENV DEKART_PORT=8080
 ENV DEKART_STATIC_FILES=./build
-CMD ["/dekart/server"]
+ENV DEKART_POSTGRES_USER=dekart
+ENV DEKART_POSTGRES_PASSWORD=dekart
+ENV DEKART_POSTGRES_PORT=5432
+ENV DEKART_POSTGRES_HOST=localhost
+
+CMD service postgresql start && /dekart/server

@@ -41,6 +41,22 @@ gotest:
 
 e2e: bq athena snowflake
 
+snowpark:
+	docker buildx build --tag dekart-snowpark -o type=image -f ./Dockerfile .
+
+snowpark-run:
+	docker run -it --rm \
+	-p 8082:8080 \
+	-e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
+	-e DEKART_STORAGE=SNOWFLAKE \
+	-e DEKART_DATASOURCE=SNOWFLAKE \
+	-e DEKART_SNOWFLAKE_ACCOUNT_ID=${DEKART_SNOWFLAKE_ACCOUNT_ID} \
+	-e DEKART_SNOWFLAKE_USER=${DEKART_SNOWFLAKE_USER} \
+	-e DEKART_SNOWFLAKE_PASSWORD=${DEKART_SNOWFLAKE_PASSWORD} \
+	-e DEKART_CORS_ORIGIN=http://localhost:3000 \
+	-e DEKART_CLOUD_STORAGE_BUCKET=XXX \
+	dekart-snowpark
+
 google-oauth:
 	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} -o type=image -f ./Dockerfile --target e2etest .
 	docker run -it --rm \
