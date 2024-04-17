@@ -9,7 +9,6 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"os"
 	"regexp"
 	"sync"
 
@@ -202,13 +201,13 @@ func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connect
 }
 
 func (s *Store) Create(reportID string, queryID string, queryText string, userCtx context.Context) (job.Job, chan int32, error) {
-	dataSourceName := fmt.Sprintf(
-		"%s:%s@%s",
-		os.Getenv("DEKART_SNOWFLAKE_USER"),
-		os.Getenv("DEKART_SNOWFLAKE_PASSWORD"),
-		os.Getenv("DEKART_SNOWFLAKE_ACCOUNT_ID"),
-	)
-	db, err := sql.Open("snowflake", dataSourceName)
+	// dataSourceName := fmt.Sprintf(
+	// 	"%s:%s@%s",
+	// 	os.Getenv("DEKART_SNOWFLAKE_USER"),
+	// 	os.Getenv("DEKART_SNOWFLAKE_PASSWORD"),
+	// 	os.Getenv("DEKART_SNOWFLAKE_ACCOUNT_ID"),
+	// )
+	db, err := sql.Open("snowflake")
 	if err != nil {
 		log.Error().Err(err).Msg("failed to connect to snowflake")
 		return nil, nil, err
