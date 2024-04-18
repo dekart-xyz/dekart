@@ -136,6 +136,7 @@ func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connect
 		j.QueryText,
 	)
 	if err != nil {
+		j.Logger.Debug().Err(err).Msg("Error querying snowflake")
 		j.CancelWithError(err)
 		return nil // it's ok, since these are query errors
 	}
@@ -219,12 +220,13 @@ func getDataSourceName() string {
 	if token != "" {
 		log.Debug().Msg("Using snowpark token")
 		return fmt.Sprintf(
-			"zzz:zzz@%s/%s/%s?account=%s&token=%s&authenticator=oauth",
+			"dekart:zzz@%s/%s/%s?account=%s&token=%s&warehouse=%s&authenticator=oauth&insecureMode=true&tracing=debug",
 			os.Getenv("SNOWFLAKE_HOST"),
 			os.Getenv("SNOWFLAKE_DATABASE"),
 			os.Getenv("SNOWFLAKE_SCHEMA"),
 			os.Getenv("SNOWFLAKE_ACCOUNT"),
 			token,
+			os.Getenv("SNOWFLAKE_WAREHOUSE"),
 		)
 		// log.Debug().Str("dataSourceName", dataSourceName).Msg("Using snowpark token")
 	}
