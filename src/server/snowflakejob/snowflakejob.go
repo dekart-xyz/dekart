@@ -9,6 +9,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"os"
 	"regexp"
 	"sync"
 
@@ -200,16 +201,43 @@ func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connect
 	return nil
 }
 
-func (s *Store) Create(reportID string, queryID string, queryText string, userCtx context.Context) (job.Job, chan int32, error) {
-	// dataSourceName := fmt.Sprintf(
-	// 	"%s:%s@%s",
-	// 	os.Getenv("DEKART_SNOWFLAKE_USER"),
-	// 	os.Getenv("DEKART_SNOWFLAKE_PASSWORD"),
-	// 	os.Getenv("DEKART_SNOWFLAKE_ACCOUNT_ID"),
-	// )
-	db, err := sql.Open("snowflake")
+func readSnowparkToken() string {
+	_, err := os.Stat("/snowflake/session/token")
+	if os.IsNotExist(err) {
+		return ""
+	}
+	token, err := os.ReadFile("/snowflake/session/token")
 	if err != nil {
-		log.Error().Err(err).Msg("failed to connect to snowflake")
+		log.Error().Err(err).Msg("failed to read token")
+		return ""
+	}
+	return string(token)
+}
+
+func (s *Store) Create(reportID string, queryID string, queryText string, userCtx context.Context) (job.Job, chan int32, error) {
+	dataSourceName := fmt.Sprintf(
+		"%s:%s@%s",
+		os.Getenv("DEKART_SNOWFLAKE_USER"),
+		os.Getenv("DEKART_SNOWFLAKE_PASSWORD"),
+		os.Getenv("DEKART_SNOWFLAKE_ACCOUNT_ID"),
+	)
+	token := readSnowparkToken()
+	if token != "" {
+		log.Debug().Msg("Using snowpark token")
+		dataSourceName = fmt.Sprintf(
+			"%s/%s/%s?account=%s&token=%s&authenticator=oauth",
+			os.Getenv("SNOWFLAKE_HOST"),
+			os.Getenv("SNOWFLAKE_DATABASE"),
+			os.Getenv("SNOWFLAKE_SCHEMA"),
+			os.Getenv("SNOWFLAKE_ACCOUNT"),
+			token,
+		)
+	} else {
+		log.Debug().Msg("Using snowflake password")
+	}
+	db, err := sql.Open("snowflake", dataSourceName)
+	if err != nil {
+		log.Error().Str("dataSourceName", dataSourceName).Err(err).Msg("failed to connect to snowflake")
 		return nil, nil, err
 	}
 	job := &Job{

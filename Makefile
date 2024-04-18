@@ -41,7 +41,7 @@ gotest:
 
 e2e: bq athena snowflake
 
-snowpark:
+snowpark-build:
 	docker buildx build --platform linux/amd64 --tag dekart-snowpark -f ./Dockerfile . --load
 
 snowpark-run:
@@ -65,6 +65,8 @@ snowpark-docker-login:
 
 snowpark-docker-push:
 	docker push ${SNOWPARK_IMAGE_URL}/dekart-snowpark
+
+snowpark: snowpark-build snowpark-tag snowpark-docker-push
 
 google-oauth:
 	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} -o type=image -f ./Dockerfile --target e2etest .
