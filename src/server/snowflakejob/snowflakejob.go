@@ -214,27 +214,37 @@ func readSnowparkToken() string {
 	return string(token)
 }
 
-func (s *Store) Create(reportID string, queryID string, queryText string, userCtx context.Context) (job.Job, chan int32, error) {
-	dataSourceName := fmt.Sprintf(
-		"%s:%s@%s",
-		os.Getenv("DEKART_SNOWFLAKE_USER"),
-		os.Getenv("DEKART_SNOWFLAKE_PASSWORD"),
-		os.Getenv("DEKART_SNOWFLAKE_ACCOUNT_ID"),
-	)
+func getDataSourceName() string {
 	token := readSnowparkToken()
 	if token != "" {
-		dataSourceName = fmt.Sprintf(
-			"%s/%s/%s?account=%s&token=%s&authenticator=oauth",
+		log.Debug().Msg("Using snowpark token")
+		return fmt.Sprintf(
+			"zzz:zzz@%s/%s/%s?account=%s&token=%s&authenticator=oauth",
 			os.Getenv("SNOWFLAKE_HOST"),
 			os.Getenv("SNOWFLAKE_DATABASE"),
 			os.Getenv("SNOWFLAKE_SCHEMA"),
 			os.Getenv("SNOWFLAKE_ACCOUNT"),
 			token,
 		)
-		log.Debug().Str("dataSourceName", dataSourceName).Msg("Using snowpark token")
-	} else {
-		log.Debug().Msg("Using snowflake password")
+		// log.Debug().Str("dataSourceName", dataSourceName).Msg("Using snowpark token")
 	}
+	devConnectionString := os.Getenv("DEKART_SNOWFLAKE_DEV_CONNECTION_STRING")
+	if devConnectionString != "" {
+		log.Warn().Str("devConnectionString", devConnectionString).Msg("Using snowflake dev connection string")
+		return devConnectionString
+	}
+	log.Debug().Msg("Using snowflake password")
+	return fmt.Sprintf(
+		"%s:%s@%s",
+		os.Getenv("DEKART_SNOWFLAKE_USER"),
+		os.Getenv("DEKART_SNOWFLAKE_PASSWORD"),
+		os.Getenv("DEKART_SNOWFLAKE_ACCOUNT_ID"),
+	)
+}
+
+func (s *Store) Create(reportID string, queryID string, queryText string, userCtx context.Context) (job.Job, chan int32, error) {
+	dataSourceName := getDataSourceName()
+	log.Debug().Str("dataSourceName", dataSourceName).Msg("Creating snowflake job")
 	db, err := sql.Open("snowflake", dataSourceName)
 	if err != nil {
 		log.Error().Str("dataSourceName", dataSourceName).Err(err).Msg("failed to connect to snowflake")
