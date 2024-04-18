@@ -223,7 +223,6 @@ func (s *Store) Create(reportID string, queryID string, queryText string, userCt
 	)
 	token := readSnowparkToken()
 	if token != "" {
-		log.Debug().Msg("Using snowpark token")
 		dataSourceName = fmt.Sprintf(
 			"%s/%s/%s?account=%s&token=%s&authenticator=oauth",
 			os.Getenv("SNOWFLAKE_HOST"),
@@ -232,6 +231,7 @@ func (s *Store) Create(reportID string, queryID string, queryText string, userCt
 			os.Getenv("SNOWFLAKE_ACCOUNT"),
 			token,
 		)
+		log.Debug().Str("dataSourceName", dataSourceName).Msg("Using snowpark token")
 	} else {
 		log.Debug().Msg("Using snowflake password")
 	}
