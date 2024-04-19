@@ -93,7 +93,7 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 	ping := s.reportStreams.Register(req.Report.Id, streamID.String(), req.StreamOptions.Sequence)
 	defer s.reportStreams.Deregister(req.Report.Id, streamID.String())
 
-	ctx, cancel := context.WithTimeout(srv.Context(), 25*time.Second)
+	ctx, cancel := context.WithTimeout(srv.Context(), 10*time.Second)
 	defer cancel()
 
 	for {
@@ -228,7 +228,7 @@ func (s Server) GetUserStream(req *proto.GetUserStreamRequest, srv proto.Dekart_
 	ping, streamID := s.userStreams.Register(*claims, req.StreamOptions.Sequence)
 	defer s.userStreams.Deregister(*claims, streamID)
 
-	ctx, cancel := context.WithTimeout(srv.Context(), 25*time.Second)
+	ctx, cancel := context.WithTimeout(srv.Context(), 10*time.Second)
 	defer cancel()
 
 	for {
@@ -261,7 +261,7 @@ func (s Server) GetReportListStream(req *proto.ReportListRequest, srv proto.Deka
 	ping := s.reportStreams.Register(report.All, streamID.String(), req.StreamOptions.Sequence)
 	defer s.reportStreams.Deregister(report.All, streamID.String())
 
-	ctx, cancel := context.WithTimeout(srv.Context(), 25*time.Second)
+	ctx, cancel := context.WithTimeout(srv.Context(), 10*time.Second)
 	defer cancel()
 
 	for {

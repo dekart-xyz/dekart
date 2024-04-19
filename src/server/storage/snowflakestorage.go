@@ -3,10 +3,10 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"dekart/src/server/snowflakeconn"
 	"encoding/csv"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"time"
 
@@ -32,22 +32,17 @@ func (s *SnowflakeStorage) GetObject(_ string, queryID string) StorageObject {
 
 // NewSnowflakeStorageObject
 func NewSnowflakeStorageObject(fileName string) StorageObject {
-	dataSourceName := fmt.Sprintf(
-		"%s:%s@%s",
-		os.Getenv("DEKART_SNOWFLAKE_USER"),
-		os.Getenv("DEKART_SNOWFLAKE_PASSWORD"),
-		os.Getenv("DEKART_SNOWFLAKE_ACCOUNT_ID"),
-	)
+	connector := snowflakeconn.GetConnector()
 	parts := strings.Split(fileName, ".")
 	queryID := parts[0] //extract queryID from fileName like 01b3b0ae-0102-9b06-0001-c28e001599fe.csv
 
-	return SnowflakeStorageObject{queryID: queryID, dataSourceName: dataSourceName}
+	return SnowflakeStorageObject{queryID: queryID, connector: connector}
 }
 
 // SnowflakeStorageObject
 type SnowflakeStorageObject struct {
-	queryID        string
-	dataSourceName string
+	queryID   string
+	connector sf.Connector
 }
 
 func (s SnowflakeStorageObject) CanSaveQuery() bool {
@@ -57,11 +52,7 @@ func (s SnowflakeStorageObject) CanSaveQuery() bool {
 func (s SnowflakeStorageObject) GetReader(ctx context.Context) (io.ReadCloser, error) {
 	log.Debug().Str("queryID", s.queryID).Msg("GetReader")
 	fetchResultByIDCtx := sf.WithFetchResultByID(ctx, s.queryID)
-	db, err := sql.Open("snowflake", s.dataSourceName)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to connect to snowflake")
-		return nil, err
-	}
+	db := sql.OpenDB(s.connector)
 	rows, err := db.QueryContext(fetchResultByIDCtx, "")
 	if err != nil {
 		log.Error().Err(err).Msg("failed to query snowflake")

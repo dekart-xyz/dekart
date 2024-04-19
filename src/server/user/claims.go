@@ -161,6 +161,7 @@ func GetTokenSource(ctx context.Context) oauth2.TokenSource {
 // GetContext Context with user claims
 func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 	ctx := r.Context()
+	log.Debug().Interface("Header", r.Header).Msg("GetContext")
 	var claims *Claims
 	if c.RequireIAP {
 		claims = c.validateJWTFromAppEngine(ctx, r.Header.Get("X-Goog-IAP-JWT-Assertion"))
