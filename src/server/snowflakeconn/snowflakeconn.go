@@ -71,6 +71,7 @@ func getConfig() sf.Config {
 			Authenticator: sf.AuthTypeOAuth,
 			Token:         token,
 			Params:        map[string]*string{},
+			InsecureMode:  true,
 		}
 	}
 	log.Fatal().Msg("No snowflake credentials found")
