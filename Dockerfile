@@ -57,6 +57,8 @@ COPY --from=gobuilder /source/server .
 ADD migrations migrations
 
 # Initialize PostgreSQL
+ENV PGDATA=/dekart/pgdata
+VOLUME /dekart/pgdata
 USER postgres
 RUN service postgresql start &&\
     psql --command "CREATE USER dekart WITH SUPERUSER PASSWORD 'dekart';" &&\

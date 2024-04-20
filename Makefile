@@ -47,14 +47,14 @@ snowpark-build:
 snowpark-run:
 	docker run -it --rm \
 	-p 8082:8080 \
+	-v $$(pwd)/db-volume:/dekart/pgdata \
 	-e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
 	-e DEKART_STORAGE=SNOWFLAKE \
 	-e DEKART_DATASOURCE=SNOWFLAKE \
 	-e DEKART_SNOWFLAKE_ACCOUNT_ID=${DEKART_SNOWFLAKE_ACCOUNT_ID} \
 	-e DEKART_SNOWFLAKE_USER=${DEKART_SNOWFLAKE_USER} \
 	-e DEKART_SNOWFLAKE_PASSWORD=${DEKART_SNOWFLAKE_PASSWORD} \
-	-e DEKART_CORS_ORIGIN=http://localhost:3000 \
-	-e DEKART_CLOUD_STORAGE_BUCKET=XXX \
+	-e DEKART_CORS_ORIGIN=null \
 	dekart-snowpark
 
 snowpark-tag:

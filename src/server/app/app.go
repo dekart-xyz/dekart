@@ -78,6 +78,10 @@ func matchOrigin(origin string) bool {
 func configureGRPC(dekartServer *dekart.Server) *grpcweb.WrappedGrpcServer {
 	server := grpc.NewServer()
 	proto.RegisterDekartServer(server, dekartServer)
+	if allowedOrigin == "" || allowedOrigin == "null" {
+		log.Info().Msg("CORS is disabled")
+		return grpcweb.WrapServer(server)
+	}
 	return grpcweb.WrapServer(
 		server,
 		grpcweb.WithOriginFunc(func(origin string) bool {
