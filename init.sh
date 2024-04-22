@@ -1,7 +1,18 @@
 #!/bin/bash
-set -e
+
+# Define a function to run ./backup.sh
+backup() {
+    service cron stop
+    /dekart/backup.sh
+    service postgresql stop
+    pkill -f "/dekart/server"
+    exit 0
+}
+
+
+# Set the trap
+trap backup SIGTERM SIGINT
 
 service postgresql start
-su - postgres -c "psql -d postgres -c \"SELECT pg_switch_wal();\""
-su - postgres -c "pgbackrest --stanza=main --log-level-console=info stanza-create"
+
 /dekart/server

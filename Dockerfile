@@ -50,7 +50,7 @@ FROM ubuntu:18.04
 WORKDIR /dekart
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install  -y \
     postgresql-10 postgresql-contrib-10 \
-    pgbackrest \
+    cron \
     ca-certificates
 RUN update-ca-certificates
 
@@ -59,11 +59,14 @@ COPY --from=gobuilder /source/server .
 ADD migrations migrations
 
 RUN mkdir -p /dekart/backup
+RUN chown -R postgres:postgres /dekart/backup
 
-ADD postgresql.conf /etc/postgresql/10/main/postgresql.conf
-RUN chown -R postgres:postgres /etc/postgresql/10/main/postgresql.conf
+VOLUME /dekart/backup-volume
 
-ADD pgbackrest.conf /etc/pgbackrest.conf
+# ADD postgresql.conf /etc/postgresql/10/main/postgresql.conf
+# RUN chown -R postgres:postgres /etc/postgresql/10/main/postgresql.conf
+
+# ADD pgbackrest.conf /etc/pgbackrest.conf
 
 USER postgres
 RUN service postgresql start &&\
@@ -73,6 +76,7 @@ RUN service postgresql start &&\
 USER root
 ENV DEKART_PORT=8080
 ENV DEKART_STATIC_FILES=./build
+ENV DEKART_POSTGRES_DB=dekart
 ENV DEKART_POSTGRES_USER=dekart
 ENV DEKART_POSTGRES_PASSWORD=dekart
 ENV DEKART_POSTGRES_PORT=5432
@@ -81,4 +85,9 @@ ENV DEKART_POSTGRES_HOST=localhost
 ADD init.sh .
 RUN chmod +x init.sh
 
-CMD ./init.sh
+ADD backup.sh .
+RUN chmod +x backup.sh
+
+RUN (crontab -l 2>/dev/null; echo "0 * * * * /dekart/backup.sh") | crontab -
+
+CMD [ "./init.sh" ]
