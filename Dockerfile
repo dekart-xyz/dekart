@@ -48,17 +48,23 @@ ENTRYPOINT /bin/sh -c /dekart/server & cypress run --spec ${TEST_SPEC}
 
 FROM ubuntu:18.04
 WORKDIR /dekart
-RUN apt-get update && apt-get install  -y \
-    postgresql postgresql-contrib \
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install  -y \
+    postgresql-10 postgresql-contrib-10 \
+    pgbackrest \
     ca-certificates
 RUN update-ca-certificates
+
 COPY --from=nodebuilder /source/build build
 COPY --from=gobuilder /source/server .
 ADD migrations migrations
 
-# Initialize PostgreSQL
-ENV PGDATA=/dekart/pgdata
-VOLUME /dekart/pgdata
+RUN mkdir -p /dekart/backup
+
+ADD postgresql.conf /etc/postgresql/10/main/postgresql.conf
+RUN chown -R postgres:postgres /etc/postgresql/10/main/postgresql.conf
+
+ADD pgbackrest.conf /etc/pgbackrest.conf
+
 USER postgres
 RUN service postgresql start &&\
     psql --command "CREATE USER dekart WITH SUPERUSER PASSWORD 'dekart';" &&\
@@ -72,4 +78,7 @@ ENV DEKART_POSTGRES_PASSWORD=dekart
 ENV DEKART_POSTGRES_PORT=5432
 ENV DEKART_POSTGRES_HOST=localhost
 
-CMD service postgresql start && /dekart/server
+ADD init.sh .
+RUN chmod +x init.sh
+
+CMD ./init.sh

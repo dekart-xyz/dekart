@@ -44,10 +44,11 @@ e2e: bq athena snowflake
 snowpark-build:
 	docker buildx build --platform linux/amd64 --tag dekart-snowpark -f ./Dockerfile . --load
 
+# -v $$(pwd)/db-volume:/dekart/pgdata
+# -v $$(pwd)/db-volume:/dekart/backup
 snowpark-run:
 	docker run -it --rm \
 	-p 8082:8080 \
-	-v $$(pwd)/db-volume:/dekart/pgdata \
 	-e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
 	-e DEKART_STORAGE=SNOWFLAKE \
 	-e DEKART_DATASOURCE=SNOWFLAKE \
