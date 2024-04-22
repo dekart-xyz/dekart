@@ -50,7 +50,6 @@ FROM ubuntu:18.04
 WORKDIR /dekart
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install  -y \
     postgresql-10 postgresql-contrib-10 \
-    cron \
     ca-certificates
 RUN update-ca-certificates
 
@@ -87,7 +86,5 @@ RUN chmod +x init.sh
 
 ADD backup.sh .
 RUN chmod +x backup.sh
-
-RUN (crontab -l 2>/dev/null; echo "0 * * * * /dekart/backup.sh") | crontab -
 
 CMD [ "./init.sh" ]

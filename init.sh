@@ -2,10 +2,7 @@
 
 # Define a function to run ./backup.sh
 backup() {
-    service cron stop
-    /dekart/backup.sh
     service postgresql stop
-    pkill -f "/dekart/server"
     exit 0
 }
 
@@ -35,5 +32,7 @@ restore() {
 }
 
 restore
+
+./backup.sh &
 
 /dekart/server
