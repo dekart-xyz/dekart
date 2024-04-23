@@ -3,15 +3,6 @@ import { closeDatasetSettingsModal, openDatasetSettingsModal, setActiveDataset }
 import { downloading as downloadingAction, finishDownloading } from '../actions/message'
 import { openReport, reportUpdate } from '../actions/report'
 
-function gone (state = [], action) {
-  switch (action.type) {
-    case gone.name:
-      return state.concat(action.sourceId)
-    default:
-      return state
-  }
-}
-
 function downloading (state = [], action) {
   const { dataset } = action
   switch (action.type) {
@@ -78,6 +69,5 @@ export default combineReducers({
   downloading,
   active,
   settings,
-  list,
-  gone
+  list
 })

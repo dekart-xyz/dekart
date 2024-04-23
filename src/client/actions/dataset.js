@@ -9,10 +9,6 @@ import { KeplerGlSchema } from '@dekart-xyz/kepler.gl/dist/schemas'
 import getDatasetName from '../lib/getDatasetName'
 import { runQuery } from './query'
 
-export function gone (sourceId) {
-  return { type: gone.name, sourceId }
-}
-
 export function createDataset (reportId) {
   return (dispatch, getState) => {
     dispatch({ type: createDataset.name })
@@ -104,7 +100,6 @@ export function downloadDataset (dataset, sourceId, extension, prevDatasetsList)
     } catch (err) {
       dispatch(finishDownloading(dataset))
       if (err.status === 410 && dataset.queryId) {
-        dispatch(gone(sourceId))
         const { canRun, queryText } = getState().queryStatus[dataset.queryId]
         if (!canRun) {
           dispatch(warn(<><i>{label}</i> result expired</>, false))

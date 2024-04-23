@@ -11,7 +11,6 @@ export function downloading (dataset) {
 }
 
 export function finishDownloading (dataset, gone = false) {
-  console.log('finishDownloading gone', gone)
   return { type: finishDownloading.name, dataset, gone }
 }
 
