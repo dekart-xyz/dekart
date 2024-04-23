@@ -9,6 +9,10 @@ import { KeplerGlSchema } from '@dekart-xyz/kepler.gl/dist/schemas'
 import getDatasetName from '../lib/getDatasetName'
 import { runQuery } from './query'
 
+export function gone (sourceId) {
+  return { type: gone.name, sourceId }
+}
+
 export function createDataset (reportId) {
   return (dispatch, getState) => {
     dispatch({ type: createDataset.name })
@@ -20,7 +24,7 @@ export function createDataset (reportId) {
 
 export function setActiveDataset (datasetId) {
   return (dispatch, getState) => {
-    const { datasets } = getState()
+    const { list: datasets } = getState().dataset
     const dataset = datasets.find(d => d.id === datasetId) || datasets[0]
     if (dataset) {
       dispatch({ type: setActiveDataset.name, dataset })
@@ -30,7 +34,7 @@ export function setActiveDataset (datasetId) {
 
 export function updateDatasetName (datasetId, name) {
   return async (dispatch, getState) => {
-    const { datasets } = getState()
+    const { list: datasets } = getState().dataset
     const dataset = datasets.find(d => d.id === datasetId)
     if (!dataset) {
       return
@@ -45,7 +49,7 @@ export function updateDatasetName (datasetId, name) {
 
 export function updateDatasetConnection (datasetId, connectionId) {
   return async (dispatch, getState) => {
-    const { datasets } = getState()
+    const { list: datasets } = getState().dataset
     const dataset = datasets.find(d => d.id === datasetId)
     if (!dataset) {
       return
@@ -60,7 +64,7 @@ export function updateDatasetConnection (datasetId, connectionId) {
 
 export function removeDataset (datasetId) {
   return async (dispatch, getState) => {
-    const { datasets, activeDataset } = getState()
+    const { list: datasets, active: activeDataset } = getState().dataset
     if (activeDataset.id === datasetId) {
       // removed active query
       const datasetsLeft = datasets.filter(q => q.id !== datasetId)
@@ -82,7 +86,7 @@ export function removeDataset (datasetId) {
 
 export function downloadDataset (dataset, sourceId, extension, prevDatasetsList) {
   return async (dispatch, getState) => {
-    const { datasets, files, queries, keplerGl } = getState()
+    const { dataset: { list: datasets }, files, queries, keplerGl } = getState()
     const label = getDatasetName(dataset, queries, files)
     dispatch({ type: downloadDataset.name, dataset })
     dispatch(downloading(dataset))
@@ -100,6 +104,7 @@ export function downloadDataset (dataset, sourceId, extension, prevDatasetsList)
     } catch (err) {
       dispatch(finishDownloading(dataset))
       if (err.status === 410 && dataset.queryId) {
+        dispatch(gone(sourceId))
         const { canRun, queryText } = getState().queryStatus[dataset.queryId]
         if (!canRun) {
           dispatch(warn(<><i>{label}</i> result expired</>, false))

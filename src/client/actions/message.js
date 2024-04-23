@@ -10,8 +10,9 @@ export function downloading (dataset) {
   return { type: downloading.name, dataset }
 }
 
-export function finishDownloading (dataset) {
-  return { type: finishDownloading.name, dataset }
+export function finishDownloading (dataset, gone = false) {
+  console.log('finishDownloading gone', gone)
+  return { type: finishDownloading.name, dataset, gone }
 }
 
 export function warn (content, transitive = true) {

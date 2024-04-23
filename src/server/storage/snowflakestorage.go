@@ -127,6 +127,11 @@ func (s SnowflakeStorageObject) GetWriter(ctx context.Context) io.WriteCloser {
 }
 
 func (s SnowflakeStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, error) {
+	// randomly return expired error every second time for testing
+	// if rand.Intn(2) == 0 {
+	// 	return nil, &ExpiredError{}
+	// }
+
 	conn, err := s.connector.Connect(ctx)
 	if err != nil {
 		return nil, err

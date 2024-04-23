@@ -4,7 +4,7 @@ import message from 'antd/es/message'
 import { useEffect } from 'react'
 
 function DownloadingMessage () {
-  const downloadingDatasets = useSelector(state => state.downloadingDatasets)
+  const downloadingDatasets = useSelector(state => state.dataset.downloading)
   const files = useSelector(state => state.files)
   const queries = useSelector(state => state.queries)
   const size = downloadingDatasets.reduce((size, { queryId, fileId }) => {
@@ -26,7 +26,7 @@ function DownloadingMessage () {
 
 let hideDownloading = null
 export default function Downloading () {
-  const downloadingDatasets = useSelector(state => state.downloadingDatasets)
+  const downloadingDatasets = useSelector(state => state.dataset.downloading)
   const show = downloadingDatasets.length > 0
   const [api, contextHolder] = message.useMessage()
   useEffect(() => {

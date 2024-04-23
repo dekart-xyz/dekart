@@ -83,7 +83,7 @@ function shouldDownloadQueryText (query, prevQueriesList, queriesList) {
 export function reportUpdate (reportStreamResponse) {
   const { report, queriesList, datasetsList, filesList } = reportStreamResponse
   return async (dispatch, getState) => {
-    const { queries: prevQueriesList, datasets: prevDatasetsList, report: prevReport, files: prevFileList, env, connection } = getState()
+    const { queries: prevQueriesList, dataset: { list: prevDatasetsList, gone }, report: prevReport, files: prevFileList, env, connection } = getState()
     dispatch({
       type: reportUpdate.name,
       report,
@@ -126,7 +126,7 @@ export function reportUpdate (reportStreamResponse) {
       let extension = 'csv'
       if (dataset.queryId) {
         const query = queriesList.find(q => q.id === dataset.queryId)
-        if (shouldAddQuery(query, prevQueriesList, queriesList) || shouldUpdateDataset(dataset, prevDatasetsList)) {
+        if (shouldAddQuery(query, prevQueriesList, gone) || shouldUpdateDataset(dataset, prevDatasetsList)) {
           dispatch(downloadDataset(
             dataset,
             query.jobResultId,
