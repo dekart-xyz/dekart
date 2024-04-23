@@ -34,6 +34,14 @@ type Storage interface {
 	CanSaveQuery() bool
 }
 
+// Expired Error
+type ExpiredError struct {
+}
+
+func (e *ExpiredError) Error() string {
+	return "expired"
+}
+
 func GetBucketName(userBucketName string) string {
 	defaultBucketName := GetDefaultBucketName()
 	if userBucketName != "" {

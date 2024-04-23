@@ -126,8 +126,25 @@ func (s SnowflakeStorageObject) GetWriter(ctx context.Context) io.WriteCloser {
 	return nil
 }
 
-func (s SnowflakeStorageObject) GetCreatedAt(context.Context) (*time.Time, error) {
-	return nil, nil
+func (s SnowflakeStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, error) {
+	conn, err := s.connector.Connect(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	status, err := conn.(sf.SnowflakeConnection).GetQueryStatus(ctx, s.queryID)
+
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to get query status")
+		return nil, &ExpiredError{}
+	}
+	createdAt := time.Unix(status.EndTime, 0)
+
+	//check if query is older than 1 day (minus 1 hour for safety)
+	if time.Since(createdAt) > 23*time.Hour {
+		return nil, &ExpiredError{}
+	}
+	return &createdAt, nil
 }
 
 // GetSize(context.Context) (*int64, error)

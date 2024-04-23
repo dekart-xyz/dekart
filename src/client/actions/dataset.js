@@ -1,12 +1,13 @@
 import { CreateDatasetRequest, RemoveDatasetRequest, UpdateDatasetConnectionRequest, UpdateDatasetNameRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { grpcCall } from './grpc'
-import { downloading, setError, finishDownloading, success } from './message'
+import { downloading, setError, finishDownloading, success, info, warn } from './message'
 import { addDataToMap, toggleSidePanel, removeDataset as removeDatasetFromKepler, reorderLayer } from '@dekart-xyz/kepler.gl/dist/actions'
 import { processCsvData, processGeojson } from '@dekart-xyz/kepler.gl/dist/processors'
 import { get } from '../lib/api'
 import { KeplerGlSchema } from '@dekart-xyz/kepler.gl/dist/schemas'
 import getDatasetName from '../lib/getDatasetName'
+import { runQuery } from './query'
 
 export function createDataset (reportId) {
   return (dispatch, getState) => {
@@ -81,6 +82,8 @@ export function removeDataset (datasetId) {
 
 export function downloadDataset (dataset, sourceId, extension, prevDatasetsList) {
   return async (dispatch, getState) => {
+    const { datasets, files, queries, keplerGl } = getState()
+    const label = getDatasetName(dataset, queries, files)
     dispatch({ type: downloadDataset.name, dataset })
     dispatch(downloading(dataset))
     const { token } = getState()
@@ -95,11 +98,20 @@ export function downloadDataset (dataset, sourceId, extension, prevDatasetsList)
         data = processGeojson(json)
       }
     } catch (err) {
-      dispatch(setError(err))
+      dispatch(finishDownloading(dataset))
+      if (err.status === 410 && dataset.queryId) {
+        const { canRun, queryText } = getState().queryStatus[dataset.queryId]
+        if (!canRun) {
+          dispatch(warn(<><i>{label}</i> result expired</>, false))
+          return
+        }
+        dispatch(info(<><i>{label}</i> result expired, re-running</>))
+        dispatch(runQuery(dataset.queryId, queryText))
+      } else {
+        dispatch(setError(err))
+      }
       return
     }
-    const { datasets, files, queries, keplerGl } = getState()
-    const label = getDatasetName(dataset, queries, files)
     // check if dataset was already added to kepler
     const addedDatasets = getState().keplerGl.kepler.visState.datasets
     const prevDataset = prevDatasetsList.find(d => d.id in addedDatasets)
