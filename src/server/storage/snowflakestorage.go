@@ -148,7 +148,7 @@ func (s SnowflakeStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, e
 		log.Warn().Err(err).Msg("failed to get query status")
 		return nil, &ExpiredError{}
 	}
-	createdAt := time.Unix(status.EndTime, 0)
+	createdAt := time.Unix(status.EndTime/1000, 0)
 
 	log.Debug().Str("queryID", s.queryID).Time("createdAt", createdAt).Msg("GetCreatedAt")
 
