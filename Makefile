@@ -41,6 +41,33 @@ gotest:
 
 e2e: bq athena snowflake
 
+snowpark-build:
+	docker buildx build --platform linux/amd64 --tag dekart-snowpark -f ./Dockerfile . --load
+
+snowpark-run:
+	docker run -it --rm \
+	-p 8082:8080 \
+	-v $$(pwd)/backup-volume:/dekart/backup-volume \
+	-e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
+	-e DEKART_STORAGE=SNOWFLAKE \
+	-e DEKART_DATASOURCE=SNOWFLAKE \
+	-e DEKART_SNOWFLAKE_ACCOUNT_ID=${DEKART_SNOWFLAKE_ACCOUNT_ID} \
+	-e DEKART_SNOWFLAKE_USER=${DEKART_SNOWFLAKE_USER} \
+	-e DEKART_SNOWFLAKE_PASSWORD=${DEKART_SNOWFLAKE_PASSWORD} \
+	-e DEKART_CORS_ORIGIN=null \
+	dekart-snowpark
+
+snowpark-tag:
+	docker tag dekart-snowpark ${SNOWPARK_IMAGE_URL}/dekart-snowpark
+
+snowpark-docker-login:
+	docker login ${SNOWPARK_IMAGE_URL} -u ${DEKART_SNOWFLAKE_USER} -p ${DEKART_SNOWFLAKE_PASSWORD}
+
+snowpark-docker-push:
+	docker push ${SNOWPARK_IMAGE_URL}/dekart-snowpark
+
+snowpark: snowpark-build snowpark-tag snowpark-docker-push
+
 google-oauth:
 	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} -o type=image -f ./Dockerfile --target e2etest .
 	docker run -it --rm \
