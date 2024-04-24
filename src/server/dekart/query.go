@@ -95,6 +95,8 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 		return nil, Unauthenticated
 	}
 
+	log.Debug().Str("report_id", req.ReportId).Msg("RunAllQueries")
+
 	// get all queries from report
 	queriesRows, err := s.db.QueryContext(ctx,
 		`select
@@ -194,6 +196,7 @@ func (s Server) runQuery(ctx context.Context, i query) error {
 		log.Error().Err(err).Send()
 		return err
 	}
+	// Result ID should be same as job ID once available
 	obj := s.storage.GetObject(i.bucketName, fmt.Sprintf("%s.csv", job.GetID()))
 	go s.updateJobStatus(job, jobStatus)
 	job.Status() <- int32(proto.Query_JOB_STATUS_PENDING)

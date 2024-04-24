@@ -81,6 +81,7 @@ func (j *BasicJob) GetResultSize() int64 {
 	return j.ResultSize
 }
 
+// nil until result is ready
 func (j *BasicJob) GetResultID() *string {
 	j.Lock()
 	defer j.Unlock()

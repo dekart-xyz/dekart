@@ -1,4 +1,4 @@
-export function shouldAddQuery (query, prevQueriesList, queriesList) {
+export function shouldAddQuery (query, prevQueriesList) {
   if (!query.jobResultId) {
     return false
   }

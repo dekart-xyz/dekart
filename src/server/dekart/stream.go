@@ -6,6 +6,8 @@ import (
 	"dekart/src/server/report"
 	"dekart/src/server/user"
 	"fmt"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -65,6 +67,21 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 
 }
 
+const defaultStreamTimeout = 50 * time.Second
+
+// parse int constant from os env variable DEKART_STREAM_TIMEOUT
+func getStreamTimeout() time.Duration {
+	timeout := os.Getenv("DEKART_STREAM_TIMEOUT")
+	if timeout == "" {
+		return defaultStreamTimeout
+	}
+	timeoutInt, err := strconv.Atoi(timeout)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to parse DEKART_STREAM_TIMEOUT")
+	}
+	return time.Duration(timeoutInt) * time.Second
+}
+
 // GetReportStream which sends report and queries on every update
 func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart_GetReportStreamServer) error {
 	claims := user.GetClaims(srv.Context())
@@ -93,7 +110,7 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 	ping := s.reportStreams.Register(req.Report.Id, streamID.String(), req.StreamOptions.Sequence)
 	defer s.reportStreams.Deregister(req.Report.Id, streamID.String())
 
-	ctx, cancel := context.WithTimeout(srv.Context(), 55*time.Second)
+	ctx, cancel := context.WithTimeout(srv.Context(), getStreamTimeout())
 	defer cancel()
 
 	for {
@@ -228,7 +245,7 @@ func (s Server) GetUserStream(req *proto.GetUserStreamRequest, srv proto.Dekart_
 	ping, streamID := s.userStreams.Register(*claims, req.StreamOptions.Sequence)
 	defer s.userStreams.Deregister(*claims, streamID)
 
-	ctx, cancel := context.WithTimeout(srv.Context(), 55*time.Second)
+	ctx, cancel := context.WithTimeout(srv.Context(), getStreamTimeout())
 	defer cancel()
 
 	for {
@@ -261,7 +278,7 @@ func (s Server) GetReportListStream(req *proto.ReportListRequest, srv proto.Deka
 	ping := s.reportStreams.Register(report.All, streamID.String(), req.StreamOptions.Sequence)
 	defer s.reportStreams.Deregister(report.All, streamID.String())
 
-	ctx, cancel := context.WithTimeout(srv.Context(), 55*time.Second)
+	ctx, cancel := context.WithTimeout(srv.Context(), getStreamTimeout())
 	defer cancel()
 
 	for {
