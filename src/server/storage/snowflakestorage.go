@@ -55,6 +55,11 @@ func (s SnowflakeStorageObject) GetReader(ctx context.Context) (io.ReadCloser, e
 	db := sql.OpenDB(s.connector)
 	rows, err := db.QueryContext(fetchResultByIDCtx, "")
 	if err != nil {
+		if sfErr, ok := err.(*sf.SnowflakeError); ok {
+			if sfErr.Number == 612 {
+				return nil, &ExpiredError{}
+			}
+		}
 		log.Error().Err(err).Msg("failed to query snowflake")
 		return nil, err
 	}
@@ -144,6 +149,8 @@ func (s SnowflakeStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, e
 		return nil, &ExpiredError{}
 	}
 	createdAt := time.Unix(status.EndTime, 0)
+
+	log.Debug().Str("queryID", s.queryID).Time("createdAt", createdAt).Msg("GetCreatedAt")
 
 	//check if query is older than 1 day (minus 1 hour for safety)
 	if time.Since(createdAt) > 23*time.Hour {

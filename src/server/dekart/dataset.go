@@ -348,11 +348,17 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "expired", http.StatusGone)
 			return
 		}
-		// HttpError(w, err)
+		HttpError(w, err)
 		return
 	}
 	objectReader, err := obj.GetReader(ctx)
 	if err != nil {
+		//TODO: copy paste
+		if _, ok := err.(*storage.ExpiredError); ok {
+			log.Debug().Err(err).Send()
+			http.Error(w, "expired", http.StatusGone)
+			return
+		}
 		HttpError(w, err)
 		return
 	}
