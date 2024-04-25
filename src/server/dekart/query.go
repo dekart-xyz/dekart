@@ -102,7 +102,8 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 		`select
 			queries.id,
 			queries.query_source_id,
-			datasets.connection_id
+			datasets.connection_id,
+			queries.query_text
 		from queries
 			left join datasets on queries.id = datasets.query_id
 			left join reports on (datasets.report_id = reports.id or queries.report_id = reports.id)
@@ -124,8 +125,9 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 	for queriesRows.Next() {
 		var queryID string
 		var querySourceId string
+		var queryText string
 		var connectionID sql.NullString
-		err := queriesRows.Scan(&queryID, &querySourceId, &connectionID)
+		err := queriesRows.Scan(&queryID, &querySourceId, &connectionID, &queryText)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, status.Error(codes.Internal, err.Error())
@@ -142,6 +144,7 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 			queryID:    queryID,
 			connection: connection,
 			bucketName: bucketName,
+			queryText:  queryText,
 		})
 	}
 
@@ -155,12 +158,15 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 
 	for i := range queries {
 		go func(i int) {
-			queryText, err := s.getQueryText(ctx, querySourceIds[i], queries[i].bucketName)
-			if err != nil {
-				res <- err
-				return
+			if queries[i].queryText == "" {
+				// for SNOWFLAKE storage queryText is stored in db
+				queryText, err := s.getQueryText(ctx, querySourceIds[i], queries[i].bucketName)
+				if err != nil {
+					res <- err
+					return
+				}
+				queries[i].queryText = queryText
 			}
-			queries[i].queryText = queryText
 			err = s.runQuery(ctx, queries[i])
 			res <- err
 		}(i)
