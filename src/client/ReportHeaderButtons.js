@@ -66,6 +66,7 @@ function RefreshButton () {
   }
   return (
     <Button
+      id='dekart-refresh-button'
       type='text'
       icon={loadingNumber ? <LoadingOutlined /> : <ReloadOutlined />}
       title='Re-run all queries'

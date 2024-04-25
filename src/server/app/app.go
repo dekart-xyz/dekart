@@ -7,6 +7,8 @@ import (
 	"dekart/src/server/user"
 	"net/http"
 	"os"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -43,32 +45,53 @@ func (m ResponseWriter) WriteHeader(statusCode int) {
 
 var allowedOrigin string = os.Getenv("DEKART_CORS_ORIGIN")
 
+func getAllowedOrigin(origin string) string {
+	if matchOrigin(origin) {
+		return origin
+	}
+	return "null"
+}
+
+func matchOrigin(origin string) bool {
+	if allowedOrigin == "" || allowedOrigin == "*" {
+		log.Warn().Msg("DEKART_CORS_ORIGIN is empty or *")
+		return true
+	}
+	//check if allowedOrigin contains wildcard using strings.Contains
+	if strings.Contains(allowedOrigin, "*") {
+		regexPattern := strings.ReplaceAll(allowedOrigin, "*", ".*")
+		match, err := regexp.MatchString(regexPattern, origin)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to match origin")
+			return false
+		}
+		return match
+	}
+
+	result := origin == allowedOrigin
+	if !result {
+		log.Warn().Str("origin", origin).Str("allowed origin", allowedOrigin).Msg("Origin is not allowed")
+	}
+	return result
+}
+
 func configureGRPC(dekartServer *dekart.Server) *grpcweb.WrappedGrpcServer {
 	server := grpc.NewServer()
 	proto.RegisterDekartServer(server, dekartServer)
+	if allowedOrigin == "" || allowedOrigin == "null" {
+		log.Info().Msg("CORS is disabled")
+		return grpcweb.WrapServer(server)
+	}
 	return grpcweb.WrapServer(
 		server,
 		grpcweb.WithOriginFunc(func(origin string) bool {
-			if allowedOrigin == "" || allowedOrigin == "*" {
-				log.Warn().Msg("DEKART_CORS_ORIGIN is empty or *")
-				return true
-			}
-			result := origin == allowedOrigin
-			if !result {
-				log.Warn().Str("origin", origin).Str("allowed origin", allowedOrigin).Msg("Origin is not allowed")
-			}
-			return result
+			return matchOrigin(origin)
 		}),
 	)
 }
 
 func setOriginHeader(w http.ResponseWriter, r *http.Request) {
-	if allowedOrigin == "" || allowedOrigin == "*" {
-		log.Warn().Msg("DEKART_CORS_ORIGIN is empty or *")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-	} else {
-		w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
-	}
+	w.Header().Set("Access-Control-Allow-Origin", getAllowedOrigin(r.Header.Get("Origin")))
 	w.Header().Set("Access-Control-Allow-Headers", "Authorization")
 }
 

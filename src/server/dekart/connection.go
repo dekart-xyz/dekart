@@ -37,9 +37,6 @@ func (s Server) getBucketNameFromConnection(conn *proto.Connection) string {
 
 	bucketName := conn.CloudStorageBucket
 
-	if bucketName == "" {
-		log.Warn().Msgf("connection %s has no bucket name", conn.Id)
-	}
 	return bucketName
 }
 

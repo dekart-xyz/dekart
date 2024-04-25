@@ -108,10 +108,9 @@ athena:
 	${DEKART_DOCKER_E2E_TAG}
 
 
-snowflake:
+snowflake-s3:
 	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} -o type=image -f ./Dockerfile --target e2etest .
 	docker run -it --rm \
-	-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
 	-v $$(pwd)/cypress/videos:/dekart/cypress/videos/ \
 	-v $$(pwd)/cypress/screenshots:/dekart/cypress/screenshots/ \
 	-e DEKART_POSTGRES_DB=${DEKART_POSTGRES_DB} \
@@ -130,6 +129,28 @@ snowflake:
 	-e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
 	-e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
 	-e DEKART_ALLOW_FILE_UPLOAD=1 \
+	-e DEKART_CORS_ORIGIN=http://localhost:3000 \
+	-e TEST_SPEC=cypress/e2e/snowflake-s3 \
+	${DEKART_DOCKER_E2E_TAG}
+
+snowflake:
+	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} -o type=image -f ./Dockerfile --target e2etest .
+	docker run -it --rm \
+	-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
+	-v $$(pwd)/cypress/videos:/dekart/cypress/videos/ \
+	-v $$(pwd)/cypress/screenshots:/dekart/cypress/screenshots/ \
+	-e DEKART_POSTGRES_DB=${DEKART_POSTGRES_DB} \
+	-e DEKART_POSTGRES_USER=${DEKART_POSTGRES_USER} \
+	-e DEKART_POSTGRES_PASSWORD=${DEKART_POSTGRES_PASSWORD} \
+	-e DEKART_POSTGRES_PORT=${DEKART_POSTGRES_PORT} \
+	-e DEKART_POSTGRES_HOST=host.docker.internal \
+	-e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
+	-e DEKART_STORAGE=SNOWFLAKE \
+	-e DEKART_DATASOURCE=SNOWFLAKE \
+	-e DEKART_SNOWFLAKE_ACCOUNT_ID=${DEKART_SNOWFLAKE_ACCOUNT_ID} \
+	-e DEKART_SNOWFLAKE_USER=${DEKART_SNOWFLAKE_USER} \
+	-e DEKART_SNOWFLAKE_PASSWORD=${DEKART_SNOWFLAKE_PASSWORD} \
+	-e DEKART_CLOUD_STORAGE_BUCKET=${DEKART_CLOUD_STORAGE_BUCKET} \
 	-e DEKART_CORS_ORIGIN=http://localhost:3000 \
 	-e TEST_SPEC=cypress/e2e/snowflake \
 	${DEKART_DOCKER_E2E_TAG}

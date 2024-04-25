@@ -31,6 +31,15 @@ type StorageObject interface {
 
 type Storage interface {
 	GetObject(string, string) StorageObject
+	CanSaveQuery() bool
+}
+
+// Expired Error is returned when temp storage is expired
+type ExpiredError struct {
+}
+
+func (e *ExpiredError) Error() string {
+	return "expired"
 }
 
 func GetBucketName(userBucketName string) string {
@@ -52,6 +61,11 @@ func GetDefaultBucketName() string {
 type GoogleCloudStorage struct {
 	defaultBucketName string
 	logger            zerolog.Logger
+}
+
+// CanSaveQuery returns true if the storage can save SQL query text
+func (s GoogleCloudStorage) CanSaveQuery() bool {
+	return true
 }
 
 func (s GoogleCloudStorage) GetDefaultBucketName() string {
@@ -208,6 +222,10 @@ func NewS3Storage() Storage {
 		uploader:   s3manager.NewUploaderWithClient(s3client),
 		logger:     log.With().Str("DEKART_CLOUD_STORAGE_BUCKET", bucketName).Logger(),
 	}
+}
+
+func (s S3Storage) CanSaveQuery() bool {
+	return true
 }
 
 func (s S3Storage) GetDefaultBucketName() string {

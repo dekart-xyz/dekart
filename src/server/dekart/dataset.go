@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/storage"
 	"dekart/src/server/user"
 	"fmt"
 	"io"
@@ -319,6 +320,15 @@ func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetReque
 	return res, nil
 }
 
+// process storage expired error
+func storageError(w http.ResponseWriter, err error) {
+	if _, ok := err.(*storage.ExpiredError); ok {
+		http.Error(w, "expired", http.StatusGone)
+		return
+	}
+	HttpError(w, err)
+}
+
 func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	ctx := r.Context()
@@ -342,12 +352,12 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	obj := s.storage.GetObject(bucketName, fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
 	created, err := obj.GetCreatedAt(ctx)
 	if err != nil {
-		HttpError(w, err)
+		storageError(w, err)
 		return
 	}
 	objectReader, err := obj.GetReader(ctx)
 	if err != nil {
-		HttpError(w, err)
+		storageError(w, err)
 		return
 	}
 	defer objectReader.Close()
