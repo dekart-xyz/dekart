@@ -42,9 +42,9 @@ gotest:
 e2e: bq athena snowflake
 
 snowpark-build:
-	docker buildx build --platform linux/amd64 --tag dekart-snowpark -f ./Dockerfile . --load
+	docker buildx build --platform linux/amd64 --tag ${SNOWPARK_IMAGE_NAME} -f ./Dockerfile . --load
 
-snowpark-run:
+snowpark-run: snowpark-build
 	docker run -it --rm \
 	-p 8082:8080 \
 	-v $$(pwd)/backup-volume:/dekart/backup-volume \
@@ -55,18 +55,21 @@ snowpark-run:
 	-e DEKART_SNOWFLAKE_USER=${DEKART_SNOWFLAKE_USER} \
 	-e DEKART_SNOWFLAKE_PASSWORD=${DEKART_SNOWFLAKE_PASSWORD} \
 	-e DEKART_CORS_ORIGIN=null \
-	dekart-snowpark
+	${SNOWPARK_IMAGE_NAME}
 
 snowpark-tag:
-	docker tag dekart-snowpark ${SNOWPARK_IMAGE_URL}/dekart-snowpark
+	docker tag ${SNOWPARK_IMAGE_NAME} ${SNOWPARK_IMAGE_URL}/${SNOWPARK_IMAGE_NAME}:${SNOWPARK_IMAGE_TAG}
 
 snowpark-docker-login:
 	docker login ${SNOWPARK_IMAGE_URL} -u ${DEKART_SNOWFLAKE_USER} -p ${DEKART_SNOWFLAKE_PASSWORD}
 
 snowpark-docker-push:
-	docker push ${SNOWPARK_IMAGE_URL}/dekart-snowpark
+	docker push ${SNOWPARK_IMAGE_URL}/${SNOWPARK_IMAGE_NAME}:${SNOWPARK_IMAGE_TAG}
 
-snowpark: snowpark-build snowpark-tag snowpark-docker-push
+snowpark-spec:
+	snowsql -c main -q "PUT file://$(shell pwd)/snowpark_spec.yaml @dekart_snowpark.public.dekart_snowpark_stage overwrite=true auto_compress=false"
+
+snowpark: snowpark-build snowpark-tag snowpark-docker-push snowpark-spec
 
 google-oauth:
 	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} -o type=image -f ./Dockerfile --target e2etest .
