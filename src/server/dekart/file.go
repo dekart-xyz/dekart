@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/conn"
 	"dekart/src/server/user"
 	"fmt"
 	"io"
@@ -77,7 +78,8 @@ func (s Server) moveFileToStorage(reqCtx context.Context, fileSourceID string, f
 	ctx, cancel := context.WithTimeout(user.CopyClaims(reqCtx, context.Background()), 10*time.Minute)
 	defer cancel()
 
-	storageWriter := s.storage.GetObject(bucketName, fmt.Sprintf("%s.%s", fileSourceID, fileExtension)).GetWriter(ctx)
+	// reqCtx is used because it has connection information, ctx does not have it
+	storageWriter := s.storage.GetObject(reqCtx, bucketName, fmt.Sprintf("%s.%s", fileSourceID, fileExtension)).GetWriter(ctx)
 	_, err := io.Copy(storageWriter, file)
 	if err != nil {
 		log.Err(err).Send()
@@ -135,6 +137,14 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Err(err).Send()
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if !connection.CanStoreFiles {
+		err = fmt.Errorf("connection does not support file storage")
+		log.Warn().Err(err).Send()
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	bucketName := s.getBucketNameFromConnection(connection)
@@ -171,7 +181,8 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 		file.Close()
 		return
 	}
-	go s.moveFileToStorage(ctx, fileSourceID, fileExtension, file, reportIds, bucketName)
+	conCtx := conn.GetCtx(ctx, connection)
+	go s.moveFileToStorage(conCtx, fileSourceID, fileExtension, file, reportIds, bucketName)
 	s.reportStreams.PingAll(reportIds)
 
 }

@@ -184,6 +184,15 @@ type DekartCreateConnection = {
   readonly responseType: typeof proto_dekart_pb.CreateConnectionResponse;
 };
 
+type DekartGetGcpProjectList = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.GetGcpProjectListRequest;
+  readonly responseType: typeof proto_dekart_pb.GetGcpProjectListResponse;
+};
+
 type DekartUpdateConnection = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -251,6 +260,7 @@ export class Dekart {
   static readonly GetUserStream: DekartGetUserStream;
   static readonly GetUsage: DekartGetUsage;
   static readonly CreateConnection: DekartCreateConnection;
+  static readonly GetGcpProjectList: DekartGetGcpProjectList;
   static readonly UpdateConnection: DekartUpdateConnection;
   static readonly ArchiveConnection: DekartArchiveConnection;
   static readonly GetConnectionList: DekartGetConnectionList;
@@ -445,6 +455,15 @@ export class DekartClient {
   createConnection(
     requestMessage: proto_dekart_pb.CreateConnectionRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateConnectionResponse|null) => void
+  ): UnaryResponse;
+  getGcpProjectList(
+    requestMessage: proto_dekart_pb.GetGcpProjectListRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetGcpProjectListResponse|null) => void
+  ): UnaryResponse;
+  getGcpProjectList(
+    requestMessage: proto_dekart_pb.GetGcpProjectListRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetGcpProjectListResponse|null) => void
   ): UnaryResponse;
   updateConnection(
     requestMessage: proto_dekart_pb.UpdateConnectionRequest,

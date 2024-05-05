@@ -3,10 +3,10 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"dekart/src/server/errtype"
 	"dekart/src/server/snowflakeutils"
 	"encoding/csv"
 	"io"
-	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -21,20 +21,17 @@ func NewSnowflakeStorage() *SnowflakeStorage {
 	return &SnowflakeStorage{}
 }
 
-func (s *SnowflakeStorage) CanSaveQuery() bool {
+func (s *SnowflakeStorage) CanSaveQuery(context.Context, string) bool {
 	return false
 }
 
-func (s *SnowflakeStorage) GetObject(_ string, queryID string) StorageObject {
+func (s *SnowflakeStorage) GetObject(_ context.Context, string, queryID string) StorageObject {
 	return NewSnowflakeStorageObject(queryID)
 }
 
 // NewSnowflakeStorageObject
-func NewSnowflakeStorageObject(fileName string) StorageObject {
+func NewSnowflakeStorageObject(queryID string) StorageObject {
 	connector := snowflakeutils.GetConnector()
-	parts := strings.Split(fileName, ".")
-	queryID := parts[0] //extract queryID from fileName like 01b3b0ae-0102-9b06-0001-c28e001599fe.csv
-
 	return SnowflakeStorageObject{queryID: queryID, connector: connector}
 }
 
@@ -44,7 +41,7 @@ type SnowflakeStorageObject struct {
 	connector sf.Connector
 }
 
-func (s SnowflakeStorageObject) CanSaveQuery() bool {
+func (s SnowflakeStorageObject) CanSaveQuery(context.Context, string) bool {
 	return false
 }
 
@@ -56,7 +53,7 @@ func (s SnowflakeStorageObject) GetReader(ctx context.Context) (io.ReadCloser, e
 	if err != nil {
 		if sfErr, ok := err.(*sf.SnowflakeError); ok {
 			if sfErr.Number == 612 {
-				return nil, &ExpiredError{}
+				return nil, &errtype.Expired{}
 			}
 		}
 		log.Error().Err(err).Msg("failed to query snowflake")
@@ -118,7 +115,7 @@ func (s SnowflakeStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, e
 
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to get query status")
-		return nil, &ExpiredError{}
+		return nil, &errtype.Expired{}
 	}
 	createdAt := time.Unix(status.EndTime/1000, 0)
 
@@ -126,7 +123,7 @@ func (s SnowflakeStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, e
 
 	//check if query is older than 1 day (minus 1 hour for safety)
 	if time.Since(createdAt) > 23*time.Hour {
-		return nil, &ExpiredError{}
+		return nil, &errtype.Expired{}
 	}
 	return &createdAt, nil
 }

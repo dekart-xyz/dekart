@@ -4,12 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/errtype"
 	"dekart/src/server/job"
 	"dekart/src/server/snowflakeutils"
 	"dekart/src/server/storage"
 	"encoding/csv"
 	"io"
-	"regexp"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -54,8 +54,6 @@ func (j *Job) write(csvRows chan []string) {
 	j.close(storageWriter, csvWriter)
 }
 
-var contextCancelledRe = regexp.MustCompile(`context canceled`)
-
 func (j *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 	csvWriter.Flush()
 	err := storageWriter.Close()
@@ -64,7 +62,7 @@ func (j *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 		if err == context.Canceled {
 			return
 		}
-		if contextCancelledRe.MatchString(err.Error()) {
+		if errtype.ContextCancelledRe.MatchString(err.Error()) {
 			return
 		}
 		j.Logger.Err(err).Send()
@@ -81,8 +79,7 @@ func (j *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 	j.Logger.Debug().Msg("Writing Done")
 	j.Lock()
 	j.ResultSize = *resultSize
-	jobID := j.GetID()
-	j.ResultID = &jobID // results available now
+	j.ResultReady = true // results available now
 	j.Unlock()
 	j.Status() <- int32(proto.Query_JOB_STATUS_DONE)
 	j.Cancel()
@@ -112,8 +109,8 @@ func (j *Job) fetchQueryMetadata(queryIDChan chan string, resultsReady chan bool
 			}
 			j.Lock()
 			if j.isSnowflakeStorageObject {
-				// when using SNOWFLAKE storage, resultID is same as queryID and available immediately
-				j.ResultID = &queryID
+				j.ResultReady = true
+				j.DWJobID = &queryID
 			}
 			j.ProcessedBytes = status.ScanBytes
 			j.Unlock()

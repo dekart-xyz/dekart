@@ -1,8 +1,8 @@
-package bqjob
+package bqutils
 
 import (
 	"context"
-	"dekart/src/server/job"
+	"dekart/src/server/errtype"
 	"dekart/src/server/user"
 	"fmt"
 	"io"
@@ -94,7 +94,7 @@ func (r *Reader) getTableFields() []string {
 func (r *Reader) getStreams() ([]*bqStoragePb.ReadStream, error) {
 	readStreams := r.session.GetStreams()
 	if len(readStreams) == 0 {
-		err := &job.EmptyResultError{}
+		err := &errtype.EmptyResult{}
 		r.logger.Debug().Err(err).Send()
 		return readStreams, err
 	}
@@ -192,7 +192,7 @@ func (r *StreamReader) readStream() {
 			if err == context.Canceled {
 				break
 			}
-			if contextCancelledRe.MatchString(err.Error()) {
+			if errtype.ContextCancelledRe.MatchString(err.Error()) {
 				break
 			}
 			r.logger.Err(err).Msg("cannot read rows from stream")

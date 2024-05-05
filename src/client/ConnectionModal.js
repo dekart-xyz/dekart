@@ -8,11 +8,15 @@ import { useEffect } from 'react'
 import { archiveConnection, closeConnectionDialog, connectionChanged, saveConnection, testConnection } from './actions/connection'
 import { CheckCircleTwoTone, ExclamationCircleTwoTone } from '@ant-design/icons'
 import Tooltip from 'antd/es/tooltip'
+import AutoComplete from 'antd/es/auto-complete'
+import Alert from 'antd/es/alert'
 
 function Footer ({ form }) {
   const { dialog, test } = useSelector(state => state.connection)
   const { tested, testing, error: testError, success: testSuccess } = test
   const { id, loading } = dialog
+
+  const connection = useSelector(state => state.connection.list.find(s => s.id === id))
 
   const dispatch = useDispatch()
 
@@ -33,13 +37,14 @@ function Footer ({ form }) {
       <div className={styles.spacer} />
       <Button
         id='saveConnection'
-        type={tested && testSuccess ? 'primary' : 'default'} disabled={!tested || loading} onClick={() => {
+        type={tested && testSuccess ? 'primary' : 'default'} disabled={!tested || loading} danger={connection?.datasetCount > 0} onClick={() => {
           dispatch(saveConnection(id, form.getFieldsValue()))
         }}
+        title={connection?.datasetCount > 0 ? 'This connection is used in dataset. Modifying it may lead to errors in reports. Consider creating new connection and archiving this one' : 'Save connection'}
       >
         Save
       </Button>
-      <Button danger onClick={() => dispatch(archiveConnection(id))}>
+      <Button onClick={() => dispatch(archiveConnection(id))}>
         Archive
       </Button>
     </div>
@@ -47,7 +52,7 @@ function Footer ({ form }) {
 }
 
 export default function ConnectionModal () {
-  const { dialog } = useSelector(state => state.connection)
+  const { dialog, projects } = useSelector(state => state.connection)
   const { visible, id, loading } = dialog
 
   const env = useSelector(state => state.env)
@@ -88,15 +93,28 @@ export default function ConnectionModal () {
             if (changedValues.bigqueryProjectId || changedValues.cloudStorageBucket) {
               dispatch(connectionChanged(allValues))
             }
+            if (changedValues.bigqueryProjectId && !allValues.connectionName) {
+              form.setFieldsValue({ connectionName: changedValues.bigqueryProjectId })
+            }
           }}
         >
-          <Form.Item label='Connection Name' name='connectionName' required>
+          {connection?.datasetCount > 0 ? <div className={styles.datasetsCountAlert}><Alert message={<>Danger zone! This connection is used in {connection.datasetCount} dataset{connection.datasetCount > 1 ? 's' : ''}.</>} description="Modifying it may lead to queries and results not being found in reports. Consider creating new connection and archiving this one. Modifying name is safe." type="error" /></div> : null}
+          <Form.Item label='Google Cloud project ID' extra='used to bill BigQuery jobs' required name='bigqueryProjectId'>
+            {
+              projects.length > 0 && !BIGQUERY_PROJECT_ID
+                ? (
+                  <AutoComplete
+                    options={projects.map(project => ({ value: project, label: project }))}
+                    filterOption={(inputValue, option) => option.value.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1}
+                  />
+                  )
+                : <Input readOnly={BIGQUERY_PROJECT_ID} />
+              }
+          </Form.Item>
+          <Form.Item label='Connection Name' required name='connectionName'>
             <Input />
           </Form.Item>
-          <Form.Item label='Google Cloud project ID' extra='used to bill BigQuery jobs' required name='bigqueryProjectId'>
-            <Input readOnly={BIGQUERY_PROJECT_ID} />
-          </Form.Item>
-          <Form.Item label='Google Cloud Storage bucket' extra='where queries, files and query results stored' required name='cloudStorageBucket'>
+          <Form.Item label='Optional Google Cloud Storage bucket' extra='to store files and result cache ' name='cloudStorageBucket'>
             <Input placeholder='my-company-storage-bucket' readOnly={CLOUD_STORAGE_BUCKET} />
           </Form.Item>
         </Form>
