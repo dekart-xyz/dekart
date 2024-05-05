@@ -1,4 +1,4 @@
-package bqjob
+package bqutils
 
 import (
 	"encoding/json"
@@ -12,6 +12,12 @@ import (
 type Decoder struct {
 	tableFields []string
 	codec       *goavro.Codec
+}
+
+type AvroSchema struct {
+	Fields []struct {
+		Name string `json:"name"`
+	} `json:"fields"`
 }
 
 func NewDecoder(session *bqStoragePb.ReadSession) (*Decoder, error) {

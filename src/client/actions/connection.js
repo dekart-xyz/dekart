@@ -1,4 +1,4 @@
-import { ArchiveConnectionRequest, CreateConnectionRequest, GetConnectionListRequest, Connection, TestConnectionRequest, UpdateConnectionRequest, SetDefaultConnectionRequest } from '../../proto/dekart_pb'
+import { ArchiveConnectionRequest, CreateConnectionRequest, GetConnectionListRequest, Connection, TestConnectionRequest, UpdateConnectionRequest, SetDefaultConnectionRequest, GetGcpProjectListRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { updateDatasetConnection } from './dataset'
 import { grpcCall } from './grpc'
@@ -11,8 +11,33 @@ export function closeConnectionDialog () {
   return { type: closeConnectionDialog.name }
 }
 
+export function projectListUpdate (projectsList) {
+  return { type: projectListUpdate.name, projectsList }
+}
+
+export function getProjectList () {
+  return async (dispatch) => {
+    dispatch({ type: getProjectList.name })
+    const request = new GetGcpProjectListRequest()
+    const res = await new Promise((resolve, reject) => {
+      dispatch(grpcCall(Dekart.GetGcpProjectList, request, resolve, (err) => {
+        resolve({ projectsList: [] })
+        if (err.code === 7) {
+          // insufficient permissions for scopes
+          return
+        }
+        return err
+      }))
+    })
+    dispatch(projectListUpdate(res.projectsList))
+  }
+}
+
 export function editConnection (id) {
-  return { type: editConnection.name, id }
+  return async (dispatch) => {
+    dispatch({ type: editConnection.name, id })
+    dispatch(getProjectList())
+  }
 }
 
 export function selectConnection (id) {
@@ -49,21 +74,11 @@ export function archiveConnection (id) {
   }
 }
 
-function getDefaultName (connectionsList, suffix = 0) {
-  const name = suffix ? `BigQuery (${suffix})` : 'BigQuery'
-  if (connectionsList.find(c => c.connectionName === name)) {
-    return getDefaultName(connectionsList, suffix + 1)
-  }
-  return name
-}
-
 export function newConnection (datasetId) {
   return async (dispatch, getState) => {
     dispatch({ type: newConnection.name })
 
-    const connectionName = getDefaultName(getState().connection.list)
     const request = new CreateConnectionRequest()
-    request.setConnectionName(connectionName)
 
     const res = await new Promise((resolve) => {
       dispatch(grpcCall(Dekart.CreateConnection, request, resolve))
@@ -72,6 +87,7 @@ export function newConnection (datasetId) {
       dispatch(updateDatasetConnection(datasetId, res.connection.id))
     }
     dispatch(connectionCreated(res.connection))
+    dispatch(getProjectList())
   }
 }
 

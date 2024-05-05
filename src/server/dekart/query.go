@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"dekart/src/proto"
+	"dekart/src/server/conn"
 	"dekart/src/server/user"
 
 	"github.com/google/uuid"
@@ -36,6 +37,8 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 
 	connection, err := s.getConnectionFromDatasetID(ctx, req.DatasetId)
 
+	conCtx := conn.GetCtx(ctx, connection)
+
 	bucketName := s.getBucketNameFromConnection(connection)
 
 	if err != nil {
@@ -45,7 +48,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 
 	id := newUUID()
 
-	err = s.storeQuerySync(ctx, bucketName, id, "", "")
+	err = s.storeQuerySync(conCtx, bucketName, id, "", "")
 
 	if err != nil {
 		if _, ok := err.(*queryWasNotUpdated); !ok {
@@ -203,7 +206,7 @@ func (s Server) runQuery(ctx context.Context, i query) error {
 		return err
 	}
 	// Result ID should be same as job ID once available
-	obj := s.storage.GetObject(i.bucketName, fmt.Sprintf("%s.csv", job.GetID()))
+	obj := s.storage.GetObject(ctx, i.bucketName, fmt.Sprintf("%s.csv", job.GetID()))
 	go s.updateJobStatus(job, jobStatus)
 	job.Status() <- int32(proto.Query_JOB_STATUS_PENDING)
 	err = job.Run(obj, i.connection)
@@ -258,6 +261,8 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 
 	connection, err := s.getConnection(ctx, connectionID.String)
 
+	conCtx := conn.GetCtx(ctx, connection)
+
 	bucketName := s.getBucketNameFromConnection(connection)
 
 	if err != nil {
@@ -265,7 +270,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	err = s.storeQuerySync(ctx, bucketName, req.QueryId, req.QueryText, prevQuerySourceId)
+	err = s.storeQuerySync(conCtx, bucketName, req.QueryId, req.QueryText, prevQuerySourceId)
 
 	if err != nil {
 		code := codes.Internal
@@ -278,7 +283,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, status.Error(code, err.Error())
 	}
 
-	err = s.runQuery(ctx, query{
+	err = s.runQuery(conCtx, query{
 		reportID:   reportID,
 		queryID:    req.QueryId,
 		queryText:  req.QueryText,

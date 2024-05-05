@@ -37,11 +37,19 @@ service Dekart {
 
     //connections
     rpc CreateConnection(CreateConnectionRequest) returns (CreateConnectionResponse) {}
+    rpc GetGcpProjectList(GetGcpProjectListRequest) returns (GetGcpProjectListResponse) {}
     rpc UpdateConnection(UpdateConnectionRequest) returns (UpdateConnectionResponse) {}
     rpc ArchiveConnection(ArchiveConnectionRequest) returns (ArchiveConnectionResponse) {}
     rpc GetConnectionList(GetConnectionListRequest) returns (GetConnectionListResponse) {}
     rpc TestConnection(TestConnectionRequest) returns (TestConnectionResponse) {}
     rpc SetDefaultConnection(SetDefaultConnectionRequest) returns (SetDefaultConnectionResponse) {}
+}
+
+message GetGcpProjectListRequest {
+}
+
+message GetGcpProjectListResponse {
+    repeated string projects = 1;
 }
 
 message SetDefaultConnectionRequest {
@@ -117,6 +125,8 @@ message Connection {
     string author_email = 6;
     int64 created_at = 7;
     int64 updated_at = 8;
+    int64 dataset_count = 9;
+    bool can_store_files = 10;
 }
 
 message GetUsageRequest {}

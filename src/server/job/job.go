@@ -3,22 +3,16 @@ package job
 import (
 	"context"
 	"dekart/src/proto"
+	"dekart/src/server/errtype"
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
 	"dekart/src/server/uuid"
-	"regexp"
 	"sync"
 	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
-
-type EmptyResultError struct{}
-
-func (e *EmptyResultError) Error() string {
-	return "Empty result"
-}
 
 // Store is the interface for the job storage
 type Store interface {
@@ -33,7 +27,9 @@ type Job interface {
 	GetID() string
 	GetReportID() string
 	GetQueryID() string
-	GetResultID() *string // uuid; nil means no result yet
+	GetResultID() *string // same as GetID(); nil means no result yet
+	IsResultReady() bool  // true if result is ready
+	GetDWJobID() *string  // DW job ID, nil if not applicable or not yet known
 	GetTotalRows() int64
 	GetProcessedBytes() int64
 	GetResultSize() int64
@@ -56,7 +52,8 @@ type BasicJob struct {
 	ReportID       string
 	QueryText      string
 	TotalRows      int64
-	ResultID       *string
+	ResultReady    bool
+	DWJobID        *string
 	ProcessedBytes int64
 	ResultSize     int64
 	Logger         zerolog.Logger
@@ -81,11 +78,25 @@ func (j *BasicJob) GetResultSize() int64 {
 	return j.ResultSize
 }
 
-// nil until result is ready
+func (j *BasicJob) IsResultReady() bool {
+	j.Lock()
+	defer j.Unlock()
+	return j.ResultReady
+}
+
 func (j *BasicJob) GetResultID() *string {
 	j.Lock()
 	defer j.Unlock()
-	return j.ResultID
+	if j.ResultReady {
+		id := j.GetID()
+		return &id
+	}
+	return nil
+}
+func (j *BasicJob) GetDWJobID() *string {
+	j.Lock()
+	defer j.Unlock()
+	return j.DWJobID
 }
 
 func (j *BasicJob) Cancel() {
@@ -128,10 +139,8 @@ func (j *BasicJob) Err() string {
 	return j.err
 }
 
-var contextCancelledRe = regexp.MustCompile(`context canceled`)
-
 func (j *BasicJob) CancelWithError(err error) {
-	if err != context.Canceled && !contextCancelledRe.MatchString(err.Error()) {
+	if err != context.Canceled && !errtype.ContextCancelledRe.MatchString(err.Error()) {
 		j.Lock()
 		j.err = err.Error()
 		j.Unlock()

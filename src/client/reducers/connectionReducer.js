@@ -1,5 +1,5 @@
 import { combineReducers } from 'redux'
-import { closeConnectionDialog, connectionChanged, connectionCreated, connectionListUpdate, connectionSaved, editConnection, newConnection, saveConnection, testConnection, testConnectionResponse } from '../actions/connection'
+import { closeConnectionDialog, connectionChanged, connectionCreated, connectionListUpdate, connectionSaved, editConnection, newConnection, projectListUpdate, saveConnection, testConnection, testConnectionResponse } from '../actions/connection'
 import { setEnv } from '../actions/env'
 
 function dialog (state = {
@@ -114,10 +114,20 @@ function userDefined (state = false, action) {
   }
 }
 
+function projects (state = [], action) {
+  switch (action.type) {
+    case projectListUpdate.name:
+      return action.projectsList
+    default:
+      return state
+  }
+}
+
 export default combineReducers({
   dialog,
   test,
   list,
   userDefined,
-  listLoaded
+  listLoaded,
+  projects
 })
