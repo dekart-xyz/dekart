@@ -414,9 +414,11 @@ func (s Server) getLastConnectionUpdate(ctx context.Context) (int64, error) {
 	}
 	var lastConnectionUpdateDate sql.NullTime
 	err := s.db.QueryRowContext(ctx,
-		`select
-			max(updated_at)
-		from connections`,
+		`SELECT MAX(updated_at) FROM (
+			SELECT updated_at FROM connections
+			UNION ALL
+			SELECT updated_at FROM datasets
+		) AS combined`,
 	).Scan(&lastConnectionUpdateDate)
 	lastConnectionUpdate := lastConnectionUpdateDate.Time.Unix()
 	if err != nil {
