@@ -316,7 +316,7 @@ func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetReque
 		return nil, status.Errorf(codes.NotFound, err.Error())
 	}
 	s.reportStreams.Ping(req.ReportId)
-
+	s.userStreams.PingAll() // because dataset count is now part of connection info
 	res := &proto.CreateDatasetResponse{}
 
 	return res, nil
