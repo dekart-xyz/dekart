@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"dekart/src/proto"
+	"dekart/src/server/conn"
 	"dekart/src/server/user"
 
 	"github.com/google/uuid"
@@ -36,6 +37,8 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 
 	connection, err := s.getConnectionFromDatasetID(ctx, req.DatasetId)
 
+	conCtx := conn.GetCtx(ctx, connection)
+
 	bucketName := s.getBucketNameFromConnection(connection)
 
 	if err != nil {
@@ -45,7 +48,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 
 	id := newUUID()
 
-	err = s.storeQuerySync(ctx, bucketName, id, "", "")
+	err = s.storeQuerySync(conCtx, bucketName, id, "", "")
 
 	if err != nil {
 		if _, ok := err.(*queryWasNotUpdated); !ok {
@@ -99,11 +102,13 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 	var err error
 
 	if checkWorkspace(ctx).IsPlayground {
+		// get all queries from report
 		queriesRows, err = s.db.QueryContext(ctx,
 			`select
 			queries.id,
 			queries.query_source_id,
-			datasets.connection_id
+			datasets.connection_id,
+			queries.query_text
 		from queries
 			left join datasets on queries.id = datasets.query_id
 			left join reports on (datasets.report_id = reports.id or queries.report_id = reports.id)
@@ -120,7 +125,8 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 			`select
 			queries.id,
 			queries.query_source_id,
-			datasets.connection_id
+			datasets.connection_id,
+			queries.query_text
 		from queries
 			left join datasets on queries.id = datasets.query_id
 			left join reports on (datasets.report_id = reports.id or queries.report_id = reports.id)
@@ -144,8 +150,9 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 	for queriesRows.Next() {
 		var queryID string
 		var querySourceId string
+		var queryText string
 		var connectionID sql.NullString
-		err := queriesRows.Scan(&queryID, &querySourceId, &connectionID)
+		err := queriesRows.Scan(&queryID, &querySourceId, &connectionID, &queryText)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, status.Error(codes.Internal, err.Error())
@@ -162,6 +169,7 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 			queryID:    queryID,
 			connection: connection,
 			bucketName: bucketName,
+			queryText:  queryText,
 		})
 	}
 
@@ -175,12 +183,15 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 
 	for i := range queries {
 		go func(i int) {
-			queryText, err := s.getQueryText(ctx, querySourceIds[i], queries[i].bucketName)
-			if err != nil {
-				res <- err
-				return
+			if queries[i].queryText == "" {
+				// for SNOWFLAKE storage queryText is stored in db
+				queryText, err := s.getQueryText(ctx, querySourceIds[i], queries[i].bucketName)
+				if err != nil {
+					res <- err
+					return
+				}
+				queries[i].queryText = queryText
 			}
-			queries[i].queryText = queryText
 			err = s.runQuery(ctx, queries[i])
 			res <- err
 		}(i)
@@ -216,7 +227,8 @@ func (s Server) runQuery(ctx context.Context, i query) error {
 		log.Error().Err(err).Send()
 		return err
 	}
-	obj := s.storage.GetObject(i.bucketName, fmt.Sprintf("%s.csv", job.GetID()))
+	// Result ID should be same as job ID once available
+	obj := s.storage.GetObject(ctx, i.bucketName, fmt.Sprintf("%s.csv", job.GetID()))
 	go s.updateJobStatus(job, jobStatus)
 	job.Status() <- int32(proto.Query_JOB_STATUS_PENDING)
 	err = job.Run(obj, i.connection)
@@ -290,6 +302,8 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 
 	connection, err := s.getConnection(ctx, connectionID.String)
 
+	conCtx := conn.GetCtx(ctx, connection)
+
 	bucketName := s.getBucketNameFromConnection(connection)
 
 	if err != nil {
@@ -297,7 +311,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	err = s.storeQuerySync(ctx, bucketName, req.QueryId, req.QueryText, prevQuerySourceId)
+	err = s.storeQuerySync(conCtx, bucketName, req.QueryId, req.QueryText, prevQuerySourceId)
 
 	if err != nil {
 		code := codes.Internal
@@ -310,7 +324,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, status.Error(code, err.Error())
 	}
 
-	err = s.runQuery(ctx, query{
+	err = s.runQuery(conCtx, query{
 		reportID:   reportID,
 		queryID:    req.QueryId,
 		queryText:  req.QueryText,

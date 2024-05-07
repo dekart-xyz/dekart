@@ -165,8 +165,7 @@ func (j *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 
 	j.Lock()
 	j.ResultSize = *resultSize
-	jobID := j.GetID()
-	j.ResultID = &jobID
+	j.ResultReady = true
 	j.Unlock()
 
 	j.Status() <- int32(proto.Query_JOB_STATUS_DONE)

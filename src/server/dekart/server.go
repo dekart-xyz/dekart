@@ -8,6 +8,9 @@ import (
 	"dekart/src/server/report"
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
+	"encoding/json"
+	"io/ioutil"
+	"net/http"
 	"os"
 
 	"github.com/rs/zerolog/log"
@@ -52,6 +55,62 @@ func defaultString(s, def string) string {
 		return def
 	}
 	return s
+}
+
+type ProjectList struct {
+	Projects []struct {
+		Id string `json:"id"`
+	} `json:"projects"`
+}
+
+// GetGcpProjectList returns list of GCP projects for connection autosuggest
+func (s Server) GetGcpProjectList(ctx context.Context, req *proto.GetGcpProjectListRequest) (*proto.GetGcpProjectListResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	tokenSource := user.GetTokenSource(ctx)
+	if tokenSource == nil {
+		log.Warn().Msg("GetGcpProjectList called without token source")
+		return nil, Unauthenticated
+	}
+
+	token, err := tokenSource.Token()
+	if err != nil {
+		log.Err(err).Msg("Cannot get token")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	httpClient := &http.Client{}
+	r, err := http.NewRequestWithContext(ctx, "GET", "https://www.googleapis.com/bigquery/v2/projects?maxResults=100000", nil)
+	if err != nil {
+		log.Err(err).Msg("Cannot create request")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	token.SetAuthHeader(r)
+	resp, err := httpClient.Do(r)
+	if err != nil {
+		log.Err(err).Msg("Cannot list projects")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Err(err).Msg("Cannot read response")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	projectList := &ProjectList{}
+	err = json.Unmarshal(body, projectList)
+	if err != nil {
+		log.Err(err).Msg("Cannot unmarshal response")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	var projects []string
+	for _, project := range projectList.Projects {
+		projects = append(projects, project.Id)
+	}
+	return &proto.GetGcpProjectListResponse{
+		Projects: projects,
+	}, nil
 }
 
 // GetEnv variables to the client

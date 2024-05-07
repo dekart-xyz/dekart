@@ -4,6 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/conn"
+	"dekart/src/server/errtype"
+	"dekart/src/server/storage"
 	"dekart/src/server/user"
 	"fmt"
 	"io"
@@ -343,12 +346,42 @@ func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetReque
 		return nil, status.Errorf(codes.NotFound, err.Error())
 	}
 	s.reportStreams.Ping(req.ReportId)
-
+	s.userStreams.PingAll() // because dataset count is now part of connection info
 	res := &proto.CreateDatasetResponse{}
 
 	return res, nil
 }
 
+// process storage expired error
+func storageError(w http.ResponseWriter, err error) {
+	if _, ok := err.(*errtype.Expired); ok {
+		http.Error(w, "expired", http.StatusGone)
+		return
+	}
+	HttpError(w, err)
+}
+
+func (s Server) getDWJobIDFromResultID(ctx context.Context, resultID string) (string, error) {
+	var jobID sql.NullString
+	rows, err := s.db.QueryContext(ctx,
+		`select dw_job_id from queries where job_result_id=$1`,
+		resultID,
+	)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	if rows.Next() {
+		err := rows.Scan(&jobID)
+		if err != nil {
+			return "", err
+		}
+		return jobID.String, nil
+	}
+	return "", nil
+}
+
+// since reading is using connection no auth is needed here
 func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	ctx := r.Context()
@@ -374,15 +407,32 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 
 	bucketName := s.getBucketNameFromConnection(connection)
 
-	obj := s.storage.GetObject(bucketName, fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
+	conCtx := conn.GetCtx(ctx, connection)
+	dwJobID, err := s.getDWJobIDFromResultID(ctx, vars["source"])
+	if err != nil {
+		log.Error().Err(err).Msg("Error getting dw job id")
+		HttpError(w, err)
+		return
+	}
+
+	var obj storage.StorageObject
+
+	if dwJobID != "" {
+		// temp data warehouse table is used as source
+		obj = s.storage.GetObject(conCtx, bucketName, dwJobID)
+	} else {
+		// file stored on the bucket is used as source
+		obj = s.storage.GetObject(conCtx, bucketName, fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
+	}
+
 	created, err := obj.GetCreatedAt(ctx)
 	if err != nil {
-		HttpError(w, err)
+		storageError(w, err)
 		return
 	}
 	objectReader, err := obj.GetReader(ctx)
 	if err != nil {
-		HttpError(w, err)
+		storageError(w, err)
 		return
 	}
 	defer objectReader.Close()

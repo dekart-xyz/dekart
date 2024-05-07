@@ -111,10 +111,10 @@ function getTabPane (dataset, queries, files, status) {
 }
 
 function DatasetSection ({ reportId }) {
-  const datasets = useSelector(state => state.datasets)
+  const datasets = useSelector(state => state.dataset.list)
   const queries = useSelector(state => state.queries)
   const files = useSelector(state => state.files)
-  const activeDataset = useSelector(state => state.activeDataset)
+  const activeDataset = useSelector(state => state.dataset.active)
   const report = useSelector(state => state.report)
   const queryStatus = useSelector(state => state.queryStatus)
   const { canWrite } = report

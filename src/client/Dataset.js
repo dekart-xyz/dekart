@@ -17,9 +17,21 @@ function DatasetTypeSelector ({ dataset }) {
   const dispatch = useDispatch()
 
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
+  const connectionList = useSelector(state => state.connection.list)
 
   const env = useSelector(state => state.env)
   const { ALLOW_FILE_UPLOAD } = env.variables
+  let allowFileUpload = ALLOW_FILE_UPLOAD
+  let disabledFileUploadNote = 'File upload is disabled in Dekart configuration'
+  if (allowFileUpload && userDefinedConnection) {
+    // check if selected connection supports file upload
+    const connection = connectionList.find(c => c.id === dataset.connectionId)
+    allowFileUpload = connection?.canStoreFiles
+    if (!allowFileUpload) {
+      disabledFileUploadNote = 'Selected connection does not support file upload'
+    }
+  }
+
 
   return (
     <div className={styles.datasetTypeSelector}>
@@ -35,8 +47,8 @@ function DatasetTypeSelector ({ dataset }) {
             {
               label: 'File upload',
               icon: <UploadOutlined />,
-              title: !ALLOW_FILE_UPLOAD ? 'File upload is disabled in Dekart configuration' : null,
-              disabled: !ALLOW_FILE_UPLOAD,
+              title: !allowFileUpload ? disabledFileUploadNote : null,
+              disabled: !allowFileUpload,
               key: 'file'
             }
           ],

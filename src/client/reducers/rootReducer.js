@@ -2,8 +2,7 @@ import { combineReducers } from 'redux'
 import { ActionTypes as KeplerActionTypes } from '@dekart-xyz/kepler.gl/dist/actions'
 import { setUserMapboxAccessTokenUpdater } from '@dekart-xyz/kepler.gl/dist/reducers/ui-state-updaters'
 import { openReport, reportUpdate, forkReport, saveMap, reportTitleChange, newReport, newForkedReport, unsubscribeReports, reportsListUpdate, closeReport } from '../actions/report'
-import { downloading, finishDownloading, setStreamError } from '../actions/message'
-import { closeDatasetSettingsModal, openDatasetSettingsModal, setActiveDataset } from '../actions/dataset'
+import { setStreamError } from '../actions/message'
 import { queries, queryStatus } from './queryReducer'
 import { setUsage } from '../actions/usage'
 import { setEnv } from '../actions/env'
@@ -16,6 +15,7 @@ import connection from './connectionReducer'
 import user from './userReducer'
 import workspace from './workspaceReducer'
 import httpError from './httpErrorReducer'
+import dataset from './datasetReducer'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
   uiState: {
@@ -57,17 +57,6 @@ function files (state = [], action) {
       return []
     case reportUpdate.name:
       return action.filesList
-    default:
-      return state
-  }
-}
-
-function datasets (state = [], action) {
-  switch (action.type) {
-    case openReport.name:
-      return []
-    case reportUpdate.name:
-      return action.datasetsList
     default:
       return state
   }
@@ -187,40 +176,6 @@ function env (state = defaultEnv, action) {
   }
 }
 
-function downloadingDatasets (state = [], action) {
-  const { dataset } = action
-  switch (action.type) {
-    case downloading.name:
-      return state.concat(dataset)
-    case finishDownloading.name:
-      return state.filter(d => d.id !== dataset.id)
-    default:
-      return state
-  }
-}
-
-function activeDataset (state = null, action) {
-  const { datasetsList, prevDatasetsList } = action
-  switch (action.type) {
-    case openReport.name:
-      return null
-    case setActiveDataset.name:
-      return action.dataset
-    case reportUpdate.name:
-      if (!state) {
-        return datasetsList[0] || state
-      }
-      if (datasetsList.length > prevDatasetsList.length) {
-        return datasetsList.slice(-1)[0]
-      }
-      return {
-        ...(datasetsList.find(d => d.id === state.id) || datasetsList[0])
-      }
-    default:
-      return state
-  }
-}
-
 function release (state = null, action) {
   switch (action.type) {
     case newRelease.name:
@@ -264,43 +219,23 @@ function fileUploadStatus (state = {}, action) {
   }
 }
 
-function datasetSettings (state = { datasetId: null, visible: false }, action) {
-  switch (action.type) {
-    case openDatasetSettingsModal.name:
-      return {
-        datasetId: action.datasetId,
-        visible: true
-      }
-    case closeDatasetSettingsModal.name:
-      return {
-        datasetId: null,
-        visible: false
-      }
-    default:
-      return state
-  }
-}
-
 export default combineReducers({
   keplerGl,
   report,
   queries,
   queryStatus,
-  activeDataset,
   reportStatus,
   reportsList,
   env,
   httpError,
-  downloadingDatasets,
   release,
-  datasets,
   files,
   fileUploadStatus,
   usage,
-  datasetSettings,
   connection,
   token,
   stream,
   user,
-  workspace
+  workspace,
+  dataset
 })

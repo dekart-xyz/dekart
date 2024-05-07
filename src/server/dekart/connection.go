@@ -27,6 +27,12 @@ func (s Server) TestConnection(ctx context.Context, req *proto.TestConnectionReq
 	if !res.Success {
 		return res, nil
 	}
+	if req.Connection.CloudStorageBucket == "" {
+		// if no bucket is provided, temp storage is used
+		return &proto.TestConnectionResponse{
+			Success: true,
+		}, nil
+	}
 	return storage.TestConnection(ctx, req.Connection)
 }
 
@@ -37,9 +43,6 @@ func (s Server) getBucketNameFromConnection(conn *proto.Connection) string {
 
 	bucketName := conn.CloudStorageBucket
 
-	if bucketName == "" {
-		log.Warn().Msgf("connection %s has no bucket name", conn.Id)
-	}
 	return bucketName
 }
 
@@ -117,7 +120,8 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 			id,
 			connection_name,
 			bigquery_project_id,
-			cloud_storage_bucket
+			cloud_storage_bucket,
+			(select count(*) from datasets where connection_id=connections.id) as dataset_count
 		from connections where id=$1 limit 1`,
 		connectionID,
 	)
@@ -136,10 +140,14 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 			&connection.ConnectionName,
 			&bigqueryProjectId,
 			&cloudStorageBucket,
+			&connection.DatasetCount,
 		)
 		connection.Id = ID.String
 		connection.BigqueryProjectId = bigqueryProjectId.String
 		connection.CloudStorageBucket = cloudStorageBucket.String
+		if connection.CloudStorageBucket != "" {
+			connection.CanStoreFiles = true
+		}
 		if err != nil {
 			log.Err(err).Send()
 			return nil, status.Error(codes.Internal, err.Error())
@@ -164,7 +172,8 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 			is_default,
 			created_at,
 			updated_at,
-			author_email
+			author_email,
+			(select count(*) from datasets where connection_id=connections.id) as dataset_count
 		from connections where archived=false and workspace_id=$1 order by created_at desc`,
 		checkWorkspace(ctx).ID,
 	)
@@ -194,6 +203,7 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 			&createdAt,
 			&updatedAt,
 			&connection.AuthorEmail,
+			&connection.DatasetCount,
 		)
 		if err != nil {
 			log.Fatal().Err(err).Msg("scan failed")
@@ -214,6 +224,9 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 		connection.CloudStorageBucket = cloudStorageBucket.String
 		connection.UpdatedAt = updatedAt.Unix()
 		connection.CreatedAt = createdAt.Unix()
+		if connection.CloudStorageBucket != "" {
+			connection.CanStoreFiles = true
+		}
 		connections = append(connections, &connection)
 	}
 
@@ -408,9 +421,11 @@ func (s Server) getLastConnectionUpdate(ctx context.Context) (int64, error) {
 	}
 	var lastConnectionUpdateDate sql.NullTime
 	err := s.db.QueryRowContext(ctx,
-		`select
-			max(updated_at)
-		from connections`,
+		`SELECT MAX(updated_at) FROM (
+			SELECT updated_at FROM connections
+			UNION ALL
+			SELECT updated_at FROM datasets
+		) AS combined`,
 	).Scan(&lastConnectionUpdateDate)
 	lastConnectionUpdate := lastConnectionUpdateDate.Time.Unix()
 	if err != nil {
