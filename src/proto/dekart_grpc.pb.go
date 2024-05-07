@@ -39,6 +39,7 @@ const (
 	Dekart_GetUserStream_FullMethodName           = "/Dekart/GetUserStream"
 	Dekart_GetUsage_FullMethodName                = "/Dekart/GetUsage"
 	Dekart_CreateConnection_FullMethodName        = "/Dekart/CreateConnection"
+	Dekart_GetGcpProjectList_FullMethodName       = "/Dekart/GetGcpProjectList"
 	Dekart_UpdateConnection_FullMethodName        = "/Dekart/UpdateConnection"
 	Dekart_ArchiveConnection_FullMethodName       = "/Dekart/ArchiveConnection"
 	Dekart_GetConnectionList_FullMethodName       = "/Dekart/GetConnectionList"
@@ -86,6 +87,7 @@ type DekartClient interface {
 	GetUsage(ctx context.Context, in *GetUsageRequest, opts ...grpc.CallOption) (*GetUsageResponse, error)
 	//connections
 	CreateConnection(ctx context.Context, in *CreateConnectionRequest, opts ...grpc.CallOption) (*CreateConnectionResponse, error)
+	GetGcpProjectList(ctx context.Context, in *GetGcpProjectListRequest, opts ...grpc.CallOption) (*GetGcpProjectListResponse, error)
 	UpdateConnection(ctx context.Context, in *UpdateConnectionRequest, opts ...grpc.CallOption) (*UpdateConnectionResponse, error)
 	ArchiveConnection(ctx context.Context, in *ArchiveConnectionRequest, opts ...grpc.CallOption) (*ArchiveConnectionResponse, error)
 	GetConnectionList(ctx context.Context, in *GetConnectionListRequest, opts ...grpc.CallOption) (*GetConnectionListResponse, error)
@@ -362,6 +364,15 @@ func (c *dekartClient) CreateConnection(ctx context.Context, in *CreateConnectio
 	return out, nil
 }
 
+func (c *dekartClient) GetGcpProjectList(ctx context.Context, in *GetGcpProjectListRequest, opts ...grpc.CallOption) (*GetGcpProjectListResponse, error) {
+	out := new(GetGcpProjectListResponse)
+	err := c.cc.Invoke(ctx, Dekart_GetGcpProjectList_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *dekartClient) UpdateConnection(ctx context.Context, in *UpdateConnectionRequest, opts ...grpc.CallOption) (*UpdateConnectionResponse, error) {
 	out := new(UpdateConnectionResponse)
 	err := c.cc.Invoke(ctx, Dekart_UpdateConnection_FullMethodName, in, out, opts...)
@@ -519,6 +530,7 @@ type DekartServer interface {
 	GetUsage(context.Context, *GetUsageRequest) (*GetUsageResponse, error)
 	//connections
 	CreateConnection(context.Context, *CreateConnectionRequest) (*CreateConnectionResponse, error)
+	GetGcpProjectList(context.Context, *GetGcpProjectListRequest) (*GetGcpProjectListResponse, error)
 	UpdateConnection(context.Context, *UpdateConnectionRequest) (*UpdateConnectionResponse, error)
 	ArchiveConnection(context.Context, *ArchiveConnectionRequest) (*ArchiveConnectionResponse, error)
 	GetConnectionList(context.Context, *GetConnectionListRequest) (*GetConnectionListResponse, error)
@@ -602,6 +614,9 @@ func (UnimplementedDekartServer) GetUsage(context.Context, *GetUsageRequest) (*G
 }
 func (UnimplementedDekartServer) CreateConnection(context.Context, *CreateConnectionRequest) (*CreateConnectionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateConnection not implemented")
+}
+func (UnimplementedDekartServer) GetGcpProjectList(context.Context, *GetGcpProjectListRequest) (*GetGcpProjectListResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetGcpProjectList not implemented")
 }
 func (UnimplementedDekartServer) UpdateConnection(context.Context, *UpdateConnectionRequest) (*UpdateConnectionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateConnection not implemented")
@@ -1027,6 +1042,24 @@ func _Dekart_CreateConnection_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Dekart_GetGcpProjectList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetGcpProjectListRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).GetGcpProjectList(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_GetGcpProjectList_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).GetGcpProjectList(ctx, req.(*GetGcpProjectListRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Dekart_UpdateConnection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(UpdateConnectionRequest)
 	if err := dec(in); err != nil {
@@ -1353,6 +1386,10 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateConnection",
 			Handler:    _Dekart_CreateConnection_Handler,
+		},
+		{
+			MethodName: "GetGcpProjectList",
+			Handler:    _Dekart_GetGcpProjectList_Handler,
 		},
 		{
 			MethodName: "UpdateConnection",

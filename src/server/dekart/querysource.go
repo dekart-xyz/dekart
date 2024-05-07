@@ -3,7 +3,9 @@ package dekart
 import (
 	"context"
 	"crypto/sha1"
+	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/conn"
 	"dekart/src/server/user"
 	"fmt"
 	"io"
@@ -36,15 +38,21 @@ func (s Server) ServeQuerySource(w http.ResponseWriter, r *http.Request) {
 		ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{IsPlayground: true})
 	}
 
+	conCtx := conn.GetCtx(ctx, connection)
 	bucketName := s.getBucketNameFromConnection(connection)
 
-	obj := s.storage.GetObject(bucketName, fmt.Sprintf("%s.sql", vars["source"]))
-	created, err := obj.GetCreatedAt(ctx)
+	if !s.storage.CanSaveQuery(conCtx, bucketName) {
+		http.Error(w, "Query source not available for this connection", http.StatusBadRequest)
+		return
+	}
+
+	obj := s.storage.GetObject(conCtx, bucketName, fmt.Sprintf("%s.sql", vars["source"]))
+	created, err := obj.GetCreatedAt(conCtx)
 	if err != nil {
 		HttpError(w, err)
 		return
 	}
-	objectReader, err := obj.GetReader(ctx)
+	objectReader, err := obj.GetReader(conCtx)
 	if err != nil {
 		HttpError(w, err)
 		return
@@ -71,26 +79,41 @@ func (s Server) storeQuerySync(ctx context.Context, bucketName, queryID string, 
 	queryTextByte := []byte(queryText)
 	h.Write(queryTextByte)
 	newQuerySourceId := fmt.Sprintf("%x", h.Sum(nil))
-	storageWriter := s.storage.GetObject(bucketName, fmt.Sprintf("%s.sql", newQuerySourceId)).GetWriter(ctx)
-	_, err := storageWriter.Write(queryTextByte)
-	if err != nil {
-		log.Err(err).Msg("Error writing query_text to storage")
-		storageWriter.Close()
-		return err
-	}
-	err = storageWriter.Close()
-	if err != nil {
-		log.Err(err).Str("bucketName", bucketName).Msg("Error writing query_text to storage")
-		return err
-	}
+	var result sql.Result
+	var err error
+	if s.storage.CanSaveQuery(ctx, bucketName) {
+		log.Debug().Str("bucketName", bucketName).Msg("Storing query text in storage")
+		storageWriter := s.storage.GetObject(ctx, bucketName, fmt.Sprintf("%s.sql", newQuerySourceId)).GetWriter(ctx)
+		_, err = storageWriter.Write(queryTextByte)
+		if err != nil {
+			log.Err(err).Msg("Error writing query_text to storage")
+			storageWriter.Close()
+			return err
+		}
+		err = storageWriter.Close()
+		if err != nil {
+			log.Err(err).Str("bucketName", bucketName).Msg("Error writing query_text to storage")
+			return err
+		}
 
-	result, err := s.db.ExecContext(ctx,
-		`update queries set query_source_id=$1, query_source=$2, updated_at=now() where id=$3 and query_source_id=$4`,
-		newQuerySourceId,
-		proto.Query_QUERY_SOURCE_STORAGE,
-		queryID,
-		prevQuerySourceId,
-	)
+		result, err = s.db.ExecContext(ctx,
+			`update queries set query_source_id=$1, query_source=$2, updated_at=now() where id=$3 and query_source_id=$4`,
+			newQuerySourceId,
+			proto.Query_QUERY_SOURCE_STORAGE,
+			queryID,
+			prevQuerySourceId,
+		)
+	} else {
+		log.Debug().Msg("Storing query text in database")
+		result, err = s.db.ExecContext(ctx,
+			`update queries set query_text=$1, query_source_id=$2, query_source=$3, updated_at=now() where id=$4 and query_source_id=$5`,
+			queryText,
+			newQuerySourceId,
+			proto.Query_QUERY_SOURCE_INLINE,
+			queryID,
+			prevQuerySourceId,
+		)
+	}
 	if err != nil {
 		return err
 	}
@@ -106,6 +129,8 @@ func (s Server) storeQuery(userCtx context.Context, reportID string, queryID str
 	defer cancel()
 	connection, err := s.getConnectionFromQueryID(ctx, queryID)
 
+	conCtx := conn.GetCtx(ctx, connection)
+
 	if err != nil {
 		log.Err(err).Msg("Error getting connection from query id")
 		return
@@ -113,7 +138,7 @@ func (s Server) storeQuery(userCtx context.Context, reportID string, queryID str
 
 	bucketName := s.getBucketNameFromConnection(connection)
 
-	err = s.storeQuerySync(ctx, bucketName, queryID, queryText, prevQuerySourceId)
+	err = s.storeQuerySync(conCtx, bucketName, queryID, queryText, prevQuerySourceId)
 	if _, ok := err.(*queryWasNotUpdated); ok {
 		log.Warn().Msg("Query text not updated")
 		return
@@ -129,7 +154,7 @@ func (s Server) getQueryText(ctx context.Context, querySourceId string, bucketNa
 	if querySourceId == "" {
 		return "", nil
 	}
-	reader, err := s.storage.GetObject(bucketName, fmt.Sprintf("%s.sql", querySourceId)).GetReader(ctx)
+	reader, err := s.storage.GetObject(ctx, bucketName, fmt.Sprintf("%s.sql", querySourceId)).GetReader(ctx)
 	if err != nil {
 		return "", err
 	}

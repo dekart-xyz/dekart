@@ -30,7 +30,8 @@ type StorageObject interface {
 }
 
 type Storage interface {
-	GetObject(string, string) StorageObject
+	GetObject(context.Context, string, string) StorageObject
+	CanSaveQuery(context.Context, string) bool
 }
 
 func GetBucketName(userBucketName string) string {
@@ -52,6 +53,11 @@ func GetDefaultBucketName() string {
 type GoogleCloudStorage struct {
 	defaultBucketName string
 	logger            zerolog.Logger
+}
+
+// CanSaveQuery returns true if the storage can save SQL query text
+func (s GoogleCloudStorage) CanSaveQuery(_ context.Context, bucketName string) bool {
+	return bucketName != ""
 }
 
 func (s GoogleCloudStorage) GetDefaultBucketName() string {
@@ -115,7 +121,7 @@ func (o BucketNameOption) apply(options *GetObjectConfig) {
 	options.bucketName = o.BucketName
 }
 
-func (s GoogleCloudStorage) GetObject(bucketName, object string) StorageObject {
+func (s GoogleCloudStorage) GetObject(_ context.Context, bucketName, object string) StorageObject {
 	if bucketName == "" {
 		log.Warn().Msg("bucketName is not set")
 	}
@@ -210,11 +216,15 @@ func NewS3Storage() Storage {
 	}
 }
 
+func (s S3Storage) CanSaveQuery(_ context.Context, bucketName string) bool {
+	return bucketName != ""
+}
+
 func (s S3Storage) GetDefaultBucketName() string {
 	return s.bucketName
 }
 
-func (s S3Storage) GetObject(bucketName string, name string) StorageObject {
+func (s S3Storage) GetObject(_ context.Context, string, name string) StorageObject {
 	return S3StorageObject{
 		s,
 		name,

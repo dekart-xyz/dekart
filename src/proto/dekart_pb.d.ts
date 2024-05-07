@@ -401,6 +401,44 @@ export namespace User {
   }
 }
 
+export class GetGcpProjectListRequest extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetGcpProjectListRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: GetGcpProjectListRequest): GetGcpProjectListRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetGcpProjectListRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetGcpProjectListRequest;
+  static deserializeBinaryFromReader(message: GetGcpProjectListRequest, reader: jspb.BinaryReader): GetGcpProjectListRequest;
+}
+
+export namespace GetGcpProjectListRequest {
+  export type AsObject = {
+  }
+}
+
+export class GetGcpProjectListResponse extends jspb.Message {
+  clearProjectsList(): void;
+  getProjectsList(): Array<string>;
+  setProjectsList(value: Array<string>): void;
+  addProjects(value: string, index?: number): string;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetGcpProjectListResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: GetGcpProjectListResponse): GetGcpProjectListResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetGcpProjectListResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetGcpProjectListResponse;
+  static deserializeBinaryFromReader(message: GetGcpProjectListResponse, reader: jspb.BinaryReader): GetGcpProjectListResponse;
+}
+
+export namespace GetGcpProjectListResponse {
+  export type AsObject = {
+    projectsList: Array<string>,
+  }
+}
+
 export class SetDefaultConnectionRequest extends jspb.Message {
   getConnectionId(): string;
   setConnectionId(value: string): void;
@@ -928,6 +966,12 @@ export class Connection extends jspb.Message {
   getUpdatedAt(): number;
   setUpdatedAt(value: number): void;
 
+  getDatasetCount(): number;
+  setDatasetCount(value: number): void;
+
+  getCanStoreFiles(): boolean;
+  setCanStoreFiles(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Connection.AsObject;
   static toObject(includeInstance: boolean, msg: Connection): Connection.AsObject;
@@ -948,6 +992,8 @@ export namespace Connection {
     authorEmail: string,
     createdAt: number,
     updatedAt: number,
+    datasetCount: number,
+    canStoreFiles: boolean,
   }
 }
 

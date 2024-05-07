@@ -52,7 +52,7 @@ jobs:
             -e DEKART_POSTGRES_HOST=localhost \
             -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
             -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
-            -e DEKART_STORAGE=GCS \
+            -e DEKART_STORAGE=USER \
             -e DEKART_DATASOURCE=BQ \
             -e DEKART_ALLOW_FILE_UPLOAD=1 \
             -e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
@@ -78,7 +78,7 @@ jobs:
             -e DEKART_POSTGRES_HOST=localhost \
             -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
             -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
-            -e DEKART_STORAGE=GCS \
+            -e DEKART_STORAGE=USER \
             -e DEKART_DATASOURCE=BQ \
             -e DEKART_ALLOW_FILE_UPLOAD=1 \
             -e DEKART_REQUIRE_GOOGLE_OAUTH=1 \

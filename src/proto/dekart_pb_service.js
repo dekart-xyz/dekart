@@ -190,6 +190,15 @@ Dekart.CreateConnection = {
   responseType: proto_dekart_pb.CreateConnectionResponse
 };
 
+Dekart.GetGcpProjectList = {
+  methodName: "GetGcpProjectList",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.GetGcpProjectListRequest,
+  responseType: proto_dekart_pb.GetGcpProjectListResponse
+};
+
 Dekart.UpdateConnection = {
   methodName: "UpdateConnection",
   service: Dekart,
@@ -941,6 +950,37 @@ DekartClient.prototype.createConnection = function createConnection(requestMessa
     callback = arguments[1];
   }
   var client = grpc.unary(Dekart.CreateConnection, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.getGcpProjectList = function getGcpProjectList(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.GetGcpProjectList, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,

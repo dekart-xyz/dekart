@@ -104,6 +104,12 @@ func configureBucket() storage.Storage {
 	case "GCS", "":
 		log.Info().Msg("Using GCS storage backend")
 		bucket = storage.NewGoogleCloudStorage()
+	case "SNOWFLAKE":
+		log.Info().Msg("Using SNOWFLAKE query result cache")
+		bucket = storage.NewSnowflakeStorage()
+	case "USER":
+		log.Info().Msg("Using USER defined storage backend, based on connection dialog")
+		bucket = storage.NewUserStorage()
 	default:
 		log.Fatal().Str("DEKART_STORAGE", os.Getenv("DEKART_STORAGE")).Msg("Unknown storage backend")
 	}
