@@ -372,7 +372,8 @@ export default function HomePage ({ reportFilter }) {
           reportsList.loaded && connectionsLoaded
             ? (
               <>
-                <NewVersion />
+                {/* Disable version check for Snowpark */}
+                {/* <NewVersion /> */}
                 <ConnectionModal />
                 <Reports
                   reportsList={reportsList}
