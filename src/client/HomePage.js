@@ -46,11 +46,13 @@ const columns = [
     className: styles.titleColumn
   },
   {
+    title: 'Archived Title',
     dataIndex: 'archivedTitle',
     render: (t, report) => report.title,
     className: styles.titleColumn
   },
   {
+    title: 'Created By',
     dataIndex: 'author', // used for reports and connections
     render: (t, item) => (
       <div
@@ -59,9 +61,10 @@ const columns = [
     } className={styles.author}
       >{item.authorEmail}
       </div>),
-    className: styles.authorColumn
+    className: styles.titleColumn
   },
   {
+    title: 'Action',
     dataIndex: 'delete',
     render: (t, report) => <ArchiveReportButton report={report} />,
     className: styles.deleteColumn
@@ -275,7 +278,7 @@ function Reports ({ createReportButton, reportFilter }) {
             <Table
               dataSource={dataSource}
               columns={getColumns(reportFilter, archived)}
-              showHeader={false}
+              showHeader={true}
               rowClassName={styles.reportsRow}
               pagination={false}
               rowKey='id'
