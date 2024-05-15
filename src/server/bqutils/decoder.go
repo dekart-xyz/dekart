@@ -75,6 +75,8 @@ func (d *Decoder) DecodeRows(undecoded []byte, csvRows chan []string) error {
 				}
 			case []interface{}:
 				csvRow[i] = fmt.Sprintf("%v", x)
+			case float64:
+				csvRow[i] = fmt.Sprintf("%f", x)
 			case interface{}:
 				csvRow[i] = fmt.Sprintf("%v", x)
 			case nil:
