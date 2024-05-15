@@ -67,7 +67,7 @@ snowpark-docker-push:
 	docker push ${SNOWPARK_IMAGE_URL}/${SNOWPARK_IMAGE_NAME}:${SNOWPARK_IMAGE_TAG}
 
 snowpark-spec:
-	snowsql -c main -q "PUT file://$(shell pwd)/snowpark_spec.yaml @dekart_snowpark.public.dekart_snowpark_stage overwrite=true auto_compress=false"
+	snowsql -c ${SNOWSQL_CONNECTION} -q "PUT file://$(shell pwd)/snowpark_spec.yaml @dekart_snowpark.public.dekart_snowpark_stage overwrite=true auto_compress=false"
 
 snowpark: snowpark-build snowpark-tag snowpark-docker-push snowpark-spec
 

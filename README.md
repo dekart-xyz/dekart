@@ -13,6 +13,7 @@ CREATE DATABASE dekart_snowpark;
 GRANT OWNERSHIP ON DATABASE dekart_snowpark TO ROLE dekart COPY CURRENT GRANTS;
 GRANT OWNERSHIP ON SCHEMA dekart_snowpark.public TO ROLE dekart;
 GRANT USAGE, MONITOR ON COMPUTE POOL dekart_snowpark_cp TO ROLE dekart;
+GRANT BIND SERVICE ENDPOINT ON ACCOUNT TO ROLE dekart;
 
 CREATE OR REPLACE NETWORK RULE dekart_snowpark_egress
   MODE = EGRESS
@@ -28,12 +29,12 @@ GRANT USAGE ON INTEGRATION dekart_snowpark_egress_integration TO ROLE dekart;
 
 
 -- with dekart role
-CREATE IMAGE REPOSITORY dekart_snowpark;
+CREATE IMAGE REPOSITORY dekart_snowpark_repository;
 
 CREATE OR REPLACE STAGE dekart_snowpark_stage ENCRYPTION = (type = 'SNOWFLAKE_SSE');
 -- LIST @dekart_snowpark_stage;
 
-CREATE SERVICE dekart_snowpark in COMPUTE POOL dekart_snowpark_cp
+CREATE SERVICE dekart_snowpark_service in COMPUTE POOL dekart_snowpark_cp
 FROM @dekart_snowpark_stage
 spec=snowpark_spec.yaml
 QUERY_WAREHOUSE=DEKART_WH

@@ -1,7 +1,7 @@
 spec:
   containers:
     - name: dekart
-      image: /dekart_snowpark/public/dekart_snowpark/dekart_snowpark:latest
+      image: /dekart_snowpark/public/dekart_snowpark_repository/dekart_snowpark:latest
       readinessProbe:
         port: 8080
         path: /

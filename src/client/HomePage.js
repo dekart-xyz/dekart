@@ -16,6 +16,7 @@ import { editConnection, newConnection, setDefaultConnection } from './actions/c
 import ConnectionModal from './ConnectionModal'
 import Tooltip from 'antd/es/tooltip'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
+import { name } from '../../package.json'
 
 function Loading () {
   return null
@@ -372,8 +373,7 @@ export default function HomePage ({ reportFilter }) {
           reportsList.loaded && connectionsLoaded
             ? (
               <>
-                {/* Disable version check for Snowpark */}
-                {/* <NewVersion /> */}
+                {name === 'dekart-snowpark' ? null : <NewVersion />}
                 <ConnectionModal />
                 <Reports
                   reportsList={reportsList}
