@@ -140,7 +140,6 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			updated_at,
 			created_at
 		from reports
-		where author_email=$1 or (discoverable=true and archived=false) or allow_edit=true
 		order by updated_at desc`,
 		claims.Email,
 	)

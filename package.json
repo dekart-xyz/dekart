@@ -64,6 +64,7 @@
     ]
   },
   "devDependencies": {
+    "@babel/plugin-proposal-logical-assignment-operators": "^7.20.7",
     "eslint-plugin-cypress": "^2.12.1",
     "source-map-explorer": "^2.5.1",
     "standard": "^17.0.0"

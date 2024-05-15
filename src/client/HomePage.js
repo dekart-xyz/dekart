@@ -40,6 +40,7 @@ function ArchiveReportButton ({ report }) {
 
 const columns = [
   {
+    title: 'Title',
     dataIndex: 'title',
     render: (t, report) => <a href={`/reports/${report.id}`}>{report.title}</a>,
     className: styles.titleColumn
@@ -118,9 +119,9 @@ function filterColumns (filter) {
 function getColumns (reportFilter, archived) {
   if (reportFilter === 'my') {
     if (archived) {
-      return filterColumns(['archivedTitle', 'delete'])
+      return filterColumns(['archivedTitle', 'author', 'delete'])
     }
-    return filterColumns(['title', 'delete'])
+    return filterColumns(['title', 'author', 'delete'])
   } else if (reportFilter === 'connections') {
     return filterColumns(['connectionName', 'author', 'setDefault'])
   } else {
