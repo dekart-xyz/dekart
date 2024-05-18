@@ -7911,7 +7911,7 @@ proto.CreateConnectionRequest.prototype.toObject = function(opt_includeInstance)
  */
 proto.CreateConnectionRequest.toObject = function(includeInstance, msg) {
   var f, obj = {
-    connectionName: jspb.Message.getFieldWithDefault(msg, 1, "")
+    connection: (f = msg.getConnection()) && proto.Connection.toObject(includeInstance, f)
   };
 
   if (includeInstance) {
@@ -7949,8 +7949,9 @@ proto.CreateConnectionRequest.deserializeBinaryFromReader = function(msg, reader
     var field = reader.getFieldNumber();
     switch (field) {
     case 1:
-      var value = /** @type {string} */ (reader.readString());
-      msg.setConnectionName(value);
+      var value = new proto.Connection;
+      reader.readMessage(value,proto.Connection.deserializeBinaryFromReader);
+      msg.setConnection(value);
       break;
     default:
       reader.skipField();
@@ -7981,31 +7982,51 @@ proto.CreateConnectionRequest.prototype.serializeBinary = function() {
  */
 proto.CreateConnectionRequest.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
-  f = message.getConnectionName();
-  if (f.length > 0) {
-    writer.writeString(
+  f = message.getConnection();
+  if (f != null) {
+    writer.writeMessage(
       1,
-      f
+      f,
+      proto.Connection.serializeBinaryToWriter
     );
   }
 };
 
 
 /**
- * optional string connection_name = 1;
- * @return {string}
+ * optional Connection connection = 1;
+ * @return {?proto.Connection}
  */
-proto.CreateConnectionRequest.prototype.getConnectionName = function() {
-  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 1, ""));
+proto.CreateConnectionRequest.prototype.getConnection = function() {
+  return /** @type{?proto.Connection} */ (
+    jspb.Message.getWrapperField(this, proto.Connection, 1));
 };
 
 
 /**
- * @param {string} value
+ * @param {?proto.Connection|undefined} value
+ * @return {!proto.CreateConnectionRequest} returns this
+*/
+proto.CreateConnectionRequest.prototype.setConnection = function(value) {
+  return jspb.Message.setWrapperField(this, 1, value);
+};
+
+
+/**
+ * Clears the message field making it undefined.
  * @return {!proto.CreateConnectionRequest} returns this
  */
-proto.CreateConnectionRequest.prototype.setConnectionName = function(value) {
-  return jspb.Message.setProto3StringField(this, 1, value);
+proto.CreateConnectionRequest.prototype.clearConnection = function() {
+  return this.setConnection(undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.CreateConnectionRequest.prototype.hasConnection = function() {
+  return jspb.Message.getField(this, 1) != null;
 };
 
 

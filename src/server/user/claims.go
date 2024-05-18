@@ -126,7 +126,7 @@ func (c ClaimsCheck) validateAuthToken(ctx context.Context, header string) *Clai
 	})
 
 	if err != nil {
-		log.Debug().Err(err).Msg("Error getting token info")
+		log.Debug().Err(err).Int("accessTokenLen", len(accessToken)).Msg("Error getting token info")
 		return nil
 	}
 	missingSensitiveScope := checkMissingScope(sensitiveScope, tokenInfo.Scope)

@@ -6,12 +6,12 @@ import Button from 'antd/es/button'
 import styles from './ConnectionModal.module.css'
 import { useEffect } from 'react'
 import { archiveConnection, closeConnectionDialog, connectionChanged, saveConnection, testConnection } from './actions/connection'
-import { CheckCircleTwoTone, ExclamationCircleTwoTone } from '@ant-design/icons'
+import { CheckCircleTwoTone, ExclamationCircleTwoTone, LoadingOutlined } from '@ant-design/icons'
 import Tooltip from 'antd/es/tooltip'
 import AutoComplete from 'antd/es/auto-complete'
 import Alert from 'antd/es/alert'
 
-function Footer({ form }) {
+function Footer ({ form }) {
   const { dialog, test } = useSelector(state => state.connection)
   const { tested, testing, error: testError, success: testSuccess } = test
   const { id, loading } = dialog
@@ -44,14 +44,14 @@ function Footer({ form }) {
       >
         Save
       </Button>
-      <Button onClick={() => dispatch(archiveConnection(id))}>
+      <Button disabled={!id} onClick={() => dispatch(archiveConnection(id))}>
         Archive
       </Button>
     </div>
   )
 }
 
-export default function ConnectionModal() {
+export default function ConnectionModal () {
   const { dialog, projects } = useSelector(state => state.connection)
   const { visible, id, loading } = dialog
 
@@ -72,7 +72,7 @@ export default function ConnectionModal() {
   return (
     <Modal
       open
-      title='Edit Connection'
+      title='BigQuery'
       onCancel={() => dispatch(closeConnectionDialog())}
       footer={<Footer form={form} />}
     >
@@ -89,18 +89,27 @@ export default function ConnectionModal() {
             }
           }}
         >
-          {connection?.datasetCount > 0 ? <div className={styles.datasetsCountAlert}><Alert message={<>Danger zone! This connection is used in {connection.datasetCount} dataset{connection.datasetCount > 1 ? 's' : ''}.</>} description="Modifying it may lead to queries and results not being found in reports. Consider creating new connection and archiving this one. Modifying name is safe." type="error" /></div> : null}
-          <Form.Item label='Google Cloud project ID' extra='used to bill BigQuery jobs' required name='bigqueryProjectId'>
+          {connection?.datasetCount > 0 ? <div className={styles.datasetsCountAlert}><Alert message={<>Danger zone! This connection is used in {connection.datasetCount} dataset{connection.datasetCount > 1 ? 's' : ''}.</>} description='Modifying it may lead to queries and results not being found in reports. Consider creating new connection and archiving this one. Modifying name is safe.' type='error' /></div> : null}
+          <Form.Item
+            label='Project ID' extra={(() => {
+              if (projects) {
+                return projects.length ? 'Click to select you BigQuery project ID' : <>→ <a target='_blank' href='https://dekart.xyz/docs/configuration/environment-variables/?ref=no-gcp-project#user-authorization-via-google-oauth-20-flow' rel='noreferrer'>Ensure your account has access to the Google Cloud Project</a></>
+              }
+              return <LoadingOutlined />
+            })()} required name='bigqueryProjectId'
+          >
             <AutoComplete
-              options={projects.map(project => ({ value: project, label: project }))}
+              options={(projects || []).map(project => ({ value: project, label: project }))}
+              // suffixIcon={<DownOutlined />}
+              showArrow
               filterOption={(inputValue, option) => option.value.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1}
             />
           </Form.Item>
           <Form.Item label='Connection Name' required name='connectionName'>
             <Input />
           </Form.Item>
-          <Form.Item label='Optional Google Cloud Storage bucket' extra='to store files and result cache ' name='cloudStorageBucket'>
-            <Input placeholder='my-company-storage-bucket' />
+          <Form.Item label='Optional: query cache bucket' extra={<>Google Cloud Storage bucket to permanently cache query results. When not provided, query results are read from <a href='https://cloud.google.com/bigquery/docs/cached-results' target='_blank' rel='noreferrer'>BigQuery result cache</a></>} name='cloudStorageBucket'>
+            <Input placeholder='my-gcs-bucket' />
           </Form.Item>
         </Form>
       </div>

@@ -7,7 +7,7 @@ describe('cloud basic flow', () => {
     cy.visit('/')
     cy.get('button:contains("Create connection")').click()
     const randomConnectionName = `test-${Math.floor(Math.random() * 1000000)}`
-    cy.get('div.ant-modal-title').should('contain', 'Edit Connection')
+    cy.get('div.ant-modal-title').should('contain', 'BigQuery')
     cy.get('input#connectionName').clear()
     cy.get('input#connectionName').type(randomConnectionName)
     cy.get('input#bigqueryProjectId').type('dekart-dev')
