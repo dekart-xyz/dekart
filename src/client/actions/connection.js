@@ -1,6 +1,5 @@
 import { ArchiveConnectionRequest, CreateConnectionRequest, GetConnectionListRequest, Connection, TestConnectionRequest, UpdateConnectionRequest, SetDefaultConnectionRequest, GetGcpProjectListRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
-import { updateDatasetConnection } from './dataset'
 import { grpcCall } from './grpc'
 
 export function connectionCreated ({ id, connectionName }) {
@@ -74,19 +73,10 @@ export function archiveConnection (id) {
   }
 }
 
-export function newConnection (datasetId) {
-  return async (dispatch, getState) => {
+export function newConnection () {
+  return async (dispatch) => {
+    // just to show the modal
     dispatch({ type: newConnection.name })
-
-    const request = new CreateConnectionRequest()
-
-    const res = await new Promise((resolve) => {
-      dispatch(grpcCall(Dekart.CreateConnection, request, resolve))
-    })
-    if (datasetId) {
-      dispatch(updateDatasetConnection(datasetId, res.connection.id))
-    }
-    dispatch(connectionCreated(res.connection))
     dispatch(getProjectList())
   }
 }
@@ -116,18 +106,34 @@ export function connectionSaved () {
 export function saveConnection (id, connectionProps) {
   return async (dispatch, getState) => {
     dispatch({ type: saveConnection.name })
+    if (!id) {
+      // create new connection
+      const request = new CreateConnectionRequest()
+      const connection = new Connection()
+      connection.setConnectionName(connectionProps.connectionName)
+      connection.setBigqueryProjectId(connectionProps.bigqueryProjectId)
+      connection.setCloudStorageBucket(connectionProps.cloudStorageBucket)
+      request.setConnection(connection)
 
-    const request = new UpdateConnectionRequest()
-    const connection = new Connection()
-    connection.setId(id)
-    connection.setConnectionName(connectionProps.connectionName)
-    connection.setBigqueryProjectId(connectionProps.bigqueryProjectId)
-    connection.setCloudStorageBucket(connectionProps.cloudStorageBucket)
-    request.setConnection(connection)
+      const res = await new Promise((resolve) => {
+        dispatch(grpcCall(Dekart.CreateConnection, request, resolve))
+      })
 
-    await new Promise((resolve) => {
-      dispatch(grpcCall(Dekart.UpdateConnection, request, resolve))
-    })
+      dispatch(connectionCreated(res.connection))
+    } else {
+      // update existing connection
+      const request = new UpdateConnectionRequest()
+      const connection = new Connection()
+      connection.setId(id)
+      connection.setConnectionName(connectionProps.connectionName)
+      connection.setBigqueryProjectId(connectionProps.bigqueryProjectId)
+      connection.setCloudStorageBucket(connectionProps.cloudStorageBucket)
+      request.setConnection(connection)
+
+      await new Promise((resolve) => {
+        dispatch(grpcCall(Dekart.UpdateConnection, request, resolve))
+      })
+    }
 
     dispatch(connectionSaved())
   }
