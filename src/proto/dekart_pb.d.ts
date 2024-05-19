@@ -338,8 +338,10 @@ export namespace UpdateConnectionResponse {
 }
 
 export class CreateConnectionRequest extends jspb.Message {
-  getConnectionName(): string;
-  setConnectionName(value: string): void;
+  hasConnection(): boolean;
+  clearConnection(): void;
+  getConnection(): Connection | undefined;
+  setConnection(value?: Connection): void;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CreateConnectionRequest.AsObject;
@@ -353,7 +355,7 @@ export class CreateConnectionRequest extends jspb.Message {
 
 export namespace CreateConnectionRequest {
   export type AsObject = {
-    connectionName: string,
+    connection?: Connection.AsObject,
   }
 }
 

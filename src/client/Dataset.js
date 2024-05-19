@@ -32,7 +32,6 @@ function DatasetTypeSelector ({ dataset }) {
     }
   }
 
-
   return (
     <div className={styles.datasetTypeSelector}>
       <Dropdown

@@ -109,7 +109,7 @@ message UpdateConnectionResponse {
 }
 
 message CreateConnectionRequest {
-    string connection_name = 1;
+    Connection connection = 1;
 }
 
 message CreateConnectionResponse {

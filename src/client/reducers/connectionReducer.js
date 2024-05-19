@@ -25,7 +25,7 @@ function dialog (state = {
         ...state,
         visible: true,
         id: null,
-        loading: true
+        loading: false
       }
     case connectionCreated.name:
       return {
@@ -114,7 +114,7 @@ function userDefined (state = false, action) {
   }
 }
 
-function projects (state = [], action) {
+function projects (state = null, action) {
   switch (action.type) {
     case projectListUpdate.name:
       return action.projectsList
