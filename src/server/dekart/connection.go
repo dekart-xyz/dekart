@@ -283,6 +283,12 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+
+	err := validateReqConnection(req.Connection)
+	if err != nil {
+		return nil, err
+	}
+
 	res, err := s.db.ExecContext(ctx,
 		`update connections set
 			connection_name=$1,
@@ -428,16 +434,37 @@ func (s Server) getLastConnectionUpdate(ctx context.Context) (int64, error) {
 	return lastConnectionUpdate, nil
 }
 
+func validateReqConnection(con *proto.Connection) error {
+	if con == nil {
+		return status.Error(codes.InvalidArgument, "connection is required")
+	}
+	if con.ConnectionName == "" {
+		return status.Error(codes.InvalidArgument, "connection_name is required")
+	}
+	if con.BigqueryProjectId == "" {
+		return status.Error(codes.InvalidArgument, "bigquery_project_id is required")
+	}
+	return nil
+}
+
 func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectionRequest) (*proto.CreateConnectionResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	err := validateReqConnection(req.Connection)
+	if err != nil {
+		return nil, err
+	}
+
 	id := newUUID()
-	_, err := s.db.ExecContext(ctx,
-		"INSERT INTO connections (id, connection_name,  author_email) VALUES ($1, $2, $3)",
+
+	_, err = s.db.ExecContext(ctx,
+		"INSERT INTO connections (id, connection_name, bigquery_project_id, cloud_storage_bucket, author_email) VALUES ($1, $2, $3, $4, $5)",
 		id,
-		req.ConnectionName,
+		req.Connection.ConnectionName,
+		req.Connection.BigqueryProjectId,
+		req.Connection.CloudStorageBucket,
 		claims.Email,
 	)
 	if err != nil {
@@ -447,10 +474,9 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 
 	s.userStreams.PingAll()
 
+	req.Connection.Id = id
+
 	return &proto.CreateConnectionResponse{
-		Connection: &proto.Connection{
-			Id:             id,
-			ConnectionName: req.ConnectionName,
-		},
+		Connection: req.Connection,
 	}, nil
 }
