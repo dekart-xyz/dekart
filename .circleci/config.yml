@@ -1,0 +1,122 @@
+version: 2.1
+orbs:
+  go: circleci/go@1.7
+  gcp-gcr: circleci/gcp-gcr@0.13
+  jq: circleci/jq@2
+
+jobs:
+  lint:
+    docker:
+      - image: cimg/go:1.18
+    steps:
+      - checkout
+      - go/load-cache
+      - go/mod-download
+      - go/save-cache
+      - run:
+          name: download golanglint-ci
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+      - run:
+          name: run lint
+          command: golangci-lint run
+
+  unit-test:
+    docker:
+      - image: cimg/go:1.18
+
+    steps:
+      - checkout
+      - go/load-cache
+      - go/mod-download
+      - go/save-cache
+
+      - run:
+          name: make test report output
+          command: mkdir -p test-results/go/
+      - run:
+          name: execute tests
+          command: gotestsum --junitfile test-results/go/report.xml -- -coverprofile=coverage.out ./...
+          no_output_timeout: 15m
+
+      - store_test_results:
+          path: test-results
+
+      - store_artifacts:
+          path: coverage.out
+
+  trigger-integration-test:
+    docker:
+      - image: cimg/go:1.18
+    steps:
+      - setup_remote_docker
+      - gcp-gcr/gcr-auth
+
+      - checkout
+      - run: echo 'export SHORT_SHA=$(echo $CIRCLE_SHA1 | cut -c -7)' >> $BASH_ENV
+      - run: echo 'export SERVICE=$CIRCLE_PROJECT_REPONAME' >> $BASH_ENV
+      - run: docker build --build-arg "SSH_PRIVATE_KEY=$(echo $GITHUB_AUTH_TOKEN | base64 -d)" -t asia.gcr.io/${GOOGLE_PROJECT_ID}/${SERVICE}:${SHORT_SHA} .
+      - run: docker push asia.gcr.io/${GOOGLE_PROJECT_ID}/${SERVICE}:${SHORT_SHA}
+      - run: gcloud container images add-tag --quiet asia.gcr.io/${GOOGLE_PROJECT_ID}/${SERVICE}:${SHORT_SHA} asia.gcr.io/${GOOGLE_PROJECT_ID}/${SERVICE}:latest
+
+      - run:
+          name: trigger integration tests
+          command: |
+            curl --request POST 'https://circleci.com/api/v2/project/github/ridebeam/integration-tests/pipeline' \
+              --user $CIRCLE_CI_API_TOKEN \
+              --header 'Content-Type: application/json' \
+              --data-raw '{
+                "branch": "master",
+                "parameters": {
+                  "verify_service": true,
+                  "service": "'$SERVICE'",
+                  "version": "'$SHORT_SHA'",
+                  "slack_channel": "change-me"
+                }
+              }'
+  publish:
+    docker:
+      - image: cimg/python:2.7.17
+    steps:
+      - jq/install
+      - setup_remote_docker
+      - gcp-gcr/gcr-auth
+
+      - checkout
+      - run: echo 'export SERVICE_VERSION=$(echo $CIRCLE_SHA1 | cut -c -7)' >> $BASH_ENV
+      - run: echo 'export SERVICE_NAME=$CIRCLE_PROJECT_REPONAME' >> $BASH_ENV
+      - run: docker build --build-arg "SSH_PRIVATE_KEY=$(echo $GITHUB_AUTH_TOKEN | base64 -d)" -t asia.gcr.io/${GOOGLE_PROJECT_ID}/${SERVICE_NAME}:${SERVICE_VERSION} .
+      - run: docker push asia.gcr.io/${GOOGLE_PROJECT_ID}/${SERVICE_NAME}:${SERVICE_VERSION}
+      - run: gcloud container images add-tag --quiet asia.gcr.io/${GOOGLE_PROJECT_ID}/${SERVICE_NAME}:${SERVICE_VERSION} asia.gcr.io/${GOOGLE_PROJECT_ID}/${SERVICE_NAME}:latest
+      - run:
+          name: pre-auth github.com
+          command: |
+            mkdir -p ~/.ssh && \
+            touch ~/.ssh/known_hosts && \
+            chmod 600 ~/.ssh/known_hosts && \
+            ssh-keyscan github.com >> ~/.ssh/known_hosts
+      - run:
+          name: clone k8s-config
+          command: git clone -b master git@github.com:ridebeam/k8s-config.git appcfg
+
+      - run:
+          name: update version in k8s-config
+          command: BRANCH_NAME=master appcfg/.circleci/promote.sh
+
+workflows:
+  continuous-integration:
+    jobs:
+      - lint
+      - unit-test
+      # switch from publish to trigger-integration-test, never use both at the same time
+      #      - trigger-integration-test:
+      - publish:
+          requires:
+            - lint
+            - unit-test
+          filters:
+            branches:
+              only: master
+          context:
+            - GCP-DevOps
+            - CircleCI
+            - github
