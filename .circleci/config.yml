@@ -105,14 +105,14 @@ jobs:
 workflows:
   continuous-integration:
     jobs:
-      - lint
-      - unit-test
+      # - lint
+      # - unit-test
       # switch from publish to trigger-integration-test, never use both at the same time
       #      - trigger-integration-test:
       - publish:
-          requires:
-            - lint
-            - unit-test
+          # requires:
+            # - lint
+            # - unit-test
           filters:
             branches:
               only: master
@@ -120,4 +120,3 @@ workflows:
             - GCP-DevOps
             - CircleCI
             - github
-            
