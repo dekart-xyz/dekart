@@ -6,7 +6,7 @@ artifacts:
   setup_script: setup.sql
   container_services:
     images:
-      - /dekart_image_database/dekart_image_schema/dekart_image_repo/dekart-snowpark
+      - /dekart_snowpark/public/dekart_snowpark_repository/dekart_snowpark
 
 configuration:
   log_level: debug

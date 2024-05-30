@@ -68,6 +68,8 @@ snowpark-docker-push:
 
 snowpark-spec:
 	snowsql -c ${SNOWSQL_CONNECTION} -q "PUT file://$(shell pwd)/snowpark_spec.yaml @dekart_snowpark.public.dekart_snowpark_stage overwrite=true auto_compress=false"
+	snowsql -c ${SNOWSQL_CONNECTION} -q "PUT file://$(shell pwd)/setup.sql @dekart_snowpark.public.dekart_snowpark_stage overwrite=true auto_compress=false"
+	snowsql -c ${SNOWSQL_CONNECTION} -q "PUT file://$(shell pwd)/manifest.yml @dekart_snowpark.public.dekart_snowpark_stage overwrite=true auto_compress=false"
 
 snowpark: snowpark-build snowpark-tag snowpark-docker-push snowpark-spec
 
