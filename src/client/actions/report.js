@@ -147,7 +147,7 @@ export function reportUpdate (reportStreamResponse) {
             prevDatasetsList
           ))
         }
-      } else if ((!ALLOW_FILE_UPLOAD && !connection.userDefined) || user.stream?.isPlayground) {
+      } else if ((!ALLOW_FILE_UPLOAD && !connection.userDefined) || user.isPlayground) {
         // create query right away
         dispatch(createQuery(dataset.id))
       }

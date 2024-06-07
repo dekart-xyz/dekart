@@ -310,15 +310,6 @@ type DekartUpdateWorkspaceUser = {
   readonly responseType: typeof proto_dekart_pb.UpdateWorkspaceUserResponse;
 };
 
-type DekartSwitchPlayground = {
-  readonly methodName: string;
-  readonly service: typeof Dekart;
-  readonly requestStream: false;
-  readonly responseStream: false;
-  readonly requestType: typeof proto_dekart_pb.SwitchPlaygroundRequest;
-  readonly responseType: typeof proto_dekart_pb.SwitchPlaygroundResponse;
-};
-
 export class Dekart {
   static readonly serviceName: string;
   static readonly CreateReport: DekartCreateReport;
@@ -355,7 +346,6 @@ export class Dekart {
   static readonly UpdateWorkspace: DekartUpdateWorkspace;
   static readonly GetWorkspace: DekartGetWorkspace;
   static readonly UpdateWorkspaceUser: DekartUpdateWorkspaceUser;
-  static readonly SwitchPlayground: DekartSwitchPlayground;
 }
 
 export type ServiceError = { message: string, code: number; metadata: grpc.Metadata }
@@ -671,15 +661,6 @@ export class DekartClient {
   updateWorkspaceUser(
     requestMessage: proto_dekart_pb.UpdateWorkspaceUserRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateWorkspaceUserResponse|null) => void
-  ): UnaryResponse;
-  switchPlayground(
-    requestMessage: proto_dekart_pb.SwitchPlaygroundRequest,
-    metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.SwitchPlaygroundResponse|null) => void
-  ): UnaryResponse;
-  switchPlayground(
-    requestMessage: proto_dekart_pb.SwitchPlaygroundRequest,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.SwitchPlaygroundResponse|null) => void
   ): UnaryResponse;
 }
 

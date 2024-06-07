@@ -5,15 +5,13 @@ import { getUrlRef } from './lib/ref'
 import { MenuOutlined, MessageOutlined } from '@ant-design/icons'
 import { Link } from 'react-router-dom/cjs/react-router-dom'
 import { createReport } from './actions/report'
-import { switchPlayground } from './actions/user'
 
 export default function DekartMenu () {
   const env = useSelector(state => state.env)
   const usage = useSelector(state => state.usage)
   const dispatch = useDispatch()
   const { authEnabled } = env
-  const userDefinedConnection = useSelector(state => state.connection.userDefined)
-  const userStream = useSelector(state => state.user.stream)
+  const isPlayground = useSelector(state => state.user.isPlayground)
   const ref = getUrlRef(env, usage)
   return (
     <div className={styles.dekartMenu}>
@@ -21,54 +19,15 @@ export default function DekartMenu () {
         <Menu.SubMenu
           popupClassName={styles.subMenu} title={<MenuOutlined />} key='home' active='yes'
         >
-          {
-            userStream?.planType
-              ? (
-                <Menu.Item key='my'>
-                  <Link to='/'>{authEnabled ? 'My Reports' : 'Reports'}</Link>
-                </Menu.Item>
-                )
-              : null
-          }
-
-          {userStream?.planType
-            ? (
-              <Menu.Item key='shared' disabled={!authEnabled}>
-                <Link to='/shared'>Shared reports</Link>
-              </Menu.Item>
-              )
-            : null}
-
-          {userDefinedConnection
-            ? <Menu.Item key='connections'><Link to='/connections'>Connections</Link></Menu.Item>
-            : null}
-          <Menu.Item key='playground'>
-            <Link to={userStream?.isPlayground ? '/' : '/playground'}>Playground</Link>
+          <Menu.Item key='my'>
+            <Link to='/'>{authEnabled ? 'My Reports' : 'Reports'}</Link>
           </Menu.Item>
-          {
-            userStream?.isPlayground
-              ? (
-                <Menu.Item key='workspace' onClick={() => dispatch(switchPlayground(false, '/'))}>
-                  Private Workspace
-                </Menu.Item>
-                )
-              : null
-          }
-          {
-            (
-              (userStream && userStream.planType) || // subscribed
-              userStream?.isPlayground // in playground
-            )
-              ? (
-                <>
-                  <Menu.Divider />
-                  <Menu.Item key='create' onClick={() => dispatch(createReport())}>New Report</Menu.Item>
-                </>
-                )
-              : null
-
-          }
-
+          <Menu.Item key='shared' disabled={isPlayground}>
+            <Link to='/shared'>Shared reports</Link>
+          </Menu.Item>
+          <Menu.Item key='connections' disabled={isPlayground}><Link to='/connections'>Connections</Link></Menu.Item>
+          <Menu.Divider />
+          <Menu.Item key='create' onClick={() => dispatch(createReport())}>New Report</Menu.Item>
         </Menu.SubMenu>
         <Menu.SubMenu popupClassName={styles.subMenu} title={<MessageOutlined />} key='community' active='yes'>
           <Menu.Item key='slack'>

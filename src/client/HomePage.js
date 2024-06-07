@@ -129,14 +129,14 @@ function getColumns (reportFilter, archived) {
 }
 
 function FirstReportOnboarding () {
-  const isPlayground = useSelector(state => state.user.stream?.isPlayground)
+  const isPlayground = useSelector(state => state.user.isPlayground)
   const dispatch = useDispatch()
   return (
     <>
       <Result
         status='success'
         title='You are all set'
-        subTitle='Everything is ready to start your data analysis.'
+        subTitle='Everything is ready to create you first map.'
         extra={(
           <>
             <Button icon={<PlusOutlined />} type='primary' onClick={() => dispatch(createReport())}>Create report</Button>
@@ -334,7 +334,7 @@ function OnboardingDiscoverableReports () {
 
 export default function HomePage ({ reportFilter }) {
   const reportsList = useSelector(state => state.reportsList)
-  const isPlayground = useSelector(state => state.user.stream?.isPlayground)
+  const isPlayground = useSelector(state => state.user.isPlayground)
   const connectionsLoaded = useSelector(state => state.connection.listLoaded)
   const dispatch = useDispatch()
   const body = useRef()

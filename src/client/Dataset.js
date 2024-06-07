@@ -70,10 +70,10 @@ function DatasetSelector ({ dataset }) {
   const dispatch = useDispatch()
   const env = useSelector(state => state.env)
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
-  const userStream = useSelector(state => state.user.stream)
+  const isPlayground = useSelector(state => state.user.isPlayground)
   const connectionList = useSelector(state => state.connection.list)
   const history = useHistory()
-  if (!env.loaded || !userStream || userStream.isPlayground) {
+  if (!env.loaded || isPlayground) {
     // do not render until environment is loaded
     // do not render for playground users
     return null

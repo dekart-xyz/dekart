@@ -199,19 +199,3 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 		Variables: variables,
 	}, nil
 }
-
-func (s Server) SwitchPlayground(ctx context.Context, req *proto.SwitchPlaygroundRequest) (*proto.SwitchPlaygroundResponse, error) {
-	claims := user.GetClaims(ctx)
-	if claims == nil {
-		return nil, Unauthenticated
-	}
-	_, err := s.db.ExecContext(ctx, `
-		INSERT INTO users (email, is_playground) VALUES ($1, $2) ON CONFLICT (email) DO UPDATE SET is_playground = $2, updated_at = CURRENT_TIMESTAMP
-	`, claims.Email, req.IsPlayground)
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	s.userStreams.Ping([]string{claims.Email})
-	return &proto.SwitchPlaygroundResponse{}, nil
-}

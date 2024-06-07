@@ -7,10 +7,13 @@ const host = REACT_APP_API_HOST || ''
 
 export function grpcCall (method, request, resolve = () => {}, reject = (err) => err) {
   return async function (dispatch, getState) {
-    const { token } = getState()
+    const { token, user: { isPlayground } } = getState()
     const headers = new window.Headers()
     if (token) {
       headers.append('Authorization', `Bearer ${token.access_token}`)
+    }
+    if (isPlayground) {
+      headers.append('X-Dekart-Playground', 'true')
     }
     try {
       const response = await unary(method, request, headers)
@@ -75,10 +78,13 @@ class GrpcError extends Error {
 
 export function grpcStream (endpoint, request, cb) {
   return async (dispatch, getState) => {
-    const { token } = getState()
+    const { token, user: { isPlayground } } = getState()
     const headers = new window.Headers()
     if (token) {
       headers.append('Authorization', `Bearer ${token.access_token}`)
+    }
+    if (isPlayground) {
+      headers.append('X-Dekart-Playground', 'true')
     }
     const cancelable = getStream(
       endpoint,
@@ -105,6 +111,11 @@ export function grpcStream (endpoint, request, cb) {
       headers
     )
     dispatch({ type: grpcStream.name, endpoint, cancelable })
+
+    // avoid error on page reload
+    window.addEventListener('beforeunload', () => {
+      dispatch(grpcStreamCancel(endpoint))
+    })
   }
 }
 

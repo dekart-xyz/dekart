@@ -1,8 +1,9 @@
-import { GetUserStreamRequest, SwitchPlaygroundRequest } from '../../proto/dekart_pb'
+import { GetUserStreamRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { getConnectionsList } from './connection'
-import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
+import { grpcStream, grpcStreamCancel } from './grpc'
 import { updateLocalStorage } from './localStorage'
+import { updateSessionStorage } from './sessionStorage'
 import { getWorkspace } from './workspace'
 
 export function userStreamUpdate (userStream) {
@@ -44,19 +45,8 @@ export function subscribeUserStream () {
 
 export function switchPlayground (isPlayground, redirect = '/') {
   return (dispatch, getState) => {
-    const userStream = getState().user.stream
-    if (userStream && isPlayground === userStream.isPlayground) {
-      // no need to switch
-      window.location.href = redirect
-      return
-    }
-    dispatch(unsubscribeUserStream()) // unsubscribe to avoid double updates
-    const request = new SwitchPlaygroundRequest()
-    request.setIsPlayground(isPlayground)
-    dispatch(grpcCall(Dekart.SwitchPlayground, request, () => {
-      // reload page to apply new permissions
-      window.location.href = redirect
-    }))
+    dispatch(updateSessionStorage('isPlayground', isPlayground))
+    window.location.href = redirect
   }
 }
 
