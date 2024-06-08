@@ -1,6 +1,7 @@
 import { combineReducers } from 'redux'
 import { userStreamUpdate } from '../actions/user'
 import { localStorageInit } from '../actions/localStorage'
+import { sessionStorageInit } from '../actions/sessionStorage'
 
 function stream (state = null, action) {
   switch (action.type) {
@@ -34,8 +35,18 @@ function loginHint (state = null, action) {
   }
 }
 
+function isPlayground (state = false, action) {
+  switch (action.type) {
+    case sessionStorageInit.name:
+      return action.current.isPlayground
+    default:
+      return state
+  }
+}
+
 export default combineReducers({
   stream,
   sensitiveScopesGrantedOnce,
-  loginHint
+  loginHint,
+  isPlayground
 })

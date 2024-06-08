@@ -53,7 +53,6 @@ const (
 	Dekart_UpdateWorkspace_FullMethodName         = "/Dekart/UpdateWorkspace"
 	Dekart_GetWorkspace_FullMethodName            = "/Dekart/GetWorkspace"
 	Dekart_UpdateWorkspaceUser_FullMethodName     = "/Dekart/UpdateWorkspaceUser"
-	Dekart_SwitchPlayground_FullMethodName        = "/Dekart/SwitchPlayground"
 )
 
 // DekartClient is the client API for Dekart service.
@@ -104,7 +103,6 @@ type DekartClient interface {
 	UpdateWorkspace(ctx context.Context, in *UpdateWorkspaceRequest, opts ...grpc.CallOption) (*UpdateWorkspaceResponse, error)
 	GetWorkspace(ctx context.Context, in *GetWorkspaceRequest, opts ...grpc.CallOption) (*GetWorkspaceResponse, error)
 	UpdateWorkspaceUser(ctx context.Context, in *UpdateWorkspaceUserRequest, opts ...grpc.CallOption) (*UpdateWorkspaceUserResponse, error)
-	SwitchPlayground(ctx context.Context, in *SwitchPlaygroundRequest, opts ...grpc.CallOption) (*SwitchPlaygroundResponse, error)
 }
 
 type dekartClient struct {
@@ -490,15 +488,6 @@ func (c *dekartClient) UpdateWorkspaceUser(ctx context.Context, in *UpdateWorksp
 	return out, nil
 }
 
-func (c *dekartClient) SwitchPlayground(ctx context.Context, in *SwitchPlaygroundRequest, opts ...grpc.CallOption) (*SwitchPlaygroundResponse, error) {
-	out := new(SwitchPlaygroundResponse)
-	err := c.cc.Invoke(ctx, Dekart_SwitchPlayground_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // DekartServer is the server API for Dekart service.
 // All implementations must embed UnimplementedDekartServer
 // for forward compatibility
@@ -547,7 +536,6 @@ type DekartServer interface {
 	UpdateWorkspace(context.Context, *UpdateWorkspaceRequest) (*UpdateWorkspaceResponse, error)
 	GetWorkspace(context.Context, *GetWorkspaceRequest) (*GetWorkspaceResponse, error)
 	UpdateWorkspaceUser(context.Context, *UpdateWorkspaceUserRequest) (*UpdateWorkspaceUserResponse, error)
-	SwitchPlayground(context.Context, *SwitchPlaygroundRequest) (*SwitchPlaygroundResponse, error)
 	mustEmbedUnimplementedDekartServer()
 }
 
@@ -656,9 +644,6 @@ func (UnimplementedDekartServer) GetWorkspace(context.Context, *GetWorkspaceRequ
 }
 func (UnimplementedDekartServer) UpdateWorkspaceUser(context.Context, *UpdateWorkspaceUserRequest) (*UpdateWorkspaceUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateWorkspaceUser not implemented")
-}
-func (UnimplementedDekartServer) SwitchPlayground(context.Context, *SwitchPlaygroundRequest) (*SwitchPlaygroundResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SwitchPlayground not implemented")
 }
 func (UnimplementedDekartServer) mustEmbedUnimplementedDekartServer() {}
 
@@ -1294,24 +1279,6 @@ func _Dekart_UpdateWorkspaceUser_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_SwitchPlayground_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SwitchPlaygroundRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DekartServer).SwitchPlayground(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Dekart_SwitchPlayground_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).SwitchPlayground(ctx, req.(*SwitchPlaygroundRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // Dekart_ServiceDesc is the grpc.ServiceDesc for Dekart service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1442,10 +1409,6 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateWorkspaceUser",
 			Handler:    _Dekart_UpdateWorkspaceUser_Handler,
-		},
-		{
-			MethodName: "SwitchPlayground",
-			Handler:    _Dekart_SwitchPlayground_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

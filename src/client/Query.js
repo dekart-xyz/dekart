@@ -108,7 +108,7 @@ function QueryEditor ({ queryId, queryText, onChange, canWrite }) {
 }
 
 function PlaygroundWarning ({ jobError }) {
-  const isPlayground = useSelector(state => state.user.stream?.isPlayground)
+  const isPlayground = useSelector(state => state.user.isPlayground)
   const dispatch = useDispatch()
   let showPlaygroundWarning = false
   if (jobError && jobError.includes('Error 40') && isPlayground) {
@@ -203,11 +203,20 @@ function QueryStatus ({ children, query }) {
 
 function SampleQuery ({ queryId }) {
   const UX_SAMPLE_QUERY_SQL = useSelector(state => state.env.variables.UX_SAMPLE_QUERY_SQL)
-  const isPlayground = useSelector(state => state.user.stream?.isPlayground)
+  const isPlayground = useSelector(state => state.user.isPlayground)
   const queryStatus = useSelector(state => state.queryStatus[queryId])
+  const datasetCount = useSelector(state => state.connection.list.reduce((dc, c) => {
+    return dc + c.datasetCount
+  }, 0))
   const downloadingSource = queryStatus?.downloadingSource
   const dispatch = useDispatch()
-  if (downloadingSource || !isPlayground) {
+  if (
+    downloadingSource ||
+    !(
+      isPlayground ||
+      datasetCount < 2 // show sample query for the first one
+    )
+  ) {
     // do not show sample query while downloading source
     return null
   }

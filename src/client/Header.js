@@ -54,6 +54,12 @@ function User ({ buttonDivider }) {
               }
             },
             {
+              label: 'Public playground',
+              onClick: () => {
+                history.push('/playground')
+              }
+            },
+            {
               label: 'Switch account',
               onClick: () => {
                 dispatch(localStorageReset())
@@ -86,7 +92,7 @@ function User ({ buttonDivider }) {
 
 export function Workspace () {
   const workspaceName = useSelector(state => state.workspace?.name)
-  const isPlayground = useSelector(state => state.user.stream?.isPlayground)
+  const isPlayground = useSelector(state => state.user.isPlayground)
   const history = useHistory()
   if (!workspaceName || isPlayground) {
     return null
@@ -99,7 +105,7 @@ export function Workspace () {
 }
 
 export function PlaygroundMode () {
-  const isPlayground = useSelector(state => state.user.stream?.isPlayground)
+  const isPlayground = useSelector(state => state.user.isPlayground)
   const dispatch = useDispatch()
 
   if (!isPlayground) {

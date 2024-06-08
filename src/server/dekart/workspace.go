@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/user"
+	"net/http"
 
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
@@ -214,15 +215,14 @@ func (s Server) checkPlaygroundUser(ctx context.Context, email string) (bool, er
 	return isPlayground, nil
 }
 
-func (s Server) SetWorkspaceContext(ctx context.Context) context.Context {
+func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) context.Context {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return ctx
 	}
-	isPlayground, err := s.checkPlaygroundUser(ctx, claims.Email)
-	if err != nil {
-		log.Err(err).Send()
-		return ctx
+	isPlayground := false
+	if r != nil {
+		isPlayground = r.Header.Get("X-Dekart-Playground") == "true"
 	}
 	if isPlayground {
 		ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{

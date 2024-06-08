@@ -1,6 +1,7 @@
 import { combineReducers } from 'redux'
 import { userStreamUpdate } from '../actions/user'
 import { closeConnectionDialog, connectionChanged, connectionCreated, connectionListUpdate, connectionSaved, editConnection, newConnection, projectListUpdate, saveConnection, testConnection, testConnectionResponse } from '../actions/connection'
+import { sessionStorageInit } from '../actions/sessionStorage'
 
 function dialog (state = {
   visible: false,
@@ -105,9 +106,14 @@ function listLoaded (state = false, action) {
 // in cloud it's always user defined, except for playground
 function userDefined (state = true, action) {
   switch (action.type) {
+    case sessionStorageInit.name:
+      // in playground it's not user defined
+      if (action.current.isPlayground) {
+        return false
+      }
+      return state
     case userStreamUpdate.name:
       if (
-        action.userStream.isPlayground || // user switched to playground, no longer user defined connection
         !action.userStream.planType // user is not yet in workspace
       ) {
         return false

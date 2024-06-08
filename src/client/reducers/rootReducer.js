@@ -16,6 +16,8 @@ import user from './userReducer'
 import workspace from './workspaceReducer'
 import httpError from './httpErrorReducer'
 import dataset from './datasetReducer'
+import storage from './storageReducer'
+import { setRedirectState } from '../actions/redirect'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
   uiState: {
@@ -155,6 +157,11 @@ function usage (state = defaultUsage, action) {
 const defaultEnv = { loaded: false, variables: {}, authEnabled: null, authType: 'UNSPECIFIED' }
 function env (state = defaultEnv, action) {
   switch (action.type) {
+    case setRedirectState.name:
+      return {
+        ...state,
+        loaded: false // reset when user auth details like token change
+      }
     case setEnv.name:
       return {
         loaded: true,
@@ -237,5 +244,6 @@ export default combineReducers({
   stream,
   user,
   workspace,
-  dataset
+  dataset,
+  storage
 })

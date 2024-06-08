@@ -92,7 +92,7 @@ func configureGRPC(dekartServer *dekart.Server) *grpcweb.WrappedGrpcServer {
 
 func setOriginHeader(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", getAllowedOrigin(r.Header.Get("Origin")))
-	w.Header().Set("Access-Control-Allow-Headers", "Authorization")
+	w.Header().Set("Access-Control-Allow-Headers", "Authorization, X-Dekart-Playground")
 }
 
 func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *mux.Router {
@@ -184,7 +184,7 @@ func Configure(dekartServer *dekart.Server, db *sql.DB) *http.Server {
 	log.Info().Msgf("Starting dekart at :%s", port)
 	return &http.Server{
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			reqWithClaims := r.WithContext(dekartServer.SetWorkspaceContext(claimsCheck.GetContext(r)))
+			reqWithClaims := r.WithContext(dekartServer.SetWorkspaceContext(claimsCheck.GetContext(r), r))
 			if grpcServer.IsAcceptableGrpcCorsRequest(r) || grpcServer.IsGrpcWebRequest(r) {
 				grpcServer.ServeHTTP(w, reqWithClaims)
 			} else {

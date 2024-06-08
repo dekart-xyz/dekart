@@ -84,7 +84,7 @@ function EditModeButtons ({ changed }) {
   const dispatch = useDispatch()
   const history = useHistory()
   const { id, discoverable, canWrite, allowEdit, isAuthor, isPlayground } = useSelector(state => state.report)
-  const userStream = useSelector(state => state.user.stream)
+  const userIsPlayground = useSelector(state => state.user.isPlayground)
   const { canSave } = useSelector(state => state.reportStatus)
 
   return (
@@ -113,7 +113,7 @@ function EditModeButtons ({ changed }) {
             </Button>
           </>
           )
-        : <ForkButton reportId={id} disabled={!canSave || (isPlayground && !userStream?.isPlayground)} />}
+        : <ForkButton reportId={id} disabled={!canSave || (isPlayground && !userIsPlayground)} />}
     </div>
   )
 }

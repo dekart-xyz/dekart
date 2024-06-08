@@ -21,6 +21,7 @@ import GrantScopesPage from './GrantScopesPage'
 import { loadLocalStorage } from './actions/localStorage'
 import { useLocation } from 'react-router-dom/cjs/react-router-dom'
 import { Button } from 'antd'
+import { loadSessionStorage } from './actions/sessionStorage'
 
 // RedirectState reads states passed in the URL from the server
 function RedirectState () {
@@ -53,6 +54,7 @@ function AppRedirect () {
   const { status, doNotAuthenticate } = httpError
   const { newReportId } = useSelector(state => state.reportStatus)
   const userStream = useSelector(state => state.user.stream)
+  const isPlayground = useSelector(state => state.user.isPlayground)
   const needSensitiveScopes = useSelector(state => state.env.needSensitiveScopes)
   const sensitiveScopesGranted = userStream?.sensitiveScopesGranted
   const sensitiveScopesGrantedOnce = useSelector(state => state.user.sensitiveScopesGrantedOnce)
@@ -82,7 +84,7 @@ function AppRedirect () {
   if (
     userStream &&
     !userStream.planType &&
-    !userStream.isPlayground &&
+    !isPlayground &&
     !(reportOpened && !report) && // report is being loaded
     !(report?.isPlayground) // playground report
   ) {
@@ -97,7 +99,7 @@ function AppRedirect () {
     userStream &&
     needSensitiveScopes &&
     !sensitiveScopesGranted &&
-    !userStream.isPlayground &&
+    !isPlayground &&
     !(reportOpened && !report) && // report is being loaded
     !(report?.isPlayground) // playground report
   ) {
@@ -154,36 +156,44 @@ export default function App () {
   const errorMessage = useSelector(state => state.httpError.message)
   const status = useSelector(state => state.httpError.status)
   const env = useSelector(state => state.env)
-  const usage = useSelector(state => state.usage)
+  const envLoaded = env.loaded
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const dispatch = useDispatch()
   const visitedPages = React.useRef(['/'])
+  const storageLoaded = useSelector(state => state.storage.loaded)
+  const page401 = window.location.pathname.startsWith('/401')
 
   useEffect(() => {
+    dispatch(loadSessionStorage())
     dispatch(loadLocalStorage())
   }, [dispatch])
 
   useEffect(() => {
-    if (window.location.pathname.startsWith('/401')) {
-      // do not load env and usage on 401 page
+    if (page401 || envLoaded) {
       return
     }
-    if (status === 401) {
-      return
-    }
-    if (!env.loaded) {
-      dispatch(getEnv())
-    }
-    if (!usage.loaded) {
-      dispatch(getUsage())
-    }
-  }, [env, usage, dispatch, status])
+    dispatch(getEnv())
+  }, [dispatch, page401, envLoaded])
+
+  // do not call API until storage is loaded and environment is loaded and not 401
+  const loadData = storageLoaded && env.loaded && status !== 401
+
   useEffect(() => {
+    if (!loadData) {
+      return
+    }
     dispatch(subscribeUserStream())
+    dispatch(getUsage())
     return () => {
       dispatch(unsubscribeUserStream())
     }
-  }, [dispatch])
+  }, [dispatch, loadData])
+
+  // do not render until storage is loaded and environment is loaded
+  const startRender = loadData || page401 || status === 401
+  if (!startRender) {
+    return null
+  }
   return (
     <Router>
       <PageHistory visitedPages={visitedPages} />

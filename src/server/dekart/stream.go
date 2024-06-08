@@ -213,7 +213,12 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 }
 
 func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.Dekart_GetUserStreamServer, sequence int64) error {
-	ctx := s.SetWorkspaceContext(incomingCtx) // this is needed as workspace could have been changed
+	ctx := incomingCtx
+	if !checkWorkspace(ctx).IsPlayground {
+		// if playground we don't care about workspace
+		// if not playground, we need to check if workspace was not created after stream was requested
+		ctx = s.SetWorkspaceContext(incomingCtx, nil)
+	}
 	claims := user.GetClaims(ctx)
 
 	// connection update
@@ -231,7 +236,7 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 
 	// query from db user scopes
 	res, err := s.db.QueryContext(ctx,
-		`select sensitive_scope, is_playground from users where email=$1`,
+		`select sensitive_scope from users where email=$1`,
 		claims.Email,
 	)
 	if err != nil {
@@ -241,9 +246,8 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 
 	defer res.Close()
 	sensitiveScopesGranted := ""
-	isPlayground := false
 	for res.Next() {
-		err = res.Scan(&sensitiveScopesGranted, &isPlayground)
+		err = res.Scan(&sensitiveScopesGranted)
 		if err != nil {
 			log.Err(err).Send()
 			return status.Errorf(codes.Internal, err.Error())
@@ -261,7 +265,6 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 		PlanType:                   checkWorkspace(ctx).PlanType,
 		SensitiveScopesGranted:     claims.SensitiveScopesGranted,                      // current token scopes
 		SensitiveScopesGrantedOnce: user.HasAllSensitiveScopes(sensitiveScopesGranted), // granted before to app
-		IsPlayground:               isPlayground,
 	}
 
 	err = srv.Send(&response)
