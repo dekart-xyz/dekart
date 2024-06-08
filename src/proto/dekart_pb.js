@@ -10867,6 +10867,7 @@ proto.Report.toObject = function(includeInstance, msg) {
     isAuthor: jspb.Message.getBooleanFieldWithDefault(msg, 9, false),
     createdAt: jspb.Message.getFieldWithDefault(msg, 10, 0),
     updatedAt: jspb.Message.getFieldWithDefault(msg, 11, 0),
+    isSharable: jspb.Message.getBooleanFieldWithDefault(msg, 12, false),
     isPlayground: jspb.Message.getBooleanFieldWithDefault(msg, 101, false)
   };
 
@@ -10947,6 +10948,10 @@ proto.Report.deserializeBinaryFromReader = function(msg, reader) {
     case 11:
       var value = /** @type {number} */ (reader.readInt64());
       msg.setUpdatedAt(value);
+      break;
+    case 12:
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setIsSharable(value);
       break;
     case 101:
       var value = /** @type {boolean} */ (reader.readBool());
@@ -11055,6 +11060,13 @@ proto.Report.serializeBinaryToWriter = function(message, writer) {
   if (f !== 0) {
     writer.writeInt64(
       11,
+      f
+    );
+  }
+  f = message.getIsSharable();
+  if (f) {
+    writer.writeBool(
+      12,
       f
     );
   }
@@ -11263,6 +11275,24 @@ proto.Report.prototype.getUpdatedAt = function() {
  */
 proto.Report.prototype.setUpdatedAt = function(value) {
   return jspb.Message.setProto3IntField(this, 11, value);
+};
+
+
+/**
+ * optional bool is_sharable = 12;
+ * @return {boolean}
+ */
+proto.Report.prototype.getIsSharable = function() {
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 12, false));
+};
+
+
+/**
+ * @param {boolean} value
+ * @return {!proto.Report} returns this
+ */
+proto.Report.prototype.setIsSharable = function(value) {
+  return jspb.Message.setProto3BooleanField(this, 12, value);
 };
 
 

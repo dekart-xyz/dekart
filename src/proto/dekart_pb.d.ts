@@ -1395,6 +1395,9 @@ export class Report extends jspb.Message {
   getUpdatedAt(): number;
   setUpdatedAt(value: number): void;
 
+  getIsSharable(): boolean;
+  setIsSharable(value: boolean): void;
+
   getIsPlayground(): boolean;
   setIsPlayground(value: boolean): void;
 
@@ -1421,6 +1424,7 @@ export namespace Report {
     isAuthor: boolean,
     createdAt: number,
     updatedAt: number,
+    isSharable: boolean,
     isPlayground: boolean,
   }
 }

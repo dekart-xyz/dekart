@@ -381,6 +381,7 @@ message Report {
     bool is_author = 9; // user is the author of the report
     int64 created_at = 10;
     int64 updated_at = 11;
+    bool is_sharable = 12; // can be shared with other users (depends where result is stored)
 
     // cloud
     bool is_playground = 101; // true - playground, false - workspace

@@ -71,3 +71,7 @@
 .playgroundReportText {
     color: #57B7D3;
 }
+
+.addBucketToConnection {
+    opacity: 0.5;
+}
