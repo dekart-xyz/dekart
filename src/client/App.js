@@ -132,13 +132,14 @@ function SwitchToPlayground () {
 
 function NotFoundPage () {
   const dispatch = useDispatch()
-  const workspaceId = useSelector(state => state.user.stream?.workspaceId)
+  const userStream = useSelector(state => state.user.stream)
+  const workspaceId = userStream?.workspaceId
   return (
     <Result
       icon={<QuestionOutlined />} title='404' subTitle={
         <>
           <p>Page not found</p>
-          {!workspaceId
+          {(userStream && !workspaceId) // stream is loaded and user is not in workspace
             ? (
               <div>
                 <p>To access private reports join workspace.</p>

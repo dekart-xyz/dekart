@@ -15,10 +15,11 @@ function CopyLinkButton () {
   const dispatch = useDispatch()
   const userStream = useSelector(state => state.user.stream)
   const playgroundReport = useSelector(state => state.report.isPlayground)
+  const isSharable = useSelector(state => state.report.isSharable)
   return (
     <Button
       icon={<LinkOutlined />}
-      disabled={(userStream.planType === PlanType.TYPE_PERSONAL) && !playgroundReport}
+      disabled={((userStream.planType === PlanType.TYPE_PERSONAL) && !playgroundReport) || !isSharable}
       title='Copy link to report'
       onClick={() => dispatch(copyUrlToClipboard(window.location.toString()))}
     >Copy Link
@@ -41,8 +42,9 @@ function AuthTypeTitle ({ authType, referer }) {
   )
 }
 
-function ModalContent ({ reportId, discoverable, isAuthor, allowEdit }) {
+function ModalContent () {
   const dispatch = useDispatch()
+  const { discoverable, allowEdit, isAuthor, id: reportId, isSharable } = useSelector(state => state.report)
   const [discoverableSwitch, setDiscoverableSwitch] = useState(discoverable)
   const workspaceName = useSelector(state => state.workspace.name)
   const env = useSelector(state => state.env)
@@ -80,40 +82,57 @@ function ModalContent ({ reportId, discoverable, isAuthor, allowEdit }) {
           : (
             <>
               <div className={styles.reportStatusIcon}><LockOutlined /></div>
-              {userStream.planType === PlanType.TYPE_PERSONAL
-                ? (
-                  <div className={styles.reportStatusDetails}>
-                    <div className={styles.reportStatusDetailsText}> Only you can access workspace</div>
-                    <div className={styles.manageSubscription}><a href='/workspace' target='_blank'>Add users to workspace</a></div>
-                  </div>
-                  )
-                : (
-                  <div className={styles.reportStatusDetails}>
-                    <div className={styles.reportStatusDetailsText}>{(() => {
-                      switch (true) {
-                        case discoverable && allowEdit:
-                          return <>Everyone with access to <span className={styles.origin}>{workspaceName}</span> workspace can view and edit report</>
-                        case !discoverable && allowEdit:
-                          return <>Everyone with a link and access to <span className={styles.origin}>{workspaceName}</span> workspace can view and edit report</>
-                        case discoverable && !allowEdit:
-                          return <>Everyone with access to <span className={styles.origin}>{workspaceName}</span> workspace can view and refresh report</>
-                        default:
-                          return <>Everyone with a link and access to <span className={styles.origin}>{workspaceName}</span> workspace can view report</>
-                      }
-                    })()}
-                    </div>
-                    <div className={styles.reportAuthStatus}>
-                      <Tooltip title={<AuthTypeTitle authType={authType} referer={getUrlRef(env, usage)} />}>
-                        <span className={styles.authEnabled}>User authorization enabled</span>
-                      </Tooltip>
-                    </div>
-                  </div>
-                  )}
+              {(() => {
+                switch (true) {
+                  case (userStream.planType === PlanType.TYPE_PERSONAL): {
+                    return (
+                      <div className={styles.reportStatusDetails}>
+                        <div className={styles.reportStatusDetailsText}> Only you can access workspace</div>
+                        <div className={styles.manageSubscription}><a href='/workspace' target='_blank'>Add users to workspace</a></div>
+                      </div>
+
+                    ) }
+                  case (!isSharable): {
+                    return (
+                      <div className={styles.reportStatusDetails}>
+                        <div className={styles.reportStatusDetailsText}> Only you can access report</div>
+                        <div className={styles.addBucketToConnection}>To share reports between workspace users, please use connection with storage bucket.</div>
+                        <div><a href='/connections'>Setup connection</a></div>
+                      </div>
+
+                    ) }
+                  default:
+                    return (
+                      <div className={styles.reportStatusDetails}>
+                        <div className={styles.reportStatusDetailsText}>{(() => {
+                          switch (true) {
+                            case !isSharable:
+                              return <>Only you can view and refresh report</>
+                            case discoverable && allowEdit:
+                              return <>Everyone with access to <span className={styles.origin}>{workspaceName}</span> workspace can view and edit report</>
+                            case !discoverable && allowEdit:
+                              return <>Everyone with a link and access to <span className={styles.origin}>{workspaceName}</span> workspace can view and edit report</>
+                            case discoverable && !allowEdit:
+                              return <>Everyone with access to <span className={styles.origin}>{workspaceName}</span> workspace can view and refresh report</>
+                            default:
+                              return <>Everyone with a link and access to <span className={styles.origin}>{workspaceName}</span> workspace can view report</>
+                          }
+                        })()}
+                        </div>
+                        <div className={styles.reportAuthStatus}>
+                          <Tooltip title={<AuthTypeTitle authType={authType} referer={getUrlRef(env, usage)} />}>
+                            <span className={styles.authEnabled}>User authorization enabled</span>
+                          </Tooltip>
+                        </div>
+                      </div>
+                    )
+                }
+              })()}
 
             </>
             )}
       </div>
-      {userStream.planType === PlanType.TYPE_TEAM
+      {userStream.planType === PlanType.TYPE_TEAM && isSharable
         ? (
           <>
             <div className={styles.boolStatus}>
@@ -155,7 +174,7 @@ function ModalContent ({ reportId, discoverable, isAuthor, allowEdit }) {
   )
 }
 
-export default function ShareButton ({ reportId, discoverable, isAuthor, allowEdit }) {
+export default function ShareButton () {
   const [modalOpen, setModalOpen] = useState(false)
   return (
     <>
@@ -182,7 +201,7 @@ export default function ShareButton ({ reportId, discoverable, isAuthor, allowEd
           </div>
       }
       >
-        <ModalContent reportId={reportId} discoverable={discoverable} isAuthor={isAuthor} allowEdit={allowEdit} />
+        <ModalContent />
       </Modal>
     </>
   )

@@ -83,7 +83,7 @@ function RefreshButton () {
 function EditModeButtons ({ changed }) {
   const dispatch = useDispatch()
   const history = useHistory()
-  const { id, discoverable, canWrite, allowEdit, isAuthor, isPlayground } = useSelector(state => state.report)
+  const { id, canWrite, isPlayground } = useSelector(state => state.report)
   const userIsPlayground = useSelector(state => state.user.isPlayground)
   const { canSave } = useSelector(state => state.reportStatus)
 
@@ -98,7 +98,7 @@ function EditModeButtons ({ changed }) {
         onClick={() => history.replace(`/reports/${id}`)}
       />
       <ExportDropdown />
-      <ShareButton reportId={id} discoverable={discoverable} isAuthor={isAuthor} allowEdit={allowEdit} />
+      <ShareButton />
       {canWrite
         ? (
           <>
@@ -159,7 +159,7 @@ function ExportDropdown () {
 
 function ViewModeButtons () {
   const history = useHistory()
-  const { id, discoverable, canWrite, allowEdit, isAuthor, isPlayground } = useSelector(state => state.report)
+  const { id, canWrite, isPlayground } = useSelector(state => state.report)
   const userStream = useSelector(state => state.user.stream)
   const { canSave } = useSelector(state => state.reportStatus)
   if (canWrite) {
@@ -167,7 +167,7 @@ function ViewModeButtons () {
       <div className={styles.reportHeaderButtons}>
         <RefreshButton />
         <ExportDropdown />
-        <ShareButton reportId={id} discoverable={discoverable} isAuthor={isAuthor} allowEdit={allowEdit} />
+        <ShareButton />
         <ForkButton reportId={id} disabled={!canSave} />
         <Button
           type='primary'
@@ -190,7 +190,7 @@ function ViewModeButtons () {
         title='View SQL source'
       />
       <ExportDropdown />
-      <ShareButton reportId={id} discoverable={discoverable} isAuthor={isAuthor} allowEdit={allowEdit} />
+      <ShareButton />
       <ForkButton reportId={id} disabled={!canSave || (isPlayground && !userStream?.isPlayground)} />
     </div>
   )

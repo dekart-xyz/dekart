@@ -44,7 +44,9 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			allow_edit,
 			created_at,
 			updated_at,
-			is_playground
+			is_playground,
+			0 as connections_with_cache_num,
+			0 as connections_num
 		from reports as r
 		where id=$1 and not archived and is_playground=true
 		limit 1`,
@@ -64,7 +66,17 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			allow_edit,
 			created_at,
 			updated_at,
-			is_playground
+			is_playground,
+			(
+				select count(*) from connections as c
+				join datasets as d on c.id=d.connection_id
+				where d.report_id=$1 and cloud_storage_bucket is not null and cloud_storage_bucket != ''
+			) as connections_with_cache_num,
+			(
+				select count(*) from connections as c
+				join datasets as d on c.id=d.connection_id
+				where d.report_id=$1
+			) as connections_num
 		from reports as r
 		where id=$1 and not archived and (workspace_id=$3 or is_playground)
 		limit 1`,
@@ -83,6 +95,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 	for reportRows.Next() {
 		createdAt := time.Time{}
 		updatedAt := time.Time{}
+		var connectionsWithCacheNum, connectionsNum int
 		err = reportRows.Scan(
 			&report.Id,
 			&report.MapConfig,
@@ -95,6 +108,8 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			&createdAt,
 			&updatedAt,
 			&report.IsPlayground,
+			&connectionsWithCacheNum,
+			&connectionsNum,
 		)
 		if err != nil {
 			log.Err(err).Send()
@@ -105,10 +120,18 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			report.AllowEdit = false
 			report.CanWrite = false
 		}
+		// report is sharable if all connections have cache
+		report.IsSharable = (connectionsNum > 0 && connectionsWithCacheNum == connectionsNum) || report.IsPlayground
+
 		report.CreatedAt = createdAt.Unix()
 		report.UpdatedAt = updatedAt.Unix()
 	}
 	if report.Id == "" {
+		return nil, nil // not found
+	}
+
+	// not sharable reports are not visible to other users
+	if !report.IsSharable && !report.IsAuthor {
 		return nil, nil // not found
 	}
 	return report, nil
