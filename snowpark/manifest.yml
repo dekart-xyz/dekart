@@ -1,0 +1,26 @@
+manifest_version: 1
+
+version:
+  name: V1
+  label: "Dekart V1"
+  comment: "Initial version of the Dekart package"
+
+
+artifacts:
+  readme: readme.md
+  setup_script: setup.sql
+  container_services:
+    images:
+      - /dekart_app/napp/img_repo/dekart_image
+
+privileges:
+ - CREATE COMPUTE POOL:
+      description: "Enable application to create its own compute pool(s)"
+ - BIND SERVICE ENDPOINT:
+      description: "Enables application to expose service endpoints"
+ - CREATE WAREHOUSE:
+      description: "Enables application to create its own warehouse(s)"
+
+configuration:
+  log_level: debug
+  trace_level: always

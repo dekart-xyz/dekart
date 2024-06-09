@@ -58,18 +58,19 @@ snowpark-run: snowpark-build
 	${SNOWPARK_IMAGE_NAME}
 
 snowpark-tag:
-	docker tag ${SNOWPARK_IMAGE_NAME} ${SNOWPARK_IMAGE_URL}/${SNOWPARK_IMAGE_NAME}:${SNOWPARK_IMAGE_TAG}
+	docker tag ${SNOWPARK_IMAGE_NAME} ${SNOWPARK_REPO_URL}/${SNOWPARK_IMAGE_NAME}
 
 snowpark-docker-login:
-	docker login ${SNOWPARK_IMAGE_URL} -u ${DEKART_SNOWFLAKE_USER} -p ${DEKART_SNOWFLAKE_PASSWORD}
+	docker login ${SNOWPARK_REPO_URL} -u ${DEKART_SNOWFLAKE_USER} -p ${DEKART_SNOWFLAKE_PASSWORD}
 
 snowpark-docker-push:
-	docker push ${SNOWPARK_IMAGE_URL}/${SNOWPARK_IMAGE_NAME}:${SNOWPARK_IMAGE_TAG}
+	docker push ${SNOWPARK_REPO_URL}/${SNOWPARK_IMAGE_NAME}
 
 snowpark-spec:
-	snowsql -c ${SNOWSQL_CONNECTION} -q "PUT file://$(shell pwd)/snowpark_spec.yaml @dekart_snowpark.public.dekart_snowpark_stage overwrite=true auto_compress=false"
-	snowsql -c ${SNOWSQL_CONNECTION} -q "PUT file://$(shell pwd)/setup.sql @dekart_snowpark.public.dekart_snowpark_stage overwrite=true auto_compress=false"
-	snowsql -c ${SNOWSQL_CONNECTION} -q "PUT file://$(shell pwd)/manifest.yml @dekart_snowpark.public.dekart_snowpark_stage overwrite=true auto_compress=false"
+	snowsql -c ${SNOWSQL_CONNECTION} -q "PUT file://$(shell pwd)/snowpark/service.yaml @dekart_app.napp.app_stage overwrite=true auto_compress=false"
+	snowsql -c ${SNOWSQL_CONNECTION} -q "PUT file://$(shell pwd)/snowpark/setup.sql @dekart_app.napp.app_stage overwrite=true auto_compress=false"
+	snowsql -c ${SNOWSQL_CONNECTION} -q "PUT file://$(shell pwd)/snowpark/manifest.yml @dekart_app.napp.app_stage overwrite=true auto_compress=false"
+	snowsql -c ${SNOWSQL_CONNECTION} -q "PUT file://$(shell pwd)/snowpark/readme.md @dekart_app.napp.app_stage overwrite=true auto_compress=false"
 
 snowpark: snowpark-build snowpark-tag snowpark-docker-push snowpark-spec
 

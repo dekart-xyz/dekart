@@ -1,7 +1,7 @@
 spec:
   containers:
     - name: dekart
-      image: /dekart_snowpark/public/dekart_snowpark_repository/dekart_snowpark:latest
+      image: /dekart_app/napp/img_repo/dekart_image
       readinessProbe:
         port: 8080
         path: /
@@ -12,13 +12,7 @@ spec:
         DEKART_LOG_DEBUG: 1
         DEKART_CORS_ORIGIN: null
         DEKART_STREAM_TIMEOUT: 10
-      volumeMounts:
-        - name: dekartstage
-          mountPath: /dekart/backup-volume
-  volumes:
-    - name: dekartstage
-      source: "@dekart_snowpark_stage"
   endpoints:
-    - name: dekartendpoint
+    - name: app
       port: 8080
       public: true
