@@ -82,11 +82,15 @@ grant usage on warehouse wh_nac to role nac_role with grant option;
 grant imported privileges on database snowflake_sample_data to role nac_role;
 grant create database on account to role nac_role;
 grant bind service endpoint on account to role nac_role with grant option;
+grant create network policy on account to role nac_role;
+grant create integration on account to role nac_role;
 grant create compute pool on account to role nac_role;
 grant create application on account to role nac_role;
 
 use role nap_role;
 show image repositories in schema dekart_app.napp;
+
+-- recreate package and instance
 
 use role nap_role;
 create application package dekart_app_pkg;
@@ -94,9 +98,8 @@ alter application package dekart_app_pkg add version v1 using @dekart_app.napp.a
 grant install, develop on application package dekart_app_pkg to role nac_role;
 
 use role nac_role;
+use warehouse wh_nac;
 create application dekart_app_instance from application package dekart_app_pkg using version v1;
-
-use role nac_role;
 create compute pool pool_nac for application dekart_app_instance
     min_nodes = 1 max_nodes = 1
     instance_family = cpu_x64_xs
@@ -104,9 +107,21 @@ create compute pool pool_nac for application dekart_app_instance
 grant usage on compute pool pool_nac to application dekart_app_instance;
 grant usage on warehouse wh_nac to application dekart_app_instance;
 grant bind service endpoint on account to application dekart_app_instance;
+use schema dekart_app_instance.app_public;
+create or replace network rule mapbox_egress
+  mode = egress
+  type = host_port
+  value_list = ('api.mapbox.com');
+create external access integration if not exists mapbox_egress_integration
+  allowed_network_rules = (mapbox_egress)
+  enabled = true;
+grant usage on integration mapbox_egress_integration to application dekart_app_instance;
+call dekart_app_instance.app_public.start_app('POOL_NAC', 'WH_NAC', 'MAPBOX_EGRESS_INTEGRATION');
+
+-- get app url
 
 use role nac_role;
-call dekart_app_instance.app_public.start_app('POOL_NAC', 'WH_NAC');
+call dekart_app_instance.app_public.app_url();
 
 -- cleanup
 
