@@ -279,7 +279,18 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 			tokenInfo.Scope,
 		)
 		if err != nil {
-			log.Fatal().Err(err).Msg("Error marshalling token")
+			log.Fatal().Err(err).Msg("Error updating user sensitive scope")
+		}
+	} else {
+		// create or update user, do not update sensitive scope
+		_, err = c.db.ExecContext(
+			ctx,
+			"INSERT INTO users (email, sensitive_scope) VALUES ($1, $2) ON CONFLICT (email) DO UPDATE SET updated_at = CURRENT_TIMESTAMP",
+			tokenInfo.Email,
+			tokenInfo.Scope,
+		)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Error updating user")
 		}
 	}
 
