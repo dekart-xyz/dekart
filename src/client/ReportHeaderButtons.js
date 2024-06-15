@@ -11,15 +11,35 @@ import { toggleModal } from '@dekart-xyz/kepler.gl/dist/actions/ui-state-actions
 import { EXPORT_DATA_ID, EXPORT_IMAGE_ID, EXPORT_MAP_ID } from '@dekart-xyz/kepler.gl/dist/constants'
 import Dropdown from 'antd/es/dropdown'
 
-function ForkButton ({ reportId, disabled, primary }) {
+function ForkButton ({ primary }) {
   const dispatch = useDispatch()
-  if (primary) {
+  const { id: reportId, isPlayground: isPlaygroundReport } = useSelector(state => state.report)
+  const userStream = useSelector(state => state.user.stream)
+  const userIsPlayground = useSelector(state => state.user.isPlayground)
+  const workspaceId = userStream?.workspaceId
+
+  // user has workspace, but report is from playground
+  // we don't know how to match users connections to report connections
+  const disabled = workspaceId && isPlaygroundReport
+
+  const history = useHistory()
+  let onClick = () => {
+    dispatch(forkReport(reportId))
+  }
+  if (!workspaceId && !userIsPlayground) {
+    // user has no workspace, redirect to workspace page
+    onClick = () => {
+      history.push('/workspace')
+    }
+  }
+
+  if (primary && !disabled) {
     return (
       <Button
         type='primary'
         icon={<ForkOutlined />}
         disabled={disabled}
-        onClick={() => dispatch(forkReport(reportId))}
+        onClick={onClick}
       >Fork
       </Button>
     )
@@ -29,9 +49,9 @@ function ForkButton ({ reportId, disabled, primary }) {
       type='text'
       icon={<ForkOutlined />}
       disabled={disabled}
-      onClick={() => dispatch(forkReport(reportId))}
+      onClick={onClick}
       id='dekart-fork-button'
-      title='Fork Report'
+      title={disabled ? 'Forking is disabled for playground reports' : 'Fork this report'}
     />
   )
 }
@@ -83,8 +103,7 @@ function RefreshButton () {
 function EditModeButtons ({ changed }) {
   const dispatch = useDispatch()
   const history = useHistory()
-  const { id, canWrite, isPlayground } = useSelector(state => state.report)
-  const userIsPlayground = useSelector(state => state.user.isPlayground)
+  const { id, canWrite } = useSelector(state => state.report)
   const { canSave } = useSelector(state => state.reportStatus)
 
   return (
@@ -102,7 +121,7 @@ function EditModeButtons ({ changed }) {
       {canWrite
         ? (
           <>
-            <ForkButton reportId={id} disabled={!canSave} />
+            <ForkButton />
             <Button
               id='dekart-save-button'
               type={changed ? 'primary' : 'default'}
@@ -113,7 +132,7 @@ function EditModeButtons ({ changed }) {
             </Button>
           </>
           )
-        : <ForkButton reportId={id} disabled={!canSave || (isPlayground && !userIsPlayground)} />}
+        : <ForkButton primary />}
     </div>
   )
 }
@@ -159,16 +178,14 @@ function ExportDropdown () {
 
 function ViewModeButtons () {
   const history = useHistory()
-  const { id, canWrite, isPlayground } = useSelector(state => state.report)
-  const userStream = useSelector(state => state.user.stream)
-  const { canSave } = useSelector(state => state.reportStatus)
+  const { id, canWrite } = useSelector(state => state.report)
   if (canWrite) {
     return (
       <div className={styles.reportHeaderButtons}>
         <RefreshButton />
         <ExportDropdown />
         <ShareButton />
-        <ForkButton reportId={id} disabled={!canSave} />
+        <ForkButton />
         <Button
           type='primary'
           disabled={!canWrite}
@@ -191,7 +208,7 @@ function ViewModeButtons () {
       />
       <ExportDropdown />
       <ShareButton />
-      <ForkButton reportId={id} disabled={!canSave || (isPlayground && !userStream?.isPlayground)} />
+      <ForkButton primary />
     </div>
   )
 }

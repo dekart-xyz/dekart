@@ -202,10 +202,8 @@ export function Workspace ({ nextStep, setNextStep }) {
   const workspaceId = userStream?.workspaceId
   const planType = userStream?.planType
   const [step, setStep] = useState(0)
-  console.log('Workspace userStream', userStream)
   // move to the next step if workspaceId is set
   useEffect(() => {
-    console.log('Workspace useEffect', [workspaceId, planType])
     if (workspaceId) {
       if (planType === PlanType.TYPE_TEAM) {
         setStep(2)
