@@ -209,7 +209,7 @@ export function newForkedReport (id) {
 }
 
 export function forkReport (reportId) {
-  return async (dispatch, getState) => {
+  return async (dispatch) => {
     dispatch({ type: forkReport.name })
     const request = new ForkReportRequest()
     request.setReportId(reportId)

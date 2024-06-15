@@ -318,7 +318,9 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	if checkWorkspace(ctx).ID == "" {
+	isPlayground := checkWorkspace(ctx).IsPlayground
+	workspaceID := checkWorkspace(ctx).ID
+	if workspaceID == "" && !isPlayground {
 		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
 
@@ -338,6 +340,14 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 		err := fmt.Errorf("report %s not found", reportID)
 		log.Warn().Err(err).Send()
 		return nil, status.Errorf(codes.NotFound, err.Error())
+	}
+	if isPlayground && !report.IsPlayground {
+		// cannot fork non-playground report in playground
+		return nil, status.Error(codes.PermissionDenied, "Cannot fork non-playground report in playground")
+	}
+	if !isPlayground && report.IsPlayground {
+		// cannot fork playground report in workspace
+		return nil, status.Error(codes.InvalidArgument, "Cannot fork playground report in workspace")
 	}
 	report.Id = reportID
 	report.Title = fmt.Sprintf("Fork of %s", report.Title)
