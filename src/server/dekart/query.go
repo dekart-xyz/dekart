@@ -204,6 +204,7 @@ func (s Server) runQuery(ctx context.Context, o runQueryOptions) error {
 		log.Error().Err(err).Send()
 		return err
 	}
+	conCtx := conn.GetCtx(ctx, o.connection)
 	var obj storage.StorageObject
 	if o.isPublic {
 		s := storage.NewPublicStorage()
@@ -211,7 +212,7 @@ func (s Server) runQuery(ctx context.Context, o runQueryOptions) error {
 		obj = s.GetObject(ctx, s.GetDefaultBucketName(), fmt.Sprintf("%s.csv", job.GetID()))
 	} else {
 		// Result ID should be same as job ID once available
-		obj = s.storage.GetObject(ctx, o.userBucketName, fmt.Sprintf("%s.csv", job.GetID()))
+		obj = s.storage.GetObject(conCtx, o.userBucketName, fmt.Sprintf("%s.csv", job.GetID()))
 	}
 	go s.updateJobStatus(job, jobStatus)
 	job.Status() <- int32(proto.Query_JOB_STATUS_PENDING)
@@ -290,8 +291,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	conCtx := conn.GetCtx(ctx, connection)
-	err = s.storeQuerySync(conCtx, req.QueryId, req.QueryText, prevQuerySourceId)
+	err = s.storeQuerySync(ctx, req.QueryId, req.QueryText, prevQuerySourceId)
 
 	if err != nil {
 		code := codes.Internal
@@ -304,7 +304,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, status.Error(code, err.Error())
 	}
 
-	err = s.runQuery(conCtx, runQueryOptions{
+	err = s.runQuery(ctx, runQueryOptions{
 		reportID:       reportID,
 		queryID:        req.QueryId,
 		queryText:      req.QueryText,
