@@ -143,7 +143,9 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 				discoverable,
 				allow_edit,
 				updated_at,
-				created_at
+				created_at,
+				is_public,
+				is_playground
 			from reports as r
 			where author_email=$1 and is_playground=true
 			order by updated_at desc`,
