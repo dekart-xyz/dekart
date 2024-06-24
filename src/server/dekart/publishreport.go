@@ -64,7 +64,7 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 				srcObj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.csv", query.JobResultId))
 				if userBucketName != "" {
 					dstObj := s.storage.GetObject(conCtx, userBucketName, fmt.Sprintf("%s.csv", query.JobResultId))
-					err = srcObj.CopyTo(conCtx, dstObj.GetWriter(ctx))
+					err = srcObj.CopyTo(ctx, dstObj.GetWriter(conCtx))
 					if err != nil {
 						log.Err(err).Msg("Cannot copy query result to user storage")
 						return
@@ -99,7 +99,7 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 			publicStorage := storage.NewPublicStorage()
 			srcObj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", file.SourceId, getFileExtension(file.MimeType)))
 			dstObj := s.storage.GetObject(conCtx, s.getBucketNameFromConnection(connection), fmt.Sprintf("%s.%s", file.SourceId, getFileExtension(file.MimeType)))
-			err = srcObj.CopyTo(userCtx, dstObj.GetWriter(ctx))
+			err = srcObj.CopyTo(ctx, dstObj.GetWriter(conCtx))
 			if err != nil {
 				log.Err(err).Msg("Cannot copy file to public storage")
 				return
@@ -131,7 +131,7 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 			join reports r on r.id = d.report_id
 			where r.is_public = true and (
 				d.query_id in (select id from queries where job_result_id = $1)
-				or d.file_id in (select id from files where source_id = $1)
+				or d.file_id in (select id from files where file_source_id = $1)
 			)`, sourceID).Scan(&count)
 
 		if err != nil {
