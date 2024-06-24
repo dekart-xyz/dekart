@@ -87,27 +87,14 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 	return datasets, nil
 }
 
-func (s Server) getReportID(ctx context.Context, datasetID string, email string) (*string, error) {
+// getReportID returns by dataset id and checks if user has access to the report
+func (s Server) getReportID(ctx context.Context, datasetID string, canWrite bool) (*string, error) {
 	var datasetRows *sql.Rows
 	var err error
-	if checkWorkspace(ctx).IsPlayground {
-		datasetRows, err = s.db.QueryContext(ctx,
-			`select report_id from datasets
-			where id=$1 and report_id in (select report_id from reports where author_email=$2 and is_playground=true)
-			limit 1`,
-			datasetID,
-			email,
-		)
-	} else {
-		datasetRows, err = s.db.QueryContext(ctx,
-			`select report_id from datasets
-			where id=$1 and report_id in (select report_id from reports where (author_email=$2 or allow_edit) and workspace_id=$3)
-			limit 1`,
-			datasetID,
-			email,
-			checkWorkspace(ctx).ID,
-		)
-	}
+	datasetRows, err = s.db.QueryContext(ctx,
+		`select report_id from datasets where id=$1`,
+		datasetID,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -122,12 +109,8 @@ func (s Server) getReportID(ctx context.Context, datasetID string, email string)
 	if reportID == "" {
 		// check legacy queries
 		queryRows, err := s.db.QueryContext(ctx,
-			`select report_id from queries
-			where id=$1 and report_id in (select report_id from reports where (author_email=$2 or allow_edit) and workspace_id=$3)
-			limit 1`,
+			`select report_id from queries where id=$1 limit 1`,
 			datasetID,
-			email,
-			checkWorkspace(ctx).ID,
 		)
 		if err != nil {
 			return nil, err
@@ -143,6 +126,17 @@ func (s Server) getReportID(ctx context.Context, datasetID string, email string)
 			return nil, nil
 		}
 	}
+	// check if user has access to the report
+	report, err := s.getReport(ctx, reportID)
+	if err != nil {
+		return nil, err
+	}
+	if report == nil {
+		return nil, nil
+	}
+	if canWrite && !report.CanWrite {
+		return nil, nil
+	}
 	return &reportID, nil
 }
 
@@ -152,7 +146,7 @@ func (s Server) UpdateDatasetName(ctx context.Context, req *proto.UpdateDatasetN
 		return nil, Unauthenticated
 	}
 
-	reportID, err := s.getReportID(ctx, req.DatasetId, claims.Email)
+	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
 		log.Err(err).Send()
@@ -189,7 +183,7 @@ func (s Server) UpdateDatasetConnection(ctx context.Context, req *proto.UpdateDa
 		return nil, Unauthenticated
 	}
 
-	reportID, err := s.getReportID(ctx, req.DatasetId, claims.Email)
+	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
 		log.Err(err).Send()
@@ -230,7 +224,7 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
 	}
 
-	reportID, err := s.getReportID(ctx, req.DatasetId, claims.Email)
+	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
 		log.Err(err).Send()
@@ -384,9 +378,51 @@ func (s Server) getDWJobIDFromResultID(ctx context.Context, resultID string) (st
 // since reading is using connection no auth is needed here
 func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	ctx := r.Context()
+	userCtx := r.Context()
 
-	connection, err := s.getConnectionFromDatasetID(ctx, vars["dataset"])
+	claims := user.GetClaims(userCtx)
+	if claims == nil {
+		http.Error(w, Unauthenticated.Error(), http.StatusUnauthorized)
+		return
+	}
+	_, err := uuid.Parse(vars["dataset"])
+	if err != nil {
+		log.Warn().Err(err).Msg("Invalid dataset id while serving dataset source")
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	reportID, err := s.getReportID(userCtx, vars["dataset"], false)
+
+	if err != nil {
+		log.Err(err).Send()
+		HttpError(w, err)
+		return
+	}
+
+	if reportID == nil {
+		err := fmt.Errorf("dataset not found id:%s", vars["dataset"])
+		log.Warn().Err(err).Send()
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	report, err := s.getReport(userCtx, *reportID)
+
+	if err != nil {
+		log.Err(err).Send()
+		HttpError(w, err)
+		return
+	}
+
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", *reportID)
+		log.Warn().Err(err).Send()
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	connection, err := s.getConnectionFromDatasetID(userCtx, vars["dataset"])
 
 	if err != nil {
 		HttpError(w, err)
@@ -402,13 +438,13 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 
 	if connection.Id == "default" {
 		// dataset has no connection, it means it's a playground dataset
-		ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{IsPlayground: true})
+		userCtx = user.SetWorkspaceCtx(userCtx, user.WorkspaceInfo{IsPlayground: true})
 	}
 
 	bucketName := s.getBucketNameFromConnection(connection)
 
-	conCtx := conn.GetCtx(ctx, connection)
-	dwJobID, err := s.getDWJobIDFromResultID(ctx, vars["source"])
+	userConCtx := conn.GetCtx(userCtx, connection)
+	dwJobID, err := s.getDWJobIDFromResultID(userCtx, vars["source"])
 	if err != nil {
 		log.Error().Err(err).Msg("Error getting dw job id")
 		HttpError(w, err)
@@ -417,20 +453,24 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 
 	var obj storage.StorageObject
 
-	if dwJobID != "" {
+	if report.IsPublic {
+		// public report, load from public storage bucket
+		publicStorage := storage.NewPublicStorage()
+		obj = publicStorage.GetObject(userCtx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
+	} else if dwJobID != "" {
 		// temp data warehouse table is used as source
-		obj = s.storage.GetObject(conCtx, bucketName, dwJobID)
+		obj = s.storage.GetObject(userConCtx, bucketName, dwJobID)
 	} else {
 		// file stored on the bucket is used as source
-		obj = s.storage.GetObject(conCtx, bucketName, fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
+		obj = s.storage.GetObject(userConCtx, bucketName, fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
 	}
 
-	created, err := obj.GetCreatedAt(ctx)
+	created, err := obj.GetCreatedAt(userCtx)
 	if err != nil {
 		storageError(w, err)
 		return
 	}
-	objectReader, err := obj.GetReader(ctx)
+	objectReader, err := obj.GetReader(userCtx)
 	if err != nil {
 		storageError(w, err)
 		return

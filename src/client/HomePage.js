@@ -6,7 +6,7 @@ import Radio from 'antd/es/radio'
 import Result from 'antd/es/result'
 import Table from 'antd/es/table'
 import { useDispatch, useSelector } from 'react-redux'
-import { PlusOutlined, FileSearchOutlined, UsergroupAddOutlined, ApiTwoTone } from '@ant-design/icons'
+import { PlusOutlined, FileSearchOutlined, UsergroupAddOutlined, ApiTwoTone, GlobalOutlined, LockOutlined, TeamOutlined } from '@ant-design/icons'
 import DataDocumentationLink from './DataDocumentationLink'
 import Switch from 'antd/es/switch'
 import { archiveReport, subscribeReports, unsubscribeReports, createReport } from './actions/report'
@@ -39,6 +39,20 @@ function ArchiveReportButton ({ report }) {
 }
 
 const columns = [
+  {
+    dataIndex: 'icon',
+    render: (t, report) => {
+      // (report.isPlayground || report.isPublic) ? <GlobalOutlined title='This report accessible outside of workspace' /> : <LockOutlined title='This report accessible only in workspace' />
+      if (report.isPlayground || report.isPublic) {
+        return <GlobalOutlined title='This report accessible outside of workspace' />
+      }
+      if (report.discoverable) {
+        return <TeamOutlined title='This report is discoverable by others users in the workspace' />
+      }
+      return <LockOutlined title='This is visible only to you' />
+    },
+    className: styles.iconColumn
+  },
   {
     dataIndex: 'title',
     render: (t, report) => <a href={`/reports/${report.id}`}>{report.title}</a>,
@@ -120,11 +134,11 @@ function getColumns (reportFilter, archived) {
     if (archived) {
       return filterColumns(['archivedTitle', 'delete'])
     }
-    return filterColumns(['title', 'delete'])
+    return filterColumns(['icon', 'title', 'delete'])
   } else if (reportFilter === 'connections') {
     return filterColumns(['connectionName', 'author', 'setDefault'])
   } else {
-    return filterColumns(['title', 'author'])
+    return filterColumns(['icon', 'title', 'author'])
   }
 }
 

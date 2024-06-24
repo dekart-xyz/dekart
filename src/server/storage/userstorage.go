@@ -27,6 +27,7 @@ func (s *UserStorage) GetObject(ctx context.Context, _ string, object string) St
 			bucketName,
 			object,
 			log.With().Str("GoogleCloudStorageObject", object).Logger(),
+			true,
 		}
 	}
 	parts := strings.Split(object, ".")

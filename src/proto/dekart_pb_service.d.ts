@@ -310,6 +310,15 @@ type DekartUpdateWorkspaceUser = {
   readonly responseType: typeof proto_dekart_pb.UpdateWorkspaceUserResponse;
 };
 
+type DekartPublishReport = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.PublishReportRequest;
+  readonly responseType: typeof proto_dekart_pb.PublishReportResponse;
+};
+
 export class Dekart {
   static readonly serviceName: string;
   static readonly CreateReport: DekartCreateReport;
@@ -346,6 +355,7 @@ export class Dekart {
   static readonly UpdateWorkspace: DekartUpdateWorkspace;
   static readonly GetWorkspace: DekartGetWorkspace;
   static readonly UpdateWorkspaceUser: DekartUpdateWorkspaceUser;
+  static readonly PublishReport: DekartPublishReport;
 }
 
 export type ServiceError = { message: string, code: number; metadata: grpc.Metadata }
@@ -661,6 +671,15 @@ export class DekartClient {
   updateWorkspaceUser(
     requestMessage: proto_dekart_pb.UpdateWorkspaceUserRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateWorkspaceUserResponse|null) => void
+  ): UnaryResponse;
+  publishReport(
+    requestMessage: proto_dekart_pb.PublishReportRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.PublishReportResponse|null) => void
+  ): UnaryResponse;
+  publishReport(
+    requestMessage: proto_dekart_pb.PublishReportRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.PublishReportResponse|null) => void
   ): UnaryResponse;
 }
 

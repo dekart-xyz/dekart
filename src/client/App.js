@@ -86,7 +86,8 @@ function AppRedirect () {
     !userStream.planType &&
     !isPlayground &&
     !(reportOpened && !report) && // report is being loaded
-    !(report?.isPlayground) // playground report
+    !(report?.isPlayground) && // playground report
+    !(report?.isPublic) // public report
   ) {
     return <Redirect to='/workspace' push />
   }
@@ -101,7 +102,8 @@ function AppRedirect () {
     !sensitiveScopesGranted &&
     !isPlayground &&
     !(reportOpened && !report) && // report is being loaded
-    !(report?.isPlayground) // playground report
+    !(report?.isPlayground) && // playground report
+    !(report?.isPublic) // playground report
   ) {
     return <Redirect to='/grant-scopes' push />
   }
