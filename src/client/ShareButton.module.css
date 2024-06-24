@@ -11,7 +11,16 @@
     flex: 1;
 }
 
-.boolStatusIcon {
+.workspaceStatusSelect {
+    min-width: 130px;
+}
+
+.statusLabelDescription {
+    font-size: 0.8em;
+    color: #666;
+}
+
+.workspaceStatusIcon {
     font-size: 1.2em;
     position: relative;
     opacity: 0.65;
@@ -29,6 +38,13 @@
     margin-left: 10px;
 }
 
+.workspaceStatusLabel {
+    flex: 1;
+    font-size: 1.2em;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
 .boolStatusLabel {
     flex: 1;
     font-size: 1.2em;
@@ -38,11 +54,29 @@
 
 .reportStatusDetailsText {
     font-size: 1.2em;
+    font-weight: bold;
 }
 
+.workspaceStatus {
+    border-top: 1px solid #f0f0f0;
+    padding: 20px;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+}
 .boolStatus {
     border-top: 1px solid #f0f0f0;
     padding: 20px;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+.boolStatusS {
+    font-size: 0.9em;
+    padding: 20px;
+    padding-top: 0px;
+    padding-left: 45px;
     display: flex;
     flex-direction: row;
     align-items: flex-start;
@@ -72,6 +106,7 @@
     color: #57B7D3;
 }
 
-.addBucketToConnection {
-    opacity: 0.5;
+.boolStatusIcon {
+    position: relative;
+    top: 2px;
 }

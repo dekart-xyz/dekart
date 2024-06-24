@@ -138,3 +138,13 @@ func (s SnowflakeStorageObject) CopyFromS3(ctx context.Context, source string) e
 	log.Fatal().Msg("not implemented")
 	return nil
 }
+
+func (s SnowflakeStorageObject) CopyTo(ctx context.Context, writer io.WriteCloser) error {
+	log.Fatal().Msg("not implemented")
+	return nil
+}
+
+func (s SnowflakeStorageObject) Delete(ctx context.Context) error {
+	log.Fatal().Msg("not implemented")
+	return nil
+}

@@ -53,6 +53,7 @@ const (
 	Dekart_UpdateWorkspace_FullMethodName         = "/Dekart/UpdateWorkspace"
 	Dekart_GetWorkspace_FullMethodName            = "/Dekart/GetWorkspace"
 	Dekart_UpdateWorkspaceUser_FullMethodName     = "/Dekart/UpdateWorkspaceUser"
+	Dekart_PublishReport_FullMethodName           = "/Dekart/PublishReport"
 )
 
 // DekartClient is the client API for Dekart service.
@@ -103,6 +104,8 @@ type DekartClient interface {
 	UpdateWorkspace(ctx context.Context, in *UpdateWorkspaceRequest, opts ...grpc.CallOption) (*UpdateWorkspaceResponse, error)
 	GetWorkspace(ctx context.Context, in *GetWorkspaceRequest, opts ...grpc.CallOption) (*GetWorkspaceResponse, error)
 	UpdateWorkspaceUser(ctx context.Context, in *UpdateWorkspaceUserRequest, opts ...grpc.CallOption) (*UpdateWorkspaceUserResponse, error)
+	//reports
+	PublishReport(ctx context.Context, in *PublishReportRequest, opts ...grpc.CallOption) (*PublishReportResponse, error)
 }
 
 type dekartClient struct {
@@ -488,6 +491,15 @@ func (c *dekartClient) UpdateWorkspaceUser(ctx context.Context, in *UpdateWorksp
 	return out, nil
 }
 
+func (c *dekartClient) PublishReport(ctx context.Context, in *PublishReportRequest, opts ...grpc.CallOption) (*PublishReportResponse, error) {
+	out := new(PublishReportResponse)
+	err := c.cc.Invoke(ctx, Dekart_PublishReport_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DekartServer is the server API for Dekart service.
 // All implementations must embed UnimplementedDekartServer
 // for forward compatibility
@@ -536,6 +548,8 @@ type DekartServer interface {
 	UpdateWorkspace(context.Context, *UpdateWorkspaceRequest) (*UpdateWorkspaceResponse, error)
 	GetWorkspace(context.Context, *GetWorkspaceRequest) (*GetWorkspaceResponse, error)
 	UpdateWorkspaceUser(context.Context, *UpdateWorkspaceUserRequest) (*UpdateWorkspaceUserResponse, error)
+	//reports
+	PublishReport(context.Context, *PublishReportRequest) (*PublishReportResponse, error)
 	mustEmbedUnimplementedDekartServer()
 }
 
@@ -644,6 +658,9 @@ func (UnimplementedDekartServer) GetWorkspace(context.Context, *GetWorkspaceRequ
 }
 func (UnimplementedDekartServer) UpdateWorkspaceUser(context.Context, *UpdateWorkspaceUserRequest) (*UpdateWorkspaceUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateWorkspaceUser not implemented")
+}
+func (UnimplementedDekartServer) PublishReport(context.Context, *PublishReportRequest) (*PublishReportResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PublishReport not implemented")
 }
 func (UnimplementedDekartServer) mustEmbedUnimplementedDekartServer() {}
 
@@ -1279,6 +1296,24 @@ func _Dekart_UpdateWorkspaceUser_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Dekart_PublishReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PublishReportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).PublishReport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_PublishReport_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).PublishReport(ctx, req.(*PublishReportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Dekart_ServiceDesc is the grpc.ServiceDesc for Dekart service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1409,6 +1444,10 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateWorkspaceUser",
 			Handler:    _Dekart_UpdateWorkspaceUser_Handler,
+		},
+		{
+			MethodName: "PublishReport",
+			Handler:    _Dekart_PublishReport_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

@@ -13,7 +13,7 @@ import Dropdown from 'antd/es/dropdown'
 
 function ForkButton ({ primary }) {
   const dispatch = useDispatch()
-  const { id: reportId, isPlayground: isPlaygroundReport } = useSelector(state => state.report)
+  const { id: reportId, isPlayground: isPlaygroundReport, isPublic, canWrite } = useSelector(state => state.report)
   const userStream = useSelector(state => state.user.stream)
   const userIsPlayground = useSelector(state => state.user.isPlayground)
   const workspaceId = userStream?.workspaceId
@@ -22,7 +22,14 @@ function ForkButton ({ primary }) {
   // we don't know how to match users connections to report connections
   const disabled = workspaceId && isPlaygroundReport
 
+
   const history = useHistory()
+
+  if (isPublic && !canWrite) {
+    // public reports can't be forked
+    return null
+  }
+
   let onClick = () => {
     dispatch(forkReport(reportId))
   }

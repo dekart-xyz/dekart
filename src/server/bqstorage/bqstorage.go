@@ -123,3 +123,25 @@ func (s BigQueryStorageObject) CopyFromS3(ctx context.Context, source string) er
 	log.Fatal().Err(err).Send()
 	return err
 }
+
+func (s BigQueryStorageObject) Delete(ctx context.Context) error {
+	log.Fatal().Msg("BigQueryStorageObject Delete not implemented")
+	return nil
+}
+
+func (s BigQueryStorageObject) CopyTo(ctx context.Context, writer io.WriteCloser) error {
+	reader, err := s.GetReader(ctx)
+	if err != nil {
+		log.Err(err).Msg("Error getting reader while copying to")
+		return err
+	}
+	_, err = io.Copy(writer, reader)
+	if err != nil {
+		return err
+	}
+	err = writer.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+}

@@ -3,6 +3,46 @@
 
 import * as jspb from "google-protobuf";
 
+export class PublishReportRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  getPublish(): boolean;
+  setPublish(value: boolean): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): PublishReportRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: PublishReportRequest): PublishReportRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: PublishReportRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): PublishReportRequest;
+  static deserializeBinaryFromReader(message: PublishReportRequest, reader: jspb.BinaryReader): PublishReportRequest;
+}
+
+export namespace PublishReportRequest {
+  export type AsObject = {
+    reportId: string,
+    publish: boolean,
+  }
+}
+
+export class PublishReportResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): PublishReportResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: PublishReportResponse): PublishReportResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: PublishReportResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): PublishReportResponse;
+  static deserializeBinaryFromReader(message: PublishReportResponse, reader: jspb.BinaryReader): PublishReportResponse;
+}
+
+export namespace PublishReportResponse {
+  export type AsObject = {
+  }
+}
+
 export class GetStripePortalSessionRequest extends jspb.Message {
   getUiUrl(): string;
   setUiUrl(value: string): void;
@@ -1401,6 +1441,9 @@ export class Report extends jspb.Message {
   getIsPlayground(): boolean;
   setIsPlayground(value: boolean): void;
 
+  getIsPublic(): boolean;
+  setIsPublic(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Report.AsObject;
   static toObject(includeInstance: boolean, msg: Report): Report.AsObject;
@@ -1426,6 +1469,7 @@ export namespace Report {
     updatedAt: number,
     isSharable: boolean,
     isPlayground: boolean,
+    isPublic: boolean,
   }
 }
 

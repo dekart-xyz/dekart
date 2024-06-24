@@ -23,6 +23,7 @@ func newUUID() string {
 	return u.String()
 }
 
+// getReport returns report by id, checks if user has access to it
 func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
@@ -46,9 +47,10 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			updated_at,
 			is_playground,
 			0 as connections_with_cache_num,
-			0 as connections_num
+			0 as connections_num,
+			is_public
 		from reports as r
-		where id=$1 and not archived and is_playground=true
+		where id=$1 and not archived and (is_playground or is_public)
 		limit 1`,
 			reportID,
 			claims.Email,
@@ -76,9 +78,10 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 				select count(*) from connections as c
 				join datasets as d on c.id=d.connection_id
 				where d.report_id=$1
-			) as connections_num
+			) as connections_num,
+			is_public
 		from reports as r
-		where id=$1 and not archived and (workspace_id=$3 or is_playground)
+		where id=$1 and not archived and (workspace_id=$3 or is_playground or is_public)
 		limit 1`,
 			reportID,
 			claims.Email,
@@ -110,6 +113,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			&report.IsPlayground,
 			&connectionsWithCacheNum,
 			&connectionsNum,
+			&report.IsPublic,
 		)
 		if err != nil {
 			log.Err(err).Send()
@@ -121,17 +125,14 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			report.CanWrite = false
 		}
 		// report is sharable if all connections have cache
-		report.IsSharable = (connectionsNum > 0 && connectionsWithCacheNum == connectionsNum) || report.IsPlayground
+		report.IsSharable = (connectionsNum > 0 && connectionsWithCacheNum == connectionsNum)
+		report.Discoverable = report.Discoverable && report.IsSharable // only sharable reports can be discoverable
 
 		report.CreatedAt = createdAt.Unix()
 		report.UpdatedAt = updatedAt.Unix()
 	}
-	if report.Id == "" {
-		return nil, nil // not found
-	}
-
-	// not sharable reports are not visible to other users
-	if !report.IsSharable && !report.IsAuthor {
+	if report.Id == "" || // no report found
+		(!report.Discoverable && !report.IsAuthor && !report.IsPlayground && !report.IsPublic) { // report is not discoverable by others in workspace
 		return nil, nil // not found
 	}
 	return report, nil
@@ -211,11 +212,12 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 		)
 	} else {
 		_, err = tx.ExecContext(ctx,
-			"INSERT INTO reports (id, author_email, map_config, title, workspace_id) VALUES ($1, $2, $3, $4, $5)",
+			"INSERT INTO reports (id, author_email, map_config, title, is_public, workspace_id) VALUES ($1, $2, $3, $4, $5, $6)",
 			report.Id,
 			claims.Email,
 			newMapConfig,
 			report.Title,
+			report.IsPublic,
 			checkWorkspace(ctx).ID,
 		)
 	}
@@ -329,7 +331,7 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
 	}
 
-	reportID := newUUID()
+	newReportID := newUUID()
 
 	report, err := s.getReport(ctx, req.ReportId)
 	if err != nil {
@@ -337,7 +339,7 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 		return nil, err
 	}
 	if report == nil {
-		err := fmt.Errorf("report %s not found", reportID)
+		err := fmt.Errorf("report %s not found", newReportID)
 		log.Warn().Err(err).Send()
 		return nil, status.Errorf(codes.NotFound, err.Error())
 	}
@@ -349,7 +351,11 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 		// cannot fork playground report in workspace
 		return nil, status.Error(codes.InvalidArgument, "Cannot fork playground report in workspace")
 	}
-	report.Id = reportID
+	if report.IsPublic && !report.CanWrite {
+		// cannot fork public report without write permission
+		return nil, status.Error(codes.PermissionDenied, "Cannot fork public report without write permission")
+	}
+	report.Id = newReportID
 	report.Title = fmt.Sprintf("Fork of %s", report.Title)
 
 	datasets, err := s.getDatasets(ctx, req.ReportId)
@@ -365,7 +371,7 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 	}
 
 	return &proto.ForkReportResponse{
-		ReportId: reportID,
+		ReportId: newReportID,
 	}, nil
 }
 
@@ -445,6 +451,21 @@ func (s Server) SetDiscoverable(ctx context.Context, req *proto.SetDiscoverableR
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+	report, err := s.getReport(ctx, req.ReportId)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if !report.IsAuthor {
+		err := fmt.Errorf("cannot set discoverable for report %s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.PermissionDenied, "Cannot set discoverable")
 	}
 	res, err := s.db.ExecContext(ctx,
 		`update reports set discoverable=$1, allow_edit=$2 where id=$3 and author_email=$4 and workspace_id=$5`,

@@ -113,7 +113,7 @@ export function downloadDataset (dataset, sourceId, extension, prevDatasetsList)
       return
     }
     // check if dataset was already added to kepler
-    const addedDatasets = getState().keplerGl.kepler.visState.datasets
+    const addedDatasets = getState().keplerGl.kepler?.visState.datasets || {}
     const prevDataset = prevDatasetsList.find(d => d.id in addedDatasets)
     const i = datasets.findIndex(d => d.id === dataset.id)
     if (i < 0) {

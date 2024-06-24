@@ -59,6 +59,17 @@ service Dekart {
     rpc UpdateWorkspace(UpdateWorkspaceRequest) returns (UpdateWorkspaceResponse) {}
     rpc GetWorkspace(GetWorkspaceRequest) returns (GetWorkspaceResponse) {}
     rpc UpdateWorkspaceUser(UpdateWorkspaceUserRequest) returns (UpdateWorkspaceUserResponse) {}
+
+    //reports
+    rpc PublishReport(PublishReportRequest) returns (PublishReportResponse) {}
+}
+
+message PublishReportRequest {
+    string report_id = 1;
+    bool publish = 2;
+}
+
+message PublishReportResponse {
 }
 
 message GetStripePortalSessionRequest {
@@ -385,6 +396,7 @@ message Report {
 
     // cloud
     bool is_playground = 101; // true - playground, false - workspace
+    bool is_public = 102; // true - public, false - private
 }
 
 message Dataset {

@@ -161,7 +161,9 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 				discoverable,
 				allow_edit,
 				updated_at,
-				created_at
+				created_at,
+				is_public,
+				is_playground
 			from reports as r
 			where (author_email=$1 or (discoverable=true and archived=false) or allow_edit=true) and workspace_id=$2
 			order by updated_at desc`,
@@ -195,6 +197,8 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			&report.AllowEdit,
 			&updatedAt,
 			&createdAt,
+			&report.IsPublic,
+			&report.IsPlayground,
 		)
 		if err != nil {
 			log.Err(err).Send()
