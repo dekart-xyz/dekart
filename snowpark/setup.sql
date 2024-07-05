@@ -39,11 +39,28 @@ BEGIN
             EXTERNAL_ACCESS_INTEGRATIONS=(Identifier(''' || eai_name || '''))
             QUERY_WAREHOUSE=''' || whname || '''';
 GRANT USAGE ON SERVICE app_public.st_spcs TO APPLICATION ROLE app_user;
+grant service role app_public.ST_SPCS!ALL_ENDPOINTS_USAGE to application role APP_ADMIN;
+grant service role app_public.ST_SPCS!ALL_ENDPOINTS_USAGE to application role APP_USER;
 
-RETURN 'Service started. Check status, and when ready, get URL';
+RETURN 'Service started. Check status, and when ready, get URL.';
 END;
 $$;
 GRANT USAGE ON PROCEDURE app_public.start_app(VARCHAR, VARCHAR, VARCHAR) TO APPLICATION ROLE app_admin;
+
+CREATE OR REPLACE PROCEDURE app_public.grant_permissions()
+    RETURNS string
+    LANGUAGE sql
+    AS $$
+BEGIN
+GRANT USAGE ON SERVICE app_public.st_spcs TO APPLICATION ROLE app_user;
+grant service role app_public.ST_SPCS!ALL_ENDPOINTS_USAGE to application role APP_ADMIN;
+grant service role app_public.ST_SPCS!ALL_ENDPOINTS_USAGE to application role APP_USER;
+
+RETURN 'Permissions granted.';
+END;
+$$;
+GRANT USAGE ON PROCEDURE app_public.grant_permissions() TO APPLICATION ROLE app_admin;
+GRANT USAGE ON PROCEDURE app_public.grant_permissions() TO APPLICATION ROLE app_user;
 
 CREATE OR REPLACE PROCEDURE app_public.stop_app()
     RETURNS string

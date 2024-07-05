@@ -68,13 +68,6 @@ RUN service postgresql start &&\
     createdb -O dekart dekart
 
 USER root
-ENV DEKART_PORT=8080
-ENV DEKART_STATIC_FILES=./build
-ENV DEKART_POSTGRES_DB=dekart
-ENV DEKART_POSTGRES_USER=dekart
-ENV DEKART_POSTGRES_PASSWORD=dekart
-ENV DEKART_POSTGRES_PORT=5432
-ENV DEKART_POSTGRES_HOST=localhost
 
 ADD init.sh .
 RUN chmod +x init.sh
@@ -82,4 +75,14 @@ RUN chmod +x init.sh
 ADD backup.sh .
 RUN chmod +x backup.sh
 
+ADD start.sh .
+RUN chmod +x start.sh
+
+# Create a non-root user 'appuser' and give ownership of necessary directories
+RUN adduser --disabled-password --gecos "" appuser &&\
+    chown -R appuser:appuser /dekart &&\
+    chown -R appuser:appuser /dekart/migrations &&\
+    chown appuser:appuser start.sh
+
+# includes backup and restore scripts wich require root access
 CMD [ "./init.sh" ]
