@@ -5,7 +5,7 @@ describe('cloud basic flow', () => {
   it('with private token', () => {
     // create connection
     cy.visit('/')
-    cy.get('button:contains("Create connection")').click()
+    cy.get('button:contains("BigQuery")').click()
     const randomConnectionName = `test-${Math.floor(Math.random() * 1000000)}`
     cy.get('div.ant-modal-title').should('contain', 'BigQuery')
     cy.get('input#connectionName').clear()

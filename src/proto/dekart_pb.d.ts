@@ -735,12 +735,6 @@ export class GetUserStreamResponse extends jspb.Message {
   getEmail(): string;
   setEmail(value: string): void;
 
-  getSensitiveScopesGranted(): boolean;
-  setSensitiveScopesGranted(value: boolean): void;
-
-  getSensitiveScopesGrantedOnce(): boolean;
-  setSensitiveScopesGrantedOnce(value: boolean): void;
-
   getWorkspaceId(): string;
   setWorkspaceId(value: string): void;
 
@@ -765,8 +759,6 @@ export namespace GetUserStreamResponse {
     streamOptions?: StreamOptions.AsObject,
     connectionUpdate: number,
     email: string,
-    sensitiveScopesGranted: boolean,
-    sensitiveScopesGrantedOnce: boolean,
     workspaceId: string,
     planType: PlanTypeMap[keyof PlanTypeMap],
     workspaceUpdate: number,
@@ -974,6 +966,23 @@ export class Connection extends jspb.Message {
   getCanStoreFiles(): boolean;
   setCanStoreFiles(value: boolean): void;
 
+  getConnectionType(): Connection.ConnectionTypeMap[keyof Connection.ConnectionTypeMap];
+  setConnectionType(value: Connection.ConnectionTypeMap[keyof Connection.ConnectionTypeMap]): void;
+
+  getSnowflakeAccountId(): string;
+  setSnowflakeAccountId(value: string): void;
+
+  getSnowflakeUsername(): string;
+  setSnowflakeUsername(value: string): void;
+
+  hasSnowflakePassword(): boolean;
+  clearSnowflakePassword(): void;
+  getSnowflakePassword(): Secret | undefined;
+  setSnowflakePassword(value?: Secret): void;
+
+  getSnowflakeWarehouse(): string;
+  setSnowflakeWarehouse(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Connection.AsObject;
   static toObject(includeInstance: boolean, msg: Connection): Connection.AsObject;
@@ -996,6 +1005,47 @@ export namespace Connection {
     updatedAt: number,
     datasetCount: number,
     canStoreFiles: boolean,
+    connectionType: Connection.ConnectionTypeMap[keyof Connection.ConnectionTypeMap],
+    snowflakeAccountId: string,
+    snowflakeUsername: string,
+    snowflakePassword?: Secret.AsObject,
+    snowflakeWarehouse: string,
+  }
+
+  export interface ConnectionTypeMap {
+    CONNECTION_TYPE_UNSPECIFIED: 0;
+    CONNECTION_TYPE_BIGQUERY: 1;
+    CONNECTION_TYPE_SNOWFLAKE: 2;
+  }
+
+  export const ConnectionType: ConnectionTypeMap;
+}
+
+export class Secret extends jspb.Message {
+  getClientEncrypted(): string;
+  setClientEncrypted(value: string): void;
+
+  getServerEncrypted(): string;
+  setServerEncrypted(value: string): void;
+
+  getLength(): number;
+  setLength(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): Secret.AsObject;
+  static toObject(includeInstance: boolean, msg: Secret): Secret.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: Secret, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): Secret;
+  static deserializeBinaryFromReader(message: Secret, reader: jspb.BinaryReader): Secret;
+}
+
+export namespace Secret {
+  export type AsObject = {
+    clientEncrypted: string,
+    serverEncrypted: string,
+    length: number,
   }
 }
 
@@ -1228,6 +1278,8 @@ export namespace GetEnvResponse {
       TYPE_UX_ACCESS_ERROR_INFO_HTML: 13;
       TYPE_UX_NOT_FOUND_ERROR_INFO_HTML: 14;
       TYPE_UX_SAMPLE_QUERY_SQL: 15;
+      TYPE_AES_KEY: 16;
+      TYPE_AES_IV: 17;
     }
 
     export const Type: TypeMap;
@@ -1240,6 +1292,9 @@ export class RedirectState extends jspb.Message {
 
   getError(): string;
   setError(value: string): void;
+
+  getSensitiveScopesGranted(): boolean;
+  setSensitiveScopesGranted(value: boolean): void;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): RedirectState.AsObject;
@@ -1255,6 +1310,7 @@ export namespace RedirectState {
   export type AsObject = {
     tokenJson: string,
     error: string,
+    sensitiveScopesGranted: boolean,
   }
 }
 
@@ -1438,6 +1494,9 @@ export class Report extends jspb.Message {
   getIsSharable(): boolean;
   setIsSharable(value: boolean): void;
 
+  getNeedSensitiveScope(): boolean;
+  setNeedSensitiveScope(value: boolean): void;
+
   getIsPlayground(): boolean;
   setIsPlayground(value: boolean): void;
 
@@ -1468,6 +1527,7 @@ export namespace Report {
     createdAt: number,
     updatedAt: number,
     isSharable: boolean,
+    needSensitiveScope: boolean,
     isPlayground: boolean,
     isPublic: boolean,
   }

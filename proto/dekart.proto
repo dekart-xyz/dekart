@@ -229,8 +229,6 @@ message GetUserStreamResponse {
     StreamOptions stream_options = 1;
     int64 connection_update = 2;
     string email = 3; // user email used to show user icon in UI
-    bool sensitive_scopes_granted = 4; // user has granted sensitive scopes
-    bool sensitive_scopes_granted_once = 5; // user has granted sensitive scopes at least once, now we request all scopes at once
 
     // cloud
     string workspace_id = 101;
@@ -281,6 +279,22 @@ message Connection {
     int64 updated_at = 8;
     int64 dataset_count = 9;
     bool can_store_files = 10;
+    enum ConnectionType {
+        CONNECTION_TYPE_UNSPECIFIED = 0;
+        CONNECTION_TYPE_BIGQUERY = 1;
+        CONNECTION_TYPE_SNOWFLAKE = 2;
+    }
+    ConnectionType connection_type = 11;
+    string snowflake_account_id = 12;
+    string snowflake_username = 13;
+    Secret snowflake_password = 14;
+    string snowflake_warehouse = 15;
+}
+
+message Secret {
+    string client_encrypted = 1; // encrypted with client key
+    string server_encrypted = 2; // encrypted with server key
+    int32 length = 3; // length of the password for placeholder
 }
 
 message GetUsageRequest {}
@@ -334,6 +348,8 @@ message GetEnvResponse {
             TYPE_UX_ACCESS_ERROR_INFO_HTML = 13;
             TYPE_UX_NOT_FOUND_ERROR_INFO_HTML = 14;
             TYPE_UX_SAMPLE_QUERY_SQL = 15;
+            TYPE_AES_KEY = 16;
+            TYPE_AES_IV = 17;
         }
         Type type = 1;
         string value = 2;
@@ -345,6 +361,7 @@ message GetEnvResponse {
 message RedirectState {
     string token_json = 1;
     string error  = 2;
+    bool sensitive_scopes_granted = 3; // if true, sensitive scope are granted
 }
 
 // AuthState is used to pass state between UI, auth endpoint and Google OAuth via redirect
@@ -393,6 +410,7 @@ message Report {
     int64 created_at = 10;
     int64 updated_at = 11;
     bool is_sharable = 12; // can be shared with other users (depends where result is stored)
+    bool need_sensitive_scope = 13; // need sensitive scope to run queries and read results
 
     // cloud
     bool is_playground = 101; // true - playground, false - workspace

@@ -10,12 +10,13 @@ import { PlusOutlined, FileSearchOutlined, UsergroupAddOutlined, ApiTwoTone, Glo
 import DataDocumentationLink from './DataDocumentationLink'
 import Switch from 'antd/es/switch'
 import { archiveReport, subscribeReports, unsubscribeReports, createReport } from './actions/report'
-import { editConnection, newConnection, setDefaultConnection } from './actions/connection'
+import { editConnection, newConnection, newConnectionScreen, setDefaultConnection } from './actions/connection'
 import ConnectionModal from './ConnectionModal'
 import Tooltip from 'antd/es/tooltip'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
-import { PlanType } from '../proto/dekart_pb'
+import { Connection, PlanType } from '../proto/dekart_pb'
 import Onboarding from './Onboarding'
+import { DatasourceIcon } from './Datasource'
 
 function Loading () {
   return null
@@ -85,6 +86,11 @@ const columns = [
     className: styles.titleColumn
   },
   {
+    dataIndex: 'connectionIcon',
+    render: (t, connection) => <DatasourceIcon type={connection.connectionType} />,
+    className: styles.iconColumn
+  },
+  {
     dataIndex: 'setDefault',
     render: (t, connection) => <SetDefault connection={connection} />,
     className: styles.deleteColumn
@@ -118,7 +124,7 @@ function OpenConnectionButton ({ connection }) {
     <Button
       type='link'
       onClick={() => {
-        dispatch(editConnection(connection.id))
+        dispatch(editConnection(connection.id, connection.connectionType))
       }}
     >{connection.connectionName}
     </Button>
@@ -136,7 +142,7 @@ function getColumns (reportFilter, archived) {
     }
     return filterColumns(['icon', 'title', 'delete'])
   } else if (reportFilter === 'connections') {
-    return filterColumns(['connectionName', 'author', 'setDefault'])
+    return filterColumns(['connectionIcon', 'connectionName', 'author', 'setDefault'])
   } else {
     return filterColumns(['icon', 'title', 'author'])
   }
@@ -167,16 +173,37 @@ function FirstReportOnboarding () {
   )
 }
 
-function FirstConnectionOnboarding () {
+// selects between Google Cloud and Snowflake
+function ConnectionTypeSelector () {
+  const connectionList = useSelector(state => state.connection.list)
+  const showCancel = connectionList.length > 0 // show cancel button if there are connections
   const dispatch = useDispatch()
+  return (
+    <>
+      <div className={styles.connectionTypeSelector}>
+        <Button icon={<DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY} />} size='large' onClick={() => dispatch(newConnection(Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY))}>BigQuery</Button>
+        <Button icon={<DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE} />} size='large' onClick={() => dispatch(newConnection(Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE))}>Snowflake</Button>
+      </div>
+      {showCancel
+        ? (
+          <div>
+            <Button type='link' onClick={() => dispatch(newConnectionScreen(false))}>Return back</Button>
+          </div>
+          )
+        : null}
+    </>
+  )
+}
+
+function CreateConnection () {
   return (
     <>
       <Result
         status='success'
         icon={<ApiTwoTone />}
         title='Ready to connect!'
-        subTitle={<>Select <b>Project ID</b> for BigQuery billing and <b>Storage Bucket</b> name to store your query results.</>}
-        extra={<Button type='primary' onClick={() => { dispatch(newConnection()) }}>Create connection</Button>}
+        subTitle={<>Select your data source to start building your map.</>}
+        extra={<ConnectionTypeSelector />}
       />
     </>
   )
@@ -233,7 +260,7 @@ function ReportsHeader (
       <div className={styles.rightCornerAction}>
         {
           reportFilter === 'connections'
-            ? <Button onClick={() => { dispatch(newConnection()) }}>New Connection</Button>
+            ? <Button onClick={() => { dispatch(newConnectionScreen(true)) }}>New Connection</Button>
             : (
               <>
                 {
@@ -262,6 +289,7 @@ function Reports ({ createReportButton, reportFilter }) {
   const { loaded: envLoaded } = useSelector(state => state.env)
   const connectionList = useSelector(state => state.connection.list)
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
+  const newConnectionScreen = useSelector(state => state.connection.screen)
   useEffect(() => {
     if (reportsList.archived.length === 0) {
       setArchived(false)
@@ -270,10 +298,10 @@ function Reports ({ createReportButton, reportFilter }) {
   if (!envLoaded) {
     return null
   }
-  if (userDefinedConnection && connectionList.length === 0) {
+  if ((userDefinedConnection && connectionList.length === 0) || newConnectionScreen) {
     return (
       <div className={styles.reports}>
-        <FirstConnectionOnboarding />
+        <CreateConnection />
       </div>
     )
   }

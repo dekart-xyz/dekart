@@ -23,7 +23,6 @@ export function subscribeUserStream () {
     }
     dispatch(grpcStream(Dekart.GetUserStream, request, (message, err) => {
       if (message) {
-        dispatch(updateLocalStorage('sensitiveScopesGrantedOnce', message.sensitiveScopesGrantedOnce))
         dispatch(updateLocalStorage('loginHint', message.email))
         dispatch(userStreamUpdate(message))
         if (prevRes.workspaceUpdate !== message.workspaceUpdate) {
@@ -48,6 +47,10 @@ export function switchPlayground (isPlayground, redirect = '/') {
     dispatch(updateSessionStorage('isPlayground', isPlayground))
     window.location.href = redirect
   }
+}
+
+export function needSensitiveScopes () {
+  return { type: needSensitiveScopes.name }
 }
 
 export function unsubscribeUserStream () {

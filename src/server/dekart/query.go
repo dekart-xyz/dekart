@@ -198,21 +198,21 @@ type runQueryOptions struct {
 }
 
 func (s Server) runQuery(ctx context.Context, o runQueryOptions) error {
-	job, jobStatus, err := s.jobs.Create(o.reportID, o.queryID, o.queryText, ctx)
+	connCtx := conn.GetCtx(ctx, o.connection)
+	job, jobStatus, err := s.jobs.Create(o.reportID, o.queryID, o.queryText, connCtx)
 	log.Debug().Str("jobID", job.GetID()).Msg("Job created")
 	if err != nil {
 		log.Error().Err(err).Send()
 		return err
 	}
-	conCtx := conn.GetCtx(ctx, o.connection)
 	var obj storage.StorageObject
 	if o.isPublic {
-		s := storage.NewPublicStorage()
+		st := storage.NewPublicStorage()
 		// Result ID should be same as job ID once available
-		obj = s.GetObject(ctx, s.GetDefaultBucketName(), fmt.Sprintf("%s.csv", job.GetID()))
+		obj = st.GetObject(ctx, st.GetDefaultBucketName(), fmt.Sprintf("%s.csv", job.GetID()))
 	} else {
 		// Result ID should be same as job ID once available
-		obj = s.storage.GetObject(conCtx, o.userBucketName, fmt.Sprintf("%s.csv", job.GetID()))
+		obj = s.storage.GetObject(connCtx, o.userBucketName, fmt.Sprintf("%s.csv", job.GetID()))
 	}
 	go s.updateJobStatus(job, jobStatus)
 	job.Status() <- int32(proto.Query_JOB_STATUS_PENDING)

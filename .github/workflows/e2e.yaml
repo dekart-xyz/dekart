@@ -53,12 +53,13 @@ jobs:
             -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
             -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
             -e DEKART_STORAGE=USER \
-            -e DEKART_DATASOURCE=BQ \
+            -e DEKART_DATASOURCE=USER \
             -e DEKART_ALLOW_FILE_UPLOAD=1 \
             -e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
             -e DEKART_GOOGLE_OAUTH_CLIENT_ID=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }} \
             -e DEKART_GOOGLE_OAUTH_SECRET=${{ secrets.GOOGLE_OAUTH_SECRET }} \
             -e DEKART_DEV_REFRESH_TOKEN=${{ secrets.DEV_REFRESH_TOKEN_INFO }} \
+            -e DEKART_DATA_ENCRYPTION_KEY=projects/398860824064/secrets/dekart-prod-user-data-encoding-key/versions/1 \
           	-e DEKART_CORS_ORIGIN=http://localhost:3000 \
             -e TEST_SPEC=cypress/e2e/bq/cloudBasicFlowStart.cy.js \
             -e CYPRESS_CI=1 \
@@ -67,7 +68,7 @@ jobs:
         run: |
           docker run -i \
             --network="host" \
-            -v $(pwd)/$GOOGLE_APPLICATION_CREDENTIALS:/dekart/$GOOGLE_APPLICATION_CREDENTIALS \
+            -v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
             -v /tmp/cypress/videos:/dekart/cypress/videos/ \
             -v /tmp/cypress/screenshots:/dekart/cypress/screenshots/ \
             -e DEKART_LOG_DEBUG=1 \
@@ -79,12 +80,13 @@ jobs:
             -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
             -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
             -e DEKART_STORAGE=USER \
-            -e DEKART_DATASOURCE=BQ \
+            -e DEKART_DATASOURCE=USER \
             -e DEKART_ALLOW_FILE_UPLOAD=1 \
             -e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
             -e DEKART_GOOGLE_OAUTH_CLIENT_ID=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }} \
             -e DEKART_GOOGLE_OAUTH_SECRET=${{ secrets.GOOGLE_OAUTH_SECRET }} \
             -e DEKART_DEV_REFRESH_TOKEN=${{ secrets.DEV_REFRESH_TOKEN }} \
+            -e DEKART_DATA_ENCRYPTION_KEY=projects/398860824064/secrets/dekart-prod-user-data-encoding-key/versions/1 \
             -e DEKART_CORS_ORIGIN=http://localhost:3000 \
             -e TEST_SPEC=cypress/e2e/bq/cloudBasicFlowEnd.cy.js \
             -e CYPRESS_CI=1 \

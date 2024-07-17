@@ -136,3 +136,13 @@
 .stepBySetLink {
     margin-top: 15px;
 }
+
+.connectionTypeSelector :global(.ant-btn) {
+    font-size: 1.4em;
+    height: 60px;
+    margin: 0.5em;
+}
+
+.connectionTypeSelector {
+    margin-bottom: 10px;
+}

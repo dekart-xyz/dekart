@@ -8,8 +8,7 @@ import { createQuery } from './actions/query'
 import { createFile } from './actions/file'
 import Dropdown from 'antd/es/dropdown'
 import { ConsoleSqlOutlined, UploadOutlined, MoreOutlined } from '@ant-design/icons'
-import ConnectionModal from './ConnectionModal'
-import Datasource from './Datasource'
+import { Datasource } from './Datasource'
 import { updateDatasetConnection } from './actions/dataset'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 
@@ -72,6 +71,7 @@ function DatasetSelector ({ dataset }) {
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const isPlayground = useSelector(state => state.user.isPlayground)
   const connectionList = useSelector(state => state.connection.list)
+  const selectedConnection = connectionList.find(c => c.id === dataset.connectionId)
   const history = useHistory()
   if (!env.loaded || isPlayground) {
     // do not render until environment is loaded
@@ -88,7 +88,7 @@ function DatasetSelector ({ dataset }) {
         {userDefinedConnection
           ? (
             <>
-              <Datasource />
+              <Datasource connection={selectedConnection} />
               <div className={styles.datasource}>
                 <Select
                   placeholder='Select connection'
@@ -113,7 +113,6 @@ function DatasetSelector ({ dataset }) {
                   }}
                   />
               </div>
-              <ConnectionModal />
             </>
             )
           : <DatasetTypeSelector dataset={dataset} />}

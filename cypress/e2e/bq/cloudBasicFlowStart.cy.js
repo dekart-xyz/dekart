@@ -27,6 +27,7 @@ describe('cloud basic flow', () => {
     cy.get('input#name').type('test')
     cy.get('button:contains("Create")').click()
     cy.get('button#dekart-1-choose-plan').click()
+    cy.get('button:contains("BigQuery")').click()
     cy.get('button:contains("Continue to Google")').should('be.visible')
   })
 })

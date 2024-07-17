@@ -3,6 +3,8 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"dekart/src/proto"
+	"dekart/src/server/conn"
 	"dekart/src/server/errtype"
 	"dekart/src/server/snowflakeutils"
 	"encoding/csv"
@@ -25,13 +27,14 @@ func (s *SnowflakeStorage) CanSaveQuery(context.Context, string) bool {
 	return false
 }
 
-func (s *SnowflakeStorage) GetObject(_ context.Context, string, queryID string) StorageObject {
-	return NewSnowflakeStorageObject(queryID)
+func (s *SnowflakeStorage) GetObject(ctx context.Context, string, queryID string) StorageObject {
+	connection := conn.FromCtx(ctx)
+	return NewSnowflakeStorageObject(queryID, connection)
 }
 
 // NewSnowflakeStorageObject
-func NewSnowflakeStorageObject(queryID string) StorageObject {
-	connector := snowflakeutils.GetConnector()
+func NewSnowflakeStorageObject(queryID string, conn *proto.Connection) StorageObject {
+	connector := snowflakeutils.GetConnector(conn)
 	return SnowflakeStorageObject{queryID: queryID, connector: connector}
 }
 
@@ -140,7 +143,19 @@ func (s SnowflakeStorageObject) CopyFromS3(ctx context.Context, source string) e
 }
 
 func (s SnowflakeStorageObject) CopyTo(ctx context.Context, writer io.WriteCloser) error {
-	log.Fatal().Msg("not implemented")
+	reader, err := s.GetReader(ctx)
+	if err != nil {
+		log.Err(err).Msg("Error getting reader while copying to")
+		return err
+	}
+	_, err = io.Copy(writer, reader)
+	if err != nil {
+		return err
+	}
+	err = writer.Close()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
