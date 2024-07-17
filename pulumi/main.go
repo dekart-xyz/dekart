@@ -86,7 +86,7 @@ func main() {
 				"DEKART_POSTGRES_PORT":               pulumi.String("5432"),
 				"DEKART_POSTGRES_HOST":               pulumi.String("172.17.0.1"),
 				"DEKART_STORAGE":                     pulumi.String("USER"),
-				"DEKART_DATASOURCE":                  pulumi.String("BQ"),
+				"DEKART_DATASOURCE":                  pulumi.String("USER"),
 				"DEKART_ALLOW_FILE_UPLOAD":           pulumi.String("1"),
 				"DEKART_REQUIRE_GOOGLE_OAUTH":        pulumi.String("1"),
 				"DEKART_GOOGLE_OAUTH_CLIENT_ID":      pulumi.String(cfg.Require("DEKART_GOOGLE_OAUTH_CLIENT_ID")),
@@ -100,8 +100,8 @@ func main() {
 				"DEKART_CLOUD_STORAGE_BUCKET":        pulumi.String("dekart-playground"),
 				"DEKART_CLOUD_PUBLIC_STORAGE_BUCKET": pulumi.String("dekart-playground"),
 				"DEKART_BIGQUERY_MAX_BYTES_BILLED":   pulumi.String("107374182400"),
-				"DEKART_UX_SAMPLE_QUERY_SQL":         pulumi.String("SELECT primary_type, district, latitude, longitude, date from `bigquery-public-data.chicago_crime.crime` WHERE  Rand() < 5 / 100.0"),
 				"DEKART_CORS_ORIGIN":                 pulumi.String("null"),
+				"DEKART_DATA_ENCRYPTION_KEY":         pulumi.String("projects/398860824064/secrets/dekart-prod-user-data-encoding-key/versions/1"),
 			},
 			Deployment: &appengine.FlexibleAppVersionDeploymentArgs{
 				Container: &appengine.FlexibleAppVersionDeploymentContainerArgs{

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"dekart/src/proto"
 	"dekart/src/server/bqstorage"
 	"dekart/src/server/conn"
 	"strings"
@@ -19,10 +20,12 @@ func NewUserStorage() *UserStorage {
 
 func (s *UserStorage) GetObject(ctx context.Context, _ string, object string) StorageObject {
 	connection := conn.FromCtx(ctx)
-	log.Debug().Str("CloudStorageBucket", connection.CloudStorageBucket).Str("object", object).Msg("GetObject")
+	parts := strings.Split(object, ".")
+	if connection.ConnectionType == proto.Connection_CONNECTION_TYPE_SNOWFLAKE {
+		return NewSnowflakeStorageObject(parts[0], connection)
+	}
 	if connection.CloudStorageBucket != "" {
 		bucketName := connection.CloudStorageBucket
-		log.Debug().Msg("returning GoogleCloudStorageObject")
 		return GoogleCloudStorageObject{
 			bucketName,
 			object,
@@ -30,11 +33,9 @@ func (s *UserStorage) GetObject(ctx context.Context, _ string, object string) St
 			true,
 		}
 	}
-	parts := strings.Split(object, ".")
-	log.Debug().Msg("returning BigQueryStorageObject")
 	return bqstorage.BigQueryStorageObject{
 		JobID:             parts[0],
-		BigqueryProjectId: connection.BigqueryProjectID,
+		BigqueryProjectId: connection.BigqueryProjectId,
 	}
 }
 

@@ -4,16 +4,22 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/conn"
 	"dekart/src/server/errtype"
 	"dekart/src/server/job"
+	"dekart/src/server/secrets"
 	"dekart/src/server/snowflakeutils"
 	"dekart/src/server/storage"
+	"dekart/src/server/user"
 	"encoding/csv"
+	"fmt"
 	"io"
 	"sync"
 
 	"github.com/rs/zerolog/log"
 	sf "github.com/snowflakedb/gosnowflake"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type Job struct {
@@ -190,13 +196,14 @@ func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connect
 	return nil
 }
 
-func (s *Store) Create(reportID string, queryID string, queryText string, userCtx context.Context) (job.Job, chan int32, error) {
-	connector := snowflakeutils.GetConnector()
+func Create(reportID string, queryID string, queryText string, userCtx context.Context) (job.Job, error) {
+	connection := conn.FromCtx(userCtx)
+	connector := snowflakeutils.GetConnector(connection)
 	db := sql.OpenDB(connector)
 	err := db.Ping()
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to ping snowflake")
-		return nil, nil, err
+		return nil, err
 	}
 	job := &Job{
 		BasicJob: job.BasicJob{
@@ -209,7 +216,43 @@ func (s *Store) Create(reportID string, queryID string, queryText string, userCt
 		connector:   connector,
 	}
 	job.Init(userCtx)
+	return job, nil
+}
+
+func (s *Store) Create(reportID string, queryID string, queryText string, userCtx context.Context) (job.Job, chan int32, error) {
+	job, err := Create(reportID, queryID, queryText, userCtx)
+	if err != nil {
+		return nil, nil, err
+	}
 	s.StoreJob(job)
 	go s.RemoveJobWhenDone(job)
 	return job, job.Status(), nil
+}
+
+func TestConnection(ctx context.Context, req *proto.TestConnectionRequest) (*proto.TestConnectionResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, status.Error(codes.Unauthenticated, "claims are required")
+	}
+	conn := req.Connection
+	if conn == nil {
+		return nil, fmt.Errorf("connection is nil")
+	}
+	if conn.SnowflakePassword == nil {
+		return nil, status.Error(codes.InvalidArgument, "snowflake_password is required")
+	}
+	conn.SnowflakePassword = secrets.ClientToServer(conn.SnowflakePassword, claims)
+	connector := snowflakeutils.GetConnector(conn)
+	db := sql.OpenDB(connector)
+	err := db.PingContext(ctx)
+	if err != nil {
+		log.Debug().Err(err).Msg("snowflake.Ping failed when testing connection")
+		return &proto.TestConnectionResponse{
+			Success: false,
+			Error:   err.Error(),
+		}, nil
+	}
+	return &proto.TestConnectionResponse{
+		Success: true,
+	}, nil
 }

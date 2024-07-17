@@ -14,13 +14,12 @@ function getLastPage (visitedPages) {
 
 export default function GrantScopesPage ({ visitedPages }) {
   const dispatch = useDispatch()
-  const userStream = useSelector(state => state.user.stream)
+  const sensitiveScopesGranted = useSelector(state => state.user.sensitiveScopesGranted)
   const sensitiveScopesGrantedOnce = useSelector(state => state.user.sensitiveScopesGrantedOnce)
 
   useEffect(() => {
     if (
-      !userStream || // userStream is not yet loaded
-      userStream.sensitiveScopesGranted // user has already granted sensitive scopes
+      sensitiveScopesGranted // user has already granted sensitive scopes
     ) {
       return
     }
@@ -28,13 +27,9 @@ export default function GrantScopesPage ({ visitedPages }) {
       dispatch(requestSensitiveScopes(getLastPage(visitedPages)))
     }
   }
-  , [dispatch, userStream, visitedPages, sensitiveScopesGrantedOnce])
+  , [dispatch, sensitiveScopesGranted, visitedPages, sensitiveScopesGrantedOnce])
 
-  if (!userStream) {
-    return null
-  }
-
-  if (userStream.sensitiveScopesGranted) {
+  if (sensitiveScopesGranted) {
     // user shouldn't be here
     return <Redirect to='/' push />
   }

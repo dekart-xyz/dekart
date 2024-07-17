@@ -2,6 +2,8 @@ package snowflakeutils
 
 import (
 	"database/sql"
+	"dekart/src/proto"
+	"dekart/src/server/secrets"
 	"encoding/csv"
 	"fmt"
 	"os"
@@ -24,8 +26,18 @@ func readSnowparkToken() string {
 	return string(token)
 }
 
-func getConfig() sf.Config {
-	token := readSnowparkToken()
+func getConfig(conn *proto.Connection) sf.Config {
+	if conn != nil {
+		password := secrets.SecretToString(conn.SnowflakePassword, nil)
+		return sf.Config{
+			Account:   conn.SnowflakeAccountId,
+			User:      conn.SnowflakeUsername,
+			Warehouse: conn.SnowflakeWarehouse,
+			Password:  password,
+			Params:    map[string]*string{},
+		}
+
+	}
 	dekartSnowflakeUser := os.Getenv("DEKART_SNOWFLAKE_USER")
 	if dekartSnowflakeUser != "" {
 		log.Debug().Msg("Using snowflake password")
@@ -36,6 +48,7 @@ func getConfig() sf.Config {
 			Params:   map[string]*string{},
 		}
 	}
+	token := readSnowparkToken()
 	if token != "" {
 		log.Debug().Msg("Using snowpark token")
 		// https://docs.snowflake.com/en/developer-guide/snowpark-container-services/tutorials/tutorial-2#main-py-file
@@ -55,8 +68,8 @@ func getConfig() sf.Config {
 }
 
 // GetConnector returns a snowflake connector
-func GetConnector() sf.Connector {
-	config := getConfig()
+func GetConnector(conn *proto.Connection) sf.Connector {
+	config := getConfig(conn)
 	driver := sf.SnowflakeDriver{}
 	return sf.NewConnector(driver, config)
 }

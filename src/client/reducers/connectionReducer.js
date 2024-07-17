@@ -1,12 +1,13 @@
 import { combineReducers } from 'redux'
 import { userStreamUpdate } from '../actions/user'
-import { closeConnectionDialog, connectionChanged, connectionCreated, connectionListUpdate, connectionSaved, editConnection, newConnection, projectListUpdate, saveConnection, testConnection, testConnectionResponse } from '../actions/connection'
+import { closeConnectionDialog, connectionChanged, connectionCreated, connectionListUpdate, connectionSaved, editConnection, newConnection, newConnectionScreen, projectListUpdate, reOpenDialog, saveConnection, testConnection, testConnectionResponse } from '../actions/connection'
 import { sessionStorageInit } from '../actions/sessionStorage'
 
 function dialog (state = {
   visible: false,
   loading: true,
-  id: null
+  id: null,
+  connectionType: null
 }, action) {
   switch (action.type) {
     case closeConnectionDialog.name:
@@ -18,6 +19,7 @@ function dialog (state = {
       return {
         ...state,
         id: action.id,
+        connectionType: action.connectionType,
         visible: true,
         loading: false
       }
@@ -26,7 +28,8 @@ function dialog (state = {
         ...state,
         visible: true,
         id: null,
-        loading: false
+        loading: false,
+        connectionType: action.connectionType
       }
     case connectionCreated.name:
       return {
@@ -133,11 +136,35 @@ function projects (state = null, action) {
   }
 }
 
+function screen (state = false, action) {
+  switch (action.type) {
+    case newConnectionScreen.name:
+      return action.show
+    case newConnection.name:
+      return false
+    default:
+      return state
+  }
+}
+
+function lastOpenedDialog (state = null, action) {
+  switch (action.type) {
+    case sessionStorageInit.name:
+      return action.current.lastOpenedDialog || null
+    case reOpenDialog.name:
+      return null // only open dialog once
+    default:
+      return state
+  }
+}
+
 export default combineReducers({
   dialog,
   test,
   list,
   userDefined,
   listLoaded,
-  projects
+  projects,
+  screen,
+  lastOpenedDialog
 })

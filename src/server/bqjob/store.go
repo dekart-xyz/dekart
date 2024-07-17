@@ -24,8 +24,7 @@ func NewStore() *Store {
 	return store
 }
 
-// Create job on store
-func (s *Store) Create(reportID string, queryID string, queryText string, userCtx context.Context) (job.Job, chan int32, error) {
+func Create(reportID string, queryID string, queryText string, userCtx context.Context) (job.Job, error) {
 	maxBytesBilledStr := os.Getenv("DEKART_BIGQUERY_MAX_BYTES_BILLED")
 	var maxBytesBilled int64
 	var err error
@@ -35,7 +34,7 @@ func (s *Store) Create(reportID string, queryID string, queryText string, userCt
 			maxBytesBilled, err = strconv.ParseInt(maxBytesBilledStr, 10, 64)
 			if err != nil {
 				log.Fatal().Msgf("Cannot parse DEKART_BIGQUERY_MAX_BYTES_BILLED")
-				return nil, nil, err
+				return nil, err
 			}
 		} else {
 			log.Warn().Msgf("DEKART_BIGQUERY_MAX_BYTES_BILLED is not set! Use the maximum bytes billed setting to limit query costs. https://cloud.google.com/bigquery/docs/best-practices-costs#limit_query_costs_by_restricting_the_number_of_bytes_billed")
@@ -51,12 +50,26 @@ func (s *Store) Create(reportID string, queryID string, queryText string, userCt
 		maxBytesBilled: maxBytesBilled,
 	}
 	job.Init(userCtx)
+	return job, nil
+}
+
+// Create job on store
+func (s *Store) Create(reportID string, queryID string, queryText string, userCtx context.Context) (job.Job, chan int32, error) {
+	job, err := Create(reportID, queryID, queryText, userCtx)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create BigQuery job")
+		return nil, nil, err
+	}
 	s.StoreJob(job)
 	go s.RemoveJobWhenDone(job)
 	return job, job.Status(), nil
 }
 
 func (s *Store) TestConnection(ctx context.Context, req *proto.TestConnectionRequest) (*proto.TestConnectionResponse, error) {
+	return TestConnection(ctx, req)
+}
+
+func TestConnection(ctx context.Context, req *proto.TestConnectionRequest) (*proto.TestConnectionResponse, error) {
 	tokenSource := user.GetTokenSource(ctx)
 	client, err := bigquery.NewClient(
 		ctx,

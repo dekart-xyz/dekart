@@ -9,6 +9,7 @@ import { createQuery, downloadQuerySource } from './query'
 import { downloadDataset } from './dataset'
 import { shouldAddQuery } from '../lib/shouldAddQuery'
 import { shouldUpdateDataset } from '../lib/shouldUpdateDataset'
+import { needSensitiveScopes } from './user'
 
 export function closeReport () {
   return (dispatch) => {
@@ -28,7 +29,8 @@ function getReportStream (reportId, onMessage, onError) {
 }
 
 export function openReport (reportId, edit) {
-  return (dispatch) => {
+  return (dispatch, getState) => {
+    const user = getState().user
     dispatch({
       type: openReport.name,
       edit
@@ -39,7 +41,11 @@ export function openReport (reportId, edit) {
         if (err) {
           return err
         }
-        dispatch(reportUpdate(reportStreamResponse))
+        if (reportStreamResponse.report.needSensitiveScope && !user.sensitiveScopesGranted) {
+          dispatch(needSensitiveScopes())
+        } else {
+          dispatch(reportUpdate(reportStreamResponse))
+        }
       }
     ))
   }

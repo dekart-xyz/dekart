@@ -55,11 +55,12 @@ function AppRedirect () {
   const { newReportId } = useSelector(state => state.reportStatus)
   const userStream = useSelector(state => state.user.stream)
   const isPlayground = useSelector(state => state.user.isPlayground)
-  const needSensitiveScopes = useSelector(state => state.env.needSensitiveScopes)
-  const sensitiveScopesGranted = userStream?.sensitiveScopesGranted
+  const sensitiveScopesNeeded = useSelector(state => state.user.sensitiveScopesNeeded)
+  const sensitiveScopesGranted = useSelector(state => state.user.sensitiveScopesGranted)
   const sensitiveScopesGrantedOnce = useSelector(state => state.user.sensitiveScopesGrantedOnce)
   const reportOpened = useSelector(state => state.reportStatus.opened)
   const report = useSelector(state => state.report)
+  const redirectStateReceived = useSelector(state => state.user.redirectStateReceived)
   const dispatch = useDispatch()
 
   useEffect(() => {
@@ -67,10 +68,10 @@ function AppRedirect () {
       const state = new AuthState()
       state.setUiUrl(window.location.href)
       state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
-      state.setSensitiveScope(sensitiveScopesGrantedOnce) // if user has granted sensitive scopes once, request them right away without onboarding
+      state.setSensitiveScope(sensitiveScopesGranted || sensitiveScopesGrantedOnce) // if user has granted sensitive scopes on this device request token with sensitive scopes
       dispatch(authRedirect(state))
     }
-  }, [status, doNotAuthenticate, dispatch, sensitiveScopesGrantedOnce])
+  }, [status, doNotAuthenticate, dispatch, sensitiveScopesGrantedOnce, sensitiveScopesGranted])
 
   if (status === 401 && doNotAuthenticate === false) {
     // redirect to authentication endpoint from useEffect above
@@ -97,13 +98,7 @@ function AppRedirect () {
   }
 
   if (
-    userStream &&
-    needSensitiveScopes &&
-    !sensitiveScopesGranted &&
-    !isPlayground &&
-    !(reportOpened && !report) && // report is being loaded
-    !(report?.isPlayground) && // playground report
-    !(report?.isPublic) // playground report
+    redirectStateReceived && sensitiveScopesNeeded && !sensitiveScopesGranted
   ) {
     return <Redirect to='/grant-scopes' push />
   }

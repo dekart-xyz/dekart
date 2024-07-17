@@ -48,6 +48,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			is_playground,
 			0 as connections_with_cache_num,
 			0 as connections_num,
+			0 as connections_with_sensitive_scope_num,
 			is_public
 		from reports as r
 		where id=$1 and not archived and (is_playground or is_public)
@@ -72,13 +73,21 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			(
 				select count(*) from connections as c
 				join datasets as d on c.id=d.connection_id
-				where d.report_id=$1 and cloud_storage_bucket is not null and cloud_storage_bucket != ''
+				where d.report_id=$1 and cloud_storage_bucket is not null and (
+					cloud_storage_bucket != ''
+					or connection_type > 1 -- snowflake allows sharing without bucket
+				)
 			) as connections_with_cache_num,
 			(
 				select count(*) from connections as c
 				join datasets as d on c.id=d.connection_id
 				where d.report_id=$1
 			) as connections_num,
+			(
+				select count(*) from connections as c
+				join datasets as d on c.id=d.connection_id
+				where d.report_id=$1 and  connection_type <= 1 -- BigQuery
+			) as connections_with_sensitive_scope_num,
 			is_public
 		from reports as r
 		where id=$1 and not archived and (workspace_id=$3 or is_playground or is_public)
@@ -98,7 +107,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 	for reportRows.Next() {
 		createdAt := time.Time{}
 		updatedAt := time.Time{}
-		var connectionsWithCacheNum, connectionsNum int
+		var connectionsWithCacheNum, connectionsNum, connectionsWithSensitiveScopeNum int
 		err = reportRows.Scan(
 			&report.Id,
 			&report.MapConfig,
@@ -113,6 +122,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			&report.IsPlayground,
 			&connectionsWithCacheNum,
 			&connectionsNum,
+			&connectionsWithSensitiveScopeNum,
 			&report.IsPublic,
 		)
 		if err != nil {
@@ -126,6 +136,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 		}
 		// report is sharable if all connections have cache
 		report.IsSharable = (connectionsNum > 0 && connectionsWithCacheNum == connectionsNum)
+		report.NeedSensitiveScope = connectionsWithSensitiveScopeNum > 0
 		report.Discoverable = report.Discoverable && report.IsSharable // only sharable reports can be discoverable
 
 		report.CreatedAt = createdAt.Unix()

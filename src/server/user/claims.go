@@ -299,6 +299,7 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 		log.Fatal().Err(err).Msg("Error marshalling token")
 	}
 	redirectState.TokenJson = string(tokenBin)
+	redirectState.SensitiveScopesGranted = missingSensitiveScope == ""
 	return redirectState
 }
 
@@ -323,11 +324,30 @@ func (c ClaimsCheck) requestDevToken(state *pb.AuthState, r *http.Request) *pb.R
 		return redirectState
 	}
 
+	tokenInfo, err := c.getTokenInfo(ctx, token)
+	if err != nil {
+		log.Error().Err(err).Msg("Error getting token info")
+		redirectState.Error = "Error getting token info"
+		return redirectState
+	}
+
+	// check if required scopes are granted by the user
+	missingScope := checkMissingScope(auth.Scopes, tokenInfo.Scope)
+	if missingScope != "" {
+		log.Warn().Str("missingScope", missingScope).Msg("Scope missing")
+		redirectState.Error = fmt.Sprintf("Scope %s missing", missingScope)
+		return redirectState
+	}
+
+	// update user sensitive scope requested to not show the scope onboarding again
+	missingSensitiveScope := checkMissingScope(sensitiveScope, tokenInfo.Scope)
+
 	tokenBin, err := json.Marshal(*token)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Error marshalling token")
 	}
 	redirectState.TokenJson = string(tokenBin)
+	redirectState.SensitiveScopesGranted = missingSensitiveScope == ""
 	return redirectState
 }
 
