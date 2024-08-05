@@ -36,4 +36,4 @@ restore
 ./backup.sh &
 
 # Run /dekart/server as 'appuser'
-su - appuser -c '/dekart/start.sh'
+su -m appuser -c '/dekart/start.sh'

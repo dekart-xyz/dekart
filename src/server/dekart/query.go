@@ -197,7 +197,6 @@ type query struct {
 
 func (s Server) runQuery(ctx context.Context, i query) error {
 	job, jobStatus, err := s.jobs.Create(i.reportID, i.queryID, i.queryText, ctx)
-	log.Debug().Str("jobID", job.GetID()).Msg("Job created")
 	if err != nil {
 		log.Error().Err(err).Send()
 		return err

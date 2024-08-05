@@ -11,6 +11,7 @@ echo "Backup script starting..."
 # Wait for a minute before starting to ensure that migrations are complete
 sleep 60
 echo "Backup script started."
+chown postgres:postgres $BACKUP_DIR
 
 # Run indefinitely
 while true; do
