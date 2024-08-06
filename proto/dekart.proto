@@ -154,6 +154,7 @@ message User {
     string email = 1;
     int64 updated_at = 2;
     UserStatus status = 3;
+    string invite_id = 4;
 }
 
 message GetGcpProjectListRequest {

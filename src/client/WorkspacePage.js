@@ -20,6 +20,7 @@ import MembersTab from './MembersTab'
 import Result from 'antd/es/result'
 import { switchPlayground } from './actions/user'
 import { Tooltip } from 'antd'
+import { useParams } from 'react-router-dom'
 
 function Invites () {
   const workspace = useSelector(state => state.workspace)
@@ -155,7 +156,7 @@ function WorkspaceTab ({ nextStep, setNextStep }) {
   if (nextStep === 'invites') {
     title = 'Join workspace'
   } else if (workspace.id) {
-    title = 'Update workspace'
+    title = 'Edit workspace'
   }
 
   return (
@@ -164,14 +165,14 @@ function WorkspaceTab ({ nextStep, setNextStep }) {
         <div>
           <Title level={4}>{title}</Title>
         </div>
-        {userStream.workspaceId
+        {userStream.workspaceId && invites.length === 0 // user is in workspace and has no invites
           ? null
           : (
             <div><Radio.Group
-              value={nextStep}
+              value={nextStep || 'workspace'}
               onChange={(e) => setNextStep(e.target.value)}
               options={[
-                { label: 'Create', value: 'workspace' },
+                { label: userStream.workspaceId ? 'Edit' : 'Create', value: 'workspace' },
                 { label: <Badge color='blue' count={invites.length} offset={[14, -10]}><span className={styles.joinRadioItem}>Join</span></Badge>, value: 'invites' }
               ]}
               optionType='button'
@@ -197,6 +198,7 @@ function getMembersSubTitle (addedUsersCount, planType) {
 }
 
 export function Workspace ({ nextStep, setNextStep }) {
+  const { inviteId } = useParams()
   const userStream = useSelector(state => state.user.stream)
   const addedUsersCount = useSelector(state => state.workspace.addedUsersCount)
   const workspaceId = userStream?.workspaceId
@@ -204,14 +206,16 @@ export function Workspace ({ nextStep, setNextStep }) {
   const [step, setStep] = useState(0)
   // move to the next step if workspaceId is set
   useEffect(() => {
-    if (workspaceId) {
+    if (inviteId) {
+      setStep(0)
+    } else if (workspaceId) {
       if (planType === PlanType.TYPE_TEAM) {
         setStep(2)
       } else {
         setStep(1)
       }
     }
-  }, [workspaceId, planType, setStep])
+  }, [workspaceId, planType, setStep, inviteId])
 
   if (!userStream) {
     return null

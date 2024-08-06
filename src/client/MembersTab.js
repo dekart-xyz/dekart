@@ -7,6 +7,8 @@ import Input from 'antd/es/input'
 import Button from 'antd/es/button'
 import Table from 'antd/es/table'
 import Tag from 'antd/es/tag'
+import { copyUrlToClipboard } from './actions/clipboard'
+import { CopyOutlined } from '@ant-design/icons'
 
 export default function MembersTab () {
   const users = useSelector(state => state.workspace.users)
@@ -58,6 +60,24 @@ export default function MembersTab () {
               dataIndex: 'email',
               key: 'email',
               className: styles.emailColumn
+            },
+            // copy invite link
+            {
+              title: 'Invite',
+              dataIndex: 'status',
+              key: 'invite',
+              render: (status, u) => (
+                status === 1
+                  ? (
+                    <Button
+                      icon={<CopyOutlined />}
+                      className={styles.inviteButton}
+                      title='Copy invite link'
+                      type='text' onClick={() => dispatch(copyUrlToClipboard(window.location.toString() + '/invite/' + u.inviteId, 'Invite link copied to clipboard'))}
+                    />
+                    )
+                  : null
+              )
             },
             {
               title: 'Status',

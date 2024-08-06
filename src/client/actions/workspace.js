@@ -1,7 +1,7 @@
 import { CancelSubscriptionRequest, CreateWorkspaceRequest, CreateSubscriptionRequest, GetInvitesRequest, GetWorkspaceRequest, GetStripePortalSessionRequest, ListUsersRequest, RespondToInviteRequest, UpdateWorkspaceRequest, UpdateWorkspaceUserRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { grpcCall } from './grpc'
-import { info, success } from './message'
+import { success } from './message'
 
 export function redirectToCustomerPortal () {
   return (dispatch) => {
@@ -21,11 +21,7 @@ export function respondToInvite (inviteId, accept) {
     request.setInviteId(inviteId)
     request.setAccept(accept)
     dispatch(grpcCall(Dekart.RespondToInvite, request, () => {
-      if (accept) {
-        window.location.href = '/'
-      } else {
-        info('Invite declined')
-      }
+      window.location.href = '/'
     }))
   }
 }

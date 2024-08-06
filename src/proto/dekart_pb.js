@@ -4420,7 +4420,8 @@ proto.User.toObject = function(includeInstance, msg) {
   var f, obj = {
     email: jspb.Message.getFieldWithDefault(msg, 1, ""),
     updatedAt: jspb.Message.getFieldWithDefault(msg, 2, 0),
-    status: jspb.Message.getFieldWithDefault(msg, 3, 0)
+    status: jspb.Message.getFieldWithDefault(msg, 3, 0),
+    inviteId: jspb.Message.getFieldWithDefault(msg, 4, "")
   };
 
   if (includeInstance) {
@@ -4469,6 +4470,10 @@ proto.User.deserializeBinaryFromReader = function(msg, reader) {
       var value = /** @type {!proto.UserStatus} */ (reader.readEnum());
       msg.setStatus(value);
       break;
+    case 4:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setInviteId(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -4516,6 +4521,13 @@ proto.User.serializeBinaryToWriter = function(message, writer) {
   if (f !== 0.0) {
     writer.writeEnum(
       3,
+      f
+    );
+  }
+  f = message.getInviteId();
+  if (f.length > 0) {
+    writer.writeString(
+      4,
       f
     );
   }
@@ -4573,6 +4585,24 @@ proto.User.prototype.getStatus = function() {
  */
 proto.User.prototype.setStatus = function(value) {
   return jspb.Message.setProto3EnumField(this, 3, value);
+};
+
+
+/**
+ * optional string invite_id = 4;
+ * @return {string}
+ */
+proto.User.prototype.getInviteId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 4, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.User} returns this
+ */
+proto.User.prototype.setInviteId = function(value) {
+  return jspb.Message.setProto3StringField(this, 4, value);
 };
 
 

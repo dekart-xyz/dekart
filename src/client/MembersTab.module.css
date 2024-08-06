@@ -32,6 +32,11 @@
     width: 100%;
 }
 
+.inviteButton {
+    color: #888;
+
+}
+
 .invitesTabName + span {
     margin-left: 5px;
 }
