@@ -387,6 +387,9 @@ export class User extends jspb.Message {
   getStatus(): UserStatusMap[keyof UserStatusMap];
   setStatus(value: UserStatusMap[keyof UserStatusMap]): void;
 
+  getInviteId(): string;
+  setInviteId(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): User.AsObject;
   static toObject(includeInstance: boolean, msg: User): User.AsObject;
@@ -402,6 +405,7 @@ export namespace User {
     email: string,
     updatedAt: number,
     status: UserStatusMap[keyof UserStatusMap],
+    inviteId: string,
   }
 }
 

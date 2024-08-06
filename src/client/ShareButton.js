@@ -19,7 +19,7 @@ function CopyLinkButton () {
       icon={<LinkOutlined />}
       disabled={!playgroundReport && !isPublic && !discoverable}
       title='Copy link to report'
-      onClick={() => dispatch(copyUrlToClipboard(window.location.toString()))}
+      onClick={() => dispatch(copyUrlToClipboard(window.location.toString(), 'Report URL copied to clipboard'))}
     >Copy Link
     </Button>
   )

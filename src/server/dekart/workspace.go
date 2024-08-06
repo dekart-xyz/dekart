@@ -110,7 +110,8 @@ func (s Server) getWorkspaceUsers(ctx context.Context, workspaceID string) ([]*p
 			ol.status,
 			ol.created_at,
 			cl.accepted,
-			ol.authored_by
+			ol.authored_by,
+			ol.id
 		FROM
 			workspace_log ol
 		JOIN
@@ -139,8 +140,9 @@ func (s Server) getWorkspaceUsers(ctx context.Context, workspaceID string) ([]*p
 		var accepted sql.NullBool
 		var status int32
 		var authoredBy string
+		var inviteID string
 		user := proto.User{}
-		err := rows.Scan(&user.Email, &status, &updatedAt, &accepted, &authoredBy)
+		err := rows.Scan(&user.Email, &status, &updatedAt, &accepted, &authoredBy, &inviteID)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, err
@@ -152,6 +154,7 @@ func (s Server) getWorkspaceUsers(ctx context.Context, workspaceID string) ([]*p
 				user.Status = proto.UserStatus_USER_STATUS_REJECTED
 			} else {
 				user.Status = proto.UserStatus_USER_STATUS_PENDING
+				user.InviteId = inviteID
 			}
 		} else {
 			user.Status = proto.UserStatus_USER_STATUS_REMOVED
@@ -178,7 +181,8 @@ func (s Server) getUserWorkspace(ctx context.Context, email string) (*proto.Work
 		) AS oll ON ol.workspace_id = oll.workspace_id AND ol.created_at = oll.created_at
 		LEFT JOIN confirmation_log AS cl ON ol.id = cl.workspace_log_id AND cl.authored_by = ol.email
 		WHERE ol.status = 1 AND (ol.authored_by = $1 OR cl.accepted = TRUE)
-		ORDER BY ol.created_at DESC
+		-- if user accepted the invite, we should show that workspace
+		ORDER BY COALESCE(cl.created_at, ol.created_at) DESC, ol.created_at DESC
 		LIMIT 1
 	`, email)
 	if err != nil {

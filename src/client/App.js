@@ -221,6 +221,9 @@ export default function App () {
         <Route path='/reports/:id'>
           <ReportPage />
         </Route>
+        <Route path='/workspace/invite/:inviteId'>
+          <WorkspacePage userInvite />
+        </Route>
         <Route path='/workspace'>
           <WorkspacePage />
         </Route>
