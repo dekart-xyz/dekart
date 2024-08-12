@@ -1,7 +1,9 @@
 package dekart
 
 import (
+	"fmt"
 	"net/http"
+	"runtime"
 
 	"github.com/rs/zerolog/log"
 	"google.golang.org/api/googleapi"
@@ -17,6 +19,13 @@ func HttpError(w http.ResponseWriter, err error) {
 		http.Error(w, googleErr.Message, googleErr.Code)
 		return
 	}
-	log.Err(err).Interface("details", err).Msg("Unknown API Error")
+	// Capture the caller information
+	pc, file, line, ok := runtime.Caller(1)
+	caller := ""
+	if ok {
+		fn := runtime.FuncForPC(pc)
+		caller = fmt.Sprintf("called from %s:%d %s", file, line, fn.Name())
+	}
+	log.Err(err).Interface("details", err).Str("caller", caller).Msg("Unknown API Error")
 	http.Error(w, err.Error(), http.StatusInternalServerError)
 }

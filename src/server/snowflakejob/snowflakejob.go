@@ -132,67 +132,68 @@ func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connect
 	j.storageObject = storageObject
 	_, isSnowflakeStorageObject := j.storageObject.(storage.SnowflakeStorageObject)
 	j.isSnowflakeStorageObject = isSnowflakeStorageObject
-	queryIDChan := make(chan string)
-	resultsReady := make(chan bool)
-	metadataWg := &sync.WaitGroup{}
-	metadataWg.Add(1)
-	go j.fetchQueryMetadata(queryIDChan, resultsReady, metadataWg)
-	j.Status() <- int32(proto.Query_JOB_STATUS_RUNNING)
-	// TODO will this just work: queryID = rows1.(sf.SnowflakeRows).GetQueryID()
-	// https://pkg.go.dev/github.com/snowflakedb/gosnowflake#hdr-Fetch_Results_by_Query_ID
-	rows, err := j.snowflakeDb.QueryContext(
-		sf.WithQueryIDChan(j.GetCtx(), queryIDChan),
-		j.QueryText,
-	)
-	if err != nil {
-		j.Logger.Debug().Err(err).Msg("Error querying snowflake")
-		j.CancelWithError(err)
-		return nil // it's ok, since these are query errors
-	}
-	defer rows.Close()
+	go func() {
+		queryIDChan := make(chan string)
+		resultsReady := make(chan bool)
+		metadataWg := &sync.WaitGroup{}
+		metadataWg.Add(1)
+		go j.fetchQueryMetadata(queryIDChan, resultsReady, metadataWg)
+		j.Status() <- int32(proto.Query_JOB_STATUS_RUNNING)
+		// TODO will this just work: queryID = rows1.(sf.SnowflakeRows).GetQueryID()
+		// https://pkg.go.dev/github.com/snowflakedb/gosnowflake#hdr-Fetch_Results_by_Query_ID
+		rows, err := j.snowflakeDb.QueryContext(
+			sf.WithQueryIDChan(j.GetCtx(), queryIDChan),
+			j.QueryText,
+		)
+		if err != nil {
+			j.Logger.Debug().Err(err).Msg("Error querying snowflake")
+			j.CancelWithError(err)
+			return
+		}
+		defer rows.Close()
 
-	if isSnowflakeStorageObject { // no need to write to storage, use temp query results storage
-		resultsReady <- true
-		defer (func() {
-			j.Status() <- int32(proto.Query_JOB_STATUS_DONE)
-		})()
-	} else {
-		csvRows := make(chan []string, 10) //j.TotalRows?
+		if isSnowflakeStorageObject { // no need to write to storage, use temp query results storage
+			resultsReady <- true
+			defer (func() {
+				j.Status() <- int32(proto.Query_JOB_STATUS_DONE)
+			})()
+		} else {
+			csvRows := make(chan []string, 10) //j.TotalRows?
 
-		go j.write(csvRows)
+			go j.write(csvRows)
 
-		firstRow := true
-		for rows.Next() {
-			if firstRow {
-				firstRow = false
-				resultsReady <- true
-				j.Status() <- int32(proto.Query_JOB_STATUS_READING_RESULTS)
-				columnNames, err := snowflakeutils.GetColumns(rows)
+			firstRow := true
+			for rows.Next() {
+				if firstRow {
+					firstRow = false
+					resultsReady <- true
+					j.Status() <- int32(proto.Query_JOB_STATUS_READING_RESULTS)
+					columnNames, err := snowflakeutils.GetColumns(rows)
+					if err != nil {
+						j.Logger.Error().Err(err).Msg("Error getting column names")
+						j.CancelWithError(err)
+						return
+					}
+					csvRows <- columnNames
+				}
+
+				csvRow, err := snowflakeutils.GetRow(rows)
 				if err != nil {
 					j.Logger.Error().Err(err).Msg("Error getting column names")
 					j.CancelWithError(err)
-					return err
+					return
 				}
-				csvRows <- columnNames
+				csvRows <- csvRow
 			}
 
-			csvRow, err := snowflakeutils.GetRow(rows)
-			if err != nil {
-				j.Logger.Error().Err(err).Msg("Error getting column names")
-				j.CancelWithError(err)
-				return err
+			if firstRow {
+				// unblock fetchQueryMetadata if no rows
+				resultsReady <- true
 			}
-			csvRows <- csvRow
+			defer close(csvRows)
 		}
-
-		if firstRow {
-			// unblock fetchQueryMetadata if no rows
-			resultsReady <- true
-		}
-		defer close(csvRows)
-	}
-
-	metadataWg.Wait() // do not close context until metadata is fetched
+		metadataWg.Wait() // do not close context until metadata is fetched
+	}()
 	return nil
 }
 

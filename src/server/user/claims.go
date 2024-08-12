@@ -243,8 +243,12 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 	redirectState := &pb.RedirectState{}
 	ctx := r.Context()
 	if authErr != "" {
-		log.Error().Str("authErr", authErr).Msg("Error authenticating")
 		redirectState.Error = authErr
+		if authErr == "access_denied" {
+			log.Warn().Str("authErr", authErr).Msg("User denied access with Google OAuth")
+		} else {
+			log.Error().Str("authErr", authErr).Msg("Error authenticating")
+		}
 		return redirectState
 	}
 	var auth = c.getAuthConfig(state)
