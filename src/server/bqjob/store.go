@@ -7,10 +7,14 @@ import (
 	"dekart/src/server/user"
 	"os"
 	"strconv"
+	"strings"
 
 	"cloud.google.com/go/bigquery"
+	bqStorage "cloud.google.com/go/bigquery/storage/apiv1"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
+	bqStoragePb "google.golang.org/genproto/googleapis/cloud/bigquery/storage/v1"
 )
 
 // Store implements job.Store interface for BigQuery
@@ -86,13 +90,41 @@ func TestConnection(ctx context.Context, req *proto.TestConnectionRequest) (*pro
 	it := client.Datasets(ctx)
 	_, err = it.Next()
 	if err != nil {
-		log.Debug().Err(err).Msg("client.Datasets failed")
+		if err != iterator.Done { // if no datasets found, it still ok
+			return &proto.TestConnectionResponse{
+				Success: false,
+				Error:   err.Error(),
+			}, nil
+		}
+	}
+
+	// Attempt to create a read session to check for permissions
+	bqReadClient, err := bqStorage.NewBigQueryReadClient(ctx, option.WithTokenSource(tokenSource))
+	if err != nil {
+		log.Debug().Err(err).Msg("bigquery.NewBigQueryReadClient failed")
 		return &proto.TestConnectionResponse{
 			Success: false,
 			Error:   err.Error(),
 		}, nil
 	}
+	defer bqReadClient.Close()
 
+	createReadSessionRequest := &bqStoragePb.CreateReadSessionRequest{
+		Parent: "projects/" + req.Connection.BigqueryProjectId,
+		ReadSession: &bqStoragePb.ReadSession{
+			Table:      "projects/bigquery-public-data/datasets/samples/tables/shakespeare", // well-known public dataset
+			DataFormat: bqStoragePb.DataFormat_AVRO,
+		},
+	}
+	_, err = bqReadClient.CreateReadSession(ctx, createReadSessionRequest)
+	if err != nil {
+		if strings.Contains(err.Error(), "PermissionDenied") {
+			return &proto.TestConnectionResponse{
+				Success: false,
+				Error:   err.Error(),
+			}, nil
+		}
+	}
 	return &proto.TestConnectionResponse{
 		Success: true,
 	}, nil

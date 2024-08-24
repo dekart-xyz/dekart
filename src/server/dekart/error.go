@@ -3,6 +3,7 @@ package dekart
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 	"runtime"
 
 	"github.com/rs/zerolog/log"
@@ -19,6 +20,17 @@ func HttpError(w http.ResponseWriter, err error) {
 		http.Error(w, googleErr.Message, googleErr.Code)
 		return
 	}
+
+	// Handle specific RPC error format for PermissionDenied using regex
+	re := regexp.MustCompile(`rpc error: code = PermissionDenied desc = (.*)`)
+	matches := re.FindStringSubmatch(err.Error())
+	if len(matches) > 1 {
+		log.Warn().Err(err).Msg("Permission Denied Error")
+		desc := matches[1]
+		http.Error(w, "Permission Denied: "+desc, http.StatusForbidden)
+		return
+	}
+
 	// Capture the caller information
 	pc, file, line, ok := runtime.Caller(1)
 	caller := ""
