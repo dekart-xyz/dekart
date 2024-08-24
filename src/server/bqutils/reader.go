@@ -6,6 +6,7 @@ import (
 	"dekart/src/server/user"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 
 	"cloud.google.com/go/bigquery"
@@ -67,7 +68,14 @@ func NewReader(
 	r.session, err = r.bqReadClient.CreateReadSession(r.ctx, createReadSessionRequest, rpcOpts)
 	if err != nil {
 		//TODO: context canceled
-		r.logger.Error().Err(err).Msg("cannot create read session")
+
+		// Check if the error is PermissionDenied
+		if strings.Contains(err.Error(), "PermissionDenied") {
+			// user does not have permission to create read session, not dekart error
+			r.logger.Warn().Err(err).Msg("Permission Denied: cannot create read session")
+		} else {
+			r.logger.Error().Err(err).Msg("cannot create read session")
+		}
 		return r, err
 	}
 	r.tableDecoder, err = NewDecoder(r.session)
