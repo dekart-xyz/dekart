@@ -4,7 +4,7 @@ import copy from '../../fixtures/copy.json'
 describe('basic query flow', () => {
   it('should make simple athena query and get ready status', () => {
     cy.visit('/')
-    cy.get(`button:contains("${copy.create_report}")`).click()
+    cy.get('button#dekart-create-report').click()
     cy.get('button:contains("Add data from...")').click()
     cy.get('span:contains("SQL query")').click()
     cy.get('textarea').type(copy.simple_athena_query, { force: true })
@@ -17,7 +17,7 @@ describe('basic query flow', () => {
 describe('cancelling query', () => {
   it('should cancels query', () => {
     cy.visit('/')
-    cy.get(`button:contains("${copy.create_report}")`).click()
+    cy.get('button#dekart-create-report').click()
     cy.get('button:contains("Add data from...")').click()
     cy.get('span:contains("SQL query")').click()
     cy.get('textarea').type(copy.simple_athena_query, { force: true })

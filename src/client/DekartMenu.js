@@ -1,7 +1,7 @@
 import Menu from 'antd/es/menu'
 import styles from './DekartMenu.module.css'
 import { useDispatch, useSelector } from 'react-redux'
-import { getRef } from './lib/ref'
+import { getUrlRef } from './lib/ref'
 import { MenuOutlined, MessageOutlined } from '@ant-design/icons'
 import { Link } from 'react-router-dom/cjs/react-router-dom'
 import { createReport } from './actions/report'
@@ -9,23 +9,33 @@ import { createReport } from './actions/report'
 export default function DekartMenu () {
   const env = useSelector(state => state.env)
   const usage = useSelector(state => state.usage)
+  const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const dispatch = useDispatch()
   const { authEnabled } = env
-  const userDefinedConnection = useSelector(state => state.connection.userDefined)
-  const ref = getRef(env, usage)
+  const ref = getUrlRef(env, usage)
   return (
     <div className={styles.dekartMenu}>
       <Menu mode='horizontal' theme='dark'>
-        <Menu.SubMenu popupClassName={styles.subMenu} title={<MenuOutlined />} key='home' active='yes' href='/'>
-          <Menu.Item key='my'>
-            <Link to='/'>{authEnabled ? 'My Reports' : 'Reports'}</Link>
-          </Menu.Item>
-          <Menu.Item key='shared' disabled={!authEnabled}>
-            <Link to='/shared'>Shared reports</Link>
-          </Menu.Item>
-          {userDefinedConnection
-            ? <Menu.Item key='connections'><Link to='/connections'>Connections</Link></Menu.Item>
-            : null}
+        <Menu.SubMenu
+          popupClassName={styles.subMenu} title={<MenuOutlined />} key='home' active='yes'
+        >
+          {authEnabled
+            ? (
+              <>
+                <Menu.Item key='my'>
+                  <Link to='/'>My Reports</Link>
+                </Menu.Item>
+                <Menu.Item key='shared'>
+                  <Link to='/shared'>Shared reports</Link>
+                </Menu.Item>
+              </>
+              )
+            : (
+              <Menu.Item key='reports'>
+                <Link to='/'>Reports</Link>
+              </Menu.Item>
+              )}
+          {userDefinedConnection ? (<Menu.Item key='connections'><Link to='/connections'>Connections</Link></Menu.Item>) : null}
           <Menu.Divider />
           <Menu.Item key='create' onClick={() => dispatch(createReport())}>New Report</Menu.Item>
         </Menu.SubMenu>

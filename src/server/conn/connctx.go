@@ -3,38 +3,32 @@ package conn
 import (
 	"context"
 	"dekart/src/proto"
+	"os"
 
 	"github.com/rs/zerolog/log"
 )
-
-type Connection struct {
-	ID                 string
-	ConnectionName     string
-	BigqueryProjectID  string
-	CloudStorageBucket string
-}
 
 type ConnectionContextKey string
 
 const connectionContextKey ConnectionContextKey = "connection"
 
-func GetCtx(ctx context.Context, connection *proto.Connection) context.Context {
-	if connection == nil {
-		return context.WithValue(ctx, connectionContextKey, Connection{})
-	}
-	return context.WithValue(ctx, connectionContextKey, Connection{
-		ID:                 connection.Id,
-		ConnectionName:     connection.ConnectionName,
-		BigqueryProjectID:  connection.BigqueryProjectId,
-		CloudStorageBucket: connection.CloudStorageBucket,
-	})
+var dekartBigQueryProjectID = os.Getenv("DEKART_BIGQUERY_PROJECT_ID")
+var dekartCloudStorageBucket = os.Getenv("DEKART_CLOUD_STORAGE_BUCKET")
+var dekartDataSource = os.Getenv("DEKART_DATASOURCE")
+
+func IsUserDefined() bool {
+	return (dekartBigQueryProjectID == "" && dekartDataSource == "BQ") || (dekartCloudStorageBucket == "" && dekartDataSource != "SNOWFLAKE")
 }
 
-func FromCtx(ctx context.Context) Connection {
-	connection, ok := ctx.Value(connectionContextKey).(Connection)
+func GetCtx(ctx context.Context, connection *proto.Connection) context.Context {
+	return context.WithValue(ctx, connectionContextKey, connection)
+}
+
+func FromCtx(ctx context.Context) *proto.Connection {
+	connection, ok := ctx.Value(connectionContextKey).(*proto.Connection)
 	if !ok {
 		log.Error().Msg("Connection not found in context")
-		return Connection{}
+		return &proto.Connection{}
 	}
 	return connection
 }

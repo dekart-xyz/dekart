@@ -46,3 +46,6 @@ cypress/screenshots
 # IDE
 .idea
 testtmp*
+
+# .env
+.env.*

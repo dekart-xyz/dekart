@@ -4,7 +4,7 @@ import copy from '../../fixtures/copy.json'
 describe('basic query flow', () => {
   it('should make simple bigquery query and get ready status', () => {
     cy.visit('/')
-    cy.get(`button:contains("${copy.create_report}")`).click()
+    cy.get('button#dekart-create-report').click()
     cy.get('button:contains("Add data from...")').click()
     cy.get('span:contains("SQL query")').click()
     cy.get('textarea').type(copy.simple_sql_query, { force: true })

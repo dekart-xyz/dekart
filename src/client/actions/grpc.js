@@ -117,6 +117,11 @@ export function grpcStream (endpoint, request, cb) {
       headers
     )
     dispatch({ type: grpcStream.name, endpoint, cancelable })
+
+    // avoid error on page reload
+    window.addEventListener('beforeunload', () => {
+      dispatch(grpcStreamCancel(endpoint))
+    })
   }
 }
 

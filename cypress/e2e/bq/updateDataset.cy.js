@@ -5,7 +5,7 @@ describe('update dataset', () => {
   it('should persist kepler config when updating dataset', () => {
     // create report
     cy.visit('/')
-    cy.get(`button:contains("${copy.create_report}")`).click()
+    cy.get('button#dekart-create-report').click()
 
     // first query
     cy.get('button:contains("Add data from...")').click()

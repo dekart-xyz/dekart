@@ -1,11 +1,13 @@
 import { combineReducers } from 'redux'
-import { closeConnectionDialog, connectionChanged, connectionCreated, connectionListUpdate, connectionSaved, editConnection, newConnection, projectListUpdate, saveConnection, testConnection, testConnectionResponse } from '../actions/connection'
+import { closeConnectionDialog, connectionChanged, connectionCreated, connectionListUpdate, connectionSaved, editConnection, newConnection, newConnectionScreen, projectListUpdate, reOpenDialog, saveConnection, testConnection, testConnectionResponse } from '../actions/connection'
+import { sessionStorageInit } from '../actions/sessionStorage'
 import { setEnv } from '../actions/env'
 
 function dialog (state = {
   visible: false,
   loading: true,
-  id: null
+  id: null,
+  connectionType: null
 }, action) {
   switch (action.type) {
     case closeConnectionDialog.name:
@@ -17,6 +19,7 @@ function dialog (state = {
       return {
         ...state,
         id: action.id,
+        connectionType: action.connectionType,
         visible: true,
         loading: false
       }
@@ -25,7 +28,8 @@ function dialog (state = {
         ...state,
         visible: true,
         id: null,
-        loading: false
+        loading: false,
+        connectionType: action.connectionType
       }
     case connectionCreated.name:
       return {
@@ -106,8 +110,7 @@ function listLoaded (state = false, action) {
 function userDefined (state = false, action) {
   switch (action.type) {
     case setEnv.name: {
-      const { BIGQUERY_PROJECT_ID, CLOUD_STORAGE_BUCKET, DATASOURCE } = action.variables
-      return (BIGQUERY_PROJECT_ID === '' && DATASOURCE === 'BQ') || (CLOUD_STORAGE_BUCKET === '' && DATASOURCE !== 'SNOWFLAKE')
+      return Boolean(action.variables.USER_DEFINED_CONNECTION)
     }
     default:
       return state
@@ -123,11 +126,35 @@ function projects (state = null, action) {
   }
 }
 
+function screen (state = false, action) {
+  switch (action.type) {
+    case newConnectionScreen.name:
+      return action.show
+    case newConnection.name:
+      return false
+    default:
+      return state
+  }
+}
+
+function lastOpenedDialog (state = null, action) {
+  switch (action.type) {
+    case sessionStorageInit.name:
+      return action.current.lastOpenedDialog || null
+    case reOpenDialog.name:
+      return null // only open dialog once
+    default:
+      return state
+  }
+}
+
 export default combineReducers({
   dialog,
   test,
   list,
   userDefined,
   listLoaded,
-  projects
+  projects,
+  screen,
+  lastOpenedDialog
 })

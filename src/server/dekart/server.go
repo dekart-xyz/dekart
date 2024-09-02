@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/conn"
 	"dekart/src/server/job"
 	"dekart/src/server/report"
+	"dekart/src/server/secrets"
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
 	"encoding/json"
@@ -32,7 +34,6 @@ type Server struct {
 var Unauthenticated error = status.Error(codes.Unauthenticated, "UNAUTHENTICATED")
 
 // NewServer returns new Dekart Server
-// func NewServer(db *sql.DB, bucket *storage.BucketHandle, jobs *job.Store) *Server {
 func NewServer(db *sql.DB, storageBucket storage.Storage, jobs job.Store) *Server {
 	server := Server{
 		db:            db,
@@ -131,6 +132,16 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 		if homePageUrl == "" {
 			homePageUrl = "https://dekart.xyz/cloud/"
 		}
+		var authEnabled string
+		if claims.Email != user.UnknownEmail {
+			authEnabled = "1"
+		}
+
+		var userDefinedConnection string
+		if conn.IsUserDefined() {
+			userDefinedConnection = "1"
+		}
+
 		variables = []*proto.GetEnvResponse_Variable{
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_MAPBOX_TOKEN,
@@ -191,6 +202,22 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_CLOUD_STORAGE_BUCKET,
 				Value: defaultString(os.Getenv("DEKART_CLOUD_STORAGE_BUCKET"), ""),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_AES_KEY,
+				Value: secrets.GetClientKeyBase64(*claims),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_AES_IV,
+				Value: secrets.GetClientIVBase64(*claims),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_AUTH_ENABLED,
+				Value: authEnabled,
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_USER_DEFINED_CONNECTION,
+				Value: userDefinedConnection,
 			},
 		}
 

@@ -1,6 +1,7 @@
 import { combineReducers } from 'redux'
-import { userStreamUpdate } from '../actions/user'
+import { needSensitiveScopes, userStreamUpdate } from '../actions/user'
 import { localStorageInit } from '../actions/localStorage'
+import { setRedirectState } from '../actions/redirect'
 
 function stream (state = null, action) {
   switch (action.type) {
@@ -18,8 +19,35 @@ function sensitiveScopesGrantedOnce (state = false, action) {
   switch (action.type) {
     case localStorageInit.name:
       return action.current.sensitiveScopesGrantedOnce
-    case userStreamUpdate.name:
-      return action.userStream.sensitiveScopesGrantedOnce
+    case setRedirectState.name: {
+      if (action.redirectState.getSensitiveScopesGranted()) {
+        return true
+      } else {
+        return state
+      }
+    }
+    default:
+      return state
+  }
+}
+
+function sensitiveScopesGranted (state = false, action) {
+  switch (action.type) {
+    case setRedirectState.name: {
+      if (action.redirectState.getSensitiveScopesGranted()) {
+        return true
+      }
+      return state
+    }
+    default:
+      return state
+  }
+}
+
+function sensitiveScopesNeeded (state = false, action) {
+  switch (action.type) {
+    case needSensitiveScopes.name:
+      return true
     default:
       return state
   }
@@ -36,8 +64,20 @@ function loginHint (state = null, action) {
   }
 }
 
+function redirectStateReceived (state = false, action) {
+  switch (action.type) {
+    case setRedirectState.name:
+      return true
+    default:
+      return state
+  }
+}
+
 export default combineReducers({
   stream,
   sensitiveScopesGrantedOnce,
-  loginHint
+  sensitiveScopesNeeded,
+  sensitiveScopesGranted,
+  loginHint,
+  redirectStateReceived
 })

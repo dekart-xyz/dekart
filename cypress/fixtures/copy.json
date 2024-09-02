@@ -1,5 +1,4 @@
 {
-  "create_report": "Report",
   "bigquery_query": "BigQuery query",
   "athena_query": "Athena query",
   "snowflake_query": "Snowflake query",

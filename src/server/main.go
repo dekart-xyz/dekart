@@ -18,8 +18,10 @@ import (
 	"dekart/src/server/dekart"
 	"dekart/src/server/job"
 	"dekart/src/server/pgjob"
+	"dekart/src/server/secrets"
 	"dekart/src/server/snowflakejob"
 	"dekart/src/server/storage"
+	"dekart/src/server/userjob"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -119,6 +121,9 @@ func configureBucket() storage.Storage {
 func configureJobStore(bucket storage.Storage) job.Store {
 	var jobStore job.Store
 	switch os.Getenv("DEKART_DATASOURCE") {
+	case "USER":
+		log.Info().Msg("Using USER defined job store backend")
+		jobStore = userjob.NewStore()
 	case "SNOWFLAKE":
 		log.Info().Msg("Using Snowflake Datasource backend")
 		jobStore = snowflakejob.NewStore()
@@ -158,6 +163,8 @@ func waitForInterrupt() chan os.Signal {
 
 func main() {
 	configureLogger()
+
+	secrets.Init()
 
 	db := configureDb()
 	defer db.Close()

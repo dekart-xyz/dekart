@@ -4,7 +4,7 @@ import copy from '../../fixtures/copy.json'
 describe('support bq scripts', () => {
   it('retrieve result for bigquery script', () => {
     cy.visit('/')
-    cy.get(`button:contains("${copy.create_report}")`).click()
+    cy.get('button#dekart-create-report').click()
     cy.get('button:contains("Add data from...")').click()
     cy.get('span:contains("SQL query")').click()
     cy.get('textarea').type(copy.bigquery_script, { force: true })

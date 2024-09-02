@@ -3,7 +3,6 @@ package dekart
 import (
 	"context"
 	"crypto/sha1"
-	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/conn"
 	"dekart/src/server/user"
@@ -69,46 +68,20 @@ func (e *queryWasNotUpdated) Error() string {
 	return "query was not updated"
 }
 
-func (s Server) storeQuerySync(ctx context.Context, bucketName, queryID string, queryText string, prevQuerySourceId string) error {
+func (s Server) storeQuerySync(ctx context.Context, queryID string, queryText string, prevQuerySourceId string) error {
 	h := sha1.New()
 	queryTextByte := []byte(queryText)
 	h.Write(queryTextByte)
 	newQuerySourceId := fmt.Sprintf("%x", h.Sum(nil))
-	var result sql.Result
-	var err error
-	if s.storage.CanSaveQuery(ctx, bucketName) {
-		log.Debug().Str("bucketName", bucketName).Msg("Storing query text in storage")
-		storageWriter := s.storage.GetObject(ctx, bucketName, fmt.Sprintf("%s.sql", newQuerySourceId)).GetWriter(ctx)
-		_, err = storageWriter.Write(queryTextByte)
-		if err != nil {
-			log.Err(err).Msg("Error writing query_text to storage")
-			storageWriter.Close()
-			return err
-		}
-		err = storageWriter.Close()
-		if err != nil {
-			log.Err(err).Str("bucketName", bucketName).Msg("Error writing query_text to storage")
-			return err
-		}
-
-		result, err = s.db.ExecContext(ctx,
-			`update queries set query_source_id=$1, query_source=$2, updated_at=now() where id=$3 and query_source_id=$4`,
-			newQuerySourceId,
-			proto.Query_QUERY_SOURCE_STORAGE,
-			queryID,
-			prevQuerySourceId,
-		)
-	} else {
-		log.Debug().Msg("Storing query text in database")
-		result, err = s.db.ExecContext(ctx,
-			`update queries set query_text=$1, query_source_id=$2, query_source=$3, updated_at=now() where id=$4 and query_source_id=$5`,
-			queryText,
-			newQuerySourceId,
-			proto.Query_QUERY_SOURCE_INLINE,
-			queryID,
-			prevQuerySourceId,
-		)
-	}
+	// now we always store the query text in the database
+	result, err := s.db.ExecContext(ctx,
+		`update queries set query_text=$1, query_source_id=$2, query_source=$3, updated_at=now() where id=$4 and query_source_id=$5`,
+		queryText,
+		newQuerySourceId,
+		proto.Query_QUERY_SOURCE_INLINE,
+		queryID,
+		prevQuerySourceId,
+	)
 	if err != nil {
 		return err
 	}
@@ -122,18 +95,8 @@ func (s Server) storeQuerySync(ctx context.Context, bucketName, queryID string, 
 func (s Server) storeQuery(userCtx context.Context, reportID string, queryID string, queryText string, prevQuerySourceId string) {
 	ctx, cancel := context.WithTimeout(user.CopyClaims(userCtx, context.Background()), time.Second*5)
 	defer cancel()
-	connection, err := s.getConnectionFromQueryID(ctx, queryID)
 
-	conCtx := conn.GetCtx(ctx, connection)
-
-	if err != nil {
-		log.Err(err).Msg("Error getting connection from query id")
-		return
-	}
-
-	bucketName := s.getBucketNameFromConnection(connection)
-
-	err = s.storeQuerySync(conCtx, bucketName, queryID, queryText, prevQuerySourceId)
+	err := s.storeQuerySync(ctx, queryID, queryText, prevQuerySourceId)
 	if _, ok := err.(*queryWasNotUpdated); ok {
 		log.Warn().Msg("Query text not updated")
 		return
@@ -145,6 +108,7 @@ func (s Server) storeQuery(userCtx context.Context, reportID string, queryID str
 	s.reportStreams.Ping(reportID)
 }
 
+// legacy for query source stored in the storage
 func (s Server) getQueryText(ctx context.Context, querySourceId string, bucketName string) (string, error) {
 	if querySourceId == "" {
 		return "", nil

@@ -94,27 +94,60 @@ func (s BigQueryStorageObject) GetReader(ctx context.Context) (io.ReadCloser, er
 	)
 	pr, pw := io.Pipe()
 	csvWriter := csv.NewWriter(pw)
+	var firstRow []string
+	var more bool
+
+	// read first row, make sure it's not an error
+	// this is needed because if user doesn't have permission to create read session, error will be returned in the channel
+	select {
+	case firstRow, more = <-csvRows:
+		if !more {
+			err := fmt.Errorf("no data returned by BigQuery Readers")
+			log.Err(err).Send()
+			return nil, err
+		}
+	case err := <-errors:
+		return nil, err
+	}
+
 	go func() {
-		for {
-			csvRow, more := <-csvRows
-			if !more {
-				break
-			}
-			err := csvWriter.Write(csvRow)
-			if err == context.Canceled {
-				break
-			}
+		defer pw.Close()
+		defer csvWriter.Flush()
+
+		if more {
+			// write first row
+			log.Debug().Msg("writing first row")
+			err := csvWriter.Write(firstRow)
 			if err != nil {
 				log.Err(err).Send()
-				break
+				return
+			}
+
+			// continue writing rows
+			for {
+				select {
+				case csvRow, more := <-csvRows:
+					if !more {
+						return
+					}
+					err := csvWriter.Write(csvRow)
+					if err != nil {
+						log.Err(err).Send()
+						return
+					}
+				case err := <-errors:
+					if err != nil {
+						log.Err(err).Send()
+						return
+					}
+				case <-ctx.Done():
+					log.Debug().Msg("context canceled")
+					return
+				}
 			}
 		}
-		csvWriter.Flush()
-		err := pw.Close()
-		if err != nil {
-			log.Error().Err(err).Msg("Error closing pipe writer")
-		}
 	}()
+
 	return pr, nil
 }
 
@@ -122,4 +155,26 @@ func (s BigQueryStorageObject) CopyFromS3(ctx context.Context, source string) er
 	err := fmt.Errorf("BigQueryStorageObject CopyFromS3 not implemented")
 	log.Fatal().Err(err).Send()
 	return err
+}
+
+func (s BigQueryStorageObject) Delete(ctx context.Context) error {
+	log.Fatal().Msg("BigQueryStorageObject Delete not implemented")
+	return nil
+}
+
+func (s BigQueryStorageObject) CopyTo(ctx context.Context, writer io.WriteCloser) error {
+	reader, err := s.GetReader(ctx)
+	if err != nil {
+		log.Err(err).Msg("Error getting reader while copying to")
+		return err
+	}
+	_, err = io.Copy(writer, reader)
+	if err != nil {
+		return err
+	}
+	err = writer.Close()
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -16,6 +16,11 @@
     flex-direction: column;
 }
 
+.iconColumn {
+    padding-right: 0 !important;
+    opacity: 0.7;
+}
+
 .dataDocs {
     display: block;
 }
@@ -158,4 +163,18 @@
     flex-direction: row;
     align-items: right;
     gap: 10px;
+}
+
+.stepBySetLink {
+    margin-top: 15px;
+}
+
+.connectionTypeSelector :global(.ant-btn) {
+    font-size: 1.4em;
+    height: 60px;
+    margin: 0.5em;
+}
+
+.connectionTypeSelector {
+    margin-bottom: 10px;
 }

@@ -147,6 +147,19 @@ func CopyClaims(sourceCtx, destCtx context.Context) context.Context {
 	return context.WithValue(destCtx, contextKey, claims)
 }
 
+func copyClaims(sourceCtx, destCtx context.Context) context.Context {
+	claims := GetClaims(sourceCtx)
+	if claims == nil {
+		return destCtx
+	}
+	return context.WithValue(destCtx, contextKey, claims)
+}
+
+// CopyUserContext from one context to another
+func CopyUserContext(sourceCtx, destCtx context.Context) context.Context {
+	return copyClaims(sourceCtx, destCtx)
+}
+
 // GetTokenSource returns oauth2.TokenSource from context, returns nil if not found
 func GetTokenSource(ctx context.Context) oauth2.TokenSource {
 	claims := GetClaims(ctx)
@@ -235,8 +248,12 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 	redirectState := &pb.RedirectState{}
 	ctx := r.Context()
 	if authErr != "" {
-		log.Error().Str("authErr", authErr).Msg("Error authenticating")
 		redirectState.Error = authErr
+		if authErr == "access_denied" {
+			log.Warn().Str("authErr", authErr).Msg("User denied access with Google OAuth")
+		} else {
+			log.Error().Str("authErr", authErr).Msg("Error authenticating")
+		}
 		return redirectState
 	}
 	var auth = c.getAuthConfig(state)
@@ -271,7 +288,18 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 			tokenInfo.Scope,
 		)
 		if err != nil {
-			log.Fatal().Err(err).Msg("Error marshalling token")
+			log.Fatal().Err(err).Msg("Error updating user sensitive scope")
+		}
+	} else {
+		// create or update user, do not update sensitive scope
+		_, err = c.db.ExecContext(
+			ctx,
+			"INSERT INTO users (email, sensitive_scope) VALUES ($1, $2) ON CONFLICT (email) DO UPDATE SET updated_at = CURRENT_TIMESTAMP",
+			tokenInfo.Email,
+			tokenInfo.Scope,
+		)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Error updating user")
 		}
 	}
 
@@ -280,6 +308,7 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 		log.Fatal().Err(err).Msg("Error marshalling token")
 	}
 	redirectState.TokenJson = string(tokenBin)
+	redirectState.SensitiveScopesGranted = missingSensitiveScope == ""
 	return redirectState
 }
 
@@ -304,11 +333,30 @@ func (c ClaimsCheck) requestDevToken(state *pb.AuthState, r *http.Request) *pb.R
 		return redirectState
 	}
 
+	tokenInfo, err := c.getTokenInfo(ctx, token)
+	if err != nil {
+		log.Error().Err(err).Msg("Error getting token info")
+		redirectState.Error = "Error getting token info"
+		return redirectState
+	}
+
+	// check if required scopes are granted by the user
+	missingScope := checkMissingScope(auth.Scopes, tokenInfo.Scope)
+	if missingScope != "" {
+		log.Warn().Str("missingScope", missingScope).Msg("Scope missing")
+		redirectState.Error = fmt.Sprintf("Scope %s missing", missingScope)
+		return redirectState
+	}
+
+	// update user sensitive scope requested to not show the scope onboarding again
+	missingSensitiveScope := checkMissingScope(sensitiveScope, tokenInfo.Scope)
+
 	tokenBin, err := json.Marshal(*token)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Error marshalling token")
 	}
 	redirectState.TokenJson = string(tokenBin)
+	redirectState.SensitiveScopesGranted = missingSensitiveScope == ""
 	return redirectState
 }
 

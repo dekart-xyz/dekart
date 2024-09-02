@@ -11,15 +11,20 @@ import { toggleModal } from '@dekart-xyz/kepler.gl/dist/actions/ui-state-actions
 import { EXPORT_DATA_ID, EXPORT_IMAGE_ID, EXPORT_MAP_ID } from '@dekart-xyz/kepler.gl/dist/constants'
 import Dropdown from 'antd/es/dropdown'
 
-function ForkButton ({ reportId, disabled, primary }) {
+function ForkButton ({ primary }) {
   const dispatch = useDispatch()
+  const { id: reportId } = useSelector(state => state.report)
+
+  const onClick = () => {
+    dispatch(forkReport(reportId))
+  }
+
   if (primary) {
     return (
       <Button
         type='primary'
         icon={<ForkOutlined />}
-        disabled={disabled}
-        onClick={() => dispatch(forkReport(reportId))}
+        onClick={onClick}
       >Fork
       </Button>
     )
@@ -28,10 +33,9 @@ function ForkButton ({ reportId, disabled, primary }) {
     <Button
       type='text'
       icon={<ForkOutlined />}
-      disabled={disabled}
-      onClick={() => dispatch(forkReport(reportId))}
+      onClick={onClick}
       id='dekart-fork-button'
-      title='Fork Report'
+      title='Fork this report'
     />
   )
 }
@@ -83,7 +87,7 @@ function RefreshButton () {
 function EditModeButtons ({ changed }) {
   const dispatch = useDispatch()
   const history = useHistory()
-  const { id, discoverable, canWrite, allowEdit, isAuthor } = useSelector(state => state.report)
+  const { id, canWrite } = useSelector(state => state.report)
   const { canSave } = useSelector(state => state.reportStatus)
 
   return (
@@ -97,11 +101,11 @@ function EditModeButtons ({ changed }) {
         onClick={() => history.replace(`/reports/${id}`)}
       />
       <ExportDropdown />
-      <ShareButton reportId={id} discoverable={discoverable} isAuthor={isAuthor} allowEdit={allowEdit} />
+      <ShareButton />
       {canWrite
         ? (
           <>
-            <ForkButton reportId={id} disabled={!canSave} />
+            <ForkButton />
             <Button
               id='dekart-save-button'
               type={changed ? 'primary' : 'default'}
@@ -112,7 +116,7 @@ function EditModeButtons ({ changed }) {
             </Button>
           </>
           )
-        : <ForkButton reportId={id} disabled={!canSave} />}
+        : <ForkButton primary />}
     </div>
   )
 }
@@ -158,15 +162,14 @@ function ExportDropdown () {
 
 function ViewModeButtons () {
   const history = useHistory()
-  const { id, discoverable, canWrite, allowEdit, isAuthor } = useSelector(state => state.report)
-  const { canSave } = useSelector(state => state.reportStatus)
+  const { id, canWrite } = useSelector(state => state.report)
   if (canWrite) {
     return (
       <div className={styles.reportHeaderButtons}>
         <RefreshButton />
         <ExportDropdown />
-        <ShareButton reportId={id} discoverable={discoverable} isAuthor={isAuthor} allowEdit={allowEdit} />
-        <ForkButton reportId={id} disabled={!canSave} />
+        <ShareButton />
+        <ForkButton />
         <Button
           type='primary'
           disabled={!canWrite}
@@ -188,8 +191,8 @@ function ViewModeButtons () {
         title='View SQL source'
       />
       <ExportDropdown />
-      <ShareButton reportId={id} discoverable={discoverable} isAuthor={isAuthor} allowEdit={allowEdit} />
-      <ForkButton reportId={id} disabled={!canSave} />
+      <ShareButton />
+      <ForkButton primary />
     </div>
   )
 }

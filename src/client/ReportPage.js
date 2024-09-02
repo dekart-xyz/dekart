@@ -22,6 +22,7 @@ import { closeReport, openReport, reportTitleChange } from './actions/report'
 import { setError } from './actions/message'
 import Tooltip from 'antd/es/tooltip'
 import prettyBites from 'pretty-bytes'
+import { getDatasourceMeta } from './lib/datasource'
 
 function TabIcon ({ query }) {
   let iconColor = 'transparent'
@@ -67,18 +68,21 @@ function getOnTabEditHandler (dispatch, reportId) {
   }
 }
 
-function getQueryTooltip (query) {
+function QueryTooltip ({ query, dataset }) {
+  const connectionList = useSelector(state => state.connection.list)
   if (!query) {
     return null
   }
-  if (query.jobStatus !== QueryType.JobStatus.JOB_STATUS_DONE) {
-    return null
-  }
   const updatedAt = new Date(query.updatedAt * 1000)
+  const connection = connectionList.find(c => c.id === dataset.connectionId)
+  const connectionMeta = connection ? getDatasourceMeta(connection.connectionType) : null
 
   const processed = query.bytesProcessed ? `Processed ${prettyBites(query.bytesProcessed)}` : 'cached'
   return (
     <span className={styles.queryTooltip}>
+      {
+        connection && connectionMeta ? <span>{connection.connectionName} ({connectionMeta.name})</span> : null
+      }
       <span title={updatedAt.toISOString()}>{updatedAt.toLocaleString()}</span>
       <span>{processed}</span>
       {
@@ -95,7 +99,7 @@ function getTabPane (dataset, queries, files, status) {
   let tooltip = null
   if (dataset.queryId) {
     const query = queries.find(q => q.id === dataset.queryId)
-    tooltip = getQueryTooltip(query)
+    tooltip = <QueryTooltip query={query} dataset={dataset} />
     tabIcon = <TabIcon query={query} />
     changed = status.changed
   }
