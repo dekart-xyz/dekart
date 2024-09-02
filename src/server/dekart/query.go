@@ -7,6 +7,7 @@ import (
 
 	"dekart/src/proto"
 	"dekart/src/server/conn"
+	"dekart/src/server/storage"
 	"dekart/src/server/user"
 
 	"github.com/google/uuid"
@@ -22,7 +23,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		return nil, Unauthenticated
 	}
 
-	reportID, err := s.getReportID(ctx, req.DatasetId, claims.Email)
+	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
 		log.Err(err).Send()
@@ -35,28 +36,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	connection, err := s.getConnectionFromDatasetID(ctx, req.DatasetId)
-
-	conCtx := conn.GetCtx(ctx, connection)
-
-	bucketName := s.getBucketNameFromConnection(connection)
-
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
 	id := newUUID()
-
-	err = s.storeQuerySync(conCtx, bucketName, id, "", "")
-
-	if err != nil {
-		if _, ok := err.(*queryWasNotUpdated); !ok {
-			log.Err(err).Msg("Error updating query text")
-			return &proto.CreateQueryResponse{}, status.Error(codes.Internal, err.Error())
-		}
-		log.Warn().Msg("Query text not updated")
-	}
 
 	_, err = s.db.ExecContext(ctx,
 		`insert into queries (id, query_text) values ($1, '')`,
@@ -65,6 +45,16 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.storeQuerySync(ctx, id, "", "")
+
+	if err != nil {
+		if _, ok := err.(*queryWasNotUpdated); !ok {
+			log.Err(err).Msg("Error updating query text")
+			return &proto.CreateQueryResponse{}, status.Error(codes.Internal, err.Error())
+		}
+		log.Warn().Msg("Query text not updated")
 	}
 
 	result, err := s.db.ExecContext(ctx,
@@ -98,9 +88,17 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 		return nil, Unauthenticated
 	}
 
-	log.Debug().Str("report_id", req.ReportId).Msg("RunAllQueries")
+	report, err := s.getReport(ctx, req.ReportId)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if !(report.CanWrite || report.Discoverable) {
+		err := fmt.Errorf("permission denied")
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.PermissionDenied, err.Error())
+	}
 
-	// get all queries from report
 	queriesRows, err := s.db.QueryContext(ctx,
 		`select
 			queries.id,
@@ -110,9 +108,8 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 		from queries
 			left join datasets on queries.id = datasets.query_id
 			left join reports on (datasets.report_id = reports.id or queries.report_id = reports.id)
-		where reports.id = $1 and (author_email = $2 or reports.discoverable or reports.allow_edit) and job_status = $3`,
+		where reports.id = $1 and job_status = $2`,
 		req.ReportId,
-		claims.Email,
 		int32(proto.Query_JOB_STATUS_DONE),
 	)
 
@@ -122,7 +119,7 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 	}
 	defer queriesRows.Close()
 
-	var queries []query
+	var queries []runQueryOptions
 	var querySourceIds []string
 
 	for queriesRows.Next() {
@@ -142,12 +139,12 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 		bucketName := s.getBucketNameFromConnection(connection)
-		queries = append(queries, query{
-			reportID:   req.ReportId,
-			queryID:    queryID,
-			connection: connection,
-			bucketName: bucketName,
-			queryText:  queryText,
+		queries = append(queries, runQueryOptions{
+			reportID:       req.ReportId,
+			queryID:        queryID,
+			connection:     connection,
+			userBucketName: bucketName,
+			queryText:      queryText,
 		})
 	}
 
@@ -163,7 +160,7 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 		go func(i int) {
 			if queries[i].queryText == "" {
 				// for SNOWFLAKE storage queryText is stored in db
-				queryText, err := s.getQueryText(ctx, querySourceIds[i], queries[i].bucketName)
+				queryText, err := s.getQueryText(ctx, querySourceIds[i], queries[i].userBucketName)
 				if err != nil {
 					res <- err
 					return
@@ -190,26 +187,35 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 	return &proto.RunAllQueriesResponse{}, nil
 }
 
-type query struct {
-	reportID   string
-	queryID    string
-	queryText  string
-	connection *proto.Connection
-	bucketName string
+type runQueryOptions struct {
+	reportID       string
+	queryID        string
+	queryText      string
+	connection     *proto.Connection
+	userBucketName string
+	isPublic       bool // is public report, result should be stored in public storage
 }
 
-func (s Server) runQuery(ctx context.Context, i query) error {
-	job, jobStatus, err := s.jobs.Create(i.reportID, i.queryID, i.queryText, ctx)
-	log.Debug().Str("jobID", job.GetID()).Msg("Job created")
+func (s Server) runQuery(ctx context.Context, o runQueryOptions) error {
+	connCtx := conn.GetCtx(ctx, o.connection)
+	job, jobStatus, err := s.jobs.Create(o.reportID, o.queryID, o.queryText, connCtx)
 	if err != nil {
 		log.Error().Err(err).Send()
 		return err
 	}
-	// Result ID should be same as job ID once available
-	obj := s.storage.GetObject(ctx, i.bucketName, fmt.Sprintf("%s.csv", job.GetID()))
+	log.Debug().Str("jobID", job.GetID()).Msg("Job created")
+	var obj storage.StorageObject
+	if o.isPublic {
+		st := storage.NewPublicStorage()
+		// Result ID should be same as job ID once available
+		obj = st.GetObject(ctx, st.GetDefaultBucketName(), fmt.Sprintf("%s.csv", job.GetID()))
+	} else {
+		// Result ID should be same as job ID once available
+		obj = s.storage.GetObject(connCtx, o.userBucketName, fmt.Sprintf("%s.csv", job.GetID()))
+	}
 	go s.updateJobStatus(job, jobStatus)
 	job.Status() <- int32(proto.Query_JOB_STATUS_PENDING)
-	err = job.Run(obj, i.connection)
+	err = job.Run(obj, o.connection)
 	if err != nil {
 		return err
 	}
@@ -223,6 +229,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, Unauthenticated
 	}
 	log.Debug().Str("query_id", req.QueryId).Int("QueryTextLen", len(req.QueryText)).Msg("RunQuery")
+
 	queriesRows, err := s.db.QueryContext(ctx,
 		`select
 			reports.id,
@@ -231,12 +238,10 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		from queries
 			left join datasets on queries.id = datasets.query_id
 			left join reports on (datasets.report_id = reports.id or queries.report_id = reports.id)
-		where queries.id = $1 and (author_email = $2 or reports.allow_edit)
+		where queries.id = $1
 		limit 1`,
 		req.QueryId,
-		claims.Email,
 	)
-
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
@@ -259,18 +264,33 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	connection, err := s.getConnection(ctx, connectionID.String)
-
-	conCtx := conn.GetCtx(ctx, connection)
-
-	bucketName := s.getBucketNameFromConnection(connection)
+	report, err := s.getReport(ctx, reportID)
 
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	err = s.storeQuerySync(conCtx, bucketName, req.QueryId, req.QueryText, prevQuerySourceId)
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", reportID)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+
+	if !report.CanWrite {
+		err := fmt.Errorf("permission denied")
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.PermissionDenied, err.Error())
+	}
+
+	connection, err := s.getConnection(ctx, connectionID.String)
+
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.storeQuerySync(ctx, req.QueryId, req.QueryText, prevQuerySourceId)
 
 	if err != nil {
 		code := codes.Internal
@@ -283,12 +303,12 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, status.Error(code, err.Error())
 	}
 
-	err = s.runQuery(conCtx, query{
-		reportID:   reportID,
-		queryID:    req.QueryId,
-		queryText:  req.QueryText,
-		connection: connection,
-		bucketName: bucketName,
+	err = s.runQuery(ctx, runQueryOptions{
+		reportID:       reportID,
+		queryID:        req.QueryId,
+		queryText:      req.QueryText,
+		connection:     connection,
+		userBucketName: s.getBucketNameFromConnection(connection),
 	})
 
 	if err != nil {

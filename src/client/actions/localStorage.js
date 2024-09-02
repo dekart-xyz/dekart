@@ -29,7 +29,7 @@ export function loadLocalStorage () {
     const localStorageValue = window.localStorage.getItem(LOCAL_STORAGE_KEY)
     if (localStorageValue) {
       current = JSON.parse(localStorageValue)
-      dispatch(localStorageInit())
     }
+    dispatch(localStorageInit())
   }
 }

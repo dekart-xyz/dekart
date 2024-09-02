@@ -1,7 +1,14 @@
 import { AuthState } from '../../proto/dekart_pb'
+import { updateLocalStorage } from './localStorage'
 
 export function setRedirectState (redirectState) {
-  return { type: setRedirectState.name, redirectState }
+  return async (dispatch) => {
+    dispatch({ type: setRedirectState.name, redirectState })
+    if (redirectState.getSensitiveScopesGranted()) {
+      // remember that the user has granted sensitive scopes on this device once
+      dispatch(updateLocalStorage('sensitiveScopesGrantedOnce', true))
+    }
+  }
 }
 
 export function requestSensitiveScopes (returnPath) {

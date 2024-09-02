@@ -20,7 +20,6 @@ export function subscribeUserStream () {
     }
     dispatch(grpcStream(Dekart.GetUserStream, request, (message, err) => {
       if (message) {
-        dispatch(updateLocalStorage('sensitiveScopesGrantedOnce', message.sensitiveScopesGrantedOnce))
         dispatch(updateLocalStorage('loginHint', message.email))
         dispatch(userStreamUpdate(message))
         if (prevRes.connectionUpdate !== message.connectionUpdate) {
@@ -31,6 +30,10 @@ export function subscribeUserStream () {
       return err
     }))
   }
+}
+
+export function needSensitiveScopes () {
+  return { type: needSensitiveScopes.name }
 }
 
 export function unsubscribeUserStream () {

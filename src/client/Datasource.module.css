@@ -20,3 +20,11 @@
 .athena {
     background-image: url('./athena.svg');
 }
+
+.datasourceIcon {
+    width: 1em;
+    height: 1em;
+    display: inline-block;
+    color: #57B7D3;
+    background-size: contain;
+}
