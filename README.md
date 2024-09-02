@@ -68,15 +68,9 @@ Dekart is named after French mathematician René Descartes (French: [ʁəne deka
 
 ## License
 
-## Licensing
+This project is open source under the GNU Affero General Public License Version 3 (AGPLv3) or any later version.
+Commercial licenses are available upon request, please contact us at [support@dekart.xyz](mailto:support@dekart.xyz).
 
-This project contains components licensed under different licenses:
+Copyright (c) 2024 Volodymyr Bilonenko
 
-- The majority of the project is licensed under the [MIT License](./LICENSE), which allows for permissive use, including in proprietary software.
-- Specific components, such as the `./src/server/storage`, `./src/server/snowflakejob/`, `./src/client/actions/grpc.js`, are licensed under the AGPLv3 License.
-
-
-### Commercial License
-
-For companies or users who wish to use the AGPL-licensed components in proprietary environments, a commercial license is available. Please visit [dekart.xyz](https://dekart.xyz) for more information.
 

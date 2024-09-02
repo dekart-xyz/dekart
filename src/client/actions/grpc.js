@@ -1,15 +1,3 @@
-/**
- *
- * Copyright (C) 2024 Volodymyr Bilonenko
- *
- * This file is part of Dekart.
- *
- * AGPL License
- *
- * This code is licensed under the GNU Affero General Public License v3.0.
- * You can find the full text of the license in the LICENSE file or at https://www.gnu.org/licenses/agpl-3.0.en.html.
- */
-
 import { grpc } from '@improbable-eng/grpc-web'
 import { StreamOptions } from '../../proto/dekart_pb'
 import { setError, setStreamError } from './message'
