@@ -135,3 +135,12 @@ drop application package dekart_app_pkg;
 
 ```
 
+<<<<<<< HEAD
+=======
+This project is open source under the GNU Affero General Public License Version 3 (AGPLv3) or any later version.
+Commercial licenses are available upon request, please contact us at [support@dekart.xyz](mailto:support@dekart.xyz).
+
+Copyright (c) 2024 Volodymyr Bilonenko
+
+
+>>>>>>> oss/main

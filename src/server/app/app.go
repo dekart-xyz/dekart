@@ -70,7 +70,7 @@ func matchOrigin(origin string) bool {
 
 	result := origin == allowedOrigin
 	if !result {
-		log.Warn().Str("origin", origin).Str("allowed origin", allowedOrigin).Msg("Origin is not allowed")
+		log.Warn().Str("origin", origin).Str("allowedOrigin", allowedOrigin).Msg("Origin is not allowed")
 	}
 	return result
 }
@@ -144,6 +144,7 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		router.HandleFunc("/reports/{id}", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/reports/{id}/edit", staticFilesHandler.ServeIndex) // deprecated
 		router.HandleFunc("/reports/{id}/source", staticFilesHandler.ServeIndex)
+		router.HandleFunc("/grant-scopes", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/400", func(w http.ResponseWriter, r *http.Request) {
 			staticFilesHandler.ServeIndex(ResponseWriter{w: w, statusCode: http.StatusBadRequest}, r)
 		})

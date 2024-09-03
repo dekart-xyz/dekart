@@ -3,10 +3,12 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"dekart/src/proto"
+	"dekart/src/server/conn"
+	"dekart/src/server/errtype"
 	"dekart/src/server/snowflakeutils"
 	"encoding/csv"
 	"io"
-	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -21,20 +23,18 @@ func NewSnowflakeStorage() *SnowflakeStorage {
 	return &SnowflakeStorage{}
 }
 
-func (s *SnowflakeStorage) CanSaveQuery() bool {
+func (s *SnowflakeStorage) CanSaveQuery(context.Context, string) bool {
 	return false
 }
 
-func (s *SnowflakeStorage) GetObject(_ string, queryID string) StorageObject {
-	return NewSnowflakeStorageObject(queryID)
+func (s *SnowflakeStorage) GetObject(ctx context.Context, string, queryID string) StorageObject {
+	connection := conn.FromCtx(ctx)
+	return NewSnowflakeStorageObject(queryID, connection)
 }
 
 // NewSnowflakeStorageObject
-func NewSnowflakeStorageObject(fileName string) StorageObject {
-	connector := snowflakeutils.GetConnector()
-	parts := strings.Split(fileName, ".")
-	queryID := parts[0] //extract queryID from fileName like 01b3b0ae-0102-9b06-0001-c28e001599fe.csv
-
+func NewSnowflakeStorageObject(queryID string, conn *proto.Connection) StorageObject {
+	connector := snowflakeutils.GetConnector(conn)
 	return SnowflakeStorageObject{queryID: queryID, connector: connector}
 }
 
@@ -44,7 +44,7 @@ type SnowflakeStorageObject struct {
 	connector sf.Connector
 }
 
-func (s SnowflakeStorageObject) CanSaveQuery() bool {
+func (s SnowflakeStorageObject) CanSaveQuery(context.Context, string) bool {
 	return false
 }
 
@@ -56,7 +56,7 @@ func (s SnowflakeStorageObject) GetReader(ctx context.Context) (io.ReadCloser, e
 	if err != nil {
 		if sfErr, ok := err.(*sf.SnowflakeError); ok {
 			if sfErr.Number == 612 {
-				return nil, &ExpiredError{}
+				return nil, &errtype.Expired{}
 			}
 		}
 		log.Error().Err(err).Msg("failed to query snowflake")
@@ -118,7 +118,7 @@ func (s SnowflakeStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, e
 
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to get query status")
-		return nil, &ExpiredError{}
+		return nil, &errtype.Expired{}
 	}
 	createdAt := time.Unix(status.EndTime/1000, 0)
 
@@ -126,7 +126,7 @@ func (s SnowflakeStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, e
 
 	//check if query is older than 1 day (minus 1 hour for safety)
 	if time.Since(createdAt) > 23*time.Hour {
-		return nil, &ExpiredError{}
+		return nil, &errtype.Expired{}
 	}
 	return &createdAt, nil
 }
@@ -138,6 +138,28 @@ func (s SnowflakeStorageObject) GetSize(ctx context.Context) (*int64, error) {
 
 // CopyFromS3(ctx context.Context, source string) error
 func (s SnowflakeStorageObject) CopyFromS3(ctx context.Context, source string) error {
+	log.Fatal().Msg("not implemented")
+	return nil
+}
+
+func (s SnowflakeStorageObject) CopyTo(ctx context.Context, writer io.WriteCloser) error {
+	reader, err := s.GetReader(ctx)
+	if err != nil {
+		log.Err(err).Msg("Error getting reader while copying to")
+		return err
+	}
+	_, err = io.Copy(writer, reader)
+	if err != nil {
+		return err
+	}
+	err = writer.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s SnowflakeStorageObject) Delete(ctx context.Context) error {
 	log.Fatal().Msg("not implemented")
 	return nil
 }

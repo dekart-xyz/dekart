@@ -1,10 +1,9 @@
-.PHONY: proto-build proto-docker proto docker docker-compose-up docker-compose-rm version minor patch
+.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down
 
 # load .env
 # https://lithic.tech/blog/2020-05/makefile-dot-env
 ifneq (,$(wildcard ./.env))
     include .env
-    export
 endif
 
 UNAME := $(shell uname -m)
@@ -217,8 +216,6 @@ docker: # build docker for local use
 
 up-and-down:
 	docker-compose  --env-file .env --profile local up; docker-compose --env-file .env --profile local down --volumes
-
-
 up:
 	docker-compose  --env-file .env --profile local up
 
@@ -228,12 +225,24 @@ down:
 cloudsql:
 	docker-compose  --env-file .env --profile cloudsql up
 
-server:
+
+define run_server
+	@set -a; \
+	. $(1); \
+	set +a; \
 	go run ./src/server/main.go
+endef
+
+# Pattern rule to match any target starting with ".env."
+server-%:
+	$(call run_server,.env.$*)
+
+# Rule for the default .env file
+server:
+	$(call run_server,.env)
 
 npm:
 	npm i --legacy-peer-deps
-
 prerelease:
 	npm version prerelease --preid=rc
 preminor:

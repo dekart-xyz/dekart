@@ -6,17 +6,20 @@ import Radio from 'antd/es/radio'
 import Result from 'antd/es/result'
 import Table from 'antd/es/table'
 import { useDispatch, useSelector } from 'react-redux'
-import { PlusOutlined, FileSearchOutlined, GiftOutlined, UsergroupAddOutlined, ApiTwoTone } from '@ant-design/icons'
+import { PlusOutlined, FileSearchOutlined, UsergroupAddOutlined, ApiTwoTone, GiftOutlined, LockOutlined, TeamOutlined } from '@ant-design/icons'
 import DataDocumentationLink from './DataDocumentationLink'
-import { getRef } from './lib/ref'
+import { getUrlRef } from './lib/ref'
 import Switch from 'antd/es/switch'
 import { archiveReport, subscribeReports, unsubscribeReports, createReport } from './actions/report'
-import { testVersion } from './actions/version'
-import { editConnection, newConnection, setDefaultConnection } from './actions/connection'
+import { editConnection, newConnection, newConnectionScreen, setDefaultConnection } from './actions/connection'
 import ConnectionModal from './ConnectionModal'
 import Tooltip from 'antd/es/tooltip'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 import { name } from '../../package.json'
+import { Connection } from '../proto/dekart_pb'
+import Onboarding from './Onboarding'
+import { DatasourceIcon } from './Datasource'
+import { testVersion } from './actions/version'
 
 function Loading () {
   return null
@@ -40,6 +43,16 @@ function ArchiveReportButton ({ report }) {
 }
 
 const columns = [
+  {
+    dataIndex: 'icon',
+    render: (t, report) => {
+      if (report.discoverable) {
+        return <TeamOutlined title='This report is discoverable by others users in the workspace' />
+      }
+      return <LockOutlined title='This is visible only to you' />
+    },
+    className: styles.iconColumn
+  },
   {
     dataIndex: 'title',
     render: (t, report) => <a href={`/reports/${report.id}`}>{report.title}</a>,
@@ -70,6 +83,11 @@ const columns = [
     dataIndex: 'connectionName',
     render: (t, connection) => <OpenConnectionButton connection={connection} />,
     className: styles.titleColumn
+  },
+  {
+    dataIndex: 'connectionIcon',
+    render: (t, connection) => <DatasourceIcon type={connection.connectionType} />,
+    className: styles.iconColumn
   },
   {
     dataIndex: 'setDefault',
@@ -105,7 +123,7 @@ function OpenConnectionButton ({ connection }) {
     <Button
       type='link'
       onClick={() => {
-        dispatch(editConnection(connection.id))
+        dispatch(editConnection(connection.id, connection.connectionType))
       }}
     >{connection.connectionName}
     </Button>
@@ -116,16 +134,19 @@ function filterColumns (filter) {
   return filter.map(f => columns.find(c => c.dataIndex === f))
 }
 
-function getColumns (reportFilter, archived) {
+function getColumns (reportFilter, archived, authEnabled) {
   if (reportFilter === 'my') {
     if (archived) {
       return filterColumns(['archivedTitle', 'delete'])
     }
+    if (authEnabled) {
+      return filterColumns(['icon', 'title', 'delete'])
+    }
     return filterColumns(['title', 'delete'])
   } else if (reportFilter === 'connections') {
-    return filterColumns(['connectionName', 'author', 'setDefault'])
+    return filterColumns(['connectionIcon', 'connectionName', 'author', 'setDefault'])
   } else {
-    return filterColumns(['title', 'author'])
+    return filterColumns(['icon', 'title', 'author'])
   }
 }
 
@@ -136,24 +157,60 @@ function FirstReportOnboarding () {
       <Result
         status='success'
         title='You are all set'
-        subTitle='Get ready to create you first map with Dekart'
-        extra={<Button icon={<PlusOutlined />} type='primary' onClick={() => dispatch(createReport())}>Create Report</Button>}
+        subTitle='Everything is ready to create you first map.'
+        extra={(
+          <>
+            <Button icon={<PlusOutlined />} id='dekart-create-report' type='primary' onClick={() => dispatch(createReport())}>Create report</Button>
+          </>
+        )}
       />
       <DataDocumentationLink />
     </>
   )
 }
 
-function FirstConnectionOnboarding () {
+// selects between Google Cloud and Snowflake
+function ConnectionTypeSelector () {
+  const connectionList = useSelector(state => state.connection.list)
+  const { DATASOURCE } = useSelector(state => state.env.variables)
+  const showCancel = connectionList.length > 0 // show cancel button if there are connections
   const dispatch = useDispatch()
+  return (
+    <>
+      {
+        DATASOURCE === 'USER'
+          ? (
+            <div className={styles.connectionTypeSelector}>
+              <Button icon={<DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY} />} size='large' onClick={() => dispatch(newConnection(Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY))}>BigQuery</Button>
+              <Button icon={<DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE} />} size='large' onClick={() => dispatch(newConnection(Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE))}>Snowflake</Button>
+            </div>
+            )
+          : ( // by default only BQ
+            <div className={styles.connectionTypeSelector}>
+              <Button icon={<DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY} />} size='large' onClick={() => dispatch(newConnection(Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY))}>BigQuery</Button>
+            </div>
+            )
+      }
+      {showCancel
+        ? (
+          <div>
+            <Button type='link' onClick={() => dispatch(newConnectionScreen(false))}>Return back</Button>
+          </div>
+          )
+        : null}
+    </>
+  )
+}
+
+function CreateConnection () {
   return (
     <>
       <Result
         status='success'
         icon={<ApiTwoTone />}
         title='Ready to connect!'
-        subTitle={<>Next step, select <b>Project ID</b> for BigQuery billing and <b>Storage Bucket</b> name to store your query results.</>}
-        extra={<Button type='primary' onClick={() => { dispatch(newConnection()) }}>Create connection</Button>}
+        subTitle={<>Select your data source to start building your map.</>}
+        extra={<ConnectionTypeSelector />}
       />
     </>
   )
@@ -206,7 +263,7 @@ function ReportsHeader (
       <div className={styles.rightCornerAction}>
         {
           reportFilter === 'connections'
-            ? <Button onClick={() => { dispatch(newConnection()) }}>New Connection</Button>
+            ? <Button onClick={() => { dispatch(newConnectionScreen(true)) }}>New Connection</Button>
             : (
               <>
                 {
@@ -219,7 +276,7 @@ function ReportsHeader (
                       )
                     : null
                 }
-                <Button onClick={() => dispatch(createReport())}>New Report</Button>
+                <Button id='dekart-create-report' onClick={() => dispatch(createReport())}>New Report</Button>
               </>
               )
         }
@@ -232,9 +289,10 @@ function ReportsHeader (
 function Reports ({ createReportButton, reportFilter }) {
   const [archived, setArchived] = useState(false)
   const reportsList = useSelector(state => state.reportsList)
-  const { loaded: envLoaded } = useSelector(state => state.env)
+  const { loaded: envLoaded, authEnabled } = useSelector(state => state.env)
   const connectionList = useSelector(state => state.connection.list)
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
+  const newConnectionScreen = useSelector(state => state.connection.screen)
   useEffect(() => {
     if (reportsList.archived.length === 0) {
       setArchived(false)
@@ -243,10 +301,10 @@ function Reports ({ createReportButton, reportFilter }) {
   if (!envLoaded) {
     return null
   }
-  if (userDefinedConnection && connectionList.length === 0) {
+  if ((userDefinedConnection && connectionList.length === 0) || newConnectionScreen) {
     return (
       <div className={styles.reports}>
-        <FirstConnectionOnboarding />
+        <CreateConnection />
       </div>
     )
   }
@@ -274,7 +332,7 @@ function Reports ({ createReportButton, reportFilter }) {
           ? (
             <Table
               dataSource={dataSource}
-              columns={getColumns(reportFilter, archived)}
+              columns={getColumns(reportFilter, archived, authEnabled)}
               showHeader={false}
               rowClassName={styles.reportsRow}
               pagination={false}
@@ -319,18 +377,6 @@ function OnboardingDiscoverableReports () {
   )
 }
 
-function Onboarding ({ icon, title, steps }) {
-  return (
-    <div className={styles.onboarding}>
-      <div className={styles.onboardingIcon}>{icon}</div>
-      <div className={styles.onboardingContent}>
-        <div className={styles.onboardingTitle}>{title}</div>
-        <div className={styles.onboardingSteps}>{steps}</div>
-      </div>
-    </div>
-  )
-}
-
 function NewVersion () {
   const release = useSelector(state => state.release)
   const env = useSelector(state => state.env)
@@ -340,7 +386,7 @@ function NewVersion () {
     dispatch(testVersion())
   }, [dispatch])
   if (release) {
-    const ref = getRef(env, usage)
+    const ref = getUrlRef(env, usage)
     return (
       <div className={styles.newRelease}>
         <GiftOutlined className={styles.newReleaseIcon} />

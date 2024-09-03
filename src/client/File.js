@@ -34,6 +34,7 @@ function getStorageName (env) {
       storageName = 'S3'
       break
     case 'GCS':
+    case 'USER': // only GCS is supported for user storage
       storageName = 'Cloud Storage'
       break
     default:

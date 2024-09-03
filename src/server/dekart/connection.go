@@ -4,11 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/secrets"
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
 	"os"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -19,6 +21,10 @@ func (s Server) TestConnection(ctx context.Context, req *proto.TestConnectionReq
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	conn := req.Connection
+	if conn == nil {
+		return nil, status.Error(codes.InvalidArgument, "connection is required")
+	}
 	res, err := s.jobs.TestConnection(ctx, req)
 	if err != nil {
 		log.Err(err).Send()
@@ -26,6 +32,12 @@ func (s Server) TestConnection(ctx context.Context, req *proto.TestConnectionReq
 	}
 	if !res.Success {
 		return res, nil
+	}
+	if req.Connection.CloudStorageBucket == "" && os.Getenv("DEKART_STORAGE") == "USER" {
+		// if no bucket is provided, temp storage is used
+		return &proto.TestConnectionResponse{
+			Success: true,
+		}, nil
 	}
 	return storage.TestConnection(ctx, req.Connection)
 }
@@ -114,7 +126,13 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 			id,
 			connection_name,
 			bigquery_project_id,
-			cloud_storage_bucket
+			cloud_storage_bucket,
+			connection_type,
+			snowflake_account_id,
+			snowflake_username,
+			snowflake_password_encrypted,
+			snowflake_warehouse,
+			(select count(*) from datasets where connection_id=connections.id) as dataset_count
 		from connections where id=$1 limit 1`,
 		connectionID,
 	)
@@ -128,15 +146,38 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 		ID := sql.NullString{}
 		bigqueryProjectId := sql.NullString{}
 		cloudStorageBucket := sql.NullString{}
+		var connectionType proto.Connection_ConnectionType
+		snowflakeUser := sql.NullString{}
+		snowflakePassword := sql.NullString{}
+		snowflakeAccountID := sql.NullString{}
+		snowflakeWarehouse := sql.NullString{}
 		err := res.Scan(
 			&ID,
 			&connection.ConnectionName,
 			&bigqueryProjectId,
 			&cloudStorageBucket,
+			&connectionType,
+			&snowflakeAccountID,
+			&snowflakeUser,
+			&snowflakePassword,
+			&snowflakeWarehouse,
+			&connection.DatasetCount,
 		)
 		connection.Id = ID.String
 		connection.BigqueryProjectId = bigqueryProjectId.String
 		connection.CloudStorageBucket = cloudStorageBucket.String
+		connection.ConnectionType = connectionType
+		connection.SnowflakeUsername = snowflakeUser.String
+		connection.SnowflakeAccountId = snowflakeAccountID.String
+		connection.SnowflakeWarehouse = snowflakeWarehouse.String
+		if snowflakePassword.String != "" {
+			connection.SnowflakePassword = &proto.Secret{
+				ServerEncrypted: snowflakePassword.String,
+			}
+		}
+		if connection.CloudStorageBucket != "" {
+			connection.CanStoreFiles = true
+		}
 		if err != nil {
 			log.Err(err).Send()
 			return nil, status.Error(codes.Internal, err.Error())
@@ -158,10 +199,16 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 			connection_name,
 			bigquery_project_id,
 			cloud_storage_bucket,
+			connection_type,
+			snowflake_account_id,
+			snowflake_username,
+			snowflake_password_encrypted,
+			snowflake_warehouse,
 			is_default,
 			created_at,
 			updated_at,
-			author_email
+			author_email,
+			(select count(*) from datasets where connection_id=connections.id) as dataset_count
 		from connections where archived=false order by created_at desc`,
 	)
 	if err != nil {
@@ -178,6 +225,10 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 		ID := sql.NullString{}
 		bigqueryProjectId := sql.NullString{}
 		cloudStorageBucket := sql.NullString{}
+		snowflakeAccountID := sql.NullString{}
+		snowflakeUsername := sql.NullString{}
+		snowflakePassword := sql.NullString{}
+		snowflakeWarehouse := sql.NullString{}
 		isDefault := false
 		createdAt := time.Time{}
 		updatedAt := time.Time{}
@@ -186,10 +237,16 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 			&connection.ConnectionName,
 			&bigqueryProjectId,
 			&cloudStorageBucket,
+			&connection.ConnectionType,
+			&snowflakeAccountID,
+			&snowflakeUsername,
+			&snowflakePassword,
+			&snowflakeWarehouse,
 			&isDefault,
 			&createdAt,
 			&updatedAt,
 			&connection.AuthorEmail,
+			&connection.DatasetCount,
 		)
 		if err != nil {
 			log.Fatal().Err(err).Msg("scan failed")
@@ -208,8 +265,15 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 		connection.Id = ID.String
 		connection.BigqueryProjectId = bigqueryProjectId.String
 		connection.CloudStorageBucket = cloudStorageBucket.String
+		connection.SnowflakeAccountId = snowflakeAccountID.String
+		connection.SnowflakeUsername = snowflakeUsername.String
+		connection.SnowflakeWarehouse = snowflakeWarehouse.String
+		connection.SnowflakePassword = secrets.EncryptedToClient(snowflakePassword.String)
 		connection.UpdatedAt = updatedAt.Unix()
 		connection.CreatedAt = createdAt.Unix()
+		if connection.CloudStorageBucket != "" {
+			connection.CanStoreFiles = true
+		}
 		connections = append(connections, &connection)
 	}
 
@@ -267,18 +331,59 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	res, err := s.db.ExecContext(ctx,
-		`update connections set
+
+	err := validateReqConnection(req.Connection)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = uuid.Parse(req.Connection.Id)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid connection id")
+	}
+
+	var res sql.Result
+
+	if req.Connection.ConnectionType == proto.Connection_CONNECTION_TYPE_SNOWFLAKE {
+		res, err = s.db.ExecContext(ctx,
+			`update connections set
+				connection_name=$1,
+				snowflake_account_id=$2,
+				snowflake_username=$3,
+				snowflake_warehouse=$4,
+				updated_at=now()
+			where id=$5`,
+			req.Connection.ConnectionName,
+			req.Connection.SnowflakeAccountId,
+			req.Connection.SnowflakeUsername,
+			req.Connection.SnowflakeWarehouse,
+			req.Connection.Id,
+		)
+		// update password if it is provided
+		snowflakePassword := secrets.SecretToServerEncrypted(req.Connection.SnowflakePassword, claims)
+		if snowflakePassword != "" && err == nil {
+			res, err = s.db.ExecContext(ctx,
+				`update connections set
+				snowflake_password_encrypted=$1
+			where id=$2`,
+				snowflakePassword,
+				req.Connection.Id,
+			)
+		}
+	} else {
+		res, err = s.db.ExecContext(ctx,
+			`update connections set
 			connection_name=$1,
 			bigquery_project_id=$2,
 			cloud_storage_bucket=$3,
 			updated_at=now()
 		where id=$4`,
-		req.Connection.ConnectionName,
-		req.Connection.BigqueryProjectId,
-		req.Connection.CloudStorageBucket,
-		req.Connection.Id,
-	)
+			req.Connection.ConnectionName,
+			req.Connection.BigqueryProjectId,
+			req.Connection.CloudStorageBucket,
+			req.Connection.Id,
+		)
+	}
 	if err != nil {
 		log.Err(err).Send()
 		return nil, err
@@ -335,7 +440,7 @@ func (s Server) ArchiveConnection(ctx context.Context, req *proto.ArchiveConnect
 		`update connections set
 			archived=true,
 			updated_at=now()
-		where id=$1 and author_email=$2`,
+		where id=$1`,
 		req.ConnectionId,
 		claims.Email,
 	)
@@ -398,9 +503,11 @@ func (s Server) getLastConnectionUpdate(ctx context.Context) (int64, error) {
 	}
 	var lastConnectionUpdateDate sql.NullTime
 	err := s.db.QueryRowContext(ctx,
-		`select
-			max(updated_at)
-		from connections`,
+		`SELECT MAX(updated_at) FROM (
+			SELECT updated_at FROM connections
+			UNION ALL
+			SELECT updated_at FROM datasets
+		) AS combined`,
 	).Scan(&lastConnectionUpdateDate)
 	lastConnectionUpdate := lastConnectionUpdateDate.Time.Unix()
 	if err != nil {
@@ -410,16 +517,62 @@ func (s Server) getLastConnectionUpdate(ctx context.Context) (int64, error) {
 	return lastConnectionUpdate, nil
 }
 
+func validateReqConnection(con *proto.Connection) error {
+	if con == nil {
+		return status.Error(codes.InvalidArgument, "connection is required")
+	}
+	if con.ConnectionName == "" {
+		return status.Error(codes.InvalidArgument, "connection_name is required")
+	}
+	if con.ConnectionType == proto.Connection_CONNECTION_TYPE_SNOWFLAKE {
+		if con.SnowflakeAccountId == "" {
+			return status.Error(codes.InvalidArgument, "snowflake_account_id is required")
+		}
+		if con.SnowflakeUsername == "" {
+			return status.Error(codes.InvalidArgument, "snowflake_username is required")
+		}
+	} else {
+		if con.BigqueryProjectId == "" {
+			return status.Error(codes.InvalidArgument, "bigquery_project_id is required")
+		}
+	}
+	return nil
+}
+
 func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectionRequest) (*proto.CreateConnectionResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	err := validateReqConnection(req.Connection)
+	if err != nil {
+		return nil, err
+	}
+
 	id := newUUID()
-	_, err := s.db.ExecContext(ctx,
-		"INSERT INTO connections (id, connection_name,  author_email) VALUES ($1, $2, $3)",
+
+	_, err = s.db.ExecContext(ctx,
+		`INSERT INTO connections (
+			id,
+			connection_name,
+			bigquery_project_id,
+			cloud_storage_bucket,
+			connection_type,
+			snowflake_account_id,
+			snowflake_username,
+			snowflake_warehouse,
+			snowflake_password_encrypted,
+			author_email
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 		id,
-		req.ConnectionName,
+		req.Connection.ConnectionName,
+		req.Connection.BigqueryProjectId,
+		req.Connection.CloudStorageBucket,
+		req.Connection.ConnectionType,
+		req.Connection.SnowflakeAccountId,
+		req.Connection.SnowflakeUsername,
+		req.Connection.SnowflakeWarehouse,
+		secrets.SecretToServerEncrypted(req.Connection.SnowflakePassword, claims),
 		claims.Email,
 	)
 	if err != nil {
@@ -429,10 +582,9 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 
 	s.userStreams.PingAll()
 
+	req.Connection.Id = id
+
 	return &proto.CreateConnectionResponse{
-		Connection: &proto.Connection{
-			Id:             id,
-			ConnectionName: req.ConnectionName,
-		},
+		Connection: req.Connection,
 	}, nil
 }

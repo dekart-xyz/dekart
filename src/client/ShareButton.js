@@ -1,141 +1,163 @@
 import Button from 'antd/es/button'
 import Modal from 'antd/es/modal'
-import { EditOutlined, UsergroupAddOutlined, LinkOutlined, LockOutlined, InfoCircleOutlined, FileSearchOutlined } from '@ant-design/icons'
+import { LockOutlined, TeamOutlined, LinkOutlined } from '@ant-design/icons'
 import { useEffect, useState } from 'react'
 import styles from './ShareButton.module.css'
 import { useDispatch, useSelector } from 'react-redux'
-import Tooltip from 'antd/es/tooltip'
-import { getRef } from './lib/ref'
-import Switch from 'antd/es/switch'
 import { copyUrlToClipboard } from './actions/clipboard'
 import { setDiscoverable } from './actions/report'
+import Select from 'antd/es/select'
 
 function CopyLinkButton () {
   const dispatch = useDispatch()
+  const discoverable = useSelector(state => state.report.discoverable)
   return (
     <Button
       icon={<LinkOutlined />}
+      disabled={!discoverable}
       title='Copy link to report'
-      onClick={() => dispatch(copyUrlToClipboard(window.location.toString()))}
+      onClick={() => dispatch(copyUrlToClipboard(window.location.toString(), 'Report URL copied to clipboard'))}
     >Copy Link
     </Button>
   )
 }
 
-function AuthTypeTitle ({ authType, referer }) {
-  const { anchor, title } = {
-    AMAZON_OIDC: { anchor: 'user-authorization-via-amazon-load-balancer', title: 'Amazon OIDC' },
-    IAP: { anchor: 'user-authorization-via-google-iap', title: 'Google IAP' },
-    GOOGLE_OAUTH: { anchor: '', title: 'Google OAuth 2.0 flow' }
-  }[authType]
+function WorkspacePermissionsDescription () {
+  const { isSharable, discoverable, allowEdit } = useSelector(state => state.report)
+  switch (true) {
+    case !isSharable:
+      return <>⚠️ This report cannot be shared between workspace users.<br />💡 Create a connection with a storage bucket and generate a new report from it.</>
+    case allowEdit:
+      return <>Everyone with access to this workspace can view and edit this report</>
+    case discoverable:
+      return <>Everyone with access to this workspace can discover and refresh this report</>
+    default:
+      return <>This report is private. Only the author can see it</>
+  }
+}
+
+const workspacePermissions = {
+  CANNOT_VIEW: 'CANNOT_VIEW',
+  VIEW: 'VIEW',
+  EDIT: 'EDIT'
+}
+
+const workspacePermissionsLabels = {
+  [workspacePermissions.CANNOT_VIEW]: 'Cannot view',
+  [workspacePermissions.VIEW]: 'View',
+  [workspacePermissions.EDIT]: 'Edit'
+}
+
+function WorkspacePermissionsTitle () {
+  const { isSharable } = useSelector(state => state.report)
+  if (!isSharable) {
+    return <div className={styles.statusLabelTitle}>Workspace Sharing</div>
+  }
+  return <div className={styles.statusLabelTitle}>Anyone in workspace</div>
+}
+
+function permissionValueFromReportProps ({ discoverable, allowEdit }) {
+  switch (true) {
+    case discoverable && allowEdit:
+      return workspacePermissions.EDIT
+    case discoverable:
+      return workspacePermissions.VIEW
+    default:
+      return workspacePermissions.CANNOT_VIEW
+  }
+}
+
+function reportPropsFromPermissionValue (value) {
+  switch (value) {
+    case workspacePermissions.CANNOT_VIEW:
+      return { discoverable: false, allowEdit: false }
+    case workspacePermissions.VIEW:
+      return { discoverable: true, allowEdit: false }
+    case workspacePermissions.EDIT:
+      return { discoverable: true, allowEdit: true }
+    default:
+      throw new Error(`Unknown permission value: ${value}`)
+  }
+}
+
+function WorkspacePermissionsSelect () {
+  const { isPublic, id, isAuthor, allowEdit, discoverable, isSharable } = useSelector(state => state.report)
+  const dispatch = useDispatch()
+  const value = permissionValueFromReportProps({ discoverable, allowEdit })
+  const [selectValue, setSelectValue] = useState(value)
+
+  useEffect(() => {
+    setSelectValue(value)
+  }, [value])
+
+  if (!isSharable) {
+    return <Button href='/connections'>Manage connections</Button>
+  }
+  const disabled = !isAuthor
   return (
-    <><span>Users authorized via </span>
-      <a
-        target='_blank' href={`https://dekart.xyz/docs/configuration/environment-variables/?ref=${referer}#${anchor}`} rel='noreferrer'
-      >{title}
-      </a> header
+    <Select
+      defaultValue={value}
+      value={selectValue}
+      disabled={disabled}
+      className={styles.workspaceStatusSelect}
+      loading={selectValue !== value}
+      onChange={(newValue) => {
+        setSelectValue(newValue)
+        const { discoverable, allowEdit } = reportPropsFromPermissionValue(newValue)
+        dispatch(setDiscoverable(id, discoverable, allowEdit))
+      }}
+      options={[
+        { value: workspacePermissions.CANNOT_VIEW, label: isPublic ? 'View' : workspacePermissionsLabels[workspacePermissions.CANNOT_VIEW] },
+        { value: workspacePermissions.VIEW, label: isPublic ? 'Refresh' : workspacePermissionsLabels[workspacePermissions.VIEW] },
+        { value: workspacePermissions.EDIT, label: workspacePermissionsLabels[workspacePermissions.EDIT] }
+      ]}
+    />
+  )
+}
+function WorkspacePermissions () {
+  const { canWrite, discoverable } = useSelector(state => state.report)
+  if (!canWrite && !discoverable) { // show only for discoverable workspace reports
+    return null
+  }
+  return (
+    <>
+      <div className={styles.workspaceStatus}>
+        <div className={styles.workspaceStatusIcon}><TeamOutlined /></div>
+        <div className={styles.workspaceStatusLabel}>
+          <WorkspacePermissionsTitle />
+          <div className={styles.statusLabelDescription}><WorkspacePermissionsDescription /></div>
+        </div>
+        <div className={styles.workspaceStatusControl}>
+          <WorkspacePermissionsSelect />
+        </div>
+      </div>
     </>
   )
 }
 
-function ModalContent ({ reportId, discoverable, isAuthor, allowEdit }) {
-  const env = useSelector(state => state.env)
-  const usage = useSelector(state => state.usage)
-  const { loaded: envLoaded, authEnabled, authType } = env
-  const dispatch = useDispatch()
-  const [discoverableSwitch, setDiscoverableSwitch] = useState(discoverable)
-  const [allowEditSwitch, setAllowEditSwitch] = useState(allowEdit)
-
-  // when changed by another user, reset state
-  useEffect(() => {
-    setDiscoverableSwitch(discoverable)
-  }, [discoverable])
-  useEffect(() => {
-    setAllowEditSwitch(allowEdit)
-  }, [allowEdit])
-
-  if (!envLoaded) {
-    return null
-  }
-
-  if (authEnabled) {
-    return (
-      <>
-        <div className={styles.reportStatus}>
-          <div className={styles.reportStatusIcon}><LockOutlined /></div>
-          <div className={styles.reportStatusDetails}>
-            <div className={styles.reportStatusDetailsText}>{(() => {
-              switch (true) {
-                case discoverable && allowEdit:
-                  return 'Everyone can view and edit report'
-                case !discoverable && allowEdit:
-                  return 'Everyone with link can edit report'
-                case discoverable && !allowEdit:
-                  return 'Everyone with link can view and refresh report'
-                default:
-                  return 'Everyone with a link can view report'
-              }
-            })()}
-            </div>
-            <div className={styles.reportAuthStatus}>
-              <Tooltip title={<AuthTypeTitle authType={authType} referer={getRef(env, usage)} />}>
-                <span className={styles.authEnabled}>User authorization enabled</span>
-              </Tooltip>
-            </div>
-          </div>
-        </div>
-        <div className={styles.boolStatus}>
-          <div className={styles.boolStatusIcon}><FileSearchOutlined /></div>
-          <div className={styles.boolStatusLabel}>Allow everyone to discover and refresh report</div>
-          <div className={styles.boolStatusControl}>
-            <Switch
-              checked={discoverable}
-              disabled={!isAuthor}
-              title={!isAuthor ? 'Only the author can change this setting' : undefined}
-              onChange={(checked) => {
-                setDiscoverableSwitch(checked)
-                dispatch(setDiscoverable(reportId, checked, allowEdit))
-              }}
-              loading={discoverableSwitch !== discoverable}
-            />
-          </div>
-        </div>
-        <div className={styles.boolStatus}>
-          <div className={styles.boolStatusIcon}><EditOutlined /></div>
-          <div className={styles.boolStatusLabel}>Allow everyone to edit the report</div>
-          <div className={styles.boolStatusControl}>
-            <Switch
-              checked={allowEdit}
-              disabled={!isAuthor}
-              title={!isAuthor ? 'Only the author can change this setting' : undefined}
-              onChange={(checked) => {
-                setAllowEditSwitch(checked)
-                dispatch(setDiscoverable(reportId, discoverable, checked))
-              }}
-              loading={allowEditSwitch !== allowEdit}
-            />
-          </div>
-        </div>
-      </>
-    )
-  }
-
+function ModalContent () {
   return (
-    <div className={styles.reportStatus}>
-      <div className={styles.reportStatusIcon}><InfoCircleOutlined /></div>
-      <div className={styles.reportStatusDetails}>
-        <div className={styles.reportStatusDetailsText}>Everyone can edit report</div>
-      </div>
-    </div>
+    <>
+      <WorkspacePermissions />
+    </>
   )
 }
 
-export default function ShareButton ({ reportId, discoverable, isAuthor, allowEdit }) {
+export default function ShareButton () {
   const [modalOpen, setModalOpen] = useState(false)
+  const { discoverable } = useSelector(state => state.report)
+  const { authEnabled } = useSelector(state => state.env)
+  if (!authEnabled) {
+    return null
+  }
+  let icon = <LockOutlined />
+  if (discoverable) {
+    icon = <TeamOutlined />
+  }
   return (
     <>
       <Button
-        icon={<UsergroupAddOutlined />}
+        icon={icon}
         ghost
         type='text'
         title='Share and export'
@@ -155,9 +177,9 @@ export default function ShareButton ({ reportId, discoverable, isAuthor, allowEd
               Done
             </Button>
           </div>
-      }
+        }
       >
-        <ModalContent reportId={reportId} discoverable={discoverable} isAuthor={isAuthor} allowEdit={allowEdit} />
+        <ModalContent />
       </Modal>
     </>
   )

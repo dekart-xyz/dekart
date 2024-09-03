@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/conn"
 	"dekart/src/server/user"
 	"fmt"
 	"strings"
@@ -23,6 +24,7 @@ func newUUID() string {
 	return u.String()
 }
 
+// getReport returns report by id, checks if user has access to it
 func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
@@ -40,8 +42,28 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			discoverable,
 			allow_edit,
 			created_at,
-			updated_at
-		from reports where id=$1 and not archived limit 1`,
+			updated_at,
+			(
+				select count(*) from connections as c
+				join datasets as d on c.id=d.connection_id
+				where d.report_id=$1 and cloud_storage_bucket is not null and (
+					cloud_storage_bucket != ''
+					or connection_type > 1 -- snowflake allows sharing without bucket
+				)
+			) as connections_with_cache_num,
+			(
+				select count(*) from connections as c
+				join datasets as d on c.id=d.connection_id
+				where d.report_id=$1
+			) as connections_num,
+			(
+				select count(*) from connections as c
+				join datasets as d on c.id=d.connection_id
+				where d.report_id=$1 and  connection_type <= 1 -- BigQuery
+			) as connections_with_sensitive_scope_num
+		from reports as r
+		where id=$1 and not archived
+		limit 1`,
 		reportID,
 		claims.Email,
 	)
@@ -55,6 +77,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 	for reportRows.Next() {
 		createdAt := time.Time{}
 		updatedAt := time.Time{}
+		var connectionsWithCacheNum, connectionsNum, connectionsWithSensitiveScopeNum int
 		err = reportRows.Scan(
 			&report.Id,
 			&report.MapConfig,
@@ -66,15 +89,27 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			&report.AllowEdit,
 			&createdAt,
 			&updatedAt,
+			&connectionsWithCacheNum,
+			&connectionsNum,
+			&connectionsWithSensitiveScopeNum,
 		)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, err
 		}
+
+		report.IsSharable = (connectionsNum > 0 && connectionsWithCacheNum == connectionsNum) || // all connections have cache, then report is sharable
+			!conn.IsUserDefined() || // non-user defined connections are always sharable
+			claims.Email == user.UnknownEmail // when no auth, report is available for all
+
+		report.NeedSensitiveScope = connectionsWithSensitiveScopeNum > 0
+		report.Discoverable = report.Discoverable && report.IsSharable // only sharable reports can be discoverable
+
 		report.CreatedAt = createdAt.Unix()
 		report.UpdatedAt = updatedAt.Unix()
 	}
-	if report.Id == "" {
+	if report.Id == "" || // no report found
+		(!report.Discoverable && !report.IsAuthor) { // report is not discoverable by others in workspace
 		return nil, nil // not found
 	}
 	return report, nil
@@ -236,13 +271,12 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
 	}
 
-	reportID := newUUID()
+	newReportID := newUUID()
 
 	report, err := s.getReport(ctx, req.ReportId)
 	if err != nil {
@@ -250,11 +284,11 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 		return nil, err
 	}
 	if report == nil {
-		err := fmt.Errorf("report %s not found", reportID)
+		err := fmt.Errorf("report %s not found", newReportID)
 		log.Warn().Err(err).Send()
 		return nil, status.Errorf(codes.NotFound, err.Error())
 	}
-	report.Id = reportID
+	report.Id = newReportID
 	report.Title = fmt.Sprintf("Fork of %s", report.Title)
 
 	datasets, err := s.getDatasets(ctx, req.ReportId)
@@ -270,7 +304,7 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 	}
 
 	return &proto.ForkReportResponse{
-		ReportId: reportID,
+		ReportId: newReportID,
 	}, nil
 }
 
@@ -330,6 +364,21 @@ func (s Server) SetDiscoverable(ctx context.Context, req *proto.SetDiscoverableR
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+	report, err := s.getReport(ctx, req.ReportId)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if !report.IsAuthor {
+		err := fmt.Errorf("cannot set discoverable for report %s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.PermissionDenied, "Cannot set discoverable")
 	}
 	res, err := s.db.ExecContext(ctx,
 		`update reports set discoverable=$1, allow_edit=$2 where id=$3 and author_email=$4`, // only author can change discoverable and allow_edit

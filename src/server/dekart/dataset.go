@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/conn"
+	"dekart/src/server/errtype"
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
 	"fmt"
@@ -85,13 +87,13 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 	return datasets, nil
 }
 
-func (s Server) getReportID(ctx context.Context, datasetID string, email string) (*string, error) {
-	datasetRows, err := s.db.QueryContext(ctx,
-		`select report_id from datasets
-		where id=$1 and report_id in (select report_id from reports where author_email=$2 or allow_edit)
-		limit 1`,
+// getReportID returns by dataset id and checks if user has access to the report
+func (s Server) getReportID(ctx context.Context, datasetID string, canWrite bool) (*string, error) {
+	var datasetRows *sql.Rows
+	var err error
+	datasetRows, err = s.db.QueryContext(ctx,
+		`select report_id from datasets where id=$1`,
 		datasetID,
-		email,
 	)
 	if err != nil {
 		return nil, err
@@ -107,11 +109,8 @@ func (s Server) getReportID(ctx context.Context, datasetID string, email string)
 	if reportID == "" {
 		// check legacy queries
 		queryRows, err := s.db.QueryContext(ctx,
-			`select report_id from queries
-			where id=$1 and report_id in (select report_id from reports where author_email=$2 or allow_edit)
-			limit 1`,
+			`select report_id from queries where id=$1 limit 1`,
 			datasetID,
-			email,
 		)
 		if err != nil {
 			return nil, err
@@ -127,6 +126,17 @@ func (s Server) getReportID(ctx context.Context, datasetID string, email string)
 			return nil, nil
 		}
 	}
+	// check if user has access to the report
+	report, err := s.getReport(ctx, reportID)
+	if err != nil {
+		return nil, err
+	}
+	if report == nil {
+		return nil, nil
+	}
+	if canWrite && !report.CanWrite {
+		return nil, nil
+	}
 	return &reportID, nil
 }
 
@@ -136,7 +146,7 @@ func (s Server) UpdateDatasetName(ctx context.Context, req *proto.UpdateDatasetN
 		return nil, Unauthenticated
 	}
 
-	reportID, err := s.getReportID(ctx, req.DatasetId, claims.Email)
+	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
 		log.Err(err).Send()
@@ -173,7 +183,7 @@ func (s Server) UpdateDatasetConnection(ctx context.Context, req *proto.UpdateDa
 		return nil, Unauthenticated
 	}
 
-	reportID, err := s.getReportID(ctx, req.DatasetId, claims.Email)
+	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
 		log.Err(err).Send()
@@ -214,7 +224,7 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
 	}
 
-	reportID, err := s.getReportID(ctx, req.DatasetId, claims.Email)
+	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
 		log.Err(err).Send()
@@ -314,7 +324,7 @@ func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetReque
 		return nil, status.Errorf(codes.NotFound, err.Error())
 	}
 	s.reportStreams.Ping(req.ReportId)
-
+	s.userStreams.PingAll() // because dataset count is now part of connection info
 	res := &proto.CreateDatasetResponse{}
 
 	return res, nil
@@ -322,18 +332,81 @@ func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetReque
 
 // process storage expired error
 func storageError(w http.ResponseWriter, err error) {
-	if _, ok := err.(*storage.ExpiredError); ok {
+	if _, ok := err.(*errtype.Expired); ok {
 		http.Error(w, "expired", http.StatusGone)
 		return
 	}
 	HttpError(w, err)
 }
 
+func (s Server) getDWJobIDFromResultID(ctx context.Context, resultID string) (string, error) {
+	var jobID sql.NullString
+	rows, err := s.db.QueryContext(ctx,
+		`select dw_job_id from queries where job_result_id=$1`,
+		resultID,
+	)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	if rows.Next() {
+		err := rows.Scan(&jobID)
+		if err != nil {
+			return "", err
+		}
+		return jobID.String, nil
+	}
+	return "", nil
+}
+
+// since reading is using connection no auth is needed here
 func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	ctx := r.Context()
+	userCtx := r.Context()
 
-	connection, err := s.getConnectionFromDatasetID(ctx, vars["dataset"])
+	claims := user.GetClaims(userCtx)
+	if claims == nil {
+		http.Error(w, Unauthenticated.Error(), http.StatusUnauthorized)
+		return
+	}
+	_, err := uuid.Parse(vars["dataset"])
+	if err != nil {
+		log.Warn().Err(err).Msg("Invalid dataset id while serving dataset source")
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	reportID, err := s.getReportID(userCtx, vars["dataset"], false)
+
+	if err != nil {
+		log.Err(err).Send()
+		HttpError(w, err)
+		return
+	}
+
+	if reportID == nil {
+		err := fmt.Errorf("dataset not found id:%s", vars["dataset"])
+		log.Warn().Err(err).Send()
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	report, err := s.getReport(userCtx, *reportID)
+
+	if err != nil {
+		log.Err(err).Send()
+		HttpError(w, err)
+		return
+	}
+
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", *reportID)
+		log.Warn().Err(err).Send()
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	connection, err := s.getConnectionFromDatasetID(userCtx, vars["dataset"])
 
 	if err != nil {
 		HttpError(w, err)
@@ -349,13 +422,32 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 
 	bucketName := s.getBucketNameFromConnection(connection)
 
-	obj := s.storage.GetObject(bucketName, fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
-	created, err := obj.GetCreatedAt(ctx)
+	userConCtx := conn.GetCtx(userCtx, connection)
+	dwJobID, err := s.getDWJobIDFromResultID(userCtx, vars["source"])
+	if err != nil {
+		log.Error().Err(err).Msg("Error getting dw job id")
+		HttpError(w, err)
+		return
+	}
+
+	var obj storage.StorageObject
+
+	if dwJobID != "" {
+		// temp data warehouse table is used as source
+		log.Debug().Str("source", vars["source"]).Msg("Serving dataset source from temporary storage")
+		obj = s.storage.GetObject(userConCtx, bucketName, dwJobID)
+	} else {
+		// file stored on the bucket is used as source
+		log.Debug().Str("source", vars["source"]).Msg("Serving dataset source from user storage")
+		obj = s.storage.GetObject(userConCtx, bucketName, fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
+	}
+
+	created, err := obj.GetCreatedAt(userCtx)
 	if err != nil {
 		storageError(w, err)
 		return
 	}
-	objectReader, err := obj.GetReader(ctx)
+	objectReader, err := obj.GetReader(userCtx)
 	if err != nil {
 		storageError(w, err)
 		return

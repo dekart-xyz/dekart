@@ -3,6 +3,44 @@
 
 import * as jspb from "google-protobuf";
 
+export class GetGcpProjectListRequest extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetGcpProjectListRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: GetGcpProjectListRequest): GetGcpProjectListRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetGcpProjectListRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetGcpProjectListRequest;
+  static deserializeBinaryFromReader(message: GetGcpProjectListRequest, reader: jspb.BinaryReader): GetGcpProjectListRequest;
+}
+
+export namespace GetGcpProjectListRequest {
+  export type AsObject = {
+  }
+}
+
+export class GetGcpProjectListResponse extends jspb.Message {
+  clearProjectsList(): void;
+  getProjectsList(): Array<string>;
+  setProjectsList(value: Array<string>): void;
+  addProjects(value: string, index?: number): string;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetGcpProjectListResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: GetGcpProjectListResponse): GetGcpProjectListResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetGcpProjectListResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetGcpProjectListResponse;
+  static deserializeBinaryFromReader(message: GetGcpProjectListResponse, reader: jspb.BinaryReader): GetGcpProjectListResponse;
+}
+
+export namespace GetGcpProjectListResponse {
+  export type AsObject = {
+    projectsList: Array<string>,
+  }
+}
+
 export class SetDefaultConnectionRequest extends jspb.Message {
   getConnectionId(): string;
   setConnectionId(value: string): void;
@@ -147,12 +185,6 @@ export class GetUserStreamResponse extends jspb.Message {
   getEmail(): string;
   setEmail(value: string): void;
 
-  getSensitiveScopesGranted(): boolean;
-  setSensitiveScopesGranted(value: boolean): void;
-
-  getSensitiveScopesGrantedOnce(): boolean;
-  setSensitiveScopesGrantedOnce(value: boolean): void;
-
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetUserStreamResponse.AsObject;
   static toObject(includeInstance: boolean, msg: GetUserStreamResponse): GetUserStreamResponse.AsObject;
@@ -168,8 +200,6 @@ export namespace GetUserStreamResponse {
     streamOptions?: StreamOptions.AsObject,
     connectionUpdate: number,
     email: string,
-    sensitiveScopesGranted: boolean,
-    sensitiveScopesGrantedOnce: boolean,
   }
 }
 
@@ -300,8 +330,10 @@ export namespace UpdateConnectionResponse {
 }
 
 export class CreateConnectionRequest extends jspb.Message {
-  getConnectionName(): string;
-  setConnectionName(value: string): void;
+  hasConnection(): boolean;
+  clearConnection(): void;
+  getConnection(): Connection | undefined;
+  setConnection(value?: Connection): void;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CreateConnectionRequest.AsObject;
@@ -315,7 +347,7 @@ export class CreateConnectionRequest extends jspb.Message {
 
 export namespace CreateConnectionRequest {
   export type AsObject = {
-    connectionName: string,
+    connection?: Connection.AsObject,
   }
 }
 
@@ -366,6 +398,29 @@ export class Connection extends jspb.Message {
   getUpdatedAt(): number;
   setUpdatedAt(value: number): void;
 
+  getDatasetCount(): number;
+  setDatasetCount(value: number): void;
+
+  getCanStoreFiles(): boolean;
+  setCanStoreFiles(value: boolean): void;
+
+  getConnectionType(): Connection.ConnectionTypeMap[keyof Connection.ConnectionTypeMap];
+  setConnectionType(value: Connection.ConnectionTypeMap[keyof Connection.ConnectionTypeMap]): void;
+
+  getSnowflakeAccountId(): string;
+  setSnowflakeAccountId(value: string): void;
+
+  getSnowflakeUsername(): string;
+  setSnowflakeUsername(value: string): void;
+
+  hasSnowflakePassword(): boolean;
+  clearSnowflakePassword(): void;
+  getSnowflakePassword(): Secret | undefined;
+  setSnowflakePassword(value?: Secret): void;
+
+  getSnowflakeWarehouse(): string;
+  setSnowflakeWarehouse(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Connection.AsObject;
   static toObject(includeInstance: boolean, msg: Connection): Connection.AsObject;
@@ -386,6 +441,49 @@ export namespace Connection {
     authorEmail: string,
     createdAt: number,
     updatedAt: number,
+    datasetCount: number,
+    canStoreFiles: boolean,
+    connectionType: Connection.ConnectionTypeMap[keyof Connection.ConnectionTypeMap],
+    snowflakeAccountId: string,
+    snowflakeUsername: string,
+    snowflakePassword?: Secret.AsObject,
+    snowflakeWarehouse: string,
+  }
+
+  export interface ConnectionTypeMap {
+    CONNECTION_TYPE_UNSPECIFIED: 0;
+    CONNECTION_TYPE_BIGQUERY: 1;
+    CONNECTION_TYPE_SNOWFLAKE: 2;
+  }
+
+  export const ConnectionType: ConnectionTypeMap;
+}
+
+export class Secret extends jspb.Message {
+  getClientEncrypted(): string;
+  setClientEncrypted(value: string): void;
+
+  getServerEncrypted(): string;
+  setServerEncrypted(value: string): void;
+
+  getLength(): number;
+  setLength(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): Secret.AsObject;
+  static toObject(includeInstance: boolean, msg: Secret): Secret.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: Secret, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): Secret;
+  static deserializeBinaryFromReader(message: Secret, reader: jspb.BinaryReader): Secret;
+}
+
+export namespace Secret {
+  export type AsObject = {
+    clientEncrypted: string,
+    serverEncrypted: string,
+    length: number,
   }
 }
 
@@ -618,6 +716,10 @@ export namespace GetEnvResponse {
       TYPE_UX_ACCESS_ERROR_INFO_HTML: 13;
       TYPE_UX_NOT_FOUND_ERROR_INFO_HTML: 14;
       TYPE_UX_SAMPLE_QUERY_SQL: 15;
+      TYPE_AES_KEY: 16;
+      TYPE_AES_IV: 17;
+      TYPE_AUTH_ENABLED: 18;
+      TYPE_USER_DEFINED_CONNECTION: 19;
     }
 
     export const Type: TypeMap;
@@ -630,6 +732,9 @@ export class RedirectState extends jspb.Message {
 
   getError(): string;
   setError(value: string): void;
+
+  getSensitiveScopesGranted(): boolean;
+  setSensitiveScopesGranted(value: boolean): void;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): RedirectState.AsObject;
@@ -645,6 +750,7 @@ export namespace RedirectState {
   export type AsObject = {
     tokenJson: string,
     error: string,
+    sensitiveScopesGranted: boolean,
   }
 }
 
@@ -825,6 +931,12 @@ export class Report extends jspb.Message {
   getUpdatedAt(): number;
   setUpdatedAt(value: number): void;
 
+  getIsSharable(): boolean;
+  setIsSharable(value: boolean): void;
+
+  getNeedSensitiveScope(): boolean;
+  setNeedSensitiveScope(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Report.AsObject;
   static toObject(includeInstance: boolean, msg: Report): Report.AsObject;
@@ -848,6 +960,8 @@ export namespace Report {
     isAuthor: boolean,
     createdAt: number,
     updatedAt: number,
+    isSharable: boolean,
+    needSensitiveScope: boolean,
   }
 }
 

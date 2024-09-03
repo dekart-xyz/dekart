@@ -4,12 +4,18 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/conn"
 	"dekart/src/server/job"
 	"dekart/src/server/report"
+	"dekart/src/server/secrets"
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
+	"encoding/json"
+	"io/ioutil"
+	"net/http"
 	"os"
 
+	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -28,7 +34,6 @@ type Server struct {
 var Unauthenticated error = status.Error(codes.Unauthenticated, "UNAUTHENTICATED")
 
 // NewServer returns new Dekart Server
-// func NewServer(db *sql.DB, bucket *storage.BucketHandle, jobs *job.Store) *Server {
 func NewServer(db *sql.DB, storageBucket storage.Storage, jobs job.Store) *Server {
 	server := Server{
 		db:            db,
@@ -53,6 +58,62 @@ func defaultString(s, def string) string {
 	return s
 }
 
+type ProjectList struct {
+	Projects []struct {
+		Id string `json:"id"`
+	} `json:"projects"`
+}
+
+// GetGcpProjectList returns list of GCP projects for connection autosuggest
+func (s Server) GetGcpProjectList(ctx context.Context, req *proto.GetGcpProjectListRequest) (*proto.GetGcpProjectListResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	tokenSource := user.GetTokenSource(ctx)
+	if tokenSource == nil {
+		log.Warn().Msg("GetGcpProjectList called without token source")
+		return nil, Unauthenticated
+	}
+
+	token, err := tokenSource.Token()
+	if err != nil {
+		log.Err(err).Msg("Cannot get token")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	httpClient := &http.Client{}
+	r, err := http.NewRequestWithContext(ctx, "GET", "https://www.googleapis.com/bigquery/v2/projects?maxResults=100000", nil)
+	if err != nil {
+		log.Err(err).Msg("Cannot create request")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	token.SetAuthHeader(r)
+	resp, err := httpClient.Do(r)
+	if err != nil {
+		log.Err(err).Msg("Cannot list projects")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Err(err).Msg("Cannot read response")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	projectList := &ProjectList{}
+	err = json.Unmarshal(body, projectList)
+	if err != nil {
+		log.Err(err).Msg("Cannot unmarshal response")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	var projects []string
+	for _, project := range projectList.Projects {
+		projects = append(projects, project.Id)
+	}
+	return &proto.GetGcpProjectListResponse{
+		Projects: projects,
+	}, nil
+}
+
 // GetEnv variables to the client
 func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.GetEnvResponse, error) {
 	claims := user.GetClaims(ctx)
@@ -71,6 +132,16 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 		if homePageUrl == "" {
 			homePageUrl = "https://dekart.xyz/cloud/"
 		}
+		var authEnabled string
+		if claims.Email != user.UnknownEmail {
+			authEnabled = "1"
+		}
+
+		var userDefinedConnection string
+		if conn.IsUserDefined() {
+			userDefinedConnection = "1"
+		}
+
 		variables = []*proto.GetEnvResponse_Variable{
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_MAPBOX_TOKEN,
@@ -131,6 +202,22 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_CLOUD_STORAGE_BUCKET,
 				Value: defaultString(os.Getenv("DEKART_CLOUD_STORAGE_BUCKET"), ""),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_AES_KEY,
+				Value: secrets.GetClientKeyBase64(*claims),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_AES_IV,
+				Value: secrets.GetClientIVBase64(*claims),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_AUTH_ENABLED,
+				Value: authEnabled,
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_USER_DEFINED_CONNECTION,
+				Value: userDefinedConnection,
 			},
 		}
 
