@@ -1,10 +1,9 @@
-.PHONY: proto-build proto-docker proto docker docker-compose-up docker-compose-rm version minor patch
+.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down
 
 # load .env
 # https://lithic.tech/blog/2020-05/makefile-dot-env
 ifneq (,$(wildcard ./.env))
     include .env
-    export
 endif
 
 UNAME := $(shell uname -m)
@@ -108,29 +107,6 @@ cloud:
 	-e DEKART_CORS_ORIGIN=http://localhost:3000 \
 	-e TEST_SPEC=cypress/e2e/bq/cloudBasicFlowStart.cy.js \
 	${DEKART_DOCKER_E2E_TAG}
-	docker run -it --rm \
-	-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
-	-v $$(pwd)/cypress/videos:/dekart/cypress/videos/ \
-	-v $$(pwd)/cypress/screenshots:/dekart/cypress/screenshots/ \
-	-e DEKART_LOG_DEBUG=1 \
-	-e GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} \
-	-e DEKART_POSTGRES_USER=${DEKART_POSTGRES_USER} \
-	-e DEKART_POSTGRES_PASSWORD=${DEKART_POSTGRES_PASSWORD} \
-	-e DEKART_POSTGRES_PORT=${DEKART_POSTGRES_PORT} \
-	-e DEKART_POSTGRES_HOST=host.docker.internal \
-	-e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
-	-e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
-	-e DEKART_STORAGE=GCS \
-	-e DEKART_DATASOURCE=BQ \
-	-e DEKART_ALLOW_FILE_UPLOAD=1 \
-	-e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
-	-e DEKART_GOOGLE_OAUTH_CLIENT_ID=${DEKART_GOOGLE_OAUTH_CLIENT_ID} \
-	-e DEKART_GOOGLE_OAUTH_SECRET=${DEKART_GOOGLE_OAUTH_SECRET} \
-	-e DEKART_DEV_REFRESH_TOKEN=${DEV_REFRESH_TOKEN} \
-	-e DEKART_CORS_ORIGIN=http://localhost:3000 \
-	-e TEST_SPEC=cypress/e2e/bq/cloudBasicFlowEnd.cy.js \
-	${DEKART_DOCKER_E2E_TAG}
-
 
 athena:
 	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} -o type=image -f ./Dockerfile --target e2etest .
@@ -235,8 +211,6 @@ docker: # build docker for local use
 
 up-and-down:
 	docker-compose  --env-file .env --profile local up; docker-compose --env-file .env --profile local down --volumes
-
-
 up:
 	docker-compose  --env-file .env --profile local up
 
@@ -246,8 +220,21 @@ down:
 cloudsql:
 	docker-compose  --env-file .env --profile cloudsql up
 
-server:
+
+define run_server
+	@set -a; \
+	. $(1); \
+	set +a; \
 	go run ./src/server/main.go
+endef
+
+# Pattern rule to match any target starting with ".env."
+server-%:
+	$(call run_server,.env.$*)
+
+# Rule for the default .env file
+server:
+	$(call run_server,.env)
 
 npm:
 	npm i --legacy-peer-deps

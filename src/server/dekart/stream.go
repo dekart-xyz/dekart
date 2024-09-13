@@ -278,7 +278,7 @@ func (s Server) GetUserStream(req *proto.GetUserStreamRequest, srv proto.Dekart_
 	for {
 		select {
 		case sequence := <-ping:
-			return s.sendUserStreamResponse(ctx, srv, sequence)
+			return s.sendUserStreamResponse(srv.Context(), srv, sequence)
 		case <-ctx.Done():
 			return nil
 		}
@@ -311,7 +311,7 @@ func (s Server) GetReportListStream(req *proto.ReportListRequest, srv proto.Deka
 	for {
 		select {
 		case sequence := <-ping:
-			return s.sendReportList(ctx, srv, sequence)
+			return s.sendReportList(srv.Context(), srv, sequence)
 		case <-ctx.Done():
 			return nil
 		}
