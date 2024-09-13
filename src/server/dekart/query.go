@@ -234,7 +234,8 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		`select
 			reports.id,
 			queries.query_source_id,
-			datasets.connection_id
+			datasets.connection_id,
+			queries.query_text
 		from queries
 			left join datasets on queries.id = datasets.query_id
 			left join reports on (datasets.report_id = reports.id or queries.report_id = reports.id)
@@ -250,8 +251,9 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	var reportID string
 	var prevQuerySourceId string
 	var connectionID sql.NullString
+	var queryText string
 	for queriesRows.Next() {
-		err := queriesRows.Scan(&reportID, &prevQuerySourceId, &connectionID)
+		err := queriesRows.Scan(&reportID, &prevQuerySourceId, &connectionID, &queryText)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, status.Error(codes.Internal, err.Error())
@@ -277,7 +279,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	if !report.CanWrite {
+	if !(report.CanWrite || report.Discoverable) {
 		err := fmt.Errorf("permission denied")
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.PermissionDenied, err.Error())
@@ -290,23 +292,27 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	err = s.storeQuerySync(ctx, req.QueryId, req.QueryText, prevQuerySourceId)
-
-	if err != nil {
-		code := codes.Internal
-		if _, ok := err.(*queryWasNotUpdated); ok {
-			code = codes.Canceled
-			log.Warn().Err(err).Send()
-		} else {
-			log.Error().Err(err).Send()
+	if report.CanWrite {
+		// update query text if it was changed by user if user has write permission
+		// otherwise use query text from db
+		queryText = req.QueryText
+		err = s.storeQuerySync(ctx, req.QueryId, req.QueryText, prevQuerySourceId)
+		if err != nil {
+			code := codes.Internal
+			if _, ok := err.(*queryWasNotUpdated); ok {
+				code = codes.Canceled
+				log.Warn().Err(err).Send()
+			} else {
+				log.Error().Err(err).Send()
+			}
+			return nil, status.Error(code, err.Error())
 		}
-		return nil, status.Error(code, err.Error())
 	}
 
 	err = s.runQuery(ctx, runQueryOptions{
 		reportID:       reportID,
 		queryID:        req.QueryId,
-		queryText:      req.QueryText,
+		queryText:      queryText,
 		connection:     connection,
 		userBucketName: s.getBucketNameFromConnection(connection),
 	})
