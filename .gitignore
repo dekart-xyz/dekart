@@ -49,3 +49,4 @@ testtmp*
 
 # .env
 .env.*
+data

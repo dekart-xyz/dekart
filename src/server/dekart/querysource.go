@@ -87,6 +87,7 @@ func (s Server) storeQuerySync(ctx context.Context, queryID string, queryText st
 	}
 	affectedRows, _ := result.RowsAffected()
 	if affectedRows == 0 {
+		log.Warn().Str("prevQuerySourceId", prevQuerySourceId).Str("newQuerySourceId", newQuerySourceId).Msg("Query text not updated")
 		return &queryWasNotUpdated{}
 	}
 	return nil
