@@ -7,6 +7,8 @@ import { Link } from 'react-router-dom/cjs/react-router-dom'
 import { createReport } from './actions/report'
 import Tooltip from 'antd/es/tooltip'
 
+const popupOffset = [-10, 0]
+
 export default function DekartMenu () {
   const env = useSelector(state => state.env)
   const usage = useSelector(state => state.usage)
@@ -18,6 +20,7 @@ export default function DekartMenu () {
     <div className={styles.dekartMenu}>
       <Menu mode='horizontal' theme='dark'>
         <Menu.SubMenu
+          popupOffset={popupOffset}
           popupClassName={styles.subMenu} title={<MenuOutlined />} key='home' active='yes'
         >
           {authEnabled
@@ -40,14 +43,14 @@ export default function DekartMenu () {
           <Menu.Divider />
           <Menu.Item key='create' onClick={() => dispatch(createReport())}>New Report</Menu.Item>
         </Menu.SubMenu>
-        <Menu.SubMenu popupClassName={styles.subMenu} title={<MessageOutlined />} key='community' active='yes'>
+        <Menu.SubMenu popupClassName={styles.subMenu} popupOffset={popupOffset} title={<MessageOutlined />} key='community' active='yes'>
           <Menu.Item key='slack'>
             <a target='_blank' rel='noopener noreferrer' href='https://slack.dekart.xyz'>Ask in Slack</a>
           </Menu.Item>
           <Menu.Item key='issues'>
             <a target='_blank' rel='noopener noreferrer' href={'https://github.com/dekart-xyz/dekart/issues?ref=' + ref}>Report Issue</a>
           </Menu.Item>
-          <Menu.Item key='issues'>
+          <Menu.Item key='examples'>
             <a target='_blank' rel='noopener noreferrer' href={'https://dekart.xyz/docs/about/kepler-gl-map-examples?ref=' + ref}>Map Examples</a>
           </Menu.Item>
         </Menu.SubMenu>
