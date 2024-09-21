@@ -80,7 +80,7 @@ export function Header ({ buttons, title }) {
       <div className={styles.top}>
         <DekartMenu />
         <div className={styles.middle}>
-          <div className={styles.dekartLinkHolder}><a target='_blank' rel='noopener noreferrer' className={styles.dekartLink} href={homePage}>Dekart</a></div>
+          <div className={styles.dekartLinkHolder}><a target='_blank' rel='noopener noreferrer' className={styles.dekartLink} href={homePage}><span className={styles.dekartTitle} /></a></div>
         </div>
         <div className={styles.buttons}>{buttons || null}</div>
         <User buttonDivider={Boolean(buttons)} />

@@ -5,6 +5,7 @@ import { getUrlRef } from './lib/ref'
 import { MenuOutlined, MessageOutlined } from '@ant-design/icons'
 import { Link } from 'react-router-dom/cjs/react-router-dom'
 import { createReport } from './actions/report'
+import Tooltip from 'antd/es/tooltip'
 
 export default function DekartMenu () {
   const env = useSelector(state => state.env)
@@ -26,7 +27,7 @@ export default function DekartMenu () {
                   <Link to='/'>My Reports</Link>
                 </Menu.Item>
                 <Menu.Item key='shared'>
-                  <Link to='/shared'>Shared reports</Link>
+                  <Link to='/shared'>Shared Reports</Link>
                 </Menu.Item>
               </>
               )
@@ -46,9 +47,12 @@ export default function DekartMenu () {
           <Menu.Item key='issues'>
             <a target='_blank' rel='noopener noreferrer' href={'https://github.com/dekart-xyz/dekart/issues?ref=' + ref}>Report Issue</a>
           </Menu.Item>
+          <Menu.Item key='issues'>
+            <a target='_blank' rel='noopener noreferrer' href={'https://dekart.xyz/docs/about/kepler-gl-map-examples?ref=' + ref}>Map Examples</a>
+          </Menu.Item>
         </Menu.SubMenu>
         <Menu.Item key='contribute'>
-          <a target='_blank' title='Contribute' rel='noopener noreferrer' href={'https://dekart.xyz/support-project/?ref=' + ref}>🩵</a>
+          <Tooltip color='#328EB2' title={<>Loving Dekart?<br />Help community find it.<br />Give us ⭐️ on GitHub!</>}><a target='_blank' rel='noopener noreferrer' href='https://github.com/dekart-xyz/dekart'>🩵</a></Tooltip>
         </Menu.Item>
       </Menu>
     </div>
