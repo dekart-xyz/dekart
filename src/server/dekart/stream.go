@@ -2,10 +2,13 @@ package dekart
 
 import (
 	"context"
+	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/report"
 	"dekart/src/server/user"
 	"fmt"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -65,6 +68,21 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 
 }
 
+const defaultStreamTimeout = 50 * time.Second
+
+// parse int constant from os env variable DEKART_STREAM_TIMEOUT
+func getStreamTimeout() time.Duration {
+	timeout := os.Getenv("DEKART_STREAM_TIMEOUT")
+	if timeout == "" {
+		return defaultStreamTimeout
+	}
+	timeoutInt, err := strconv.Atoi(timeout)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to parse DEKART_STREAM_TIMEOUT")
+	}
+	return time.Duration(timeoutInt) * time.Second
+}
+
 // GetReportStream which sends report and queries on every update
 func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart_GetReportStreamServer) error {
 	claims := user.GetClaims(srv.Context())
@@ -93,7 +111,7 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 	ping := s.reportStreams.Register(req.Report.Id, streamID.String(), req.StreamOptions.Sequence)
 	defer s.reportStreams.Deregister(req.Report.Id, streamID.String())
 
-	ctx, cancel := context.WithTimeout(srv.Context(), 55*time.Second)
+	ctx, cancel := context.WithTimeout(srv.Context(), getStreamTimeout())
 	defer cancel()
 
 	for {
@@ -110,21 +128,24 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 
 func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportListStreamServer, sequence int64) error {
 	claims := user.GetClaims(ctx)
-	reportRows, err := s.db.QueryContext(ctx,
+
+	var err error
+	var reportRows *sql.Rows
+	reportRows, err = s.db.QueryContext(ctx,
 		`select
-			id,
-			case when title is null then 'Untitled' else title end as title,
-			archived,
-			(author_email = $1) or allow_edit as can_write,
-			author_email = $1 as is_author,
-			author_email,
-			discoverable,
-			allow_edit,
-			updated_at,
-			created_at
-		from reports
-		where author_email=$1 or (discoverable=true and archived=false) or allow_edit=true
-		order by updated_at desc`,
+				id,
+				case when title is null then 'Untitled' else title end as title,
+				archived,
+				(author_email = $1) or allow_edit as can_write,
+				author_email = $1 as is_author,
+				author_email,
+				discoverable,
+				allow_edit,
+				updated_at,
+				created_at
+			from reports as r
+			where (author_email=$1 or (discoverable=true and archived=false) or allow_edit=true)
+			order by updated_at desc`,
 		claims.Email,
 	)
 	if err != nil {
@@ -170,41 +191,23 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 	return nil
 }
 
-func (s Server) sendUserStreamResponse(ctx context.Context, srv proto.Dekart_GetUserStreamServer, sequence int64) error {
-	claims := user.GetClaims(srv.Context())
+func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.Dekart_GetUserStreamServer, sequence int64) error {
+	ctx := incomingCtx
+	claims := user.GetClaims(ctx)
+
+	// connection update
 	connectionUpdate, err := s.getLastConnectionUpdate(ctx)
 	if err != nil {
 		log.Err(err).Send()
 		return status.Errorf(codes.Internal, err.Error())
 	}
 
-	// query from db user scopes
-	res, err := s.db.QueryContext(ctx,
-		`select sensitive_scope from users where email=$1`,
-		claims.Email,
-	)
-	if err != nil {
-		log.Err(err).Send()
-		return status.Errorf(codes.Internal, err.Error())
-	}
-	defer res.Close()
-	sensitiveScopesGranted := ""
-	for res.Next() {
-		err = res.Scan(&sensitiveScopesGranted)
-		if err != nil {
-			log.Err(err).Send()
-			return status.Errorf(codes.Internal, err.Error())
-		}
-	}
-
 	response := proto.GetUserStreamResponse{
 		StreamOptions: &proto.StreamOptions{
 			Sequence: sequence,
 		},
-		ConnectionUpdate:           connectionUpdate,
-		Email:                      claims.Email,
-		SensitiveScopesGranted:     claims.SensitiveScopesGranted,                      // current token scopes
-		SensitiveScopesGrantedOnce: user.HasAllSensitiveScopes(sensitiveScopesGranted), // granted before to app
+		ConnectionUpdate: connectionUpdate,
+		Email:            claims.Email,
 	}
 
 	err = srv.Send(&response)
@@ -228,13 +231,13 @@ func (s Server) GetUserStream(req *proto.GetUserStreamRequest, srv proto.Dekart_
 	ping, streamID := s.userStreams.Register(*claims, req.StreamOptions.Sequence)
 	defer s.userStreams.Deregister(*claims, streamID)
 
-	ctx, cancel := context.WithTimeout(srv.Context(), 55*time.Second)
+	ctx, cancel := context.WithTimeout(srv.Context(), getStreamTimeout())
 	defer cancel()
 
 	for {
 		select {
 		case sequence := <-ping:
-			return s.sendUserStreamResponse(ctx, srv, sequence)
+			return s.sendUserStreamResponse(srv.Context(), srv, sequence)
 		case <-ctx.Done():
 			return nil
 		}
@@ -261,13 +264,13 @@ func (s Server) GetReportListStream(req *proto.ReportListRequest, srv proto.Deka
 	ping := s.reportStreams.Register(report.All, streamID.String(), req.StreamOptions.Sequence)
 	defer s.reportStreams.Deregister(report.All, streamID.String())
 
-	ctx, cancel := context.WithTimeout(srv.Context(), 55*time.Second)
+	ctx, cancel := context.WithTimeout(srv.Context(), getStreamTimeout())
 	defer cancel()
 
 	for {
 		select {
 		case sequence := <-ping:
-			return s.sendReportList(ctx, srv, sequence)
+			return s.sendReportList(srv.Context(), srv, sequence)
 		case <-ctx.Done():
 			return nil
 		}

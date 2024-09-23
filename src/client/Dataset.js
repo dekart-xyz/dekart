@@ -8,8 +8,7 @@ import { createQuery } from './actions/query'
 import { createFile } from './actions/file'
 import Dropdown from 'antd/es/dropdown'
 import { ConsoleSqlOutlined, UploadOutlined, MoreOutlined } from '@ant-design/icons'
-import ConnectionModal from './ConnectionModal'
-import Datasource from './Datasource'
+import { Datasource } from './Datasource'
 import { updateDatasetConnection } from './actions/dataset'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 
@@ -17,9 +16,20 @@ function DatasetTypeSelector ({ dataset }) {
   const dispatch = useDispatch()
 
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
+  const connectionList = useSelector(state => state.connection.list)
 
   const env = useSelector(state => state.env)
   const { ALLOW_FILE_UPLOAD } = env.variables
+  let allowFileUpload = ALLOW_FILE_UPLOAD
+  let disabledFileUploadNote = 'File upload is disabled in Dekart configuration'
+  if (allowFileUpload && userDefinedConnection) {
+    // check if selected connection supports file upload
+    const connection = connectionList.find(c => c.id === dataset.connectionId)
+    allowFileUpload = connection?.canStoreFiles
+    if (!allowFileUpload) {
+      disabledFileUploadNote = 'Selected connection does not support file upload'
+    }
+  }
 
   return (
     <div className={styles.datasetTypeSelector}>
@@ -35,8 +45,8 @@ function DatasetTypeSelector ({ dataset }) {
             {
               label: 'File upload',
               icon: <UploadOutlined />,
-              title: !ALLOW_FILE_UPLOAD ? 'File upload is disabled in Dekart configuration' : null,
-              disabled: !ALLOW_FILE_UPLOAD,
+              title: !allowFileUpload ? disabledFileUploadNote : null,
+              disabled: !allowFileUpload,
               key: 'file'
             }
           ],
@@ -60,6 +70,7 @@ function DatasetSelector ({ dataset }) {
   const env = useSelector(state => state.env)
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const connectionList = useSelector(state => state.connection.list)
+  const selectedConnection = connectionList.find(c => c.id === dataset.connectionId)
   const history = useHistory()
   if (!env.loaded) {
     return null
@@ -74,7 +85,7 @@ function DatasetSelector ({ dataset }) {
         {userDefinedConnection
           ? (
             <>
-              <Datasource />
+              <Datasource connection={selectedConnection} />
               <div className={styles.datasource}>
                 <Select
                   placeholder='Select connection'
@@ -99,7 +110,6 @@ function DatasetSelector ({ dataset }) {
                   }}
                   />
               </div>
-              <ConnectionModal />
             </>
             )
           : <DatasetTypeSelector dataset={dataset} />}

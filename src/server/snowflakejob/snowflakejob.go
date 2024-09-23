@@ -4,24 +4,30 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/conn"
+	"dekart/src/server/errtype"
 	"dekart/src/server/job"
+	"dekart/src/server/secrets"
+	"dekart/src/server/snowflakeutils"
 	"dekart/src/server/storage"
+	"dekart/src/server/user"
 	"encoding/csv"
 	"fmt"
 	"io"
-	"os"
-	"regexp"
 	"sync"
 
 	"github.com/rs/zerolog/log"
 	sf "github.com/snowflakedb/gosnowflake"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type Job struct {
 	job.BasicJob
-	snowflakeDb    *sql.DB
-	storageObject  storage.StorageObject
-	dataSourceName string
+	snowflakeDb              *sql.DB
+	storageObject            storage.StorageObject
+	connector                sf.Connector
+	isSnowflakeStorageObject bool
 }
 
 type Store struct {
@@ -54,8 +60,6 @@ func (j *Job) write(csvRows chan []string) {
 	j.close(storageWriter, csvWriter)
 }
 
-var contextCancelledRe = regexp.MustCompile(`context canceled`)
-
 func (j *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 	csvWriter.Flush()
 	err := storageWriter.Close()
@@ -64,7 +68,7 @@ func (j *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 		if err == context.Canceled {
 			return
 		}
-		if contextCancelledRe.MatchString(err.Error()) {
+		if errtype.ContextCancelledRe.MatchString(err.Error()) {
 			return
 		}
 		j.Logger.Err(err).Send()
@@ -81,8 +85,7 @@ func (j *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 	j.Logger.Debug().Msg("Writing Done")
 	j.Lock()
 	j.ResultSize = *resultSize
-	jobID := j.GetID()
-	j.ResultID = &jobID
+	j.ResultReady = true // results available now
 	j.Unlock()
 	j.Status() <- int32(proto.Query_JOB_STATUS_DONE)
 	j.Cancel()
@@ -98,7 +101,7 @@ func (j *Job) fetchQueryMetadata(queryIDChan chan string, resultsReady chan bool
 			j.Logger.Warn().Msg("Context Done before query status received")
 			return
 		case <-resultsReady:
-			conn, err := j.snowflakeDb.Driver().Open(j.dataSourceName)
+			conn, err := j.connector.Connect(ctx)
 			if err != nil {
 				j.Logger.Err(err).Send()
 				j.CancelWithError(err)
@@ -111,6 +114,10 @@ func (j *Job) fetchQueryMetadata(queryIDChan chan string, resultsReady chan bool
 				return
 			}
 			j.Lock()
+			if j.isSnowflakeStorageObject {
+				j.ResultReady = true
+				j.DWJobID = &queryID
+			}
 			j.ProcessedBytes = status.ScanBytes
 			j.Unlock()
 			return
@@ -123,82 +130,81 @@ func (j *Job) fetchQueryMetadata(queryIDChan chan string, resultsReady chan bool
 
 func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connection) error {
 	j.storageObject = storageObject
-	queryIDChan := make(chan string)
-	resultsReady := make(chan bool)
-	metadataWg := &sync.WaitGroup{}
-	metadataWg.Add(1)
-	go j.fetchQueryMetadata(queryIDChan, resultsReady, metadataWg)
-	j.Status() <- int32(proto.Query_JOB_STATUS_RUNNING)
-	rows, err := j.snowflakeDb.QueryContext(
-		sf.WithQueryIDChan(j.GetCtx(), queryIDChan),
-		j.QueryText,
-	)
-	if err != nil {
-		j.CancelWithError(err)
-		return nil // it's ok, since these are query errors
-	}
-	defer rows.Close()
-	csvRows := make(chan []string, 10) //j.TotalRows?
-
-	go j.write(csvRows)
-
-	firstRow := true
-	for rows.Next() {
-		columnTypes, err := rows.ColumnTypes()
+	_, isSnowflakeStorageObject := j.storageObject.(storage.SnowflakeStorageObject)
+	j.isSnowflakeStorageObject = isSnowflakeStorageObject
+	go func() {
+		queryIDChan := make(chan string)
+		resultsReady := make(chan bool)
+		metadataWg := &sync.WaitGroup{}
+		metadataWg.Add(1)
+		go j.fetchQueryMetadata(queryIDChan, resultsReady, metadataWg)
+		j.Status() <- int32(proto.Query_JOB_STATUS_RUNNING)
+		// TODO will this just work: queryID = rows1.(sf.SnowflakeRows).GetQueryID()
+		// https://pkg.go.dev/github.com/snowflakedb/gosnowflake#hdr-Fetch_Results_by_Query_ID
+		rows, err := j.snowflakeDb.QueryContext(
+			sf.WithQueryIDChan(j.GetCtx(), queryIDChan),
+			j.QueryText,
+		)
 		if err != nil {
-			j.Logger.Error().Err(err).Msg("Error getting column types")
+			j.Logger.Debug().Err(err).Msg("Error querying snowflake")
 			j.CancelWithError(err)
-			return err
+			return
 		}
-		if firstRow {
-			firstRow = false
+		defer rows.Close()
+
+		if isSnowflakeStorageObject { // no need to write to storage, use temp query results storage
 			resultsReady <- true
-			j.Status() <- int32(proto.Query_JOB_STATUS_READING_RESULTS)
-			columnNames := make([]string, len(columnTypes))
-			for i, columnType := range columnTypes {
-				columnNames[i] = columnType.Name()
-			}
-			csvRows <- columnNames
-		}
+			defer (func() {
+				j.Status() <- int32(proto.Query_JOB_STATUS_DONE)
+			})()
+		} else {
+			csvRows := make(chan []string, 10) //j.TotalRows?
 
-		csvRow := make([]string, len(columnTypes))
-		values := make([]interface{}, len(columnTypes))
-		for i := range columnTypes {
-			values[i] = new(sql.NullString)
-		}
-		rows.Scan(values...)
+			go j.write(csvRows)
 
-		for i := range columnTypes {
-			value := values[i]
-			switch x := value.(type) {
-			case *sql.NullString:
-				csvRow[i] = x.String
-			default:
-				return fmt.Errorf("incorrect type of data: %T", x)
+			firstRow := true
+			for rows.Next() {
+				if firstRow {
+					firstRow = false
+					resultsReady <- true
+					j.Status() <- int32(proto.Query_JOB_STATUS_READING_RESULTS)
+					columnNames, err := snowflakeutils.GetColumns(rows)
+					if err != nil {
+						j.Logger.Error().Err(err).Msg("Error getting column names")
+						j.CancelWithError(err)
+						return
+					}
+					csvRows <- columnNames
+				}
+
+				csvRow, err := snowflakeutils.GetRow(rows)
+				if err != nil {
+					j.Logger.Error().Err(err).Msg("Error getting column names")
+					j.CancelWithError(err)
+					return
+				}
+				csvRows <- csvRow
 			}
+
+			if firstRow {
+				// unblock fetchQueryMetadata if no rows
+				resultsReady <- true
+			}
+			defer close(csvRows)
 		}
-		csvRows <- csvRow
-	}
-	if firstRow {
-		// unblock fetchQueryMetadata if no rows
-		resultsReady <- true
-	}
-	metadataWg.Wait() // do not close context until metadata is fetched
-	close(csvRows)    //better to close in defer?
+		metadataWg.Wait() // do not close context until metadata is fetched
+	}()
 	return nil
 }
 
-func (s *Store) Create(reportID string, queryID string, queryText string, userCtx context.Context) (job.Job, chan int32, error) {
-	dataSourceName := fmt.Sprintf(
-		"%s:%s@%s",
-		os.Getenv("DEKART_SNOWFLAKE_USER"),
-		os.Getenv("DEKART_SNOWFLAKE_PASSWORD"),
-		os.Getenv("DEKART_SNOWFLAKE_ACCOUNT_ID"),
-	)
-	db, err := sql.Open("snowflake", dataSourceName)
+func Create(reportID string, queryID string, queryText string, userCtx context.Context) (job.Job, error) {
+	connection := conn.FromCtx(userCtx)
+	connector := snowflakeutils.GetConnector(connection)
+	db := sql.OpenDB(connector)
+	err := db.Ping()
 	if err != nil {
-		log.Error().Err(err).Msg("failed to connect to snowflake")
-		return nil, nil, err
+		log.Error().Err(err).Msg("Failed to ping snowflake")
+		return nil, err
 	}
 	job := &Job{
 		BasicJob: job.BasicJob{
@@ -207,11 +213,47 @@ func (s *Store) Create(reportID string, queryID string, queryText string, userCt
 			QueryText: queryText,
 			Logger:    log.With().Str("reportID", reportID).Str("queryID", queryID).Logger(),
 		},
-		snowflakeDb:    db,
-		dataSourceName: dataSourceName,
+		snowflakeDb: db,
+		connector:   connector,
 	}
 	job.Init(userCtx)
+	return job, nil
+}
+
+func (s *Store) Create(reportID string, queryID string, queryText string, userCtx context.Context) (job.Job, chan int32, error) {
+	job, err := Create(reportID, queryID, queryText, userCtx)
+	if err != nil {
+		return nil, nil, err
+	}
 	s.StoreJob(job)
 	go s.RemoveJobWhenDone(job)
 	return job, job.Status(), nil
+}
+
+func TestConnection(ctx context.Context, req *proto.TestConnectionRequest) (*proto.TestConnectionResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, status.Error(codes.Unauthenticated, "claims are required")
+	}
+	conn := req.Connection
+	if conn == nil {
+		return nil, fmt.Errorf("connection is nil")
+	}
+	if conn.SnowflakePassword == nil {
+		return nil, status.Error(codes.InvalidArgument, "snowflake_password is required")
+	}
+	conn.SnowflakePassword = secrets.ClientToServer(conn.SnowflakePassword, claims)
+	connector := snowflakeutils.GetConnector(conn)
+	db := sql.OpenDB(connector)
+	err := db.PingContext(ctx)
+	if err != nil {
+		log.Debug().Err(err).Msg("snowflake.Ping failed when testing connection")
+		return &proto.TestConnectionResponse{
+			Success: false,
+			Error:   err.Error(),
+		}, nil
+	}
+	return &proto.TestConnectionResponse{
+		Success: true,
+	}, nil
 }

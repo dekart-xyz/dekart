@@ -27,10 +27,13 @@ type StorageObject interface {
 	GetCreatedAt(context.Context) (*time.Time, error)
 	GetSize(context.Context) (*int64, error)
 	CopyFromS3(ctx context.Context, source string) error
+	CopyTo(ctx context.Context, writer io.WriteCloser) error
+	Delete(ctx context.Context) error
 }
 
 type Storage interface {
-	GetObject(string, string) StorageObject
+	GetObject(context.Context, string, string) StorageObject
+	CanSaveQuery(context.Context, string) bool
 }
 
 func GetBucketName(userBucketName string) string {
@@ -52,6 +55,12 @@ func GetDefaultBucketName() string {
 type GoogleCloudStorage struct {
 	defaultBucketName string
 	logger            zerolog.Logger
+	useUserToken      bool // if false ignore user token in ctx and use default service account
+}
+
+// CanSaveQuery returns true if the storage can save SQL query text
+func (s GoogleCloudStorage) CanSaveQuery(_ context.Context, bucketName string) bool {
+	return bucketName != ""
 }
 
 func (s GoogleCloudStorage) GetDefaultBucketName() string {
@@ -66,6 +75,20 @@ func NewGoogleCloudStorage() *GoogleCloudStorage {
 	return &GoogleCloudStorage{
 		defaultBucketName,
 		log.With().Str("DEKART_CLOUD_STORAGE_BUCKET", defaultBucketName).Logger(),
+		true,
+	}
+}
+
+// NewPublicStorage used to access public storage bucket with application account
+func NewPublicStorage() *GoogleCloudStorage {
+	defaultBucketName := os.Getenv("DEKART_CLOUD_PUBLIC_STORAGE_BUCKET")
+	if defaultBucketName == "" {
+		log.Fatal().Msg("DEKART_CLOUD_PUBLIC_STORAGE_BUCKET is not set")
+	}
+	return &GoogleCloudStorage{
+		defaultBucketName,
+		log.With().Str("DEKART_CLOUD_PUBLIC_STORAGE_BUCKET", defaultBucketName).Logger(),
+		false,
 	}
 }
 
@@ -115,7 +138,7 @@ func (o BucketNameOption) apply(options *GetObjectConfig) {
 	options.bucketName = o.BucketName
 }
 
-func (s GoogleCloudStorage) GetObject(bucketName, object string) StorageObject {
+func (s GoogleCloudStorage) GetObject(_ context.Context, bucketName, object string) StorageObject {
 	if bucketName == "" {
 		log.Warn().Msg("bucketName is not set")
 	}
@@ -123,14 +146,16 @@ func (s GoogleCloudStorage) GetObject(bucketName, object string) StorageObject {
 		bucketName,
 		object,
 		s.logger.With().Str("GoogleCloudStorageObject", object).Logger(),
+		s.useUserToken,
 	}
 }
 
 // GoogleCloudStorageObject implements StorageObject interface for Google Cloud Storage
 type GoogleCloudStorageObject struct {
-	bucketName string
-	object     string
-	logger     zerolog.Logger
+	bucketName   string
+	object       string
+	logger       zerolog.Logger
+	useUserToken bool // if false ignore user token in ctx and use default service account
 }
 
 func (o GoogleCloudStorageObject) CopyFromS3(ctx context.Context, source string) error {
@@ -138,11 +163,38 @@ func (o GoogleCloudStorageObject) CopyFromS3(ctx context.Context, source string)
 	return nil
 }
 
+func (o GoogleCloudStorageObject) CopyTo(ctx context.Context, writer io.WriteCloser) error {
+	reader, err := o.GetReader(ctx)
+	if err != nil {
+		log.Err(err).Msg("Error getting reader while copying to")
+		return err
+	}
+	_, err = io.Copy(writer, reader)
+	if err != nil {
+		return err
+	}
+	err = writer.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (o GoogleCloudStorageObject) Delete(ctx context.Context) error {
+	obj := o.getObject(ctx)
+	err := obj.Delete(ctx)
+	if err != nil {
+		o.logger.Error().Err(err).Msg("error deleting object")
+		return err
+	}
+	return nil
+}
+
 func (o GoogleCloudStorageObject) getObject(ctx context.Context) *storage.ObjectHandle {
 	tokenSource := user.GetTokenSource(ctx)
 	var client *storage.Client
 	var err error
-	if tokenSource == nil {
+	if tokenSource == nil || !o.useUserToken {
 		client, err = storage.NewClient(ctx)
 	} else {
 		client, err = storage.NewClient(ctx, option.WithTokenSource(tokenSource))
@@ -210,11 +262,15 @@ func NewS3Storage() Storage {
 	}
 }
 
+func (s S3Storage) CanSaveQuery(_ context.Context, bucketName string) bool {
+	return bucketName != ""
+}
+
 func (s S3Storage) GetDefaultBucketName() string {
 	return s.bucketName
 }
 
-func (s S3Storage) GetObject(bucketName string, name string) StorageObject {
+func (s S3Storage) GetObject(_ context.Context, string, name string) StorageObject {
 	return S3StorageObject{
 		s,
 		name,
@@ -299,6 +355,16 @@ func (o S3StorageObject) CopyFromS3(ctx context.Context, source string) error {
 		o.logger.Error().Str("source", source).Str("copySource", copySource).Err(err).Msg("Error copying from S3")
 	}
 	return err
+}
+
+func (s S3StorageObject) CopyTo(ctx context.Context, writer io.WriteCloser) error {
+	log.Fatal().Msg("not implemented")
+	return nil
+}
+
+func (s S3StorageObject) Delete(ctx context.Context) error {
+	log.Fatal().Msg("not implemented")
+	return nil
 }
 
 type S3Writer struct {

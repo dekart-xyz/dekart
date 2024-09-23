@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha1"
 	"dekart/src/proto"
+	"dekart/src/server/conn"
 	"dekart/src/server/user"
 	"fmt"
 	"io"
@@ -31,15 +32,21 @@ func (s Server) ServeQuerySource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	conCtx := conn.GetCtx(ctx, connection)
 	bucketName := s.getBucketNameFromConnection(connection)
 
-	obj := s.storage.GetObject(bucketName, fmt.Sprintf("%s.sql", vars["source"]))
-	created, err := obj.GetCreatedAt(ctx)
+	if !s.storage.CanSaveQuery(conCtx, bucketName) {
+		http.Error(w, "Query source not available for this connection", http.StatusBadRequest)
+		return
+	}
+
+	obj := s.storage.GetObject(conCtx, bucketName, fmt.Sprintf("%s.sql", vars["source"]))
+	created, err := obj.GetCreatedAt(conCtx)
 	if err != nil {
 		HttpError(w, err)
 		return
 	}
-	objectReader, err := obj.GetReader(ctx)
+	objectReader, err := obj.GetReader(conCtx)
 	if err != nil {
 		HttpError(w, err)
 		return
@@ -61,28 +68,17 @@ func (e *queryWasNotUpdated) Error() string {
 	return "query was not updated"
 }
 
-func (s Server) storeQuerySync(ctx context.Context, bucketName, queryID string, queryText string, prevQuerySourceId string) error {
+func (s Server) storeQuerySync(ctx context.Context, queryID string, queryText string, prevQuerySourceId string) error {
 	h := sha1.New()
 	queryTextByte := []byte(queryText)
 	h.Write(queryTextByte)
 	newQuerySourceId := fmt.Sprintf("%x", h.Sum(nil))
-	storageWriter := s.storage.GetObject(bucketName, fmt.Sprintf("%s.sql", newQuerySourceId)).GetWriter(ctx)
-	_, err := storageWriter.Write(queryTextByte)
-	if err != nil {
-		log.Err(err).Msg("Error writing query_text to storage")
-		storageWriter.Close()
-		return err
-	}
-	err = storageWriter.Close()
-	if err != nil {
-		log.Err(err).Str("bucketName", bucketName).Msg("Error writing query_text to storage")
-		return err
-	}
-
+	// now we always store the query text in the database
 	result, err := s.db.ExecContext(ctx,
-		`update queries set query_source_id=$1, query_source=$2, updated_at=now() where id=$3 and query_source_id=$4`,
+		`update queries set query_text=$1, query_source_id=$2, query_source=$3, updated_at=now() where id=$4 and query_source_id=$5`,
+		queryText,
 		newQuerySourceId,
-		proto.Query_QUERY_SOURCE_STORAGE,
+		proto.Query_QUERY_SOURCE_INLINE,
 		queryID,
 		prevQuerySourceId,
 	)
@@ -91,6 +87,7 @@ func (s Server) storeQuerySync(ctx context.Context, bucketName, queryID string, 
 	}
 	affectedRows, _ := result.RowsAffected()
 	if affectedRows == 0 {
+		log.Warn().Str("prevQuerySourceId", prevQuerySourceId).Str("newQuerySourceId", newQuerySourceId).Msg("Query text not updated")
 		return &queryWasNotUpdated{}
 	}
 	return nil
@@ -99,16 +96,8 @@ func (s Server) storeQuerySync(ctx context.Context, bucketName, queryID string, 
 func (s Server) storeQuery(userCtx context.Context, reportID string, queryID string, queryText string, prevQuerySourceId string) {
 	ctx, cancel := context.WithTimeout(user.CopyClaims(userCtx, context.Background()), time.Second*5)
 	defer cancel()
-	connection, err := s.getConnectionFromQueryID(ctx, queryID)
 
-	if err != nil {
-		log.Err(err).Msg("Error getting connection from query id")
-		return
-	}
-
-	bucketName := s.getBucketNameFromConnection(connection)
-
-	err = s.storeQuerySync(ctx, bucketName, queryID, queryText, prevQuerySourceId)
+	err := s.storeQuerySync(ctx, queryID, queryText, prevQuerySourceId)
 	if _, ok := err.(*queryWasNotUpdated); ok {
 		log.Warn().Msg("Query text not updated")
 		return
@@ -120,11 +109,12 @@ func (s Server) storeQuery(userCtx context.Context, reportID string, queryID str
 	s.reportStreams.Ping(reportID)
 }
 
+// legacy for query source stored in the storage
 func (s Server) getQueryText(ctx context.Context, querySourceId string, bucketName string) (string, error) {
 	if querySourceId == "" {
 		return "", nil
 	}
-	reader, err := s.storage.GetObject(bucketName, fmt.Sprintf("%s.sql", querySourceId)).GetReader(ctx)
+	reader, err := s.storage.GetObject(ctx, bucketName, fmt.Sprintf("%s.sql", querySourceId)).GetReader(ctx)
 	if err != nil {
 		return "", err
 	}

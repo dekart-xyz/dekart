@@ -135,8 +135,7 @@ func (j *Job) wait() {
 	{
 		j.Lock()
 		j.ResultSize = *size
-		resultID := j.GetID()
-		j.ResultID = &resultID
+		j.ResultReady = true
 		j.Unlock()
 	}
 	j.Status() <- int32(proto.Query_JOB_STATUS_DONE)

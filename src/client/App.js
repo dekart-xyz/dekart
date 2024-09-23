@@ -19,6 +19,7 @@ import { authRedirect, setRedirectState } from './actions/redirect'
 import { subscribeUserStream, unsubscribeUserStream } from './actions/user'
 import GrantScopesPage from './GrantScopesPage'
 import { loadLocalStorage } from './actions/localStorage'
+import { loadSessionStorage } from './actions/sessionStorage'
 
 // RedirectState reads states passed in the URL from the server
 function RedirectState () {
@@ -50,11 +51,10 @@ function AppRedirect () {
   const httpError = useSelector(state => state.httpError)
   const { status, doNotAuthenticate } = httpError
   const { newReportId } = useSelector(state => state.reportStatus)
-  const userStream = useSelector(state => state.user.stream)
-  const needSensitiveScopes = useSelector(state => state.env.needSensitiveScopes)
-  const sensitiveScopesGranted = userStream?.sensitiveScopesGranted
+  const sensitiveScopesNeeded = useSelector(state => state.user.sensitiveScopesNeeded)
+  const sensitiveScopesGranted = useSelector(state => state.user.sensitiveScopesGranted)
   const sensitiveScopesGrantedOnce = useSelector(state => state.user.sensitiveScopesGrantedOnce)
-  const location = useLocation()
+  const redirectStateReceived = useSelector(state => state.user.redirectStateReceived)
   const dispatch = useDispatch()
 
   useEffect(() => {
@@ -62,17 +62,17 @@ function AppRedirect () {
       const state = new AuthState()
       state.setUiUrl(window.location.href)
       state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
-      state.setSensitiveScope(sensitiveScopesGrantedOnce) // if user has granted sensitive scopes once, request them right away without onboarding
+      state.setSensitiveScope(sensitiveScopesGranted || sensitiveScopesGrantedOnce) // if user has granted sensitive scopes on this device request token with sensitive scopes
       dispatch(authRedirect(state))
     }
-  }, [status, doNotAuthenticate, dispatch, sensitiveScopesGrantedOnce])
+  }, [status, doNotAuthenticate, dispatch, sensitiveScopesGrantedOnce, sensitiveScopesGranted])
 
   if (status === 401 && doNotAuthenticate === false) {
     // redirect to authentication endpoint from useEffect above
     return null
   }
 
-  if (httpError.status && location.pathname !== `/${httpError.status}`) {
+  if (httpError.status) {
     return <Redirect to={`/${httpError.status}`} push />
   }
 
@@ -80,7 +80,9 @@ function AppRedirect () {
     return <Redirect to={`/reports/${newReportId}/source`} push />
   }
 
-  if (userStream && needSensitiveScopes && !sensitiveScopesGranted) {
+  if (
+    redirectStateReceived && sensitiveScopesNeeded && !sensitiveScopesGranted
+  ) {
     return <Redirect to='/grant-scopes' push />
   }
 
@@ -100,40 +102,60 @@ function PageHistory ({ visitedPages }) {
   return null
 }
 
+function NotFoundPage () {
+  return (
+    <Result
+      icon={<QuestionOutlined />} title='404' subTitle={
+        <>
+          <p>Page not found</p>
+        </>
+      }
+    />
+  )
+}
+
 export default function App () {
   const errorMessage = useSelector(state => state.httpError.message)
   const status = useSelector(state => state.httpError.status)
   const env = useSelector(state => state.env)
-  const usage = useSelector(state => state.usage)
+  const envLoaded = env.loaded
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const dispatch = useDispatch()
   const visitedPages = React.useRef(['/'])
+  const storageLoaded = useSelector(state => state.storage.loaded)
+  const page401 = window.location.pathname.startsWith('/401')
 
   useEffect(() => {
+    dispatch(loadSessionStorage())
     dispatch(loadLocalStorage())
   }, [dispatch])
 
   useEffect(() => {
-    if (window.location.pathname.startsWith('/401')) {
-      // do not load env and usage on 401 page
+    if (page401 || envLoaded) {
       return
     }
-    if (status === 401) {
-      return
-    }
-    if (!env.loaded) {
-      dispatch(getEnv())
-    }
-    if (!usage.loaded) {
-      dispatch(getUsage())
-    }
-  }, [env, usage, dispatch, status])
+    dispatch(getEnv())
+  }, [dispatch, page401, envLoaded])
+
+  // do not call API until storage is loaded and environment is loaded and not 401
+  const loadData = storageLoaded && env.loaded && status !== 401
+
   useEffect(() => {
+    if (!loadData) {
+      return
+    }
     dispatch(subscribeUserStream())
+    dispatch(getUsage())
     return () => {
       dispatch(unsubscribeUserStream())
     }
-  }, [dispatch])
+  }, [dispatch, loadData])
+
+  // do not render until storage is loaded and environment is loaded
+  const startRender = loadData || page401 || status === 401
+  if (!startRender) {
+    return null
+  }
   return (
     <Router>
       <PageHistory visitedPages={visitedPages} />
@@ -170,7 +192,7 @@ export default function App () {
           <Result icon={<WarningOutlined />} title='401' subTitle={errorMessage || 'Unauthorized'} />
         </Route>
         <Route path='*'>
-          <Result icon={<QuestionOutlined />} title='404' subTitle='Page not found' />
+          <NotFoundPage />
         </Route>
       </Switch>
     </Router>

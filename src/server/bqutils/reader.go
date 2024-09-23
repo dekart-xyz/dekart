@@ -1,11 +1,12 @@
-package bqjob
+package bqutils
 
 import (
 	"context"
-	"dekart/src/server/job"
+	"dekart/src/server/errtype"
 	"dekart/src/server/user"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 
 	"cloud.google.com/go/bigquery"
@@ -67,7 +68,14 @@ func NewReader(
 	r.session, err = r.bqReadClient.CreateReadSession(r.ctx, createReadSessionRequest, rpcOpts)
 	if err != nil {
 		//TODO: context canceled
-		r.logger.Error().Err(err).Msg("cannot create read session")
+
+		// Check if the error is PermissionDenied
+		if strings.Contains(err.Error(), "PermissionDenied") {
+			// user does not have permission to create read session, not dekart error
+			r.logger.Warn().Err(err).Msg("Permission Denied: cannot create read session")
+		} else {
+			r.logger.Error().Err(err).Msg("cannot create read session")
+		}
 		return r, err
 	}
 	r.tableDecoder, err = NewDecoder(r.session)
@@ -94,7 +102,7 @@ func (r *Reader) getTableFields() []string {
 func (r *Reader) getStreams() ([]*bqStoragePb.ReadStream, error) {
 	readStreams := r.session.GetStreams()
 	if len(readStreams) == 0 {
-		err := &job.EmptyResultError{}
+		err := &errtype.EmptyResult{}
 		r.logger.Debug().Err(err).Send()
 		return readStreams, err
 	}
@@ -192,7 +200,7 @@ func (r *StreamReader) readStream() {
 			if err == context.Canceled {
 				break
 			}
-			if contextCancelledRe.MatchString(err.Error()) {
+			if errtype.ContextCancelledRe.MatchString(err.Error()) {
 				break
 			}
 			r.logger.Err(err).Msg("cannot read rows from stream")

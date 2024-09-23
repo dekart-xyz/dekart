@@ -10,6 +10,9 @@ import (
 	"strings"
 
 	"dekart/src/proto"
+	"dekart/src/server/bqstorage"
+	"dekart/src/server/bqutils"
+	"dekart/src/server/errtype"
 	"dekart/src/server/job"
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
@@ -29,7 +32,6 @@ type Job struct {
 	client              *bigquery.Client
 }
 
-var contextCancelledRe = regexp.MustCompile(`context canceled`)
 var orderByRe = regexp.MustCompile(`(?ims)order[\s]+by`)
 
 func (job *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
@@ -40,7 +42,7 @@ func (job *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 		if err == context.Canceled {
 			return
 		}
-		if contextCancelledRe.MatchString(err.Error()) {
+		if errtype.ContextCancelledRe.MatchString(err.Error()) {
 			return
 		}
 		job.Logger.Err(err).Send()
@@ -57,8 +59,7 @@ func (job *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 	job.Logger.Debug().Msg("Writing Done")
 	job.Lock()
 	job.ResultSize = *resultSize
-	jobID := job.GetID()
-	job.ResultID = &jobID
+	job.ResultReady = true
 	job.Unlock()
 	job.Status() <- int32(proto.Query_JOB_STATUS_DONE)
 	job.Cancel()
@@ -104,12 +105,6 @@ func (job *Job) write(csvRows chan []string) {
 	job.close(storageWriter, csvWriter)
 }
 
-type AvroSchema struct {
-	Fields []struct {
-		Name string `json:"name"`
-	} `json:"fields"`
-}
-
 func (job *Job) processApiErrors(err error) {
 	if apiError, ok := err.(*googleapi.Error); ok {
 		for _, e := range apiError.Errors {
@@ -122,20 +117,8 @@ func (job *Job) processApiErrors(err error) {
 	}
 }
 
-func getTableFromJob(job *bigquery.Job) (*bigquery.Table, error) {
-	cfg, err := job.Config()
-	if err != nil {
-		return nil, err
-	}
-	queryConfig, ok := cfg.(*bigquery.QueryConfig)
-	if !ok {
-		return nil, fmt.Errorf("was expecting QueryConfig type for configuration")
-	}
-	return queryConfig.Dst, nil
-}
-
 func (job *Job) getResultTable() (*bigquery.Table, error) {
-	table, err := getTableFromJob(job.bigqueryJob)
+	table, err := bqutils.GetTableFromJob(job.bigqueryJob)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +127,7 @@ func (job *Job) getResultTable() (*bigquery.Table, error) {
 		if err != nil {
 			return nil, err
 		}
-		table, err = getTableFromJob(jobFromJobId)
+		table, err = bqutils.GetTableFromJob(jobFromJobId)
 		if err != nil {
 			return nil, err
 		}
@@ -173,6 +156,19 @@ func (job *Job) wait() {
 		return
 	}
 
+	_, isBigQueryStorage := job.storageObject.(bqstorage.BigQueryStorageObject)
+	if isBigQueryStorage {
+		// result will stay in BigQuery temp result table and will be read from there
+		job.Lock()
+		bqJobID := job.bigqueryJob.ID()
+		job.DWJobID = &bqJobID // identify result storage
+		job.ResultReady = true
+		job.Unlock()
+		job.Status() <- int32(proto.Query_JOB_STATUS_DONE)
+		job.Cancel()
+		return
+	}
+
 	table, err := job.getResultTable()
 	if err != nil {
 		job.CancelWithError(err)
@@ -191,7 +187,7 @@ func (job *Job) wait() {
 	errors := make(chan error)
 
 	// read table rows into csvRows
-	go Read(
+	go bqutils.Read(
 		job.GetCtx(),
 		errors,
 		csvRows,
