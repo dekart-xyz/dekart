@@ -50,26 +50,6 @@ Create beautiful data-driven maps and share them with your team:
 * [Run with Docker](https://dekart.xyz/docs/self-hosting/docker/?ref=github)
 * [Documentation](https://dekart.xyz/docs/configuration/environment-variables/?ref=github)
 
-## Support us in building Dekart
-
-* Give it ⭐️ on GitHub!
-* Be part of the conversation in the [Dekart Community Slack](https://slack.dekart.xyz)
-
-## Contributing
-
-* [Build from source](https://dekart.xyz/docs/contributing/build-from-source/?ref=github)
-* [Architecture Diagram](https://dekart.xyz/docs/contributing/architecture-overview/?ref=github)
-* [Contribution Guide](./CONTRIBUTING.md)
-
-
-## Name origin
-
-Dekart is named after French mathematician René Descartes (French: [ʁəne dekaʁt], Latinized: Renatus Cartesius). Descartes was the name of a French family surname derived from the word des chartes, meaning "of the charts"; this was a reference to the family's involvement in the creation of maps and globes.
-
-## License
-
-This project is open source under the GNU Affero General Public License Version 3 (AGPLv3) or any later version.
-Commercial licenses are available upon request, please contact us at [support@dekart.xyz](mailto:support@dekart.xyz).
 
 Copyright (c) 2024 Volodymyr Bilonenko
 
