@@ -19,11 +19,11 @@ You can install the Dekart Premium Docker image directly from **GitHub Packages*
    ```
 2. **Pull the Premium image**:
    ```bash
-   docker pull ghcr.io/dekart-xyz/dekart-premium:latest
+   docker pull ghcr.io/dekart-xyz/dekart-premium/dekart:latest
    ```
 3. **Run the image** with your desired configurations:
    ```bash
-   docker run -d -p 8080:8080 ghcr.io/dekart-xyz/dekart-premium:latest
+   docker run -d -p 8080:8080 ghcr.io/dekart-xyz/dekart-premium/dekart:latest
    ```
 
 ### Deploying Examples
