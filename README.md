@@ -57,3 +57,11 @@ If you need real-time support, we offer premium support via **[Slack](https://sl
 👉 [Documentation](https://dekart.xyz/docs/)
 
 
+## License
+
+This repository is licensed under the **Dekart On-Premise Premium License**.
+
+- You may modify, distribute, and use this software for commercial purposes, with certain restrictions.
+- The software is subject to the terms outlined in the commercial license.
+
+For full details, see the [`LICENSE`](./LICENSE) file or visit the [Dekart Premium License Terms](https://dekart.xyz/legal/dekart-premium-terms).
