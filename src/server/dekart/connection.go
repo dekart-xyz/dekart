@@ -33,7 +33,7 @@ func (s Server) TestConnection(ctx context.Context, req *proto.TestConnectionReq
 	if !res.Success {
 		return res, nil
 	}
-	if req.Connection.CloudStorageBucket == "" {
+	if req.Connection.CloudStorageBucket == "" && os.Getenv("DEKART_STORAGE") == "USER" {
 		// if no bucket is provided, temp storage is used
 		return &proto.TestConnectionResponse{
 			Success: true,

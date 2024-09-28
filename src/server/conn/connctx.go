@@ -3,6 +3,7 @@ package conn
 import (
 	"context"
 	"dekart/src/proto"
+	"os"
 
 	"github.com/rs/zerolog/log"
 )
@@ -10,6 +11,14 @@ import (
 type ConnectionContextKey string
 
 const connectionContextKey ConnectionContextKey = "connection"
+
+var dekartBigQueryProjectID = os.Getenv("DEKART_BIGQUERY_PROJECT_ID")
+var dekartCloudStorageBucket = os.Getenv("DEKART_CLOUD_STORAGE_BUCKET")
+var dekartDataSource = os.Getenv("DEKART_DATASOURCE")
+
+func IsUserDefined() bool {
+	return (dekartBigQueryProjectID == "" && dekartDataSource == "BQ") || (dekartCloudStorageBucket == "" && dekartDataSource != "SNOWFLAKE")
+}
 
 func GetCtx(ctx context.Context, connection *proto.Connection) context.Context {
 	return context.WithValue(ctx, connectionContextKey, connection)

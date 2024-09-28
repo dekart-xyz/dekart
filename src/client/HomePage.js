@@ -6,7 +6,7 @@ import Radio from 'antd/es/radio'
 import Result from 'antd/es/result'
 import Table from 'antd/es/table'
 import { useDispatch, useSelector } from 'react-redux'
-import { PlusOutlined, FileSearchOutlined, UsergroupAddOutlined, ApiTwoTone, GlobalOutlined, LockOutlined, TeamOutlined } from '@ant-design/icons'
+import { PlusOutlined, FileSearchOutlined, UsergroupAddOutlined, ApiTwoTone, LockOutlined, TeamOutlined } from '@ant-design/icons'
 import DataDocumentationLink from './DataDocumentationLink'
 import Switch from 'antd/es/switch'
 import { archiveReport, subscribeReports, unsubscribeReports, createReport } from './actions/report'
@@ -43,10 +43,6 @@ const columns = [
   {
     dataIndex: 'icon',
     render: (t, report) => {
-      // (report.isPlayground || report.isPublic) ? <GlobalOutlined title='This report accessible outside of workspace' /> : <LockOutlined title='This report accessible only in workspace' />
-      if (report.isPlayground || report.isPublic) {
-        return <GlobalOutlined title='This report accessible outside of workspace' />
-      }
       if (report.discoverable) {
         return <TeamOutlined title='This report is discoverable by others users in the workspace' />
       }
@@ -135,12 +131,15 @@ function filterColumns (filter) {
   return filter.map(f => columns.find(c => c.dataIndex === f))
 }
 
-function getColumns (reportFilter, archived) {
+function getColumns (reportFilter, archived, authEnabled) {
   if (reportFilter === 'my') {
     if (archived) {
       return filterColumns(['archivedTitle', 'delete'])
     }
-    return filterColumns(['icon', 'title', 'delete'])
+    if (authEnabled) {
+      return filterColumns(['icon', 'title', 'delete'])
+    }
+    return filterColumns(['title', 'delete'])
   } else if (reportFilter === 'connections') {
     return filterColumns(['connectionIcon', 'connectionName', 'author', 'setDefault'])
   } else {
@@ -273,7 +272,7 @@ function ReportsHeader (
                       )
                     : null
                 }
-                <Button onClick={() => dispatch(createReport())}>New Report</Button>
+                <Button id='dekart-create-report' onClick={() => dispatch(createReport())}>New Report</Button>
               </>
               )
         }
@@ -286,7 +285,7 @@ function ReportsHeader (
 function Reports ({ createReportButton, reportFilter }) {
   const [archived, setArchived] = useState(false)
   const reportsList = useSelector(state => state.reportsList)
-  const { loaded: envLoaded } = useSelector(state => state.env)
+  const { loaded: envLoaded, authEnabled } = useSelector(state => state.env)
   const connectionList = useSelector(state => state.connection.list)
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const newConnectionScreen = useSelector(state => state.connection.screen)
@@ -329,7 +328,7 @@ function Reports ({ createReportButton, reportFilter }) {
           ? (
             <Table
               dataSource={dataSource}
-              columns={getColumns(reportFilter, archived)}
+              columns={getColumns(reportFilter, archived, authEnabled)}
               showHeader={false}
               rowClassName={styles.reportsRow}
               pagination={false}

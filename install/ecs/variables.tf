@@ -16,7 +16,7 @@ variable "dekart_deployment_name" {
   description = "prefix for your deployment resource names"
 }
 variable "dekart_version" {
-  default     = "0.16"
+  default     = "latest"
   description = "dekart version, see releases https://github.com/dekart-xyz/dekart/releases/"
 }
 variable "dekart_rds_db_name" {

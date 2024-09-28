@@ -29,3 +29,12 @@
     flex: 1;
 }
 
+.dekartIcon {
+    position: relative;
+    top: 3px;
+    width: 16px;
+    height: 16px;
+    display: inline-block;
+    background-size: contain;
+    background-image: url('./dekart-icon.svg');
+}
