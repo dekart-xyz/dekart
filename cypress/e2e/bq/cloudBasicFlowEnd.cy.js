@@ -17,7 +17,7 @@ describe('cloud basic flow', () => {
     cy.get('button#saveConnection').click()
 
     // create new report
-    cy.get(`button:contains("${copy.create_report}")`).click()
+    cy.get('button#dekart-create-report').click()
 
     // run query
     cy.get('button:contains("Add data from...")').click()
@@ -26,5 +26,14 @@ describe('cloud basic flow', () => {
     cy.get(`button:contains("${copy.execute}")`).click()
     cy.get(`span:contains("${copy.ready}")`, { timeout: 20000 }).should('be.visible')
     cy.get(`span:contains("${copy.downloading}")`).should('contain', 'kB') // size of result shown
+
+    // share report
+    cy.get('button#dekart-share-report').click()
+    cy.get('span:contains("Cannot view")').click()
+    cy.get('div').contains(/^View$/).click()
+    cy.get('button').contains('Done').click()
+    cy.visit('/')
+    cy.get('span').contains('Shared Reports').click()
+    cy.get('span.anticon-team').should('be.visible')
   })
 })
