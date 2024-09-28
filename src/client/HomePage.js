@@ -6,7 +6,7 @@ import Radio from 'antd/es/radio'
 import Result from 'antd/es/result'
 import Table from 'antd/es/table'
 import { useDispatch, useSelector } from 'react-redux'
-import { PlusOutlined, FileSearchOutlined, UsergroupAddOutlined, ApiTwoTone, LockOutlined, TeamOutlined } from '@ant-design/icons'
+import { PlusOutlined, FileSearchOutlined, UsergroupAddOutlined, ApiTwoTone, LockOutlined, TeamOutlined, GlobalOutlined } from '@ant-design/icons'
 import DataDocumentationLink from './DataDocumentationLink'
 import Switch from 'antd/es/switch'
 import { archiveReport, subscribeReports, unsubscribeReports, createReport } from './actions/report'
@@ -43,6 +43,9 @@ const columns = [
   {
     dataIndex: 'icon',
     render: (t, report) => {
+      if (report.isPlayground || report.isPublic) {
+        return <GlobalOutlined title='This report accessible outside of workspace' />
+      }
       if (report.discoverable) {
         return <TeamOutlined title='This report is discoverable by others users in the workspace' />
       }
@@ -158,7 +161,7 @@ function FirstReportOnboarding () {
         subTitle='Everything is ready to create you first map.'
         extra={(
           <>
-            <Button icon={<PlusOutlined />} type='primary' onClick={() => dispatch(createReport())}>Create report</Button>
+            <Button icon={<PlusOutlined />} type='primary' id='dekart-create-report' onClick={() => dispatch(createReport())}>Create report</Button>
             {isPlayground
               ? (
                 <div className={styles.stepBySetLink}><a target='_blank' href='https://dekart.xyz/docs/about/playground/#quick-start' rel='noreferrer'>Check step-by-step guide</a></div>
@@ -225,7 +228,7 @@ function ReportsHeader (
   return (
     <div className={styles.reportsHeader}>
       {
-        userStream.planType === PlanType.TYPE_TEAM
+        userStream.planType === PlanType.TYPE_TEAM || userStream.planType === PlanType.TYPE_PERSONAL
           ? (
             <Radio.Group
               value={reportFilter} onChange={(e) => {

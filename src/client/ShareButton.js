@@ -236,6 +236,7 @@ export default function ShareButton () {
         icon={icon}
         ghost
         type='text'
+        id='dekart-share-report'
         title='Share report'
         onClick={() => setModalOpen(true)}
       />
