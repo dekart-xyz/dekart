@@ -166,17 +166,7 @@ function env (state = defaultEnv, action) {
       return {
         loaded: true,
         variables: action.variables,
-        authEnabled: action.variables.REQUIRE_AMAZON_OIDC === '1' || action.variables.REQUIRE_IAP === '1' || action.variables.REQUIRE_GOOGLE_OAUTH === '1',
-        authType: (
-          action.variables.REQUIRE_IAP === '1'
-            ? 'IAP'
-            : action.variables.REQUIRE_AMAZON_OIDC
-              ? 'AMAZON_OIDC'
-              : action.variables.REQUIRE_GOOGLE_OAUTH
-                ? 'GOOGLE_OAUTH'
-                : 'NONE'
-        ),
-        needSensitiveScopes: action.variables.REQUIRE_GOOGLE_OAUTH
+        authEnabled: Boolean(action.variables.AUTH_ENABLED),
       }
     default:
       return state

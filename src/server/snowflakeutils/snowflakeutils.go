@@ -27,7 +27,7 @@ func readSnowparkToken() string {
 }
 
 func getConfig(conn *proto.Connection) sf.Config {
-	if conn != nil {
+	if conn != nil && !conn.IsDefault { // for default connection we use environment variables
 		password := secrets.SecretToString(conn.SnowflakePassword, nil)
 		return sf.Config{
 			Account:   conn.SnowflakeAccountId,

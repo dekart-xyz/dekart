@@ -30,9 +30,36 @@ function User ({ buttonDivider }) {
   const token = useSelector(state => state.token)
   const history = useHistory()
   const userStream = useSelector(state => state.user.stream)
+  const { authEnabled } = useSelector(state => state.env)
   const dispatch = useDispatch()
-  if (!userStream || !token) {
+  if (!userStream || !authEnabled) {
     return null
+  }
+  const items = [{
+    label: userStream && userStream.email,
+    disabled: true
+  }]
+  if (token) {
+    items.push({
+      label: 'Switch account',
+      onClick: () => {
+        const state = new AuthState()
+        state.setUiUrl(window.location.href)
+        state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
+        state.setSwitchAccount(true)
+        dispatch(authRedirect(state))
+      }
+    })
+    items.push({
+      label: 'Sign out',
+      onClick: () => {
+        const state = new AuthState()
+        state.setUiUrl(window.location.href)
+        state.setAction(AuthState.Action.ACTION_REVOKE)
+        state.setAccessTokenToRevoke(token.access_token)
+        dispatch(authRedirect(state))
+      }
+    })
   }
   return (
     <div className={classNames(
@@ -85,7 +112,6 @@ function User ({ buttonDivider }) {
         }}
       ><Avatar>{getSignature(userStream && userStream.email)}</Avatar>
       </Dropdown>
-
     </div>
   )
 }
@@ -148,7 +174,7 @@ export function Header ({ buttons, title }) {
           <PlaygroundMode />
         </div>
         <div className={styles.middle}>
-          <div className={styles.dekartLinkHolder}><a rel='noopener noreferrer' className={styles.dekartLink} href={homePage}>Dekart</a></div>
+          <div className={styles.dekartLinkHolder}><a target='_blank' rel='noopener noreferrer' className={styles.dekartLink} href={homePage}><span className={styles.dekartTitle} /></a></div>
         </div>
         <div className={styles.buttons}>{buttons || null}</div>
         <User buttonDivider={Boolean(buttons)} />

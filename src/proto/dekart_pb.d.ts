@@ -1284,6 +1284,8 @@ export namespace GetEnvResponse {
       TYPE_UX_SAMPLE_QUERY_SQL: 15;
       TYPE_AES_KEY: 16;
       TYPE_AES_IV: 17;
+      TYPE_AUTH_ENABLED: 18;
+      TYPE_USER_DEFINED_CONNECTION: 19;
     }
 
     export const Type: TypeMap;

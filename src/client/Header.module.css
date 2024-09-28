@@ -90,6 +90,7 @@
 }
 
 .dekartLinkHolder {
+    width: 76px;
     height: 46px;
     display: flex;
     align-items: center;
@@ -102,9 +103,15 @@
 }
 
 a.dekartLink {
-    color: #57B7D3 !important;
-    font-size: 22px;
-    font-weight: bold;
-    line-height: 32px;
-    cursor: pointer;
+    display: block;
+    width: 76px;
+    height: 18px;
+}
+.dekartTitle {
+    width: 76px;
+    height: 18px;
+    display: block;
+    background-size: contain;
+    background-image: url('./dekart-title.svg');
+    background-repeat: no-repeat;
 }

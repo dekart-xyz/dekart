@@ -205,6 +205,7 @@ func (s Server) runQuery(ctx context.Context, o runQueryOptions) error {
 		log.Error().Err(err).Send()
 		return err
 	}
+	log.Debug().Str("jobID", job.GetID()).Msg("Job created")
 	var obj storage.StorageObject
 	if o.isPublic {
 		st := storage.NewPublicStorage()

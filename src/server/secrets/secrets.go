@@ -25,13 +25,17 @@ import (
 var dataEncryptionKey []byte
 
 func Init() {
-	dataEncryptionKeyStr, err := fetchGoogleSecret(os.Getenv("DEKART_DATA_ENCRYPTION_KEY"))
-	if err != nil {
-		log.Fatal().Err(err).Msg("Cannot fetch data encryption key")
-	}
-	dataEncryptionKey, err = base64.StdEncoding.DecodeString(dataEncryptionKeyStr)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Cannot decode data encryption key")
+	keyName := os.Getenv("DEKART_DATA_ENCRYPTION_KEY")
+	if keyName != "" {
+		// Fetch data encryption key from Google Secret Manager
+		dataEncryptionKeyStr, err := fetchGoogleSecret(keyName)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Cannot fetch data encryption key")
+		}
+		dataEncryptionKey, err = base64.StdEncoding.DecodeString(dataEncryptionKeyStr)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Cannot decode data encryption key")
+		}
 	}
 	generateClientKeys()
 }

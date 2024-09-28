@@ -1,71 +1,67 @@
-# Dekart
+# Dekart Premium
 
-WebGL-powered map analytics for BigQuery and Snowflake. Lightweight alternative to CARTO and Foursquare Studio for data scientists, analysts and engineers.
+Welcome to the **Dekart Premium** codebase! This repository is accessible to paying organizations with **read-only access**. Below, you'll find all the information you need to start using and managing Dekart Premium effectively.
 
-<a href="https://cloud.dekart.xyz/reports/bef92772-5ad8-4b6a-8d94-72f45f44bf92/source"><img src="./docs/files/screen.png"></a>
-<p align="center"><a href="https://dekart.xyz/docs/about/playground/?ref=github">BigQuery Playground</a> | <a href="https://cloud.dekart.xyz/playground">Live demo</a></p>
+## 📦 **Repository Access & Permissions**
 
-## Features
+- You have **read-only access** to the code in this repository.
+- Any issues or feature requests should be raised in a dedicated repository named **dekart-premium-[your_team_name]**.
+- For live support, join our **[Slack community](https://slack.dekart.xyz/)**.
 
-Create beautiful data-driven maps and share them with your team:
+## 🛠️ **Installing Dekart Premium**
 
-* WebGL map visualization based on kepler.gl and deck.gl
-* Data connectors for BigQuery, Snowflake, and other SQL databases
-* Side-by-side SQL editor
-* Live editing of maps with other team members
-* Efficient query result caching on Amazon S3 or Google Cloud Storage
-* Support for CSV and GeoJSON file uploads
-* Export to PNG, CSV and HTML maps
-* Simple Docker-based deployment with SSO support
+### From GitHub Packages
+You can install the Dekart Premium Docker image directly from **GitHub Packages**. Follow the instructions below:
 
-## Use cases
+1. **Authenticate to GitHub Packages** with your GitHub account.
+   ```bash
+   docker login ghcr.io -u [USERNAME] -p [TOKEN]
+   ```
+2. **Pull the Premium image**:
+   ```bash
+   docker pull ghcr.io/dekart-xyz/dekart-premium/dekart:latest
+   ```
+3. **Run the image** with your desired configurations:
+   ```bash
+   docker run -d -p 8080:8080 ghcr.io/dekart-xyz/dekart-premium/dekart:latest
+   ```
 
-* Explore large datasets with millions of rows and visualize them on a map
-  * [All (400k) Toronto Buildings (100Mb)](https://cloud.dekart.xyz/reports/8f2da1e3-9769-4654-abb8-983afd2a2795)
-  * [1M points (30Mb)](https://cloud.dekart.xyz/reports/f63fb537-800e-48f6-8c18-8d542a0fed30)
-  * [All ramps in Illinois ](https://cloud.dekart.xyz/reports/b818f41a-5bd2-4b3b-87b8-4797a390a2a6)
-  * [Population over 10k ](https://cloud.dekart.xyz/reports/b099fbd3-d0ae-4636-aa44-217c0bac53f6)
-* Export OpenStreetMap data
-  * [All German schools from OSM data](https://cloud.dekart.xyz/reports/e539b5f6-cec2-45d5-97b3-d5bf541a9389)
-  * [Admin Boundaries](https://dekart.xyz/blog/admin-boundaries-in-bigquery-public-datasets/)
-  * [All roads in Nevada excluding parking and service roads (26Mb)](https://cloud.dekart.xyz/reports/556330cb-e7ba-4e34-89df-5644cd0ec8b2)
-  * [Every parking lot in Nevada from the OSM](https://cloud.dekart.xyz/reports/b2f2e1b3-78ec-42d9-9cc6-c38a2a57f72e)
-  * [US States Borders](https://cloud.dekart.xyz/reports/ec7f842a-73f3-4710-a5e8-a2e2d8f63c55/source)
-* Perform geospatial analytics with BigQuery and Snowflake Spatial SQL
-  * [Locate empty building plots](https://cloud.dekart.xyz/reports/aeefb6e0-d83a-489a-b371-50b306535e2d)
-
-## Available data sources
-
-* BigQuery ([setup in Dekart Cloud](https://cloud.dekart.xyz/))
-* Snowflake
-* AWS Athena
-* Postgres
-* CSV (file upload)
-* GeoJSON (file upload)
-
-## Self-hosting Dekart
+### Deploying Examples
 
 * [Deploy to AWS/ECS with Terraform](https://dekart.xyz/docs/self-hosting/aws-ecs-terraform/?ref=github)  and manage access with Google IAP
 * [Deploy to Google App Engine](https://dekart.xyz/docs/self-hosting/app-engine/?ref=github)  and manage access with Google IAP
 * [Run with Docker](https://dekart.xyz/docs/self-hosting/docker/?ref=github)
-* [Documentation](https://dekart.xyz/docs/configuration/environment-variables/?ref=github)
-
-## Support us in building Dekart
-
-* Give it ⭐️ on GitHub!
-* Be part of the conversation in the [Dekart Community Slack](https://slack.dekart.xyz)
-
-## Contributing
-
-* [Build from source](https://dekart.xyz/docs/contributing/build-from-source/?ref=github)
-* [Architecture Diagram](https://dekart.xyz/docs/contributing/architecture-overview/?ref=github)
-* [Contribution Guide](./CONTRIBUTING.md)
 
 
-## Name origin
+👉 [Environment Variables Documentation](https://dekart.xyz/docs/configuration/environment-variables/?ref=github)
 
-Dekart is named after French mathematician René Descartes (French: [ʁəne dekaʁt], Latinized: Renatus Cartesius). Descartes was the name of a French family surname derived from the word des chartes, meaning "of the charts"; this was a reference to the family's involvement in the creation of maps and globes.
+## 📅 **Schedule Developer Support Calls**
+
+If you need personalized assistance, you can schedule a 1-on-1 call with a developer through our **[Calendly link](https://calendly.com/vladi-dekart/30min)**. We'll be happy to walk you through advanced features or help troubleshoot any issues.
+
+## 🚨 **Raising Issues**
+
+- Each team has its own repository for tracking issues. Use the format **dekart-premium-[your_team_name]** to create a new issue.
+- **Example Issue Repo**: `https://github.com/dekart-xyz/dekart-premium-[your_team_name]/issues`
+- Please provide as much detail as possible in your reports, including:
+  - Steps to reproduce
+  - Expected behavior
+  - Logs or screenshots, if available
+
+## 🔗 **Premium Support in Slack**
+
+If you need real-time support, we offer premium support via **[Slack](https://slack.dekart.xyz/)**. Feel free to ask questions, report bugs, or suggest features directly to the team.
+
+## 📄 **Resources**
+
+👉 [Documentation](https://dekart.xyz/docs/)
+
 
 ## License
 
-MIT
+This repository is licensed under the **Dekart On-Premise Premium License**.
+
+- You may modify, distribute, and use this software for commercial purposes, with certain restrictions.
+- The software is subject to the terms outlined in the commercial license.
+
+For full details, see the [`LICENSE`](./LICENSE) file or visit the [Dekart Premium License Terms](https://dekart.xyz/legal/dekart-premium-terms).
