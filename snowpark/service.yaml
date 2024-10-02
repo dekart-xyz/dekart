@@ -12,6 +12,9 @@ spec:
         DEKART_LOG_DEBUG: 1
         DEKART_CORS_ORIGIN: null
         DEKART_STREAM_TIMEOUT: 10
+        DEKART_SQLITE_DB_PATH: ./dekart.db
+        DEKART_SNOWFLAKE_STAGE: app_public.app_state_stage
+        DEKART_REQUIRE_SNOWFLAKE_CONTEXT: 1
   endpoints:
     - name: app
       port: 8080

@@ -410,7 +410,6 @@ export default function HomePage ({ reportFilter }) {
     dispatch(subscribeReports())
     return () => dispatch(unsubscribeReports())
   }, [dispatch])
-
   return (
     <div className={styles.homePage}>
       <Header />

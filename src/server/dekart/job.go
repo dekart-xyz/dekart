@@ -21,43 +21,42 @@ func (s Server) updateJobStatus(job job.Job, jobStatus chan int32) {
 					ctx,
 					`update queries set
 						job_status = $1,
-						job_error = $3,
-						job_result_id = $4,
-						dw_job_id = $5,
+						job_error = $2,
+						job_result_id = $3,
+						dw_job_id = $4,
 						job_started = CURRENT_TIMESTAMP,
 						total_rows = 0,
 						bytes_processed = 0,
 						result_size = 0,
-						updated_at=now()
-					where id  = $2`,
+						updated_at = CURRENT_TIMESTAMP
+					where id = $5`,
 					status,
-					job.GetQueryID(),
 					job.Err(),
 					job.GetResultID(),
 					job.GetDWJobID(),
+					job.GetQueryID(),
 				)
-
 			} else {
 				_, err = s.db.ExecContext(
 					ctx,
 					`update queries set
 						job_status = $1,
-						job_error = $3,
-						job_result_id = $4,
-						total_rows = $5,
-						bytes_processed = $6,
-						result_size = $7,
-						dw_job_id = $8,
-						updated_at=now()
-					where id  = $2`,
+						job_error = $2,
+						job_result_id = $3,
+						total_rows = $4,
+						bytes_processed = $5,
+						result_size = $6,
+						dw_job_id = $7,
+						updated_at = CURRENT_TIMESTAMP
+					where id = $8`,
 					status,
-					job.GetQueryID(),
 					job.Err(),
 					job.GetResultID(),
 					job.GetTotalRows(),
 					job.GetProcessedBytes(),
 					job.GetResultSize(),
 					job.GetDWJobID(),
+					job.GetQueryID(),
 				)
 			}
 			cancel()

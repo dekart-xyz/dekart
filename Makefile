@@ -1,4 +1,4 @@
-.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down
+.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down sqlite
 
 # load .env
 # https://lithic.tech/blog/2020-05/makefile-dot-env
@@ -54,6 +54,12 @@ snowpark-run: snowpark-build
 	-e DEKART_SNOWFLAKE_USER=${DEKART_SNOWFLAKE_USER} \
 	-e DEKART_SNOWFLAKE_PASSWORD=${DEKART_SNOWFLAKE_PASSWORD} \
 	-e DEKART_CORS_ORIGIN=null \
+	-e DEKART_LOG_DEBUG=1 \
+	-e DEKART_CORS_ORIGIN=null \
+	-e DEKART_STREAM_TIMEOUT=10 \
+	-e DEKART_SQLITE_DB_PATH=./dekart.db \
+	-e DEKART_SNOWFLAKE_STAGE=DEKART_DEV.PUBLIC.DEKART_DEV \
+	-e DEKART_BACKUP_FREQUENCY_MIN=5 \
 	${SNOWPARK_IMAGE_NAME}
 
 snowpark-tag:
@@ -71,7 +77,10 @@ snowpark-spec:
 	snowsql -c ${SNOWSQL_CONNECTION} -q "PUT file://$(shell pwd)/snowpark/manifest.yml @dekart_app.napp.app_stage overwrite=true auto_compress=false"
 	snowsql -c ${SNOWSQL_CONNECTION} -q "PUT file://$(shell pwd)/snowpark/readme.md @dekart_app.napp.app_stage overwrite=true auto_compress=false"
 
-snowpark: snowpark-build snowpark-tag snowpark-docker-push snowpark-spec
+snowpark-patch:
+	snowsql -c ${SNOWSQL_CONNECTION} -q "alter application package dekart_app_pkg ADD PATCH FOR VERSION v1 using @dekart_app.napp.app_stage;"
+
+snowpark: snowpark-build snowpark-tag snowpark-docker-push snowpark-spec snowpark-patch
 
 google-oauth:
 	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} -o type=image -f ./Dockerfile --target e2etest .
@@ -224,6 +233,9 @@ down:
 
 cloudsql:
 	docker-compose  --env-file .env --profile cloudsql up
+
+sqlite:
+	docker-compose  --env-file .env --profile sqlite up
 
 
 define run_server

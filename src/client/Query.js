@@ -187,6 +187,8 @@ function SampleQuery ({ queryId }) {
   const queryStatus = useSelector(state => state.queryStatus[queryId])
   const dataset = useSelector(state => state.dataset.list.find(q => q.queryId === queryId))
   const connection = useSelector(state => state.connection.list.find(c => c.id === dataset?.connectionId))
+  const { DATASOURCE } = useSelector(state => state.env.variables)
+
   const datasetCount = useSelector(state => state.connection.list.reduce((dc, c) => {
     return dc + c.datasetCount
   }, 0))
@@ -205,8 +207,12 @@ function SampleQuery ({ queryId }) {
     return null
   }
   let showSampleQuery = UX_SAMPLE_QUERY_SQL
-  if (!showSampleQuery && connection) {
-    showSampleQuery = getDatasourceMeta(connection.connectionType)?.sampleQuery
+  if (!showSampleQuery) {
+    if (connection) {
+      showSampleQuery = getDatasourceMeta(connection.connectionType)?.sampleQuery
+    } else if (DATASOURCE) {
+      showSampleQuery = getDatasourceMeta(DATASOURCE)?.sampleQuery
+    }
   }
   if (showSampleQuery) {
     return (

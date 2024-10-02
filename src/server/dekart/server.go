@@ -42,13 +42,21 @@ func NewServer(db *sql.DB, storageBucket storage.Storage, jobs job.Store) *Serve
 		storage:       storageBucket,
 		jobs:          jobs,
 	}
+	if IsSqlite() && os.Getenv("DEKART_STORAGE") == "SNOWFLAKE" {
+		go server.startBackups()
+	}
 	return &server
 
+}
+
+func IsSqlite() bool {
+	return os.Getenv("DEKART_SQLITE_DB_PATH") != ""
 }
 
 // Shutdown cancels all jobs
 func (s Server) Shutdown(ctx context.Context) {
 	s.jobs.CancelAll(ctx)
+	s.CreateBackup(false)
 }
 
 func defaultString(s, def string) string {

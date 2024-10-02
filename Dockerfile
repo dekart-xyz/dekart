@@ -1,4 +1,4 @@
-FROM node:16 as nodedeps
+FROM node:16 AS nodedeps
 WORKDIR /source
 ADD package.json .
 ADD package-lock.json .
@@ -11,13 +11,17 @@ ADD src/proto src/proto
 ADD src/index.js src/index.js
 ADD src/setupTests.js src/setupTests.js
 
-FROM nodedeps as nodebuilder
+FROM nodedeps AS nodebuilder
 RUN npm run build
 
-FROM nodedeps as nodetest
+FROM nodedeps AS nodetest
 RUN npm run test
 
-FROM golang:1.20 as godeps
+FROM golang:1.20 AS godeps
+
+# Install necessary packages for CGO
+RUN apt-get update && apt-get install -y gcc
+
 WORKDIR /source
 ADD go.mod .
 ADD go.sum .
@@ -25,10 +29,10 @@ RUN go mod download -x
 ADD src/proto src/proto
 ADD src/server src/server
 
-FROM godeps as gobuilder
-RUN CGO_ENABLED=0 go build ./src/server
+FROM godeps AS gobuilder
+RUN CGO_ENABLED=1 go build ./src/server
 
-FROM godeps as gotest
+FROM godeps AS gotest
 RUN go test -v -count=1 ./src/server/**/
 
 FROM cypress/included:12.17.1 as e2etest
@@ -41,48 +45,43 @@ ENV DEKART_STATIC_FILES=./build
 COPY --from=nodebuilder /source/build build
 COPY --from=gobuilder /source/server .
 ADD migrations migrations
+ADD sqlite sqlite
 ADD cypress cypress
 ADD cypress.config.js .
 ADD package.json .
 ENTRYPOINT /bin/sh -c /dekart/server & cypress run --spec ${TEST_SPEC}
 
-FROM ubuntu:18.04
+FROM ubuntu:22.04
 WORKDIR /dekart
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install  -y \
-    postgresql-10 postgresql-contrib-10 \
+RUN apt-get update && apt-get install  -y \
+    gcc \
     ca-certificates
 RUN update-ca-certificates
-
 COPY --from=nodebuilder /source/build build
 COPY --from=gobuilder /source/server .
 ADD migrations migrations
+ADD sqlite sqlite
 
-RUN mkdir -p /dekart/backup
-RUN chown -R postgres:postgres /dekart/backup
+# Create a user and group
+ARG USERNAME=appuser
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
 
-VOLUME /dekart/backup-volume
+RUN groupadd -g $USER_GID $USERNAME \
+    && useradd -m -u $USER_UID -g $USERNAME -s /bin/bash $USERNAME
 
-USER postgres
-RUN service postgresql start &&\
-    psql --command "CREATE USER dekart WITH SUPERUSER PASSWORD 'dekart';" &&\
-    createdb -O dekart dekart
+# Set environment variables
+ENV DEKART_PORT=8080
+ENV DEKART_STATIC_FILES=./build
 
-USER root
+# Change ownership of the working directory to the new user
+RUN chown -R $USERNAME:$USERNAME /dekart
 
-ADD init.sh .
-RUN chmod +x init.sh
+# Switch to the non-root user
+USER $USERNAME
 
-ADD backup.sh .
-RUN chmod +x backup.sh
+# Expose the necessary port
+EXPOSE 8080
 
-ADD start.sh .
-RUN chmod +x start.sh
-
-# Create a non-root user 'appuser' and give ownership of necessary directories
-RUN adduser --disabled-password --gecos "" appuser &&\
-    chown -R appuser:appuser /dekart &&\
-    chown -R appuser:appuser /dekart/migrations &&\
-    chown appuser:appuser start.sh
-
-# includes backup and restore scripts wich require root access
-CMD [ "./init.sh" ]
+# Run the server
+CMD ["/dekart/server"]
