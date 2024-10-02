@@ -224,15 +224,15 @@ docker: # build docker for local use
 	docker buildx build --push --tag ${DEKART_DOCKER_DEV_TAG} -o type=image --platform=linux/amd64 -f ./Dockerfile .
 
 up-and-down:
-	docker-compose  --env-file .env --profile local up; docker-compose --env-file .env --profile local down --volumes
+	docker compose  --env-file .env --profile local up; docker compose --env-file .env --profile local down --volumes
 up:
-	docker-compose  --env-file .env --profile local up
+	docker compose  --env-file .env --profile local up
 
 down:
-	docker-compose --env-file .env --profile local down --volumes
+	docker compose --env-file .env --profile local down --volumes
 
 cloudsql:
-	docker-compose  --env-file .env --profile cloudsql up
+	docker compose  --env-file .env --profile cloudsql up
 
 sqlite:
 	docker-compose  --env-file .env --profile sqlite up

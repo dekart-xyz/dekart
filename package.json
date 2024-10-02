@@ -1,6 +1,6 @@
 {
-  "name": "dekart-snowpark",
-  "version": "0.16.0",
+  "name": "dekart",
+  "version": "0.17.1",
   "private": true,
   "dependencies": {
     "@dekart-xyz/kepler.gl": "2.5.5-fix.5",
@@ -69,6 +69,7 @@
     "standard": "^17.0.0"
   },
   "overrides": {
+    "react-error-overlay": "6.0.9",
     "@deck.gl/aggregation-layers": "8.6.5",
     "@deck.gl/core": "8.6.5",
     "@deck.gl/extensions": "8.6.5",

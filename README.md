@@ -1,146 +1,67 @@
-# Dekart on Snowpark
+# Dekart Premium
 
-```sql
+Welcome to the **Dekart Premium** codebase! This repository is accessible to paying organizations with **read-only access**. Below, you'll find all the information you need to start using and managing Dekart Premium effectively.
 
--- with adminaccount
-CREATE COMPUTE POOL dekart_snowpark_cp
-  MIN_NODES = 1
-  MAX_NODES = 1
-  INSTANCE_FAMILY = CPU_X64_XS;
-CREATE ROLE dekart;
-GRANT ROLE dekart TO USER DELFRRR;
-CREATE DATABASE dekart_snowpark;
-GRANT OWNERSHIP ON DATABASE dekart_snowpark TO ROLE dekart COPY CURRENT GRANTS;
-GRANT OWNERSHIP ON SCHEMA dekart_snowpark.public TO ROLE dekart;
-GRANT USAGE, MONITOR ON COMPUTE POOL dekart_snowpark_cp TO ROLE dekart;
-GRANT BIND SERVICE ENDPOINT ON ACCOUNT TO ROLE dekart;
+## 📦 **Repository Access & Permissions**
 
-CREATE OR REPLACE NETWORK RULE dekart_snowpark_egress
-  MODE = EGRESS
-  TYPE = HOST_PORT
-  VALUE_LIST = ('api.mapbox.com');
+- You have **read-only access** to the code in this repository.
+- Any issues or feature requests should be raised in a dedicated repository named **dekart-premium-[your_team_name]**.
+- For live support, join our **[Slack community](https://slack.dekart.xyz/)**.
 
-CREATE EXTERNAL ACCESS INTEGRATION dekart_snowpark_egress_integration
-  ALLOWED_NETWORK_RULES = (dekart_snowpark_egress)
-  ENABLED = true;
+## 🛠️ **Installing Dekart Premium**
 
--- this seems to need accountadmin
-GRANT USAGE ON INTEGRATION dekart_snowpark_egress_integration TO ROLE dekart;
+### From GitHub Packages
+You can install the Dekart Premium Docker image directly from **GitHub Packages**. Follow the instructions below:
 
+1. **Authenticate to GitHub Packages** with your GitHub account.
+   ```bash
+   docker login ghcr.io -u [USERNAME] -p [TOKEN]
+   ```
+2. **Pull the Premium image**:
+   ```bash
+   docker pull ghcr.io/dekart-xyz/dekart-premium/dekart:latest
+   ```
+3. **Run the image** with your desired configurations:
+   ```bash
+   docker run -d -p 8080:8080 ghcr.io/dekart-xyz/dekart-premium/dekart:latest
+   ```
 
--- with dekart role
-CREATE IMAGE REPOSITORY dekart_snowpark_repository;
+### Deploying Examples
 
-CREATE OR REPLACE STAGE dekart_snowpark_stage ENCRYPTION = (type = 'SNOWFLAKE_SSE');
--- LIST @dekart_snowpark_stage;
-
-CREATE SERVICE dekart_snowpark_service in COMPUTE POOL dekart_snowpark_cp
-FROM @dekart_snowpark_stage
-spec=snowpark_spec.yaml
-QUERY_WAREHOUSE=DEKART_WH
-EXTERNAL_ACCESS_INTEGRATIONS=(DEKART_SNOWPARK_EGRESS_INTEGRATION)
-MAX_INSTANCES=1;
-
-SHOW ENDPOINTS IN SERVICE dekart_snowpark;
-
--- DROP SERVICE dekart_snowpark;
-
-```
-
-# Snowpark package
-
-```sql
-use role accountadmin;
-create security integration if not exists snowservices_ingress_oauth
-  type=oauth
-  oauth_client=snowservices_ingress
-  enabled=true;
-
-use role accountadmin;
-create role if not exists nap_role;
-grant role nap_role to role accountadmin;
-grant create integration on account to role nap_role;
-grant create compute pool on account to role nap_role;
-grant create warehouse on account to role nap_role;
-grant create database on account to role nap_role;
-grant create application package on account to role nap_role;
-grant create application on account to role nap_role with grant option;
-grant bind service endpoint on account to role nap_role;
-
-use role nap_role;
-create database if not exists dekart_app;
-create schema if not exists dekart_app.napp;
-create stage if not exists dekart_app.napp.app_stage;
-create image repository if not exists dekart_app.napp.img_repo;
-create warehouse if not exists wh_nap with warehouse_size='xsmall';
-
-use role accountadmin;
-create role if not exists nac_role;
-grant role nac_role to role accountadmin;
-create warehouse if not exists wh_nac with warehouse_size='xsmall';
-grant usage on warehouse wh_nac to role nac_role with grant option;
-grant imported privileges on database snowflake_sample_data to role nac_role;
-grant create database on account to role nac_role;
-grant bind service endpoint on account to role nac_role with grant option;
-grant create network policy on account to role nac_role;
-grant create integration on account to role nac_role;
-grant create compute pool on account to role nac_role;
-grant create application on account to role nac_role;
-
-use role nap_role;
-show image repositories in schema dekart_app.napp;
-
--- recreate package and instance
-
-use role nap_role;
-create application package dekart_app_pkg;
-alter application package dekart_app_pkg add version v1 using @dekart_app.napp.app_stage;
-grant install, develop on application package dekart_app_pkg to role nac_role;
-
-use role nac_role;
-use warehouse wh_nac;
-create application dekart_app_instance from application package dekart_app_pkg using version v1;
-create compute pool pool_nac for application dekart_app_instance
-    min_nodes = 1 max_nodes = 1
-    instance_family = cpu_x64_xs
-    auto_resume = true;
-grant usage on compute pool pool_nac to application dekart_app_instance;
-grant usage on warehouse wh_nac to application dekart_app_instance;
-grant bind service endpoint on account to application dekart_app_instance;
-use schema dekart_app_instance.app_public;
-create or replace network rule mapbox_egress
-  mode = egress
-  type = host_port
-  value_list = ('api.mapbox.com');
-create external access integration if not exists mapbox_egress_integration
-  allowed_network_rules = (mapbox_egress)
-  enabled = true;
-grant usage on integration mapbox_egress_integration to application dekart_app_instance;
-call dekart_app_instance.app_public.start_app('POOL_NAC', 'WH_NAC', 'MAPBOX_EGRESS_INTEGRATION');
-
--- get app url
-
-use role nac_role;
-call dekart_app_instance.app_public.app_url();
-
--- cleanup
-
-use role nac_role;
-drop application dekart_app_instance;
-drop compute pool pool_nac;
-
-use role nap_role;
-drop application package dekart_app_pkg;
+* [Deploy to AWS/ECS with Terraform](https://dekart.xyz/docs/self-hosting/aws-ecs-terraform/?ref=github)  and manage access with Google IAP
+* [Deploy to Google App Engine](https://dekart.xyz/docs/self-hosting/app-engine/?ref=github)  and manage access with Google IAP
+* [Run with Docker](https://dekart.xyz/docs/self-hosting/docker/?ref=github)
 
 
-```
+👉 [Environment Variables Documentation](https://dekart.xyz/docs/configuration/environment-variables/?ref=github)
 
-<<<<<<< HEAD
-=======
-This project is open source under the GNU Affero General Public License Version 3 (AGPLv3) or any later version.
-Commercial licenses are available upon request, please contact us at [support@dekart.xyz](mailto:support@dekart.xyz).
+## 📅 **Schedule Developer Support Calls**
 
-Copyright (c) 2024 Volodymyr Bilonenko
+If you need personalized assistance, you can schedule a 1-on-1 call with a developer through our **[Calendly link](https://calendly.com/vladi-dekart/30min)**. We'll be happy to walk you through advanced features or help troubleshoot any issues.
+
+## 🚨 **Raising Issues**
+
+- Each team has its own repository for tracking issues. Use the format **dekart-premium-[your_team_name]** to create a new issue.
+- **Example Issue Repo**: `https://github.com/dekart-xyz/dekart-premium-[your_team_name]/issues`
+- Please provide as much detail as possible in your reports, including:
+  - Steps to reproduce
+  - Expected behavior
+  - Logs or screenshots, if available
+
+## 🔗 **Premium Support in Slack**
+
+If you need real-time support, we offer premium support via **[Slack](https://slack.dekart.xyz/)**. Feel free to ask questions, report bugs, or suggest features directly to the team.
+
+## 📄 **Resources**
+
+👉 [Documentation](https://dekart.xyz/docs/)
 
 
->>>>>>> oss/main
+## License
+
+This repository is licensed under the **Dekart On-Premise Premium License**.
+
+- You may modify, distribute, and use this software for commercial purposes, with certain restrictions.
+- The software is subject to the terms outlined in the commercial license.
+
+For full details, see the [`LICENSE`](./LICENSE) file or visit the [Dekart Premium License Terms](https://dekart.xyz/legal/dekart-premium-terms).

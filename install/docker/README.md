@@ -1,24 +1,8 @@
-# Dekart Docker image
-Open-source, self-hosted version of [Dekart Cloud](https://dekart.xyz): WebGL-powered map analytics for BigQuery and Snowflake. Lightweight alternative to CARTO and Foursquare Studio for data scientists, analysts and engineers who work with large datasets.
-
-[Home Page](https://dekart.xyz?ref=dokerhub) | [GitHub](https://github.com/dekart/dekart?ref=dokerhub)
-
-## Features
-
-Create beautiful data-driven maps and share them with your team:
-
-* State-of-the art WebGL-powered map visualization
-* Optimized for large query results, tested 100Mb/1M rows
-* Efficient query result caching on Amazon S3 or Google Cloud Storage
-* Live editing of maps with other team members
-* Side-by-side SQL editor
-* Support for CSV and GeoJSON file uploads
-* Export to PNG, CSV and HTML maps
-* Simple Docker-based deployment with SSO support
+# Dekart Premium Docker image
 
 ## Available data sources
 
-* BigQuery ([setup in Dekart Cloud](https://cloud.dekart.xyz/))
+* BigQuery
 * Snowflake
 * AWS Athena
 * Postgres
@@ -30,6 +14,12 @@ Create beautiful data-driven maps and share them with your team:
 * Google Cloud Storage or AWS S3 bucket for storing cache
 * PostgreSQL or similar (Cloud SQL, Amazon RDS, etc)
 * Mapbox Token
+
+## Login to GitHub Packages
+
+```bash
+  docker login ghcr.io -u $(GITHUB_USERNAME) -p $(GITHUB_PAT)
+```
 
 ## Running docker
 
@@ -54,7 +44,7 @@ docker run \
   -e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
   -e DEKART_CORS_ORIGIN=${DEKART_CORS_ORIGIN} \
   -p 8080:8080 \
-  dekartxyz/dekart:0.16
+  ghcr.io/dekart-xyz/dekart-premium/dekart:latest
 ```
 
 ### BigQuery
@@ -75,7 +65,7 @@ docker run \
   -e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
   -e DEKART_CORS_ORIGIN=${DEKART_CORS_ORIGIN} \
   -p 8080:8080 \
-  dekartxyz/dekart:0.16
+  ghcr.io/dekart-xyz/dekart-premium/dekart:latest
 ```
 
 ### Snowflake
@@ -99,7 +89,7 @@ docker run -it --rm \
   -e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
   -e DEKART_CORS_ORIGIN=${DEKART_CORS_ORIGIN} \
   -p 8080:8080 \
-  dekartxyz/dekart:0.16
+  ghcr.io/dekart-xyz/dekart-premium/dekart:latest
 ```
 
 [Documentation](https://dekart.xyz/docs/?ref=dokerhub)
