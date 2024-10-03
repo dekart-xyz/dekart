@@ -83,13 +83,19 @@ snowpark-patch:
 snowpark: snowpark-build snowpark-tag snowpark-docker-push snowpark-spec snowpark-patch
 
 docker-test:
-	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} -o type=image -f ./Dockerfile --target e2etest .
+	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} --platform=linux/amd64 -o type=image -f ./Dockerfile --target e2etest  .
 	docker run -it --rm \
+	--platform=linux/amd64 \
 	-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
 	-v $$(pwd)/cypress/videos:/dekart/cypress/videos/ \
 	-v $$(pwd)/cypress/screenshots:/dekart/cypress/screenshots/ \
+	-p 3000:3000 \
 	--env-file .env.snowflake-sqlite \
-	-e TEST_SPEC=cypress/e2e/snowflake \
+	-e DEKART_PORT=3000 \
+	-e CYPRESS_CI=1 \
+	-e TEST_SPEC=/dekart/cypress/e2e/snowflake/happyPath.cy.js \
+	-e DEKART_SQLITE_DB_PATH=/dekart/dekart.db \
+	-e DEKART_STATIC_FILES=./build \
 	${DEKART_DOCKER_E2E_TAG}
 
 docker: # build docker for local use

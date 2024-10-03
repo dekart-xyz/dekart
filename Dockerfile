@@ -35,29 +35,18 @@ RUN CGO_ENABLED=1 go build ./src/server
 FROM godeps AS gotest
 RUN go test -v -count=1 ./src/server/**/
 
-# Stage to get the required GLIBC version
-FROM ubuntu:22.04 AS glibc
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libc6 \
-    && rm -rf /var/lib/apt/lists/*
-
-FROM cypress/included:12.17.1 AS e2etest
+# FROM cypress/included:13.14.2 as e2etest
+FROM cypress/included:13.6.4 as e2etest
 WORKDIR /dekart
 RUN apt-get update && apt-get install  -y --no-install-recommends \
     gcc \
-    gnupg \
+    curl \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 RUN update-ca-certificates
-
-# Copy the required GLIBC libraries from the glibc stage
-COPY --from=glibc /lib/x86_64-linux-gnu/libc.so.6 /lib/x86_64-linux-gnu/libc.so.6
-COPY --from=glibc /lib/x86_64-linux-gnu/libm.so.6 /lib/x86_64-linux-gnu/libm.so.6
-COPY --from=glibc /lib/x86_64-linux-gnu/libpthread.so.0 /lib/x86_64-linux-gnu/libpthread.so.0
-COPY --from=glibc /lib/x86_64-linux-gnu/libdl.so.2 /lib/x86_64-linux-gnu/libdl.so.2
-
 ENV DEKART_PORT=3000
 ENV DEKART_STATIC_FILES=./build
+# ENV DEBUG=cypress:snapshot:error
 COPY --from=nodebuilder /source/build build
 COPY --from=gobuilder /source/server .
 ADD migrations migrations
@@ -65,8 +54,17 @@ ADD sqlite sqlite
 ADD cypress cypress
 ADD cypress.config.js .
 ADD package.json .
-
 ENTRYPOINT /bin/sh -c /dekart/server & cypress run --spec ${TEST_SPEC}
+# ENTRYPOINT /bin/sh -c /dekart/server &curl --retry 10 --retry-delay 5 --retry-connrefused http://127.0.0.1:3000
+# ENTRYPOINT /bin/sh -c "/dekart/server & \
+#     until curl --retry 10 --retry-delay 5 --retry-connrefused http://127.0.0.1:3000; do \
+#         echo 'Waiting for server...'; \
+#         sleep 5; \
+#     done && \
+#     cypress run --spec ${TEST_SPEC}"
+
+# ENTRYPOINT /bin/sh -c "echo TEST_SPEC: ${TEST_SPEC} && /dekart/server & xvfb-run --auto-servernum --server-args='-screen 0 1280x720x24' npx cypress run --spec ${TEST_SPEC}"
+
 
 FROM ubuntu:22.04
 WORKDIR /dekart
