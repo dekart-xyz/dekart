@@ -225,7 +225,7 @@ func deleteOldBackups(db *sql.DB, stage string) {
 		}
 
 		if fileTime.Before(maxAge) {
-			log.Info().Str("file_name", actualFileName).Msg("Old backup found in Snowflake stage")
+			log.Info().Str("file_name", actualFileName).Time("max_age", maxAge).Msg("Old backup found in Snowflake stage")
 			removeCommand := fmt.Sprintf(`REMOVE @%s/%s`, stage, fileName)
 			_, err := db.Exec(removeCommand)
 			if err != nil {

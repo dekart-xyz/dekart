@@ -42,7 +42,7 @@ func NewServer(db *sql.DB, storageBucket storage.Storage, jobs job.Store) *Serve
 		storage:       storageBucket,
 		jobs:          jobs,
 	}
-	if IsSqlite() && os.Getenv("DEKART_STORAGE") == "SNOWFLAKE" {
+	if IsSqlite() && os.Getenv("DEKART_STORAGE") == "SNOWFLAKE" && os.Getenv("DEKART_SNOWFLAKE_STAGE") != "" {
 		go server.startBackups()
 	}
 	return &server
