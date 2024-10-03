@@ -19,6 +19,11 @@ var backupFrequencyStr = os.Getenv("DEKART_BACKUP_FREQUENCY_MIN")
 var dbFilePath = os.Getenv("DEKART_SQLITE_DB_PATH")
 
 func (s Server) startBackups() {
+	if stage == "" {
+		log.Warn().Msg("DEKART_SNOWFLAKE_STAGE environment variable is not set")
+		return
+	}
+
 	// Get the backup frequency from the environment variable, default to 5 minutes
 	backupFrequency, err := strconv.Atoi(backupFrequencyStr)
 	if err != nil || backupFrequency <= 0 {
@@ -126,6 +131,11 @@ type BackupLock struct {
 var bl BackupLock = BackupLock{}
 
 func (s Server) CreateBackup(deleteOld bool) {
+	if stage == "" {
+		log.Warn().Msg("DEKART_SNOWFLAKE_STAGE environment variable is not set")
+		return
+	}
+
 	log.Debug().Msg("Creating backup")
 
 	// Lock the mutex

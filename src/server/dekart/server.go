@@ -42,7 +42,7 @@ func NewServer(db *sql.DB, storageBucket storage.Storage, jobs job.Store) *Serve
 		storage:       storageBucket,
 		jobs:          jobs,
 	}
-	if IsSqlite() && os.Getenv("DEKART_STORAGE") == "SNOWFLAKE" && os.Getenv("DEKART_SNOWFLAKE_STAGE") != "" {
+	if IsSqlite() {
 		go server.startBackups()
 	}
 	return &server
@@ -226,6 +226,10 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_USER_DEFINED_CONNECTION,
 				Value: userDefinedConnection,
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_UX_DISABLE_VERSION_CHECK,
+				Value: defaultString(os.Getenv("DEKART_UX_DISABLE_VERSION_CHECK"), ""),
 			},
 		}
 
