@@ -221,7 +221,7 @@ postgres:
 	${DEKART_DOCKER_E2E_TAG}
 
 docker: # build docker for local use
-	docker buildx build --push --tag ${DEKART_DOCKER_DEV_TAG} -o type=image --platform=linux/amd64 -f ./Dockerfile .
+	docker buildx build --tag ${DEKART_DOCKER_DEV_TAG} -o type=image --platform=linux/amd64 -f ./Dockerfile .
 
 up-and-down:
 	docker compose  --env-file .env --profile local up; docker compose --env-file .env --profile local down --volumes

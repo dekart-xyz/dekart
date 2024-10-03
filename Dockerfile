@@ -35,7 +35,7 @@ RUN CGO_ENABLED=1 go build ./src/server
 FROM godeps AS gotest
 RUN go test -v -count=1 ./src/server/**/
 
-FROM cypress/included:12.17.1 as e2etest
+FROM cypress/included:12.17.1 AS e2etest
 WORKDIR /dekart
 RUN apt-get update && apt-get install  -y \
     ca-certificates

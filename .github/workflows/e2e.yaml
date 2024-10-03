@@ -39,6 +39,7 @@ jobs:
           target: e2etest
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}/dekart:buildcache
           cache-to: type=registry,ref=ghcr.io/${{ github.repository }}/dekart:buildcache,mode=max
+          platforms: linux/amd64
   google-oauth:
     runs-on: ubuntu-latest
     needs: build
