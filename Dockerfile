@@ -35,11 +35,27 @@ RUN CGO_ENABLED=1 go build ./src/server
 FROM godeps AS gotest
 RUN go test -v -count=1 ./src/server/**/
 
+# Stage to get the required GLIBC version
+FROM ubuntu:22.04 AS glibc
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libc6 \
+    && rm -rf /var/lib/apt/lists/*
+
 FROM cypress/included:12.17.1 AS e2etest
 WORKDIR /dekart
-RUN apt-get update && apt-get install  -y \
-    ca-certificates
+RUN apt-get update && apt-get install  -y --no-install-recommends \
+    gcc \
+    gnupg \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 RUN update-ca-certificates
+
+# Copy the required GLIBC libraries from the glibc stage
+COPY --from=glibc /lib/x86_64-linux-gnu/libc.so.6 /lib/x86_64-linux-gnu/libc.so.6
+COPY --from=glibc /lib/x86_64-linux-gnu/libm.so.6 /lib/x86_64-linux-gnu/libm.so.6
+COPY --from=glibc /lib/x86_64-linux-gnu/libpthread.so.0 /lib/x86_64-linux-gnu/libpthread.so.0
+COPY --from=glibc /lib/x86_64-linux-gnu/libdl.so.2 /lib/x86_64-linux-gnu/libdl.so.2
+
 ENV DEKART_PORT=3000
 ENV DEKART_STATIC_FILES=./build
 COPY --from=nodebuilder /source/build build
@@ -49,13 +65,15 @@ ADD sqlite sqlite
 ADD cypress cypress
 ADD cypress.config.js .
 ADD package.json .
+
 ENTRYPOINT /bin/sh -c /dekart/server & cypress run --spec ${TEST_SPEC}
 
 FROM ubuntu:22.04
 WORKDIR /dekart
-RUN apt-get update && apt-get install  -y \
+RUN apt-get update && apt-get install  -y --no-install-recommends \
     gcc \
-    ca-certificates
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 RUN update-ca-certificates
 COPY --from=nodebuilder /source/build build
 COPY --from=gobuilder /source/server .
