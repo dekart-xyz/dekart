@@ -54,16 +54,6 @@ ADD cypress cypress
 ADD cypress.config.js .
 ADD package.json .
 ENTRYPOINT /bin/sh -c /dekart/server & cypress run --spec ${TEST_SPEC}
-# ENTRYPOINT /bin/sh -c /dekart/server &curl --retry 10 --retry-delay 5 --retry-connrefused http://127.0.0.1:3000
-# ENTRYPOINT /bin/sh -c "/dekart/server & \
-#     until curl --retry 10 --retry-delay 5 --retry-connrefused http://127.0.0.1:3000; do \
-#         echo 'Waiting for server...'; \
-#         sleep 5; \
-#     done && \
-#     cypress run --spec ${TEST_SPEC}"
-
-# ENTRYPOINT /bin/sh -c "echo TEST_SPEC: ${TEST_SPEC} && /dekart/server & xvfb-run --auto-servernum --server-args='-screen 0 1280x720x24' npx cypress run --spec ${TEST_SPEC}"
-
 
 FROM ubuntu:22.04
 WORKDIR /dekart
