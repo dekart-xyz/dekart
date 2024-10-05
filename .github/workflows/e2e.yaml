@@ -298,9 +298,9 @@ jobs:
             -e DEKART_SNOWFLAKE_ACCOUNT_ID=${{ secrets.SNOWFLAKE_ACCOUNT_ID }} \
             -e DEKART_SNOWFLAKE_USER=${{ secrets.SNOWFLAKE_USER }} \
             -e DEKART_SNOWFLAKE_PASSWORD=${{ secrets.SNOWFLAKE_PASSWORD }} \
-            -e DEKART_SQLITE_DB_PATH=./dekart.db
-            -e DEKART_REQUIRE_SNOWFLAKE_CONTEXT=1
-            -e DEKART_DEV_CLAIMS_EMAIL=bilonenko.v2@gmail.com
+            -e DEKART_SQLITE_DB_PATH=./dekart.db \
+            -e DEKART_REQUIRE_SNOWFLAKE_CONTEXT=1 \
+            -e DEKART_DEV_CLAIMS_EMAIL=bilonenko.v2@gmail.com \
             ghcr.io/${{ github.repository }}/dekart:${{ env.IMAGE_CACHE_KEY }}
       - name: Upload cypress artifacts
         if: failure()
