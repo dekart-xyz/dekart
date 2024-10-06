@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 
@@ -39,15 +40,16 @@ const contextKey ContextKey = "userDetails"
 
 // ClaimsCheckConfig config for ClaimsCheck
 type ClaimsCheckConfig struct {
-	Audience            string
-	RequireIAP          bool
-	RequireAmazonOIDC   bool
-	RequireGoogleOAuth  bool
-	GoogleOAuthClientId string
-	GoogleOAuthSecret   string
-	DevClaimsEmail      string
-	DevRefreshToken     string
-	Region              string
+	Audience                string
+	RequireIAP              bool
+	RequireAmazonOIDC       bool
+	RequireGoogleOAuth      bool
+	RequireSnowflakeContext bool
+	GoogleOAuthClientId     string
+	GoogleOAuthSecret       string
+	DevClaimsEmail          string
+	DevRefreshToken         string
+	Region                  string
 }
 
 // ClaimsCheck factory to add user claims to context
@@ -60,10 +62,12 @@ type ClaimsCheck struct {
 var b2i = map[bool]int{false: 0, true: 1}
 
 func validateConfig(c ClaimsCheckConfig) {
-	if b2i[c.RequireIAP]+b2i[c.RequireAmazonOIDC]+b2i[c.RequireGoogleOAuth] > 1 {
+	if b2i[c.RequireIAP]+b2i[c.RequireAmazonOIDC]+b2i[c.RequireGoogleOAuth]+b2i[c.RequireSnowflakeContext] > 1 {
 		log.Fatal().Msg("DEKART_REQUIRE_IAP and DEKART_REQUIRE_AMAZON_OIDC and DEKART_REQUIRE_GOOGLE_OAUTH are mutually exclusive")
 	}
 	switch {
+	case c.RequireSnowflakeContext:
+		log.Info().Msgf("Dekart configured to require Snowflake context")
 	case c.RequireIAP:
 		log.Info().Msgf("Dekart configured to require IAP")
 	case c.RequireAmazonOIDC:
@@ -181,6 +185,8 @@ func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 		claims = c.validateJWTFromAmazonOIDC(ctx, r.Header.Get("x-amzn-oidc-data"))
 	} else if c.RequireGoogleOAuth {
 		claims = c.validateAuthToken(ctx, r.Header.Get("Authorization"))
+	} else if c.RequireSnowflakeContext {
+		claims = c.getSnowflakeContext(r.Header.Get("Sf-Context-Current-User"))
 	} else {
 		claims = &Claims{
 			Email: UnknownEmail,
@@ -192,6 +198,23 @@ func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 
 var infoScope = []string{googleOAuth.UserinfoProfileScope, googleOAuth.UserinfoEmailScope}
 var sensitiveScope = []string{googleOAuth.UserinfoProfileScope, googleOAuth.UserinfoEmailScope, "https://www.googleapis.com/auth/devstorage.read_write", bigquery.BigqueryScope}
+
+func (c ClaimsCheck) getSnowflakeContext(user string) *Claims {
+	if c.DevClaimsEmail != "" {
+		return &Claims{
+			Email: c.DevClaimsEmail,
+		}
+	}
+	if user == "" {
+		return &Claims{
+			Email: UnknownEmail,
+		}
+	}
+	email := fmt.Sprintf("%s@%s", user, os.Getenv("SNOWFLAKE_ACCOUNT"))
+	return &Claims{
+		Email: email,
+	}
+}
 
 func (c ClaimsCheck) getAuthConfig(state *pb.AuthState) *oauth2.Config {
 	authUrl := ""

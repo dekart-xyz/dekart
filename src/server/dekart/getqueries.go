@@ -68,9 +68,39 @@ func (s Server) getQueries(ctx context.Context, datasets []*proto.Dataset) ([]*p
 		}
 	}
 	if len(queryIds) > 0 {
-		queryIdsStr := strings.Join(queryIds, ",")
-		queryRows, err := s.db.QueryContext(ctx,
-			`select
+		// Quote each queryId and join them with commas
+		quotedQueryIds := make([]string, len(queryIds))
+		for i, id := range queryIds {
+			quotedQueryIds[i] = "'" + id + "'"
+		}
+		queryIdsStr := strings.Join(quotedQueryIds, ",")
+		var queryRows *sql.Rows
+		var err error
+		if IsSqlite() {
+			queryRows, err = s.db.QueryContext(ctx,
+				`select
+				id,
+				query_text,
+				job_status,
+				case when job_result_id is null then '' else cast(job_result_id as VARCHAR) end as job_result_id,
+				case when job_error is null then '' else job_error end as job_error,
+				case
+					when job_started is null
+					then 0
+					else CAST((strftime('%s', CURRENT_TIMESTAMP)  - strftime('%s', job_started))*1000 as BIGINT)
+				end as job_duration,
+				total_rows,
+				bytes_processed,
+				result_size,
+				created_at,
+				updated_at,
+				query_source,
+				query_source_id
+			from queries where id IN (`+queryIdsStr+`) order by created_at asc`,
+			)
+		} else {
+			queryRows, err = s.db.QueryContext(ctx,
+				`select
 				id,
 				query_text,
 				job_status,
@@ -89,8 +119,9 @@ func (s Server) getQueries(ctx context.Context, datasets []*proto.Dataset) ([]*p
 				query_source,
 				query_source_id
 			from queries where id = ANY($1) order by created_at asc`,
-			pq.Array(queryIds),
-		)
+				pq.Array(queryIds),
+			)
+		}
 		if err != nil {
 			log.Fatal().Err(err).Msgf("select from queries failed, ids: %s", queryIdsStr)
 		}
@@ -121,7 +152,9 @@ func (s Server) getQueriesLegacy(ctx context.Context, reportID string) ([]*proto
 			updated_at,
 			query_source,
 			query_source_id
-		from queries where report_id=$1 order by created_at asc`,
+		from queries
+		where report_id=$1
+		order by created_at asc`,
 		reportID,
 	)
 	if err != nil {

@@ -91,17 +91,6 @@
     align-items: center;
 }
 
-.newReleaseTitle {
-    font-size: 18px;
-    margin-bottom: 10px;
-}
-
-.newReleaseIcon {
-    color: #57B7D3 !important;
-    font-size: 42px;
-    position: absolute;
-    left: 20px;
-}
 
 .authorColumn {
     font-size: 0.9em;
@@ -110,16 +99,6 @@
     text-align: right;
     padding-top: 0 !important;
     padding-bottom: 0 !important;
-}
-
-.newRelease {
-    background-color: white;
-    width: 900px;
-    padding: 20px;
-    padding-left: 82px;
-    margin-bottom: 40px;
-    position: relative;
-    box-shadow: 0 5px 9px -1px #B1EDFF;
 }
 
 .onboarding {

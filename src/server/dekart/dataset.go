@@ -23,20 +23,22 @@ import (
 func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Dataset, error) {
 	datasets := make([]*proto.Dataset, 0)
 
-	// add legacy queries
-	queries, err := s.getQueriesLegacy(ctx, reportID)
-	if err != nil {
-		return nil, err
-	}
-	for _, query := range queries {
-		datasets = append(datasets, &proto.Dataset{
-			Id:        query.Id,
-			ReportId:  reportID,
-			QueryId:   query.Id,
-			CreatedAt: query.CreatedAt,
-			UpdatedAt: query.UpdatedAt,
-			Name:      "",
-		})
+	if !IsSqlite() {
+		// add legacy queries
+		queries, err := s.getQueriesLegacy(ctx, reportID)
+		if err != nil {
+			return nil, err
+		}
+		for _, query := range queries {
+			datasets = append(datasets, &proto.Dataset{
+				Id:        query.Id,
+				ReportId:  reportID,
+				QueryId:   query.Id,
+				CreatedAt: query.CreatedAt,
+				UpdatedAt: query.UpdatedAt,
+				Name:      "",
+			})
+		}
 	}
 
 	// normal datasets

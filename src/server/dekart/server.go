@@ -42,13 +42,21 @@ func NewServer(db *sql.DB, storageBucket storage.Storage, jobs job.Store) *Serve
 		storage:       storageBucket,
 		jobs:          jobs,
 	}
+	if IsSqlite() {
+		go server.startBackups()
+	}
 	return &server
 
+}
+
+func IsSqlite() bool {
+	return os.Getenv("DEKART_SQLITE_DB_PATH") != ""
 }
 
 // Shutdown cancels all jobs
 func (s Server) Shutdown(ctx context.Context) {
 	s.jobs.CancelAll(ctx)
+	s.CreateBackup(false)
 }
 
 func defaultString(s, def string) string {
@@ -218,6 +226,10 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_USER_DEFINED_CONNECTION,
 				Value: userDefinedConnection,
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_UX_DISABLE_VERSION_CHECK,
+				Value: defaultString(os.Getenv("DEKART_UX_DISABLE_VERSION_CHECK"), ""),
 			},
 		}
 

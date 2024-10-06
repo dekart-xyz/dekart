@@ -25,8 +25,10 @@ import (
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
+	"github.com/golang-migrate/migrate/v4/database/sqlite3"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/lib/pq"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
@@ -56,6 +58,20 @@ func configureLogger() {
 }
 
 func configureDb() *sql.DB {
+	sqlitePath, sqliteOk := os.LookupEnv("DEKART_SQLITE_DB_PATH")
+	if sqliteOk {
+		// Use SQLite
+		log.Info().Msg("Using SQLite database")
+		log.Debug().Msg("Restoring SQLite database from backup")
+		dekart.RestoreDbFile()
+		db, err := sql.Open("sqlite3", sqlitePath)
+		if err != nil {
+			log.Fatal().Err(err).Send()
+		}
+		return db
+	}
+
+	log.Info().Msg("Using Postgres database")
 	url, ok := os.LookupEnv("DEKART_POSTGRES_URL")
 	if !ok {
 		url = fmt.Sprintf(
@@ -78,22 +94,45 @@ func configureDb() *sql.DB {
 }
 
 func applyMigrations(db *sql.DB) {
-	driver, err := postgres.WithInstance(db, &postgres.Config{})
-	if err != nil {
-		log.Fatal().Err(err).Msg("WithInstance")
-	}
-	m, err := migrate.NewWithDatabaseInstance(
-		"file://migrations",
-		"postgres", driver)
-	if err != nil {
-		log.Fatal().Err(err).Msg("NewWithDatabaseInstance")
-	}
-	err = m.Up()
-	if err != nil {
-		if err == migrate.ErrNoChange {
-			return
+	_, sqliteOk := os.LookupEnv("DEKART_SQLITE_DB_PATH")
+	if sqliteOk {
+		// Use SQLite migration driver
+		driver, err := sqlite3.WithInstance(db, &sqlite3.Config{})
+		if err != nil {
+			log.Fatal().Err(err).Msg("WithInstance")
 		}
-		log.Fatal().Err(err).Msg("Migrations Up")
+		m, err := migrate.NewWithDatabaseInstance(
+			"file://sqlite/migrations",
+			"sqlite3", driver)
+		if err != nil {
+			log.Fatal().Err(err).Msg("NewWithDatabaseInstance")
+		}
+		err = m.Up()
+		if err != nil {
+			if err == migrate.ErrNoChange {
+				return
+			}
+			log.Fatal().Err(err).Msg("Migrations Up")
+		}
+	} else {
+		// Use PostgreSQL migration driver
+		driver, err := postgres.WithInstance(db, &postgres.Config{})
+		if err != nil {
+			log.Fatal().Err(err).Msg("WithInstance")
+		}
+		m, err := migrate.NewWithDatabaseInstance(
+			"file://migrations",
+			"postgres", driver)
+		if err != nil {
+			log.Fatal().Err(err).Msg("NewWithDatabaseInstance")
+		}
+		err = m.Up()
+		if err != nil {
+			if err == migrate.ErrNoChange {
+				return
+			}
+			log.Fatal().Err(err).Msg("Migrations Up")
+		}
 	}
 }
 

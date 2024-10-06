@@ -720,6 +720,7 @@ export namespace GetEnvResponse {
       TYPE_AES_IV: 17;
       TYPE_AUTH_ENABLED: 18;
       TYPE_USER_DEFINED_CONNECTION: 19;
+      TYPE_UX_DISABLE_VERSION_CHECK: 20;
     }
 
     export const Type: TypeMap;

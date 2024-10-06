@@ -1,0 +1,22 @@
+spec:
+  containers:
+    - name: dekart
+      image: /dekart_app/napp/img_repo/dekart_image
+      readinessProbe:
+        port: 8080
+        path: /
+      env:
+        DEKART_MAPBOX_TOKEN: pk.eyJ1IjoiZGVsZnJyciIsImEiOiJja2l6MXZqdjgxaXFjMnNtZTgzaHhsMGM5In0.ifCwBcTR2U-jgDev22PaSw
+        DEKART_STORAGE: SNOWFLAKE
+        DEKART_DATASOURCE: SNOWFLAKE
+        DEKART_LOG_DEBUG: 1
+        DEKART_CORS_ORIGIN: null
+        DEKART_STREAM_TIMEOUT: 10
+        DEKART_SQLITE_DB_PATH: ./dekart.db
+        DEKART_SNOWFLAKE_STAGE: app_public.app_state_stage
+        DEKART_REQUIRE_SNOWFLAKE_CONTEXT: 1
+        DEKART_UX_DISABLE_VERSION_CHECK: 1
+  endpoints:
+    - name: app
+      port: 8080
+      public: true
