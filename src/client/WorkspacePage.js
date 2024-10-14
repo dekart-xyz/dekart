@@ -192,7 +192,7 @@ function getMembersSubTitle (addedUsersCount, planType) {
     return ''
   }
   if (planType === PlanType.TYPE_TEAM) {
-    return `(${addedUsersCount} of 20)`
+    return `(${addedUsersCount} of 29)`
   }
   return '(team plan)'
 }
