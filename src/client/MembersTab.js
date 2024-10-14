@@ -40,7 +40,7 @@ export default function MembersTab () {
             onPressEnter={addUserCb}
           />
           <Button
-            disabled={addedUsersCount >= 20}
+            disabled={addedUsersCount >= 29}
             className={styles.inviteUsersButton} type='primary' onClick={addUserCb}
           >Invite user
           </Button>

@@ -335,7 +335,7 @@ func (s Server) UpdateWorkspaceUser(ctx context.Context, req *proto.UpdateWorksp
 		if workspaceInfo.PlanType == proto.PlanType_TYPE_PERSONAL && workspaceInfo.AddedUsersCount > 0 {
 			return nil, status.Error(codes.InvalidArgument, "Cannot add more users to personal workspace")
 		}
-		if workspaceInfo.PlanType == proto.PlanType_TYPE_TEAM && workspaceInfo.AddedUsersCount > 20 {
+		if workspaceInfo.PlanType == proto.PlanType_TYPE_TEAM && workspaceInfo.AddedUsersCount > 29 {
 			return nil, status.Error(codes.InvalidArgument, "Cannot add more users to team workspace")
 		}
 	}
