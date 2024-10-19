@@ -3,6 +3,7 @@ package bqstorage
 import (
 	"context"
 	"dekart/src/server/bqutils"
+	"dekart/src/server/deadline"
 	"dekart/src/server/errtype"
 	"dekart/src/server/user"
 	"encoding/csv"
@@ -60,7 +61,7 @@ func (s BigQueryStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, er
 	}
 	endTime := jobFromJobId.LastStatus().Statistics.EndTime
 
-	if time.Since(endTime) > 23*time.Hour {
+	if time.Since(endTime) > deadline.GetQueryCacheDeadline() {
 		return nil, &errtype.Expired{}
 	}
 
