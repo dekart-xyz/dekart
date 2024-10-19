@@ -90,6 +90,9 @@ export class UpdateWorkspaceUserRequest extends jspb.Message {
   getUserUpdateType(): UpdateWorkspaceUserRequest.UserUpdateTypeMap[keyof UpdateWorkspaceUserRequest.UserUpdateTypeMap];
   setUserUpdateType(value: UpdateWorkspaceUserRequest.UserUpdateTypeMap[keyof UpdateWorkspaceUserRequest.UserUpdateTypeMap]): void;
 
+  getRole(): UserRoleMap[keyof UserRoleMap];
+  setRole(value: UserRoleMap[keyof UserRoleMap]): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): UpdateWorkspaceUserRequest.AsObject;
   static toObject(includeInstance: boolean, msg: UpdateWorkspaceUserRequest): UpdateWorkspaceUserRequest.AsObject;
@@ -104,12 +107,14 @@ export namespace UpdateWorkspaceUserRequest {
   export type AsObject = {
     email: string,
     userUpdateType: UpdateWorkspaceUserRequest.UserUpdateTypeMap[keyof UpdateWorkspaceUserRequest.UserUpdateTypeMap],
+    role: UserRoleMap[keyof UserRoleMap],
   }
 
   export interface UserUpdateTypeMap {
     USER_UPDATE_TYPE_UNSPECIFIED: 0;
     USER_UPDATE_TYPE_ADD: 1;
     USER_UPDATE_TYPE_REMOVE: 2;
+    USER_UPDATE_TYPE_UPDATE: 3;
   }
 
   export const UserUpdateType: UserUpdateTypeMap;
@@ -390,6 +395,9 @@ export class User extends jspb.Message {
   getInviteId(): string;
   setInviteId(value: string): void;
 
+  getRole(): UserRoleMap[keyof UserRoleMap];
+  setRole(value: UserRoleMap[keyof UserRoleMap]): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): User.AsObject;
   static toObject(includeInstance: boolean, msg: User): User.AsObject;
@@ -406,6 +414,7 @@ export namespace User {
     updatedAt: number,
     status: UserStatusMap[keyof UserStatusMap],
     inviteId: string,
+    role: UserRoleMap[keyof UserRoleMap],
   }
 }
 
@@ -748,6 +757,9 @@ export class GetUserStreamResponse extends jspb.Message {
   getWorkspaceUpdate(): number;
   setWorkspaceUpdate(value: number): void;
 
+  getRole(): UserRoleMap[keyof UserRoleMap];
+  setRole(value: UserRoleMap[keyof UserRoleMap]): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetUserStreamResponse.AsObject;
   static toObject(includeInstance: boolean, msg: GetUserStreamResponse): GetUserStreamResponse.AsObject;
@@ -766,6 +778,7 @@ export namespace GetUserStreamResponse {
     workspaceId: string,
     planType: PlanTypeMap[keyof PlanTypeMap],
     workspaceUpdate: number,
+    role: UserRoleMap[keyof UserRoleMap],
   }
 }
 
@@ -2220,6 +2233,15 @@ export interface UserStatusMap {
 }
 
 export const UserStatus: UserStatusMap;
+
+export interface UserRoleMap {
+  ROLE_UNSPECIFIED: 0;
+  ROLE_ADMIN: 1;
+  ROLE_EDITOR: 2;
+  ROLE_VIEWER: 3;
+}
+
+export const UserRole: UserRoleMap;
 
 export interface PlanTypeMap {
   TYPE_UNSPECIFIED: 0;

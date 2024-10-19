@@ -134,6 +134,11 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			report.AllowEdit = false
 			report.CanWrite = false
 		}
+		if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
+			// viewer cannot edit reports
+			report.AllowEdit = false
+			report.CanWrite = false
+		}
 		// report is sharable if all connections have cache
 		report.IsSharable = (connectionsNum > 0 && connectionsWithCacheNum == connectionsNum)
 		report.NeedSensitiveScope = connectionsWithSensitiveScopeNum > 0
@@ -157,6 +162,10 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 	}
 	if checkWorkspace(ctx).ID == "" && !checkWorkspace(ctx).IsPlayground {
 		return nil, status.Error(codes.NotFound, "Workspace not found")
+	}
+	log.Debug().Interface("workspace", checkWorkspace(ctx)).Msg("CreateReport")
+	if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
+		return nil, status.Error(codes.PermissionDenied, "Only admins and editors can create reports")
 	}
 	id := newUUID()
 	var err error
@@ -336,7 +345,9 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 	if workspaceID == "" && !isPlayground {
 		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
-
+	if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
+		return nil, status.Error(codes.PermissionDenied, "Only admins and editors can fork reports")
+	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
@@ -391,6 +402,9 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
+	}
+	if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
+		return nil, status.Error(codes.PermissionDenied, "Only admins and editors can update reports")
 	}
 	if req.Report == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "req.Report == nil")

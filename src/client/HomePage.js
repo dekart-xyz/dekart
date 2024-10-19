@@ -153,6 +153,7 @@ function getColumns (reportFilter, archived, authEnabled) {
 function FirstReportOnboarding () {
   const isPlayground = useSelector(state => state.user.isPlayground)
   const dispatch = useDispatch()
+  const isViewer = useSelector(state => state.user.isViewer)
   return (
     <>
       <Result
@@ -161,7 +162,7 @@ function FirstReportOnboarding () {
         subTitle='Everything is ready to create you first map.'
         extra={(
           <>
-            <Button icon={<PlusOutlined />} type='primary' id='dekart-create-report' onClick={() => dispatch(createReport())}>Create report</Button>
+            <Button icon={<PlusOutlined />} disabled={isViewer} type='primary' id='dekart-create-report' onClick={() => dispatch(createReport())}>Create report</Button>
             {isPlayground
               ? (
                 <div className={styles.stepBySetLink}><a target='_blank' href='https://dekart.xyz/docs/about/playground/#quick-start' rel='noreferrer'>Check step-by-step guide</a></div>
@@ -219,6 +220,7 @@ function ReportsHeader (
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const dispatch = useDispatch()
   const history = useHistory()
+  const { isAdmin, isViewer } = useSelector(state => state.user)
 
   const userStream = useSelector(state => state.user.stream)
   if (!userStream) {
@@ -262,7 +264,7 @@ function ReportsHeader (
       <div className={styles.rightCornerAction}>
         {
           reportFilter === 'connections'
-            ? <Button onClick={() => { dispatch(newConnectionScreen(true)) }}>New Connection</Button>
+            ? <Button disabled={!isAdmin} onClick={() => { dispatch(newConnectionScreen(true)) }}>New Connection</Button>
             : (
               <>
                 {
@@ -275,7 +277,7 @@ function ReportsHeader (
                       )
                     : null
                 }
-                <Button id='dekart-create-report' onClick={() => dispatch(createReport())}>New Report</Button>
+                <Button id='dekart-create-report' disabled={isViewer} onClick={() => dispatch(createReport())}>New Report</Button>
               </>
               )
         }
@@ -292,6 +294,7 @@ function Reports ({ createReportButton, reportFilter }) {
   const connectionList = useSelector(state => state.connection.list)
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const newConnectionScreen = useSelector(state => state.connection.screen)
+  const isAdmin = useSelector(state => state.user.isAdmin)
   useEffect(() => {
     if (reportsList.archived.length === 0) {
       setArchived(false)
@@ -300,7 +303,7 @@ function Reports ({ createReportButton, reportFilter }) {
   if (!envLoaded) {
     return null
   }
-  if ((userDefinedConnection && connectionList.length === 0) || newConnectionScreen) {
+  if ((userDefinedConnection && connectionList.length === 0 && isAdmin) || newConnectionScreen) {
     return (
       <div className={styles.reports}>
         <CreateConnection />

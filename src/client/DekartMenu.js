@@ -16,6 +16,7 @@ export default function DekartMenu () {
   const dispatch = useDispatch()
   const { authEnabled } = env
   const isPlayground = useSelector(state => state.user.isPlayground)
+  const isViewer = useSelector(state => state.user.isViewer)
   const ref = getUrlRef(env, usage)
   return (
     <div className={styles.dekartMenu}>
@@ -42,7 +43,7 @@ export default function DekartMenu () {
               )}
           {userDefinedConnection ? (<Menu.Item key='connections'><Link to='/connections'>Connections</Link></Menu.Item>) : null}
           <Menu.Divider />
-          <Menu.Item key='create' onClick={() => dispatch(createReport())}>New Report</Menu.Item>
+          <Menu.Item key='create' disabled={isViewer} onClick={() => dispatch(createReport())}>New Report</Menu.Item>
         </Menu.SubMenu>
         <Menu.SubMenu popupClassName={styles.subMenu} popupOffset={popupOffset} title={<MessageOutlined />} key='community' active='yes'>
           <Menu.Item key='slack'>

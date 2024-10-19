@@ -249,6 +249,7 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 		WorkspaceUpdate:  workspaceUpdate,
 		WorkspaceId:      checkWorkspace(ctx).ID,
 		PlanType:         checkWorkspace(ctx).PlanType,
+		Role:             checkWorkspace(ctx).UserRole,
 	}
 
 	err = srv.Send(&response)

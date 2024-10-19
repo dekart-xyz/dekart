@@ -17,7 +17,7 @@ function Footer ({ form, testDisabled }) {
   const { dialog, test } = useSelector(state => state.connection)
   const { tested, testing, error: testError, success: testSuccess } = test
   const { id, loading, connectionType } = dialog
-
+  const isAdmin = useSelector(state => state.user.isAdmin)
   const dispatch = useDispatch()
 
   return (
@@ -37,13 +37,13 @@ function Footer ({ form, testDisabled }) {
       <div className={styles.spacer} />
       <Button
         id='saveConnection'
-        type={tested && testSuccess ? 'primary' : 'default'} disabled={(!tested || loading) && !testDisabled} onClick={() => {
+        type={tested && testSuccess ? 'primary' : 'default'} disabled={((!tested || loading) && !testDisabled) || !isAdmin} onClick={() => {
           dispatch(saveConnection(id, connectionType, form.getFieldsValue()))
         }}
       >
         Save
       </Button>
-      <Button disabled={!id} onClick={() => dispatch(archiveConnection(id))}>
+      <Button disabled={!id || !isAdmin} onClick={() => dispatch(archiveConnection(id))}>
         Archive
       </Button>
     </div>

@@ -17,11 +17,11 @@ function ForkButton ({ primary }) {
   const userStream = useSelector(state => state.user.stream)
   const userIsPlayground = useSelector(state => state.user.isPlayground)
   const workspaceId = userStream?.workspaceId
+  const isViewer = useSelector(state => state.user.isViewer)
 
   // user has workspace, but report is from playground
   // we don't know how to match users connections to report connections
-  const disabled = workspaceId && isPlaygroundReport
-
+  const disabled = (workspaceId && isPlaygroundReport) || isViewer
 
   const history = useHistory()
 
@@ -66,6 +66,7 @@ function ForkButton ({ primary }) {
 function RefreshButton () {
   const { discoverable, canWrite } = useSelector(state => state.report)
   const queries = useSelector(state => state.queries)
+  const isViewer = useSelector(state => state.user.isViewer)
   const loadingNumber = queries.reduce((loadingNumber, q) => {
     switch (q.jobStatus) {
       case Query.JobStatus.JOB_STATUS_PENDING:
@@ -88,7 +89,7 @@ function RefreshButton () {
   if (completedQueries === 0 && loadingNumber === 0) {
     return null
   }
-  if (!canWrite && !discoverable) {
+  if ((!canWrite && !discoverable) || isViewer) {
     return null
   }
   return (
@@ -112,6 +113,7 @@ function EditModeButtons ({ changed }) {
   const history = useHistory()
   const { id, canWrite } = useSelector(state => state.report)
   const { canSave } = useSelector(state => state.reportStatus)
+  const isViewer = useSelector(state => state.user.isViewer)
 
   return (
     <div className={styles.reportHeaderButtons}>
@@ -119,7 +121,7 @@ function EditModeButtons ({ changed }) {
       <Button
         type='text'
         icon={<FundProjectionScreenOutlined />}
-        disabled={changed && canWrite}
+        disabled={changed && canWrite && !isViewer}
         title='Present Mode'
         onClick={() => history.replace(`/reports/${id}`)}
       />

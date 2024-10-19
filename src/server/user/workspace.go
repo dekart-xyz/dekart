@@ -23,6 +23,7 @@ type WorkspaceInfo struct {
 	Name            string
 	AddedUsersCount int64
 	IsPlayground    bool
+	UserRole        proto.UserRole
 }
 
 func SetWorkspaceCtx(ctx context.Context, workspace WorkspaceInfo) context.Context {

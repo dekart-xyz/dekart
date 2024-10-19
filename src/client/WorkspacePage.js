@@ -112,11 +112,12 @@ function CreateWorkspaceForm () {
 
 function UpdateWorkspaceForm () {
   const workspace = useSelector(state => state.workspace)
-  const [disabled, setDisabled] = useState(false)
+  const isAdmin = useSelector(state => state.user.isAdmin)
+  const [disabled, setDisabled] = useState(!isAdmin)
   const dispatch = useDispatch()
   useEffect(() => {
-    setDisabled(false)
-  }, [workspace])
+    setDisabled(!isAdmin)
+  }, [workspace, isAdmin])
   return (
     <Card>
       <Form

@@ -31,11 +31,12 @@ function Plan ({ title, children, planType, cancelAt, addedUsersCount }) {
   const userStream = useSelector(state => state.user.stream)
   const dispatch = useDispatch()
   const [waitForRedirect, setWaitForRedirect] = useState(false)
+  const isAdmin = useSelector(state => state.user.isAdmin)
   let actionButton = (
     <Button
       key='1' type={hover ? 'primary' : 'default'}
       id={`dekart-${planType}-choose-plan`}
-      disabled={waitForRedirect} loading={waitForRedirect}
+      disabled={waitForRedirect || !isAdmin} loading={waitForRedirect}
       onClick={() => {
         setWaitForRedirect(true)
         dispatch(createSubscription(planType))
@@ -60,7 +61,7 @@ function Plan ({ title, children, planType, cancelAt, addedUsersCount }) {
     actionButton = (
       <>
         <Button
-          disabled={waitForRedirect} loading={waitForRedirect} onClick={() => {
+          disabled={waitForRedirect || !isAdmin} loading={waitForRedirect} onClick={() => {
             setWaitForRedirect(true)
             dispatch(redirectToCustomerPortal())
           }}

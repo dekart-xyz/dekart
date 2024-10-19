@@ -86,8 +86,10 @@ message UpdateWorkspaceUserRequest {
         USER_UPDATE_TYPE_UNSPECIFIED = 0;
         USER_UPDATE_TYPE_ADD = 1;
         USER_UPDATE_TYPE_REMOVE = 2;
+        USER_UPDATE_TYPE_UPDATE = 3;
     }
     UserUpdateType user_update_type = 2;
+    UserRole role = 3;
 }
 
 message UpdateWorkspaceUserResponse {
@@ -150,11 +152,19 @@ enum UserStatus {
     USER_STATUS_REJECTED = 4;
 }
 
+enum UserRole {
+    ROLE_UNSPECIFIED = 0;
+    ROLE_ADMIN = 1;
+    ROLE_EDITOR = 2;
+    ROLE_VIEWER = 3;
+}
+
 message User {
     string email = 1;
     int64 updated_at = 2;
     UserStatus status = 3;
     string invite_id = 4;
+    UserRole role = 5;
 }
 
 message GetGcpProjectListRequest {
@@ -235,6 +245,7 @@ message GetUserStreamResponse {
     string workspace_id = 101;
     PlanType plan_type = 102;
     int64 workspace_update = 103; // includes invites, members and subscription
+    UserRole role = 104;
 }
 
 message TestConnectionRequest {
