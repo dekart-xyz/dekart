@@ -233,9 +233,6 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, Unauthenticated
 	}
 	log.Debug().Str("query_id", req.QueryId).Int("QueryTextLen", len(req.QueryText)).Msg("RunQuery")
-	if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
-		return nil, status.Error(codes.PermissionDenied, "Only editors can run queries")
-	}
 
 	queriesRows, err := s.db.QueryContext(ctx,
 		`select
