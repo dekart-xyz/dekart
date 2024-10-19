@@ -332,6 +332,9 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "only admins can edit connections")
+	}
 
 	err := validateReqConnection(req.Connection)
 	if err != nil {
@@ -436,6 +439,9 @@ func (s Server) ArchiveConnection(ctx context.Context, req *proto.ArchiveConnect
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
+	}
+	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "only admins can edit connections")
 	}
 	workspaceInfo := checkWorkspace(ctx)
 	res, err := s.db.ExecContext(ctx,
@@ -553,6 +559,9 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 	}
 	if checkWorkspace(ctx).ID == "" {
 		return nil, status.Error(codes.NotFound, "workspace not found")
+	}
+	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "only admins can create connections")
 	}
 	err := validateReqConnection(req.Connection)
 	if err != nil {

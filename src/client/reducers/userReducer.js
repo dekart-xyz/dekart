@@ -3,6 +3,7 @@ import { needSensitiveScopes, userStreamUpdate } from '../actions/user'
 import { localStorageInit } from '../actions/localStorage'
 import { sessionStorageInit } from '../actions/sessionStorage'
 import { setRedirectState } from '../actions/redirect'
+import { UserRole } from '../../proto/dekart_pb'
 
 function stream (state = null, action) {
   switch (action.type) {
@@ -81,6 +82,24 @@ function redirectStateReceived (state = false, action) {
   }
 }
 
+function isViewer (state = true, action) {
+  switch (action.type) {
+    case userStreamUpdate.name:
+      return action.userStream.role === UserRole.ROLE_VIEWER
+    default:
+      return state
+  }
+}
+
+function isAdmin (state = false, action) {
+  switch (action.type) {
+    case userStreamUpdate.name:
+      return action.userStream.role === UserRole.ROLE_ADMIN
+    default:
+      return state
+  }
+}
+
 export default combineReducers({
   stream,
   sensitiveScopesGrantedOnce,
@@ -88,5 +107,7 @@ export default combineReducers({
   sensitiveScopesGranted,
   loginHint,
   isPlayground,
-  redirectStateReceived
+  redirectStateReceived,
+  isViewer,
+  isAdmin
 })

@@ -73,6 +73,9 @@ func (s Server) UpdateWorkspace(ctx context.Context, req *proto.UpdateWorkspaceR
 	if workspaceID == "" {
 		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
+	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "Only admins can update workspace")
+	}
 	_, err := s.db.ExecContext(ctx, `
 		UPDATE workspaces
 		SET name = $2, updated_at = now()
@@ -105,13 +108,15 @@ func (s Server) getWorkspaceUsers(ctx context.Context, workspaceID string) ([]*p
 	// In this query, the subquery (aliased as subq) gets the maximum created_at for each email.
 	//The main query then joins workspace_log with this subquery on email and created_at, effectively getting the active value at the time of the last log for each user.
 	rows, err := s.db.QueryContext(ctx, `
+		WITH status AS (
 		SELECT
 			ol.email,
 			ol.status,
 			ol.created_at,
 			cl.accepted,
 			ol.authored_by,
-			ol.id
+			ol.id,
+			ol.role
 		FROM
 			workspace_log ol
 		JOIN
@@ -122,6 +127,7 @@ func (s Server) getWorkspaceUsers(ctx context.Context, workspaceID string) ([]*p
 				workspace_log
 			WHERE
 				workspace_id = $1
+				and status in (1, 2)
 			GROUP BY
 				email) subq
 		ON
@@ -129,6 +135,39 @@ func (s Server) getWorkspaceUsers(ctx context.Context, workspaceID string) ([]*p
 		LEFT JOIN confirmation_log AS cl ON ol.id = cl.workspace_log_id
 		ORDER BY
 			ol.created_at DESC
+		), role AS (
+		SELECT
+			ol.email,
+			ol.role,
+			ol.created_at,
+			ol.authored_by
+		FROM
+			workspace_log ol
+		JOIN
+			(SELECT
+				email,
+				max(created_at) as max_created_at
+			FROM
+				workspace_log
+			WHERE
+				workspace_id = $1
+				and status in (1, 3)
+			GROUP BY
+				email) subq
+		ON
+			ol.email = subq.email AND ol.created_at = subq.max_created_at and ol.workspace_id = $1
+		)
+		SELECT
+			status.email,
+			status.status,
+			status.created_at,
+			status.accepted,
+			status.authored_by,
+			status.id,
+			COALESCE(role.role, status.role) as role
+		FROM status
+		LEFT JOIN role ON status.email = role.email;
+
 		`, workspaceID)
 	if err != nil {
 		log.Err(err).Send()
@@ -142,7 +181,7 @@ func (s Server) getWorkspaceUsers(ctx context.Context, workspaceID string) ([]*p
 		var authoredBy string
 		var inviteID string
 		user := proto.User{}
-		err := rows.Scan(&user.Email, &status, &updatedAt, &accepted, &authoredBy, &inviteID)
+		err := rows.Scan(&user.Email, &status, &updatedAt, &accepted, &authoredBy, &inviteID, &user.Role)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, err
@@ -164,11 +203,33 @@ func (s Server) getWorkspaceUsers(ctx context.Context, workspaceID string) ([]*p
 	return users, nil
 }
 
-func (s Server) getUserWorkspace(ctx context.Context, email string) (*proto.Workspace, error) {
+func (s Server) getUserWorkspace(ctx context.Context, email string) (*proto.Workspace, *proto.UserRole, error) {
 	res, err := s.db.QueryContext(ctx, `
+		with user_role as (
+			SELECT
+				ol.role,
+				ol.email,
+				ol.workspace_id
+			FROM
+				workspace_log ol
+			JOIN (
+				SELECT
+					workspace_id,
+					MAX(created_at) AS created_at
+				FROM workspace_log
+				WHERE
+					email = $1
+					and status in (1, 3)
+				GROUP BY workspace_id
+			) AS oll ON ol.workspace_id = oll.workspace_id AND ol.created_at = oll.created_at
+			WHERE
+				ol.email = $1
+				AND ol.status in (1, 3)
+		)
 		SELECT
 			o.id,
-			o.name
+			o.name,
+			ur.role
 		FROM workspaces AS o
 		JOIN workspace_log AS ol ON o.id = ol.workspace_id
 		JOIN (
@@ -177,9 +238,11 @@ func (s Server) getUserWorkspace(ctx context.Context, email string) (*proto.Work
 				MAX(created_at) AS created_at
 			FROM workspace_log
 			WHERE email = $1
+			and status in (1, 2)
 			GROUP BY workspace_id
 		) AS oll ON ol.workspace_id = oll.workspace_id AND ol.created_at = oll.created_at
 		LEFT JOIN confirmation_log AS cl ON ol.id = cl.workspace_log_id AND cl.authored_by = ol.email
+		LEFT JOIN user_role AS ur ON ol.email = ur.email AND ol.workspace_id = ur.workspace_id
 		WHERE ol.status = 1 AND (ol.authored_by = $1 OR cl.accepted = TRUE)
 		-- if user accepted the invite, we should show that workspace
 		ORDER BY COALESCE(cl.created_at, ol.created_at) DESC, ol.created_at DESC
@@ -187,36 +250,20 @@ func (s Server) getUserWorkspace(ctx context.Context, email string) (*proto.Work
 	`, email)
 	if err != nil {
 		log.Err(err).Send()
-		return nil, err
+		return nil, nil, err
 	}
 	defer res.Close()
+	role := proto.UserRole_ROLE_UNSPECIFIED
 	if res.Next() {
 		workspace := proto.Workspace{}
-		err := res.Scan(&workspace.Id, &workspace.Name)
+		err := res.Scan(&workspace.Id, &workspace.Name, &role)
 		if err != nil {
 			log.Err(err).Send()
-			return nil, err
+			return nil, nil, err
 		}
-		return &workspace, nil
+		return &workspace, &role, nil
 	}
-	return nil, nil
-}
-
-func (s Server) checkPlaygroundUser(ctx context.Context, email string) (bool, error) {
-	var isPlayground bool
-	err := s.db.QueryRowContext(ctx, `
-		SELECT is_playground
-		FROM users
-		WHERE email = $1
-	`, email).Scan(&isPlayground)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return false, nil
-		}
-		log.Err(err).Send()
-		return false, err
-	}
-	return isPlayground, nil
+	return nil, &role, nil
 }
 
 func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) context.Context {
@@ -234,7 +281,7 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 		})
 		return ctx
 	}
-	workspace, err := s.getUserWorkspace(ctx, claims.Email)
+	workspace, role, err := s.getUserWorkspace(ctx, claims.Email)
 	if err != nil {
 		log.Err(err).Send()
 		return ctx
@@ -266,6 +313,7 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 		PlanType:        planType,
 		Name:            name,
 		AddedUsersCount: addedUsersCount,
+		UserRole:        *role,
 	})
 	return ctx
 }
@@ -322,14 +370,15 @@ func (s Server) UpdateWorkspaceUser(ctx context.Context, req *proto.UpdateWorksp
 	if workspaceInfo.ID == "" {
 		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
+	if workspaceInfo.UserRole != proto.UserRole_ROLE_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "Only admin can update users")
+	}
 	if req.UserUpdateType == proto.UpdateWorkspaceUserRequest_USER_UPDATE_TYPE_UNSPECIFIED {
 		log.Error().Msgf("User update type not specified")
 		return nil, status.Error(codes.InvalidArgument, "User update type not specified")
 	}
-	if req.UserUpdateType == proto.UpdateWorkspaceUserRequest_USER_UPDATE_TYPE_REMOVE {
-		if claims.Email == req.Email {
-			return nil, status.Error(codes.InvalidArgument, "Cannot remove yourself")
-		}
+	if claims.Email == req.Email {
+		return nil, status.Error(codes.InvalidArgument, "Cannot remove yourself")
 	}
 	if req.UserUpdateType == proto.UpdateWorkspaceUserRequest_USER_UPDATE_TYPE_ADD {
 		if workspaceInfo.PlanType == proto.PlanType_TYPE_PERSONAL && workspaceInfo.AddedUsersCount > 0 {
@@ -340,9 +389,9 @@ func (s Server) UpdateWorkspaceUser(ctx context.Context, req *proto.UpdateWorksp
 		}
 	}
 	_, err := s.db.ExecContext(ctx, `
-		INSERT INTO workspace_log (id, workspace_id, email, status, authored_by)
-		VALUES ($1, $2, $3, $4, $5)
-	`, newUUID(), workspaceInfo.ID, req.Email, req.UserUpdateType, claims.Email)
+		INSERT INTO workspace_log (id, workspace_id, email, status, authored_by, role)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`, newUUID(), workspaceInfo.ID, req.Email, req.UserUpdateType, claims.Email, req.Role)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
@@ -369,6 +418,7 @@ func (s Server) getInvites(ctx context.Context, email string) ([]*proto.Workspac
 				workspace_log
 			WHERE
 				email = $1
+				AND status in (1, 2)
 			GROUP BY
 				workspace_id) subq
 		ON ol.workspace_id=subq.workspace_id AND ol.created_at = subq.max_created_at

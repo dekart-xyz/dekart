@@ -135,7 +135,9 @@ func (s Server) CancelSubscription(ctx context.Context, req *proto.CancelSubscri
 	if workspaceInfo.ID == "" {
 		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
-
+	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "Only admins can cancel subscriptions")
+	}
 	sub, err := s.getSubscription(ctx, workspaceInfo.ID)
 	if err != nil {
 		log.Err(err).Send()
@@ -207,7 +209,9 @@ func (s Server) GetStripePortalSession(ctx context.Context, req *proto.GetStripe
 	if workspaceInfo.ID == "" {
 		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
-
+	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "Only admins can access billing portal")
+	}
 	sub, err := s.getSubscription(ctx, workspaceInfo.ID)
 	if err != nil {
 		log.Err(err).Send()
@@ -250,6 +254,9 @@ func (s Server) CreateSubscription(ctx context.Context, req *proto.CreateSubscri
 	workspaceInfo := checkWorkspace(ctx)
 	if workspaceInfo.ID == "" {
 		return nil, status.Error(codes.NotFound, "Workspace not found")
+	}
+	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "Only admins can create subscriptions")
 	}
 	switch req.PlanType {
 	case proto.PlanType_TYPE_PERSONAL:

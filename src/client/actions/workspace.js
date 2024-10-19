@@ -102,15 +102,21 @@ export function getInvites () {
   }
 }
 
-export function updateWorkspaceUser (email, userUpdateType) {
+export function updateWorkspaceUser (email, userUpdateType, role = 2) {
   return (dispatch) => {
     dispatch({ type: updateWorkspaceUser.name })
     const request = new UpdateWorkspaceUserRequest()
     request.setEmail(email)
     request.setUserUpdateType(userUpdateType)
+    if (userUpdateType !== UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_REMOVE) {
+      request.setRole(role)
+    }
     dispatch(grpcCall(Dekart.UpdateWorkspaceUser, request, () => {
       if (userUpdateType === UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_ADD) {
         success('User invited')
+      }
+      if (userUpdateType === UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_UPDATE) {
+        success('Role updated')
       }
     }))
   }

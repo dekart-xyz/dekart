@@ -87,7 +87,9 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-
+	if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
+		return nil, status.Error(codes.PermissionDenied, "Only editors can run queries")
+	}
 	report, err := s.getReport(ctx, req.ReportId)
 	if err != nil {
 		log.Err(err).Send()
@@ -231,6 +233,9 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, Unauthenticated
 	}
 	log.Debug().Str("query_id", req.QueryId).Int("QueryTextLen", len(req.QueryText)).Msg("RunQuery")
+	if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
+		return nil, status.Error(codes.PermissionDenied, "Only editors can run queries")
+	}
 
 	queriesRows, err := s.db.QueryContext(ctx,
 		`select
@@ -338,6 +343,9 @@ func (s Server) CancelQuery(ctx context.Context, req *proto.CancelQueryRequest) 
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
+	}
+	if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
+		return nil, status.Error(codes.PermissionDenied, "Only editors can cancel queries")
 	}
 	log.Debug().Str("query_id", req.QueryId).Msg("CancelQuery")
 	_, err := uuid.Parse(req.QueryId)
