@@ -51,7 +51,6 @@ service Dekart {
 
     //subscriptions
     rpc CreateSubscription(CreateSubscriptionRequest) returns (CreateSubscriptionResponse) {}
-    rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse) {}
     rpc GetStripePortalSession(GetStripePortalSessionRequest) returns (GetStripePortalSessionResponse) {}
 
     //workspace
@@ -189,14 +188,6 @@ message RunAllQueriesResponse {
 
 }
 
-message CancelSubscriptionRequest {
-    string ui_url = 1;
-}
-
-message CancelSubscriptionResponse {
-    string redirect_url = 1;
-}
-
 message Workspace {
     string id = 1;
     string name = 2;
@@ -209,12 +200,15 @@ message Subscription {
     string stripe_subscription_id = 7;
     string stripe_customer_email = 8;
     int64 cancel_at = 9; //seconds
+    string item_id = 10; // stripe subscription item id
 }
 
 enum PlanType {
     TYPE_UNSPECIFIED = 0;
     TYPE_PERSONAL = 1;
     TYPE_TEAM = 2;
+    TYPE_GROW = 3;
+    TYPE_MAX = 4;
 }
 
 message CreateSubscriptionRequest {

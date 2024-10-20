@@ -256,15 +256,6 @@ type DekartCreateSubscription = {
   readonly responseType: typeof proto_dekart_pb.CreateSubscriptionResponse;
 };
 
-type DekartCancelSubscription = {
-  readonly methodName: string;
-  readonly service: typeof Dekart;
-  readonly requestStream: false;
-  readonly responseStream: false;
-  readonly requestType: typeof proto_dekart_pb.CancelSubscriptionRequest;
-  readonly responseType: typeof proto_dekart_pb.CancelSubscriptionResponse;
-};
-
 type DekartGetStripePortalSession = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -349,7 +340,6 @@ export class Dekart {
   static readonly SetDefaultConnection: DekartSetDefaultConnection;
   static readonly RespondToInvite: DekartRespondToInvite;
   static readonly CreateSubscription: DekartCreateSubscription;
-  static readonly CancelSubscription: DekartCancelSubscription;
   static readonly GetStripePortalSession: DekartGetStripePortalSession;
   static readonly CreateWorkspace: DekartCreateWorkspace;
   static readonly UpdateWorkspace: DekartUpdateWorkspace;
@@ -617,15 +607,6 @@ export class DekartClient {
   createSubscription(
     requestMessage: proto_dekart_pb.CreateSubscriptionRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateSubscriptionResponse|null) => void
-  ): UnaryResponse;
-  cancelSubscription(
-    requestMessage: proto_dekart_pb.CancelSubscriptionRequest,
-    metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CancelSubscriptionResponse|null) => void
-  ): UnaryResponse;
-  cancelSubscription(
-    requestMessage: proto_dekart_pb.CancelSubscriptionRequest,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CancelSubscriptionResponse|null) => void
   ): UnaryResponse;
   getStripePortalSession(
     requestMessage: proto_dekart_pb.GetStripePortalSessionRequest,

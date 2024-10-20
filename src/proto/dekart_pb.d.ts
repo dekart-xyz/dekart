@@ -528,46 +528,6 @@ export namespace RunAllQueriesResponse {
   }
 }
 
-export class CancelSubscriptionRequest extends jspb.Message {
-  getUiUrl(): string;
-  setUiUrl(value: string): void;
-
-  serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): CancelSubscriptionRequest.AsObject;
-  static toObject(includeInstance: boolean, msg: CancelSubscriptionRequest): CancelSubscriptionRequest.AsObject;
-  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
-  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: CancelSubscriptionRequest, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): CancelSubscriptionRequest;
-  static deserializeBinaryFromReader(message: CancelSubscriptionRequest, reader: jspb.BinaryReader): CancelSubscriptionRequest;
-}
-
-export namespace CancelSubscriptionRequest {
-  export type AsObject = {
-    uiUrl: string,
-  }
-}
-
-export class CancelSubscriptionResponse extends jspb.Message {
-  getRedirectUrl(): string;
-  setRedirectUrl(value: string): void;
-
-  serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): CancelSubscriptionResponse.AsObject;
-  static toObject(includeInstance: boolean, msg: CancelSubscriptionResponse): CancelSubscriptionResponse.AsObject;
-  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
-  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: CancelSubscriptionResponse, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): CancelSubscriptionResponse;
-  static deserializeBinaryFromReader(message: CancelSubscriptionResponse, reader: jspb.BinaryReader): CancelSubscriptionResponse;
-}
-
-export namespace CancelSubscriptionResponse {
-  export type AsObject = {
-    redirectUrl: string,
-  }
-}
-
 export class Workspace extends jspb.Message {
   getId(): string;
   setId(value: string): void;
@@ -611,6 +571,9 @@ export class Subscription extends jspb.Message {
   getCancelAt(): number;
   setCancelAt(value: number): void;
 
+  getItemId(): string;
+  setItemId(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Subscription.AsObject;
   static toObject(includeInstance: boolean, msg: Subscription): Subscription.AsObject;
@@ -629,6 +592,7 @@ export namespace Subscription {
     stripeSubscriptionId: string,
     stripeCustomerEmail: string,
     cancelAt: number,
+    itemId: string,
   }
 }
 
@@ -2247,6 +2211,8 @@ export interface PlanTypeMap {
   TYPE_UNSPECIFIED: 0;
   TYPE_PERSONAL: 1;
   TYPE_TEAM: 2;
+  TYPE_GROW: 3;
+  TYPE_MAX: 4;
 }
 
 export const PlanType: PlanTypeMap;

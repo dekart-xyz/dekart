@@ -230,7 +230,7 @@ function ReportsHeader (
   return (
     <div className={styles.reportsHeader}>
       {
-        userStream.planType === PlanType.TYPE_TEAM || userStream.planType === PlanType.TYPE_PERSONAL
+        userStream.planType > PlanType.TYPE_UNSPECIFIED
           ? (
             <Radio.Group
               value={reportFilter} onChange={(e) => {

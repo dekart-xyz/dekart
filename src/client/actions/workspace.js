@@ -1,4 +1,4 @@
-import { CancelSubscriptionRequest, CreateWorkspaceRequest, CreateSubscriptionRequest, GetInvitesRequest, GetWorkspaceRequest, GetStripePortalSessionRequest, ListUsersRequest, RespondToInviteRequest, UpdateWorkspaceRequest, UpdateWorkspaceUserRequest } from '../../proto/dekart_pb'
+import { CreateWorkspaceRequest, CreateSubscriptionRequest, GetInvitesRequest, GetWorkspaceRequest, GetStripePortalSessionRequest, ListUsersRequest, RespondToInviteRequest, UpdateWorkspaceRequest, UpdateWorkspaceUserRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { success } from './message'
@@ -118,17 +118,6 @@ export function updateWorkspaceUser (email, userUpdateType, role = 2) {
       if (userUpdateType === UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_UPDATE) {
         success('Role updated')
       }
-    }))
-  }
-}
-
-export function cancelSubscription () {
-  return (dispatch) => {
-    dispatch({ type: cancelSubscription.name })
-    const request = new CancelSubscriptionRequest()
-    request.setUiUrl(window.location.href)
-    dispatch(grpcCall(Dekart.CancelSubscription, request, (res) => {
-      success('Subscription canceled')
     }))
   }
 }
