@@ -6,9 +6,10 @@ import { useDispatch, useSelector } from 'react-redux'
 import Button from 'antd/es/button'
 import { createSubscription, redirectToCustomerPortal } from './actions/workspace'
 import { PlanType } from '../proto/dekart_pb'
-import { HomeOutlined, TeamOutlined, CheckCircleOutlined } from '@ant-design/icons'
+import { CheckCircleOutlined } from '@ant-design/icons'
 import Text from 'antd/es/typography/Text'
 import Card from 'antd/es/card'
+import Tooltip from 'antd/es/tooltip'
 
 function PlanTitle ({ name, price, icon, color, description, selected }) {
   return (
@@ -17,7 +18,7 @@ function PlanTitle ({ name, price, icon, color, description, selected }) {
         <Tag icon={icon} color={selected ? '#108ee9' : undefined}>{name}</Tag>
       </div>
       <div className={styles.planTitlePrice}>
-        <Title level={2}>{price}</Title>
+        {price}
       </div>
       <div className={styles.planTitleDescription}>
         <Title level={5} type='secondary'>{description}</Title>
@@ -45,7 +46,7 @@ function Plan ({ title, children, planType, cancelAt, addedUsersCount }) {
     </Button>
   )
   if (planType === PlanType.TYPE_PERSONAL) {
-    if (userStream.planType === PlanType.TYPE_TEAM) {
+    if (userStream.planType > PlanType.TYPE_PERSONAL) {
       actionButton = (
         <Button disabled title='Downgrading from Team to Personal is not supported'>Choose plan</Button>
       )
@@ -56,8 +57,7 @@ function Plan ({ title, children, planType, cancelAt, addedUsersCount }) {
         <Button disabled title='Workspace has more then one member'>Choose plan</Button>
       )
     }
-  }
-  if (planType === PlanType.TYPE_TEAM && userStream.planType === PlanType.TYPE_TEAM) {
+  } else if (planType === userStream.planType) {
     actionButton = (
       <>
         <Button
@@ -94,37 +94,65 @@ function Plans () {
       <Plan
         addedUsersCount={workspace.addedUsersCount}
         title={<PlanTitle
-          icon={<HomeOutlined />}
-          name='personal'
+          name='Personal'
           selected={userStream.planType === PlanType.TYPE_PERSONAL}
           price='Free'
-          description='unlimited single person use'
+          description='Single-person use'
                />}
         planType={PlanType.TYPE_PERSONAL}
       >
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Unlimited BigQuery connections</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Upload GeoJSON/CSV</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Unlimited WebGL maps</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Google SSO</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Single user access</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>BigQuery Connector</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Snowflake Connector</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Publish Maps Online</Text></p>
+      </Plan>
+      {userStream.planType === PlanType.TYPE_TEAM
+        ? (
+          <Plan
+            addedUsersCount={workspace.addedUsersCount}
+            title={<PlanTitle
+              name='Team'
+              price='$100/month'
+              selected={userStream.planType === PlanType.TYPE_TEAM}
+              description={<Tooltip placement='bottom' title='You can continue using Team plan. If you switch to another plan you will not be able to switch back.'><Tag color='red'>Deprecated</Tag></Tooltip>}
+                   />}
+            planType={PlanType.TYPE_TEAM}
+            cancelAt={workspace?.subscription?.cancelAt}
+          >
+            <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Everything from Personal</Text></p>
+            <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Manage Map Access</Text></p>
+            <p>&nbsp;</p>
+          </Plan>
+          )
+        : null}
+      <Plan
+        addedUsersCount={workspace.addedUsersCount}
+        title={<PlanTitle
+          name='Grow'
+          price='$49/month'
+          selected={userStream.planType === PlanType.TYPE_GROW}
+          description='Per editor or admin'
+               />}
+        planType={PlanType.TYPE_GROW}
+        cancelAt={workspace?.subscription?.cancelAt}
+      >
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Everything from Personal</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Unlimited Map Viewers</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Manage Map Access</Text></p>
       </Plan>
       <Plan
         addedUsersCount={workspace.addedUsersCount}
         title={<PlanTitle
-          icon={<TeamOutlined />}
-          name='team'
-          price='$100/month'
-          selected={userStream.planType === PlanType.TYPE_TEAM}
-          description='for teams up to 20 people'
+          name='Max'
+          price='$490/month'
+          selected={userStream.planType === PlanType.TYPE_MAX}
+          description='Unlimited users'
                />}
-        planType={PlanType.TYPE_TEAM}
+        planType={PlanType.TYPE_MAX}
         cancelAt={workspace?.subscription?.cancelAt}
       >
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Everything from Personal plan</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Invite up to 20 collaborators</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Share and manage access</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Manage access to reports</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Live report editing</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Everything from Personal</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Unlimited editors and viewers</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Manage Map Access</Text></p>
       </Plan>
     </div>
   )
@@ -138,6 +166,11 @@ export default function SubscriptionTab () {
   return (
     <div className={styles.subscriptionTab}>
       <Plans />
+      <div className={styles.termsLink}><a href='https://dekart.xyz/legal/terms/' target='_blank' rel='noreferrer'>🎓 Terms and conditions</a></div>
+      <div className={styles.notSure}>
+        <Title level={2}>Not sure what plan to choose?</Title>
+        <p><a href='https://calendly.com/vladi-dekart/30min' target='_blank' rel='noreferrer'>Book a call with the Dekart team</a> — Unlock insider discounts and learn about our roadmap.</p>
+      </div>
     </div>
   )
 }

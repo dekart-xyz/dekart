@@ -8,6 +8,8 @@ config:
   dekart-cloud:DEKART_POSTGRES_PASSWORD:
     secure: v1:GAjnlwqNVA6EbZCN:Hyq7MdOVYJiItb2a69Te1SDT2TeguxeEhmyL6aLahnnHO2xwEXTH+0Xh
   dekart-cloud:STRIPE_PRICE_ID: price_1OkjzzCnpQUpbHMF6kZXqQJY
+  dekart-cloud:STRIPE_PRICE_ID_GROW: price_1QC4XhCnpQUpbHMFgd88O17B
+  dekart-cloud:STRIPE_PRICE_ID_MAX: price_1QC4cVCnpQUpbHMFOiNOkpi0
   dekart-cloud:STRIPE_SECRET_KEY:
     secure: v1:iD3iQSallufpglCn:LWxvzdEktEi7mg61fUkx9XPML9A8/XDdkjOYwPbRKm8XKYWROomYCL+K38R5VNN+QXIwtOMuL+CqwTGPHcff5umUgOYPFAji9XoroK+PLgTrxMfIGEf2VOiWQ/Qoc5iWb7Wbs9AV+uwKNjSIfiAlzZMHVzD6TGjO2niM
   gcp:project: dekart-cloud

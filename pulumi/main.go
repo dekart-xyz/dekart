@@ -93,6 +93,8 @@ func main() {
 				"DEKART_GOOGLE_OAUTH_SECRET":         cfg.RequireSecret("DEKART_GOOGLE_OAUTH_SECRET"),
 				"STRIPE_SECRET_KEY":                  cfg.RequireSecret("STRIPE_SECRET_KEY"),
 				"STRIPE_PRICE_ID":                    pulumi.String(cfg.Require("STRIPE_PRICE_ID")),
+				"STRIPE_PRICE_ID_GROW":               pulumi.String(cfg.Require("STRIPE_PRICE_ID_GROW")),
+				"STRIPE_PRICE_ID_MAX":                pulumi.String(cfg.Require("STRIPE_PRICE_ID_MAX")),
 				"DEKART_MAPBOX_TOKEN":                pulumi.String(cfg.Require("DEKART_MAPBOX_TOKEN")),
 				"DEKART_HTML_CUSTOM_CODE":            pulumi.String(cfg.Require("DEKART_HTML_CUSTOM_CODE")),
 				"DEKART_UX_HOMEPAGE":                 pulumi.String("/"),

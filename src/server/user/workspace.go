@@ -22,6 +22,7 @@ type WorkspaceInfo struct {
 	PlanType        proto.PlanType
 	Name            string
 	AddedUsersCount int64
+	BilledUsers     int64 // Number of users that are billed for the workspace
 	IsPlayground    bool
 	UserRole        proto.UserRole
 }

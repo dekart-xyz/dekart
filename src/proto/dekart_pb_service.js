@@ -262,15 +262,6 @@ Dekart.CreateSubscription = {
   responseType: proto_dekart_pb.CreateSubscriptionResponse
 };
 
-Dekart.CancelSubscription = {
-  methodName: "CancelSubscription",
-  service: Dekart,
-  requestStream: false,
-  responseStream: false,
-  requestType: proto_dekart_pb.CancelSubscriptionRequest,
-  responseType: proto_dekart_pb.CancelSubscriptionResponse
-};
-
 Dekart.GetStripePortalSession = {
   methodName: "GetStripePortalSession",
   service: Dekart,
@@ -1198,37 +1189,6 @@ DekartClient.prototype.createSubscription = function createSubscription(requestM
     callback = arguments[1];
   }
   var client = grpc.unary(Dekart.CreateSubscription, {
-    request: requestMessage,
-    host: this.serviceHost,
-    metadata: metadata,
-    transport: this.options.transport,
-    debug: this.options.debug,
-    onEnd: function (response) {
-      if (callback) {
-        if (response.status !== grpc.Code.OK) {
-          var err = new Error(response.statusMessage);
-          err.code = response.status;
-          err.metadata = response.trailers;
-          callback(err, null);
-        } else {
-          callback(null, response.message);
-        }
-      }
-    }
-  });
-  return {
-    cancel: function () {
-      callback = null;
-      client.close();
-    }
-  };
-};
-
-DekartClient.prototype.cancelSubscription = function cancelSubscription(requestMessage, metadata, callback) {
-  if (arguments.length === 2) {
-    callback = arguments[1];
-  }
-  var client = grpc.unary(Dekart.CancelSubscription, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,

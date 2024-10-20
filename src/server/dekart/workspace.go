@@ -89,18 +89,22 @@ func (s Server) UpdateWorkspace(ctx context.Context, req *proto.UpdateWorkspaceR
 	return &proto.UpdateWorkspaceResponse{}, nil
 }
 
-func (s Server) countActiveWorkspaceUsers(ctx context.Context, workspaceID string) (int64, error) {
+func (s Server) countActiveWorkspaceUsers(ctx context.Context, workspaceID string) (int64, int64, error) {
 	users, err := s.getWorkspaceUsers(ctx, workspaceID)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 	var count int64
+	var countBilledUsers int64
 	for _, user := range users {
 		if user.Status == proto.UserStatus_USER_STATUS_ACTIVE || user.Status == proto.UserStatus_USER_STATUS_PENDING {
 			count++
+			if user.Role == proto.UserRole_ROLE_ADMIN || user.Role == proto.UserRole_ROLE_EDITOR {
+				countBilledUsers++
+			}
 		}
 	}
-	return count, nil
+	return count, countBilledUsers, nil
 }
 
 func (s Server) getWorkspaceUsers(ctx context.Context, workspaceID string) ([]*proto.User, error) {
@@ -290,6 +294,7 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 	var planType proto.PlanType
 	var name string
 	var addedUsersCount int64 = 0
+	var billedUsers int64 = 0
 	if workspace != nil {
 		workspaceId = workspace.Id
 		name = workspace.Name
@@ -301,7 +306,7 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 		if subscription != nil {
 			planType = subscription.PlanType
 		}
-		addedUsersCount, err = s.countActiveWorkspaceUsers(ctx, workspaceId)
+		addedUsersCount, billedUsers, err = s.countActiveWorkspaceUsers(ctx, workspaceId)
 		if err != nil {
 			log.Err(err).Send()
 			return ctx
@@ -313,6 +318,7 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 		PlanType:        planType,
 		Name:            name,
 		AddedUsersCount: addedUsersCount,
+		BilledUsers:     billedUsers,
 		UserRole:        *role,
 	})
 	return ctx
@@ -381,6 +387,9 @@ func (s Server) UpdateWorkspaceUser(ctx context.Context, req *proto.UpdateWorksp
 		return nil, status.Error(codes.InvalidArgument, "Cannot remove yourself")
 	}
 	if req.UserUpdateType == proto.UpdateWorkspaceUserRequest_USER_UPDATE_TYPE_ADD {
+		if workspaceInfo.PlanType == proto.PlanType_TYPE_UNSPECIFIED {
+			return nil, status.Error(codes.InvalidArgument, "Workspace plan not specified")
+		}
 		if workspaceInfo.PlanType == proto.PlanType_TYPE_PERSONAL && workspaceInfo.AddedUsersCount > 0 {
 			return nil, status.Error(codes.InvalidArgument, "Cannot add more users to personal workspace")
 		}
@@ -396,6 +405,15 @@ func (s Server) UpdateWorkspaceUser(ctx context.Context, req *proto.UpdateWorksp
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+
+	// because we are adding/removing users, we need to update the seats in the workspace context
+	updatedCtx := s.SetWorkspaceContext(ctx, nil)
+	err = s.updateSeats(updatedCtx)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	s.userStreams.PingAll()
 	return &proto.UpdateWorkspaceUserResponse{}, nil
 }

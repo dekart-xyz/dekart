@@ -189,13 +189,13 @@ function WorkspaceTab ({ nextStep, setNextStep }) {
 }
 
 function getMembersSubTitle (addedUsersCount, planType) {
-  if (isNaN(addedUsersCount)) {
+  if (isNaN(addedUsersCount) || planType > PlanType.TYPE_TEAM) {
     return ''
   }
   if (planType === PlanType.TYPE_TEAM) {
-    return `(${addedUsersCount} of 29)`
+    return `(${addedUsersCount} of 20)`
   }
-  return '(team plan)'
+  return '(paid plan)'
 }
 
 export function Workspace ({ nextStep, setNextStep }) {
@@ -210,7 +210,7 @@ export function Workspace ({ nextStep, setNextStep }) {
     if (inviteId) {
       setStep(0)
     } else if (workspaceId) {
-      if (planType === PlanType.TYPE_TEAM) {
+      if (planType > PlanType.TYPE_PERSONAL) {
         setStep(2)
       } else {
         setStep(1)
@@ -245,7 +245,7 @@ export function Workspace ({ nextStep, setNextStep }) {
             {
               title: 'Members',
               icon: <TeamOutlined />,
-              disabled: userStream.planType !== PlanType.TYPE_TEAM,
+              disabled: userStream.planType <= PlanType.TYPE_PERSONAL,
               subTitle: getMembersSubTitle(addedUsersCount, planType)
             }
           ]}

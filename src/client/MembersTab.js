@@ -2,7 +2,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import styles from './MembersTab.module.css'
 import { useCallback, useState } from 'react'
 import { updateWorkspaceUser } from './actions/workspace'
-import { UpdateWorkspaceUserRequest, UserRole } from '../proto/dekart_pb'
+import { PlanType, UpdateWorkspaceUserRequest, UserRole } from '../proto/dekart_pb'
 import Input from 'antd/es/input'
 import Button from 'antd/es/button'
 import Table from 'antd/es/table'
@@ -15,18 +15,27 @@ export default function MembersTab () {
   const users = useSelector(state => state.workspace.users)
   const addedUsersCount = useSelector(state => state.workspace.addedUsersCount)
   const userStream = useSelector(state => state.user.stream)
+  const planType = userStream?.planType
   const dispatch = useDispatch()
   const [email, setEmail] = useState('')
   const isAdmin = useSelector(state => state.user.isAdmin)
   const addUserCb = useCallback(() => {
-    if (email) {
+    if (email && isAdmin) {
       dispatch(updateWorkspaceUser(email, UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_ADD))
       setEmail('')
     }
-  }, [dispatch, email])
+  }, [dispatch, email, isAdmin])
   if (!users) {
     return null
   }
+
+  let inviteDisabled
+  if (planType === PlanType.TYPE_TEAM) {
+    inviteDisabled = !isAdmin || addedUsersCount >= 20
+  } else if (planType > PlanType.TYPE_PERSONAL) {
+    inviteDisabled = !isAdmin
+  }
+
   return (
     <div className={styles.teamTab}>
       <div className={styles.inviteUsers}>
@@ -42,7 +51,7 @@ export default function MembersTab () {
             onPressEnter={addUserCb}
           />
           <Button
-            disabled={addedUsersCount >= 29 || !isAdmin}
+            disabled={inviteDisabled}
             className={styles.inviteUsersButton} type='primary' onClick={addUserCb}
           >Invite user
           </Button>
