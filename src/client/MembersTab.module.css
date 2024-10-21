@@ -15,7 +15,7 @@
     min-width: 700px;
     /* display: flex; */
     flex: 1;
-    overflow: scroll;
+    /* overflow: scroll; */
     align-items: center;
     flex-direction: column;
 }
