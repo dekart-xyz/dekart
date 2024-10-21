@@ -131,15 +131,7 @@ export default function MembersTab () {
               dataIndex: 'active',
               className: styles.removeButtonColumn,
               render: (a, u) => (
-                <Button
-                  disabled={u.email === userStream.email || !isAdmin}
-                  title={u.email === userStream.email ? 'You cannot remove yourself' : undefined}
-                  className={styles.removeButton}
-                  type='text' onClick={() => {
-                    dispatch(updateWorkspaceUser(u.email, UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_REMOVE))
-                  }}
-                >Remove
-                </Button>
+                <RemoveButton email={u.email} />
               )
             }
           ]}
@@ -147,5 +139,25 @@ export default function MembersTab () {
       </div>
 
     </div>
+  )
+}
+
+function RemoveButton ({email}) {
+  const [removing, setRemoving] = useState(false)
+  const dispatch = useDispatch()
+  const userStream = useSelector(state => state.user.stream)
+  const isAdmin = useSelector(state => state.user.isAdmin)
+  return (
+    <Button
+      disabled={email === userStream.email || !isAdmin || removing}
+      loading={removing}
+      title={email === userStream.email ? 'You cannot remove yourself' : undefined}
+      className={styles.removeButton}
+      type='text' onClick={() => {
+        setRemoving(true)
+        dispatch(updateWorkspaceUser(email, UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_REMOVE))
+      }}
+    >Remove
+    </Button>
   )
 }
