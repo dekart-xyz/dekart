@@ -103,7 +103,7 @@ function Plans () {
       >
         <p><Text type='success'><CheckCircleOutlined /> </Text><Text>BigQuery Connector</Text></p>
         <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Snowflake Connector</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Publish Maps Online</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Private and Public Maps</Text></p>
       </Plan>
       {userStream.planType === PlanType.TYPE_TEAM
         ? (
@@ -119,7 +119,7 @@ function Plans () {
             cancelAt={workspace?.subscription?.cancelAt}
           >
             <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Everything from Personal</Text></p>
-            <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Manage Map Access</Text></p>
+            <p><Text type='success'><CheckCircleOutlined /> </Text><Text>User Access Management</Text></p>
             <p>&nbsp;</p>
           </Plan>
           )
@@ -136,8 +136,8 @@ function Plans () {
         cancelAt={workspace?.subscription?.cancelAt}
       >
         <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Everything from Personal</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Unlimited Map Viewers</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Manage Map Access</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Unlimited Viewers</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>User Access Management</Text></p>
       </Plan>
       <Plan
         addedUsersCount={workspace.addedUsersCount}
@@ -152,7 +152,7 @@ function Plans () {
       >
         <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Everything from Personal</Text></p>
         <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Unlimited editors and viewers</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Manage Map Access</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>User Access Management</Text></p>
       </Plan>
     </div>
   )
