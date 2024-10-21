@@ -35,7 +35,7 @@ function Invites () {
             title='Awaiting an Invitation?'
             steps={
               <ol>
-                <li>Ask a current member to send an invite to your email from the "Members" tab.</li>
+                <li>Ask a current member to send an invite to your email from the User Menu → Manage Workspace.</li>
                 <li>Once they've sent it, you'll be able to accept the invitation here.</li>
               </ol>
             }
@@ -85,12 +85,45 @@ function Invites () {
   )
 }
 
+const publicDomains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com', 'aol.com', 'protonmail.com', 'zoho.com', 'yandex.com', 'mail.com', 'gmx.com', 'inbox.com', 'fastmail.com', 'tutanota.com', 'disroot.org', 'riseup.net', 'tuta.io', 'keemail.me', 'elude.in']
+function suggestWorkspaceName(email) {
+
+  // Validate the email format
+  if (!email || !email.includes('@')) {
+      return '';
+  }
+
+  // Split the email into user handler and domain
+  const [username, domain] = email.split('@');
+
+  // Capitalize the first letter of a string for a nicer format
+  const capitalize = (str) => str.charAt(0).toUpperCase() + str.slice(1);
+
+
+  // Check if the domain is public
+  if (publicDomains.includes(domain)) {
+      return `Personal`;
+  }
+
+  // If it's a private domain, assume it's a company
+  const companyName = capitalize(domain.split('.')[0]); // Use the main part of the domain
+
+  return companyName
+}
+
 function CreateWorkspaceForm () {
   const [disabled, setDisabled] = useState(false)
+  const email = useSelector(state => state.user.stream?.email)
   const dispatch = useDispatch()
+  const [form] = Form.useForm()
+  useEffect(() => {
+      form.setFieldsValue({name: suggestWorkspaceName(email)})
+  }, [email, form])
+
   return (
     <Card>
       <Form
+        form={form}
         disabled={disabled}
         layout='vertical' onFinish={(values) => {
           setDisabled(true)

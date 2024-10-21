@@ -8,7 +8,7 @@ import 'ace-builds/src-noconflict/mode-sql'
 import 'ace-builds/src-noconflict/theme-sqlserver'
 import 'ace-builds/src-noconflict/ext-language_tools'
 import 'ace-builds/webpack-resolver'
-import { Query as QueryType } from '../proto/dekart_pb'
+import { Connection, Query as QueryType } from '../proto/dekart_pb'
 import { SendOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
 import { Duration } from 'luxon'
 import DataDocumentationLink from './DataDocumentationLink'
@@ -26,21 +26,6 @@ function CancelButton ({ query }) {
       type='ghost'
       onClick={() => dispatch(cancelQuery(query.id))}
     >Cancel
-    </Button>
-  )
-}
-function ShowDataTable ({ query }) {
-  const dispatch = useDispatch()
-  const { downloadingResults, datasetId } = useSelector(state => state.queryStatus[query.id])
-  if (downloadingResults) {
-    return null
-  }
-  return (
-    <Button
-      size='small'
-      type='ghost'
-      onClick={() => dispatch(showDataTable(datasetId))}
-    >Show Table
     </Button>
   )
 }
@@ -165,7 +150,6 @@ function QueryStatus ({ children, query }) {
       icon = <CheckCircleTwoTone className={styles.icon} twoToneColor='#52c41a' />
       message = <span>Ready</span>
       style = styles.success
-      action = <ShowDataTable query={query} />
       break
     case QueryType.JobStatus.JOB_STATUS_READING_RESULTS:
       message = 'Reading Result'
@@ -177,7 +161,6 @@ function QueryStatus ({ children, query }) {
       icon = <CheckCircleTwoTone className={styles.icon} twoToneColor='#52c41a' />
       message = <span>Ready</span>
       style = styles.success
-      action = <ShowDataTable query={query} />
       break
     default:
   }
@@ -208,6 +191,12 @@ function SampleQuery ({ queryId }) {
   const queryStatus = useSelector(state => state.queryStatus[queryId])
   const dataset = useSelector(state => state.dataset.list.find(q => q.queryId === queryId))
   const connection = useSelector(state => state.connection.list.find(c => c.id === dataset?.connectionId))
+
+  let connectionType = connection?.connectionType
+  if (isPlayground) {
+    connectionType = Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY
+  }
+
   const datasetCount = useSelector(state => state.connection.list.reduce((dc, c) => {
     return dc + c.datasetCount
   }, 0))
@@ -217,20 +206,15 @@ function SampleQuery ({ queryId }) {
     return <DataDocumentationLink className={styles.dataDoc} />
   }
   if (
-    downloadingSource ||
-    !(
-      isPlayground ||
-      datasetCount < 2 // show sample query for the first one
-    )
-  ) {
+    downloadingSource) {
     // do not show sample query while downloading source
     return null
   }
   let showSampleQuery = UX_SAMPLE_QUERY_SQL
-  if (!showSampleQuery && connection) {
-    showSampleQuery = getDatasourceMeta(connection.connectionType)?.sampleQuery
+  if (!showSampleQuery) {
+    showSampleQuery = getDatasourceMeta(connectionType)?.sampleQuery
   }
-  if (showSampleQuery) {
+  if (showSampleQuery && datasetCount < 2) {
     return (
       <div className={styles.sampleQuery}>
         <Tooltip title={<>Don't know where to start?<br />Try running public dataset query.</>}>
@@ -244,6 +228,22 @@ function SampleQuery ({ queryId }) {
       </div>
     )
   }
+  const examplesUrl = getDatasourceMeta(connectionType)?.examplesUrl
+  if (examplesUrl) {
+    return (
+      <div className={styles.sampleQuery}>
+        <Tooltip title={<>Don't know where to start?<br />Try running public dataset query.</>}>
+          <a
+            href={examplesUrl}
+            target='_blank'
+            rel='noreferrer'
+          >💡 Start with public dataset query
+          </a>
+        </Tooltip>
+      </div>
+    )
+  }
+  console.log('no sample query', connection)
   return null
 }
 
