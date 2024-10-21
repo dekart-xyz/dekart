@@ -94,7 +94,7 @@ function suggestWorkspaceName(email) {
   }
 
   // Split the email into user handler and domain
-  const [username, domain] = email.split('@');
+  const [, domain] = email.split('@');
 
   // Capitalize the first letter of a string for a nicer format
   const capitalize = (str) => str.charAt(0).toUpperCase() + str.slice(1);

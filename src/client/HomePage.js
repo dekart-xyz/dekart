@@ -17,7 +17,6 @@ import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 import { Connection, PlanType } from '../proto/dekart_pb'
 import Onboarding from './Onboarding'
 import { DatasourceIcon } from './Datasource'
-import Title from 'antd/es/typography/Title'
 
 function Loading () {
   return null

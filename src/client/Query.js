@@ -13,7 +13,6 @@ import { SendOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircle
 import { Duration } from 'luxon'
 import DataDocumentationLink from './DataDocumentationLink'
 import { cancelQuery, queryChanged, runQuery } from './actions/query'
-import { showDataTable } from './actions/showDataTable'
 import Tooltip from 'antd/es/tooltip'
 import { switchPlayground } from './actions/user'
 import { getDatasourceMeta } from './lib/datasource'
