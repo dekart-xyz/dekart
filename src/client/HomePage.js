@@ -189,11 +189,16 @@ function ConnectionTypeSelector () {
       </div>
       {showCancel
         ? (
-          <div>
-            <Button type='link' onClick={() => dispatch(newConnectionScreen(false))}>Return back</Button>
+          <div className={styles.connectionSelectorBack}>
+            <Button type='ghost' onClick={() => dispatch(newConnectionScreen(false))}>Return back</Button>
           </div>
           )
-        : null}
+        : (
+          <div className={styles.notSure}>
+          <p>or</p>
+          <Button ghost type='primary' href='https://dekart.xyz/self-hosted/' target='_blank'>Get Started with Self-Hosting</Button>
+        </div>
+        )}
     </>
   )
 }

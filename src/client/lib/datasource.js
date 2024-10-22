@@ -7,6 +7,7 @@ export function getDatasourceMeta (datasource) {
       return {
         name: 'Snowflake',
         style: 'snowflake',
+        examplesUrl: 'https://dekart.xyz/docs/about/snowflake-kepler-gl-examples/',
         sampleQuery: `-- Generate 100 random latitude and longitude points
 SELECT
     ROUND(uniform(-90::float, 90::float, random()), 6) AS lat,  -- Generate random latitude between -90 and 90
@@ -23,6 +24,7 @@ FROM
         name: 'BigQuery',
         style: 'bigquery',
         usageStatsId: 2,
+        examplesUrl: 'https://dekart.xyz/docs/about/overture-maps-examples/',
         sampleQuery: `-- Select a random 0.1% sample of crimes from the Chicago crime dataset
 SELECT
     primary_type,  -- Type of crime

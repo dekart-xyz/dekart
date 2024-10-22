@@ -32,7 +32,7 @@ export function createWorkspace (name) {
     const request = new CreateWorkspaceRequest()
     request.setWorkspaceName(name)
     dispatch(grpcCall(Dekart.CreateWorkspace, request, () => {
-      success('Workspace created')
+      window.location.href = '/'
     }))
   }
 }

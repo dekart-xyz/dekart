@@ -60,7 +60,13 @@ func (s Server) CreateWorkspace(ctx context.Context, req *proto.CreateWorkspaceR
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	s.userStreams.PingAll()
+
+	// create a subscription for the workspace
+	err = s.createPersonalSubscription(ctx, workspaceID, claims.Email)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, err
+	}
 	return &proto.CreateWorkspaceResponse{}, nil
 }
 
