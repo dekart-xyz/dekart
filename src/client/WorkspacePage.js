@@ -19,10 +19,10 @@ import SubscriptionTab from './SubscriptionTab'
 import MembersTab from './MembersTab'
 import Result from 'antd/es/result'
 import { switchPlayground } from './actions/user'
-import { Tooltip } from 'antd'
 import { useParams } from 'react-router-dom'
+import { track } from './lib/tracking'
 
-function Invites () {
+function Invites() {
   const workspace = useSelector(state => state.workspace)
   const invites = workspace.invites
   const dispatch = useDispatch()
@@ -40,7 +40,7 @@ function Invites () {
               </ol>
             }
           />
-          )
+        )
         : (
           <div className={styles.inviteList}>
             <Table
@@ -90,7 +90,7 @@ function suggestWorkspaceName(email) {
 
   // Validate the email format
   if (!email || !email.includes('@')) {
-      return '';
+    return '';
   }
 
   // Split the email into user handler and domain
@@ -102,7 +102,7 @@ function suggestWorkspaceName(email) {
 
   // Check if the domain is public
   if (publicDomains.includes(domain)) {
-      return `Personal`;
+    return `Personal`;
   }
 
   // If it's a private domain, assume it's a company
@@ -111,13 +111,13 @@ function suggestWorkspaceName(email) {
   return companyName
 }
 
-function CreateWorkspaceForm () {
+function CreateWorkspaceForm() {
   const [disabled, setDisabled] = useState(false)
   const email = useSelector(state => state.user.stream?.email)
   const dispatch = useDispatch()
   const [form] = Form.useForm()
   useEffect(() => {
-      form.setFieldsValue({name: suggestWorkspaceName(email)})
+    form.setFieldsValue({ name: suggestWorkspaceName(email) })
   }, [email, form])
 
   return (
@@ -126,6 +126,7 @@ function CreateWorkspaceForm () {
         form={form}
         disabled={disabled}
         layout='vertical' onFinish={(values) => {
+          track('CreateWorkspaceFormFinish')
           setDisabled(true)
           dispatch(createWorkspace(values.name))
         }}
@@ -143,7 +144,7 @@ function CreateWorkspaceForm () {
   )
 }
 
-function UpdateWorkspaceForm () {
+function UpdateWorkspaceForm() {
   const workspace = useSelector(state => state.workspace)
   const isAdmin = useSelector(state => state.user.isAdmin)
   const [disabled, setDisabled] = useState(!isAdmin)
@@ -174,7 +175,7 @@ function UpdateWorkspaceForm () {
   )
 }
 
-function WorkspaceTab ({ nextStep, setNextStep }) {
+function WorkspaceTab({ nextStep, setNextStep }) {
   const userStream = useSelector(state => state.user.stream)
   const workspace = useSelector(state => state.workspace)
   const invites = workspace.invites
@@ -211,9 +212,9 @@ function WorkspaceTab ({ nextStep, setNextStep }) {
               ]}
               optionType='button'
               buttonStyle='solid'
-                 />
+            />
             </div>
-            )}
+          )}
       </div>
       <div className={styles.workspaceTabBody}>{form}</div>
 
@@ -221,7 +222,7 @@ function WorkspaceTab ({ nextStep, setNextStep }) {
   )
 }
 
-function getMembersSubTitle (addedUsersCount, planType) {
+function getMembersSubTitle(addedUsersCount, planType) {
   if (isNaN(addedUsersCount) || planType > PlanType.TYPE_TEAM) {
     return ''
   }
@@ -231,7 +232,7 @@ function getMembersSubTitle (addedUsersCount, planType) {
   return '(paid plan)'
 }
 
-export function Workspace ({ nextStep, setNextStep }) {
+export function Workspace({ nextStep, setNextStep }) {
   const { inviteId } = useParams()
   const userStream = useSelector(state => state.user.stream)
   const addedUsersCount = useSelector(state => state.workspace.addedUsersCount)
@@ -256,65 +257,79 @@ export function Workspace ({ nextStep, setNextStep }) {
   }
   return (
     <div className={styles.workspace}>
-      <div className={styles.workspaceSteps}>
-        <Steps
-          type='navigation'
-          size='default'
-          current={step}
-          onChange={(current) => {
-            setStep(current)
-          }}
-          className='site-navigation-steps'
-          items={[
-            {
-              title: 'Workspace',
-              icon: <AppstoreTwoTone />
-            },
-            {
-              title: 'Plan',
-              icon: <CreditCardOutlined />,
-              disabled: !userStream.workspaceId
-            },
-            {
-              title: 'Members',
-              icon: <TeamOutlined />,
-              disabled: userStream.planType <= PlanType.TYPE_PERSONAL,
-              subTitle: getMembersSubTitle(addedUsersCount, planType)
-            }
-          ]}
-        />
-      </div>
+      {workspaceId ? (
+        <div className={styles.workspaceSteps}>
+          <Steps
+            type='navigation'
+            size='default'
+            current={step}
+            onChange={(current) => {
+              setStep(current)
+            }}
+            className='site-navigation-steps'
+            items={[
+              {
+                title: 'Workspace',
+                icon: <AppstoreTwoTone />
+              },
+              {
+                title: 'Plan',
+                icon: <CreditCardOutlined />,
+                disabled: !userStream.workspaceId
+              },
+              {
+                title: 'Members',
+                icon: <TeamOutlined />,
+                disabled: userStream.planType <= PlanType.TYPE_PERSONAL,
+                subTitle: getMembersSubTitle(addedUsersCount, planType)
+              }
+            ]}
+          />
+        </div>
+
+      ) : null}
+
       {([<WorkspaceTab key={0} nextStep={nextStep} setNextStep={setNextStep} />, <SubscriptionTab key={1} />, <MembersTab key={2} />])[step]}
     </div>
   )
 }
 
-function WelcomeScreen ({ setNextStep }) {
+function WelcomeScreen({ setNextStep }) {
   const workspace = useSelector(state => state.workspace)
   const invites = workspace.invites
-  const dispatch = useDispatch()
+  useEffect(() => {
+    track('WelcomeScreen')
+  }, [])
   return (
     <Result
       status='success'
       icon={<span className={styles.rocketIcon} />}
-      // icon={<svg viewBox='64 64 896 896' focusable='false' data-icon='rocket' width='64px' height='64px' fill='currentColor' aria-hidden='true'><path d='M261.7 621.4c-9.4 14.6-17 30.3-22.5 46.6H324V558.7c-24.8 16.2-46 37.5-62.3 62.7zM700 558.7V668h84.8c-5.5-16.3-13.1-32-22.5-46.6a211.6 211.6 0 00-62.3-62.7zm-64-239.9l-124-147-124 147V668h248V318.8zM512 448a48.01 48.01 0 010-96 48.01 48.01 0 010 96z' fill='#e6f7ff' /><path d='M864 736c0-111.6-65.4-208-160-252.9V317.3c0-15.1-5.3-29.7-15.1-41.2L536.5 95.4C530.1 87.8 521 84 512 84s-18.1 3.8-24.5 11.4L335.1 276.1a63.97 63.97 0 00-15.1 41.2v165.8C225.4 528 160 624.4 160 736h156.5c-2.3 7.2-3.5 15-3.5 23.8 0 22.1 7.6 43.7 21.4 60.8a97.2 97.2 0 0043.1 30.6c23.1 54 75.6 88.8 134.5 88.8 29.1 0 57.3-8.6 81.4-24.8 23.6-15.8 41.9-37.9 53-64a97 97 0 0043.1-30.5 97.52 97.52 0 0021.4-60.8c0-8.4-1.1-16.4-3.1-23.8L864 736zm-540-68h-84.8c5.5-16.3 13.1-32 22.5-46.6 16.3-25.2 37.5-46.5 62.3-62.7V668zm64-184.9V318.8l124-147 124 147V668H388V483.1zm240.1 301.1c-5.2 3-11.2 4.2-17.1 3.4l-19.5-2.4-2.8 19.4c-5.4 37.9-38.4 66.5-76.7 66.5s-71.3-28.6-76.7-66.5l-2.8-19.5-19.5 2.5a27.7 27.7 0 01-17.1-3.5c-8.7-5-14.1-14.3-14.1-24.4 0-10.6 5.9-19.4 14.6-23.8h231.3c8.8 4.5 14.6 13.3 14.6 23.8-.1 10.2-5.5 19.6-14.2 24.5zM700 668V558.7a211.6 211.6 0 0162.3 62.7c9.4 14.6 17 30.3 22.5 46.6H700z' fill='#1890ff' /><path d='M464 400a48 48 0 1096 0 48 48 0 10-96 0z' fill='#1890ff' /></svg>}
-      // icon={<RocketTwoTone />}
-      title='Get started!'
-      subTitle='Set up a private workspace to store kepler.gl maps and link your datasets.'
+      title='Start Mapping in Seconds'
+      subTitle='Set up a secure space to connect your data, and share live maps with your team.'
       extra={(
         <>
-          <Button type='primary' key='1' onClick={() => setNextStep('workspace')}>
-            Create workspace
+          <Button type='primary' key='1' onClick={() => {
+            track('CreateWorkspace')
+            setNextStep('workspace')
+          }}>
+            Create Workspace
           </Button>
-          <Button key='2' onClick={() => setNextStep('invites')}><Badge color='blue' count={invites.length} offset={[14, -10]}>Join existing workspace</Badge></Button>
-          <div className={styles.playground}><Tooltip placement='bottom' title='Map public BigQuery data in Kepler.gl with Playground mode.'><Button type='link' onClick={() => dispatch(switchPlayground(true))}>Switch to Public Playground</Button></Tooltip></div>
+          <Button key='2' onClick={() => setNextStep('invites')}><Badge color='blue' count={invites.length} offset={[14, -10]}>Join Existing Workspace</Badge></Button>
+          <div className={styles.notSure}>
+          <div className={styles.notSureItems}>
+              <div>→ Connect Instantly to BigQuery and Snowflake</div>
+              <div>→ Create Your First Map in 30 Seconds</div>
+              <div>→ No credit card required.</div>
+              </div>
+              <Button ghost type='primary'  href='https://dekart.xyz/docs/about/screencast/' target='_blank'>🎬 Watch a 40-Second Walkthrough</Button>
+          </div>
         </>
-             )}
+      )}
     />
   )
 }
 
-export default function WorkspacePage () {
+export default function WorkspacePage() {
   const userStream = useSelector(state => state.user.stream)
   const workspaceId = userStream?.workspaceId
   const [nextStep, setNextStep] = useState(null)
@@ -336,7 +351,7 @@ export default function WorkspacePage () {
           <div className={styles.body}>
             {workspaceId || nextStep ? <Workspace nextStep={nextStep} setNextStep={setNextStep} /> : <WelcomeScreen setNextStep={setNextStep} />}
           </div>
-          )
+        )
         : null}
     </div>
   )

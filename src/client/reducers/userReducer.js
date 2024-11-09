@@ -67,7 +67,8 @@ function loginHint (state = null, action) {
 function isPlayground (state = false, action) {
   switch (action.type) {
     case sessionStorageInit.name:
-      return action.current.isPlayground
+      // prevent returning undefined when sessionStorage was deleted
+      return Boolean(action.current.isPlayground)
     default:
       return state
   }

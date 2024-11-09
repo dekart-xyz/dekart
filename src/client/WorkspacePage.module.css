@@ -7,7 +7,7 @@
     flex-direction: column;
 }
 
-.playground {
+.demo {
     margin-top: 20px;
 }
 
@@ -94,4 +94,18 @@
 
 :global(.ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled)) .joinRadioItem {
     color: white !important;
+}
+
+.notSure {
+    border-top: 1px solid rgb(217, 217, 217);
+    padding-top: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center ;
+    margin-top: 40px;
+}
+.notSureItems {
+    text-align: left;
+    margin-bottom: 40px;
 }
