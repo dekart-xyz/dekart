@@ -12,6 +12,7 @@ import AutoComplete from 'antd/es/auto-complete'
 import Alert from 'antd/es/alert'
 import { Connection } from '../proto/dekart_pb'
 import { DatasourceIcon } from './Datasource'
+import { track } from './lib/tracking'
 
 function Footer ({ form, testDisabled }) {
   const { dialog, test } = useSelector(state => state.connection)
@@ -24,6 +25,7 @@ function Footer ({ form, testDisabled }) {
     <div className={styles.modalFooter}>
       <Button
         type='primary' disabled={testing || tested || testDisabled} loading={testing} onClick={() => {
+          track('TestConnection')
           dispatch(testConnection(connectionType, form.getFieldsValue()))
         }}
       >
@@ -38,6 +40,7 @@ function Footer ({ form, testDisabled }) {
       <Button
         id='saveConnection'
         type={tested && testSuccess ? 'primary' : 'default'} disabled={((!tested || loading) && !testDisabled) || !isAdmin} onClick={() => {
+          track('SaveConnection')
           dispatch(saveConnection(id, connectionType, form.getFieldsValue()))
         }}
       >
@@ -119,6 +122,10 @@ function BigQueryConnectionModal ({ form }) {
   const { id, loading } = dialog
   const dispatch = useDispatch()
   const connection = useSelector(state => state.connection.list.find(s => s.id === id))
+
+  useEffect(() => {
+    track('BigQueryConnectionModal')
+  }, [])
 
   // only name can be changed for connections used in datasets
   const nameChangeOnly = connection?.datasetCount > 0

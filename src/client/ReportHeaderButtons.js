@@ -10,6 +10,7 @@ import { Query } from '../proto/dekart_pb'
 import { toggleModal } from '@dekart-xyz/kepler.gl/dist/actions/ui-state-actions'
 import { EXPORT_DATA_ID, EXPORT_IMAGE_ID, EXPORT_MAP_ID } from '@dekart-xyz/kepler.gl/dist/constants'
 import Dropdown from 'antd/es/dropdown'
+import Tooltip from 'antd/es/tooltip'
 
 function ForkButton ({ primary }) {
   const dispatch = useDispatch()
@@ -108,12 +109,33 @@ function RefreshButton () {
   )
 }
 
+function CreateWorkspaceButton () {
+  const history = useHistory()
+  return (
+    <Tooltip title='Set up a secure space to connect your data, and share live maps with your team.'>
+      <Button type='primary' onClick={() => history.push('/workspace')}>Create Workspace</Button>
+    </Tooltip>
+
+  )
+}
+
 function EditModeButtons ({ changed }) {
   const dispatch = useDispatch()
   const history = useHistory()
   const { id, canWrite } = useSelector(state => state.report)
   const { canSave } = useSelector(state => state.reportStatus)
   const isViewer = useSelector(state => state.user.isViewer)
+  const userStream = useSelector(state => state.user.stream)
+  const workspaceId = userStream?.workspaceId
+  const isPlayground = useSelector(state => state.user.isPlayground)
+
+  if (!workspaceId && !isPlayground) {
+    return (
+      <div className={styles.reportHeaderButtons}>
+        <CreateWorkspaceButton />
+      </div>
+    )
+  }
 
   return (
     <div className={styles.reportHeaderButtons}>
@@ -188,6 +210,10 @@ function ExportDropdown () {
 function ViewModeButtons () {
   const history = useHistory()
   const { id, canWrite } = useSelector(state => state.report)
+  const userStream = useSelector(state => state.user.stream)
+  const workspaceId = userStream?.workspaceId
+  const isPlayground = useSelector(state => state.user.isPlayground)
+
   if (canWrite) {
     return (
       <div className={styles.reportHeaderButtons}>
@@ -206,6 +232,15 @@ function ViewModeButtons () {
       </div>
     )
   }
+
+  if (!workspaceId && !isPlayground) {
+    return (
+      <div className={styles.reportHeaderButtons}>
+        <CreateWorkspaceButton />
+      </div>
+    )
+  }
+
   return (
     <div className={styles.reportHeaderButtons}>
       <RefreshButton />

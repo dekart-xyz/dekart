@@ -17,6 +17,7 @@ import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 import { Connection, PlanType } from '../proto/dekart_pb'
 import Onboarding from './Onboarding'
 import { DatasourceIcon } from './Datasource'
+import { track } from './lib/tracking'
 
 function Loading () {
   return null
@@ -181,11 +182,20 @@ function ConnectionTypeSelector () {
   const connectionList = useSelector(state => state.connection.list)
   const showCancel = connectionList.length > 0 // show cancel button if there are connections
   const dispatch = useDispatch()
+  useEffect(() => {
+    track('ConnectionTypeSelector')
+  }, [])
   return (
     <>
       <div className={styles.connectionTypeSelector}>
-        <Button icon={<DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY} />} size='large' onClick={() => dispatch(newConnection(Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY))}>BigQuery</Button>
-        <Button icon={<DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE} />} size='large' onClick={() => dispatch(newConnection(Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE))}>Snowflake</Button>
+        <Button icon={<DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY} />} size='large' onClick={() => {
+          track('ConnectionTypeSelectorBigQuery')
+          dispatch(newConnection(Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY))
+        }}>BigQuery</Button>
+        <Button icon={<DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE} />} size='large' onClick={() => {
+          track('ConnectionTypeSelectorSnowflake')
+          dispatch(newConnection(Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE))
+        }}>Snowflake</Button>
       </div>
       {showCancel
         ? (

@@ -19,11 +19,11 @@ describe('cloud basic flow', () => {
     cy.get('button#dekart-playground-mode-button').click()
     cy.get('button:contains("Switch to private workspace")').click()
 
-    cy.get('button:contains("Create workspace")').should('be.visible')
+    cy.get('button:contains("Create Workspace")').should('be.visible')
 
     // create workspace
     cy.visit('/')
-    cy.get('button:contains("Create workspace")').click()
+    cy.get('button:contains("Create Workspace")').click()
     cy.get('input#name').type('test')
     cy.get('button:contains("Create")').click()
     cy.get('button:contains("BigQuery")').click()
