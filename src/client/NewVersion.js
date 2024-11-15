@@ -11,7 +11,7 @@ export default function NewVersion () {
   const env = useSelector(state => state.env)
   const usage = useSelector(state => state.usage)
   const dispatch = useDispatch()
-  const { UX_DISABLE_VERSION_CHECK } = env
+  const { UX_DISABLE_VERSION_CHECK } = env.variables
   useEffect(() => {
     if (!UX_DISABLE_VERSION_CHECK) {
       dispatch(testVersion())
