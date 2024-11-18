@@ -4,7 +4,7 @@
 
 Alternative to CARTO Builder and BigQuery GeoViz — lightweight, powerful, and open.
 
-<a href="https://cloud.dekart.xyz/reports/410b857a-aad1-4f05-8ddd-551d0f0fe650/source"><img src="https://dekart.xyz/all-nevada-roads_huc1594046d3e56af7f2f96f4dd89594e5_2522139_2048x0_resize_box_3.png"></a>
+<a href="https://cloud.dekart.xyz/reports/410b857a-aad1-4f05-8ddd-551d0f0fe650/source"><img src="https://dekart.xyz/berlin-roads_hufc8b27bf447ed9fea8a337916e339bb3_1495519_2048x0_resize_box_3.png"></a>
 <p align="center"><a href="https://cloud.dekart.xyz/">Try Live Demo</a></p>
 
 ## Features
