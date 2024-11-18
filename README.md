@@ -5,13 +5,13 @@
 Alternative to CARTO Builder and BigQuery GeoViz — lightweight, powerful, and open.
 
 <a href="https://cloud.dekart.xyz/reports/410b857a-aad1-4f05-8ddd-551d0f0fe650/source"><img src="https://dekart.xyz/berlin-roads_hufc8b27bf447ed9fea8a337916e339bb3_1495519_2048x0_resize_box_3.png"></a>
-<p align="center"><a href="https://cloud.dekart.xyz/">Try Live Demo</a></p>
+<div align="center"><a href="https://cloud.dekart.xyz/">Try Live Demo</a></div>
 
 ## Features
 
 - **WebGL-Powered Maps**: Built with Kepler.gl and Deck.gl.
 - **Scale**: Tested with up to 1M rows and 100MB queries.
-- **SQL-Firs**: Side-by-side SQL editor with instant previews.
+- **SQL-First**: Side-by-side SQL editor with instant previews.
 - **Cloud-Native Connectors**: BigQuery, Snowflake, Athena, and Postgres.
 - **Secure**: SSO via Google OAuth/IAP, Amazon OIDC
 - **Efficient**: Cached query results for predictable database usage.
