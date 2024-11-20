@@ -64,11 +64,22 @@ function loginHint (state = null, action) {
   }
 }
 
+function isDefaultWorkspace (state = false, action) {
+  switch (action.type) {
+    case userStreamUpdate.name:
+      return action.userStream.isDefaultWorkspace
+    default:
+      return state
+  }
+}
+
 function isPlayground (state = false, action) {
   switch (action.type) {
     case sessionStorageInit.name:
       // prevent returning undefined when sessionStorage was deleted
       return Boolean(action.current.isPlayground)
+    case userStreamUpdate.name:
+      return action.userStream.isPlayground
     default:
       return state
   }
@@ -108,6 +119,7 @@ export default combineReducers({
   sensitiveScopesGranted,
   loginHint,
   isPlayground,
+  isDefaultWorkspace,
   redirectStateReceived,
   isViewer,
   isAdmin

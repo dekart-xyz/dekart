@@ -724,6 +724,12 @@ export class GetUserStreamResponse extends jspb.Message {
   getRole(): UserRoleMap[keyof UserRoleMap];
   setRole(value: UserRoleMap[keyof UserRoleMap]): void;
 
+  getIsPlayground(): boolean;
+  setIsPlayground(value: boolean): void;
+
+  getIsDefaultWorkspace(): boolean;
+  setIsDefaultWorkspace(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetUserStreamResponse.AsObject;
   static toObject(includeInstance: boolean, msg: GetUserStreamResponse): GetUserStreamResponse.AsObject;
@@ -743,6 +749,8 @@ export namespace GetUserStreamResponse {
     planType: PlanTypeMap[keyof PlanTypeMap],
     workspaceUpdate: number,
     role: UserRoleMap[keyof UserRoleMap],
+    isPlayground: boolean,
+    isDefaultWorkspace: boolean,
   }
 }
 

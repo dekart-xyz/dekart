@@ -295,7 +295,9 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 	}
 
 	if claims.Email == user.UnknownEmail {
+		// For backward compatibility, we switch to playground mode if the user is not authenticated
 		ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{
+			IsPlayground:       true,
 			IsDefaultWorkspace: true,
 		})
 		return ctx

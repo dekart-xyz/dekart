@@ -38,7 +38,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			id,
 			case when map_config is null then '' else map_config end as map_config,
 			case when title is null then 'Untitled' else title end as title,
-			(author_email = $1) or allow_edit as can_write,
+			(author_email = $2) or allow_edit as can_write,
 			author_email = $2 as is_author,
 			author_email,
 			discoverable,
@@ -98,7 +98,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 		)
 	}
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Str("workspace", checkWorkspace(ctx).ID).Str("reportID", reportID).Send()
 		return nil, err
 	}
 	defer reportRows.Close()

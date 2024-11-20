@@ -132,9 +132,10 @@ export function Workspace () {
 
 export function PlaygroundMode () {
   const isPlayground = useSelector(state => state.user.isPlayground)
+  const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
   const dispatch = useDispatch()
 
-  if (!isPlayground) {
+  if (!isPlayground || isDefaultWorkspace) {
     return null
   }
 

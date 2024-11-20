@@ -6553,7 +6553,9 @@ proto.GetUserStreamResponse.toObject = function(includeInstance, msg) {
     workspaceId: jspb.Message.getFieldWithDefault(msg, 4, ""),
     planType: jspb.Message.getFieldWithDefault(msg, 5, 0),
     workspaceUpdate: jspb.Message.getFieldWithDefault(msg, 6, 0),
-    role: jspb.Message.getFieldWithDefault(msg, 7, 0)
+    role: jspb.Message.getFieldWithDefault(msg, 7, 0),
+    isPlayground: jspb.Message.getBooleanFieldWithDefault(msg, 8, false),
+    isDefaultWorkspace: jspb.Message.getBooleanFieldWithDefault(msg, 9, false)
   };
 
   if (includeInstance) {
@@ -6618,6 +6620,14 @@ proto.GetUserStreamResponse.deserializeBinaryFromReader = function(msg, reader) 
     case 7:
       var value = /** @type {!proto.UserRole} */ (reader.readEnum());
       msg.setRole(value);
+      break;
+    case 8:
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setIsPlayground(value);
+      break;
+    case 9:
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setIsDefaultWorkspace(value);
       break;
     default:
       reader.skipField();
@@ -6695,6 +6705,20 @@ proto.GetUserStreamResponse.serializeBinaryToWriter = function(message, writer) 
   if (f !== 0.0) {
     writer.writeEnum(
       7,
+      f
+    );
+  }
+  f = message.getIsPlayground();
+  if (f) {
+    writer.writeBool(
+      8,
+      f
+    );
+  }
+  f = message.getIsDefaultWorkspace();
+  if (f) {
+    writer.writeBool(
+      9,
       f
     );
   }
@@ -6843,6 +6867,42 @@ proto.GetUserStreamResponse.prototype.getRole = function() {
  */
 proto.GetUserStreamResponse.prototype.setRole = function(value) {
   return jspb.Message.setProto3EnumField(this, 7, value);
+};
+
+
+/**
+ * optional bool is_playground = 8;
+ * @return {boolean}
+ */
+proto.GetUserStreamResponse.prototype.getIsPlayground = function() {
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 8, false));
+};
+
+
+/**
+ * @param {boolean} value
+ * @return {!proto.GetUserStreamResponse} returns this
+ */
+proto.GetUserStreamResponse.prototype.setIsPlayground = function(value) {
+  return jspb.Message.setProto3BooleanField(this, 8, value);
+};
+
+
+/**
+ * optional bool is_default_workspace = 9;
+ * @return {boolean}
+ */
+proto.GetUserStreamResponse.prototype.getIsDefaultWorkspace = function() {
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 9, false));
+};
+
+
+/**
+ * @param {boolean} value
+ * @return {!proto.GetUserStreamResponse} returns this
+ */
+proto.GetUserStreamResponse.prototype.setIsDefaultWorkspace = function(value) {
+  return jspb.Message.setProto3BooleanField(this, 9, value);
 };
 
 

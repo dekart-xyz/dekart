@@ -238,6 +238,8 @@ message GetUserStreamResponse {
     PlanType plan_type = 5;
     int64 workspace_update = 6; // includes invites, members and subscription
     UserRole role = 7;
+    bool is_playground = 8;
+    bool is_default_workspace = 9;
 }
 
 message TestConnectionRequest {

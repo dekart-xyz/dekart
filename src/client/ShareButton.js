@@ -27,7 +27,10 @@ function CopyLinkButton () {
 
 function PublishSwitchDescription () {
   const { isPublic, isPlayground, canWrite } = useSelector(state => state.report)
+  const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
   switch (true) {
+    case isPlayground && isDefaultWorkspace:
+      return <>Everyone in the workspace can edit this report</>
     case isPlayground:
       return <>Playground reports are always public</>
     case isPublic && canWrite:
@@ -77,7 +80,7 @@ function PublicPermissions () {
     <div className={styles.boolStatus}>
       <div className={styles.boolStatusIcon}><GlobalOutlined /></div>
       <div className={styles.boolStatusLabel}>
-        <div className={styles.statusLabelTitle}>Anyone on the internet with the link can view</div>
+        <div className={styles.statusLabelTitle}>Anyone with the link can view</div>
         <div className={styles.statusLabelDescription}><PublishSwitchDescription /></div>
       </div>
       <div className={styles.boolStatusControl}>
@@ -185,6 +188,10 @@ function WorkspacePermissionsSelect () {
 }
 function WorkspacePermissions () {
   const { canWrite, discoverable } = useSelector(state => state.report)
+  const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
+  if (isDefaultWorkspace) {
+    return null
+  }
   if (!canWrite && !discoverable) { // show only for discoverable workspace reports
     return null
   }
@@ -224,8 +231,11 @@ export default function ShareButton () {
   const [modalOpen, setModalOpen] = useState(false)
   const workspaceId = useSelector(state => state.user.stream?.workspaceId)
   const { isPublic, isPlayground, discoverable } = useSelector(state => state.report)
+  const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
   let icon = <LockOutlined />
-  if (isPublic || isPlayground) {
+  if (isDefaultWorkspace) {
+    icon = <LinkOutlined />
+  } else if (isPublic || isPlayground) {
     icon = <GlobalOutlined />
   } else if (discoverable) {
     icon = <TeamOutlined />
