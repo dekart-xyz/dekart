@@ -8,6 +8,9 @@ endif
 
 UNAME := $(shell uname -m)
 
+pulumi-preview:
+	cd pulumi && pulumi preview --debug
+
 proto-clean:
 	rm -rf ./src/proto/*.go
 	rm -rf ./src/proto/*.js

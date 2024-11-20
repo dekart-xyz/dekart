@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/conn"
+	"dekart/src/server/storage"
 	"dekart/src/server/user"
 	"fmt"
 	"io"
@@ -76,8 +77,13 @@ func (s Server) moveFileToStorage(reqConCtx context.Context, fileSourceID string
 	userCtx, cancel := context.WithTimeout(user.CopyUserContext(reqConCtx, context.Background()), 10*time.Minute)
 	defer cancel()
 	var storageWriter io.WriteCloser
-	// reqConCtx is used because it has connection information, userCtx does not have it
-	storageWriter = s.storage.GetObject(reqConCtx, bucketName, fmt.Sprintf("%s.%s", fileSourceID, fileExtension)).GetWriter(userCtx)
+	if report.IsPublic {
+		s := storage.NewPublicStorage()
+		storageWriter = s.GetObject(userCtx, s.GetDefaultBucketName(), fmt.Sprintf("%s.%s", fileSourceID, fileExtension)).GetWriter(userCtx)
+	} else {
+		// reqConCtx is used because it has connection information, userCtx does not have it
+		storageWriter = s.storage.GetObject(reqConCtx, bucketName, fmt.Sprintf("%s.%s", fileSourceID, fileExtension)).GetWriter(userCtx)
+	}
 	_, err := io.Copy(storageWriter, file)
 	if err != nil {
 		log.Err(err).Send()

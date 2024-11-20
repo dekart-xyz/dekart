@@ -7,6 +7,7 @@ import { requestSensitiveScopes } from './actions/redirect'
 import { CloudTwoTone } from '@ant-design/icons'
 import { useEffect } from 'react'
 import { Redirect } from 'react-router-dom/cjs/react-router-dom'
+import { track } from './lib/tracking'
 
 function getLastPage (visitedPages) {
   return visitedPages.current.filter(page => page !== '/grant-scopes').pop()
@@ -46,10 +47,16 @@ export default function GrantScopesPage ({ visitedPages }) {
         <Result
           icon={<CloudTwoTone />}
           title='Grant access to Google Cloud'
-          subTitle={<>Dekart needs access to your <b>BigQuery</b> and <b>Google Cloud Storage</b> to query and store results.<br /> Your token is not stored in Dekart. You can revoke access by signing out of Dekart anytime.</>}
+          subTitle={(
+            <>
+              <p>Dekart needs access to your <b>BigQuery</b> and <b>Google Cloud Storage</b> to query and store results.<br /> Your token is not stored in Dekart. You can revoke access by signing out of Dekart anytime.</p>
+              <p><a href='https://dekart.xyz/docs/cloud/cloud-security-faq/' target='_blank' rel='noreferrer'>Security Considerations</a></p>
+            </>
+          )}
           extra={(
             <Button
               type='primary' onClick={() => {
+                track('RequestSensitiveScopes')
                 dispatch(requestSensitiveScopes(getLastPage(visitedPages)))
               }}
             >Continue to Google

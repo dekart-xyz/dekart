@@ -1,20 +1,23 @@
 import Button from 'antd/es/button'
 import Modal from 'antd/es/modal'
-import { LockOutlined, TeamOutlined, LinkOutlined } from '@ant-design/icons'
+import { GlobalOutlined, LockOutlined, TeamOutlined, LinkOutlined, UserAddOutlined } from '@ant-design/icons'
 import { useEffect, useState } from 'react'
 import styles from './ShareButton.module.css'
 import { useDispatch, useSelector } from 'react-redux'
+import Switch from 'antd/es/switch'
 import { copyUrlToClipboard } from './actions/clipboard'
-import { setDiscoverable } from './actions/report'
+import { publishReport, setDiscoverable } from './actions/report'
 import Select from 'antd/es/select'
 
 function CopyLinkButton () {
   const dispatch = useDispatch()
+  const playgroundReport = useSelector(state => state.report.isPlayground)
+  const isPublic = useSelector(state => state.report.isPublic)
   const discoverable = useSelector(state => state.report.discoverable)
   return (
     <Button
       icon={<LinkOutlined />}
-      disabled={!discoverable}
+      disabled={!playgroundReport && !isPublic && !discoverable}
       title='Copy link to report'
       onClick={() => dispatch(copyUrlToClipboard(window.location.toString(), 'Report URL copied to clipboard'))}
     >Copy Link
@@ -22,9 +25,73 @@ function CopyLinkButton () {
   )
 }
 
-function WorkspacePermissionsDescription () {
-  const { isSharable, discoverable, allowEdit } = useSelector(state => state.report)
+function PublishSwitchDescription () {
+  const { isPublic, isPlayground, canWrite } = useSelector(state => state.report)
   switch (true) {
+    case isPlayground:
+      return <>Playground reports are always public</>
+    case isPublic && canWrite:
+      return <>This report is public. Anyone with the link can access it in read-only mode.</>
+    case isPublic:
+      return <>This report is public. Anyone with the link can access it in read-only mode. Only the author can change this setting.</>
+    default:
+      return <>This report is private. Toggling this switch will make the report, uploaded files, and query results accessible to anyone with the link in read-only mode.</>
+  }
+}
+
+function PublishSwitch () {
+  const { isPublic, id, isPlayground, canWrite } = useSelector(state => state.report)
+  const [switchState, setSwitchState] = useState(isPublic || isPlayground)
+  const dispatch = useDispatch()
+  useEffect(() => {
+    setSwitchState(isPublic || isPlayground)
+  }, [isPublic, isPlayground])
+  if (
+    !canWrite || // show for authors and editors
+    isPlayground // don't show for playground reports as can't change
+  ) {
+    return null
+  }
+  return (
+    <Switch
+      checked={switchState}
+      onChange={(checked) => {
+        setSwitchState(checked)
+        dispatch(publishReport(id, checked))
+      }}
+      loading={isPlayground ? false : switchState !== isPublic}
+    />
+  )
+}
+
+function PublicPermissions () {
+  const { isPublic, isPlayground, canWrite } = useSelector(state => state.report)
+
+  if (
+    !canWrite && // show for authors and editors
+    !isPublic && !isPlayground // show for public reports
+  ) {
+    return null
+  }
+  return (
+    <div className={styles.boolStatus}>
+      <div className={styles.boolStatusIcon}><GlobalOutlined /></div>
+      <div className={styles.boolStatusLabel}>
+        <div className={styles.statusLabelTitle}>Anyone on the internet with the link can view</div>
+        <div className={styles.statusLabelDescription}><PublishSwitchDescription /></div>
+      </div>
+      <div className={styles.boolStatusControl}>
+        <PublishSwitch />
+      </div>
+    </div>
+  )
+}
+
+function WorkspacePermissionsDescription () {
+  const { isPlayground, isSharable, discoverable, allowEdit } = useSelector(state => state.report)
+  switch (true) {
+    case isPlayground:
+      return <>Workspace permissions are disabled in Playground Mode</>
     case !isSharable:
       return <>⚠️ This report cannot be shared between workspace users.<br />💡 Create a connection with a storage bucket and generate a new report from it.</>
     case allowEdit:
@@ -49,8 +116,8 @@ const workspacePermissionsLabels = {
 }
 
 function WorkspacePermissionsTitle () {
-  const { isSharable } = useSelector(state => state.report)
-  if (!isSharable) {
+  const { isPlayground, isSharable } = useSelector(state => state.report)
+  if (isPlayground || !isSharable) {
     return <div className={styles.statusLabelTitle}>Workspace Sharing</div>
   }
   return <div className={styles.statusLabelTitle}>Anyone in workspace</div>
@@ -81,7 +148,7 @@ function reportPropsFromPermissionValue (value) {
 }
 
 function WorkspacePermissionsSelect () {
-  const { isPublic, id, isAuthor, allowEdit, discoverable, isSharable } = useSelector(state => state.report)
+  const { isPublic, id, isPlayground, isAuthor, allowEdit, discoverable, isSharable } = useSelector(state => state.report)
   const dispatch = useDispatch()
   const value = permissionValueFromReportProps({ discoverable, allowEdit })
   const [selectValue, setSelectValue] = useState(value)
@@ -90,7 +157,9 @@ function WorkspacePermissionsSelect () {
     setSelectValue(value)
   }, [value])
 
-  if (!isSharable) {
+  if (isPlayground) {
+    return <Button href='/workspace'>Manage workspace</Button>
+  } else if (!isSharable) {
     return <Button href='/connections'>Manage connections</Button>
   }
   const disabled = !isAuthor
@@ -136,8 +205,16 @@ function WorkspacePermissions () {
 }
 
 function ModalContent () {
+  const env = useSelector(state => state.env)
+  const { loaded: envLoaded } = env
+
+  if (!envLoaded) {
+    return null
+  }
+
   return (
     <>
+      <PublicPermissions />
       <WorkspacePermissions />
     </>
   )
@@ -145,13 +222,12 @@ function ModalContent () {
 
 export default function ShareButton () {
   const [modalOpen, setModalOpen] = useState(false)
-  const { discoverable } = useSelector(state => state.report)
-  const { authEnabled } = useSelector(state => state.env)
-  if (!authEnabled) {
-    return null
-  }
+  const workspaceId = useSelector(state => state.user.stream?.workspaceId)
+  const { isPublic, isPlayground, discoverable } = useSelector(state => state.report)
   let icon = <LockOutlined />
-  if (discoverable) {
+  if (isPublic || isPlayground) {
+    icon = <GlobalOutlined />
+  } else if (discoverable) {
     icon = <TeamOutlined />
   }
   return (
@@ -160,7 +236,8 @@ export default function ShareButton () {
         icon={icon}
         ghost
         type='text'
-        title='Share and export'
+        id='dekart-share-report'
+        title='Share report'
         onClick={() => setModalOpen(true)}
       />
       <Modal
@@ -172,6 +249,7 @@ export default function ShareButton () {
         footer={
           <div className={styles.modalFooter}>
             <CopyLinkButton />
+            {workspaceId ? <Button icon={<UserAddOutlined />} href='/workspace'>Add users to workspace</Button> : null}
             <div className={styles.modalFooterSpacer} />
             <Button type='primary' onClick={() => setModalOpen(false)}>
               Done

@@ -24,9 +24,9 @@ export function getProjectList () {
     const request = new GetGcpProjectListRequest()
     const res = await new Promise((resolve, reject) => {
       dispatch(grpcCall(Dekart.GetGcpProjectList, request, resolve, (err) => {
-        resolve({ projectsList: [] })
         if (err.code === 7) {
           // insufficient permissions for scopes
+          resolve({ projectsList: [] })
           return
         }
         return err

@@ -10,20 +10,43 @@ import { Query } from '../proto/dekart_pb'
 import { toggleModal } from '@dekart-xyz/kepler.gl/dist/actions/ui-state-actions'
 import { EXPORT_DATA_ID, EXPORT_IMAGE_ID, EXPORT_MAP_ID } from '@dekart-xyz/kepler.gl/dist/constants'
 import Dropdown from 'antd/es/dropdown'
+import Tooltip from 'antd/es/tooltip'
 
 function ForkButton ({ primary }) {
   const dispatch = useDispatch()
-  const { id: reportId } = useSelector(state => state.report)
+  const { id: reportId, isPlayground: isPlaygroundReport, isPublic, canWrite } = useSelector(state => state.report)
+  const userStream = useSelector(state => state.user.stream)
+  const userIsPlayground = useSelector(state => state.user.isPlayground)
+  const workspaceId = userStream?.workspaceId
+  const isViewer = useSelector(state => state.user.isViewer)
 
-  const onClick = () => {
-    dispatch(forkReport(reportId))
+  // user has workspace, but report is from playground
+  // we don't know how to match users connections to report connections
+  const disabled = (workspaceId && isPlaygroundReport) || isViewer
+
+  const history = useHistory()
+
+  if (isPublic && !canWrite) {
+    // public reports can't be forked
+    return null
   }
 
-  if (primary) {
+  let onClick = () => {
+    dispatch(forkReport(reportId))
+  }
+  if (!workspaceId && !userIsPlayground) {
+    // user has no workspace, redirect to workspace page
+    onClick = () => {
+      history.push('/workspace')
+    }
+  }
+
+  if (primary && !disabled) {
     return (
       <Button
         type='primary'
         icon={<ForkOutlined />}
+        disabled={disabled}
         onClick={onClick}
       >Fork
       </Button>
@@ -33,9 +56,10 @@ function ForkButton ({ primary }) {
     <Button
       type='text'
       icon={<ForkOutlined />}
+      disabled={disabled}
       onClick={onClick}
       id='dekart-fork-button'
-      title='Fork this report'
+      title={disabled ? 'Forking is disabled for playground reports' : 'Fork this report'}
     />
   )
 }
@@ -43,6 +67,7 @@ function ForkButton ({ primary }) {
 function RefreshButton () {
   const { discoverable, canWrite } = useSelector(state => state.report)
   const queries = useSelector(state => state.queries)
+  const isViewer = useSelector(state => state.user.isViewer)
   const loadingNumber = queries.reduce((loadingNumber, q) => {
     switch (q.jobStatus) {
       case Query.JobStatus.JOB_STATUS_PENDING:
@@ -65,7 +90,7 @@ function RefreshButton () {
   if (completedQueries === 0 && loadingNumber === 0) {
     return null
   }
-  if (!canWrite && !discoverable) {
+  if ((!canWrite && !discoverable) || isViewer) {
     return null
   }
   return (
@@ -84,11 +109,33 @@ function RefreshButton () {
   )
 }
 
+function CreateWorkspaceButton () {
+  const history = useHistory()
+  return (
+    <Tooltip title='Set up a secure space to connect your data, and share live maps with your team.'>
+      <Button type='primary' onClick={() => history.push('/workspace')}>Create Workspace</Button>
+    </Tooltip>
+
+  )
+}
+
 function EditModeButtons ({ changed }) {
   const dispatch = useDispatch()
   const history = useHistory()
   const { id, canWrite } = useSelector(state => state.report)
   const { canSave } = useSelector(state => state.reportStatus)
+  const isViewer = useSelector(state => state.user.isViewer)
+  const userStream = useSelector(state => state.user.stream)
+  const workspaceId = userStream?.workspaceId
+  const isPlayground = useSelector(state => state.user.isPlayground)
+
+  if (!workspaceId && !isPlayground) {
+    return (
+      <div className={styles.reportHeaderButtons}>
+        <CreateWorkspaceButton />
+      </div>
+    )
+  }
 
   return (
     <div className={styles.reportHeaderButtons}>
@@ -96,7 +143,7 @@ function EditModeButtons ({ changed }) {
       <Button
         type='text'
         icon={<FundProjectionScreenOutlined />}
-        disabled={changed && canWrite}
+        disabled={changed && canWrite && !isViewer}
         title='Present Mode'
         onClick={() => history.replace(`/reports/${id}`)}
       />
@@ -163,6 +210,10 @@ function ExportDropdown () {
 function ViewModeButtons () {
   const history = useHistory()
   const { id, canWrite } = useSelector(state => state.report)
+  const userStream = useSelector(state => state.user.stream)
+  const workspaceId = userStream?.workspaceId
+  const isPlayground = useSelector(state => state.user.isPlayground)
+
   if (canWrite) {
     return (
       <div className={styles.reportHeaderButtons}>
@@ -181,6 +232,15 @@ function ViewModeButtons () {
       </div>
     )
   }
+
+  if (!workspaceId && !isPlayground) {
+    return (
+      <div className={styles.reportHeaderButtons}>
+        <CreateWorkspaceButton />
+      </div>
+    )
+  }
+
   return (
     <div className={styles.reportHeaderButtons}>
       <RefreshButton />

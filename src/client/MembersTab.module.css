@@ -1,0 +1,42 @@
+.inviteUsers {
+    margin-bottom: 20px;
+    padding: 10px;
+}
+
+.inviteUsersInput {
+    width: calc(100% - 100px)!important;
+}
+
+.inviteUsersButton {
+    width: 100px;
+}
+
+.teamTab {
+    min-width: 700px;
+    /* display: flex; */
+    flex: 1;
+    /* overflow: scroll; */
+    align-items: center;
+    flex-direction: column;
+}
+
+.removeButtonColumn {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    width: 300px;
+    text-align: right;
+
+}
+
+.emailColumn {
+    width: 100%;
+}
+
+.inviteButton {
+    color: #888;
+
+}
+
+.invitesTabName + span {
+    margin-left: 5px;
+}

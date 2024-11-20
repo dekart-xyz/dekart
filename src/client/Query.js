@@ -8,13 +8,13 @@ import 'ace-builds/src-noconflict/mode-sql'
 import 'ace-builds/src-noconflict/theme-sqlserver'
 import 'ace-builds/src-noconflict/ext-language_tools'
 import 'ace-builds/webpack-resolver'
-import { Query as QueryType } from '../proto/dekart_pb'
+import { Connection, Query as QueryType } from '../proto/dekart_pb'
 import { SendOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
 import { Duration } from 'luxon'
 import DataDocumentationLink from './DataDocumentationLink'
 import { cancelQuery, queryChanged, runQuery } from './actions/query'
-import { showDataTable } from './actions/showDataTable'
 import Tooltip from 'antd/es/tooltip'
+import { switchPlayground } from './actions/user'
 import { getDatasourceMeta } from './lib/datasource'
 
 function CancelButton ({ query }) {
@@ -25,21 +25,6 @@ function CancelButton ({ query }) {
       type='ghost'
       onClick={() => dispatch(cancelQuery(query.id))}
     >Cancel
-    </Button>
-  )
-}
-function ShowDataTable ({ query }) {
-  const dispatch = useDispatch()
-  const { downloadingResults, datasetId } = useSelector(state => state.queryStatus[query.id])
-  if (downloadingResults) {
-    return null
-  }
-  return (
-    <Button
-      size='small'
-      type='ghost'
-      onClick={() => dispatch(showDataTable(datasetId))}
-    >Show Table
     </Button>
   )
 }
@@ -107,6 +92,24 @@ function QueryEditor ({ queryId, queryText, onChange, canWrite }) {
   )
 }
 
+function PlaygroundWarning ({ jobError }) {
+  const isPlayground = useSelector(state => state.user.isPlayground)
+  const dispatch = useDispatch()
+  let showPlaygroundWarning = false
+  if (jobError && jobError.includes('Error 40') && isPlayground) {
+    showPlaygroundWarning = true
+  }
+  if (!showPlaygroundWarning) {
+    return null
+  }
+  return (
+    <div className={styles.playgroundWarning}>
+      <p>You are in Playground Mode. To access private datasets create free workspace and configure connection</p>
+      <Button type='link' onClick={() => dispatch(switchPlayground(false))}>Switch to workspace</Button>
+    </div>
+  )
+}
+
 function QueryStatus ({ children, query }) {
   const env = useSelector(state => state.env)
   let message, errorMessage, action, style, tooltip, errorInfoHtml
@@ -146,7 +149,6 @@ function QueryStatus ({ children, query }) {
       icon = <CheckCircleTwoTone className={styles.icon} twoToneColor='#52c41a' />
       message = <span>Ready</span>
       style = styles.success
-      action = <ShowDataTable query={query} />
       break
     case QueryType.JobStatus.JOB_STATUS_READING_RESULTS:
       message = 'Reading Result'
@@ -158,7 +160,6 @@ function QueryStatus ({ children, query }) {
       icon = <CheckCircleTwoTone className={styles.icon} twoToneColor='#52c41a' />
       message = <span>Ready</span>
       style = styles.success
-      action = <ShowDataTable query={query} />
       break
     default:
   }
@@ -175,6 +176,7 @@ function QueryStatus ({ children, query }) {
         </div>
         {errorMessage ? <div className={styles.errorMessage}>{errorMessage}</div> : null}
         {errorInfoHtml ? <div className={styles.errorInfoHtml} dangerouslySetInnerHTML={{ __html: errorInfoHtml }} /> : null}
+        <PlaygroundWarning jobError={query.jobError} />
       </div>
       {children ? <div className={styles.button}>{children}</div> : null}
 
@@ -188,21 +190,20 @@ function SampleQuery ({ queryId }) {
   const dataset = useSelector(state => state.dataset.list.find(q => q.queryId === queryId))
   const connection = useSelector(state => state.connection.list.find(c => c.id === dataset?.connectionId))
   const { DATASOURCE } = useSelector(state => state.env.variables)
+  const isPlayground = useSelector(state => state.user.isPlayground)
 
-  const datasetCount = useSelector(state => state.connection.list.reduce((dc, c) => {
-    return dc + c.datasetCount
-  }, 0))
+  let connectionType = connection?.connectionType
+  if (isPlayground) {
+    connectionType = Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY
+  }
+
   const downloadingSource = queryStatus?.downloadingSource
   const dispatch = useDispatch()
   if (UX_DATA_DOCUMENTATION) {
     return <DataDocumentationLink className={styles.dataDoc} />
   }
   if (
-    downloadingSource ||
-    !(
-      datasetCount < 2 // show sample query for the first one
-    )
-  ) {
+    downloadingSource) {
     // do not show sample query while downloading source
     return null
   }
@@ -224,6 +225,21 @@ function SampleQuery ({ queryId }) {
             }}
           >💡 Start with a sample query
           </Button>
+        </Tooltip>
+      </div>
+    )
+  }
+  const examplesUrl = getDatasourceMeta(connectionType)?.examplesUrl
+  if (examplesUrl) {
+    return (
+      <div className={styles.sampleQuery}>
+        <Tooltip title={<>Don't know where to start?<br />Try running public dataset query.</>}>
+          <a
+            href={examplesUrl}
+            target='_blank'
+            rel='noreferrer'
+          >💡 Start with public dataset query
+          </a>
         </Tooltip>
       </div>
     )

@@ -1,0 +1,74 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      build_app:
+        description: 'Build and push the app'
+        default: false
+        type: boolean
+      build_e2e:
+        description: 'Build and push the app'
+        default: false
+        type: boolean
+
+
+env:
+  IMAGE_CACHE_KEY: e2etest-${{ github.run_id }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      image_digest: ${{ steps.docker_build.outputs.digest }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v0
+        with:
+          service_account_key: ${{ secrets.PRIVATE_GITHUB_ACTIONS_DEKART_CLOUD }}
+          project_id: dekart-cloud
+      - name: Configure Docker to use the gcloud command-line tool as a credential helper
+        run: gcloud auth configure-docker europe-west3-docker.pkg.dev
+      - name: Create .npmrc
+        run: |
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_GH_TOKEN }}" > .npmrc
+          echo "@dekart-xyz:registry=https://npm.pkg.github.com" >> .npmrc
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart
+          tags: |
+            type=sha
+            type=ref,event=branch
+            type=ref,event=pr
+      - name: Build App
+        if: ${{ inputs.build_app }}
+        id: docker_build
+        uses: docker/build-push-action@v4
+        with:
+          cache-from: type=registry,ref=europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:buildcache
+          cache-to: type=registry,ref=europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:buildcache,mode=max
+          push: true
+          context: .
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+      - name: Build E2E
+        if: inputs.build_e2e
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:${{ env.IMAGE_CACHE_KEY }}
+          target: e2etest
+          cache-from: type=registry,ref=europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:buildcache
+          cache-to: type=registry,ref=europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:buildcache,mode=max
+
+

@@ -62,7 +62,7 @@ type BasicJob struct {
 
 func (j *BasicJob) Init(userCtx context.Context) {
 	j.id = uuid.GetUUID()
-	j.ctx, j.cancel = context.WithTimeout(user.CopyClaims(userCtx, context.Background()), 10*time.Minute)
+	j.ctx, j.cancel = context.WithTimeout(user.CopyUserContext(userCtx, context.Background()), 10*time.Minute)
 	j.status = make(chan int32)
 }
 

@@ -1,0 +1,16 @@
+encryptionsalt: v1:8/RGQJlumlU=:v1:+LRuMfSfLcDuw/UL:oplI0bgodIRxEx5fPXMCISPxP5hITw==
+config:
+  dekart-cloud:DEKART_GOOGLE_OAUTH_CLIENT_ID: 398860824064-rqa4t679cocjcsg2do0kseh6otsm5dq2.apps.googleusercontent.com
+  dekart-cloud:DEKART_GOOGLE_OAUTH_SECRET:
+    secure: v1:0pu91gVe+g/prMot:y42ya0oIF13krubezdtcDXRa0PAAIWKRZp18YJLpV7QOiAbpQT+fw+cFHu8spBcBrXgY
+  dekart-cloud:DEKART_HTML_CUSTOM_CODE: <script defer data-domain="cloud.dekart.xyz" src="https://plausible.io/js/script.js"></script>
+  dekart-cloud:DEKART_MAPBOX_TOKEN: pk.eyJ1IjoidmxhZGktZGVrYXJ0IiwiYSI6ImNsc3Fid2JiODB2cWQya25zcW5mdHl0Z3cifQ.kQSyxta1j8UpoldFdwaE4Q
+  dekart-cloud:DEKART_POSTGRES_PASSWORD:
+    secure: v1:GAjnlwqNVA6EbZCN:Hyq7MdOVYJiItb2a69Te1SDT2TeguxeEhmyL6aLahnnHO2xwEXTH+0Xh
+  dekart-cloud:STRIPE_PRICE_ID: price_1OkjzzCnpQUpbHMF6kZXqQJY
+  dekart-cloud:STRIPE_PRICE_ID_GROW: price_1QC4XhCnpQUpbHMFgd88O17B
+  dekart-cloud:STRIPE_PRICE_ID_MAX: price_1QC4cVCnpQUpbHMFOiNOkpi0
+  dekart-cloud:STRIPE_SECRET_KEY:
+    secure: v1:iD3iQSallufpglCn:LWxvzdEktEi7mg61fUkx9XPML9A8/XDdkjOYwPbRKm8XKYWROomYCL+K38R5VNN+QXIwtOMuL+CqwTGPHcff5umUgOYPFAji9XoroK+PLgTrxMfIGEf2VOiWQ/Qoc5iWb7Wbs9AV+uwKNjSIfiAlzZMHVzD6TGjO2niM
+  gcp:project: dekart-cloud
+  gcp:region: europe-west3

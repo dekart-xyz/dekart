@@ -101,3 +101,12 @@
 .authEnabled {
     color: #00b300;
 }
+
+.playgroundReportText {
+    color: #57B7D3;
+}
+
+.boolStatusIcon {
+    position: relative;
+    top: 2px;
+}

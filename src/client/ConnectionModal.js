@@ -12,38 +12,41 @@ import AutoComplete from 'antd/es/auto-complete'
 import Alert from 'antd/es/alert'
 import { Connection } from '../proto/dekart_pb'
 import { DatasourceIcon } from './Datasource'
+import { track } from './lib/tracking'
 
 function Footer ({ form, testDisabled }) {
   const { dialog, test } = useSelector(state => state.connection)
   const { tested, testing, error: testError, success: testSuccess } = test
   const { id, loading, connectionType } = dialog
-
+  const isAdmin = useSelector(state => state.user.isAdmin)
   const dispatch = useDispatch()
 
   return (
     <div className={styles.modalFooter}>
       <Button
         type='primary' disabled={testing || tested || testDisabled} loading={testing} onClick={() => {
+          track('TestConnection')
           dispatch(testConnection(connectionType, form.getFieldsValue()))
         }}
       >
         Test Connection
       </Button>
       {
-    tested
-      ? <div className={styles.testStatus}>{testError ? <Tooltip title={testError}><ExclamationCircleTwoTone twoToneColor='#f5222d' /></Tooltip> : <CheckCircleTwoTone twoToneColor='#52c41a' />}</div>
-      : null
-  }
+        tested
+          ? <div className={styles.testStatus}>{testError ? <Tooltip title={testError}><ExclamationCircleTwoTone twoToneColor='#f5222d' /></Tooltip> : <CheckCircleTwoTone twoToneColor='#52c41a' />}</div>
+          : null
+      }
       <div className={styles.spacer} />
       <Button
         id='saveConnection'
-        type={tested && testSuccess ? 'primary' : 'default'} disabled={(!tested || loading) && !testDisabled} onClick={() => {
+        type={tested && testSuccess ? 'primary' : 'default'} disabled={((!tested || loading) && !testDisabled) || !isAdmin} onClick={() => {
+          track('SaveConnection')
           dispatch(saveConnection(id, connectionType, form.getFieldsValue()))
         }}
       >
         Save
       </Button>
-      <Button disabled={!id} onClick={() => dispatch(archiveConnection(id))}>
+      <Button disabled={!id || !isAdmin} onClick={() => dispatch(archiveConnection(id))}>
         Archive
       </Button>
     </div>
@@ -116,11 +119,13 @@ function SnowflakeConnectionModal ({ form }) {
 }
 function BigQueryConnectionModal ({ form }) {
   const { dialog, projects } = useSelector(state => state.connection)
-  const env = useSelector(state => state.env)
-  const { DEKART_STORAGE } = env.variables
   const { id, loading } = dialog
   const dispatch = useDispatch()
   const connection = useSelector(state => state.connection.list.find(s => s.id === id))
+
+  useEffect(() => {
+    track('BigQueryConnectionModal')
+  }, [])
 
   // only name can be changed for connections used in datasets
   const nameChangeOnly = connection?.datasetCount > 0
@@ -165,18 +170,9 @@ function BigQueryConnectionModal ({ form }) {
           <Form.Item label='Connection Name' required name='connectionName'>
             <Input />
           </Form.Item>
-          {DEKART_STORAGE === 'USER'
-            ? (
-              <Form.Item label='Optional: Storage Bucket' extra={<>Google Cloud Storage bucket to permanently cache query results. Required to share map with other users.</>} name='cloudStorageBucket'>
-                <Input placeholder='my-gcs-bucket' disabled={nameChangeOnly} />
-              </Form.Item>
-              )
-            : (
-              <Form.Item label='Storage Bucket' required extra={<>Google Cloud Storage bucket to permanently cache query results.</>} name='cloudStorageBucket'>
-                <Input placeholder='my-gcs-bucket' disabled={nameChangeOnly} />
-              </Form.Item>
-              )}
-
+          <Form.Item label='Optional: Storage Bucket' extra={<>Google Cloud Storage bucket to permanently cache query results. Required to share map with other users.</>} name='cloudStorageBucket'>
+            <Input placeholder='my-gcs-bucket' disabled={nameChangeOnly} />
+          </Form.Item>
         </Form>
       </div>
     </Modal>
@@ -192,9 +188,6 @@ export default function ConnectionModal () {
     dispatch(reOpenDialog())
   }, [dispatch])
 
-  const env = useSelector(state => state.env)
-  const { BIGQUERY_PROJECT_ID, CLOUD_STORAGE_BUCKET } = env.variables
-
   const connection = useSelector(state => state.connection.list.find(s => s.id === id))
 
   const [form] = Form.useForm()
@@ -203,13 +196,7 @@ export default function ConnectionModal () {
     if (connection) {
       form.setFieldsValue(connection)
     }
-    if (BIGQUERY_PROJECT_ID) {
-      form.setFieldsValue({ bigqueryProjectId: BIGQUERY_PROJECT_ID })
-    }
-    if (CLOUD_STORAGE_BUCKET) {
-      form.setFieldsValue({ cloudStorageBucket: CLOUD_STORAGE_BUCKET })
-    }
-  }, [connection, BIGQUERY_PROJECT_ID, CLOUD_STORAGE_BUCKET, form])
+  }, [connection, form])
 
   if (!visible) {
     return null

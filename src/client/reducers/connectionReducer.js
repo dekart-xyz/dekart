@@ -106,8 +106,8 @@ function listLoaded (state = false, action) {
   }
 }
 
-// userDefined when connection is not configured in Dekart via env variables
-function userDefined (state = false, action) {
+// in cloud it's always user defined, except for playground
+function userDefined (state = true, action) {
   switch (action.type) {
     case setEnv.name: {
       return Boolean(action.variables.USER_DEFINED_CONNECTION)

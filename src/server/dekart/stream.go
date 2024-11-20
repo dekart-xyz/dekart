@@ -131,8 +131,9 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 
 	var err error
 	var reportRows *sql.Rows
-	reportRows, err = s.db.QueryContext(ctx,
-		`select
+	if checkWorkspace(ctx).ID == "" {
+		reportRows, err = s.db.QueryContext(ctx,
+			`select
 				id,
 				case when title is null then 'Untitled' else title end as title,
 				archived,
@@ -142,12 +143,36 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 				discoverable,
 				allow_edit,
 				updated_at,
-				created_at
+				created_at,
+				is_public,
+				is_playground
 			from reports as r
-			where (author_email=$1 or (discoverable=true and archived=false) or allow_edit=true)
+			where author_email=$1 and is_playground=true
 			order by updated_at desc`,
-		claims.Email,
-	)
+			claims.Email,
+		)
+	} else {
+		reportRows, err = s.db.QueryContext(ctx,
+			`select
+				id,
+				case when title is null then 'Untitled' else title end as title,
+				archived,
+				(author_email = $1) or allow_edit as can_write,
+				author_email = $1 as is_author,
+				author_email,
+				discoverable,
+				allow_edit,
+				updated_at,
+				created_at,
+				is_public,
+				is_playground
+			from reports as r
+			where (author_email=$1 or (discoverable=true and archived=false) or allow_edit=true) and workspace_id=$2
+			order by updated_at desc`,
+			claims.Email,
+			checkWorkspace(ctx).ID,
+		)
+	}
 	if err != nil {
 		log.Err(err).Send()
 		return status.Errorf(codes.Internal, err.Error())
@@ -174,6 +199,8 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			&report.AllowEdit,
 			&updatedAt,
 			&createdAt,
+			&report.IsPublic,
+			&report.IsPlayground,
 		)
 		if err != nil {
 			log.Err(err).Send()
@@ -193,10 +220,21 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 
 func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.Dekart_GetUserStreamServer, sequence int64) error {
 	ctx := incomingCtx
+	if !checkWorkspace(ctx).IsPlayground {
+		// if playground we don't care about workspace
+		// if not playground, we need to check if workspace was not created after stream was requested
+		ctx = s.SetWorkspaceContext(incomingCtx, nil)
+	}
 	claims := user.GetClaims(ctx)
 
 	// connection update
 	connectionUpdate, err := s.getLastConnectionUpdate(ctx)
+	if err != nil {
+		log.Err(err).Send()
+		return status.Errorf(codes.Internal, err.Error())
+	}
+
+	workspaceUpdate, err := s.getWorkspaceUpdate(ctx)
 	if err != nil {
 		log.Err(err).Send()
 		return status.Errorf(codes.Internal, err.Error())
@@ -208,6 +246,10 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 		},
 		ConnectionUpdate: connectionUpdate,
 		Email:            claims.Email,
+		WorkspaceUpdate:  workspaceUpdate,
+		WorkspaceId:      checkWorkspace(ctx).ID,
+		PlanType:         checkWorkspace(ctx).PlanType,
+		Role:             checkWorkspace(ctx).UserRole,
 	}
 
 	err = srv.Send(&response)

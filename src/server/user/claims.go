@@ -142,15 +142,6 @@ func (c ClaimsCheck) validateAuthToken(ctx context.Context, header string) *Clai
 	}
 }
 
-// CopyClaims from one context to another
-func CopyClaims(sourceCtx, destCtx context.Context) context.Context {
-	claims := GetClaims(sourceCtx)
-	if claims == nil {
-		return destCtx
-	}
-	return context.WithValue(destCtx, contextKey, claims)
-}
-
 func copyClaims(sourceCtx, destCtx context.Context) context.Context {
 	claims := GetClaims(sourceCtx)
 	if claims == nil {
@@ -161,13 +152,17 @@ func copyClaims(sourceCtx, destCtx context.Context) context.Context {
 
 // CopyUserContext from one context to another
 func CopyUserContext(sourceCtx, destCtx context.Context) context.Context {
-	return copyClaims(sourceCtx, destCtx)
+	ctx := copyClaims(sourceCtx, destCtx)
+	return copyWorkspace(sourceCtx, ctx)
 }
 
 // GetTokenSource returns oauth2.TokenSource from context, returns nil if not found
 func GetTokenSource(ctx context.Context) oauth2.TokenSource {
 	claims := GetClaims(ctx)
 	if claims == nil || claims.AccessToken == "" {
+		return nil
+	}
+	if CheckWorkspaceCtx(ctx).IsPlayground {
 		return nil
 	}
 	return oauth2.StaticTokenSource(&oauth2.Token{

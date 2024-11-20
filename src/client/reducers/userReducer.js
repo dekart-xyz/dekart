@@ -1,20 +1,20 @@
 import { combineReducers } from 'redux'
 import { needSensitiveScopes, userStreamUpdate } from '../actions/user'
 import { localStorageInit } from '../actions/localStorage'
+import { sessionStorageInit } from '../actions/sessionStorage'
 import { setRedirectState } from '../actions/redirect'
+import { UserRole } from '../../proto/dekart_pb'
 
 function stream (state = null, action) {
   switch (action.type) {
     case userStreamUpdate.name:
-      return {
-        email: action.userStream.email,
-        sensitiveScopesGranted: action.userStream.sensitiveScopesGranted
-      }
+      return action.userStream
     default:
       return state
   }
 }
 
+// sensitiveScopesGrantedOnce combines backend and local storage state
 function sensitiveScopesGrantedOnce (state = false, action) {
   switch (action.type) {
     case localStorageInit.name:
@@ -64,10 +64,38 @@ function loginHint (state = null, action) {
   }
 }
 
+function isPlayground (state = false, action) {
+  switch (action.type) {
+    case sessionStorageInit.name:
+      // prevent returning undefined when sessionStorage was deleted
+      return Boolean(action.current.isPlayground)
+    default:
+      return state
+  }
+}
+
 function redirectStateReceived (state = false, action) {
   switch (action.type) {
     case setRedirectState.name:
       return true
+    default:
+      return state
+  }
+}
+
+function isViewer (state = true, action) {
+  switch (action.type) {
+    case userStreamUpdate.name:
+      return action.userStream.role === UserRole.ROLE_VIEWER
+    default:
+      return state
+  }
+}
+
+function isAdmin (state = false, action) {
+  switch (action.type) {
+    case userStreamUpdate.name:
+      return action.userStream.role === UserRole.ROLE_ADMIN
     default:
       return state
   }
@@ -79,5 +107,8 @@ export default combineReducers({
   sensitiveScopesNeeded,
   sensitiveScopesGranted,
   loginHint,
-  redirectStateReceived
+  isPlayground,
+  redirectStateReceived,
+  isViewer,
+  isAdmin
 })

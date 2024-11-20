@@ -1,28 +1,17 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - '**'
+  release:
+    types: [published]
+
 jobs:
-  node_tests:
-    uses: ./.github/workflows/node_test.yaml
-    secrets: inherit
-  go_tests:
-    uses: ./.github/workflows/go_test.yaml
-    secrets: inherit
-  e2e_tests:
-    uses: ./.github/workflows/e2e.yaml
-    secrets: inherit
-  docker:
-    needs: [node_tests, go_tests, e2e_tests]
+  deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out the repo
+      - name: Checkout code
         uses: actions/checkout@v2
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v4
+      - name: Setup Go
+        uses: actions/setup-go@v3
         with:
           images: |
             ghcr.io/${{ github.repository }}/dekart
