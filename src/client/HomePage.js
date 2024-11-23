@@ -18,6 +18,7 @@ import Onboarding from './Onboarding'
 import { DatasourceIcon } from './Datasource'
 import { Connection, PlanType } from '../proto/dekart_pb'
 import { track } from './lib/tracking'
+import { If } from './lib/helperElements'
 
 function Loading () {
   return null
@@ -177,11 +178,32 @@ function FirstReportOnboarding () {
   )
 }
 
+function ConnectionTypeSelectorBottom () {
+  const dispatch = useDispatch()
+  const planType = useSelector(state => state.user.stream.planType)
+  const showCancel = useSelector(state => state.connection.list).length > 0
+  if (showCancel) {
+    return (
+      <div className={styles.connectionSelectorBack}>
+        <Button type='ghost' onClick={() => dispatch(newConnectionScreen(false))}>Return back</Button>
+      </div>
+    )
+  }
+  if (planType === PlanType.TYPE_PERSONAL) {
+    return (
+      <div className={styles.notSure}>
+        <p>or</p>
+        <Button ghost type='primary' href='https://dekart.xyz/self-hosted/?ref=ConnectionTypeSelector' target='_blank'>Get Started with Self-Hosting</Button>
+      </div>
+    )
+  }
+  return null
+}
+
 // selects between Google Cloud and Snowflake
 function ConnectionTypeSelector () {
-  const connectionList = useSelector(state => state.connection.list)
-  const showCancel = connectionList.length > 0 // show cancel button if there are connections
   const dispatch = useDispatch()
+  const planType = useSelector(state => state.user.stream.planType)
   useEffect(() => {
     track('ConnectionTypeSelector')
   }, [])
@@ -195,26 +217,17 @@ function ConnectionTypeSelector () {
           }}
         >BigQuery
         </Button>
-        <Button
-          icon={<DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE} />} size='large' onClick={() => {
-            track('ConnectionTypeSelectorSnowflake')
-            dispatch(newConnection(Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE))
-          }}
-        >Snowflake
-        </Button>
+        <If condition={planType !== PlanType.TYPE_PREMIUM}>
+          <Button
+            icon={<DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE} />} size='large' onClick={() => {
+              track('ConnectionTypeSelectorSnowflake')
+              dispatch(newConnection(Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE))
+            }}
+          >Snowflake
+          </Button>
+        </If>
       </div>
-      {showCancel
-        ? (
-          <div className={styles.connectionSelectorBack}>
-            <Button type='ghost' onClick={() => dispatch(newConnectionScreen(false))}>Return back</Button>
-          </div>
-          )
-        : (
-          <div className={styles.notSure}>
-            <p>or</p>
-            <Button ghost type='primary' href='https://dekart.xyz/self-hosted/' target='_blank'>Get Started with Self-Hosting</Button>
-          </div>
-          )}
+      <ConnectionTypeSelectorBottom />
     </>
   )
 }

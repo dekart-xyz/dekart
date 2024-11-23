@@ -273,12 +273,12 @@ func (s Server) getUserWorkspace(ctx context.Context, email string) (*proto.Work
 		}
 		return &workspace, &role, nil
 	}
-	if !user.CanCreateWorkspace() { // if user cannot create workspace, we should return add the default workspace
-		workspaceID := "00000000-0000-0000-0000-000000000000"
+	if !user.CanCreateWorkspace() { // if user cannot create workspace, we should add the default workspace
+		workspaceID := user.GetDefaultWorkspaceID()
 		_, err = s.db.ExecContext(ctx, `
-		INSERT INTO workspace_log (workspace_id, email, status, authored_by, id)
-		VALUES ($1, $2, 1, $2, $3)
-	`, workspaceID, email, newUUID())
+		INSERT INTO workspace_log (workspace_id, email, status, authored_by, id, role)
+		VALUES ($1, $2, 1, $2, $3, $4)
+	`, workspaceID, email, newUUID(), user.GetUserDefaultRole(email))
 		if err != nil {
 			log.Err(err).Send()
 			return nil, nil, err

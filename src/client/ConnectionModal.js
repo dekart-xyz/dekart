@@ -10,7 +10,7 @@ import { CheckCircleTwoTone, ExclamationCircleTwoTone, LoadingOutlined } from '@
 import Tooltip from 'antd/es/tooltip'
 import AutoComplete from 'antd/es/auto-complete'
 import Alert from 'antd/es/alert'
-import { Connection } from '../proto/dekart_pb'
+import { Connection, PlanType } from '../proto/dekart_pb'
 import { DatasourceIcon } from './Datasource'
 import { track } from './lib/tracking'
 
@@ -122,7 +122,7 @@ function BigQueryConnectionModal ({ form }) {
   const { id, loading } = dialog
   const dispatch = useDispatch()
   const connection = useSelector(state => state.connection.list.find(s => s.id === id))
-
+  const planType = useSelector(state => state.user.stream.planType)
   useEffect(() => {
     track('BigQueryConnectionModal')
   }, [])
@@ -170,7 +170,7 @@ function BigQueryConnectionModal ({ form }) {
           <Form.Item label='Connection Name' required name='connectionName'>
             <Input />
           </Form.Item>
-          <Form.Item label='Optional: Storage Bucket' extra={<>Google Cloud Storage bucket to permanently cache query results. Required to share map with other users.</>} name='cloudStorageBucket'>
+          <Form.Item required={planType === PlanType.TYPE_PREMIUM} label={planType === PlanType.TYPE_PREMIUM ? 'Storage Bucket' : 'Optional: Storage Bucket'} extra={<>Google Cloud Storage bucket to permanently cache query results. Required to share map with other users.</>} name='cloudStorageBucket'>
             <Input placeholder='my-gcs-bucket' disabled={nameChangeOnly} />
           </Form.Item>
         </Form>

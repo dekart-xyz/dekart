@@ -51,3 +51,40 @@ func CanCreateWorkspace() bool {
 	}
 	return false // by default do not allow workspace creation, default workspace will be created
 }
+
+// GetDefaultWorkspaceID returns default workspace ID
+func GetDefaultWorkspaceID() string {
+	return "00000000-0000-0000-0000-000000000000"
+}
+
+// getDefaultWorkspaceAdmin returns default workspace admin
+func getDefaultWorkspaceAdmin() string {
+	return os.Getenv("DEKART_DEFAULT_WORKSPACE_ADMIN")
+}
+
+// getWorkspaceDefaultRole returns default user role for workspace
+func getWorkspaceDefaultRole() proto.UserRole {
+	if getDefaultWorkspaceAdmin() == "" {
+		// every user is admin by default in default workspace
+		return proto.UserRole_ROLE_ADMIN
+	}
+	switch os.Getenv("DEKART_DEFAULT_WORKSPACE_ROLE") {
+	case "admin":
+		return proto.UserRole_ROLE_ADMIN
+	case "editor":
+		return proto.UserRole_ROLE_EDITOR
+	case "viewer":
+		return proto.UserRole_ROLE_VIEWER
+	default:
+		log.Warn().Msgf("Unknown default workspace role %s", os.Getenv("DEKART_DEFAULT_WORKSPACE_ROLE"))
+		return proto.UserRole_ROLE_VIEWER
+	}
+}
+
+// GetUserDefaultRole returns default role for user
+func GetUserDefaultRole(email string) proto.UserRole {
+	if email == getDefaultWorkspaceAdmin() {
+		return proto.UserRole_ROLE_ADMIN
+	}
+	return getWorkspaceDefaultRole()
+}
