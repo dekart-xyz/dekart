@@ -1272,6 +1272,7 @@ export namespace GetEnvResponse {
       TYPE_AUTH_ENABLED: 18;
       TYPE_USER_DEFINED_CONNECTION: 19;
       TYPE_UX_DISABLE_VERSION_CHECK: 20;
+      TYPE_ALLOW_WORKSPACE_CREATION: 21;
     }
 
     export const Type: TypeMap;
@@ -2222,6 +2223,7 @@ export interface PlanTypeMap {
   TYPE_TEAM: 2;
   TYPE_GROW: 3;
   TYPE_MAX: 4;
+  TYPE_PREMIUM: 5;
 }
 
 export const PlanType: PlanTypeMap;

@@ -263,33 +263,38 @@ export function Workspace ({ nextStep, setNextStep }) {
               size='default'
               current={step}
               onChange={(current) => {
-        setStep(current)
-      }}
+                setStep(current)
+              }}
               className='site-navigation-steps'
               items={[
-        {
-          title: 'Workspace',
-          icon: <AppstoreTwoTone />
-        },
-        {
-          title: 'Plan',
-          icon: <CreditCardOutlined />,
-          disabled: !userStream.workspaceId
-        },
-        {
-          title: 'Members',
-          icon: <TeamOutlined />,
-          disabled: userStream.planType <= PlanType.TYPE_PERSONAL,
-          subTitle: getMembersSubTitle(addedUsersCount, planType)
-        }
-      ]}
+                {
+                  title: 'Workspace',
+                  icon: <AppstoreTwoTone />
+                },
+                userStream.planType !== PlanType.TYPE_PREMIUM
+                  ? {
+                      title: 'Plan',
+                      icon: <CreditCardOutlined />,
+                      disabled: !userStream.workspaceId
+                    }
+                  : null,
+                {
+                  title: 'Members',
+                  icon: <TeamOutlined />,
+                  disabled: userStream.planType <= PlanType.TYPE_PERSONAL,
+                  subTitle: getMembersSubTitle(addedUsersCount, planType)
+                }
+              ].filter(Boolean)}
             />
           </div>
 
           )
         : null}
 
-      {([<WorkspaceTab key={0} nextStep={nextStep} setNextStep={setNextStep} />, <SubscriptionTab key={1} />, <MembersTab key={2} />])[step]}
+      {([
+        <WorkspaceTab key={0} nextStep={nextStep} setNextStep={setNextStep} />,
+        userStream.planType !== PlanType.TYPE_PREMIUM ? <SubscriptionTab key={1} /> : <MembersTab key={1} />,
+        <MembersTab key={2} />])[step]}
     </div>
   )
 }

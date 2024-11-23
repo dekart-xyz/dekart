@@ -219,9 +219,11 @@ function ModalContent () {
     return null
   }
 
+  const { CLOUD_STORAGE_BUCKET } = env.variables
+
   return (
     <>
-      <PublicPermissions />
+      {CLOUD_STORAGE_BUCKET ? <PublicPermissions /> : null}
       <WorkspacePermissions />
     </>
   )

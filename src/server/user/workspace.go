@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"dekart/src/proto"
+	"os"
 
 	"github.com/rs/zerolog/log"
 )
@@ -38,4 +39,15 @@ func CheckWorkspaceCtx(ctx context.Context) WorkspaceInfo {
 		log.Error().Msgf("workspaceInfo not found in context")
 	}
 	return workspaceInfo
+}
+
+// CanCreateWorkspace checks if users can create workspace
+func CanCreateWorkspace() bool {
+	if GetDefaultSubscription() != proto.PlanType_TYPE_PREMIUM {
+		return true // for cloud users always create workspace
+	}
+	if os.Getenv("DEKART_ALLOW_WORKSPACE_CREATION") != "" {
+		return true
+	}
+	return false // by default do not allow workspace creation, default workspace will be created
 }

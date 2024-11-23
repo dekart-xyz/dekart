@@ -218,6 +218,8 @@ func main() {
 
 	go startHttpServer(httpServer)
 
+	log.Debug().Msg("dekart server started")
+
 	sig := <-waitForInterrupt()
 
 	// shutdown gracefully

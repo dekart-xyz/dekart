@@ -18,6 +18,28 @@ services:
         - cloudsql
       ports:
         - 8081:8080
+  dekart-oss-bigquery:
+    image: ghcr.io/dekart-xyz/dekart-premium/dekart:latest
+    platform: linux/amd64
+    restart: always
+    ports:
+      - 8080:8080
+    profiles:
+      - dekart-oss-bigquery
+    volumes:
+      - "${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS}"
+    environment:
+      DEKART_POSTGRES_DB: "${DEKART_POSTGRES_DB}"
+      DEKART_POSTGRES_USER: "${DEKART_POSTGRES_USER}"
+      DEKART_POSTGRES_PASSWORD: "${DEKART_POSTGRES_PASSWORD}"
+      DEKART_POSTGRES_PORT: "5432"
+      DEKART_POSTGRES_HOST: "host.docker.internal"
+      DEKART_CLOUD_STORAGE_BUCKET: "${DEKART_CLOUD_STORAGE_BUCKET}"
+      DEKART_BIGQUERY_PROJECT_ID: "${DEKART_BIGQUERY_PROJECT_ID}"
+      DEKART_BIGQUERY_MAX_BYTES_BILLED: "53687091200"
+      DEKART_MAPBOX_TOKEN: "${DEKART_MAPBOX_TOKEN}"
+      GOOGLE_APPLICATION_CREDENTIALS: "${GOOGLE_APPLICATION_CREDENTIALS}"
+      DEKART_CORS_ORIGIN: "${DEKART_CORS_ORIGIN}"
   cloudsql:
     build: ./cloud_sql_proxy
     ports:

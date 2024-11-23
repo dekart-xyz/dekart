@@ -10195,7 +10195,8 @@ proto.GetEnvResponse.Variable.Type = {
   TYPE_AES_IV: 17,
   TYPE_AUTH_ENABLED: 18,
   TYPE_USER_DEFINED_CONNECTION: 19,
-  TYPE_UX_DISABLE_VERSION_CHECK: 20
+  TYPE_UX_DISABLE_VERSION_CHECK: 20,
+  TYPE_ALLOW_WORKSPACE_CREATION: 21
 };
 
 /**
@@ -16448,7 +16449,8 @@ proto.PlanType = {
   TYPE_PERSONAL: 1,
   TYPE_TEAM: 2,
   TYPE_GROW: 3,
-  TYPE_MAX: 4
+  TYPE_MAX: 4,
+  TYPE_PREMIUM: 5
 };
 
 goog.object.extend(exports, proto);

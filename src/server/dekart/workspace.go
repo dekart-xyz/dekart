@@ -62,7 +62,7 @@ func (s Server) CreateWorkspace(ctx context.Context, req *proto.CreateWorkspaceR
 	}
 
 	// create a subscription for the workspace
-	err = s.createPersonalSubscription(ctx, workspaceID, claims.Email)
+	err = s.createDefaultSubscription(ctx, workspaceID, claims.Email)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, err
@@ -273,6 +273,24 @@ func (s Server) getUserWorkspace(ctx context.Context, email string) (*proto.Work
 		}
 		return &workspace, &role, nil
 	}
+	if !user.CanCreateWorkspace() { // if user cannot create workspace, we should return add the default workspace
+		workspaceID := "00000000-0000-0000-0000-000000000000"
+		_, err = s.db.ExecContext(ctx, `
+		INSERT INTO workspace_log (workspace_id, email, status, authored_by, id)
+		VALUES ($1, $2, 1, $2, $3)
+	`, workspaceID, email, newUUID())
+		if err != nil {
+			log.Err(err).Send()
+			return nil, nil, err
+		}
+		err = s.createDefaultSubscription(ctx, workspaceID, email)
+		if err != nil {
+			log.Err(err).Send()
+			return nil, nil, err
+		}
+		return s.getUserWorkspace(ctx, email)
+	}
+
 	return nil, &role, nil
 }
 
