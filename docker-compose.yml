@@ -20,12 +20,14 @@ services:
         - 8081:8080
   dekart-oss-bigquery:
     image: ghcr.io/dekart-xyz/dekart-premium/dekart:latest
+    env_file:
+      - .env.bigquery
     platform: linux/amd64
     restart: always
     ports:
       - 8080:8080
     profiles:
-      - dekart-oss-bigquery
+      - bigquery
     volumes:
       - "${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS}"
     environment:
@@ -40,6 +42,29 @@ services:
       DEKART_MAPBOX_TOKEN: "${DEKART_MAPBOX_TOKEN}"
       GOOGLE_APPLICATION_CREDENTIALS: "${GOOGLE_APPLICATION_CREDENTIALS}"
       DEKART_CORS_ORIGIN: "${DEKART_CORS_ORIGIN}"
+  dekart-oss-googleoauth:
+    image: ghcr.io/dekart-xyz/dekart-premium/dekart:latest
+    env_file:
+      - .env.googleoauth
+    platform: linux/amd64
+    restart: always
+    ports:
+      - 8080:8080
+    profiles:
+      - googleoauth
+    volumes:
+      - "${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS}"
+    environment:
+      DEKART_POSTGRES_DB: "${DEKART_POSTGRES_DB}"
+      DEKART_POSTGRES_USER: "${DEKART_POSTGRES_USER}"
+      DEKART_POSTGRES_PASSWORD: "${DEKART_POSTGRES_PASSWORD}"
+      DEKART_POSTGRES_PORT: "5432"
+      DEKART_POSTGRES_HOST: "host.docker.internal"
+      DEKART_MAPBOX_TOKEN: "${DEKART_MAPBOX_TOKEN}"
+      DEKART_ALLOW_FILE_UPLOAD: "${DEKART_ALLOW_FILE_UPLOAD}"
+      DEKART_REQUIRE_GOOGLE_OAUTH: "${DEKART_REQUIRE_GOOGLE_OAUTH}"
+      DEKART_GOOGLE_OAUTH_CLIENT_ID: "${DEKART_GOOGLE_OAUTH_CLIENT_ID}"
+      DEKART_GOOGLE_OAUTH_SECRET: "${DEKART_GOOGLE_OAUTH_SECRET}"
   cloudsql:
     build: ./cloud_sql_proxy
     ports:
