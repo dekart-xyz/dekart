@@ -13,21 +13,17 @@ jobs:
       pull-requests: read
       contents: read
   node_tests:
+    needs: changes
+    if: needs.changes.outputs.js == 'true'
     uses: ./.github/workflows/node_test.yaml
     secrets: inherit
   go_tests:
+    needs: changes
+    if: needs.changes.outputs.go == 'true'
     uses: ./.github/workflows/go_test.yaml
     secrets: inherit
-  build:
-    with:
-      build_e2e: true
-    uses: ./.github/workflows/build.yaml
-    secrets: inherit
-  pulumi_preview:
-    uses: ./.github/workflows/pulumi_preview.yaml
-    secrets: inherit
   e2e_tests:
-    needs: [build]
+    needs: changes
     uses: ./.github/workflows/e2e.yaml
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: needs.changes.outputs.e2e == 'true' && github.event.pull_request.head.repo.full_name == github.repository
     secrets: inherit

@@ -1,17 +1,28 @@
 name: Release
 
 on:
-  release:
-    types: [published]
-
+  push:
+    tags:
+      - '**'
 jobs:
-  deploy:
+  node_tests:
+    uses: ./.github/workflows/node_test.yaml
+    secrets: inherit
+  go_tests:
+    uses: ./.github/workflows/go_test.yaml
+    secrets: inherit
+  e2e_tests:
+    uses: ./.github/workflows/e2e.yaml
+    secrets: inherit
+  docker:
+    needs: [node_tests, go_tests, e2e_tests]
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Check out the repo
         uses: actions/checkout@v2
-      - name: Setup Go
-        uses: actions/setup-go@v3
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
         with:
           images: |
             ghcr.io/${{ github.repository }}/dekart
@@ -44,5 +55,3 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}/dekart:buildcache
           cache-to: type=registry,ref=ghcr.io/${{ github.repository }}/dekart:buildcache,mode=max
-
-
