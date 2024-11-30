@@ -14,7 +14,8 @@ import (
 )
 
 func (s Server) getWorkspaceUpdate(ctx context.Context) (int64, error) {
-	var updatedAt sql.NullString // Use NullString to handle both Postgres and SQLite outputs
+	var updatedAtStr sql.NullString // Use NullString to handle both Postgres and SQLite outputs
+	var updatedAtTime sql.NullTime  // Use time for postgres
 
 	// Query for the max updated_at across all relevant tables
 	query := `
@@ -26,27 +27,32 @@ func (s Server) getWorkspaceUpdate(ctx context.Context) (int64, error) {
 			SELECT MAX(created_at) AS updated_at FROM confirmation_log
 		) max_updated_at;
 	`
-
-	// Execute the query
-	err := s.db.QueryRowContext(ctx, query).Scan(&updatedAt)
+	var err error
+	if IsSqlite() {
+		err = s.db.QueryRowContext(ctx, query).Scan(&updatedAtStr)
+	} else {
+		err = s.db.QueryRowContext(ctx, query).Scan(&updatedAtTime)
+	}
 	if err != nil {
 		log.Err(err).Msg("Error fetching max updated_at")
 		return 0, err
 	}
 
-	// If no timestamp is found, return 0
-	if !updatedAt.Valid {
-		return 0, nil
-	}
+	if IsSqlite() {
+		// If no timestamp is found, return 0
+		if !updatedAtStr.Valid {
+			return 0, nil
+		}
+		// Parse the timestamp string into a time.Time
+		parsedTime, err := time.Parse("2006-01-02 15:04:05", updatedAtStr.String)
+		if err != nil {
+			log.Err(err).Msg("Error parsing updated_at timestamp")
+			return 0, err
+		}
 
-	// Parse the timestamp string into a time.Time
-	parsedTime, err := time.Parse("2006-01-02 15:04:05", updatedAt.String)
-	if err != nil {
-		log.Err(err).Msg("Error parsing updated_at timestamp")
-		return 0, err
+		return parsedTime.Unix(), nil
 	}
-
-	return parsedTime.Unix(), nil
+	return updatedAtTime.Time.Unix(), nil
 }
 
 func (s Server) CreateWorkspace(ctx context.Context, req *proto.CreateWorkspaceRequest) (*proto.CreateWorkspaceResponse, error) {
