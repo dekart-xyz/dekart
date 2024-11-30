@@ -70,7 +70,6 @@
     "standard": "^17.0.0"
   },
   "overrides": {
-    "react-error-overlay": "6.0.9",
     "@deck.gl/aggregation-layers": "8.6.5",
     "@deck.gl/core": "8.6.5",
     "@deck.gl/extensions": "8.6.5",
