@@ -1,7 +1,0 @@
-name: dekart-cloud
-runtime: go
-description: prod
-config:
-  pulumi:tags:
-    value:
-      pulumi:template: ""
