@@ -70,12 +70,16 @@ function DatasetSelector ({ dataset }) {
   const env = useSelector(state => state.env)
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const isPlayground = useSelector(state => state.user.isPlayground)
+  const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
   const connectionList = useSelector(state => state.connection.list)
   const selectedConnection = connectionList.find(c => c.id === dataset.connectionId)
   const history = useHistory()
-  if (!env.loaded || isPlayground) {
+  if (!env.loaded) {
     // do not render until environment is loaded
-    // do not render for playground users
+    return null
+  }
+  if (isPlayground && !isDefaultWorkspace) {
+    // do not render in playground mode, but render in default workspace
     return null
   }
   const { ALLOW_FILE_UPLOAD } = env.variables

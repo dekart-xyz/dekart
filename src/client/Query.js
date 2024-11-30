@@ -194,6 +194,7 @@ function SampleQuery ({ queryId }) {
 
   let connectionType = connection?.connectionType
   if (isPlayground) {
+    // TODO: what if snowflake connection is used in playground?
     connectionType = Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY
   }
 
