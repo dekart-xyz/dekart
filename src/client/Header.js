@@ -89,8 +89,10 @@ function User ({ buttonDivider }) {
 export function Workspace () {
   const workspaceName = useSelector(state => state.workspace?.name)
   const isPlayground = useSelector(state => state.user.isPlayground)
+  const env = useSelector(state => state.env)
+  const { ALLOW_WORKSPACE_CREATION } = env.variables
   const history = useHistory()
-  if (!workspaceName || isPlayground) {
+  if (!workspaceName || isPlayground || !ALLOW_WORKSPACE_CREATION) {
     return null
   }
   return (

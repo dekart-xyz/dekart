@@ -6,6 +6,7 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/user"
 	"net/http"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
@@ -13,28 +14,39 @@ import (
 )
 
 func (s Server) getWorkspaceUpdate(ctx context.Context) (int64, error) {
-	var updated_at sql.NullTime
-	// for simplicity, we just get the max updated_at from the all tables.
-	err := s.db.QueryRowContext(ctx, `
-		SELECT max(updated_at) FROM (
-			SELECT
-				max(updated_at) as updated_at
-			FROM workspaces
+	var updatedAt sql.NullString // Use NullString to handle both Postgres and SQLite outputs
+
+	// Query for the max updated_at across all relevant tables
+	query := `
+		SELECT MAX(updated_at) FROM (
+			SELECT MAX(updated_at) AS updated_at FROM workspaces
 			UNION
-			SELECT
-				max(created_at) as updated_at
-			FROM workspace_log
+			SELECT MAX(created_at) AS updated_at FROM workspace_log
 			UNION
-			SELECT
-				max(created_at) as updated_at
-			FROM confirmation_log
-		) max_updated_at
-	`).Scan(&updated_at)
+			SELECT MAX(created_at) AS updated_at FROM confirmation_log
+		) max_updated_at;
+	`
+
+	// Execute the query
+	err := s.db.QueryRowContext(ctx, query).Scan(&updatedAt)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error fetching max updated_at")
 		return 0, err
 	}
-	return updated_at.Time.Unix(), nil
+
+	// If no timestamp is found, return 0
+	if !updatedAt.Valid {
+		return 0, nil
+	}
+
+	// Parse the timestamp string into a time.Time
+	parsedTime, err := time.Parse("2006-01-02 15:04:05", updatedAt.String)
+	if err != nil {
+		log.Err(err).Msg("Error parsing updated_at timestamp")
+		return 0, err
+	}
+
+	return parsedTime.Unix(), nil
 }
 
 func (s Server) CreateWorkspace(ctx context.Context, req *proto.CreateWorkspaceRequest) (*proto.CreateWorkspaceResponse, error) {

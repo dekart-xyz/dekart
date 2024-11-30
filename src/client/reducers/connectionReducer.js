@@ -106,7 +106,7 @@ function listLoaded (state = false, action) {
   }
 }
 
-// in cloud it's always user defined, except for playground
+// can user define their own connections
 function userDefined (state = true, action) {
   switch (action.type) {
     case setEnv.name: {

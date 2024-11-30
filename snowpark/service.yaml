@@ -16,6 +16,7 @@ spec:
         DEKART_SNOWFLAKE_STAGE: app_public.app_state_stage
         DEKART_REQUIRE_SNOWFLAKE_CONTEXT: 1
         DEKART_UX_DISABLE_VERSION_CHECK: 1
+        DEKART_DEFAULT_WORKSPACE_ROLE: editor
   endpoints:
     - name: app
       port: 8080

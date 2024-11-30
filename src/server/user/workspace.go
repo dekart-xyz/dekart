@@ -62,12 +62,8 @@ func getDefaultWorkspaceAdmin() string {
 	return os.Getenv("DEKART_DEFAULT_WORKSPACE_ADMIN")
 }
 
-// getWorkspaceDefaultRole returns default user role for workspace
-func getWorkspaceDefaultRole() proto.UserRole {
-	if getDefaultWorkspaceAdmin() == "" {
-		// every user is admin by default in default workspace
-		return proto.UserRole_ROLE_ADMIN
-	}
+// GetWorkspaceDefaultRole returns default user role for workspace
+func GetWorkspaceDefaultRole() proto.UserRole {
 	switch os.Getenv("DEKART_DEFAULT_WORKSPACE_ROLE") {
 	case "admin":
 		return proto.UserRole_ROLE_ADMIN
@@ -76,7 +72,10 @@ func getWorkspaceDefaultRole() proto.UserRole {
 	case "viewer":
 		return proto.UserRole_ROLE_VIEWER
 	default:
-		log.Warn().Msgf("Unknown default workspace role %s", os.Getenv("DEKART_DEFAULT_WORKSPACE_ROLE"))
+		if getDefaultWorkspaceAdmin() == "" {
+			// someone should be admin, then everyone else is admin
+			return proto.UserRole_ROLE_ADMIN
+		}
 		return proto.UserRole_ROLE_VIEWER
 	}
 }
@@ -86,5 +85,5 @@ func GetUserDefaultRole(email string) proto.UserRole {
 	if email == getDefaultWorkspaceAdmin() {
 		return proto.UserRole_ROLE_ADMIN
 	}
-	return getWorkspaceDefaultRole()
+	return GetWorkspaceDefaultRole()
 }

@@ -240,6 +240,10 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 				Type:  proto.GetEnvResponse_Variable_TYPE_ALLOW_WORKSPACE_CREATION,
 				Value: allowWorkspaceCreation,
 			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_WORKSPACE_DEFAULT_ROLE,
+				Value: user.GetWorkspaceDefaultRole().String(),
+			},
 		}
 
 	}

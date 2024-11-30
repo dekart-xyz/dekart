@@ -39,7 +39,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			id,
 			case when map_config is null then '' else map_config end as map_config,
 			case when title is null then 'Untitled' else title end as title,
-			(author_email = $2) or allow_edit as can_write,
+			(author_email = $1) or allow_edit as can_write,
 			author_email = $2 as is_author,
 			author_email,
 			discoverable,
@@ -52,10 +52,11 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			0 as connections_with_sensitive_scope_num,
 			is_public
 		from reports as r
-		where id=$1 and not archived and (is_playground or is_public)
+		where id=$3 and not archived and (is_playground or is_public)
 		limit 1`,
-			reportID,
 			claims.Email,
+			claims.Email, // sqlite does not support positional parameters reuse
+			reportID,
 		)
 	} else {
 		reportRows, err = s.db.QueryContext(ctx,
@@ -63,7 +64,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			id,
 			case when map_config is null then '' else map_config end as map_config,
 			case when title is null then 'Untitled' else title end as title,
-			(author_email = $2) or allow_edit as can_write,
+			(author_email = $1) or allow_edit as can_write,
 			author_email = $2 as is_author,
 			author_email,
 			discoverable,
@@ -74,7 +75,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			(
 				select count(*) from connections as c
 				join datasets as d on c.id=d.connection_id
-				where d.report_id=$1 and cloud_storage_bucket is not null and (
+				where d.report_id=$3 and cloud_storage_bucket is not null and (
 					cloud_storage_bucket != ''
 					or connection_type > 1 -- snowflake allows sharing without bucket
 				)
@@ -82,19 +83,23 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			(
 				select count(*) from connections as c
 				join datasets as d on c.id=d.connection_id
-				where d.report_id=$1
+				where d.report_id=$4
 			) as connections_num,
 			(
 				select count(*) from connections as c
 				join datasets as d on c.id=d.connection_id
-				where d.report_id=$1 and  connection_type <= 1 -- BigQuery
+				where d.report_id=$5 and  connection_type <= 1 -- BigQuery
 			) as connections_with_sensitive_scope_num,
 			is_public
 		from reports as r
-		where id=$1 and not archived and (workspace_id=$3 or is_playground or is_public)
+		where (id=$6) and (not archived) and ((workspace_id=$7) or is_playground or is_public)
 		limit 1`,
-			reportID,
 			claims.Email,
+			claims.Email,
+			reportID,
+			reportID, // sqlite does not support positional parameters reuse
+			reportID,
+			reportID,
 			checkWorkspace(ctx).ID,
 		)
 	}

@@ -1273,6 +1273,7 @@ export namespace GetEnvResponse {
       TYPE_USER_DEFINED_CONNECTION: 19;
       TYPE_UX_DISABLE_VERSION_CHECK: 20;
       TYPE_ALLOW_WORKSPACE_CREATION: 21;
+      TYPE_WORKSPACE_DEFAULT_ROLE: 22;
     }
 
     export const Type: TypeMap;
