@@ -8,6 +8,7 @@ import Switch from 'antd/es/switch'
 import { copyUrlToClipboard } from './actions/clipboard'
 import { publishReport, setDiscoverable } from './actions/report'
 import Select from 'antd/es/select'
+import { PlanType } from '../proto/dekart_pb'
 
 function CopyLinkButton () {
   const dispatch = useDispatch()
@@ -69,7 +70,12 @@ function PublishSwitch () {
 
 function PublicPermissions () {
   const { isPublic, isPlayground, canWrite } = useSelector(state => state.report)
+  const planType = useSelector(state => state.user.stream?.planType)
 
+  if (planType === PlanType.TYPE_PREMIUM || planType === PlanType.TYPE_UNSPECIFIED) {
+    // do not show feature for self-hosted users yet
+    return null
+  }
   if (
     !canWrite && // show for authors and editors
     !isPublic && !isPlayground // show for public reports
@@ -219,11 +225,9 @@ function ModalContent () {
     return null
   }
 
-  const { CLOUD_STORAGE_BUCKET } = env.variables
-
   return (
     <>
-      {CLOUD_STORAGE_BUCKET ? <PublicPermissions /> : null}
+      <PublicPermissions />
       <WorkspacePermissions />
     </>
   )

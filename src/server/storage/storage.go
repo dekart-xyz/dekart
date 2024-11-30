@@ -83,11 +83,14 @@ func NewGoogleCloudStorage() *GoogleCloudStorage {
 func NewPublicStorage() *GoogleCloudStorage {
 	defaultBucketName := os.Getenv("DEKART_CLOUD_PUBLIC_STORAGE_BUCKET")
 	if defaultBucketName == "" {
-		log.Fatal().Msg("DEKART_CLOUD_PUBLIC_STORAGE_BUCKET is not set")
+		defaultBucketName = os.Getenv("DEKART_CLOUD_STORAGE_BUCKET")
+	}
+	if defaultBucketName == "" {
+		log.Fatal().Msg("DEKART_CLOUD_PUBLIC_STORAGE_BUCKET and DEKART_CLOUD_STORAGE_BUCKET are not set")
 	}
 	return &GoogleCloudStorage{
 		defaultBucketName,
-		log.With().Str("DEKART_CLOUD_PUBLIC_STORAGE_BUCKET", defaultBucketName).Logger(),
+		log.With().Str("defaultBucketName", defaultBucketName).Logger(),
 		false,
 	}
 }

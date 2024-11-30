@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/conn"
 	"dekart/src/server/user"
 	"fmt"
 	"strings"
@@ -141,6 +142,12 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 		}
 		// report is sharable if all connections have cache
 		report.IsSharable = (connectionsNum > 0 && connectionsWithCacheNum == connectionsNum)
+
+		if !conn.IsUserDefined() {
+			// for configured connections, report is sharable if cloud storage bucket is set
+			report.IsSharable = conn.CanShareReports()
+		}
+
 		report.NeedSensitiveScope = connectionsWithSensitiveScopeNum > 0
 		report.Discoverable = report.Discoverable && report.IsSharable // only sharable reports can be discoverable
 

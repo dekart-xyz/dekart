@@ -31,6 +31,7 @@ function User ({ buttonDivider }) {
   const history = useHistory()
   const userStream = useSelector(state => state.user.stream)
   const { authEnabled } = useSelector(state => state.env)
+  const isPlayground = useSelector(state => state.user.isPlayground)
   const dispatch = useDispatch()
   if (!userStream || !authEnabled) {
     return null
@@ -39,6 +40,16 @@ function User ({ buttonDivider }) {
     label: userStream && userStream.email,
     disabled: true
   }]
+
+  if (!isPlayground) {
+    items.push({
+      label: 'Manage workspace',
+      onClick: () => {
+        history.push('/workspace')
+      }
+    })
+  }
+
   if (token) {
     items.push({
       label: 'Switch account',
@@ -68,48 +79,7 @@ function User ({ buttonDivider }) {
     )}
     >
       <Dropdown
-        overlayClassName={styles.userDropdown} menu={{
-          items: [
-            {
-              label: userStream && userStream.email,
-              disabled: true
-            },
-            {
-              label: 'Manage workspace',
-              onClick: () => {
-                history.push('/workspace')
-              }
-            },
-            {
-              label: 'Public playground',
-              onClick: () => {
-                history.push('/playground')
-              }
-            },
-            {
-              label: 'Switch account',
-              onClick: () => {
-                dispatch(localStorageReset())
-                const state = new AuthState()
-                state.setUiUrl(window.location.href)
-                state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
-                state.setSwitchAccount(true)
-                dispatch(authRedirect(state))
-              }
-            },
-            {
-              label: 'Sign out',
-              onClick: () => {
-                dispatch(localStorageReset())
-                const state = new AuthState()
-                state.setUiUrl(window.location.href)
-                state.setAction(AuthState.Action.ACTION_REVOKE)
-                state.setAccessTokenToRevoke(token.access_token)
-                dispatch(authRedirect(state))
-              }
-            }
-          ]
-        }}
+        overlayClassName={styles.userDropdown} menu={{ items }}
       ><Avatar>{getSignature(userStream && userStream.email)}</Avatar>
       </Dropdown>
     </div>
