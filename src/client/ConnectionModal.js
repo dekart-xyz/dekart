@@ -170,7 +170,7 @@ function BigQueryConnectionModal ({ form }) {
           <Form.Item label='Connection Name' required name='connectionName'>
             <Input />
           </Form.Item>
-          <Form.Item required={planType === PlanType.TYPE_PREMIUM} label={planType === PlanType.TYPE_PREMIUM ? 'Storage Bucket' : 'Optional: Storage Bucket'} extra={<>Google Cloud Storage bucket to permanently cache query results. Required to share map with other users.</>} name='cloudStorageBucket'>
+          <Form.Item required={planType === PlanType.TYPE_SELF_HOSTED} label={planType === PlanType.TYPE_SELF_HOSTED ? 'Storage Bucket' : 'Optional: Storage Bucket'} extra={<>Google Cloud Storage bucket to permanently cache query results. Required to share map with other users.</>} name='cloudStorageBucket'>
             <Input placeholder='my-gcs-bucket' disabled={nameChangeOnly} />
           </Form.Item>
         </Form>

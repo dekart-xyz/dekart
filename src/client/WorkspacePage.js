@@ -271,7 +271,7 @@ export function Workspace ({ nextStep, setNextStep }) {
                   title: 'Workspace',
                   icon: <AppstoreTwoTone />
                 },
-                userStream.planType !== PlanType.TYPE_PREMIUM
+                userStream.planType !== PlanType.TYPE_SELF_HOSTED
                   ? {
                       title: 'Plan',
                       icon: <CreditCardOutlined />,
@@ -293,7 +293,7 @@ export function Workspace ({ nextStep, setNextStep }) {
 
       {([
         <WorkspaceTab key={0} nextStep={nextStep} setNextStep={setNextStep} />,
-        userStream.planType !== PlanType.TYPE_PREMIUM ? <SubscriptionTab key={1} /> : <MembersTab key={1} />,
+        userStream.planType !== PlanType.TYPE_SELF_HOSTED ? <SubscriptionTab key={1} /> : <MembersTab key={1} />,
         <MembersTab key={2} />])[step]}
     </div>
   )

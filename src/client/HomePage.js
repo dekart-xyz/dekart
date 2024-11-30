@@ -217,7 +217,7 @@ function ConnectionTypeSelector () {
           }}
         >BigQuery
         </Button>
-        <If condition={planType !== PlanType.TYPE_PREMIUM}>
+        <If condition={planType !== PlanType.TYPE_SELF_HOSTED}>
           <Button
             icon={<DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE} />} size='large' onClick={() => {
               track('ConnectionTypeSelectorSnowflake')

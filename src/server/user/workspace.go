@@ -43,7 +43,7 @@ func CheckWorkspaceCtx(ctx context.Context) WorkspaceInfo {
 
 // CanCreateWorkspace checks if users can create workspace
 func CanCreateWorkspace() bool {
-	if GetDefaultSubscription() != proto.PlanType_TYPE_PREMIUM {
+	if GetDefaultSubscription() != proto.PlanType_TYPE_SELF_HOSTED {
 		return true // for cloud users always create workspace
 	}
 	if os.Getenv("DEKART_ALLOW_WORKSPACE_CREATION") != "" {

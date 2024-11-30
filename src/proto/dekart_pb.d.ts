@@ -2224,7 +2224,7 @@ export interface PlanTypeMap {
   TYPE_TEAM: 2;
   TYPE_GROW: 3;
   TYPE_MAX: 4;
-  TYPE_PREMIUM: 5;
+  TYPE_SELF_HOSTED: 5;
 }
 
 export const PlanType: PlanTypeMap;

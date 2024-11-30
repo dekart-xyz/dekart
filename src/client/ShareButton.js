@@ -72,7 +72,7 @@ function PublicPermissions () {
   const { isPublic, isPlayground, canWrite } = useSelector(state => state.report)
   const planType = useSelector(state => state.user.stream?.planType)
 
-  if (planType === PlanType.TYPE_PREMIUM || planType === PlanType.TYPE_UNSPECIFIED) {
+  if (planType === PlanType.TYPE_SELF_HOSTED || planType === PlanType.TYPE_UNSPECIFIED) {
     // do not show feature for self-hosted users yet
     return null
   }
