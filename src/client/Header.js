@@ -12,7 +12,6 @@ import { authRedirect } from './actions/redirect'
 import Button from 'antd/es/button'
 import Tooltip from 'antd/es/tooltip'
 import { switchPlayground } from './actions/user'
-import localStorageReset from './actions/localStorage'
 
 function getSignature (email) {
   if (!email) {
