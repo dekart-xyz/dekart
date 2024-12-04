@@ -87,7 +87,9 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-
+	if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
+		return nil, status.Error(codes.PermissionDenied, "Only editors can run queries")
+	}
 	report, err := s.getReport(ctx, req.ReportId)
 	if err != nil {
 		log.Err(err).Send()
@@ -145,6 +147,7 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 			connection:     connection,
 			userBucketName: bucketName,
 			queryText:      queryText,
+			isPublic:       report.IsPublic,
 		})
 	}
 
@@ -199,6 +202,7 @@ type runQueryOptions struct {
 func (s Server) runQuery(ctx context.Context, o runQueryOptions) error {
 	connCtx := conn.GetCtx(ctx, o.connection)
 	job, jobStatus, err := s.jobs.Create(o.reportID, o.queryID, o.queryText, connCtx)
+	log.Debug().Str("jobID", job.GetID()).Msg("Job created")
 	if err != nil {
 		log.Error().Err(err).Send()
 		return err
@@ -315,6 +319,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		queryText:      queryText,
 		connection:     connection,
 		userBucketName: s.getBucketNameFromConnection(connection),
+		isPublic:       report.IsPublic,
 	})
 
 	if err != nil {
@@ -336,22 +341,41 @@ func (s Server) CancelQuery(ctx context.Context, req *proto.CancelQueryRequest) 
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
+		return nil, status.Error(codes.PermissionDenied, "Only editors can cancel queries")
+	}
 	log.Debug().Str("query_id", req.QueryId).Msg("CancelQuery")
 	_, err := uuid.Parse(req.QueryId)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
 	}
-	queriesRows, err := s.db.QueryContext(ctx,
-		`select
+	var queriesRows *sql.Rows
+	if checkWorkspace(ctx).IsPlayground {
+		queriesRows, err = s.db.QueryContext(ctx,
+			`select
 			reports.id
 		from queries
 			left join datasets on queries.id = datasets.query_id
 			left join reports on (datasets.report_id = reports.id or queries.report_id = reports.id)
-		where queries.id = $1 and (author_email = $2 or reports.allow_edit)
+		where queries.id = $1 and author_email = $2 and is_playground=true
 		limit 1`,
-		req.QueryId,
-		claims.Email,
-	)
+			req.QueryId,
+			claims.Email,
+		)
+	} else {
+		queriesRows, err = s.db.QueryContext(ctx,
+			`select
+			reports.id
+		from queries
+			left join datasets on queries.id = datasets.query_id
+			left join reports on (datasets.report_id = reports.id or queries.report_id = reports.id)
+		where queries.id = $1 and (author_email = $2 or reports.allow_edit) and workspace_id=$3
+		limit 1`,
+			req.QueryId,
+			claims.Email,
+			checkWorkspace(ctx).ID,
+		)
+	}
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())

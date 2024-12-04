@@ -7,10 +7,13 @@ const host = REACT_APP_API_HOST || ''
 
 export function grpcCall (method, request, resolve = () => {}, reject = (err) => err) {
   return async function (dispatch, getState) {
-    const { token } = getState()
+    const { token, user: { isPlayground } } = getState()
     const headers = new window.Headers()
     if (token) {
       headers.append('Authorization', `Bearer ${token.access_token}`)
+    }
+    if (isPlayground) {
+      headers.append('X-Dekart-Playground', 'true')
     }
     try {
       const response = await unary(method, request, headers)
@@ -75,10 +78,13 @@ class GrpcError extends Error {
 
 export function grpcStream (endpoint, request, cb) {
   return async (dispatch, getState) => {
-    const { token } = getState()
+    const { token, user: { isPlayground } } = getState()
     const headers = new window.Headers()
     if (token) {
       headers.append('Authorization', `Bearer ${token.access_token}`)
+    }
+    if (isPlayground) {
+      headers.append('X-Dekart-Playground', 'true')
     }
     const cancelable = getStream(
       endpoint,
@@ -148,7 +154,10 @@ function getStream (endpoint, request, onMessage, onError, metadata = {}, cancel
       }
       if (code === 0) {
         getStream(endpoint, request, onMessage, onError, metadata, cancelable, currentSequence)
-      } else if (code === 2 && retryCount <= 4) {
+      } else if (
+        (code === 2) &&
+        retryCount <= 4
+      ) {
         if (window.document.hidden) {
           const onVisibilityChange = () => {
             window.document.removeEventListener('visibilitychange', onVisibilityChange, false)
@@ -161,7 +170,6 @@ function getStream (endpoint, request, onMessage, onError, metadata = {}, cancel
         }
       } else {
         cancelable.cancel()
-        // console.error('GRPC stream error', code, message)
         onError(code, message)
       }
     }

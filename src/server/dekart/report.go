@@ -31,8 +31,11 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 		log.Fatal().Msg("getReport require claims")
 		return nil, nil
 	}
-	reportRows, err := s.db.QueryContext(ctx,
-		`select
+	var reportRows *sql.Rows
+	var err error
+	if checkWorkspace(ctx).ID == "" {
+		reportRows, err = s.db.QueryContext(ctx,
+			`select
 			id,
 			case when map_config is null then '' else map_config end as map_config,
 			case when title is null then 'Untitled' else title end as title,
@@ -43,6 +46,32 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			allow_edit,
 			created_at,
 			updated_at,
+			is_playground,
+			0 as connections_with_cache_num,
+			0 as connections_num,
+			0 as connections_with_sensitive_scope_num,
+			is_public
+		from reports as r
+		where id=$3 and not archived and (is_playground or is_public)
+		limit 1`,
+			claims.Email,
+			claims.Email, // sqlite does not support positional parameters reuse
+			reportID,
+		)
+	} else {
+		reportRows, err = s.db.QueryContext(ctx,
+			`select
+			id,
+			case when map_config is null then '' else map_config end as map_config,
+			case when title is null then 'Untitled' else title end as title,
+			(author_email = $1) or allow_edit as can_write,
+			author_email = $2 as is_author,
+			author_email,
+			discoverable,
+			allow_edit,
+			created_at,
+			updated_at,
+			is_playground,
 			(
 				select count(*) from connections as c
 				join datasets as d on c.id=d.connection_id
@@ -60,19 +89,22 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 				select count(*) from connections as c
 				join datasets as d on c.id=d.connection_id
 				where d.report_id=$5 and  connection_type <= 1 -- BigQuery
-			) as connections_with_sensitive_scope_num
+			) as connections_with_sensitive_scope_num,
+			is_public
 		from reports as r
-		where (id=$6) and not archived
+		where (id=$6) and (not archived) and ((workspace_id=$7) or is_playground or is_public)
 		limit 1`,
-		claims.Email,
-		claims.Email,
-		reportID,
-		reportID,
-		reportID,
-		reportID,
-	)
+			claims.Email,
+			claims.Email,
+			reportID,
+			reportID, // sqlite does not support positional parameters reuse
+			reportID,
+			reportID,
+			checkWorkspace(ctx).ID,
+		)
+	}
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Str("workspace", checkWorkspace(ctx).ID).Str("reportID", reportID).Send()
 		return nil, err
 	}
 	defer reportRows.Close()
@@ -93,18 +125,33 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			&report.AllowEdit,
 			&createdAt,
 			&updatedAt,
+			&report.IsPlayground,
 			&connectionsWithCacheNum,
 			&connectionsNum,
 			&connectionsWithSensitiveScopeNum,
+			&report.IsPublic,
 		)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, err
 		}
+		if report.IsPlayground && !checkWorkspace(ctx).IsPlayground {
+			// report is playground but user is not in playground
+			report.AllowEdit = false
+			report.CanWrite = false
+		}
+		if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
+			// viewer cannot edit reports
+			report.AllowEdit = false
+			report.CanWrite = false
+		}
+		// report is sharable if all connections have cache
+		report.IsSharable = (connectionsNum > 0 && connectionsWithCacheNum == connectionsNum)
 
-		report.IsSharable = (connectionsNum > 0 && connectionsWithCacheNum == connectionsNum) || // all connections have cache, then report is sharable
-			!conn.IsUserDefined() || // non-user defined connections are always sharable
-			claims.Email == user.UnknownEmail // when no auth, report is available for all
+		if !conn.IsUserDefined() {
+			// for configured connections, report is sharable if cloud storage bucket is set
+			report.IsSharable = conn.CanShareReports()
+		}
 
 		report.NeedSensitiveScope = connectionsWithSensitiveScopeNum > 0
 		report.Discoverable = report.Discoverable && report.IsSharable // only sharable reports can be discoverable
@@ -113,7 +160,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 		report.UpdatedAt = updatedAt.Unix()
 	}
 	if report.Id == "" || // no report found
-		(!report.Discoverable && !report.IsAuthor) { // report is not discoverable by others in workspace
+		(!report.Discoverable && !report.IsAuthor && !report.IsPlayground && !report.IsPublic) { // report is not discoverable by others in workspace
 		return nil, nil // not found
 	}
 	return report, nil
@@ -125,12 +172,30 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	if checkWorkspace(ctx).ID == "" && !checkWorkspace(ctx).IsPlayground {
+		return nil, status.Error(codes.NotFound, "Workspace not found")
+	}
+	log.Debug().Interface("workspace", checkWorkspace(ctx)).Msg("CreateReport")
+	if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
+		return nil, status.Error(codes.PermissionDenied, "Only admins and editors can create reports")
+	}
 	id := newUUID()
-	_, err := s.db.ExecContext(ctx,
-		"INSERT INTO reports (id, author_email) VALUES ($1, $2)",
-		id,
-		claims.Email,
-	)
+	var err error
+	if checkWorkspace(ctx).IsPlayground {
+		_, err = s.db.ExecContext(ctx,
+			"INSERT INTO reports (id, author_email, is_playground) VALUES ($1, $2, true)",
+			id,
+			claims.Email,
+		)
+	} else {
+		_, err = s.db.ExecContext(ctx,
+			"INSERT INTO reports (id, author_email, workspace_id) VALUES ($1, $2, $3)",
+			id,
+			claims.Email,
+			checkWorkspace(ctx).ID,
+		)
+
+	}
 	if err != nil {
 		log.Err(err).Send()
 		return nil, err
@@ -169,13 +234,25 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 		return err
 	}
 	newMapConfig, newDatasetIds := updateDatasetIds(report, datasets)
-	_, err = tx.ExecContext(ctx,
-		"INSERT INTO reports (id, author_email, map_config, title) VALUES ($1, $2, $3, $4)",
-		report.Id,
-		claims.Email,
-		newMapConfig,
-		report.Title,
-	)
+	if checkWorkspace(ctx).IsPlayground {
+		_, err = tx.ExecContext(ctx,
+			"INSERT INTO reports (id, author_email, map_config, title, is_playground) VALUES ($1, $2, $3, $4, true)",
+			report.Id,
+			claims.Email,
+			newMapConfig,
+			report.Title,
+		)
+	} else {
+		_, err = tx.ExecContext(ctx,
+			"INSERT INTO reports (id, author_email, map_config, title, is_public, workspace_id) VALUES ($1, $2, $3, $4, $5, $6)",
+			report.Id,
+			claims.Email,
+			newMapConfig,
+			report.Title,
+			report.IsPublic,
+			checkWorkspace(ctx).ID,
+		)
+	}
 	if err != nil {
 		rollback(tx)
 		return err
@@ -275,6 +352,14 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	isPlayground := checkWorkspace(ctx).IsPlayground
+	workspaceID := checkWorkspace(ctx).ID
+	if workspaceID == "" && !isPlayground {
+		return nil, status.Error(codes.NotFound, "Workspace not found")
+	}
+	if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
+		return nil, status.Error(codes.PermissionDenied, "Only admins and editors can fork reports")
+	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
@@ -291,6 +376,18 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 		err := fmt.Errorf("report %s not found", newReportID)
 		log.Warn().Err(err).Send()
 		return nil, status.Errorf(codes.NotFound, err.Error())
+	}
+	if isPlayground && !report.IsPlayground {
+		// cannot fork non-playground report in playground
+		return nil, status.Error(codes.PermissionDenied, "Cannot fork non-playground report in playground")
+	}
+	if !isPlayground && report.IsPlayground {
+		// cannot fork playground report in workspace
+		return nil, status.Error(codes.InvalidArgument, "Cannot fork playground report in workspace")
+	}
+	if report.IsPublic && !report.CanWrite {
+		// cannot fork public report without write permission
+		return nil, status.Error(codes.PermissionDenied, "Cannot fork public report without write permission")
 	}
 	report.Id = newReportID
 	report.Title = fmt.Sprintf("Fork of %s", report.Title)
@@ -318,19 +415,38 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
+		return nil, status.Error(codes.PermissionDenied, "Only admins and editors can update reports")
+	}
 	if req.Report == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "req.Report == nil")
 	}
-	result, err := s.db.ExecContext(ctx,
-		`update
+	var result sql.Result
+	var err error
+	if checkWorkspace(ctx).IsPlayground {
+		result, err = s.db.ExecContext(ctx,
+			`update
 			reports
 		set map_config=$1, title=$2
-		where id=$3 and (author_email=$4 or allow_edit)`,
-		req.Report.MapConfig,
-		req.Report.Title,
-		req.Report.Id,
-		claims.Email,
-	)
+		where id=$3 and author_email=$4 and is_playground=true`,
+			req.Report.MapConfig,
+			req.Report.Title,
+			req.Report.Id,
+			claims.Email,
+		)
+	} else {
+		result, err = s.db.ExecContext(ctx,
+			`update
+			reports
+		set map_config=$1, title=$2
+		where id=$3 and (author_email=$4 or allow_edit) and workspace_id=$5`,
+			req.Report.MapConfig,
+			req.Report.Title,
+			req.Report.Id,
+			claims.Email,
+			checkWorkspace(ctx).ID,
+		)
+	}
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
@@ -365,6 +481,10 @@ func (s Server) SetDiscoverable(ctx context.Context, req *proto.SetDiscoverableR
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	if checkWorkspace(ctx).ID == "" {
+		log.Warn().Msg("Workspace not found")
+		return nil, status.Error(codes.NotFound, "Workspace not found")
+	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
@@ -385,11 +505,12 @@ func (s Server) SetDiscoverable(ctx context.Context, req *proto.SetDiscoverableR
 		return nil, status.Error(codes.PermissionDenied, "Cannot set discoverable")
 	}
 	res, err := s.db.ExecContext(ctx,
-		`update reports set discoverable=$1, allow_edit=$2 where id=$3 and author_email=$4`, // only author can change discoverable and allow_edit
+		`update reports set discoverable=$1, allow_edit=$2 where id=$3 and author_email=$4 and workspace_id=$5`,
 		req.Discoverable,
 		req.AllowEdit,
 		req.ReportId,
 		claims.Email,
+		checkWorkspace(ctx).ID,
 	)
 	if err != nil {
 		log.Err(err).Send()
@@ -423,12 +544,23 @@ func (s Server) ArchiveReport(ctx context.Context, req *proto.ArchiveReportReque
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
 	}
-	result, err := s.db.ExecContext(ctx,
-		"update reports set archived=$1 where id=$2 and author_email=$3", // only author can archive
-		req.Archive,
-		req.ReportId,
-		claims.Email,
-	)
+	var result sql.Result
+	if checkWorkspace(ctx).IsPlayground {
+		result, err = s.db.ExecContext(ctx,
+			"update reports set archived=$1 where id=$2 and author_email=$3 and is_playground=true",
+			req.Archive,
+			req.ReportId,
+			claims.Email,
+		)
+	} else {
+		result, err = s.db.ExecContext(ctx,
+			"update reports set archived=$1 where id=$2 and author_email=$3 and workspace_id=$4",
+			req.Archive,
+			req.ReportId,
+			claims.Email,
+			checkWorkspace(ctx).ID,
+		)
+	}
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())

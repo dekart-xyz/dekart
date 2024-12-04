@@ -10,11 +10,12 @@ import { closeDatasetSettingsModal, removeDataset, updateDatasetName } from './a
 function ModalFooter ({ saving, setSaving, name, datasetId }) {
   const dispatch = useDispatch()
   const numDatasets = useSelector(state => state.dataset.list.length)
+  const isViewer = useSelector(state => state.user.isViewer)
 
   return (
     <div className={styles.modalFooter}>
       <Button
-        disabled={saving}
+        disabled={saving || isViewer}
         id='dekart-save-dataset-name-button'
         onClick={() => {
           setSaving(true)

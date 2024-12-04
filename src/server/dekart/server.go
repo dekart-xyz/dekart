@@ -150,6 +150,11 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 			userDefinedConnection = "1"
 		}
 
+		var allowWorkspaceCreation string
+		if user.CanCreateWorkspace() {
+			allowWorkspaceCreation = "1"
+		}
+
 		variables = []*proto.GetEnvResponse_Variable{
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_MAPBOX_TOKEN,
@@ -230,6 +235,14 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_UX_DISABLE_VERSION_CHECK,
 				Value: defaultString(os.Getenv("DEKART_UX_DISABLE_VERSION_CHECK"), ""),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_ALLOW_WORKSPACE_CREATION,
+				Value: allowWorkspaceCreation,
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_WORKSPACE_DEFAULT_ROLE,
+				Value: user.GetWorkspaceDefaultRole().String(),
 			},
 		}
 

@@ -244,6 +244,78 @@ Dekart.SetDefaultConnection = {
   responseType: proto_dekart_pb.SetDefaultConnectionResponse
 };
 
+Dekart.RespondToInvite = {
+  methodName: "RespondToInvite",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.RespondToInviteRequest,
+  responseType: proto_dekart_pb.RespondToInviteResponse
+};
+
+Dekart.CreateSubscription = {
+  methodName: "CreateSubscription",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.CreateSubscriptionRequest,
+  responseType: proto_dekart_pb.CreateSubscriptionResponse
+};
+
+Dekart.GetStripePortalSession = {
+  methodName: "GetStripePortalSession",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.GetStripePortalSessionRequest,
+  responseType: proto_dekart_pb.GetStripePortalSessionResponse
+};
+
+Dekart.CreateWorkspace = {
+  methodName: "CreateWorkspace",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.CreateWorkspaceRequest,
+  responseType: proto_dekart_pb.CreateWorkspaceResponse
+};
+
+Dekart.UpdateWorkspace = {
+  methodName: "UpdateWorkspace",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.UpdateWorkspaceRequest,
+  responseType: proto_dekart_pb.UpdateWorkspaceResponse
+};
+
+Dekart.GetWorkspace = {
+  methodName: "GetWorkspace",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.GetWorkspaceRequest,
+  responseType: proto_dekart_pb.GetWorkspaceResponse
+};
+
+Dekart.UpdateWorkspaceUser = {
+  methodName: "UpdateWorkspaceUser",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.UpdateWorkspaceUserRequest,
+  responseType: proto_dekart_pb.UpdateWorkspaceUserResponse
+};
+
+Dekart.PublishReport = {
+  methodName: "PublishReport",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.PublishReportRequest,
+  responseType: proto_dekart_pb.PublishReportResponse
+};
+
 exports.Dekart = Dekart;
 
 function DekartClient(serviceHost, options) {
@@ -1055,6 +1127,254 @@ DekartClient.prototype.setDefaultConnection = function setDefaultConnection(requ
     callback = arguments[1];
   }
   var client = grpc.unary(Dekart.SetDefaultConnection, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.respondToInvite = function respondToInvite(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.RespondToInvite, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.createSubscription = function createSubscription(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.CreateSubscription, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.getStripePortalSession = function getStripePortalSession(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.GetStripePortalSession, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.createWorkspace = function createWorkspace(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.CreateWorkspace, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.updateWorkspace = function updateWorkspace(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.UpdateWorkspace, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.getWorkspace = function getWorkspace(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.GetWorkspace, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.updateWorkspaceUser = function updateWorkspaceUser(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.UpdateWorkspaceUser, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.publishReport = function publishReport(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.PublishReport, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,

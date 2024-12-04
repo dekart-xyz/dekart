@@ -209,7 +209,8 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 			updated_at,
 			author_email,
 			(select count(*) from datasets where connection_id=connections.id) as dataset_count
-		from connections where archived=false order by created_at desc`,
+		from connections where archived=false and workspace_id=$1 order by created_at desc`,
+		checkWorkspace(ctx).ID,
 	)
 	if err != nil {
 		if err == context.Canceled {
@@ -331,6 +332,9 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "only admins can edit connections")
+	}
 
 	err := validateReqConnection(req.Connection)
 	if err != nil {
@@ -436,13 +440,18 @@ func (s Server) ArchiveConnection(ctx context.Context, req *proto.ArchiveConnect
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "only admins can edit connections")
+	}
+	workspaceInfo := checkWorkspace(ctx)
 	res, err := s.db.ExecContext(ctx,
 		`update connections set
 			archived=true,
 			updated_at=CURRENT_TIMESTAMP
-		where id=$1`,
+		where id=$1 and author_email=$2 and workspace_id=$3`,
 		req.ConnectionId,
 		claims.Email,
+		workspaceInfo.ID,
 	)
 	if err != nil {
 		log.Err(err).Send()
@@ -485,6 +494,10 @@ func (s Server) GetConnectionList(ctx context.Context, req *proto.GetConnectionL
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
+	}
+	if checkWorkspace(ctx).ID == "" {
+		log.Warn().Msg("workspace not found when getting connection list")
+		return nil, status.Error(codes.NotFound, "workspace not found")
 	}
 	connections, err := s.getConnections(ctx)
 	if err != nil {
@@ -569,6 +582,12 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	if checkWorkspace(ctx).ID == "" {
+		return nil, status.Error(codes.NotFound, "workspace not found")
+	}
+	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "only admins can create connections")
+	}
 	err := validateReqConnection(req.Connection)
 	if err != nil {
 		return nil, err
@@ -587,8 +606,9 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 			snowflake_username,
 			snowflake_warehouse,
 			snowflake_password_encrypted,
-			author_email
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+			author_email,
+			workspace_id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
 		id,
 		req.Connection.ConnectionName,
 		req.Connection.BigqueryProjectId,
@@ -599,6 +619,7 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 		req.Connection.SnowflakeWarehouse,
 		secrets.SecretToServerEncrypted(req.Connection.SnowflakePassword, claims),
 		claims.Email,
+		checkWorkspace(ctx).ID,
 	)
 	if err != nil {
 		log.Err(err).Send()

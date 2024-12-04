@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/conn"
+	"dekart/src/server/deadline"
 	"dekart/src/server/errtype"
 	"dekart/src/server/snowflakeutils"
 	"encoding/csv"
@@ -124,8 +125,8 @@ func (s SnowflakeStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, e
 
 	log.Debug().Str("queryID", s.queryID).Time("createdAt", createdAt).Msg("GetCreatedAt")
 
-	//check if query is older than 1 day (minus 1 hour for safety)
-	if time.Since(createdAt) > 23*time.Hour {
+	//check if query is too old
+	if time.Since(createdAt) > deadline.GetQueryCacheDeadline() {
 		return nil, &errtype.Expired{}
 	}
 	return &createdAt, nil

@@ -6,7 +6,7 @@ import Radio from 'antd/es/radio'
 import Result from 'antd/es/result'
 import Table from 'antd/es/table'
 import { useDispatch, useSelector } from 'react-redux'
-import { PlusOutlined, FileSearchOutlined, UsergroupAddOutlined, ApiTwoTone, LockOutlined, TeamOutlined } from '@ant-design/icons'
+import { PlusOutlined, FileSearchOutlined, UsergroupAddOutlined, ApiTwoTone, LockOutlined, TeamOutlined, GlobalOutlined } from '@ant-design/icons'
 import DataDocumentationLink from './DataDocumentationLink'
 import Switch from 'antd/es/switch'
 import { archiveReport, subscribeReports, unsubscribeReports, createReport } from './actions/report'
@@ -14,10 +14,11 @@ import { editConnection, newConnection, newConnectionScreen, setDefaultConnectio
 import ConnectionModal from './ConnectionModal'
 import Tooltip from 'antd/es/tooltip'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
-import { Connection } from '../proto/dekart_pb'
 import Onboarding from './Onboarding'
 import { DatasourceIcon } from './Datasource'
-import NewVersion from './NewVersion'
+import { Connection, PlanType } from '../proto/dekart_pb'
+import { track } from './lib/tracking'
+import { If } from './lib/helperElements'
 
 function Loading () {
   return null
@@ -44,6 +45,9 @@ const columns = [
   {
     dataIndex: 'icon',
     render: (t, report) => {
+      if (report.isPlayground || report.isPublic) {
+        return <GlobalOutlined title='This report accessible outside of workspace' />
+      }
       if (report.discoverable) {
         return <TeamOutlined title='This report is discoverable by others users in the workspace' />
       }
@@ -66,8 +70,8 @@ const columns = [
     render: (t, item) => (
       <div
         title={
-      `Created by ${item.authorEmail} at ${new Date(item.createdAt * 1000).toLocaleString()}, last updated at ${new Date(item.updatedAt * 1000).toLocaleString()}`
-    } className={styles.author}
+          `Created by ${item.authorEmail} at ${new Date(item.createdAt * 1000).toLocaleString()}, last updated at ${new Date(item.updatedAt * 1000).toLocaleString()}`
+        } className={styles.author}
       >{item.authorEmail}
       </div>),
     className: styles.authorColumn
@@ -149,7 +153,10 @@ function getColumns (reportFilter, archived, authEnabled) {
 }
 
 function FirstReportOnboarding () {
+  const isPlayground = useSelector(state => state.user.isPlayground)
   const dispatch = useDispatch()
+  const isViewer = useSelector(state => state.user.isViewer)
+  const isSelfHosted = useSelector(state => state.user.isSelfHosted)
   return (
     <>
       <Result
@@ -158,7 +165,8 @@ function FirstReportOnboarding () {
         subTitle='Everything is ready to create you first map.'
         extra={(
           <>
-            <Button icon={<PlusOutlined />} id='dekart-create-report' type='primary' onClick={() => dispatch(createReport())}>Create report</Button>
+            <Button icon={<PlusOutlined />} disabled={isViewer} type='primary' id='dekart-create-report' onClick={() => dispatch(createReport())}>Create report</Button>
+            <If condition={isPlayground && !isSelfHosted}><div className={styles.stepBySetLink}><a target='_blank' href='https://dekart.xyz/docs/about/playground/#quick-start' rel='noreferrer'>Check step-by-step guide</a></div></If>
           </>
         )}
       />
@@ -167,35 +175,56 @@ function FirstReportOnboarding () {
   )
 }
 
+function ConnectionTypeSelectorBottom () {
+  const dispatch = useDispatch()
+  const planType = useSelector(state => state.user.stream.planType)
+  const showCancel = useSelector(state => state.connection.list).length > 0
+  if (showCancel) {
+    return (
+      <div className={styles.connectionSelectorBack}>
+        <Button type='ghost' onClick={() => dispatch(newConnectionScreen(false))}>Return back</Button>
+      </div>
+    )
+  }
+  if (planType === PlanType.TYPE_PERSONAL) {
+    return (
+      <div className={styles.notSure}>
+        <p>or</p>
+        <Button ghost type='primary' href='https://dekart.xyz/self-hosted/?ref=ConnectionTypeSelector' target='_blank'>Get Started with Self-Hosting</Button>
+      </div>
+    )
+  }
+  return null
+}
+
 // selects between Google Cloud and Snowflake
 function ConnectionTypeSelector () {
-  const connectionList = useSelector(state => state.connection.list)
-  const { DATASOURCE } = useSelector(state => state.env.variables)
-  const showCancel = connectionList.length > 0 // show cancel button if there are connections
   const dispatch = useDispatch()
+  const planType = useSelector(state => state.user.stream.planType)
+  useEffect(() => {
+    track('ConnectionTypeSelector')
+  }, [])
   return (
     <>
-      {
-        DATASOURCE === 'USER'
-          ? (
-            <div className={styles.connectionTypeSelector}>
-              <Button icon={<DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY} />} size='large' onClick={() => dispatch(newConnection(Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY))}>BigQuery</Button>
-              <Button icon={<DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE} />} size='large' onClick={() => dispatch(newConnection(Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE))}>Snowflake</Button>
-            </div>
-            )
-          : ( // by default only BQ
-            <div className={styles.connectionTypeSelector}>
-              <Button icon={<DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY} />} size='large' onClick={() => dispatch(newConnection(Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY))}>BigQuery</Button>
-            </div>
-            )
-      }
-      {showCancel
-        ? (
-          <div>
-            <Button type='link' onClick={() => dispatch(newConnectionScreen(false))}>Return back</Button>
-          </div>
-          )
-        : null}
+      <div className={styles.connectionTypeSelector}>
+        <Button
+          icon={<DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY} />} size='large' onClick={() => {
+            track('ConnectionTypeSelectorBigQuery')
+            dispatch(newConnection(Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY))
+          }}
+        >BigQuery
+        </Button>
+        <If condition={planType !== PlanType.TYPE_SELF_HOSTED}>
+          <Button
+            icon={<DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE} />} size='large' onClick={() => {
+              track('ConnectionTypeSelectorSnowflake')
+              dispatch(newConnection(Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE))
+            }}
+          >Snowflake
+          </Button>
+        </If>
+      </div>
+      <ConnectionTypeSelectorBottom />
     </>
   )
 }
@@ -217,51 +246,56 @@ function CreateConnection () {
 function ReportsHeader (
   { reportFilter, archived, setArchived }
 ) {
-  const { authEnabled } = useSelector(state => state.env)
   const connectionList = useSelector(state => state.connection.list)
   const reportsList = useSelector(state => state.reportsList)
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
-
   const dispatch = useDispatch()
   const history = useHistory()
+  const { isAdmin, isViewer } = useSelector(state => state.user)
+
+  const userStream = useSelector(state => state.user.stream)
+  if (!userStream) {
+    return null
+  }
+
   return (
     <div className={styles.reportsHeader}>
       {
-      authEnabled
-        ? (
-          <Radio.Group
-            value={reportFilter} onChange={(e) => {
-              switch (e.target.value) {
-                case 'my':
-                  history.push('/')
-                  break
-                case 'discoverable':
-                  history.push('/shared')
-                  break
-                case 'connections':
-                  history.push('/connections')
-                  break
-                default:
+        userStream.planType > PlanType.TYPE_UNSPECIFIED
+          ? (
+            <Radio.Group
+              value={reportFilter} onChange={(e) => {
+                switch (e.target.value) {
+                  case 'my':
+                    history.push('/')
+                    break
+                  case 'discoverable':
+                    history.push('/shared')
+                    break
+                  case 'connections':
+                    history.push('/connections')
+                    break
+                  default:
                   // do nothing
+                }
+              }}
+            >
+              <Radio.Button value='my'>My Reports</Radio.Button>
+              <Radio.Button value='discoverable'>Shared Reports</Radio.Button>
+              {
+                connectionList && userDefinedConnection ? <Radio.Button value='connections'>Connections</Radio.Button> : null
               }
-            }}
-          >
-            <Radio.Button value='my'>My Reports</Radio.Button>
-            <Radio.Button value='discoverable'>Shared Reports</Radio.Button>
-            {
-              connectionList && userDefinedConnection ? <Radio.Button value='connections'>Connections</Radio.Button> : null
-            }
-          </Radio.Group>
+            </Radio.Group>
 
-          )
-        : (
-          <div className={styles.reportsHeaderTitle}>Manage reports</div>
-          )
+            )
+          : (
+            <div className={styles.reportsHeaderTitle}>{reportFilter === 'connections' ? 'Connection' : 'Reports'}</div>
+            )
       }
       <div className={styles.rightCornerAction}>
         {
           reportFilter === 'connections'
-            ? <Button onClick={() => { dispatch(newConnectionScreen(true)) }}>New Connection</Button>
+            ? <Button disabled={!isAdmin} onClick={() => { dispatch(newConnectionScreen(true)) }}>New Connection</Button>
             : (
               <>
                 {
@@ -274,7 +308,7 @@ function ReportsHeader (
                       )
                     : null
                 }
-                <Button id='dekart-create-report' onClick={() => dispatch(createReport())}>New Report</Button>
+                <Button id='dekart-create-report' disabled={isViewer} onClick={() => dispatch(createReport())}>New Report</Button>
               </>
               )
         }
@@ -291,6 +325,7 @@ function Reports ({ createReportButton, reportFilter }) {
   const connectionList = useSelector(state => state.connection.list)
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const newConnectionScreen = useSelector(state => state.connection.screen)
+  const isAdmin = useSelector(state => state.user.isAdmin)
   useEffect(() => {
     if (reportsList.archived.length === 0) {
       setArchived(false)
@@ -299,7 +334,7 @@ function Reports ({ createReportButton, reportFilter }) {
   if (!envLoaded) {
     return null
   }
-  if ((userDefinedConnection && connectionList.length === 0) || newConnectionScreen) {
+  if ((userDefinedConnection && connectionList.length === 0 && isAdmin) || newConnectionScreen) {
     return (
       <div className={styles.reports}>
         <CreateConnection />
@@ -354,7 +389,7 @@ function OnboardingMyReports () {
           <li>Save the report and give it a relevant name.</li>
           <li>Your report will appear here.</li>
         </ol>
-          }
+      }
     />
   )
 }
@@ -370,13 +405,14 @@ function OnboardingDiscoverableReports () {
           <li>In a pop-up window select the option to make the report discoverable.</li>
           <li>Shared reports will appear in this tab for all users.</li>
         </ol>
-            }
+      }
     />
   )
 }
 
 export default function HomePage ({ reportFilter }) {
   const reportsList = useSelector(state => state.reportsList)
+  const isPlayground = useSelector(state => state.user.isPlayground)
   const connectionsLoaded = useSelector(state => state.connection.listLoaded)
   const dispatch = useDispatch()
   const body = useRef()
@@ -389,10 +425,9 @@ export default function HomePage ({ reportFilter }) {
       <Header />
       <div className={styles.body}>
         {
-          reportsList.loaded && connectionsLoaded
+          reportsList.loaded && (connectionsLoaded || isPlayground)
             ? (
               <>
-                <NewVersion />
                 <ConnectionModal />
                 <Reports
                   reportsList={reportsList}

@@ -2,6 +2,7 @@
 const SESSION_STORAGE_KEY = 'dekart-session-storage-v1'
 
 const initialState = {
+  isPlayground: false,
   lastOpenedDialog: null // connection dialog state
 }
 

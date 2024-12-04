@@ -23,6 +23,16 @@
     word-break: break-all;
 }
 
+.playgroundWarning p {
+    padding-left: 18px;
+    word-break: normal;
+
+}
+.playgroundWarning{
+    padding: 10px 0;
+    margin-left: 10px;
+    font-size: 0.8em;
+}
 .errorInfoHtml {
     margin-left: 28px;
     padding: 10px 0;

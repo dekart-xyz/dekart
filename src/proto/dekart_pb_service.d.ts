@@ -238,6 +238,78 @@ type DekartSetDefaultConnection = {
   readonly responseType: typeof proto_dekart_pb.SetDefaultConnectionResponse;
 };
 
+type DekartRespondToInvite = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.RespondToInviteRequest;
+  readonly responseType: typeof proto_dekart_pb.RespondToInviteResponse;
+};
+
+type DekartCreateSubscription = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.CreateSubscriptionRequest;
+  readonly responseType: typeof proto_dekart_pb.CreateSubscriptionResponse;
+};
+
+type DekartGetStripePortalSession = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.GetStripePortalSessionRequest;
+  readonly responseType: typeof proto_dekart_pb.GetStripePortalSessionResponse;
+};
+
+type DekartCreateWorkspace = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.CreateWorkspaceRequest;
+  readonly responseType: typeof proto_dekart_pb.CreateWorkspaceResponse;
+};
+
+type DekartUpdateWorkspace = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.UpdateWorkspaceRequest;
+  readonly responseType: typeof proto_dekart_pb.UpdateWorkspaceResponse;
+};
+
+type DekartGetWorkspace = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.GetWorkspaceRequest;
+  readonly responseType: typeof proto_dekart_pb.GetWorkspaceResponse;
+};
+
+type DekartUpdateWorkspaceUser = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.UpdateWorkspaceUserRequest;
+  readonly responseType: typeof proto_dekart_pb.UpdateWorkspaceUserResponse;
+};
+
+type DekartPublishReport = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.PublishReportRequest;
+  readonly responseType: typeof proto_dekart_pb.PublishReportResponse;
+};
+
 export class Dekart {
   static readonly serviceName: string;
   static readonly CreateReport: DekartCreateReport;
@@ -266,6 +338,14 @@ export class Dekart {
   static readonly GetConnectionList: DekartGetConnectionList;
   static readonly TestConnection: DekartTestConnection;
   static readonly SetDefaultConnection: DekartSetDefaultConnection;
+  static readonly RespondToInvite: DekartRespondToInvite;
+  static readonly CreateSubscription: DekartCreateSubscription;
+  static readonly GetStripePortalSession: DekartGetStripePortalSession;
+  static readonly CreateWorkspace: DekartCreateWorkspace;
+  static readonly UpdateWorkspace: DekartUpdateWorkspace;
+  static readonly GetWorkspace: DekartGetWorkspace;
+  static readonly UpdateWorkspaceUser: DekartUpdateWorkspaceUser;
+  static readonly PublishReport: DekartPublishReport;
 }
 
 export type ServiceError = { message: string, code: number; metadata: grpc.Metadata }
@@ -509,6 +589,78 @@ export class DekartClient {
   setDefaultConnection(
     requestMessage: proto_dekart_pb.SetDefaultConnectionRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.SetDefaultConnectionResponse|null) => void
+  ): UnaryResponse;
+  respondToInvite(
+    requestMessage: proto_dekart_pb.RespondToInviteRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.RespondToInviteResponse|null) => void
+  ): UnaryResponse;
+  respondToInvite(
+    requestMessage: proto_dekart_pb.RespondToInviteRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.RespondToInviteResponse|null) => void
+  ): UnaryResponse;
+  createSubscription(
+    requestMessage: proto_dekart_pb.CreateSubscriptionRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateSubscriptionResponse|null) => void
+  ): UnaryResponse;
+  createSubscription(
+    requestMessage: proto_dekart_pb.CreateSubscriptionRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateSubscriptionResponse|null) => void
+  ): UnaryResponse;
+  getStripePortalSession(
+    requestMessage: proto_dekart_pb.GetStripePortalSessionRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetStripePortalSessionResponse|null) => void
+  ): UnaryResponse;
+  getStripePortalSession(
+    requestMessage: proto_dekart_pb.GetStripePortalSessionRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetStripePortalSessionResponse|null) => void
+  ): UnaryResponse;
+  createWorkspace(
+    requestMessage: proto_dekart_pb.CreateWorkspaceRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateWorkspaceResponse|null) => void
+  ): UnaryResponse;
+  createWorkspace(
+    requestMessage: proto_dekart_pb.CreateWorkspaceRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CreateWorkspaceResponse|null) => void
+  ): UnaryResponse;
+  updateWorkspace(
+    requestMessage: proto_dekart_pb.UpdateWorkspaceRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateWorkspaceResponse|null) => void
+  ): UnaryResponse;
+  updateWorkspace(
+    requestMessage: proto_dekart_pb.UpdateWorkspaceRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateWorkspaceResponse|null) => void
+  ): UnaryResponse;
+  getWorkspace(
+    requestMessage: proto_dekart_pb.GetWorkspaceRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetWorkspaceResponse|null) => void
+  ): UnaryResponse;
+  getWorkspace(
+    requestMessage: proto_dekart_pb.GetWorkspaceRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetWorkspaceResponse|null) => void
+  ): UnaryResponse;
+  updateWorkspaceUser(
+    requestMessage: proto_dekart_pb.UpdateWorkspaceUserRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateWorkspaceUserResponse|null) => void
+  ): UnaryResponse;
+  updateWorkspaceUser(
+    requestMessage: proto_dekart_pb.UpdateWorkspaceUserRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateWorkspaceUserResponse|null) => void
+  ): UnaryResponse;
+  publishReport(
+    requestMessage: proto_dekart_pb.PublishReportRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.PublishReportResponse|null) => void
+  ): UnaryResponse;
+  publishReport(
+    requestMessage: proto_dekart_pb.PublishReportRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.PublishReportResponse|null) => void
   ): UnaryResponse;
 }
 

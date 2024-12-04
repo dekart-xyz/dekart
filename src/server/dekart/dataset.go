@@ -268,6 +268,20 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 func (s Server) insertDataset(ctx context.Context, reportID string) (res sql.Result, err error) {
 	id := newUUID()
 	claims := user.GetClaims(ctx)
+	if checkWorkspace(ctx).IsPlayground {
+		return s.db.ExecContext(ctx,
+			`insert into datasets (id, report_id)
+			select
+				$1 as id,
+				id as report_id
+			from reports
+			where id=$2 and not archived and author_email=$3 or allow_edit and is_playground=true limit 1
+			`,
+			id,
+			reportID,
+			claims.Email,
+		)
+	}
 	connection, err := s.getDefaultConnection(ctx)
 	if err != nil {
 		return nil, err
@@ -279,26 +293,28 @@ func (s Server) insertDataset(ctx context.Context, reportID string) (res sql.Res
 			$1 as id,
 			id as report_id
 		from reports
-		where id=$2 and not archived and (author_email=$3 or allow_edit) limit 1
+		where id=$2 and not archived and (author_email=$3 or allow_edit) and workspace_id=$4 limit 1
 		`,
 			id,
 			reportID,
 			claims.Email,
+			checkWorkspace(ctx).ID,
 		)
 	}
 	return s.db.ExecContext(ctx,
 		`insert into datasets (id, report_id, connection_id)
-	select
-		$1 as id,
-		id as report_id,
-		$4 as connection_id
-	from reports
-	where id=$2 and not archived and (author_email=$3 or allow_edit) limit 1
+			select
+				$1 as id,
+				id as report_id,
+				$4 as connection_id
+			from reports
+			where id=$2 and not archived and (author_email=$3 or allow_edit) and workspace_id=$5 limit 1
 	`,
 		id,
 		reportID,
 		claims.Email,
 		connection.Id,
+		checkWorkspace(ctx).ID,
 	)
 }
 
@@ -422,6 +438,11 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if connection.Id == "default" {
+		// dataset has no connection, it means it's a playground dataset
+		userCtx = user.SetWorkspaceCtx(userCtx, user.WorkspaceInfo{IsPlayground: true})
+	}
+
 	bucketName := s.getBucketNameFromConnection(connection)
 
 	userConCtx := conn.GetCtx(userCtx, connection)
@@ -434,7 +455,12 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 
 	var obj storage.StorageObject
 
-	if dwJobID != "" {
+	if report.IsPublic {
+		// public report, load from public storage bucket
+		log.Debug().Str("source", vars["source"]).Msg("Serving dataset source from public storage")
+		publicStorage := storage.NewPublicStorage()
+		obj = publicStorage.GetObject(userCtx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
+	} else if dwJobID != "" {
 		// temp data warehouse table is used as source
 		log.Debug().Str("source", vars["source"]).Msg("Serving dataset source from temporary storage")
 		obj = s.storage.GetObject(userConCtx, bucketName, dwJobID)

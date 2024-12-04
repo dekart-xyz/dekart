@@ -15,9 +15,9 @@ jobs:
             echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > .npmrc
             echo "@dekart-xyz:registry=https://npm.pkg.github.com" >> .npmrc
           else
-            echo "Using NPM_GH_TOKEN"            
+            echo "Using NPM_GH_TOKEN"
             echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_GH_TOKEN }}" > .npmrc
-            echo "@dekart-xyz:registry=https://npm.pkg.github.com" >> .npmrc            
+            echo "@dekart-xyz:registry=https://npm.pkg.github.com" >> .npmrc
           fi
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2

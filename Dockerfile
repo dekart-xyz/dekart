@@ -17,7 +17,7 @@ RUN npm run build
 FROM nodedeps AS nodetest
 RUN npm run test
 
-FROM golang:1.20 AS godeps
+FROM golang:1.21 AS godeps
 
 # Install necessary packages for CGO
 RUN apt-get update && apt-get install -y gcc

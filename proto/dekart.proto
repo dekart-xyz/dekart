@@ -43,6 +43,127 @@ service Dekart {
     rpc GetConnectionList(GetConnectionListRequest) returns (GetConnectionListResponse) {}
     rpc TestConnection(TestConnectionRequest) returns (TestConnectionResponse) {}
     rpc SetDefaultConnection(SetDefaultConnectionRequest) returns (SetDefaultConnectionResponse) {}
+
+    //CLOUD
+
+    //user
+    rpc RespondToInvite(RespondToInviteRequest) returns (RespondToInviteResponse) {}
+
+    //subscriptions
+    rpc CreateSubscription(CreateSubscriptionRequest) returns (CreateSubscriptionResponse) {}
+    rpc GetStripePortalSession(GetStripePortalSessionRequest) returns (GetStripePortalSessionResponse) {}
+
+    //workspace
+    rpc CreateWorkspace(CreateWorkspaceRequest) returns (CreateWorkspaceResponse) {}
+    rpc UpdateWorkspace(UpdateWorkspaceRequest) returns (UpdateWorkspaceResponse) {}
+    rpc GetWorkspace(GetWorkspaceRequest) returns (GetWorkspaceResponse) {}
+    rpc UpdateWorkspaceUser(UpdateWorkspaceUserRequest) returns (UpdateWorkspaceUserResponse) {}
+
+    //reports
+    rpc PublishReport(PublishReportRequest) returns (PublishReportResponse) {}
+}
+
+message PublishReportRequest {
+    string report_id = 1;
+    bool publish = 2;
+}
+
+message PublishReportResponse {
+}
+
+message GetStripePortalSessionRequest {
+    string ui_url = 1;
+}
+
+message GetStripePortalSessionResponse {
+    string url = 1;
+}
+
+message UpdateWorkspaceUserRequest {
+    string email = 1;
+    enum UserUpdateType {
+        USER_UPDATE_TYPE_UNSPECIFIED = 0;
+        USER_UPDATE_TYPE_ADD = 1;
+        USER_UPDATE_TYPE_REMOVE = 2;
+        USER_UPDATE_TYPE_UPDATE = 3;
+    }
+    UserUpdateType user_update_type = 2;
+    UserRole role = 3;
+}
+
+message UpdateWorkspaceUserResponse {
+}
+
+message GetWorkspaceRequest {
+}
+
+message GetWorkspaceResponse {
+    Workspace Workspace = 1;
+    Subscription subscription = 2;
+    repeated User users = 3;
+    repeated WorkspaceInvite invites = 4;
+    int64 added_users_count = 5; // to not duplicate count logic in UI
+}
+
+message CreateWorkspaceRequest {
+    string workspace_name = 1;
+}
+
+message CreateWorkspaceResponse {
+}
+
+message UpdateWorkspaceRequest {
+    string workspace_name = 1;
+}
+
+message UpdateWorkspaceResponse {
+}
+
+message RespondToInviteRequest {
+    string invite_id = 1;
+    bool accept = 2;
+}
+
+message RespondToInviteResponse {
+
+}
+
+message GetInvitesRequest {
+}
+
+message WorkspaceInvite {
+    string workspace_id = 1;
+    string invite_id = 2;
+    string inviter_email = 3;
+    string workspace_name = 4;
+    int64 created_at = 5;
+}
+
+message GetInvitesResponse {
+    repeated WorkspaceInvite invites = 1;
+}
+
+enum UserStatus {
+    USER_STATUS_UNSPECIFIED = 0;
+    USER_STATUS_PENDING = 1;
+    USER_STATUS_ACTIVE = 2;
+    USER_STATUS_REMOVED = 3;
+    USER_STATUS_REJECTED = 4;
+}
+
+enum UserRole {
+    ROLE_UNSPECIFIED = 0;
+    ROLE_ADMIN = 1;
+    ROLE_EDITOR = 2;
+    ROLE_VIEWER = 3;
+}
+
+message User {
+    string email = 1;
+    int64 updated_at = 2;
+    UserStatus status = 3;
+    string invite_id = 4;
+    UserRole role = 5;
 }
 
 message GetGcpProjectListRequest {
@@ -64,6 +185,40 @@ message RunAllQueriesRequest {
 }
 
 message RunAllQueriesResponse {
+
+}
+
+message Workspace {
+    string id = 1;
+    string name = 2;
+}
+
+message Subscription {
+    PlanType plan_type = 2;
+    int64 updated_at = 4; //seconds
+    string customer_id = 6;
+    string stripe_subscription_id = 7;
+    string stripe_customer_email = 8;
+    int64 cancel_at = 9; //seconds
+    string item_id = 10; // stripe subscription item id
+}
+
+enum PlanType {
+    TYPE_UNSPECIFIED = 0;
+    TYPE_PERSONAL = 1;
+    TYPE_TEAM = 2;
+    TYPE_GROW = 3;
+    TYPE_MAX = 4;
+    TYPE_SELF_HOSTED = 5;
+}
+
+message CreateSubscriptionRequest {
+    PlanType plan_type = 1;
+    string ui_url = 2;
+}
+
+message CreateSubscriptionResponse {
+    string redirect_url = 1;
 }
 
 message GetConnectionListRequest {
@@ -80,6 +235,12 @@ message GetUserStreamResponse {
     StreamOptions stream_options = 1;
     int64 connection_update = 2;
     string email = 3; // user email used to show user icon in UI
+    string workspace_id = 4;
+    PlanType plan_type = 5;
+    int64 workspace_update = 6; // includes invites, members and subscription
+    UserRole role = 7;
+    bool is_playground = 8;
+    bool is_default_workspace = 9;
 }
 
 message TestConnectionRequest {
@@ -199,6 +360,8 @@ message GetEnvResponse {
             TYPE_AUTH_ENABLED = 18;
             TYPE_USER_DEFINED_CONNECTION = 19;
             TYPE_UX_DISABLE_VERSION_CHECK = 20;
+            TYPE_ALLOW_WORKSPACE_CREATION = 21;
+            TYPE_WORKSPACE_DEFAULT_ROLE = 22;
         }
         Type type = 1;
         string value = 2;
@@ -260,6 +423,8 @@ message Report {
     int64 updated_at = 11;
     bool is_sharable = 12; // can be shared with other users (depends where result is stored)
     bool need_sensitive_scope = 13; // need sensitive scope to run queries and read results
+    bool is_playground = 14; // true - playground, false - workspace
+    bool is_public = 15; // true - public, false - private
 }
 
 message Dataset {

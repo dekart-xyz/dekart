@@ -32,6 +32,11 @@ func (s Server) ServeQuerySource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if connection.Id == "default" {
+		// dataset has no connection, it means it's a playground dataset
+		ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{IsPlayground: true})
+	}
+
 	conCtx := conn.GetCtx(ctx, connection)
 	bucketName := s.getBucketNameFromConnection(connection)
 
@@ -95,7 +100,7 @@ func (s Server) storeQuerySync(ctx context.Context, queryID string, queryText st
 }
 
 func (s Server) storeQuery(userCtx context.Context, reportID string, queryID string, queryText string, prevQuerySourceId string) {
-	ctx, cancel := context.WithTimeout(user.CopyClaims(userCtx, context.Background()), time.Second*5)
+	ctx, cancel := context.WithTimeout(user.CopyUserContext(userCtx, context.Background()), time.Second*5)
 	defer cancel()
 
 	err := s.storeQuerySync(ctx, queryID, queryText, prevQuerySourceId)

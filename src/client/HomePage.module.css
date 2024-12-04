@@ -92,6 +92,14 @@
 }
 
 
+.connectionSelectorBack {
+    margin-top: 30px;
+}
+
+.notSure {
+    text-align: center;
+}
+
 .authorColumn {
     font-size: 0.9em;
     opacity: 0.7;
@@ -131,6 +139,15 @@
 .onboardingTitle {
     font-size: 24px;
     margin-bottom: 10px;
+}
+.newRelease {
+    background-color: white;
+    width: 900px;
+    padding: 20px;
+    padding-left: 82px;
+    margin-bottom: 40px;
+    position: relative;
+    box-shadow: 0 5px 9px -1px #B1EDFF;
 }
 
 .reportsHeaderTitle {

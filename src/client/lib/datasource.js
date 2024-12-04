@@ -7,20 +7,13 @@ export function getDatasourceMeta (datasource) {
       return {
         name: 'Snowflake',
         style: 'snowflake',
-        sampleQuery: `-- Instructions:
--- 1. Go to Snowflake Marketplace and search for Overture Maps:
---    https://app.snowflake.com/marketplace/data-products/search?search=overture%20maps%20places
--- 2. Get 'Places' dataset. These dataset will be instantly available in your Snowflake account.
--- 3. Ensure the following GRANT statement is run by ACCOUNTADMIN to allow Dekart to access the dataset:
---    GRANT IMPORTED PRIVILEGES ON DATABASE OVERTURE_MAPS__PLACES TO APPLICATION dekart;
-
--- All restaurants in the world (920,600 points)
+        examplesUrl: 'https://dekart.xyz/docs/about/snowflake-kepler-gl-examples/',
+        sampleQuery: `-- Generate 100 random latitude and longitude points
 SELECT
-    NAMES['primary'] AS name,                      -- Extracts the primary name of the restaurant
-    ST_X(ST_CENTROID(GEOMETRY)) AS longitude,       -- Extracts the longitude (X coordinate) of the centroid
-    ST_Y(ST_CENTROID(GEOMETRY)) AS latitude         -- Extracts the latitude (Y coordinate) of the centroid
-FROM OVERTURE_MAPS__PLACES.CARTO.PLACE
-WHERE categories['primary'] = 'restaurant';         -- Filters only the places categorized as 'restaurant'
+    ROUND(uniform(-90::float, 90::float, random()), 6) AS lat,  -- Generate random latitude between -90 and 90
+    ROUND(uniform(-180::float, 180::float, random()), 6) AS lon  -- Generate random longitude between -180 and 180
+FROM
+    TABLE(GENERATOR(ROWCOUNT => 100));  -- Create 100 rows
 `,
         usageStatsId: 3
       }
@@ -31,6 +24,7 @@ WHERE categories['primary'] = 'restaurant';         -- Filters only the places c
         name: 'BigQuery',
         style: 'bigquery',
         usageStatsId: 2,
+        examplesUrl: 'https://dekart.xyz/docs/about/overture-maps-examples/',
         sampleQuery: `-- Select a random 0.1% sample of crimes from the Chicago crime dataset
 SELECT
     primary_type,  -- Type of crime
