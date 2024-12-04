@@ -156,6 +156,7 @@ function FirstReportOnboarding () {
   const isPlayground = useSelector(state => state.user.isPlayground)
   const dispatch = useDispatch()
   const isViewer = useSelector(state => state.user.isViewer)
+  const isSelfHosted = useSelector(state => state.user.isSelfHosted)
   return (
     <>
       <Result
@@ -165,11 +166,7 @@ function FirstReportOnboarding () {
         extra={(
           <>
             <Button icon={<PlusOutlined />} disabled={isViewer} type='primary' id='dekart-create-report' onClick={() => dispatch(createReport())}>Create report</Button>
-            {isPlayground
-              ? (
-                <div className={styles.stepBySetLink}><a target='_blank' href='https://dekart.xyz/docs/about/playground/#quick-start' rel='noreferrer'>Check step-by-step guide</a></div>
-                )
-              : null}
+            <If condition={isPlayground && !isSelfHosted}><div className={styles.stepBySetLink}><a target='_blank' href='https://dekart.xyz/docs/about/playground/#quick-start' rel='noreferrer'>Check step-by-step guide</a></div></If>
           </>
         )}
       />

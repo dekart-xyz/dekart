@@ -8,6 +8,8 @@ import { CloudTwoTone } from '@ant-design/icons'
 import { useEffect } from 'react'
 import { Redirect } from 'react-router-dom/cjs/react-router-dom'
 import { track } from './lib/tracking'
+import { If } from './lib/helperElements'
+import { PlanType } from '../proto/dekart_pb'
 
 function getLastPage (visitedPages) {
   return visitedPages.current.filter(page => page !== '/grant-scopes').pop()
@@ -17,6 +19,7 @@ export default function GrantScopesPage ({ visitedPages }) {
   const dispatch = useDispatch()
   const sensitiveScopesGranted = useSelector(state => state.user.sensitiveScopesGranted)
   const sensitiveScopesGrantedOnce = useSelector(state => state.user.sensitiveScopesGrantedOnce)
+  const planType = useSelector(state => state.user.planType)
 
   useEffect(() => {
     if (
@@ -50,7 +53,7 @@ export default function GrantScopesPage ({ visitedPages }) {
           subTitle={(
             <>
               <p>Dekart needs access to your <b>BigQuery</b> and <b>Google Cloud Storage</b> to query and store results.<br /> Your token is not stored in Dekart. You can revoke access by signing out of Dekart anytime.</p>
-              <p><a href='https://dekart.xyz/docs/cloud/cloud-security-faq/' target='_blank' rel='noreferrer'>Security Considerations</a></p>
+              <If condition={planType === PlanType.TYPE_SELF_HOSTED}><p><a href='https://dekart.xyz/docs/cloud/cloud-security-faq/' target='_blank' rel='noreferrer'>Security Considerations</a></p></If>
             </>
           )}
           extra={(

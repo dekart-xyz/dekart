@@ -160,7 +160,11 @@ function Plans () {
 
 export default function SubscriptionTab () {
   const userStream = useSelector(state => state.user.stream)
+  const isSelfHosted = useSelector(state => state.user.isSelfHosted)
   if (!userStream) {
+    return null
+  }
+  if (isSelfHosted) {
     return null
   }
   return (
