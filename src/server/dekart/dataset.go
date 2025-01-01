@@ -23,22 +23,6 @@ import (
 func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Dataset, error) {
 	datasets := make([]*proto.Dataset, 0)
 
-	// add legacy queries
-	queries, err := s.getQueriesLegacy(ctx, reportID)
-	if err != nil {
-		return nil, err
-	}
-	for _, query := range queries {
-		datasets = append(datasets, &proto.Dataset{
-			Id:        query.Id,
-			ReportId:  reportID,
-			QueryId:   query.Id,
-			CreatedAt: query.CreatedAt,
-			UpdatedAt: query.UpdatedAt,
-			Name:      "",
-		})
-	}
-
 	// normal datasets
 	datasetRows, err := s.db.QueryContext(ctx,
 		`select
@@ -358,7 +342,7 @@ func storageError(w http.ResponseWriter, err error) {
 func (s Server) getDWJobIDFromResultID(ctx context.Context, resultID string) (string, error) {
 	var jobID sql.NullString
 	rows, err := s.db.QueryContext(ctx,
-		`select dw_job_id from queries where job_result_id=$1`,
+		`select dw_job_id from query_jobs where job_result_id=$1`,
 		resultID,
 	)
 	if err != nil {

@@ -1,0 +1,77 @@
+.queryParams {
+    color: white;
+    padding: 10px 15px 10px 15px;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+}
+
+.wrapper {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.queryParams :global(.ant-form-item-label > label) {
+    color: white;
+}
+
+.queryParams :global(.ant-form) {
+    display: flex;
+    gap: 16px;
+}
+.queryParams :global(.ant-form-item) {
+    margin-bottom: 0px;
+}
+.queryParams :global(.ant-input-group-addon) {
+    background-color:  #1f1f1f;
+    border-color: #434343;
+    color: #8c8c8c;
+
+}
+.queryParams :global(.ant-input-affix-wrapper) {
+    background-color: #1f1f1f;
+    border-color: #434343;
+    color: white;
+    padding-right: 0px;
+}
+.settingsButton {
+    color: white;
+}
+
+.queryParams :global(.ant-btn) {
+    position: relative;
+    top: 1px;
+}
+.queryParams :global(.ant-btn-background-ghost[disabled]) {
+    background-color: #1f1f1f!important;
+    color: #8c8c8c !important;
+    border-color: #434343!important;
+    opacity: 0.7;
+}
+.queryParams :global(.ant-input) {
+    background-color: #1f1f1f;
+    border-color: #434343;
+    color: white;
+}
+
+.label {
+    color: white;
+}
+
+.settingsButtonDisabled {
+    opacity: 0;
+    cursor: default!important;
+}
+
+.settingsButton:hover {
+    color: white !important;
+}
+.settingsButton {
+    color: #8c8c8c !important;
+    background-color: #1f1f1f;
+     border-color: #434343;
+}

@@ -22,8 +22,10 @@ service Dekart {
     // queries
     rpc CreateQuery(CreateQueryRequest) returns (CreateQueryResponse) {}
     rpc RunQuery(RunQueryRequest) returns (RunQueryResponse) {}
-    rpc CancelQuery(CancelQueryRequest) returns (CancelQueryResponse) {}
     rpc RunAllQueries(RunAllQueriesRequest) returns (RunAllQueriesResponse) {}
+
+    //jobs
+    rpc CancelJob(CancelJobRequest) returns (CancelJobResponse) {}
 
     rpc GetEnv(GetEnvRequest) returns (GetEnvResponse) {}
 
@@ -61,6 +63,13 @@ service Dekart {
 
     //reports
     rpc PublishReport(PublishReportRequest) returns (PublishReportResponse) {}
+}
+
+message CancelJobRequest {
+    string job_id = 1;
+}
+
+message CancelJobResponse {
 }
 
 message PublishReportRequest {
@@ -182,6 +191,8 @@ message SetDefaultConnectionResponse {
 
 message RunAllQueriesRequest {
     string report_id = 1;
+    repeated QueryParam query_params = 2;
+    string query_params_values = 3; // url encoded
 }
 
 message RunAllQueriesResponse {
@@ -410,7 +421,7 @@ message Report {
     string map_config = 2;
     string title = 3;
     bool archived = 4;
-    bool can_write = 5;
+    bool can_write = 5; // user can write to the report because he is the author or has edit permission
     string author_email = 6;
     bool discoverable = 7; // report is discoverable by other users of the same instance
     bool allow_edit = 8; // allow other users to edit the report
@@ -419,10 +430,9 @@ message Report {
     int64 updated_at = 11;
     bool is_sharable = 12; // can be shared with other users (depends where result is stored)
     bool need_sensitive_scope = 13; // need sensitive scope to run queries and read results
-
-    // cloud
-    bool is_playground = 101; // true - playground, false - workspace
-    bool is_public = 102; // true - public, false - private
+    bool is_playground = 14; // true - playground, false - workspace
+    bool is_public = 15; // true - public, false - private
+    repeated QueryParam query_params = 16;
 }
 
 message Dataset {
@@ -436,10 +446,18 @@ message Dataset {
     string connection_id = 8;
 }
 
-message Query {
+message QueryJob {
     string id = 1;
-    // string report_id = 2;
+    string query_id = 2;
     string query_text = 3;
+    string job_result_id = 4;
+    string job_error = 5;
+    int64 job_duration = 6;
+    int32 total_rows = 7;
+    int64 bytes_processed = 8;
+    int64 result_size = 9;
+    int64 created_at = 10;
+    int64 updated_at = 11;
 
     enum JobStatus {
         JOB_STATUS_UNSPECIFIED = 0;
@@ -450,23 +468,24 @@ message Query {
         JOB_STATUS_DONE = 5;
     }
 
-    JobStatus job_status = 4;
-    string job_result_id = 5;
-    string job_error = 6;
-    int64 job_duration = 7;
-    int32 total_rows = 8;
-    int64 bytes_processed = 9;
-    int64 result_size = 10;
-    int64 created_at = 11;
-    int64 updated_at = 12;
+    JobStatus job_status = 12;
+    string dw_job_id = 13;
+    string query_params_hash = 14;
+}
+
+message Query {
+    string id = 1;
+    string query_text = 2;
+    int64 created_at = 3;
+    int64 updated_at = 4;
 
     enum QuerySource {
         QUERY_SOURCE_UNSPECIFIED = 0;
         QUERY_SOURCE_INLINE = 1;
         QUERY_SOURCE_STORAGE = 2;
     }
-    QuerySource query_source = 13;
-    string query_source_id = 14;
+    QuerySource query_source = 5;
+    string query_source_id = 6;
 }
 
 message File {
@@ -488,8 +507,11 @@ message File {
 }
 
 message UpdateReportRequest {
-    Report report = 1; // MapConfig, Title, Id will be used for update
-    repeated Query query = 2;
+    string report_id = 1;
+    string map_config = 2;
+    string title = 3;
+    repeated Query query = 4;
+    repeated QueryParam query_params = 5;
 }
 
 message UpdateReportResponse {
@@ -498,16 +520,11 @@ message UpdateReportResponse {
 message RunQueryRequest {
     string query_id = 1;
     string query_text = 2;
+    repeated QueryParam query_params = 3;
+    string query_params_values = 4; // url encoded
 }
 
 message RunQueryResponse {
-}
-
-message CancelQueryRequest {
-    string query_id = 1;
-}
-
-message CancelQueryResponse {
 }
 
 message UpdateDatasetNameRequest {
@@ -561,6 +578,7 @@ message ReportStreamResponse {
     repeated Dataset datasets = 4;
     repeated File files = 5;
     repeated Connection connections = 6;
+    repeated QueryJob query_jobs = 7;
 }
 
 message ForkReportRequest {
@@ -577,4 +595,15 @@ message CreateReportRequest {
 
 message CreateReportResponse {
     Report report = 1;
+}
+
+message QueryParam {
+    string name = 1;
+    string label = 2;
+    enum Type {
+        TYPE_UNSPECIFIED = 0;
+        TYPE_STRING = 1;
+    }
+    Type type = 3;
+    string default_value = 4;
 }

@@ -135,6 +135,12 @@
     position: relative;
     background-color: #15232F;
 }
+.keplerFlexWrapper {
+    flex: 1;
+    display: flex;
+    position: relative;
+    background-color: #15232F;
+}
 
 .keplerBlock :global #kepler-gl__kepler .side-panel__header__top {
     display: none;

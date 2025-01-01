@@ -1,4 +1,18 @@
 import { Connection } from '../../proto/dekart_pb'
+import { bigQueryKeywords } from './bigQueryKeywords'
+import { snowflakeKeywords } from './snowflakeKeywords'
+
+const bigQueryCustomCompleter = {
+  getCompletions (editor, session, pos, prefix, callback) {
+    callback(null, bigQueryKeywords)
+  }
+}
+
+const snowflakeCustomCompleter = {
+  getCompletions (editor, session, pos, prefix, callback) {
+    callback(null, snowflakeKeywords)
+  }
+}
 
 export function getDatasourceMeta (datasource) {
   switch (datasource) {
@@ -7,6 +21,7 @@ export function getDatasourceMeta (datasource) {
       return {
         name: 'Snowflake',
         style: 'snowflake',
+        completer: snowflakeCustomCompleter,
         examplesUrl: 'https://dekart.xyz/docs/about/snowflake-kepler-gl-examples/',
         sampleQuery: `-- Generate 100 random latitude and longitude points
 SELECT
@@ -23,6 +38,7 @@ FROM
       return {
         name: 'BigQuery',
         style: 'bigquery',
+        completer: bigQueryCustomCompleter,
         usageStatsId: 2,
         examplesUrl: 'https://dekart.xyz/docs/about/overture-maps-examples/',
         sampleQuery: `-- Select a random 0.1% sample of crimes from the Chicago crime dataset

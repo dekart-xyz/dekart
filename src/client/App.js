@@ -94,7 +94,9 @@ function AppRedirect () {
   }
 
   if (newReportId) {
-    return <Redirect to={`/reports/${newReportId}/source`} push />
+    const currentUrl = new URL(window.location.href)
+    const params = currentUrl.search
+    return <Redirect to={`/reports/${newReportId}/source${params}`} push />
   }
 
   if (

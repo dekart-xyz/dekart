@@ -35,14 +35,16 @@ func (s Server) getFileReports(ctx context.Context, fileId string) (*string, err
 		return nil, err
 	}
 	defer fileRows.Close()
+	var reportId string
 	for fileRows.Next() {
-		var reportId string
 		if err = fileRows.Scan(&reportId); err != nil {
 			return nil, err
 		}
-		return &reportId, nil
 	}
-	return nil, nil
+	if reportId == "" {
+		return nil, nil
+	}
+	return &reportId, nil
 }
 
 func (s Server) setUploadError(reportID string, fileSourceID string, err error) {

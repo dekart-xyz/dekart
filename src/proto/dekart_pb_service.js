@@ -118,15 +118,6 @@ Dekart.RunQuery = {
   responseType: proto_dekart_pb.RunQueryResponse
 };
 
-Dekart.CancelQuery = {
-  methodName: "CancelQuery",
-  service: Dekart,
-  requestStream: false,
-  responseStream: false,
-  requestType: proto_dekart_pb.CancelQueryRequest,
-  responseType: proto_dekart_pb.CancelQueryResponse
-};
-
 Dekart.RunAllQueries = {
   methodName: "RunAllQueries",
   service: Dekart,
@@ -134,6 +125,15 @@ Dekart.RunAllQueries = {
   responseStream: false,
   requestType: proto_dekart_pb.RunAllQueriesRequest,
   responseType: proto_dekart_pb.RunAllQueriesResponse
+};
+
+Dekart.CancelJob = {
+  methodName: "CancelJob",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.CancelJobRequest,
+  responseType: proto_dekart_pb.CancelJobResponse
 };
 
 Dekart.GetEnv = {
@@ -695,11 +695,11 @@ DekartClient.prototype.runQuery = function runQuery(requestMessage, metadata, ca
   };
 };
 
-DekartClient.prototype.cancelQuery = function cancelQuery(requestMessage, metadata, callback) {
+DekartClient.prototype.runAllQueries = function runAllQueries(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
-  var client = grpc.unary(Dekart.CancelQuery, {
+  var client = grpc.unary(Dekart.RunAllQueries, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
@@ -726,11 +726,11 @@ DekartClient.prototype.cancelQuery = function cancelQuery(requestMessage, metada
   };
 };
 
-DekartClient.prototype.runAllQueries = function runAllQueries(requestMessage, metadata, callback) {
+DekartClient.prototype.cancelJob = function cancelJob(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
-  var client = grpc.unary(Dekart.RunAllQueries, {
+  var client = grpc.unary(Dekart.CancelJob, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,

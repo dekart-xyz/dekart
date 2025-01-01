@@ -4,10 +4,12 @@ import copy from '../../fixtures/copy.json'
 describe('cloud basic flow', () => {
   it('with info token', () => {
     cy.visit('/playground')
-    cy.get('button:contains("Playground Mode")').should('be.visible')
+    cy.get('#dekart-create-report').should('be.visible')
+    cy.get('#dekart-main-menu').click()
+    cy.get('span:contains("Playground Workspace")').should('be.visible')
 
     // create new report
-    cy.get(`button:contains("${copy.create_report}")`).click()
+    cy.get('#dekart-create-report').click()
 
     // run query
     cy.get('textarea').type(copy.simple_sql_query, { force: true })
@@ -16,8 +18,8 @@ describe('cloud basic flow', () => {
     cy.get(`span:contains("${copy.downloading}")`).should('contain', 'kB') // size of result shown
 
     // switch to private workspace
-    cy.get('button#dekart-playground-mode-button').click()
-    cy.get('button:contains("Switch to private workspace")').click()
+    cy.get('#dekart-avatar').click()
+    cy.get('span:contains("Switch to workspace")').click()
 
     cy.get('button:contains("Create Workspace")').should('be.visible')
 

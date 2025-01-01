@@ -6,12 +6,8 @@ import Avatar from 'antd/es/avatar'
 import Dropdown from 'antd/es/dropdown'
 import { AuthState } from '../proto/dekart_pb'
 import classNames from 'classnames'
-import { GlobalOutlined, LockOutlined } from '@ant-design/icons'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 import { authRedirect } from './actions/redirect'
-import Button from 'antd/es/button'
-import Tooltip from 'antd/es/tooltip'
-import { switchPlayground } from './actions/user'
 import localStorageReset from './actions/localStorage'
 
 function getSignature (email) {
@@ -31,6 +27,7 @@ function User ({ buttonDivider }) {
   const history = useHistory()
   const userStream = useSelector(state => state.user.stream)
   const { authEnabled } = useSelector(state => state.env)
+  const isPlayground = useSelector(state => state.user.isPlayground)
   const dispatch = useDispatch()
   if (!userStream || !authEnabled) {
     return null
@@ -74,18 +71,27 @@ function User ({ buttonDivider }) {
               label: userStream && userStream.email,
               disabled: true
             },
-            {
-              label: 'Manage workspace',
-              onClick: () => {
-                history.push('/workspace')
-              }
-            },
-            {
-              label: 'Public playground',
-              onClick: () => {
-                history.push('/playground')
-              }
-            },
+            !isPlayground
+              ? {
+                  label: 'Manage workspace',
+                  onClick: () => {
+                    history.push('/workspace')
+                  }
+                }
+              : undefined,
+            isPlayground
+              ? {
+                  label: 'Switch to workspace',
+                  onClick: () => {
+                    history.push('/workspace')
+                  }
+                }
+              : {
+                  label: 'Public playground',
+                  onClick: () => {
+                    history.push('/playground')
+                  }
+                },
             {
               label: 'Switch account',
               onClick: () => {
@@ -110,55 +116,13 @@ function User ({ buttonDivider }) {
             }
           ]
         }}
-      ><Avatar>{getSignature(userStream && userStream.email)}</Avatar>
+      ><Avatar id='dekart-avatar'>{getSignature(userStream && userStream.email)}</Avatar>
       </Dropdown>
     </div>
   )
 }
 
-export function Workspace () {
-  const workspaceName = useSelector(state => state.workspace?.name)
-  const isPlayground = useSelector(state => state.user.isPlayground)
-  const history = useHistory()
-  if (!workspaceName || isPlayground) {
-    return null
-  }
-  return (
-    <div className={styles.workspace}>
-      <Tooltip title={<>You are in private workspace.<br />Click to manage workspace access.</>}><Button type='link' size='small' onClick={() => history.push('/workspace')} className={styles.workspaceButton}><LockOutlined />{workspaceName}</Button></Tooltip>
-    </div>
-  )
-}
-
-export function PlaygroundMode () {
-  const isPlayground = useSelector(state => state.user.isPlayground)
-  const dispatch = useDispatch()
-
-  if (!isPlayground) {
-    return null
-  }
-
-  return (
-    <div className={styles.playground}>
-      <Tooltip title={
-        (
-          <div className={styles.playgroundTooltip}>
-            <div>Public playground mode is enabled. Your queries are public. Only public datasets are accessible.</div>
-            <Button
-              size='small' type='link' onClick={() => dispatch(switchPlayground(false))}
-            >Switch to private workspace
-            </Button>
-          </div>
-        )
-      }
-      >
-        <Button id='dekart-playground-mode-button' type='link' size='small' className={styles.playgroundButton}><GlobalOutlined /> Playground Mode</Button>
-      </Tooltip>
-    </div>
-  )
-}
-
-export function Header ({ buttons, title }) {
+export function Header ({ buttons, title, queryParams }) {
   const env = useSelector(state => state.env)
   const usage = useSelector(state => state.usage)
   let homePage
@@ -170,16 +134,14 @@ export function Header ({ buttons, title }) {
       <div className={styles.top}>
         <div className={styles.left}>
           <DekartMenu />
-          <Workspace />
-          <PlaygroundMode />
         </div>
         <div className={styles.middle}>
-          <div className={styles.dekartLinkHolder}><a target='_blank' rel='noopener noreferrer' className={styles.dekartLink} href={homePage}><span className={styles.dekartTitle} /></a></div>
+          {title ? (<div className={styles.titleWrap}><div className={styles.title}>{title}</div></div>) : (<div className={styles.dekartLinkHolder}><a target='_blank' rel='noopener noreferrer' className={styles.dekartLink} href={homePage}><span className={styles.dekartTitle} /></a></div>)}
         </div>
         <div className={styles.buttons}>{buttons || null}</div>
         <User buttonDivider={Boolean(buttons)} />
       </div>
-      {title ? (<div className={styles.title}>{title}</div>) : null}
+      {queryParams && <div className={styles.queryParams}>{queryParams}</div>}
     </div>
   )
 }

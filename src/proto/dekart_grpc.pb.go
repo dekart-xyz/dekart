@@ -31,8 +31,8 @@ const (
 	Dekart_CreateFile_FullMethodName              = "/Dekart/CreateFile"
 	Dekart_CreateQuery_FullMethodName             = "/Dekart/CreateQuery"
 	Dekart_RunQuery_FullMethodName                = "/Dekart/RunQuery"
-	Dekart_CancelQuery_FullMethodName             = "/Dekart/CancelQuery"
 	Dekart_RunAllQueries_FullMethodName           = "/Dekart/RunAllQueries"
+	Dekart_CancelJob_FullMethodName               = "/Dekart/CancelJob"
 	Dekart_GetEnv_FullMethodName                  = "/Dekart/GetEnv"
 	Dekart_GetReportStream_FullMethodName         = "/Dekart/GetReportStream"
 	Dekart_GetReportListStream_FullMethodName     = "/Dekart/GetReportListStream"
@@ -75,8 +75,9 @@ type DekartClient interface {
 	// queries
 	CreateQuery(ctx context.Context, in *CreateQueryRequest, opts ...grpc.CallOption) (*CreateQueryResponse, error)
 	RunQuery(ctx context.Context, in *RunQueryRequest, opts ...grpc.CallOption) (*RunQueryResponse, error)
-	CancelQuery(ctx context.Context, in *CancelQueryRequest, opts ...grpc.CallOption) (*CancelQueryResponse, error)
 	RunAllQueries(ctx context.Context, in *RunAllQueriesRequest, opts ...grpc.CallOption) (*RunAllQueriesResponse, error)
+	// jobs
+	CancelJob(ctx context.Context, in *CancelJobRequest, opts ...grpc.CallOption) (*CancelJobResponse, error)
 	GetEnv(ctx context.Context, in *GetEnvRequest, opts ...grpc.CallOption) (*GetEnvResponse, error)
 	// streams
 	GetReportStream(ctx context.Context, in *ReportStreamRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ReportStreamResponse], error)
@@ -96,7 +97,6 @@ type DekartClient interface {
 	RespondToInvite(ctx context.Context, in *RespondToInviteRequest, opts ...grpc.CallOption) (*RespondToInviteResponse, error)
 	// subscriptions
 	CreateSubscription(ctx context.Context, in *CreateSubscriptionRequest, opts ...grpc.CallOption) (*CreateSubscriptionResponse, error)
-	// rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse) {}
 	GetStripePortalSession(ctx context.Context, in *GetStripePortalSessionRequest, opts ...grpc.CallOption) (*GetStripePortalSessionResponse, error)
 	// workspace
 	CreateWorkspace(ctx context.Context, in *CreateWorkspaceRequest, opts ...grpc.CallOption) (*CreateWorkspaceResponse, error)
@@ -235,20 +235,20 @@ func (c *dekartClient) RunQuery(ctx context.Context, in *RunQueryRequest, opts .
 	return out, nil
 }
 
-func (c *dekartClient) CancelQuery(ctx context.Context, in *CancelQueryRequest, opts ...grpc.CallOption) (*CancelQueryResponse, error) {
+func (c *dekartClient) RunAllQueries(ctx context.Context, in *RunAllQueriesRequest, opts ...grpc.CallOption) (*RunAllQueriesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CancelQueryResponse)
-	err := c.cc.Invoke(ctx, Dekart_CancelQuery_FullMethodName, in, out, cOpts...)
+	out := new(RunAllQueriesResponse)
+	err := c.cc.Invoke(ctx, Dekart_RunAllQueries_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *dekartClient) RunAllQueries(ctx context.Context, in *RunAllQueriesRequest, opts ...grpc.CallOption) (*RunAllQueriesResponse, error) {
+func (c *dekartClient) CancelJob(ctx context.Context, in *CancelJobRequest, opts ...grpc.CallOption) (*CancelJobResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RunAllQueriesResponse)
-	err := c.cc.Invoke(ctx, Dekart_RunAllQueries_FullMethodName, in, out, cOpts...)
+	out := new(CancelJobResponse)
+	err := c.cc.Invoke(ctx, Dekart_CancelJob_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -502,8 +502,9 @@ type DekartServer interface {
 	// queries
 	CreateQuery(context.Context, *CreateQueryRequest) (*CreateQueryResponse, error)
 	RunQuery(context.Context, *RunQueryRequest) (*RunQueryResponse, error)
-	CancelQuery(context.Context, *CancelQueryRequest) (*CancelQueryResponse, error)
 	RunAllQueries(context.Context, *RunAllQueriesRequest) (*RunAllQueriesResponse, error)
+	// jobs
+	CancelJob(context.Context, *CancelJobRequest) (*CancelJobResponse, error)
 	GetEnv(context.Context, *GetEnvRequest) (*GetEnvResponse, error)
 	// streams
 	GetReportStream(*ReportStreamRequest, grpc.ServerStreamingServer[ReportStreamResponse]) error
@@ -523,7 +524,6 @@ type DekartServer interface {
 	RespondToInvite(context.Context, *RespondToInviteRequest) (*RespondToInviteResponse, error)
 	// subscriptions
 	CreateSubscription(context.Context, *CreateSubscriptionRequest) (*CreateSubscriptionResponse, error)
-	// rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse) {}
 	GetStripePortalSession(context.Context, *GetStripePortalSessionRequest) (*GetStripePortalSessionResponse, error)
 	// workspace
 	CreateWorkspace(context.Context, *CreateWorkspaceRequest) (*CreateWorkspaceResponse, error)
@@ -578,11 +578,11 @@ func (UnimplementedDekartServer) CreateQuery(context.Context, *CreateQueryReques
 func (UnimplementedDekartServer) RunQuery(context.Context, *RunQueryRequest) (*RunQueryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RunQuery not implemented")
 }
-func (UnimplementedDekartServer) CancelQuery(context.Context, *CancelQueryRequest) (*CancelQueryResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CancelQuery not implemented")
-}
 func (UnimplementedDekartServer) RunAllQueries(context.Context, *RunAllQueriesRequest) (*RunAllQueriesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RunAllQueries not implemented")
+}
+func (UnimplementedDekartServer) CancelJob(context.Context, *CancelJobRequest) (*CancelJobResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CancelJob not implemented")
 }
 func (UnimplementedDekartServer) GetEnv(context.Context, *GetEnvRequest) (*GetEnvResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetEnv not implemented")
@@ -881,24 +881,6 @@ func _Dekart_RunQuery_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_CancelQuery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CancelQueryRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DekartServer).CancelQuery(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Dekart_CancelQuery_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).CancelQuery(ctx, req.(*CancelQueryRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Dekart_RunAllQueries_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RunAllQueriesRequest)
 	if err := dec(in); err != nil {
@@ -913,6 +895,24 @@ func _Dekart_RunAllQueries_Handler(srv interface{}, ctx context.Context, dec fun
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DekartServer).RunAllQueries(ctx, req.(*RunAllQueriesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_CancelJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelJobRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).CancelJob(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_CancelJob_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).CancelJob(ctx, req.(*CancelJobRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1312,12 +1312,12 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Dekart_RunQuery_Handler,
 		},
 		{
-			MethodName: "CancelQuery",
-			Handler:    _Dekart_CancelQuery_Handler,
-		},
-		{
 			MethodName: "RunAllQueries",
 			Handler:    _Dekart_RunAllQueries_Handler,
+		},
+		{
+			MethodName: "CancelJob",
+			Handler:    _Dekart_CancelJob_Handler,
 		},
 		{
 			MethodName: "GetEnv",

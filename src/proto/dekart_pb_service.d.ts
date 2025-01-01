@@ -112,15 +112,6 @@ type DekartRunQuery = {
   readonly responseType: typeof proto_dekart_pb.RunQueryResponse;
 };
 
-type DekartCancelQuery = {
-  readonly methodName: string;
-  readonly service: typeof Dekart;
-  readonly requestStream: false;
-  readonly responseStream: false;
-  readonly requestType: typeof proto_dekart_pb.CancelQueryRequest;
-  readonly responseType: typeof proto_dekart_pb.CancelQueryResponse;
-};
-
 type DekartRunAllQueries = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -128,6 +119,15 @@ type DekartRunAllQueries = {
   readonly responseStream: false;
   readonly requestType: typeof proto_dekart_pb.RunAllQueriesRequest;
   readonly responseType: typeof proto_dekart_pb.RunAllQueriesResponse;
+};
+
+type DekartCancelJob = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.CancelJobRequest;
+  readonly responseType: typeof proto_dekart_pb.CancelJobResponse;
 };
 
 type DekartGetEnv = {
@@ -324,8 +324,8 @@ export class Dekart {
   static readonly CreateFile: DekartCreateFile;
   static readonly CreateQuery: DekartCreateQuery;
   static readonly RunQuery: DekartRunQuery;
-  static readonly CancelQuery: DekartCancelQuery;
   static readonly RunAllQueries: DekartRunAllQueries;
+  static readonly CancelJob: DekartCancelJob;
   static readonly GetEnv: DekartGetEnv;
   static readonly GetReportStream: DekartGetReportStream;
   static readonly GetReportListStream: DekartGetReportListStream;
@@ -488,15 +488,6 @@ export class DekartClient {
     requestMessage: proto_dekart_pb.RunQueryRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.RunQueryResponse|null) => void
   ): UnaryResponse;
-  cancelQuery(
-    requestMessage: proto_dekart_pb.CancelQueryRequest,
-    metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CancelQueryResponse|null) => void
-  ): UnaryResponse;
-  cancelQuery(
-    requestMessage: proto_dekart_pb.CancelQueryRequest,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CancelQueryResponse|null) => void
-  ): UnaryResponse;
   runAllQueries(
     requestMessage: proto_dekart_pb.RunAllQueriesRequest,
     metadata: grpc.Metadata,
@@ -505,6 +496,15 @@ export class DekartClient {
   runAllQueries(
     requestMessage: proto_dekart_pb.RunAllQueriesRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.RunAllQueriesResponse|null) => void
+  ): UnaryResponse;
+  cancelJob(
+    requestMessage: proto_dekart_pb.CancelJobRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CancelJobResponse|null) => void
+  ): UnaryResponse;
+  cancelJob(
+    requestMessage: proto_dekart_pb.CancelJobRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.CancelJobResponse|null) => void
   ): UnaryResponse;
   getEnv(
     requestMessage: proto_dekart_pb.GetEnvRequest,

@@ -61,7 +61,7 @@ func (job *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 	job.ResultSize = *resultSize
 	job.ResultReady = true
 	job.Unlock()
-	job.Status() <- int32(proto.Query_JOB_STATUS_DONE)
+	job.Status() <- int32(proto.QueryJob_JOB_STATUS_DONE)
 	job.Cancel()
 }
 
@@ -164,7 +164,7 @@ func (job *Job) wait() {
 		job.DWJobID = &bqJobID // identify result storage
 		job.ResultReady = true
 		job.Unlock()
-		job.Status() <- int32(proto.Query_JOB_STATUS_DONE)
+		job.Status() <- int32(proto.QueryJob_JOB_STATUS_DONE)
 		job.Cancel()
 		return
 	}
@@ -181,7 +181,7 @@ func (job *Job) wait() {
 		return
 	}
 
-	job.Status() <- int32(proto.Query_JOB_STATUS_READING_RESULTS)
+	job.Status() <- int32(proto.QueryJob_JOB_STATUS_READING_RESULTS)
 
 	csvRows := make(chan []string, job.TotalRows)
 	errors := make(chan error)
@@ -270,7 +270,7 @@ func (job *Job) Run(storageObject storage.StorageObject, conn *proto.Connection)
 	job.bigqueryJob = bigqueryJob
 	job.storageObject = storageObject
 	job.Unlock()
-	job.Status() <- int32(proto.Query_JOB_STATUS_RUNNING)
+	job.Status() <- int32(proto.QueryJob_JOB_STATUS_RUNNING)
 	job.Logger.Debug().Msg("Waiting for results")
 	go job.wait()
 	return nil

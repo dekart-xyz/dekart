@@ -1,5 +1,5 @@
 import { combineReducers } from 'redux'
-import { closeDatasetSettingsModal, openDatasetSettingsModal, setActiveDataset } from '../actions/dataset'
+import { closeDatasetSettingsModal, keplerDatasetFinishUpdating, keplerDatasetStartUpdating, openDatasetSettingsModal, setActiveDataset } from '../actions/dataset'
 import { downloading as downloadingAction, finishDownloading } from '../actions/message'
 import { openReport, reportUpdate } from '../actions/report'
 
@@ -65,9 +65,22 @@ function settings (state = { datasetId: null, visible: false }, action) {
   }
 }
 
+// Number of datasets that are currently updating on kepler
+function updatingNum (state = 0, action) {
+  switch (action.type) {
+    case keplerDatasetStartUpdating.name:
+      return state + 1
+    case keplerDatasetFinishUpdating.name:
+      return state - 1
+    default:
+      return state
+  }
+}
+
 export default combineReducers({
   downloading,
   active,
   settings,
-  list
+  list,
+  updatingNum
 })
