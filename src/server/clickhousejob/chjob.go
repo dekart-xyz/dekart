@@ -22,6 +22,7 @@ type Store struct {
 
 }
 
+// s3Config is needed to export the results to S3 using Clickhouse's s3 function (https://clickhouse.com/docs/en/sql-reference/table-functions/s3)
 type s3Config struct {
 	Endpoint  string
 	AccessKey string
