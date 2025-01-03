@@ -15,6 +15,7 @@ import (
 	"dekart/src/server/app"
 	"dekart/src/server/athenajob"
 	"dekart/src/server/bqjob"
+	chjob "dekart/src/server/clickhousejob"
 	"dekart/src/server/dekart"
 	"dekart/src/server/job"
 	"dekart/src/server/pgjob"
@@ -136,6 +137,9 @@ func configureJobStore(bucket storage.Storage) job.Store {
 	case "BQ", "":
 		log.Info().Msg("Using BigQuery Datasource backend")
 		jobStore = bqjob.NewStore()
+	case "CH":
+		log.Info().Msg("Using Clickhouse Datasource backend")
+		jobStore = chjob.NewStore()
 	default:
 		log.Fatal().Str("DEKART_STORAGE", os.Getenv("DEKART_STORAGE")).Msg("Unknown storage backend")
 	}

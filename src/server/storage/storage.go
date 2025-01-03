@@ -2,12 +2,16 @@ package storage
 
 import (
 	"context"
-	"dekart/src/proto"
-	"dekart/src/server/user"
+	"crypto/tls"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
+
+	"dekart/src/proto"
+	"dekart/src/server/user"
 
 	"cloud.google.com/go/storage"
 	"github.com/aws/aws-sdk-go/aws"
@@ -252,6 +256,25 @@ func NewS3Storage() Storage {
 	conf := aws.NewConfig().
 		WithMaxRetries(3).
 		WithS3ForcePathStyle(true)
+
+	endpoint := os.Getenv("AWS_ENDPOINT")
+	if len(endpoint) > 0 {
+		conf = conf.WithEndpoint(endpoint)
+	}
+
+	region := os.Getenv("AWS_REGION")
+	if len(region) > 0 {
+		conf = conf.WithRegion(region)
+	}
+
+	insecureTLS := os.Getenv("AWS_INSECURE")
+	if strings.ToUpper(insecureTLS) == "TRUE" {
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+		conf = conf.WithHTTPClient(&http.Client{Transport: tr})
+	}
+
 	ses := session.Must(session.NewSession(conf))
 	s3client := s3.New(ses)
 	return S3Storage{
