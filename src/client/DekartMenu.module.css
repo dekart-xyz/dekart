@@ -38,3 +38,15 @@
     background-size: contain;
     background-image: url('./dekart-icon.svg');
 }
+.workspaceIndicator :global(span.ant-menu-title-content) {
+    color: black !important;
+}
+
+.workspaceIndicator {
+    background-color: rgb(87, 183, 211) !important;
+    color: white !important;
+    opacity: 1 !important;
+    border-bottom: 1px solid black;
+}
+
+

@@ -25,19 +25,19 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 		return
 	}
 
-	// handling queries
-	queries, err := s.getQueries(userCtx, datasets)
+	// handling queryJobs
+	queryJobs, err := s.getDatasetsQueryJobs(userCtx, datasets)
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve queries")
+		log.Err(err).Msg("Cannot retrieve query jobs")
 		return
 	}
 
 	objectsToDelete := []storage.StorageObject{}
 	sourceIDsToDelete := []string{}
 
-	for _, query := range queries {
-		if query.JobResultId != "" { // else nothing to move
-			connection, err := s.getConnectionFromQueryID(userCtx, query.Id)
+	for _, queryJob := range queryJobs {
+		if queryJob.JobResultId != "" { // else nothing to move
+			connection, err := s.getConnectionFromQueryID(userCtx, queryJob.QueryId)
 			conCtx := conn.GetCtx(userCtx, connection)
 			if err != nil {
 				log.Err(err).Msg("Cannot retrieve connection while publishing report")
@@ -48,22 +48,22 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 				return
 			}
 			userBucketName := s.getBucketNameFromConnection(connection)
-			dwJobID, err := s.getDWJobIDFromResultID(userCtx, query.JobResultId)
+			dwJobID, err := s.getDWJobIDFromResultID(userCtx, queryJob.JobResultId)
 			if err != nil {
 				log.Err(err).Msg("Cannot retrieve job id")
 				return
 			}
 			if dwJobID != "" { // query result is in temporary storage, we need just to remove from public storage
 				publicStorage := storage.NewPublicStorage()
-				obj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.csv", query.JobResultId))
+				obj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.csv", queryJob.JobResultId))
 				objectsToDelete = append(objectsToDelete, obj)
-				sourceIDsToDelete = append(sourceIDsToDelete, query.JobResultId)
+				sourceIDsToDelete = append(sourceIDsToDelete, queryJob.JobResultId)
 			} else {
 				// query result is in user storage bucket, we need to move it back
 				publicStorage := storage.NewPublicStorage()
-				srcObj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.csv", query.JobResultId))
+				srcObj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.csv", queryJob.JobResultId))
 				if userBucketName != "" {
-					dstObj := s.storage.GetObject(conCtx, userBucketName, fmt.Sprintf("%s.csv", query.JobResultId))
+					dstObj := s.storage.GetObject(conCtx, userBucketName, fmt.Sprintf("%s.csv", queryJob.JobResultId))
 					err = srcObj.CopyTo(ctx, dstObj.GetWriter(conCtx))
 					if err != nil {
 						log.Err(err).Msg("Cannot copy query result to user storage")
@@ -71,7 +71,7 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 					}
 				}
 				objectsToDelete = append(objectsToDelete, srcObj)
-				sourceIDsToDelete = append(sourceIDsToDelete, query.JobResultId)
+				sourceIDsToDelete = append(sourceIDsToDelete, queryJob.JobResultId)
 			}
 		}
 	}
@@ -159,17 +159,17 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 		return
 	}
 
-	// handling queries
-	queries, err := s.getQueries(userCtx, datasets)
+	// handling queryJobs
+	queryJobs, err := s.getDatasetsQueryJobs(userCtx, datasets)
 	if err != nil {
 		log.Err(err).Msg("Cannot retrieve queries")
 		return
 	}
 
 	// moving query results to storage
-	for _, query := range queries {
-		if query.JobResultId != "" { // else nothing to move
-			connection, err := s.getConnectionFromQueryID(userCtx, query.Id)
+	for _, queryJob := range queryJobs {
+		if queryJob.JobResultId != "" { // else nothing to move
+			connection, err := s.getConnectionFromQueryID(userCtx, queryJob.QueryId)
 			conCtx := conn.GetCtx(userCtx, connection)
 			if err != nil {
 				log.Err(err).Msg("Cannot retrieve connection while publishing report")
@@ -181,32 +181,20 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 			}
 			userBucketName := s.getBucketNameFromConnection(connection)
 
-			// moving query text to database
-			if query.QuerySource == proto.Query_QUERY_SOURCE_STORAGE {
-				queryText, err := s.getQueryText(conCtx, query.QuerySourceId, userBucketName)
-				if err != nil {
-					log.Err(err).Msg("Cannot retrieve query text")
-					return
-				}
-				err = s.storeQuerySync(conCtx, query.Id, queryText, query.QuerySourceId)
-				if err != nil {
-					log.Err(err).Msg("Cannot store query")
-					return
-				}
-			}
+			// TODO: moving query text to database
 
-			dwJobID, err := s.getDWJobIDFromResultID(userCtx, query.JobResultId)
+			dwJobID, err := s.getDWJobIDFromResultID(userCtx, queryJob.JobResultId)
 			if err != nil {
 				log.Err(err).Msg("Cannot retrieve job id")
 				return
 			}
 			publicStorage := storage.NewPublicStorage()
-			dstObj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.csv", query.JobResultId))
+			dstObj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.csv", queryJob.JobResultId))
 			var srcObj storage.StorageObject
 			if dwJobID != "" { // query result is in temporary storage
 				srcObj = s.storage.GetObject(conCtx, "", dwJobID)
 			} else { // query result is in user storage bucket
-				srcObj = s.storage.GetObject(conCtx, userBucketName, fmt.Sprintf("%s.csv", query.JobResultId))
+				srcObj = s.storage.GetObject(conCtx, userBucketName, fmt.Sprintf("%s.csv", queryJob.JobResultId))
 			}
 			err = srcObj.CopyTo(userCtx, dstObj.GetWriter(ctx))
 			if err != nil {

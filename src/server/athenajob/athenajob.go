@@ -121,7 +121,7 @@ func (j *Job) wait() {
 		j.ProcessedBytes = *queryExecution.Statistics.DataScannedInBytes
 		j.Unlock()
 	}
-	j.Status() <- int32(proto.Query_JOB_STATUS_READING_RESULTS)
+	j.Status() <- int32(proto.QueryJob_JOB_STATUS_READING_RESULTS)
 	err = j.storageObject.CopyFromS3(j.GetCtx(), *queryExecution.ResultConfiguration.OutputLocation)
 	if err != nil {
 		j.CancelWithError(err)
@@ -138,7 +138,7 @@ func (j *Job) wait() {
 		j.ResultReady = true
 		j.Unlock()
 	}
-	j.Status() <- int32(proto.Query_JOB_STATUS_DONE)
+	j.Status() <- int32(proto.QueryJob_JOB_STATUS_DONE)
 	j.Cancel()
 }
 
@@ -173,7 +173,7 @@ func (j *Job) Run(storageObject storage.StorageObject, conn *proto.Connection) e
 	j.queryExecutionId = *out.QueryExecutionId
 	j.Unlock()
 
-	j.Status() <- int32(proto.Query_JOB_STATUS_RUNNING)
+	j.Status() <- int32(proto.QueryJob_JOB_STATUS_RUNNING)
 
 	j.Logger.Debug().Str("queryExecutionId", j.queryExecutionId).Msg("waiting")
 	go j.wait()

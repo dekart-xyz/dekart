@@ -57,7 +57,7 @@ func (s *Store) Create(reportID string, queryID string, queryText string, userCt
 }
 
 func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connection) error {
-	j.Status() <- int32(proto.Query_JOB_STATUS_RUNNING)
+	j.Status() <- int32(proto.QueryJob_JOB_STATUS_RUNNING)
 	j.storageObject = storageObject
 
 	rows, err := j.postgresDB.QueryContext(j.GetCtx(), j.QueryText)
@@ -83,7 +83,7 @@ func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connect
 	for rows.Next() {
 		if firstRow {
 			firstRow = false
-			j.Status() <- int32(proto.Query_JOB_STATUS_READING_RESULTS)
+			j.Status() <- int32(proto.QueryJob_JOB_STATUS_READING_RESULTS)
 			columnNames := make([]string, len(columnTypes))
 			for i, columnType := range columnTypes {
 				columnNames[i] = columnType.Name()
@@ -117,7 +117,7 @@ func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connect
 	}
 
 	close(csvRows)
-	j.Status() <- int32(proto.Query_JOB_STATUS_DONE)
+	j.Status() <- int32(proto.QueryJob_JOB_STATUS_DONE)
 	return nil
 }
 
@@ -168,6 +168,6 @@ func (j *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 	j.ResultReady = true
 	j.Unlock()
 
-	j.Status() <- int32(proto.Query_JOB_STATUS_DONE)
+	j.Status() <- int32(proto.QueryJob_JOB_STATUS_DONE)
 	j.Cancel()
 }

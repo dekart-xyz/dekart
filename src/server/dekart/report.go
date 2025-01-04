@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/user"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -49,7 +50,8 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			0 as connections_with_cache_num,
 			0 as connections_num,
 			0 as connections_with_sensitive_scope_num,
-			is_public
+			is_public,
+			query_params
 		from reports as r
 		where id=$1 and not archived and (is_playground or is_public)
 		limit 1`,
@@ -88,7 +90,8 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 				join datasets as d on c.id=d.connection_id
 				where d.report_id=$1 and  connection_type <= 1 -- BigQuery
 			) as connections_with_sensitive_scope_num,
-			is_public
+			is_public,
+			query_params
 		from reports as r
 		where id=$1 and not archived and (workspace_id=$3 or is_playground or is_public)
 		limit 1`,
@@ -108,6 +111,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 		createdAt := time.Time{}
 		updatedAt := time.Time{}
 		var connectionsWithCacheNum, connectionsNum, connectionsWithSensitiveScopeNum int
+		var queryParams []byte
 		err = reportRows.Scan(
 			&report.Id,
 			&report.MapConfig,
@@ -124,6 +128,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			&connectionsNum,
 			&connectionsWithSensitiveScopeNum,
 			&report.IsPublic,
+			&queryParams,
 		)
 		if err != nil {
 			log.Err(err).Send()
@@ -146,6 +151,15 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 
 		report.CreatedAt = createdAt.Unix()
 		report.UpdatedAt = updatedAt.Unix()
+
+		//query params
+		if len(queryParams) > 0 {
+			err = json.Unmarshal(queryParams, &report.QueryParams)
+			if err != nil {
+				log.Err(err).Send()
+				return nil, err
+			}
+		}
 	}
 	if report.Id == "" || // no report found
 		(!report.Discoverable && !report.IsAuthor && !report.IsPlayground && !report.IsPublic) { // report is not discoverable by others in workspace
@@ -215,28 +229,39 @@ func updateDatasetIds(report *proto.Report, datasets []*proto.Dataset) (newMapCo
 	return newMapConfig, newDatasetIds
 }
 
-func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Report, datasets []*proto.Dataset) error {
+func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Report, datasets []*proto.Dataset, jobs []*proto.QueryJob) error {
 	claims := user.GetClaims(ctx)
 	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return err
 	}
 	newMapConfig, newDatasetIds := updateDatasetIds(report, datasets)
+	var paramsJSON []byte
+	if report.QueryParams != nil {
+		var err error
+		paramsJSON, err = json.Marshal(report.QueryParams)
+		if err != nil {
+			log.Err(err).Send()
+			return err
+		}
+	}
 	if checkWorkspace(ctx).IsPlayground {
 		_, err = tx.ExecContext(ctx,
-			"INSERT INTO reports (id, author_email, map_config, title, is_playground) VALUES ($1, $2, $3, $4, true)",
+			"INSERT INTO reports (id, author_email, map_config, title, query_params, is_playground) VALUES ($1, $2, $3, $4, $5, true)",
 			report.Id,
 			claims.Email,
 			newMapConfig,
 			report.Title,
+			paramsJSON,
 		)
 	} else {
 		_, err = tx.ExecContext(ctx,
-			"INSERT INTO reports (id, author_email, map_config, title, is_public, workspace_id) VALUES ($1, $2, $3, $4, $5, $6)",
+			"INSERT INTO reports (id, author_email, map_config, title, query_params, is_public, workspace_id) VALUES ($1, $2, $3, $4, $5, $6, $7)",
 			report.Id,
 			claims.Email,
 			newMapConfig,
 			report.Title,
+			paramsJSON,
 			report.IsPublic,
 			checkWorkspace(ctx).ID,
 		)
@@ -261,24 +286,12 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 						id,
 						query_text,
 						query_source,
-						query_source_id,
-						job_status,
-						job_result_id,
-						job_error,
-						total_rows,
-						bytes_processed,
-						result_size
+						query_source_id
 					) select
 						$1,
 						query_text,
 						query_source,
-						query_source_id,
-						job_status,
-						job_result_id,
-						job_error,
-						total_rows,
-						bytes_processed,
-						result_size
+						query_source_id
 					from queries where id=$2`,
 				newQueryID,
 				dataset.QueryId,
@@ -287,6 +300,38 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 				log.Debug().Err(err).Send()
 				rollback(tx)
 				return err
+			}
+			// iterate over query jobs and insert new query jobs with new query id and new id
+			for _, job := range jobs {
+				if job.QueryId == dataset.QueryId {
+					_, err = tx.ExecContext(ctx,
+						`INSERT INTO query_jobs (
+							id,
+							query_id,
+							job_status,
+							query_params_hash,
+							dw_job_id,
+							job_result_id,
+							job_error
+						) select
+							$1,
+							$2,
+							job_status,
+							query_params_hash,
+							dw_job_id,
+							job_result_id,
+							job_error
+						from query_jobs where id=$3`,
+						newUUID(),
+						newQueryID,
+						job.Id,
+					)
+					if err != nil {
+						log.Debug().Err(err).Send()
+						rollback(tx)
+						return err
+					}
+				}
 			}
 		} else if dataset.FileId != "" {
 			newFileID := newUUID()
@@ -386,7 +431,9 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 		return nil, err
 	}
 
-	err = s.commitReportWithDatasets(ctx, report, datasets)
+	jobs, err := s.getDatasetsQueryJobs(ctx, datasets)
+
+	err = s.commitReportWithDatasets(ctx, report, datasets, jobs)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, err
@@ -406,31 +453,40 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
 		return nil, status.Error(codes.PermissionDenied, "Only admins and editors can update reports")
 	}
-	if req.Report == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "req.Report == nil")
+	var paramsJSON []byte
+	if req.QueryParams != nil {
+		var err error
+		paramsJSON, err = json.Marshal(req.QueryParams)
+		if err != nil {
+			log.Err(err).Send()
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
 	}
+
 	var result sql.Result
 	var err error
 	if checkWorkspace(ctx).IsPlayground {
 		result, err = s.db.ExecContext(ctx,
 			`update
 			reports
-		set map_config=$1, title=$2
-		where id=$3 and author_email=$4 and is_playground=true`,
-			req.Report.MapConfig,
-			req.Report.Title,
-			req.Report.Id,
+		set map_config=$1, title=$2, query_params=$3
+		where id=$4 and author_email=$5 and is_playground=true`,
+			req.MapConfig,
+			req.Title,
+			paramsJSON,
+			req.ReportId,
 			claims.Email,
 		)
 	} else {
 		result, err = s.db.ExecContext(ctx,
 			`update
 			reports
-		set map_config=$1, title=$2
-		where id=$3 and (author_email=$4 or allow_edit) and workspace_id=$5`,
-			req.Report.MapConfig,
-			req.Report.Title,
-			req.Report.Id,
+		set map_config=$1, title=$2, query_params=$3
+		where id=$4 and (author_email=$5 or allow_edit) and workspace_id=$6`,
+			req.MapConfig,
+			req.Title,
+			paramsJSON,
+			req.ReportId,
 			claims.Email,
 			checkWorkspace(ctx).ID,
 		)
@@ -449,17 +505,17 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 
 	if affectedRows == 0 {
 		// TODO: distinguish between not found and read only
-		err := fmt.Errorf("report not found id:%s", req.Report.Id)
+		err := fmt.Errorf("report not found id:%s", req.ReportId)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
 	// save queries
 	for _, query := range req.Query {
-		go s.storeQuery(ctx, req.Report.Id, query.Id, query.QueryText, query.QuerySourceId)
+		go s.storeQuery(ctx, req.ReportId, query.Id, query.QueryText, query.QuerySourceId)
 	}
 
-	s.reportStreams.Ping(req.Report.Id)
+	s.reportStreams.Ping(req.ReportId)
 
 	return &proto.UpdateReportResponse{}, nil
 }

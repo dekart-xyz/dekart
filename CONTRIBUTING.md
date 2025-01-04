@@ -21,3 +21,14 @@
 3. Click Authorize APIs
 4. Use refresh token to as `DEKART_DEV_REFRESH_TOKEN`
 
+## Running production version locally
+
+```
+ docker compose  --env-file .env.cloud --profile cloud up
+ ```
+
+to stop the container
+
+```
+docker compose  --env-file .env.cloud --profile cloud down
+```

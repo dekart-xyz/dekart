@@ -7,29 +7,30 @@ import { useDispatch, useSelector } from 'react-redux'
 import 'ace-builds/src-noconflict/mode-sql'
 import 'ace-builds/src-noconflict/theme-sqlserver'
 import 'ace-builds/src-noconflict/ext-language_tools'
+import 'ace-builds/src-noconflict/keybinding-vscode'
 import 'ace-builds/webpack-resolver'
-import { Connection, Query as QueryType } from '../proto/dekart_pb'
+import { Connection, QueryJob } from '../proto/dekart_pb'
 import { SendOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
 import { Duration } from 'luxon'
 import DataDocumentationLink from './DataDocumentationLink'
-import { cancelQuery, queryChanged, runQuery } from './actions/query'
+import { cancelJob, queryChanged, runQuery } from './actions/query'
 import Tooltip from 'antd/es/tooltip'
 import { switchPlayground } from './actions/user'
 import { getDatasourceMeta } from './lib/datasource'
 
-function CancelButton ({ query }) {
+function CancelButton ({ queryJob }) {
   const dispatch = useDispatch()
   return (
     <Button
       size='small'
       type='ghost'
-      onClick={() => dispatch(cancelQuery(query.id))}
+      onClick={() => dispatch(cancelJob(queryJob.id))}
     >Cancel
     </Button>
   )
 }
 
-function JobTimer ({ query }) {
+function JobTimer ({ queryJob }) {
   const online = useSelector(state => state.reportStatus.online)
   const lastUpdated = useSelector(state => state.reportStatus.lastUpdated)
   const [durationMs, setDuration] = useState(Date.now())
@@ -39,12 +40,12 @@ function JobTimer ({ query }) {
       if (cancel || !online) {
         return
       }
-      setDuration(query.jobDuration + Date.now() - lastUpdated)
+      setDuration(queryJob.jobDuration + Date.now() - lastUpdated)
       setTimeout(iterator, 1000)
     }
     iterator()
     return () => { cancel = true }
-  }, [query.jobDuration, online, lastUpdated])
+  }, [queryJob.jobDuration, online, lastUpdated])
   if (!online) {
     return null
   }
@@ -52,16 +53,27 @@ function JobTimer ({ query }) {
   return (<span className={styles.jobTimer}>{duration.toFormat('mm:ss')}</span>)
 }
 
-function StatusActions ({ query }) {
+function StatusActions ({ queryJob }) {
   return (
     <span className={styles.statusActions}>
-      <JobTimer query={query} />
-      <CancelButton query={query} />
+      <JobTimer queryJob={queryJob} />
+      <CancelButton queryJob={queryJob} />
     </span>
   )
 }
 
 function QueryEditor ({ queryId, queryText, onChange, canWrite }) {
+  const dataset = useSelector(state => state.dataset.list.find(q => q.queryId === queryId))
+  const connection = useSelector(state => state.connection.list.find(c => c.id === dataset?.connectionId))
+  const connectionType = useConnectionType(connection?.id)
+  const completer = getDatasourceMeta(connectionType)?.completer
+  useEffect(() => {
+    if (completer) {
+      const langTools = window.ace.require('ace/ext/language_tools')
+      langTools.addCompleter(completer)
+    }
+  }, [completer])
+
   return (
     <div className={styles.editor}>
       <AutoSizer>
@@ -70,9 +82,9 @@ function QueryEditor ({ queryId, queryText, onChange, canWrite }) {
             mode='sql'
             width={`${width}px`}
             height={`${height}px`}
-            // theme='textmate'
             theme='sqlserver'
             name={'AceEditor' + queryId}
+            keyboardHandler='vscode'
             onChange={onChange}
             value={queryText}
             readOnly={!canWrite}
@@ -112,12 +124,14 @@ function PlaygroundWarning ({ jobError }) {
 
 function QueryStatus ({ children, query }) {
   const env = useSelector(state => state.env)
+  const hash = useSelector(state => state.queryParams.hash)
+  const queryJob = useSelector(state => state.queryJobs.find(job => job.queryId === query.id && job.queryParamsHash === hash))
   let message, errorMessage, action, style, tooltip, errorInfoHtml
   let icon = null
-  if (query.jobError) {
+  if (queryJob?.jobError) {
     message = 'Error'
     style = styles.error
-    errorMessage = query.jobError
+    errorMessage = queryJob.jobError
     if (env.variables.UX_ACCESS_ERROR_INFO_HTML && errorMessage.includes('Error 403')) {
       errorInfoHtml = ''
     } else if (env.variables.UX_NOT_FOUND_ERROR_INFO_HTML && errorMessage.includes('Error 404')) {
@@ -125,38 +139,38 @@ function QueryStatus ({ children, query }) {
     }
     icon = <ExclamationCircleTwoTone className={styles.icon} twoToneColor='#F66B55' />
   }
-  switch (query.jobStatus) {
-    case QueryType.JobStatus.JOB_STATUS_PENDING:
+  switch (queryJob?.jobStatus) {
+    case QueryJob.JobStatus.JOB_STATUS_PENDING:
       icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
       message = 'Pending'
       style = styles.info
-      action = <StatusActions query={query} />
+      action = <StatusActions queryJob={queryJob} />
       break
-    case QueryType.JobStatus.JOB_STATUS_RUNNING:
+    case QueryJob.JobStatus.JOB_STATUS_RUNNING:
       icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
       message = 'Running'
       style = styles.info
-      action = <StatusActions query={query} />
+      action = <StatusActions queryJob={queryJob} />
       break
-    case QueryType.JobStatus.JOB_STATUS_DONE_LEGACY:
-      if (!query.jobResultId) {
+    case QueryJob.JobStatus.JOB_STATUS_DONE_LEGACY:
+      if (!queryJob.jobResultId) {
         message = 'Reading Result'
         style = styles.info
         icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
-        action = <StatusActions query={query} />
+        action = <StatusActions queryJob={queryJob} />
         break
       }
       icon = <CheckCircleTwoTone className={styles.icon} twoToneColor='#52c41a' />
       message = <span>Ready</span>
       style = styles.success
       break
-    case QueryType.JobStatus.JOB_STATUS_READING_RESULTS:
+    case QueryJob.JobStatus.JOB_STATUS_READING_RESULTS:
       message = 'Reading Result'
       style = styles.info
       icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
-      action = <StatusActions query={query} />
+      action = <StatusActions queryJob={queryJob} />
       break
-    case QueryType.JobStatus.JOB_STATUS_DONE:
+    case QueryJob.JobStatus.JOB_STATUS_DONE:
       icon = <CheckCircleTwoTone className={styles.icon} twoToneColor='#52c41a' />
       message = <span>Ready</span>
       style = styles.success
@@ -176,7 +190,7 @@ function QueryStatus ({ children, query }) {
         </div>
         {errorMessage ? <div className={styles.errorMessage}>{errorMessage}</div> : null}
         {errorInfoHtml ? <div className={styles.errorInfoHtml} dangerouslySetInnerHTML={{ __html: errorInfoHtml }} /> : null}
-        <PlaygroundWarning jobError={query.jobError} />
+        <PlaygroundWarning jobError={queryJob?.jobError} />
       </div>
       {children ? <div className={styles.button}>{children}</div> : null}
 
@@ -184,17 +198,19 @@ function QueryStatus ({ children, query }) {
   )
 }
 
+// custom react hook which gets connectionType
+function useConnectionType (connectionId) {
+  const isPlayground = useSelector(state => state.user.isPlayground)
+  const connectionType = useSelector(state => state.connection.list.find(c => c.id === connectionId)?.connectionType)
+  return isPlayground ? Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY : connectionType
+}
+
 function SampleQuery ({ queryId }) {
   const { UX_SAMPLE_QUERY_SQL, UX_DATA_DOCUMENTATION } = useSelector(state => state.env.variables)
-  const isPlayground = useSelector(state => state.user.isPlayground)
   const queryStatus = useSelector(state => state.queryStatus[queryId])
   const dataset = useSelector(state => state.dataset.list.find(q => q.queryId === queryId))
   const connection = useSelector(state => state.connection.list.find(c => c.id === dataset?.connectionId))
-
-  let connectionType = connection?.connectionType
-  if (isPlayground) {
-    connectionType = Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY
-  }
+  const connectionType = useConnectionType(connection?.id)
 
   const datasetCount = useSelector(state => state.connection.list.reduce((dc, c) => {
     return dc + c.datasetCount
@@ -242,7 +258,6 @@ function SampleQuery ({ queryId }) {
       </div>
     )
   }
-  console.log('no sample query', connection)
   return null
 }
 

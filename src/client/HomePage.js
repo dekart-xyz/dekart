@@ -188,14 +188,20 @@ function ConnectionTypeSelector () {
   return (
     <>
       <div className={styles.connectionTypeSelector}>
-        <Button icon={<DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY} />} size='large' onClick={() => {
-          track('ConnectionTypeSelectorBigQuery')
-          dispatch(newConnection(Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY))
-        }}>BigQuery</Button>
-        <Button icon={<DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE} />} size='large' onClick={() => {
-          track('ConnectionTypeSelectorSnowflake')
-          dispatch(newConnection(Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE))
-        }}>Snowflake</Button>
+        <Button
+          icon={<DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY} />} size='large' onClick={() => {
+            track('ConnectionTypeSelectorBigQuery')
+            dispatch(newConnection(Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY))
+          }}
+        >BigQuery
+        </Button>
+        <Button
+          icon={<DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE} />} size='large' onClick={() => {
+            track('ConnectionTypeSelectorSnowflake')
+            dispatch(newConnection(Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE))
+          }}
+        >Snowflake
+        </Button>
       </div>
       {showCancel
         ? (
@@ -205,10 +211,10 @@ function ConnectionTypeSelector () {
           )
         : (
           <div className={styles.notSure}>
-          <p>or</p>
-          <Button ghost type='primary' href='https://dekart.xyz/self-hosted/' target='_blank'>Get Started with Self-Hosting</Button>
-        </div>
-        )}
+            <p>or</p>
+            <Button ghost type='primary' href='https://dekart.xyz/self-hosted/' target='_blank'>Get Started with Self-Hosting</Button>
+          </div>
+          )}
     </>
   )
 }
@@ -279,7 +285,14 @@ function ReportsHeader (
       <div className={styles.rightCornerAction}>
         {
           reportFilter === 'connections'
-            ? <Button disabled={!isAdmin} onClick={() => { dispatch(newConnectionScreen(true)) }}>New Connection</Button>
+            ? (
+              <Button
+                disabled={!isAdmin}
+                title={isAdmin ? 'Create new connection' : 'Only admin can create new connection'}
+                onClick={() => { dispatch(newConnectionScreen(true)) }}
+              >New Connection
+              </Button>
+              )
             : (
               <>
                 {

@@ -6,11 +6,12 @@ import { useEffect } from 'react'
 function DownloadingMessage () {
   const downloadingDatasets = useSelector(state => state.dataset.downloading)
   const files = useSelector(state => state.files)
-  const queries = useSelector(state => state.queries)
+  const hash = useSelector(state => state.queryParams.hash)
+  const queryJobs = useSelector(state => state.queryJobs)
   const size = downloadingDatasets.reduce((size, { queryId, fileId }) => {
     if (queryId) {
-      const query = queries.find(q => q.id === queryId)
-      return size + query.resultSize
+      const job = queryJobs.find(j => j.queryId === queryId && j.queryParamsHash === hash)
+      return size + job.resultSize
     }
     if (fileId) {
       const file = files.find(f => f.id === fileId)

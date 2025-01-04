@@ -22,7 +22,7 @@ import { switchPlayground } from './actions/user'
 import { useParams } from 'react-router-dom'
 import { track } from './lib/tracking'
 
-function Invites() {
+function Invites () {
   const workspace = useSelector(state => state.workspace)
   const invites = workspace.invites
   const dispatch = useDispatch()
@@ -40,7 +40,7 @@ function Invites() {
               </ol>
             }
           />
-        )
+          )
         : (
           <div className={styles.inviteList}>
             <Table
@@ -86,32 +86,30 @@ function Invites() {
 }
 
 const publicDomains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com', 'aol.com', 'protonmail.com', 'zoho.com', 'yandex.com', 'mail.com', 'gmx.com', 'inbox.com', 'fastmail.com', 'tutanota.com', 'disroot.org', 'riseup.net', 'tuta.io', 'keemail.me', 'elude.in']
-function suggestWorkspaceName(email) {
-
+function suggestWorkspaceName (email) {
   // Validate the email format
   if (!email || !email.includes('@')) {
-    return '';
+    return ''
   }
 
   // Split the email into user handler and domain
-  const [, domain] = email.split('@');
+  const [, domain] = email.split('@')
 
   // Capitalize the first letter of a string for a nicer format
-  const capitalize = (str) => str.charAt(0).toUpperCase() + str.slice(1);
-
+  const capitalize = (str) => str.charAt(0).toUpperCase() + str.slice(1)
 
   // Check if the domain is public
   if (publicDomains.includes(domain)) {
-    return `Personal`;
+    return 'Personal'
   }
 
   // If it's a private domain, assume it's a company
-  const companyName = capitalize(domain.split('.')[0]); // Use the main part of the domain
+  const companyName = capitalize(domain.split('.')[0]) // Use the main part of the domain
 
   return companyName
 }
 
-function CreateWorkspaceForm() {
+function CreateWorkspaceForm () {
   const [disabled, setDisabled] = useState(false)
   const email = useSelector(state => state.user.stream?.email)
   const dispatch = useDispatch()
@@ -144,7 +142,7 @@ function CreateWorkspaceForm() {
   )
 }
 
-function UpdateWorkspaceForm() {
+function UpdateWorkspaceForm () {
   const workspace = useSelector(state => state.workspace)
   const isAdmin = useSelector(state => state.user.isAdmin)
   const [disabled, setDisabled] = useState(!isAdmin)
@@ -175,7 +173,7 @@ function UpdateWorkspaceForm() {
   )
 }
 
-function WorkspaceTab({ nextStep, setNextStep }) {
+function WorkspaceTab ({ nextStep, setNextStep }) {
   const userStream = useSelector(state => state.user.stream)
   const workspace = useSelector(state => state.workspace)
   const invites = workspace.invites
@@ -212,9 +210,9 @@ function WorkspaceTab({ nextStep, setNextStep }) {
               ]}
               optionType='button'
               buttonStyle='solid'
-            />
+                 />
             </div>
-          )}
+            )}
       </div>
       <div className={styles.workspaceTabBody}>{form}</div>
 
@@ -222,7 +220,7 @@ function WorkspaceTab({ nextStep, setNextStep }) {
   )
 }
 
-function getMembersSubTitle(addedUsersCount, planType) {
+function getMembersSubTitle (addedUsersCount, planType) {
   if (isNaN(addedUsersCount) || planType > PlanType.TYPE_TEAM) {
     return ''
   }
@@ -232,7 +230,7 @@ function getMembersSubTitle(addedUsersCount, planType) {
   return '(paid plan)'
 }
 
-export function Workspace({ nextStep, setNextStep }) {
+export function Workspace ({ nextStep, setNextStep }) {
   const { inviteId } = useParams()
   const userStream = useSelector(state => state.user.stream)
   const addedUsersCount = useSelector(state => state.workspace.addedUsersCount)
@@ -257,44 +255,46 @@ export function Workspace({ nextStep, setNextStep }) {
   }
   return (
     <div className={styles.workspace}>
-      {workspaceId ? (
-        <div className={styles.workspaceSteps}>
-          <Steps
-            type='navigation'
-            size='default'
-            current={step}
-            onChange={(current) => {
-              setStep(current)
-            }}
-            className='site-navigation-steps'
-            items={[
-              {
-                title: 'Workspace',
-                icon: <AppstoreTwoTone />
-              },
-              {
-                title: 'Plan',
-                icon: <CreditCardOutlined />,
-                disabled: !userStream.workspaceId
-              },
-              {
-                title: 'Members',
-                icon: <TeamOutlined />,
-                disabled: userStream.planType <= PlanType.TYPE_PERSONAL,
-                subTitle: getMembersSubTitle(addedUsersCount, planType)
-              }
-            ]}
-          />
-        </div>
+      {workspaceId
+        ? (
+          <div className={styles.workspaceSteps}>
+            <Steps
+              type='navigation'
+              size='default'
+              current={step}
+              onChange={(current) => {
+                setStep(current)
+              }}
+              className='site-navigation-steps'
+              items={[
+                {
+                  title: 'Workspace',
+                  icon: <AppstoreTwoTone />
+                },
+                {
+                  title: 'Plan',
+                  icon: <CreditCardOutlined />,
+                  disabled: !userStream.workspaceId
+                },
+                {
+                  title: 'Members',
+                  icon: <TeamOutlined />,
+                  disabled: userStream.planType <= PlanType.TYPE_PERSONAL,
+                  subTitle: getMembersSubTitle(addedUsersCount, planType)
+                }
+              ]}
+            />
+          </div>
 
-      ) : null}
+          )
+        : null}
 
       {([<WorkspaceTab key={0} nextStep={nextStep} setNextStep={setNextStep} />, <SubscriptionTab key={1} />, <MembersTab key={2} />])[step]}
     </div>
   )
 }
 
-function WelcomeScreen({ setNextStep }) {
+function WelcomeScreen ({ setNextStep }) {
   const workspace = useSelector(state => state.workspace)
   const invites = workspace.invites
   useEffect(() => {
@@ -308,20 +308,22 @@ function WelcomeScreen({ setNextStep }) {
       subTitle='Set up a secure space to connect your data, and share live maps with your team.'
       extra={(
         <>
-          <Button type='primary' key='1' onClick={() => {
-            track('CreateWorkspace')
-            setNextStep('workspace')
-          }}>
+          <Button
+            type='primary' key='1' onClick={() => {
+              track('CreateWorkspace')
+              setNextStep('workspace')
+            }}
+          >
             Create Workspace
           </Button>
           <Button key='2' onClick={() => setNextStep('invites')}><Badge color='blue' count={invites.length} offset={[14, -10]}>Join Existing Workspace</Badge></Button>
           <div className={styles.notSure}>
-          <div className={styles.notSureItems}>
+            <div className={styles.notSureItems}>
               <div>→ Connect Instantly to BigQuery and Snowflake</div>
               <div>→ Create Your First Map in 30 Seconds</div>
               <div>→ No credit card required.</div>
-              </div>
-              <Button ghost type='primary'  href='https://dekart.xyz/docs/about/screencast/' target='_blank'>🎬 Watch a 40-Second Walkthrough</Button>
+            </div>
+            <Button ghost type='primary' href='https://dekart.xyz/docs/about/screencast/' target='_blank'>🎬 Watch a 40-Second Walkthrough</Button>
           </div>
         </>
       )}
@@ -329,7 +331,7 @@ function WelcomeScreen({ setNextStep }) {
   )
 }
 
-export default function WorkspacePage() {
+export default function WorkspacePage () {
   const userStream = useSelector(state => state.user.stream)
   const workspaceId = userStream?.workspaceId
   const [nextStep, setNextStep] = useState(null)
@@ -351,7 +353,7 @@ export default function WorkspacePage() {
           <div className={styles.body}>
             {workspaceId || nextStep ? <Workspace nextStep={nextStep} setNextStep={setNextStep} /> : <WelcomeScreen setNextStep={setNextStep} />}
           </div>
-        )
+          )
         : null}
     </div>
   )

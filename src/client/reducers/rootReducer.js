@@ -1,9 +1,9 @@
 import { combineReducers } from 'redux'
 import { ActionTypes as KeplerActionTypes } from '@dekart-xyz/kepler.gl/dist/actions'
 import { setUserMapboxAccessTokenUpdater } from '@dekart-xyz/kepler.gl/dist/reducers/ui-state-updaters'
-import { openReport, reportUpdate, forkReport, saveMap, reportTitleChange, newReport, newForkedReport, unsubscribeReports, reportsListUpdate, closeReport } from '../actions/report'
+import { openReport, reportUpdate, forkReport, saveMap, reportTitleChange, newReport, newForkedReport, unsubscribeReports, reportsListUpdate, closeReport, toggleReportEdit, setReportChanged, savedReport } from '../actions/report'
 import { setStreamError } from '../actions/message'
-import { queries, queryStatus } from './queryReducer'
+import { numRunningQueries, queries, queryJobs, queryParams, queryStatus } from './queryReducer'
 import { setUsage } from '../actions/usage'
 import { setEnv } from '../actions/env'
 import { newRelease } from '../actions/version'
@@ -18,6 +18,7 @@ import httpError from './httpErrorReducer'
 import dataset from './datasetReducer'
 import storage from './storageReducer'
 import { setRedirectState } from '../actions/redirect'
+import { queryChanged, queryParamChanged, updateQueryParamsFromQueries } from '../actions/query'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
   uiState: {
@@ -66,40 +67,63 @@ function files (state = [], action) {
 
 const defaultReportStatus = {
   dataAdded: false,
-  canSave: false,
   title: null,
-  edit: false,
+  edit: false, // edit UI mode (does not mean user has write access)
   online: false,
   newReportId: null,
   lastUpdated: 0,
-  opened: false
+  opened: false,
+  saving: false,
+  lastChanged: 0,
+  lastSaved: 0
 }
 function reportStatus (state = defaultReportStatus, action) {
   switch (action.type) {
+    case updateQueryParamsFromQueries.name:
+    case queryParamChanged.name:
+    case queryChanged.name:
+    case setReportChanged.name: {
+      const lastChanged = Date.now()
+      return {
+        ...state,
+        lastChanged
+      }
+    }
     case forkReport.name:
     case saveMap.name:
       return {
         ...state,
-        canSave: false
+        saving: true
       }
     case reportTitleChange.name:
       return {
         ...state,
-        title: action.title
+        title: action.title,
+        lastChanged: Date.now()
+      }
+    case savedReport.name:
+      return {
+        ...state,
+        saving: false,
+        lastSaved: action.lastSaved
       }
     case reportUpdate.name:
       return {
         ...state,
-        canSave: true,
         online: true,
-        title: state.title == null ? action.report.title : state.title,
+        title: action.report.title,
         lastUpdated: Date.now()
       }
     case openReport.name:
       return {
         ...defaultReportStatus,
-        edit: action.edit,
-        opened: true
+        opened: true,
+        edit: state.edit
+      }
+    case toggleReportEdit.name:
+      return {
+        ...state,
+        edit: action.edit
       }
     case closeReport.name:
       return defaultReportStatus
@@ -166,7 +190,7 @@ function env (state = defaultEnv, action) {
       return {
         loaded: true,
         variables: action.variables,
-        authEnabled: Boolean(action.variables.AUTH_ENABLED),
+        authEnabled: Boolean(action.variables.AUTH_ENABLED)
       }
     default:
       return state
@@ -219,8 +243,6 @@ function fileUploadStatus (state = {}, action) {
 export default combineReducers({
   keplerGl,
   report,
-  queries,
-  queryStatus,
   reportStatus,
   reportsList,
   env,
@@ -235,5 +257,10 @@ export default combineReducers({
   user,
   workspace,
   dataset,
-  storage
+  storage,
+  queries,
+  queryStatus,
+  queryParams,
+  queryJobs,
+  numRunningQueries
 })

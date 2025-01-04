@@ -2,12 +2,12 @@ import { CreateDatasetRequest, RemoveDatasetRequest, UpdateDatasetConnectionRequ
 import { Dekart } from '../../proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { downloading, setError, finishDownloading, success, info, warn } from './message'
-import { addDataToMap, toggleSidePanel, removeDataset as removeDatasetFromKepler, reorderLayer } from '@dekart-xyz/kepler.gl/dist/actions'
+import { addDataToMap, toggleSidePanel, reorderLayer, removeDataset as removeDatasetFromKepler } from '@dekart-xyz/kepler.gl/dist/actions'
 import { processCsvData, processGeojson } from '@dekart-xyz/kepler.gl/dist/processors'
 import { get } from '../lib/api'
-import { KeplerGlSchema } from '@dekart-xyz/kepler.gl/dist/schemas'
 import getDatasetName from '../lib/getDatasetName'
 import { runQuery } from './query'
+import { KeplerGlSchema } from '@dekart-xyz/kepler.gl/dist/schemas'
 
 export function createDataset (reportId) {
   return (dispatch, getState) => {
@@ -80,6 +80,14 @@ export function removeDataset (datasetId) {
   }
 }
 
+export function keplerDatasetStartUpdating () {
+  return { type: keplerDatasetStartUpdating.name }
+}
+
+export function keplerDatasetFinishUpdating () {
+  return { type: keplerDatasetFinishUpdating.name }
+}
+
 export function downloadDataset (dataset, sourceId, extension, prevDatasetsList) {
   return async (dispatch, getState) => {
     const { dataset: { list: datasets }, files, queries, keplerGl } = getState()
@@ -99,7 +107,9 @@ export function downloadDataset (dataset, sourceId, extension, prevDatasetsList)
       }
     } catch (err) {
       dispatch(finishDownloading(dataset)) // remove downloading message
-      if (err.status === 410 && dataset.queryId) { // gone from dw query temporary storage
+      if (err.message.includes('CSV is empty')) {
+        dispatch(warn(<><i>{label}</i> Result is empty</>))
+      } else if (err.status === 410 && dataset.queryId) { // gone from dw query temporary storage
         const { canRun, queryText } = getState().queryStatus[dataset.queryId]
         if (!canRun) {
           dispatch(warn(<><i>{label}</i> result expired</>, false))
@@ -121,17 +131,14 @@ export function downloadDataset (dataset, sourceId, extension, prevDatasetsList)
     }
     try {
       if (prevDataset) {
+        dispatch(keplerDatasetStartUpdating())
         const prevLabel = getDatasetName(prevDataset, queries, files)
-        // kepler does not update datasets correctly
-        // so we have to remove and add again
-
-        // receive config
-        const config = KeplerGlSchema.getConfigToSave(keplerGl.kepler)
 
         // remember layer order, because kepler will reshuffle layers after adding dataset
         const layerOrder = [].concat(getState().keplerGl.kepler.visState.layerOrder)
         const layersAr = getState().keplerGl.kepler.visState.layers.map(layer => layer.id)
         const layerIdOrder = layerOrder.map(id => layersAr[id])
+        const config = KeplerGlSchema.getConfigToSave(keplerGl.kepler)
 
         // filter for specific dataset
         config.config.visState.layers = config.config.visState.layers.filter(
@@ -151,7 +158,6 @@ export function downloadDataset (dataset, sourceId, extension, prevDatasetsList)
           })
         }
 
-        // remove dataset
         dispatch(removeDatasetFromKepler(dataset.id))
 
         // add dataset with previous config
@@ -164,15 +170,18 @@ export function downloadDataset (dataset, sourceId, extension, prevDatasetsList)
             data
           },
           options: { keepExistingConfig: true },
-          config
+          config // https://github.com/keplergl/kepler.gl/issues/176#issuecomment-410326304
         }))
 
         // restore layer order
         const newLayersAr = getState().keplerGl.kepler.visState.layers.map(layer => layer.id)
         if (newLayersAr.length === layerIdOrder.length) {
-          const newOrder = layerIdOrder.map(id => newLayersAr.indexOf(id))
-          dispatch(reorderLayer(newOrder))
+          const newOrder = layerIdOrder.map(id => newLayersAr.indexOf(id)).filter(i => i >= 0)
+          if (newOrder.length === layerIdOrder.length) {
+            dispatch(reorderLayer(newOrder))
+          }
         }
+        dispatch(keplerDatasetFinishUpdating())
       } else {
         dispatch(addDataToMap({
           datasets: {
