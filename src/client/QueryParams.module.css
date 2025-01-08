@@ -46,6 +46,9 @@
     position: relative;
     top: 1px;
 }
+.textParameter :global(.ant-btn) {
+    border-width: 0 !important;
+}
 .queryParams :global(.ant-btn-background-ghost[disabled]) {
     background-color: #1f1f1f!important;
     color: #8c8c8c !important;

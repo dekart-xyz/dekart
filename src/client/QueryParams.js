@@ -35,10 +35,10 @@ function SettingsButton ({ name }) {
 }
 
 function TextParameter ({ queryParam }) {
-  const value = useSelector(state => state.queryParams.values[queryParam.name] || queryParam.defaultValue)
+  const value = useSelector(state => state.queryParams.values[queryParam.name])
   const dispatch = useDispatch()
   return (
-    <Form.Item>
+    <Form.Item className={styles.textParameter}>
       <Input
         addonBefore={<Label>{queryParam.label || queryParam.name}</Label>}
         suffix={<SettingsButton name={queryParam.name} />}
