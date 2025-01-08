@@ -5,7 +5,6 @@ import { getQueryParamsObjArr, getQueryParamsString } from '../lib/queryParams'
 import { grpcCall } from './grpc'
 import { setError } from './message'
 import { md5 } from 'js-md5'
-import { saveMap } from './report'
 
 export function queryChanged (queryId, queryText) {
   return (dispatch, getState) => {
@@ -146,39 +145,23 @@ export function updateQueryParamsFromURL (search) {
   }
 }
 
-// use first value from query params as default value if it is not set
-function setDefaultValuesIfNeeded (queryParamsList, values) {
-  let changed = false
-  queryParamsList.forEach(param => {
-    if (!param.defaultValue && values[param.name]) {
-      param.defaultValue = values[param.name]
-      changed = true
-    }
-  })
-  return changed
-}
-
 export function applyQueryParams () {
   return async function (dispatch, getState) {
-    const { queryParams: { values, list }, report: { canWrite } } = getState()
-    const updateAndRunQueries = () => {
-      dispatch(setQueryParamsValues(values))
-      dispatch(runAllQueries())
-    }
-
-    if (canWrite && setDefaultValuesIfNeeded(list, values)) {
-      dispatch(queryParamChanged())
-      dispatch(saveMap(updateAndRunQueries))
-    } else {
-      updateAndRunQueries()
-    }
+    const { queryParams: { values } } = getState()
+    dispatch(setQueryParamsValues(values))
+    dispatch(runAllQueries())
   }
 }
 
-export function setQueryParamsValues (values) {
+export function setQueryParamsValues (valuesIn) {
   return async function (dispatch, getState) {
     const { queryParams } = getState()
-
+    const values = { ...valuesIn }
+    queryParams.list.forEach(param => {
+      if (!valuesIn[param.name]) {
+        valuesIn[param.name] = param.defaultValue
+      }
+    })
     const paramsStr = getQueryParamsString(queryParams.list, values)
     window.history.replaceState({}, '', `${window.location.pathname}?${paramsStr}`)
 
