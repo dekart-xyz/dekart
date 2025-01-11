@@ -20,6 +20,7 @@ import (
 	"dekart/src/server/pgjob"
 	"dekart/src/server/secrets"
 	"dekart/src/server/snowflakejob"
+	"dekart/src/server/snowflakeutils"
 	"dekart/src/server/storage"
 	"dekart/src/server/userjob"
 
@@ -52,6 +53,7 @@ func configureLogger() {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 	log.Info().Msgf("Log level: %s", zerolog.GlobalLevel().String())
+	snowflakeutils.ConfigureSnowflakeLogger(&log.Logger)
 
 }
 

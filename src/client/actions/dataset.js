@@ -93,11 +93,13 @@ export function downloadDataset (dataset, sourceId, extension, prevDatasetsList)
     const { dataset: { list: datasets }, files, queries, keplerGl } = getState()
     const label = getDatasetName(dataset, queries, files)
     dispatch({ type: downloadDataset.name, dataset })
-    dispatch(downloading(dataset))
+    const controller = new AbortController()
+
+    dispatch(downloading(dataset, controller))
     const { token } = getState()
     let data
     try {
-      const res = await get(`/dataset-source/${dataset.id}/${sourceId}.${extension}`, token)
+      const res = await get(`/dataset-source/${dataset.id}/${sourceId}.${extension}`, token, controller.signal)
       if (extension === 'csv') {
         const csv = await res.text()
         data = processCsvData(csv)
@@ -117,6 +119,8 @@ export function downloadDataset (dataset, sourceId, extension, prevDatasetsList)
         }
         dispatch(info(<><i>{label}</i> result expired, re-running</>))
         dispatch(runQuery(dataset.queryId, queryText))
+      } else if (err.name === 'AbortError') {
+        dispatch(setError(new Error('Download cancelled by user')))
       } else {
         dispatch(setError(err))
       }

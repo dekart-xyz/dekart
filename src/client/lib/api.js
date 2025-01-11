@@ -1,4 +1,3 @@
-
 export class ApiError extends Error {
   constructor (url, status, errorDetails) {
     super(`${status} GET ${url}`)
@@ -7,7 +6,7 @@ export class ApiError extends Error {
   }
 }
 
-export async function get (endpoint, token = null) {
+export async function get (endpoint, token = null, signal = null) {
   const headers = {}
   if (token) {
     headers.Authorization = `Bearer ${token.access_token}`
@@ -20,7 +19,8 @@ export async function get (endpoint, token = null) {
     url,
     {
       method: 'GET',
-      headers
+      headers,
+      signal
     }
   )
   if (!res.ok) {

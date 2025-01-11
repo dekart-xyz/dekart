@@ -1,7 +1,24 @@
 import { combineReducers } from 'redux'
 import { closeDatasetSettingsModal, keplerDatasetFinishUpdating, keplerDatasetStartUpdating, openDatasetSettingsModal, setActiveDataset } from '../actions/dataset'
-import { downloading as downloadingAction, finishDownloading } from '../actions/message'
+import { cancelDownloading, downloading as downloadingAction, finishDownloading } from '../actions/message'
 import { openReport, reportUpdate } from '../actions/report'
+
+function downloadControllers (state = [], action) {
+  switch (action.type) {
+    case downloadingAction.name:
+      return state.concat({
+        id: action.dataset.id,
+        controller: action.controller
+      })
+    case finishDownloading.name:
+      return state.filter(d => d.id !== action.dataset.id)
+    case cancelDownloading.name:
+      state.forEach(d => d.controller.abort())
+      return []
+    default:
+      return state
+  }
+}
 
 function downloading (state = [], action) {
   const { dataset } = action
@@ -82,5 +99,6 @@ export default combineReducers({
   active,
   settings,
   list,
-  updatingNum
+  updatingNum,
+  downloadControllers
 })

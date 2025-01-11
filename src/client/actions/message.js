@@ -6,8 +6,12 @@ const style = {}
 
 message.config({ top: 100 })
 
-export function downloading (dataset) {
-  return { type: downloading.name, dataset }
+export function downloading (dataset, controller) {
+  return { type: downloading.name, dataset, controller }
+}
+
+export function cancelDownloading () {
+  return { type: cancelDownloading.name }
 }
 
 export function finishDownloading (dataset, gone = false) {

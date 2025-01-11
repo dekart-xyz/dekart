@@ -1,10 +1,14 @@
 import prettyBites from 'pretty-bytes'
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import message from 'antd/es/message'
 import { useEffect } from 'react'
+import Button from 'antd/es/button'
+import styles from './Downloading.module.css'
+import { cancelDownloading } from './actions/message'
 
 function DownloadingMessage () {
   const downloadingDatasets = useSelector(state => state.dataset.downloading)
+  const dispatch = useDispatch()
   const files = useSelector(state => state.files)
   const hash = useSelector(state => state.queryParams.hash)
   const queryJobs = useSelector(state => state.queryJobs)
@@ -22,7 +26,7 @@ function DownloadingMessage () {
   if (size) {
     return (<span>Downloading Map Data ({prettyBites(size)})</span>)
   }
-  return (<span>Downloading Map Data...</span>)
+  return (<span>Downloading Map Data <Button className={styles.cancel} onClick={() => dispatch(cancelDownloading())} size='small'>Cancel</Button></span>)
 }
 
 let hideDownloading = null
