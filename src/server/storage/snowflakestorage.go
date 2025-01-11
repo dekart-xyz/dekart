@@ -51,7 +51,7 @@ func (s SnowflakeStorageObject) CanSaveQuery(context.Context, string) bool {
 
 func (s SnowflakeStorageObject) GetReader(ctx context.Context) (io.ReadCloser, error) {
 	log.Debug().Str("queryID", s.queryID).Msg("GetReader")
-	fetchResultByIDCtx := sf.WithFetchResultByID(ctx, s.queryID)
+	fetchResultByIDCtx := sf.WithStreamDownloader(sf.WithFetchResultByID(ctx, s.queryID))
 	db := sql.OpenDB(s.connector)
 	rows, err := db.QueryContext(fetchResultByIDCtx, "")
 	if err != nil {
