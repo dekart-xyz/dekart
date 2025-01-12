@@ -29,16 +29,18 @@ export function get (endpoint, token = null, signal = null, onProgress = null) {
     xhr.responseType = 'arraybuffer'
 
     xhr.onload = () => {
+      const headers = parseHeaders(xhr.getAllResponseHeaders())
+      const res = new window.Response(xhr.response, {
+        status: xhr.status,
+        statusText: xhr.statusText,
+        headers: new window.Headers(headers)
+      })
       if (xhr.status >= 200 && xhr.status < 300) {
-        const headers = parseHeaders(xhr.getAllResponseHeaders())
-        resolve(new window.Response(xhr.response, {
-          status: xhr.status,
-          statusText: xhr.statusText,
-          headers: new window.Headers(headers)
-        }))
+        resolve(res)
       } else {
-        const errorDetails = xhr.responseText
-        reject(new ApiError(url, xhr.status, errorDetails))
+        res.text().then(text => {
+          reject(new ApiError(url, xhr.status, text))
+        }).catch(reject)
       }
     }
 

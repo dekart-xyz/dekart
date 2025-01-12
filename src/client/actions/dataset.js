@@ -101,9 +101,12 @@ export function processDownloadError (err, dataset, label) {
     } else if (err.status === 410 && dataset.queryId) { // gone from dw query temporary storage
       const { canRun, queryText } = getState().queryStatus[dataset.queryId]
       if (!canRun) {
-        dispatch(warn(<><i>{label}</i> result expired</>, false))
+        // it's running already, do nothing
         return
       }
+      // don't need to check if user can run query (report.CanWrite || report.Discoverable)
+      // because report cannot be opened if it's not discoverable
+      // so if user can open report, they can run query
       dispatch(info(<><i>{label}</i> result expired, re-running</>))
       dispatch(runQuery(dataset.queryId, queryText))
     } else if (err.name === 'AbortError') {
