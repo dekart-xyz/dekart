@@ -10,14 +10,6 @@ export function downloading (dataset, controller) {
   return { type: downloading.name, dataset, controller }
 }
 
-export function cancelDownloading () {
-  return { type: cancelDownloading.name }
-}
-
-export function finishDownloading (dataset, gone = false) {
-  return { type: finishDownloading.name, dataset, gone }
-}
-
 export function warn (content, transitive = true) {
   if (!transitive) {
     message.warn({
