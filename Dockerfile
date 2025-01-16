@@ -17,7 +17,7 @@ RUN npm run build
 FROM nodedeps as nodetest
 RUN npm run test
 
-FROM golang:1.20 as godeps
+FROM golang:1.23.3 as godeps
 WORKDIR /source
 ADD go.mod .
 ADD go.sum .
