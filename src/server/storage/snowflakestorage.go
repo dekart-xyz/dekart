@@ -90,6 +90,10 @@ func (s SnowflakeStorageObject) GetReader(ctx context.Context) (io.ReadCloser, e
 			}
 			err = csvWriter.Write(csvRow)
 			if err != nil {
+				if errtype.WriteClosedPipeRe.MatchString(err.Error()) {
+					log.Warn().Err(err).Msg("Error writing column names")
+					return
+				}
 				log.Error().Err(err).Msg("Error writing column names")
 				return
 			}

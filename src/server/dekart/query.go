@@ -281,7 +281,6 @@ func (s Server) getQueryDetails(ctx context.Context, queryID string) (*queryDeta
 
 // injectQueryParams replaces query parameters with values, returns new query text and values hash
 func injectQueryParams(queryText string, params []*proto.QueryParam, valuesUrlEncoded string) (string, string, error) {
-	log.Debug().Str("query_text", queryText).Str("values", valuesUrlEncoded).Send()
 	// parse values from URL encoded string
 	values := make(map[string]string)
 	if valuesUrlEncoded != "" {
