@@ -2,9 +2,9 @@ package snowflakeutils
 
 import (
 	"context"
+	"dekart/src/server/errtype"
 	"fmt"
 	"io"
-	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -107,7 +107,7 @@ func (log *SFLogger) Warningf(format string, args ...interface{}) {
 
 func (log *SFLogger) Errorf(format string, args ...interface{}) {
 	//check if error is context cancellation error and suppress it
-	if strings.Contains(fmt.Sprintf(format, args...), "context canceled") {
+	if errtype.ContextCancelledRe.MatchString(fmt.Sprintf(format, args...)) {
 		log.dekartLogger.Warn().Msgf(format, args...)
 		return
 	}

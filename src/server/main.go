@@ -16,6 +16,7 @@ import (
 	"dekart/src/server/athenajob"
 	"dekart/src/server/bqjob"
 	"dekart/src/server/dekart"
+	"dekart/src/server/errtype"
 	"dekart/src/server/job"
 	"dekart/src/server/pgjob"
 	"dekart/src/server/secrets"
@@ -43,7 +44,7 @@ func configureLogger() {
 	if pretty != "" {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339}).With().Caller().Logger()
 	} else {
-		log.Logger = log.Logger.With().Caller().Stack().Logger()
+		log.Logger = log.Logger.With().Caller().Stack().Logger().Output(&errtype.LogWriter{Writer: os.Stderr})
 	}
 
 	debug := os.Getenv("DEKART_LOG_DEBUG")
@@ -54,7 +55,6 @@ func configureLogger() {
 	}
 	log.Info().Msgf("Log level: %s", zerolog.GlobalLevel().String())
 	snowflakeutils.ConfigureSnowflakeLogger(&log.Logger)
-
 }
 
 func configureDb() *sql.DB {

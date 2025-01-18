@@ -237,8 +237,7 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 	// connection update
 	connectionUpdate, err := s.getLastConnectionUpdate(ctx)
 	if err != nil {
-		log.Err(err).Send()
-		return status.Errorf(codes.Internal, err.Error())
+		return GRPCError("error getting connection update", err)
 	}
 
 	workspaceUpdate, err := s.getWorkspaceUpdate(ctx)
