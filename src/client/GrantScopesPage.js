@@ -4,7 +4,7 @@ import Result from 'antd/es/result'
 import Button from 'antd/es/button'
 import { useDispatch, useSelector } from 'react-redux'
 import { requestSensitiveScopes } from './actions/redirect'
-import { CloudTwoTone } from '@ant-design/icons'
+import { CloudTwoTone, FileProtectOutlined } from '@ant-design/icons'
 import { useEffect } from 'react'
 import { Redirect } from 'react-router-dom/cjs/react-router-dom'
 import { track } from './lib/tracking'
@@ -46,11 +46,15 @@ export default function GrantScopesPage ({ visitedPages }) {
       <div className={styles.body}>
         <Result
           icon={<CloudTwoTone />}
-          title='Grant access to Google Cloud'
+          title='Grant Access to Google Cloud'
           subTitle={(
             <>
-              <p>Dekart needs access to your <b>BigQuery</b> and <b>Google Cloud Storage</b> to query and store results.<br /> Your token is not stored in Dekart. You can revoke access by signing out of Dekart anytime.</p>
-              <p><a href='https://dekart.xyz/docs/cloud/cloud-security-faq/' target='_blank' rel='noreferrer'>Security Considerations</a></p>
+              <p>Dekart uses BigQuery passthrough authentication and requests short-lived tokens stored only in your browser, ensuring no tokens or query results are stored on its backend.</p>
+              <p style={{
+                fontSize: '1.2em'
+              }}
+              ><FileProtectOutlined /> <a href='https://dekart.xyz/docs/usage/google-cloud-grant-scopes-faq/' target='_blank' rel='noreferrer'>Verified by Google’s Trust & Safety Team</a>
+              </p>
             </>
           )}
           extra={(
