@@ -9,27 +9,20 @@ import { runAllQueries } from './actions/query'
 import { toggleModal } from '@dekart-xyz/kepler.gl/dist/actions/ui-state-actions'
 import { EXPORT_DATA_ID, EXPORT_IMAGE_ID, EXPORT_MAP_ID } from '@dekart-xyz/kepler.gl/dist/constants'
 import Dropdown from 'antd/es/dropdown'
-import Tooltip from 'antd/es/tooltip'
 import { useEffect } from 'react'
+import { ForkOnboarding, useRequireOnboarding } from './ForkOnboarding'
 
 function ForkButton ({ primary }) {
   const dispatch = useDispatch()
-  const { id: reportId, isPlayground: isPlaygroundReport, isPublic, canWrite } = useSelector(state => state.report)
+  const { id: reportId } = useSelector(state => state.report)
   const userStream = useSelector(state => state.user.stream)
   const userIsPlayground = useSelector(state => state.user.isPlayground)
   const workspaceId = userStream?.workspaceId
   const isViewer = useSelector(state => state.user.isViewer)
 
-  // user has workspace, but report is from playground
-  // we don't know how to match users connections to report connections
-  const disabled = (workspaceId && isPlaygroundReport) || isViewer
+  const disabled = isViewer
 
   const history = useHistory()
-
-  if (isPublic && !canWrite) {
-    // public reports can't be forked
-    return null
-  }
 
   let onClick = () => {
     dispatch(forkReport(reportId))
@@ -48,7 +41,7 @@ function ForkButton ({ primary }) {
         icon={<ForkOutlined />}
         disabled={disabled}
         onClick={onClick}
-      >Fork
+      >Fork this Map
       </Button>
     )
   }
@@ -59,7 +52,7 @@ function ForkButton ({ primary }) {
       disabled={disabled}
       onClick={onClick}
       id='dekart-fork-button'
-      title={disabled ? 'Forking is disabled for playground reports' : 'Fork this report'}
+      title={disabled ? 'Forking is disabled for viewers' : 'Fork this Map'}
     />
   )
 }
@@ -88,16 +81,6 @@ function RefreshButton () {
   )
 }
 
-function CreateWorkspaceButton () {
-  const history = useHistory()
-  return (
-    <Tooltip title='Set up a secure space to connect your data, and share live maps with your team.'>
-      <Button type='primary' onClick={() => history.push('/workspace')}>Create Workspace</Button>
-    </Tooltip>
-
-  )
-}
-
 function useReportChanged () {
   const { lastChanged, lastSaved } = useSelector(state => state.reportStatus)
   return lastChanged > lastSaved
@@ -108,9 +91,6 @@ function useAutoSave () {
   const dispatch = useDispatch()
   const { saving, online } = useSelector(state => state.reportStatus)
   const changed = useReportChanged()
-  const userStream = useSelector(state => state.user.stream)
-  const workspaceId = userStream?.workspaceId
-  const isPlayground = useSelector(state => state.user.isPlayground)
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -123,14 +103,6 @@ function useAutoSave () {
       clearTimeout(handler)
     }
   }, [canWrite, saving, changed, online, dispatch])
-
-  if (!workspaceId && !isPlayground) {
-    return (
-      <div className={styles.reportHeaderButtons}>
-        <CreateWorkspaceButton />
-      </div>
-    )
-  }
 }
 
 function goToPresent (history, id) {
@@ -147,6 +119,16 @@ function EditModeButtons () {
   const isViewer = useSelector(state => state.user.isViewer)
 
   useAutoSave()
+
+  const requireOnboarding = useRequireOnboarding()
+
+  if (requireOnboarding) {
+    return (
+      <div className={styles.reportHeaderButtons}>
+        <ForkOnboarding requireOnboarding={requireOnboarding} edit />
+      </div>
+    )
+  }
 
   return (
     <div className={styles.reportHeaderButtons}>
@@ -228,9 +210,16 @@ function goToSource (history, id) {
 function ViewModeButtons () {
   const history = useHistory()
   const { id, canWrite } = useSelector(state => state.report)
-  const userStream = useSelector(state => state.user.stream)
-  const workspaceId = userStream?.workspaceId
-  const isPlayground = useSelector(state => state.user.isPlayground)
+
+  const requireOnboarding = useRequireOnboarding()
+
+  if (requireOnboarding) {
+    return (
+      <div className={styles.reportHeaderButtons}>
+        <ForkOnboarding requireOnboarding={requireOnboarding} />
+      </div>
+    )
+  }
 
   if (canWrite) {
     return (
@@ -246,14 +235,6 @@ function ViewModeButtons () {
           onClick={() => goToSource(history, id)}
         >Edit
         </Button>
-      </div>
-    )
-  }
-
-  if (!workspaceId && !isPlayground) {
-    return (
-      <div className={styles.reportHeaderButtons}>
-        <CreateWorkspaceButton />
       </div>
     )
   }

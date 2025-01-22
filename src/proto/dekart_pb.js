@@ -23,7 +23,7 @@ goog.exportSymbol('proto.AuthState.Action', null, global);
 goog.exportSymbol('proto.CancelJobRequest', null, global);
 goog.exportSymbol('proto.CancelJobResponse', null, global);
 goog.exportSymbol('proto.Connection', null, global);
-goog.exportSymbol('proto.Connection.ConnectionType', null, global);
+goog.exportSymbol('proto.ConnectionType', null, global);
 goog.exportSymbol('proto.CreateConnectionRequest', null, global);
 goog.exportSymbol('proto.CreateConnectionResponse', null, global);
 goog.exportSymbol('proto.CreateDatasetRequest', null, global);
@@ -8482,7 +8482,7 @@ proto.Connection.deserializeBinaryFromReader = function(msg, reader) {
       msg.setCanStoreFiles(value);
       break;
     case 11:
-      var value = /** @type {!proto.Connection.ConnectionType} */ (reader.readEnum());
+      var value = /** @type {!proto.ConnectionType} */ (reader.readEnum());
       msg.setConnectionType(value);
       break;
     case 12:
@@ -8639,15 +8639,6 @@ proto.Connection.serializeBinaryToWriter = function(message, writer) {
   }
 };
 
-
-/**
- * @enum {number}
- */
-proto.Connection.ConnectionType = {
-  CONNECTION_TYPE_UNSPECIFIED: 0,
-  CONNECTION_TYPE_BIGQUERY: 1,
-  CONNECTION_TYPE_SNOWFLAKE: 2
-};
 
 /**
  * optional string id = 1;
@@ -8831,15 +8822,15 @@ proto.Connection.prototype.setCanStoreFiles = function(value) {
 
 /**
  * optional ConnectionType connection_type = 11;
- * @return {!proto.Connection.ConnectionType}
+ * @return {!proto.ConnectionType}
  */
 proto.Connection.prototype.getConnectionType = function() {
-  return /** @type {!proto.Connection.ConnectionType} */ (jspb.Message.getFieldWithDefault(this, 11, 0));
+  return /** @type {!proto.ConnectionType} */ (jspb.Message.getFieldWithDefault(this, 11, 0));
 };
 
 
 /**
- * @param {!proto.Connection.ConnectionType} value
+ * @param {!proto.ConnectionType} value
  * @return {!proto.Connection} returns this
  */
 proto.Connection.prototype.setConnectionType = function(value) {
@@ -12359,7 +12350,8 @@ proto.Dataset.toObject = function(includeInstance, msg) {
     updatedAt: jspb.Message.getFieldWithDefault(msg, 5, 0),
     fileId: jspb.Message.getFieldWithDefault(msg, 6, ""),
     name: jspb.Message.getFieldWithDefault(msg, 7, ""),
-    connectionId: jspb.Message.getFieldWithDefault(msg, 8, "")
+    connectionId: jspb.Message.getFieldWithDefault(msg, 8, ""),
+    connectionType: jspb.Message.getFieldWithDefault(msg, 9, 0)
   };
 
   if (includeInstance) {
@@ -12427,6 +12419,10 @@ proto.Dataset.deserializeBinaryFromReader = function(msg, reader) {
     case 8:
       var value = /** @type {string} */ (reader.readString());
       msg.setConnectionId(value);
+      break;
+    case 9:
+      var value = /** @type {!proto.ConnectionType} */ (reader.readEnum());
+      msg.setConnectionType(value);
       break;
     default:
       reader.skipField();
@@ -12510,6 +12506,13 @@ proto.Dataset.serializeBinaryToWriter = function(message, writer) {
   if (f.length > 0) {
     writer.writeString(
       8,
+      f
+    );
+  }
+  f = message.getConnectionType();
+  if (f !== 0.0) {
+    writer.writeEnum(
+      9,
       f
     );
   }
@@ -12657,6 +12660,24 @@ proto.Dataset.prototype.getConnectionId = function() {
  */
 proto.Dataset.prototype.setConnectionId = function(value) {
   return jspb.Message.setProto3StringField(this, 8, value);
+};
+
+
+/**
+ * optional ConnectionType connection_type = 9;
+ * @return {!proto.ConnectionType}
+ */
+proto.Dataset.prototype.getConnectionType = function() {
+  return /** @type {!proto.ConnectionType} */ (jspb.Message.getFieldWithDefault(this, 9, 0));
+};
+
+
+/**
+ * @param {!proto.ConnectionType} value
+ * @return {!proto.Dataset} returns this
+ */
+proto.Dataset.prototype.setConnectionType = function(value) {
+  return jspb.Message.setProto3EnumField(this, 9, value);
 };
 
 
@@ -16118,7 +16139,7 @@ proto.ReportStreamRequest.prototype.hasStreamOptions = function() {
  * @private {!Array<number>}
  * @const
  */
-proto.ReportStreamResponse.repeatedFields_ = [2,4,5,6,7];
+proto.ReportStreamResponse.repeatedFields_ = [2,4,5,6];
 
 
 
@@ -16159,8 +16180,6 @@ proto.ReportStreamResponse.toObject = function(includeInstance, msg) {
     proto.Dataset.toObject, includeInstance),
     filesList: jspb.Message.toObjectList(msg.getFilesList(),
     proto.File.toObject, includeInstance),
-    connectionsList: jspb.Message.toObjectList(msg.getConnectionsList(),
-    proto.Connection.toObject, includeInstance),
     queryJobsList: jspb.Message.toObjectList(msg.getQueryJobsList(),
     proto.QueryJob.toObject, includeInstance)
   };
@@ -16225,11 +16244,6 @@ proto.ReportStreamResponse.deserializeBinaryFromReader = function(msg, reader) {
       msg.addFiles(value);
       break;
     case 6:
-      var value = new proto.Connection;
-      reader.readMessage(value,proto.Connection.deserializeBinaryFromReader);
-      msg.addConnections(value);
-      break;
-    case 7:
       var value = new proto.QueryJob;
       reader.readMessage(value,proto.QueryJob.deserializeBinaryFromReader);
       msg.addQueryJobs(value);
@@ -16303,18 +16317,10 @@ proto.ReportStreamResponse.serializeBinaryToWriter = function(message, writer) {
       proto.File.serializeBinaryToWriter
     );
   }
-  f = message.getConnectionsList();
-  if (f.length > 0) {
-    writer.writeRepeatedMessage(
-      6,
-      f,
-      proto.Connection.serializeBinaryToWriter
-    );
-  }
   f = message.getQueryJobsList();
   if (f.length > 0) {
     writer.writeRepeatedMessage(
-      7,
+      6,
       f,
       proto.QueryJob.serializeBinaryToWriter
     );
@@ -16511,50 +16517,12 @@ proto.ReportStreamResponse.prototype.clearFilesList = function() {
 
 
 /**
- * repeated Connection connections = 6;
- * @return {!Array<!proto.Connection>}
- */
-proto.ReportStreamResponse.prototype.getConnectionsList = function() {
-  return /** @type{!Array<!proto.Connection>} */ (
-    jspb.Message.getRepeatedWrapperField(this, proto.Connection, 6));
-};
-
-
-/**
- * @param {!Array<!proto.Connection>} value
- * @return {!proto.ReportStreamResponse} returns this
-*/
-proto.ReportStreamResponse.prototype.setConnectionsList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 6, value);
-};
-
-
-/**
- * @param {!proto.Connection=} opt_value
- * @param {number=} opt_index
- * @return {!proto.Connection}
- */
-proto.ReportStreamResponse.prototype.addConnections = function(opt_value, opt_index) {
-  return jspb.Message.addToRepeatedWrapperField(this, 6, opt_value, proto.Connection, opt_index);
-};
-
-
-/**
- * Clears the list making it empty but non-null.
- * @return {!proto.ReportStreamResponse} returns this
- */
-proto.ReportStreamResponse.prototype.clearConnectionsList = function() {
-  return this.setConnectionsList([]);
-};
-
-
-/**
- * repeated QueryJob query_jobs = 7;
+ * repeated QueryJob query_jobs = 6;
  * @return {!Array<!proto.QueryJob>}
  */
 proto.ReportStreamResponse.prototype.getQueryJobsList = function() {
   return /** @type{!Array<!proto.QueryJob>} */ (
-    jspb.Message.getRepeatedWrapperField(this, proto.QueryJob, 7));
+    jspb.Message.getRepeatedWrapperField(this, proto.QueryJob, 6));
 };
 
 
@@ -16563,7 +16531,7 @@ proto.ReportStreamResponse.prototype.getQueryJobsList = function() {
  * @return {!proto.ReportStreamResponse} returns this
 */
 proto.ReportStreamResponse.prototype.setQueryJobsList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 7, value);
+  return jspb.Message.setRepeatedWrapperField(this, 6, value);
 };
 
 
@@ -16573,7 +16541,7 @@ proto.ReportStreamResponse.prototype.setQueryJobsList = function(value) {
  * @return {!proto.QueryJob}
  */
 proto.ReportStreamResponse.prototype.addQueryJobs = function(opt_value, opt_index) {
-  return jspb.Message.addToRepeatedWrapperField(this, 7, opt_value, proto.QueryJob, opt_index);
+  return jspb.Message.addToRepeatedWrapperField(this, 6, opt_value, proto.QueryJob, opt_index);
 };
 
 
@@ -17356,6 +17324,15 @@ proto.PlanType = {
   TYPE_TEAM: 2,
   TYPE_GROW: 3,
   TYPE_MAX: 4
+};
+
+/**
+ * @enum {number}
+ */
+proto.ConnectionType = {
+  CONNECTION_TYPE_UNSPECIFIED: 0,
+  CONNECTION_TYPE_BIGQUERY: 1,
+  CONNECTION_TYPE_SNOWFLAKE: 2
 };
 
 goog.object.extend(exports, proto);

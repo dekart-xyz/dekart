@@ -1,4 +1,4 @@
-import { ArchiveConnectionRequest, CreateConnectionRequest, GetConnectionListRequest, Connection, TestConnectionRequest, UpdateConnectionRequest, SetDefaultConnectionRequest, GetGcpProjectListRequest, Secret } from '../../proto/dekart_pb'
+import { ArchiveConnectionRequest, CreateConnectionRequest, GetConnectionListRequest, Connection, TestConnectionRequest, UpdateConnectionRequest, SetDefaultConnectionRequest, GetGcpProjectListRequest, Secret, ConnectionType } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { updateSessionStorage } from './sessionStorage'
@@ -98,13 +98,13 @@ export function reOpenDialog () {
 export function newConnection (connectionType) {
   return async (dispatch, getState) => {
     const { user } = getState()
-    if (connectionType === Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY && !user.sensitiveScopesGranted) {
+    if (connectionType === ConnectionType.CONNECTION_TYPE_BIGQUERY && !user.sensitiveScopesGranted) {
       dispatch(updateSessionStorage('lastOpenedDialog', { connectionType })) // remember the dialog state
       dispatch(needSensitiveScopes())
     }
     // just to show the modal
     dispatch({ type: newConnection.name, connectionType })
-    if (connectionType === Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY) {
+    if (connectionType === ConnectionType.CONNECTION_TYPE_BIGQUERY) {
       dispatch(getProjectList())
     }
   }
@@ -136,7 +136,14 @@ export function getConnectionsList () {
 }
 
 export function connectionSaved () {
-  return { type: connectionSaved.name }
+  return function (dispatch, getState) {
+    dispatch({ type: connectionSaved.name })
+    const redirectWhenSaveConnection = getState().connection.redirectWhenSaveConnection
+    if (redirectWhenSaveConnection) {
+      dispatch(updateSessionStorage('redirectWhenSaveConnection', null))
+      window.location.href = redirectWhenSaveConnection.edit ? `/reports/${redirectWhenSaveConnection.reportId}/source` : `/reports/${redirectWhenSaveConnection.reportId}`
+    }
+  }
 }
 
 export function saveConnection (id, connectionType, connectionProps) {
@@ -147,8 +154,8 @@ export function saveConnection (id, connectionType, connectionProps) {
     if (!id) {
       // create new connection
       const request = new CreateConnectionRequest()
-      if (connectionType === Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE) {
-        connection.setConnectionName(connectionProps.connectionName)
+      if (connectionType === ConnectionType.CONNECTION_TYPE_SNOWFLAKE) {
+        connection.setConnectionName(connectionProps.connectionName || 'Snowflake')
         connection.setSnowflakeAccountId(connectionProps.snowflakeAccountId)
         connection.setSnowflakeUsername(connectionProps.snowflakeUsername)
         connection.setSnowflakeWarehouse(connectionProps.snowflakeWarehouse)
@@ -173,7 +180,7 @@ export function saveConnection (id, connectionType, connectionProps) {
       // update existing connection
       const request = new UpdateConnectionRequest()
       connection.setId(id)
-      if (connectionType === Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE) {
+      if (connectionType === ConnectionType.CONNECTION_TYPE_SNOWFLAKE) {
         connection.setConnectionName(connectionProps.connectionName)
         connection.setSnowflakeAccountId(connectionProps.snowflakeAccountId)
         connection.setSnowflakeUsername(connectionProps.snowflakeUsername)
@@ -262,7 +269,7 @@ export function testConnection (connectionType, values) {
     const request = new TestConnectionRequest()
     const connection = new Connection()
     connection.setConnectionType(connectionType)
-    if (connectionType === Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE) {
+    if (connectionType === ConnectionType.CONNECTION_TYPE_SNOWFLAKE) {
       const { connectionName, snowflakeAccountId, snowflakeUsername, snowflakeWarehouse, snowflakePassword } = values
       connection.setConnectionName(connectionName)
       connection.setSnowflakeAccountId(snowflakeAccountId)

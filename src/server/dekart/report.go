@@ -414,14 +414,7 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 		// cannot fork non-playground report in playground
 		return nil, status.Error(codes.PermissionDenied, "Cannot fork non-playground report in playground")
 	}
-	if !isPlayground && report.IsPlayground {
-		// cannot fork playground report in workspace
-		return nil, status.Error(codes.InvalidArgument, "Cannot fork playground report in workspace")
-	}
-	if report.IsPublic && !report.CanWrite {
-		// cannot fork public report without write permission
-		return nil, status.Error(codes.PermissionDenied, "Cannot fork public report without write permission")
-	}
+
 	report.Id = newReportID
 	report.Title = fmt.Sprintf("Fork of %s", report.Title)
 
@@ -430,8 +423,50 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 		log.Err(err).Msg("Cannot retrieve datasets")
 		return nil, err
 	}
+	connectionUpdated := false
 
-	jobs, err := s.getDatasetsQueryJobs(ctx, datasets)
+	// we need to replace connection ids with the user connections ids when
+	// forking a public report
+	// or when forking a playground report in workspace
+	if report.IsPublic || (report.IsPlayground && !isPlayground) {
+		userConnections, err := s.getConnections(ctx)
+		if err != nil {
+			log.Err(err).Msg("Cannot retrieve connections")
+			return nil, err
+		}
+		// replace dataset connection ids with new connection ids with same connection type
+		for _, dataset := range datasets {
+			var newConnectionID string
+			for _, connection := range userConnections {
+				if dataset.ConnectionId == connection.Id {
+					newConnectionID = connection.Id
+					break
+				}
+				if connection.ConnectionType == dataset.ConnectionType ||
+					(report.IsPlayground && connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_BIGQUERY) {
+					// for playground reports we can use any bigquery connection
+					newConnectionID = connection.Id
+				}
+			}
+			if newConnectionID == "" {
+				log.Error().Msg("Connection not found")
+				return nil, status.Error(codes.NotFound, "Connection not found")
+			}
+			if newConnectionID != dataset.ConnectionId {
+				connectionUpdated = true
+			}
+			dataset.ConnectionId = newConnectionID
+		}
+	}
+	var jobs []*proto.QueryJob
+	if !connectionUpdated {
+		// copy query jobs only if user has access to the connection
+		jobs, err = s.getDatasetsQueryJobs(ctx, datasets)
+		if err != nil {
+			log.Err(err).Msg("Cannot retrieve query jobs")
+			return nil, err
+		}
+	}
 
 	err = s.commitReportWithDatasets(ctx, report, datasets, jobs)
 	if err != nil {

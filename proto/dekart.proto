@@ -285,6 +285,12 @@ message CreateConnectionResponse {
     Connection connection = 1;
 }
 
+enum ConnectionType {
+    CONNECTION_TYPE_UNSPECIFIED = 0;
+    CONNECTION_TYPE_BIGQUERY = 1;
+    CONNECTION_TYPE_SNOWFLAKE = 2;
+}
+
 message Connection {
     string id = 1;
     string connection_name = 2;
@@ -296,11 +302,6 @@ message Connection {
     int64 updated_at = 8;
     int64 dataset_count = 9;
     bool can_store_files = 10;
-    enum ConnectionType {
-        CONNECTION_TYPE_UNSPECIFIED = 0;
-        CONNECTION_TYPE_BIGQUERY = 1;
-        CONNECTION_TYPE_SNOWFLAKE = 2;
-    }
     ConnectionType connection_type = 11;
     string snowflake_account_id = 12;
     string snowflake_username = 13;
@@ -444,6 +445,7 @@ message Dataset {
     string file_id = 6;
     string name = 7;
     string connection_id = 8;
+    ConnectionType connection_type = 9;
 }
 
 message QueryJob {
@@ -577,8 +579,7 @@ message ReportStreamResponse {
     StreamOptions stream_options = 3;
     repeated Dataset datasets = 4;
     repeated File files = 5;
-    repeated Connection connections = 6;
-    repeated QueryJob query_jobs = 7;
+    repeated QueryJob query_jobs = 6;
 }
 
 message ForkReportRequest {

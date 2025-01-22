@@ -9,7 +9,7 @@ import 'ace-builds/src-noconflict/theme-sqlserver'
 import 'ace-builds/src-noconflict/ext-language_tools'
 import 'ace-builds/src-noconflict/keybinding-vscode'
 import 'ace-builds/webpack-resolver'
-import { Connection, QueryJob } from '../proto/dekart_pb'
+import { ConnectionType, QueryJob } from '../proto/dekart_pb'
 import { SendOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
 import { Duration } from 'luxon'
 import DataDocumentationLink from './DataDocumentationLink'
@@ -202,7 +202,7 @@ function QueryStatus ({ children, query }) {
 function useConnectionType (connectionId) {
   const isPlayground = useSelector(state => state.user.isPlayground)
   const connectionType = useSelector(state => state.connection.list.find(c => c.id === connectionId)?.connectionType)
-  return isPlayground ? Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY : connectionType
+  return isPlayground ? ConnectionType.CONNECTION_TYPE_BIGQUERY : connectionType
 }
 
 function SampleQuery ({ queryId }) {

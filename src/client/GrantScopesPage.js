@@ -50,11 +50,6 @@ export default function GrantScopesPage ({ visitedPages }) {
           subTitle={(
             <>
               <p>Dekart uses BigQuery passthrough authentication and requests short-lived tokens stored only in your browser, ensuring no tokens or query results are stored on its backend.</p>
-              <p style={{
-                fontSize: '1.2em'
-              }}
-              ><FileProtectOutlined /> <a href='https://dekart.xyz/docs/usage/google-cloud-grant-scopes-faq/' target='_blank' rel='noreferrer'>Verified by Google’s Trust & Safety Team</a>
-              </p>
             </>
           )}
           extra={(
@@ -67,6 +62,12 @@ export default function GrantScopesPage ({ visitedPages }) {
             </Button>
           )}
         />
+        <p style={{
+          fontSize: '1.2em'
+        }}
+        ><FileProtectOutlined /> <a href='https://dekart.xyz/docs/usage/google-cloud-grant-scopes-faq/' target='_blank' rel='noreferrer'>Verified by Google’s Trust & Safety Team</a>
+        </p>
+
       </div>
     </div>
   )

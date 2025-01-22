@@ -1,4 +1,4 @@
-import { Connection } from '../../proto/dekart_pb'
+import { ConnectionType } from '../../proto/dekart_pb'
 import { bigQueryKeywords } from './bigQueryKeywords'
 import { snowflakeKeywords } from './snowflakeKeywords'
 
@@ -17,7 +17,7 @@ const snowflakeCustomCompleter = {
 export function getDatasourceMeta (datasource) {
   switch (datasource) {
     case 'SNOWFLAKE':
-    case Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE:
+    case ConnectionType.CONNECTION_TYPE_SNOWFLAKE:
       return {
         name: 'Snowflake',
         style: 'snowflake',
@@ -33,8 +33,8 @@ FROM
         usageStatsId: 3
       }
     case 'BQ':
-    case Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY:
-    case Connection.ConnectionType.CONNECTION_TYPE_UNSPECIFIED: // legacy user connections
+    case ConnectionType.CONNECTION_TYPE_BIGQUERY:
+    case ConnectionType.CONNECTION_TYPE_UNSPECIFIED: // legacy user connections
       return {
         name: 'BigQuery',
         style: 'bigquery',

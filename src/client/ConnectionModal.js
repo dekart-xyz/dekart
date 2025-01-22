@@ -10,7 +10,7 @@ import { CheckCircleTwoTone, ExclamationCircleTwoTone, LoadingOutlined } from '@
 import Tooltip from 'antd/es/tooltip'
 import AutoComplete from 'antd/es/auto-complete'
 import Alert from 'antd/es/alert'
-import { Connection } from '../proto/dekart_pb'
+import { ConnectionType } from '../proto/dekart_pb'
 import { DatasourceIcon } from './Datasource'
 import { track } from './lib/tracking'
 
@@ -64,7 +64,7 @@ function SnowflakeConnectionModal ({ form }) {
   return (
     <Modal
       open
-      title={<><DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE} /> Snowflake</>}
+      title={<><DatasourceIcon type={ConnectionType.CONNECTION_TYPE_SNOWFLAKE} /> Snowflake</>}
       onCancel={() => dispatch(closeConnectionDialog())}
       footer={<Footer form={form} testDisabled={!passwordChanged} />}
     >
@@ -83,7 +83,7 @@ function SnowflakeConnectionModal ({ form }) {
           }}
         >
           {datasetUsed ? <div className={styles.datasetsCountAlert}><Alert message={<>This connection is used in {connection.datasetCount} dataset{connection.datasetCount > 1 ? 's' : ''}.</>} description='Changing make cause report errors' type='warning' /></div> : null}
-          <Form.Item label='Connection Name' required name='connectionName'>
+          <Form.Item label='Connection Name' name='connectionName'>
             <Input placeholder='Snowflake' />
           </Form.Item>
           <Form.Item
@@ -133,7 +133,7 @@ function BigQueryConnectionModal ({ form }) {
   return (
     <Modal
       open
-      title={<><DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY} /> BigQuery</>}
+      title={<><DatasourceIcon type={ConnectionType.CONNECTION_TYPE_BIGQUERY} /> BigQuery</>}
       onCancel={() => dispatch(closeConnectionDialog())}
       footer={<Footer form={form} testDisabled={nameChangeOnly} />}
     >
@@ -202,9 +202,9 @@ export default function ConnectionModal () {
     return null
   }
   switch (connectionType) {
-    case Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE:
+    case ConnectionType.CONNECTION_TYPE_SNOWFLAKE:
       return <SnowflakeConnectionModal form={form} />
-    case Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY:
+    case ConnectionType.CONNECTION_TYPE_BIGQUERY:
     default:
       return <BigQueryConnectionModal form={form} />
   }

@@ -14,7 +14,7 @@ import { editConnection, newConnection, newConnectionScreen, setDefaultConnectio
 import ConnectionModal from './ConnectionModal'
 import Tooltip from 'antd/es/tooltip'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
-import { Connection, PlanType } from '../proto/dekart_pb'
+import { ConnectionType, PlanType } from '../proto/dekart_pb'
 import Onboarding from './Onboarding'
 import { DatasourceIcon } from './Datasource'
 import { track } from './lib/tracking'
@@ -189,16 +189,16 @@ function ConnectionTypeSelector () {
     <>
       <div className={styles.connectionTypeSelector}>
         <Button
-          icon={<DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY} />} size='large' onClick={() => {
+          icon={<DatasourceIcon type={ConnectionType.CONNECTION_TYPE_BIGQUERY} />} size='large' onClick={() => {
             track('ConnectionTypeSelectorBigQuery')
-            dispatch(newConnection(Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY))
+            dispatch(newConnection(ConnectionType.CONNECTION_TYPE_BIGQUERY))
           }}
         >BigQuery
         </Button>
         <Button
-          icon={<DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE} />} size='large' onClick={() => {
+          icon={<DatasourceIcon type={ConnectionType.CONNECTION_TYPE_SNOWFLAKE} />} size='large' onClick={() => {
             track('ConnectionTypeSelectorSnowflake')
-            dispatch(newConnection(Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE))
+            dispatch(newConnection(ConnectionType.CONNECTION_TYPE_SNOWFLAKE))
           }}
         >Snowflake
         </Button>

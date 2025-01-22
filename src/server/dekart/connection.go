@@ -146,7 +146,7 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 		ID := sql.NullString{}
 		bigqueryProjectId := sql.NullString{}
 		cloudStorageBucket := sql.NullString{}
-		var connectionType proto.Connection_ConnectionType
+		var connectionType proto.ConnectionType
 		snowflakeUser := sql.NullString{}
 		snowflakePassword := sql.NullString{}
 		snowflakeAccountID := sql.NullString{}
@@ -348,7 +348,7 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 
 	var res sql.Result
 
-	if req.Connection.ConnectionType == proto.Connection_CONNECTION_TYPE_SNOWFLAKE {
+	if req.Connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_SNOWFLAKE {
 		res, err = s.db.ExecContext(ctx,
 			`update connections set
 				connection_name=$1,
@@ -537,7 +537,7 @@ func validateReqConnection(con *proto.Connection) error {
 	if con.ConnectionName == "" {
 		return status.Error(codes.InvalidArgument, "connection_name is required")
 	}
-	if con.ConnectionType == proto.Connection_CONNECTION_TYPE_SNOWFLAKE {
+	if con.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_SNOWFLAKE {
 		if con.SnowflakeAccountId == "" {
 			return status.Error(codes.InvalidArgument, "snowflake_account_id is required")
 		}

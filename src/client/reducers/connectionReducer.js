@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 import { userStreamUpdate } from '../actions/user'
 import { closeConnectionDialog, connectionChanged, connectionCreated, connectionListUpdate, connectionSaved, editConnection, newConnection, newConnectionScreen, projectListUpdate, reOpenDialog, saveConnection, testConnection, testConnectionResponse } from '../actions/connection'
-import { sessionStorageInit } from '../actions/sessionStorage'
+import { sessionStorageInit, updateSessionStorage } from '../actions/sessionStorage'
 
 function dialog (state = {
   visible: false,
@@ -158,6 +158,16 @@ function lastOpenedDialog (state = null, action) {
   }
 }
 
+function redirectWhenSaveConnection (state = null, action) {
+  switch (action.type) {
+    case updateSessionStorage.name:
+    case sessionStorageInit.name:
+      return action.current.redirectWhenSaveConnection || null // for backward compatibility
+    default:
+      return state
+  }
+}
+
 export default combineReducers({
   dialog,
   test,
@@ -166,5 +176,6 @@ export default combineReducers({
   listLoaded,
   projects,
   screen,
-  lastOpenedDialog
+  lastOpenedDialog,
+  redirectWhenSaveConnection
 })
