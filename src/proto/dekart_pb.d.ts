@@ -993,8 +993,8 @@ export class Connection extends jspb.Message {
   getCanStoreFiles(): boolean;
   setCanStoreFiles(value: boolean): void;
 
-  getConnectionType(): Connection.ConnectionTypeMap[keyof Connection.ConnectionTypeMap];
-  setConnectionType(value: Connection.ConnectionTypeMap[keyof Connection.ConnectionTypeMap]): void;
+  getConnectionType(): ConnectionTypeMap[keyof ConnectionTypeMap];
+  setConnectionType(value: ConnectionTypeMap[keyof ConnectionTypeMap]): void;
 
   getSnowflakeAccountId(): string;
   setSnowflakeAccountId(value: string): void;
@@ -1032,20 +1032,12 @@ export namespace Connection {
     updatedAt: number,
     datasetCount: number,
     canStoreFiles: boolean,
-    connectionType: Connection.ConnectionTypeMap[keyof Connection.ConnectionTypeMap],
+    connectionType: ConnectionTypeMap[keyof ConnectionTypeMap],
     snowflakeAccountId: string,
     snowflakeUsername: string,
     snowflakePassword?: Secret.AsObject,
     snowflakeWarehouse: string,
   }
-
-  export interface ConnectionTypeMap {
-    CONNECTION_TYPE_UNSPECIFIED: 0;
-    CONNECTION_TYPE_BIGQUERY: 1;
-    CONNECTION_TYPE_SNOWFLAKE: 2;
-  }
-
-  export const ConnectionType: ConnectionTypeMap;
 }
 
 export class Secret extends jspb.Message {
@@ -1593,6 +1585,9 @@ export class Dataset extends jspb.Message {
   getConnectionId(): string;
   setConnectionId(value: string): void;
 
+  getConnectionType(): ConnectionTypeMap[keyof ConnectionTypeMap];
+  setConnectionType(value: ConnectionTypeMap[keyof ConnectionTypeMap]): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Dataset.AsObject;
   static toObject(includeInstance: boolean, msg: Dataset): Dataset.AsObject;
@@ -1613,6 +1608,7 @@ export namespace Dataset {
     fileId: string,
     name: string,
     connectionId: string,
+    connectionType: ConnectionTypeMap[keyof ConnectionTypeMap],
   }
 }
 
@@ -2166,11 +2162,6 @@ export class ReportStreamResponse extends jspb.Message {
   setFilesList(value: Array<File>): void;
   addFiles(value?: File, index?: number): File;
 
-  clearConnectionsList(): void;
-  getConnectionsList(): Array<Connection>;
-  setConnectionsList(value: Array<Connection>): void;
-  addConnections(value?: Connection, index?: number): Connection;
-
   clearQueryJobsList(): void;
   getQueryJobsList(): Array<QueryJob>;
   setQueryJobsList(value: Array<QueryJob>): void;
@@ -2193,7 +2184,6 @@ export namespace ReportStreamResponse {
     streamOptions?: StreamOptions.AsObject,
     datasetsList: Array<Dataset.AsObject>,
     filesList: Array<File.AsObject>,
-    connectionsList: Array<Connection.AsObject>,
     queryJobsList: Array<QueryJob.AsObject>,
   }
 }
@@ -2343,4 +2333,12 @@ export interface PlanTypeMap {
 }
 
 export const PlanType: PlanTypeMap;
+
+export interface ConnectionTypeMap {
+  CONNECTION_TYPE_UNSPECIFIED: 0;
+  CONNECTION_TYPE_BIGQUERY: 1;
+  CONNECTION_TYPE_SNOWFLAKE: 2;
+}
+
+export const ConnectionType: ConnectionTypeMap;
 

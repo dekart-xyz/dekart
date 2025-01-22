@@ -19,7 +19,7 @@ import { subscribeUserStream, switchPlayground, unsubscribeUserStream } from './
 import WorkspacePage from './WorkspacePage'
 import GrantScopesPage from './GrantScopesPage'
 import { loadLocalStorage } from './actions/localStorage'
-import { useLocation } from 'react-router-dom/cjs/react-router-dom'
+import { useHistory, useLocation } from 'react-router-dom/cjs/react-router-dom'
 import { Button } from 'antd'
 import { loadSessionStorage } from './actions/sessionStorage'
 
@@ -152,6 +152,22 @@ function NotFoundPage () {
   )
 }
 
+function ErrorPage ({ icon, title, subTitle }) {
+  const history = useHistory()
+  return (
+    <Result
+      icon={icon} title={title} subTitle={
+        <>
+          <p>{subTitle}</p>
+          <div>
+            <Button onClick={() => history.push('/')}>Back to workspace</Button>
+          </div>
+        </>
+      }
+    />
+  )
+}
+
 export default function App () {
   const errorMessage = useSelector(state => state.httpError.message)
   const status = useSelector(state => state.httpError.status)
@@ -230,13 +246,13 @@ export default function App () {
           <WorkspacePage />
         </Route>
         <Route path='/400'>
-          <Result icon={<WarningOutlined />} title='400' subTitle='Bad Request' />
+          <ErrorPage icon={<WarningOutlined />} title='400' subTitle='Bad Request' />
         </Route>
         <Route path='/403'>
-          <Result icon={<WarningOutlined />} title='403' subTitle={errorMessage || 'Forbidden'} />
+          <ErrorPage icon={<WarningOutlined />} title='403' subTitle={errorMessage || 'Forbidden'} />
         </Route>
         <Route path='/401'>
-          <Result icon={<WarningOutlined />} title='401' subTitle={errorMessage || 'Unauthorized'} />
+          <ErrorPage icon={<WarningOutlined />} title='401' subTitle={errorMessage || 'Unauthorized'} />
         </Route>
         <Route path='*'>
           <NotFoundPage />

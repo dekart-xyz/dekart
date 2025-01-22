@@ -1,0 +1,10 @@
+.modalFooter {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.description {
+  margin-bottom: 20px;
+}

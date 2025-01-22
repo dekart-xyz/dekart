@@ -26,14 +26,17 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 	// normal datasets
 	datasetRows, err := s.db.QueryContext(ctx,
 		`select
-			id,
-			query_id,
-			file_id,
-			created_at,
-			updated_at,
-			name,
-			connection_id
-		from datasets where report_id=$1 order by created_at asc`,
+			datasets.id,
+			datasets.query_id,
+			datasets.file_id,
+			datasets.created_at,
+			datasets.updated_at,
+			datasets.name,
+			datasets.connection_id,
+			connections.connection_type
+		from datasets
+		left join connections on datasets.connection_id=connections.id
+		where report_id=$1 order by created_at asc`,
 		reportID,
 	)
 	if err != nil {
@@ -49,6 +52,7 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 		var queryId sql.NullString
 		var fileId sql.NullString
 		var connectionID sql.NullString
+		var connectionType sql.NullInt32
 		if err := datasetRows.Scan(
 			&dataset.Id,
 			&queryId,
@@ -57,6 +61,7 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 			&updatedAt,
 			&dataset.Name,
 			&connectionID,
+			&connectionType,
 		); err != nil {
 			log.Err(err).Msg("Error scanning dataset results")
 			return nil, err
@@ -66,6 +71,9 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 		dataset.QueryId = queryId.String
 		dataset.FileId = fileId.String
 		dataset.ConnectionId = connectionID.String
+		if connectionType.Valid {
+			dataset.ConnectionType = proto.ConnectionType(connectionType.Int32)
+		}
 		datasets = append(datasets, &dataset)
 	}
 	return datasets, nil

@@ -19,6 +19,7 @@ import dataset from './datasetReducer'
 import storage from './storageReducer'
 import { setRedirectState } from '../actions/redirect'
 import { queryChanged, queryParamChanged, updateQueryParamsFromQueries } from '../actions/query'
+import sessionStorage from './sessionStorageReducer'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
   uiState: {
@@ -262,5 +263,6 @@ export default combineReducers({
   queryStatus,
   queryParams,
   queryJobs,
-  numRunningQueries
+  numRunningQueries,
+  sessionStorage
 })

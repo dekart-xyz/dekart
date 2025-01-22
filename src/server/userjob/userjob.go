@@ -19,7 +19,7 @@ func NewStore() *Store {
 }
 
 func (s *Store) TestConnection(ctx context.Context, req *proto.TestConnectionRequest) (*proto.TestConnectionResponse, error) {
-	if req.Connection.ConnectionType == proto.Connection_CONNECTION_TYPE_SNOWFLAKE {
+	if req.Connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_SNOWFLAKE {
 		return snowflakejob.TestConnection(ctx, req)
 	}
 	return bqjob.TestConnection(ctx, req)
@@ -29,7 +29,7 @@ func (s *Store) Create(reportID string, queryID string, queryText string, connCt
 	var err error
 	var job job.Job
 	connection := conn.FromCtx(connCtx)
-	if connection.ConnectionType == proto.Connection_CONNECTION_TYPE_SNOWFLAKE {
+	if connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_SNOWFLAKE {
 		job, err = snowflakejob.Create(reportID, queryID, queryText, connCtx)
 	} else {
 		job, err = bqjob.Create(reportID, queryID, queryText, connCtx)
