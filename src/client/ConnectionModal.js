@@ -170,7 +170,7 @@ function BigQueryServiceAccountConnectionModal ({ form }) {
             }
           }}
         >
-          {nameChangeOnly ? <div className={styles.datasetsCountAlert}><Alert message={<>This connection is used in {connection.datasetCount} dataset{connection.datasetCount > 1 ? 's' : ''}.</>} description='Bucket name cannot be changes' type='warning' /></div> : null}
+          {nameChangeOnly ? <div className={styles.datasetsCountAlert}><Alert message={<>This connection is used in {connection.datasetCount} dataset{connection.datasetCount > 1 ? 's' : ''}.</>} description='Bucket name cannot be changed' type='warning' /></div> : null}
           <Form.Item label='Connection Name' name='connectionName'>
             <Input placeholder='BigQuery' />
           </Form.Item>
