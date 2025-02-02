@@ -144,7 +144,7 @@ function CreateWorkspaceForm () {
               { value: 'GoogleSearch', label: 'Google Search' },
               { value: 'GoogleAds', label: 'Google Ads' },
               { value: 'Reddit', label: 'Reddit' },
-              { value: 'GiHub', label: 'GiHub' },
+              { value: 'GitHub', label: 'GitHub' },
               { value: 'Other', label: 'Other' }
             ]}
           />
