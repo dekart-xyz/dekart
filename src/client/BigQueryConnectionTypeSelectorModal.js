@@ -47,7 +47,7 @@ export default function BigQueryConnectionTypeSelectorModal ({ open, onClose }) 
             </Button>
           </p>
           <p>
-            → <a href='https://dekart.xyz/docs/usage/choose-bigquery-connection-nethod/#which-permissions-are-required'>Which permissions required?</a>
+            → <a href='https://dekart.xyz/docs/usage/choose-bigquery-connection-method/#which-permissions-are-required'>Which permissions required?</a>
           </p>
 
         </div>
