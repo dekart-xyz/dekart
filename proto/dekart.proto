@@ -307,6 +307,7 @@ message Connection {
     string snowflake_username = 13;
     Secret snowflake_password = 14;
     string snowflake_warehouse = 15;
+    Secret bigquery_key = 16;
 }
 
 message Secret {

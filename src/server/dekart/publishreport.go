@@ -17,6 +17,7 @@ import (
 
 func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defConnCtx := conn.GetCtx(ctx, &proto.Connection{})
 	defer cancel()
 	userCtx := user.CopyUserContext(reqCtx, ctx)
 	datasets, err := s.getDatasets(userCtx, reportID)
@@ -64,7 +65,7 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 				srcObj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.csv", queryJob.JobResultId))
 				if userBucketName != "" {
 					dstObj := s.storage.GetObject(conCtx, userBucketName, fmt.Sprintf("%s.csv", queryJob.JobResultId))
-					err = srcObj.CopyTo(ctx, dstObj.GetWriter(conCtx))
+					err = srcObj.CopyTo(defConnCtx, dstObj.GetWriter(conCtx))
 					if err != nil {
 						log.Err(err).Msg("Cannot copy query result to user storage")
 						return
@@ -141,7 +142,7 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 		if count > 0 { // sourceID is used in other public reports, do not delete
 			continue
 		}
-		err = obj.Delete(ctx)
+		err = obj.Delete(defConnCtx)
 		if err != nil {
 			log.Err(err).Msg("Cannot delete object from public storage")
 			return
@@ -151,6 +152,7 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 
 func (s Server) publishReport(reqCtx context.Context, reportID string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defConnCtx := conn.GetCtx(ctx, &proto.Connection{})
 	defer cancel()
 	userCtx := user.CopyUserContext(reqCtx, ctx)
 	datasets, err := s.getDatasets(userCtx, reportID)
@@ -196,7 +198,7 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 			} else { // query result is in user storage bucket
 				srcObj = s.storage.GetObject(conCtx, userBucketName, fmt.Sprintf("%s.csv", queryJob.JobResultId))
 			}
-			err = srcObj.CopyTo(userCtx, dstObj.GetWriter(ctx))
+			err = srcObj.CopyTo(conCtx, dstObj.GetWriter(defConnCtx))
 			if err != nil {
 				log.Err(err).Msg("Cannot copy query result to public storage")
 				return
@@ -227,7 +229,7 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 			publicStorage := storage.NewPublicStorage()
 			dstObj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", file.SourceId, getFileExtension(file.MimeType)))
 			srcObj := s.storage.GetObject(conCtx, s.getBucketNameFromConnection(connection), fmt.Sprintf("%s.%s", file.SourceId, getFileExtension(file.MimeType)))
-			err = srcObj.CopyTo(userCtx, dstObj.GetWriter(ctx))
+			err = srcObj.CopyTo(conCtx, dstObj.GetWriter(ctx))
 			if err != nil {
 				log.Err(err).Msg("Cannot copy file to public storage")
 				return

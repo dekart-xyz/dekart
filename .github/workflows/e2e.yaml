@@ -93,7 +93,7 @@ jobs:
             europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:${{ env.IMAGE_CACHE_KEY }}
       - name: Upload cypress artifacts
         if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: bigquery
           path: /tmp/cypress

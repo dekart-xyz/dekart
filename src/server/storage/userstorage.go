@@ -34,8 +34,8 @@ func (s *UserStorage) GetObject(ctx context.Context, _ string, object string) St
 		}
 	}
 	return bqstorage.BigQueryStorageObject{
-		JobID:             parts[0],
-		BigqueryProjectId: connection.BigqueryProjectId,
+		JobID:      parts[0],
+		Connection: connection,
 	}
 }
 

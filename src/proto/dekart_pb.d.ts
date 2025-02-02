@@ -1010,6 +1010,11 @@ export class Connection extends jspb.Message {
   getSnowflakeWarehouse(): string;
   setSnowflakeWarehouse(value: string): void;
 
+  hasBigqueryKey(): boolean;
+  clearBigqueryKey(): void;
+  getBigqueryKey(): Secret | undefined;
+  setBigqueryKey(value?: Secret): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Connection.AsObject;
   static toObject(includeInstance: boolean, msg: Connection): Connection.AsObject;
@@ -1037,6 +1042,7 @@ export namespace Connection {
     snowflakeUsername: string,
     snowflakePassword?: Secret.AsObject,
     snowflakeWarehouse: string,
+    bigqueryKey?: Secret.AsObject,
   }
 }
 

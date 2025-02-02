@@ -132,6 +132,7 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 			snowflake_username,
 			snowflake_password_encrypted,
 			snowflake_warehouse,
+			bigquery_key_encrypted,
 			(select count(*) from datasets where connection_id=connections.id) as dataset_count
 		from connections where id=$1 limit 1`,
 		connectionID,
@@ -149,6 +150,7 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 		var connectionType proto.ConnectionType
 		snowflakeUser := sql.NullString{}
 		snowflakePassword := sql.NullString{}
+		bigqueryKey := sql.NullString{}
 		snowflakeAccountID := sql.NullString{}
 		snowflakeWarehouse := sql.NullString{}
 		err := res.Scan(
@@ -161,6 +163,7 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 			&snowflakeUser,
 			&snowflakePassword,
 			&snowflakeWarehouse,
+			&bigqueryKey,
 			&connection.DatasetCount,
 		)
 		connection.Id = ID.String
@@ -173,6 +176,11 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 		if snowflakePassword.String != "" {
 			connection.SnowflakePassword = &proto.Secret{
 				ServerEncrypted: snowflakePassword.String,
+			}
+		}
+		if bigqueryKey.String != "" {
+			connection.BigqueryKey = &proto.Secret{
+				ServerEncrypted: bigqueryKey.String,
 			}
 		}
 		if connection.CloudStorageBucket != "" {
@@ -208,6 +216,7 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 			created_at,
 			updated_at,
 			author_email,
+			bigquery_key_encrypted,
 			(select count(*) from datasets where connection_id=connections.id) as dataset_count
 		from connections where archived=false and workspace_id=$1 order by created_at desc`,
 		checkWorkspace(ctx).ID,
@@ -229,6 +238,7 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 		snowflakeAccountID := sql.NullString{}
 		snowflakeUsername := sql.NullString{}
 		snowflakePassword := sql.NullString{}
+		bigqueryKey := sql.NullString{}
 		snowflakeWarehouse := sql.NullString{}
 		isDefault := false
 		createdAt := time.Time{}
@@ -247,6 +257,7 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 			&createdAt,
 			&updatedAt,
 			&connection.AuthorEmail,
+			&bigqueryKey,
 			&connection.DatasetCount,
 		)
 		if err != nil {
@@ -270,6 +281,7 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 		connection.SnowflakeUsername = snowflakeUsername.String
 		connection.SnowflakeWarehouse = snowflakeWarehouse.String
 		connection.SnowflakePassword = secrets.EncryptedToClient(snowflakePassword.String)
+		connection.BigqueryKey = secrets.EncryptedToClient(bigqueryKey.String)
 		connection.UpdatedAt = updatedAt.Unix()
 		connection.CreatedAt = createdAt.Unix()
 		if connection.CloudStorageBucket != "" {
@@ -378,15 +390,31 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 		res, err = s.db.ExecContext(ctx,
 			`update connections set
 			connection_name=$1,
-			bigquery_project_id=$2,
-			cloud_storage_bucket=$3,
+			cloud_storage_bucket=$2,
 			updated_at=now()
-		where id=$4`,
+			where id=$3`,
 			req.Connection.ConnectionName,
-			req.Connection.BigqueryProjectId,
 			req.Connection.CloudStorageBucket,
 			req.Connection.Id,
 		)
+		if req.Connection.BigqueryProjectId != "" && err == nil {
+			res, err = s.db.ExecContext(ctx,
+				`update connections set
+				bigquery_project_id=$1
+			where id=$2`,
+				req.Connection.BigqueryProjectId,
+				req.Connection.Id,
+			)
+		}
+		if req.Connection.BigqueryKey != nil && err == nil {
+			res, err = s.db.ExecContext(ctx,
+				`update connections set
+				bigquery_key_encrypted=$1
+			where id=$2`,
+				secrets.SecretToServerEncrypted(req.Connection.BigqueryKey, claims),
+				req.Connection.Id,
+			)
+		}
 	}
 	if err != nil {
 		log.Err(err).Send()
@@ -544,10 +572,6 @@ func validateReqConnection(con *proto.Connection) error {
 		if con.SnowflakeUsername == "" {
 			return status.Error(codes.InvalidArgument, "snowflake_username is required")
 		}
-	} else {
-		if con.BigqueryProjectId == "" {
-			return status.Error(codes.InvalidArgument, "bigquery_project_id is required")
-		}
 	}
 	return nil
 }
@@ -581,9 +605,10 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 			snowflake_username,
 			snowflake_warehouse,
 			snowflake_password_encrypted,
+			bigquery_key_encrypted,
 			author_email,
 			workspace_id
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
 		id,
 		req.Connection.ConnectionName,
 		req.Connection.BigqueryProjectId,
@@ -593,6 +618,7 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 		req.Connection.SnowflakeUsername,
 		req.Connection.SnowflakeWarehouse,
 		secrets.SecretToServerEncrypted(req.Connection.SnowflakePassword, claims),
+		secrets.SecretToServerEncrypted(req.Connection.BigqueryKey, claims),
 		claims.Email,
 		checkWorkspace(ctx).ID,
 	)
