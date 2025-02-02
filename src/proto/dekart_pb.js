@@ -8404,7 +8404,8 @@ proto.Connection.toObject = function(includeInstance, msg) {
     snowflakeAccountId: jspb.Message.getFieldWithDefault(msg, 12, ""),
     snowflakeUsername: jspb.Message.getFieldWithDefault(msg, 13, ""),
     snowflakePassword: (f = msg.getSnowflakePassword()) && proto.Secret.toObject(includeInstance, f),
-    snowflakeWarehouse: jspb.Message.getFieldWithDefault(msg, 15, "")
+    snowflakeWarehouse: jspb.Message.getFieldWithDefault(msg, 15, ""),
+    bigqueryKey: (f = msg.getBigqueryKey()) && proto.Secret.toObject(includeInstance, f)
   };
 
   if (includeInstance) {
@@ -8501,6 +8502,11 @@ proto.Connection.deserializeBinaryFromReader = function(msg, reader) {
     case 15:
       var value = /** @type {string} */ (reader.readString());
       msg.setSnowflakeWarehouse(value);
+      break;
+    case 16:
+      var value = new proto.Secret;
+      reader.readMessage(value,proto.Secret.deserializeBinaryFromReader);
+      msg.setBigqueryKey(value);
       break;
     default:
       reader.skipField();
@@ -8635,6 +8641,14 @@ proto.Connection.serializeBinaryToWriter = function(message, writer) {
     writer.writeString(
       15,
       f
+    );
+  }
+  f = message.getBigqueryKey();
+  if (f != null) {
+    writer.writeMessage(
+      16,
+      f,
+      proto.Secret.serializeBinaryToWriter
     );
   }
 };
@@ -8926,6 +8940,43 @@ proto.Connection.prototype.getSnowflakeWarehouse = function() {
  */
 proto.Connection.prototype.setSnowflakeWarehouse = function(value) {
   return jspb.Message.setProto3StringField(this, 15, value);
+};
+
+
+/**
+ * optional Secret bigquery_key = 16;
+ * @return {?proto.Secret}
+ */
+proto.Connection.prototype.getBigqueryKey = function() {
+  return /** @type{?proto.Secret} */ (
+    jspb.Message.getWrapperField(this, proto.Secret, 16));
+};
+
+
+/**
+ * @param {?proto.Secret|undefined} value
+ * @return {!proto.Connection} returns this
+*/
+proto.Connection.prototype.setBigqueryKey = function(value) {
+  return jspb.Message.setWrapperField(this, 16, value);
+};
+
+
+/**
+ * Clears the message field making it undefined.
+ * @return {!proto.Connection} returns this
+ */
+proto.Connection.prototype.clearBigqueryKey = function() {
+  return this.setBigqueryKey(undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.Connection.prototype.hasBigqueryKey = function() {
+  return jspb.Message.getField(this, 16) != null;
 };
 
 

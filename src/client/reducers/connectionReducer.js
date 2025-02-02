@@ -7,7 +7,8 @@ function dialog (state = {
   visible: false,
   loading: true,
   id: null,
-  connectionType: null
+  connectionType: null,
+  bigqueryKey: false
 }, action) {
   switch (action.type) {
     case closeConnectionDialog.name:
@@ -21,7 +22,8 @@ function dialog (state = {
         id: action.id,
         connectionType: action.connectionType,
         visible: true,
-        loading: false
+        loading: false,
+        bigqueryKey: action.bigqueryKey
       }
     case newConnection.name:
       return {
@@ -29,7 +31,8 @@ function dialog (state = {
         visible: true,
         id: null,
         loading: false,
-        connectionType: action.connectionType
+        connectionType: action.connectionType,
+        bigqueryKey: action.bigqueryKey
       }
     case connectionCreated.name:
       return {

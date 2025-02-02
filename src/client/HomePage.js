@@ -18,6 +18,7 @@ import { ConnectionType, PlanType } from '../proto/dekart_pb'
 import Onboarding from './Onboarding'
 import { DatasourceIcon } from './Datasource'
 import { track } from './lib/tracking'
+import BigQueryConnectionTypeSelectorModal from './BigQueryConnectionTypeSelectorModal'
 
 function Loading () {
   return null
@@ -124,7 +125,7 @@ function OpenConnectionButton ({ connection }) {
     <Button
       type='link'
       onClick={() => {
-        dispatch(editConnection(connection.id, connection.connectionType))
+        dispatch(editConnection(connection.id, connection.connectionType, Boolean(connection.bigqueryKey)))
       }}
     >{connection.connectionName}
     </Button>
@@ -182,16 +183,18 @@ function ConnectionTypeSelector () {
   const connectionList = useSelector(state => state.connection.list)
   const showCancel = connectionList.length > 0 // show cancel button if there are connections
   const dispatch = useDispatch()
+  const [bigqueryModalOpen, setBigqueryModalOpen] = useState(false)
   useEffect(() => {
     track('ConnectionTypeSelector')
   }, [])
   return (
     <>
       <div className={styles.connectionTypeSelector}>
+        <BigQueryConnectionTypeSelectorModal open={bigqueryModalOpen} onClose={() => setBigqueryModalOpen(false)} />
         <Button
           icon={<DatasourceIcon type={ConnectionType.CONNECTION_TYPE_BIGQUERY} />} size='large' onClick={() => {
             track('ConnectionTypeSelectorBigQuery')
-            dispatch(newConnection(ConnectionType.CONNECTION_TYPE_BIGQUERY))
+            setBigqueryModalOpen(true)
           }}
         >BigQuery
         </Button>

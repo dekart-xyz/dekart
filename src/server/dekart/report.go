@@ -78,6 +78,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 				where d.report_id=$1 and cloud_storage_bucket is not null and (
 					cloud_storage_bucket != ''
 					or connection_type > 1 -- snowflake allows sharing without bucket
+					or (bigquery_key_encrypted is not null and bigquery_key_encrypted != '') -- bigquery service account
 				)
 			) as connections_with_cache_num,
 			(
@@ -89,6 +90,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 				select count(*) from connections as c
 				join datasets as d on c.id=d.connection_id
 				where d.report_id=$1 and  connection_type <= 1 -- BigQuery
+				and (c.bigquery_key_encrypted is null or c.bigquery_key_encrypted = '') -- BigQuery passthrough
 			) as connections_with_sensitive_scope_num,
 			is_public,
 			query_params

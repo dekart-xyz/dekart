@@ -36,9 +36,9 @@ export function getProjectList () {
   }
 }
 
-export function editConnection (id, connectionType) {
+export function editConnection (id, connectionType, bigqueryKey = false) {
   return async (dispatch) => {
-    dispatch({ type: editConnection.name, id, connectionType })
+    dispatch({ type: editConnection.name, id, connectionType, bigqueryKey })
     dispatch(getProjectList())
   }
 }
@@ -95,16 +95,16 @@ export function reOpenDialog () {
 }
 
 // newConnection opens a modal to create a new connection
-export function newConnection (connectionType) {
+export function newConnection (connectionType, bigqueryKey = false) {
   return async (dispatch, getState) => {
     const { user } = getState()
-    if (connectionType === ConnectionType.CONNECTION_TYPE_BIGQUERY && !user.sensitiveScopesGranted) {
+    if (connectionType === ConnectionType.CONNECTION_TYPE_BIGQUERY && !user.sensitiveScopesGranted && !bigqueryKey) {
       dispatch(updateSessionStorage('lastOpenedDialog', { connectionType })) // remember the dialog state
       dispatch(needSensitiveScopes())
     }
     // just to show the modal
-    dispatch({ type: newConnection.name, connectionType })
-    if (connectionType === ConnectionType.CONNECTION_TYPE_BIGQUERY) {
+    dispatch({ type: newConnection.name, connectionType, bigqueryKey })
+    if (connectionType === ConnectionType.CONNECTION_TYPE_BIGQUERY && !bigqueryKey) {
       dispatch(getProjectList())
     }
   }
@@ -162,8 +162,16 @@ export function saveConnection (id, connectionType, connectionProps) {
         const secret = new Secret()
         secret.setClientEncrypted(await encryptPassword(connectionProps.snowflakePassword, getState().env.variables.AES_KEY, getState().env.variables.AES_IV))
         connection.setSnowflakePassword(secret)
+      } else if (connectionProps.newBigqueryKey) { // bigquery service account key
+        const { connectionName, cloudStorageBucket, newBigqueryKey } = connectionProps
+        connection.setConnectionName(connectionName || 'BigQuery')
+        connection.setCloudStorageBucket(cloudStorageBucket)
+        const secret = new Secret()
+        const { env: { variables: { AES_IV, AES_KEY } } } = getState()
+        secret.setClientEncrypted(await encryptPassword(newBigqueryKey, AES_KEY, AES_IV))
+        connection.setBigqueryKey(secret)
       } else {
-        connection.setConnectionName(connectionProps.connectionName)
+        connection.setConnectionName(connectionProps.connectionName || 'BigQuery')
         connection.setBigqueryProjectId(connectionProps.bigqueryProjectId)
         connection.setCloudStorageBucket(connectionProps.cloudStorageBucket)
       }
@@ -190,6 +198,17 @@ export function saveConnection (id, connectionType, connectionProps) {
           const secret = new Secret()
           secret.setClientEncrypted(await encryptPassword(connectionProps.snowflakePassword, getState().env.variables.AES_KEY, getState().env.variables.AES_IV))
           connection.setSnowflakePassword(secret)
+        }
+      } else if (prevConnection.bigqueryKey) { // bigquery service account key
+        connection.setConnectionName(connectionProps.connectionName)
+        connection.setCloudStorageBucket(connectionProps.cloudStorageBucket)
+        console.log('bigqueryKey', connectionProps.newBigqueryKey)
+        if (connectionProps.newBigqueryKey) {
+          // update key only if it was changed, otherwise it's just a placeholder
+          const secret = new Secret()
+          const { env: { variables: { AES_IV, AES_KEY } } } = getState()
+          secret.setClientEncrypted(await encryptPassword(connectionProps.newBigqueryKey, AES_KEY, AES_IV))
+          connection.setBigqueryKey(secret)
         }
       } else {
         connection.setConnectionName(connectionProps.connectionName)
@@ -278,6 +297,13 @@ export function testConnection (connectionType, values) {
       const secret = new Secret()
       secret.setClientEncrypted(await encryptPassword(snowflakePassword, AES_KEY, AES_IV))
       connection.setSnowflakePassword(secret)
+    } else if (values.newBigqueryKey) { // bigquery service account key
+      const { connectionName, cloudStorageBucket, newBigqueryKey } = values
+      connection.setConnectionName(connectionName)
+      connection.setCloudStorageBucket(cloudStorageBucket)
+      const secret = new Secret()
+      secret.setClientEncrypted(await encryptPassword(newBigqueryKey, AES_KEY, AES_IV))
+      connection.setBigqueryKey(secret)
     } else { // bigquery
       const { connectionName, bigqueryProjectId, cloudStorageBucket } = values
       connection.setConnectionName(connectionName)

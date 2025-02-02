@@ -370,9 +370,9 @@ func (s Server) getDWJobIDFromResultID(ctx context.Context, resultID string) (st
 // since reading is using connection no auth is needed here
 func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	userCtx := r.Context()
+	ctx := r.Context()
 
-	claims := user.GetClaims(userCtx)
+	claims := user.GetClaims(ctx)
 	if claims == nil {
 		http.Error(w, Unauthenticated.Error(), http.StatusUnauthorized)
 		return
@@ -384,7 +384,7 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reportID, err := s.getReportID(userCtx, vars["dataset"], false)
+	reportID, err := s.getReportID(ctx, vars["dataset"], false)
 
 	if err != nil {
 		log.Err(err).Send()
@@ -399,7 +399,7 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	report, err := s.getReport(userCtx, *reportID)
+	report, err := s.getReport(ctx, *reportID)
 
 	if err != nil {
 		log.Err(err).Send()
@@ -414,7 +414,7 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	connection, err := s.getConnectionFromDatasetID(userCtx, vars["dataset"])
+	connection, err := s.getConnectionFromDatasetID(ctx, vars["dataset"])
 
 	if err != nil {
 		HttpError(w, err)
@@ -430,13 +430,14 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 
 	if connection.Id == "default" {
 		// dataset has no connection, it means it's a playground dataset
-		userCtx = user.SetWorkspaceCtx(userCtx, user.WorkspaceInfo{IsPlayground: true})
+		ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{IsPlayground: true})
 	}
 
 	bucketName := s.getBucketNameFromConnection(connection)
 
-	userConCtx := conn.GetCtx(userCtx, connection)
-	dwJobID, err := s.getDWJobIDFromResultID(userCtx, vars["source"])
+	conCtx := conn.GetCtx(ctx, connection)
+	defConCtx := conn.GetCtx(ctx, &proto.Connection{Id: "default"})
+	dwJobID, err := s.getDWJobIDFromResultID(ctx, vars["source"])
 	if err != nil {
 		log.Error().Err(err).Msg("Error getting dw job id")
 		HttpError(w, err)
@@ -445,27 +446,30 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 
 	var obj storage.StorageObject
 
+	useCtx := conCtx
+
 	if report.IsPublic {
 		// public report, load from public storage bucket
 		log.Debug().Str("source", vars["source"]).Msg("Serving dataset source from public storage")
 		publicStorage := storage.NewPublicStorage()
-		obj = publicStorage.GetObject(userCtx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
+		obj = publicStorage.GetObject(defConCtx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
+		useCtx = defConCtx // public storage does not require connection
 	} else if dwJobID != "" {
 		// temp data warehouse table is used as source
 		log.Debug().Str("source", vars["source"]).Msg("Serving dataset source from temporary storage")
-		obj = s.storage.GetObject(userConCtx, bucketName, dwJobID)
+		obj = s.storage.GetObject(conCtx, bucketName, dwJobID)
 	} else {
 		// file stored on the bucket is used as source
 		log.Debug().Str("source", vars["source"]).Msg("Serving dataset source from user storage")
-		obj = s.storage.GetObject(userConCtx, bucketName, fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
+		obj = s.storage.GetObject(conCtx, bucketName, fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
 	}
 
-	created, err := obj.GetCreatedAt(userCtx)
+	created, err := obj.GetCreatedAt(useCtx)
 	if err != nil {
 		storageError(w, err)
 		return
 	}
-	objectReader, err := obj.GetReader(userCtx)
+	objectReader, err := obj.GetReader(useCtx)
 	if err != nil {
 		storageError(w, err)
 		return

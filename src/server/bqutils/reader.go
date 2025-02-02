@@ -2,8 +2,8 @@ package bqutils
 
 import (
 	"context"
+	"dekart/src/server/conn"
 	"dekart/src/server/errtype"
-	"dekart/src/server/user"
 	"fmt"
 	"io"
 	"strings"
@@ -13,7 +13,6 @@ import (
 	bqStorage "cloud.google.com/go/bigquery/storage/apiv1"
 	gax "github.com/googleapis/gax-go/v2"
 	"github.com/rs/zerolog"
-	"google.golang.org/api/option"
 	bqStoragePb "google.golang.org/genproto/googleapis/cloud/bigquery/storage/v1"
 	"google.golang.org/grpc"
 )
@@ -44,15 +43,8 @@ func NewReader(
 		maxReadStreamsCount: maxReadStreamsCount,
 	}
 	var err error
-	tokenSource := user.GetTokenSource(ctx)
-	if tokenSource != nil {
-		r.bqReadClient, err = bqStorage.NewBigQueryReadClient(
-			r.ctx,
-			option.WithTokenSource(tokenSource),
-		)
-	} else {
-		r.bqReadClient, err = bqStorage.NewBigQueryReadClient(r.ctx)
-	}
+	conn := conn.FromCtx(ctx) // always returns a connection
+	r.bqReadClient, err = GetReadClient(ctx, conn)
 	if err != nil || r.bqReadClient == nil {
 		r.logger.Fatal().Err(err).Msg("cannot create bigquery read client")
 	}

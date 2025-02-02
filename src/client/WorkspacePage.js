@@ -21,6 +21,7 @@ import Result from 'antd/es/result'
 import { switchPlayground } from './actions/user'
 import { useParams } from 'react-router-dom'
 import { track } from './lib/tracking'
+import Select from 'antd/es/select'
 
 function Invites () {
   const workspace = useSelector(state => state.workspace)
@@ -125,16 +126,32 @@ function CreateWorkspaceForm () {
         disabled={disabled}
         layout='vertical' onFinish={(values) => {
           track('CreateWorkspaceFormFinish')
+          if (values.source) {
+            track('CreateWorkspaceFormSource' + values.source)
+          }
           setDisabled(true)
           dispatch(createWorkspace(values.name))
         }}
       >
-        <Form.Item name='name' rules={[{ required: true, message: 'Workspace name is required' }]}>
+        <Form.Item label='Workspace Name' name='name' rules={[{ required: true, message: 'Workspace name is required' }]}>
           <Input placeholder='Workspace name' />
+        </Form.Item>
+        <Form.Item label='Where did you first hear about Dekart?' extra='Optional, helps us improve' name='source' rules={[{ required: false }]}>
+          <Select
+            placeholder='Select a source'
+            options={[
+              { value: 'LinkedIn', label: 'LinkedIn' },
+              { value: 'GoogleSearch', label: 'Google Search' },
+              { value: 'GoogleAds', label: 'Google Ads' },
+              { value: 'Reddit', label: 'Reddit' },
+              { value: 'GiHub', label: 'GiHub' },
+              { value: 'Other', label: 'Other' }
+            ]}
+          />
         </Form.Item>
         <Form.Item>
           <Button type='primary' htmlType='submit'>
-            Create
+            Create Workspace
           </Button>
         </Form.Item>
       </Form>

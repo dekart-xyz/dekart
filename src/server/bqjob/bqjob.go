@@ -7,7 +7,8 @@ import (
 	"io"
 	"os"
 	"regexp"
-	"strings"
+
+	"github.com/rs/zerolog/log"
 
 	"dekart/src/proto"
 	"dekart/src/server/bqstorage"
@@ -15,11 +16,9 @@ import (
 	"dekart/src/server/errtype"
 	"dekart/src/server/job"
 	"dekart/src/server/storage"
-	"dekart/src/server/user"
 
 	"cloud.google.com/go/bigquery"
 	"google.golang.org/api/googleapi"
-	"google.golang.org/api/option"
 )
 
 // Job implements the dekart.Job interface for BigQuery; concurrency safe.
@@ -218,38 +217,12 @@ func (job *Job) setMaxReadStreamsCount(queryText string) {
 	}
 }
 
-func getOauthScopes() []string {
-	scopes := []string{"https://www.googleapis.com/auth/bigquery"}
-	extraScopesRaw := os.Getenv("DEKART_GCP_EXTRA_OAUTH_SCOPES")
-	if extraScopesRaw != "" {
-		extraScopes := strings.Split(extraScopesRaw, ",")
-		scopes = append(scopes, extraScopes...)
-	}
-	return scopes
-
-}
-
 // Run implementation
 func (job *Job) Run(storageObject storage.StorageObject, conn *proto.Connection) error {
 	job.Logger.Debug().Msg("Run BigQuery Job")
-	var client *bigquery.Client = nil
-	var err error
-	tokenSource := user.GetTokenSource(job.GetCtx())
-	if tokenSource != nil {
-		job.Logger.Debug().Msg("Using oauth2 token")
-		client, err = bigquery.NewClient(
-			job.GetCtx(),
-			conn.BigqueryProjectId,
-			option.WithTokenSource(tokenSource),
-		)
-	} else {
-		client, err = bigquery.NewClient(
-			job.GetCtx(),
-			conn.BigqueryProjectId,
-			option.WithScopes(getOauthScopes()...),
-		)
-	}
+	client, err := bqutils.GetClient(job.GetCtx(), conn)
 	if err != nil {
+		log.Warn().Err(err).Msg("bigquery.NewClient failed")
 		job.Cancel()
 		return err
 	}
@@ -263,6 +236,7 @@ func (job *Job) Run(storageObject storage.StorageObject, conn *proto.Connection)
 
 	bigqueryJob, err := query.Run(job.GetCtx())
 	if err != nil {
+		log.Warn().Err(err).Msg("query.Run failed")
 		job.Cancel()
 		return err
 	}

@@ -2,10 +2,11 @@ package bqstorage
 
 import (
 	"context"
+	"dekart/src/proto"
 	"dekart/src/server/bqutils"
+	"dekart/src/server/conn"
 	"dekart/src/server/deadline"
 	"dekart/src/server/errtype"
-	"dekart/src/server/user"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -13,13 +14,12 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"github.com/rs/zerolog/log"
-	"google.golang.org/api/option"
 )
 
 // BigQueryStorageObject implements StorageObject interface for BigQuery temp results tables
 type BigQueryStorageObject struct {
-	JobID             string
-	BigqueryProjectId string
+	JobID      string
+	Connection *proto.Connection
 }
 
 func (s BigQueryStorageObject) GetWriter(ctx context.Context) io.WriteCloser {
@@ -34,15 +34,7 @@ func (s BigQueryStorageObject) GetSize(ctx context.Context) (*int64, error) {
 }
 
 func (s BigQueryStorageObject) getClient(ctx context.Context) (*bigquery.Client, error) {
-	tokenSource := user.GetTokenSource(ctx)
-	if tokenSource == nil {
-		return nil, fmt.Errorf("no token source")
-	}
-	client, err := bigquery.NewClient(
-		ctx,
-		s.BigqueryProjectId,
-		option.WithTokenSource(tokenSource),
-	)
+	client, err := bqutils.GetClient(ctx, s.Connection)
 	if err != nil {
 		return nil, err
 	}
@@ -70,11 +62,12 @@ func (s BigQueryStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, er
 
 func (s BigQueryStorageObject) GetReader(ctx context.Context) (io.ReadCloser, error) {
 	log.Debug().Str("jobID", s.JobID).Msg("BigQueryStorageObject GetReader")
+	connCtx := conn.GetCtx(ctx, s.Connection)
 	client, err := s.getClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-	jobFromJobId, err := client.JobFromID(ctx, s.JobID)
+	jobFromJobId, err := client.JobFromID(connCtx, s.JobID)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +79,7 @@ func (s BigQueryStorageObject) GetReader(ctx context.Context) (io.ReadCloser, er
 	errors := make(chan error)
 
 	go bqutils.Read(
-		ctx,
+		connCtx,
 		errors,
 		csvRows,
 		table,
