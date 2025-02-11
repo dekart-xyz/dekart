@@ -82,7 +82,7 @@ func (r *Reader) close() {
 	if r.bqReadClient != nil {
 		err := r.bqReadClient.Close()
 		if err != nil {
-			r.logger.Err(err).Send()
+			r.logger.Err(err).Msg("cannot close bigquery read client")
 		}
 	}
 }
@@ -95,7 +95,6 @@ func (r *Reader) getStreams() ([]*bqStoragePb.ReadStream, error) {
 	readStreams := r.session.GetStreams()
 	if len(readStreams) == 0 {
 		err := &errtype.EmptyResult{}
-		r.logger.Debug().Err(err).Send()
 		return readStreams, err
 	}
 	r.logger.Debug().Int32("maxReadStreamsCount", r.maxReadStreamsCount).Msgf("Number of Streams %d", len(readStreams))
@@ -217,7 +216,7 @@ func (r *StreamReader) processStreamResponse(processWaitGroup *sync.WaitGroup) {
 			}
 			if res == nil {
 				err = fmt.Errorf("res is nil")
-				r.logger.Err(err).Send()
+				r.logger.Err(err).Send() // here send is ok
 				r.errors <- err
 				return
 			}
@@ -225,14 +224,14 @@ func (r *StreamReader) processStreamResponse(processWaitGroup *sync.WaitGroup) {
 				rows := res.GetAvroRows()
 				if rows == nil {
 					err = fmt.Errorf("rows is nil")
-					r.logger.Err(err).Send()
+					r.logger.Err(err).Send() // here send is ok
 					r.errors <- err
 					return
 				}
 				undecoded := rows.GetSerializedBinaryRows()
 				err = r.tableDecoder.DecodeRows(undecoded, r.csvRows)
 				if err != nil {
-					r.logger.Err(err).Send()
+					r.logger.Err(err).Msg("cannot decode rows")
 					r.errors <- err
 					return
 				}

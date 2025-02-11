@@ -70,7 +70,7 @@ func (s Server) updateJobStatus(job job.Job, jobStatus chan int32, paramHash str
 			}
 			cancel()
 			if err != nil {
-				log.Fatal().Err(err).Send()
+				log.Fatal().Err(err).Msg("updateJobStatus failed")
 			}
 			s.reportStreams.Ping(job.GetReportID())
 		case <-job.GetCtx().Done():
@@ -127,7 +127,7 @@ func (s Server) getReportIDFromJobID(ctx context.Context, jobID string) (string,
 		jobID,
 	).Scan(&reportID)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("getReportIDFromJobID failed")
 		return "", err
 	}
 	return reportID, nil
@@ -143,7 +143,7 @@ func (s Server) CancelJob(ctx context.Context, req *proto.CancelJobRequest) (*pr
 	}
 	job, err := s.getQueryJob(ctx, req.JobId)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("getQueryJob failed")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if job == nil {
@@ -152,7 +152,7 @@ func (s Server) CancelJob(ctx context.Context, req *proto.CancelJobRequest) (*pr
 	}
 	reportID, err := s.getReportIDFromJobID(ctx, req.JobId)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("getReportIDFromJobID failed")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if reportID == "" {
@@ -161,7 +161,7 @@ func (s Server) CancelJob(ctx context.Context, req *proto.CancelJobRequest) (*pr
 	}
 	report, err := s.getReport(ctx, reportID)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("getReport failed")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if report == nil {
@@ -180,7 +180,7 @@ func (s Server) CancelJob(ctx context.Context, req *proto.CancelJobRequest) (*pr
 				req.JobId,
 			)
 			if err != nil {
-				log.Err(err).Send()
+				log.Err(err).Msg("update query_jobs failed")
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 			s.reportStreams.Ping(reportID)
@@ -250,7 +250,7 @@ func rowsToQueryJobs(queryRows *sql.Rows) ([]*proto.QueryJob, error) {
 			&createdAt,
 		)
 		if err != nil {
-			log.Fatal().Err(err).Send()
+			log.Fatal().Err(err).Msg("scan failed in rowsToQueryJobs")
 		}
 		queryJob.CreatedAt = createdAt.Unix()
 		queryJob.UpdatedAt = updatedAt.Unix()

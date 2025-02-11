@@ -253,7 +253,7 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 func (s Server) PublishReport(ctx context.Context, req *proto.PublishReportRequest) (*proto.PublishReportResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
-		log.Debug().Err(Unauthenticated).Send()
+		log.Warn().Err(Unauthenticated).Msg("Claims are required")
 		return nil, Unauthenticated
 	}
 	_, err := uuid.Parse(req.ReportId)
@@ -267,12 +267,12 @@ func (s Server) PublishReport(ctx context.Context, req *proto.PublishReportReque
 	}
 	if report == nil {
 		err := status.Errorf(codes.NotFound, "report %s not found", req.ReportId)
-		log.Warn().Err(err).Send()
+		log.Warn().Err(err).Msg("Report not found while publishing report")
 		return nil, err
 	}
 	if !report.CanWrite {
 		err := status.Errorf(codes.PermissionDenied, "no permission to publish report %s", req.ReportId)
-		log.Warn().Err(err).Send()
+		log.Warn().Err(err).Msg("No permission to publish report")
 		return nil, status.Errorf(codes.PermissionDenied, err.Error())
 	}
 	if req.Publish {

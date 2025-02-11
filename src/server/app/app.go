@@ -36,7 +36,7 @@ func (m ResponseWriter) Write(b []byte) (int, error) {
 // WriteHeader overrides statusOk with configured header
 func (m ResponseWriter) WriteHeader(statusCode int) {
 	if statusCode != http.StatusOK {
-		log.Warn().Int("statusCode", statusCode).Send()
+		log.Warn().Int("statusCode", statusCode).Msg("Status code is not OK")
 		m.w.WriteHeader(statusCode)
 	} else {
 		m.w.WriteHeader(m.statusCode)

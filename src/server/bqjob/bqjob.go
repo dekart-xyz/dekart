@@ -44,13 +44,13 @@ func (job *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 		if errtype.ContextCancelledRe.MatchString(err.Error()) {
 			return
 		}
-		job.Logger.Err(err).Send()
+		job.Logger.Err(err).Msg("storageWriter.Close failed")
 		job.CancelWithError(err)
 		return
 	}
 	resultSize, err := job.storageObject.GetSize(job.GetCtx())
 	if err != nil {
-		job.Logger.Err(err).Send()
+		job.Logger.Err(err).Msg("storageObject.GetSize failed")
 		job.CancelWithError(err)
 		return
 	}
@@ -96,7 +96,7 @@ func (job *Job) write(csvRows chan []string) {
 			break
 		}
 		if err != nil {
-			job.Logger.Err(err).Send()
+			job.Logger.Err(err).Msg("csvWriter.Write failed")
 			job.CancelWithError(err)
 			break
 		}

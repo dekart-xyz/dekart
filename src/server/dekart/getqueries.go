@@ -27,13 +27,13 @@ func rowsToQueries(queryRows *sql.Rows) ([]*proto.Query, error) {
 			&query.QuerySource,
 			&query.QuerySourceId,
 		); err != nil {
-			log.Fatal().Err(err).Send()
+			log.Fatal().Err(err).Msg("scan query failed")
 		}
 
 		switch query.QuerySource {
 		case proto.Query_QUERY_SOURCE_UNSPECIFIED:
 			err := fmt.Errorf("unknown query source query id=%s", query.Id)
-			log.Err(err).Send()
+			log.Err(err).Msg("unknown query source")
 			return nil, err
 		case proto.Query_QUERY_SOURCE_INLINE:
 			query.QueryText = queryText
