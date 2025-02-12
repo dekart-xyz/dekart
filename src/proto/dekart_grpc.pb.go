@@ -24,6 +24,8 @@ const (
 	Dekart_UpdateReport_FullMethodName            = "/Dekart/UpdateReport"
 	Dekart_ArchiveReport_FullMethodName           = "/Dekart/ArchiveReport"
 	Dekart_SetDiscoverable_FullMethodName         = "/Dekart/SetDiscoverable"
+	Dekart_PublishReport_FullMethodName           = "/Dekart/PublishReport"
+	Dekart_AllowExportDatasets_FullMethodName     = "/Dekart/AllowExportDatasets"
 	Dekart_CreateDataset_FullMethodName           = "/Dekart/CreateDataset"
 	Dekart_RemoveDataset_FullMethodName           = "/Dekart/RemoveDataset"
 	Dekart_UpdateDatasetName_FullMethodName       = "/Dekart/UpdateDatasetName"
@@ -52,7 +54,6 @@ const (
 	Dekart_UpdateWorkspace_FullMethodName         = "/Dekart/UpdateWorkspace"
 	Dekart_GetWorkspace_FullMethodName            = "/Dekart/GetWorkspace"
 	Dekart_UpdateWorkspaceUser_FullMethodName     = "/Dekart/UpdateWorkspaceUser"
-	Dekart_PublishReport_FullMethodName           = "/Dekart/PublishReport"
 )
 
 // DekartClient is the client API for Dekart service.
@@ -65,6 +66,8 @@ type DekartClient interface {
 	UpdateReport(ctx context.Context, in *UpdateReportRequest, opts ...grpc.CallOption) (*UpdateReportResponse, error)
 	ArchiveReport(ctx context.Context, in *ArchiveReportRequest, opts ...grpc.CallOption) (*ArchiveReportResponse, error)
 	SetDiscoverable(ctx context.Context, in *SetDiscoverableRequest, opts ...grpc.CallOption) (*SetDiscoverableResponse, error)
+	PublishReport(ctx context.Context, in *PublishReportRequest, opts ...grpc.CallOption) (*PublishReportResponse, error)
+	AllowExportDatasets(ctx context.Context, in *AllowExportDatasetsRequest, opts ...grpc.CallOption) (*AllowExportDatasetsResponse, error)
 	// datasets
 	CreateDataset(ctx context.Context, in *CreateDatasetRequest, opts ...grpc.CallOption) (*CreateDatasetResponse, error)
 	RemoveDataset(ctx context.Context, in *RemoveDatasetRequest, opts ...grpc.CallOption) (*RemoveDatasetResponse, error)
@@ -103,8 +106,6 @@ type DekartClient interface {
 	UpdateWorkspace(ctx context.Context, in *UpdateWorkspaceRequest, opts ...grpc.CallOption) (*UpdateWorkspaceResponse, error)
 	GetWorkspace(ctx context.Context, in *GetWorkspaceRequest, opts ...grpc.CallOption) (*GetWorkspaceResponse, error)
 	UpdateWorkspaceUser(ctx context.Context, in *UpdateWorkspaceUserRequest, opts ...grpc.CallOption) (*UpdateWorkspaceUserResponse, error)
-	// reports
-	PublishReport(ctx context.Context, in *PublishReportRequest, opts ...grpc.CallOption) (*PublishReportResponse, error)
 }
 
 type dekartClient struct {
@@ -159,6 +160,26 @@ func (c *dekartClient) SetDiscoverable(ctx context.Context, in *SetDiscoverableR
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SetDiscoverableResponse)
 	err := c.cc.Invoke(ctx, Dekart_SetDiscoverable_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) PublishReport(ctx context.Context, in *PublishReportRequest, opts ...grpc.CallOption) (*PublishReportResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PublishReportResponse)
+	err := c.cc.Invoke(ctx, Dekart_PublishReport_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) AllowExportDatasets(ctx context.Context, in *AllowExportDatasetsRequest, opts ...grpc.CallOption) (*AllowExportDatasetsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AllowExportDatasetsResponse)
+	err := c.cc.Invoke(ctx, Dekart_AllowExportDatasets_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -472,16 +493,6 @@ func (c *dekartClient) UpdateWorkspaceUser(ctx context.Context, in *UpdateWorksp
 	return out, nil
 }
 
-func (c *dekartClient) PublishReport(ctx context.Context, in *PublishReportRequest, opts ...grpc.CallOption) (*PublishReportResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PublishReportResponse)
-	err := c.cc.Invoke(ctx, Dekart_PublishReport_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // DekartServer is the server API for Dekart service.
 // All implementations must embed UnimplementedDekartServer
 // for forward compatibility.
@@ -492,6 +503,8 @@ type DekartServer interface {
 	UpdateReport(context.Context, *UpdateReportRequest) (*UpdateReportResponse, error)
 	ArchiveReport(context.Context, *ArchiveReportRequest) (*ArchiveReportResponse, error)
 	SetDiscoverable(context.Context, *SetDiscoverableRequest) (*SetDiscoverableResponse, error)
+	PublishReport(context.Context, *PublishReportRequest) (*PublishReportResponse, error)
+	AllowExportDatasets(context.Context, *AllowExportDatasetsRequest) (*AllowExportDatasetsResponse, error)
 	// datasets
 	CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error)
 	RemoveDataset(context.Context, *RemoveDatasetRequest) (*RemoveDatasetResponse, error)
@@ -530,8 +543,6 @@ type DekartServer interface {
 	UpdateWorkspace(context.Context, *UpdateWorkspaceRequest) (*UpdateWorkspaceResponse, error)
 	GetWorkspace(context.Context, *GetWorkspaceRequest) (*GetWorkspaceResponse, error)
 	UpdateWorkspaceUser(context.Context, *UpdateWorkspaceUserRequest) (*UpdateWorkspaceUserResponse, error)
-	// reports
-	PublishReport(context.Context, *PublishReportRequest) (*PublishReportResponse, error)
 	mustEmbedUnimplementedDekartServer()
 }
 
@@ -556,6 +567,12 @@ func (UnimplementedDekartServer) ArchiveReport(context.Context, *ArchiveReportRe
 }
 func (UnimplementedDekartServer) SetDiscoverable(context.Context, *SetDiscoverableRequest) (*SetDiscoverableResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetDiscoverable not implemented")
+}
+func (UnimplementedDekartServer) PublishReport(context.Context, *PublishReportRequest) (*PublishReportResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PublishReport not implemented")
+}
+func (UnimplementedDekartServer) AllowExportDatasets(context.Context, *AllowExportDatasetsRequest) (*AllowExportDatasetsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AllowExportDatasets not implemented")
 }
 func (UnimplementedDekartServer) CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateDataset not implemented")
@@ -640,9 +657,6 @@ func (UnimplementedDekartServer) GetWorkspace(context.Context, *GetWorkspaceRequ
 }
 func (UnimplementedDekartServer) UpdateWorkspaceUser(context.Context, *UpdateWorkspaceUserRequest) (*UpdateWorkspaceUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateWorkspaceUser not implemented")
-}
-func (UnimplementedDekartServer) PublishReport(context.Context, *PublishReportRequest) (*PublishReportResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PublishReport not implemented")
 }
 func (UnimplementedDekartServer) mustEmbedUnimplementedDekartServer() {}
 func (UnimplementedDekartServer) testEmbeddedByValue()                {}
@@ -751,6 +765,42 @@ func _Dekart_SetDiscoverable_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DekartServer).SetDiscoverable(ctx, req.(*SetDiscoverableRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_PublishReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PublishReportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).PublishReport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_PublishReport_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).PublishReport(ctx, req.(*PublishReportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_AllowExportDatasets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AllowExportDatasetsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).AllowExportDatasets(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_AllowExportDatasets_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).AllowExportDatasets(ctx, req.(*AllowExportDatasetsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1238,24 +1288,6 @@ func _Dekart_UpdateWorkspaceUser_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_PublishReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PublishReportRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DekartServer).PublishReport(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Dekart_PublishReport_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).PublishReport(ctx, req.(*PublishReportRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // Dekart_ServiceDesc is the grpc.ServiceDesc for Dekart service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1282,6 +1314,14 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetDiscoverable",
 			Handler:    _Dekart_SetDiscoverable_Handler,
+		},
+		{
+			MethodName: "PublishReport",
+			Handler:    _Dekart_PublishReport_Handler,
+		},
+		{
+			MethodName: "AllowExportDatasets",
+			Handler:    _Dekart_AllowExportDatasets_Handler,
 		},
 		{
 			MethodName: "CreateDataset",
@@ -1382,10 +1422,6 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateWorkspaceUser",
 			Handler:    _Dekart_UpdateWorkspaceUser_Handler,
-		},
-		{
-			MethodName: "PublishReport",
-			Handler:    _Dekart_PublishReport_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

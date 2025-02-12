@@ -49,6 +49,24 @@ type DekartSetDiscoverable = {
   readonly responseType: typeof proto_dekart_pb.SetDiscoverableResponse;
 };
 
+type DekartPublishReport = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.PublishReportRequest;
+  readonly responseType: typeof proto_dekart_pb.PublishReportResponse;
+};
+
+type DekartAllowExportDatasets = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.AllowExportDatasetsRequest;
+  readonly responseType: typeof proto_dekart_pb.AllowExportDatasetsResponse;
+};
+
 type DekartCreateDataset = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -301,15 +319,6 @@ type DekartUpdateWorkspaceUser = {
   readonly responseType: typeof proto_dekart_pb.UpdateWorkspaceUserResponse;
 };
 
-type DekartPublishReport = {
-  readonly methodName: string;
-  readonly service: typeof Dekart;
-  readonly requestStream: false;
-  readonly responseStream: false;
-  readonly requestType: typeof proto_dekart_pb.PublishReportRequest;
-  readonly responseType: typeof proto_dekart_pb.PublishReportResponse;
-};
-
 export class Dekart {
   static readonly serviceName: string;
   static readonly CreateReport: DekartCreateReport;
@@ -317,6 +326,8 @@ export class Dekart {
   static readonly UpdateReport: DekartUpdateReport;
   static readonly ArchiveReport: DekartArchiveReport;
   static readonly SetDiscoverable: DekartSetDiscoverable;
+  static readonly PublishReport: DekartPublishReport;
+  static readonly AllowExportDatasets: DekartAllowExportDatasets;
   static readonly CreateDataset: DekartCreateDataset;
   static readonly RemoveDataset: DekartRemoveDataset;
   static readonly UpdateDatasetName: DekartUpdateDatasetName;
@@ -345,7 +356,6 @@ export class Dekart {
   static readonly UpdateWorkspace: DekartUpdateWorkspace;
   static readonly GetWorkspace: DekartGetWorkspace;
   static readonly UpdateWorkspaceUser: DekartUpdateWorkspaceUser;
-  static readonly PublishReport: DekartPublishReport;
 }
 
 export type ServiceError = { message: string, code: number; metadata: grpc.Metadata }
@@ -424,6 +434,24 @@ export class DekartClient {
   setDiscoverable(
     requestMessage: proto_dekart_pb.SetDiscoverableRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.SetDiscoverableResponse|null) => void
+  ): UnaryResponse;
+  publishReport(
+    requestMessage: proto_dekart_pb.PublishReportRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.PublishReportResponse|null) => void
+  ): UnaryResponse;
+  publishReport(
+    requestMessage: proto_dekart_pb.PublishReportRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.PublishReportResponse|null) => void
+  ): UnaryResponse;
+  allowExportDatasets(
+    requestMessage: proto_dekart_pb.AllowExportDatasetsRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.AllowExportDatasetsResponse|null) => void
+  ): UnaryResponse;
+  allowExportDatasets(
+    requestMessage: proto_dekart_pb.AllowExportDatasetsRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.AllowExportDatasetsResponse|null) => void
   ): UnaryResponse;
   createDataset(
     requestMessage: proto_dekart_pb.CreateDatasetRequest,
@@ -652,15 +680,6 @@ export class DekartClient {
   updateWorkspaceUser(
     requestMessage: proto_dekart_pb.UpdateWorkspaceUserRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.UpdateWorkspaceUserResponse|null) => void
-  ): UnaryResponse;
-  publishReport(
-    requestMessage: proto_dekart_pb.PublishReportRequest,
-    metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.PublishReportResponse|null) => void
-  ): UnaryResponse;
-  publishReport(
-    requestMessage: proto_dekart_pb.PublishReportRequest,
-    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.PublishReportResponse|null) => void
   ): UnaryResponse;
 }
 

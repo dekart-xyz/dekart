@@ -1,12 +1,12 @@
 import Button from 'antd/es/button'
 import Modal from 'antd/es/modal'
-import { GlobalOutlined, LockOutlined, TeamOutlined, LinkOutlined, UserAddOutlined } from '@ant-design/icons'
+import { GlobalOutlined, LockOutlined, TeamOutlined, LinkOutlined, UserAddOutlined, DownloadOutlined } from '@ant-design/icons'
 import { useEffect, useState } from 'react'
 import styles from './ShareButton.module.css'
 import { useDispatch, useSelector } from 'react-redux'
 import Switch from 'antd/es/switch'
 import { copyUrlToClipboard } from './actions/clipboard'
-import { publishReport, setDiscoverable } from './actions/report'
+import { allowExportDatasets, publishReport, setDiscoverable } from './actions/report'
 import Select from 'antd/es/select'
 
 function CopyLinkButton () {
@@ -82,6 +82,40 @@ function PublicPermissions () {
       </div>
       <div className={styles.boolStatusControl}>
         <PublishSwitch />
+      </div>
+    </div>
+  )
+}
+function AllowExportData () {
+  const { allowExport, canWrite, id } = useSelector(state => state.report)
+  const [switchState, setSwitchState] = useState(allowExport)
+  const dispatch = useDispatch()
+  if (
+    !canWrite
+  ) {
+    return null
+  }
+  return (
+    <div className={styles.boolStatus}>
+      <div className={styles.boolStatusIcon}><DownloadOutlined /></div>
+      <div className={styles.boolStatusLabel}>
+        <div className={styles.statusLabelTitle}>Allow exporting data</div>
+        <div className={styles.statusLabelDescription}>{
+          allowExport
+            ? 'Users can export data from this report'
+            : 'Users cannot export data from this report'
+          }
+        </div>
+      </div>
+      <div className={styles.boolStatusControl}>
+        <Switch
+          checked={allowExport}
+          onChange={(checked) => {
+            setSwitchState(checked)
+            dispatch(allowExportDatasets(id, checked))
+          }}
+          loading={switchState !== allowExport}
+        />
       </div>
     </div>
   )
@@ -216,6 +250,7 @@ function ModalContent () {
     <>
       <PublicPermissions />
       <WorkspacePermissions />
+      <AllowExportData />
     </>
   )
 }

@@ -51,7 +51,8 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			0 as connections_num,
 			0 as connections_with_sensitive_scope_num,
 			is_public,
-			query_params
+			query_params,
+			allow_export
 		from reports as r
 		where id=$1 and not archived and (is_playground or is_public)
 		limit 1`,
@@ -93,7 +94,8 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 				and (c.bigquery_key_encrypted is null or c.bigquery_key_encrypted = '') -- BigQuery passthrough
 			) as connections_with_sensitive_scope_num,
 			is_public,
-			query_params
+			query_params,
+			allow_export
 		from reports as r
 		where id=$1 and not archived and (workspace_id=$3 or is_playground or is_public)
 		limit 1`,
@@ -131,6 +133,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			&connectionsWithSensitiveScopeNum,
 			&report.IsPublic,
 			&queryParams,
+			&report.AllowExport,
 		)
 		if err != nil {
 			log.Err(err).Send()
@@ -555,6 +558,43 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	s.reportStreams.Ping(req.ReportId)
 
 	return &proto.UpdateReportResponse{}, nil
+}
+
+func (s Server) AllowExportDatasets(ctx context.Context, req *proto.AllowExportDatasetsRequest) (*proto.AllowExportDatasetsResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	_, err := uuid.Parse(req.ReportId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+	report, err := s.getReport(ctx, req.ReportId)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if !report.CanWrite {
+		err := fmt.Errorf("cannot allow export for report %s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.PermissionDenied, "Cannot allow export")
+	}
+	_, err = s.db.ExecContext(ctx,
+		`update reports set allow_export=$1 where id=$2`,
+		req.AllowExport,
+		req.ReportId,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	s.reportStreams.Ping(req.ReportId)
+	return &proto.AllowExportDatasetsResponse{}, nil
 }
 
 func (s Server) SetDiscoverable(ctx context.Context, req *proto.SetDiscoverableRequest) (*proto.SetDiscoverableResponse, error) {
