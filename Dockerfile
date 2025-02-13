@@ -31,10 +31,11 @@ RUN CGO_ENABLED=0 go build ./src/server
 FROM godeps as gotest
 RUN go test -v -count=1 ./src/server/**/
 
-FROM cypress/included:13.7.0 as e2etest
+FROM cypress/included:13.14.2 as e2etest
 WORKDIR /dekart
-RUN apt-get update && apt-get install  -y \
-    ca-certificates
+RUN apt-get update && apt-get install  -y --no-install-recommends \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 RUN update-ca-certificates
 ENV DEKART_PORT=3000
 ENV DEKART_STATIC_FILES=./build
