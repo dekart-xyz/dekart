@@ -141,13 +141,13 @@ func (s Server) UpdateDatasetName(ctx context.Context, req *proto.UpdateDatasetN
 	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error getting report id")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if reportID == nil {
 		err := fmt.Errorf("dataset not found id:%s", req.DatasetId)
-		log.Warn().Err(err).Send()
+		log.Warn().Err(err).Msg("Dataset not found")
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
@@ -160,7 +160,7 @@ func (s Server) UpdateDatasetName(ctx context.Context, req *proto.UpdateDatasetN
 		req.DatasetId,
 	)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error updating dataset name")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -178,13 +178,13 @@ func (s Server) UpdateDatasetConnection(ctx context.Context, req *proto.UpdateDa
 	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error getting report id")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if reportID == nil {
 		err := fmt.Errorf("dataset not found id:%s", req.DatasetId)
-		log.Warn().Err(err).Send()
+		log.Warn().Err(err).Msg("Dataset not found")
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
@@ -197,7 +197,7 @@ func (s Server) UpdateDatasetConnection(ctx context.Context, req *proto.UpdateDa
 		req.DatasetId,
 	)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error updating dataset connection")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -219,13 +219,13 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error getting report id")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if reportID == nil {
 		err := fmt.Errorf("dataset not found id:%s", req.DatasetId)
-		log.Warn().Err(err).Send()
+		log.Warn().Err(err).Msg("Dataset not found")
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
@@ -236,7 +236,7 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 		req.DatasetId,
 	)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error deleting dataset")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -246,7 +246,7 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 		req.DatasetId,
 	)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error deleting legacy query")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -316,19 +316,19 @@ func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetReque
 	result, err := s.insertDataset(ctx, req.ReportId)
 
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error inserting dataset")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	affectedRows, err := result.RowsAffected()
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error getting affected rows")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if affectedRows == 0 {
 		err := fmt.Errorf("report=%s, author_email=%s not found", req.ReportId, claims.Email)
-		log.Warn().Err(err).Send()
+		log.Warn().Err(err).Msg("Report not found")
 		return nil, status.Errorf(codes.NotFound, err.Error())
 	}
 	s.reportStreams.Ping(req.ReportId)
@@ -387,14 +387,14 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	reportID, err := s.getReportID(ctx, vars["dataset"], false)
 
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error getting report id")
 		HttpError(w, err)
 		return
 	}
 
 	if reportID == nil {
 		err := fmt.Errorf("dataset not found id:%s", vars["dataset"])
-		log.Warn().Err(err).Send()
+		log.Warn().Err(err).Msg("Dataset not found")
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
@@ -402,14 +402,14 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	report, err := s.getReport(ctx, *reportID)
 
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error getting report")
 		HttpError(w, err)
 		return
 	}
 
 	if report == nil {
 		err := fmt.Errorf("report not found id:%s", *reportID)
-		log.Warn().Err(err).Send()
+		log.Warn().Err(err).Msg("Report not found while serving dataset source")
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
@@ -423,7 +423,7 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 
 	if connection == nil {
 		err := fmt.Errorf("connection not found id:%s", vars["dataset"])
-		log.Warn().Err(err).Send()
+		log.Warn().Err(err).Msg("Connection not found while serving dataset source")
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}

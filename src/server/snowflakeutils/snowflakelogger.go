@@ -26,7 +26,7 @@ func NewSnowflakeLogger(dekartLogger *zerolog.Logger) *sf.SFLogger {
 	logrusLogger.SetFormatter(&logrus.JSONFormatter{})
 
 	// Set the log level
-	logrusLogger.SetLevel(logrus.ErrorLevel)
+	logrusLogger.SetLevel(logrus.FatalLevel) // TODO: do we need Error implementation then?
 
 	logger := &SFLogger{inner: logrusLogger, dekartLogger: dekartLogger}
 	var sfLogger sf.SFLogger = logger
@@ -155,7 +155,7 @@ func (log *SFLogger) Warning(args ...interface{}) {
 }
 
 func (log *SFLogger) Error(args ...interface{}) {
-	log.inner.Error(args...)
+	log.dekartLogger.Error().Msg(fmt.Sprint(args...))
 }
 
 func (log *SFLogger) Fatal(args ...interface{}) {

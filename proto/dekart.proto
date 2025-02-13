@@ -9,6 +9,8 @@ service Dekart {
     rpc UpdateReport(UpdateReportRequest) returns (UpdateReportResponse) {}
     rpc ArchiveReport(ArchiveReportRequest) returns (ArchiveReportResponse) {}
     rpc SetDiscoverable(SetDiscoverableRequest) returns (SetDiscoverableResponse) {}
+    rpc PublishReport(PublishReportRequest) returns (PublishReportResponse) {}
+    rpc AllowExportDatasets(AllowExportDatasetsRequest) returns (AllowExportDatasetsResponse) {}
 
     // datasets
     rpc CreateDataset(CreateDatasetRequest) returns (CreateDatasetResponse) {}
@@ -60,9 +62,14 @@ service Dekart {
     rpc UpdateWorkspace(UpdateWorkspaceRequest) returns (UpdateWorkspaceResponse) {}
     rpc GetWorkspace(GetWorkspaceRequest) returns (GetWorkspaceResponse) {}
     rpc UpdateWorkspaceUser(UpdateWorkspaceUserRequest) returns (UpdateWorkspaceUserResponse) {}
+}
 
-    //reports
-    rpc PublishReport(PublishReportRequest) returns (PublishReportResponse) {}
+message AllowExportDatasetsRequest {
+    string report_id = 1;
+    bool allow_export = 2;
+}
+
+message AllowExportDatasetsResponse {
 }
 
 message CancelJobRequest {
@@ -434,7 +441,8 @@ message Report {
     bool need_sensitive_scope = 13; // need sensitive scope to run queries and read results
     bool is_playground = 14; // true - playground, false - workspace
     bool is_public = 15; // true - public, false - private
-    repeated QueryParam query_params = 16;
+    bool allow_export = 16; // allow export datasets
+    repeated QueryParam query_params = 17;
 }
 
 message Dataset {

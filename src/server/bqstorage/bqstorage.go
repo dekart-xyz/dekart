@@ -28,9 +28,8 @@ func (s BigQueryStorageObject) GetWriter(ctx context.Context) io.WriteCloser {
 }
 
 func (s BigQueryStorageObject) GetSize(ctx context.Context) (*int64, error) {
-	err := fmt.Errorf("BigQueryStorageObject GetSize not implemented")
-	log.Err(err).Send()
-	return nil, err
+	log.Fatal().Msg("BigQueryStorageObject GetSize not implemented")
+	return nil, nil
 }
 
 func (s BigQueryStorageObject) getClient(ctx context.Context) (*bigquery.Client, error) {
@@ -97,7 +96,7 @@ func (s BigQueryStorageObject) GetReader(ctx context.Context) (io.ReadCloser, er
 	case firstRow, more = <-csvRows:
 		if !more {
 			err := fmt.Errorf("no data returned by BigQuery Readers")
-			log.Err(err).Send()
+			log.Err(err).Send() // here send is ok
 			return nil, err
 		}
 	case err := <-errors:
@@ -110,10 +109,9 @@ func (s BigQueryStorageObject) GetReader(ctx context.Context) (io.ReadCloser, er
 
 		if more {
 			// write first row
-			log.Debug().Msg("writing first row")
 			err := csvWriter.Write(firstRow)
 			if err != nil {
-				log.Err(err).Send()
+				log.Err(err).Msg("error writing first row")
 				return
 			}
 
@@ -126,12 +124,12 @@ func (s BigQueryStorageObject) GetReader(ctx context.Context) (io.ReadCloser, er
 					}
 					err := csvWriter.Write(csvRow)
 					if err != nil {
-						log.Err(err).Send()
+						log.Err(err).Msg("error writing row")
 						return
 					}
 				case err := <-errors:
 					if err != nil {
-						log.Err(err).Send()
+						log.Err(err).Msg("error reading row")
 						return
 					}
 				case <-ctx.Done():
@@ -147,7 +145,7 @@ func (s BigQueryStorageObject) GetReader(ctx context.Context) (io.ReadCloser, er
 
 func (s BigQueryStorageObject) CopyFromS3(ctx context.Context, source string) error {
 	err := fmt.Errorf("BigQueryStorageObject CopyFromS3 not implemented")
-	log.Fatal().Err(err).Send()
+	log.Fatal().Err(err).Send() // here send is ok
 	return err
 }
 

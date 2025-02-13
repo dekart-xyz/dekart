@@ -25,17 +25,17 @@ func NewStaticFilesHandler(staticPath string) StaticFilesHandler {
 	fs := http.Dir(staticPath)
 	indexFile, err := fs.Open("./index.html")
 	if err != nil {
-		log.Fatal().Str("DEKART_STATIC_FILES", staticPath).Err(err).Send()
+		log.Fatal().Str("DEKART_STATIC_FILES", staticPath).Err(err).Msg("Failed to open index.html file")
 	}
 	defer indexFile.Close()
 	stat, err := indexFile.Stat()
 	if err != nil {
-		log.Fatal().Err(err).Send()
+		log.Fatal().Err(err).Msg("Failed to get index.html file info")
 	}
 	template := make([]byte, stat.Size())
 	_, err = indexFile.Read(template)
 	if err != nil {
-		log.Fatal().Err(err).Send()
+		log.Fatal().Err(err).Msg("Failed to read index.html file")
 	}
 	indexFileBuffer := customCodeRe.ReplaceAll(template, []byte(os.Getenv("DEKART_HTML_CUSTOM_CODE")))
 
@@ -47,7 +47,7 @@ func NewStaticFilesHandler(staticPath string) StaticFilesHandler {
 	return staticFilesHandler
 }
 
-//ServeHTTP implementation for reading static files from build folder
+// ServeHTTP implementation for reading static files from build folder
 func (h StaticFilesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := filepath.Clean(r.URL.Path)
 	path = filepath.Join(h.staticPath, path)
@@ -62,7 +62,7 @@ func (h StaticFilesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.FileServer(http.Dir(h.staticPath)).ServeHTTP(w, r)
 }
 
-//ServeIndex serves index.html
+// ServeIndex serves index.html
 func (h StaticFilesHandler) ServeIndex(w http.ResponseWriter, r *http.Request) {
 	http.ServeContent(w, r, "index.html", h.indexFileModTime, bytes.NewReader(h.indexFileBuffer))
 }

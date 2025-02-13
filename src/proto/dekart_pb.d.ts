@@ -3,6 +3,46 @@
 
 import * as jspb from "google-protobuf";
 
+export class AllowExportDatasetsRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  getAllowExport(): boolean;
+  setAllowExport(value: boolean): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): AllowExportDatasetsRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: AllowExportDatasetsRequest): AllowExportDatasetsRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: AllowExportDatasetsRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): AllowExportDatasetsRequest;
+  static deserializeBinaryFromReader(message: AllowExportDatasetsRequest, reader: jspb.BinaryReader): AllowExportDatasetsRequest;
+}
+
+export namespace AllowExportDatasetsRequest {
+  export type AsObject = {
+    reportId: string,
+    allowExport: boolean,
+  }
+}
+
+export class AllowExportDatasetsResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): AllowExportDatasetsResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: AllowExportDatasetsResponse): AllowExportDatasetsResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: AllowExportDatasetsResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): AllowExportDatasetsResponse;
+  static deserializeBinaryFromReader(message: AllowExportDatasetsResponse, reader: jspb.BinaryReader): AllowExportDatasetsResponse;
+}
+
+export namespace AllowExportDatasetsResponse {
+  export type AsObject = {
+  }
+}
+
 export class CancelJobRequest extends jspb.Message {
   getJobId(): string;
   setJobId(value: string): void;
@@ -1530,6 +1570,9 @@ export class Report extends jspb.Message {
   getIsPublic(): boolean;
   setIsPublic(value: boolean): void;
 
+  getAllowExport(): boolean;
+  setAllowExport(value: boolean): void;
+
   clearQueryParamsList(): void;
   getQueryParamsList(): Array<QueryParam>;
   setQueryParamsList(value: Array<QueryParam>): void;
@@ -1562,6 +1605,7 @@ export namespace Report {
     needSensitiveScope: boolean,
     isPlayground: boolean,
     isPublic: boolean,
+    allowExport: boolean,
     queryParamsList: Array<QueryParam.AsObject>,
   }
 }

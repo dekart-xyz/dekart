@@ -71,7 +71,7 @@ func configureDb() *sql.DB {
 	}
 	db, err := sql.Open("postgres", url)
 	if err != nil {
-		log.Fatal().Err(err).Send()
+		log.Fatal().Err(err).Msg("sql.Open failed")
 	}
 	db.SetConnMaxLifetime(0)
 	db.SetMaxIdleConns(3)
@@ -151,7 +151,7 @@ func startHttpServer(httpServer *http.Server) {
 		if err == http.ErrServerClosed {
 			log.Info().Msg("http server closed")
 		} else {
-			log.Fatal().Err(err).Send()
+			log.Fatal().Err(err).Msg("http server failed")
 		}
 	}
 }

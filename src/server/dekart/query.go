@@ -28,13 +28,13 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error getting report ID")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if reportID == nil {
 		err := fmt.Errorf("dataset not found or permission not granted")
-		log.Warn().Err(err).Str("dataset_id", req.DatasetId).Send()
+		log.Warn().Err(err).Str("dataset_id", req.DatasetId).Msg("Dataset not found")
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
@@ -45,7 +45,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		id,
 	)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error creating query")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -65,13 +65,13 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		req.DatasetId,
 	)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error updating dataset")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	affectedRows, err := result.RowsAffected()
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error getting affected rows count after updating dataset")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -94,7 +94,7 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 	}
 	report, err := s.getReport(ctx, req.ReportId)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error getting report by ID in RunAllQueries")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if !(report.CanWrite || report.Discoverable) {
@@ -215,7 +215,7 @@ func (s Server) runQuery(ctx context.Context, o runQueryOptions) error {
 	job, jobStatus, err := s.jobs.Create(o.reportID, o.queryID, o.queryText, connCtx)
 	log.Debug().Str("jobID", job.GetID()).Msg("Job created")
 	if err != nil {
-		log.Error().Err(err).Send()
+		log.Error().Err(err).Msg("Failed to create job")
 		return err
 	}
 	log.Debug().Str("jobID", job.GetID()).Msg("Job created")

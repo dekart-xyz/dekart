@@ -164,6 +164,8 @@ function EditModeButtons () {
 
 function ExportDropdown () {
   const dispatch = useDispatch()
+  const { allowExport } = useSelector(state => state.report)
+
   const items = [
     {
       label: 'Export:',
@@ -192,9 +194,10 @@ function ExportDropdown () {
     }
   ]
   return (
-    <Dropdown menu={{ items }} placement='topLeft'>
+    <Dropdown menu={{ items }} placement='topLeft' disabled={!allowExport}>
       <Button
         type='text'
+        title={allowExport ? 'Export' : 'Exporting is disabled'}
         icon={<DownloadOutlined />}
       />
     </Dropdown>

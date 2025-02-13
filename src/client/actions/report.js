@@ -3,7 +3,7 @@ import { removeDataset } from '@dekart-xyz/kepler.gl/dist/actions'
 
 import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
 import { success } from './message'
-import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest } from '../../proto/dekart_pb'
+import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { createQuery, downloadQuerySource } from './query'
 import { downloadDataset } from './dataset'
@@ -246,6 +246,16 @@ export function newReport (id) {
 
 export function newForkedReport (id) {
   return { type: newForkedReport.name, id }
+}
+
+export function allowExportDatasets (reportId, allowExport) {
+  return async (dispatch) => {
+    dispatch({ type: allowExportDatasets.name })
+    const req = new AllowExportDatasetsRequest()
+    req.setReportId(reportId)
+    req.setAllowExport(allowExport)
+    dispatch(grpcCall(Dekart.AllowExportDatasets, req))
+  }
 }
 
 export function publishReport (reportId, publish) {
