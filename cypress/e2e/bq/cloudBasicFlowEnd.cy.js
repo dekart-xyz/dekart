@@ -3,8 +3,9 @@ import copy from '../../fixtures/copy.json'
 
 describe('cloud basic flow', () => {
   it('with private token', () => {
-    // create connection
     cy.visit('/')
+
+    // create connection
     cy.get('button:contains("BigQuery")').click()
     cy.get('button:contains("Connect with Google")').click()
     const randomConnectionName = `test-${Math.floor(Math.random() * 1000000)}`
@@ -33,7 +34,7 @@ describe('cloud basic flow', () => {
     // share report
     cy.get('button#dekart-share-report').click()
     cy.get('span:contains("Cannot view")').click()
-    cy.get('div').contains(/^View$/).click()
+    cy.get('div.dekart-share-view').click()
     cy.get('button').contains('Done').click()
     cy.visit('/')
     cy.get('span').contains('Shared Reports').click()
