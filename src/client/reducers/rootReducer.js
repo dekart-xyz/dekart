@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 import { ActionTypes as KeplerActionTypes } from '@dekart-xyz/kepler.gl/dist/actions'
 import { setUserMapboxAccessTokenUpdater } from '@dekart-xyz/kepler.gl/dist/reducers/ui-state-updaters'
-import { openReport, reportUpdate, forkReport, saveMap, reportTitleChange, newReport, newForkedReport, unsubscribeReports, reportsListUpdate, closeReport, toggleReportEdit, setReportChanged, savedReport } from '../actions/report'
+import { openReport, reportUpdate, forkReport, saveMap, reportTitleChange, newReport, newForkedReport, unsubscribeReports, reportsListUpdate, closeReport, toggleReportEdit, setReportChanged, savedReport, toggleReportFullscreen } from '../actions/report'
 import { setStreamError } from '../actions/message'
 import { numRunningQueries, queries, queryJobs, queryParams, queryStatus } from './queryReducer'
 import { setUsage } from '../actions/usage'
@@ -20,6 +20,8 @@ import storage from './storageReducer'
 import { setRedirectState } from '../actions/redirect'
 import { queryChanged, queryParamChanged, updateQueryParamsFromQueries } from '../actions/query'
 import sessionStorage from './sessionStorageReducer'
+import readme from './readmeReducer'
+import { setReadmeValue } from '../actions/readme'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
   uiState: {
@@ -76,13 +78,15 @@ const defaultReportStatus = {
   opened: false,
   saving: false,
   lastChanged: 0,
-  lastSaved: 0
+  lastSaved: 0,
+  fullscreen: null
 }
 function reportStatus (state = defaultReportStatus, action) {
   switch (action.type) {
     case updateQueryParamsFromQueries.name:
     case queryParamChanged.name:
     case queryChanged.name:
+    case setReadmeValue.name:
     case setReportChanged.name: {
       const lastChanged = Date.now()
       return {
@@ -108,24 +112,39 @@ function reportStatus (state = defaultReportStatus, action) {
         saving: false,
         lastSaved: action.lastSaved
       }
-    case reportUpdate.name:
+    case toggleReportFullscreen.name:
+      return {
+        ...state,
+        fullscreen: !state.fullscreen
+      }
+    case reportUpdate.name: {
+      let fullscreen = state.fullscreen
+      if (fullscreen === null) { // not defined yet, if defined, keep it as is
+        const { readme } = action.report
+        fullscreen = !(readme || state.edit)
+      }
       return {
         ...state,
         online: true,
         title: action.report.title,
-        lastUpdated: Date.now()
+        lastUpdated: Date.now(),
+        fullscreen
       }
-    case openReport.name:
+    }
+    case openReport.name: {
       return {
         ...defaultReportStatus,
         opened: true,
         edit: state.edit
       }
-    case toggleReportEdit.name:
+    }
+    case toggleReportEdit.name: {
       return {
         ...state,
-        edit: action.edit
+        edit: action.edit,
+        fullscreen: action.fullscreen
       }
+    }
     case closeReport.name:
       return defaultReportStatus
     case setStreamError.name:
@@ -264,5 +283,6 @@ export default combineReducers({
   queryParams,
   queryJobs,
   numRunningQueries,
-  sessionStorage
+  sessionStorage,
+  readme
 })

@@ -3,6 +3,82 @@
 
 import * as jspb from "google-protobuf";
 
+export class AddReadmeRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  getMarkdown(): string;
+  setMarkdown(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): AddReadmeRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: AddReadmeRequest): AddReadmeRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: AddReadmeRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): AddReadmeRequest;
+  static deserializeBinaryFromReader(message: AddReadmeRequest, reader: jspb.BinaryReader): AddReadmeRequest;
+}
+
+export namespace AddReadmeRequest {
+  export type AsObject = {
+    reportId: string,
+    markdown: string,
+  }
+}
+
+export class AddReadmeResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): AddReadmeResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: AddReadmeResponse): AddReadmeResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: AddReadmeResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): AddReadmeResponse;
+  static deserializeBinaryFromReader(message: AddReadmeResponse, reader: jspb.BinaryReader): AddReadmeResponse;
+}
+
+export namespace AddReadmeResponse {
+  export type AsObject = {
+  }
+}
+
+export class RemoveReadmeRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): RemoveReadmeRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: RemoveReadmeRequest): RemoveReadmeRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: RemoveReadmeRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RemoveReadmeRequest;
+  static deserializeBinaryFromReader(message: RemoveReadmeRequest, reader: jspb.BinaryReader): RemoveReadmeRequest;
+}
+
+export namespace RemoveReadmeRequest {
+  export type AsObject = {
+    reportId: string,
+  }
+}
+
+export class RemoveReadmeResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): RemoveReadmeResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: RemoveReadmeResponse): RemoveReadmeResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: RemoveReadmeResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RemoveReadmeResponse;
+  static deserializeBinaryFromReader(message: RemoveReadmeResponse, reader: jspb.BinaryReader): RemoveReadmeResponse;
+}
+
+export namespace RemoveReadmeResponse {
+  export type AsObject = {
+  }
+}
+
 export class AllowExportDatasetsRequest extends jspb.Message {
   getReportId(): string;
   setReportId(value: string): void;
@@ -1524,6 +1600,26 @@ export namespace ReportListResponse {
   }
 }
 
+export class Readme extends jspb.Message {
+  getMarkdown(): string;
+  setMarkdown(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): Readme.AsObject;
+  static toObject(includeInstance: boolean, msg: Readme): Readme.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: Readme, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): Readme;
+  static deserializeBinaryFromReader(message: Readme, reader: jspb.BinaryReader): Readme;
+}
+
+export namespace Readme {
+  export type AsObject = {
+    markdown: string,
+  }
+}
+
 export class Report extends jspb.Message {
   getId(): string;
   setId(value: string): void;
@@ -1578,6 +1674,11 @@ export class Report extends jspb.Message {
   setQueryParamsList(value: Array<QueryParam>): void;
   addQueryParams(value?: QueryParam, index?: number): QueryParam;
 
+  hasReadme(): boolean;
+  clearReadme(): void;
+  getReadme(): Readme | undefined;
+  setReadme(value?: Readme): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Report.AsObject;
   static toObject(includeInstance: boolean, msg: Report): Report.AsObject;
@@ -1607,6 +1708,7 @@ export namespace Report {
     isPublic: boolean,
     allowExport: boolean,
     queryParamsList: Array<QueryParam.AsObject>,
+    readme?: Readme.AsObject,
   }
 }
 
@@ -1874,6 +1976,11 @@ export class UpdateReportRequest extends jspb.Message {
   setQueryParamsList(value: Array<QueryParam>): void;
   addQueryParams(value?: QueryParam, index?: number): QueryParam;
 
+  hasReadme(): boolean;
+  clearReadme(): void;
+  getReadme(): Readme | undefined;
+  setReadme(value?: Readme): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): UpdateReportRequest.AsObject;
   static toObject(includeInstance: boolean, msg: UpdateReportRequest): UpdateReportRequest.AsObject;
@@ -1891,6 +1998,7 @@ export namespace UpdateReportRequest {
     title: string,
     queryList: Array<Query.AsObject>,
     queryParamsList: Array<QueryParam.AsObject>,
+    readme?: Readme.AsObject,
   }
 }
 

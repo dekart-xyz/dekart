@@ -73,6 +73,24 @@ Dekart.AllowExportDatasets = {
   responseType: proto_dekart_pb.AllowExportDatasetsResponse
 };
 
+Dekart.AddReadme = {
+  methodName: "AddReadme",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.AddReadmeRequest,
+  responseType: proto_dekart_pb.AddReadmeResponse
+};
+
+Dekart.RemoveReadme = {
+  methodName: "RemoveReadme",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: proto_dekart_pb.RemoveReadmeRequest,
+  responseType: proto_dekart_pb.RemoveReadmeResponse
+};
+
 Dekart.CreateDataset = {
   methodName: "CreateDataset",
   service: Dekart,
@@ -523,6 +541,68 @@ DekartClient.prototype.allowExportDatasets = function allowExportDatasets(reques
     callback = arguments[1];
   }
   var client = grpc.unary(Dekart.AllowExportDatasets, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.addReadme = function addReadme(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.AddReadme, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.removeReadme = function removeReadme(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.RemoveReadme, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,

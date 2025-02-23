@@ -264,6 +264,7 @@ function SampleQuery ({ queryId }) {
 export default function Query ({ query }) {
   const { canRun, queryText } = useSelector(state => state.queryStatus[query.id])
   const { canWrite } = useSelector(state => state.report)
+  const edit = useSelector(state => state.reportStatus.edit)
   const dispatch = useDispatch()
   return (
     <div key={query.id} className={styles.query}>
@@ -271,11 +272,11 @@ export default function Query ({ query }) {
         queryId={query.id}
         queryText={queryText}
         onChange={value => dispatch(queryChanged(query.id, value))}
-        canWrite={canWrite}
+        canWrite={canWrite && edit}
       />
       <QueryStatus query={query}>
         {
-          canWrite
+          canWrite && edit
             ? (
               <Button
                 size='large'
