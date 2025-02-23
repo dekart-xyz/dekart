@@ -26,6 +26,8 @@ const (
 	Dekart_SetDiscoverable_FullMethodName         = "/Dekart/SetDiscoverable"
 	Dekart_PublishReport_FullMethodName           = "/Dekart/PublishReport"
 	Dekart_AllowExportDatasets_FullMethodName     = "/Dekart/AllowExportDatasets"
+	Dekart_AddReadme_FullMethodName               = "/Dekart/AddReadme"
+	Dekart_RemoveReadme_FullMethodName            = "/Dekart/RemoveReadme"
 	Dekart_CreateDataset_FullMethodName           = "/Dekart/CreateDataset"
 	Dekart_RemoveDataset_FullMethodName           = "/Dekart/RemoveDataset"
 	Dekart_UpdateDatasetName_FullMethodName       = "/Dekart/UpdateDatasetName"
@@ -68,6 +70,8 @@ type DekartClient interface {
 	SetDiscoverable(ctx context.Context, in *SetDiscoverableRequest, opts ...grpc.CallOption) (*SetDiscoverableResponse, error)
 	PublishReport(ctx context.Context, in *PublishReportRequest, opts ...grpc.CallOption) (*PublishReportResponse, error)
 	AllowExportDatasets(ctx context.Context, in *AllowExportDatasetsRequest, opts ...grpc.CallOption) (*AllowExportDatasetsResponse, error)
+	AddReadme(ctx context.Context, in *AddReadmeRequest, opts ...grpc.CallOption) (*AddReadmeResponse, error)
+	RemoveReadme(ctx context.Context, in *RemoveReadmeRequest, opts ...grpc.CallOption) (*RemoveReadmeResponse, error)
 	// datasets
 	CreateDataset(ctx context.Context, in *CreateDatasetRequest, opts ...grpc.CallOption) (*CreateDatasetResponse, error)
 	RemoveDataset(ctx context.Context, in *RemoveDatasetRequest, opts ...grpc.CallOption) (*RemoveDatasetResponse, error)
@@ -180,6 +184,26 @@ func (c *dekartClient) AllowExportDatasets(ctx context.Context, in *AllowExportD
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(AllowExportDatasetsResponse)
 	err := c.cc.Invoke(ctx, Dekart_AllowExportDatasets_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) AddReadme(ctx context.Context, in *AddReadmeRequest, opts ...grpc.CallOption) (*AddReadmeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AddReadmeResponse)
+	err := c.cc.Invoke(ctx, Dekart_AddReadme_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) RemoveReadme(ctx context.Context, in *RemoveReadmeRequest, opts ...grpc.CallOption) (*RemoveReadmeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RemoveReadmeResponse)
+	err := c.cc.Invoke(ctx, Dekart_RemoveReadme_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -505,6 +529,8 @@ type DekartServer interface {
 	SetDiscoverable(context.Context, *SetDiscoverableRequest) (*SetDiscoverableResponse, error)
 	PublishReport(context.Context, *PublishReportRequest) (*PublishReportResponse, error)
 	AllowExportDatasets(context.Context, *AllowExportDatasetsRequest) (*AllowExportDatasetsResponse, error)
+	AddReadme(context.Context, *AddReadmeRequest) (*AddReadmeResponse, error)
+	RemoveReadme(context.Context, *RemoveReadmeRequest) (*RemoveReadmeResponse, error)
 	// datasets
 	CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error)
 	RemoveDataset(context.Context, *RemoveDatasetRequest) (*RemoveDatasetResponse, error)
@@ -573,6 +599,12 @@ func (UnimplementedDekartServer) PublishReport(context.Context, *PublishReportRe
 }
 func (UnimplementedDekartServer) AllowExportDatasets(context.Context, *AllowExportDatasetsRequest) (*AllowExportDatasetsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AllowExportDatasets not implemented")
+}
+func (UnimplementedDekartServer) AddReadme(context.Context, *AddReadmeRequest) (*AddReadmeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddReadme not implemented")
+}
+func (UnimplementedDekartServer) RemoveReadme(context.Context, *RemoveReadmeRequest) (*RemoveReadmeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveReadme not implemented")
 }
 func (UnimplementedDekartServer) CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateDataset not implemented")
@@ -801,6 +833,42 @@ func _Dekart_AllowExportDatasets_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DekartServer).AllowExportDatasets(ctx, req.(*AllowExportDatasetsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_AddReadme_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddReadmeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).AddReadme(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_AddReadme_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).AddReadme(ctx, req.(*AddReadmeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_RemoveReadme_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveReadmeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).RemoveReadme(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_RemoveReadme_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).RemoveReadme(ctx, req.(*RemoveReadmeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1322,6 +1390,14 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AllowExportDatasets",
 			Handler:    _Dekart_AllowExportDatasets_Handler,
+		},
+		{
+			MethodName: "AddReadme",
+			Handler:    _Dekart_AddReadme_Handler,
+		},
+		{
+			MethodName: "RemoveReadme",
+			Handler:    _Dekart_RemoveReadme_Handler,
 		},
 		{
 			MethodName: "CreateDataset",

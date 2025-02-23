@@ -67,6 +67,24 @@ type DekartAllowExportDatasets = {
   readonly responseType: typeof proto_dekart_pb.AllowExportDatasetsResponse;
 };
 
+type DekartAddReadme = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.AddReadmeRequest;
+  readonly responseType: typeof proto_dekart_pb.AddReadmeResponse;
+};
+
+type DekartRemoveReadme = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.RemoveReadmeRequest;
+  readonly responseType: typeof proto_dekart_pb.RemoveReadmeResponse;
+};
+
 type DekartCreateDataset = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -328,6 +346,8 @@ export class Dekart {
   static readonly SetDiscoverable: DekartSetDiscoverable;
   static readonly PublishReport: DekartPublishReport;
   static readonly AllowExportDatasets: DekartAllowExportDatasets;
+  static readonly AddReadme: DekartAddReadme;
+  static readonly RemoveReadme: DekartRemoveReadme;
   static readonly CreateDataset: DekartCreateDataset;
   static readonly RemoveDataset: DekartRemoveDataset;
   static readonly UpdateDatasetName: DekartUpdateDatasetName;
@@ -452,6 +472,24 @@ export class DekartClient {
   allowExportDatasets(
     requestMessage: proto_dekart_pb.AllowExportDatasetsRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.AllowExportDatasetsResponse|null) => void
+  ): UnaryResponse;
+  addReadme(
+    requestMessage: proto_dekart_pb.AddReadmeRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.AddReadmeResponse|null) => void
+  ): UnaryResponse;
+  addReadme(
+    requestMessage: proto_dekart_pb.AddReadmeRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.AddReadmeResponse|null) => void
+  ): UnaryResponse;
+  removeReadme(
+    requestMessage: proto_dekart_pb.RemoveReadmeRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.RemoveReadmeResponse|null) => void
+  ): UnaryResponse;
+  removeReadme(
+    requestMessage: proto_dekart_pb.RemoveReadmeRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.RemoveReadmeResponse|null) => void
   ): UnaryResponse;
   createDataset(
     requestMessage: proto_dekart_pb.CreateDatasetRequest,

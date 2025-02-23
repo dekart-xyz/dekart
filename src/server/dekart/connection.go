@@ -225,7 +225,8 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 		if err == context.Canceled {
 			return nil, err
 		}
-		log.Fatal().Err(err).Msg("select from connections failed")
+		log.Err(err).Msg("select from connections failed")
+		return nil, err
 	}
 	defer rows.Close()
 	lastDefault := time.Time{}

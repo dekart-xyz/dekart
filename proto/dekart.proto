@@ -11,6 +11,8 @@ service Dekart {
     rpc SetDiscoverable(SetDiscoverableRequest) returns (SetDiscoverableResponse) {}
     rpc PublishReport(PublishReportRequest) returns (PublishReportResponse) {}
     rpc AllowExportDatasets(AllowExportDatasetsRequest) returns (AllowExportDatasetsResponse) {}
+    rpc AddReadme(AddReadmeRequest) returns (AddReadmeResponse) {}
+    rpc RemoveReadme(RemoveReadmeRequest) returns (RemoveReadmeResponse) {}
 
     // datasets
     rpc CreateDataset(CreateDatasetRequest) returns (CreateDatasetResponse) {}
@@ -62,6 +64,21 @@ service Dekart {
     rpc UpdateWorkspace(UpdateWorkspaceRequest) returns (UpdateWorkspaceResponse) {}
     rpc GetWorkspace(GetWorkspaceRequest) returns (GetWorkspaceResponse) {}
     rpc UpdateWorkspaceUser(UpdateWorkspaceUserRequest) returns (UpdateWorkspaceUserResponse) {}
+}
+
+message AddReadmeRequest {
+    string report_id = 1;
+    string markdown = 2;
+}
+
+message AddReadmeResponse {
+}
+
+message RemoveReadmeRequest {
+    string report_id = 1;
+}
+
+message RemoveReadmeResponse {
 }
 
 message AllowExportDatasetsRequest {
@@ -425,6 +442,10 @@ message ReportListResponse {
     StreamOptions stream_options = 2;
 }
 
+message Readme {
+    string markdown = 1;
+}
+
 message Report {
     string id = 1;
     string map_config = 2;
@@ -443,6 +464,7 @@ message Report {
     bool is_public = 15; // true - public, false - private
     bool allow_export = 16; // allow export datasets
     repeated QueryParam query_params = 17;
+    Readme readme = 18;
 }
 
 message Dataset {
@@ -523,6 +545,7 @@ message UpdateReportRequest {
     string title = 3;
     repeated Query query = 4;
     repeated QueryParam query_params = 5;
+    Readme readme = 6;
 }
 
 message UpdateReportResponse {

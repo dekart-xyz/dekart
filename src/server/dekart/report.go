@@ -52,7 +52,8 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			0 as connections_with_sensitive_scope_num,
 			is_public,
 			query_params,
-			allow_export
+			allow_export,
+			readme
 		from reports as r
 		where id=$1 and not archived and (is_playground or is_public)
 		limit 1`,
@@ -95,7 +96,8 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			) as connections_with_sensitive_scope_num,
 			is_public,
 			query_params,
-			allow_export
+			allow_export,
+			readme
 		from reports as r
 		where id=$1 and not archived and (workspace_id=$3 or is_playground or is_public)
 		limit 1`,
@@ -114,6 +116,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 	for reportRows.Next() {
 		createdAt := time.Time{}
 		updatedAt := time.Time{}
+		readme := sql.NullString{}
 		var connectionsWithCacheNum, connectionsNum, connectionsWithSensitiveScopeNum int
 		var queryParams []byte
 		err = reportRows.Scan(
@@ -134,6 +137,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			&report.IsPublic,
 			&queryParams,
 			&report.AllowExport,
+			&readme,
 		)
 		if err != nil {
 			log.Err(err).Send()
@@ -156,6 +160,12 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 
 		report.CreatedAt = createdAt.Unix()
 		report.UpdatedAt = updatedAt.Unix()
+
+		if readme.Valid {
+			report.Readme = &proto.Readme{
+				Markdown: readme.String,
+			}
+		}
 
 		//query params
 		if len(queryParams) > 0 {
@@ -250,18 +260,32 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 			return err
 		}
 	}
+
+	var readme sql.NullString
+	if report.Readme != nil {
+		readme = sql.NullString{
+			String: report.Readme.Markdown,
+			Valid:  true,
+		}
+	} else {
+		readme = sql.NullString{
+			Valid: false,
+		}
+	}
+
 	if checkWorkspace(ctx).IsPlayground {
 		_, err = tx.ExecContext(ctx,
-			"INSERT INTO reports (id, author_email, map_config, title, query_params, is_playground) VALUES ($1, $2, $3, $4, $5, true)",
+			"INSERT INTO reports (id, author_email, map_config, title, query_params, is_playground, readme) VALUES ($1, $2, $3, $4, $5, true, $6)",
 			report.Id,
 			claims.Email,
 			newMapConfig,
 			report.Title,
 			paramsJSON,
+			readme,
 		)
 	} else {
 		_, err = tx.ExecContext(ctx,
-			"INSERT INTO reports (id, author_email, map_config, title, query_params, is_public, workspace_id) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+			"INSERT INTO reports (id, author_email, map_config, title, query_params, is_public, workspace_id, readme) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
 			report.Id,
 			claims.Email,
 			newMapConfig,
@@ -269,6 +293,7 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 			paramsJSON,
 			report.IsPublic,
 			checkWorkspace(ctx).ID,
+			readme,
 		)
 	}
 	if err != nil {
@@ -503,17 +528,30 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 		}
 	}
 
+	var readme sql.NullString
+	if req.Readme != nil {
+		readme = sql.NullString{
+			String: req.Readme.Markdown,
+			Valid:  true,
+		}
+	} else {
+		readme = sql.NullString{
+			Valid: false,
+		}
+	}
+
 	var result sql.Result
 	var err error
 	if checkWorkspace(ctx).IsPlayground {
 		result, err = s.db.ExecContext(ctx,
 			`update
 			reports
-		set map_config=$1, title=$2, query_params=$3
-		where id=$4 and author_email=$5 and is_playground=true`,
+		set map_config=$1, title=$2, query_params=$3, readme=$4
+		where id=$5 and author_email=$6 and is_playground=true`,
 			req.MapConfig,
 			req.Title,
 			paramsJSON,
+			readme,
 			req.ReportId,
 			claims.Email,
 		)
@@ -521,11 +559,12 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 		result, err = s.db.ExecContext(ctx,
 			`update
 			reports
-		set map_config=$1, title=$2, query_params=$3
-		where id=$4 and (author_email=$5 or allow_edit) and workspace_id=$6`,
+		set map_config=$1, title=$2, query_params=$3, readme=$4
+		where id=$5 and (author_email=$6 or allow_edit) and workspace_id=$7`,
 			req.MapConfig,
 			req.Title,
 			paramsJSON,
+			readme,
 			req.ReportId,
 			claims.Email,
 			checkWorkspace(ctx).ID,

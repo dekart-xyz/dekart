@@ -3,7 +3,7 @@ import { removeDataset } from '@dekart-xyz/kepler.gl/dist/actions'
 
 import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
 import { success } from './message'
-import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest } from '../../proto/dekart_pb'
+import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { createQuery, downloadQuerySource } from './query'
 import { downloadDataset } from './dataset'
@@ -31,7 +31,16 @@ function getReportStream (reportId, onMessage, onError) {
 }
 
 export function toggleReportEdit (edit) {
-  return { type: toggleReportEdit.name, edit }
+  return function (dispatch, getState) {
+    const report = getState().report
+    let fullscreen = null
+    if (edit) {
+      fullscreen = false
+    } else if (report) {
+      fullscreen = !report.readme
+    }
+    dispatch({ type: toggleReportEdit.name, edit, fullscreen })
+  }
 }
 
 export function openReport (reportId) {
@@ -303,11 +312,15 @@ export function savedReport (lastSaved) {
   return { type: savedReport.name, lastSaved }
 }
 
+export function toggleReportFullscreen () {
+  return { type: toggleReportFullscreen.name }
+}
+
 export function saveMap (onSaveComplete = () => {}) {
   return async (dispatch, getState) => {
     const lastSaved = Date.now()
     dispatch({ type: saveMap.name })
-    const { keplerGl, report, reportStatus, queryStatus, queryParams } = getState()
+    const { keplerGl, report, reportStatus, queryStatus, queryParams, readme } = getState()
     const configToSave = KeplerGlSchema.getConfigToSave(keplerGl.kepler)
     const request = new UpdateReportRequest()
     const queries = Object.keys(queryStatus).reduce((queries, id) => {
@@ -321,6 +334,11 @@ export function saveMap (onSaveComplete = () => {}) {
       }
       return queries
     }, [])
+    if (readme.markdown !== null) {
+      const readmeProp = new Readme()
+      readmeProp.setMarkdown(readme.markdown)
+      request.setReadme(readmeProp)
+    }
     request.setReportId(report.id)
     request.setMapConfig(JSON.stringify(configToSave))
     request.setTitle(reportStatus.title)
