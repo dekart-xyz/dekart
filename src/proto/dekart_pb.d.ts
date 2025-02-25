@@ -3,6 +3,158 @@
 
 import * as jspb from "google-protobuf";
 
+export class AddReadmeRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  getMarkdown(): string;
+  setMarkdown(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): AddReadmeRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: AddReadmeRequest): AddReadmeRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: AddReadmeRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): AddReadmeRequest;
+  static deserializeBinaryFromReader(message: AddReadmeRequest, reader: jspb.BinaryReader): AddReadmeRequest;
+}
+
+export namespace AddReadmeRequest {
+  export type AsObject = {
+    reportId: string,
+    markdown: string,
+  }
+}
+
+export class AddReadmeResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): AddReadmeResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: AddReadmeResponse): AddReadmeResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: AddReadmeResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): AddReadmeResponse;
+  static deserializeBinaryFromReader(message: AddReadmeResponse, reader: jspb.BinaryReader): AddReadmeResponse;
+}
+
+export namespace AddReadmeResponse {
+  export type AsObject = {
+  }
+}
+
+export class RemoveReadmeRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): RemoveReadmeRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: RemoveReadmeRequest): RemoveReadmeRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: RemoveReadmeRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RemoveReadmeRequest;
+  static deserializeBinaryFromReader(message: RemoveReadmeRequest, reader: jspb.BinaryReader): RemoveReadmeRequest;
+}
+
+export namespace RemoveReadmeRequest {
+  export type AsObject = {
+    reportId: string,
+  }
+}
+
+export class RemoveReadmeResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): RemoveReadmeResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: RemoveReadmeResponse): RemoveReadmeResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: RemoveReadmeResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RemoveReadmeResponse;
+  static deserializeBinaryFromReader(message: RemoveReadmeResponse, reader: jspb.BinaryReader): RemoveReadmeResponse;
+}
+
+export namespace RemoveReadmeResponse {
+  export type AsObject = {
+  }
+}
+
+export class AllowExportDatasetsRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  getAllowExport(): boolean;
+  setAllowExport(value: boolean): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): AllowExportDatasetsRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: AllowExportDatasetsRequest): AllowExportDatasetsRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: AllowExportDatasetsRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): AllowExportDatasetsRequest;
+  static deserializeBinaryFromReader(message: AllowExportDatasetsRequest, reader: jspb.BinaryReader): AllowExportDatasetsRequest;
+}
+
+export namespace AllowExportDatasetsRequest {
+  export type AsObject = {
+    reportId: string,
+    allowExport: boolean,
+  }
+}
+
+export class AllowExportDatasetsResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): AllowExportDatasetsResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: AllowExportDatasetsResponse): AllowExportDatasetsResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: AllowExportDatasetsResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): AllowExportDatasetsResponse;
+  static deserializeBinaryFromReader(message: AllowExportDatasetsResponse, reader: jspb.BinaryReader): AllowExportDatasetsResponse;
+}
+
+export namespace AllowExportDatasetsResponse {
+  export type AsObject = {
+  }
+}
+
+export class CancelJobRequest extends jspb.Message {
+  getJobId(): string;
+  setJobId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CancelJobRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: CancelJobRequest): CancelJobRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CancelJobRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CancelJobRequest;
+  static deserializeBinaryFromReader(message: CancelJobRequest, reader: jspb.BinaryReader): CancelJobRequest;
+}
+
+export namespace CancelJobRequest {
+  export type AsObject = {
+    jobId: string,
+  }
+}
+
+export class CancelJobResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CancelJobResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: CancelJobResponse): CancelJobResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CancelJobResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CancelJobResponse;
+  static deserializeBinaryFromReader(message: CancelJobResponse, reader: jspb.BinaryReader): CancelJobResponse;
+}
+
+export namespace CancelJobResponse {
+  export type AsObject = {
+  }
+}
+
 export class PublishReportRequest extends jspb.Message {
   getReportId(): string;
   setReportId(value: string): void;
@@ -496,6 +648,14 @@ export class RunAllQueriesRequest extends jspb.Message {
   getReportId(): string;
   setReportId(value: string): void;
 
+  clearQueryParamsList(): void;
+  getQueryParamsList(): Array<QueryParam>;
+  setQueryParamsList(value: Array<QueryParam>): void;
+  addQueryParams(value?: QueryParam, index?: number): QueryParam;
+
+  getQueryParamsValues(): string;
+  setQueryParamsValues(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): RunAllQueriesRequest.AsObject;
   static toObject(includeInstance: boolean, msg: RunAllQueriesRequest): RunAllQueriesRequest.AsObject;
@@ -509,6 +669,8 @@ export class RunAllQueriesRequest extends jspb.Message {
 export namespace RunAllQueriesRequest {
   export type AsObject = {
     reportId: string,
+    queryParamsList: Array<QueryParam.AsObject>,
+    queryParamsValues: string,
   }
 }
 
@@ -955,8 +1117,8 @@ export class Connection extends jspb.Message {
   getCanStoreFiles(): boolean;
   setCanStoreFiles(value: boolean): void;
 
-  getConnectionType(): Connection.ConnectionTypeMap[keyof Connection.ConnectionTypeMap];
-  setConnectionType(value: Connection.ConnectionTypeMap[keyof Connection.ConnectionTypeMap]): void;
+  getConnectionType(): ConnectionTypeMap[keyof ConnectionTypeMap];
+  setConnectionType(value: ConnectionTypeMap[keyof ConnectionTypeMap]): void;
 
   getSnowflakeAccountId(): string;
   setSnowflakeAccountId(value: string): void;
@@ -971,6 +1133,11 @@ export class Connection extends jspb.Message {
 
   getSnowflakeWarehouse(): string;
   setSnowflakeWarehouse(value: string): void;
+
+  hasBigqueryKey(): boolean;
+  clearBigqueryKey(): void;
+  getBigqueryKey(): Secret | undefined;
+  setBigqueryKey(value?: Secret): void;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Connection.AsObject;
@@ -994,20 +1161,13 @@ export namespace Connection {
     updatedAt: number,
     datasetCount: number,
     canStoreFiles: boolean,
-    connectionType: Connection.ConnectionTypeMap[keyof Connection.ConnectionTypeMap],
+    connectionType: ConnectionTypeMap[keyof ConnectionTypeMap],
     snowflakeAccountId: string,
     snowflakeUsername: string,
     snowflakePassword?: Secret.AsObject,
     snowflakeWarehouse: string,
+    bigqueryKey?: Secret.AsObject,
   }
-
-  export interface ConnectionTypeMap {
-    CONNECTION_TYPE_UNSPECIFIED: 0;
-    CONNECTION_TYPE_BIGQUERY: 1;
-    CONNECTION_TYPE_SNOWFLAKE: 2;
-  }
-
-  export const ConnectionType: ConnectionTypeMap;
 }
 
 export class Secret extends jspb.Message {
@@ -1274,6 +1434,7 @@ export namespace GetEnvResponse {
       TYPE_UX_DISABLE_VERSION_CHECK: 20;
       TYPE_ALLOW_WORKSPACE_CREATION: 21;
       TYPE_WORKSPACE_DEFAULT_ROLE: 22;
+      TYPE_SECRETS_ENABLED: 23;
     }
 
     export const Type: TypeMap;
@@ -1451,6 +1612,26 @@ export namespace ReportListResponse {
   }
 }
 
+export class Readme extends jspb.Message {
+  getMarkdown(): string;
+  setMarkdown(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): Readme.AsObject;
+  static toObject(includeInstance: boolean, msg: Readme): Readme.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: Readme, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): Readme;
+  static deserializeBinaryFromReader(message: Readme, reader: jspb.BinaryReader): Readme;
+}
+
+export namespace Readme {
+  export type AsObject = {
+    markdown: string,
+  }
+}
+
 export class Report extends jspb.Message {
   getId(): string;
   setId(value: string): void;
@@ -1497,6 +1678,19 @@ export class Report extends jspb.Message {
   getIsPublic(): boolean;
   setIsPublic(value: boolean): void;
 
+  getAllowExport(): boolean;
+  setAllowExport(value: boolean): void;
+
+  clearQueryParamsList(): void;
+  getQueryParamsList(): Array<QueryParam>;
+  setQueryParamsList(value: Array<QueryParam>): void;
+  addQueryParams(value?: QueryParam, index?: number): QueryParam;
+
+  hasReadme(): boolean;
+  clearReadme(): void;
+  getReadme(): Readme | undefined;
+  setReadme(value?: Readme): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Report.AsObject;
   static toObject(includeInstance: boolean, msg: Report): Report.AsObject;
@@ -1524,6 +1718,9 @@ export namespace Report {
     needSensitiveScope: boolean,
     isPlayground: boolean,
     isPublic: boolean,
+    allowExport: boolean,
+    queryParamsList: Array<QueryParam.AsObject>,
+    readme?: Readme.AsObject,
   }
 }
 
@@ -1552,6 +1749,9 @@ export class Dataset extends jspb.Message {
   getConnectionId(): string;
   setConnectionId(value: string): void;
 
+  getConnectionType(): ConnectionTypeMap[keyof ConnectionTypeMap];
+  setConnectionType(value: ConnectionTypeMap[keyof ConnectionTypeMap]): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Dataset.AsObject;
   static toObject(includeInstance: boolean, msg: Dataset): Dataset.AsObject;
@@ -1572,18 +1772,19 @@ export namespace Dataset {
     fileId: string,
     name: string,
     connectionId: string,
+    connectionType: ConnectionTypeMap[keyof ConnectionTypeMap],
   }
 }
 
-export class Query extends jspb.Message {
+export class QueryJob extends jspb.Message {
   getId(): string;
   setId(value: string): void;
 
+  getQueryId(): string;
+  setQueryId(value: string): void;
+
   getQueryText(): string;
   setQueryText(value: string): void;
-
-  getJobStatus(): Query.JobStatusMap[keyof Query.JobStatusMap];
-  setJobStatus(value: Query.JobStatusMap[keyof Query.JobStatusMap]): void;
 
   getJobResultId(): string;
   setJobResultId(value: string): void;
@@ -1602,6 +1803,68 @@ export class Query extends jspb.Message {
 
   getResultSize(): number;
   setResultSize(value: number): void;
+
+  getCreatedAt(): number;
+  setCreatedAt(value: number): void;
+
+  getUpdatedAt(): number;
+  setUpdatedAt(value: number): void;
+
+  getJobStatus(): QueryJob.JobStatusMap[keyof QueryJob.JobStatusMap];
+  setJobStatus(value: QueryJob.JobStatusMap[keyof QueryJob.JobStatusMap]): void;
+
+  getDwJobId(): string;
+  setDwJobId(value: string): void;
+
+  getQueryParamsHash(): string;
+  setQueryParamsHash(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): QueryJob.AsObject;
+  static toObject(includeInstance: boolean, msg: QueryJob): QueryJob.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: QueryJob, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): QueryJob;
+  static deserializeBinaryFromReader(message: QueryJob, reader: jspb.BinaryReader): QueryJob;
+}
+
+export namespace QueryJob {
+  export type AsObject = {
+    id: string,
+    queryId: string,
+    queryText: string,
+    jobResultId: string,
+    jobError: string,
+    jobDuration: number,
+    totalRows: number,
+    bytesProcessed: number,
+    resultSize: number,
+    createdAt: number,
+    updatedAt: number,
+    jobStatus: QueryJob.JobStatusMap[keyof QueryJob.JobStatusMap],
+    dwJobId: string,
+    queryParamsHash: string,
+  }
+
+  export interface JobStatusMap {
+    JOB_STATUS_UNSPECIFIED: 0;
+    JOB_STATUS_PENDING: 1;
+    JOB_STATUS_RUNNING: 2;
+    JOB_STATUS_DONE_LEGACY: 3;
+    JOB_STATUS_READING_RESULTS: 4;
+    JOB_STATUS_DONE: 5;
+  }
+
+  export const JobStatus: JobStatusMap;
+}
+
+export class Query extends jspb.Message {
+  getId(): string;
+  setId(value: string): void;
+
+  getQueryText(): string;
+  setQueryText(value: string): void;
 
   getCreatedAt(): number;
   setCreatedAt(value: number): void;
@@ -1629,29 +1892,11 @@ export namespace Query {
   export type AsObject = {
     id: string,
     queryText: string,
-    jobStatus: Query.JobStatusMap[keyof Query.JobStatusMap],
-    jobResultId: string,
-    jobError: string,
-    jobDuration: number,
-    totalRows: number,
-    bytesProcessed: number,
-    resultSize: number,
     createdAt: number,
     updatedAt: number,
     querySource: Query.QuerySourceMap[keyof Query.QuerySourceMap],
     querySourceId: string,
   }
-
-  export interface JobStatusMap {
-    JOB_STATUS_UNSPECIFIED: 0;
-    JOB_STATUS_PENDING: 1;
-    JOB_STATUS_RUNNING: 2;
-    JOB_STATUS_DONE_LEGACY: 3;
-    JOB_STATUS_READING_RESULTS: 4;
-    JOB_STATUS_DONE: 5;
-  }
-
-  export const JobStatus: JobStatusMap;
 
   export interface QuerySourceMap {
     QUERY_SOURCE_UNSPECIFIED: 0;
@@ -1724,15 +1969,29 @@ export namespace File {
 }
 
 export class UpdateReportRequest extends jspb.Message {
-  hasReport(): boolean;
-  clearReport(): void;
-  getReport(): Report | undefined;
-  setReport(value?: Report): void;
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  getMapConfig(): string;
+  setMapConfig(value: string): void;
+
+  getTitle(): string;
+  setTitle(value: string): void;
 
   clearQueryList(): void;
   getQueryList(): Array<Query>;
   setQueryList(value: Array<Query>): void;
   addQuery(value?: Query, index?: number): Query;
+
+  clearQueryParamsList(): void;
+  getQueryParamsList(): Array<QueryParam>;
+  setQueryParamsList(value: Array<QueryParam>): void;
+  addQueryParams(value?: QueryParam, index?: number): QueryParam;
+
+  hasReadme(): boolean;
+  clearReadme(): void;
+  getReadme(): Readme | undefined;
+  setReadme(value?: Readme): void;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): UpdateReportRequest.AsObject;
@@ -1746,8 +2005,12 @@ export class UpdateReportRequest extends jspb.Message {
 
 export namespace UpdateReportRequest {
   export type AsObject = {
-    report?: Report.AsObject,
+    reportId: string,
+    mapConfig: string,
+    title: string,
     queryList: Array<Query.AsObject>,
+    queryParamsList: Array<QueryParam.AsObject>,
+    readme?: Readme.AsObject,
   }
 }
 
@@ -1774,6 +2037,14 @@ export class RunQueryRequest extends jspb.Message {
   getQueryText(): string;
   setQueryText(value: string): void;
 
+  clearQueryParamsList(): void;
+  getQueryParamsList(): Array<QueryParam>;
+  setQueryParamsList(value: Array<QueryParam>): void;
+  addQueryParams(value?: QueryParam, index?: number): QueryParam;
+
+  getQueryParamsValues(): string;
+  setQueryParamsValues(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): RunQueryRequest.AsObject;
   static toObject(includeInstance: boolean, msg: RunQueryRequest): RunQueryRequest.AsObject;
@@ -1788,6 +2059,8 @@ export namespace RunQueryRequest {
   export type AsObject = {
     queryId: string,
     queryText: string,
+    queryParamsList: Array<QueryParam.AsObject>,
+    queryParamsValues: string,
   }
 }
 
@@ -1803,42 +2076,6 @@ export class RunQueryResponse extends jspb.Message {
 }
 
 export namespace RunQueryResponse {
-  export type AsObject = {
-  }
-}
-
-export class CancelQueryRequest extends jspb.Message {
-  getQueryId(): string;
-  setQueryId(value: string): void;
-
-  serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): CancelQueryRequest.AsObject;
-  static toObject(includeInstance: boolean, msg: CancelQueryRequest): CancelQueryRequest.AsObject;
-  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
-  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: CancelQueryRequest, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): CancelQueryRequest;
-  static deserializeBinaryFromReader(message: CancelQueryRequest, reader: jspb.BinaryReader): CancelQueryRequest;
-}
-
-export namespace CancelQueryRequest {
-  export type AsObject = {
-    queryId: string,
-  }
-}
-
-export class CancelQueryResponse extends jspb.Message {
-  serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): CancelQueryResponse.AsObject;
-  static toObject(includeInstance: boolean, msg: CancelQueryResponse): CancelQueryResponse.AsObject;
-  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
-  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: CancelQueryResponse, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): CancelQueryResponse;
-  static deserializeBinaryFromReader(message: CancelQueryResponse, reader: jspb.BinaryReader): CancelQueryResponse;
-}
-
-export namespace CancelQueryResponse {
   export type AsObject = {
   }
 }
@@ -2095,10 +2332,10 @@ export class ReportStreamResponse extends jspb.Message {
   setFilesList(value: Array<File>): void;
   addFiles(value?: File, index?: number): File;
 
-  clearConnectionsList(): void;
-  getConnectionsList(): Array<Connection>;
-  setConnectionsList(value: Array<Connection>): void;
-  addConnections(value?: Connection, index?: number): Connection;
+  clearQueryJobsList(): void;
+  getQueryJobsList(): Array<QueryJob>;
+  setQueryJobsList(value: Array<QueryJob>): void;
+  addQueryJobs(value?: QueryJob, index?: number): QueryJob;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): ReportStreamResponse.AsObject;
@@ -2117,7 +2354,7 @@ export namespace ReportStreamResponse {
     streamOptions?: StreamOptions.AsObject,
     datasetsList: Array<Dataset.AsObject>,
     filesList: Array<File.AsObject>,
-    connectionsList: Array<Connection.AsObject>,
+    queryJobsList: Array<QueryJob.AsObject>,
   }
 }
 
@@ -2199,6 +2436,45 @@ export namespace CreateReportResponse {
   }
 }
 
+export class QueryParam extends jspb.Message {
+  getName(): string;
+  setName(value: string): void;
+
+  getLabel(): string;
+  setLabel(value: string): void;
+
+  getType(): QueryParam.TypeMap[keyof QueryParam.TypeMap];
+  setType(value: QueryParam.TypeMap[keyof QueryParam.TypeMap]): void;
+
+  getDefaultValue(): string;
+  setDefaultValue(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): QueryParam.AsObject;
+  static toObject(includeInstance: boolean, msg: QueryParam): QueryParam.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: QueryParam, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): QueryParam;
+  static deserializeBinaryFromReader(message: QueryParam, reader: jspb.BinaryReader): QueryParam;
+}
+
+export namespace QueryParam {
+  export type AsObject = {
+    name: string,
+    label: string,
+    type: QueryParam.TypeMap[keyof QueryParam.TypeMap],
+    defaultValue: string,
+  }
+
+  export interface TypeMap {
+    TYPE_UNSPECIFIED: 0;
+    TYPE_STRING: 1;
+  }
+
+  export const Type: TypeMap;
+}
+
 export interface UserStatusMap {
   USER_STATUS_UNSPECIFIED: 0;
   USER_STATUS_PENDING: 1;
@@ -2228,4 +2504,12 @@ export interface PlanTypeMap {
 }
 
 export const PlanType: PlanTypeMap;
+
+export interface ConnectionTypeMap {
+  CONNECTION_TYPE_UNSPECIFIED: 0;
+  CONNECTION_TYPE_BIGQUERY: 1;
+  CONNECTION_TYPE_SNOWFLAKE: 2;
+}
+
+export const ConnectionType: ConnectionTypeMap;
 

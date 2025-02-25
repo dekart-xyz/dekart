@@ -1,6 +1,7 @@
-import { Query } from '../../proto/dekart_pb'
+import { combineReducers } from 'redux'
+import { Query, QueryJob } from '../../proto/dekart_pb'
 import { downloadDataset } from '../actions/dataset'
-import { queryChanged, querySource } from '../actions/query'
+import { closeQueryParamSettings, openQueryParamSettings, queryChanged, queryParamChanged, querySource, setQueryParamsValues, setQueryParamValue, updateQueryParamsFromQueries } from '../actions/query'
 import { openReport, reportUpdate } from '../actions/report'
 import { ActionTypes as KeplerActionTypes } from '@dekart-xyz/kepler.gl/dist/actions'
 
@@ -10,6 +11,37 @@ export function queries (state = [], action) {
       return []
     case reportUpdate.name:
       return action.queriesList
+    default:
+      return state
+  }
+}
+
+export function numRunningQueries (state = 0, action) {
+  switch (action.type) {
+    case openReport.name:
+      return 0
+    case reportUpdate.name:
+      return action.queryJobsList.filter(job => job.queryParamsHash === action.hash).reduce((loadingNumber, q) => {
+        switch (q.jobStatus) {
+          case QueryJob.JobStatus.JOB_STATUS_PENDING:
+          case QueryJob.JobStatus.JOB_STATUS_RUNNING:
+          case QueryJob.JobStatus.JOB_STATUS_READING_RESULTS:
+            return loadingNumber + 1
+          default:
+            return loadingNumber
+        }
+      }, 0)
+    default:
+      return state
+  }
+}
+
+export function queryJobs (state = [], action) {
+  switch (action.type) {
+    case openReport.name:
+      return []
+    case reportUpdate.name:
+      return action.queryJobsList
     default:
       return state
   }
@@ -90,8 +122,10 @@ export function queryStatus (state = {}, action) {
       return state
     case reportUpdate.name:
       return action.queriesList.reduce(function (queryStatus, query) {
+        const queryJob = action.queryJobsList.find(job => job.queryId === query.id && job.queryParamsHash === action.hash)
         queryStatus[query.id] = {
-          canRun: [Query.JobStatus.JOB_STATUS_UNSPECIFIED, Query.JobStatus.JOB_STATUS_DONE, Query.JobStatus.JOB_STATUS_DONE_LEGACY].includes(query.jobStatus),
+          // can run if no job or job is done
+          canRun: queryJob ? [QueryJob.JobStatus.JOB_STATUS_UNSPECIFIED, QueryJob.JobStatus.JOB_STATUS_DONE, QueryJob.JobStatus.JOB_STATUS_DONE_LEGACY].includes(queryJob.jobStatus) : true,
           downloadingResults: false,
           querySourceId: query.querySourceId,
           querySource: query.querySource,
@@ -120,3 +154,75 @@ export function queryStatus (state = {}, action) {
       return state
   }
 }
+
+// query parameters
+
+function queryParamsValues (state = {}, action) {
+  switch (action.type) {
+    case setQueryParamsValues.name:
+      return action.values
+    case setQueryParamValue.name:
+      return {
+        ...state,
+        [action.name]: action.value
+      }
+    default:
+      return state
+  }
+}
+
+function queryParamsUrl (state = '', action) {
+  switch (action.type) {
+    case setQueryParamsValues.name:
+      return action.url
+    default:
+      return state
+  }
+}
+
+function queryParamsModal (state = null, action) {
+  switch (action.type) {
+    case openQueryParamSettings.name:
+      return action.name
+    case closeQueryParamSettings.name:
+      return null
+    case queryParamChanged.name:
+      return null
+    default:
+      return state
+  }
+}
+
+function queryParamsList (state = [], action) {
+  switch (action.type) {
+    case queryParamChanged.name:
+      return state.slice()
+    case openReport.name:
+      return []
+    case reportUpdate.name:
+      return structuredClone(action.report.queryParamsList)
+    case updateQueryParamsFromQueries.name:
+      return action.queryParamsList
+    default:
+      return state
+  }
+}
+
+const emptyStringHash = 'd41d8cd98f00b204e9800998ecf8427e'
+
+function queryParamsHash (state = emptyStringHash, action) {
+  switch (action.type) {
+    case setQueryParamsValues.name:
+      return action.hash
+    default:
+      return state
+  }
+}
+
+export const queryParams = combineReducers({
+  list: queryParamsList,
+  values: queryParamsValues,
+  modal: queryParamsModal,
+  url: queryParamsUrl,
+  hash: queryParamsHash
+})

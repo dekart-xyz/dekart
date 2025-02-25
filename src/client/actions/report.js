@@ -1,15 +1,17 @@
 import { KeplerGlSchema } from '@dekart-xyz/kepler.gl/dist/schemas'
-import { receiveMapConfig, removeDataset } from '@dekart-xyz/kepler.gl/dist/actions'
+import { removeDataset } from '@dekart-xyz/kepler.gl/dist/actions'
 
 import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
 import { success } from './message'
-import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest } from '../../proto/dekart_pb'
+import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme } from '../../proto/dekart_pb'
 import { Dekart } from '../../proto/dekart_pb_service'
 import { createQuery, downloadQuerySource } from './query'
 import { downloadDataset } from './dataset'
 import { shouldAddQuery } from '../lib/shouldAddQuery'
 import { shouldUpdateDataset } from '../lib/shouldUpdateDataset'
 import { needSensitiveScopes } from './user'
+import { getQueryParamsObjArr } from '../lib/queryParams'
+import { receiveReportUpdateMapConfig } from '../lib/mapConfig'
 
 export function closeReport () {
   return (dispatch) => {
@@ -28,12 +30,24 @@ function getReportStream (reportId, onMessage, onError) {
   return grpcStream(Dekart.GetReportStream, request, onMessage)
 }
 
-export function openReport (reportId, edit) {
+export function toggleReportEdit (edit) {
+  return function (dispatch, getState) {
+    const report = getState().report
+    let fullscreen = null
+    if (edit) {
+      fullscreen = false
+    } else if (report) {
+      fullscreen = !report.readme
+    }
+    dispatch({ type: toggleReportEdit.name, edit, fullscreen })
+  }
+}
+
+export function openReport (reportId) {
   return (dispatch, getState) => {
     const user = getState().user
     dispatch({
-      type: openReport.name,
-      edit
+      type: openReport.name
     })
     dispatch(getReportStream(
       reportId,
@@ -51,12 +65,14 @@ export function openReport (reportId, edit) {
   }
 }
 
-function shouldAddFile (file, prevFileList, filesList) {
+function shouldAddFile (file, prevFileList, filesList, mapConfigUpdated) {
   if (file.fileStatus < File.Status.STATUS_STORED) {
     return false
   }
   if (!file.sourceId) {
     return false
+  } else if (mapConfigUpdated) {
+    return true
   }
 
   if (!prevFileList) {
@@ -86,10 +102,30 @@ function shouldDownloadQueryText (query, prevQueriesList, queriesList) {
   return false
 }
 
+export function setReportChanged (changed) {
+  return { type: setReportChanged.name, changed }
+}
+
 export function reportUpdate (reportStreamResponse) {
-  const { report, queriesList, datasetsList, filesList } = reportStreamResponse
+  const { report, queriesList, datasetsList, filesList, queryJobsList } = reportStreamResponse
   return async (dispatch, getState) => {
-    const { queries: prevQueriesList, dataset: { list: prevDatasetsList }, report: prevReport, files: prevFileList, env, connection, user } = getState()
+    const {
+      queries: prevQueriesList,
+      dataset: { list: prevDatasetsList },
+      files: prevFileList,
+      env,
+      connection,
+      user,
+      queryJobs: prevQueryJobsList,
+      queryParams: { hash },
+      reportStatus: { lastChanged, lastSaved }
+    } = getState()
+
+    if (lastChanged > lastSaved) {
+      // report was changed locally, prevent remote update
+      return
+    }
+
     dispatch({
       type: reportUpdate.name,
       report,
@@ -97,29 +133,34 @@ export function reportUpdate (reportStreamResponse) {
       prevQueriesList,
       datasetsList,
       prevDatasetsList,
-      filesList
+      filesList,
+      queryJobsList,
+      hash
     })
-    if (report.mapConfig && !prevReport) {
-      const parsedConfig = KeplerGlSchema.parseSavedConfig(JSON.parse(report.mapConfig))
-      dispatch(receiveMapConfig(parsedConfig))
+    let mapConfigUpdated = false
+    if (report.mapConfig) {
+      mapConfigUpdated = receiveReportUpdateMapConfig(report, dispatch, getState)
     }
 
-    prevQueriesList.forEach(query => {
-      if (!queriesList.find(q => q.id === query.id)) {
-        const dataset = prevDatasetsList.find(d => d.queryId === query.id)
-        if (dataset) {
-          dispatch(removeDataset(dataset.id))
+    if (!mapConfigUpdated) {
+      // new map config reset data anyway
+      prevQueriesList.forEach(query => {
+        if (!queriesList.find(q => q.id === query.id)) {
+          const dataset = prevDatasetsList.find(d => d.queryId === query.id)
+          if (dataset) {
+            dispatch(removeDataset(dataset.id))
+          }
         }
-      }
-    })
-    prevFileList.forEach(file => {
-      if (!filesList.find(f => f.id === file.id)) {
-        const dataset = prevDatasetsList.find(d => d.fileId === file.id)
-        if (dataset) {
-          dispatch(removeDataset(dataset.id))
+      })
+      prevFileList.forEach(file => {
+        if (!filesList.find(f => f.id === file.id)) {
+          const dataset = prevDatasetsList.find(d => d.fileId === file.id)
+          if (dataset) {
+            dispatch(removeDataset(dataset.id))
+          }
         }
-      }
-    })
+      })
+    }
 
     queriesList.forEach((query) => {
       if (shouldDownloadQueryText(query, prevQueriesList, queriesList)) {
@@ -128,21 +169,23 @@ export function reportUpdate (reportStreamResponse) {
     })
 
     const { ALLOW_FILE_UPLOAD } = env.variables
+    const { queryParams } = getState()
     datasetsList.forEach((dataset) => {
       let extension = 'csv'
       if (dataset.queryId) {
         const query = queriesList.find(q => q.id === dataset.queryId)
-        if (shouldAddQuery(query, prevQueriesList) || shouldUpdateDataset(dataset, prevDatasetsList)) {
+        const queryJob = queryJobsList.find(job => job.queryId === query.id && job.queryParamsHash === queryParams.hash)
+        if (shouldAddQuery(queryJob, prevQueryJobsList, mapConfigUpdated) || shouldUpdateDataset(dataset, prevDatasetsList)) {
           dispatch(downloadDataset(
             dataset,
-            query.jobResultId,
+            queryJob.jobResultId,
             extension,
             prevDatasetsList
           ))
         }
       } else if (dataset.fileId) {
         const file = filesList.find(f => f.id === dataset.fileId)
-        if (shouldAddFile(file, prevFileList, filesList) || shouldUpdateDataset(dataset, prevDatasetsList)) {
+        if (shouldAddFile(file, prevFileList, filesList, mapConfigUpdated) || shouldUpdateDataset(dataset, prevDatasetsList)) {
           if (file.mimeType === 'application/geo+json') {
             extension = 'geojson'
           }
@@ -214,6 +257,16 @@ export function newForkedReport (id) {
   return { type: newForkedReport.name, id }
 }
 
+export function allowExportDatasets (reportId, allowExport) {
+  return async (dispatch) => {
+    dispatch({ type: allowExportDatasets.name })
+    const req = new AllowExportDatasetsRequest()
+    req.setReportId(reportId)
+    req.setAllowExport(allowExport)
+    dispatch(grpcCall(Dekart.AllowExportDatasets, req))
+  }
+}
+
 export function publishReport (reportId, publish) {
   return async (dispatch) => {
     dispatch({ type: publishReport.name })
@@ -255,13 +308,21 @@ export function reportTitleChange (title) {
   }
 }
 
-export function saveMap () {
+export function savedReport (lastSaved) {
+  return { type: savedReport.name, lastSaved }
+}
+
+export function toggleReportFullscreen () {
+  return { type: toggleReportFullscreen.name }
+}
+
+export function saveMap (onSaveComplete = () => {}) {
   return async (dispatch, getState) => {
+    const lastSaved = Date.now()
     dispatch({ type: saveMap.name })
-    const { keplerGl, report, reportStatus, queryStatus } = getState()
+    const { keplerGl, report, reportStatus, queryStatus, queryParams, readme } = getState()
     const configToSave = KeplerGlSchema.getConfigToSave(keplerGl.kepler)
     const request = new UpdateReportRequest()
-    const reportPayload = new Report()
     const queries = Object.keys(queryStatus).reduce((queries, id) => {
       const status = queryStatus[id]
       if (status.changed) {
@@ -273,13 +334,19 @@ export function saveMap () {
       }
       return queries
     }, [])
-    reportPayload.setId(report.id)
-    reportPayload.setMapConfig(JSON.stringify(configToSave))
-    reportPayload.setTitle(reportStatus.title)
-    request.setReport(reportPayload)
+    if (readme.markdown !== null) {
+      const readmeProp = new Readme()
+      readmeProp.setMarkdown(readme.markdown)
+      request.setReadme(readmeProp)
+    }
+    request.setReportId(report.id)
+    request.setMapConfig(JSON.stringify(configToSave))
+    request.setTitle(reportStatus.title)
     request.setQueryList(queries)
+    request.setQueryParamsList(getQueryParamsObjArr(queryParams.list))
     dispatch(grpcCall(Dekart.UpdateReport, request, () => {
-      dispatch(success('Map Saved'))
+      onSaveComplete()
+      dispatch(savedReport(lastSaved))
     }))
   }
 }

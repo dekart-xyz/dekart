@@ -3,17 +3,15 @@ package bqjob
 import (
 	"context"
 	"dekart/src/proto"
+	"dekart/src/server/bqutils"
 	"dekart/src/server/job"
 	"dekart/src/server/user"
 	"os"
 	"strconv"
 	"strings"
 
-	"cloud.google.com/go/bigquery"
-	bqStorage "cloud.google.com/go/bigquery/storage/apiv1"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/api/iterator"
-	"google.golang.org/api/option"
 	bqStoragePb "google.golang.org/genproto/googleapis/cloud/bigquery/storage/v1"
 )
 
@@ -74,12 +72,7 @@ func (s *Store) TestConnection(ctx context.Context, req *proto.TestConnectionReq
 }
 
 func TestConnection(ctx context.Context, req *proto.TestConnectionRequest) (*proto.TestConnectionResponse, error) {
-	tokenSource := user.GetTokenSource(ctx)
-	client, err := bigquery.NewClient(
-		ctx,
-		req.Connection.BigqueryProjectId,
-		option.WithTokenSource(tokenSource),
-	)
+	client, err := bqutils.GetClient(ctx, req.Connection)
 	if err != nil {
 		log.Debug().Err(err).Msg("bigquery.NewClient failed")
 		return &proto.TestConnectionResponse{
@@ -99,7 +92,7 @@ func TestConnection(ctx context.Context, req *proto.TestConnectionRequest) (*pro
 	}
 
 	// Attempt to create a read session to check for permissions
-	bqReadClient, err := bqStorage.NewBigQueryReadClient(ctx, option.WithTokenSource(tokenSource))
+	bqReadClient, err := bqutils.GetReadClient(ctx, req.Connection)
 	if err != nil {
 		log.Debug().Err(err).Msg("bigquery.NewBigQueryReadClient failed")
 		return &proto.TestConnectionResponse{

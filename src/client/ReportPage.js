@@ -5,10 +5,9 @@ import { KeplerGl } from '@dekart-xyz/kepler.gl/dist/components'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
 import { useDispatch, useSelector } from 'react-redux'
-import { EditOutlined, WarningFilled, MoreOutlined } from '@ant-design/icons'
-import { Query as QueryType } from '../proto/dekart_pb'
+import { EditOutlined, WarningFilled, MoreOutlined, PlusOutlined, ReadOutlined, ConsoleSqlOutlined, VerticalAlignBottomOutlined } from '@ant-design/icons'
+import { QueryJob } from '../proto/dekart_pb'
 import Tabs from 'antd/es/tabs'
-import { KeplerGlSchema } from '@dekart-xyz/kepler.gl/dist/schemas'
 import classnames from 'classnames'
 import { Header } from './Header'
 import ReportHeaderButtons from './ReportHeaderButtons'
@@ -18,25 +17,32 @@ import { Resizable } from 're-resizable'
 import DatasetSettingsModal from './DatasetSettingsModal'
 import getDatasetName from './lib/getDatasetName'
 import { createDataset, openDatasetSettingsModal, setActiveDataset } from './actions/dataset'
-import { closeReport, openReport, reportTitleChange } from './actions/report'
+import { closeReport, openReport, reportTitleChange, toggleReportEdit, toggleReportFullscreen } from './actions/report'
 import { setError } from './actions/message'
 import Tooltip from 'antd/es/tooltip'
 import prettyBites from 'pretty-bytes'
 import { getDatasourceMeta } from './lib/datasource'
+import QueryParams from './QueryParams'
+import { useCheckMapConfig } from './lib/mapConfig'
+import Dropdown from 'antd/es/dropdown'
+import Readme from './Readme'
+import { addReadme, removeReadme, showReadmeTab } from './actions/readme'
+import Modal from 'antd/es/modal'
+import { MapControlButton } from '@dekart-xyz/kepler.gl/dist/components/common/styled-components'
 
-function TabIcon ({ query }) {
+function TabIcon ({ job }) {
   let iconColor = 'transparent'
-  if (query.jobError) {
+  if (job.jobError) {
     iconColor = '#F66B55'
   }
-  switch (query.jobStatus) {
-    case QueryType.JobStatus.JOB_STATUS_RUNNING:
-    case QueryType.JobStatus.JOB_STATUS_PENDING:
-    case QueryType.JobStatus.JOB_STATUS_READING_RESULTS:
+  switch (job.jobStatus) {
+    case QueryJob.JobStatus.JOB_STATUS_RUNNING:
+    case QueryJob.JobStatus.JOB_STATUS_PENDING:
+    case QueryJob.JobStatus.JOB_STATUS_READING_RESULTS:
       iconColor = '#B8B8B8'
       break
-    case QueryType.JobStatus.JOB_STATUS_DONE:
-      if (!query.jobResultId) {
+    case QueryJob.JobStatus.JOB_STATUS_DONE:
+      if (!job.jobResultId) {
         iconColor = '#B8B8B8'
         break
       }
@@ -57,27 +63,36 @@ function TabIcon ({ query }) {
 function getOnTabEditHandler (dispatch, reportId) {
   return (datasetId, action) => {
     switch (action) {
-      case 'add':
-        return dispatch(createDataset(reportId))
-      case 'remove':
-        dispatch(openDatasetSettingsModal(datasetId))
+      case 'remove': {
+        if (datasetId === 'readme') {
+          Modal.confirm({
+            title: 'Remove readme from report?',
+            okText: 'Yes',
+            okType: 'danger',
+            cancelText: 'No',
+            onOk: () => dispatch(removeReadme())
+          })
+        } else {
+          dispatch(openDatasetSettingsModal(datasetId))
+        }
         break
+      }
       default:
         // do nothing
     }
   }
 }
 
-function QueryTooltip ({ query, dataset }) {
+function QueryTooltip ({ job, dataset }) {
   const connectionList = useSelector(state => state.connection.list)
-  if (!query) {
+  if (!job) {
     return null
   }
-  const updatedAt = new Date(query.updatedAt * 1000)
+  const updatedAt = new Date(job.updatedAt * 1000)
   const connection = connectionList.find(c => c.id === dataset.connectionId)
   const connectionMeta = connection ? getDatasourceMeta(connection.connectionType) : null
 
-  const processed = query.bytesProcessed ? `Processed ${prettyBites(query.bytesProcessed)}` : 'cached'
+  const processed = job.bytesProcessed ? `Processed ${prettyBites(job.bytesProcessed)}` : 'cached'
   return (
     <span className={styles.queryTooltip}>
       {
@@ -86,21 +101,23 @@ function QueryTooltip ({ query, dataset }) {
       <span title={updatedAt.toISOString()}>{updatedAt.toLocaleString()}</span>
       <span>{processed}</span>
       {
-        query.resultSize ? <span>Result {prettyBites(query.resultSize)}</span> : null
+        job.resultSize ? <span>Result {prettyBites(job.resultSize)}</span> : null
       }
     </span>
   )
 }
 
-function getTabPane (dataset, queries, files, status) {
+function getTabPane (dataset, queries, files, status, queryJobs, closable) {
   let changed = false
   const title = getDatasetName(dataset, queries, files)
   let tabIcon = null
   let tooltip = null
   if (dataset.queryId) {
-    const query = queries.find(q => q.id === dataset.queryId)
-    tooltip = <QueryTooltip query={query} dataset={dataset} />
-    tabIcon = <TabIcon query={query} />
+    const job = queryJobs.find(j => j.queryId === dataset.queryId)
+    if (job) {
+      tooltip = <QueryTooltip job={job} dataset={dataset} />
+      tabIcon = <TabIcon job={job} />
+    }
     changed = status.changed
   }
   const tabTitle = `${title}${changed ? '*' : ''}`
@@ -108,7 +125,7 @@ function getTabPane (dataset, queries, files, status) {
     <Tabs.TabPane
       tab={<Tooltip placement='bottom' title={tooltip}>{tabIcon}{tabTitle}</Tooltip>}
       key={dataset.id}
-      closable
+      closable={closable}
       closeIcon={<span title='Dataset setting'><MoreOutlined /></span>}
     />
   )
@@ -117,40 +134,99 @@ function getTabPane (dataset, queries, files, status) {
 function DatasetSection ({ reportId }) {
   const datasets = useSelector(state => state.dataset.list)
   const queries = useSelector(state => state.queries)
+  const queryJobs = useSelector(state => state.queryJobs)
   const files = useSelector(state => state.files)
   const activeDataset = useSelector(state => state.dataset.active)
   const report = useSelector(state => state.report)
   const queryStatus = useSelector(state => state.queryStatus)
   const { canWrite } = report
+  const edit = useSelector(state => state.reportStatus.edit)
   const dispatch = useDispatch()
+  const readmeTab = []
+  const showReadme = useSelector(state => state.readme.showTab)
+  const closable = Boolean(canWrite && edit)
+
+  if (report.readme) {
+    readmeTab.push(
+      <Tabs.TabPane
+        className={styles.addTabPane}
+        tab={
+          <><ReadOutlined /> Readme</>
+      }
+        key='readme'
+        closable={closable}
+      />
+    )
+  }
+
+  const items = [
+    {
+      label: 'Data',
+      icon: <ConsoleSqlOutlined />,
+      onClick: () => {
+        dispatch(createDataset(reportId))
+      }
+    },
+    {
+      label: 'Readme',
+      icon: <ReadOutlined />,
+      disabled: Boolean(report.readme),
+      onClick: () => {
+        dispatch(addReadme())
+      }
+    }
+  ]
 
   useEffect(() => {
     if (report && !(activeDataset)) {
       dispatch(createDataset(reportId))
     }
   }, [reportId, report, activeDataset, dispatch])
-  if (activeDataset) {
+  if (activeDataset || showReadme) {
     return (
       <>
         <Resizable
           enable={{ top: false, right: false, bottom: false, left: true, topRight: false, bottomRight: false, bottomLeft: false, topLeft: false }}
           className={styles.resizable}
           defaultSize={{ width: 'min(40%, 500px)' }}
+
         >
           <div className={styles.datasetSectionWrapper}>
             <div className={styles.datasetSection}>
               <div className={styles.tabs} id='dekart-report-page-tabs'>
                 <Tabs
                   type={canWrite ? 'editable-card' : 'card'}
-                  activeKey={activeDataset.id}
-                  onChange={(datasetId) => dispatch(setActiveDataset(datasetId))}
-                  hideAdd={!canWrite}
+                  activeKey={showReadme ? 'readme' : activeDataset.id}
+                  onChange={(tabId) => {
+                    switch (tabId) {
+                      case 'readme':
+                        dispatch(showReadmeTab())
+                        return
+                      case 'add':
+                        return
+                      default:
+                        dispatch(setActiveDataset(tabId))
+                    }
+                  }}
+                  hideAdd
                   onEdit={getOnTabEditHandler(dispatch, reportId)}
                 >
-                  {datasets.map((dataset) => getTabPane(dataset, queries, files, queryStatus))}
+                  {readmeTab.concat(datasets.map((dataset) => getTabPane(dataset, queries, files, queryStatus, queryJobs, closable))).concat(canWrite && edit && (
+                    <Tabs.TabPane
+                      className={styles.addTabPane}
+                      tab={
+                        <Dropdown menu={{ items }} placement='bottom'>
+                          <span className={styles.addTab}><PlusOutlined className={styles.addTabIcon} /></span>
+                        </Dropdown>
+                      }
+                      key='add'
+                      closable={false}
+                      disabled={!canWrite}
+                    />)
+                  )}
                 </Tabs>
               </div>
-              <Dataset dataset={activeDataset} />
+              {showReadme ? <Readme readme={report.readme} /> : <Dataset dataset={activeDataset} />}
             </div>
           </div>
         </Resizable>
@@ -159,25 +235,6 @@ function DatasetSection ({ reportId }) {
     )
   } else {
     return null
-  }
-}
-
-let checkMapConfigTimer
-function checkMapConfig (kepler, mapConfig, setMapChanged) {
-  if (checkMapConfigTimer) {
-    clearTimeout(checkMapConfigTimer)
-  }
-  checkMapConfigTimer = setTimeout(() => {
-    if (kepler) {
-      const configToSave = JSON.stringify(KeplerGlSchema.getConfigToSave(kepler))
-      setMapChanged(configToSave !== mapConfig)
-    }
-    checkMapConfigTimer = null
-  }, 500)
-  return () => {
-    if (checkMapConfigTimer) {
-      clearTimeout(checkMapConfigTimer)
-    }
   }
 }
 
@@ -244,6 +301,20 @@ class CatchKeplerError extends Component {
   }
 }
 
+function ToggleFullscreenButton () {
+  const dispatch = useDispatch()
+
+  return (
+    <div className={styles.toggleFullscreen}>
+      <Tooltip title='Toggle fullscreen' placement='left'>
+        <MapControlButton active className={styles.toggleFullscreenButton} onClick={() => dispatch(toggleReportFullscreen())}>
+          <VerticalAlignBottomOutlined />
+        </MapControlButton>
+      </Tooltip>
+    </div>
+  )
+}
+
 function Kepler () {
   const env = useSelector(state => state.env)
   const dispatch = useDispatch()
@@ -254,6 +325,7 @@ function Kepler () {
   }
   return (
     <div className={styles.keplerBlock}>
+      <ToggleFullscreenButton />
       <AutoSizer>
         {({ height, width }) => (
           <CatchKeplerError onError={(err) => dispatch(setError(err))}>
@@ -273,12 +345,11 @@ function Kepler () {
 export default function ReportPage ({ edit }) {
   const { id } = useParams()
 
-  const kepler = useSelector(state => state.keplerGl.kepler)
   const report = useSelector(state => state.report)
   const envLoaded = useSelector(state => state.env.loaded)
-  const { mapConfig, title } = report || {}
   const files = useSelector(state => state.files || [])
   const queries = useSelector(state => state.queries || [])
+  const fullscreen = useSelector(state => state.reportStatus.fullscreen)
   const updatedAt = [].concat(files, queries).reduce((updatedAt, item) => {
     if (item.updatedAt > updatedAt) {
       return item.updatedAt
@@ -286,26 +357,23 @@ export default function ReportPage ({ edit }) {
     return updatedAt
   }, 0)
   const updatedAtDate = new Date(updatedAt * 1000)
-  const reportStatus = useSelector(state => state.reportStatus)
-  const queryChanged = useSelector(state => Object.values(state.queryStatus).reduce((queryChanged, queryStatus) => {
-    return queryStatus.changed || queryChanged
-  }, false))
 
   const dispatch = useDispatch()
-
-  const [mapChanged, setMapChanged] = useState(false)
 
   useEffect(() => {
     // make sure kepler loaded before firing kepler actions
     if (!envLoaded) {
       return
     }
-    dispatch(openReport(id, edit))
+    dispatch(openReport(id))
     return () => dispatch(closeReport(id))
-  }, [id, dispatch, edit, envLoaded])
+  }, [id, dispatch, envLoaded])
 
-  useEffect(() => checkMapConfig(kepler, mapConfig, setMapChanged), [kepler, mapConfig, setMapChanged])
-  const titleChanged = reportStatus.title && title && reportStatus.title !== title
+  useEffect(() => {
+    dispatch(toggleReportEdit(edit))
+  }, [id, edit, dispatch])
+
+  useCheckMapConfig()
 
   if (!report) {
     return null
@@ -316,21 +384,23 @@ export default function ReportPage ({ edit }) {
       <Downloading />
       <Header
         title={(<Title />)}
+        queryParams={(<QueryParams />)}
         buttons={(<ReportHeaderButtons
-          changed={mapChanged || titleChanged || queryChanged}
           edit={edit}
                   />)}
       />
       <div className={styles.body}>
-        <div className={styles.keplerFlex}>
-          <Kepler />
-          <div className={styles.meta}>
-            {updatedAt ? <span className={styles.lastUpdated} title={`${updatedAtDate.toISOString()}`}>{updatedAtDate.toLocaleString()}</span> : null}
-            {updatedAt && report.authorEmail !== 'UNKNOWN_EMAIL' ? <span className={styles.dot}> | </span> : null}
-            {report.authorEmail !== 'UNKNOWN_EMAIL' ? <span className={styles.author} title='Report author'>{report.authorEmail}</span> : null}
+        <div className={styles.keplerFlexWrapper}>
+          <div className={styles.keplerFlex}>
+            <Kepler />
+            <div className={styles.meta}>
+              {updatedAt ? <span className={styles.lastUpdated} title={`${updatedAtDate.toISOString()}`}>{updatedAtDate.toLocaleString()}</span> : null}
+              {updatedAt && report.authorEmail !== 'UNKNOWN_EMAIL' ? <span className={styles.dot}> | </span> : null}
+              {report.authorEmail !== 'UNKNOWN_EMAIL' ? <span className={styles.author} title='Report author'>{report.authorEmail}</span> : null}
+            </div>
           </div>
         </div>
-        {edit ? <DatasetSection reportId={id} /> : null}
+        {!fullscreen ? <DatasetSection reportId={id} /> : null}
       </div>
     </div>
   )

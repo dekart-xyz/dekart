@@ -81,7 +81,7 @@ ADD COLUMN is_default BOOLEAN DEFAULT FALSE;
 
 -- create default workspace
 INSERT INTO workspaces (id, name, is_default)
-VALUES ('00000000-0000-0000-0000-000000000000', 'Default Workspace', true);
+VALUES ('00000000-0000-0000-0000-000000000000', 'Default', true);
 
 -- migrate authors as admin of new organization
 INSERT INTO workspace_log (workspace_id, email, authored_by, status, role, id)

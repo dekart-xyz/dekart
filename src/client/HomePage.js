@@ -14,11 +14,12 @@ import { editConnection, newConnection, newConnectionScreen, setDefaultConnectio
 import ConnectionModal from './ConnectionModal'
 import Tooltip from 'antd/es/tooltip'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
+import { ConnectionType, PlanType } from '../proto/dekart_pb'
 import Onboarding from './Onboarding'
 import { DatasourceIcon } from './Datasource'
-import { Connection, PlanType } from '../proto/dekart_pb'
 import { track } from './lib/tracking'
 import { If } from './lib/helperElements'
+import BigQueryConnectionTypeSelectorModal from './BigQueryConnectionTypeSelectorModal'
 
 function Loading () {
   return null
@@ -125,7 +126,7 @@ function OpenConnectionButton ({ connection }) {
     <Button
       type='link'
       onClick={() => {
-        dispatch(editConnection(connection.id, connection.connectionType))
+        dispatch(editConnection(connection.id, connection.connectionType, Boolean(connection.bigqueryKey)))
       }}
     >{connection.connectionName}
     </Button>
@@ -200,29 +201,31 @@ function ConnectionTypeSelectorBottom () {
 // selects between Google Cloud and Snowflake
 function ConnectionTypeSelector () {
   const dispatch = useDispatch()
-  const planType = useSelector(state => state.user.stream.planType)
+  const [bigqueryModalOpen, setBigqueryModalOpen] = useState(false)
+  const secretsEnabled = useSelector(state => state.env.secretsEnabled)
   useEffect(() => {
     track('ConnectionTypeSelector')
   }, [])
   return (
     <>
       <div className={styles.connectionTypeSelector}>
+        <BigQueryConnectionTypeSelectorModal open={bigqueryModalOpen} onClose={() => setBigqueryModalOpen(false)} />
         <Button
-          icon={<DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY} />} size='large' onClick={() => {
+          icon={<DatasourceIcon type={ConnectionType.CONNECTION_TYPE_BIGQUERY} />} size='large' onClick={() => {
             track('ConnectionTypeSelectorBigQuery')
-            dispatch(newConnection(Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY))
+            setBigqueryModalOpen(true)
           }}
         >BigQuery
         </Button>
-        <If condition={planType !== PlanType.TYPE_SELF_HOSTED}>
-          <Button
-            icon={<DatasourceIcon type={Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE} />} size='large' onClick={() => {
-              track('ConnectionTypeSelectorSnowflake')
-              dispatch(newConnection(Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE))
-            }}
-          >Snowflake
-          </Button>
-        </If>
+        <Button
+          disabled={!secretsEnabled}
+          title={secretsEnabled ? '' : 'Feature is disabled. Contact your administrator to enable it.'}
+          icon={<DatasourceIcon type={ConnectionType.CONNECTION_TYPE_SNOWFLAKE} />} size='large' onClick={() => {
+            track('ConnectionTypeSelectorSnowflake')
+            dispatch(newConnection(ConnectionType.CONNECTION_TYPE_SNOWFLAKE))
+          }}
+        >Snowflake
+        </Button>
       </div>
       <ConnectionTypeSelectorBottom />
     </>
@@ -295,7 +298,14 @@ function ReportsHeader (
       <div className={styles.rightCornerAction}>
         {
           reportFilter === 'connections'
-            ? <Button disabled={!isAdmin} onClick={() => { dispatch(newConnectionScreen(true)) }}>New Connection</Button>
+            ? (
+              <Button
+                disabled={!isAdmin}
+                title={isAdmin ? 'Create new connection' : 'Only admin can create new connection'}
+                onClick={() => { dispatch(newConnectionScreen(true)) }}
+              >New Connection
+              </Button>
+              )
             : (
               <>
                 {

@@ -35,14 +35,16 @@ func (s Server) getFileReports(ctx context.Context, fileId string) (*string, err
 		return nil, err
 	}
 	defer fileRows.Close()
+	var reportId string
 	for fileRows.Next() {
-		var reportId string
 		if err = fileRows.Scan(&reportId); err != nil {
 			return nil, err
 		}
-		return &reportId, nil
 	}
-	return nil, nil
+	if reportId == "" {
+		return nil, nil
+	}
+	return &reportId, nil
 }
 
 func (s Server) setUploadError(reportID string, fileSourceID string, err error) {
@@ -55,7 +57,7 @@ func (s Server) setUploadError(reportID string, fileSourceID string, err error) 
 		fileSourceID,
 	)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("setUploadError failed")
 		return
 	}
 	s.reportStreams.Ping(reportID)
@@ -86,14 +88,14 @@ func (s Server) moveFileToStorage(reqConCtx context.Context, fileSourceID string
 	}
 	_, err := io.Copy(storageWriter, file)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("error copying file to storage")
 		s.setUploadError(report.Id, fileSourceID, err)
 		return
 	}
 
 	err = storageWriter.Close()
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("error closing storage writer")
 		s.setUploadError(report.Id, fileSourceID, err)
 	}
 	log.Debug().Msgf("file %s.csv moved to storage", fileSourceID)
@@ -102,7 +104,7 @@ func (s Server) moveFileToStorage(reqConCtx context.Context, fileSourceID string
 		fileSourceID,
 	)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("update file status failed")
 		s.setUploadError(report.Id, fileSourceID, err)
 		return
 	}
@@ -125,27 +127,27 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 	reportId, err := s.getFileReports(ctx, fileId)
 
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("getFileReports failed")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
 	if reportId == nil {
 		err := fmt.Errorf("file not found")
-		log.Warn().Err(err).Send()
+		log.Warn().Err(err).Msg("file not found")
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
 	report, err := s.getReport(ctx, *reportId)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("getReport failed")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	if report == nil || !report.CanWrite {
 		err := fmt.Errorf("report not found or permission not granted")
-		log.Warn().Err(err).Send()
+		log.Warn().Err(err).Msg("report not found or permission not granted")
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
@@ -153,14 +155,14 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 	connection, err := s.getConnectionFromFileID(ctx, fileId)
 
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("getConnectionFromFileID failed")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	if !connection.CanStoreFiles {
 		err = fmt.Errorf("connection does not support file storage")
-		log.Warn().Err(err).Send()
+		log.Warn().Err(err).Msg("connection does not support file storage")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -169,7 +171,7 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 
 	file, handler, err := r.FormFile("file")
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("FormFile failed")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -179,7 +181,7 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 
 	if fileExtension == "" {
 		err = fmt.Errorf("unsupported file type")
-		log.Warn().Err(err).Str("mimeType", mimeType).Send()
+		log.Warn().Err(err).Str("mimeType", mimeType).Msg("unsupported file type")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -194,7 +196,7 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 		fileId,
 	)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("update files failed")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		file.Close()
 		return
@@ -214,13 +216,13 @@ func (s Server) CreateFile(ctx context.Context, req *proto.CreateFileRequest) (*
 	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("getReportID failed")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if reportID == nil {
 		err := fmt.Errorf("dataset not found or permission not granted")
-		log.Warn().Err(err).Send()
+		log.Warn().Err(err).Msg("dataset not found or permission not granted")
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
@@ -231,7 +233,7 @@ func (s Server) CreateFile(ctx context.Context, req *proto.CreateFileRequest) (*
 		id,
 	)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("insert into files failed")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -241,13 +243,13 @@ func (s Server) CreateFile(ctx context.Context, req *proto.CreateFileRequest) (*
 		req.DatasetId,
 	)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("update datasets failed when creating file")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	affectedRows, err := result.RowsAffected()
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("RowsAffected failed when creating file")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 

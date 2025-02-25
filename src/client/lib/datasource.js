@@ -1,12 +1,27 @@
-import { Connection } from '../../proto/dekart_pb'
+import { ConnectionType } from '../../proto/dekart_pb'
+import { bigQueryKeywords } from './bigQueryKeywords'
+import { snowflakeKeywords } from './snowflakeKeywords'
+
+const bigQueryCustomCompleter = {
+  getCompletions (editor, session, pos, prefix, callback) {
+    callback(null, bigQueryKeywords)
+  }
+}
+
+const snowflakeCustomCompleter = {
+  getCompletions (editor, session, pos, prefix, callback) {
+    callback(null, snowflakeKeywords)
+  }
+}
 
 export function getDatasourceMeta (datasource) {
   switch (datasource) {
     case 'SNOWFLAKE':
-    case Connection.ConnectionType.CONNECTION_TYPE_SNOWFLAKE:
+    case ConnectionType.CONNECTION_TYPE_SNOWFLAKE:
       return {
         name: 'Snowflake',
         style: 'snowflake',
+        completer: snowflakeCustomCompleter,
         examplesUrl: 'https://dekart.xyz/docs/about/snowflake-kepler-gl-examples/',
         sampleQuery: `-- Generate 100 random latitude and longitude points
 SELECT
@@ -18,11 +33,12 @@ FROM
         usageStatsId: 3
       }
     case 'BQ':
-    case Connection.ConnectionType.CONNECTION_TYPE_BIGQUERY:
-    case Connection.ConnectionType.CONNECTION_TYPE_UNSPECIFIED: // legacy user connections
+    case ConnectionType.CONNECTION_TYPE_BIGQUERY:
+    case ConnectionType.CONNECTION_TYPE_UNSPECIFIED: // legacy user connections
       return {
         name: 'BigQuery',
         style: 'bigquery',
+        completer: bigQueryCustomCompleter,
         usageStatsId: 2,
         examplesUrl: 'https://dekart.xyz/docs/about/overture-maps-examples/',
         sampleQuery: `-- Select a random 0.1% sample of crimes from the Chicago crime dataset

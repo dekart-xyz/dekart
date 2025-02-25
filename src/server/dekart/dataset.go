@@ -23,35 +23,20 @@ import (
 func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Dataset, error) {
 	datasets := make([]*proto.Dataset, 0)
 
-	if !IsSqlite() {
-		// add legacy queries
-		queries, err := s.getQueriesLegacy(ctx, reportID)
-		if err != nil {
-			return nil, err
-		}
-		for _, query := range queries {
-			datasets = append(datasets, &proto.Dataset{
-				Id:        query.Id,
-				ReportId:  reportID,
-				QueryId:   query.Id,
-				CreatedAt: query.CreatedAt,
-				UpdatedAt: query.UpdatedAt,
-				Name:      "",
-			})
-		}
-	}
-
 	// normal datasets
 	datasetRows, err := s.db.QueryContext(ctx,
 		`select
-			id,
-			query_id,
-			file_id,
-			created_at,
-			updated_at,
-			name,
-			connection_id
-		from datasets where report_id=$1 order by created_at asc`,
+			datasets.id,
+			datasets.query_id,
+			datasets.file_id,
+			datasets.created_at,
+			datasets.updated_at,
+			datasets.name,
+			datasets.connection_id,
+			connections.connection_type
+		from datasets
+		left join connections on datasets.connection_id=connections.id
+		where report_id=$1 order by created_at asc`,
 		reportID,
 	)
 	if err != nil {
@@ -67,6 +52,7 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 		var queryId sql.NullString
 		var fileId sql.NullString
 		var connectionID sql.NullString
+		var connectionType sql.NullInt32
 		if err := datasetRows.Scan(
 			&dataset.Id,
 			&queryId,
@@ -75,6 +61,7 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 			&updatedAt,
 			&dataset.Name,
 			&connectionID,
+			&connectionType,
 		); err != nil {
 			log.Err(err).Msg("Error scanning dataset results")
 			return nil, err
@@ -84,6 +71,9 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 		dataset.QueryId = queryId.String
 		dataset.FileId = fileId.String
 		dataset.ConnectionId = connectionID.String
+		if connectionType.Valid {
+			dataset.ConnectionType = proto.ConnectionType(connectionType.Int32)
+		}
 		datasets = append(datasets, &dataset)
 	}
 	return datasets, nil
@@ -151,13 +141,13 @@ func (s Server) UpdateDatasetName(ctx context.Context, req *proto.UpdateDatasetN
 	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error getting report id")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if reportID == nil {
 		err := fmt.Errorf("dataset not found id:%s", req.DatasetId)
-		log.Warn().Err(err).Send()
+		log.Warn().Err(err).Msg("Dataset not found")
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
@@ -170,7 +160,7 @@ func (s Server) UpdateDatasetName(ctx context.Context, req *proto.UpdateDatasetN
 		req.DatasetId,
 	)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error updating dataset name")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -188,13 +178,13 @@ func (s Server) UpdateDatasetConnection(ctx context.Context, req *proto.UpdateDa
 	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error getting report id")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if reportID == nil {
 		err := fmt.Errorf("dataset not found id:%s", req.DatasetId)
-		log.Warn().Err(err).Send()
+		log.Warn().Err(err).Msg("Dataset not found")
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
@@ -207,7 +197,7 @@ func (s Server) UpdateDatasetConnection(ctx context.Context, req *proto.UpdateDa
 		req.DatasetId,
 	)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error updating dataset connection")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -229,13 +219,13 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error getting report id")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if reportID == nil {
 		err := fmt.Errorf("dataset not found id:%s", req.DatasetId)
-		log.Warn().Err(err).Send()
+		log.Warn().Err(err).Msg("Dataset not found")
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
@@ -246,7 +236,7 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 		req.DatasetId,
 	)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error deleting dataset")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -256,7 +246,7 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 		req.DatasetId,
 	)
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error deleting legacy query")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -326,19 +316,19 @@ func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetReque
 	result, err := s.insertDataset(ctx, req.ReportId)
 
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error inserting dataset")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	affectedRows, err := result.RowsAffected()
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error getting affected rows")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if affectedRows == 0 {
 		err := fmt.Errorf("report=%s, author_email=%s not found", req.ReportId, claims.Email)
-		log.Warn().Err(err).Send()
+		log.Warn().Err(err).Msg("Report not found")
 		return nil, status.Errorf(codes.NotFound, err.Error())
 	}
 	s.reportStreams.Ping(req.ReportId)
@@ -360,7 +350,7 @@ func storageError(w http.ResponseWriter, err error) {
 func (s Server) getDWJobIDFromResultID(ctx context.Context, resultID string) (string, error) {
 	var jobID sql.NullString
 	rows, err := s.db.QueryContext(ctx,
-		`select dw_job_id from queries where job_result_id=$1`,
+		`select dw_job_id from query_jobs where job_result_id=$1`,
 		resultID,
 	)
 	if err != nil {
@@ -380,9 +370,9 @@ func (s Server) getDWJobIDFromResultID(ctx context.Context, resultID string) (st
 // since reading is using connection no auth is needed here
 func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	userCtx := r.Context()
+	ctx := r.Context()
 
-	claims := user.GetClaims(userCtx)
+	claims := user.GetClaims(ctx)
 	if claims == nil {
 		http.Error(w, Unauthenticated.Error(), http.StatusUnauthorized)
 		return
@@ -394,37 +384,37 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reportID, err := s.getReportID(userCtx, vars["dataset"], false)
+	reportID, err := s.getReportID(ctx, vars["dataset"], false)
 
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error getting report id")
 		HttpError(w, err)
 		return
 	}
 
 	if reportID == nil {
 		err := fmt.Errorf("dataset not found id:%s", vars["dataset"])
-		log.Warn().Err(err).Send()
+		log.Warn().Err(err).Msg("Dataset not found")
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
-	report, err := s.getReport(userCtx, *reportID)
+	report, err := s.getReport(ctx, *reportID)
 
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error getting report")
 		HttpError(w, err)
 		return
 	}
 
 	if report == nil {
 		err := fmt.Errorf("report not found id:%s", *reportID)
-		log.Warn().Err(err).Send()
+		log.Warn().Err(err).Msg("Report not found while serving dataset source")
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
-	connection, err := s.getConnectionFromDatasetID(userCtx, vars["dataset"])
+	connection, err := s.getConnectionFromDatasetID(ctx, vars["dataset"])
 
 	if err != nil {
 		HttpError(w, err)
@@ -433,20 +423,21 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 
 	if connection == nil {
 		err := fmt.Errorf("connection not found id:%s", vars["dataset"])
-		log.Warn().Err(err).Send()
+		log.Warn().Err(err).Msg("Connection not found while serving dataset source")
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
 	if connection.Id == "default" {
 		// dataset has no connection, it means it's a playground dataset
-		userCtx = user.SetWorkspaceCtx(userCtx, user.WorkspaceInfo{IsPlayground: true})
+		ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{IsPlayground: true})
 	}
 
 	bucketName := s.getBucketNameFromConnection(connection)
 
-	userConCtx := conn.GetCtx(userCtx, connection)
-	dwJobID, err := s.getDWJobIDFromResultID(userCtx, vars["source"])
+	conCtx := conn.GetCtx(ctx, connection)
+	defConCtx := conn.GetCtx(ctx, &proto.Connection{Id: "default"})
+	dwJobID, err := s.getDWJobIDFromResultID(ctx, vars["source"])
 	if err != nil {
 		log.Error().Err(err).Msg("Error getting dw job id")
 		HttpError(w, err)
@@ -455,27 +446,30 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 
 	var obj storage.StorageObject
 
+	useCtx := conCtx
+
 	if report.IsPublic {
 		// public report, load from public storage bucket
 		log.Debug().Str("source", vars["source"]).Msg("Serving dataset source from public storage")
 		publicStorage := storage.NewPublicStorage()
-		obj = publicStorage.GetObject(userCtx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
+		obj = publicStorage.GetObject(defConCtx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
+		useCtx = defConCtx // public storage does not require connection
 	} else if dwJobID != "" {
 		// temp data warehouse table is used as source
 		log.Debug().Str("source", vars["source"]).Msg("Serving dataset source from temporary storage")
-		obj = s.storage.GetObject(userConCtx, bucketName, dwJobID)
+		obj = s.storage.GetObject(conCtx, bucketName, dwJobID)
 	} else {
 		// file stored on the bucket is used as source
 		log.Debug().Str("source", vars["source"]).Msg("Serving dataset source from user storage")
-		obj = s.storage.GetObject(userConCtx, bucketName, fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
+		obj = s.storage.GetObject(conCtx, bucketName, fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
 	}
 
-	created, err := obj.GetCreatedAt(userCtx)
+	created, err := obj.GetCreatedAt(useCtx)
 	if err != nil {
 		storageError(w, err)
 		return
 	}
-	objectReader, err := obj.GetReader(userCtx)
+	objectReader, err := obj.GetReader(useCtx)
 	if err != nil {
 		storageError(w, err)
 		return
