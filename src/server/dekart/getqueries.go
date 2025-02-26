@@ -66,17 +66,6 @@ func (s Server) getQueries(ctx context.Context, datasets []*proto.Dataset) ([]*p
 				`select
 				id,
 				query_text,
-				job_status,
-				case when job_result_id is null then '' else cast(job_result_id as VARCHAR) end as job_result_id,
-				case when job_error is null then '' else job_error end as job_error,
-				case
-					when job_started is null
-					then 0
-					else CAST((strftime('%s', CURRENT_TIMESTAMP)  - strftime('%s', job_started))*1000 as BIGINT)
-				end as job_duration,
-				total_rows,
-				bytes_processed,
-				result_size,
 				created_at,
 				updated_at,
 				query_source,

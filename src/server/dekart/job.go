@@ -6,6 +6,7 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/job"
 	"dekart/src/server/user"
+	"fmt"
 	"strings"
 	"time"
 
@@ -55,7 +56,7 @@ func (s Server) updateJobStatus(job job.Job, jobStatus chan int32, paramHash str
 						bytes_processed = $5,
 						result_size = $6,
 						dw_job_id = $7,
-						updated_at=now()
+						updated_at=CURRENT_TIMESTAMP
 					where id = $8`,
 					status,
 					job.Err(),
@@ -173,7 +174,7 @@ func (s Server) CancelJob(ctx context.Context, req *proto.CancelJobRequest) (*pr
 			_, err = s.db.ExecContext(
 				ctx,
 				`update query_jobs set
-					job_status = $1, updated_at=now()
+					job_status = $1, updated_at=CURRENT_TIMESTAMP
 				where id  = $2`,
 				int32(proto.QueryJob_JOB_STATUS_UNSPECIFIED),
 				req.JobId,
@@ -198,9 +199,57 @@ func (s Server) getDatasetsQueryJobs(ctx context.Context, datasets []*proto.Data
 		}
 	}
 	if len(queryIds) > 0 {
-		queryIdsStr := strings.Join(queryIds, ",")
-		queryRows, err := s.db.QueryContext(ctx,
-			`select distinct on (query_params_hash, query_id)
+		quotedQueryIds := make([]string, len(queryIds))
+		for i, id := range queryIds {
+			quotedQueryIds[i] = "'" + id + "'"
+		}
+		queryIdsStr := strings.Join(quotedQueryIds, ",")
+		log.Debug().Str("queryIds", queryIdsStr).Msg("getDatasetsQueryJobs")
+		var queryRows *sql.Rows
+		var err error
+		if IsSqlite() {
+			queryRows, err = s.db.QueryContext(ctx,
+				`WITH RankedJobs AS (
+					SELECT
+						id,
+						query_id,
+						job_status,
+						job_result_id,
+						job_error,
+						total_rows,
+						bytes_processed,
+						result_size,
+						query_params_hash,
+						dw_job_id,
+						updated_at,
+						created_at,
+						ROW_NUMBER() OVER (
+							PARTITION BY query_params_hash, query_id
+							ORDER BY created_at DESC
+						) as rn
+					FROM query_jobs
+					WHERE query_id IN (`+queryIdsStr+`)
+				)
+				SELECT
+					id,
+					query_id,
+					job_status,
+					job_result_id,
+					job_error,
+					total_rows,
+					bytes_processed,
+					result_size,
+					query_params_hash,
+					dw_job_id,
+					updated_at,
+					created_at
+				FROM RankedJobs
+				WHERE rn = 1
+				ORDER BY query_params_hash, query_id`,
+			)
+		} else {
+			queryRows, err = s.db.QueryContext(ctx,
+				`select distinct on (query_params_hash, query_id)
 				id,
 				query_id,
 				job_status,
@@ -214,8 +263,9 @@ func (s Server) getDatasetsQueryJobs(ctx context.Context, datasets []*proto.Data
 				updated_at,
 				created_at
 			from query_jobs where query_id = ANY($1) order by query_params_hash, query_id, created_at desc`,
-			pq.Array(queryIds),
-		)
+				pq.Array(queryIds),
+			)
+		}
 		if err != nil {
 			log.Fatal().Err(err).Interface("queryIds", queryIds).Msgf("select from query_jobs failed, ids: %s", queryIdsStr)
 		}
@@ -226,36 +276,67 @@ func (s Server) getDatasetsQueryJobs(ctx context.Context, datasets []*proto.Data
 	return make([]*proto.QueryJob, 0), nil
 }
 
-func rowsToQueryJobs(queryRows *sql.Rows) ([]*proto.QueryJob, error) {
-	queryJobs := make([]*proto.QueryJob, 0)
-	for queryRows.Next() {
-		queryJob := proto.QueryJob{}
-		var dwJobId sql.NullString
+func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
+	var jobs []*proto.QueryJob
+	for rows.Next() {
+		job := &proto.QueryJob{}
 		var jobResultId sql.NullString
-		var createdAt time.Time
-		var updatedAt time.Time
-		err := queryRows.Scan(
-			&queryJob.Id,
-			&queryJob.QueryId,
-			&queryJob.JobStatus,
-			&jobResultId,
-			&queryJob.JobError,
-			&queryJob.TotalRows,
-			&queryJob.BytesProcessed,
-			&queryJob.ResultSize,
-			&queryJob.QueryParamsHash,
-			&dwJobId,
-			&updatedAt,
-			&createdAt,
-		)
-		if err != nil {
-			log.Fatal().Err(err).Msg("scan failed in rowsToQueryJobs")
+		var dwJobId sql.NullString
+		if IsSqlite() {
+			var updatedAtStr, createdAtStr string
+			err := rows.Scan(
+				&job.Id,
+				&job.QueryId,
+				&job.JobStatus,
+				&jobResultId,
+				&job.JobError,
+				&job.TotalRows,
+				&job.BytesProcessed,
+				&job.ResultSize,
+				&job.QueryParamsHash,
+				&dwJobId,
+				&updatedAtStr, // SQLite timestamp string in this case
+				&createdAtStr,
+			)
+			if err != nil {
+				return nil, fmt.Errorf("scan failed in rowsToQueryJobs error=%q", err)
+			}
+			// Parse SQLite timestamp strings
+			updatedAtTime, err := time.Parse("2006-01-02 15:04:05", updatedAtStr)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse updated_at timestamp: %v", err)
+			}
+			createdAtTime, err := time.Parse("2006-01-02 15:04:05", createdAtStr)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse created_at timestamp: %v", err)
+			}
+			job.UpdatedAt = updatedAtTime.Unix()
+			job.CreatedAt = createdAtTime.Unix()
+		} else {
+			var updatedAt, createdAt time.Time
+			err := rows.Scan(
+				&job.Id,
+				&job.QueryId,
+				&job.JobStatus,
+				&jobResultId,
+				&job.JobError,
+				&job.TotalRows,
+				&job.BytesProcessed,
+				&job.ResultSize,
+				&job.QueryParamsHash,
+				&dwJobId,
+				&updatedAt,
+				&createdAt,
+			)
+			if err != nil {
+				return nil, fmt.Errorf("scan failed in rowsToQueryJobs error=%q", err)
+			}
+			job.UpdatedAt = updatedAt.Unix()
+			job.CreatedAt = createdAt.Unix()
 		}
-		queryJob.CreatedAt = createdAt.Unix()
-		queryJob.UpdatedAt = updatedAt.Unix()
-		queryJob.DwJobId = dwJobId.String
-		queryJob.JobResultId = jobResultId.String
-		queryJobs = append(queryJobs, &queryJob)
+		job.DwJobId = dwJobId.String
+		job.JobResultId = jobResultId.String
+		jobs = append(jobs, job)
 	}
-	return queryJobs, nil
+	return jobs, nil
 }
