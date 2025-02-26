@@ -16,10 +16,12 @@ import (
 	"dekart/src/server/athenajob"
 	"dekart/src/server/bqjob"
 	"dekart/src/server/dekart"
+	"dekart/src/server/errtype"
 	"dekart/src/server/job"
 	"dekart/src/server/pgjob"
 	"dekart/src/server/secrets"
 	"dekart/src/server/snowflakejob"
+	"dekart/src/server/snowflakeutils"
 	"dekart/src/server/storage"
 	"dekart/src/server/userjob"
 
@@ -44,7 +46,7 @@ func configureLogger() {
 	if pretty != "" {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339}).With().Caller().Logger()
 	} else {
-		log.Logger = log.Logger.With().Caller().Stack().Logger()
+		log.Logger = log.Logger.With().Caller().Stack().Logger().Output(&errtype.LogWriter{Writer: os.Stderr})
 	}
 
 	debug := os.Getenv("DEKART_LOG_DEBUG")
@@ -54,7 +56,7 @@ func configureLogger() {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 	log.Info().Msgf("Log level: %s", zerolog.GlobalLevel().String())
-
+	snowflakeutils.ConfigureSnowflakeLogger(&log.Logger)
 }
 
 func configureDb() *sql.DB {
@@ -85,7 +87,7 @@ func configureDb() *sql.DB {
 	}
 	db, err := sql.Open("postgres", url)
 	if err != nil {
-		log.Fatal().Err(err).Send()
+		log.Fatal().Err(err).Msg("sql.Open failed")
 	}
 	db.SetConnMaxLifetime(0)
 	db.SetMaxIdleConns(3)
@@ -188,7 +190,7 @@ func startHttpServer(httpServer *http.Server) {
 		if err == http.ErrServerClosed {
 			log.Info().Msg("http server closed")
 		} else {
-			log.Fatal().Err(err).Send()
+			log.Fatal().Err(err).Msg("http server failed")
 		}
 	}
 }

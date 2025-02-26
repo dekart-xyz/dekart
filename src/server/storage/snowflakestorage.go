@@ -51,7 +51,7 @@ func (s SnowflakeStorageObject) CanSaveQuery(context.Context, string) bool {
 
 func (s SnowflakeStorageObject) GetReader(ctx context.Context) (io.ReadCloser, error) {
 	log.Debug().Str("queryID", s.queryID).Msg("GetReader")
-	fetchResultByIDCtx := sf.WithFetchResultByID(ctx, s.queryID)
+	fetchResultByIDCtx := sf.WithStreamDownloader(sf.WithFetchResultByID(ctx, s.queryID))
 	db := sql.OpenDB(s.connector)
 	rows, err := db.QueryContext(fetchResultByIDCtx, "")
 	if err != nil {
@@ -90,6 +90,10 @@ func (s SnowflakeStorageObject) GetReader(ctx context.Context) (io.ReadCloser, e
 			}
 			err = csvWriter.Write(csvRow)
 			if err != nil {
+				if errtype.WriteClosedPipeRe.MatchString(err.Error()) {
+					log.Warn().Err(err).Msg("Error writing column names")
+					return
+				}
 				log.Error().Err(err).Msg("Error writing column names")
 				return
 			}

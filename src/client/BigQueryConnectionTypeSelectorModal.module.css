@@ -1,0 +1,10 @@
+
+.connectionOptions {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+}
+
+.connectionOptionsItem {
+  flex: 0.5;
+}

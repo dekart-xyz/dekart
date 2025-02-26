@@ -155,6 +155,11 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 			allowWorkspaceCreation = "1"
 		}
 
+		var secretsEnabled string
+		if os.Getenv("DEKART_DATA_ENCRYPTION_KEY") != "" {
+			secretsEnabled = "1"
+		}
+
 		variables = []*proto.GetEnvResponse_Variable{
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_MAPBOX_TOKEN,
@@ -243,6 +248,10 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_WORKSPACE_DEFAULT_ROLE,
 				Value: user.GetWorkspaceDefaultRole().String(),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_SECRETS_ENABLED,
+				Value: secretsEnabled,
 			},
 		}
 

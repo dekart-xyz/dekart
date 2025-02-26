@@ -1,35 +1,28 @@
 import { useHistory } from 'react-router'
 import styles from './ReportHeaderButtons.module.css'
 import Button from 'antd/es/button'
-import { FundProjectionScreenOutlined, DownloadOutlined, EditOutlined, ConsoleSqlOutlined, ForkOutlined, ReloadOutlined, LoadingOutlined } from '@ant-design/icons'
+import { EyeOutlined, DownloadOutlined, CloudOutlined, EditOutlined, ConsoleSqlOutlined, ForkOutlined, ReloadOutlined, LoadingOutlined, CloudSyncOutlined } from '@ant-design/icons'
 import { useDispatch, useSelector } from 'react-redux'
 import ShareButton from './ShareButton'
 import { forkReport, saveMap } from './actions/report'
 import { runAllQueries } from './actions/query'
-import { Query } from '../proto/dekart_pb'
 import { toggleModal } from '@dekart-xyz/kepler.gl/dist/actions/ui-state-actions'
 import { EXPORT_DATA_ID, EXPORT_IMAGE_ID, EXPORT_MAP_ID } from '@dekart-xyz/kepler.gl/dist/constants'
 import Dropdown from 'antd/es/dropdown'
-import Tooltip from 'antd/es/tooltip'
+import { useEffect } from 'react'
+import { ForkOnboarding, useRequireOnboarding } from './ForkOnboarding'
 
 function ForkButton ({ primary }) {
   const dispatch = useDispatch()
-  const { id: reportId, isPlayground: isPlaygroundReport, isPublic, canWrite } = useSelector(state => state.report)
+  const { id: reportId } = useSelector(state => state.report)
   const userStream = useSelector(state => state.user.stream)
   const userIsPlayground = useSelector(state => state.user.isPlayground)
   const workspaceId = userStream?.workspaceId
   const isViewer = useSelector(state => state.user.isViewer)
 
-  // user has workspace, but report is from playground
-  // we don't know how to match users connections to report connections
-  const disabled = (workspaceId && isPlaygroundReport) || isViewer
+  const disabled = isViewer
 
   const history = useHistory()
-
-  if (isPublic && !canWrite) {
-    // public reports can't be forked
-    return null
-  }
 
   let onClick = () => {
     dispatch(forkReport(reportId))
@@ -48,7 +41,7 @@ function ForkButton ({ primary }) {
         icon={<ForkOutlined />}
         disabled={disabled}
         onClick={onClick}
-      >Fork
+      >Fork this Map
       </Button>
     )
   }
@@ -59,37 +52,16 @@ function ForkButton ({ primary }) {
       disabled={disabled}
       onClick={onClick}
       id='dekart-fork-button'
-      title={disabled ? 'Forking is disabled for playground reports' : 'Fork this report'}
+      title={disabled ? 'Forking is disabled for viewers' : 'Fork this Map'}
     />
   )
 }
 
 function RefreshButton () {
   const { discoverable, canWrite } = useSelector(state => state.report)
-  const queries = useSelector(state => state.queries)
   const isViewer = useSelector(state => state.user.isViewer)
-  const loadingNumber = queries.reduce((loadingNumber, q) => {
-    switch (q.jobStatus) {
-      case Query.JobStatus.JOB_STATUS_PENDING:
-      case Query.JobStatus.JOB_STATUS_RUNNING:
-      case Query.JobStatus.JOB_STATUS_READING_RESULTS:
-        return loadingNumber + 1
-      default:
-        return loadingNumber
-    }
-  }, 0)
-  const completedQueries = queries.reduce((n, q) => {
-    switch (q.jobStatus) {
-      case Query.JobStatus.JOB_STATUS_DONE:
-        return n + 1
-      default:
-        return n
-    }
-  }, 0)
+  const numRunningQueries = useSelector(state => state.numRunningQueries)
   const dispatch = useDispatch()
-  if (completedQueries === 0 && loadingNumber === 0) {
-    return null
-  }
   if ((!canWrite && !discoverable) || isViewer) {
     return null
   }
@@ -97,10 +69,10 @@ function RefreshButton () {
     <Button
       id='dekart-refresh-button'
       type='text'
-      icon={loadingNumber ? <LoadingOutlined /> : <ReloadOutlined />}
+      icon={numRunningQueries ? <LoadingOutlined /> : <ReloadOutlined />}
       title='Re-run all queries'
       onClick={() => {
-        if (loadingNumber) {
+        if (numRunningQueries) {
           return
         }
         dispatch(runAllQueries())
@@ -109,30 +81,50 @@ function RefreshButton () {
   )
 }
 
-function CreateWorkspaceButton () {
-  const history = useHistory()
-  return (
-    <Tooltip title='Set up a secure space to connect your data, and share live maps with your team.'>
-      <Button type='primary' onClick={() => history.push('/workspace')}>Create Workspace</Button>
-    </Tooltip>
-
-  )
+function useReportChanged () {
+  const { lastChanged, lastSaved } = useSelector(state => state.reportStatus)
+  return lastChanged > lastSaved
 }
 
-function EditModeButtons ({ changed }) {
+function useAutoSave () {
+  const { canWrite } = useSelector(state => state.report)
+  const dispatch = useDispatch()
+  const { saving, online } = useSelector(state => state.reportStatus)
+  const changed = useReportChanged()
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (changed && canWrite && !saving && online) {
+        dispatch(saveMap())
+      }
+    }, 1000)
+
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [canWrite, saving, changed, online, dispatch])
+}
+
+function goToPresent (history, id) {
+  const searchParams = new URLSearchParams(window.location.search)
+  history.replace(`/reports/${id}?${searchParams.toString()}`)
+}
+
+function EditModeButtons () {
   const dispatch = useDispatch()
   const history = useHistory()
   const { id, canWrite } = useSelector(state => state.report)
-  const { canSave } = useSelector(state => state.reportStatus)
-  const isViewer = useSelector(state => state.user.isViewer)
-  const userStream = useSelector(state => state.user.stream)
-  const workspaceId = userStream?.workspaceId
-  const isPlayground = useSelector(state => state.user.isPlayground)
+  const { saving } = useSelector(state => state.reportStatus)
+  const changed = useReportChanged()
 
-  if (!workspaceId && !isPlayground) {
+  useAutoSave()
+
+  const requireOnboarding = useRequireOnboarding()
+
+  if (requireOnboarding) {
     return (
       <div className={styles.reportHeaderButtons}>
-        <CreateWorkspaceButton />
+        <ForkOnboarding requireOnboarding={requireOnboarding} edit />
       </div>
     )
   }
@@ -140,13 +132,6 @@ function EditModeButtons ({ changed }) {
   return (
     <div className={styles.reportHeaderButtons}>
       <RefreshButton />
-      <Button
-        type='text'
-        icon={<FundProjectionScreenOutlined />}
-        disabled={changed && canWrite && !isViewer}
-        title='Present Mode'
-        onClick={() => history.replace(`/reports/${id}`)}
-      />
       <ExportDropdown />
       <ShareButton />
       {canWrite
@@ -155,11 +140,21 @@ function EditModeButtons ({ changed }) {
             <ForkButton />
             <Button
               id='dekart-save-button'
-              type={changed ? 'primary' : 'default'}
+              title={saving ? 'Saving...' : 'Save this report'}
+              type='text'
               ghost
-              disabled={!canSave}
+              icon={saving || changed ? <CloudSyncOutlined /> : <CloudOutlined />}
+              disabled={saving}
               onClick={() => dispatch(saveMap())}
-            >Save{changed ? '*' : ''}
+            />
+            <Button
+              ghost
+              icon={<EyeOutlined />}
+              // TODO shall we disable?
+              // disabled={changed && canWrite && !isViewer}
+              title='View Mode'
+              onClick={() => goToPresent(history, id)}
+            >View
             </Button>
           </>
           )
@@ -170,6 +165,8 @@ function EditModeButtons ({ changed }) {
 
 function ExportDropdown () {
   const dispatch = useDispatch()
+  const { allowExport } = useSelector(state => state.report)
+
   const items = [
     {
       label: 'Export:',
@@ -198,21 +195,35 @@ function ExportDropdown () {
     }
   ]
   return (
-    <Dropdown menu={{ items }} placement='topLeft'>
+    <Dropdown menu={{ items }} placement='topLeft' disabled={!allowExport}>
       <Button
         type='text'
+        title={allowExport ? 'Export' : 'Exporting is disabled'}
         icon={<DownloadOutlined />}
       />
     </Dropdown>
   )
 }
 
+// goToSource redirects to the source view while preserving the current query params
+function goToSource (history, id) {
+  const searchParams = new URLSearchParams(window.location.search)
+  history.replace(`/reports/${id}/source?${searchParams.toString()}`)
+}
+
 function ViewModeButtons () {
   const history = useHistory()
-  const { id, canWrite } = useSelector(state => state.report)
-  const userStream = useSelector(state => state.user.stream)
-  const workspaceId = userStream?.workspaceId
-  const isPlayground = useSelector(state => state.user.isPlayground)
+  const { id, canWrite, readme } = useSelector(state => state.report)
+
+  const requireOnboarding = useRequireOnboarding()
+
+  if (requireOnboarding) {
+    return (
+      <div className={styles.reportHeaderButtons}>
+        <ForkOnboarding requireOnboarding={requireOnboarding} />
+      </div>
+    )
+  }
 
   if (canWrite) {
     return (
@@ -225,18 +236,9 @@ function ViewModeButtons () {
           type='primary'
           disabled={!canWrite}
           icon={<EditOutlined />}
-          onClick={() => history.replace(`/reports/${id}/source`)}
+          onClick={() => goToSource(history, id)}
         >Edit
         </Button>
-
-      </div>
-    )
-  }
-
-  if (!workspaceId && !isPlayground) {
-    return (
-      <div className={styles.reportHeaderButtons}>
-        <CreateWorkspaceButton />
       </div>
     )
   }
@@ -244,12 +246,13 @@ function ViewModeButtons () {
   return (
     <div className={styles.reportHeaderButtons}>
       <RefreshButton />
-      <Button
-        type='text'
-        icon={<ConsoleSqlOutlined />}
-        onClick={() => history.replace(`/reports/${id}/source`)}
-        title='View SQL source'
-      />
+      {!readme && ( // hide the button if there is readme, because the source view is then by default
+        <Button
+          type='text'
+          icon={<ConsoleSqlOutlined />}
+          onClick={() => goToSource(history, id)}
+          title='View SQL source'
+        />)}
       <ExportDropdown />
       <ShareButton />
       <ForkButton primary />
@@ -257,9 +260,9 @@ function ViewModeButtons () {
   )
 }
 
-export default function ReportHeaderButtons ({ edit, changed }) {
+export default function ReportHeaderButtons ({ edit }) {
   if (edit) {
-    return <EditModeButtons changed={changed} />
+    return <EditModeButtons />
   }
   return <ViewModeButtons />
 }

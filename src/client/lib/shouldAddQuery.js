@@ -1,12 +1,14 @@
-export function shouldAddQuery (query, prevQueriesList) {
-  if (!query.jobResultId) {
+export function shouldAddQuery (queryJob, prevQueryJobList, mapConfigUpdated) {
+  if (!queryJob?.jobResultId) {
     return false
-  }
-  if (!prevQueriesList) {
+  } else if (mapConfigUpdated) {
     return true
   }
-  const prevQueryState = prevQueriesList.find(q => q.id === query.id)
-  if (!prevQueryState || prevQueryState.jobResultId !== query.jobResultId) {
+  if (!prevQueryJobList) {
+    return true
+  }
+  const prevQueryJobState = prevQueryJobList.find(q => q.id === queryJob.id)
+  if (!prevQueryJobState || prevQueryJobState.jobResultId !== queryJob.jobResultId) {
     return true
   }
   return false

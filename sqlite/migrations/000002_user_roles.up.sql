@@ -77,7 +77,7 @@ ADD COLUMN is_default BOOLEAN DEFAULT 0; -- Adjusted to INTEGER for SQLite
 
 -- Insert default workspace. UUID replaced with a static string.
 INSERT INTO workspaces (id, name, is_default)
-VALUES ('00000000-0000-0000-0000-000000000000', 'Default Workspace', 1); -- Adjusted BOOLEAN true to INTEGER 1
+VALUES ('00000000-0000-0000-0000-000000000000', 'Default', 1); -- Adjusted BOOLEAN true to INTEGER 1
 
 -- Migrating authors as admins of the default workspace.
 -- Using LOWER(HEX(RANDOMBLOB(16))) for UUID generation.

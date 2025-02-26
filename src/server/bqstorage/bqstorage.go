@@ -2,10 +2,11 @@ package bqstorage
 
 import (
 	"context"
+	"dekart/src/proto"
 	"dekart/src/server/bqutils"
+	"dekart/src/server/conn"
 	"dekart/src/server/deadline"
 	"dekart/src/server/errtype"
-	"dekart/src/server/user"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -13,13 +14,12 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"github.com/rs/zerolog/log"
-	"google.golang.org/api/option"
 )
 
 // BigQueryStorageObject implements StorageObject interface for BigQuery temp results tables
 type BigQueryStorageObject struct {
-	JobID             string
-	BigqueryProjectId string
+	JobID      string
+	Connection *proto.Connection
 }
 
 func (s BigQueryStorageObject) GetWriter(ctx context.Context) io.WriteCloser {
@@ -28,21 +28,12 @@ func (s BigQueryStorageObject) GetWriter(ctx context.Context) io.WriteCloser {
 }
 
 func (s BigQueryStorageObject) GetSize(ctx context.Context) (*int64, error) {
-	err := fmt.Errorf("BigQueryStorageObject GetSize not implemented")
-	log.Err(err).Send()
-	return nil, err
+	log.Fatal().Msg("BigQueryStorageObject GetSize not implemented")
+	return nil, nil
 }
 
 func (s BigQueryStorageObject) getClient(ctx context.Context) (*bigquery.Client, error) {
-	tokenSource := user.GetTokenSource(ctx)
-	if tokenSource == nil {
-		return nil, fmt.Errorf("no token source")
-	}
-	client, err := bigquery.NewClient(
-		ctx,
-		s.BigqueryProjectId,
-		option.WithTokenSource(tokenSource),
-	)
+	client, err := bqutils.GetClient(ctx, s.Connection)
 	if err != nil {
 		return nil, err
 	}
@@ -70,11 +61,12 @@ func (s BigQueryStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, er
 
 func (s BigQueryStorageObject) GetReader(ctx context.Context) (io.ReadCloser, error) {
 	log.Debug().Str("jobID", s.JobID).Msg("BigQueryStorageObject GetReader")
+	connCtx := conn.GetCtx(ctx, s.Connection)
 	client, err := s.getClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-	jobFromJobId, err := client.JobFromID(ctx, s.JobID)
+	jobFromJobId, err := client.JobFromID(connCtx, s.JobID)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +78,7 @@ func (s BigQueryStorageObject) GetReader(ctx context.Context) (io.ReadCloser, er
 	errors := make(chan error)
 
 	go bqutils.Read(
-		ctx,
+		connCtx,
 		errors,
 		csvRows,
 		table,
@@ -104,7 +96,7 @@ func (s BigQueryStorageObject) GetReader(ctx context.Context) (io.ReadCloser, er
 	case firstRow, more = <-csvRows:
 		if !more {
 			err := fmt.Errorf("no data returned by BigQuery Readers")
-			log.Err(err).Send()
+			log.Err(err).Send() // here send is ok
 			return nil, err
 		}
 	case err := <-errors:
@@ -117,10 +109,9 @@ func (s BigQueryStorageObject) GetReader(ctx context.Context) (io.ReadCloser, er
 
 		if more {
 			// write first row
-			log.Debug().Msg("writing first row")
 			err := csvWriter.Write(firstRow)
 			if err != nil {
-				log.Err(err).Send()
+				log.Err(err).Msg("error writing first row")
 				return
 			}
 
@@ -133,12 +124,12 @@ func (s BigQueryStorageObject) GetReader(ctx context.Context) (io.ReadCloser, er
 					}
 					err := csvWriter.Write(csvRow)
 					if err != nil {
-						log.Err(err).Send()
+						log.Err(err).Msg("error writing row")
 						return
 					}
 				case err := <-errors:
 					if err != nil {
-						log.Err(err).Send()
+						log.Err(err).Msg("error reading row")
 						return
 					}
 				case <-ctx.Done():
@@ -154,7 +145,7 @@ func (s BigQueryStorageObject) GetReader(ctx context.Context) (io.ReadCloser, er
 
 func (s BigQueryStorageObject) CopyFromS3(ctx context.Context, source string) error {
 	err := fmt.Errorf("BigQueryStorageObject CopyFromS3 not implemented")
-	log.Fatal().Err(err).Send()
+	log.Fatal().Err(err).Send() // here send is ok
 	return err
 }
 

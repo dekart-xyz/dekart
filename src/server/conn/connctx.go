@@ -41,3 +41,8 @@ func FromCtx(ctx context.Context) *proto.Connection {
 	}
 	return connection
 }
+
+func CopyConnectionCtx(sourceCtx, destCtx context.Context) context.Context {
+	connection := FromCtx(sourceCtx)
+	return GetCtx(destCtx, connection)
+}

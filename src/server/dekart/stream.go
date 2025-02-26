@@ -49,6 +49,12 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 		return status.Errorf(codes.Internal, err.Error())
 	}
 
+	queryJobs, err := s.getDatasetsQueryJobs(ctx, datasets)
+	if err != nil {
+		log.Err(err).Msg("Cannot retrieve query jobs")
+		return status.Errorf(codes.Internal, err.Error())
+	}
+
 	res := proto.ReportStreamResponse{
 		Report:   report,
 		Queries:  queries,
@@ -57,6 +63,7 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 		StreamOptions: &proto.StreamOptions{
 			Sequence: sequence,
 		},
+		QueryJobs: queryJobs,
 	}
 
 	err = srv.Send(&res)
@@ -230,8 +237,7 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 	// connection update
 	connectionUpdate, err := s.getLastConnectionUpdate(ctx)
 	if err != nil {
-		log.Err(err).Send()
-		return status.Errorf(codes.Internal, err.Error())
+		return GRPCError("error getting connection update", err)
 	}
 
 	workspaceUpdate, err := s.getWorkspaceUpdate(ctx)

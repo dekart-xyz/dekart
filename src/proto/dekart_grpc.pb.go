@@ -24,6 +24,10 @@ const (
 	Dekart_UpdateReport_FullMethodName            = "/Dekart/UpdateReport"
 	Dekart_ArchiveReport_FullMethodName           = "/Dekart/ArchiveReport"
 	Dekart_SetDiscoverable_FullMethodName         = "/Dekart/SetDiscoverable"
+	Dekart_PublishReport_FullMethodName           = "/Dekart/PublishReport"
+	Dekart_AllowExportDatasets_FullMethodName     = "/Dekart/AllowExportDatasets"
+	Dekart_AddReadme_FullMethodName               = "/Dekart/AddReadme"
+	Dekart_RemoveReadme_FullMethodName            = "/Dekart/RemoveReadme"
 	Dekart_CreateDataset_FullMethodName           = "/Dekart/CreateDataset"
 	Dekart_RemoveDataset_FullMethodName           = "/Dekart/RemoveDataset"
 	Dekart_UpdateDatasetName_FullMethodName       = "/Dekart/UpdateDatasetName"
@@ -31,8 +35,8 @@ const (
 	Dekart_CreateFile_FullMethodName              = "/Dekart/CreateFile"
 	Dekart_CreateQuery_FullMethodName             = "/Dekart/CreateQuery"
 	Dekart_RunQuery_FullMethodName                = "/Dekart/RunQuery"
-	Dekart_CancelQuery_FullMethodName             = "/Dekart/CancelQuery"
 	Dekart_RunAllQueries_FullMethodName           = "/Dekart/RunAllQueries"
+	Dekart_CancelJob_FullMethodName               = "/Dekart/CancelJob"
 	Dekart_GetEnv_FullMethodName                  = "/Dekart/GetEnv"
 	Dekart_GetReportStream_FullMethodName         = "/Dekart/GetReportStream"
 	Dekart_GetReportListStream_FullMethodName     = "/Dekart/GetReportListStream"
@@ -52,7 +56,6 @@ const (
 	Dekart_UpdateWorkspace_FullMethodName         = "/Dekart/UpdateWorkspace"
 	Dekart_GetWorkspace_FullMethodName            = "/Dekart/GetWorkspace"
 	Dekart_UpdateWorkspaceUser_FullMethodName     = "/Dekart/UpdateWorkspaceUser"
-	Dekart_PublishReport_FullMethodName           = "/Dekart/PublishReport"
 )
 
 // DekartClient is the client API for Dekart service.
@@ -65,6 +68,10 @@ type DekartClient interface {
 	UpdateReport(ctx context.Context, in *UpdateReportRequest, opts ...grpc.CallOption) (*UpdateReportResponse, error)
 	ArchiveReport(ctx context.Context, in *ArchiveReportRequest, opts ...grpc.CallOption) (*ArchiveReportResponse, error)
 	SetDiscoverable(ctx context.Context, in *SetDiscoverableRequest, opts ...grpc.CallOption) (*SetDiscoverableResponse, error)
+	PublishReport(ctx context.Context, in *PublishReportRequest, opts ...grpc.CallOption) (*PublishReportResponse, error)
+	AllowExportDatasets(ctx context.Context, in *AllowExportDatasetsRequest, opts ...grpc.CallOption) (*AllowExportDatasetsResponse, error)
+	AddReadme(ctx context.Context, in *AddReadmeRequest, opts ...grpc.CallOption) (*AddReadmeResponse, error)
+	RemoveReadme(ctx context.Context, in *RemoveReadmeRequest, opts ...grpc.CallOption) (*RemoveReadmeResponse, error)
 	// datasets
 	CreateDataset(ctx context.Context, in *CreateDatasetRequest, opts ...grpc.CallOption) (*CreateDatasetResponse, error)
 	RemoveDataset(ctx context.Context, in *RemoveDatasetRequest, opts ...grpc.CallOption) (*RemoveDatasetResponse, error)
@@ -75,8 +82,9 @@ type DekartClient interface {
 	// queries
 	CreateQuery(ctx context.Context, in *CreateQueryRequest, opts ...grpc.CallOption) (*CreateQueryResponse, error)
 	RunQuery(ctx context.Context, in *RunQueryRequest, opts ...grpc.CallOption) (*RunQueryResponse, error)
-	CancelQuery(ctx context.Context, in *CancelQueryRequest, opts ...grpc.CallOption) (*CancelQueryResponse, error)
 	RunAllQueries(ctx context.Context, in *RunAllQueriesRequest, opts ...grpc.CallOption) (*RunAllQueriesResponse, error)
+	// jobs
+	CancelJob(ctx context.Context, in *CancelJobRequest, opts ...grpc.CallOption) (*CancelJobResponse, error)
 	GetEnv(ctx context.Context, in *GetEnvRequest, opts ...grpc.CallOption) (*GetEnvResponse, error)
 	// streams
 	GetReportStream(ctx context.Context, in *ReportStreamRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ReportStreamResponse], error)
@@ -102,8 +110,6 @@ type DekartClient interface {
 	UpdateWorkspace(ctx context.Context, in *UpdateWorkspaceRequest, opts ...grpc.CallOption) (*UpdateWorkspaceResponse, error)
 	GetWorkspace(ctx context.Context, in *GetWorkspaceRequest, opts ...grpc.CallOption) (*GetWorkspaceResponse, error)
 	UpdateWorkspaceUser(ctx context.Context, in *UpdateWorkspaceUserRequest, opts ...grpc.CallOption) (*UpdateWorkspaceUserResponse, error)
-	// reports
-	PublishReport(ctx context.Context, in *PublishReportRequest, opts ...grpc.CallOption) (*PublishReportResponse, error)
 }
 
 type dekartClient struct {
@@ -158,6 +164,46 @@ func (c *dekartClient) SetDiscoverable(ctx context.Context, in *SetDiscoverableR
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SetDiscoverableResponse)
 	err := c.cc.Invoke(ctx, Dekart_SetDiscoverable_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) PublishReport(ctx context.Context, in *PublishReportRequest, opts ...grpc.CallOption) (*PublishReportResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PublishReportResponse)
+	err := c.cc.Invoke(ctx, Dekart_PublishReport_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) AllowExportDatasets(ctx context.Context, in *AllowExportDatasetsRequest, opts ...grpc.CallOption) (*AllowExportDatasetsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AllowExportDatasetsResponse)
+	err := c.cc.Invoke(ctx, Dekart_AllowExportDatasets_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) AddReadme(ctx context.Context, in *AddReadmeRequest, opts ...grpc.CallOption) (*AddReadmeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AddReadmeResponse)
+	err := c.cc.Invoke(ctx, Dekart_AddReadme_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) RemoveReadme(ctx context.Context, in *RemoveReadmeRequest, opts ...grpc.CallOption) (*RemoveReadmeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RemoveReadmeResponse)
+	err := c.cc.Invoke(ctx, Dekart_RemoveReadme_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -234,20 +280,20 @@ func (c *dekartClient) RunQuery(ctx context.Context, in *RunQueryRequest, opts .
 	return out, nil
 }
 
-func (c *dekartClient) CancelQuery(ctx context.Context, in *CancelQueryRequest, opts ...grpc.CallOption) (*CancelQueryResponse, error) {
+func (c *dekartClient) RunAllQueries(ctx context.Context, in *RunAllQueriesRequest, opts ...grpc.CallOption) (*RunAllQueriesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CancelQueryResponse)
-	err := c.cc.Invoke(ctx, Dekart_CancelQuery_FullMethodName, in, out, cOpts...)
+	out := new(RunAllQueriesResponse)
+	err := c.cc.Invoke(ctx, Dekart_RunAllQueries_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *dekartClient) RunAllQueries(ctx context.Context, in *RunAllQueriesRequest, opts ...grpc.CallOption) (*RunAllQueriesResponse, error) {
+func (c *dekartClient) CancelJob(ctx context.Context, in *CancelJobRequest, opts ...grpc.CallOption) (*CancelJobResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RunAllQueriesResponse)
-	err := c.cc.Invoke(ctx, Dekart_RunAllQueries_FullMethodName, in, out, cOpts...)
+	out := new(CancelJobResponse)
+	err := c.cc.Invoke(ctx, Dekart_CancelJob_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -471,16 +517,6 @@ func (c *dekartClient) UpdateWorkspaceUser(ctx context.Context, in *UpdateWorksp
 	return out, nil
 }
 
-func (c *dekartClient) PublishReport(ctx context.Context, in *PublishReportRequest, opts ...grpc.CallOption) (*PublishReportResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PublishReportResponse)
-	err := c.cc.Invoke(ctx, Dekart_PublishReport_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // DekartServer is the server API for Dekart service.
 // All implementations must embed UnimplementedDekartServer
 // for forward compatibility.
@@ -491,6 +527,10 @@ type DekartServer interface {
 	UpdateReport(context.Context, *UpdateReportRequest) (*UpdateReportResponse, error)
 	ArchiveReport(context.Context, *ArchiveReportRequest) (*ArchiveReportResponse, error)
 	SetDiscoverable(context.Context, *SetDiscoverableRequest) (*SetDiscoverableResponse, error)
+	PublishReport(context.Context, *PublishReportRequest) (*PublishReportResponse, error)
+	AllowExportDatasets(context.Context, *AllowExportDatasetsRequest) (*AllowExportDatasetsResponse, error)
+	AddReadme(context.Context, *AddReadmeRequest) (*AddReadmeResponse, error)
+	RemoveReadme(context.Context, *RemoveReadmeRequest) (*RemoveReadmeResponse, error)
 	// datasets
 	CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error)
 	RemoveDataset(context.Context, *RemoveDatasetRequest) (*RemoveDatasetResponse, error)
@@ -501,8 +541,9 @@ type DekartServer interface {
 	// queries
 	CreateQuery(context.Context, *CreateQueryRequest) (*CreateQueryResponse, error)
 	RunQuery(context.Context, *RunQueryRequest) (*RunQueryResponse, error)
-	CancelQuery(context.Context, *CancelQueryRequest) (*CancelQueryResponse, error)
 	RunAllQueries(context.Context, *RunAllQueriesRequest) (*RunAllQueriesResponse, error)
+	// jobs
+	CancelJob(context.Context, *CancelJobRequest) (*CancelJobResponse, error)
 	GetEnv(context.Context, *GetEnvRequest) (*GetEnvResponse, error)
 	// streams
 	GetReportStream(*ReportStreamRequest, grpc.ServerStreamingServer[ReportStreamResponse]) error
@@ -528,8 +569,6 @@ type DekartServer interface {
 	UpdateWorkspace(context.Context, *UpdateWorkspaceRequest) (*UpdateWorkspaceResponse, error)
 	GetWorkspace(context.Context, *GetWorkspaceRequest) (*GetWorkspaceResponse, error)
 	UpdateWorkspaceUser(context.Context, *UpdateWorkspaceUserRequest) (*UpdateWorkspaceUserResponse, error)
-	// reports
-	PublishReport(context.Context, *PublishReportRequest) (*PublishReportResponse, error)
 	mustEmbedUnimplementedDekartServer()
 }
 
@@ -555,6 +594,18 @@ func (UnimplementedDekartServer) ArchiveReport(context.Context, *ArchiveReportRe
 func (UnimplementedDekartServer) SetDiscoverable(context.Context, *SetDiscoverableRequest) (*SetDiscoverableResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetDiscoverable not implemented")
 }
+func (UnimplementedDekartServer) PublishReport(context.Context, *PublishReportRequest) (*PublishReportResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PublishReport not implemented")
+}
+func (UnimplementedDekartServer) AllowExportDatasets(context.Context, *AllowExportDatasetsRequest) (*AllowExportDatasetsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AllowExportDatasets not implemented")
+}
+func (UnimplementedDekartServer) AddReadme(context.Context, *AddReadmeRequest) (*AddReadmeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddReadme not implemented")
+}
+func (UnimplementedDekartServer) RemoveReadme(context.Context, *RemoveReadmeRequest) (*RemoveReadmeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveReadme not implemented")
+}
 func (UnimplementedDekartServer) CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateDataset not implemented")
 }
@@ -576,11 +627,11 @@ func (UnimplementedDekartServer) CreateQuery(context.Context, *CreateQueryReques
 func (UnimplementedDekartServer) RunQuery(context.Context, *RunQueryRequest) (*RunQueryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RunQuery not implemented")
 }
-func (UnimplementedDekartServer) CancelQuery(context.Context, *CancelQueryRequest) (*CancelQueryResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CancelQuery not implemented")
-}
 func (UnimplementedDekartServer) RunAllQueries(context.Context, *RunAllQueriesRequest) (*RunAllQueriesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RunAllQueries not implemented")
+}
+func (UnimplementedDekartServer) CancelJob(context.Context, *CancelJobRequest) (*CancelJobResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CancelJob not implemented")
 }
 func (UnimplementedDekartServer) GetEnv(context.Context, *GetEnvRequest) (*GetEnvResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetEnv not implemented")
@@ -638,9 +689,6 @@ func (UnimplementedDekartServer) GetWorkspace(context.Context, *GetWorkspaceRequ
 }
 func (UnimplementedDekartServer) UpdateWorkspaceUser(context.Context, *UpdateWorkspaceUserRequest) (*UpdateWorkspaceUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateWorkspaceUser not implemented")
-}
-func (UnimplementedDekartServer) PublishReport(context.Context, *PublishReportRequest) (*PublishReportResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PublishReport not implemented")
 }
 func (UnimplementedDekartServer) mustEmbedUnimplementedDekartServer() {}
 func (UnimplementedDekartServer) testEmbeddedByValue()                {}
@@ -749,6 +797,78 @@ func _Dekart_SetDiscoverable_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DekartServer).SetDiscoverable(ctx, req.(*SetDiscoverableRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_PublishReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PublishReportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).PublishReport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_PublishReport_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).PublishReport(ctx, req.(*PublishReportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_AllowExportDatasets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AllowExportDatasetsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).AllowExportDatasets(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_AllowExportDatasets_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).AllowExportDatasets(ctx, req.(*AllowExportDatasetsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_AddReadme_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddReadmeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).AddReadme(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_AddReadme_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).AddReadme(ctx, req.(*AddReadmeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_RemoveReadme_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveReadmeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).RemoveReadme(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_RemoveReadme_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).RemoveReadme(ctx, req.(*RemoveReadmeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -879,24 +999,6 @@ func _Dekart_RunQuery_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_CancelQuery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CancelQueryRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DekartServer).CancelQuery(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Dekart_CancelQuery_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).CancelQuery(ctx, req.(*CancelQueryRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Dekart_RunAllQueries_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RunAllQueriesRequest)
 	if err := dec(in); err != nil {
@@ -911,6 +1013,24 @@ func _Dekart_RunAllQueries_Handler(srv interface{}, ctx context.Context, dec fun
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DekartServer).RunAllQueries(ctx, req.(*RunAllQueriesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_CancelJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelJobRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).CancelJob(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_CancelJob_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).CancelJob(ctx, req.(*CancelJobRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1236,24 +1356,6 @@ func _Dekart_UpdateWorkspaceUser_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_PublishReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PublishReportRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DekartServer).PublishReport(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Dekart_PublishReport_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).PublishReport(ctx, req.(*PublishReportRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // Dekart_ServiceDesc is the grpc.ServiceDesc for Dekart service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1280,6 +1382,22 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetDiscoverable",
 			Handler:    _Dekart_SetDiscoverable_Handler,
+		},
+		{
+			MethodName: "PublishReport",
+			Handler:    _Dekart_PublishReport_Handler,
+		},
+		{
+			MethodName: "AllowExportDatasets",
+			Handler:    _Dekart_AllowExportDatasets_Handler,
+		},
+		{
+			MethodName: "AddReadme",
+			Handler:    _Dekart_AddReadme_Handler,
+		},
+		{
+			MethodName: "RemoveReadme",
+			Handler:    _Dekart_RemoveReadme_Handler,
 		},
 		{
 			MethodName: "CreateDataset",
@@ -1310,12 +1428,12 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Dekart_RunQuery_Handler,
 		},
 		{
-			MethodName: "CancelQuery",
-			Handler:    _Dekart_CancelQuery_Handler,
-		},
-		{
 			MethodName: "RunAllQueries",
 			Handler:    _Dekart_RunAllQueries_Handler,
+		},
+		{
+			MethodName: "CancelJob",
+			Handler:    _Dekart_CancelJob_Handler,
 		},
 		{
 			MethodName: "GetEnv",
@@ -1380,10 +1498,6 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateWorkspaceUser",
 			Handler:    _Dekart_UpdateWorkspaceUser_Handler,
-		},
-		{
-			MethodName: "PublishReport",
-			Handler:    _Dekart_PublishReport_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

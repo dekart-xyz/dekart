@@ -3,6 +3,7 @@ package job
 import (
 	"context"
 	"dekart/src/proto"
+	"dekart/src/server/conn"
 	"dekart/src/server/errtype"
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
@@ -62,7 +63,13 @@ type BasicJob struct {
 
 func (j *BasicJob) Init(userCtx context.Context) {
 	j.id = uuid.GetUUID()
-	j.ctx, j.cancel = context.WithTimeout(user.CopyUserContext(userCtx, context.Background()), 10*time.Minute)
+	j.ctx, j.cancel = context.WithTimeout(
+		conn.CopyConnectionCtx(
+			userCtx,
+			user.CopyUserContext(userCtx, context.Background()),
+		),
+		10*time.Minute,
+	)
 	j.status = make(chan int32)
 }
 
@@ -145,7 +152,7 @@ func (j *BasicJob) CancelWithError(err error) {
 		j.err = err.Error()
 		j.Unlock()
 	}
-	j.status <- int32(proto.Query_JOB_STATUS_UNSPECIFIED)
+	j.status <- int32(proto.QueryJob_JOB_STATUS_UNSPECIFIED)
 	j.cancel()
 }
 
@@ -184,14 +191,14 @@ func (s *BasicStore) RemoveJobWhenDone(job Job) {
 	s.Unlock()
 }
 
-func (s *BasicStore) Cancel(queryID string) bool {
+func (s *BasicStore) Cancel(jobID string) bool {
 	s.Lock()
-	log.Debug().Str("queryID", queryID).Int("jobs", len(s.Jobs)).Msg("Canceling query in store")
+	log.Debug().Str("jobID", jobID).Int("jobs", len(s.Jobs)).Msg("Canceling query in store")
 	defer s.Unlock()
 	for _, job := range s.Jobs {
-		log.Debug().Str("jobQueryID", job.GetQueryID()).Msg("Canceling query in store")
-		if job.GetQueryID() == queryID {
-			job.Status() <- int32(proto.Query_JOB_STATUS_UNSPECIFIED)
+		log.Debug().Str("jobID", jobID).Msg("Canceling query in store")
+		if job.GetID() == jobID {
+			job.Status() <- int32(proto.QueryJob_JOB_STATUS_UNSPECIFIED)
 			job.Cancel()
 			return true
 		}
@@ -203,7 +210,7 @@ func (s *BasicStore) CancelAll(ctx context.Context) {
 	s.Lock()
 	for _, job := range s.Jobs {
 		select {
-		case job.Status() <- int32(proto.Query_JOB_STATUS_UNSPECIFIED):
+		case job.Status() <- int32(proto.QueryJob_JOB_STATUS_UNSPECIFIED):
 		case <-ctx.Done():
 		}
 		job.Cancel()

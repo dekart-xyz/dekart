@@ -3,7 +3,8 @@ package storage
 import (
 	"context"
 	"dekart/src/proto"
-	"dekart/src/server/user"
+	"dekart/src/server/bqutils"
+	"dekart/src/server/conn"
 	"io"
 	"net/url"
 	"os"
@@ -18,7 +19,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/api/iterator"
-	"google.golang.org/api/option"
 )
 
 type StorageObject interface {
@@ -96,10 +96,12 @@ func NewPublicStorage() *GoogleCloudStorage {
 }
 
 func TestConnection(ctx context.Context, connection *proto.Connection) (*proto.TestConnectionResponse, error) {
-	tokenSource := user.GetTokenSource(ctx)
-	client, err := storage.NewClient(ctx, option.WithTokenSource(tokenSource))
+	client, err := bqutils.GetStorageClient(ctx, connection, false)
 	if err != nil {
-		log.Fatal().Err(err).Send()
+		return &proto.TestConnectionResponse{
+			Success: false,
+			Error:   err.Error(),
+		}, nil
 	}
 	bucket := client.Bucket(connection.CloudStorageBucket)
 
@@ -194,16 +196,10 @@ func (o GoogleCloudStorageObject) Delete(ctx context.Context) error {
 }
 
 func (o GoogleCloudStorageObject) getObject(ctx context.Context) *storage.ObjectHandle {
-	tokenSource := user.GetTokenSource(ctx)
-	var client *storage.Client
-	var err error
-	if tokenSource == nil || !o.useUserToken {
-		client, err = storage.NewClient(ctx)
-	} else {
-		client, err = storage.NewClient(ctx, option.WithTokenSource(tokenSource))
-	}
+	client, err := bqutils.GetStorageClient(ctx, conn.FromCtx(ctx), !o.useUserToken)
 	if err != nil {
-		log.Fatal().Err(err).Send()
+		log.Err(err).Msg("error getting storage client")
+		return nil
 	}
 	bucket := client.Bucket(o.bucketName)
 	return bucket.Object(o.object)

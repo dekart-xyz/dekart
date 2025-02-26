@@ -2,8 +2,8 @@ package bqutils
 
 import (
 	"context"
+	"dekart/src/server/conn"
 	"dekart/src/server/errtype"
-	"dekart/src/server/user"
 	"fmt"
 	"io"
 	"strings"
@@ -13,7 +13,6 @@ import (
 	bqStorage "cloud.google.com/go/bigquery/storage/apiv1"
 	gax "github.com/googleapis/gax-go/v2"
 	"github.com/rs/zerolog"
-	"google.golang.org/api/option"
 	bqStoragePb "google.golang.org/genproto/googleapis/cloud/bigquery/storage/v1"
 	"google.golang.org/grpc"
 )
@@ -44,15 +43,8 @@ func NewReader(
 		maxReadStreamsCount: maxReadStreamsCount,
 	}
 	var err error
-	tokenSource := user.GetTokenSource(ctx)
-	if tokenSource != nil {
-		r.bqReadClient, err = bqStorage.NewBigQueryReadClient(
-			r.ctx,
-			option.WithTokenSource(tokenSource),
-		)
-	} else {
-		r.bqReadClient, err = bqStorage.NewBigQueryReadClient(r.ctx)
-	}
+	conn := conn.FromCtx(ctx) // always returns a connection
+	r.bqReadClient, err = GetReadClient(ctx, conn)
 	if err != nil || r.bqReadClient == nil {
 		r.logger.Fatal().Err(err).Msg("cannot create bigquery read client")
 	}
@@ -90,7 +82,7 @@ func (r *Reader) close() {
 	if r.bqReadClient != nil {
 		err := r.bqReadClient.Close()
 		if err != nil {
-			r.logger.Err(err).Send()
+			r.logger.Err(err).Msg("cannot close bigquery read client")
 		}
 	}
 }
@@ -103,7 +95,6 @@ func (r *Reader) getStreams() ([]*bqStoragePb.ReadStream, error) {
 	readStreams := r.session.GetStreams()
 	if len(readStreams) == 0 {
 		err := &errtype.EmptyResult{}
-		r.logger.Debug().Err(err).Send()
 		return readStreams, err
 	}
 	r.logger.Debug().Int32("maxReadStreamsCount", r.maxReadStreamsCount).Msgf("Number of Streams %d", len(readStreams))
@@ -225,7 +216,7 @@ func (r *StreamReader) processStreamResponse(processWaitGroup *sync.WaitGroup) {
 			}
 			if res == nil {
 				err = fmt.Errorf("res is nil")
-				r.logger.Err(err).Send()
+				r.logger.Err(err).Send() // here send is ok
 				r.errors <- err
 				return
 			}
@@ -233,14 +224,14 @@ func (r *StreamReader) processStreamResponse(processWaitGroup *sync.WaitGroup) {
 				rows := res.GetAvroRows()
 				if rows == nil {
 					err = fmt.Errorf("rows is nil")
-					r.logger.Err(err).Send()
+					r.logger.Err(err).Send() // here send is ok
 					r.errors <- err
 					return
 				}
 				undecoded := rows.GetSerializedBinaryRows()
 				err = r.tableDecoder.DecodeRows(undecoded, r.csvRows)
 				if err != nil {
-					r.logger.Err(err).Send()
+					r.logger.Err(err).Msg("cannot decode rows")
 					r.errors <- err
 					return
 				}

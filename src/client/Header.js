@@ -6,12 +6,13 @@ import Avatar from 'antd/es/avatar'
 import Dropdown from 'antd/es/dropdown'
 import { AuthState } from '../proto/dekart_pb'
 import classNames from 'classnames'
-import { GlobalOutlined, LockOutlined } from '@ant-design/icons'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 import { authRedirect } from './actions/redirect'
 import Button from 'antd/es/button'
 import Tooltip from 'antd/es/tooltip'
 import { switchPlayground } from './actions/user'
+import localStorageReset from './actions/localStorage'
+import { GlobalOutlined, LockOutlined } from '@ant-design/icons'
 
 function getSignature (email) {
   if (!email) {
@@ -53,6 +54,7 @@ function User ({ buttonDivider }) {
     items.push({
       label: 'Switch account',
       onClick: () => {
+        dispatch(localStorageReset())
         const state = new AuthState()
         state.setUiUrl(window.location.href)
         state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
@@ -63,6 +65,7 @@ function User ({ buttonDivider }) {
     items.push({
       label: 'Sign out',
       onClick: () => {
+        dispatch(localStorageReset())
         const state = new AuthState()
         state.setUiUrl(window.location.href)
         state.setAction(AuthState.Action.ACTION_REVOKE)
@@ -130,7 +133,7 @@ export function PlaygroundMode () {
   )
 }
 
-export function Header ({ buttons, title }) {
+export function Header ({ buttons, title, queryParams }) {
   const env = useSelector(state => state.env)
   const usage = useSelector(state => state.usage)
   let homePage
@@ -142,16 +145,14 @@ export function Header ({ buttons, title }) {
       <div className={styles.top}>
         <div className={styles.left}>
           <DekartMenu />
-          <Workspace />
-          <PlaygroundMode />
         </div>
         <div className={styles.middle}>
-          <div className={styles.dekartLinkHolder}><a target='_blank' rel='noopener noreferrer' className={styles.dekartLink} href={homePage}><span className={styles.dekartTitle} /></a></div>
+          {title ? (<div className={styles.titleWrap}><div className={styles.title}>{title}</div></div>) : (<div className={styles.dekartLinkHolder}><a target='_blank' rel='noopener noreferrer' className={styles.dekartLink} href={homePage}><span className={styles.dekartTitle} /></a></div>)}
         </div>
         <div className={styles.buttons}>{buttons || null}</div>
         <User buttonDivider={Boolean(buttons)} />
       </div>
-      {title ? (<div className={styles.title}>{title}</div>) : null}
+      {queryParams && <div className={styles.queryParams}>{queryParams}</div>}
     </div>
   )
 }

@@ -102,7 +102,7 @@ func (s Server) UpdateWorkspace(ctx context.Context, req *proto.UpdateWorkspaceR
 	}
 	_, err := s.db.ExecContext(ctx, `
 		UPDATE workspaces
-		SET name = $2, updated_at = now()
+		SET name = $2, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1
 	`, workspaceID, req.WorkspaceName)
 	if err != nil {
