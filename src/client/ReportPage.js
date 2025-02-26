@@ -216,7 +216,7 @@ function DatasetSection ({ reportId }) {
                       className={styles.addTabPane}
                       tab={
                         <Dropdown menu={{ items }} placement='bottom'>
-                          <span className={styles.addTab}><PlusOutlined className={styles.addTabIcon} /></span>
+                          <span className={styles.addTab} id='dekart-report-page-add-tab'><PlusOutlined className={styles.addTabIcon} /></span>
                         </Dropdown>
                       }
                       key='add'

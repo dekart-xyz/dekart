@@ -15,7 +15,8 @@ describe('update dataset', () => {
     cy.get(`span:contains("${copy.ready}")`, { timeout: 20000 }).should('be.visible')
 
     // second query
-    cy.get('#dekart-report-page-tabs button.ant-tabs-nav-add:first').click({ force: true })
+    cy.get('#dekart-report-page-add-tab').click()
+    cy.get('.ant-dropdown-menu-item:contains("Data")').click()
     cy.get('button:contains("Add data from...")').click()
     cy.get('span:contains("SQL query")').click()
     cy.get('textarea').type('SELECT primary_type, district, latitude, longitude, date from `bigquery-public-data.chicago_crime.crime` limit 2', { force: true })
