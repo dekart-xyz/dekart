@@ -19,7 +19,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
-	"google.golang.org/api/bigquery/v2"
 	"google.golang.org/api/idtoken"
 	googleOAuth "google.golang.org/api/oauth2/v2"
 	"google.golang.org/api/option"
@@ -191,8 +190,22 @@ func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 	return userCtx
 }
 
+func GetBigQueryAuthScopes() []string {
+	scopes := []string{"https://www.googleapis.com/auth/bigquery"}
+	extraScopesRaw := os.Getenv("DEKART_GCP_EXTRA_OAUTH_SCOPES")
+	if extraScopesRaw != "" {
+		extraScopes := strings.Split(extraScopesRaw, ",")
+		scopes = append(scopes, extraScopes...)
+	}
+	return scopes
+
+}
+
 var infoScope = []string{googleOAuth.UserinfoProfileScope, googleOAuth.UserinfoEmailScope}
-var sensitiveScope = []string{googleOAuth.UserinfoProfileScope, googleOAuth.UserinfoEmailScope, "https://www.googleapis.com/auth/devstorage.read_write", bigquery.BigqueryScope}
+var sensitiveScope = append(
+	[]string{googleOAuth.UserinfoProfileScope, googleOAuth.UserinfoEmailScope, "https://www.googleapis.com/auth/devstorage.read_write"},
+	GetBigQueryAuthScopes()..., // includes extra configured scopes
+)
 
 func (c ClaimsCheck) getSnowflakeContext(user string) *Claims {
 	if c.DevClaimsEmail != "" {
