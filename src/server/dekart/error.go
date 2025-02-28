@@ -63,6 +63,6 @@ func HttpError(w http.ResponseWriter, err error) {
 		fn := runtime.FuncForPC(pc)
 		caller = fmt.Sprintf("called from %s:%d %s", file, line, fn.Name())
 	}
-	log.Err(err).Interface("details", err).Str("caller", caller).Msg("Unknown API Error")
+	log.Err(err).Interface("details", err).Str("called_from", caller).Msg("Unknown API Error")
 	http.Error(w, err.Error(), http.StatusInternalServerError)
 }
