@@ -3,7 +3,9 @@ package conn
 import (
 	"context"
 	"dekart/src/proto"
+	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/rs/zerolog/log"
 )
@@ -27,7 +29,10 @@ func GetCtx(ctx context.Context, connection *proto.Connection) context.Context {
 func FromCtx(ctx context.Context) *proto.Connection {
 	connection, ok := ctx.Value(connectionContextKey).(*proto.Connection)
 	if !ok {
-		log.Error().Msg("Connection not found in context")
+		_, file, line, _ := runtime.Caller(1)
+		log.Error().Caller().Str("called_from",
+			fmt.Sprintf("%s:%d", file, line),
+		).Msg("Connection not found in context")
 		return &proto.Connection{}
 	}
 	return connection
