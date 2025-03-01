@@ -15,3 +15,7 @@
     align-items: center;
     flex-direction: column;
 }
+
+.body p {
+    max-width: 500px;
+}

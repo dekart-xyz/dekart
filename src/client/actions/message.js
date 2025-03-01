@@ -6,12 +6,8 @@ const style = {}
 
 message.config({ top: 100 })
 
-export function downloading (dataset) {
-  return { type: downloading.name, dataset }
-}
-
-export function finishDownloading (dataset, gone = false) {
-  return { type: finishDownloading.name, dataset, gone }
+export function downloading (dataset, controller) {
+  return { type: downloading.name, dataset, controller }
 }
 
 export function warn (content, transitive = true) {
@@ -67,6 +63,9 @@ export function setError (err, transitive = true) {
 }
 
 export function setHttpError (status, message = '') {
+  if (status === 404) {
+    console.trace('404')
+  }
   return { type: setHttpError.name, status, message }
 }
 

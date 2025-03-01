@@ -6,10 +6,10 @@ on:
       js:
         description: 'Run JS tests'
         value: ${{ jobs.changes.outputs.js }}
-      go: 
+      go:
         description: 'Run Go tests'
         value: ${{ jobs.changes.outputs.go }}
-      e2e:     
+      e2e:
         description: 'Run E2E tests'
         value: ${{ jobs.changes.outputs.e2e }}
 jobs:
@@ -17,13 +17,14 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read
+      contents: read
     # Set job outputs to values from filter step
     outputs:
       js: ${{ steps.filter.outputs.js }}
       go: ${{ steps.filter.outputs.go }}
       e2e: ${{ steps.filter.outputs.e2e }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: dorny/paths-filter@v2
       id: filter
       with:

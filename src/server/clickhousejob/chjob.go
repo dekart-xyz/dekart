@@ -10,6 +10,7 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/job"
 	"dekart/src/server/storage"
+
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/rs/zerolog/log"
 )
@@ -112,7 +113,7 @@ type Job struct {
 }
 
 func (j *Job) wait() {
-	j.Status() <- int32(proto.Query_JOB_STATUS_READING_RESULTS)
+	j.Status() <- int32(proto.QueryJob_JOB_STATUS_READING_RESULTS)
 
 	// Get location of the results file
 	resultLocation := fmt.Sprintf("%s/%s/%s/result.csv", j.outputLocation, j.ReportID, j.QueryID)
@@ -134,7 +135,7 @@ func (j *Job) wait() {
 	j.ResultReady = true
 	j.Unlock()
 
-	j.Status() <- int32(proto.Query_JOB_STATUS_DONE)
+	j.Status() <- int32(proto.QueryJob_JOB_STATUS_DONE)
 	j.Cancel()
 }
 
@@ -149,7 +150,7 @@ func (j *Job) Run(storageObject storage.StorageObject, _ *proto.Connection) erro
 		j.ReportID,
 		j.QueryID)
 
-	j.Status() <- int32(proto.Query_JOB_STATUS_RUNNING)
+	j.Status() <- int32(proto.QueryJob_JOB_STATUS_RUNNING)
 
 	go func() {
 

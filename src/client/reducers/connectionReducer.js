@@ -1,13 +1,14 @@
 import { combineReducers } from 'redux'
 import { closeConnectionDialog, connectionChanged, connectionCreated, connectionListUpdate, connectionSaved, editConnection, newConnection, newConnectionScreen, projectListUpdate, reOpenDialog, saveConnection, testConnection, testConnectionResponse } from '../actions/connection'
-import { sessionStorageInit } from '../actions/sessionStorage'
 import { setEnv } from '../actions/env'
+import { sessionStorageInit, updateSessionStorage } from '../actions/sessionStorage'
 
 function dialog (state = {
   visible: false,
   loading: true,
   id: null,
-  connectionType: null
+  connectionType: null,
+  bigqueryKey: false
 }, action) {
   switch (action.type) {
     case closeConnectionDialog.name:
@@ -21,7 +22,8 @@ function dialog (state = {
         id: action.id,
         connectionType: action.connectionType,
         visible: true,
-        loading: false
+        loading: false,
+        bigqueryKey: action.bigqueryKey
       }
     case newConnection.name:
       return {
@@ -29,7 +31,8 @@ function dialog (state = {
         visible: true,
         id: null,
         loading: false,
-        connectionType: action.connectionType
+        connectionType: action.connectionType,
+        bigqueryKey: action.bigqueryKey
       }
     case connectionCreated.name:
       return {
@@ -106,8 +109,8 @@ function listLoaded (state = false, action) {
   }
 }
 
-// userDefined when connection is not configured in Dekart via env variables
-function userDefined (state = false, action) {
+// can user define their own connections
+function userDefined (state = true, action) {
   switch (action.type) {
     case setEnv.name: {
       return Boolean(action.variables.USER_DEFINED_CONNECTION)
@@ -148,6 +151,16 @@ function lastOpenedDialog (state = null, action) {
   }
 }
 
+function redirectWhenSaveConnection (state = null, action) {
+  switch (action.type) {
+    case updateSessionStorage.name:
+    case sessionStorageInit.name:
+      return action.current.redirectWhenSaveConnection || null // for backward compatibility
+    default:
+      return state
+  }
+}
+
 export default combineReducers({
   dialog,
   test,
@@ -156,5 +169,6 @@ export default combineReducers({
   listLoaded,
   projects,
   screen,
-  lastOpenedDialog
+  lastOpenedDialog,
+  redirectWhenSaveConnection
 })

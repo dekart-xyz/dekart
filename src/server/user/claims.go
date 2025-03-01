@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 
@@ -18,7 +19,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
-	"google.golang.org/api/bigquery/v2"
 	"google.golang.org/api/idtoken"
 	googleOAuth "google.golang.org/api/oauth2/v2"
 	"google.golang.org/api/option"
@@ -39,15 +39,16 @@ const contextKey ContextKey = "userDetails"
 
 // ClaimsCheckConfig config for ClaimsCheck
 type ClaimsCheckConfig struct {
-	Audience            string
-	RequireIAP          bool
-	RequireAmazonOIDC   bool
-	RequireGoogleOAuth  bool
-	GoogleOAuthClientId string
-	GoogleOAuthSecret   string
-	DevClaimsEmail      string
-	DevRefreshToken     string
-	Region              string
+	Audience                string
+	RequireIAP              bool
+	RequireAmazonOIDC       bool
+	RequireGoogleOAuth      bool
+	RequireSnowflakeContext bool
+	GoogleOAuthClientId     string
+	GoogleOAuthSecret       string
+	DevClaimsEmail          string
+	DevRefreshToken         string
+	Region                  string
 }
 
 // ClaimsCheck factory to add user claims to context
@@ -60,10 +61,12 @@ type ClaimsCheck struct {
 var b2i = map[bool]int{false: 0, true: 1}
 
 func validateConfig(c ClaimsCheckConfig) {
-	if b2i[c.RequireIAP]+b2i[c.RequireAmazonOIDC]+b2i[c.RequireGoogleOAuth] > 1 {
+	if b2i[c.RequireIAP]+b2i[c.RequireAmazonOIDC]+b2i[c.RequireGoogleOAuth]+b2i[c.RequireSnowflakeContext] > 1 {
 		log.Fatal().Msg("DEKART_REQUIRE_IAP and DEKART_REQUIRE_AMAZON_OIDC and DEKART_REQUIRE_GOOGLE_OAUTH are mutually exclusive")
 	}
 	switch {
+	case c.RequireSnowflakeContext:
+		log.Info().Msgf("Dekart configured to require Snowflake context")
 	case c.RequireIAP:
 		log.Info().Msgf("Dekart configured to require IAP")
 	case c.RequireAmazonOIDC:
@@ -138,15 +141,6 @@ func (c ClaimsCheck) validateAuthToken(ctx context.Context, header string) *Clai
 	}
 }
 
-// CopyClaims from one context to another
-func CopyClaims(sourceCtx, destCtx context.Context) context.Context {
-	claims := GetClaims(sourceCtx)
-	if claims == nil {
-		return destCtx
-	}
-	return context.WithValue(destCtx, contextKey, claims)
-}
-
 func copyClaims(sourceCtx, destCtx context.Context) context.Context {
 	claims := GetClaims(sourceCtx)
 	if claims == nil {
@@ -157,13 +151,17 @@ func copyClaims(sourceCtx, destCtx context.Context) context.Context {
 
 // CopyUserContext from one context to another
 func CopyUserContext(sourceCtx, destCtx context.Context) context.Context {
-	return copyClaims(sourceCtx, destCtx)
+	ctx := copyClaims(sourceCtx, destCtx)
+	return copyWorkspace(sourceCtx, ctx)
 }
 
 // GetTokenSource returns oauth2.TokenSource from context, returns nil if not found
 func GetTokenSource(ctx context.Context) oauth2.TokenSource {
 	claims := GetClaims(ctx)
 	if claims == nil || claims.AccessToken == "" {
+		return nil
+	}
+	if CheckWorkspaceCtx(ctx).IsPlayground {
 		return nil
 	}
 	return oauth2.StaticTokenSource(&oauth2.Token{
@@ -181,6 +179,8 @@ func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 		claims = c.validateJWTFromAmazonOIDC(ctx, r.Header.Get("x-amzn-oidc-data"))
 	} else if c.RequireGoogleOAuth {
 		claims = c.validateAuthToken(ctx, r.Header.Get("Authorization"))
+	} else if c.RequireSnowflakeContext {
+		claims = c.getSnowflakeContext(r.Header.Get("Sf-Context-Current-User"))
 	} else {
 		claims = &Claims{
 			Email: UnknownEmail,
@@ -190,8 +190,39 @@ func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 	return userCtx
 }
 
+func GetBigQueryAuthScopes() []string {
+	scopes := []string{"https://www.googleapis.com/auth/bigquery"}
+	extraScopesRaw := os.Getenv("DEKART_GCP_EXTRA_OAUTH_SCOPES")
+	if extraScopesRaw != "" {
+		extraScopes := strings.Split(extraScopesRaw, ",")
+		scopes = append(scopes, extraScopes...)
+	}
+	return scopes
+
+}
+
 var infoScope = []string{googleOAuth.UserinfoProfileScope, googleOAuth.UserinfoEmailScope}
-var sensitiveScope = []string{googleOAuth.UserinfoProfileScope, googleOAuth.UserinfoEmailScope, "https://www.googleapis.com/auth/devstorage.read_write", bigquery.BigqueryScope}
+var sensitiveScope = append(
+	[]string{googleOAuth.UserinfoProfileScope, googleOAuth.UserinfoEmailScope, "https://www.googleapis.com/auth/devstorage.read_write"},
+	GetBigQueryAuthScopes()..., // includes extra configured scopes
+)
+
+func (c ClaimsCheck) getSnowflakeContext(user string) *Claims {
+	if c.DevClaimsEmail != "" {
+		return &Claims{
+			Email: c.DevClaimsEmail,
+		}
+	}
+	if user == "" {
+		return &Claims{
+			Email: UnknownEmail,
+		}
+	}
+	email := fmt.Sprintf("%s@%s", user, os.Getenv("SNOWFLAKE_ACCOUNT"))
+	return &Claims{
+		Email: email,
+	}
+}
 
 func (c ClaimsCheck) getAuthConfig(state *pb.AuthState) *oauth2.Config {
 	authUrl := ""

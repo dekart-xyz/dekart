@@ -2,7 +2,9 @@
 const SESSION_STORAGE_KEY = 'dekart-session-storage-v1'
 
 const initialState = {
-  lastOpenedDialog: null // connection dialog state
+  isPlayground: false,
+  lastOpenedDialog: null, // connection dialog state
+  redirectWhenSaveConnection: null // { reportId, edit }
 }
 
 let current = initialState

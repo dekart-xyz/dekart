@@ -77,8 +77,6 @@ func (d *Decoder) DecodeRows(undecoded []byte, csvRows chan []string) error {
 				csvRow[i] = fmt.Sprintf("%v", x)
 			case interface{}:
 				csvRow[i] = fmt.Sprintf("%v", x)
-			case nil:
-				csvRow[i] = ""
 			default:
 				return fmt.Errorf("incorrect type of data: %T", x)
 			}

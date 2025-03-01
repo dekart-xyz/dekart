@@ -47,6 +47,5 @@ cypress/screenshots
 .idea
 testtmp*
 
-# .env
 .env.*
 data
