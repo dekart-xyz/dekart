@@ -18,9 +18,9 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/improbable-eng/grpc-web v0.15.0
 	github.com/lib/pq v1.10.9
-	github.com/linkedin/goavro/v2 v2.12.0
+	github.com/linkedin/goavro/v2 v2.13.1
 	github.com/rs/zerolog v1.29.1
-	golang.org/x/sync v0.11.0 // indirect
+	golang.org/x/sync v0.11.0
 	google.golang.org/api v0.187.0
 	google.golang.org/genproto v0.0.0-20240624140628-dc46fd24d27d
 	google.golang.org/grpc v1.69.2
