@@ -20,10 +20,10 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/linkedin/goavro/v2 v2.12.0
 	github.com/rs/zerolog v1.29.1
-	golang.org/x/sync v0.11.0 // indirect
+	golang.org/x/sync v0.11.0
 	google.golang.org/api v0.187.0
 	google.golang.org/genproto v0.0.0-20240624140628-dc46fd24d27d
-	google.golang.org/grpc v1.69.2
+	google.golang.org/grpc v1.70.0
 	google.golang.org/protobuf v1.36.1
 )
 
@@ -39,7 +39,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/testcontainers/testcontainers-go v0.34.0
 	github.com/testcontainers/testcontainers-go/modules/clickhouse v0.34.0
-	golang.org/x/oauth2 v0.23.0
+	golang.org/x/oauth2 v0.24.0
 )
 
 require (
