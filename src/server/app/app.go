@@ -36,7 +36,7 @@ func (m ResponseWriter) Write(b []byte) (int, error) {
 // WriteHeader overrides statusOk with configured header
 func (m ResponseWriter) WriteHeader(statusCode int) {
 	if statusCode != http.StatusOK {
-		log.Warn().Int("statusCode", statusCode).Send()
+		log.Warn().Int("statusCode", statusCode).Msg("Status code is not OK")
 		m.w.WriteHeader(statusCode)
 	} else {
 		m.w.WriteHeader(m.statusCode)
@@ -92,7 +92,7 @@ func configureGRPC(dekartServer *dekart.Server) *grpcweb.WrappedGrpcServer {
 
 func setOriginHeader(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", getAllowedOrigin(r.Header.Get("Origin")))
-	w.Header().Set("Access-Control-Allow-Headers", "Authorization")
+	w.Header().Set("Access-Control-Allow-Headers", "Authorization, X-Dekart-Playground")
 }
 
 func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *mux.Router {
@@ -133,8 +133,13 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 	}
 	api.Use(mux.CORSMethodMiddleware(router))
 
-	staticPath := os.Getenv("DEKART_STATIC_FILES")
+	// Health check
+	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}).Methods("GET")
 
+	// Serve static files
+	staticPath := os.Getenv("DEKART_STATIC_FILES")
 	if staticPath != "" {
 		staticFilesHandler := NewStaticFilesHandler(staticPath)
 
@@ -144,6 +149,9 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		router.HandleFunc("/reports/{id}", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/reports/{id}/edit", staticFilesHandler.ServeIndex) // deprecated
 		router.HandleFunc("/reports/{id}/source", staticFilesHandler.ServeIndex)
+		router.HandleFunc("/workspace", staticFilesHandler.ServeIndex)
+		router.HandleFunc("/workspace/invite/{id}", staticFilesHandler.ServeIndex)
+		router.HandleFunc("/playground", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/grant-scopes", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/400", func(w http.ResponseWriter, r *http.Request) {
 			staticFilesHandler.ServeIndex(ResponseWriter{w: w, statusCode: http.StatusBadRequest}, r)
@@ -159,15 +167,16 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 // Configure HTTP server with http and grpc
 func Configure(dekartServer *dekart.Server, db *sql.DB) *http.Server {
 	claimsCheck := user.NewClaimsCheck(user.ClaimsCheckConfig{
-		Audience:            os.Getenv("DEKART_IAP_JWT_AUD"),
-		RequireIAP:          os.Getenv("DEKART_REQUIRE_IAP") == "1",
-		RequireAmazonOIDC:   os.Getenv("DEKART_REQUIRE_AMAZON_OIDC") == "1",
-		RequireGoogleOAuth:  os.Getenv("DEKART_REQUIRE_GOOGLE_OAUTH") == "1",
-		Region:              os.Getenv("AWS_REGION"),
-		DevClaimsEmail:      os.Getenv("DEKART_DEV_CLAIMS_EMAIL"),
-		DevRefreshToken:     os.Getenv("DEKART_DEV_REFRESH_TOKEN"),
-		GoogleOAuthClientId: os.Getenv("DEKART_GOOGLE_OAUTH_CLIENT_ID"),
-		GoogleOAuthSecret:   os.Getenv("DEKART_GOOGLE_OAUTH_SECRET"),
+		Audience:                os.Getenv("DEKART_IAP_JWT_AUD"),
+		RequireIAP:              os.Getenv("DEKART_REQUIRE_IAP") == "1",
+		RequireSnowflakeContext: os.Getenv("DEKART_REQUIRE_SNOWFLAKE_CONTEXT") == "1",
+		RequireAmazonOIDC:       os.Getenv("DEKART_REQUIRE_AMAZON_OIDC") == "1",
+		RequireGoogleOAuth:      os.Getenv("DEKART_REQUIRE_GOOGLE_OAUTH") == "1",
+		Region:                  os.Getenv("AWS_REGION"),
+		DevClaimsEmail:          os.Getenv("DEKART_DEV_CLAIMS_EMAIL"),
+		DevRefreshToken:         os.Getenv("DEKART_DEV_REFRESH_TOKEN"),
+		GoogleOAuthClientId:     os.Getenv("DEKART_GOOGLE_OAUTH_CLIENT_ID"),
+		GoogleOAuthSecret:       os.Getenv("DEKART_GOOGLE_OAUTH_SECRET"),
 	}, db)
 
 	grpcServer := configureGRPC(dekartServer)
@@ -177,7 +186,7 @@ func Configure(dekartServer *dekart.Server, db *sql.DB) *http.Server {
 	log.Info().Msgf("Starting dekart at :%s", port)
 	return &http.Server{
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			reqWithClaims := r.WithContext(claimsCheck.GetContext(r))
+			reqWithClaims := r.WithContext(dekartServer.SetWorkspaceContext(claimsCheck.GetContext(r), r))
 			if grpcServer.IsAcceptableGrpcCorsRequest(r) || grpcServer.IsGrpcWebRequest(r) {
 				grpcServer.ServeHTTP(w, reqWithClaims)
 			} else {

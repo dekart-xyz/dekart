@@ -3,6 +3,8 @@ import { Dekart } from '../../proto/dekart_pb_service'
 import { getConnectionsList } from './connection'
 import { grpcStream, grpcStreamCancel } from './grpc'
 import { updateLocalStorage } from './localStorage'
+import { updateSessionStorage } from './sessionStorage'
+import { getWorkspace } from './workspace'
 
 export function userStreamUpdate (userStream) {
   return {
@@ -16,19 +18,34 @@ export function subscribeUserStream () {
     dispatch({ type: subscribeUserStream.name })
     const request = new GetUserStreamRequest()
     const prevRes = {
-      connectionUpdate: 0
+      connectionUpdate: -1,
+      workspaceUpdate: -1
     }
     dispatch(grpcStream(Dekart.GetUserStream, request, (message, err) => {
       if (message) {
         dispatch(updateLocalStorage('loginHint', message.email))
         dispatch(userStreamUpdate(message))
-        if (prevRes.connectionUpdate !== message.connectionUpdate) {
-          prevRes.connectionUpdate = message.connectionUpdate
-          dispatch(getConnectionsList())
+        if (prevRes.workspaceUpdate !== message.workspaceUpdate) {
+          prevRes.workspaceUpdate = message.workspaceUpdate
+          dispatch(getWorkspace())
+        }
+        if (message.planType > 0) {
+          // update only when subscription is active to avoid 404 errors
+          if (prevRes.connectionUpdate !== message.connectionUpdate) {
+            prevRes.connectionUpdate = message.connectionUpdate
+            dispatch(getConnectionsList())
+          }
         }
       }
       return err
     }))
+  }
+}
+
+export function switchPlayground (isPlayground, redirect = '/') {
+  return (dispatch, getState) => {
+    dispatch(updateSessionStorage('isPlayground', isPlayground))
+    window.location.href = redirect
   }
 }
 

@@ -18,3 +18,12 @@ import './commands'
 
 // Alternatively you can use CommonJS syntax:
 // require('./commands')
+
+/* eslint-disable no-undef */
+
+Cypress.on('uncaught:exception', (err, runnable) => {
+  // Ignore ResizeObserver error
+  if (err.message.includes('ResizeObserver')) {
+    return false
+  }
+})

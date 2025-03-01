@@ -52,6 +52,7 @@ func getConfig(conn *proto.Connection) sf.Config {
 	if token != "" {
 		log.Debug().Msg("Using snowpark token")
 		// https://docs.snowflake.com/en/developer-guide/snowpark-container-services/tutorials/tutorial-2#main-py-file
+		// https://docs.snowflake.com/en/developer-guide/snowpark-container-services/additional-considerations-services-jobs
 		return sf.Config{
 			Account:       os.Getenv("SNOWFLAKE_ACCOUNT"),
 			Host:          os.Getenv("SNOWFLAKE_HOST"),

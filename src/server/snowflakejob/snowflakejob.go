@@ -87,7 +87,7 @@ func (j *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 	j.ResultSize = *resultSize
 	j.ResultReady = true // results available now
 	j.Unlock()
-	j.Status() <- int32(proto.Query_JOB_STATUS_DONE)
+	j.Status() <- int32(proto.QueryJob_JOB_STATUS_DONE)
 	j.Cancel()
 }
 
@@ -138,7 +138,7 @@ func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connect
 		metadataWg := &sync.WaitGroup{}
 		metadataWg.Add(1)
 		go j.fetchQueryMetadata(queryIDChan, resultsReady, metadataWg)
-		j.Status() <- int32(proto.Query_JOB_STATUS_RUNNING)
+		j.Status() <- int32(proto.QueryJob_JOB_STATUS_RUNNING)
 		// TODO will this just work: queryID = rows1.(sf.SnowflakeRows).GetQueryID()
 		// https://pkg.go.dev/github.com/snowflakedb/gosnowflake#hdr-Fetch_Results_by_Query_ID
 		rows, err := j.snowflakeDb.QueryContext(
@@ -155,7 +155,7 @@ func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connect
 		if isSnowflakeStorageObject { // no need to write to storage, use temp query results storage
 			resultsReady <- true
 			defer (func() {
-				j.Status() <- int32(proto.Query_JOB_STATUS_DONE)
+				j.Status() <- int32(proto.QueryJob_JOB_STATUS_DONE)
 			})()
 		} else {
 			csvRows := make(chan []string, 10) //j.TotalRows?
@@ -167,7 +167,7 @@ func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connect
 				if firstRow {
 					firstRow = false
 					resultsReady <- true
-					j.Status() <- int32(proto.Query_JOB_STATUS_READING_RESULTS)
+					j.Status() <- int32(proto.QueryJob_JOB_STATUS_READING_RESULTS)
 					columnNames, err := snowflakeutils.GetColumns(rows)
 					if err != nil {
 						j.Logger.Error().Err(err).Msg("Error getting column names")

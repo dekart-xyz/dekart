@@ -4,8 +4,7 @@ import {
   Switch,
   Route,
   Redirect,
-  useParams,
-  useLocation
+  useParams
 } from 'react-router-dom'
 import ReportPage from './ReportPage'
 import HomePage from './HomePage'
@@ -16,9 +15,12 @@ import { getUsage } from './actions/usage'
 import { AuthState, RedirectState as DekartRedirectState } from '../proto/dekart_pb'
 import { getEnv } from './actions/env'
 import { authRedirect, setRedirectState } from './actions/redirect'
-import { subscribeUserStream, unsubscribeUserStream } from './actions/user'
+import { subscribeUserStream, switchPlayground, unsubscribeUserStream } from './actions/user'
+import WorkspacePage from './WorkspacePage'
 import GrantScopesPage from './GrantScopesPage'
 import { loadLocalStorage } from './actions/localStorage'
+import { useHistory, useLocation } from 'react-router-dom/cjs/react-router-dom'
+import { Button } from 'antd'
 import { loadSessionStorage } from './actions/sessionStorage'
 
 // RedirectState reads states passed in the URL from the server
@@ -51,9 +53,13 @@ function AppRedirect () {
   const httpError = useSelector(state => state.httpError)
   const { status, doNotAuthenticate } = httpError
   const { newReportId } = useSelector(state => state.reportStatus)
+  const userStream = useSelector(state => state.user.stream)
+  const isPlayground = useSelector(state => state.user.isPlayground)
   const sensitiveScopesNeeded = useSelector(state => state.user.sensitiveScopesNeeded)
   const sensitiveScopesGranted = useSelector(state => state.user.sensitiveScopesGranted)
   const sensitiveScopesGrantedOnce = useSelector(state => state.user.sensitiveScopesGrantedOnce)
+  const reportOpened = useSelector(state => state.reportStatus.opened)
+  const report = useSelector(state => state.report)
   const redirectStateReceived = useSelector(state => state.user.redirectStateReceived)
   const dispatch = useDispatch()
 
@@ -76,8 +82,21 @@ function AppRedirect () {
     return <Redirect to={`/${httpError.status}`} push />
   }
 
+  if (
+    userStream &&
+    !userStream.planType &&
+    !isPlayground &&
+    !(reportOpened && !report) && // report is being loaded
+    !(report?.isPlayground) && // playground report
+    !(report?.isPublic) // public report
+  ) {
+    return <Redirect to='/workspace' push />
+  }
+
   if (newReportId) {
-    return <Redirect to={`/reports/${newReportId}/source`} push />
+    const currentUrl = new URL(window.location.href)
+    const params = currentUrl.search
+    return <Redirect to={`/reports/${newReportId}/source${params}`} push />
   }
 
   if (
@@ -102,12 +121,47 @@ function PageHistory ({ visitedPages }) {
   return null
 }
 
+function SwitchToPlayground () {
+  const dispatch = useDispatch()
+  useEffect(() => {
+    dispatch(switchPlayground(true))
+  }, [dispatch])
+  return null
+}
+
 function NotFoundPage () {
+  const dispatch = useDispatch()
+  const userStream = useSelector(state => state.user.stream)
+  const workspaceId = userStream?.workspaceId
   return (
     <Result
       icon={<QuestionOutlined />} title='404' subTitle={
         <>
           <p>Page not found</p>
+          {(userStream && !workspaceId) // stream is loaded and user is not in workspace
+            ? (
+              <div>
+                <p>To access private reports join workspace.</p>
+                <Button onClick={() => dispatch(switchPlayground(false, '/workspace'))}>Join workspace</Button>
+              </div>
+              )
+            : null}
+        </>
+      }
+    />
+  )
+}
+
+function ErrorPage ({ icon, title, subTitle }) {
+  const history = useHistory()
+  return (
+    <Result
+      icon={icon} title={title} subTitle={
+        <>
+          <p>{subTitle}</p>
+          <div>
+            <Button onClick={() => history.push('/')}>Back to workspace</Button>
+          </div>
         </>
       }
     />
@@ -161,6 +215,9 @@ export default function App () {
       <PageHistory visitedPages={visitedPages} />
       <RedirectState />
       <Switch>
+        <Route exact path='/playground'>
+          <SwitchToPlayground />
+        </Route>
         <Route exact path='/'>
           <HomePage reportFilter='my' />
         </Route>
@@ -182,14 +239,20 @@ export default function App () {
         <Route path='/reports/:id'>
           <ReportPage />
         </Route>
+        <Route path='/workspace/invite/:inviteId'>
+          <WorkspacePage userInvite />
+        </Route>
+        <Route path='/workspace'>
+          <WorkspacePage />
+        </Route>
         <Route path='/400'>
-          <Result icon={<WarningOutlined />} title='400' subTitle='Bad Request' />
+          <ErrorPage icon={<WarningOutlined />} title='400' subTitle='Bad Request' />
         </Route>
         <Route path='/403'>
-          <Result icon={<WarningOutlined />} title='403' subTitle={errorMessage || 'Forbidden'} />
+          <ErrorPage icon={<WarningOutlined />} title='403' subTitle={errorMessage || 'Forbidden'} />
         </Route>
         <Route path='/401'>
-          <Result icon={<WarningOutlined />} title='401' subTitle={errorMessage || 'Unauthorized'} />
+          <ErrorPage icon={<WarningOutlined />} title='401' subTitle={errorMessage || 'Unauthorized'} />
         </Route>
         <Route path='*'>
           <NotFoundPage />

@@ -8,15 +8,65 @@
 
 .middle {
     position: absolute;
-    left: calc(50% - 50px);
-    width: 100px;
-    display: flex;
+    left: 250px;
+    width: calc(100% - 2*250px);
+}
+
+.titleWrap {
+    width: 100%;
+    height: 45px;
     flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+}
+
+.left {
+    width: 250px;
+    display: flex;
+    flex-direction: row;
     align-items: center;
 }
 
+.workspace {
+    text-align: center;
+    margin-left: 10px;
+    background: rgb(15, 150, 104);
+    font-size: 0.8em;
+    display: absolute;
+    bottom: 0;
+    border-radius: 3px;
+}
+
+.workspaceButton > span {
+    color: white!important;
+    font-size: 0.8em;
+}
+
+.playgroundButton > span {
+    color: #2B323B!important;
+    font-size: 0.8em;
+}
+
+.playgroundTooltip div {
+    padding: 7px;
+}
+.playgroundTooltip {
+    font-size: 0.8em;
+}
+
+.playground {
+    text-align: center;
+    margin-left: 10px;
+    background: rgb(87, 183, 211);
+    font-size: 0.8em;
+    display: absolute;
+    bottom: 0;
+    border-radius: 3px;
+}
+
 .header {
-    padding: 5px 10px 5px 10px;
+    padding: 5px 10px 5px 0px;
     background: linear-gradient(180deg, #2B323B 70%, #25272F 100%);
 }
 
@@ -47,10 +97,12 @@
 }
 
 .dekartLinkHolder {
-    width: 76px;
+    width: 100%;
     height: 46px;
     display: flex;
     align-items: center;
+    justify-content: center;
+
 }
 
 .title {

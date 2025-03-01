@@ -1,15 +1,53 @@
 import { combineReducers } from 'redux'
-import { closeDatasetSettingsModal, openDatasetSettingsModal, setActiveDataset } from '../actions/dataset'
-import { downloading as downloadingAction, finishDownloading } from '../actions/message'
+import { addDatasetToMap, cancelDownloading, closeDatasetSettingsModal, downloadDataset, downloadingProgress, finishAddingDatasetToMap, finishDownloading, keplerDatasetFinishUpdating, keplerDatasetStartUpdating, openDatasetSettingsModal, processDownloadError, setActiveDataset } from '../actions/dataset'
 import { openReport, reportUpdate } from '../actions/report'
 
 function downloading (state = [], action) {
-  const { dataset } = action
   switch (action.type) {
-    case downloadingAction.name:
-      return state.concat(dataset)
+    case downloadDataset.name:
+      return state.concat({
+        dataset: action.dataset,
+        controller: action.controller,
+        loaded: 0
+      })
+    case downloadingProgress.name:
+      return state.map(d => {
+        if (d.dataset.id === action.dataset.id) {
+          return {
+            ...d,
+            loaded: action.loaded
+          }
+        }
+        return d
+      })
+    case cancelDownloading.name:
+      return []
+    case addDatasetToMap.name:
+      return state.map(d => {
+        if (d.dataset.id === action.dataset.id) {
+          return {
+            ...d,
+            addingToMap: true
+          }
+        }
+        return d
+      })
     case finishDownloading.name:
-      return state.filter(d => d.id !== dataset.id)
+      return state.map(d => {
+        if (d.dataset.id === action.dataset.id) {
+          return {
+            ...d,
+            res: action.res,
+            extension: action.extension,
+            label: action.label,
+            prevDatasetsList: action.prevDatasetsList
+          }
+        }
+        return d
+      })
+    case finishAddingDatasetToMap.name: // dataset added to map, remove from downloading list
+    case processDownloadError.name: // error occurred, remove from downloading list
+      return state.filter(d => d.dataset.id !== action.dataset.id)
     default:
       return state
   }
@@ -65,9 +103,22 @@ function settings (state = { datasetId: null, visible: false }, action) {
   }
 }
 
+// Number of datasets that are currently updating on kepler
+function updatingNum (state = 0, action) {
+  switch (action.type) {
+    case keplerDatasetStartUpdating.name:
+      return state + 1
+    case keplerDatasetFinishUpdating.name:
+      return state - 1
+    default:
+      return state
+  }
+}
+
 export default combineReducers({
   downloading,
   active,
   settings,
-  list
+  list,
+  updatingNum
 })

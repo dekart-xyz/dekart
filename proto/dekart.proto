@@ -9,6 +9,10 @@ service Dekart {
     rpc UpdateReport(UpdateReportRequest) returns (UpdateReportResponse) {}
     rpc ArchiveReport(ArchiveReportRequest) returns (ArchiveReportResponse) {}
     rpc SetDiscoverable(SetDiscoverableRequest) returns (SetDiscoverableResponse) {}
+    rpc PublishReport(PublishReportRequest) returns (PublishReportResponse) {}
+    rpc AllowExportDatasets(AllowExportDatasetsRequest) returns (AllowExportDatasetsResponse) {}
+    rpc AddReadme(AddReadmeRequest) returns (AddReadmeResponse) {}
+    rpc RemoveReadme(RemoveReadmeRequest) returns (RemoveReadmeResponse) {}
 
     // datasets
     rpc CreateDataset(CreateDatasetRequest) returns (CreateDatasetResponse) {}
@@ -22,8 +26,10 @@ service Dekart {
     // queries
     rpc CreateQuery(CreateQueryRequest) returns (CreateQueryResponse) {}
     rpc RunQuery(RunQueryRequest) returns (RunQueryResponse) {}
-    rpc CancelQuery(CancelQueryRequest) returns (CancelQueryResponse) {}
     rpc RunAllQueries(RunAllQueriesRequest) returns (RunAllQueriesResponse) {}
+
+    //jobs
+    rpc CancelJob(CancelJobRequest) returns (CancelJobResponse) {}
 
     rpc GetEnv(GetEnvRequest) returns (GetEnvResponse) {}
 
@@ -43,6 +49,154 @@ service Dekart {
     rpc GetConnectionList(GetConnectionListRequest) returns (GetConnectionListResponse) {}
     rpc TestConnection(TestConnectionRequest) returns (TestConnectionResponse) {}
     rpc SetDefaultConnection(SetDefaultConnectionRequest) returns (SetDefaultConnectionResponse) {}
+
+    //CLOUD
+
+    //user
+    rpc RespondToInvite(RespondToInviteRequest) returns (RespondToInviteResponse) {}
+
+    //subscriptions
+    rpc CreateSubscription(CreateSubscriptionRequest) returns (CreateSubscriptionResponse) {}
+    rpc GetStripePortalSession(GetStripePortalSessionRequest) returns (GetStripePortalSessionResponse) {}
+
+    //workspace
+    rpc CreateWorkspace(CreateWorkspaceRequest) returns (CreateWorkspaceResponse) {}
+    rpc UpdateWorkspace(UpdateWorkspaceRequest) returns (UpdateWorkspaceResponse) {}
+    rpc GetWorkspace(GetWorkspaceRequest) returns (GetWorkspaceResponse) {}
+    rpc UpdateWorkspaceUser(UpdateWorkspaceUserRequest) returns (UpdateWorkspaceUserResponse) {}
+}
+
+message AddReadmeRequest {
+    string report_id = 1;
+    string markdown = 2;
+}
+
+message AddReadmeResponse {
+}
+
+message RemoveReadmeRequest {
+    string report_id = 1;
+}
+
+message RemoveReadmeResponse {
+}
+
+message AllowExportDatasetsRequest {
+    string report_id = 1;
+    bool allow_export = 2;
+}
+
+message AllowExportDatasetsResponse {
+}
+
+message CancelJobRequest {
+    string job_id = 1;
+}
+
+message CancelJobResponse {
+}
+
+message PublishReportRequest {
+    string report_id = 1;
+    bool publish = 2;
+}
+
+message PublishReportResponse {
+}
+
+message GetStripePortalSessionRequest {
+    string ui_url = 1;
+}
+
+message GetStripePortalSessionResponse {
+    string url = 1;
+}
+
+message UpdateWorkspaceUserRequest {
+    string email = 1;
+    enum UserUpdateType {
+        USER_UPDATE_TYPE_UNSPECIFIED = 0;
+        USER_UPDATE_TYPE_ADD = 1;
+        USER_UPDATE_TYPE_REMOVE = 2;
+        USER_UPDATE_TYPE_UPDATE = 3;
+    }
+    UserUpdateType user_update_type = 2;
+    UserRole role = 3;
+}
+
+message UpdateWorkspaceUserResponse {
+}
+
+message GetWorkspaceRequest {
+}
+
+message GetWorkspaceResponse {
+    Workspace Workspace = 1;
+    Subscription subscription = 2;
+    repeated User users = 3;
+    repeated WorkspaceInvite invites = 4;
+    int64 added_users_count = 5; // to not duplicate count logic in UI
+}
+
+message CreateWorkspaceRequest {
+    string workspace_name = 1;
+}
+
+message CreateWorkspaceResponse {
+}
+
+message UpdateWorkspaceRequest {
+    string workspace_name = 1;
+}
+
+message UpdateWorkspaceResponse {
+}
+
+message RespondToInviteRequest {
+    string invite_id = 1;
+    bool accept = 2;
+}
+
+message RespondToInviteResponse {
+
+}
+
+message GetInvitesRequest {
+}
+
+message WorkspaceInvite {
+    string workspace_id = 1;
+    string invite_id = 2;
+    string inviter_email = 3;
+    string workspace_name = 4;
+    int64 created_at = 5;
+}
+
+message GetInvitesResponse {
+    repeated WorkspaceInvite invites = 1;
+}
+
+enum UserStatus {
+    USER_STATUS_UNSPECIFIED = 0;
+    USER_STATUS_PENDING = 1;
+    USER_STATUS_ACTIVE = 2;
+    USER_STATUS_REMOVED = 3;
+    USER_STATUS_REJECTED = 4;
+}
+
+enum UserRole {
+    ROLE_UNSPECIFIED = 0;
+    ROLE_ADMIN = 1;
+    ROLE_EDITOR = 2;
+    ROLE_VIEWER = 3;
+}
+
+message User {
+    string email = 1;
+    int64 updated_at = 2;
+    UserStatus status = 3;
+    string invite_id = 4;
+    UserRole role = 5;
 }
 
 message GetGcpProjectListRequest {
@@ -61,9 +215,45 @@ message SetDefaultConnectionResponse {
 
 message RunAllQueriesRequest {
     string report_id = 1;
+    repeated QueryParam query_params = 2;
+    string query_params_values = 3; // url encoded
 }
 
 message RunAllQueriesResponse {
+
+}
+
+message Workspace {
+    string id = 1;
+    string name = 2;
+}
+
+message Subscription {
+    PlanType plan_type = 2;
+    int64 updated_at = 4; //seconds
+    string customer_id = 6;
+    string stripe_subscription_id = 7;
+    string stripe_customer_email = 8;
+    int64 cancel_at = 9; //seconds
+    string item_id = 10; // stripe subscription item id
+}
+
+enum PlanType {
+    TYPE_UNSPECIFIED = 0;
+    TYPE_PERSONAL = 1;
+    TYPE_TEAM = 2;
+    TYPE_GROW = 3;
+    TYPE_MAX = 4;
+    TYPE_SELF_HOSTED = 5;
+}
+
+message CreateSubscriptionRequest {
+    PlanType plan_type = 1;
+    string ui_url = 2;
+}
+
+message CreateSubscriptionResponse {
+    string redirect_url = 1;
 }
 
 message GetConnectionListRequest {
@@ -80,6 +270,12 @@ message GetUserStreamResponse {
     StreamOptions stream_options = 1;
     int64 connection_update = 2;
     string email = 3; // user email used to show user icon in UI
+    string workspace_id = 4;
+    PlanType plan_type = 5;
+    int64 workspace_update = 6; // includes invites, members and subscription
+    UserRole role = 7;
+    bool is_playground = 8;
+    bool is_default_workspace = 9;
 }
 
 message TestConnectionRequest {
@@ -114,6 +310,12 @@ message CreateConnectionResponse {
     Connection connection = 1;
 }
 
+enum ConnectionType {
+    CONNECTION_TYPE_UNSPECIFIED = 0;
+    CONNECTION_TYPE_BIGQUERY = 1;
+    CONNECTION_TYPE_SNOWFLAKE = 2;
+}
+
 message Connection {
     string id = 1;
     string connection_name = 2;
@@ -125,16 +327,12 @@ message Connection {
     int64 updated_at = 8;
     int64 dataset_count = 9;
     bool can_store_files = 10;
-    enum ConnectionType {
-        CONNECTION_TYPE_UNSPECIFIED = 0;
-        CONNECTION_TYPE_BIGQUERY = 1;
-        CONNECTION_TYPE_SNOWFLAKE = 2;
-    }
     ConnectionType connection_type = 11;
     string snowflake_account_id = 12;
     string snowflake_username = 13;
     Secret snowflake_password = 14;
     string snowflake_warehouse = 15;
+    Secret bigquery_key = 16;
 }
 
 message Secret {
@@ -198,6 +396,10 @@ message GetEnvResponse {
             TYPE_AES_IV = 17;
             TYPE_AUTH_ENABLED = 18;
             TYPE_USER_DEFINED_CONNECTION = 19;
+            TYPE_UX_DISABLE_VERSION_CHECK = 20;
+            TYPE_ALLOW_WORKSPACE_CREATION = 21;
+            TYPE_WORKSPACE_DEFAULT_ROLE = 22;
+            TYPE_SECRETS_ENABLED = 23;
         }
         Type type = 1;
         string value = 2;
@@ -245,12 +447,16 @@ message ReportListResponse {
     StreamOptions stream_options = 2;
 }
 
+message Readme {
+    string markdown = 1;
+}
+
 message Report {
     string id = 1;
     string map_config = 2;
     string title = 3;
     bool archived = 4;
-    bool can_write = 5;
+    bool can_write = 5; // user can write to the report because he is the author or has edit permission
     string author_email = 6;
     bool discoverable = 7; // report is discoverable by other users of the same instance
     bool allow_edit = 8; // allow other users to edit the report
@@ -259,6 +465,11 @@ message Report {
     int64 updated_at = 11;
     bool is_sharable = 12; // can be shared with other users (depends where result is stored)
     bool need_sensitive_scope = 13; // need sensitive scope to run queries and read results
+    bool is_playground = 14; // true - playground, false - workspace
+    bool is_public = 15; // true - public, false - private
+    bool allow_export = 16; // allow export datasets
+    repeated QueryParam query_params = 17;
+    Readme readme = 18;
 }
 
 message Dataset {
@@ -270,12 +481,21 @@ message Dataset {
     string file_id = 6;
     string name = 7;
     string connection_id = 8;
+    ConnectionType connection_type = 9;
 }
 
-message Query {
+message QueryJob {
     string id = 1;
-    // string report_id = 2;
+    string query_id = 2;
     string query_text = 3;
+    string job_result_id = 4;
+    string job_error = 5;
+    int64 job_duration = 6;
+    int32 total_rows = 7;
+    int64 bytes_processed = 8;
+    int64 result_size = 9;
+    int64 created_at = 10;
+    int64 updated_at = 11;
 
     enum JobStatus {
         JOB_STATUS_UNSPECIFIED = 0;
@@ -286,23 +506,24 @@ message Query {
         JOB_STATUS_DONE = 5;
     }
 
-    JobStatus job_status = 4;
-    string job_result_id = 5;
-    string job_error = 6;
-    int64 job_duration = 7;
-    int32 total_rows = 8;
-    int64 bytes_processed = 9;
-    int64 result_size = 10;
-    int64 created_at = 11;
-    int64 updated_at = 12;
+    JobStatus job_status = 12;
+    string dw_job_id = 13;
+    string query_params_hash = 14;
+}
+
+message Query {
+    string id = 1;
+    string query_text = 2;
+    int64 created_at = 3;
+    int64 updated_at = 4;
 
     enum QuerySource {
         QUERY_SOURCE_UNSPECIFIED = 0;
         QUERY_SOURCE_INLINE = 1;
         QUERY_SOURCE_STORAGE = 2;
     }
-    QuerySource query_source = 13;
-    string query_source_id = 14;
+    QuerySource query_source = 5;
+    string query_source_id = 6;
 }
 
 message File {
@@ -324,8 +545,12 @@ message File {
 }
 
 message UpdateReportRequest {
-    Report report = 1; // MapConfig, Title, Id will be used for update
-    repeated Query query = 2;
+    string report_id = 1;
+    string map_config = 2;
+    string title = 3;
+    repeated Query query = 4;
+    repeated QueryParam query_params = 5;
+    Readme readme = 6;
 }
 
 message UpdateReportResponse {
@@ -334,16 +559,11 @@ message UpdateReportResponse {
 message RunQueryRequest {
     string query_id = 1;
     string query_text = 2;
+    repeated QueryParam query_params = 3;
+    string query_params_values = 4; // url encoded
 }
 
 message RunQueryResponse {
-}
-
-message CancelQueryRequest {
-    string query_id = 1;
-}
-
-message CancelQueryResponse {
 }
 
 message UpdateDatasetNameRequest {
@@ -396,7 +616,7 @@ message ReportStreamResponse {
     StreamOptions stream_options = 3;
     repeated Dataset datasets = 4;
     repeated File files = 5;
-    repeated Connection connections = 6;
+    repeated QueryJob query_jobs = 6;
 }
 
 message ForkReportRequest {
@@ -413,4 +633,15 @@ message CreateReportRequest {
 
 message CreateReportResponse {
     Report report = 1;
+}
+
+message QueryParam {
+    string name = 1;
+    string label = 2;
+    enum Type {
+        TYPE_UNSPECIFIED = 0;
+        TYPE_STRING = 1;
+    }
+    Type type = 3;
+    string default_value = 4;
 }

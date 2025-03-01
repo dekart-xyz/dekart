@@ -1,0 +1,2 @@
+ALTER TABLE  reports
+ADD COLUMN readme TEXT DEFAULT NULL;

@@ -7,7 +7,8 @@ import (
 	"io"
 	"os"
 	"regexp"
-	"strings"
+
+	"github.com/rs/zerolog/log"
 
 	"dekart/src/proto"
 	"dekart/src/server/bqstorage"
@@ -15,11 +16,9 @@ import (
 	"dekart/src/server/errtype"
 	"dekart/src/server/job"
 	"dekart/src/server/storage"
-	"dekart/src/server/user"
 
 	"cloud.google.com/go/bigquery"
 	"google.golang.org/api/googleapi"
-	"google.golang.org/api/option"
 )
 
 // Job implements the dekart.Job interface for BigQuery; concurrency safe.
@@ -45,13 +44,13 @@ func (job *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 		if errtype.ContextCancelledRe.MatchString(err.Error()) {
 			return
 		}
-		job.Logger.Err(err).Send()
+		job.Logger.Err(err).Msg("storageWriter.Close failed")
 		job.CancelWithError(err)
 		return
 	}
 	resultSize, err := job.storageObject.GetSize(job.GetCtx())
 	if err != nil {
-		job.Logger.Err(err).Send()
+		job.Logger.Err(err).Msg("storageObject.GetSize failed")
 		job.CancelWithError(err)
 		return
 	}
@@ -61,7 +60,7 @@ func (job *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 	job.ResultSize = *resultSize
 	job.ResultReady = true
 	job.Unlock()
-	job.Status() <- int32(proto.Query_JOB_STATUS_DONE)
+	job.Status() <- int32(proto.QueryJob_JOB_STATUS_DONE)
 	job.Cancel()
 }
 
@@ -97,7 +96,7 @@ func (job *Job) write(csvRows chan []string) {
 			break
 		}
 		if err != nil {
-			job.Logger.Err(err).Send()
+			job.Logger.Err(err).Msg("csvWriter.Write failed")
 			job.CancelWithError(err)
 			break
 		}
@@ -164,7 +163,7 @@ func (job *Job) wait() {
 		job.DWJobID = &bqJobID // identify result storage
 		job.ResultReady = true
 		job.Unlock()
-		job.Status() <- int32(proto.Query_JOB_STATUS_DONE)
+		job.Status() <- int32(proto.QueryJob_JOB_STATUS_DONE)
 		job.Cancel()
 		return
 	}
@@ -181,7 +180,7 @@ func (job *Job) wait() {
 		return
 	}
 
-	job.Status() <- int32(proto.Query_JOB_STATUS_READING_RESULTS)
+	job.Status() <- int32(proto.QueryJob_JOB_STATUS_READING_RESULTS)
 
 	csvRows := make(chan []string, job.TotalRows)
 	errors := make(chan error)
@@ -218,38 +217,12 @@ func (job *Job) setMaxReadStreamsCount(queryText string) {
 	}
 }
 
-func getOauthScopes() []string {
-	scopes := []string{"https://www.googleapis.com/auth/bigquery"}
-	extraScopesRaw := os.Getenv("DEKART_GCP_EXTRA_OAUTH_SCOPES")
-	if extraScopesRaw != "" {
-		extraScopes := strings.Split(extraScopesRaw, ",")
-		scopes = append(scopes, extraScopes...)
-	}
-	return scopes
-
-}
-
 // Run implementation
 func (job *Job) Run(storageObject storage.StorageObject, conn *proto.Connection) error {
 	job.Logger.Debug().Msg("Run BigQuery Job")
-	var client *bigquery.Client = nil
-	var err error
-	tokenSource := user.GetTokenSource(job.GetCtx())
-	if tokenSource != nil {
-		job.Logger.Debug().Msg("Using oauth2 token")
-		client, err = bigquery.NewClient(
-			job.GetCtx(),
-			conn.BigqueryProjectId,
-			option.WithTokenSource(tokenSource),
-		)
-	} else {
-		client, err = bigquery.NewClient(
-			job.GetCtx(),
-			conn.BigqueryProjectId,
-			option.WithScopes(getOauthScopes()...),
-		)
-	}
+	client, err := bqutils.GetClient(job.GetCtx(), conn)
 	if err != nil {
+		log.Warn().Err(err).Msg("bigquery.NewClient failed")
 		job.Cancel()
 		return err
 	}
@@ -263,6 +236,7 @@ func (job *Job) Run(storageObject storage.StorageObject, conn *proto.Connection)
 
 	bigqueryJob, err := query.Run(job.GetCtx())
 	if err != nil {
+		log.Warn().Err(err).Msg("query.Run failed")
 		job.Cancel()
 		return err
 	}
@@ -270,7 +244,7 @@ func (job *Job) Run(storageObject storage.StorageObject, conn *proto.Connection)
 	job.bigqueryJob = bigqueryJob
 	job.storageObject = storageObject
 	job.Unlock()
-	job.Status() <- int32(proto.Query_JOB_STATUS_RUNNING)
+	job.Status() <- int32(proto.QueryJob_JOB_STATUS_RUNNING)
 	job.Logger.Debug().Msg("Waiting for results")
 	go job.wait()
 	return nil

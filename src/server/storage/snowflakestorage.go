@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/conn"
+	"dekart/src/server/deadline"
 	"dekart/src/server/errtype"
 	"dekart/src/server/snowflakeutils"
 	"encoding/csv"
@@ -50,7 +51,7 @@ func (s SnowflakeStorageObject) CanSaveQuery(context.Context, string) bool {
 
 func (s SnowflakeStorageObject) GetReader(ctx context.Context) (io.ReadCloser, error) {
 	log.Debug().Str("queryID", s.queryID).Msg("GetReader")
-	fetchResultByIDCtx := sf.WithFetchResultByID(ctx, s.queryID)
+	fetchResultByIDCtx := sf.WithStreamDownloader(sf.WithFetchResultByID(ctx, s.queryID))
 	db := sql.OpenDB(s.connector)
 	rows, err := db.QueryContext(fetchResultByIDCtx, "")
 	if err != nil {
@@ -89,6 +90,10 @@ func (s SnowflakeStorageObject) GetReader(ctx context.Context) (io.ReadCloser, e
 			}
 			err = csvWriter.Write(csvRow)
 			if err != nil {
+				if errtype.WriteClosedPipeRe.MatchString(err.Error()) {
+					log.Warn().Err(err).Msg("Error writing column names")
+					return
+				}
 				log.Error().Err(err).Msg("Error writing column names")
 				return
 			}
@@ -124,8 +129,8 @@ func (s SnowflakeStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, e
 
 	log.Debug().Str("queryID", s.queryID).Time("createdAt", createdAt).Msg("GetCreatedAt")
 
-	//check if query is older than 1 day (minus 1 hour for safety)
-	if time.Since(createdAt) > 23*time.Hour {
+	//check if query is too old
+	if time.Since(createdAt) > deadline.GetQueryCacheDeadline() {
 		return nil, &errtype.Expired{}
 	}
 	return &createdAt, nil

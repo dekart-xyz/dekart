@@ -1,6 +1,5 @@
 /* eslint-disable no-undef */
 import copy from '../../fixtures/copy.json'
-
 describe('happy path', () => {
   it('should make simple postgres query and get ready status', () => {
     cy.visit('/')
