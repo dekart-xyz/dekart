@@ -55,7 +55,7 @@ ADD cypress.config.js .
 ADD package.json .
 ENTRYPOINT /bin/sh -c /dekart/server & cypress run --spec ${TEST_SPEC}
 
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 WORKDIR /dekart
 RUN apt-get update && apt-get install  -y --no-install-recommends \
     gcc \
