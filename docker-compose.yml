@@ -50,7 +50,7 @@ services:
       DEKART_CORS_ORIGIN: "${DEKART_CORS_ORIGIN}"
   # docker compose --env-file .env.snowflake-s3 --profile dekart-oss-snowflake-s3 up
   dekart-oss-snowflake-s3:
-    image: dekartxyz/dekart:0.18
+    image: dekartxyz/dekart:0.17.0-rc.1
     platform: linux/amd64
     restart: always
     ports:
