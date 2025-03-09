@@ -1,6 +1,6 @@
 import Button from 'antd/es/button'
 import Modal from 'antd/es/modal'
-import { GlobalOutlined, LockOutlined, TeamOutlined, LinkOutlined, UserAddOutlined, DownloadOutlined } from '@ant-design/icons'
+import { BarChartOutlined, GlobalOutlined, LockOutlined, TeamOutlined, LinkOutlined, UserAddOutlined, DownloadOutlined } from '@ant-design/icons'
 import { useEffect, useState } from 'react'
 import styles from './ShareButton.module.css'
 import { useDispatch, useSelector } from 'react-redux'
@@ -8,6 +8,9 @@ import Switch from 'antd/es/switch'
 import { copyUrlToClipboard } from './actions/clipboard'
 import { allowExportDatasets, publishReport, setDiscoverable } from './actions/report'
 import Select from 'antd/es/select'
+import { setAnalyticsModalOpen } from './actions/analytics'
+import { track } from './lib/tracking'
+import AnalyticsModal from './AnalyticsModal'
 
 function CopyLinkButton () {
   const dispatch = useDispatch()
@@ -64,6 +67,29 @@ function PublishSwitch () {
   )
 }
 
+function ViewAnalytics () {
+  const { isPublic, canWrite, isPlayground } = useSelector(state => state.report)
+  const dispatch = useDispatch()
+  if (
+    !canWrite || // show for authors and editors
+    isPlayground // show for public reports
+  ) {
+    return null
+  }
+  return (
+    <div className={styles.viewAnalytics}>
+      <Button
+        type='link' onClick={() => {
+          dispatch(setAnalyticsModalOpen(true))
+          track('OpenAnalyticsModal')
+        }} icon={<BarChartOutlined />} size='small' disabled={!isPublic}
+      >
+        View analytics
+      </Button>
+    </div>
+  )
+}
+
 function PublicPermissions () {
   const { isPublic, isPlayground, canWrite } = useSelector(state => state.report)
 
@@ -79,6 +105,7 @@ function PublicPermissions () {
       <div className={styles.boolStatusLabel}>
         <div className={styles.statusLabelTitle}>Anyone on the internet with the link can view</div>
         <div className={styles.statusLabelDescription}><PublishSwitchDescription /></div>
+        <ViewAnalytics />
       </div>
       <div className={styles.boolStatusControl}>
         <PublishSwitch />
@@ -259,6 +286,12 @@ export default function ShareButton () {
   const [modalOpen, setModalOpen] = useState(false)
   const workspaceId = useSelector(state => state.user.stream?.workspaceId)
   const { isPublic, isPlayground, discoverable } = useSelector(state => state.report)
+  const analyticsModalOpen = useSelector(state => state.analytics.modalOpen)
+  useEffect(() => {
+    if (analyticsModalOpen) {
+      setModalOpen(false)
+    }
+  }, [analyticsModalOpen])
   let icon = <LockOutlined />
   if (isPublic || isPlayground) {
     icon = <GlobalOutlined />
@@ -294,6 +327,7 @@ export default function ShareButton () {
       >
         <ModalContent />
       </Modal>
+      <AnalyticsModal />
     </>
   )
 }

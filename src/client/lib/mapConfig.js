@@ -55,7 +55,7 @@ function checkMapConfig (kepler, mapConfigInputStr, dispatch, datasets) {
       }
     }
     checkMapConfigTimer = null
-  }, 500)
+  }, 0) // zero otherwise it may skip local update, then see that config changed and re-upload data
   return () => {
     if (checkMapConfigTimer) {
       clearTimeout(checkMapConfigTimer)

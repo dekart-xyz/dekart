@@ -211,6 +211,15 @@ type DekartGetUsage = {
   readonly responseType: typeof proto_dekart_pb.GetUsageResponse;
 };
 
+type DekartGetReportAnalytics = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof proto_dekart_pb.GetReportAnalyticsRequest;
+  readonly responseType: typeof proto_dekart_pb.GetReportAnalyticsResponse;
+};
+
 type DekartCreateConnection = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -362,6 +371,7 @@ export class Dekart {
   static readonly GetReportListStream: DekartGetReportListStream;
   static readonly GetUserStream: DekartGetUserStream;
   static readonly GetUsage: DekartGetUsage;
+  static readonly GetReportAnalytics: DekartGetReportAnalytics;
   static readonly CreateConnection: DekartCreateConnection;
   static readonly GetGcpProjectList: DekartGetGcpProjectList;
   static readonly UpdateConnection: DekartUpdateConnection;
@@ -592,6 +602,15 @@ export class DekartClient {
   getUsage(
     requestMessage: proto_dekart_pb.GetUsageRequest,
     callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetUsageResponse|null) => void
+  ): UnaryResponse;
+  getReportAnalytics(
+    requestMessage: proto_dekart_pb.GetReportAnalyticsRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetReportAnalyticsResponse|null) => void
+  ): UnaryResponse;
+  getReportAnalytics(
+    requestMessage: proto_dekart_pb.GetReportAnalyticsRequest,
+    callback: (error: ServiceError|null, responseMessage: proto_dekart_pb.GetReportAnalyticsResponse|null) => void
   ): UnaryResponse;
   createConnection(
     requestMessage: proto_dekart_pb.CreateConnectionRequest,

@@ -42,6 +42,7 @@ const (
 	Dekart_GetReportListStream_FullMethodName     = "/Dekart/GetReportListStream"
 	Dekart_GetUserStream_FullMethodName           = "/Dekart/GetUserStream"
 	Dekart_GetUsage_FullMethodName                = "/Dekart/GetUsage"
+	Dekart_GetReportAnalytics_FullMethodName      = "/Dekart/GetReportAnalytics"
 	Dekart_CreateConnection_FullMethodName        = "/Dekart/CreateConnection"
 	Dekart_GetGcpProjectList_FullMethodName       = "/Dekart/GetGcpProjectList"
 	Dekart_UpdateConnection_FullMethodName        = "/Dekart/UpdateConnection"
@@ -92,6 +93,7 @@ type DekartClient interface {
 	GetUserStream(ctx context.Context, in *GetUserStreamRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GetUserStreamResponse], error)
 	// statistics
 	GetUsage(ctx context.Context, in *GetUsageRequest, opts ...grpc.CallOption) (*GetUsageResponse, error)
+	GetReportAnalytics(ctx context.Context, in *GetReportAnalyticsRequest, opts ...grpc.CallOption) (*GetReportAnalyticsResponse, error)
 	// connections
 	CreateConnection(ctx context.Context, in *CreateConnectionRequest, opts ...grpc.CallOption) (*CreateConnectionResponse, error)
 	GetGcpProjectList(ctx context.Context, in *GetGcpProjectListRequest, opts ...grpc.CallOption) (*GetGcpProjectListResponse, error)
@@ -377,6 +379,16 @@ func (c *dekartClient) GetUsage(ctx context.Context, in *GetUsageRequest, opts .
 	return out, nil
 }
 
+func (c *dekartClient) GetReportAnalytics(ctx context.Context, in *GetReportAnalyticsRequest, opts ...grpc.CallOption) (*GetReportAnalyticsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetReportAnalyticsResponse)
+	err := c.cc.Invoke(ctx, Dekart_GetReportAnalytics_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *dekartClient) CreateConnection(ctx context.Context, in *CreateConnectionRequest, opts ...grpc.CallOption) (*CreateConnectionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateConnectionResponse)
@@ -551,6 +563,7 @@ type DekartServer interface {
 	GetUserStream(*GetUserStreamRequest, grpc.ServerStreamingServer[GetUserStreamResponse]) error
 	// statistics
 	GetUsage(context.Context, *GetUsageRequest) (*GetUsageResponse, error)
+	GetReportAnalytics(context.Context, *GetReportAnalyticsRequest) (*GetReportAnalyticsResponse, error)
 	// connections
 	CreateConnection(context.Context, *CreateConnectionRequest) (*CreateConnectionResponse, error)
 	GetGcpProjectList(context.Context, *GetGcpProjectListRequest) (*GetGcpProjectListResponse, error)
@@ -647,6 +660,9 @@ func (UnimplementedDekartServer) GetUserStream(*GetUserStreamRequest, grpc.Serve
 }
 func (UnimplementedDekartServer) GetUsage(context.Context, *GetUsageRequest) (*GetUsageResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUsage not implemented")
+}
+func (UnimplementedDekartServer) GetReportAnalytics(context.Context, *GetReportAnalyticsRequest) (*GetReportAnalyticsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetReportAnalytics not implemented")
 }
 func (UnimplementedDekartServer) CreateConnection(context.Context, *CreateConnectionRequest) (*CreateConnectionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateConnection not implemented")
@@ -1104,6 +1120,24 @@ func _Dekart_GetUsage_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Dekart_GetReportAnalytics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetReportAnalyticsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).GetReportAnalytics(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_GetReportAnalytics_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).GetReportAnalytics(ctx, req.(*GetReportAnalyticsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Dekart_CreateConnection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateConnectionRequest)
 	if err := dec(in); err != nil {
@@ -1442,6 +1476,10 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUsage",
 			Handler:    _Dekart_GetUsage_Handler,
+		},
+		{
+			MethodName: "GetReportAnalytics",
+			Handler:    _Dekart_GetReportAnalytics_Handler,
 		},
 		{
 			MethodName: "CreateConnection",
