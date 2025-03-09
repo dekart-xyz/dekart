@@ -3,6 +3,48 @@
 
 import * as jspb from "google-protobuf";
 
+export class GetReportAnalyticsRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetReportAnalyticsRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: GetReportAnalyticsRequest): GetReportAnalyticsRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetReportAnalyticsRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetReportAnalyticsRequest;
+  static deserializeBinaryFromReader(message: GetReportAnalyticsRequest, reader: jspb.BinaryReader): GetReportAnalyticsRequest;
+}
+
+export namespace GetReportAnalyticsRequest {
+  export type AsObject = {
+    reportId: string,
+  }
+}
+
+export class GetReportAnalyticsResponse extends jspb.Message {
+  hasAnalytics(): boolean;
+  clearAnalytics(): void;
+  getAnalytics(): ReportAnalytics | undefined;
+  setAnalytics(value?: ReportAnalytics): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetReportAnalyticsResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: GetReportAnalyticsResponse): GetReportAnalyticsResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetReportAnalyticsResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetReportAnalyticsResponse;
+  static deserializeBinaryFromReader(message: GetReportAnalyticsResponse, reader: jspb.BinaryReader): GetReportAnalyticsResponse;
+}
+
+export namespace GetReportAnalyticsResponse {
+  export type AsObject = {
+    analytics?: ReportAnalytics.AsObject,
+  }
+}
+
 export class AddReadmeRequest extends jspb.Message {
   getReportId(): string;
   setReportId(value: string): void;
@@ -1617,6 +1659,34 @@ export class Readme extends jspb.Message {
 export namespace Readme {
   export type AsObject = {
     markdown: string,
+  }
+}
+
+export class ReportAnalytics extends jspb.Message {
+  getViewersTotal(): number;
+  setViewersTotal(value: number): void;
+
+  getViewers7d(): number;
+  setViewers7d(value: number): void;
+
+  getViewers24h(): number;
+  setViewers24h(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): ReportAnalytics.AsObject;
+  static toObject(includeInstance: boolean, msg: ReportAnalytics): ReportAnalytics.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: ReportAnalytics, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): ReportAnalytics;
+  static deserializeBinaryFromReader(message: ReportAnalytics, reader: jspb.BinaryReader): ReportAnalytics;
+}
+
+export namespace ReportAnalytics {
+  export type AsObject = {
+    viewersTotal: number,
+    viewers7d: number,
+    viewers24h: number,
   }
 }
 

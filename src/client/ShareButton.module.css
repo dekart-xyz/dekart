@@ -20,6 +20,12 @@
     color: #666;
 }
 
+.viewAnalytics {
+    font-size: 0.8em;
+    margin-top: 5px;
+    margin-left: -7px;
+}
+
 .workspaceStatusIcon {
     font-size: 1.2em;
     position: relative;

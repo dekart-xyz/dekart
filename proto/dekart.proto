@@ -40,6 +40,7 @@ service Dekart {
 
     //statistics
     rpc GetUsage(GetUsageRequest) returns (GetUsageResponse) {}
+    rpc GetReportAnalytics(GetReportAnalyticsRequest) returns (GetReportAnalyticsResponse) {}
 
     //connections
     rpc CreateConnection(CreateConnectionRequest) returns (CreateConnectionResponse) {}
@@ -49,8 +50,6 @@ service Dekart {
     rpc GetConnectionList(GetConnectionListRequest) returns (GetConnectionListResponse) {}
     rpc TestConnection(TestConnectionRequest) returns (TestConnectionResponse) {}
     rpc SetDefaultConnection(SetDefaultConnectionRequest) returns (SetDefaultConnectionResponse) {}
-
-    //CLOUD
 
     //user
     rpc RespondToInvite(RespondToInviteRequest) returns (RespondToInviteResponse) {}
@@ -64,6 +63,14 @@ service Dekart {
     rpc UpdateWorkspace(UpdateWorkspaceRequest) returns (UpdateWorkspaceResponse) {}
     rpc GetWorkspace(GetWorkspaceRequest) returns (GetWorkspaceResponse) {}
     rpc UpdateWorkspaceUser(UpdateWorkspaceUserRequest) returns (UpdateWorkspaceUserResponse) {}
+}
+
+message GetReportAnalyticsRequest {
+    string report_id = 1;
+}
+
+message GetReportAnalyticsResponse {
+    ReportAnalytics analytics = 1;
 }
 
 message AddReadmeRequest {
@@ -444,6 +451,12 @@ message ReportListResponse {
 
 message Readme {
     string markdown = 1;
+}
+
+message ReportAnalytics {
+    int64 viewers_total = 1;
+    int64 viewers_7d = 2;
+    int64 viewers_24h = 3;
 }
 
 message Report {

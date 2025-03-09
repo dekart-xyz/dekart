@@ -22,6 +22,7 @@ import { queryChanged, queryParamChanged, updateQueryParamsFromQueries } from '.
 import sessionStorage from './sessionStorageReducer'
 import readme from './readmeReducer'
 import { setReadmeValue } from '../actions/readme'
+import analytics from './analyticsReducer'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
   uiState: {
@@ -284,5 +285,6 @@ export default combineReducers({
   queryJobs,
   numRunningQueries,
   sessionStorage,
-  readme
+  readme,
+  analytics
 })

@@ -20,6 +20,12 @@ import (
 func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStreamServer, sequence int64) error {
 	ctx := srv.Context()
 
+	claims := user.GetClaims(ctx)
+
+	if claims == nil {
+		return Unauthenticated
+	}
+
 	report, err := s.getReport(ctx, reportID)
 	if err != nil {
 		log.Err(err).Msg("Cannot retrieve report")
@@ -29,6 +35,20 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 		err := fmt.Errorf("report %s not found", reportID)
 		log.Warn().Err(err).Send()
 		return status.Errorf(codes.NotFound, err.Error())
+	}
+
+	// update report_analytics
+	_, err = s.db.ExecContext(ctx,
+		`insert into report_analytics (report_id, email)
+		values ($1, $2)
+		on conflict (report_id, email) do update set updated_at = CURRENT_TIMESTAMP,
+		num_views = report_analytics.num_views + 1`,
+		reportID,
+		claims.Email,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return status.Errorf(codes.Internal, err.Error())
 	}
 
 	datasets, err := s.getDatasets(ctx, reportID)
