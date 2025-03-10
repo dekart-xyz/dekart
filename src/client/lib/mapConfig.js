@@ -55,7 +55,7 @@ function checkMapConfig (kepler, mapConfigInputStr, dispatch, datasets) {
       }
     }
     checkMapConfigTimer = null
-  }, 500)
+  }, 0)
   return () => {
     if (checkMapConfigTimer) {
       clearTimeout(checkMapConfigTimer)
