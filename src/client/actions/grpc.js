@@ -53,15 +53,16 @@ class CancelableRequest {
     this.cancel = this.cancel.bind(this)
   }
 
-  setInvokeRequest ({ cancel }) {
+  setInvokeRequest (req) {
     if (this.canceled) {
-      throw new Error('Request already canceled')
+      // cancel the request if it was canceled before it was set
+      req.close()
     }
-    this.cancelInvoke = cancel
+    this.cancelInvoke = req.close
   }
 
   cancel () {
-    if (this.cancelInvoke) {
+    if (this.cancelInvoke && !this.canceled) {
       this.cancelInvoke()
     }
     this.canceled = true
@@ -77,7 +78,7 @@ class GrpcError extends Error {
 }
 
 export function grpcStream (endpoint, request, cb) {
-  return async (dispatch, getState) => {
+  return (dispatch, getState) => {
     const { token, user: { isPlayground } } = getState()
     const headers = new window.Headers()
     if (token) {
@@ -86,36 +87,60 @@ export function grpcStream (endpoint, request, cb) {
     if (isPlayground) {
       headers.append('X-Dekart-Playground', 'true')
     }
-    const cancelable = getStream(
-      endpoint,
-      request,
-      (mes) => {
-        const err = cb(mes, null)
-        if (err) {
-          if (err instanceof GrpcError) {
-            // TODO: fix naming of streamError
-            dispatch(setStreamError(err.code, err.message))
-          } else {
-            dispatch(setError(err))
-          }
-        }
-      },
-      (code, message) => {
-        const err = cb(null, new GrpcError(message, code))
+    const onMessage = (message) => {
+      const err = cb(message, null)
+      if (err) {
         if (err instanceof GrpcError) {
           dispatch(setStreamError(err.code, err.message))
         } else {
           dispatch(setError(err))
         }
-      },
+      }
+    }
+    const onError = (code, message) => {
+      const err = cb(null, new GrpcError(message, code))
+      if (err instanceof GrpcError) {
+        dispatch(setStreamError(err.code, err.message))
+      } else {
+        dispatch(setError(err))
+      }
+    }
+    let cancelable = getStream(
+      endpoint,
+      request,
+      onMessage,
+      onError,
       headers
     )
     dispatch({ type: grpcStream.name, endpoint, cancelable })
 
-    // avoid error on page reload
-    window.addEventListener('beforeunload', () => {
-      dispatch(grpcStreamCancel(endpoint))
-    })
+    const cancelOnVisibilityChange = () => {
+      if (document.hidden) {
+        // close streams when tab is hidden
+        // prevents blocking connections for multiple tabs
+        document.removeEventListener('visibilitychange', cancelOnVisibilityChange)
+        dispatch(grpcStreamCancel(endpoint))
+        document.addEventListener('visibilitychange', resumeOnVisibilityChange)
+      }
+    }
+
+    const resumeOnVisibilityChange = () => {
+      if (!document.hidden) {
+        // resume streams when tab is visible
+        document.removeEventListener('visibilitychange', resumeOnVisibilityChange)
+        cancelable = getStream(
+          endpoint,
+          request,
+          onMessage,
+          onError,
+          headers
+        )
+        dispatch({ type: grpcStream.name, endpoint, cancelable })
+        document.addEventListener('visibilitychange', cancelOnVisibilityChange)
+      }
+    }
+
+    document.addEventListener('visibilitychange', cancelOnVisibilityChange)
   }
 }
 

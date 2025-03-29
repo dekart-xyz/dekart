@@ -198,9 +198,14 @@ export default function App () {
     if (!loadData) {
       return
     }
-    dispatch(subscribeUserStream())
-    dispatch(getUsage())
+    // prevent open stream twice on first render
+    const t = setTimeout(() => {
+      dispatch(subscribeUserStream())
+      dispatch(getUsage())
+    }
+    , 0)
     return () => {
+      clearTimeout(t)
       dispatch(unsubscribeUserStream())
     }
   }, [dispatch, loadData])
