@@ -202,7 +202,6 @@ export function saveConnection (id, connectionType, connectionProps) {
       } else if (prevConnection.bigqueryKey) { // bigquery service account key
         connection.setConnectionName(connectionProps.connectionName)
         connection.setCloudStorageBucket(connectionProps.cloudStorageBucket)
-        console.log('bigqueryKey', connectionProps.newBigqueryKey)
         if (connectionProps.newBigqueryKey) {
           // update key only if it was changed, otherwise it's just a placeholder
           const secret = new Secret()
