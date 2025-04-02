@@ -427,8 +427,13 @@ export default function HomePage ({ reportFilter }) {
   const dispatch = useDispatch()
   const body = useRef()
   useEffect(() => {
-    dispatch(subscribeReports())
-    return () => dispatch(unsubscribeReports())
+    const t = setTimeout(() => {
+      dispatch(subscribeReports())
+    }, 0)
+    return () => {
+      clearTimeout(t)
+      dispatch(unsubscribeReports())
+    }
   }, [dispatch])
   return (
     <div className={styles.homePage}>

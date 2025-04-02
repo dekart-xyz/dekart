@@ -365,8 +365,14 @@ export default function ReportPage ({ edit }) {
     if (!envLoaded) {
       return
     }
-    dispatch(openReport(id))
-    return () => dispatch(closeReport(id))
+    // prevent open stream twice on first render
+    const t = setTimeout(() => {
+      dispatch(openReport(id))
+    }, 0)
+    return () => {
+      clearTimeout(t)
+      dispatch(closeReport())
+    }
   }, [id, dispatch, envLoaded])
 
   useEffect(() => {
