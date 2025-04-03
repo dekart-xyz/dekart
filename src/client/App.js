@@ -22,6 +22,7 @@ import { loadLocalStorage } from './actions/localStorage'
 import { useHistory, useLocation } from 'react-router-dom/cjs/react-router-dom'
 import { Button } from 'antd'
 import { loadSessionStorage } from './actions/sessionStorage'
+import { Loading } from './Loading'
 
 // RedirectState reads states passed in the URL from the server
 function RedirectState () {
@@ -213,7 +214,7 @@ export default function App () {
   // do not render until storage is loaded and environment is loaded
   const startRender = loadData || page401 || status === 401
   if (!startRender) {
-    return null
+    return <Loading />
   }
   return (
     <Router>
