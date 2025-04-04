@@ -64,5 +64,9 @@ func (h StaticFilesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // ServeIndex serves index.html
 func (h StaticFilesHandler) ServeIndex(w http.ResponseWriter, r *http.Request) {
+	// Set caching headers for index.html
+	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate") // Prevent caching
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Expires", "0")
 	http.ServeContent(w, r, "index.html", h.indexFileModTime, bytes.NewReader(h.indexFileBuffer))
 }

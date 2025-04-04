@@ -115,6 +115,9 @@ export function grpcStream (endpoint, request, cb) {
     dispatch({ type: grpcStream.name, endpoint, cancelable })
 
     const cancelOnVisibilityChange = () => {
+      if (cancelable && cancelable.canceled) {
+        return
+      }
       if (document.hidden) {
         // close streams when tab is hidden
         // prevents blocking connections for multiple tabs
