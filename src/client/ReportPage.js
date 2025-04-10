@@ -29,6 +29,7 @@ import Readme from './Readme'
 import { addReadme, removeReadme, showReadmeTab } from './actions/readme'
 import Modal from 'antd/es/modal'
 import { MapControlButton } from '@dekart-xyz/kepler.gl/dist/components/common/styled-components'
+import { Loading } from './Loading'
 
 function TabIcon ({ job }) {
   let iconColor = 'transparent'
@@ -382,7 +383,7 @@ export default function ReportPage ({ edit }) {
   useCheckMapConfig()
 
   if (!report) {
-    return null
+    return <Loading />
   }
 
   return (

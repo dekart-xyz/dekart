@@ -112,13 +112,17 @@ func (s Server) getConnectionFromFileID(ctx context.Context, fileID string) (*pr
 func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.Connection, error) {
 
 	if connectionID == "default" || connectionID == "" {
-		return &proto.Connection{
+		con := proto.Connection{
 			Id:                 "default",
 			ConnectionName:     "default",
 			CloudStorageBucket: storage.GetDefaultBucketName(),
 			BigqueryProjectId:  os.Getenv("DEKART_BIGQUERY_PROJECT_ID"),
 			IsDefault:          true,
-		}, nil
+		}
+		if con.CloudStorageBucket != "" {
+			con.CanStoreFiles = true
+		}
+		return &con, nil
 	}
 
 	res, err := s.db.QueryContext(ctx, `
