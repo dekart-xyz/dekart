@@ -48,6 +48,13 @@ function User ({ buttonDivider }) {
         history.push('/workspace')
       }
     })
+  } else {
+    items.push({
+      label: 'Switch to workspace',
+      onClick: () => {
+        history.push('/workspace')
+      }
+    })
   }
 
   if (token) {
@@ -82,7 +89,7 @@ function User ({ buttonDivider }) {
     >
       <Dropdown
         overlayClassName={styles.userDropdown} menu={{ items }}
-      ><Avatar>{getSignature(userStream && userStream.email)}</Avatar>
+      ><Avatar id='dekart-avatar'>{getSignature(userStream && userStream.email)}</Avatar>
       </Dropdown>
     </div>
   )
