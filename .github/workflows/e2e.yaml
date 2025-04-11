@@ -234,6 +234,7 @@ jobs:
             -e DEKART_SNOWFLAKE_ACCOUNT_ID=${{ secrets.SNOWFLAKE_ACCOUNT_ID }} \
             -e DEKART_SNOWFLAKE_USER=${{ secrets.SNOWFLAKE_USER }} \
             -e DEKART_SNOWFLAKE_PASSWORD=${{ secrets.SNOWFLAKE_PASSWORD }} \
+            -e DEKART_SNOWFLAKE_PRIVATE_KEY=${{ secrets.DEKART_SNOWFLAKE_PRIVATE_KEY }} \
             -e DEKART_DEV_CLAIMS_EMAIL=test@gmail.com \
             -e DEKART_REQUIRE_AMAZON_OIDC=1 \
             dekartxyz/dekart:${{ env.IMAGE_CACHE_KEY }}
