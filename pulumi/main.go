@@ -104,6 +104,9 @@ func main() {
 				"DEKART_BIGQUERY_MAX_BYTES_BILLED":   pulumi.String("107374182400"),
 				"DEKART_CORS_ORIGIN":                 pulumi.String("null"),
 				"DEKART_DATA_ENCRYPTION_KEY":         pulumi.String("projects/398860824064/secrets/dekart-prod-user-data-encoding-key/versions/1"),
+				"DEKART_ALLOW_WORKSPACE_CREATION":    pulumi.String("1"),
+				"DEKART_UX_DISABLE_VERSION_CHECK":    pulumi.String("1"),
+				"DEKART_CLOUD":                       pulumi.String("1"),
 			},
 			Deployment: &appengine.FlexibleAppVersionDeploymentArgs{
 				Container: &appengine.FlexibleAppVersionDeploymentContainerArgs{
