@@ -201,7 +201,6 @@ function BigQueryConnectionModal ({ form }) {
   const { id, loading } = dialog
   const dispatch = useDispatch()
   const connection = useSelector(state => state.connection.list.find(s => s.id === id))
-
   useEffect(() => {
     track('BigQueryConnectionModal')
   }, [])

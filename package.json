@@ -1,10 +1,10 @@
 {
   "name": "dekart",
-  "version": "0.17.1",
+  "version": "0.18.3",
   "private": true,
   "dependencies": {
     "@dekart-xyz/kepler.gl": "2.5.5-fix.5",
-    "@improbable-eng/grpc-web": "^0.13.0",
+    "@improbable-eng/grpc-web": "^0.15.0",
     "@testing-library/jest-dom": "^5.11.6",
     "@testing-library/react": "^11.2.2",
     "@testing-library/user-event": "^12.5.0",

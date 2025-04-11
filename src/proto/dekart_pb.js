@@ -8170,10 +8170,12 @@ proto.GetUserStreamResponse.toObject = function(includeInstance, msg) {
     streamOptions: (f = msg.getStreamOptions()) && proto.StreamOptions.toObject(includeInstance, f),
     connectionUpdate: jspb.Message.getFieldWithDefault(msg, 2, 0),
     email: jspb.Message.getFieldWithDefault(msg, 3, ""),
-    workspaceId: jspb.Message.getFieldWithDefault(msg, 101, ""),
-    planType: jspb.Message.getFieldWithDefault(msg, 102, 0),
-    workspaceUpdate: jspb.Message.getFieldWithDefault(msg, 103, 0),
-    role: jspb.Message.getFieldWithDefault(msg, 104, 0)
+    workspaceId: jspb.Message.getFieldWithDefault(msg, 4, ""),
+    planType: jspb.Message.getFieldWithDefault(msg, 5, 0),
+    workspaceUpdate: jspb.Message.getFieldWithDefault(msg, 6, 0),
+    role: jspb.Message.getFieldWithDefault(msg, 7, 0),
+    isPlayground: jspb.Message.getBooleanFieldWithDefault(msg, 8, false),
+    isDefaultWorkspace: jspb.Message.getBooleanFieldWithDefault(msg, 9, false)
   };
 
   if (includeInstance) {
@@ -8223,21 +8225,29 @@ proto.GetUserStreamResponse.deserializeBinaryFromReader = function(msg, reader) 
       var value = /** @type {string} */ (reader.readString());
       msg.setEmail(value);
       break;
-    case 101:
+    case 4:
       var value = /** @type {string} */ (reader.readString());
       msg.setWorkspaceId(value);
       break;
-    case 102:
+    case 5:
       var value = /** @type {!proto.PlanType} */ (reader.readEnum());
       msg.setPlanType(value);
       break;
-    case 103:
+    case 6:
       var value = /** @type {number} */ (reader.readInt64());
       msg.setWorkspaceUpdate(value);
       break;
-    case 104:
+    case 7:
       var value = /** @type {!proto.UserRole} */ (reader.readEnum());
       msg.setRole(value);
+      break;
+    case 8:
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setIsPlayground(value);
+      break;
+    case 9:
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setIsDefaultWorkspace(value);
       break;
     default:
       reader.skipField();
@@ -8293,28 +8303,42 @@ proto.GetUserStreamResponse.serializeBinaryToWriter = function(message, writer) 
   f = message.getWorkspaceId();
   if (f.length > 0) {
     writer.writeString(
-      101,
+      4,
       f
     );
   }
   f = message.getPlanType();
   if (f !== 0.0) {
     writer.writeEnum(
-      102,
+      5,
       f
     );
   }
   f = message.getWorkspaceUpdate();
   if (f !== 0) {
     writer.writeInt64(
-      103,
+      6,
       f
     );
   }
   f = message.getRole();
   if (f !== 0.0) {
     writer.writeEnum(
-      104,
+      7,
+      f
+    );
+  }
+  f = message.getIsPlayground();
+  if (f) {
+    writer.writeBool(
+      8,
+      f
+    );
+  }
+  f = message.getIsDefaultWorkspace();
+  if (f) {
+    writer.writeBool(
+      9,
       f
     );
   }
@@ -8395,11 +8419,11 @@ proto.GetUserStreamResponse.prototype.setEmail = function(value) {
 
 
 /**
- * optional string workspace_id = 101;
+ * optional string workspace_id = 4;
  * @return {string}
  */
 proto.GetUserStreamResponse.prototype.getWorkspaceId = function() {
-  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 101, ""));
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 4, ""));
 };
 
 
@@ -8408,16 +8432,16 @@ proto.GetUserStreamResponse.prototype.getWorkspaceId = function() {
  * @return {!proto.GetUserStreamResponse} returns this
  */
 proto.GetUserStreamResponse.prototype.setWorkspaceId = function(value) {
-  return jspb.Message.setProto3StringField(this, 101, value);
+  return jspb.Message.setProto3StringField(this, 4, value);
 };
 
 
 /**
- * optional PlanType plan_type = 102;
+ * optional PlanType plan_type = 5;
  * @return {!proto.PlanType}
  */
 proto.GetUserStreamResponse.prototype.getPlanType = function() {
-  return /** @type {!proto.PlanType} */ (jspb.Message.getFieldWithDefault(this, 102, 0));
+  return /** @type {!proto.PlanType} */ (jspb.Message.getFieldWithDefault(this, 5, 0));
 };
 
 
@@ -8426,16 +8450,16 @@ proto.GetUserStreamResponse.prototype.getPlanType = function() {
  * @return {!proto.GetUserStreamResponse} returns this
  */
 proto.GetUserStreamResponse.prototype.setPlanType = function(value) {
-  return jspb.Message.setProto3EnumField(this, 102, value);
+  return jspb.Message.setProto3EnumField(this, 5, value);
 };
 
 
 /**
- * optional int64 workspace_update = 103;
+ * optional int64 workspace_update = 6;
  * @return {number}
  */
 proto.GetUserStreamResponse.prototype.getWorkspaceUpdate = function() {
-  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 103, 0));
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 6, 0));
 };
 
 
@@ -8444,16 +8468,16 @@ proto.GetUserStreamResponse.prototype.getWorkspaceUpdate = function() {
  * @return {!proto.GetUserStreamResponse} returns this
  */
 proto.GetUserStreamResponse.prototype.setWorkspaceUpdate = function(value) {
-  return jspb.Message.setProto3IntField(this, 103, value);
+  return jspb.Message.setProto3IntField(this, 6, value);
 };
 
 
 /**
- * optional UserRole role = 104;
+ * optional UserRole role = 7;
  * @return {!proto.UserRole}
  */
 proto.GetUserStreamResponse.prototype.getRole = function() {
-  return /** @type {!proto.UserRole} */ (jspb.Message.getFieldWithDefault(this, 104, 0));
+  return /** @type {!proto.UserRole} */ (jspb.Message.getFieldWithDefault(this, 7, 0));
 };
 
 
@@ -8462,7 +8486,43 @@ proto.GetUserStreamResponse.prototype.getRole = function() {
  * @return {!proto.GetUserStreamResponse} returns this
  */
 proto.GetUserStreamResponse.prototype.setRole = function(value) {
-  return jspb.Message.setProto3EnumField(this, 104, value);
+  return jspb.Message.setProto3EnumField(this, 7, value);
+};
+
+
+/**
+ * optional bool is_playground = 8;
+ * @return {boolean}
+ */
+proto.GetUserStreamResponse.prototype.getIsPlayground = function() {
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 8, false));
+};
+
+
+/**
+ * @param {boolean} value
+ * @return {!proto.GetUserStreamResponse} returns this
+ */
+proto.GetUserStreamResponse.prototype.setIsPlayground = function(value) {
+  return jspb.Message.setProto3BooleanField(this, 8, value);
+};
+
+
+/**
+ * optional bool is_default_workspace = 9;
+ * @return {boolean}
+ */
+proto.GetUserStreamResponse.prototype.getIsDefaultWorkspace = function() {
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 9, false));
+};
+
+
+/**
+ * @param {boolean} value
+ * @return {!proto.GetUserStreamResponse} returns this
+ */
+proto.GetUserStreamResponse.prototype.setIsDefaultWorkspace = function(value) {
+  return jspb.Message.setProto3BooleanField(this, 9, value);
 };
 
 
@@ -11796,7 +11856,11 @@ proto.GetEnvResponse.Variable.Type = {
   TYPE_AES_KEY: 16,
   TYPE_AES_IV: 17,
   TYPE_AUTH_ENABLED: 18,
-  TYPE_USER_DEFINED_CONNECTION: 19
+  TYPE_USER_DEFINED_CONNECTION: 19,
+  TYPE_UX_DISABLE_VERSION_CHECK: 20,
+  TYPE_ALLOW_WORKSPACE_CREATION: 21,
+  TYPE_WORKSPACE_DEFAULT_ROLE: 22,
+  TYPE_SECRETS_ENABLED: 23
 };
 
 /**
@@ -19080,7 +19144,8 @@ proto.PlanType = {
   TYPE_PERSONAL: 1,
   TYPE_TEAM: 2,
   TYPE_GROW: 3,
-  TYPE_MAX: 4
+  TYPE_MAX: 4,
+  TYPE_SELF_HOSTED: 5
 };
 
 /**

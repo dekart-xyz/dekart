@@ -56,3 +56,4 @@ jobs:
               - 'go.sum'
               - '.github/workflows/e2e.yaml'
               - 'migrations/**'
+              - 'Dockerfile'

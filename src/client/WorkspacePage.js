@@ -288,25 +288,30 @@ export function Workspace ({ nextStep, setNextStep }) {
                   title: 'Workspace',
                   icon: <AppstoreTwoTone />
                 },
-                {
-                  title: 'Plan',
-                  icon: <CreditCardOutlined />,
-                  disabled: !userStream.workspaceId
-                },
+                userStream.planType !== PlanType.TYPE_SELF_HOSTED
+                  ? {
+                      title: 'Plan',
+                      icon: <CreditCardOutlined />,
+                      disabled: !userStream.workspaceId
+                    }
+                  : null,
                 {
                   title: 'Members',
                   icon: <TeamOutlined />,
                   disabled: userStream.planType <= PlanType.TYPE_PERSONAL,
                   subTitle: getMembersSubTitle(addedUsersCount, planType)
                 }
-              ]}
+              ].filter(Boolean)}
             />
           </div>
 
           )
         : null}
 
-      {([<WorkspaceTab key={0} nextStep={nextStep} setNextStep={setNextStep} />, <SubscriptionTab key={1} />, <MembersTab key={2} />])[step]}
+      {([
+        <WorkspaceTab key={0} nextStep={nextStep} setNextStep={setNextStep} />,
+        userStream.planType !== PlanType.TYPE_SELF_HOSTED ? <SubscriptionTab key={1} /> : <MembersTab key={1} />,
+        <MembersTab key={2} />])[step]}
     </div>
   )
 }

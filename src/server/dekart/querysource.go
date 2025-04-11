@@ -80,7 +80,7 @@ func (s Server) storeQuerySync(ctx context.Context, queryID string, queryText st
 	newQuerySourceId := fmt.Sprintf("%x", h.Sum(nil))
 	// now we always store the query text in the database
 	result, err := s.db.ExecContext(ctx,
-		`update queries set query_text=$1, query_source_id=$2, query_source=$3, updated_at=now() where id=$4 and query_source_id=$5`,
+		`update queries set query_text=$1, query_source_id=$2, query_source=$3, updated_at=CURRENT_TIMESTAMP where id=$4 and query_source_id=$5`,
 		queryText,
 		newQuerySourceId,
 		proto.Query_QUERY_SOURCE_INLINE,
@@ -88,6 +88,7 @@ func (s Server) storeQuerySync(ctx context.Context, queryID string, queryText st
 		prevQuerySourceId,
 	)
 	if err != nil {
+		log.Err(err).Msg("Error updating query text")
 		return err
 	}
 	affectedRows, _ := result.RowsAffected()

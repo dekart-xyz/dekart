@@ -8,7 +8,11 @@ import { AuthState } from '../proto/dekart_pb'
 import classNames from 'classnames'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 import { authRedirect } from './actions/redirect'
+import Button from 'antd/es/button'
+import Tooltip from 'antd/es/tooltip'
+import { switchPlayground } from './actions/user'
 import localStorageReset from './actions/localStorage'
+import { GlobalOutlined, LockOutlined } from '@ant-design/icons'
 
 function getSignature (email) {
   if (!email) {
@@ -36,10 +40,21 @@ function User ({ buttonDivider }) {
     label: userStream && userStream.email,
     disabled: true
   }]
+
+  if (!isPlayground) {
+    items.push({
+      label: 'Manage workspace',
+      onClick: () => {
+        history.push('/workspace')
+      }
+    })
+  }
+
   if (token) {
     items.push({
       label: 'Switch account',
       onClick: () => {
+        dispatch(localStorageReset())
         const state = new AuthState()
         state.setUiUrl(window.location.href)
         state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
@@ -50,6 +65,7 @@ function User ({ buttonDivider }) {
     items.push({
       label: 'Sign out',
       onClick: () => {
+        dispatch(localStorageReset())
         const state = new AuthState()
         state.setUiUrl(window.location.href)
         state.setAction(AuthState.Action.ACTION_REVOKE)
@@ -65,59 +81,54 @@ function User ({ buttonDivider }) {
     )}
     >
       <Dropdown
-        overlayClassName={styles.userDropdown} menu={{
-          items: [
-            {
-              label: userStream && userStream.email,
-              disabled: true
-            },
-            !isPlayground
-              ? {
-                  label: 'Manage workspace',
-                  onClick: () => {
-                    history.push('/workspace')
-                  }
-                }
-              : undefined,
-            isPlayground
-              ? {
-                  label: 'Switch to workspace',
-                  onClick: () => {
-                    history.push('/workspace')
-                  }
-                }
-              : {
-                  label: 'Public playground',
-                  onClick: () => {
-                    history.push('/playground')
-                  }
-                },
-            {
-              label: 'Switch account',
-              onClick: () => {
-                dispatch(localStorageReset())
-                const state = new AuthState()
-                state.setUiUrl(window.location.href)
-                state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
-                state.setSwitchAccount(true)
-                dispatch(authRedirect(state))
-              }
-            },
-            {
-              label: 'Sign out',
-              onClick: () => {
-                dispatch(localStorageReset())
-                const state = new AuthState()
-                state.setUiUrl(window.location.href)
-                state.setAction(AuthState.Action.ACTION_REVOKE)
-                state.setAccessTokenToRevoke(token.access_token)
-                dispatch(authRedirect(state))
-              }
-            }
-          ]
-        }}
-      ><Avatar id='dekart-avatar'>{getSignature(userStream && userStream.email)}</Avatar>
+        overlayClassName={styles.userDropdown} menu={{ items }}
+      ><Avatar>{getSignature(userStream && userStream.email)}</Avatar>
       </Dropdown>
+    </div>
+  )
+}
+
+export function Workspace () {
+  const workspaceName = useSelector(state => state.workspace?.name)
+  const isPlayground = useSelector(state => state.user.isPlayground)
+  const env = useSelector(state => state.env)
+  const { ALLOW_WORKSPACE_CREATION } = env.variables
+  const history = useHistory()
+  if (!workspaceName || isPlayground || !ALLOW_WORKSPACE_CREATION) {
+    return null
+  }
+  return (
+    <div className={styles.workspace}>
+      <Tooltip title={<>You are in private workspace.<br />Click to manage workspace access.</>}><Button type='link' size='small' onClick={() => history.push('/workspace')} className={styles.workspaceButton}><LockOutlined />{workspaceName}</Button></Tooltip>
+    </div>
+  )
+}
+
+export function PlaygroundMode () {
+  const isPlayground = useSelector(state => state.user.isPlayground)
+  const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
+  const dispatch = useDispatch()
+
+  if (!isPlayground || isDefaultWorkspace) {
+    return null
+  }
+
+  return (
+    <div className={styles.playground}>
+      <Tooltip title={
+        (
+          <div className={styles.playgroundTooltip}>
+            <div>Public playground mode is enabled. Your queries are public. Only public datasets are accessible.</div>
+            <Button
+              size='small' type='link' onClick={() => dispatch(switchPlayground(false))}
+            >Switch to private workspace
+            </Button>
+          </div>
+        )
+      }
+      >
+        <Button id='dekart-playground-mode-button' type='link' size='small' className={styles.playgroundButton}><GlobalOutlined /> Playground Mode</Button>
+      </Tooltip>
     </div>
   )
 }

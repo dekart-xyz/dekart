@@ -91,7 +91,7 @@ func (j *Job) pullQueryExecutionStatus() (*athena.QueryExecution, error) {
 			}
 			status := *out.QueryExecution.Status.State
 			switch status {
-			case "RUNNING":
+			case "RUNNING", "QUEUED":
 				continue
 			case "SUCCEEDED":
 				return out.QueryExecution, nil

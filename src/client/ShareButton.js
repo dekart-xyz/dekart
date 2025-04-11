@@ -11,6 +11,7 @@ import Select from 'antd/es/select'
 import { setAnalyticsModalOpen } from './actions/analytics'
 import { track } from './lib/tracking'
 import AnalyticsModal from './AnalyticsModal'
+import { PlanType } from '../proto/dekart_pb'
 
 function CopyLinkButton () {
   const dispatch = useDispatch()
@@ -30,7 +31,10 @@ function CopyLinkButton () {
 
 function PublishSwitchDescription () {
   const { isPublic, isPlayground, canWrite } = useSelector(state => state.report)
+  const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
   switch (true) {
+    case isPlayground && isDefaultWorkspace:
+      return <>Everyone in the workspace can edit this report</>
     case isPlayground:
       return <>Playground reports are always public</>
     case isPublic && canWrite:
@@ -92,7 +96,12 @@ function ViewAnalytics () {
 
 function PublicPermissions () {
   const { isPublic, isPlayground, canWrite } = useSelector(state => state.report)
+  const planType = useSelector(state => state.user.stream?.planType)
 
+  if (planType === PlanType.TYPE_SELF_HOSTED || planType === PlanType.TYPE_UNSPECIFIED) {
+    // do not show feature for self-hosted users yet
+    return null
+  }
   if (
     !canWrite && // show for authors and editors
     !isPublic && !isPlayground // show for public reports
@@ -103,7 +112,7 @@ function PublicPermissions () {
     <div className={styles.boolStatus}>
       <div className={styles.boolStatusIcon}><GlobalOutlined /></div>
       <div className={styles.boolStatusLabel}>
-        <div className={styles.statusLabelTitle}>Anyone on the internet with the link can view</div>
+        <div className={styles.statusLabelTitle}>Anyone with the link can view</div>
         <div className={styles.statusLabelDescription}><PublishSwitchDescription /></div>
         <ViewAnalytics />
       </div>
@@ -246,6 +255,10 @@ function WorkspacePermissionsSelect () {
 }
 function WorkspacePermissions () {
   const { canWrite, discoverable } = useSelector(state => state.report)
+  const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
+  if (isDefaultWorkspace) {
+    return null
+  }
   if (!canWrite && !discoverable) { // show only for discoverable workspace reports
     return null
   }
@@ -292,8 +305,11 @@ export default function ShareButton () {
       setModalOpen(false)
     }
   }, [analyticsModalOpen])
+  const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
   let icon = <LockOutlined />
-  if (isPublic || isPlayground) {
+  if (isDefaultWorkspace) {
+    icon = <LinkOutlined />
+  } else if (isPublic || isPlayground) {
     icon = <GlobalOutlined />
   } else if (discoverable) {
     icon = <TeamOutlined />

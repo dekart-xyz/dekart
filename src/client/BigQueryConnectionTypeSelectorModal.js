@@ -3,12 +3,13 @@ import Modal from 'antd/es/modal/Modal'
 import styles from './BigQueryConnectionTypeSelectorModal.module.css'
 import { newConnection } from './actions/connection'
 import { ConnectionType } from '../proto/dekart_pb'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { useEffect } from 'react'
 import { track } from './lib/tracking'
 
 export default function BigQueryConnectionTypeSelectorModal ({ open, onClose }) {
   const dispatch = useDispatch()
+  const secretsEnabled = useSelector(state => state.env.secretsEnabled)
   useEffect(() => {
     if (open) {
       track('OpenBigQueryConnectionTypeSelectorModal')
@@ -63,6 +64,8 @@ export default function BigQueryConnectionTypeSelectorModal ({ open, onClose }) 
           <p>
             <Button
               type='primary'
+              disabled={!secretsEnabled}
+              title={secretsEnabled ? '' : 'Feature is disabled by admin'}
               onClick={() => {
                 onClose()
                 dispatch(newConnection(ConnectionType.CONNECTION_TYPE_BIGQUERY, true))

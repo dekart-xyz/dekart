@@ -2,12 +2,15 @@ package storage
 
 import (
 	"context"
+	"crypto/tls"
 	"dekart/src/proto"
 	"dekart/src/server/bqutils"
 	"dekart/src/server/conn"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/storage"
@@ -83,11 +86,14 @@ func NewGoogleCloudStorage() *GoogleCloudStorage {
 func NewPublicStorage() *GoogleCloudStorage {
 	defaultBucketName := os.Getenv("DEKART_CLOUD_PUBLIC_STORAGE_BUCKET")
 	if defaultBucketName == "" {
-		log.Fatal().Msg("DEKART_CLOUD_PUBLIC_STORAGE_BUCKET is not set")
+		defaultBucketName = os.Getenv("DEKART_CLOUD_STORAGE_BUCKET")
+	}
+	if defaultBucketName == "" {
+		log.Fatal().Msg("DEKART_CLOUD_PUBLIC_STORAGE_BUCKET and DEKART_CLOUD_STORAGE_BUCKET are not set")
 	}
 	return &GoogleCloudStorage{
 		defaultBucketName,
-		log.With().Str("DEKART_CLOUD_PUBLIC_STORAGE_BUCKET", defaultBucketName).Logger(),
+		log.With().Str("defaultBucketName", defaultBucketName).Logger(),
 		false,
 	}
 }
@@ -248,6 +254,25 @@ func NewS3Storage() Storage {
 	conf := aws.NewConfig().
 		WithMaxRetries(3).
 		WithS3ForcePathStyle(true)
+
+	endpoint := os.Getenv("AWS_ENDPOINT")
+	if len(endpoint) > 0 {
+		conf = conf.WithEndpoint(endpoint)
+	}
+
+	region := os.Getenv("AWS_REGION")
+	if len(region) > 0 {
+		conf = conf.WithRegion(region)
+	}
+
+	insecureTLS := os.Getenv("AWS_INSECURE")
+	if strings.ToUpper(insecureTLS) == "TRUE" {
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+		conf = conf.WithHTTPClient(&http.Client{Transport: tr})
+	}
+
 	ses := session.Must(session.NewSession(conf))
 	s3client := s3.New(ses)
 	return S3Storage{

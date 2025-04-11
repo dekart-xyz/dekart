@@ -1,4 +1,4 @@
-.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down
+.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down sqlite
 
 # load .env
 # https://lithic.tech/blog/2020-05/makefile-dot-env
@@ -43,171 +43,65 @@ gotest:
 
 e2e: bq athena snowflake
 
-google-oauth:
-	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} -o type=image -f ./Dockerfile --target e2etest .
-	docker run -it --rm \
-	-v $$(pwd)/cypress/videos:/dekart/cypress/videos/ \
-	-v $$(pwd)/cypress/screenshots:/dekart/cypress/screenshots/ \
-	-e DEKART_POSTGRES_DB=${DEKART_POSTGRES_DB} \
-	-e DEKART_POSTGRES_USER=${DEKART_POSTGRES_USER} \
-	-e DEKART_POSTGRES_PASSWORD=${DEKART_POSTGRES_PASSWORD} \
-	-e DEKART_POSTGRES_PORT=${DEKART_POSTGRES_PORT} \
-	-e DEKART_POSTGRES_HOST=host.docker.internal \
-	-e DEKART_ALLOW_FILE_UPLOAD=1 \
-	-e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
-	-e DEKART_GOOGLE_OAUTH_CLIENT_ID=${DEKART_GOOGLE_OAUTH_CLIENT_ID} \
-	-e DEKART_GOOGLE_OAUTH_SECRET=${DEKART_GOOGLE_OAUTH_SECRET} \
-	-e DEKART_DEV_REFRESH_TOKEN=${DEKART_DEV_REFRESH_TOKEN} \
-	-e TEST_SPEC=cypress/e2e/google-oauth \
-	-e CYPRESS_CI=1 \
-	${DEKART_DOCKER_E2E_TAG}
+snowpark-build:
+	docker buildx build --platform linux/amd64 --tag ${SNOWPARK_IMAGE_NAME} -f ./Dockerfile . --load
 
-bq:
-	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} -o type=image -f ./Dockerfile --target e2etest .
+snowpark-run: snowpark-build
 	docker run -it --rm \
-	-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
-	-v $$(pwd)/cypress/videos:/dekart/cypress/videos/ \
-	-v $$(pwd)/cypress/screenshots:/dekart/cypress/screenshots/ \
-	-e GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} \
-	-e DEKART_POSTGRES_DB=${DEKART_POSTGRES_DB} \
-	-e DEKART_POSTGRES_USER=${DEKART_POSTGRES_USER} \
-	-e DEKART_POSTGRES_PASSWORD=${DEKART_POSTGRES_PASSWORD} \
-	-e DEKART_POSTGRES_PORT=${DEKART_POSTGRES_PORT} \
-	-e DEKART_POSTGRES_HOST=host.docker.internal \
-	-e DEKART_CLOUD_STORAGE_BUCKET=${DEKART_CLOUD_STORAGE_BUCKET} \
-	-e DEKART_BIGQUERY_PROJECT_ID=${DEKART_BIGQUERY_PROJECT_ID} \
-	-e DEKART_BIGQUERY_MAX_BYTES_BILLED=53687091200 \
-	-e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
-	-e DEKART_ALLOW_FILE_UPLOAD=1 \
-	-e DEKART_CORS_ORIGIN=http://localhost:3000 \
-	-e TEST_SPEC=cypress/e2e/bq \
-	${DEKART_DOCKER_E2E_TAG}
-
-cloud:
-	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} -o type=image -f ./Dockerfile --target e2etest .
-	docker run -it --rm \
-	-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
-	-v $$(pwd)/cypress/videos:/dekart/cypress/videos/ \
-	-v $$(pwd)/cypress/screenshots:/dekart/cypress/screenshots/ \
-	-e DEKART_LOG_DEBUG=1 \
-	-e GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} \
-	-e DEKART_POSTGRES_USER=${DEKART_POSTGRES_USER} \
-	-e DEKART_POSTGRES_PASSWORD=${DEKART_POSTGRES_PASSWORD} \
-	-e DEKART_POSTGRES_PORT=${DEKART_POSTGRES_PORT} \
-	-e DEKART_POSTGRES_HOST=host.docker.internal \
-	-e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
-	-e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
-	-e DEKART_STORAGE=GCS \
-	-e DEKART_DATASOURCE=BQ \
-	-e DEKART_ALLOW_FILE_UPLOAD=1 \
-	-e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
-	-e DEKART_GOOGLE_OAUTH_CLIENT_ID=${DEKART_GOOGLE_OAUTH_CLIENT_ID} \
-	-e DEKART_GOOGLE_OAUTH_SECRET=${DEKART_GOOGLE_OAUTH_SECRET} \
-	-e DEKART_DEV_REFRESH_TOKEN=${DEV_REFRESH_TOKEN_INFO} \
-	-e DEKART_CORS_ORIGIN=http://localhost:3000 \
-	-e TEST_SPEC=cypress/e2e/bq/cloudBasicFlowStart.cy.js \
-	${DEKART_DOCKER_E2E_TAG}
-
-athena:
-	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} -o type=image -f ./Dockerfile --target e2etest .
-	docker run -it --rm \
-	-v $$(pwd)/cypress/videos:/dekart/cypress/videos/ \
-	-v $$(pwd)/cypress/screenshots:/dekart/cypress/screenshots/ \
-	-e DEKART_LOG_DEBUG=1 \
-	-e DEKART_POSTGRES_DB=${DEKART_POSTGRES_DB} \
-	-e DEKART_POSTGRES_USER=${DEKART_POSTGRES_USER} \
-	-e DEKART_POSTGRES_PASSWORD=${DEKART_POSTGRES_PASSWORD} \
-	-e DEKART_POSTGRES_PORT=${DEKART_POSTGRES_PORT} \
-	-e DEKART_POSTGRES_HOST=host.docker.internal \
-	-e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
-	-e DEKART_STORAGE=S3 \
-	-e DEKART_DATASOURCE=ATHENA \
-	-e DEKART_CLOUD_STORAGE_BUCKET=${DEKART_CLOUD_STORAGE_BUCKET} \
-	-e DEKART_ATHENA_S3_OUTPUT_LOCATION=${DEKART_ATHENA_S3_OUTPUT_LOCATION} \
-	-e DEKART_ATHENA_CATALOG=${DEKART_ATHENA_CATALOG} \
-	-e DEKART_ATHENA_WORKGROUP=${DEKART_ATHENA_WORKGROUP} \
-	-e AWS_REGION=${AWS_REGION} \
-	-e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
-	-e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
-	-e DEKART_ALLOW_FILE_UPLOAD=1 \
-	-e DEKART_CORS_ORIGIN=http://localhost:3000 \
-	-e TEST_SPEC=cypress/e2e/athena \
-	${DEKART_DOCKER_E2E_TAG}
-
-
-snowflake-s3:
-	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} -o type=image -f ./Dockerfile --target e2etest .
-	docker run -it --rm \
-	-v $$(pwd)/cypress/videos:/dekart/cypress/videos/ \
-	-v $$(pwd)/cypress/screenshots:/dekart/cypress/screenshots/ \
-	-e DEKART_POSTGRES_DB=${DEKART_POSTGRES_DB} \
-	-e DEKART_POSTGRES_USER=${DEKART_POSTGRES_USER} \
-	-e DEKART_POSTGRES_PASSWORD=${DEKART_POSTGRES_PASSWORD} \
-	-e DEKART_POSTGRES_PORT=${DEKART_POSTGRES_PORT} \
-	-e DEKART_POSTGRES_HOST=host.docker.internal \
-	-e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
-	-e DEKART_STORAGE=S3 \
-	-e DEKART_DATASOURCE=SNOWFLAKE \
-	-e DEKART_SNOWFLAKE_ACCOUNT_ID=${DEKART_SNOWFLAKE_ACCOUNT_ID} \
-	-e DEKART_SNOWFLAKE_USER=${DEKART_SNOWFLAKE_USER} \
-	-e DEKART_SNOWFLAKE_PASSWORD=${DEKART_SNOWFLAKE_PASSWORD} \
-	-e DEKART_CLOUD_STORAGE_BUCKET=${DEKART_CLOUD_STORAGE_BUCKET} \
-	-e AWS_REGION=${AWS_REGION} \
-	-e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
-	-e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
-	-e DEKART_ALLOW_FILE_UPLOAD=1 \
-	-e DEKART_CORS_ORIGIN=http://localhost:3000 \
-	-e TEST_SPEC=cypress/e2e/snowflake-s3 \
-	${DEKART_DOCKER_E2E_TAG}
-
-snowflake:
-	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} -o type=image -f ./Dockerfile --target e2etest .
-	docker run -it --rm \
-	-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
-	-v $$(pwd)/cypress/videos:/dekart/cypress/videos/ \
-	-v $$(pwd)/cypress/screenshots:/dekart/cypress/screenshots/ \
-	-e DEKART_POSTGRES_DB=${DEKART_POSTGRES_DB} \
-	-e DEKART_POSTGRES_USER=${DEKART_POSTGRES_USER} \
-	-e DEKART_POSTGRES_PASSWORD=${DEKART_POSTGRES_PASSWORD} \
-	-e DEKART_POSTGRES_PORT=${DEKART_POSTGRES_PORT} \
-	-e DEKART_POSTGRES_HOST=host.docker.internal \
+	-p 8082:8080 \
+	-v $$(pwd)/backup-volume:/dekart/backup-volume \
 	-e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
 	-e DEKART_STORAGE=SNOWFLAKE \
 	-e DEKART_DATASOURCE=SNOWFLAKE \
 	-e DEKART_SNOWFLAKE_ACCOUNT_ID=${DEKART_SNOWFLAKE_ACCOUNT_ID} \
 	-e DEKART_SNOWFLAKE_USER=${DEKART_SNOWFLAKE_USER} \
 	-e DEKART_SNOWFLAKE_PASSWORD=${DEKART_SNOWFLAKE_PASSWORD} \
-	-e DEKART_CLOUD_STORAGE_BUCKET=${DEKART_CLOUD_STORAGE_BUCKET} \
-	-e DEKART_CORS_ORIGIN=http://localhost:3000 \
-	-e TEST_SPEC=cypress/e2e/snowflake \
-	${DEKART_DOCKER_E2E_TAG}
+	-e DEKART_CORS_ORIGIN=null \
+	-e DEKART_LOG_DEBUG=1 \
+	-e DEKART_CORS_ORIGIN=null \
+	-e DEKART_STREAM_TIMEOUT=10 \
+	-e DEKART_SQLITE_DB_PATH=./dekart.db \
+	-e DEKART_SNOWFLAKE_STAGE=DEKART_DEV.PUBLIC.DEKART_DEV \
+	-e DEKART_BACKUP_FREQUENCY_MIN=5 \
+	${SNOWPARK_IMAGE_NAME}
 
-postgres:
-	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} -o type=image -f ./Dockerfile --target e2etest .
+snowpark-tag:
+	docker tag ${SNOWPARK_IMAGE_NAME} ${SNOWPARK_REPO_URL}/${SNOWPARK_IMAGE_NAME}
+
+snowpark-docker-login:
+	docker login ${SNOWPARK_REPO_URL} -u ${DEKART_SNOWFLAKE_USER} -p ${DEKART_SNOWFLAKE_PASSWORD}
+
+snowpark-docker-push:
+	docker push ${SNOWPARK_REPO_URL}/${SNOWPARK_IMAGE_NAME}
+
+snowpark-spec:
+	snowsql -c ${SNOWSQL_CONNECTION} -q "PUT file://$(shell pwd)/snowpark/service.yaml @dekart_app.napp.app_stage overwrite=true auto_compress=false"
+	snowsql -c ${SNOWSQL_CONNECTION} -q "PUT file://$(shell pwd)/snowpark/setup.sql @dekart_app.napp.app_stage overwrite=true auto_compress=false"
+	snowsql -c ${SNOWSQL_CONNECTION} -q "PUT file://$(shell pwd)/snowpark/manifest.yml @dekart_app.napp.app_stage overwrite=true auto_compress=false"
+	snowsql -c ${SNOWSQL_CONNECTION} -q "PUT file://$(shell pwd)/snowpark/readme.md @dekart_app.napp.app_stage overwrite=true auto_compress=false"
+
+snowpark-patch:
+	snowsql -c ${SNOWSQL_CONNECTION} -q "alter application package dekart_app_pkg ADD PATCH FOR VERSION v1 using @dekart_app.napp.app_stage;"
+
+snowpark: snowpark-build snowpark-tag snowpark-docker-push snowpark-spec snowpark-patch
+
+docker-test:
+	docker buildx build --tag ${DEKART_DOCKER_E2E_TAG} -o type=image -f ./Dockerfile --target e2etest  .
 	docker run -it --rm \
 	-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
-	-e GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} \
 	-v $$(pwd)/cypress/videos:/dekart/cypress/videos/ \
 	-v $$(pwd)/cypress/screenshots:/dekart/cypress/screenshots/ \
-	-e DEKART_POSTGRES_DB=${DEKART_POSTGRES_DB} \
-	-e DEKART_POSTGRES_USER=${DEKART_POSTGRES_USER} \
-	-e DEKART_POSTGRES_PASSWORD=${DEKART_POSTGRES_PASSWORD} \
-	-e DEKART_POSTGRES_PORT=${DEKART_POSTGRES_PORT} \
-	-e DEKART_POSTGRES_HOST=host.docker.internal \
-	-e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
-	-e DEKART_STORAGE=GCS \
-	\
-	-e DEKART_DATASOURCE=PG \
-	-e DEKART_POSTGRES_DATA_CONNECTION=${DEKART_POSTGRES_DATA_CONNECTION} \
-	\
-	-e DEKART_CLOUD_STORAGE_BUCKET=${DEKART_CLOUD_STORAGE_BUCKET} \
-	-e DEKART_ALLOW_FILE_UPLOAD=1 \
-	-e DEKART_CORS_ORIGIN=http://localhost:3000 \
-	-e TEST_SPEC=cypress/e2e/pg \
+	-p 3000:3000 \
+	--env-file .env.snowflake-sqlite \
+	-e DEKART_PORT=3000 \
+	-e CYPRESS_CI=1 \
+	-e TEST_SPEC=/dekart/cypress/e2e/snowflake/happyPath.cy.js \
+	-e DEKART_SQLITE_DB_PATH=/dekart/dekart.db \
+	-e DEKART_STATIC_FILES=./build \
 	${DEKART_DOCKER_E2E_TAG}
 
 docker: # build docker for local use
-	docker buildx build --push --tag ${DEKART_DOCKER_DEV_TAG} -o type=image --platform=linux/amd64 -f ./Dockerfile .
+	docker buildx build --tag ${DEKART_DOCKER_DEV_TAG} -o type=image --platform=linux/amd64 -f ./Dockerfile .
 
 up-and-down:
 	docker compose  --env-file .env --profile local up; docker compose --env-file .env --profile local down --volumes
@@ -219,6 +113,9 @@ down:
 
 cloudsql:
 	docker compose  --env-file .env --profile cloudsql up
+
+sqlite:
+	docker-compose  --env-file .env --profile sqlite up
 
 
 define run_server
@@ -254,19 +151,3 @@ patch: version
 
 test:
 	go test -v -count=1 ./src/server/**/
-
-run-docker-dev:
-	docker run -it --rm \
-		-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
-		-e GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} \
-		-e DEKART_POSTGRES_DB=${DEKART_POSTGRES_DB} \
-		-e DEKART_POSTGRES_USER=${DEKART_POSTGRES_USER} \
-		-e DEKART_POSTGRES_PASSWORD=${DEKART_POSTGRES_PASSWORD} \
-		-e DEKART_POSTGRES_PORT=${DEKART_POSTGRES_PORT} \
-		-e DEKART_POSTGRES_HOST=host.docker.internal \
-		-e DEKART_CLOUD_STORAGE_BUCKET=${DEKART_CLOUD_STORAGE_BUCKET} \
-		-e DEKART_BIGQUERY_PROJECT_ID=${DEKART_BIGQUERY_PROJECT_ID} \
-		-e DEKART_BIGQUERY_MAX_BYTES_BILLED=53687091200 \
-		-e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
-		-p 8080:8080 \
-		${DEKART_DOCKER_DEV_TAG}

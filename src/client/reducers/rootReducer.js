@@ -211,7 +211,8 @@ function env (state = defaultEnv, action) {
       return {
         loaded: true,
         variables: action.variables,
-        authEnabled: Boolean(action.variables.AUTH_ENABLED)
+        authEnabled: Boolean(action.variables.AUTH_ENABLED),
+        secretsEnabled: Boolean(action.variables.SECRETS_ENABLED)
       }
     default:
       return state
