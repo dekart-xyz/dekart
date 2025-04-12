@@ -105,6 +105,8 @@ docker: # build docker for local use
 
 up-and-down:
 	docker compose  --env-file .env --profile local up; docker compose --env-file .env --profile local down --volumes
+cloud:
+	docker compose  --env-file .env.cloud --profile cloud up; docker compose --profile cloud down --volumes
 up:
 	docker compose  --env-file .env --profile local up
 

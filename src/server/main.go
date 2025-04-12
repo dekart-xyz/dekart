@@ -129,12 +129,30 @@ func applyMigrations(db *sql.DB) {
 		if err != nil {
 			log.Fatal().Err(err).Msg("NewWithDatabaseInstance")
 		}
+		version, dirty, err := m.Version()
+		if err != nil {
+			if err == migrate.ErrNilVersion {
+				log.Info().Msg("No migrations applied yet")
+			} else {
+				log.Fatal().Err(err).Msg("Version")
+			}
+		} else {
+			log.Info().Int("version", int(version)).Bool("dirty", dirty).Msg("Current migration version")
+		}
+
 		err = m.Up()
 		if err != nil {
 			if err == migrate.ErrNoChange {
+				log.Info().Msg("No new migrations to apply")
 				return
 			}
 			log.Fatal().Err(err).Msg("Migrations Up")
+		}
+		version, dirty, err = m.Version()
+		if err != nil {
+			log.Fatal().Err(err).Msg("Version")
+		} else {
+			log.Info().Int("version", int(version)).Bool("dirty", dirty).Msg("Migrations applied")
 		}
 	}
 }

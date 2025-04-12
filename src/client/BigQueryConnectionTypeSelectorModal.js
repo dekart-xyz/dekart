@@ -48,7 +48,7 @@ export default function BigQueryConnectionTypeSelectorModal ({ open, onClose }) 
             </Button>
           </p>
           <p>
-            → <a href='https://dekart.xyz/docs/usage/choose-bigquery-connection-method/#which-permissions-are-required'>Which permissions required?</a>
+            → <a href='https://dekart.xyz/docs/usage/choose-bigquery-connection-method/#which-permissions-are-required' target='_blank' rel='noreferrer'>Which permissions required?</a>
           </p>
 
         </div>
@@ -75,8 +75,8 @@ export default function BigQueryConnectionTypeSelectorModal ({ open, onClose }) 
             </Button>
           </p>
           <div>
-            <div>→ <a href='https://dekart.xyz/docs/usage/choose-bigquery-connection-method/#how-to-get-a-service-account-key'>How to get the key?</a></div>
-            <div>→ <a href='https://dekart.xyz/docs/usage/choose-bigquery-connection-method/#how-is-the-key-secured'>How key is secured?</a></div>
+            <div>→ <a href='https://dekart.xyz/docs/usage/choose-bigquery-connection-method/#how-to-get-a-service-account-key' target='_blank' rel='noreferrer'>How to get the key?</a></div>
+            <div>→ <a href='https://dekart.xyz/docs/usage/choose-bigquery-connection-method/#how-is-the-key-secured' target='_blank' rel='noreferrer'>How key is secured?</a></div>
           </div>
 
         </div>
