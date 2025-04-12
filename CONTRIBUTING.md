@@ -32,3 +32,10 @@ to stop the container
 ```
 docker compose  --env-file .env.cloud --profile cloud down
 ```
+
+## Running prev version via docker-compose
+
+```
+docker compose  --env-file .env.bigquery --profile dekart-oss-bigquery up
+docker compose  --profile dekart-oss-bigquery down
+```

@@ -60,7 +60,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	}
 
 	result, err := s.db.ExecContext(ctx,
-		`update datasets set query_id=$1, updated_at=now() where id=$2 and query_id is null`,
+		`update datasets set query_id=$1, updated_at=CURRENT_TIMESTAMP where id=$2 and query_id is null`,
 		id,
 		req.DatasetId,
 	)

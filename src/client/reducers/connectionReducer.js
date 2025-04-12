@@ -1,6 +1,6 @@
 import { combineReducers } from 'redux'
-import { userStreamUpdate } from '../actions/user'
 import { closeConnectionDialog, connectionChanged, connectionCreated, connectionListUpdate, connectionSaved, editConnection, newConnection, newConnectionScreen, projectListUpdate, reOpenDialog, saveConnection, testConnection, testConnectionResponse } from '../actions/connection'
+import { setEnv } from '../actions/env'
 import { sessionStorageInit, updateSessionStorage } from '../actions/sessionStorage'
 
 function dialog (state = {
@@ -109,22 +109,12 @@ function listLoaded (state = false, action) {
   }
 }
 
-// in cloud it's always user defined, except for playground
+// can user define their own connections
 function userDefined (state = true, action) {
   switch (action.type) {
-    case sessionStorageInit.name:
-      // in playground it's not user defined
-      if (action.current.isPlayground) {
-        return false
-      }
-      return state
-    case userStreamUpdate.name:
-      if (
-        !action.userStream.planType // user is not yet in workspace
-      ) {
-        return false
-      }
-      return state
+    case setEnv.name: {
+      return Boolean(action.variables.USER_DEFINED_CONNECTION)
+    }
     default:
       return state
   }

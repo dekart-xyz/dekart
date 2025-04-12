@@ -36,7 +36,7 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 			connections.connection_type
 		from datasets
 		left join connections on datasets.connection_id=connections.id
-		where report_id=$1 order by created_at asc`,
+		where report_id=$1 order by datasets.created_at asc`,
 		reportID,
 	)
 	if err != nil {

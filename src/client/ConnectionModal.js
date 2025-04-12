@@ -178,7 +178,7 @@ function BigQueryServiceAccountConnectionModal ({ form }) {
             required label='Service Account JSON Key' name='newBigqueryKey' extra={
             !showKey
               ? <>Keys are encrypted and cannot be displayed.<Button type='link' size='small' onClick={() => setShowKey(true)}>Enter new value</Button></>
-              : <>Paste the JSON key for the service account you want to use to connect to BigQuery. <a target='_blank' href='https://dekart.xyz/docs/usage/choose-bigquery-connection-nethod/#how-to-get-a-service-account-key' rel='noreferrer'>Read Documentation</a></>
+              : <>Paste the JSON key for the service account you want to use to connect to BigQuery. <a href='https://dekart.xyz/docs/usage/choose-bigquery-connection-method/#how-to-get-a-service-account-key' target='_blank' rel='noreferrer'>Read Documentation</a></>
           }
           >
             <TextArea
@@ -201,7 +201,6 @@ function BigQueryConnectionModal ({ form }) {
   const { id, loading } = dialog
   const dispatch = useDispatch()
   const connection = useSelector(state => state.connection.list.find(s => s.id === id))
-
   useEffect(() => {
     track('BigQueryConnectionModal')
   }, [])

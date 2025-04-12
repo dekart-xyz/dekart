@@ -7,8 +7,6 @@ import (
 	"dekart/src/server/user"
 	"encoding/json"
 	"fmt"
-	"os"
-	"strings"
 
 	"github.com/rs/zerolog/log"
 
@@ -18,17 +16,6 @@ import (
 	"cloud.google.com/go/bigquery"
 	"google.golang.org/api/option"
 )
-
-func getOauthScopes() []string {
-	scopes := []string{"https://www.googleapis.com/auth/bigquery"}
-	extraScopesRaw := os.Getenv("DEKART_GCP_EXTRA_OAUTH_SCOPES")
-	if extraScopesRaw != "" {
-		extraScopes := strings.Split(extraScopesRaw, ",")
-		scopes = append(scopes, extraScopes...)
-	}
-	return scopes
-
-}
 
 func GetTableFromJob(job *bigquery.Job) (*bigquery.Table, error) {
 	cfg, err := job.Config()
@@ -67,7 +54,7 @@ func GetClient(ctx context.Context, conn *proto.Connection) (*bigquery.Client, e
 	} else if tokenSource != nil {
 		secretOption = option.WithTokenSource(tokenSource)
 	} else {
-		secretOption = option.WithScopes(getOauthScopes()...)
+		secretOption = option.WithScopes(user.GetBigQueryAuthScopes()...)
 	}
 	return bigquery.NewClient(
 		ctx,

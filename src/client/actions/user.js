@@ -18,7 +18,7 @@ export function subscribeUserStream () {
     dispatch({ type: subscribeUserStream.name })
     const request = new GetUserStreamRequest()
     const prevRes = {
-      connectionUpdate: 0,
+      connectionUpdate: -1,
       workspaceUpdate: -1
     }
     dispatch(grpcStream(Dekart.GetUserStream, request, (message, err) => {

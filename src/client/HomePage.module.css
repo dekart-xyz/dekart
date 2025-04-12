@@ -91,17 +91,6 @@
     align-items: center;
 }
 
-.newReleaseTitle {
-    font-size: 18px;
-    margin-bottom: 10px;
-}
-
-.newReleaseIcon {
-    color: #57B7D3 !important;
-    font-size: 42px;
-    position: absolute;
-    left: 20px;
-}
 
 .connectionSelectorBack {
     margin-top: 30px;
@@ -120,6 +109,37 @@
     padding-bottom: 0 !important;
 }
 
+.onboarding {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    margin-top: 20px;
+    background-color: white;
+    padding: 20px;
+    border: 1px solid #F0F0F0;
+}
+
+.onboardingIcon {
+    font-size: 42px;
+    color: white;
+    background-color: #349DFE;
+    border-radius: 50%;
+    width: 70px;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 20px;
+}
+
+.onboardingSteps {
+    opacity: 0.7;
+}
+
+.onboardingTitle {
+    font-size: 24px;
+    margin-bottom: 10px;
+}
 .newRelease {
     background-color: white;
     width: 900px;

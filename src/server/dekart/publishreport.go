@@ -112,7 +112,7 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 
 	// updating report
 	_, err = s.db.ExecContext(userCtx,
-		`update reports set is_public = false, updated_at = now() where id = $1`,
+		`update reports set is_public = false, updated_at = CURRENT_TIMESTAMP where id = $1`,
 		reportID,
 	)
 	if err != nil {
@@ -238,7 +238,7 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 	}
 
 	_, err = s.db.ExecContext(userCtx,
-		`update reports set is_public = true, updated_at = now() where id = $1`,
+		`update reports set is_public = true, updated_at = CURRENT_TIMESTAMP where id = $1`,
 		reportID,
 	)
 	if err != nil {

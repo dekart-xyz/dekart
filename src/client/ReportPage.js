@@ -29,6 +29,7 @@ import Readme from './Readme'
 import { addReadme, removeReadme, showReadmeTab } from './actions/readme'
 import Modal from 'antd/es/modal'
 import { MapControlButton } from '@dekart-xyz/kepler.gl/dist/components/common/styled-components'
+import { Loading } from './Loading'
 
 function TabIcon ({ job }) {
   let iconColor = 'transparent'
@@ -216,7 +217,7 @@ function DatasetSection ({ reportId }) {
                       className={styles.addTabPane}
                       tab={
                         <Dropdown menu={{ items }} placement='bottom'>
-                          <span className={styles.addTab}><PlusOutlined className={styles.addTabIcon} /></span>
+                          <span className={styles.addTab} id='dekart-report-page-add-tab'><PlusOutlined className={styles.addTabIcon} /></span>
                         </Dropdown>
                       }
                       key='add'
@@ -365,8 +366,14 @@ export default function ReportPage ({ edit }) {
     if (!envLoaded) {
       return
     }
-    dispatch(openReport(id))
-    return () => dispatch(closeReport(id))
+    // prevent open stream twice on first render
+    const t = setTimeout(() => {
+      dispatch(openReport(id))
+    }, 0)
+    return () => {
+      clearTimeout(t)
+      dispatch(closeReport())
+    }
   }, [id, dispatch, envLoaded])
 
   useEffect(() => {
@@ -376,7 +383,7 @@ export default function ReportPage ({ edit }) {
   useCheckMapConfig()
 
   if (!report) {
-    return null
+    return <Loading />
   }
 
   return (

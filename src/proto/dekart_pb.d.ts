@@ -928,6 +928,12 @@ export class GetUserStreamResponse extends jspb.Message {
   getRole(): UserRoleMap[keyof UserRoleMap];
   setRole(value: UserRoleMap[keyof UserRoleMap]): void;
 
+  getIsPlayground(): boolean;
+  setIsPlayground(value: boolean): void;
+
+  getIsDefaultWorkspace(): boolean;
+  setIsDefaultWorkspace(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetUserStreamResponse.AsObject;
   static toObject(includeInstance: boolean, msg: GetUserStreamResponse): GetUserStreamResponse.AsObject;
@@ -947,6 +953,8 @@ export namespace GetUserStreamResponse {
     planType: PlanTypeMap[keyof PlanTypeMap],
     workspaceUpdate: number,
     role: UserRoleMap[keyof UserRoleMap],
+    isPlayground: boolean,
+    isDefaultWorkspace: boolean,
   }
 }
 
@@ -1465,6 +1473,10 @@ export namespace GetEnvResponse {
       TYPE_AES_IV: 17;
       TYPE_AUTH_ENABLED: 18;
       TYPE_USER_DEFINED_CONNECTION: 19;
+      TYPE_UX_DISABLE_VERSION_CHECK: 20;
+      TYPE_ALLOW_WORKSPACE_CREATION: 21;
+      TYPE_WORKSPACE_DEFAULT_ROLE: 22;
+      TYPE_SECRETS_ENABLED: 23;
     }
 
     export const Type: TypeMap;
@@ -2558,6 +2570,7 @@ export interface PlanTypeMap {
   TYPE_TEAM: 2;
   TYPE_GROW: 3;
   TYPE_MAX: 4;
+  TYPE_SELF_HOSTED: 5;
 }
 
 export const PlanType: PlanTypeMap;

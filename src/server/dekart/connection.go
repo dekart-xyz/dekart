@@ -112,13 +112,17 @@ func (s Server) getConnectionFromFileID(ctx context.Context, fileID string) (*pr
 func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.Connection, error) {
 
 	if connectionID == "default" || connectionID == "" {
-		return &proto.Connection{
+		con := proto.Connection{
 			Id:                 "default",
 			ConnectionName:     "default",
 			CloudStorageBucket: storage.GetDefaultBucketName(),
 			BigqueryProjectId:  os.Getenv("DEKART_BIGQUERY_PROJECT_ID"),
 			IsDefault:          true,
-		}, nil
+		}
+		if con.CloudStorageBucket != "" {
+			con.CanStoreFiles = true
+		}
+		return &con, nil
 	}
 
 	res, err := s.db.QueryContext(ctx, `
@@ -328,7 +332,7 @@ func (s Server) SetDefaultConnection(ctx context.Context, req *proto.SetDefaultC
 	_, err := s.db.ExecContext(ctx,
 		`update connections set
 			is_default=true,
-			updated_at=now()
+			updated_at=CURRENT_TIMESTAMP
 		where id=$1`,
 		req.ConnectionId,
 	)
@@ -368,7 +372,7 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 				snowflake_account_id=$2,
 				snowflake_username=$3,
 				snowflake_warehouse=$4,
-				updated_at=now()
+				updated_at=CURRENT_TIMESTAMP
 			where id=$5`,
 			req.Connection.ConnectionName,
 			req.Connection.SnowflakeAccountId,
@@ -392,8 +396,8 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 			`update connections set
 			connection_name=$1,
 			cloud_storage_bucket=$2,
-			updated_at=now()
-			where id=$3`,
+			updated_at=CURRENT_TIMESTAMP
+		where id=$3`,
 			req.Connection.ConnectionName,
 			req.Connection.CloudStorageBucket,
 			req.Connection.Id,
@@ -476,7 +480,7 @@ func (s Server) ArchiveConnection(ctx context.Context, req *proto.ArchiveConnect
 	res, err := s.db.ExecContext(ctx,
 		`update connections set
 			archived=true,
-			updated_at=now()
+			updated_at=CURRENT_TIMESTAMP
 		where id=$1 and author_email=$2 and workspace_id=$3`,
 		req.ConnectionId,
 		claims.Email,
@@ -504,7 +508,7 @@ func (s Server) ArchiveConnection(ctx context.Context, req *proto.ArchiveConnect
 	_, err = s.db.ExecContext(ctx,
 		`update datasets set
 			connection_id=null,
-			updated_at=now()
+			updated_at=CURRENT_TIMESTAMP
 		where connection_id=$1 and file_id is null and query_id is null`,
 		req.ConnectionId,
 	)
@@ -543,18 +547,43 @@ func (s Server) getLastConnectionUpdate(ctx context.Context) (int64, error) {
 	if claims == nil {
 		return 0, Unauthenticated
 	}
-	var lastConnectionUpdateDate sql.NullTime
-	err := s.db.QueryRowContext(ctx,
-		`SELECT MAX(updated_at) FROM (
+	var lastConnectionUpdate int64
+	if IsSqlite() {
+		var lastConnectionUpdateDate sql.NullString
+		err := s.db.QueryRowContext(ctx,
+			`SELECT MAX(updated_at) FROM (
+            SELECT updated_at FROM connections
+            UNION ALL
+            SELECT updated_at FROM datasets
+        ) AS combined`,
+		).Scan(&lastConnectionUpdateDate)
+		if err != nil {
+			log.Err(err).Send()
+			return 0, err
+		}
+		if !lastConnectionUpdateDate.Valid {
+			return 0, nil // or any default value you prefer
+		}
+		lastConnectionUpdateDateParsed, err := time.Parse("2006-01-02 15:04:05", lastConnectionUpdateDate.String)
+		if err != nil {
+			log.Err(err).Send()
+			return 0, err
+		}
+		lastConnectionUpdate = lastConnectionUpdateDateParsed.Unix()
+	} else {
+		var lastConnectionUpdateDate sql.NullTime
+		err := s.db.QueryRowContext(ctx,
+			`SELECT MAX(updated_at) FROM (
 			SELECT updated_at FROM connections
 			UNION ALL
 			SELECT updated_at FROM datasets
 		) AS combined`,
-	).Scan(&lastConnectionUpdateDate)
-	lastConnectionUpdate := lastConnectionUpdateDate.Time.Unix()
-	if err != nil {
-		log.Err(err).Msg("select max updated_at failed")
-		return 0, err
+		).Scan(&lastConnectionUpdateDate)
+		lastConnectionUpdate = lastConnectionUpdateDate.Time.Unix()
+		if err != nil {
+			log.Err(err).Send()
+			return 0, err
+		}
 	}
 	return lastConnectionUpdate, nil
 }

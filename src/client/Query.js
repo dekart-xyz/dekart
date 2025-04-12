@@ -15,7 +15,6 @@ import { Duration } from 'luxon'
 import DataDocumentationLink from './DataDocumentationLink'
 import { cancelJob, queryChanged, runQuery } from './actions/query'
 import Tooltip from 'antd/es/tooltip'
-import { switchPlayground } from './actions/user'
 import { getDatasourceMeta } from './lib/datasource'
 
 function CancelButton ({ queryJob }) {
@@ -104,24 +103,6 @@ function QueryEditor ({ queryId, queryText, onChange, canWrite }) {
   )
 }
 
-function PlaygroundWarning ({ jobError }) {
-  const isPlayground = useSelector(state => state.user.isPlayground)
-  const dispatch = useDispatch()
-  let showPlaygroundWarning = false
-  if (jobError && jobError.includes('Error 40') && isPlayground) {
-    showPlaygroundWarning = true
-  }
-  if (!showPlaygroundWarning) {
-    return null
-  }
-  return (
-    <div className={styles.playgroundWarning}>
-      <p>You are in Playground Mode. To access private datasets create free workspace and configure connection</p>
-      <Button type='link' onClick={() => dispatch(switchPlayground(false))}>Switch to workspace</Button>
-    </div>
-  )
-}
-
 function QueryStatus ({ children, query }) {
   const env = useSelector(state => state.env)
   const hash = useSelector(state => state.queryParams.hash)
@@ -190,7 +171,6 @@ function QueryStatus ({ children, query }) {
         </div>
         {errorMessage ? <div className={styles.errorMessage}>{errorMessage}</div> : null}
         {errorInfoHtml ? <div className={styles.errorInfoHtml} dangerouslySetInnerHTML={{ __html: errorInfoHtml }} /> : null}
-        <PlaygroundWarning jobError={queryJob?.jobError} />
       </div>
       {children ? <div className={styles.button}>{children}</div> : null}
 
@@ -210,11 +190,15 @@ function SampleQuery ({ queryId }) {
   const queryStatus = useSelector(state => state.queryStatus[queryId])
   const dataset = useSelector(state => state.dataset.list.find(q => q.queryId === queryId))
   const connection = useSelector(state => state.connection.list.find(c => c.id === dataset?.connectionId))
-  const connectionType = useConnectionType(connection?.id)
+  const { DATASOURCE } = useSelector(state => state.env.variables)
+  const isPlayground = useSelector(state => state.user.isPlayground)
 
-  const datasetCount = useSelector(state => state.connection.list.reduce((dc, c) => {
-    return dc + c.datasetCount
-  }, 0))
+  let connectionType = connection?.connectionType
+  if (isPlayground) {
+    // TODO: what if snowflake connection is used in playground?
+    connectionType = ConnectionType.CONNECTION_TYPE_BIGQUERY
+  }
+
   const downloadingSource = queryStatus?.downloadingSource
   const dispatch = useDispatch()
   if (UX_DATA_DOCUMENTATION) {
@@ -227,9 +211,13 @@ function SampleQuery ({ queryId }) {
   }
   let showSampleQuery = UX_SAMPLE_QUERY_SQL
   if (!showSampleQuery) {
-    showSampleQuery = getDatasourceMeta(connectionType)?.sampleQuery
+    if (connection) {
+      showSampleQuery = getDatasourceMeta(connection.connectionType)?.sampleQuery
+    } else if (DATASOURCE) {
+      showSampleQuery = getDatasourceMeta(DATASOURCE)?.sampleQuery
+    }
   }
-  if (showSampleQuery && datasetCount < 2) {
+  if (showSampleQuery) {
     return (
       <div className={styles.sampleQuery}>
         <Tooltip title={<>Don't know where to start?<br />Try running public dataset query.</>}>

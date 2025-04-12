@@ -6,6 +6,7 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/user"
 	"net/http"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
@@ -13,28 +14,45 @@ import (
 )
 
 func (s Server) getWorkspaceUpdate(ctx context.Context) (int64, error) {
-	var updated_at sql.NullTime
-	// for simplicity, we just get the max updated_at from the all tables.
-	err := s.db.QueryRowContext(ctx, `
-		SELECT max(updated_at) FROM (
-			SELECT
-				max(updated_at) as updated_at
-			FROM workspaces
+	var updatedAtStr sql.NullString // Use NullString to handle both Postgres and SQLite outputs
+	var updatedAtTime sql.NullTime  // Use time for postgres
+
+	// Query for the max updated_at across all relevant tables
+	query := `
+		SELECT MAX(updated_at) FROM (
+			SELECT MAX(updated_at) AS updated_at FROM workspaces
 			UNION
-			SELECT
-				max(created_at) as updated_at
-			FROM workspace_log
+			SELECT MAX(created_at) AS updated_at FROM workspace_log
 			UNION
-			SELECT
-				max(created_at) as updated_at
-			FROM confirmation_log
-		) max_updated_at
-	`).Scan(&updated_at)
+			SELECT MAX(created_at) AS updated_at FROM confirmation_log
+		) max_updated_at;
+	`
+	var err error
+	if IsSqlite() {
+		err = s.db.QueryRowContext(ctx, query).Scan(&updatedAtStr)
+	} else {
+		err = s.db.QueryRowContext(ctx, query).Scan(&updatedAtTime)
+	}
 	if err != nil {
-		log.Err(err).Send()
+		log.Err(err).Msg("Error fetching max updated_at")
 		return 0, err
 	}
-	return updated_at.Time.Unix(), nil
+
+	if IsSqlite() {
+		// If no timestamp is found, return 0
+		if !updatedAtStr.Valid {
+			return 0, nil
+		}
+		// Parse the timestamp string into a time.Time
+		parsedTime, err := time.Parse("2006-01-02 15:04:05", updatedAtStr.String)
+		if err != nil {
+			log.Err(err).Msg("Error parsing updated_at timestamp")
+			return 0, err
+		}
+
+		return parsedTime.Unix(), nil
+	}
+	return updatedAtTime.Time.Unix(), nil
 }
 
 func (s Server) CreateWorkspace(ctx context.Context, req *proto.CreateWorkspaceRequest) (*proto.CreateWorkspaceResponse, error) {
@@ -62,7 +80,7 @@ func (s Server) CreateWorkspace(ctx context.Context, req *proto.CreateWorkspaceR
 	}
 
 	// create a subscription for the workspace
-	err = s.createPersonalSubscription(ctx, workspaceID, claims.Email)
+	err = s.createDefaultSubscription(ctx, workspaceID, claims.Email)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, err
@@ -84,7 +102,7 @@ func (s Server) UpdateWorkspace(ctx context.Context, req *proto.UpdateWorkspaceR
 	}
 	_, err := s.db.ExecContext(ctx, `
 		UPDATE workspaces
-		SET name = $2, updated_at = now()
+		SET name = $2, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1
 	`, workspaceID, req.WorkspaceName)
 	if err != nil {
@@ -273,6 +291,24 @@ func (s Server) getUserWorkspace(ctx context.Context, email string) (*proto.Work
 		}
 		return &workspace, &role, nil
 	}
+	if !user.CanCreateWorkspace() { // if user cannot create workspace, we should add the default workspace
+		workspaceID := user.GetDefaultWorkspaceID()
+		_, err = s.db.ExecContext(ctx, `
+		INSERT INTO workspace_log (workspace_id, email, status, authored_by, id, role)
+		VALUES ($1, $2, 1, $2, $3, $4)
+	`, workspaceID, email, newUUID(), user.GetUserDefaultRole(email))
+		if err != nil {
+			log.Err(err).Send()
+			return nil, nil, err
+		}
+		err = s.createDefaultSubscription(ctx, workspaceID, email)
+		if err != nil {
+			log.Err(err).Send()
+			return nil, nil, err
+		}
+		return s.getUserWorkspace(ctx, email)
+	}
+
 	return nil, &role, nil
 }
 
@@ -281,6 +317,8 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 	if claims == nil {
 		return ctx
 	}
+
+	// check if the request is from playground
 	isPlayground := false
 	if r != nil {
 		isPlayground = r.Header.Get("X-Dekart-Playground") == "true"
@@ -291,6 +329,16 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 		})
 		return ctx
 	}
+
+	if claims.Email == user.UnknownEmail {
+		// For backward compatibility, we switch to playground mode if the user is not authenticated
+		ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{
+			IsPlayground:       true,
+			IsDefaultWorkspace: true,
+		})
+		return ctx
+	}
+
 	workspace, role, err := s.getUserWorkspace(ctx, claims.Email)
 	if err != nil {
 		log.Err(err).Send()

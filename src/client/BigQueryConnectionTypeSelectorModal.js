@@ -3,12 +3,13 @@ import Modal from 'antd/es/modal/Modal'
 import styles from './BigQueryConnectionTypeSelectorModal.module.css'
 import { newConnection } from './actions/connection'
 import { ConnectionType } from '../proto/dekart_pb'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { useEffect } from 'react'
 import { track } from './lib/tracking'
 
 export default function BigQueryConnectionTypeSelectorModal ({ open, onClose }) {
   const dispatch = useDispatch()
+  const secretsEnabled = useSelector(state => state.env.secretsEnabled)
   useEffect(() => {
     if (open) {
       track('OpenBigQueryConnectionTypeSelectorModal')
@@ -47,7 +48,7 @@ export default function BigQueryConnectionTypeSelectorModal ({ open, onClose }) 
             </Button>
           </p>
           <p>
-            → <a href='https://dekart.xyz/docs/usage/choose-bigquery-connection-method/#which-permissions-are-required'>Which permissions required?</a>
+            → <a href='https://dekart.xyz/docs/usage/choose-bigquery-connection-method/#which-permissions-are-required' target='_blank' rel='noreferrer'>Which permissions required?</a>
           </p>
 
         </div>
@@ -63,6 +64,8 @@ export default function BigQueryConnectionTypeSelectorModal ({ open, onClose }) 
           <p>
             <Button
               type='primary'
+              disabled={!secretsEnabled}
+              title={secretsEnabled ? '' : 'Feature is disabled by admin'}
               onClick={() => {
                 onClose()
                 dispatch(newConnection(ConnectionType.CONNECTION_TYPE_BIGQUERY, true))
@@ -72,8 +75,8 @@ export default function BigQueryConnectionTypeSelectorModal ({ open, onClose }) 
             </Button>
           </p>
           <div>
-            <div>→ <a href='https://dekart.xyz/docs/usage/choose-bigquery-connection-method/#how-to-get-a-service-account-key'>How to get the key?</a></div>
-            <div>→ <a href='https://dekart.xyz/docs/usage/choose-bigquery-connection-method/#how-is-the-key-secured'>How key is secured?</a></div>
+            <div>→ <a href='https://dekart.xyz/docs/usage/choose-bigquery-connection-method/#how-to-get-a-service-account-key' target='_blank' rel='noreferrer'>How to get the key?</a></div>
+            <div>→ <a href='https://dekart.xyz/docs/usage/choose-bigquery-connection-method/#how-is-the-key-secured' target='_blank' rel='noreferrer'>How key is secured?</a></div>
           </div>
 
         </div>

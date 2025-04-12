@@ -6,6 +6,7 @@ describe('basic query flow', () => {
 
     // create connection
     cy.get('button:contains("BigQuery")').click()
+    cy.get('button:contains("Connect with Google")').click()
     const randomConnectionName = `test-${Math.floor(Math.random() * 1000000)}`
     cy.get('div.ant-modal-title').should('contain', 'BigQuery')
     cy.get('input#connectionName').clear()

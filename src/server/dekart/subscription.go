@@ -266,10 +266,10 @@ func (s Server) GetStripePortalSession(ctx context.Context, req *proto.GetStripe
 	return nil, status.Error(codes.InvalidArgument, "Unknown plan type")
 }
 
-func (s Server) createPersonalSubscription(ctx context.Context, workspaceID string, email string) error {
+func (s Server) createDefaultSubscription(ctx context.Context, workspaceID string, email string) error {
 	_, err := s.db.ExecContext(ctx, `insert into subscription_log (workspace_id, plan_type, authored_by) values ($1, $2, $3)`,
 		workspaceID,
-		proto.PlanType_TYPE_PERSONAL,
+		user.GetDefaultSubscription(),
 		email,
 	)
 	if err != nil {
@@ -303,7 +303,7 @@ func (s Server) CreateSubscription(ctx context.Context, req *proto.CreateSubscri
 			log.Error().Msg("Workspace has more than one user, cannot downgrade to personal plan")
 			return nil, status.Error(codes.InvalidArgument, "Workspace has more than one user, cannot downgrade to personal plan")
 		}
-		err := s.createPersonalSubscription(ctx, workspaceInfo.ID, claims.Email)
+		err := s.createDefaultSubscription(ctx, workspaceInfo.ID, claims.Email)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, status.Error(codes.Internal, err.Error())

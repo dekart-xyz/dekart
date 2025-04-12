@@ -3,7 +3,7 @@ import { needSensitiveScopes, userStreamUpdate } from '../actions/user'
 import { localStorageInit } from '../actions/localStorage'
 import { sessionStorageInit } from '../actions/sessionStorage'
 import { setRedirectState } from '../actions/redirect'
-import { UserRole } from '../../proto/dekart_pb'
+import { PlanType, UserRole } from '../../proto/dekart_pb'
 
 function stream (state = null, action) {
   switch (action.type) {
@@ -64,11 +64,31 @@ function loginHint (state = null, action) {
   }
 }
 
+function isDefaultWorkspace (state = false, action) {
+  switch (action.type) {
+    case userStreamUpdate.name:
+      return action.userStream.isDefaultWorkspace
+    default:
+      return state
+  }
+}
+
+function isSelfHosted (state = null, action) {
+  switch (action.type) {
+    case userStreamUpdate.name:
+      return action.userStream.planType === PlanType.TYPE_SELF_HOSTED || action.userStream.isDefaultWorkspace
+    default:
+      return state
+  }
+}
+
 function isPlayground (state = false, action) {
   switch (action.type) {
     case sessionStorageInit.name:
       // prevent returning undefined when sessionStorage was deleted
       return Boolean(action.current.isPlayground)
+    case userStreamUpdate.name:
+      return action.userStream.isPlayground
     default:
       return state
   }
@@ -108,7 +128,9 @@ export default combineReducers({
   sensitiveScopesGranted,
   loginHint,
   isPlayground,
+  isDefaultWorkspace,
   redirectStateReceived,
   isViewer,
-  isAdmin
+  isAdmin,
+  isSelfHosted
 })

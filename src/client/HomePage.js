@@ -18,6 +18,7 @@ import { ConnectionType, PlanType } from '../proto/dekart_pb'
 import Onboarding from './Onboarding'
 import { DatasourceIcon } from './Datasource'
 import { track } from './lib/tracking'
+import { If } from './lib/helperElements'
 import BigQueryConnectionTypeSelectorModal from './BigQueryConnectionTypeSelectorModal'
 
 function Loading () {
@@ -156,6 +157,7 @@ function FirstReportOnboarding () {
   const isPlayground = useSelector(state => state.user.isPlayground)
   const dispatch = useDispatch()
   const isViewer = useSelector(state => state.user.isViewer)
+  const isSelfHosted = useSelector(state => state.user.isSelfHosted)
   return (
     <>
       <Result
@@ -165,11 +167,7 @@ function FirstReportOnboarding () {
         extra={(
           <>
             <Button icon={<PlusOutlined />} disabled={isViewer} type='primary' id='dekart-create-report' onClick={() => dispatch(createReport())}>Create report</Button>
-            {isPlayground
-              ? (
-                <div className={styles.stepBySetLink}><a target='_blank' href='https://dekart.xyz/docs/about/playground/#quick-start' rel='noreferrer'>Check step-by-step guide</a></div>
-                )
-              : null}
+            <If condition={isPlayground && !isSelfHosted}><div className={styles.stepBySetLink}><a target='_blank' href='https://dekart.xyz/docs/about/playground/#quick-start' rel='noreferrer'>Check step-by-step guide</a></div></If>
           </>
         )}
       />
@@ -178,12 +176,33 @@ function FirstReportOnboarding () {
   )
 }
 
+function ConnectionTypeSelectorBottom () {
+  const dispatch = useDispatch()
+  const planType = useSelector(state => state.user.stream.planType)
+  const showCancel = useSelector(state => state.connection.list).length > 0
+  if (showCancel) {
+    return (
+      <div className={styles.connectionSelectorBack}>
+        <Button type='ghost' onClick={() => dispatch(newConnectionScreen(false))}>Return back</Button>
+      </div>
+    )
+  }
+  if (planType === PlanType.TYPE_PERSONAL) {
+    return (
+      <div className={styles.notSure}>
+        <p>or</p>
+        <Button ghost type='primary' href='https://dekart.xyz/self-hosted/?ref=ConnectionTypeSelector' target='_blank'>Get Started with Self-Hosting</Button>
+      </div>
+    )
+  }
+  return null
+}
+
 // selects between Google Cloud and Snowflake
 function ConnectionTypeSelector () {
-  const connectionList = useSelector(state => state.connection.list)
-  const showCancel = connectionList.length > 0 // show cancel button if there are connections
   const dispatch = useDispatch()
   const [bigqueryModalOpen, setBigqueryModalOpen] = useState(false)
+  const secretsEnabled = useSelector(state => state.env.secretsEnabled)
   useEffect(() => {
     track('ConnectionTypeSelector')
   }, [])
@@ -199,6 +218,8 @@ function ConnectionTypeSelector () {
         >BigQuery
         </Button>
         <Button
+          disabled={!secretsEnabled}
+          title={secretsEnabled ? '' : 'Feature is disabled. Contact your administrator to enable it.'}
           icon={<DatasourceIcon type={ConnectionType.CONNECTION_TYPE_SNOWFLAKE} />} size='large' onClick={() => {
             track('ConnectionTypeSelectorSnowflake')
             dispatch(newConnection(ConnectionType.CONNECTION_TYPE_SNOWFLAKE))
@@ -206,18 +227,7 @@ function ConnectionTypeSelector () {
         >Snowflake
         </Button>
       </div>
-      {showCancel
-        ? (
-          <div className={styles.connectionSelectorBack}>
-            <Button type='ghost' onClick={() => dispatch(newConnectionScreen(false))}>Return back</Button>
-          </div>
-          )
-        : (
-          <div className={styles.notSure}>
-            <p>or</p>
-            <Button ghost type='primary' href='https://dekart.xyz/self-hosted/' target='_blank'>Get Started with Self-Hosting</Button>
-          </div>
-          )}
+      <ConnectionTypeSelectorBottom />
     </>
   )
 }
@@ -417,8 +427,13 @@ export default function HomePage ({ reportFilter }) {
   const dispatch = useDispatch()
   const body = useRef()
   useEffect(() => {
-    dispatch(subscribeReports())
-    return () => dispatch(unsubscribeReports())
+    const t = setTimeout(() => {
+      dispatch(subscribeReports())
+    }, 0)
+    return () => {
+      clearTimeout(t)
+      dispatch(unsubscribeReports())
+    }
   }, [dispatch])
   return (
     <div className={styles.homePage}>

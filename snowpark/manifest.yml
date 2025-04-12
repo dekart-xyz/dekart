@@ -1,0 +1,53 @@
+manifest_version: 1
+# Example https://github.com/snowflakedb/native-apps-examples/blob/f2a488ba591e3f130d512f037e34292b8cb7cfa6/spcs-three-tier/app/manifest.yml#L7
+
+version:
+  name: V1
+  label: "Dekart for Snowpark V1"
+  comment: "Initial release of Dekart for Snowpark"
+
+artifacts:
+  readme: readme.md
+  setup_script: setup.sql
+  container_services:
+    images:
+      - /dekart_app/napp/img_repo/dekart_image
+  default_web_endpoint:
+    service: app_public.st_spcs
+    endpoint: app
+
+configuration:
+  grant_callback: v1.create_services
+  log_level: debug
+  trace_level: always
+
+lifecycle_callbacks:
+  version_initializer: v1.init
+
+privileges:
+  - CREATE COMPUTE POOL:
+      description: "Required to allow the app to create a compute pool in the consumer account."
+      required_at_setup: true
+  - CREATE WAREHOUSE:
+      description: "Required to allow the app to create a warehouse in the consumer account."
+      required_at_setup: true
+  - BIND SERVICE ENDPOINT:
+      description: "Enables application to expose service endpoints"
+      required_at_setup: true
+
+references:
+  - MAPBOX_EAI:
+      label: "Mapbox API"
+      description: "Dekart uses Mapbox API to render maps."
+      privileges: [USAGE]
+      object_type: EXTERNAL ACCESS INTEGRATION
+      register_callback: v1.register_single_callback
+      configuration_callback: v1.get_configuration
+      required_at_setup: true
+  - consumer_tables:
+      label: "Account tables be accessed from Dekart"
+      description: "A table in the consumer account that exists outside the APPLICATION object."
+      privileges:
+        - SELECT
+      object_type: TABLE
+      register_callback: v1.register_single_callback

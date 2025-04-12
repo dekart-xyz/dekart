@@ -270,12 +270,14 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 		StreamOptions: &proto.StreamOptions{
 			Sequence: sequence,
 		},
-		ConnectionUpdate: connectionUpdate,
-		Email:            claims.Email,
-		WorkspaceUpdate:  workspaceUpdate,
-		WorkspaceId:      checkWorkspace(ctx).ID,
-		PlanType:         checkWorkspace(ctx).PlanType,
-		Role:             checkWorkspace(ctx).UserRole,
+		ConnectionUpdate:   connectionUpdate,
+		Email:              claims.Email,
+		WorkspaceUpdate:    workspaceUpdate,
+		WorkspaceId:        checkWorkspace(ctx).ID,
+		PlanType:           checkWorkspace(ctx).PlanType,
+		Role:               checkWorkspace(ctx).UserRole,
+		IsPlayground:       checkWorkspace(ctx).IsPlayground,
+		IsDefaultWorkspace: checkWorkspace(ctx).IsDefaultWorkspace,
 	}
 
 	err = srv.Send(&response)
