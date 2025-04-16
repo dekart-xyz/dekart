@@ -81,7 +81,7 @@ func (s Server) getSubscription(ctx context.Context, workspaceId string) (*proto
 			}, nil
 		}
 		for _, subscription := range c.Subscriptions.Data {
-			if subscription.Status == "active" {
+			if subscription.Status == "active" || subscription.Status == "past_due" {
 				for _, item := range subscription.Items.Data {
 					if item.Price.ID == priceID && !item.Deleted {
 						return &proto.Subscription{
