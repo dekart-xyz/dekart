@@ -135,6 +135,7 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 			snowflake_account_id,
 			snowflake_username,
 			snowflake_password_encrypted,
+			snowflake_key_encrypted,
 			snowflake_warehouse,
 			bigquery_key_encrypted,
 			(select count(*) from datasets where connection_id=connections.id) as dataset_count
@@ -154,6 +155,7 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 		var connectionType proto.ConnectionType
 		snowflakeUser := sql.NullString{}
 		snowflakePassword := sql.NullString{}
+		snowflakeKey := sql.NullString{}
 		bigqueryKey := sql.NullString{}
 		snowflakeAccountID := sql.NullString{}
 		snowflakeWarehouse := sql.NullString{}
@@ -166,6 +168,7 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 			&snowflakeAccountID,
 			&snowflakeUser,
 			&snowflakePassword,
+			&snowflakeKey,
 			&snowflakeWarehouse,
 			&bigqueryKey,
 			&connection.DatasetCount,
@@ -180,6 +183,11 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 		if snowflakePassword.String != "" {
 			connection.SnowflakePassword = &proto.Secret{
 				ServerEncrypted: snowflakePassword.String,
+			}
+		}
+		if snowflakeKey.String != "" {
+			connection.SnowflakeKey = &proto.Secret{
+				ServerEncrypted: snowflakeKey.String,
 			}
 		}
 		if bigqueryKey.String != "" {
@@ -215,6 +223,7 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 			snowflake_account_id,
 			snowflake_username,
 			snowflake_password_encrypted,
+			snowflake_key_encrypted,
 			snowflake_warehouse,
 			is_default,
 			created_at,
@@ -243,6 +252,7 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 		snowflakeAccountID := sql.NullString{}
 		snowflakeUsername := sql.NullString{}
 		snowflakePassword := sql.NullString{}
+		snowflakeKey := sql.NullString{}
 		bigqueryKey := sql.NullString{}
 		snowflakeWarehouse := sql.NullString{}
 		isDefault := false
@@ -257,6 +267,7 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 			&snowflakeAccountID,
 			&snowflakeUsername,
 			&snowflakePassword,
+			&snowflakeKey,
 			&snowflakeWarehouse,
 			&isDefault,
 			&createdAt,
@@ -286,6 +297,7 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 		connection.SnowflakeUsername = snowflakeUsername.String
 		connection.SnowflakeWarehouse = snowflakeWarehouse.String
 		connection.SnowflakePassword = secrets.EncryptedToClient(snowflakePassword.String)
+		connection.SnowflakeKey = secrets.EncryptedToClient(snowflakeKey.String)
 		connection.BigqueryKey = secrets.EncryptedToClient(bigqueryKey.String)
 		connection.UpdatedAt = updatedAt.Unix()
 		connection.CreatedAt = createdAt.Unix()
@@ -380,14 +392,13 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 			req.Connection.SnowflakeWarehouse,
 			req.Connection.Id,
 		)
-		// update password if it is provided
-		snowflakePassword := secrets.SecretToServerEncrypted(req.Connection.SnowflakePassword, claims)
-		if snowflakePassword != "" && err == nil {
+		snowflakeKey := secrets.SecretToServerEncrypted(req.Connection.SnowflakeKey, claims)
+		if snowflakeKey != "" && err == nil {
 			res, err = s.db.ExecContext(ctx,
 				`update connections set
-				snowflake_password_encrypted=$1
+				snowflake_key_encrypted=$1
 			where id=$2`,
-				snowflakePassword,
+				snowflakeKey,
 				req.Connection.Id,
 			)
 		}
@@ -635,10 +646,11 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 			snowflake_username,
 			snowflake_warehouse,
 			snowflake_password_encrypted,
+			snowflake_key_encrypted,
 			bigquery_key_encrypted,
 			author_email,
 			workspace_id
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
 		id,
 		req.Connection.ConnectionName,
 		req.Connection.BigqueryProjectId,
@@ -648,6 +660,7 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 		req.Connection.SnowflakeUsername,
 		req.Connection.SnowflakeWarehouse,
 		secrets.SecretToServerEncrypted(req.Connection.SnowflakePassword, claims),
+		secrets.SecretToServerEncrypted(req.Connection.SnowflakeKey, claims),
 		secrets.SecretToServerEncrypted(req.Connection.BigqueryKey, claims),
 		claims.Email,
 		checkWorkspace(ctx).ID,

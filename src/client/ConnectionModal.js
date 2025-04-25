@@ -71,14 +71,14 @@ function SnowflakeConnectionModal ({ form }) {
   const dispatch = useDispatch()
   const connection = useSelector(state => state.connection.list.find(s => s.id === id))
   const datasetUsed = connection?.datasetCount > 0
-  const passwordChanged = form.getFieldValue('snowflakePassword') !== connection?.snowflakePassword
+  const keyChanged = form.getFieldValue('snowflakeKey') !== connection?.snowflakeKey
 
   return (
     <Modal
       open
       title={<><DatasourceIcon type={ConnectionType.CONNECTION_TYPE_SNOWFLAKE} /> Snowflake</>}
       onCancel={() => dispatch(closeConnectionDialog())}
-      footer={<Footer form={form} testDisabled={!passwordChanged} />}
+      footer={<Footer form={form} testDisabled={!keyChanged} />}
     >
       <div className={styles.modalBody}>
         <Form
@@ -108,15 +108,15 @@ function SnowflakeConnectionModal ({ form }) {
           <Form.Item required label='Snowflake Username' name='snowflakeUsername' extra='The database username for the account that you want to use to connect to your database.'>
             <Input placeholder='USERNAME' />
           </Form.Item>
-          <Form.Item required label='Snowflake Password' name='snowflakePassword' extra={<>The password for the username that you use to connect to the database.</>}>
+          <Form.Item required label='Snowflake Private Key' name='snowflakeKey' extra={<>The <a target='_blank' href='https://dekart.xyz/docs/usage/snowflake-private-key/' rel='noreferrer'>private key</a> required for authenticating with Snowflake.</>}>
             <Input.Password
-              placeholder='PASSWORD' visibilityToggle={passwordChanged} onFocus={() => {
-                if (!passwordChanged) {
-                  form.setFieldsValue({ snowflakePassword: '' })
+              placeholder='MIIEv..' visibilityToggle={keyChanged} onFocus={() => {
+                if (!keyChanged) {
+                  form.setFieldsValue({ snowflakeKey: '' })
                 }
               }} onBlur={() => {
-                if (form.getFieldValue('snowflakePassword') === '') {
-                  form.setFieldsValue({ snowflakePassword: connection?.snowflakePassword })
+                if (form.getFieldValue('snowflakeKey') === '') {
+                  form.setFieldsValue({ snowflakeKey: connection?.snowflakeKey })
                 }
               }}
             />

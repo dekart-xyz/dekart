@@ -213,7 +213,6 @@ type runQueryOptions struct {
 func (s Server) runQuery(ctx context.Context, o runQueryOptions) error {
 	connCtx := conn.GetCtx(ctx, o.connection)
 	job, jobStatus, err := s.jobs.Create(o.reportID, o.queryID, o.queryText, connCtx)
-	log.Debug().Str("jobID", job.GetID()).Msg("Job created")
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create job")
 		return err
