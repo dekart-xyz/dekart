@@ -13,7 +13,7 @@ export class AbortError extends Error {
   }
 }
 
-export function get (endpoint, token = null, signal = null, onProgress = null) {
+export function get (endpoint, token = null, signal = null, onProgress = null, claimEmailCookie = null) {
   return new Promise((resolve, reject) => {
     const xhr = new window.XMLHttpRequest()
     const { REACT_APP_API_HOST } = process.env
@@ -24,6 +24,9 @@ export function get (endpoint, token = null, signal = null, onProgress = null) {
 
     if (token) {
       xhr.setRequestHeader('Authorization', `Bearer ${token.access_token}`)
+    }
+    if (claimEmailCookie) {
+      xhr.setRequestHeader('X-Dekart-Claim-Email', claimEmailCookie)
     }
 
     xhr.responseType = 'arraybuffer'
