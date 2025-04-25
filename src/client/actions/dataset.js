@@ -245,13 +245,14 @@ export function downloadDataset (dataset, sourceId, extension, prevDatasetsList)
     const label = getDatasetName(dataset, queries, files)
     const controller = new AbortController()
     dispatch({ type: downloadDataset.name, dataset, controller })
-    const { token } = getState()
+    const { token, user: { claimEmailCookie } } = getState()
     try {
       const res = await get(
         `/dataset-source/${dataset.id}/${sourceId}.${extension}`,
         token,
         controller.signal,
-        (loaded) => dispatch(downloadingProgress(dataset, loaded))
+        (loaded) => dispatch(downloadingProgress(dataset, loaded)),
+        claimEmailCookie
       )
       dispatch(finishDownloading(dataset, prevDatasetsList, res, extension, label))
     } catch (err) {

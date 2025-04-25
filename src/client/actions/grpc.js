@@ -7,7 +7,7 @@ const host = REACT_APP_API_HOST || ''
 
 export function grpcCall (method, request, resolve = () => {}, reject = (err) => err) {
   return async function (dispatch, getState) {
-    const { token, user: { isPlayground } } = getState()
+    const { token, user: { isPlayground, claimEmailCookie } } = getState()
     const headers = new window.Headers()
     if (token) {
       headers.append('Authorization', `Bearer ${token.access_token}`)
@@ -15,6 +15,10 @@ export function grpcCall (method, request, resolve = () => {}, reject = (err) =>
     if (isPlayground) {
       headers.append('X-Dekart-Playground', 'true')
     }
+    if (claimEmailCookie) {
+      headers.append('X-Dekart-Claim-Email', claimEmailCookie)
+    }
+
     try {
       const response = await unary(method, request, headers)
       resolve(response)
@@ -79,13 +83,16 @@ class GrpcError extends Error {
 
 export function grpcStream (endpoint, request, cb) {
   return (dispatch, getState) => {
-    const { token, user: { isPlayground } } = getState()
+    const { token, user: { isPlayground, claimEmailCookie } } = getState()
     const headers = new window.Headers()
     if (token) {
       headers.append('Authorization', `Bearer ${token.access_token}`)
     }
     if (isPlayground) {
       headers.append('X-Dekart-Playground', 'true')
+    }
+    if (claimEmailCookie) {
+      headers.append('X-Dekart-Claim-Email', claimEmailCookie)
     }
     const onMessage = (message) => {
       const err = cb(message, null)
