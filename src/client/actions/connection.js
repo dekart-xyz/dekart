@@ -125,10 +125,10 @@ export function getConnectionsList () {
     })
 
     res.connectionsList.forEach((connection) => {
-      // replace password with placeholder
-      // no password is returned from the server, only the length
-      if (connection.snowflakePassword?.length > 0) {
-        connection.snowflakePassword = '*'.repeat(connection.snowflakePassword.length)
+      // replace key with placeholder
+      // no secret is returned from the server, only the length
+      if (connection.snowflakeKey?.length > 0) {
+        connection.snowflakeKey = '*'.repeat(connection.snowflakeKey.length)
       }
     })
     dispatch(connectionListUpdate(res.connectionsList))
@@ -160,8 +160,8 @@ export function saveConnection (id, connectionType, connectionProps) {
         connection.setSnowflakeUsername(connectionProps.snowflakeUsername)
         connection.setSnowflakeWarehouse(connectionProps.snowflakeWarehouse)
         const secret = new Secret()
-        secret.setClientEncrypted(await encryptPassword(connectionProps.snowflakePassword, getState().env.variables.AES_KEY, getState().env.variables.AES_IV))
-        connection.setSnowflakePassword(secret)
+        secret.setClientEncrypted(await encryptPassword(connectionProps.snowflakeKey, getState().env.variables.AES_KEY, getState().env.variables.AES_IV))
+        connection.setSnowflakeKey(secret)
       } else if (connectionProps.newBigqueryKey) { // bigquery service account key
         const { connectionName, cloudStorageBucket, newBigqueryKey } = connectionProps
         connection.setConnectionName(connectionName || 'BigQuery')
@@ -193,11 +193,11 @@ export function saveConnection (id, connectionType, connectionProps) {
         connection.setSnowflakeAccountId(connectionProps.snowflakeAccountId)
         connection.setSnowflakeUsername(connectionProps.snowflakeUsername)
         connection.setSnowflakeWarehouse(connectionProps.snowflakeWarehouse)
-        if (prevConnection?.snowflakePassword !== connectionProps.snowflakePassword) {
-          // update password only if it was changed, otherwise it's just a placeholder
+        if (prevConnection?.snowflakeKey !== connectionProps.snowflakeKey) {
+          // update secret only if it was changed, otherwise it's just a placeholder
           const secret = new Secret()
-          secret.setClientEncrypted(await encryptPassword(connectionProps.snowflakePassword, getState().env.variables.AES_KEY, getState().env.variables.AES_IV))
-          connection.setSnowflakePassword(secret)
+          secret.setClientEncrypted(await encryptPassword(connectionProps.snowflakeKey, getState().env.variables.AES_KEY, getState().env.variables.AES_IV))
+          connection.setSnowflakeKey(secret)
         }
       } else if (prevConnection.bigqueryKey) { // bigquery service account key
         connection.setConnectionName(connectionProps.connectionName)
@@ -288,14 +288,14 @@ export function testConnection (connectionType, values) {
     const connection = new Connection()
     connection.setConnectionType(connectionType)
     if (connectionType === ConnectionType.CONNECTION_TYPE_SNOWFLAKE) {
-      const { connectionName, snowflakeAccountId, snowflakeUsername, snowflakeWarehouse, snowflakePassword } = values
+      const { connectionName, snowflakeAccountId, snowflakeUsername, snowflakeWarehouse, snowflakeKey } = values
       connection.setConnectionName(connectionName)
       connection.setSnowflakeAccountId(snowflakeAccountId)
       connection.setSnowflakeUsername(snowflakeUsername)
       connection.setSnowflakeWarehouse(snowflakeWarehouse)
       const secret = new Secret()
-      secret.setClientEncrypted(await encryptPassword(snowflakePassword, AES_KEY, AES_IV))
-      connection.setSnowflakePassword(secret)
+      secret.setClientEncrypted(await encryptPassword(snowflakeKey, AES_KEY, AES_IV))
+      connection.setSnowflakeKey(secret)
     } else if (values.newBigqueryKey) { // bigquery service account key
       const { connectionName, cloudStorageBucket, newBigqueryKey } = values
       connection.setConnectionName(connectionName)

@@ -9719,7 +9719,8 @@ proto.Connection.toObject = function(includeInstance, msg) {
     snowflakeUsername: jspb.Message.getFieldWithDefault(msg, 13, ""),
     snowflakePassword: (f = msg.getSnowflakePassword()) && proto.Secret.toObject(includeInstance, f),
     snowflakeWarehouse: jspb.Message.getFieldWithDefault(msg, 15, ""),
-    bigqueryKey: (f = msg.getBigqueryKey()) && proto.Secret.toObject(includeInstance, f)
+    bigqueryKey: (f = msg.getBigqueryKey()) && proto.Secret.toObject(includeInstance, f),
+    snowflakeKey: (f = msg.getSnowflakeKey()) && proto.Secret.toObject(includeInstance, f)
   };
 
   if (includeInstance) {
@@ -9821,6 +9822,11 @@ proto.Connection.deserializeBinaryFromReader = function(msg, reader) {
       var value = new proto.Secret;
       reader.readMessage(value,proto.Secret.deserializeBinaryFromReader);
       msg.setBigqueryKey(value);
+      break;
+    case 17:
+      var value = new proto.Secret;
+      reader.readMessage(value,proto.Secret.deserializeBinaryFromReader);
+      msg.setSnowflakeKey(value);
       break;
     default:
       reader.skipField();
@@ -9961,6 +9967,14 @@ proto.Connection.serializeBinaryToWriter = function(message, writer) {
   if (f != null) {
     writer.writeMessage(
       16,
+      f,
+      proto.Secret.serializeBinaryToWriter
+    );
+  }
+  f = message.getSnowflakeKey();
+  if (f != null) {
+    writer.writeMessage(
+      17,
       f,
       proto.Secret.serializeBinaryToWriter
     );
@@ -10291,6 +10305,43 @@ proto.Connection.prototype.clearBigqueryKey = function() {
  */
 proto.Connection.prototype.hasBigqueryKey = function() {
   return jspb.Message.getField(this, 16) != null;
+};
+
+
+/**
+ * optional Secret snowflake_key = 17;
+ * @return {?proto.Secret}
+ */
+proto.Connection.prototype.getSnowflakeKey = function() {
+  return /** @type{?proto.Secret} */ (
+    jspb.Message.getWrapperField(this, proto.Secret, 17));
+};
+
+
+/**
+ * @param {?proto.Secret|undefined} value
+ * @return {!proto.Connection} returns this
+*/
+proto.Connection.prototype.setSnowflakeKey = function(value) {
+  return jspb.Message.setWrapperField(this, 17, value);
+};
+
+
+/**
+ * Clears the message field making it undefined.
+ * @return {!proto.Connection} returns this
+ */
+proto.Connection.prototype.clearSnowflakeKey = function() {
+  return this.setSnowflakeKey(undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.Connection.prototype.hasSnowflakeKey = function() {
+  return jspb.Message.getField(this, 17) != null;
 };
 
 
