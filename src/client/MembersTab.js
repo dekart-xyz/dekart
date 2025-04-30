@@ -12,28 +12,20 @@ import { CopyOutlined } from '@ant-design/icons'
 import Select from 'antd/es/select'
 
 function getRoleTitle (role, planType) {
-  if (planType === PlanType.TYPE_GROW) {
-    switch (role) {
-      case UserRole.ROLE_ADMIN:
-        return 'Admin ($49/month)'
-      case UserRole.ROLE_EDITOR:
-        return 'Editor ($49/month)'
-      case UserRole.ROLE_VIEWER:
-        return 'Viewer (free)'
-      default:
-        return 'Unknown'
+  const roleLabels = {
+    [PlanType.TYPE_GROW]: {
+      [UserRole.ROLE_ADMIN]: 'Admin ($49/month)',
+      [UserRole.ROLE_EDITOR]: 'Editor ($49/month)',
+      [UserRole.ROLE_VIEWER]: 'Viewer (free)'
+    },
+    default: {
+      [UserRole.ROLE_ADMIN]: 'Admin',
+      [UserRole.ROLE_EDITOR]: 'Editor',
+      [UserRole.ROLE_VIEWER]: 'Viewer'
     }
   }
-  switch (role) {
-    case UserRole.ROLE_ADMIN:
-      return 'Admin'
-    case UserRole.ROLE_EDITOR:
-      return 'Editor'
-    case UserRole.ROLE_VIEWER:
-      return 'Viewer'
-    default:
-      return 'Unknown'
-  }
+  const labels = roleLabels[planType] || roleLabels.default
+  return labels[role] || 'Unknown'
 }
 
 export default function MembersTab () {

@@ -232,29 +232,29 @@ export default function App () {
           <SwitchToPlayground />
         </Route>
         <Route exact path='/'>
-          <AppRedirect /> {/* needed to redirect back to workspace when payment issue */}
+          <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
           <HomePage reportFilter='my' />
         </Route>
         <Route exact path='/grant-scopes'>
           <GrantScopesPage visitedPages={visitedPages} />
         </Route>
         <Route exact path='/shared'>
-          <AppRedirect /> {/* needed to redirect back to workspace when payment issue */}
+          <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
           <HomePage reportFilter='discoverable' />
         </Route>
         <Route exact path='/connections'>
-          <AppRedirect /> {/* needed to redirect back to workspace when payment issue */}
+          <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
           {userDefinedConnection ? <HomePage reportFilter='connections' /> : <Redirect to='/' />}
         </Route>
         <Route path='/reports/:id/edit'>
           <RedirectToSource />
         </Route>
         <Route path='/reports/:id/source'>
-          <AppRedirect /> {/* needed to redirect back to workspace when payment issue */}
+          <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
           <ReportPage edit />
         </Route>
         <Route path='/reports/:id'>
-          <AppRedirect /> {/* needed to redirect back to workspace when payment issue */}
+          <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
           <ReportPage />
         </Route>
         <Route path='/workspace/invite/:inviteId'>
