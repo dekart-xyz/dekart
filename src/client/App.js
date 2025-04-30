@@ -134,6 +134,7 @@ function NotFoundPage () {
   const dispatch = useDispatch()
   const userStream = useSelector(state => state.user.stream)
   const workspaceId = userStream?.workspaceId
+  const history = useHistory()
   return (
     <Result
       icon={<QuestionOutlined />} title='404' subTitle={
@@ -146,7 +147,13 @@ function NotFoundPage () {
                 <Button onClick={() => dispatch(switchPlayground(false, '/workspace'))}>Join workspace</Button>
               </div>
               )
-            : null}
+            : (
+              <>
+                <div>
+                  <Button onClick={() => history.push('/')}>Back to workspace</Button>
+                </div>
+              </>
+              )}
         </>
       }
     />
@@ -225,24 +232,29 @@ export default function App () {
           <SwitchToPlayground />
         </Route>
         <Route exact path='/'>
+          <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
           <HomePage reportFilter='my' />
         </Route>
         <Route exact path='/grant-scopes'>
           <GrantScopesPage visitedPages={visitedPages} />
         </Route>
         <Route exact path='/shared'>
+          <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
           <HomePage reportFilter='discoverable' />
         </Route>
         <Route exact path='/connections'>
+          <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
           {userDefinedConnection ? <HomePage reportFilter='connections' /> : <Redirect to='/' />}
         </Route>
         <Route path='/reports/:id/edit'>
           <RedirectToSource />
         </Route>
         <Route path='/reports/:id/source'>
+          <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
           <ReportPage edit />
         </Route>
         <Route path='/reports/:id'>
+          <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
           <ReportPage />
         </Route>
         <Route path='/workspace/invite/:inviteId'>
