@@ -42,7 +42,7 @@ export default function MembersTab () {
       dispatch(updateWorkspaceUser(email, UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_ADD, inviteRole))
       setEmail('')
     }
-  }, [dispatch, email, isAdmin])
+  }, [dispatch, email, isAdmin, inviteRole])
   if (!users) {
     return null
   }
