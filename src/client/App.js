@@ -134,6 +134,7 @@ function NotFoundPage () {
   const dispatch = useDispatch()
   const userStream = useSelector(state => state.user.stream)
   const workspaceId = userStream?.workspaceId
+  const history = useHistory()
   return (
     <Result
       icon={<QuestionOutlined />} title='404' subTitle={
@@ -146,7 +147,13 @@ function NotFoundPage () {
                 <Button onClick={() => dispatch(switchPlayground(false, '/workspace'))}>Join workspace</Button>
               </div>
               )
-            : null}
+            : (
+              <>
+                <div>
+                  <Button onClick={() => history.push('/')}>Back to workspace</Button>
+                </div>
+              </>
+              )}
         </>
       }
     />
@@ -225,24 +232,29 @@ export default function App () {
           <SwitchToPlayground />
         </Route>
         <Route exact path='/'>
+          <AppRedirect /> {/* needed to redirect back to workspace when payment issue */}
           <HomePage reportFilter='my' />
         </Route>
         <Route exact path='/grant-scopes'>
           <GrantScopesPage visitedPages={visitedPages} />
         </Route>
         <Route exact path='/shared'>
+          <AppRedirect /> {/* needed to redirect back to workspace when payment issue */}
           <HomePage reportFilter='discoverable' />
         </Route>
         <Route exact path='/connections'>
+          <AppRedirect /> {/* needed to redirect back to workspace when payment issue */}
           {userDefinedConnection ? <HomePage reportFilter='connections' /> : <Redirect to='/' />}
         </Route>
         <Route path='/reports/:id/edit'>
           <RedirectToSource />
         </Route>
         <Route path='/reports/:id/source'>
+          <AppRedirect /> {/* needed to redirect back to workspace when payment issue */}
           <ReportPage edit />
         </Route>
         <Route path='/reports/:id'>
+          <AppRedirect /> {/* needed to redirect back to workspace when payment issue */}
           <ReportPage />
         </Route>
         <Route path='/workspace/invite/:inviteId'>

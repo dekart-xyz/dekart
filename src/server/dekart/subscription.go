@@ -71,13 +71,12 @@ func (s Server) getSubscription(ctx context.Context, workspaceId string) (*proto
 
 		if err != nil {
 			log.Err(err).Send()
-			return &proto.Subscription{
-				UpdatedAt: createdAt.Time.Unix(),
-			}, err
+			return nil, err
 		}
 		if c.Subscriptions == nil {
 			return &proto.Subscription{
-				UpdatedAt: createdAt.Time.Unix(),
+				CustomerId: customerID.String,
+				UpdatedAt:  createdAt.Time.Unix(),
 			}, nil
 		}
 		for _, subscription := range c.Subscriptions.Data {
@@ -100,13 +99,15 @@ func (s Server) getSubscription(ctx context.Context, workspaceId string) (*proto
 		}
 		// no active subscription
 		return &proto.Subscription{
-			UpdatedAt: createdAt.Time.Unix(),
+			CustomerId: customerID.String,
+			UpdatedAt:  createdAt.Time.Unix(),
 		}, nil
 	}
 	// free plan or unknown plan
 	return &proto.Subscription{
-		PlanType:  planType,
-		UpdatedAt: createdAt.Time.Unix(),
+		PlanType:   planType,
+		CustomerId: customerID.String,
+		UpdatedAt:  createdAt.Time.Unix(),
 	}, nil
 }
 

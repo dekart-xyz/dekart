@@ -20,10 +20,7 @@ import { DatasourceIcon } from './Datasource'
 import { track } from './lib/tracking'
 import { If } from './lib/helperElements'
 import BigQueryConnectionTypeSelectorModal from './BigQueryConnectionTypeSelectorModal'
-
-function Loading () {
-  return null
-}
+import { Loading } from './Loading'
 
 function ArchiveReportButton ({ report }) {
   const dispatch = useDispatch()
