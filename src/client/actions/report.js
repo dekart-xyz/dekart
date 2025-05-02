@@ -1,5 +1,5 @@
-import { KeplerGlSchema } from '@dekart-xyz/kepler.gl/dist/schemas'
-import { removeDataset } from '@dekart-xyz/kepler.gl/dist/actions'
+import { KeplerGlSchema } from '@kepler.gl/schemas'
+import { removeDataset } from '@kepler.gl/actions'
 
 import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
 import { success } from './message'

@@ -1,7 +1,7 @@
 import { useParams } from 'react-router-dom'
 import Input from 'antd/es/input'
 import { useEffect, useState, Component } from 'react'
-import { KeplerGl } from '@dekart-xyz/kepler.gl/dist/components'
+import { KeplerGl } from '@kepler.gl/components'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
 import { useDispatch, useSelector } from 'react-redux'
@@ -28,7 +28,7 @@ import Dropdown from 'antd/es/dropdown'
 import Readme from './Readme'
 import { addReadme, removeReadme, showReadmeTab } from './actions/readme'
 import Modal from 'antd/es/modal'
-import { MapControlButton } from '@dekart-xyz/kepler.gl/dist/components/common/styled-components'
+import { MapControlButton } from '@kepler.gl/components/dist/common/styled-components'
 import { Loading } from './Loading'
 
 function TabIcon ({ job }) {

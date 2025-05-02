@@ -2,12 +2,12 @@ import { CreateDatasetRequest, RemoveDatasetRequest, UpdateDatasetConnectionRequ
 import { Dekart } from '../../proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { setError, success, info, warn } from './message'
-import { addDataToMap, toggleSidePanel, reorderLayer, removeDataset as removeDatasetFromKepler } from '@dekart-xyz/kepler.gl/dist/actions'
-import { processCsvData, processGeojson } from '@dekart-xyz/kepler.gl/dist/processors'
+import { addDataToMap, toggleSidePanel, reorderLayer, removeDataset as removeDatasetFromKepler } from '@kepler.gl/actions'
+import { processCsvData, processGeojson } from '@kepler.gl/processors'
 import { get } from '../lib/api'
 import getDatasetName from '../lib/getDatasetName'
 import { runQuery } from './query'
-import { KeplerGlSchema } from '@dekart-xyz/kepler.gl/dist/schemas'
+import { KeplerGlSchema } from '@kepler.gl/schemas'
 
 export function createDataset (reportId) {
   return (dispatch) => {
@@ -137,6 +137,7 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
       if (extension === 'csv') {
         const csv = await res.text()
         data = processCsvData(csv)
+        console.log('csv data', data)
       } else {
         const json = await res.json()
         data = processGeojson(json)

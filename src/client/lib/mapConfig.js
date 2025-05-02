@@ -1,5 +1,5 @@
-import { receiveMapConfig } from '@dekart-xyz/kepler.gl/dist/actions/actions'
-import { KeplerGlSchema } from '@dekart-xyz/kepler.gl/dist/schemas'
+import { receiveMapConfig } from '@kepler.gl/actions'
+import { KeplerGlSchema } from '@kepler.gl/schemas'
 import { setReportChanged } from '../actions/report'
 import { useDispatch, useSelector } from 'react-redux'
 import { useEffect } from 'react'

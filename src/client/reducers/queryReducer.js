@@ -3,7 +3,7 @@ import { Query, QueryJob } from '../../proto/dekart_pb'
 import { downloadDataset } from '../actions/dataset'
 import { closeQueryParamSettings, openQueryParamSettings, queryChanged, queryParamChanged, querySource, setQueryParamsValues, setQueryParamValue, updateQueryParamsFromQueries } from '../actions/query'
 import { openReport, reportUpdate } from '../actions/report'
-import { ActionTypes as KeplerActionTypes } from '@dekart-xyz/kepler.gl/dist/actions'
+import { ActionTypes as KeplerActionTypes } from '@kepler.gl/actions'
 
 export function queries (state = [], action) {
   switch (action.type) {
