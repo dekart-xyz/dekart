@@ -17,6 +17,8 @@ const store = createStore(
     applyMiddleware(...enhanceReduxMiddleware([thunk]))
   )
 )
+
+console.log('store')
 // screenshotInit(store)
 
 ReactDOM.render(

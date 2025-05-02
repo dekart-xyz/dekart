@@ -1,9 +1,9 @@
 import { grpc } from '@improbable-eng/grpc-web'
-import { StreamOptions } from '../../proto/dekart_pb'
+import { StreamOptions } from 'dekart-proto/dekart_pb'
 import { setError, setStreamError } from './message'
 
-const { REACT_APP_API_HOST } = process.env
-const host = REACT_APP_API_HOST || ''
+const { VITE_API_HOST } = import.meta.env
+const host = VITE_API_HOST || ''
 
 export function grpcCall (method, request, resolve = () => {}, reject = (err) => err) {
   return async function (dispatch, getState) {

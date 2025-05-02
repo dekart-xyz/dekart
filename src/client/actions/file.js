@@ -1,5 +1,5 @@
-import { CreateFileRequest } from '../../proto/dekart_pb'
-import { Dekart } from '../../proto/dekart_pb_service'
+import { CreateFileRequest } from 'dekart-proto/dekart_pb'
+import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 
 export function uploadFileProgress (fileId, loaded, total) {
@@ -26,8 +26,8 @@ export function uploadFile (fileId, file) {
     const formData = new window.FormData()
     formData.append('file', file)
 
-    const { REACT_APP_API_HOST } = process.env
-    const host = REACT_APP_API_HOST || ''
+    const { VITE_API_HOST } = import.meta.env
+    const host = VITE_API_HOST || ''
     const url = `${host}/api/v1/file/${fileId}.csv`
 
     const { token } = getState()

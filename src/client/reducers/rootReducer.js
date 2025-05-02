@@ -263,7 +263,7 @@ function fileUploadStatus (state = {}, action) {
 }
 
 export default combineReducers({
-  keplerGl: keplerGlReducer,
+  keplerGl,
   report,
   reportStatus,
   reportsList,

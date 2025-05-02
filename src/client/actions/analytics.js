@@ -1,5 +1,5 @@
-import { GetReportAnalyticsRequest } from '../../proto/dekart_pb'
-import { Dekart } from '../../proto/dekart_pb_service'
+import { GetReportAnalyticsRequest } from 'dekart-proto/dekart_pb'
+import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 
 export function setAnalyticsModalOpen (modalOpen) {

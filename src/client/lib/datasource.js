@@ -1,4 +1,4 @@
-import { ConnectionType } from '../../proto/dekart_pb'
+import { ConnectionType } from 'dekart-proto/dekart_pb'
 import { bigQueryKeywords } from './bigQueryKeywords'
 import { snowflakeKeywords } from './snowflakeKeywords'
 
