@@ -74,10 +74,6 @@
     "vite": "^5.4.19",
     "vite-plugin-commonjs-externals": "^0.1.4"
   },
-  "exports": {
-    "./proto": "./src/proto/dekart_pb.js",
-    "./proto-service": "./src/proto/dekart_pb_service.js"
-  },
   "overrides": {
     "react-dev-utils": {
       "immer": "$immer"
