@@ -1,7 +1,7 @@
 // package: 
-// file: proto/dekart.proto
+// file: dekart.proto
 
-var proto_dekart_pb = require("../proto/dekart_pb");
+var dekart_pb = require("./dekart_pb");
 var grpc = require("@improbable-eng/grpc-web").grpc;
 
 var Dekart = (function () {
@@ -15,8 +15,8 @@ Dekart.CreateReport = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.CreateReportRequest,
-  responseType: proto_dekart_pb.CreateReportResponse
+  requestType: dekart_pb.CreateReportRequest,
+  responseType: dekart_pb.CreateReportResponse
 };
 
 Dekart.ForkReport = {
@@ -24,8 +24,8 @@ Dekart.ForkReport = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.ForkReportRequest,
-  responseType: proto_dekart_pb.ForkReportResponse
+  requestType: dekart_pb.ForkReportRequest,
+  responseType: dekart_pb.ForkReportResponse
 };
 
 Dekart.UpdateReport = {
@@ -33,8 +33,8 @@ Dekart.UpdateReport = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.UpdateReportRequest,
-  responseType: proto_dekart_pb.UpdateReportResponse
+  requestType: dekart_pb.UpdateReportRequest,
+  responseType: dekart_pb.UpdateReportResponse
 };
 
 Dekart.ArchiveReport = {
@@ -42,8 +42,8 @@ Dekart.ArchiveReport = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.ArchiveReportRequest,
-  responseType: proto_dekart_pb.ArchiveReportResponse
+  requestType: dekart_pb.ArchiveReportRequest,
+  responseType: dekart_pb.ArchiveReportResponse
 };
 
 Dekart.SetDiscoverable = {
@@ -51,8 +51,8 @@ Dekart.SetDiscoverable = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.SetDiscoverableRequest,
-  responseType: proto_dekart_pb.SetDiscoverableResponse
+  requestType: dekart_pb.SetDiscoverableRequest,
+  responseType: dekart_pb.SetDiscoverableResponse
 };
 
 Dekart.PublishReport = {
@@ -60,8 +60,8 @@ Dekart.PublishReport = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.PublishReportRequest,
-  responseType: proto_dekart_pb.PublishReportResponse
+  requestType: dekart_pb.PublishReportRequest,
+  responseType: dekart_pb.PublishReportResponse
 };
 
 Dekart.AllowExportDatasets = {
@@ -69,8 +69,8 @@ Dekart.AllowExportDatasets = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.AllowExportDatasetsRequest,
-  responseType: proto_dekart_pb.AllowExportDatasetsResponse
+  requestType: dekart_pb.AllowExportDatasetsRequest,
+  responseType: dekart_pb.AllowExportDatasetsResponse
 };
 
 Dekart.AddReadme = {
@@ -78,8 +78,8 @@ Dekart.AddReadme = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.AddReadmeRequest,
-  responseType: proto_dekart_pb.AddReadmeResponse
+  requestType: dekart_pb.AddReadmeRequest,
+  responseType: dekart_pb.AddReadmeResponse
 };
 
 Dekart.RemoveReadme = {
@@ -87,8 +87,8 @@ Dekart.RemoveReadme = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.RemoveReadmeRequest,
-  responseType: proto_dekart_pb.RemoveReadmeResponse
+  requestType: dekart_pb.RemoveReadmeRequest,
+  responseType: dekart_pb.RemoveReadmeResponse
 };
 
 Dekart.CreateDataset = {
@@ -96,8 +96,8 @@ Dekart.CreateDataset = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.CreateDatasetRequest,
-  responseType: proto_dekart_pb.CreateDatasetResponse
+  requestType: dekart_pb.CreateDatasetRequest,
+  responseType: dekart_pb.CreateDatasetResponse
 };
 
 Dekart.RemoveDataset = {
@@ -105,8 +105,8 @@ Dekart.RemoveDataset = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.RemoveDatasetRequest,
-  responseType: proto_dekart_pb.RemoveDatasetResponse
+  requestType: dekart_pb.RemoveDatasetRequest,
+  responseType: dekart_pb.RemoveDatasetResponse
 };
 
 Dekart.UpdateDatasetName = {
@@ -114,8 +114,8 @@ Dekart.UpdateDatasetName = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.UpdateDatasetNameRequest,
-  responseType: proto_dekart_pb.UpdateDatasetNameResponse
+  requestType: dekart_pb.UpdateDatasetNameRequest,
+  responseType: dekart_pb.UpdateDatasetNameResponse
 };
 
 Dekart.UpdateDatasetConnection = {
@@ -123,8 +123,8 @@ Dekart.UpdateDatasetConnection = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.UpdateDatasetConnectionRequest,
-  responseType: proto_dekart_pb.UpdateDatasetConnectionResponse
+  requestType: dekart_pb.UpdateDatasetConnectionRequest,
+  responseType: dekart_pb.UpdateDatasetConnectionResponse
 };
 
 Dekart.CreateFile = {
@@ -132,8 +132,8 @@ Dekart.CreateFile = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.CreateFileRequest,
-  responseType: proto_dekart_pb.CreateFileResponse
+  requestType: dekart_pb.CreateFileRequest,
+  responseType: dekart_pb.CreateFileResponse
 };
 
 Dekart.CreateQuery = {
@@ -141,8 +141,8 @@ Dekart.CreateQuery = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.CreateQueryRequest,
-  responseType: proto_dekart_pb.CreateQueryResponse
+  requestType: dekart_pb.CreateQueryRequest,
+  responseType: dekart_pb.CreateQueryResponse
 };
 
 Dekart.RunQuery = {
@@ -150,8 +150,8 @@ Dekart.RunQuery = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.RunQueryRequest,
-  responseType: proto_dekart_pb.RunQueryResponse
+  requestType: dekart_pb.RunQueryRequest,
+  responseType: dekart_pb.RunQueryResponse
 };
 
 Dekart.RunAllQueries = {
@@ -159,8 +159,8 @@ Dekart.RunAllQueries = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.RunAllQueriesRequest,
-  responseType: proto_dekart_pb.RunAllQueriesResponse
+  requestType: dekart_pb.RunAllQueriesRequest,
+  responseType: dekart_pb.RunAllQueriesResponse
 };
 
 Dekart.CancelJob = {
@@ -168,8 +168,8 @@ Dekart.CancelJob = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.CancelJobRequest,
-  responseType: proto_dekart_pb.CancelJobResponse
+  requestType: dekart_pb.CancelJobRequest,
+  responseType: dekart_pb.CancelJobResponse
 };
 
 Dekart.GetEnv = {
@@ -177,8 +177,8 @@ Dekart.GetEnv = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.GetEnvRequest,
-  responseType: proto_dekart_pb.GetEnvResponse
+  requestType: dekart_pb.GetEnvRequest,
+  responseType: dekart_pb.GetEnvResponse
 };
 
 Dekart.GetReportStream = {
@@ -186,8 +186,8 @@ Dekart.GetReportStream = {
   service: Dekart,
   requestStream: false,
   responseStream: true,
-  requestType: proto_dekart_pb.ReportStreamRequest,
-  responseType: proto_dekart_pb.ReportStreamResponse
+  requestType: dekart_pb.ReportStreamRequest,
+  responseType: dekart_pb.ReportStreamResponse
 };
 
 Dekart.GetReportListStream = {
@@ -195,8 +195,8 @@ Dekart.GetReportListStream = {
   service: Dekart,
   requestStream: false,
   responseStream: true,
-  requestType: proto_dekart_pb.ReportListRequest,
-  responseType: proto_dekart_pb.ReportListResponse
+  requestType: dekart_pb.ReportListRequest,
+  responseType: dekart_pb.ReportListResponse
 };
 
 Dekart.GetUserStream = {
@@ -204,8 +204,8 @@ Dekart.GetUserStream = {
   service: Dekart,
   requestStream: false,
   responseStream: true,
-  requestType: proto_dekart_pb.GetUserStreamRequest,
-  responseType: proto_dekart_pb.GetUserStreamResponse
+  requestType: dekart_pb.GetUserStreamRequest,
+  responseType: dekart_pb.GetUserStreamResponse
 };
 
 Dekart.GetUsage = {
@@ -213,8 +213,8 @@ Dekart.GetUsage = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.GetUsageRequest,
-  responseType: proto_dekart_pb.GetUsageResponse
+  requestType: dekart_pb.GetUsageRequest,
+  responseType: dekart_pb.GetUsageResponse
 };
 
 Dekart.GetReportAnalytics = {
@@ -222,8 +222,8 @@ Dekart.GetReportAnalytics = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.GetReportAnalyticsRequest,
-  responseType: proto_dekart_pb.GetReportAnalyticsResponse
+  requestType: dekart_pb.GetReportAnalyticsRequest,
+  responseType: dekart_pb.GetReportAnalyticsResponse
 };
 
 Dekart.CreateConnection = {
@@ -231,8 +231,8 @@ Dekart.CreateConnection = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.CreateConnectionRequest,
-  responseType: proto_dekart_pb.CreateConnectionResponse
+  requestType: dekart_pb.CreateConnectionRequest,
+  responseType: dekart_pb.CreateConnectionResponse
 };
 
 Dekart.GetGcpProjectList = {
@@ -240,8 +240,8 @@ Dekart.GetGcpProjectList = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.GetGcpProjectListRequest,
-  responseType: proto_dekart_pb.GetGcpProjectListResponse
+  requestType: dekart_pb.GetGcpProjectListRequest,
+  responseType: dekart_pb.GetGcpProjectListResponse
 };
 
 Dekart.UpdateConnection = {
@@ -249,8 +249,8 @@ Dekart.UpdateConnection = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.UpdateConnectionRequest,
-  responseType: proto_dekart_pb.UpdateConnectionResponse
+  requestType: dekart_pb.UpdateConnectionRequest,
+  responseType: dekart_pb.UpdateConnectionResponse
 };
 
 Dekart.ArchiveConnection = {
@@ -258,8 +258,8 @@ Dekart.ArchiveConnection = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.ArchiveConnectionRequest,
-  responseType: proto_dekart_pb.ArchiveConnectionResponse
+  requestType: dekart_pb.ArchiveConnectionRequest,
+  responseType: dekart_pb.ArchiveConnectionResponse
 };
 
 Dekart.GetConnectionList = {
@@ -267,8 +267,8 @@ Dekart.GetConnectionList = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.GetConnectionListRequest,
-  responseType: proto_dekart_pb.GetConnectionListResponse
+  requestType: dekart_pb.GetConnectionListRequest,
+  responseType: dekart_pb.GetConnectionListResponse
 };
 
 Dekart.TestConnection = {
@@ -276,8 +276,8 @@ Dekart.TestConnection = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.TestConnectionRequest,
-  responseType: proto_dekart_pb.TestConnectionResponse
+  requestType: dekart_pb.TestConnectionRequest,
+  responseType: dekart_pb.TestConnectionResponse
 };
 
 Dekart.SetDefaultConnection = {
@@ -285,8 +285,8 @@ Dekart.SetDefaultConnection = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.SetDefaultConnectionRequest,
-  responseType: proto_dekart_pb.SetDefaultConnectionResponse
+  requestType: dekart_pb.SetDefaultConnectionRequest,
+  responseType: dekart_pb.SetDefaultConnectionResponse
 };
 
 Dekart.RespondToInvite = {
@@ -294,8 +294,8 @@ Dekart.RespondToInvite = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.RespondToInviteRequest,
-  responseType: proto_dekart_pb.RespondToInviteResponse
+  requestType: dekart_pb.RespondToInviteRequest,
+  responseType: dekart_pb.RespondToInviteResponse
 };
 
 Dekart.CreateSubscription = {
@@ -303,8 +303,8 @@ Dekart.CreateSubscription = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.CreateSubscriptionRequest,
-  responseType: proto_dekart_pb.CreateSubscriptionResponse
+  requestType: dekart_pb.CreateSubscriptionRequest,
+  responseType: dekart_pb.CreateSubscriptionResponse
 };
 
 Dekart.GetStripePortalSession = {
@@ -312,8 +312,8 @@ Dekart.GetStripePortalSession = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.GetStripePortalSessionRequest,
-  responseType: proto_dekart_pb.GetStripePortalSessionResponse
+  requestType: dekart_pb.GetStripePortalSessionRequest,
+  responseType: dekart_pb.GetStripePortalSessionResponse
 };
 
 Dekart.CreateWorkspace = {
@@ -321,8 +321,8 @@ Dekart.CreateWorkspace = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.CreateWorkspaceRequest,
-  responseType: proto_dekart_pb.CreateWorkspaceResponse
+  requestType: dekart_pb.CreateWorkspaceRequest,
+  responseType: dekart_pb.CreateWorkspaceResponse
 };
 
 Dekart.UpdateWorkspace = {
@@ -330,8 +330,8 @@ Dekart.UpdateWorkspace = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.UpdateWorkspaceRequest,
-  responseType: proto_dekart_pb.UpdateWorkspaceResponse
+  requestType: dekart_pb.UpdateWorkspaceRequest,
+  responseType: dekart_pb.UpdateWorkspaceResponse
 };
 
 Dekart.GetWorkspace = {
@@ -339,8 +339,8 @@ Dekart.GetWorkspace = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.GetWorkspaceRequest,
-  responseType: proto_dekart_pb.GetWorkspaceResponse
+  requestType: dekart_pb.GetWorkspaceRequest,
+  responseType: dekart_pb.GetWorkspaceResponse
 };
 
 Dekart.UpdateWorkspaceUser = {
@@ -348,8 +348,8 @@ Dekart.UpdateWorkspaceUser = {
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: proto_dekart_pb.UpdateWorkspaceUserRequest,
-  responseType: proto_dekart_pb.UpdateWorkspaceUserResponse
+  requestType: dekart_pb.UpdateWorkspaceUserRequest,
+  responseType: dekart_pb.UpdateWorkspaceUserResponse
 };
 
 exports.Dekart = Dekart;

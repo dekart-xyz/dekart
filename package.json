@@ -37,12 +37,14 @@
     "redux-thunk": "^2.3.0",
     "semver": "^7.3.5",
     "styled-components": "^5.2.1",
-    "web-vitals": "^0.2.4"
+    "web-vitals": "^0.2.4",
+    "dekart-proto": "file:./proto"
   },
   "scripts": {
     "start": "vite dev",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "postinstall": "ln -sf ../src/proto node_modules/dekart-proto"
   },
   "eslintConfig": {
     "globals": {
