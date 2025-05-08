@@ -15,6 +15,7 @@ ADD Makefile Makefile
 RUN make proto-copy-to-node
 
 FROM nodedeps AS nodebuilder
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run build
 
 FROM nodedeps AS nodetest
