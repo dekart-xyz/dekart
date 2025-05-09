@@ -137,7 +137,6 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
       if (extension === 'csv') {
         const csv = await res.text()
         data = processCsvData(csv)
-        console.log('csv data', data)
       } else {
         const json = await res.json()
         data = processGeojson(json)
