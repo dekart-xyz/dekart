@@ -1,6 +1,8 @@
 import { setError } from './message'
-import { version } from '../../../package.json'
+// import { version } from '../../../package.json'
 import semver from 'semver'
+
+const version = process.env.VERSION || '0.0.0'
 
 export function testVersion () {
   return async (dispatch) => {

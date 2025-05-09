@@ -1,5 +1,5 @@
-import { AddReadmeRequest, RemoveReadmeRequest } from '../../proto/dekart_pb'
-import { Dekart } from '../../proto/dekart_pb_service'
+import { AddReadmeRequest, RemoveReadmeRequest } from 'dekart-proto/dekart_pb'
+import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { track } from '../lib/tracking'
 import { grpcCall } from './grpc'
 

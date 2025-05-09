@@ -14,7 +14,7 @@ import { editConnection, newConnection, newConnectionScreen, setDefaultConnectio
 import ConnectionModal from './ConnectionModal'
 import Tooltip from 'antd/es/tooltip'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
-import { ConnectionType, PlanType } from '../proto/dekart_pb'
+import { ConnectionType, PlanType } from 'dekart-proto/dekart_pb'
 import Onboarding from './Onboarding'
 import { DatasourceIcon } from './Datasource'
 import { track } from './lib/tracking'

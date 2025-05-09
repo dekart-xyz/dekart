@@ -1,5 +1,5 @@
 // package: 
-// file: proto/dekart.proto
+// file: dekart.proto
 
 import * as jspb from "google-protobuf";
 

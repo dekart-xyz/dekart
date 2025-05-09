@@ -1,5 +1,5 @@
+@import 'antd/dist/antd.css';
 @import-normalize;
-@import '~antd/dist/antd.css';
 
 html, body, #root {
     width: 100%;

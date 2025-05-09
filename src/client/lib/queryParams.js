@@ -1,4 +1,4 @@
-import { QueryParam } from '../../proto/dekart_pb'
+import { QueryParam } from 'dekart-proto/dekart_pb'
 
 export function getQueryParamsString (queryParams, values) {
   const params = new URLSearchParams()

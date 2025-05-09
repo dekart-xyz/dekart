@@ -1,13 +1,13 @@
-import { CreateDatasetRequest, RemoveDatasetRequest, UpdateDatasetConnectionRequest, UpdateDatasetNameRequest } from '../../proto/dekart_pb'
-import { Dekart } from '../../proto/dekart_pb_service'
+import { CreateDatasetRequest, RemoveDatasetRequest, UpdateDatasetConnectionRequest, UpdateDatasetNameRequest } from 'dekart-proto/dekart_pb'
+import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { setError, success, info, warn } from './message'
-import { addDataToMap, toggleSidePanel, reorderLayer, removeDataset as removeDatasetFromKepler } from '@dekart-xyz/kepler.gl/dist/actions'
-import { processCsvData, processGeojson } from '@dekart-xyz/kepler.gl/dist/processors'
+import { addDataToMap, toggleSidePanel, reorderLayer, removeDataset as removeDatasetFromKepler } from '@kepler.gl/actions'
+import { processCsvData, processGeojson } from '@kepler.gl/processors'
 import { get } from '../lib/api'
 import getDatasetName from '../lib/getDatasetName'
 import { runQuery } from './query'
-import { KeplerGlSchema } from '@dekart-xyz/kepler.gl/dist/schemas'
+import { KeplerGlSchema } from '@kepler.gl/schemas'
 
 export function createDataset (reportId) {
   return (dispatch) => {

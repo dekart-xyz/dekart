@@ -10,7 +10,7 @@ import { CheckCircleTwoTone, ExclamationCircleTwoTone, LoadingOutlined } from '@
 import Tooltip from 'antd/es/tooltip'
 import AutoComplete from 'antd/es/auto-complete'
 import Alert from 'antd/es/alert'
-import { ConnectionType } from '../proto/dekart_pb'
+import { ConnectionType } from 'dekart-proto/dekart_pb'
 import { DatasourceIcon } from './Datasource'
 import { track } from './lib/tracking'
 import TextArea from 'antd/es/input/TextArea'

@@ -1,5 +1,5 @@
-import { GetUserStreamRequest } from '../../proto/dekart_pb'
-import { Dekart } from '../../proto/dekart_pb_service'
+import { GetUserStreamRequest } from 'dekart-proto/dekart_pb'
+import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { getConnectionsList } from './connection'
 import { grpcStream, grpcStreamCancel } from './grpc'
 import { updateLocalStorage } from './localStorage'

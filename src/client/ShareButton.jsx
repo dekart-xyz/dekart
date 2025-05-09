@@ -11,7 +11,7 @@ import Select from 'antd/es/select'
 import { setAnalyticsModalOpen } from './actions/analytics'
 import { track } from './lib/tracking'
 import AnalyticsModal from './AnalyticsModal'
-import { PlanType } from '../proto/dekart_pb'
+import { PlanType } from 'dekart-proto/dekart_pb'
 
 function CopyLinkButton () {
   const dispatch = useDispatch()

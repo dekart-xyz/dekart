@@ -1,0 +1,11 @@
+{
+    "name": "dekart-proto",
+    "version": "1.0.0",
+    "main": "dekart_pb.js",
+    "files": [
+        "dekart_pb.js",
+        "dekart_pb_service.js",
+        "dekart_pb.d.ts",
+        "dekart_pb_service.d.ts"
+    ]
+}

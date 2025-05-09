@@ -1,4 +1,4 @@
-import { setExportImageSetting } from '@dekart-xyz/kepler.gl/dist/actions/ui-state-actions'
+import { setExportImageSetting } from '@kepler.gl/actions/dist/ui-state-actions'
 
 export default function screenshotInit (store) {
   // This function is called from the e2e tests.

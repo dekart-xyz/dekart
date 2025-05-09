@@ -10,7 +10,7 @@ import styles from './ForkOnboarding.module.css'
 import { updateSessionStorage } from './actions/sessionStorage'
 import { ForkOutlined } from '@ant-design/icons'
 import { track } from './lib/tracking'
-import { ConnectionType } from '../proto/dekart_pb'
+import { ConnectionType } from 'dekart-proto/dekart_pb'
 
 export function useRequireOnboarding () {
   const userStream = useSelector(state => state.user.stream)

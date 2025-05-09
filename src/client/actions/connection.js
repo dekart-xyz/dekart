@@ -1,5 +1,5 @@
-import { ArchiveConnectionRequest, CreateConnectionRequest, GetConnectionListRequest, Connection, TestConnectionRequest, UpdateConnectionRequest, SetDefaultConnectionRequest, GetGcpProjectListRequest, Secret, ConnectionType } from '../../proto/dekart_pb'
-import { Dekart } from '../../proto/dekart_pb_service'
+import { ArchiveConnectionRequest, CreateConnectionRequest, GetConnectionListRequest, Connection, TestConnectionRequest, UpdateConnectionRequest, SetDefaultConnectionRequest, GetGcpProjectListRequest, Secret, ConnectionType } from 'dekart-proto/dekart_pb'
+import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { updateSessionStorage } from './sessionStorage'
 import { needSensitiveScopes } from './user'

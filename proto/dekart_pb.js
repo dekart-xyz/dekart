@@ -1,4 +1,4 @@
-// source: proto/dekart.proto
+// source: dekart.proto
 /**
  * @fileoverview
  * @enhanceable

@@ -1,23 +1,29 @@
-FROM node:16 AS nodedeps
+FROM node:18 AS nodedeps
 WORKDIR /source
 ADD package.json .
 ADD package-lock.json .
 ADD .npmrc .
 ENV CI=true
-RUN npm i --legacy-peer-deps
+RUN npm i
 ADD public public
 ADD src/client src/client
-ADD src/proto src/proto
+ADD proto proto
+ADD index.html index.html
 ADD src/index.js src/index.js
 ADD src/setupTests.js src/setupTests.js
+ADD Makefile Makefile
+ADD vitest.config.js vitest.config.js
+ADD vite.config.js vite.config.js
+RUN make proto-copy-to-node
 
 FROM nodedeps AS nodebuilder
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run build
 
 FROM nodedeps AS nodetest
 RUN npm run test
 
-FROM golang:1.23.3 as godeps
+FROM golang:1.23.3 AS godeps
 
 # Install necessary packages for CGO
 RUN apt-get update && apt-get install -y gcc
@@ -57,9 +63,10 @@ ENTRYPOINT /bin/sh -c /dekart/server & cypress run --spec ${TEST_SPEC}
 
 FROM ubuntu:22.04
 WORKDIR /dekart
-RUN apt-get update && apt-get install  -y --no-install-recommends \
+RUN apt-get clean && apt-get update --allow-releaseinfo-change && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     gcc \
     ca-certificates \
+    && apt-get -y autoremove && apt-get -y autoclean \
     && rm -rf /var/lib/apt/lists/*
 RUN update-ca-certificates
 COPY --from=nodebuilder /source/build build
