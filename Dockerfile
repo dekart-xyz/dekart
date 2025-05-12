@@ -1,4 +1,4 @@
-FROM node:16 AS nodedeps
+FROM node:24 AS nodedeps
 WORKDIR /source
 ADD package.json .
 ADD package-lock.json .
