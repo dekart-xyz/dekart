@@ -1,4 +1,3 @@
-
 const LOCAL_STORAGE_KEY = 'dekart-local-storage-v1'
 
 const initialState = {
