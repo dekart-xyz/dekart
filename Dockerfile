@@ -3,18 +3,17 @@ WORKDIR /source
 ADD package.json .
 ADD package-lock.json .
 ADD .npmrc .
+ADD Makefile .
+ADD proto proto
 ENV CI=true
 RUN npm i
 ADD public public
 ADD src/client src/client
-ADD proto proto
 ADD index.html index.html
 ADD src/index.js src/index.js
 ADD src/setupTests.js src/setupTests.js
-ADD Makefile Makefile
 ADD vitest.config.js vitest.config.js
 ADD vite.config.js vite.config.js
-RUN make proto-copy-to-node
 
 FROM nodedeps AS nodebuilder
 RUN npm run lint
