@@ -58,7 +58,7 @@ export function updateDatasetConnection (datasetId, connectionId) {
   }
 }
 
-export function removeDataset (datasetId) {
+export function removeDataset (datasetId, silent = false) {
   return async (dispatch, getState) => {
     const { list: datasets, active: activeDataset } = getState().dataset
     if (activeDataset.id === datasetId) {
@@ -75,7 +75,9 @@ export function removeDataset (datasetId) {
     const request = new RemoveDatasetRequest()
     request.setDatasetId(datasetId)
     dispatch(grpcCall(Dekart.RemoveDataset, request, (res) => {
-      dispatch(success('Dataset removed'))
+      if (!silent) {
+        dispatch(success('Dataset removed'))
+      }
     }))
   }
 }

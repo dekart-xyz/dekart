@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 import { addReadme, removeReadme, setPreview, setReadmeValue, showReadmeTab } from '../actions/readme'
 import { reportUpdate } from '../actions/report'
-import { setActiveDataset } from '../actions/dataset'
+import { createDataset, setActiveDataset } from '../actions/dataset'
 
 function showPreview (state = true, action) {
   switch (action.type) {
@@ -25,6 +25,7 @@ function showTab (state = true, action) {
       return true
     case removeReadme.name:
     case setActiveDataset.name:
+    case createDataset.name:
       return false
     default:
       return state

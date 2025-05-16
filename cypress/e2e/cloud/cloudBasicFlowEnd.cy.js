@@ -5,6 +5,12 @@ describe('cloud basic flow', () => {
   it('with private token', () => {
     cy.visit('/')
 
+    // create new report
+    cy.get('button#dekart-create-report').click()
+
+    // click #dekart-add-connection
+    cy.get('#dekart-add-connection').click()
+
     // create connection
     cy.get('button:contains("BigQuery")').click()
     cy.get('button:contains("Connect with Google")').click()
@@ -12,7 +18,6 @@ describe('cloud basic flow', () => {
     cy.get('div.ant-modal-title').should('contain', 'BigQuery')
     cy.get('input#connectionName').clear()
     cy.get('input#connectionName').type(randomConnectionName)
-
     cy.get('input#bigqueryProjectId').clear() // prevent autofill
     cy.get('input#bigqueryProjectId').type('dekart-dev')
     cy.get('input#cloudStorageBucket').type('dekart-dev')
@@ -20,12 +25,8 @@ describe('cloud basic flow', () => {
     cy.get('button#saveConnection').should('be.enabled')
     cy.get('button#saveConnection').click()
 
-    // create new report
-    cy.get('button#dekart-create-report').click()
-
     // run query
-    cy.get('button:contains("Add data from...")').click()
-    cy.get('span:contains("SQL query")').click()
+    cy.get('button:contains("BigQuery SQL")').click()
     cy.get('textarea').type(copy.simple_sql_query, { force: true })
     cy.get(`button:contains("${copy.execute}")`).click()
     cy.get(`span:contains("${copy.ready}")`, { timeout: 20000 }).should('be.visible')

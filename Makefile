@@ -35,6 +35,7 @@ endif
 
 proto-copy-to-node:
 	rm -rf ./node_modules/dekart-proto
+	rm -rf ./node_modules/.vite
 	mkdir -p ./node_modules/dekart-proto
 	cp -r ./proto/* ./node_modules/dekart-proto/
 

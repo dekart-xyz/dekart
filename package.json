@@ -42,7 +42,9 @@
     "start": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "vitest",
+    "lint": "standard ./src/client ",
+    "postinstall": "make proto-copy-to-node"
   },
   "eslintConfig": {
     "globals": {

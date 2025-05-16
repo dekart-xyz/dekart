@@ -5,7 +5,7 @@ import { KeplerGl } from '@kepler.gl/components'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
 import { useDispatch, useSelector } from 'react-redux'
-import { EditOutlined, WarningFilled, MoreOutlined, PlusOutlined, ReadOutlined, ConsoleSqlOutlined, VerticalAlignBottomOutlined } from '@ant-design/icons'
+import { EditOutlined, WarningFilled, MoreOutlined, ReadOutlined, VerticalAlignBottomOutlined } from '@ant-design/icons'
 import { QueryJob } from 'dekart-proto/dekart_pb'
 import Tabs from 'antd/es/tabs'
 import classnames from 'classnames'
@@ -16,7 +16,7 @@ import Dataset from './Dataset'
 import { Resizable } from 're-resizable'
 import DatasetSettingsModal from './DatasetSettingsModal'
 import getDatasetName from './lib/getDatasetName'
-import { createDataset, openDatasetSettingsModal, setActiveDataset } from './actions/dataset'
+import { createDataset, openDatasetSettingsModal, removeDataset, setActiveDataset } from './actions/dataset'
 import { closeReport, openReport, reportTitleChange, toggleReportEdit, toggleReportFullscreen } from './actions/report'
 import { setError } from './actions/message'
 import Tooltip from 'antd/es/tooltip'
@@ -24,9 +24,8 @@ import prettyBites from 'pretty-bytes'
 import { getDatasourceMeta } from './lib/datasource'
 import QueryParams from './QueryParams'
 import { useCheckMapConfig } from './lib/mapConfig'
-import Dropdown from 'antd/es/dropdown'
 import Readme from './Readme'
-import { addReadme, removeReadme, showReadmeTab } from './actions/readme'
+import { removeReadme, showReadmeTab } from './actions/readme'
 import Modal from 'antd/es/modal'
 import { MapControlButton } from '@kepler.gl/components/dist/common/styled-components'
 import { Loading } from './Loading'
@@ -61,9 +60,11 @@ function TabIcon ({ job }) {
   )
 }
 
-function getOnTabEditHandler (dispatch, reportId) {
+function getOnTabEditHandler (dispatch, reportId, datasets) {
   return (datasetId, action) => {
     switch (action) {
+      case 'add':
+        return dispatch(createDataset(reportId))
       case 'remove': {
         if (datasetId === 'readme') {
           Modal.confirm({
@@ -73,8 +74,13 @@ function getOnTabEditHandler (dispatch, reportId) {
             cancelText: 'No',
             onOk: () => dispatch(removeReadme())
           })
-        } else {
-          dispatch(openDatasetSettingsModal(datasetId))
+        } else if (datasetId) {
+          const datasetsToRemove = datasets.find(d => d.id === datasetId)
+          if (datasetsToRemove.fileId || datasetsToRemove.queryId) {
+            dispatch(openDatasetSettingsModal(datasetId))
+          } else {
+            dispatch(removeDataset(datasetsToRemove.id, true))
+          }
         }
         break
       }
@@ -122,12 +128,16 @@ function getTabPane (dataset, queries, files, status, queryJobs, closable) {
     changed = status.changed
   }
   const tabTitle = `${title}${changed ? '*' : ''}`
+  let closeIcon
+  if (dataset.queryId || dataset.fileId) {
+    closeIcon = <span title='Dataset setting'><MoreOutlined /></span>
+  }
   return (
     <Tabs.TabPane
       tab={<Tooltip placement='bottom' title={tooltip}>{tabIcon}{tabTitle}</Tooltip>}
       key={dataset.id}
       closable={closable}
-      closeIcon={<span title='Dataset setting'><MoreOutlined /></span>}
+      closeIcon={closeIcon}
     />
   )
 }
@@ -145,7 +155,7 @@ function DatasetSection ({ reportId }) {
   const dispatch = useDispatch()
   const readmeTab = []
   const showReadme = useSelector(state => state.readme.showTab)
-  const closable = Boolean(canWrite && edit)
+  const closable = Boolean(canWrite && edit && datasets.length > 1)
 
   if (report.readme) {
     readmeTab.push(
@@ -155,28 +165,10 @@ function DatasetSection ({ reportId }) {
           <><ReadOutlined /> Readme</>
       }
         key='readme'
-        closable={closable}
+        closable={canWrite && edit}
       />
     )
   }
-
-  const items = [
-    {
-      label: 'Data',
-      icon: <ConsoleSqlOutlined />,
-      onClick: () => {
-        dispatch(createDataset(reportId))
-      }
-    },
-    {
-      label: 'Readme',
-      icon: <ReadOutlined />,
-      disabled: Boolean(report.readme),
-      onClick: () => {
-        dispatch(addReadme())
-      }
-    }
-  ]
 
   useEffect(() => {
     if (report && !(activeDataset)) {
@@ -203,28 +195,14 @@ function DatasetSection ({ reportId }) {
                       case 'readme':
                         dispatch(showReadmeTab())
                         return
-                      case 'add':
-                        return
                       default:
                         dispatch(setActiveDataset(tabId))
                     }
                   }}
-                  hideAdd
-                  onEdit={getOnTabEditHandler(dispatch, reportId)}
+                  hideAdd={!(canWrite && edit)}
+                  onEdit={getOnTabEditHandler(dispatch, reportId, datasets)}
                 >
-                  {readmeTab.concat(datasets.map((dataset) => getTabPane(dataset, queries, files, queryStatus, queryJobs, closable))).concat(canWrite && edit && (
-                    <Tabs.TabPane
-                      className={styles.addTabPane}
-                      tab={
-                        <Dropdown menu={{ items }} placement='bottom'>
-                          <span className={styles.addTab} id='dekart-report-page-add-tab'><PlusOutlined className={styles.addTabIcon} /></span>
-                        </Dropdown>
-                      }
-                      key='add'
-                      closable={false}
-                      disabled={!canWrite}
-                    />)
-                  )}
+                  {readmeTab.concat(datasets.map((dataset) => getTabPane(dataset, queries, files, queryStatus, queryJobs, closable)))}
                 </Tabs>
               </div>
               {showReadme ? <Readme readme={report.readme} /> : <Dataset dataset={activeDataset} />}

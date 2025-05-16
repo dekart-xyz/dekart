@@ -210,8 +210,8 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 	return &connection, nil
 }
 
-// getConnections list for connections created by user
-func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error) {
+// getUserConnections list for connections created by user
+func (s Server) getUserConnections(ctx context.Context) ([]*proto.Connection, error) {
 	connections := make([]*proto.Connection, 0)
 	rows, err := s.db.QueryContext(ctx,
 		`select
@@ -316,24 +316,6 @@ func (s Server) getConnections(ctx context.Context) ([]*proto.Connection, error)
 
 	return connections, nil
 
-}
-
-func (s Server) getDefaultConnection(ctx context.Context) (*proto.Connection, error) {
-	claims := user.GetClaims(ctx)
-	if claims == nil {
-		return nil, Unauthenticated
-	}
-	connections, err := s.getConnections(ctx)
-	if err != nil {
-		log.Err(err).Msg("getConnections failed")
-		return nil, err
-	}
-	for _, connection := range connections {
-		if connection.IsDefault {
-			return connection, nil
-		}
-	}
-	return nil, nil
 }
 
 func (s Server) SetDefaultConnection(ctx context.Context, req *proto.SetDefaultConnectionRequest) (*proto.SetDefaultConnectionResponse, error) {
@@ -543,11 +525,17 @@ func (s Server) GetConnectionList(ctx context.Context, req *proto.GetConnectionL
 		log.Warn().Msg("workspace not found when getting connection list")
 		return nil, status.Error(codes.NotFound, "workspace not found")
 	}
-	connections, err := s.getConnections(ctx)
+	connections, err := s.getUserConnections(ctx)
 	if err != nil {
 		log.Err(err).Msg("getConnections failed")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+	defaultConnection, err := s.getConnection(ctx, "default")
+	if err != nil {
+		log.Err(err).Msg("getDefaultConnection failed")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	connections = append(connections, defaultConnection)
 	return &proto.GetConnectionListResponse{
 		Connections: connections,
 	}, nil

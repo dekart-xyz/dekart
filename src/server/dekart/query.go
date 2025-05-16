@@ -38,6 +38,14 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
+	if req.ConnectionId != "" {
+		err = s.updateDatasetConnection(ctx, req.DatasetId, req.ConnectionId)
+		if err != nil {
+			log.Err(err).Msg("Error updating dataset connection")
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
 	id := newUUID()
 
 	_, err = s.db.ExecContext(ctx,
@@ -173,8 +181,10 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 		go func(i int) {
 			if queries[i].queryText == "" {
 				// for SNOWFLAKE storage queryText is stored in db
-				queryText, err := s.getQueryText(ctx, querySourceIds[i], queries[i].userBucketName)
+				connCtx := conn.GetCtx(ctx, queries[i].connection)
+				queryText, err := s.getQueryText(connCtx, querySourceIds[i], queries[i].userBucketName)
 				if err != nil {
+					log.Err(err).Msgf("Error getting query text for query %s", queries[i].queryID)
 					res <- err
 					return
 				}

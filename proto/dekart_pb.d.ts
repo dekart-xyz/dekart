@@ -52,6 +52,9 @@ export class AddReadmeRequest extends jspb.Message {
   getMarkdown(): string;
   setMarkdown(value: string): void;
 
+  getFromDatasetId(): string;
+  setFromDatasetId(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): AddReadmeRequest.AsObject;
   static toObject(includeInstance: boolean, msg: AddReadmeRequest): AddReadmeRequest.AsObject;
@@ -66,6 +69,7 @@ export namespace AddReadmeRequest {
   export type AsObject = {
     reportId: string,
     markdown: string,
+    fromDatasetId: string,
   }
 }
 
@@ -2316,6 +2320,9 @@ export class CreateQueryRequest extends jspb.Message {
   getDatasetId(): string;
   setDatasetId(value: string): void;
 
+  getConnectionId(): string;
+  setConnectionId(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CreateQueryRequest.AsObject;
   static toObject(includeInstance: boolean, msg: CreateQueryRequest): CreateQueryRequest.AsObject;
@@ -2329,6 +2336,7 @@ export class CreateQueryRequest extends jspb.Message {
 export namespace CreateQueryRequest {
   export type AsObject = {
     datasetId: string,
+    connectionId: string,
   }
 }
 

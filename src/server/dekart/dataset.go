@@ -169,6 +169,22 @@ func (s Server) UpdateDatasetName(ctx context.Context, req *proto.UpdateDatasetN
 	return &proto.UpdateDatasetNameResponse{}, nil
 }
 
+func (s Server) updateDatasetConnection(ctx context.Context, datasetID string, connectionID string) error {
+	_, err := s.db.ExecContext(ctx,
+		`update
+			datasets set
+			connection_id = $1
+			where id=$2`,
+		connectionID,
+		datasetID,
+	)
+	if err != nil {
+		log.Err(err).Msg("Error updating dataset connection")
+		return err
+	}
+	return nil
+}
+
 func (s Server) UpdateDatasetConnection(ctx context.Context, req *proto.UpdateDatasetConnectionRequest) (*proto.UpdateDatasetConnectionResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
@@ -188,14 +204,8 @@ func (s Server) UpdateDatasetConnection(ctx context.Context, req *proto.UpdateDa
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	_, err = s.db.ExecContext(ctx,
-		`update
-			datasets set
-			connection_id = $1
-			where id=$2`,
-		req.ConnectionId,
-		req.DatasetId,
-	)
+	err = s.updateDatasetConnection(ctx, req.DatasetId, req.ConnectionId)
+
 	if err != nil {
 		log.Err(err).Msg("Error updating dataset connection")
 		return nil, status.Error(codes.Internal, err.Error())
@@ -272,38 +282,17 @@ func (s Server) insertDataset(ctx context.Context, reportID string) (res sql.Res
 			claims.Email,
 		)
 	}
-	connection, err := s.getDefaultConnection(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if connection == nil {
-		return s.db.ExecContext(ctx,
-			`insert into datasets (id, report_id)
+	return s.db.ExecContext(ctx,
+		`insert into datasets (id, report_id)
 		select
 			$1 as id,
 			id as report_id
 		from reports
 		where id=$2 and not archived and (author_email=$3 or allow_edit) and workspace_id=$4 limit 1
 		`,
-			id,
-			reportID,
-			claims.Email,
-			checkWorkspace(ctx).ID,
-		)
-	}
-	return s.db.ExecContext(ctx,
-		`insert into datasets (id, report_id, connection_id)
-			select
-				$1 as id,
-				id as report_id,
-				$4 as connection_id
-			from reports
-			where id=$2 and not archived and (author_email=$3 or allow_edit) and workspace_id=$5 limit 1
-	`,
 		id,
 		reportID,
 		claims.Email,
-		connection.Id,
 		checkWorkspace(ctx).ID,
 	)
 }
