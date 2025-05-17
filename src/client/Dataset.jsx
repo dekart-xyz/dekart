@@ -12,9 +12,10 @@ import { addReadme } from './actions/readme'
 import { updateSessionStorage } from './actions/sessionStorage'
 import { getDatasourceMeta } from './lib/datasource'
 
-function DatasetSelectorButton ({ icon, title, subtitle, onClick }) {
+function DatasetSelectorButton ({ icon, title, subtitle, onClick, id }) {
   return (
     <Button
+      id={id}
       size='large'
       className={styles.datasetSelectorButton}
       onClick={onClick}
@@ -87,6 +88,7 @@ function DatasetSelector ({ dataset }) {
         {noneDefaultConnectionList.length === 0 && (
           <DatasetSelectorButton
             icon={<ApiTwoTone />}
+            id='dekart-add-connection'
             title='Add connection'
             subtitle='Connect BigQuery or Snowflake'
             onClick={() => {
