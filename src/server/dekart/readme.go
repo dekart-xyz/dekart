@@ -44,6 +44,13 @@ func (s Server) AddReadme(ctx context.Context, req *proto.AddReadmeRequest) (*pr
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+	_, err = s.db.ExecContext(ctx,
+		`delete from datasets where id=$1`,
+		req.FromDatasetId,
+	)
+	if err != nil {
+		log.Err(err).Msg("Error deleting dataset")
+	}
 	s.reportStreams.Ping(req.ReportId)
 	return &proto.AddReadmeResponse{}, nil
 }

@@ -1,4 +1,3 @@
-
 const SESSION_STORAGE_KEY = 'dekart-session-storage-v1'
 
 const initialState = {

@@ -76,6 +76,7 @@ message GetReportAnalyticsResponse {
 message AddReadmeRequest {
     string report_id = 1;
     string markdown = 2;
+    string from_dataset_id = 3; // dataset id to remove from report
 }
 
 message AddReadmeResponse {
@@ -613,6 +614,7 @@ message CreateFileResponse {
 
 message CreateQueryRequest {
     string dataset_id = 1;
+    string connection_id = 2;
 }
 
 message CreateQueryResponse {

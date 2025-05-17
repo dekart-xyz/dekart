@@ -51,11 +51,12 @@ export function updateQueryParamsFromQueries () {
   }
 }
 
-export function createQuery (datasetId) {
+export function createQuery (datasetId, connectionId) {
   return (dispatch) => {
     dispatch({ type: createQuery.name })
     const request = new CreateQueryRequest()
     request.setDatasetId(datasetId)
+    request.setConnectionId(connectionId)
     dispatch(grpcCall(Dekart.CreateQuery, request))
   }
 }

@@ -2451,7 +2451,8 @@ proto.AddReadmeRequest.prototype.toObject = function(opt_includeInstance) {
 proto.AddReadmeRequest.toObject = function(includeInstance, msg) {
   var f, obj = {
     reportId: jspb.Message.getFieldWithDefault(msg, 1, ""),
-    markdown: jspb.Message.getFieldWithDefault(msg, 2, "")
+    markdown: jspb.Message.getFieldWithDefault(msg, 2, ""),
+    fromDatasetId: jspb.Message.getFieldWithDefault(msg, 3, "")
   };
 
   if (includeInstance) {
@@ -2496,6 +2497,10 @@ proto.AddReadmeRequest.deserializeBinaryFromReader = function(msg, reader) {
       var value = /** @type {string} */ (reader.readString());
       msg.setMarkdown(value);
       break;
+    case 3:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setFromDatasetId(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -2539,6 +2544,13 @@ proto.AddReadmeRequest.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
+  f = message.getFromDatasetId();
+  if (f.length > 0) {
+    writer.writeString(
+      3,
+      f
+    );
+  }
 };
 
 
@@ -2575,6 +2587,24 @@ proto.AddReadmeRequest.prototype.getMarkdown = function() {
  */
 proto.AddReadmeRequest.prototype.setMarkdown = function(value) {
   return jspb.Message.setProto3StringField(this, 2, value);
+};
+
+
+/**
+ * optional string from_dataset_id = 3;
+ * @return {string}
+ */
+proto.AddReadmeRequest.prototype.getFromDatasetId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 3, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.AddReadmeRequest} returns this
+ */
+proto.AddReadmeRequest.prototype.setFromDatasetId = function(value) {
+  return jspb.Message.setProto3StringField(this, 3, value);
 };
 
 
@@ -17554,7 +17584,8 @@ proto.CreateQueryRequest.prototype.toObject = function(opt_includeInstance) {
  */
 proto.CreateQueryRequest.toObject = function(includeInstance, msg) {
   var f, obj = {
-    datasetId: jspb.Message.getFieldWithDefault(msg, 1, "")
+    datasetId: jspb.Message.getFieldWithDefault(msg, 1, ""),
+    connectionId: jspb.Message.getFieldWithDefault(msg, 2, "")
   };
 
   if (includeInstance) {
@@ -17595,6 +17626,10 @@ proto.CreateQueryRequest.deserializeBinaryFromReader = function(msg, reader) {
       var value = /** @type {string} */ (reader.readString());
       msg.setDatasetId(value);
       break;
+    case 2:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setConnectionId(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -17631,6 +17666,13 @@ proto.CreateQueryRequest.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
+  f = message.getConnectionId();
+  if (f.length > 0) {
+    writer.writeString(
+      2,
+      f
+    );
+  }
 };
 
 
@@ -17649,6 +17691,24 @@ proto.CreateQueryRequest.prototype.getDatasetId = function() {
  */
 proto.CreateQueryRequest.prototype.setDatasetId = function(value) {
   return jspb.Message.setProto3StringField(this, 1, value);
+};
+
+
+/**
+ * optional string connection_id = 2;
+ * @return {string}
+ */
+proto.CreateQueryRequest.prototype.getConnectionId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 2, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.CreateQueryRequest} returns this
+ */
+proto.CreateQueryRequest.prototype.setConnectionId = function(value) {
+  return jspb.Message.setProto3StringField(this, 2, value);
 };
 
 

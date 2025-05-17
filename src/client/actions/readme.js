@@ -13,7 +13,7 @@ export function removeReadme () {
   }
 }
 
-export function addReadme () {
+export function addReadme (datasetId) {
   return (dispatch, getState) => {
     track('AddReadme')
     const markdown = `# My Readme
@@ -30,6 +30,7 @@ Use **Markdown** to document your map:
     const request = new AddReadmeRequest()
     request.setReportId(reportId)
     request.setMarkdown(markdown)
+    request.setFromDatasetId(datasetId)
     dispatch(grpcCall(Dekart.AddReadme, request))
   }
 }

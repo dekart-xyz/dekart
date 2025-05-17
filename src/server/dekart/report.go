@@ -471,7 +471,7 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 	// forking a public report
 	// or when forking a playground report in workspace
 	if report.IsPublic || (report.IsPlayground && !isPlayground) {
-		userConnections, err := s.getConnections(ctx)
+		userConnections, err := s.getUserConnections(ctx)
 		if err != nil {
 			log.Err(err).Msg("Cannot retrieve connections")
 			return nil, err

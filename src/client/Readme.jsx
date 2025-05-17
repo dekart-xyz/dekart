@@ -5,6 +5,10 @@ import Button from 'antd/es/button'
 import Markdown from 'react-markdown'
 import { useDispatch, useSelector } from 'react-redux'
 import { setPreview, setReadmeValue } from './actions/readme'
+import ace from 'ace-builds/src-noconflict/ace'
+
+ace.config.set('basePath', '/node_modules/ace-builds/src-min-noconflict')
+
 export default function Readme ({ readme }) {
   const { canWrite } = useSelector(state => state.report)
   const { edit } = useSelector(state => state.reportStatus)

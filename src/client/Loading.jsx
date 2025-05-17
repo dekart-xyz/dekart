@@ -1,11 +1,10 @@
-
-import styles from './Loading.module.css';
+import styles from './Loading.module.css'
 import SpinFC from 'antd/es/spin'
 
-export function Loading() {
+export function Loading () {
   return (
     <div className={styles.loading}>
-      <SpinFC size="large" />
+      <SpinFC size='large' />
     </div>
-  );
+  )
 }

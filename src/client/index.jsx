@@ -5,10 +5,7 @@ import './index.css'
 import { createStore, applyMiddleware, compose } from 'redux'
 import { Provider } from 'react-redux'
 import thunk from 'redux-thunk'
-// import { createLogger } from 'redux-logger'
 import reducer from './reducers/rootReducer'
-// import { taskMiddleware } from 'react-palm/tasks'
-// import screenshotInit from './lib/screenshot'
 import { enhanceReduxMiddleware } from '@kepler.gl/reducers'
 
 const store = createStore(
@@ -17,9 +14,6 @@ const store = createStore(
     applyMiddleware(...enhanceReduxMiddleware([thunk]))
   )
 )
-
-console.log('store')
-// screenshotInit(store)
 
 ReactDOM.render(
   <Provider store={store}>

@@ -6,12 +6,6 @@ on:
       - main
 
 jobs:
-  node_tests:
-    uses: ./.github/workflows/node_test.yaml
-    secrets: inherit
-  go_tests:
-    uses: ./.github/workflows/go_test.yaml
-    secrets: inherit
   build:
     with:
       build_e2e: true

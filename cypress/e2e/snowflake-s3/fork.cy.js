@@ -1,24 +1,6 @@
 /* eslint-disable no-undef */
 import copy from '../../fixtures/copy.json'
 
-async function getColorAtMapCenter (win) {
-  const { imageDataUri, mapH, mapW } = await win.dekartMapScreenshot()
-  const img = await new Promise((resolve) => {
-    const img = new Image()
-    img.width = mapW
-    img.height = mapH
-    img.onload = () => resolve(img)
-    img.src = imageDataUri
-  })
-  const c = document.createElement('canvas')
-  c.width = mapW
-  c.height = mapH
-  const ctx = c.getContext('2d')
-  ctx.drawImage(img, 0, 0)
-  const imageData = ctx.getImageData(Math.trunc(mapW / 2), Math.trunc(mapH / 2), 1, 1).data
-  return imageData.join(',')
-}
-
 describe('fork', () => {
   it('should have same viz style after fork', () => {
     cy.visit('/')

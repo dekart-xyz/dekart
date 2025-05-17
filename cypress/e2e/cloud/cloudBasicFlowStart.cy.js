@@ -28,6 +28,14 @@ describe('cloud basic flow', () => {
     cy.get('button:contains("Create Workspace")').click()
     cy.get('input#name').type('test')
     cy.get('button:contains("Create")').click()
+
+    // create new report
+    cy.get('button#dekart-create-report').click()
+
+    // click #dekart-add-connection
+    cy.get('#dekart-add-connection').click()
+
+    // create connection
     cy.get('button:contains("BigQuery")').click()
     cy.get('button:contains("Connect with Google")').click()
     cy.get('button:contains("Continue to Google")').should('be.visible')

@@ -37,13 +37,11 @@ jobs:
               - 'src/proto/**'
               - 'package.json'
               - 'package-lock.json'
-              - '.github/workflows/node_test.yaml'
             go:
               - 'src/server/**'
               - 'src/proto/**'
               - 'go.mod'
               - 'go.sum'
-              - '.github/workflows/go_test.yaml'
               - 'migrations/**'
             e2e:
               - 'public/**'

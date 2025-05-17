@@ -3,24 +3,26 @@ WORKDIR /source
 ADD package.json .
 ADD package-lock.json .
 ADD .npmrc .
+ADD Makefile .
+ADD proto proto
 ENV CI=true
 RUN npm i
 ADD public public
 ADD src/client src/client
-ADD proto proto
 ADD index.html index.html
 ADD src/index.js src/index.js
 ADD src/setupTests.js src/setupTests.js
-ADD Makefile Makefile
 ADD vitest.config.js vitest.config.js
 ADD vite.config.js vite.config.js
-RUN make proto-copy-to-node
 
 FROM nodedeps AS nodebuilder
+RUN npm run lint
+RUN npm run test
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run build
 
 FROM nodedeps AS nodetest
+RUN npm run lint
 RUN npm run test
 
 FROM golang:1.23.3 AS godeps
@@ -36,6 +38,7 @@ ADD src/proto src/proto
 ADD src/server src/server
 
 FROM godeps AS gobuilder
+RUN go test -v -count=1 ./src/server/**/
 RUN CGO_ENABLED=1 go build ./src/server
 
 FROM godeps AS gotest

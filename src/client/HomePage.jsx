@@ -177,10 +177,21 @@ function ConnectionTypeSelectorBottom () {
   const dispatch = useDispatch()
   const planType = useSelector(state => state.user.stream.planType)
   const showCancel = useSelector(state => state.connection.list).length > 0
+  const newConnectionScreen = useSelector(state => state.connection.screen)
+  const history = useHistory()
   if (showCancel) {
     return (
       <div className={styles.connectionSelectorBack}>
-        <Button type='ghost' onClick={() => dispatch(newConnectionScreen(false))}>Return back</Button>
+        <Button
+          type='ghost' onClick={() => {
+            if (newConnectionScreen) {
+              dispatch(newConnectionScreen(false))
+            } else {
+              history.push('/')
+            }
+          }}
+        >Return back
+        </Button>
       </div>
     )
   }
@@ -329,8 +340,9 @@ function Reports ({ createReportButton, reportFilter }) {
   const [archived, setArchived] = useState(false)
   const reportsList = useSelector(state => state.reportsList)
   const { loaded: envLoaded, authEnabled } = useSelector(state => state.env)
-  const connectionList = useSelector(state => state.connection.list)
-  const userDefinedConnection = useSelector(state => state.connection.userDefined)
+  const connectionList = useSelector(state => state.connection.list.filter(c => c.id !== 'default'))
+  // TODO: show default SQL connection in the list
+  // const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const newConnectionScreen = useSelector(state => state.connection.screen)
   const isAdmin = useSelector(state => state.user.isAdmin)
   useEffect(() => {
@@ -341,7 +353,7 @@ function Reports ({ createReportButton, reportFilter }) {
   if (!envLoaded) {
     return null
   }
-  if ((userDefinedConnection && connectionList.length === 0 && isAdmin) || newConnectionScreen) {
+  if (newConnectionScreen || (reportFilter === 'connections' && connectionList.length === 0 && isAdmin)) {
     return (
       <div className={styles.reports}>
         <CreateConnection />

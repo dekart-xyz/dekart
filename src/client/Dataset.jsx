@@ -1,67 +1,31 @@
 import Button from 'antd/es/button'
 import styles from './Dataset.module.css'
-import Select from 'antd/es/select'
 import { useDispatch, useSelector } from 'react-redux'
 import Query from './Query'
 import File from './File'
 import { createQuery } from './actions/query'
 import { createFile } from './actions/file'
-import Dropdown from 'antd/es/dropdown'
-import { ConsoleSqlOutlined, UploadOutlined, MoreOutlined } from '@ant-design/icons'
-import { Datasource } from './Datasource'
-import { updateDatasetConnection } from './actions/dataset'
+import { ApiTwoTone, InboxOutlined, ReadOutlined } from '@ant-design/icons'
+import { DatasourceIcon } from './Datasource'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
+import { addReadme } from './actions/readme'
+import { updateSessionStorage } from './actions/sessionStorage'
+import { getDatasourceMeta } from './lib/datasource'
 
-function DatasetTypeSelector ({ dataset }) {
-  const dispatch = useDispatch()
-
-  const userDefinedConnection = useSelector(state => state.connection.userDefined)
-  const connectionList = useSelector(state => state.connection.list)
-
-  const env = useSelector(state => state.env)
-  const { ALLOW_FILE_UPLOAD } = env.variables
-  let allowFileUpload = ALLOW_FILE_UPLOAD
-  let disabledFileUploadNote = 'File upload is disabled in Dekart configuration'
-  if (allowFileUpload && userDefinedConnection) {
-    // check if selected connection supports file upload
-    const connection = connectionList.find(c => c.id === dataset.connectionId)
-    allowFileUpload = connection?.canStoreFiles
-    if (!allowFileUpload) {
-      disabledFileUploadNote = 'Selected connection does not support file upload'
-    }
-  }
-
+function DatasetSelectorButton ({ icon, title, subtitle, onClick, id }) {
   return (
-    <div className={styles.datasetTypeSelector}>
-      <Dropdown
-        disabled={!dataset.connectionId && userDefinedConnection}
-        menu={{
-          items: [
-            {
-              label: 'SQL query',
-              icon: <ConsoleSqlOutlined />,
-              key: 'sql'
-            },
-            {
-              label: 'File upload',
-              icon: <UploadOutlined />,
-              title: !allowFileUpload ? disabledFileUploadNote : null,
-              disabled: !allowFileUpload,
-              key: 'file'
-            }
-          ],
-          onClick: ({ key }) => {
-            if (key === 'sql') {
-              dispatch(createQuery(dataset.id))
-            } else if (key === 'file') {
-              dispatch(createFile(dataset.id))
-            }
-          }
-        }}
-      >
-        <Button block type='primary'>Add data from...</Button>
-      </Dropdown>
-    </div>
+    <Button
+      id={id}
+      size='large'
+      className={styles.datasetSelectorButton}
+      onClick={onClick}
+    >
+      <span className={styles.datasetSelectorButtonInner}>
+        <span className={styles.datasetSelectorIcon}>{icon}</span>
+        <span className={styles.datasetSelectorTitle}>{title}</span>
+        <span className={styles.datasetSelectorSubtitle}>{subtitle}</span>
+      </span>
+    </Button>
   )
 }
 
@@ -72,8 +36,10 @@ function DatasetSelector ({ dataset }) {
   const isPlayground = useSelector(state => state.user.isPlayground)
   const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
   const connectionList = useSelector(state => state.connection.list)
-  const selectedConnection = connectionList.find(c => c.id === dataset.connectionId)
+  const noneDefaultConnectionList = connectionList.filter(c => c.id !== 'default')
   const history = useHistory()
+  const report = useSelector(state => state.report)
+  const isAdmin = useSelector(state => state.user.isAdmin)
   if (!env.loaded) {
     // do not render until environment is loaded
     return null
@@ -88,49 +54,60 @@ function DatasetSelector ({ dataset }) {
   }
   return (
     <div className={styles.datasetSelector}>
-      <div className={styles.selector}>
-        {userDefinedConnection
-          ? (
-            <>
-              <Datasource connection={selectedConnection} />
-              <div className={styles.datasource}>
-                <Select
-                  placeholder='Select connection'
-                  id='dekart-connection-select'
-                  className={styles.connectionSelect}
-                  value={dataset.connectionId || null}
-                  onSelect={value => {
-                    dispatch(updateDatasetConnection(dataset.id, value))
-                  }}
-                  options={[
-                    ...(connectionList.map(connection => ({
-                      value: connection.id,
-                      label: connection.connectionName
-                    })))
-                  ]}
-                /><Button
-                  type='text'
-                  title='Edit connections'
-                  className={styles.connectionEditButton} icon={<MoreOutlined />}
-                  onClick={() => {
-                    history.push('/connections')
-                  }}
-                  />
-              </div>
-            </>
-            )
-          : <DatasetTypeSelector dataset={dataset} />}
-      </div>
-      {
-        userDefinedConnection
-          ? (
-            <div className={styles.status}>
-              <DatasetTypeSelector dataset={dataset} />
-            </div>
+      <div className={styles.datasetSelectorInner}>
+        <DatasetSelectorButton
+          icon={<InboxOutlined />}
+          title='Upload File'
+          subtitle='Load files in CSV or GeoJSON formats'
+          onClick={() => {
+            dispatch(createFile(dataset.id))
+          }}
+        />
+        {!report.readme && (
+          <DatasetSelectorButton
+            icon={<ReadOutlined />}
+            title='Write README'
+            subtitle='Add Markdown description to your map'
+            onClick={() => {
+              dispatch(addReadme(dataset.id))
+            }}
+          />
+        )}
 
-            )
-          : null
-      }
+        {noneDefaultConnectionList.map((connection) => (
+          <DatasetSelectorButton
+            key={connection.id}
+            icon={<DatasourceIcon type={connection.connectionType} />}
+            title={`${getDatasourceMeta(connection.connectionType).name} SQL (${connection.connectionName})`}
+            subtitle={`Run SQL directly on ${getDatasourceMeta(connection.connectionType).name}`}
+            onClick={() => {
+              dispatch(createQuery(dataset.id, connection.id))
+            }}
+          />
+        ))}
+        {noneDefaultConnectionList.length === 0 && (
+          <DatasetSelectorButton
+            icon={<ApiTwoTone />}
+            id='dekart-add-connection'
+            title='Add connection'
+            subtitle='Connect BigQuery or Snowflake'
+            onClick={() => {
+              dispatch(updateSessionStorage('redirectWhenSaveConnection', { reportId: report.id, edit: true }))
+              history.push('/connections')
+            }}
+          />
+        )}
+      </div>
+      {isAdmin && noneDefaultConnectionList.length > 0 && (
+        <Button
+          type='link'
+          onClick={() => {
+            history.push('/connections')
+          }}
+        >
+          Add and edit connections
+        </Button>
+      )}
     </div>
   )
 }
