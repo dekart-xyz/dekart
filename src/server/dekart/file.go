@@ -77,6 +77,7 @@ func getFileExtension(mimeType string) string {
 func (s Server) moveFileToStorage(reqConCtx context.Context, fileSourceID string, fileExtension string, file multipart.File, report *proto.Report, bucketName string) {
 	defer file.Close()
 	userCtx, cancel := context.WithTimeout(user.CopyUserContext(reqConCtx, context.Background()), 10*time.Minute)
+	userConnCtx := conn.CopyConnectionCtx(reqConCtx, userCtx)
 	defer cancel()
 	var storageWriter io.WriteCloser
 	if report.IsPublic {
@@ -84,7 +85,7 @@ func (s Server) moveFileToStorage(reqConCtx context.Context, fileSourceID string
 		storageWriter = s.GetObject(userCtx, s.GetDefaultBucketName(), fmt.Sprintf("%s.%s", fileSourceID, fileExtension)).GetWriter(userCtx)
 	} else {
 		// reqConCtx is used because it has connection information, userCtx does not have it
-		storageWriter = s.storage.GetObject(reqConCtx, bucketName, fmt.Sprintf("%s.%s", fileSourceID, fileExtension)).GetWriter(userCtx)
+		storageWriter = s.storage.GetObject(userConnCtx, bucketName, fmt.Sprintf("%s.%s", fileSourceID, fileExtension)).GetWriter(userConnCtx)
 	}
 	_, err := io.Copy(storageWriter, file)
 	if err != nil {
@@ -97,6 +98,7 @@ func (s Server) moveFileToStorage(reqConCtx context.Context, fileSourceID string
 	if err != nil {
 		log.Err(err).Msg("error closing storage writer")
 		s.setUploadError(report.Id, fileSourceID, err)
+		return
 	}
 	log.Debug().Msgf("file %s.csv moved to storage", fileSourceID)
 	_, err = s.db.ExecContext(userCtx,
