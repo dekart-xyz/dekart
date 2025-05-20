@@ -79,6 +79,7 @@ const defaultReportStatus = {
   saving: false,
   lastChanged: 0,
   lastSaved: 0,
+  savedReportVersion: 0,
   fullscreen: null
 }
 function reportStatus (state = defaultReportStatus, action) {
@@ -110,7 +111,8 @@ function reportStatus (state = defaultReportStatus, action) {
       return {
         ...state,
         saving: false,
-        lastSaved: action.lastSaved
+        lastSaved: action.lastSaved,
+        savedReportVersion: action.savedReportVersion
       }
     case toggleReportFullscreen.name:
       return {
