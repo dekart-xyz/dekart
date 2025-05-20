@@ -2015,6 +2015,9 @@ export namespace UpdateReportRequest {
 }
 
 export class UpdateReportResponse extends jspb.Message {
+  getUpdatedAt(): number;
+  setUpdatedAt(value: number): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): UpdateReportResponse.AsObject;
   static toObject(includeInstance: boolean, msg: UpdateReportResponse): UpdateReportResponse.AsObject;
@@ -2027,6 +2030,7 @@ export class UpdateReportResponse extends jspb.Message {
 
 export namespace UpdateReportResponse {
   export type AsObject = {
+    updatedAt: number,
   }
 }
 

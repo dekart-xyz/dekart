@@ -55,7 +55,7 @@ function checkMapConfig (kepler, mapConfigInputStr, dispatch, datasets) {
       }
     }
     checkMapConfigTimer = null
-  }, 0)
+  }, 100) // 100ms delay to avoid calls when playing animation
   return () => {
     if (checkMapConfigTimer) {
       clearTimeout(checkMapConfigTimer)

@@ -118,13 +118,8 @@ export function reportUpdate (reportStreamResponse) {
       user,
       queryJobs: prevQueryJobsList,
       queryParams: { hash },
-      reportStatus: { lastChanged, lastSaved }
+      reportStatus: { lastChanged, lastSaved, savedReportVersion }
     } = getState()
-
-    if (lastChanged > lastSaved) {
-      // report was changed locally, prevent remote update
-      return
-    }
 
     dispatch({
       type: reportUpdate.name,
@@ -138,12 +133,15 @@ export function reportUpdate (reportStreamResponse) {
       hash
     })
     let mapConfigUpdated = false
-    if (report.mapConfig) {
+    if (
+      report.mapConfig &&
+      report.updatedAt > savedReportVersion && // ignore when updated version same as last saved to prevent maps reloads
+      lastSaved >= lastChanged // ignore overwriting unsaved changes
+    ) {
       mapConfigUpdated = receiveReportUpdateMapConfig(report, dispatch, getState)
     }
 
-    if (!mapConfigUpdated) {
-      // new map config reset data anyway
+    if (!mapConfigUpdated) { // new map config reset data anyway
       prevQueriesList.forEach(query => {
         if (!queriesList.find(q => q.id === query.id)) {
           const dataset = prevDatasetsList.find(d => d.queryId === query.id)
@@ -308,8 +306,8 @@ export function reportTitleChange (title) {
   }
 }
 
-export function savedReport (lastSaved) {
-  return { type: savedReport.name, lastSaved }
+export function savedReport (lastSaved, savedReportVersion) {
+  return { type: savedReport.name, lastSaved, savedReportVersion }
 }
 
 export function toggleReportFullscreen () {
@@ -318,9 +316,9 @@ export function toggleReportFullscreen () {
 
 export function saveMap (onSaveComplete = () => {}) {
   return async (dispatch, getState) => {
-    const lastSaved = Date.now()
     dispatch({ type: saveMap.name })
     const { keplerGl, report, reportStatus, queryStatus, queryParams, readme } = getState()
+    const lastSaved = reportStatus.lastChanged
     const configToSave = KeplerGlSchema.getConfigToSave(keplerGl.kepler)
     const request = new UpdateReportRequest()
     const queries = Object.keys(queryStatus).reduce((queries, id) => {
@@ -344,9 +342,9 @@ export function saveMap (onSaveComplete = () => {}) {
     request.setTitle(reportStatus.title)
     request.setQueryList(queries)
     request.setQueryParamsList(getQueryParamsObjArr(queryParams.list))
-    dispatch(grpcCall(Dekart.UpdateReport, request, () => {
+    dispatch(grpcCall(Dekart.UpdateReport, request, (res) => {
       onSaveComplete()
-      dispatch(savedReport(lastSaved))
+      dispatch(savedReport(lastSaved, res.updatedAt))
     }))
   }
 }
