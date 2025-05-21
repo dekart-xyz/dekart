@@ -1,7 +1,7 @@
 version: "3.9"
 services:
   db:
-    image: postgres:15
+    image: postgres
     profiles:
       - local
     ports:
@@ -31,11 +31,11 @@ services:
   dekart-cloud:
     image: europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:sha-e9f8018
     platform: linux/amd64
-    mem_limit: 512m
+    restart: always
     ports:
       - 8080:8080
     profiles:
-      - cloud
+      - bigquery
     volumes:
       - "${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS}"
     environment:
@@ -50,22 +50,34 @@ services:
       DEKART_MAPBOX_TOKEN: "${DEKART_MAPBOX_TOKEN}"
       GOOGLE_APPLICATION_CREDENTIALS: "${GOOGLE_APPLICATION_CREDENTIALS}"
       DEKART_CORS_ORIGIN: "${DEKART_CORS_ORIGIN}"
-      DEKART_LOG_DEBUG: "${DEKART_LOG_DEBUG}"
-      DEKART_LOG_PRETTY: "${DEKART_LOG_PRETTY}"
-      DEKART_PORT: "${DEKART_PORT}"
-      DEKART_STATIC_FILES: "${DEKART_STATIC_FILES}"
-      DEKART_ALLOW_FILE_UPLOAD: "${DEKART_ALLOW_FILE_UPLOAD}"
-      DEKART_REQUIRE_GOOGLE_OAUTH: "${DEKART_REQUIRE_GOOGLE_OAUTH}"
-      DEKART_GOOGLE_OAUTH_CLIENT_ID: "${DEKART_GOOGLE_OAUTH_CLIENT_ID}"
-      DEKART_GOOGLE_OAUTH_SECRET: "${DEKART_GOOGLE_OAUTH_SECRET}"
-      STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY}"
-      STRIPE_PRICE_ID: "${STRIPE_PRICE_ID}"
-      STRIPE_PRICE_ID_GROW: "${STRIPE_PRICE_ID_GROW}"
-      STRIPE_PRICE_ID_MAX: "${STRIPE_PRICE_ID_MAX}"
-      DEKART_CLOUD_PUBLIC_STORAGE_BUCKET: "${DEKART_CLOUD_PUBLIC_STORAGE_BUCKET}"
-      DEKART_DATA_ENCRYPTION_KEY: "${DEKART_DATA_ENCRYPTION_KEY}"
-      DEKART_UX_HOMEPAGE: "${DEKART_UX_HOMEPAGE}"
+  # docker compose --env-file .env.snowflake-s3 --profile dekart-oss-snowflake-s3 up
+  dekart-oss-snowflake-s3:
+    image: dekartxyz/dekart:0.17
+    platform: linux/amd64
+    restart: always
+    ports:
+      - 8080:8080
+    profiles:
+      - snowflake-s3
+    environment:
+      DEKART_POSTGRES_DB: "${DEKART_POSTGRES_DB}"
+      DEKART_POSTGRES_USER: "${DEKART_POSTGRES_USER}"
+      DEKART_POSTGRES_PASSWORD: "${DEKART_POSTGRES_PASSWORD}"
+      DEKART_POSTGRES_PORT: "5432"
+      DEKART_POSTGRES_HOST: "host.docker.internal"
+      DEKART_MAPBOX_TOKEN: "${DEKART_MAPBOX_TOKEN}"
       DEKART_STORAGE: "${DEKART_STORAGE}"
       DEKART_DATASOURCE: "${DEKART_DATASOURCE}"
+      DEKART_CLOUD_STORAGE_BUCKET: "${DEKART_CLOUD_STORAGE_BUCKET}"
+      AWS_REGION: "${AWS_REGION}"
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+      DEKART_ALLOW_FILE_UPLOAD: "${DEKART_ALLOW_FILE_UPLOAD}"
+      DEKART_SNOWFLAKE_ACCOUNT_ID: "${DEKART_SNOWFLAKE_ACCOUNT_ID}"
+      DEKART_SNOWFLAKE_USER: "${DEKART_SNOWFLAKE_USER}"
+      DEKART_SNOWFLAKE_PASSWORD: "${DEKART_SNOWFLAKE_PASSWORD}"
+      DEKART_DEV_CLAIMS_EMAIL: "${DEKART_DEV_CLAIMS_EMAIL}"
+      DEKART_REQUIRE_AMAZON_OIDC: "${DEKART_REQUIRE_AMAZON_OIDC}"
+
 
 

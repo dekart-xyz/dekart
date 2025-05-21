@@ -554,16 +554,18 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 
 	var result sql.Result
 	var err error
+	updated_at := time.Now()
 	if checkWorkspace(ctx).IsPlayground {
 		result, err = s.db.ExecContext(ctx,
 			`update
 			reports
-		set map_config=$1, title=$2, query_params=$3, readme=$4
-		where id=$5 and author_email=$6 and is_playground=true`,
+		set map_config=$1, title=$2, query_params=$3, readme=$4, updated_at=$5
+		where id=$6 and author_email=$7 and is_playground=true`,
 			req.MapConfig,
 			req.Title,
 			string(paramsJSON),
 			readme,
+			updated_at,
 			req.ReportId,
 			claims.Email,
 		)
@@ -571,12 +573,13 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 		result, err = s.db.ExecContext(ctx,
 			`update
 			reports
-		set map_config=$1, title=$2, query_params=$3, readme=$4
-		where id=$5 and (author_email=$6 or allow_edit) and workspace_id=$7`,
+		set map_config=$1, title=$2, query_params=$3, readme=$4, updated_at=$5
+		where id=$6 and (author_email=$7 or allow_edit) and workspace_id=$8`,
 			req.MapConfig,
 			req.Title,
 			string(paramsJSON),
 			readme,
+			updated_at,
 			req.ReportId,
 			claims.Email,
 			checkWorkspace(ctx).ID,
@@ -606,9 +609,11 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 		go s.storeQuery(ctx, req.ReportId, query.Id, query.QueryText, query.QuerySourceId)
 	}
 
-	s.reportStreams.Ping(req.ReportId)
+	defer s.reportStreams.Ping(req.ReportId)
 
-	return &proto.UpdateReportResponse{}, nil
+	return &proto.UpdateReportResponse{
+		UpdatedAt: updated_at.Unix(),
+	}, nil
 }
 
 func (s Server) AllowExportDatasets(ctx context.Context, req *proto.AllowExportDatasetsRequest) (*proto.AllowExportDatasetsResponse, error) {

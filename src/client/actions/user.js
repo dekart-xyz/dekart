@@ -6,6 +6,13 @@ import { updateLocalStorage } from './localStorage'
 import { updateSessionStorage } from './sessionStorage'
 import { getWorkspace } from './workspace'
 
+export function setClaimEmailCookie () {
+  const claimEmailCookie = document.cookie
+    .split('; ')
+    .find(row => row.startsWith('dekart-dev-claim-email='))?.split('=')[1] || null
+  return { type: setClaimEmailCookie.name, claimEmailCookie }
+}
+
 export function userStreamUpdate (userStream) {
   return {
     type: userStreamUpdate.name,

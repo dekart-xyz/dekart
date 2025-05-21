@@ -569,6 +569,7 @@ message UpdateReportRequest {
 }
 
 message UpdateReportResponse {
+    int64 updated_at = 1;
 }
 
 message RunQueryRequest {

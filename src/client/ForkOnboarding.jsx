@@ -13,6 +13,7 @@ import { track } from './lib/tracking'
 import { ConnectionType } from 'dekart-proto/dekart_pb'
 
 export function useRequireOnboarding () {
+  const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const userStream = useSelector(state => state.user.stream)
   const workspaceId = userStream?.workspaceId
   const requireWorkspace = !workspaceId
@@ -27,7 +28,7 @@ export function useRequireOnboarding () {
     return acc
   }
   , []))
-  if (!userStream || !connectionListLoaded || canWrite) {
+  if (!userStream || !connectionListLoaded || canWrite || !userDefinedConnection) {
     return null
   }
   const connectionTypes = connections.reduce((acc, connection) => {

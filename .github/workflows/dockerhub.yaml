@@ -1,0 +1,24 @@
+name: Docker Hub
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - './install/docker/README.md'
+
+jobs:
+  dockerhub:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+      - name: Docker Hub Description
+        uses: peter-evans/dockerhub-description@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+          repository: dekartxyz/dekart
+          short-description: Visualize Data from Google BigQuery and Amazon Athena on a Kepler.gl map
+          readme-filepath: ./install/docker/README.md
+
