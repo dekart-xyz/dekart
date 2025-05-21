@@ -78,7 +78,7 @@ function DatasetSelector ({ dataset }) {
           <DatasetSelectorButton
             key={connection.id}
             icon={<DatasourceIcon type={connection.connectionType} />}
-            title={`${getDatasourceMeta(connection.connectionType).name} SQL (${connection.connectionName})`}
+            title={`${connection.connectionName}`}
             subtitle={`Run SQL directly on ${getDatasourceMeta(connection.connectionType).name}`}
             onClick={() => {
               dispatch(createQuery(dataset.id, connection.id))

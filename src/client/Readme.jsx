@@ -5,9 +5,13 @@ import Button from 'antd/es/button'
 import Markdown from 'react-markdown'
 import { useDispatch, useSelector } from 'react-redux'
 import { setPreview, setReadmeValue } from './actions/readme'
-import ace from 'ace-builds/src-noconflict/ace'
-
-ace.config.set('basePath', '/node_modules/ace-builds/src-min-noconflict')
+import 'ace-builds/src-noconflict/snippets/markdown'
+import 'ace-builds/src-noconflict/mode-markdown'
+import 'ace-builds/src-noconflict/theme-sqlserver'
+import 'ace-builds/src-noconflict/ext-language_tools'
+import 'ace-builds/src-noconflict/keybinding-vscode'
+import 'ace-builds/src-noconflict/ext-beautify'
+import 'ace-builds/src-noconflict/ext-emmet'
 
 export default function Readme ({ readme }) {
   const { canWrite } = useSelector(state => state.report)
@@ -48,6 +52,7 @@ export default function Readme ({ readme }) {
                 keyboardHandler='vscode'
                 onChange={v => dispatch(setReadmeValue(v))}
                 value={markdown}
+                enableSnippets={false}
                 readOnly={!canWrite}
                 editorProps={{ $blockScrolling: true }}
                 setOptions={{
