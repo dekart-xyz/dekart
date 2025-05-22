@@ -100,7 +100,7 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 			publicStorage := storage.NewPublicStorage()
 			srcObj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", file.SourceId, getFileExtension(file.MimeType)))
 			dstObj := s.storage.GetObject(conCtx, s.getBucketNameFromConnection(connection), fmt.Sprintf("%s.%s", file.SourceId, getFileExtension(file.MimeType)))
-			err = srcObj.CopyTo(ctx, dstObj.GetWriter(conCtx))
+			err = srcObj.CopyTo(conCtx, dstObj.GetWriter(conCtx))
 			if err != nil {
 				log.Err(err).Msg("Cannot copy file to public storage")
 				return
@@ -229,7 +229,7 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 			publicStorage := storage.NewPublicStorage()
 			dstObj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", file.SourceId, getFileExtension(file.MimeType)))
 			srcObj := s.storage.GetObject(conCtx, s.getBucketNameFromConnection(connection), fmt.Sprintf("%s.%s", file.SourceId, getFileExtension(file.MimeType)))
-			err = srcObj.CopyTo(conCtx, dstObj.GetWriter(ctx))
+			err = srcObj.CopyTo(conCtx, dstObj.GetWriter(conCtx))
 			if err != nil {
 				log.Err(err).Msg("Cannot copy file to public storage")
 				return
