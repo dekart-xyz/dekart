@@ -12,7 +12,7 @@ import { ForkOutlined } from '@ant-design/icons'
 import { track } from './lib/tracking'
 import { ConnectionType } from 'dekart-proto/dekart_pb'
 
-export function useRequireOnboarding () {
+export function useRequireOnboarding() {
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const userStream = useSelector(state => state.user.stream)
   const workspaceId = userStream?.workspaceId
@@ -21,24 +21,32 @@ export function useRequireOnboarding () {
   const connections = useSelector(state => state.connection.list)
   const connectionListLoaded = useSelector(state => state.connection.listLoaded) || userStream?.planType === 0
   const connectionTypesRequired = useSelector(state => state.dataset.list.reduce((acc, dataset) => {
-    const connectionType = dataset.connectionType === ConnectionType.CONNECTION_TYPE_UNSPECIFIED ? ConnectionType.CONNECTION_TYPE_BIGQUERY : dataset.connectionType
-    if (!acc.includes(connectionType)) {
-      return acc.concat(connectionType)
+    let connectionType = null
+    if (dataset.connectionType === ConnectionType.CONNECTION_TYPE_UNSPECIFIED) {
+      // default connection used, ok for files
+      if (dataset.queryId) {
+        // if this query we need user to have BigQuery connection
+        connectionType = ConnectionType.CONNECTION_TYPE_BIGQUERY
+      }
+    } else {
+      connectionType = dataset.connectionType
+    }
+    if (connectionType && !acc.includes(connectionType)) {
+      acc.push(connectionType)
     }
     return acc
-  }
-  , []))
+  }, []))
   if (!userStream || !connectionListLoaded || canWrite || !userDefinedConnection) {
     return null
   }
   const connectionTypes = connections.reduce((acc, connection) => {
-    const connectionType = connection.connectionType === ConnectionType.CONNECTION_TYPE_UNSPECIFIED ? ConnectionType.CONNECTION_TYPE_BIGQUERY : connection.connectionType
+    const connectionType = connection.connectionType
     if (!acc.includes(connectionType)) {
       return acc.concat(connectionType)
     }
     return acc
   }
-  , [])
+    , [])
   const alreadyConnectedTypes = connectionTypesRequired.filter(connectionType => connectionTypes.includes(connectionType))
   // find missing connection types
   const missingConnectionTypes = connectionTypesRequired.filter(connectionType => !connectionTypes.includes(connectionType))
@@ -52,7 +60,7 @@ export function useRequireOnboarding () {
   return null
 }
 
-export function ForkOnboarding ({ requireOnboarding: { requireWorkspace, missingConnectionTypes, alreadyConnectedTypes }, edit }) {
+export function ForkOnboarding({ requireOnboarding: { requireWorkspace, missingConnectionTypes, alreadyConnectedTypes }, edit }) {
   const [visible, setVisible] = useState(false)
   const dispatch = useDispatch()
   const current = requireWorkspace ? 0 : 1 + alreadyConnectedTypes.length
@@ -67,7 +75,7 @@ export function ForkOnboarding ({ requireOnboarding: { requireWorkspace, missing
         }}
       >Create Free Workspace
       </Button>
-      )
+    )
     : <Button type='primary' onClick={() => history.push('/connections')}>Connect {getDatasourceMeta(missingConnectionTypes[0]).name}</Button>
 
   useEffect(() => {

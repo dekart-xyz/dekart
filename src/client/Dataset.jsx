@@ -11,6 +11,7 @@ import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 import { addReadme } from './actions/readme'
 import { updateSessionStorage } from './actions/sessionStorage'
 import { getDatasourceMeta } from './lib/datasource'
+import { track } from './lib/tracking'
 
 function DatasetSelectorButton ({ icon, title, subtitle, onClick, id }) {
   return (
@@ -94,6 +95,7 @@ function DatasetSelector ({ dataset }) {
             onClick={() => {
               dispatch(updateSessionStorage('redirectWhenSaveConnection', { reportId: report.id, edit: true }))
               history.push('/connections')
+              track('AddConnectionFromDatasetSelector')
             }}
           />
         )}

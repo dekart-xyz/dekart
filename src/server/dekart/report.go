@@ -484,13 +484,11 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 					newConnectionID = connection.Id
 					break
 				}
-				if connection.ConnectionType == dataset.ConnectionType ||
-					(report.IsPlayground && connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_BIGQUERY) {
-					// for playground reports we can use any bigquery connection
+				if connection.ConnectionType == dataset.ConnectionType {
 					newConnectionID = connection.Id
 				}
 			}
-			if newConnectionID == "" {
+			if newConnectionID == "" && dataset.ConnectionId != "" {
 				log.Error().Msg("Connection not found")
 				return nil, status.Error(codes.NotFound, "Connection not found")
 			}
