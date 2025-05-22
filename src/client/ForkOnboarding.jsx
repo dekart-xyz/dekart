@@ -12,7 +12,7 @@ import { ForkOutlined } from '@ant-design/icons'
 import { track } from './lib/tracking'
 import { ConnectionType } from 'dekart-proto/dekart_pb'
 
-export function useRequireOnboarding() {
+export function useRequireOnboarding () {
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const userStream = useSelector(state => state.user.stream)
   const workspaceId = userStream?.workspaceId
@@ -46,7 +46,7 @@ export function useRequireOnboarding() {
     }
     return acc
   }
-    , [])
+  , [])
   const alreadyConnectedTypes = connectionTypesRequired.filter(connectionType => connectionTypes.includes(connectionType))
   // find missing connection types
   const missingConnectionTypes = connectionTypesRequired.filter(connectionType => !connectionTypes.includes(connectionType))
@@ -60,7 +60,7 @@ export function useRequireOnboarding() {
   return null
 }
 
-export function ForkOnboarding({ requireOnboarding: { requireWorkspace, missingConnectionTypes, alreadyConnectedTypes }, edit }) {
+export function ForkOnboarding ({ requireOnboarding: { requireWorkspace, missingConnectionTypes, alreadyConnectedTypes }, edit }) {
   const [visible, setVisible] = useState(false)
   const dispatch = useDispatch()
   const current = requireWorkspace ? 0 : 1 + alreadyConnectedTypes.length
@@ -75,7 +75,7 @@ export function ForkOnboarding({ requireOnboarding: { requireWorkspace, missingC
         }}
       >Create Free Workspace
       </Button>
-    )
+      )
     : <Button type='primary' onClick={() => history.push('/connections')}>Connect {getDatasourceMeta(missingConnectionTypes[0]).name}</Button>
 
   useEffect(() => {
