@@ -173,7 +173,15 @@ func GetTokenSource(ctx context.Context) oauth2.TokenSource {
 func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 	ctx := r.Context()
 	var claims *Claims
-	if c.RequireIAP {
+	if c.DevClaimsEmail != "" {
+		email := r.Header.Get("X-Dekart-Claim-Email")
+		if email == "" {
+			email = c.DevClaimsEmail
+		}
+		claims = &Claims{
+			Email: email,
+		}
+	} else if c.RequireIAP {
 		claims = c.validateJWTFromAppEngine(ctx, r.Header.Get("X-Goog-IAP-JWT-Assertion"))
 	} else if c.RequireAmazonOIDC {
 		claims = c.validateJWTFromAmazonOIDC(ctx, r.Header.Get("x-amzn-oidc-data"))
@@ -520,11 +528,6 @@ func (c ClaimsCheck) getPublicKeyFromAmazon(token *jwt.Token) (interface{}, erro
 // validateJWTFromAmazonOIDC parses and validates token from x-amzn-oidc-data
 // see https://docs.aws.amazon.com/elasticloadbalancing/latest/application/listener-authenticate-users.html
 func (c ClaimsCheck) validateJWTFromAmazonOIDC(ctx context.Context, header string) *Claims {
-	if c.DevClaimsEmail != "" {
-		return &Claims{
-			Email: c.DevClaimsEmail,
-		}
-	}
 	if header == "" {
 		return nil
 	}
@@ -547,12 +550,6 @@ func (c ClaimsCheck) validateJWTFromAmazonOIDC(ctx context.Context, header strin
 // validateJWTFromAppEngine validates a JWT found in the
 // "x-goog-iap-jwt-assertion" header.
 func (c ClaimsCheck) validateJWTFromAppEngine(ctx context.Context, iapJWT string) *Claims {
-	if c.DevClaimsEmail != "" {
-		return &Claims{
-			Email: c.DevClaimsEmail,
-		}
-	}
-
 	payload, err := idtoken.Validate(ctx, iapJWT, c.Audience)
 	if err != nil {
 		log.Warn().Err(err).Msg("Error validating IAP JWT")

@@ -77,7 +77,6 @@ func getConfig(conn *proto.Connection) sf.Config {
 			PrivateKey:    pk,
 			Params:        map[string]*string{},
 		}
-
 	}
 	privateKey := os.Getenv("DEKART_SNOWFLAKE_PRIVATE_KEY")
 	dekartSnowflakeUser := os.Getenv("DEKART_SNOWFLAKE_USER")

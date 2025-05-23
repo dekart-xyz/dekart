@@ -26,7 +26,7 @@ describe('cloud basic flow', () => {
     cy.get('button#saveConnection').click()
 
     // run query
-    cy.get('button:contains("BigQuery SQL")').click()
+    cy.get('button:contains("Run SQL")').click()
     cy.get('textarea').type(copy.simple_sql_query, { force: true })
     cy.get(`button:contains("${copy.execute}")`).click()
     cy.get(`span:contains("${copy.ready}")`, { timeout: 20000 }).should('be.visible')

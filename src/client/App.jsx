@@ -15,7 +15,7 @@ import { getUsage } from './actions/usage'
 import { AuthState, RedirectState as DekartRedirectState } from 'dekart-proto/dekart_pb'
 import { getEnv } from './actions/env'
 import { authRedirect, setRedirectState } from './actions/redirect'
-import { subscribeUserStream, switchPlayground, unsubscribeUserStream } from './actions/user'
+import { setClaimEmailCookie, subscribeUserStream, switchPlayground, unsubscribeUserStream } from './actions/user'
 import WorkspacePage from './WorkspacePage'
 import GrantScopesPage from './GrantScopesPage'
 import { loadLocalStorage } from './actions/localStorage'
@@ -190,6 +190,7 @@ export default function App () {
   useEffect(() => {
     dispatch(loadSessionStorage())
     dispatch(loadLocalStorage())
+    dispatch(setClaimEmailCookie())
   }, [dispatch])
 
   useEffect(() => {

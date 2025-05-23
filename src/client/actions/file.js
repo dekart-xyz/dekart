@@ -1,6 +1,7 @@
 import { CreateFileRequest } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { grpcCall } from './grpc'
+import { track } from '../lib/tracking'
 
 export function uploadFileProgress (fileId, loaded, total) {
   return {
@@ -59,5 +60,6 @@ export function createFile (datasetId) {
     const request = new CreateFileRequest()
     request.setDatasetId(datasetId)
     dispatch(grpcCall(Dekart.CreateFile, request))
+    track('CreateFile')
   }
 }

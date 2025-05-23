@@ -16119,7 +16119,7 @@ proto.UpdateReportResponse.prototype.toObject = function(opt_includeInstance) {
  */
 proto.UpdateReportResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
-
+    updatedAt: jspb.Message.getFieldWithDefault(msg, 1, 0)
   };
 
   if (includeInstance) {
@@ -16156,6 +16156,10 @@ proto.UpdateReportResponse.deserializeBinaryFromReader = function(msg, reader) {
     }
     var field = reader.getFieldNumber();
     switch (field) {
+    case 1:
+      var value = /** @type {number} */ (reader.readInt64());
+      msg.setUpdatedAt(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -16185,6 +16189,31 @@ proto.UpdateReportResponse.prototype.serializeBinary = function() {
  */
 proto.UpdateReportResponse.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
+  f = message.getUpdatedAt();
+  if (f !== 0) {
+    writer.writeInt64(
+      1,
+      f
+    );
+  }
+};
+
+
+/**
+ * optional int64 updated_at = 1;
+ * @return {number}
+ */
+proto.UpdateReportResponse.prototype.getUpdatedAt = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 1, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.UpdateReportResponse} returns this
+ */
+proto.UpdateReportResponse.prototype.setUpdatedAt = function(value) {
+  return jspb.Message.setProto3IntField(this, 1, value);
 };
 
 
