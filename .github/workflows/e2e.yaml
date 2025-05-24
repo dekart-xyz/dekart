@@ -63,6 +63,7 @@ jobs:
           	-e DEKART_CORS_ORIGIN=http://localhost:3000 \
             -e DEKART_ALLOW_WORKSPACE_CREATION=1 \
             -e DEKART_UX_DISABLE_VERSION_CHECK=1 \
+            -e DEKART_DEV_NO_DATASET_CACHE=1 \
             -e DEKART_CLOUD=1 \
             -e TEST_SPEC=cypress/e2e/cloud/cloudBasicFlowStart.cy.js \
             -e CYPRESS_CI=1 \
@@ -93,6 +94,7 @@ jobs:
             -e DEKART_CORS_ORIGIN=http://localhost:3000 \
             -e DEKART_ALLOW_WORKSPACE_CREATION=1 \
             -e DEKART_UX_DISABLE_VERSION_CHECK=1 \
+            -e DEKART_DEV_NO_DATASET_CACHE=1 \
             -e DEKART_CLOUD=1 \
             -e TEST_SPEC=cypress/e2e/cloud/cloudBasicFlowEnd.cy.js \
             -e CYPRESS_CI=1 \
