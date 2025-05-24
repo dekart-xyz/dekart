@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -464,9 +465,16 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer objectReader.Close()
-	w.Header().Set("Content-Type", "text/csv")
-	w.Header().Set("Cache-Control", "public, max-age=31536000")
-	w.Header().Set("Last-Modified", created.Format(time.UnixDate))
+	if os.Getenv("DEKART_DEV_NO_DATASET_CACHE") == "1" {
+		log.Warn().Msg("DEKART_DEV_NO_DATASET_CACHE is set, disabling cache for dataset source")
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate") // Prevent caching
+		w.Header().Set("Pragma", "no-cache")
+		w.Header().Set("Expires", "0")
+	} else {
+		w.Header().Set("Content-Type", "text/csv")
+		w.Header().Set("Cache-Control", "public, max-age=31536000")
+		w.Header().Set("Last-Modified", created.Format(time.UnixDate))
+	}
 	if _, err := io.Copy(w, objectReader); err != nil {
 		HttpError(w, err)
 		return

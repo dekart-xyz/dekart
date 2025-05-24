@@ -62,6 +62,7 @@ function PublishSwitch () {
   return (
     <Switch
       checked={switchState}
+      id='dekart-publish-report'
       onChange={(checked) => {
         setSwitchState(checked)
         dispatch(publishReport(id, checked))
