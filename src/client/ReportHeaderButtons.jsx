@@ -11,6 +11,8 @@ import { EXPORT_DATA_ID, EXPORT_IMAGE_ID, EXPORT_MAP_ID } from '@kepler.gl/const
 import Dropdown from 'antd/es/dropdown'
 import { useEffect } from 'react'
 import { ForkOnboarding, useRequireOnboarding } from './ForkOnboarding'
+import Select from 'antd/es/select'
+import { Tooltip } from 'antd'
 
 function ForkButton ({ primary }) {
   const dispatch = useDispatch()
@@ -133,7 +135,6 @@ function EditModeButtons () {
     <div className={styles.reportHeaderButtons}>
       <RefreshButton />
       <ExportDropdown />
-      <ShareButton />
       {canWrite
         ? (
           <>
@@ -147,18 +148,12 @@ function EditModeButtons () {
               disabled={saving}
               onClick={() => dispatch(saveMap())}
             />
-            <Button
-              ghost
-              icon={<EyeOutlined />}
-              // TODO shall we disable?
-              // disabled={changed && canWrite && !isViewer}
-              title='View Mode'
-              onClick={() => goToPresent(history, id)}
-            >View
-            </Button>
+            <ViewSelect value='edit' />
           </>
           )
         : <ForkButton primary />}
+      <ShareButton />
+
     </div>
   )
 }
@@ -211,6 +206,30 @@ function goToSource (history, id) {
   history.replace(`/reports/${id}/source?${searchParams.toString()}`)
 }
 
+function ViewSelect (value) {
+  const history = useHistory()
+  const { id } = useSelector(state => state.report)
+  return (
+    <Select
+      ghost
+      className={styles.reportViewSelect}
+      defaultValue={value}
+      onChange={(value) => {
+        if (value === 'edit') {
+          goToSource(history, id)
+        } else if (value === 'view') {
+          goToPresent(history, id)
+        }
+      }}
+      options={[
+        { value: 'view', label: <><EyeOutlined /> Viewing</> },
+        { value: 'edit', label: <><EditOutlined /> Editing</> }
+      ]}
+    />
+
+  )
+}
+
 function ViewModeButtons () {
   const history = useHistory()
   const { id, canWrite, readme } = useSelector(state => state.report)
@@ -230,15 +249,26 @@ function ViewModeButtons () {
       <div className={styles.reportHeaderButtons}>
         <RefreshButton />
         <ExportDropdown />
-        <ShareButton />
         <ForkButton />
-        <Button
-          type='primary'
-          disabled={!canWrite}
-          icon={<EditOutlined />}
-          onClick={() => goToSource(history, id)}
-        >Edit
-        </Button>
+        <ViewSelect value='view' />
+        {/* <Button.Group className={styles.reportHeaderButtonGroup}>
+          <Button
+            icon={<EyeOutlined />}
+            type='primary'
+            ghost
+            onClick={() => goToPresent(history, id)}
+            title='View Mode'
+          >View
+          </Button>
+          <Button
+            disabled={!canWrite}
+            ghost
+            icon={<EditOutlined />}
+            onClick={() => goToSource(history, id)}
+          >Edit
+          </Button>
+        </Button.Group> */}
+        <ShareButton />
       </div>
     )
   }
@@ -254,8 +284,8 @@ function ViewModeButtons () {
           title='View SQL source'
         />)}
       <ExportDropdown />
-      <ShareButton />
       <ForkButton primary />
+      <ShareButton />
     </div>
   )
 }

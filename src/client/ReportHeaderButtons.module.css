@@ -6,7 +6,12 @@
     align-items: center;
 }
 
-.reportHeaderButtons button {
+.reportHeaderButtonGroup {
+    margin-right: 10px;
+}
+
+.reportHeaderButtons button
+{
     margin-left: 10px;
 }
 
@@ -22,6 +27,43 @@
 .reportHeaderButtons :global .ant-btn-text:active,
 .reportHeaderButtons :global .ant-btn-text:hover {
     color: #fff !important;
+}
+
+.reportViewSelect{
+    margin-left: 5px !important;
+
+}
+
+.reportViewSelect :global(.ant-select-selector) {
+    background: transparent !important;
+    border: 1px solid rgba(255,255,255,0.3);
+    color: rgba(255,255,255,0.7);
+    box-shadow: none;
+    transition: border-color 0.2s;
+    border-radius: 4px;
+    height: 32px;
+    padding: 0 11px;
+    display: flex;
+    align-items: center;
+    /* margin-left: 20px; */
+}
+
+.reportViewSelect :global(.ant-select-selector:hover),
+.reportViewSelect :global(.ant-select-selector:focus) {
+    border-color: #fff;
+    color: #fff;
+}
+
+.reportViewSelect :global(.ant-select-selection-item) {
+    color: inherit;
+}
+
+.reportViewSelect :global(.ant-select-arrow) {
+    color: rgba(255,255,255,0.7);
+}
+
+.reportViewSelect :global(.ant-select-open .ant-select-selector) {
+    border-color: #fff;
 }
 
 .reportHeaderButtons :global .ant-btn-text:disabled {

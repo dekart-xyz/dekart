@@ -160,7 +160,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			report.CanWrite = false
 		}
 		// report is sharable if all connections have cache
-		report.IsSharable = (connectionsNum > 0 && connectionsWithCacheNum == connectionsNum)
+		report.IsSharable = (connectionsWithCacheNum == connectionsNum)
 
 		if !conn.IsUserDefined() {
 			// for configured connections, report is sharable if cloud storage bucket is set

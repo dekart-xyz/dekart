@@ -12,6 +12,7 @@ import { setAnalyticsModalOpen } from './actions/analytics'
 import { track } from './lib/tracking'
 import AnalyticsModal from './AnalyticsModal'
 import { PlanType } from 'dekart-proto/dekart_pb'
+import Tooltip from 'antd/es/tooltip'
 
 function CopyLinkButton () {
   const dispatch = useDispatch()
@@ -308,23 +309,29 @@ export default function ShareButton () {
   }, [analyticsModalOpen])
   const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
   let icon = <LockOutlined />
+  let tooltip = 'Private map, only you can see it'
   if (isDefaultWorkspace) {
     icon = <LinkOutlined />
+    tooltip = 'Share report with workspace users'
   } else if (isPublic || isPlayground) {
     icon = <GlobalOutlined />
+    tooltip = 'Public map, anyone with the link can see it'
   } else if (discoverable) {
     icon = <TeamOutlined />
+    tooltip = 'Anyone in workspace can view and refresh this report'
   }
   return (
     <>
-      <Button
-        icon={icon}
-        ghost
-        type='text'
-        id='dekart-share-report'
-        title='Share report'
-        onClick={() => setModalOpen(true)}
-      />
+      <Tooltip title={tooltip} placement='bottom'>
+        <Button
+          icon={icon}
+          type='primary'
+          id='dekart-share-report'
+          title='Share report'
+          onClick={() => setModalOpen(true)}
+        >Share
+        </Button>
+      </Tooltip>
       <Modal
         title='Share report'
         visible={modalOpen}
