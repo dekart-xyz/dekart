@@ -84,7 +84,6 @@ func getConfig(conn *proto.Connection) sf.Config {
 	dekartSnowflakeAccount := os.Getenv("DEKART_SNOWFLAKE_ACCOUNT_ID")
 
 	if privateKey != "" {
-		log.Debug().Msg("Using snowflake private key")
 		pk, err := ParsePrivateKey(privateKey)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to parse private key")
@@ -109,7 +108,6 @@ func getConfig(conn *proto.Connection) sf.Config {
 	}
 	token := readSnowparkToken()
 	if token != "" {
-		log.Debug().Msg("Using snowpark token")
 		// https://docs.snowflake.com/en/developer-guide/snowpark-container-services/tutorials/tutorial-2#main-py-file
 		// https://docs.snowflake.com/en/developer-guide/snowpark-container-services/additional-considerations-services-jobs
 		return sf.Config{

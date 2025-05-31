@@ -55,7 +55,6 @@ func (job *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 		return
 	}
 
-	job.Logger.Debug().Msg("Writing Done")
 	job.Lock()
 	job.ResultSize = *resultSize
 	job.ResultReady = true
@@ -204,7 +203,6 @@ func (job *Job) wait() {
 		job.CancelWithError(err)
 		return
 	}
-	job.Logger.Debug().Msg("Job Wait Done")
 }
 
 func (job *Job) setMaxReadStreamsCount(queryText string) {
@@ -219,7 +217,6 @@ func (job *Job) setMaxReadStreamsCount(queryText string) {
 
 // Run implementation
 func (job *Job) Run(storageObject storage.StorageObject, conn *proto.Connection) error {
-	job.Logger.Debug().Msg("Run BigQuery Job")
 	client, err := bqutils.GetClient(job.GetCtx(), conn)
 	if err != nil {
 		log.Warn().Err(err).Msg("bigquery.NewClient failed")
@@ -245,7 +242,6 @@ func (job *Job) Run(storageObject storage.StorageObject, conn *proto.Connection)
 	job.storageObject = storageObject
 	job.Unlock()
 	job.Status() <- int32(proto.QueryJob_JOB_STATUS_RUNNING)
-	job.Logger.Debug().Msg("Waiting for results")
 	go job.wait()
 	return nil
 }

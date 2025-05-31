@@ -1,7 +1,7 @@
 import { useHistory } from 'react-router'
 import styles from './ReportHeaderButtons.module.css'
 import Button from 'antd/es/button'
-import { EyeOutlined, DownloadOutlined, CloudOutlined, EditOutlined, ConsoleSqlOutlined, ForkOutlined, ReloadOutlined, LoadingOutlined, CloudSyncOutlined } from '@ant-design/icons'
+import { EyeOutlined, DownloadOutlined, CloudOutlined, EditOutlined, ForkOutlined, ReloadOutlined, LoadingOutlined, CloudSyncOutlined } from '@ant-design/icons'
 import { useDispatch, useSelector } from 'react-redux'
 import ShareButton from './ShareButton'
 import { forkReport, saveMap } from './actions/report'
@@ -11,6 +11,7 @@ import { EXPORT_DATA_ID, EXPORT_IMAGE_ID, EXPORT_MAP_ID } from '@kepler.gl/const
 import Dropdown from 'antd/es/dropdown'
 import { useEffect } from 'react'
 import { ForkOnboarding, useRequireOnboarding } from './ForkOnboarding'
+import Select from 'antd/es/select'
 
 function ForkButton ({ primary }) {
   const dispatch = useDispatch()
@@ -61,8 +62,9 @@ function RefreshButton () {
   const { discoverable, canWrite } = useSelector(state => state.report)
   const isViewer = useSelector(state => state.user.isViewer)
   const numRunningQueries = useSelector(state => state.numRunningQueries)
+  const numQueries = useSelector(state => state.queries.length)
   const dispatch = useDispatch()
-  if ((!canWrite && !discoverable) || isViewer) {
+  if ((!canWrite && !discoverable) || isViewer || numQueries === 0) {
     return null
   }
   return (
@@ -112,8 +114,7 @@ function goToPresent (history, id) {
 
 function EditModeButtons () {
   const dispatch = useDispatch()
-  const history = useHistory()
-  const { id, canWrite } = useSelector(state => state.report)
+  const { canWrite } = useSelector(state => state.report)
   const { saving } = useSelector(state => state.reportStatus)
   const changed = useReportChanged()
 
@@ -133,32 +134,30 @@ function EditModeButtons () {
     <div className={styles.reportHeaderButtons}>
       <RefreshButton />
       <ExportDropdown />
-      <ShareButton />
       {canWrite
         ? (
           <>
             <ForkButton />
             <Button
               id='dekart-save-button'
-              title={saving ? 'Saving...' : 'Save this report'}
+              title={saving ? 'Saving...' : 'Save this map'}
               type='text'
               ghost
               icon={saving || changed ? <CloudSyncOutlined /> : <CloudOutlined />}
               disabled={saving}
               onClick={() => dispatch(saveMap())}
             />
-            <Button
-              ghost
-              icon={<EyeOutlined />}
-              // TODO shall we disable?
-              // disabled={changed && canWrite && !isViewer}
-              title='View Mode'
-              onClick={() => goToPresent(history, id)}
-            >View
-            </Button>
+            <ViewSelect value='edit' />
+            <ShareButton />
           </>
           )
-        : <ForkButton primary />}
+        : (
+          <>
+            <ShareButton />
+            <ForkButton primary />
+          </>
+          )}
+
     </div>
   )
 }
@@ -211,9 +210,32 @@ function goToSource (history, id) {
   history.replace(`/reports/${id}/source?${searchParams.toString()}`)
 }
 
-function ViewModeButtons () {
+function ViewSelect (value) {
   const history = useHistory()
-  const { id, canWrite, readme } = useSelector(state => state.report)
+  const { id } = useSelector(state => state.report)
+  return (
+    <Select
+      ghost
+      className={styles.reportViewSelect}
+      defaultValue={value}
+      onChange={(value) => {
+        if (value === 'edit') {
+          goToSource(history, id)
+        } else if (value === 'view') {
+          goToPresent(history, id)
+        }
+      }}
+      options={[
+        { value: 'view', label: <><EyeOutlined /> Viewing</> },
+        { value: 'edit', label: <><EditOutlined /> Editing</> }
+      ]}
+    />
+
+  )
+}
+
+function ViewModeButtons () {
+  const { canWrite } = useSelector(state => state.report)
 
   const requireOnboarding = useRequireOnboarding()
 
@@ -230,15 +252,9 @@ function ViewModeButtons () {
       <div className={styles.reportHeaderButtons}>
         <RefreshButton />
         <ExportDropdown />
-        <ShareButton />
         <ForkButton />
-        <Button
-          type='primary'
-          disabled={!canWrite}
-          icon={<EditOutlined />}
-          onClick={() => goToSource(history, id)}
-        >Edit
-        </Button>
+        <ViewSelect value='view' />
+        <ShareButton />
       </div>
     )
   }
@@ -246,13 +262,6 @@ function ViewModeButtons () {
   return (
     <div className={styles.reportHeaderButtons}>
       <RefreshButton />
-      {!readme && ( // hide the button if there is readme, because the source view is then by default
-        <Button
-          type='text'
-          icon={<ConsoleSqlOutlined />}
-          onClick={() => goToSource(history, id)}
-          title='View SQL source'
-        />)}
       <ExportDropdown />
       <ShareButton />
       <ForkButton primary />

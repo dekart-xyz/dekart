@@ -82,7 +82,6 @@ func (j *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 		return
 	}
 
-	j.Logger.Debug().Msg("Writing Done")
 	j.Lock()
 	j.ResultSize = *resultSize
 	j.ResultReady = true // results available now
@@ -146,7 +145,7 @@ func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connect
 			j.QueryText,
 		)
 		if err != nil {
-			j.Logger.Debug().Err(err).Msg("Error querying snowflake")
+			j.Logger.Warn().Err(err).Msg("Error querying snowflake")
 			j.CancelWithError(err)
 			return
 		}
@@ -258,7 +257,7 @@ func TestConnection(ctx context.Context, req *proto.TestConnectionRequest) (*pro
 	db := sql.OpenDB(connector)
 	err = db.PingContext(ctx)
 	if err != nil {
-		log.Debug().Err(err).Msg("snowflake.Ping failed when testing connection")
+		log.Warn().Err(err).Msg("snowflake.Ping failed when testing connection")
 		return &proto.TestConnectionResponse{
 			Success: false,
 			Error:   err.Error(),

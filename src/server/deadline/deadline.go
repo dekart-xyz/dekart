@@ -16,7 +16,6 @@ func GetQueryCacheDeadline() time.Duration {
 		if err != nil {
 			log.Fatal().Err(err).Msg("Failed to parse DEKART_DEV_QUERY_CACHE_DEADLINE")
 		}
-		log.Debug().Dur("deadline", parsedDeadline).Msg("Parsed DEKART_DEV_QUERY_CACHE_DEADLINE")
 		deadline = parsedDeadline
 	}
 	return deadline

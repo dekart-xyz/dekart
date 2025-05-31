@@ -59,7 +59,7 @@ function AppRedirect () {
   const sensitiveScopesNeeded = useSelector(state => state.user.sensitiveScopesNeeded)
   const sensitiveScopesGranted = useSelector(state => state.user.sensitiveScopesGranted)
   const sensitiveScopesGrantedOnce = useSelector(state => state.user.sensitiveScopesGrantedOnce)
-  const reportOpened = useSelector(state => state.reportStatus.opened)
+  const reportWillOpen = useSelector(state => state.reportStatus.willOpen)
   const report = useSelector(state => state.report)
   const redirectStateReceived = useSelector(state => state.user.redirectStateReceived)
   const dispatch = useDispatch()
@@ -87,9 +87,10 @@ function AppRedirect () {
     userStream &&
     !userStream.planType &&
     !isPlayground &&
-    !(reportOpened && !report) && // report is being loaded
+    !(reportWillOpen && !report) && // report is being loaded
     !(report?.isPlayground) && // playground report
-    !(report?.isPublic) // public report
+    !(report?.isPublic) && // public report
+    !(report?.hasDirectAccess) // public report
   ) {
     return <Redirect to='/workspace' push />
   }
@@ -143,7 +144,7 @@ function NotFoundPage () {
           {(userStream && !workspaceId) // stream is loaded and user is not in workspace
             ? (
               <div>
-                <p>To access private reports join workspace.</p>
+                <p>To access private maps join workspace.</p>
                 <Button onClick={() => dispatch(switchPlayground(false, '/workspace'))}>Join workspace</Button>
               </div>
               )

@@ -60,7 +60,6 @@ func RestoreDbFile() {
 	db := sql.OpenDB(connector)
 	defer db.Close()
 	listCommand := fmt.Sprintf(`LIST @%s pattern = '.*backup'`, stage)
-	log.Debug().Str("list_command", listCommand).Msg("Listing files in Snowflake stage")
 	rows, err := db.Query(listCommand)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to list files in Snowflake stage")
@@ -136,7 +135,7 @@ func (s Server) CreateBackup(deleteOld bool) {
 		return
 	}
 
-	log.Debug().Msg("Creating backup")
+	log.Info().Msg("Creating backup of SQLite database")
 
 	// Lock the mutex
 	bl.mutex.Lock()
@@ -145,7 +144,7 @@ func (s Server) CreateBackup(deleteOld bool) {
 	if bl.isRunning {
 		// Unlock the mutex and return immediately
 		bl.mutex.Unlock()
-		log.Debug().Msg("Backup is already running, skipping this call.")
+		log.Info().Msg("Backup function is already running, skipping this invocation")
 		return
 	}
 
@@ -182,7 +181,7 @@ func (s Server) CreateBackup(deleteOld bool) {
 		log.Error().Err(err).Msg("Failed to upload backup to Snowflake stage")
 		return
 	} else {
-		log.Debug().Str("backup_path", backupPath).Str("stage", stage).Msg("Backup uploaded to Snowflake stage successfully")
+		log.Info().Str("backup_path", backupPath).Str("stage", stage).Msg("Backup uploaded to Snowflake stage successfully")
 	}
 
 	// Delete the backup file from the local filesystem

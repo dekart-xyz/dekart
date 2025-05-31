@@ -34,11 +34,11 @@ describe('cloud basic flow', () => {
 
     // share report
     cy.get('button#dekart-share-report').click()
-    cy.get('span:contains("Cannot view")').click()
-    cy.get('div.dekart-share-view').click()
+    cy.get('span:contains("No Access")').click()
+    cy.get('div.dekart-share-view').click({ force: true })
     cy.get('button').contains('Done').click()
     cy.visit('/')
-    cy.get('span').contains('Shared Reports').click()
+    cy.get('span').contains('Shared Maps').click()
     cy.get('span.anticon-team').should('be.visible')
   })
 })

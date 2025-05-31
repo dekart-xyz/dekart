@@ -20,7 +20,6 @@ func (s Server) updateJobStatus(job job.Job, jobStatus chan int32, paramHash str
 	for {
 		select {
 		case status := <-jobStatus:
-			log.Debug().Str("query_id", job.GetQueryID()).Int32("status", status).Msg("Job status changed")
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			var err error
 			if status == int32(proto.QueryJob_JOB_STATUS_PENDING) {
@@ -170,7 +169,7 @@ func (s Server) CancelJob(ctx context.Context, req *proto.CancelJobRequest) (*pr
 	}
 	if report.AllowEdit || report.CanWrite {
 		if ok := s.jobs.Cancel(req.JobId); !ok {
-			log.Debug().Msg("Job was not canceled in memory store, trying to cancel in database")
+			log.Warn().Msg("Job was not canceled in memory store, trying to cancel in database")
 			_, err = s.db.ExecContext(
 				ctx,
 				`update query_jobs set
@@ -184,8 +183,6 @@ func (s Server) CancelJob(ctx context.Context, req *proto.CancelJobRequest) (*pr
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 			s.reportStreams.Ping(reportID)
-		} else {
-			log.Debug().Msg("Job canceled in memory store")
 		}
 	}
 	return &proto.CancelJobResponse{}, nil
@@ -204,7 +201,6 @@ func (s Server) getDatasetsQueryJobs(ctx context.Context, datasets []*proto.Data
 			quotedQueryIds[i] = "'" + id + "'"
 		}
 		queryIdsStr := strings.Join(quotedQueryIds, ",")
-		log.Debug().Str("queryIds", queryIdsStr).Msg("getDatasetsQueryJobs")
 		var queryRows *sql.Rows
 		var err error
 		if IsSqlite() {

@@ -100,7 +100,6 @@ func (s Server) moveFileToStorage(reqConCtx context.Context, fileSourceID string
 		s.setUploadError(report.Id, fileSourceID, err)
 		return
 	}
-	log.Debug().Msgf("file %s.csv moved to storage", fileSourceID)
 	_, err = s.db.ExecContext(userCtx,
 		`update files set file_status=3, updated_at=CURRENT_TIMESTAMP where file_source_id=$1`,
 		fileSourceID,

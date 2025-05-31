@@ -3,7 +3,7 @@ import { removeDataset } from '@kepler.gl/actions'
 
 import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
 import { success } from './message'
-import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme } from 'dekart-proto/dekart_pb'
+import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { createQuery, downloadQuerySource } from './query'
 import { downloadDataset } from './dataset'
@@ -41,6 +41,10 @@ export function toggleReportEdit (edit) {
     }
     dispatch({ type: toggleReportEdit.name, edit, fullscreen })
   }
+}
+
+export function reportWillOpen (reportId) {
+  return { type: reportWillOpen.name, reportId }
 }
 
 export function openReport (reportId) {
@@ -107,7 +111,7 @@ export function setReportChanged (changed) {
 }
 
 export function reportUpdate (reportStreamResponse) {
-  const { report, queriesList, datasetsList, filesList, queryJobsList } = reportStreamResponse
+  const { report, queriesList, datasetsList, filesList, queryJobsList, directAccessEmailsList } = reportStreamResponse
   return async (dispatch, getState) => {
     const {
       queries: prevQueriesList,
@@ -130,7 +134,8 @@ export function reportUpdate (reportStreamResponse) {
       prevDatasetsList,
       filesList,
       queryJobsList,
-      hash
+      hash,
+      directAccessEmailsList
     })
     let mapConfigUpdated = false
     if (
@@ -312,6 +317,18 @@ export function savedReport (lastSaved, savedReportVersion) {
 
 export function toggleReportFullscreen () {
   return { type: toggleReportFullscreen.name }
+}
+
+export function addReportDirectAccess (reportId, emails) {
+  return async (dispatch) => {
+    dispatch({ type: addReportDirectAccess.name })
+    const request = new AddReportDirectAccessRequest()
+    request.setReportId(reportId)
+    request.setEmailsList(emails)
+    dispatch(grpcCall(Dekart.AddReportDirectAccess, request, () => {
+      dispatch(success('Direct access updated'))
+    }))
+  }
 }
 
 export function saveMap (onSaveComplete = () => {}) {

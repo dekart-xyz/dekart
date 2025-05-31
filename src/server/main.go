@@ -65,7 +65,7 @@ func configureDb() *sql.DB {
 	if sqliteOk {
 		// Use SQLite
 		log.Info().Msg("Using SQLite database")
-		log.Debug().Msg("Restoring SQLite database from backup")
+		log.Info().Msg("Restoring SQLite database from backup")
 		dekart.RestoreDbFile()
 		db, err := sql.Open("sqlite3", sqlitePath)
 		if err != nil {
@@ -242,7 +242,7 @@ func main() {
 
 	go startHttpServer(httpServer)
 
-	log.Debug().Msg("dekart server started")
+	log.Info().Msg("dekart server started")
 
 	sig := <-waitForInterrupt()
 
@@ -257,13 +257,13 @@ func main() {
 	go func() {
 		defer wg.Done()
 		dekartServer.Shutdown(shutdownCtx)
-		log.Debug().Msg("dekart server shutdown complete")
+		log.Info().Msg("dekart server shutdown complete")
 	}()
 
 	go func() {
 		defer wg.Done()
 		httpServer.Shutdown(shutdownCtx)
-		log.Debug().Msg("http server shutdown complete")
+		log.Info().Msg("http server shutdown complete")
 	}()
 
 	shutdown := make(chan bool)

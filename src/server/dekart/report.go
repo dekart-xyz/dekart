@@ -32,39 +32,8 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 		log.Fatal().Msg("getReport require claims")
 		return nil, nil
 	}
-	var reportRows *sql.Rows
-	var err error
-	if checkWorkspace(ctx).ID == "" {
-		reportRows, err = s.db.QueryContext(ctx,
-			`select
-			id,
-			case when map_config is null then '' else map_config end as map_config,
-			case when title is null then 'Untitled' else title end as title,
-			(author_email = $1) or allow_edit as can_write,
-			author_email = $2 as is_author,
-			author_email,
-			discoverable,
-			allow_edit,
-			created_at,
-			updated_at,
-			is_playground,
-			0 as connections_with_cache_num,
-			0 as connections_num,
-			0 as connections_with_sensitive_scope_num,
-			is_public,
-			query_params,
-			allow_export,
-			readme
-		from reports as r
-		where id=$3 and not archived and (is_playground or is_public)
-		limit 1`,
-			claims.Email,
-			claims.Email, // sqlite does not support positional parameters reuse
-			reportID,
-		)
-	} else {
-		reportRows, err = s.db.QueryContext(ctx,
-			`select
+	reportRows, err := s.db.QueryContext(ctx,
+		`select
 			id,
 			case when map_config is null then '' else map_config end as map_config,
 			case when title is null then 'Untitled' else title end as title,
@@ -99,19 +68,18 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			is_public,
 			query_params,
 			allow_export,
-			readme
+			readme,
+			workspace_id
 		from reports as r
-		where (id=$6) and (not archived) and ((workspace_id=$7) or is_playground or is_public)
+		where (id=$6) and (not archived)
 		limit 1`,
-			claims.Email,
-			claims.Email,
-			reportID,
-			reportID, // sqlite does not support positional parameters reuse
-			reportID,
-			reportID,
-			checkWorkspace(ctx).ID,
-		)
-	}
+		claims.Email,
+		claims.Email,
+		reportID,
+		reportID, // sqlite does not support positional parameters reuse
+		reportID,
+		reportID,
+	)
 	if err != nil {
 		log.Err(err).Str("workspace", checkWorkspace(ctx).ID).Str("reportID", reportID).Send()
 		return nil, err
@@ -123,6 +91,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 		createdAt := time.Time{}
 		updatedAt := time.Time{}
 		readme := sql.NullString{}
+		reportWorkspaceID := sql.NullString{}
 		var connectionsWithCacheNum, connectionsNum, connectionsWithSensitiveScopeNum int
 		var queryParams []byte
 		err = reportRows.Scan(
@@ -144,6 +113,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			&queryParams,
 			&report.AllowExport,
 			&readme,
+			&reportWorkspaceID,
 		)
 		if err != nil {
 			log.Err(err).Send()
@@ -160,7 +130,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			report.CanWrite = false
 		}
 		// report is sharable if all connections have cache
-		report.IsSharable = (connectionsNum > 0 && connectionsWithCacheNum == connectionsNum)
+		report.IsSharable = (connectionsWithCacheNum == connectionsNum)
 
 		if !conn.IsUserDefined() {
 			// for configured connections, report is sharable if cloud storage bucket is set
@@ -168,7 +138,9 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 		}
 
 		report.NeedSensitiveScope = connectionsWithSensitiveScopeNum > 0
-		report.Discoverable = report.Discoverable && report.IsSharable // only sharable reports can be discoverable
+		report.Discoverable = (report.Discoverable &&
+			report.IsSharable && // only sharable reports can be discoverable
+			reportWorkspaceID.String == checkWorkspace(ctx).ID)
 
 		report.CreatedAt = createdAt.Unix()
 		report.UpdatedAt = updatedAt.Unix()
@@ -188,11 +160,28 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			}
 		}
 	}
-	if report.Id == "" || // no report found
-		(!report.Discoverable && !report.IsAuthor && !report.IsPlayground && !report.IsPublic) { // report is not discoverable by others in workspace
-		return nil, nil // not found
+	if report.Id != "" {
+		directAccessEmails, err := s.getDirectAccessEmails(ctx, report.Id)
+		if err != nil {
+			log.Err(err).Msg("getDirectAccessEmails failed")
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		if len(directAccessEmails) > 0 {
+			report.HasDirectAccess = true
+		}
+		if report.Discoverable || report.IsAuthor || report.IsPlayground || report.IsPublic {
+			// report is discoverable by others in workspace
+			return report, nil
+		}
+		if report.IsSharable {
+			for _, email := range directAccessEmails {
+				if email == claims.Email {
+					return report, nil // user has direct access to the report
+				}
+			}
+		}
 	}
-	return report, nil
+	return nil, nil // not found
 }
 
 // CreateReport implementation
@@ -204,7 +193,6 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 	if checkWorkspace(ctx).ID == "" && !checkWorkspace(ctx).IsPlayground {
 		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
-	log.Debug().Interface("workspace", checkWorkspace(ctx)).Msg("CreateReport")
 	if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
 		return nil, status.Error(codes.PermissionDenied, "Only admins and editors can create reports")
 	}
@@ -339,7 +327,7 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 				dataset.QueryId,
 			)
 			if err != nil {
-				log.Debug().Err(err).Send()
+				log.Warn().Err(err).Send()
 				rollback(tx)
 				return err
 			}
@@ -369,7 +357,7 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 						job.Id,
 					)
 					if err != nil {
-						log.Debug().Err(err).Send()
+						log.Warn().Err(err).Send()
 						rollback(tx)
 						return err
 					}
@@ -397,7 +385,7 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 					upload_error
 				from files where id=$2`, newFileID, dataset.FileId)
 			if err != nil {
-				log.Debug().Err(err).Send()
+				log.Warn().Err(err).Send()
 				rollback(tx)
 				return err
 			}
@@ -413,7 +401,7 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 			connectionId,
 		)
 		if err != nil {
-			log.Debug().Err(err).Send()
+			log.Warn().Err(err).Send()
 			rollback(tx)
 			return err
 		}
@@ -756,4 +744,160 @@ func (s Server) ArchiveReport(ctx context.Context, req *proto.ArchiveReportReque
 
 	return &proto.ArchiveReportResponse{}, nil
 
+}
+
+func (s Server) getDirectAccessEmails(ctx context.Context, reportID string) ([]string, error) {
+	// Get the latest access log entries for the report
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT email
+		FROM (
+			SELECT email, access_level, status,
+				ROW_NUMBER() OVER (PARTITION BY email ORDER BY created_at DESC) as rn
+			FROM report_access_log
+			WHERE report_id = $1
+		) t
+		WHERE rn = 1 AND status != 2
+	`, reportID)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, err
+	}
+	defer rows.Close()
+
+	emails := make([]string, 0)
+	for rows.Next() {
+		var email string
+		if err := rows.Scan(&email); err != nil {
+			log.Err(err).Send()
+			return nil, err
+		}
+		emails = append(emails, email)
+	}
+	return emails, nil
+}
+
+// AddReportDirectAccess adds direct access for the report
+func (s Server) AddReportDirectAccess(ctx context.Context, req *proto.AddReportDirectAccessRequest) (*proto.AddReportDirectAccessResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	reportID := req.ReportId
+	emails := req.Emails
+
+	// Validate report ID
+	_, err := uuid.Parse(reportID)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+
+	report, err := s.getReport(ctx, req.ReportId)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if !report.IsAuthor {
+		err := fmt.Errorf("cannot add direct access for report %s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.PermissionDenied, "Cannot add direct access")
+	}
+
+	// Start transaction
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer func() {
+		if err != nil {
+			rollback(tx)
+		}
+	}()
+
+	// Derive current access state from the latest log entries
+	// Only include emails whose latest entry is not a removal (status != 2)
+	rows, err := tx.QueryContext(ctx, `
+		SELECT email, access_level
+		FROM (
+			SELECT email, access_level, status,
+				ROW_NUMBER() OVER (PARTITION BY email ORDER BY created_at DESC) as rn
+			FROM report_access_log
+			WHERE report_id = $1
+		) t
+		WHERE rn = 1 AND status != 2
+	`, reportID)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer rows.Close()
+
+	currentAccess := make(map[string]int)
+	for rows.Next() {
+		var email string
+		var accessLevel int
+		if err := rows.Scan(&email, &accessLevel); err != nil {
+			log.Err(err).Send()
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		currentAccess[email] = accessLevel
+	}
+
+	// Build set of requested emails for view access (level 1)
+	requested := make(map[string]int)
+	for _, email := range emails {
+		requested[email] = 1
+	}
+
+	// Compute users to add/change and remove
+	toAddOrUpdate := make(map[string]int)
+	for email, level := range requested {
+		if curLevel, ok := currentAccess[email]; !ok || curLevel != level {
+			toAddOrUpdate[email] = level
+		}
+	}
+	toRemove := make([]string, 0)
+	for email := range currentAccess {
+		if _, ok := requested[email]; !ok {
+			toRemove = append(toRemove, email)
+		}
+	}
+
+	// Apply additions
+	for email, level := range toAddOrUpdate {
+		_, err = tx.ExecContext(ctx, `
+			INSERT INTO report_access_log (report_id, email, status, access_level, authored_by)
+			VALUES ($1, $2, $3, 1, $4)
+		`, reportID, email, level, claims.Email)
+		if err != nil {
+			log.Err(err).Send()
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	// Apply removals
+	for _, email := range toRemove {
+		_, err = tx.ExecContext(ctx, `
+			INSERT INTO report_access_log (report_id, email, status, access_level, authored_by)
+			VALUES ($1, $2, 2, 0, $3)
+		`, reportID, email, claims.Email)
+		if err != nil {
+			log.Err(err).Send()
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	defer s.reportStreams.Ping(req.ReportId)
+
+	return &proto.AddReportDirectAccessResponse{}, nil
 }

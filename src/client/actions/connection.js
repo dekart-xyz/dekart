@@ -39,6 +39,7 @@ export function getProjectList () {
 export function editConnection (id, connectionType, bigqueryKey = false) {
   return async (dispatch) => {
     dispatch({ type: editConnection.name, id, connectionType, bigqueryKey })
+    dispatch(getConnectionsList()) // get the latest connections list to ensure the connection is up-to-date
     dispatch(getProjectList())
   }
 }

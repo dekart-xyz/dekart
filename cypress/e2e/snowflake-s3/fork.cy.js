@@ -21,7 +21,7 @@ describe('fork', () => {
 
     // share report
     cy.get('button#dekart-share-report').click()
-    cy.get('span:contains("Cannot view")').click()
+    cy.get('span:contains("No Access")').click()
     cy.get('div.dekart-share-view').click()
     cy.get('button').contains('Done').click()
 

@@ -111,7 +111,6 @@ func (s Server) storeQuery(userCtx context.Context, reportID string, queryID str
 		log.Err(err).Msg("Error updating query text")
 		return
 	}
-	log.Debug().Msg("Query text updated in storage")
 	s.reportStreams.Ping(reportID)
 }
 
