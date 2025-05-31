@@ -94,7 +94,7 @@ function SnowflakeConnectionModal ({ form }) {
             dispatch(connectionChanged())
           }}
         >
-          {datasetUsed ? <div className={styles.datasetsCountAlert}><Alert message={<>This connection is used in {connection.datasetCount} dataset{connection.datasetCount > 1 ? 's' : ''}.</>} description='Changing make cause map errors' type='warning' /></div> : null}
+          {datasetUsed ? <div className={styles.datasetsCountAlert}><Alert message={<>This connection is used in {connection.datasetCount} dataset{connection.datasetCount > 1 ? 's' : ''}.</>} description='Changing may cause map errors' type='warning' /></div> : null}
           <Form.Item label='Connection Name' name='connectionName'>
             <Input placeholder='Snowflake' />
           </Form.Item>
