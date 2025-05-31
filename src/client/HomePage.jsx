@@ -46,8 +46,8 @@ const columns = [
       if (report.isPlayground || report.isPublic) {
         return <GlobalOutlined title='This report accessible outside of workspace' />
       }
-      if (report.discoverable) {
-        return <TeamOutlined title='This report is discoverable by others users in the workspace' />
+      if (report.discoverable || report.hasDirectAccess) {
+        return <TeamOutlined title='This report is discoverable by others users' />
       }
       return <LockOutlined title='This is visible only to you' />
     },
@@ -100,11 +100,11 @@ function SetDefault ({ connection }) {
   const dispatch = useDispatch()
   if (connection.isDefault) {
     return (
-      <Tooltip title='Default connection is used for storing report metadata. Users required to have access to default bucket to view the report.'>Default</Tooltip>
+      <Tooltip title='Default connection is used for storing map metadata. Users required to have access to default bucket to view the report.'>Default</Tooltip>
     )
   }
   return (
-    <Tooltip title='Default connection is used for storing report metadata. Users required to have access to default bucket to view the report.'>
+    <Tooltip title='Default connection is used for storing map metadata. Users required to have access to default bucket to view the report.'>
       <Button
         type='text'
         className={styles.deleteButton}
@@ -163,7 +163,7 @@ function FirstReportOnboarding () {
         subTitle='Everything is ready to create you first map.'
         extra={(
           <>
-            <Button icon={<PlusOutlined />} disabled={isViewer} type='primary' id='dekart-create-report' onClick={() => dispatch(createReport())}>Create report</Button>
+            <Button icon={<PlusOutlined />} disabled={isViewer} type='primary' id='dekart-create-report' onClick={() => dispatch(createReport())}>Create map</Button>
             <If condition={isPlayground && !isSelfHosted}><div className={styles.stepBySetLink}><a target='_blank' href='https://dekart.xyz/docs/about/playground/#quick-start' rel='noreferrer'>Check step-by-step guide</a></div></If>
           </>
         )}
@@ -177,14 +177,14 @@ function ConnectionTypeSelectorBottom () {
   const dispatch = useDispatch()
   const planType = useSelector(state => state.user.stream.planType)
   const showCancel = useSelector(state => state.connection.list).length > 0
-  const newConnectionScreen = useSelector(state => state.connection.screen)
+  const newScreen = useSelector(state => state.connection.screen)
   const history = useHistory()
   if (showCancel) {
     return (
       <div className={styles.connectionSelectorBack}>
         <Button
           type='ghost' onClick={() => {
-            if (newConnectionScreen) {
+            if (newScreen) {
               dispatch(newConnectionScreen(false))
             } else {
               history.push('/')
@@ -291,8 +291,8 @@ function ReportsHeader (
                 }
               }}
             >
-              <Radio.Button value='my'>My Reports</Radio.Button>
-              <Radio.Button value='discoverable'>Shared Reports</Radio.Button>
+              <Radio.Button value='my'>My Maps</Radio.Button>
+              <Radio.Button value='discoverable'>Shared Maps</Radio.Button>
               {
                 connectionList && userDefinedConnection ? <Radio.Button value='connections'>Connections</Radio.Button> : null
               }
@@ -300,7 +300,7 @@ function ReportsHeader (
 
             )
           : (
-            <div className={styles.reportsHeaderTitle}>{reportFilter === 'connections' ? 'Connection' : 'Reports'}</div>
+            <div className={styles.reportsHeaderTitle}>{reportFilter === 'connections' ? 'Connection' : 'Maps'}</div>
             )
       }
       <div className={styles.rightCornerAction}>
@@ -309,6 +309,7 @@ function ReportsHeader (
             ? (
               <Button
                 disabled={!isAdmin}
+                type='primary'
                 title={isAdmin ? 'Create new connection' : 'Only admin can create new connection'}
                 onClick={() => { dispatch(newConnectionScreen(true)) }}
               >New Connection
@@ -326,7 +327,7 @@ function ReportsHeader (
                       )
                     : null
                 }
-                <Button id='dekart-create-report' disabled={isViewer} onClick={() => dispatch(createReport())}>New Report</Button>
+                <Button id='dekart-create-report' type='primary' disabled={isViewer} onClick={() => dispatch(createReport())}>New Map</Button>
               </>
               )
         }
@@ -402,11 +403,11 @@ function Reports ({ createReportButton, reportFilter }) {
 function OnboardingMyReports () {
   return (
     <Onboarding
-      icon={<FileSearchOutlined />} title='View, manage, and organize the reports that you have created ' steps={
+      icon={<FileSearchOutlined />} title='View, manage, and organize the maps that you have created ' steps={
         <ol>
-          <li>Click on the "New Report" button in the top right corner</li>
-          <li>Save the report and give it a relevant name.</li>
-          <li>Your report will appear here.</li>
+          <li>Click on the "New Map" button in the top right corner</li>
+          <li>Save the map and give it a relevant name.</li>
+          <li>Your map will appear here.</li>
         </ol>
       }
     />
@@ -417,12 +418,12 @@ function OnboardingDiscoverableReports () {
   return (
     <Onboarding
       icon={<UsergroupAddOutlined />}
-      title='Shared reports helps your others to discover and reuse your reports'
+      title='Shared maps helps your others to discover and reuse your reports'
       steps={
         <ol>
-          <li>Open the report that you want to share and click on the "Share" button on the top right corner of the page</li>
-          <li>In a pop-up window select the option to make the report discoverable.</li>
-          <li>Shared reports will appear in this tab for all users.</li>
+          <li>Open the map that you want to share and click on the "Share" button on the top right corner of the page</li>
+          <li>In a pop-up window select the option to make the map discoverable.</li>
+          <li>Shared maps will appear in this tab for all users.</li>
         </ol>
       }
     />

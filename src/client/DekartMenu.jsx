@@ -57,20 +57,20 @@ export default function DekartMenu () {
               <>
                 <WorkspaceIndicator />
                 <Menu.Item key='my'>
-                  <Link to='/'>My Reports</Link>
+                  <Link to='/'>My Maps</Link>
                 </Menu.Item>
                 <Menu.Item key='shared' disabled={isPlayground}>
-                  <Link to='/shared'>Shared reports</Link>
+                  <Link to='/shared'>Shared Maps</Link>
                 </Menu.Item>
               </>
               )
             : (
               <Menu.Item key='reports'>
-                <Link to='/'>Reports</Link>
+                <Link to='/'>Maps</Link>
               </Menu.Item>
               )}
           {userDefinedConnection ? (<Menu.Item key='connections'><Link to='/connections'>Connections</Link></Menu.Item>) : null}
-          <Menu.Item key='create' disabled={isViewer} onClick={() => dispatch(createReport())}>New Report</Menu.Item>
+          <Menu.Item key='create' disabled={isViewer} onClick={() => dispatch(createReport())}>New Map</Menu.Item>
         </Menu.SubMenu>
         <Menu.SubMenu popupClassName={styles.subMenu} popupOffset={popupOffset} title={<MessageOutlined />} key='community' active='yes'>
           <Menu.Item key='gpt'>

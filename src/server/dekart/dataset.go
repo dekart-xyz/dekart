@@ -440,17 +440,14 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 
 	if report.IsPublic {
 		// public report, load from public storage bucket
-		log.Debug().Str("source", vars["source"]).Msg("Serving dataset source from public storage")
 		publicStorage := storage.NewPublicStorage()
 		obj = publicStorage.GetObject(defConCtx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
 		useCtx = defConCtx // public storage does not require connection
 	} else if dwJobID != "" {
 		// temp data warehouse table is used as source
-		log.Debug().Str("source", vars["source"]).Msg("Serving dataset source from temporary storage")
 		obj = s.storage.GetObject(conCtx, bucketName, dwJobID)
 	} else {
 		// file stored on the bucket is used as source
-		log.Debug().Str("source", vars["source"]).Msg("Serving dataset source from user storage")
 		obj = s.storage.GetObject(conCtx, bucketName, fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
 	}
 

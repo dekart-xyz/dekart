@@ -13,6 +13,7 @@ service Dekart {
     rpc AllowExportDatasets(AllowExportDatasetsRequest) returns (AllowExportDatasetsResponse) {}
     rpc AddReadme(AddReadmeRequest) returns (AddReadmeResponse) {}
     rpc RemoveReadme(RemoveReadmeRequest) returns (RemoveReadmeResponse) {}
+    rpc AddReportDirectAccess(AddReportDirectAccessRequest) returns (AddReportDirectAccessResponse) {}
 
     // datasets
     rpc CreateDataset(CreateDatasetRequest) returns (CreateDatasetResponse) {}
@@ -63,6 +64,13 @@ service Dekart {
     rpc UpdateWorkspace(UpdateWorkspaceRequest) returns (UpdateWorkspaceResponse) {}
     rpc GetWorkspace(GetWorkspaceRequest) returns (GetWorkspaceResponse) {}
     rpc UpdateWorkspaceUser(UpdateWorkspaceUserRequest) returns (UpdateWorkspaceUserResponse) {}
+}
+
+message AddReportDirectAccessRequest {
+    string report_id = 1;
+    repeated string emails = 2; // list of user emails to add direct access to the report
+}
+message AddReportDirectAccessResponse {
 }
 
 message GetReportAnalyticsRequest {
@@ -485,6 +493,7 @@ message Report {
     bool allow_export = 16; // allow export datasets
     repeated QueryParam query_params = 17;
     Readme readme = 18;
+    bool has_direct_access = 19; // true - report has direct access for other users, false - no direct access
 }
 
 message Dataset {
@@ -634,6 +643,7 @@ message ReportStreamResponse {
     repeated Dataset datasets = 4;
     repeated File files = 5;
     repeated QueryJob query_jobs = 6;
+    repeated string direct_access_emails = 7; // emails of users with direct access to the report
 }
 
 message ForkReportRequest {

@@ -29,7 +29,7 @@ function ModalFooter ({ saving, setSaving, name, datasetId }) {
         onClick={() => {
           dispatch(closeDatasetSettingsModal())
           Modal.confirm({
-            title: 'Remove dataset from report?',
+            title: 'Remove dataset from map?',
             okText: 'Yes',
             okType: 'danger',
             cancelText: 'No',

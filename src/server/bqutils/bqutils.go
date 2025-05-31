@@ -8,8 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/rs/zerolog/log"
-
 	bqStorage "cloud.google.com/go/bigquery/storage/apiv1"
 	"cloud.google.com/go/storage"
 
@@ -80,7 +78,6 @@ func GetReadClient(ctx context.Context, conn *proto.Connection) (*bqStorage.BigQ
 		}
 		secretOption = option.WithCredentialsJSON([]byte(bigqueryKeyStr))
 	} else if tokenSource != nil {
-		log.Debug().Msg("GetReadClient: Using token source")
 		secretOption = option.WithTokenSource(tokenSource)
 	}
 	if secretOption == nil {

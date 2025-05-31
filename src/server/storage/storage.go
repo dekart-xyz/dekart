@@ -313,7 +313,6 @@ func (o S3StorageObject) GetWriter(ctx context.Context) io.WriteCloser {
 			o.logger.Error().Err(err).Msg("error while uploading object")
 			return err
 		}
-		o.logger.Debug().Msg("object is successfully uploaded")
 		return nil
 	})
 

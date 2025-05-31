@@ -3,6 +3,48 @@
 
 import * as jspb from "google-protobuf";
 
+export class AddReportDirectAccessRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  clearEmailsList(): void;
+  getEmailsList(): Array<string>;
+  setEmailsList(value: Array<string>): void;
+  addEmails(value: string, index?: number): string;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): AddReportDirectAccessRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: AddReportDirectAccessRequest): AddReportDirectAccessRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: AddReportDirectAccessRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): AddReportDirectAccessRequest;
+  static deserializeBinaryFromReader(message: AddReportDirectAccessRequest, reader: jspb.BinaryReader): AddReportDirectAccessRequest;
+}
+
+export namespace AddReportDirectAccessRequest {
+  export type AsObject = {
+    reportId: string,
+    emailsList: Array<string>,
+  }
+}
+
+export class AddReportDirectAccessResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): AddReportDirectAccessResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: AddReportDirectAccessResponse): AddReportDirectAccessResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: AddReportDirectAccessResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): AddReportDirectAccessResponse;
+  static deserializeBinaryFromReader(message: AddReportDirectAccessResponse, reader: jspb.BinaryReader): AddReportDirectAccessResponse;
+}
+
+export namespace AddReportDirectAccessResponse {
+  export type AsObject = {
+  }
+}
+
 export class GetReportAnalyticsRequest extends jspb.Message {
   getReportId(): string;
   setReportId(value: string): void;
@@ -1771,6 +1813,9 @@ export class Report extends jspb.Message {
   getReadme(): Readme | undefined;
   setReadme(value?: Readme): void;
 
+  getHasDirectAccess(): boolean;
+  setHasDirectAccess(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Report.AsObject;
   static toObject(includeInstance: boolean, msg: Report): Report.AsObject;
@@ -1801,6 +1846,7 @@ export namespace Report {
     allowExport: boolean,
     queryParamsList: Array<QueryParam.AsObject>,
     readme?: Readme.AsObject,
+    hasDirectAccess: boolean,
   }
 }
 
@@ -2425,6 +2471,11 @@ export class ReportStreamResponse extends jspb.Message {
   setQueryJobsList(value: Array<QueryJob>): void;
   addQueryJobs(value?: QueryJob, index?: number): QueryJob;
 
+  clearDirectAccessEmailsList(): void;
+  getDirectAccessEmailsList(): Array<string>;
+  setDirectAccessEmailsList(value: Array<string>): void;
+  addDirectAccessEmails(value: string, index?: number): string;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): ReportStreamResponse.AsObject;
   static toObject(includeInstance: boolean, msg: ReportStreamResponse): ReportStreamResponse.AsObject;
@@ -2443,6 +2494,7 @@ export namespace ReportStreamResponse {
     datasetsList: Array<Dataset.AsObject>,
     filesList: Array<File.AsObject>,
     queryJobsList: Array<QueryJob.AsObject>,
+    directAccessEmailsList: Array<string>,
   }
 }
 

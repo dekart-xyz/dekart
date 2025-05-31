@@ -1,7 +1,7 @@
 import Tag from 'antd/es/tag'
 import styles from './SubscriptionTab.module.css'
 import Title from 'antd/es/typography/Title'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import Button from 'antd/es/button'
 import { createSubscription, redirectToCustomerPortal } from './actions/workspace'
@@ -10,6 +10,7 @@ import { CheckCircleOutlined } from '@ant-design/icons'
 import Text from 'antd/es/typography/Text'
 import Card from 'antd/es/card'
 import Tooltip from 'antd/es/tooltip'
+import { track } from './lib/tracking'
 
 function PlanTitle ({ name, price, icon, color, description, selected }) {
   return (
@@ -103,7 +104,7 @@ function Plans () {
       >
         <p><Text type='success'><CheckCircleOutlined /> </Text><Text>BigQuery Connector</Text></p>
         <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Snowflake Connector</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Private and Public Maps</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Personal and Public Maps</Text></p>
       </Plan>
       {userStream.planType === PlanType.TYPE_TEAM
         ? (
@@ -137,7 +138,7 @@ function Plans () {
       >
         <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Everything from Personal</Text></p>
         <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Unlimited Viewers</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>User Access Management</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Share Maps Privately</Text></p>
       </Plan>
       <Plan
         addedUsersCount={workspace.addedUsersCount}
@@ -150,9 +151,9 @@ function Plans () {
         planType={PlanType.TYPE_MAX}
         cancelAt={workspace?.subscription?.cancelAt}
       >
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Everything from Personal</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Unlimited editors and viewers</Text></p>
-        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>User Access Management</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Everything from Grow</Text></p>
+        <p><Text type='success'><CheckCircleOutlined /> </Text><Text>Unlimited Editors</Text></p>
+        <p>&nbsp;</p>
       </Plan>
     </div>
   )
@@ -161,6 +162,11 @@ function Plans () {
 export default function SubscriptionTab () {
   const userStream = useSelector(state => state.user.stream)
   const isSelfHosted = useSelector(state => state.user.isSelfHosted)
+  useEffect(() => {
+    if (userStream && !isSelfHosted) {
+      track('SubscriptionTabOpened')
+    }
+  }, [userStream, isSelfHosted])
   if (!userStream) {
     return null
   }

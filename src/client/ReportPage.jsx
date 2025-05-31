@@ -17,7 +17,7 @@ import { Resizable } from 're-resizable'
 import DatasetSettingsModal from './DatasetSettingsModal'
 import getDatasetName from './lib/getDatasetName'
 import { createDataset, openDatasetSettingsModal, removeDataset, setActiveDataset } from './actions/dataset'
-import { closeReport, openReport, reportTitleChange, toggleReportEdit, toggleReportFullscreen } from './actions/report'
+import { closeReport, openReport, reportTitleChange, reportWillOpen, toggleReportEdit, toggleReportFullscreen } from './actions/report'
 import { setError } from './actions/message'
 import Tooltip from 'antd/es/tooltip'
 import prettyBites from 'pretty-bytes'
@@ -247,7 +247,7 @@ function Title () {
             }
           )}
           onClick={() => reportStatus.edit && setEdit(true)}
-          title='Click to edit report title'
+          title='Click to edit map title'
         >{
             reportStatus.edit && canWrite ? <EditOutlined className={styles.titleEditIcon} /> : null
           }{reportStatus.title}
@@ -344,6 +344,9 @@ export default function ReportPage ({ edit }) {
     if (!envLoaded) {
       return
     }
+
+    dispatch(reportWillOpen(id))
+
     // prevent open stream twice on first render
     const t = setTimeout(() => {
       dispatch(openReport(id))
@@ -381,7 +384,7 @@ export default function ReportPage ({ edit }) {
             <div className={styles.meta}>
               {updatedAt ? <span className={styles.lastUpdated} title={`${updatedAtDate.toISOString()}`}>{updatedAtDate.toLocaleString()}</span> : null}
               {updatedAt && report.authorEmail !== 'UNKNOWN_EMAIL' ? <span className={styles.dot}> | </span> : null}
-              {report.authorEmail !== 'UNKNOWN_EMAIL' ? <span className={styles.author} title='Report author'>{report.authorEmail}</span> : null}
+              {report.authorEmail !== 'UNKNOWN_EMAIL' ? <span className={styles.author} title='Map author'>{report.authorEmail}</span> : null}
             </div>
           </div>
         </div>

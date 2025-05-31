@@ -176,9 +176,7 @@ func (s *BasicStore) StoreJob(job Job) {
 // RemoveJobWhenDone blocks until the job is finished
 func (s *BasicStore) RemoveJobWhenDone(job Job) {
 	<-job.GetCtx().Done()
-	log.Debug().Str("queryId", job.GetQueryID()).Msg("Removing job from store")
 	s.Lock()
-	log.Debug().Str("queryId", job.GetQueryID()).Int("jobs", len(s.Jobs)).Msg("lock acquired")
 	for i, j := range s.Jobs {
 		if job.GetID() == j.GetID() {
 			// removing job from slice
@@ -193,10 +191,8 @@ func (s *BasicStore) RemoveJobWhenDone(job Job) {
 
 func (s *BasicStore) Cancel(jobID string) bool {
 	s.Lock()
-	log.Debug().Str("jobID", jobID).Int("jobs", len(s.Jobs)).Msg("Canceling query in store")
 	defer s.Unlock()
 	for _, job := range s.Jobs {
-		log.Debug().Str("jobID", jobID).Msg("Canceling query in store")
 		if job.GetID() == jobID {
 			job.Status() <- int32(proto.QueryJob_JOB_STATUS_UNSPECIFIED)
 			job.Cancel()

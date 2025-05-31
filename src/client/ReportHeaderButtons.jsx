@@ -1,7 +1,7 @@
 import { useHistory } from 'react-router'
 import styles from './ReportHeaderButtons.module.css'
 import Button from 'antd/es/button'
-import { EyeOutlined, DownloadOutlined, CloudOutlined, EditOutlined, ConsoleSqlOutlined, ForkOutlined, ReloadOutlined, LoadingOutlined, CloudSyncOutlined } from '@ant-design/icons'
+import { EyeOutlined, DownloadOutlined, CloudOutlined, EditOutlined, ForkOutlined, ReloadOutlined, LoadingOutlined, CloudSyncOutlined } from '@ant-design/icons'
 import { useDispatch, useSelector } from 'react-redux'
 import ShareButton from './ShareButton'
 import { forkReport, saveMap } from './actions/report'
@@ -12,7 +12,6 @@ import Dropdown from 'antd/es/dropdown'
 import { useEffect } from 'react'
 import { ForkOnboarding, useRequireOnboarding } from './ForkOnboarding'
 import Select from 'antd/es/select'
-import { Tooltip } from 'antd'
 
 function ForkButton ({ primary }) {
   const dispatch = useDispatch()
@@ -63,8 +62,9 @@ function RefreshButton () {
   const { discoverable, canWrite } = useSelector(state => state.report)
   const isViewer = useSelector(state => state.user.isViewer)
   const numRunningQueries = useSelector(state => state.numRunningQueries)
+  const numQueries = useSelector(state => state.queries.length)
   const dispatch = useDispatch()
-  if ((!canWrite && !discoverable) || isViewer) {
+  if ((!canWrite && !discoverable) || isViewer || numQueries === 0) {
     return null
   }
   return (
@@ -114,8 +114,7 @@ function goToPresent (history, id) {
 
 function EditModeButtons () {
   const dispatch = useDispatch()
-  const history = useHistory()
-  const { id, canWrite } = useSelector(state => state.report)
+  const { canWrite } = useSelector(state => state.report)
   const { saving } = useSelector(state => state.reportStatus)
   const changed = useReportChanged()
 
@@ -141,7 +140,7 @@ function EditModeButtons () {
             <ForkButton />
             <Button
               id='dekart-save-button'
-              title={saving ? 'Saving...' : 'Save this report'}
+              title={saving ? 'Saving...' : 'Save this map'}
               type='text'
               ghost
               icon={saving || changed ? <CloudSyncOutlined /> : <CloudOutlined />}
@@ -149,10 +148,15 @@ function EditModeButtons () {
               onClick={() => dispatch(saveMap())}
             />
             <ViewSelect value='edit' />
+            <ShareButton />
           </>
           )
-        : <ForkButton primary />}
-      <ShareButton />
+        : (
+          <>
+            <ShareButton />
+            <ForkButton primary />
+          </>
+          )}
 
     </div>
   )
@@ -231,8 +235,7 @@ function ViewSelect (value) {
 }
 
 function ViewModeButtons () {
-  const history = useHistory()
-  const { id, canWrite, readme } = useSelector(state => state.report)
+  const { canWrite } = useSelector(state => state.report)
 
   const requireOnboarding = useRequireOnboarding()
 
@@ -251,23 +254,6 @@ function ViewModeButtons () {
         <ExportDropdown />
         <ForkButton />
         <ViewSelect value='view' />
-        {/* <Button.Group className={styles.reportHeaderButtonGroup}>
-          <Button
-            icon={<EyeOutlined />}
-            type='primary'
-            ghost
-            onClick={() => goToPresent(history, id)}
-            title='View Mode'
-          >View
-          </Button>
-          <Button
-            disabled={!canWrite}
-            ghost
-            icon={<EditOutlined />}
-            onClick={() => goToSource(history, id)}
-          >Edit
-          </Button>
-        </Button.Group> */}
         <ShareButton />
       </div>
     )
@@ -276,16 +262,9 @@ function ViewModeButtons () {
   return (
     <div className={styles.reportHeaderButtons}>
       <RefreshButton />
-      {!readme && ( // hide the button if there is readme, because the source view is then by default
-        <Button
-          type='text'
-          icon={<ConsoleSqlOutlined />}
-          onClick={() => goToSource(history, id)}
-          title='View SQL source'
-        />)}
       <ExportDropdown />
-      <ForkButton primary />
       <ShareButton />
+      <ForkButton primary />
     </div>
   )
 }
