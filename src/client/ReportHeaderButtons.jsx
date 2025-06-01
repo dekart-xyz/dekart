@@ -263,8 +263,8 @@ function ViewModeButtons () {
     <div className={styles.reportHeaderButtons}>
       <RefreshButton />
       <ExportDropdown />
+      <ForkButton />
       <ShareButton />
-      <ForkButton primary />
     </div>
   )
 }
