@@ -409,7 +409,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 			log.Warn().Err(err).Send()
 			return nil, status.Error(codes.Canceled, err.Error())
 		}
-		log.Err(err).Send()
+		log.Err(err).Str("QueryId", req.QueryId).Str("connectionID", connection.Id).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
