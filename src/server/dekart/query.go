@@ -179,8 +179,8 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 
 	for i := range queries {
 		go func(i int) {
-			if queries[i].queryText == "" {
-				// for SNOWFLAKE storage queryText is stored in db
+			if queries[i].queryText == "" && queries[i].userBucketName != "" {
+				// legacy queries stored in user storage
 				connCtx := conn.GetCtx(ctx, queries[i].connection)
 				queryText, err := s.getQueryText(connCtx, querySourceIds[i], queries[i].userBucketName)
 				if err != nil {
