@@ -7,6 +7,7 @@ import (
 	"dekart/src/server/conn"
 	"dekart/src/server/job"
 	"dekart/src/server/snowflakejob"
+	"dekart/src/server/wherobotsjob"
 )
 
 type Store struct {
@@ -22,6 +23,10 @@ func (s *Store) TestConnection(ctx context.Context, req *proto.TestConnectionReq
 	if req.Connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_SNOWFLAKE {
 		return snowflakejob.TestConnection(ctx, req)
 	}
+	if req.Connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_WHEROBOTS {
+		return wherobotsjob.TestConnection(ctx, req)
+	}
+
 	return bqjob.TestConnection(ctx, req)
 }
 
@@ -31,6 +36,8 @@ func (s *Store) Create(reportID string, queryID string, queryText string, connCt
 	connection := conn.FromCtx(connCtx)
 	if connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_SNOWFLAKE {
 		job, err = snowflakejob.Create(reportID, queryID, queryText, connCtx)
+	} else if connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_WHEROBOTS {
+		job, err = wherobotsjob.Create(reportID, queryID, queryText, connCtx)
 	} else {
 		job, err = bqjob.Create(reportID, queryID, queryText, connCtx)
 	}

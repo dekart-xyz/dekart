@@ -171,7 +171,7 @@ function UpdateWorkspaceForm () {
     <Card>
       <Form
         disabled={disabled}
-        initialValues={{ name: workspace.name }}
+        initialValues={{ name: workspace.name, workspaceIDReadOnly: workspace.id }}
         layout='vertical' onFinish={(values) => {
           setDisabled(true)
           dispatch(updateWorkspace(values.name))
@@ -179,6 +179,9 @@ function UpdateWorkspaceForm () {
       >
         <Form.Item name='name' label='Workspace name' rules={[{ required: true, message: 'Workspace name is required' }]}>
           <Input />
+        </Form.Item>
+        <Form.Item label='Workspace ID' name='workspaceIDReadOnly'>
+          <Input readOnly disabled />
         </Form.Item>
         <Form.Item>
           <Button type='primary' htmlType='submit'>

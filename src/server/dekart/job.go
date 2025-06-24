@@ -16,7 +16,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s Server) updateJobStatus(job job.Job, jobStatus chan int32, paramHash string) {
+func (s Server) updateJobStatus(job job.Job, jobStatus chan int32, paramHash string, queryText string) {
 	for {
 		select {
 		case status := <-jobStatus:
@@ -33,9 +33,10 @@ func (s Server) updateJobStatus(job job.Job, jobStatus chan int32, paramHash str
 						query_params_hash,
 						dw_job_id,
 						job_result_id,
-						job_error
+						job_error,
+						query_text
 					)
-					values ($1, $2, $3, $4, $5, $6, $7)`,
+					values ($1, $2, $3, $4, $5, $6, $7, $8)`,
 					job.GetQueryID(),
 					job.GetID(),
 					status,
@@ -43,6 +44,7 @@ func (s Server) updateJobStatus(job job.Job, jobStatus chan int32, paramHash str
 					job.GetDWJobID(),
 					job.GetResultID(),
 					job.Err(),
+					queryText,
 				)
 			} else {
 				_, err = s.db.ExecContext(
@@ -55,8 +57,9 @@ func (s Server) updateJobStatus(job job.Job, jobStatus chan int32, paramHash str
 						bytes_processed = $5,
 						result_size = $6,
 						dw_job_id = $7,
+						result_uri = $8,
 						updated_at=CURRENT_TIMESTAMP
-					where id = $8`,
+					where id = $9`,
 					status,
 					job.Err(),
 					job.GetResultID(),
@@ -64,6 +67,7 @@ func (s Server) updateJobStatus(job job.Job, jobStatus chan int32, paramHash str
 					job.GetProcessedBytes(),
 					job.GetResultSize(),
 					job.GetDWJobID(),
+					job.GetResultURI(),
 					job.GetID(),
 				)
 			}
@@ -92,7 +96,8 @@ func (s Server) getQueryJob(ctx context.Context, jobID string) (*proto.QueryJob,
 			query_params_hash,
 			dw_job_id,
 			updated_at,
-			created_at
+			created_at,
+			EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - created_at))::bigint * 1000 as job_duration
 		from query_jobs
 		where id = $1
 		order by created_at desc
@@ -205,28 +210,7 @@ func (s Server) getDatasetsQueryJobs(ctx context.Context, datasets []*proto.Data
 		var err error
 		if IsSqlite() {
 			queryRows, err = s.db.QueryContext(ctx,
-				`WITH RankedJobs AS (
-					SELECT
-						id,
-						query_id,
-						job_status,
-						job_result_id,
-						job_error,
-						total_rows,
-						bytes_processed,
-						result_size,
-						query_params_hash,
-						dw_job_id,
-						updated_at,
-						created_at,
-						ROW_NUMBER() OVER (
-							PARTITION BY query_params_hash, query_id
-							ORDER BY created_at DESC
-						) as rn
-					FROM query_jobs
-					WHERE query_id IN (`+queryIdsStr+`)
-				)
-				SELECT
+				`SELECT
 					id,
 					query_id,
 					job_status,
@@ -238,9 +222,12 @@ func (s Server) getDatasetsQueryJobs(ctx context.Context, datasets []*proto.Data
 					query_params_hash,
 					dw_job_id,
 					updated_at,
-					created_at
-				FROM RankedJobs
-				WHERE rn = 1
+					created_at,
+					(STRFTIME('%s', 'now') - STRFTIME('%s', created_at)) * 1000 as job_duration
+				FROM query_jobs
+				WHERE query_id IN (`+queryIdsStr+`)
+				GROUP BY query_params_hash, query_id
+				HAVING created_at = MAX(created_at)
 				ORDER BY query_params_hash, query_id`,
 			)
 		} else {
@@ -257,7 +244,8 @@ func (s Server) getDatasetsQueryJobs(ctx context.Context, datasets []*proto.Data
 				query_params_hash,
 				dw_job_id,
 				updated_at,
-				created_at
+				created_at,
+				EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - created_at))::bigint * 1000 as job_duration
 			from query_jobs where query_id = ANY($1) order by query_params_hash, query_id, created_at desc`,
 				pq.Array(queryIds),
 			)
@@ -293,6 +281,7 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 				&dwJobId,
 				&updatedAtStr, // SQLite timestamp string in this case
 				&createdAtStr,
+				&job.JobDuration,
 			)
 			if err != nil {
 				return nil, fmt.Errorf("scan failed in rowsToQueryJobs error=%q", err)
@@ -323,6 +312,7 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 				&dwJobId,
 				&updatedAt,
 				&createdAt,
+				&job.JobDuration,
 			)
 			if err != nil {
 				return nil, fmt.Errorf("scan failed in rowsToQueryJobs error=%q", err)

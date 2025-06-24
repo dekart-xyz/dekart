@@ -330,6 +330,7 @@ enum ConnectionType {
     CONNECTION_TYPE_UNSPECIFIED = 0;
     CONNECTION_TYPE_BIGQUERY = 1;
     CONNECTION_TYPE_SNOWFLAKE = 2;
+    CONNECTION_TYPE_WHEROBOTS = 3;
 }
 
 message Connection {
@@ -350,6 +351,10 @@ message Connection {
     string snowflake_warehouse = 15;
     Secret bigquery_key = 16;
     Secret snowflake_key = 17;
+    string wherobots_host = 18;
+    Secret wherobots_key = 19;
+    string wherobots_runtime = 20;
+    string wherobots_region = 21;
 }
 
 message Secret {
@@ -417,6 +422,7 @@ message GetEnvResponse {
             TYPE_ALLOW_WORKSPACE_CREATION = 21;
             TYPE_WORKSPACE_DEFAULT_ROLE = 22;
             TYPE_SECRETS_ENABLED = 23;
+            TYPE_CLOUD_UX_CONFIG_JSON = 24;
         }
         Type type = 1;
         string value = 2;

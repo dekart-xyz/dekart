@@ -1,6 +1,7 @@
 import { ConnectionType } from 'dekart-proto/dekart_pb'
 import { bigQueryKeywords } from './bigQueryKeywords'
 import { snowflakeKeywords } from './snowflakeKeywords'
+import { sedonaKeywords } from './sedonaKeywords'
 
 const bigQueryCustomCompleter = {
   getCompletions (editor, session, pos, prefix, callback) {
@@ -11,6 +12,12 @@ const bigQueryCustomCompleter = {
 const snowflakeCustomCompleter = {
   getCompletions (editor, session, pos, prefix, callback) {
     callback(null, snowflakeKeywords)
+  }
+}
+
+const wherobotsCustomCompleter = {
+  getCompletions (editor, session, pos, prefix, callback) {
+    callback(null, sedonaKeywords)
   }
 }
 
@@ -59,6 +66,23 @@ WHERE
         name: 'Athena',
         style: 'athena',
         usageStatsId: 1
+      }
+    case 'WHEROBOTS':
+    case ConnectionType.CONNECTION_TYPE_WHEROBOTS:
+      return {
+        name: 'Wherobots',
+        style: 'wherobots',
+        usageStatsId: 4,
+        completer: wherobotsCustomCompleter,
+        sampleQuery: `SELECT
+    latitude,
+    longitude
+FROM
+    wherobots_open_data.foursquare.places
+WHERE
+    country = 'US'
+    AND LOWER(name) = 'starbucks'
+LIMIT 1000;`
       }
     default:
       return {

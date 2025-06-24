@@ -2,12 +2,13 @@ import { CreateDatasetRequest, RemoveDatasetRequest, UpdateDatasetConnectionRequ
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { setError, success, info, warn } from './message'
-import { addDataToMap, toggleSidePanel, reorderLayer, removeDataset as removeDatasetFromKepler } from '@kepler.gl/actions'
+import { addDataToMap, toggleSidePanel, reorderLayer, removeDataset as removeDatasetFromKepler, loadFiles } from '@kepler.gl/actions'
 import { processCsvData, processGeojson } from '@kepler.gl/processors'
 import { get } from '../lib/api'
 import getDatasetName from '../lib/getDatasetName'
 import { runQuery } from './query'
 import { KeplerGlSchema } from '@kepler.gl/schemas'
+import wasmInit from 'parquet-wasm'
 
 export function createDataset (reportId) {
   return (dispatch) => {
@@ -129,9 +130,18 @@ export function finishAddingDatasetToMap (dataset) {
   return { type: finishAddingDatasetToMap.name, dataset }
 }
 
+let isWasmInitialized = false
+
 export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
   return async function (dispatch, getState) {
+    // must be before async so dataset is not added twice
     dispatch({ type: addDatasetToMap.name, dataset })
+
+    if (!isWasmInitialized) {
+      isWasmInitialized = true
+      await wasmInit()
+    }
+
     const { dataset: { list: datasets }, files, queries, keplerGl } = getState()
     const label = getDatasetName(dataset, queries, files)
     let data
@@ -139,9 +149,20 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
       if (extension === 'csv') {
         const csv = await res.text()
         data = processCsvData(csv)
-      } else {
+      } else if (extension === 'geojson') {
         const json = await res.json()
         data = processGeojson(json)
+      } else if (extension === 'parquet') {
+        const blob = await res.blob()
+        data = await new Promise((resolve, reject) => {
+          dispatch(loadFiles([new File([blob], label)], (r) => {
+            const datasetData = r[0].data
+            resolve(datasetData)
+            return { type: 'none' } // dispatch a dummy action to satisfy loadFiles API
+          }))
+        })
+      } else {
+        throw new Error(`Unsupported dataset extension: ${extension}`)
       }
     } catch (err) {
       dispatch(processDownloadError(err, dataset, label))

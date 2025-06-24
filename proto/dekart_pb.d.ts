@@ -1232,6 +1232,20 @@ export class Connection extends jspb.Message {
   getSnowflakeKey(): Secret | undefined;
   setSnowflakeKey(value?: Secret): void;
 
+  getWherobotsHost(): string;
+  setWherobotsHost(value: string): void;
+
+  hasWherobotsKey(): boolean;
+  clearWherobotsKey(): void;
+  getWherobotsKey(): Secret | undefined;
+  setWherobotsKey(value?: Secret): void;
+
+  getWherobotsRuntime(): string;
+  setWherobotsRuntime(value: string): void;
+
+  getWherobotsRegion(): string;
+  setWherobotsRegion(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Connection.AsObject;
   static toObject(includeInstance: boolean, msg: Connection): Connection.AsObject;
@@ -1261,6 +1275,10 @@ export namespace Connection {
     snowflakeWarehouse: string,
     bigqueryKey?: Secret.AsObject,
     snowflakeKey?: Secret.AsObject,
+    wherobotsHost: string,
+    wherobotsKey?: Secret.AsObject,
+    wherobotsRuntime: string,
+    wherobotsRegion: string,
   }
 }
 
@@ -1529,6 +1547,7 @@ export namespace GetEnvResponse {
       TYPE_ALLOW_WORKSPACE_CREATION: 21;
       TYPE_WORKSPACE_DEFAULT_ROLE: 22;
       TYPE_SECRETS_ENABLED: 23;
+      TYPE_CLOUD_UX_CONFIG_JSON: 24;
     }
 
     export const Type: TypeMap;
@@ -2649,6 +2668,7 @@ export interface ConnectionTypeMap {
   CONNECTION_TYPE_UNSPECIFIED: 0;
   CONNECTION_TYPE_BIGQUERY: 1;
   CONNECTION_TYPE_SNOWFLAKE: 2;
+  CONNECTION_TYPE_WHEROBOTS: 3;
 }
 
 export const ConnectionType: ConnectionTypeMap;

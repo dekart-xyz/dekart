@@ -19,7 +19,7 @@ func NewUserStorage() *UserStorage {
 	return &UserStorage{}
 }
 
-func (s *UserStorage) GetObject(ctx context.Context, _ string, object string) StorageObject {
+func (s *UserStorage) GetObject(ctx context.Context, resultURI string, object string) StorageObject {
 	connection := conn.FromCtx(ctx)
 	parts := strings.Split(object, ".")
 	useUserToken := true

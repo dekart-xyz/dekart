@@ -41,6 +41,9 @@ function DatasetSelector ({ dataset }) {
   const history = useHistory()
   const report = useSelector(state => state.report)
   const isAdmin = useSelector(state => state.user.isAdmin)
+  const { uxConfig } = useSelector(state => state.env)
+  const workspaceId = useSelector(state => state.user.stream?.workspaceId)
+
   if (!env.loaded) {
     // do not render until environment is loaded
     return null
@@ -91,7 +94,7 @@ function DatasetSelector ({ dataset }) {
             icon={<ApiTwoTone />}
             id='dekart-add-connection'
             title='Add connection'
-            subtitle='Connect BigQuery or Snowflake'
+            subtitle={uxConfig?.enableWherobotsWorkspaces?.includes(workspaceId) ? 'Connect BigQuery, Snowflake, Wherobots' : 'Connect BigQuery, Snowflake'}
             onClick={() => {
               dispatch(updateSessionStorage('redirectWhenSaveConnection', { reportId: report.id, edit: true }))
               history.push('/connections')
