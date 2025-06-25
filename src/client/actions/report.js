@@ -3,7 +3,7 @@ import { removeDataset } from '@kepler.gl/actions'
 
 import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
 import { success } from './message'
-import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest } from 'dekart-proto/dekart_pb'
+import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { createQuery, downloadQuerySource } from './query'
 import { downloadDataset } from './dataset'
@@ -179,6 +179,9 @@ export function reportUpdate (reportStreamResponse) {
         const query = queriesList.find(q => q.id === dataset.queryId)
         const queryJob = queryJobsList.find(job => job.queryId === query.id && job.queryParamsHash === queryParams.hash)
         if (shouldAddQuery(queryJob, prevQueryJobsList, mapConfigUpdated) || shouldUpdateDataset(dataset, prevDatasetsList)) {
+          if (dataset.connectionType === ConnectionType.CONNECTION_TYPE_WHEROBOTS) {
+            extension = 'parquet'
+          }
           dispatch(downloadDataset(
             dataset,
             queryJob.jobResultId,

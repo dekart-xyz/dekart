@@ -13,6 +13,12 @@ export default defineConfig({
     port: 3000
   },
   define: defineProcessEnv,
+  optimizeDeps: {
+    // serves the file straight from node_modules
+    exclude: [
+      'parquet-wasm'
+    ]
+  },
   build: {
     outDir: 'build',
     assetsDir: '.'

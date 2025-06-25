@@ -8,6 +8,8 @@ import (
 	"runtime"
 
 	"github.com/rs/zerolog/log"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type ConnectionContextKey string
@@ -56,4 +58,37 @@ func FromCtx(ctx context.Context) *proto.Connection {
 func CopyConnectionCtx(sourceCtx, destCtx context.Context) context.Context {
 	connection := FromCtx(sourceCtx)
 	return GetCtx(destCtx, connection)
+}
+
+func ValidateReqConnection(con *proto.Connection) error {
+	if con == nil {
+		return status.Error(codes.InvalidArgument, "connection is required")
+	}
+	if con.ConnectionName == "" {
+		return status.Error(codes.InvalidArgument, "connection_name is required")
+	}
+	if con.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_SNOWFLAKE {
+		if con.SnowflakeAccountId == "" {
+			return status.Error(codes.InvalidArgument, "snowflake_account_id is required")
+		}
+		if con.SnowflakeUsername == "" {
+			return status.Error(codes.InvalidArgument, "snowflake_username is required")
+		}
+	}
+	if con.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_WHEROBOTS {
+		if con.WherobotsHost == "" {
+			return status.Error(codes.InvalidArgument, "wherobots_host is required")
+		}
+		if con.WherobotsKey == nil {
+			return status.Error(codes.InvalidArgument, "wherobots_key is required")
+		}
+		if con.WherobotsRegion == "" {
+			return status.Error(codes.InvalidArgument, "wherobots_region is required")
+		}
+		if con.WherobotsRuntime == "" {
+			return status.Error(codes.InvalidArgument, "wherobots_runtime is required")
+		}
+
+	}
+	return nil
 }

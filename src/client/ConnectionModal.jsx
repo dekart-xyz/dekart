@@ -65,6 +65,99 @@ function Footer ({ form, testDisabled }) {
   )
 }
 
+function WherobotsConnectionModal ({ form }) {
+  const { dialog } = useSelector(state => state.connection)
+  const { id, loading } = dialog
+  const dispatch = useDispatch()
+  const connection = useSelector(state => state.connection.list.find(s => s.id === id))
+  const datasetUsed = connection?.datasetCount > 0
+  const apiKeyChanged = form.getFieldValue('wherobotsKey') !== connection?.wherobotsKey
+
+  useEffect(() => {
+    if (!connection) {
+      // new connection, set default values
+      form.setFieldsValue({
+        connectionName: 'Wherobots',
+        wherobotsHost: 'api.cloud.wherobots.com'
+      })
+    }
+  }, [id, form])
+
+  return (
+    <Modal
+      open
+      title={<><DatasourceIcon type={ConnectionType.CONNECTION_TYPE_WHEROBOTS} /> Wherobots</>}
+      onCancel={() => dispatch(closeConnectionDialog())}
+      footer={<Footer form={form} testDisabled={false} />}
+    >
+      <div className={styles.modalBody}>
+        <Form
+          form={form}
+          disabled={loading}
+          layout='vertical' onValuesChange={(changedValues, allValues) => {
+            dispatch(connectionChanged())
+          }}
+        >
+          {datasetUsed ? <div className={styles.datasetsCountAlert}><Alert message={<>This connection is used in {connection.datasetCount} dataset{connection.datasetCount > 1 ? 's' : ''}.</>} description='Changing make cause report errors' type='warning' /></div> : null}
+          <Form.Item required label='Connection Name' name='connectionName'>
+            <Input defaultValue='Wherobots' />
+          </Form.Item>
+          <Form.Item required label='Host' name='wherobotsHost'>
+            <Input />
+          </Form.Item>
+          <Form.Item required label='API Key' name='wherobotsKey' extra={<>The <a target='_blank' href='https://cloud.wherobots.com/organization/security' rel='noreferrer'>API key</a> for the user that you use to connect to the database.</>}>
+            <Input.Password
+              visibilityToggle={apiKeyChanged} onFocus={() => {
+                if (!apiKeyChanged) {
+                  form.setFieldsValue({ wherobotsKey: '' })
+                }
+              }} onBlur={() => {
+                if (form.getFieldValue('wherobotsKey') === '') {
+                  form.setFieldsValue({ wherobotsKey: connection?.wherobotsKey })
+                }
+              }}
+            />
+          </Form.Item>
+          <Form.Item required label='Runtime' name='wherobotsRuntime'>
+            <AutoComplete
+              options={[
+                { value: 'tiny', label: 'tiny' },
+                { value: 'small', label: 'small' },
+                { value: 'medium', label: 'medium' },
+                { value: 'large', label: 'large' },
+                { value: 'x-large', label: 'x-large' },
+                { value: '2x-large', label: '2x-large' },
+                { value: '4x-large', label: '4x-large' },
+                { value: 'medium-himem', label: 'medium-himem' },
+                { value: 'large-himem', label: 'large-himem' },
+                { value: 'x-large-himem', label: 'x-large-himem' },
+                { value: '2x-large-himem', label: '2x-large-himem' },
+                { value: '4x-large-himem', label: '4x-large-himem' },
+                { value: 'tiny-a10-gpu', label: 'tiny-a10-gpu' },
+                { value: 'small-a10-gpu', label: 'small-a10-gpu' },
+                { value: 'medium-a10-gpu', label: 'medium-a10-gpu' }
+              ]}
+              showArrow
+              disabled={false}
+              filterOption={(inputValue, option) => option.value.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1}
+            />
+          </Form.Item>
+          <Form.Item required label='Region' name='wherobotsRegion'>
+            <AutoComplete
+              options={[
+                { value: 'aws-us-west-2', label: 'aws-us-west-2' }
+              ]}
+              showArrow
+              disabled={false}
+              filterOption={(inputValue, option) => option.value.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1}
+            />
+          </Form.Item>
+        </Form>
+      </div>
+    </Modal>
+  )
+}
+
 function SnowflakeConnectionModal ({ form }) {
   const { dialog } = useSelector(state => state.connection)
   const { id, loading } = dialog
@@ -295,6 +388,8 @@ export default function ConnectionModal () {
   switch (connectionType) {
     case ConnectionType.CONNECTION_TYPE_SNOWFLAKE:
       return <SnowflakeConnectionModal form={form} />
+    case ConnectionType.CONNECTION_TYPE_WHEROBOTS:
+      return <WherobotsConnectionModal form={form} />
     case ConnectionType.CONNECTION_TYPE_BIGQUERY:
     default:
       return <BigQueryConnectionModal form={form} />

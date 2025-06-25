@@ -31,12 +31,20 @@ require (
 	cloud.google.com/go/secretmanager v1.13.1
 	github.com/ClickHouse/clickhouse-go/v2 v2.30.0
 	github.com/DATA-DOG/go-sqlmock v1.5.2
+	github.com/andybalholm/brotli v1.1.1 // indirect
+	github.com/apache/arrow/go/v10 v10.0.1 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.26.1
 	github.com/aws/aws-sdk-go-v2/config v1.27.11
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.11
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.53.1
+	github.com/fxamacker/cbor/v2 v2.7.0
+	github.com/gorilla/websocket v1.5.0
+	github.com/pulumi/pulumi-gcp/sdk/v7 v7.38.0
+	github.com/pulumi/pulumi/sdk/v3 v3.162.0
+	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/snowflakedb/gosnowflake v1.7.2
 	github.com/stretchr/testify v1.10.0
+	github.com/stripe/stripe-go/v76 v76.5.0
 	github.com/testcontainers/testcontainers-go v0.34.0
 	github.com/testcontainers/testcontainers-go/modules/clickhouse v0.34.0
 	golang.org/x/oauth2 v0.23.0
@@ -49,12 +57,7 @@ require (
 	dario.cat/mergo v1.0.0 // indirect
 )
 
-require (
-	github.com/mattn/go-sqlite3 v1.14.16
-	github.com/pulumi/pulumi-gcp/sdk/v7 v7.38.0
-	github.com/pulumi/pulumi/sdk/v3 v3.162.0
-	github.com/stripe/stripe-go/v76 v76.5.0
-)
+require github.com/mattn/go-sqlite3 v1.14.16
 
 require (
 	cloud.google.com/go/auth v0.7.0 // indirect
@@ -72,8 +75,6 @@ require (
 	github.com/ProtonMail/go-crypto v1.1.3 // indirect
 	github.com/aead/chacha20 v0.0.0-20180709150244-8b13a72661da // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
-	github.com/andybalholm/brotli v1.1.1 // indirect
-	github.com/apache/arrow/go/v10 v10.0.1 // indirect
 	github.com/apache/arrow/go/v14 v14.0.2 // indirect
 	github.com/apache/arrow/go/v15 v15.0.2 // indirect
 	github.com/apache/thrift v0.18.1 // indirect
@@ -149,7 +150,6 @@ require (
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
-	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/grpc-ecosystem/grpc-opentracing v0.0.0-20180507213350-8e809c8a8645 // indirect
 	github.com/gsterjov/go-libsecret v0.0.0-20161001094733-a6f4afe4910c // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -213,7 +213,6 @@ require (
 	github.com/shirou/gopsutil/v3 v3.23.12 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
-	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/skeema/knownhosts v1.3.0 // indirect
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/cobra v1.8.0 // indirect
@@ -223,6 +222,7 @@ require (
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/uber/jaeger-client-go v2.30.0+incompatible // indirect
 	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect
+	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
 	github.com/zclconf/go-cty v1.13.2 // indirect

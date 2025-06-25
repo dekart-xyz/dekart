@@ -163,6 +163,14 @@ export function saveConnection (id, connectionType, connectionProps) {
         const secret = new Secret()
         secret.setClientEncrypted(await encryptPassword(connectionProps.snowflakeKey, getState().env.variables.AES_KEY, getState().env.variables.AES_IV))
         connection.setSnowflakeKey(secret)
+      } else if (connectionType === ConnectionType.CONNECTION_TYPE_WHEROBOTS) {
+        connection.setConnectionName(connectionProps.connectionName || 'Wherobots')
+        connection.setWherobotsHost(connectionProps.wherobotsHost)
+        connection.setWherobotsRegion(connectionProps.wherobotsRegion)
+        connection.setWherobotsRuntime(connectionProps.wherobotsRuntime)
+        const secret = new Secret()
+        secret.setClientEncrypted(await encryptPassword(connectionProps.wherobotsKey, getState().env.variables.AES_KEY, getState().env.variables.AES_IV))
+        connection.setWherobotsKey(secret)
       } else if (connectionProps.newBigqueryKey) { // bigquery service account key
         const { connectionName, cloudStorageBucket, newBigqueryKey } = connectionProps
         connection.setConnectionName(connectionName || 'BigQuery')
@@ -297,6 +305,15 @@ export function testConnection (connectionType, values) {
       const secret = new Secret()
       secret.setClientEncrypted(await encryptPassword(snowflakeKey, AES_KEY, AES_IV))
       connection.setSnowflakeKey(secret)
+    } else if (connectionType === ConnectionType.CONNECTION_TYPE_WHEROBOTS) {
+      const { connectionName, wherobotsKey, wherobotsHost, wherobotsRegion, wherobotsRuntime } = values
+      connection.setConnectionName(connectionName)
+      connection.setWherobotsHost(wherobotsHost)
+      connection.setWherobotsRegion(wherobotsRegion)
+      connection.setWherobotsRuntime(wherobotsRuntime)
+      const secret = new Secret()
+      secret.setClientEncrypted(await encryptPassword(wherobotsKey, AES_KEY, AES_IV))
+      connection.setWherobotsKey(secret)
     } else if (values.newBigqueryKey) { // bigquery service account key
       const { connectionName, cloudStorageBucket, newBigqueryKey } = values
       connection.setConnectionName(connectionName)

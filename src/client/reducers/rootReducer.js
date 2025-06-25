@@ -80,7 +80,8 @@ function env (state = defaultEnv, action) {
         loaded: true,
         variables: action.variables,
         authEnabled: Boolean(action.variables.AUTH_ENABLED),
-        secretsEnabled: Boolean(action.variables.SECRETS_ENABLED)
+        secretsEnabled: Boolean(action.variables.SECRETS_ENABLED),
+        uxConfig: JSON.parse(action.variables.CLOUD_UX_CONFIG_JSON || '{}')
       }
     default:
       return state

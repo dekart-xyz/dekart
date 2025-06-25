@@ -10081,7 +10081,11 @@ proto.Connection.toObject = function(includeInstance, msg) {
     snowflakePassword: (f = msg.getSnowflakePassword()) && proto.Secret.toObject(includeInstance, f),
     snowflakeWarehouse: jspb.Message.getFieldWithDefault(msg, 15, ""),
     bigqueryKey: (f = msg.getBigqueryKey()) && proto.Secret.toObject(includeInstance, f),
-    snowflakeKey: (f = msg.getSnowflakeKey()) && proto.Secret.toObject(includeInstance, f)
+    snowflakeKey: (f = msg.getSnowflakeKey()) && proto.Secret.toObject(includeInstance, f),
+    wherobotsHost: jspb.Message.getFieldWithDefault(msg, 18, ""),
+    wherobotsKey: (f = msg.getWherobotsKey()) && proto.Secret.toObject(includeInstance, f),
+    wherobotsRuntime: jspb.Message.getFieldWithDefault(msg, 20, ""),
+    wherobotsRegion: jspb.Message.getFieldWithDefault(msg, 21, "")
   };
 
   if (includeInstance) {
@@ -10188,6 +10192,23 @@ proto.Connection.deserializeBinaryFromReader = function(msg, reader) {
       var value = new proto.Secret;
       reader.readMessage(value,proto.Secret.deserializeBinaryFromReader);
       msg.setSnowflakeKey(value);
+      break;
+    case 18:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setWherobotsHost(value);
+      break;
+    case 19:
+      var value = new proto.Secret;
+      reader.readMessage(value,proto.Secret.deserializeBinaryFromReader);
+      msg.setWherobotsKey(value);
+      break;
+    case 20:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setWherobotsRuntime(value);
+      break;
+    case 21:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setWherobotsRegion(value);
       break;
     default:
       reader.skipField();
@@ -10338,6 +10359,35 @@ proto.Connection.serializeBinaryToWriter = function(message, writer) {
       17,
       f,
       proto.Secret.serializeBinaryToWriter
+    );
+  }
+  f = message.getWherobotsHost();
+  if (f.length > 0) {
+    writer.writeString(
+      18,
+      f
+    );
+  }
+  f = message.getWherobotsKey();
+  if (f != null) {
+    writer.writeMessage(
+      19,
+      f,
+      proto.Secret.serializeBinaryToWriter
+    );
+  }
+  f = message.getWherobotsRuntime();
+  if (f.length > 0) {
+    writer.writeString(
+      20,
+      f
+    );
+  }
+  f = message.getWherobotsRegion();
+  if (f.length > 0) {
+    writer.writeString(
+      21,
+      f
     );
   }
 };
@@ -10703,6 +10753,97 @@ proto.Connection.prototype.clearSnowflakeKey = function() {
  */
 proto.Connection.prototype.hasSnowflakeKey = function() {
   return jspb.Message.getField(this, 17) != null;
+};
+
+
+/**
+ * optional string wherobots_host = 18;
+ * @return {string}
+ */
+proto.Connection.prototype.getWherobotsHost = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 18, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.Connection} returns this
+ */
+proto.Connection.prototype.setWherobotsHost = function(value) {
+  return jspb.Message.setProto3StringField(this, 18, value);
+};
+
+
+/**
+ * optional Secret wherobots_key = 19;
+ * @return {?proto.Secret}
+ */
+proto.Connection.prototype.getWherobotsKey = function() {
+  return /** @type{?proto.Secret} */ (
+    jspb.Message.getWrapperField(this, proto.Secret, 19));
+};
+
+
+/**
+ * @param {?proto.Secret|undefined} value
+ * @return {!proto.Connection} returns this
+*/
+proto.Connection.prototype.setWherobotsKey = function(value) {
+  return jspb.Message.setWrapperField(this, 19, value);
+};
+
+
+/**
+ * Clears the message field making it undefined.
+ * @return {!proto.Connection} returns this
+ */
+proto.Connection.prototype.clearWherobotsKey = function() {
+  return this.setWherobotsKey(undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.Connection.prototype.hasWherobotsKey = function() {
+  return jspb.Message.getField(this, 19) != null;
+};
+
+
+/**
+ * optional string wherobots_runtime = 20;
+ * @return {string}
+ */
+proto.Connection.prototype.getWherobotsRuntime = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 20, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.Connection} returns this
+ */
+proto.Connection.prototype.setWherobotsRuntime = function(value) {
+  return jspb.Message.setProto3StringField(this, 20, value);
+};
+
+
+/**
+ * optional string wherobots_region = 21;
+ * @return {string}
+ */
+proto.Connection.prototype.getWherobotsRegion = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 21, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.Connection} returns this
+ */
+proto.Connection.prototype.setWherobotsRegion = function(value) {
+  return jspb.Message.setProto3StringField(this, 21, value);
 };
 
 
@@ -12272,7 +12413,8 @@ proto.GetEnvResponse.Variable.Type = {
   TYPE_UX_DISABLE_VERSION_CHECK: 20,
   TYPE_ALLOW_WORKSPACE_CREATION: 21,
   TYPE_WORKSPACE_DEFAULT_ROLE: 22,
-  TYPE_SECRETS_ENABLED: 23
+  TYPE_SECRETS_ENABLED: 23,
+  TYPE_CLOUD_UX_CONFIG_JSON: 24
 };
 
 /**
@@ -19704,7 +19846,8 @@ proto.PlanType = {
 proto.ConnectionType = {
   CONNECTION_TYPE_UNSPECIFIED: 0,
   CONNECTION_TYPE_BIGQUERY: 1,
-  CONNECTION_TYPE_SNOWFLAKE: 2
+  CONNECTION_TYPE_SNOWFLAKE: 2,
+  CONNECTION_TYPE_WHEROBOTS: 3
 };
 
 goog.object.extend(exports, proto);

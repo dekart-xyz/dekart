@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/conn"
 	"dekart/src/server/secrets"
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
@@ -21,10 +22,19 @@ func (s Server) TestConnection(ctx context.Context, req *proto.TestConnectionReq
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	conn := req.Connection
-	if conn == nil {
+	con := req.Connection
+	if con == nil {
 		return nil, status.Error(codes.InvalidArgument, "connection is required")
 	}
+
+	err := conn.ValidateReqConnection(con)
+	if err != nil {
+		return &proto.TestConnectionResponse{
+			Success: false,
+			Error:   err.Error(),
+		}, nil
+	}
+
 	res, err := s.jobs.TestConnection(ctx, req)
 	if err != nil {
 		log.Err(err).Msg("TestConnection failed")
@@ -138,7 +148,11 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 			snowflake_key_encrypted,
 			snowflake_warehouse,
 			bigquery_key_encrypted,
-			(select count(*) from datasets where connection_id=connections.id) as dataset_count
+			(select count(*) from datasets where connection_id=connections.id) as dataset_count,
+			wherobots_host,
+			wherobots_key_encrypted,
+			wherobots_region,
+			wherobots_runtime
 		from connections where id=$1 limit 1`,
 		connectionID,
 	)
@@ -156,6 +170,10 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 		snowflakeUser := sql.NullString{}
 		snowflakePassword := sql.NullString{}
 		snowflakeKey := sql.NullString{}
+		whererobotsKeyEncrypted := sql.NullString{}
+		whererobotsHost := sql.NullString{}
+		whererobotsRegion := sql.NullString{}
+		whererobotsRuntime := sql.NullString{}
 		bigqueryKey := sql.NullString{}
 		snowflakeAccountID := sql.NullString{}
 		snowflakeWarehouse := sql.NullString{}
@@ -172,6 +190,10 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 			&snowflakeWarehouse,
 			&bigqueryKey,
 			&connection.DatasetCount,
+			&whererobotsHost,
+			&whererobotsKeyEncrypted,
+			&whererobotsRegion,
+			&whererobotsRuntime,
 		)
 		connection.Id = ID.String
 		connection.BigqueryProjectId = bigqueryProjectId.String
@@ -180,6 +202,9 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 		connection.SnowflakeUsername = snowflakeUser.String
 		connection.SnowflakeAccountId = snowflakeAccountID.String
 		connection.SnowflakeWarehouse = snowflakeWarehouse.String
+		connection.WherobotsHost = whererobotsHost.String
+		connection.WherobotsRegion = whererobotsRegion.String
+		connection.WherobotsRuntime = whererobotsRuntime.String
 		if snowflakePassword.String != "" {
 			connection.SnowflakePassword = &proto.Secret{
 				ServerEncrypted: snowflakePassword.String,
@@ -193,6 +218,11 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 		if bigqueryKey.String != "" {
 			connection.BigqueryKey = &proto.Secret{
 				ServerEncrypted: bigqueryKey.String,
+			}
+		}
+		if whererobotsKeyEncrypted.String != "" {
+			connection.WherobotsKey = &proto.Secret{
+				ServerEncrypted: whererobotsKeyEncrypted.String,
 			}
 		}
 		if connection.CloudStorageBucket != "" {
@@ -230,7 +260,11 @@ func (s Server) getUserConnections(ctx context.Context) ([]*proto.Connection, er
 			updated_at,
 			author_email,
 			bigquery_key_encrypted,
-			(select count(*) from datasets where connection_id=connections.id) as dataset_count
+			(select count(*) from datasets where connection_id=connections.id) as dataset_count,
+			wherobots_host,
+			wherobots_key_encrypted,
+			wherobots_region,
+			wherobots_runtime
 		from connections where archived=false and workspace_id=$1 order by created_at desc`,
 		checkWorkspace(ctx).ID,
 	)
@@ -253,6 +287,10 @@ func (s Server) getUserConnections(ctx context.Context) ([]*proto.Connection, er
 		snowflakeUsername := sql.NullString{}
 		snowflakePassword := sql.NullString{}
 		snowflakeKey := sql.NullString{}
+		wherobotsHost := sql.NullString{}
+		wherobotsKeyEncrypted := sql.NullString{}
+		wherobotsRegion := sql.NullString{}
+		wherobotsRuntime := sql.NullString{}
 		bigqueryKey := sql.NullString{}
 		snowflakeWarehouse := sql.NullString{}
 		isDefault := false
@@ -275,6 +313,10 @@ func (s Server) getUserConnections(ctx context.Context) ([]*proto.Connection, er
 			&connection.AuthorEmail,
 			&bigqueryKey,
 			&connection.DatasetCount,
+			&wherobotsHost,
+			&wherobotsKeyEncrypted,
+			&wherobotsRegion,
+			&wherobotsRuntime,
 		)
 		if err != nil {
 			log.Fatal().Err(err).Msg("scan failed")
@@ -301,6 +343,10 @@ func (s Server) getUserConnections(ctx context.Context) ([]*proto.Connection, er
 		connection.BigqueryKey = secrets.EncryptedToClient(bigqueryKey.String)
 		connection.UpdatedAt = updatedAt.Unix()
 		connection.CreatedAt = createdAt.Unix()
+		connection.WherobotsHost = wherobotsHost.String
+		connection.WherobotsRegion = wherobotsRegion.String
+		connection.WherobotsRuntime = wherobotsRuntime.String
+		connection.WherobotsKey = secrets.EncryptedToClient(wherobotsKeyEncrypted.String)
 		if connection.CloudStorageBucket != "" {
 			connection.CanStoreFiles = true
 		}
@@ -347,7 +393,7 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 		return nil, status.Error(codes.PermissionDenied, "only admins can edit connections")
 	}
 
-	err := validateReqConnection(req.Connection)
+	err := conn.ValidateReqConnection(req.Connection)
 	if err != nil {
 		return nil, err
 	}
@@ -381,6 +427,32 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 				snowflake_key_encrypted=$1
 			where id=$2`,
 				snowflakeKey,
+				req.Connection.Id,
+			)
+		}
+	} else if req.Connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_WHEROBOTS {
+		res, err = s.db.ExecContext(ctx,
+			`update connections set
+				connection_name=$1,
+				wherobots_host=$2,
+				wherobots_region=$3,
+				wherobots_runtime=$4,
+				updated_at=now()
+			where id=$5`,
+			req.Connection.ConnectionName,
+			req.Connection.WherobotsHost,
+			req.Connection.WherobotsRegion,
+			req.Connection.WherobotsRuntime,
+			req.Connection.Id,
+		)
+		// update key if it is provided
+		wherobotsKey := secrets.SecretToServerEncrypted(req.Connection.WherobotsKey, claims)
+		if wherobotsKey != "" && err == nil {
+			res, err = s.db.ExecContext(ctx,
+				`update connections set
+				wherobots_key_encrypted=$1
+			where id=$2`,
+				wherobotsKey,
 				req.Connection.Id,
 			)
 		}
@@ -587,24 +659,6 @@ func (s Server) getLastConnectionUpdate(ctx context.Context) (int64, error) {
 	return lastConnectionUpdate, nil
 }
 
-func validateReqConnection(con *proto.Connection) error {
-	if con == nil {
-		return status.Error(codes.InvalidArgument, "connection is required")
-	}
-	if con.ConnectionName == "" {
-		return status.Error(codes.InvalidArgument, "connection_name is required")
-	}
-	if con.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_SNOWFLAKE {
-		if con.SnowflakeAccountId == "" {
-			return status.Error(codes.InvalidArgument, "snowflake_account_id is required")
-		}
-		if con.SnowflakeUsername == "" {
-			return status.Error(codes.InvalidArgument, "snowflake_username is required")
-		}
-	}
-	return nil
-}
-
 func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectionRequest) (*proto.CreateConnectionResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
@@ -616,7 +670,7 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "only admins can create connections")
 	}
-	err := validateReqConnection(req.Connection)
+	err := conn.ValidateReqConnection(req.Connection)
 	if err != nil {
 		return nil, err
 	}
@@ -637,8 +691,12 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 			snowflake_key_encrypted,
 			bigquery_key_encrypted,
 			author_email,
-			workspace_id
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+			workspace_id,
+			wherobots_host,
+			wherobots_key_encrypted,
+			wherobots_region,
+			wherobots_runtime
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
 		id,
 		req.Connection.ConnectionName,
 		req.Connection.BigqueryProjectId,
@@ -652,6 +710,10 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 		secrets.SecretToServerEncrypted(req.Connection.BigqueryKey, claims),
 		claims.Email,
 		checkWorkspace(ctx).ID,
+		req.Connection.WherobotsHost,
+		secrets.SecretToServerEncrypted(req.Connection.WherobotsKey, claims),
+		req.Connection.WherobotsRegion,
+		req.Connection.WherobotsRuntime,
 	)
 	if err != nil {
 		log.Err(err).Msg("insert into connections failed")

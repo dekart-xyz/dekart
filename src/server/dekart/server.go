@@ -253,6 +253,10 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 				Type:  proto.GetEnvResponse_Variable_TYPE_SECRETS_ENABLED,
 				Value: secretsEnabled,
 			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_CLOUD_UX_CONFIG_JSON,
+				Value: defaultString(os.Getenv("DEKART_CLOUD_UX_CONFIG_JSON"), "{}"),
+			},
 		}
 
 	}

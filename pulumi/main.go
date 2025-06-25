@@ -70,7 +70,7 @@ func main() {
 			Service:       pulumi.String("default"),
 			Runtime:       pulumi.String("custom"),
 			ServingStatus: pulumi.String("SERVING"),
-			VersionId:     pulumi.String(versionId), // Get the current time and format it as a string
+			VersionId:     pulumi.String(versionId),
 			Handlers: appengine.FlexibleAppVersionHandlerArray{
 				appengine.FlexibleAppVersionHandlerArgs{
 					UrlRegex:      pulumi.String("/.*"),
@@ -107,6 +107,7 @@ func main() {
 				"DEKART_ALLOW_WORKSPACE_CREATION":    pulumi.String("1"),
 				"DEKART_UX_DISABLE_VERSION_CHECK":    pulumi.String("1"),
 				"DEKART_CLOUD":                       pulumi.String("1"),
+				"DEKART_CLOUD_UX_CONFIG_JSON":        pulumi.String(`{"enableWherobotsWorkspaces":["8daeced1-d90a-4999-8ec0-982797bfbd39", "9aeba267-fcd2-4cd2-887f-9b85064a4a9a"]}`),
 			},
 			Deployment: &appengine.FlexibleAppVersionDeploymentArgs{
 				Container: &appengine.FlexibleAppVersionDeploymentContainerArgs{

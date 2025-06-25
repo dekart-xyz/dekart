@@ -337,6 +337,26 @@ func storageError(w http.ResponseWriter, err error) {
 	HttpError(w, err)
 }
 
+func (s Server) getResultURI(ctx context.Context, resultID string) (string, error) {
+	var uri sql.NullString
+	rows, err := s.db.QueryContext(ctx,
+		`select result_uri from query_jobs where job_result_id=$1`,
+		resultID,
+	)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	if rows.Next() {
+		err := rows.Scan(&uri)
+		if err != nil {
+			return "", err
+		}
+		return uri.String, nil
+	}
+	return "", nil
+}
+
 func (s Server) getDWJobIDFromResultID(ctx context.Context, resultID string) (string, error) {
 	var jobID sql.NullString
 	rows, err := s.db.QueryContext(ctx,
@@ -434,6 +454,13 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	resultURI, err := s.getResultURI(ctx, vars["source"])
+	if err != nil {
+		log.Error().Err(err).Msg("Error getting result URI")
+		HttpError(w, err)
+		return
+	}
+
 	var obj storage.StorageObject
 
 	useCtx := conCtx
@@ -443,6 +470,8 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 		publicStorage := storage.NewPublicStorage()
 		obj = publicStorage.GetObject(defConCtx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
 		useCtx = defConCtx // public storage does not require connection
+	} else if resultURI != "" {
+		obj = storage.NewPresignedS3Storage().GetObject(conCtx, "", resultURI)
 	} else if dwJobID != "" {
 		// temp data warehouse table is used as source
 		obj = s.storage.GetObject(conCtx, bucketName, dwJobID)
@@ -456,6 +485,7 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 		storageError(w, err)
 		return
 	}
+
 	objectReader, err := obj.GetReader(useCtx)
 	if err != nil {
 		storageError(w, err)
