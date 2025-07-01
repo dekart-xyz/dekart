@@ -26,18 +26,25 @@ func NewPresignedS3Storage() Storage { return PresignedS3Storage{} }
 func (s PresignedS3Storage) CanSaveQuery(context.Context, string) bool { return false }
 
 func (s PresignedS3Storage) GetObject(_ context.Context, _ string, signedURL string) StorageObject {
-	return presignedS3Object{
+	return PresignedS3Object{
 		url:    signedURL,
 		logger: log.With().Str("presignedS3URL", signedURL).Logger(),
 	}
 }
 
-type presignedS3Object struct {
+func NewPresignedS3Object(signedURL string) StorageObject {
+	return PresignedS3Object{
+		url:    signedURL,
+		logger: log.With().Str("presignedS3URL", signedURL).Logger(),
+	}
+}
+
+type PresignedS3Object struct {
 	url    string
 	logger zerolog.Logger
 }
 
-func (o presignedS3Object) GetReader(ctx context.Context) (io.ReadCloser, error) {
+func (o PresignedS3Object) GetReader(ctx context.Context) (io.ReadCloser, error) {
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, o.url, nil)
 
 	resp, err := http.DefaultClient.Do(req)
@@ -99,7 +106,7 @@ func decodeS3Error(resp *http.Response) (bool, error) {
 // ─── WRITE ────────────────────────────────────────────────────────────────────
 // We stream via an io.Pipe so callers can write incrementally.
 
-func (o presignedS3Object) GetWriter(ctx context.Context) io.WriteCloser {
+func (o PresignedS3Object) GetWriter(ctx context.Context) io.WriteCloser {
 	pr, pw := io.Pipe()
 	eg := new(errgroup.Group)
 
@@ -148,7 +155,7 @@ func (w presignedWriter) Close() error {
 
 // ─── METADATA (HEAD) ──────────────────────────────────────────────────────────
 
-func (o presignedS3Object) head(ctx context.Context) (*http.Response, error) {
+func (o PresignedS3Object) head(ctx context.Context) (*http.Response, error) {
 	req, _ := http.NewRequestWithContext(ctx, http.MethodHead, o.url, nil)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -170,12 +177,12 @@ func (o presignedS3Object) head(ctx context.Context) (*http.Response, error) {
 	}
 }
 
-func (o presignedS3Object) GetCreatedAt(ctx context.Context) (*time.Time, error) {
+func (o PresignedS3Object) GetCreatedAt(ctx context.Context) (*time.Time, error) {
 	now := time.Now()
 	return &now, nil
 }
 
-func (o presignedS3Object) GetSize(ctx context.Context) (*int64, error) {
+func (o PresignedS3Object) GetSize(ctx context.Context) (*int64, error) {
 	resp, err := o.head(ctx)
 	if err != nil {
 		return nil, err
@@ -192,12 +199,12 @@ func (o presignedS3Object) GetSize(ctx context.Context) (*int64, error) {
 
 // ─── COPY / DELETE helpers ───────────────────────────────────────────────────
 
-func (o presignedS3Object) CopyFromS3(context.Context, string) error {
+func (o PresignedS3Object) CopyFromS3(context.Context, string) error {
 	// A pre-signed target can’t use server-side COPY – caller must stream.
 	return fmt.Errorf("CopyFromS3 not supported for presigned S3 URLs")
 }
 
-func (o presignedS3Object) CopyTo(ctx context.Context, w io.WriteCloser) error {
+func (o PresignedS3Object) CopyTo(ctx context.Context, w io.WriteCloser) error {
 	r, err := o.GetReader(ctx)
 	if err != nil {
 		return err
@@ -209,7 +216,7 @@ func (o presignedS3Object) CopyTo(ctx context.Context, w io.WriteCloser) error {
 	return w.Close()
 }
 
-func (o presignedS3Object) Delete(ctx context.Context) error {
+func (o PresignedS3Object) Delete(ctx context.Context) error {
 	req, _ := http.NewRequestWithContext(ctx, http.MethodDelete, o.url, nil)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

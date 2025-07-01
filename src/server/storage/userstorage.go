@@ -30,6 +30,11 @@ func (s *UserStorage) GetObject(ctx context.Context, resultURI string, object st
 	if connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_SNOWFLAKE {
 		return NewSnowflakeStorageObject(parts[0], connection)
 	}
+
+	if connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_WHEROBOTS {
+		return NewPresignedS3Object(object)
+	}
+
 	if connection.CloudStorageBucket != "" {
 		bucketName := connection.CloudStorageBucket
 		return GoogleCloudStorageObject{
