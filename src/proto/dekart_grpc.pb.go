@@ -19,45 +19,46 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Dekart_CreateReport_FullMethodName            = "/Dekart/CreateReport"
-	Dekart_ForkReport_FullMethodName              = "/Dekart/ForkReport"
-	Dekart_UpdateReport_FullMethodName            = "/Dekart/UpdateReport"
-	Dekart_ArchiveReport_FullMethodName           = "/Dekart/ArchiveReport"
-	Dekart_SetDiscoverable_FullMethodName         = "/Dekart/SetDiscoverable"
-	Dekart_PublishReport_FullMethodName           = "/Dekart/PublishReport"
-	Dekart_AllowExportDatasets_FullMethodName     = "/Dekart/AllowExportDatasets"
-	Dekart_AddReadme_FullMethodName               = "/Dekart/AddReadme"
-	Dekart_RemoveReadme_FullMethodName            = "/Dekart/RemoveReadme"
-	Dekart_AddReportDirectAccess_FullMethodName   = "/Dekart/AddReportDirectAccess"
-	Dekart_CreateDataset_FullMethodName           = "/Dekart/CreateDataset"
-	Dekart_RemoveDataset_FullMethodName           = "/Dekart/RemoveDataset"
-	Dekart_UpdateDatasetName_FullMethodName       = "/Dekart/UpdateDatasetName"
-	Dekart_UpdateDatasetConnection_FullMethodName = "/Dekart/UpdateDatasetConnection"
-	Dekart_CreateFile_FullMethodName              = "/Dekart/CreateFile"
-	Dekart_CreateQuery_FullMethodName             = "/Dekart/CreateQuery"
-	Dekart_RunQuery_FullMethodName                = "/Dekart/RunQuery"
-	Dekart_RunAllQueries_FullMethodName           = "/Dekart/RunAllQueries"
-	Dekart_CancelJob_FullMethodName               = "/Dekart/CancelJob"
-	Dekart_GetEnv_FullMethodName                  = "/Dekart/GetEnv"
-	Dekart_GetReportStream_FullMethodName         = "/Dekart/GetReportStream"
-	Dekart_GetReportListStream_FullMethodName     = "/Dekart/GetReportListStream"
-	Dekart_GetUserStream_FullMethodName           = "/Dekart/GetUserStream"
-	Dekart_GetUsage_FullMethodName                = "/Dekart/GetUsage"
-	Dekart_GetReportAnalytics_FullMethodName      = "/Dekart/GetReportAnalytics"
-	Dekart_CreateConnection_FullMethodName        = "/Dekart/CreateConnection"
-	Dekart_GetGcpProjectList_FullMethodName       = "/Dekart/GetGcpProjectList"
-	Dekart_UpdateConnection_FullMethodName        = "/Dekart/UpdateConnection"
-	Dekart_ArchiveConnection_FullMethodName       = "/Dekart/ArchiveConnection"
-	Dekart_GetConnectionList_FullMethodName       = "/Dekart/GetConnectionList"
-	Dekart_TestConnection_FullMethodName          = "/Dekart/TestConnection"
-	Dekart_SetDefaultConnection_FullMethodName    = "/Dekart/SetDefaultConnection"
-	Dekart_RespondToInvite_FullMethodName         = "/Dekart/RespondToInvite"
-	Dekart_CreateSubscription_FullMethodName      = "/Dekart/CreateSubscription"
-	Dekart_GetStripePortalSession_FullMethodName  = "/Dekart/GetStripePortalSession"
-	Dekart_CreateWorkspace_FullMethodName         = "/Dekart/CreateWorkspace"
-	Dekart_UpdateWorkspace_FullMethodName         = "/Dekart/UpdateWorkspace"
-	Dekart_GetWorkspace_FullMethodName            = "/Dekart/GetWorkspace"
-	Dekart_UpdateWorkspaceUser_FullMethodName     = "/Dekart/UpdateWorkspaceUser"
+	Dekart_CreateReport_FullMethodName               = "/Dekart/CreateReport"
+	Dekart_ForkReport_FullMethodName                 = "/Dekart/ForkReport"
+	Dekart_UpdateReport_FullMethodName               = "/Dekart/UpdateReport"
+	Dekart_ArchiveReport_FullMethodName              = "/Dekart/ArchiveReport"
+	Dekart_SetDiscoverable_FullMethodName            = "/Dekart/SetDiscoverable"
+	Dekart_PublishReport_FullMethodName              = "/Dekart/PublishReport"
+	Dekart_AllowExportDatasets_FullMethodName        = "/Dekart/AllowExportDatasets"
+	Dekart_AddReadme_FullMethodName                  = "/Dekart/AddReadme"
+	Dekart_RemoveReadme_FullMethodName               = "/Dekart/RemoveReadme"
+	Dekart_AddReportDirectAccess_FullMethodName      = "/Dekart/AddReportDirectAccess"
+	Dekart_CreateDataset_FullMethodName              = "/Dekart/CreateDataset"
+	Dekart_RemoveDataset_FullMethodName              = "/Dekart/RemoveDataset"
+	Dekart_UpdateDatasetName_FullMethodName          = "/Dekart/UpdateDatasetName"
+	Dekart_UpdateDatasetConnection_FullMethodName    = "/Dekart/UpdateDatasetConnection"
+	Dekart_CreateFile_FullMethodName                 = "/Dekart/CreateFile"
+	Dekart_CreateQuery_FullMethodName                = "/Dekart/CreateQuery"
+	Dekart_RunQuery_FullMethodName                   = "/Dekart/RunQuery"
+	Dekart_RunAllQueries_FullMethodName              = "/Dekart/RunAllQueries"
+	Dekart_CancelJob_FullMethodName                  = "/Dekart/CancelJob"
+	Dekart_GetEnv_FullMethodName                     = "/Dekart/GetEnv"
+	Dekart_GetReportStream_FullMethodName            = "/Dekart/GetReportStream"
+	Dekart_GetReportListStream_FullMethodName        = "/Dekart/GetReportListStream"
+	Dekart_GetUserStream_FullMethodName              = "/Dekart/GetUserStream"
+	Dekart_GetUsage_FullMethodName                   = "/Dekart/GetUsage"
+	Dekart_GetReportAnalytics_FullMethodName         = "/Dekart/GetReportAnalytics"
+	Dekart_CreateConnection_FullMethodName           = "/Dekart/CreateConnection"
+	Dekart_GetGcpProjectList_FullMethodName          = "/Dekart/GetGcpProjectList"
+	Dekart_UpdateConnection_FullMethodName           = "/Dekart/UpdateConnection"
+	Dekart_ArchiveConnection_FullMethodName          = "/Dekart/ArchiveConnection"
+	Dekart_GetConnectionList_FullMethodName          = "/Dekart/GetConnectionList"
+	Dekart_TestConnection_FullMethodName             = "/Dekart/TestConnection"
+	Dekart_SetDefaultConnection_FullMethodName       = "/Dekart/SetDefaultConnection"
+	Dekart_GetWherobotsConnectionHint_FullMethodName = "/Dekart/GetWherobotsConnectionHint"
+	Dekart_RespondToInvite_FullMethodName            = "/Dekart/RespondToInvite"
+	Dekart_CreateSubscription_FullMethodName         = "/Dekart/CreateSubscription"
+	Dekart_GetStripePortalSession_FullMethodName     = "/Dekart/GetStripePortalSession"
+	Dekart_CreateWorkspace_FullMethodName            = "/Dekart/CreateWorkspace"
+	Dekart_UpdateWorkspace_FullMethodName            = "/Dekart/UpdateWorkspace"
+	Dekart_GetWorkspace_FullMethodName               = "/Dekart/GetWorkspace"
+	Dekart_UpdateWorkspaceUser_FullMethodName        = "/Dekart/UpdateWorkspaceUser"
 )
 
 // DekartClient is the client API for Dekart service.
@@ -104,6 +105,7 @@ type DekartClient interface {
 	GetConnectionList(ctx context.Context, in *GetConnectionListRequest, opts ...grpc.CallOption) (*GetConnectionListResponse, error)
 	TestConnection(ctx context.Context, in *TestConnectionRequest, opts ...grpc.CallOption) (*TestConnectionResponse, error)
 	SetDefaultConnection(ctx context.Context, in *SetDefaultConnectionRequest, opts ...grpc.CallOption) (*SetDefaultConnectionResponse, error)
+	GetWherobotsConnectionHint(ctx context.Context, in *GetWherobotsConnectionHintRequest, opts ...grpc.CallOption) (*GetWherobotsConnectionHintResponse, error)
 	// user
 	RespondToInvite(ctx context.Context, in *RespondToInviteRequest, opts ...grpc.CallOption) (*RespondToInviteResponse, error)
 	// subscriptions
@@ -471,6 +473,16 @@ func (c *dekartClient) SetDefaultConnection(ctx context.Context, in *SetDefaultC
 	return out, nil
 }
 
+func (c *dekartClient) GetWherobotsConnectionHint(ctx context.Context, in *GetWherobotsConnectionHintRequest, opts ...grpc.CallOption) (*GetWherobotsConnectionHintResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetWherobotsConnectionHintResponse)
+	err := c.cc.Invoke(ctx, Dekart_GetWherobotsConnectionHint_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *dekartClient) RespondToInvite(ctx context.Context, in *RespondToInviteRequest, opts ...grpc.CallOption) (*RespondToInviteResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RespondToInviteResponse)
@@ -585,6 +597,7 @@ type DekartServer interface {
 	GetConnectionList(context.Context, *GetConnectionListRequest) (*GetConnectionListResponse, error)
 	TestConnection(context.Context, *TestConnectionRequest) (*TestConnectionResponse, error)
 	SetDefaultConnection(context.Context, *SetDefaultConnectionRequest) (*SetDefaultConnectionResponse, error)
+	GetWherobotsConnectionHint(context.Context, *GetWherobotsConnectionHintRequest) (*GetWherobotsConnectionHintResponse, error)
 	// user
 	RespondToInvite(context.Context, *RespondToInviteRequest) (*RespondToInviteResponse, error)
 	// subscriptions
@@ -700,6 +713,9 @@ func (UnimplementedDekartServer) TestConnection(context.Context, *TestConnection
 }
 func (UnimplementedDekartServer) SetDefaultConnection(context.Context, *SetDefaultConnectionRequest) (*SetDefaultConnectionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetDefaultConnection not implemented")
+}
+func (UnimplementedDekartServer) GetWherobotsConnectionHint(context.Context, *GetWherobotsConnectionHintRequest) (*GetWherobotsConnectionHintResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetWherobotsConnectionHint not implemented")
 }
 func (UnimplementedDekartServer) RespondToInvite(context.Context, *RespondToInviteRequest) (*RespondToInviteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RespondToInvite not implemented")
@@ -1298,6 +1314,24 @@ func _Dekart_SetDefaultConnection_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Dekart_GetWherobotsConnectionHint_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetWherobotsConnectionHintRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).GetWherobotsConnectionHint(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_GetWherobotsConnectionHint_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).GetWherobotsConnectionHint(ctx, req.(*GetWherobotsConnectionHintRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Dekart_RespondToInvite_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RespondToInviteRequest)
 	if err := dec(in); err != nil {
@@ -1546,6 +1580,10 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetDefaultConnection",
 			Handler:    _Dekart_SetDefaultConnection_Handler,
+		},
+		{
+			MethodName: "GetWherobotsConnectionHint",
+			Handler:    _Dekart_GetWherobotsConnectionHint_Handler,
 		},
 		{
 			MethodName: "RespondToInvite",

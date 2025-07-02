@@ -3,6 +3,52 @@
 
 import * as jspb from "google-protobuf";
 
+export class GetWherobotsConnectionHintRequest extends jspb.Message {
+  getWherobotsHost(): string;
+  setWherobotsHost(value: string): void;
+
+  hasWherobotsKey(): boolean;
+  clearWherobotsKey(): void;
+  getWherobotsKey(): Secret | undefined;
+  setWherobotsKey(value?: Secret): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetWherobotsConnectionHintRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: GetWherobotsConnectionHintRequest): GetWherobotsConnectionHintRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetWherobotsConnectionHintRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetWherobotsConnectionHintRequest;
+  static deserializeBinaryFromReader(message: GetWherobotsConnectionHintRequest, reader: jspb.BinaryReader): GetWherobotsConnectionHintRequest;
+}
+
+export namespace GetWherobotsConnectionHintRequest {
+  export type AsObject = {
+    wherobotsHost: string,
+    wherobotsKey?: Secret.AsObject,
+  }
+}
+
+export class GetWherobotsConnectionHintResponse extends jspb.Message {
+  getHintJson(): string;
+  setHintJson(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetWherobotsConnectionHintResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: GetWherobotsConnectionHintResponse): GetWherobotsConnectionHintResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetWherobotsConnectionHintResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetWherobotsConnectionHintResponse;
+  static deserializeBinaryFromReader(message: GetWherobotsConnectionHintResponse, reader: jspb.BinaryReader): GetWherobotsConnectionHintResponse;
+}
+
+export namespace GetWherobotsConnectionHintResponse {
+  export type AsObject = {
+    hintJson: string,
+  }
+}
+
 export class AddReportDirectAccessRequest extends jspb.Message {
   getReportId(): string;
   setReportId(value: string): void;

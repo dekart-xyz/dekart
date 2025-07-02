@@ -11,6 +11,8 @@ import (
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
 	"encoding/json"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -262,5 +264,43 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 	}
 	return &proto.GetEnvResponse{
 		Variables: variables,
+	}, nil
+}
+
+// GetWherobotsConnectionHint returns a hint for Wherobots connection based on the provided host and key
+func (s Server) GetWherobotsConnectionHint(ctx context.Context, req *proto.GetWherobotsConnectionHintRequest) (*proto.GetWherobotsConnectionHintResponse, error) {
+	if req.WherobotsHost == "" || req.WherobotsKey == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "wherobots_host and wherobots_key are required")
+	}
+	apiKey := secrets.SecretToString(req.WherobotsKey, user.GetClaims(ctx))
+
+	// make http request to Wherobots API
+	reqURL := fmt.Sprintf("https://%s/me/jupyter/lab/config-hint", req.WherobotsHost)
+	httpReq, err := http.NewRequestWithContext(ctx, "GET", reqURL, nil)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create HTTP request for Wherobots connection hint")
+		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to create request: %v", err))
+	}
+	httpReq.Header.Set("X-API-Key", apiKey)
+
+	resp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("failed to call Wherobots API: %v", err))
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Wherobots API returned status %d", resp.StatusCode))
+	}
+
+	hintBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to read response body from Wherobots connection hint")
+		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to read response body: %v", err))
+	}
+	hint := string(hintBytes)
+
+	return &proto.GetWherobotsConnectionHintResponse{
+		HintJson: hint,
 	}, nil
 }

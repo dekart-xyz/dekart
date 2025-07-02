@@ -292,6 +292,15 @@ type DekartSetDefaultConnection = {
   readonly responseType: typeof dekart_pb.SetDefaultConnectionResponse;
 };
 
+type DekartGetWherobotsConnectionHint = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof dekart_pb.GetWherobotsConnectionHintRequest;
+  readonly responseType: typeof dekart_pb.GetWherobotsConnectionHintResponse;
+};
+
 type DekartRespondToInvite = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -389,6 +398,7 @@ export class Dekart {
   static readonly GetConnectionList: DekartGetConnectionList;
   static readonly TestConnection: DekartTestConnection;
   static readonly SetDefaultConnection: DekartSetDefaultConnection;
+  static readonly GetWherobotsConnectionHint: DekartGetWherobotsConnectionHint;
   static readonly RespondToInvite: DekartRespondToInvite;
   static readonly CreateSubscription: DekartCreateSubscription;
   static readonly GetStripePortalSession: DekartGetStripePortalSession;
@@ -693,6 +703,15 @@ export class DekartClient {
   setDefaultConnection(
     requestMessage: dekart_pb.SetDefaultConnectionRequest,
     callback: (error: ServiceError|null, responseMessage: dekart_pb.SetDefaultConnectionResponse|null) => void
+  ): UnaryResponse;
+  getWherobotsConnectionHint(
+    requestMessage: dekart_pb.GetWherobotsConnectionHintRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.GetWherobotsConnectionHintResponse|null) => void
+  ): UnaryResponse;
+  getWherobotsConnectionHint(
+    requestMessage: dekart_pb.GetWherobotsConnectionHintRequest,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.GetWherobotsConnectionHintResponse|null) => void
   ): UnaryResponse;
   respondToInvite(
     requestMessage: dekart_pb.RespondToInviteRequest,

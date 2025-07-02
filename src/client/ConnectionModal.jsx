@@ -5,7 +5,7 @@ import { useSelector, useDispatch } from 'react-redux'
 import Button from 'antd/es/button'
 import styles from './ConnectionModal.module.css'
 import { useEffect, useState } from 'react'
-import { archiveConnection, closeConnectionDialog, connectionChanged, reOpenDialog, saveConnection, testConnection } from './actions/connection'
+import { archiveConnection, closeConnectionDialog, connectionChanged, getWherobotsConnectionHint, reOpenDialog, saveConnection, testConnection } from './actions/connection'
 import { CheckCircleTwoTone, ExclamationCircleTwoTone, LoadingOutlined } from '@ant-design/icons'
 import Tooltip from 'antd/es/tooltip'
 import AutoComplete from 'antd/es/auto-complete'
@@ -72,10 +72,12 @@ function WherobotsConnectionModal ({ form }) {
   const connection = useSelector(state => state.connection.list.find(s => s.id === id))
   const datasetUsed = connection?.datasetCount > 0
   const apiKeyChanged = form.getFieldValue('wherobotsKey') !== connection?.wherobotsKey
+  const wherobotsHint = useSelector(state => state.connection.wherobotsHint)
 
   useEffect(() => {
     if (!connection) {
       // new connection, set default values
+      form.resetFields()
       form.setFieldsValue({
         connectionName: 'Wherobots',
         wherobotsHost: 'api.cloud.wherobots.com'
@@ -96,6 +98,9 @@ function WherobotsConnectionModal ({ form }) {
           disabled={loading}
           layout='vertical' onValuesChange={(changedValues, allValues) => {
             dispatch(connectionChanged())
+            if (changedValues.wherobotsHost || changedValues.wherobotsKey) {
+              dispatch(getWherobotsConnectionHint(allValues.wherobotsHost, allValues.wherobotsKey))
+            }
           }}
         >
           {datasetUsed ? <div className={styles.datasetsCountAlert}><Alert message={<>This connection is used in {connection.datasetCount} dataset{connection.datasetCount > 1 ? 's' : ''}.</>} description='Changing make cause report errors' type='warning' /></div> : null}
@@ -120,23 +125,7 @@ function WherobotsConnectionModal ({ form }) {
           </Form.Item>
           <Form.Item required label='Runtime' name='wherobotsRuntime'>
             <AutoComplete
-              options={[
-                { value: 'tiny', label: 'tiny' },
-                { value: 'small', label: 'small' },
-                { value: 'medium', label: 'medium' },
-                { value: 'large', label: 'large' },
-                { value: 'x-large', label: 'x-large' },
-                { value: '2x-large', label: '2x-large' },
-                { value: '4x-large', label: '4x-large' },
-                { value: 'medium-himem', label: 'medium-himem' },
-                { value: 'large-himem', label: 'large-himem' },
-                { value: 'x-large-himem', label: 'x-large-himem' },
-                { value: '2x-large-himem', label: '2x-large-himem' },
-                { value: '4x-large-himem', label: '4x-large-himem' },
-                { value: 'tiny-a10-gpu', label: 'tiny-a10-gpu' },
-                { value: 'small-a10-gpu', label: 'small-a10-gpu' },
-                { value: 'medium-a10-gpu', label: 'medium-a10-gpu' }
-              ]}
+              options={wherobotsHint.runtimes}
               showArrow
               disabled={false}
               filterOption={(inputValue, option) => option.value.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1}
@@ -144,9 +133,7 @@ function WherobotsConnectionModal ({ form }) {
           </Form.Item>
           <Form.Item required label='Region' name='wherobotsRegion'>
             <AutoComplete
-              options={[
-                { value: 'aws-us-west-2', label: 'aws-us-west-2' }
-              ]}
+              options={wherobotsHint.regions}
               showArrow
               disabled={false}
               filterOption={(inputValue, option) => option.value.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1}

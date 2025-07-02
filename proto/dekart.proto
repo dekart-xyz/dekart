@@ -51,6 +51,7 @@ service Dekart {
     rpc GetConnectionList(GetConnectionListRequest) returns (GetConnectionListResponse) {}
     rpc TestConnection(TestConnectionRequest) returns (TestConnectionResponse) {}
     rpc SetDefaultConnection(SetDefaultConnectionRequest) returns (SetDefaultConnectionResponse) {}
+    rpc GetWherobotsConnectionHint(GetWherobotsConnectionHintRequest) returns (GetWherobotsConnectionHintResponse) {}
 
     //user
     rpc RespondToInvite(RespondToInviteRequest) returns (RespondToInviteResponse) {}
@@ -64,6 +65,15 @@ service Dekart {
     rpc UpdateWorkspace(UpdateWorkspaceRequest) returns (UpdateWorkspaceResponse) {}
     rpc GetWorkspace(GetWorkspaceRequest) returns (GetWorkspaceResponse) {}
     rpc UpdateWorkspaceUser(UpdateWorkspaceUserRequest) returns (UpdateWorkspaceUserResponse) {}
+}
+
+message GetWherobotsConnectionHintRequest {
+    string wherobots_host = 18;
+    Secret wherobots_key = 19;
+}
+
+message GetWherobotsConnectionHintResponse {
+    string hint_json = 1; // hint for Wherobots connection
 }
 
 message AddReportDirectAccessRequest {
