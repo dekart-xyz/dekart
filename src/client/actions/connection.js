@@ -1,4 +1,4 @@
-import { ArchiveConnectionRequest, CreateConnectionRequest, GetConnectionListRequest, Connection, TestConnectionRequest, UpdateConnectionRequest, SetDefaultConnectionRequest, GetGcpProjectListRequest, Secret, ConnectionType } from 'dekart-proto/dekart_pb'
+import { ArchiveConnectionRequest, CreateConnectionRequest, GetConnectionListRequest, Connection, TestConnectionRequest, UpdateConnectionRequest, SetDefaultConnectionRequest, GetGcpProjectListRequest, Secret, ConnectionType, GetWherobotsConnectionHintRequest } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { updateSessionStorage } from './sessionStorage'
@@ -287,6 +287,37 @@ function arrayBufferToBase64 (buffer) {
     binary += String.fromCharCode(bytes[i])
   }
   return window.btoa(binary)
+}
+
+export function wherobotsConnectionHintError (err) {
+  return { type: wherobotsConnectionHintError.name, error: err }
+}
+
+export function wherobotsConnectionHintResponse (hint) {
+  const regions = hint?.regions?.hint?.filter((r) => r.enabled).map((r) => ({ value: r.regionName, label: r.regionName }))
+  const runtimes = hint?.runtimes?.hint?.filter((r) => r.enabled).map((r) => ({ value: r.id, label: r.id }))
+  return { type: wherobotsConnectionHintResponse.name, runtimes, regions }
+}
+
+export function getWherobotsConnectionHint (wherobotsHost, wherobotsKey) {
+  return async (dispatch, getState) => {
+    dispatch({ type: getWherobotsConnectionHint.name })
+    const { env: { variables: { AES_IV, AES_KEY } } } = getState()
+    const request = new GetWherobotsConnectionHintRequest()
+    request.setWherobotsHost(wherobotsHost)
+    const secret = new Secret()
+    secret.setClientEncrypted(await encryptPassword(wherobotsKey, AES_KEY, AES_IV))
+    request.setWherobotsKey(secret)
+    const res = await new Promise((resolve) => {
+      dispatch(grpcCall(Dekart.GetWherobotsConnectionHint, request, resolve, (err) => {
+        dispatch(wherobotsConnectionHintError(err))
+        if (err.code !== 13) {
+          return err
+        }
+      }))
+    })
+    dispatch(wherobotsConnectionHintResponse(JSON.parse(res.hintJson)))
+  }
 }
 
 export function testConnection (connectionType, values) {

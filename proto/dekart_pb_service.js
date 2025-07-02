@@ -298,6 +298,15 @@ Dekart.SetDefaultConnection = {
   responseType: dekart_pb.SetDefaultConnectionResponse
 };
 
+Dekart.GetWherobotsConnectionHint = {
+  methodName: "GetWherobotsConnectionHint",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: dekart_pb.GetWherobotsConnectionHintRequest,
+  responseType: dekart_pb.GetWherobotsConnectionHintResponse
+};
+
 Dekart.RespondToInvite = {
   methodName: "RespondToInvite",
   service: Dekart,
@@ -1358,6 +1367,37 @@ DekartClient.prototype.setDefaultConnection = function setDefaultConnection(requ
     callback = arguments[1];
   }
   var client = grpc.unary(Dekart.SetDefaultConnection, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.getWherobotsConnectionHint = function getWherobotsConnectionHint(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.GetWherobotsConnectionHint, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
