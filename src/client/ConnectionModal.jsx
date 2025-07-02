@@ -76,6 +76,7 @@ function WherobotsConnectionModal ({ form }) {
   useEffect(() => {
     if (!connection) {
       // new connection, set default values
+      form.resetFields()
       form.setFieldsValue({
         connectionName: 'Wherobots',
         wherobotsHost: 'api.cloud.wherobots.com'

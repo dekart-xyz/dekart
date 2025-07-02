@@ -331,7 +331,7 @@ export function testConnection (connectionType, values) {
     request.setConnection(connection)
 
     const res = await new Promise((resolve) => {
-      dispatch(grpcCall(Dekart.TestConnection, request, resolve))
+      dispatch(grpcCall(Dekart.TestConnection, request, resolve, (err) => err, 1))
     })
 
     dispatch(testConnectionResponse(res))
