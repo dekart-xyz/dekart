@@ -167,6 +167,8 @@ type Connection struct {
 	queriesMu sync.Mutex
 	queries   map[string]*Query
 
+	writeMu sync.Mutex
+
 	closed bool
 	done   chan struct{}
 	wg     sync.WaitGroup
@@ -276,6 +278,8 @@ func (c *Connection) wsSend(v any) error {
 	if err != nil {
 		return err
 	}
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
 	return c.ws.WriteMessage(websocket.TextMessage, msg)
 }
 

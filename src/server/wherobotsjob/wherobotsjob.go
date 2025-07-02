@@ -36,6 +36,9 @@ func NewStore() *Store {
 // Run executes the query against Wherobots DB, streaming rows to the storageObject as CSV.
 func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connection) error {
 
+	//check if storageObject is GoogleCloudStorage
+	_, isGoogleCloudStorage := storageObject.(storage.GoogleCloudStorageObject)
+
 	go func() {
 		// Create the Wherobots DB connection
 		wConn, err := wherobotsdb.Connect(
@@ -72,6 +75,16 @@ func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connect
 		if err != nil {
 			j.CancelWithError(err)
 			return
+		}
+		if isGoogleCloudStorage {
+			// now we need also to copy the result to the storageObject
+			j.Status() <- int32(proto.QueryJob_JOB_STATUS_READING_RESULTS)
+			sourceObj := storage.NewPresignedS3Object(resultURI)
+			err := sourceObj.CopyTo(j.GetCtx(), storageObject.GetWriter(j.GetCtx()))
+			if err != nil {
+				j.CancelWithError(err)
+				return
+			}
 		}
 		j.Lock()
 		j.ResultReady = true

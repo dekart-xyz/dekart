@@ -221,15 +221,31 @@ function Title () {
   const reportStatus = useSelector(state => state.reportStatus)
   const { canWrite } = useSelector(state => state.report)
   const [edit, setEdit] = useState(false)
+  const title = reportStatus.title || ''
+  const [value, setValue] = useState(title)
   const dispatch = useDispatch()
+  useEffect(() => {
+    if (title !== value && !edit) {
+      setValue(title || '')
+    }
+  }, [title, value, edit])
   if (canWrite && reportStatus.edit && edit) {
     return (
       <div className={styles.title}>
         <Input
           className={styles.titleInput}
-          value={reportStatus.title}
-          onChange={(e) => dispatch(reportTitleChange(e.target.value))}
-          onBlur={() => setEdit(false)}
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value)
+          }}
+          onBlur={() => {
+            setEdit(false)
+            dispatch(reportTitleChange(value))
+          }}
+          onPressEnter={() => {
+            setEdit(false)
+            dispatch(reportTitleChange(value))
+          }}
           placeholder='Untitled'
           autoFocus
           disabled={!(reportStatus.edit && canWrite)}

@@ -231,8 +231,12 @@ func (s Server) runQuery(ctx context.Context, o runQueryOptions) error {
 	var obj storage.StorageObject
 	if o.isPublic {
 		st := storage.NewPublicStorage()
+		extension := "csv"
+		if o.connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_WHEROBOTS {
+			extension = "parquet"
+		}
 		// Result ID should be same as job ID once available
-		obj = st.GetObject(ctx, st.GetDefaultBucketName(), fmt.Sprintf("%s.csv", job.GetID()))
+		obj = st.GetObject(ctx, st.GetDefaultBucketName(), fmt.Sprintf("%s.%s", job.GetID(), extension))
 	} else {
 		// Result ID should be same as job ID once available
 		obj = s.storage.GetObject(connCtx, o.userBucketName, fmt.Sprintf("%s.csv", job.GetID()))
