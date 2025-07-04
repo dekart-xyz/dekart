@@ -1,22 +1,39 @@
-
 name: Push to main
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+
+env:
+  DEPLOY_TARGET: ${{ vars.DEPLOY_TARGET != '' &&
+                     vars.DEPLOY_TARGET ||
+                     (contains(github.repository, 'dekart-cloud') && 'cloud' || 'default') }}
 
 jobs:
+  changes:
+    uses: ./.github/workflows/changes.yaml
+    permissions:
+      pull-requests: read
+      contents:       read
+
   build:
+    needs: [changes]
+    if: env.DEPLOY_TARGET == 'cloud' || needs.changes.outputs.e2e == 'true'
     with:
-      build_app: true
-      build_e2e: true
+      build_app:  ${{ env.DEPLOY_TARGET == 'cloud' }}          # app image for cloud repos
+      build_e2e:  ${{ needs.changes.outputs.e2e == 'true' }}   # e2e image only when needed
     uses: ./.github/workflows/build.yaml
     secrets: inherit
-  e2e_tests:
-    needs: [build]
-    uses: ./.github/workflows/e2e.yaml
-    secrets: inherit
+
   pulumi_preview:
+    if: env.DEPLOY_TARGET == 'cloud'
     uses: ./.github/workflows/pulumi_preview.yaml
+    secrets: inherit
+
+  e2e_tests:
+    if: needs.changes.outputs.e2e == 'true'
+    needs:
+      - build
+      - changes
+    uses: ./.github/workflows/e2e.yaml
     secrets: inherit

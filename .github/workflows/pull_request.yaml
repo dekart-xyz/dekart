@@ -2,20 +2,52 @@ name: Pull Request
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [main]
+
+env:
+  DEPLOY_TARGET: ${{ vars.DEPLOY_TARGET != '' &&
+                     vars.DEPLOY_TARGET ||
+                     (contains(github.repository, 'dekart-cloud') && 'cloud' || 'default') }}
 
 jobs:
-  build:
+  changes:
+    if: startsWith(github.head_ref, 'release') != true
+    uses: ./.github/workflows/changes.yaml
+    permissions:
+      pull-requests: read
+      contents:       read
+
+  node_tests:
+    if: needs.changes.outputs.js == 'true'
+    needs: [changes]
+    uses: ./.github/workflows/node_test.yaml
+    secrets: inherit
+
+  go_tests:
+    if: needs.changes.outputs.go == 'true'
+    needs: [changes]
+    uses: ./.github/workflows/go_test.yaml
+    secrets: inherit
+
+  build_e2e:
+    if: needs.changes.outputs.e2e == 'true'&&
+        github.event.pull_request.head.repo.full_name == github.repository
+    needs: [changes]
     with:
       build_e2e: true
     uses: ./.github/workflows/build.yaml
     secrets: inherit
+
   pulumi_preview:
+    if: env.DEPLOY_TARGET == 'cloud'
     uses: ./.github/workflows/pulumi_preview.yaml
     secrets: inherit
+
   e2e_tests:
-    needs: [build]
+    if: needs.changes.outputs.e2e == 'true' &&
+        github.event.pull_request.head.repo.full_name == github.repository
+    needs:
+      - build_e2e
+      - changes
     uses: ./.github/workflows/e2e.yaml
-    if: github.event.pull_request.head.repo.full_name == github.repository
     secrets: inherit

@@ -1,45 +1,76 @@
-name: Release
+name: Release – Premium
 
 on:
-  release:
-    types: [published]
+  push:
+    tags: ['**']
+
+env:
+  # Detect flavour once
+  DEPLOY_TARGET: ${{ vars.DEPLOY_TARGET != '' &&
+                     vars.DEPLOY_TARGET ||
+                     (contains(github.repository, 'dekart-cloud') && 'cloud' || 'default') }}
 
 jobs:
-  deploy:
+  node_tests:
+    if: env.DEPLOY_TARGET != 'cloud'
+    uses: ./.github/workflows/node_test.yaml
+    secrets: inherit
+
+  go_tests:
+    if: env.DEPLOY_TARGET != 'cloud'
+    uses: ./.github/workflows/go_test.yaml
+    secrets: inherit
+
+  build_e2e:
+    if: env.DEPLOY_TARGET != 'cloud'
+    needs: [node_tests, go_tests]
+    with:
+      build_e2e: true
+    uses: ./.github/workflows/build.yaml
+    secrets: inherit
+
+  e2e_tests:
+    if: env.DEPLOY_TARGET != 'cloud'
+    needs: [node_tests, go_tests, build_e2e]
+    uses: ./.github/workflows/e2e.yaml
+    secrets: inherit
+
+  docker:
+    if: env.DEPLOY_TARGET != 'cloud'
+    needs: [node_tests, go_tests, e2e_tests]
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Setup Go
-        uses: actions/setup-go@v3
+      - uses: actions/checkout@v4
+
+      - id: meta
+        uses: docker/metadata-action@v5
         with:
-          go-version: 1.21
-      - name: Get short SHA
-        id: short_sha
-        run: echo "::set-output name=sha::$(echo ${GITHUB_SHA::7})"
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v0
+          images: ghcr.io/${{ github.repository }}/dekart
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=ref,event=branch
+            type=ref,event=pr
+
+      - run: |
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_GH_TOKEN }}" > .npmrc
+          echo "@dekart-xyz:registry=https://npm.pkg.github.com" >> .npmrc
+
+      - uses: docker/setup-qemu-action@v2
+      - uses: docker/setup-buildx-action@v2
+
+      - uses: docker/login-action@v3
         with:
-          service_account_key: ${{ secrets.PRIVATE_GITHUB_ACTIONS_DEKART_CLOUD }}
-          project_id: dekart-cloud
-          export_default_credentials: true
-      - name: Configure Docker to use the gcloud command-line tool as a credential helper
-        run: gcloud auth configure-docker europe-west3-docker.pkg.dev
-      - name: Pull Docker image
-        run: docker pull europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:sha-${{ steps.short_sha.outputs.sha }}
-      - name: Get image digest
-        id: get_digest
-        run: |
-          digest=$(docker image inspect europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:sha-${{ steps.short_sha.outputs.sha }} --format='{{index .RepoDigests 0}}')
-          echo "::set-output name=digest::$digest"
-      - name: pulumi preview
-        uses: pulumi/actions@v5
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v5
         with:
-          command: up
-          cloud-url: gs://dekart-cloud-pulumi
-          stack-name: prod
-          work-dir: ./pulumi
-        env:
-          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
-          IMAGE_DIGEST: ${{ steps.get_digest.outputs.digest }}
-          VERSION_ID: ${{ github.event.release.tag_name }}
+          context: .
+          push: true
+          tags:   ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}/dekart:buildcache
+          cache-to:   type=registry,ref=ghcr.io/${{ github.repository }}/dekart:buildcache,mode=max
