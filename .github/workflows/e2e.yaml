@@ -129,14 +129,14 @@ jobs:
               -e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
               -e DEKART_GOOGLE_OAUTH_CLIENT_ID=$GOOGLE_OAUTH_ID_SEC \
               -e DEKART_GOOGLE_OAUTH_SECRET=$GOOGLE_OAUTH_SECRET_SEC \
-              -e DEKART_DEV_REFRESH_TOKEN=$DEV_REFRESH_TOKEN_SEC
+              -e DEKART_DEV_REFRESH_TOKEN=$DEV_REFRESH_TOKEN_SEC \
 
           - id: bigquery
             spec: cypress/e2e/bq
             extra_env: |
               -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
               -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
-              -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev
+              -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
 
           - id: athena
             spec: cypress/e2e/athena
@@ -148,7 +148,7 @@ jobs:
               -e DEKART_ATHENA_CATALOG=AwsDataCatalog \
               -e AWS_REGION=$AWS_REGION \
               -e AWS_ACCESS_KEY_ID=$AWS_KEY_SEC \
-              -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_SEC
+              -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_SEC \
 
           - id: snowflake-s3
             spec: cypress/e2e/snowflake-s3
@@ -163,7 +163,7 @@ jobs:
               -e DEKART_SNOWFLAKE_USER=$SNOW_USER_SEC \
               -e DEKART_SNOWFLAKE_PASSWORD=$SNOW_PASS_SEC \
               -e DEKART_REQUIRE_AMAZON_OIDC=1 \
-              -e DEKART_DEV_CLAIMS_EMAIL=test@gmail.com
+              -e DEKART_DEV_CLAIMS_EMAIL=test@gmail.com \
 
           - id: snowflake-sqlite
             spec: cypress/e2e/snowflake
@@ -175,7 +175,7 @@ jobs:
               -e DEKART_SNOWFLAKE_PASSWORD=$SNOW_PASS_SEC \
               -e DEKART_SQLITE_DB_PATH=./dekart.db \
               -e DEKART_REQUIRE_SNOWFLAKE_CONTEXT=1 \
-              -e DEKART_DEV_CLAIMS_EMAIL=bilonenko.v2@gmail.com
+              -e DEKART_DEV_CLAIMS_EMAIL=bilonenko.v2@gmail.com \
 
     services:
       postgres:
