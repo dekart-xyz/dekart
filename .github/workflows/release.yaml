@@ -4,40 +4,42 @@ on:
   push:
     tags: ['**']
 
-env:
-  # Detect flavour once
-  DEPLOY_TARGET: ${{ vars.DEPLOY_TARGET != '' &&
-                     vars.DEPLOY_TARGET ||
-                     (contains(github.repository, 'dekart-cloud') && 'cloud' || 'default') }}
-
 jobs:
+  flavour:
+    uses: ./.github/workflows/flavour.yaml      # ← tiny helper workflow
+
   node_tests:
-    if: env.DEPLOY_TARGET != 'cloud'
+    if: needs.flavour.outputs.is_premium == 'true'
+    needs: [flavour]
     uses: ./.github/workflows/node_test.yaml
     secrets: inherit
 
   go_tests:
-    if: env.DEPLOY_TARGET != 'cloud'
+    if: needs.flavour.outputs.is_premium == 'true'
+    needs: [flavour]
     uses: ./.github/workflows/go_test.yaml
     secrets: inherit
 
   build_e2e:
-    if: env.DEPLOY_TARGET != 'cloud'
-    needs: [node_tests, go_tests]
+    if: needs.flavour.outputs.is_premium == 'true'
+    needs: [flavour, node_tests, go_tests]
     with:
       build_e2e: true
+      target: ${{ needs.flavour.outputs.target }}   # ← pass flavour
     uses: ./.github/workflows/build.yaml
     secrets: inherit
 
   e2e_tests:
-    if: env.DEPLOY_TARGET != 'cloud'
-    needs: [node_tests, go_tests, build_e2e]
+    if: needs.flavour.outputs.is_premium == 'true'
+    needs: [flavour, node_tests, go_tests, build_e2e]
     uses: ./.github/workflows/e2e.yaml
+    with:
+      target: ${{ needs.flavour.outputs.target }}   # ← pass flavour
     secrets: inherit
 
   docker:
-    if: env.DEPLOY_TARGET != 'cloud'
-    needs: [node_tests, go_tests, e2e_tests]
+    if: needs.flavour.outputs.is_premium == 'true'
+    needs: [flavour, node_tests, go_tests, e2e_tests]
     runs-on: ubuntu-latest
 
     steps:

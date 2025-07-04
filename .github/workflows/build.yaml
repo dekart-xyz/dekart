@@ -1,4 +1,4 @@
-name: Dekart Build (cloud + default)
+name: Dekart Build (cloud | premium)
 
 on:
   workflow_call:
@@ -9,48 +9,58 @@ on:
       build_e2e:
         type: boolean
         default: false
+      # optional: let the caller pass flavour from flavour.yaml
+      target:
+        type: string          # "cloud" or "premium"
+        required: false
+        description: 'Repo flavour; defaults to auto-detect'
     outputs:
       app_image:
-        description: 'Full tag of the app image (if built)'
         value: ${{ jobs.build.outputs.app_image }}
+        description: Full tag of the app image (if built)
       e2e_image:
-        description: 'Full tag of the e2e image (if built)'
         value: ${{ jobs.build.outputs.e2e_image }}
+        description: Full tag of the e2e image (if built)
 
+###############################################################################
+# Decide flavour once
+###############################################################################
 env:
-  DEPLOY_TARGET: ${{ vars.DEPLOY_TARGET != '' &&
-                     vars.DEPLOY_TARGET ||
-                     (contains(github.repository, 'dekart-cloud') && 'cloud' || 'default') }}
+  TARGET: ${{ inputs.target != '' &&
+              inputs.target ||
+              (contains(github.repository, 'dekart-cloud') && 'cloud' || 'premium') }}
   IMAGE_CACHE_KEY: e2etest-${{ github.run_id }}-${{ github.run_attempt }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
     outputs:
-      app_image: ${{ steps.set_tags.outputs.app }}
-      e2e_image: ${{ steps.set_tags.outputs.e2e }}
+      app_image: ${{ steps.tags.outputs.app }}
+      e2e_image: ${{ steps.tags.outputs.e2e }}
 
     steps:
     - uses: actions/checkout@v4
     - uses: docker/setup-qemu-action@v2
     - uses: docker/setup-buildx-action@v2
 
-    - name: Decide registry / tags
-      id: set_tags
+    # ------------------------------------------------------------------ choose registry
+    - name: Decide registry & tags
+      id: tags
       run: |
-        if [ "${{ env.DEPLOY_TARGET }}" = "cloud" ]; then
-          echo "REGISTRY_BASE=europe-west3-docker.pkg.dev/dekart-cloud/dekart" >> $GITHUB_ENV
-          echo "LOGIN=cloud"                                               >> $GITHUB_ENV
+        if [ "${{ env.TARGET }}" = "cloud" ]; then
+          REGISTRY="europe-west3-docker.pkg.dev/dekart-cloud/dekart"
+          echo "LOGIN=cloud" >> $GITHUB_ENV
         else
-          echo "REGISTRY_BASE=ghcr.io/${{ github.repository }}"            >> $GITHUB_ENV
-          echo "LOGIN=ghcr"                                                >> $GITHUB_ENV
+          REGISTRY="ghcr.io/${{ github.repository }}"
+          echo "LOGIN=ghcr"  >> $GITHUB_ENV
         fi
-
-        echo "APP=${REGISTRY_BASE}/dekart:sha-${GITHUB_SHA::7}"            >> $GITHUB_OUTPUT
-        echo "E2E=${REGISTRY_BASE}/dekart:${IMAGE_CACHE_KEY}"              >> $GITHUB_OUTPUT
+        echo "REGISTRY_BASE=$REGISTRY"                    >> $GITHUB_ENV
+        echo "app=${REGISTRY}/dekart:sha-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+        echo "e2e=${REGISTRY}/dekart:${IMAGE_CACHE_KEY}"   >> $GITHUB_OUTPUT
       shell: bash
 
-    - name: Authenticate to GCP
+    # ----------------------------------------------------------------- registry login
+    - name: Auth to Google Artifact Registry
       if: env.LOGIN == 'cloud'
       uses: google-github-actions/setup-gcloud@v0
       with:
@@ -79,7 +89,7 @@ jobs:
       with:
         context: .
         push: true
-        tags: ${{ steps.set_tags.outputs.app }}
+        tags:  ${{ steps.tags.outputs.app }}
         cache-from: type=registry,ref=${{ env.REGISTRY_BASE }}/dekart:buildcache
         cache-to:   type=registry,ref=${{ env.REGISTRY_BASE }}/dekart:buildcache,mode=max
 
@@ -88,8 +98,8 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        push: true
         target: e2etest
-        tags:  ${{ steps.set_tags.outputs.e2e }}
+        push: true
+        tags:  ${{ steps.tags.outputs.e2e }}
         cache-from: type=registry,ref=${{ env.REGISTRY_BASE }}/dekart:buildcache
         cache-to:   type=registry,ref=${{ env.REGISTRY_BASE }}/dekart:buildcache,mode=max

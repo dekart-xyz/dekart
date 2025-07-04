@@ -2,44 +2,37 @@ name: Release – Cloud
 
 on:
   release:
-    types: [published]
-
-env:
-  # Detect flavour once
-  DEPLOY_TARGET: ${{ vars.DEPLOY_TARGET != '' &&
-                     vars.DEPLOY_TARGET ||
-                     (contains(github.repository, 'dekart-cloud') && 'cloud' || 'default') }}
+    types: [published]   # → runs when a GitHub Release is published
 
 jobs:
+  flavour:
+    uses: ./.github/workflows/flavour.yaml      # tiny helper, outputs is_cloud
+
   deploy:
-    if: env.DEPLOY_TARGET == 'cloud'
+    if: needs.flavour.outputs.is_cloud == 'true'
+    needs: [flavour]
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
-        with: {go-version: '1.21'}
+        with: { go-version: '1.21' }
 
       - id: short_sha
         run: echo "sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
 
-      # ─── Google Artifact Registry login ────────────────────────────────────
       - uses: google-github-actions/setup-gcloud@v0
         with:
           project_id: dekart-cloud
           service_account_key: ${{ secrets.PRIVATE_GITHUB_ACTIONS_DEKART_CLOUD }}
           export_default_credentials: true
-
       - run: gcloud auth configure-docker europe-west3-docker.pkg.dev
 
-      # ─── Pull previously built image & fetch digest ────────────────────────
       - run: docker pull europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:sha-${{ steps.short_sha.outputs.sha }}
-
       - id: digest
         run: |
           echo "digest=$(docker image inspect europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:sha-${{ steps.short_sha.outputs.sha }} --format='{{index .RepoDigests 0}}')" >> $GITHUB_OUTPUT
 
-      # ─── Pulumi: deploy prod stack ─────────────────────────────────────────
       - uses: pulumi/actions@v5
         with:
           command: up
@@ -48,5 +41,5 @@ jobs:
           work-dir: ./pulumi
         env:
           PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
-          IMAGE_DIGEST: ${{ steps.digest.outputs.digest }}
-          VERSION_ID:   ${{ github.event.release.tag_name }}
+          IMAGE_DIGEST:            ${{ steps.digest.outputs.digest }}
+          VERSION_ID:              ${{ github.event.release.tag_name }}

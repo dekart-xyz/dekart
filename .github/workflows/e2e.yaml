@@ -1,8 +1,19 @@
 name: e2e_tests
 
-on: [workflow_call]
+on:
+  workflow_call:
+    inputs:
+      # optional: let caller pass the flavour detected by flavour.yaml
+      target:
+        type: string          # "cloud" or "premium"
+        required: false
 
 env:
+  # Decide flavour once
+  TARGET: ${{ inputs.target != '' &&
+              inputs.target ||
+              (contains(github.repository, 'dekart-cloud') && 'cloud' || 'premium') }}
+
   DEKART_POSTGRES_PASSWORD: dekart
   DEKART_POSTGRES_USER:     postgres
   DEKART_POSTGRES_DB:       dekart
@@ -11,13 +22,9 @@ env:
   AWS_REGION:  us-east-1
   IMAGE_CACHE_KEY: e2etest-${{ github.run_id }}-${{ github.run_attempt }}
 
-  DEPLOY_TARGET: ${{ vars.DEPLOY_TARGET != ''          &&
-                     vars.DEPLOY_TARGET                 ||
-                     (contains(github.repository, 'dekart-cloud') && 'gcp' || 'ghcr') }}
-
 jobs:
   e2e-cloud:
-    if: env.DEPLOY_TARGET == 'gcp'
+    if: env.TARGET == 'cloud'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -50,11 +57,11 @@ jobs:
             cypress/e2e/cloud/cloudBasicFlowStart.cy.js \
             cypress/e2e/cloud/cloudBasicFlowEnd.cy.js
           do
-            # Pick the right token for the current spec
+            # choose correct refresh-token
             if [[ "$SPEC" == *cloudBasicFlowStart* ]]; then
-              TOKEN="${{ secrets.DEV_REFRESH_TOKEN_INFO }}"
+              TOKEN='${{ secrets.DEV_REFRESH_TOKEN_INFO }}'
             else
-              TOKEN="${{ secrets.DEV_REFRESH_TOKEN }}"
+              TOKEN='${{ secrets.DEV_REFRESH_TOKEN }}'
             fi
 
             docker run -i --network host \
@@ -87,15 +94,14 @@ jobs:
               europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:${{ env.IMAGE_CACHE_KEY }}
           done
 
-      - name: Upload cypress artifacts
+      - uses: actions/upload-artifact@v4
         if: failure()
-        uses: actions/upload-artifact@v4
         with:
           name: cloud
           path: /tmp/cypress
 
-  e2e-ghcr:
-    if: env.DEPLOY_TARGET == 'ghcr'
+  e2e-premium:
+    if: env.TARGET == 'premium'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -171,21 +177,20 @@ jobs:
         ports: ['5432:5432']
 
     steps:
-      - name: Create google credentials (if needed)
-        if: contains(matrix.id, 'google') || matrix.id == 'bigquery'
+      - if: contains(matrix.id, 'google') || matrix.id == 'bigquery'
+        name: Create google credentials
         run: echo '${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}' > $GOOGLE_APPLICATION_CREDENTIALS
 
       - uses: docker/setup-qemu-action@v2
       - uses: docker/setup-buildx-action@v2
 
-      - name: Login to GHCR
-        uses: docker/login-action@v3
+      - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run ${{ matrix.id }} E2E suite
+      - name: Run ${{ matrix.id }} suite
         run: |
           docker run -i --network host \
             -v /tmp/cypress/videos:/dekart/cypress/videos \
@@ -202,9 +207,8 @@ jobs:
             ${{ matrix.extra_env }} \
             ghcr.io/${{ github.repository }}/dekart:${{ env.IMAGE_CACHE_KEY }}
 
-      - name: Upload cypress artifacts
+      - uses: actions/upload-artifact@v4
         if: failure()
-        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.id }}
           path: /tmp/cypress
