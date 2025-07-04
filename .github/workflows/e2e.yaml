@@ -5,7 +5,7 @@ on:
     inputs:
       # optional: flavour forwarded from flavour.yaml
       target:
-        type: string     # "cloud" | "premium"
+        type: string   # "cloud" | "premium"
         required: false
 
 env:
@@ -18,12 +18,15 @@ env:
   DEKART_POSTGRES_DB:       dekart
 
   GOOGLE_APPLICATION_CREDENTIALS: GOOGLE_APPLICATION_CREDENTIALS.json
-  AWS_REGION: us-east-1
+  AWS_REGION:  us-east-1
   IMAGE_CACHE_KEY: e2etest-${{ github.run_id }}-${{ github.run_attempt }}
 
 jobs:
+  # is_cloud  =  explicit target is cloud
+  #          OR no target AND repo name ends with dekart-cloud
   e2e-cloud:
-    if: env.TARGET == 'cloud'
+    if: ${{ (inputs.target != '' && inputs.target == 'cloud') ||
+            (inputs.target == '' && contains(github.repository,'dekart-cloud')) }}
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -56,11 +59,9 @@ jobs:
             cypress/e2e/cloud/cloudBasicFlowStart.cy.js \
             cypress/e2e/cloud/cloudBasicFlowEnd.cy.js
           do
-            if [[ "$SPEC" == *cloudBasicFlowStart* ]]; then
-              TOKEN='${{ secrets.DEV_REFRESH_TOKEN_INFO }}'
-            else
-              TOKEN='${{ secrets.DEV_REFRESH_TOKEN }}'
-            fi
+            TOKEN=$([ "$SPEC" == *cloudBasicFlowStart* ] && \
+              echo '${{ secrets.DEV_REFRESH_TOKEN_INFO }}' || \
+              echo '${{ secrets.DEV_REFRESH_TOKEN }}')
 
             docker run -i --network host \
               -v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
@@ -99,21 +100,24 @@ jobs:
           path: /tmp/cypress
 
   e2e-premium:
-    if: env.TARGET == 'premium'
+    # premium branch is simply "not cloud"
+    if: ${{ !(
+            (inputs.target != '' && inputs.target == 'cloud') ||
+            (inputs.target == '' && contains(github.repository,'dekart-cloud'))
+          ) }}
     runs-on: ubuntu-latest
 
-    # All sensitive values become normal env vars (safe in matrix)
-    env:
-      GOOGLE_CRED_SEC:        ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
-      GOOGLE_OAUTH_ID_SEC:    ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+    env:            # secrets mapped to env so matrix can reference them
+      GOOGLE_CRED_SEC:         ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+      GOOGLE_OAUTH_ID_SEC:     ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
       GOOGLE_OAUTH_SECRET_SEC: ${{ secrets.GOOGLE_OAUTH_SECRET }}
-      DEV_REFRESH_TOKEN_SEC:  ${{ secrets.DEV_REFRESH_TOKEN }}
-      S3_BUCKET_SEC:          ${{ secrets.S3_BUCKET }}
-      AWS_KEY_SEC:            ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_SEC:         ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      SNOW_ID_SEC:            ${{ secrets.SNOWFLAKE_ACCOUNT_ID }}
-      SNOW_USER_SEC:          ${{ secrets.SNOWFLAKE_USER }}
-      SNOW_PASS_SEC:          ${{ secrets.SNOWFLAKE_PASSWORD }}
+      DEV_REFRESH_TOKEN_SEC:   ${{ secrets.DEV_REFRESH_TOKEN }}
+      S3_BUCKET_SEC:           ${{ secrets.S3_BUCKET }}
+      AWS_KEY_SEC:             ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_SEC:          ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      SNOW_ID_SEC:             ${{ secrets.SNOWFLAKE_ACCOUNT_ID }}
+      SNOW_USER_SEC:           ${{ secrets.SNOWFLAKE_USER }}
+      SNOW_PASS_SEC:           ${{ secrets.SNOWFLAKE_PASSWORD }}
 
     strategy:
       fail-fast: false
