@@ -3,13 +3,12 @@ name: e2e_tests
 on:
   workflow_call:
     inputs:
-      # optional: let caller pass the flavour detected by flavour.yaml
+      # optional: flavour forwarded from flavour.yaml
       target:
-        type: string          # "cloud" or "premium"
+        type: string     # "cloud" | "premium"
         required: false
 
 env:
-  # Decide flavour once
   TARGET: ${{ inputs.target != '' &&
               inputs.target ||
               (contains(github.repository, 'dekart-cloud') && 'cloud' || 'premium') }}
@@ -19,7 +18,7 @@ env:
   DEKART_POSTGRES_DB:       dekart
 
   GOOGLE_APPLICATION_CREDENTIALS: GOOGLE_APPLICATION_CREDENTIALS.json
-  AWS_REGION:  us-east-1
+  AWS_REGION: us-east-1
   IMAGE_CACHE_KEY: e2etest-${{ github.run_id }}-${{ github.run_attempt }}
 
 jobs:
@@ -57,7 +56,6 @@ jobs:
             cypress/e2e/cloud/cloudBasicFlowStart.cy.js \
             cypress/e2e/cloud/cloudBasicFlowEnd.cy.js
           do
-            # choose correct refresh-token
             if [[ "$SPEC" == *cloudBasicFlowStart* ]]; then
               TOKEN='${{ secrets.DEV_REFRESH_TOKEN_INFO }}'
             else
@@ -103,61 +101,74 @@ jobs:
   e2e-premium:
     if: env.TARGET == 'premium'
     runs-on: ubuntu-latest
+
+    # All sensitive values become normal env vars (safe in matrix)
+    env:
+      GOOGLE_CRED_SEC:        ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+      GOOGLE_OAUTH_ID_SEC:    ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+      GOOGLE_OAUTH_SECRET_SEC: ${{ secrets.GOOGLE_OAUTH_SECRET }}
+      DEV_REFRESH_TOKEN_SEC:  ${{ secrets.DEV_REFRESH_TOKEN }}
+      S3_BUCKET_SEC:          ${{ secrets.S3_BUCKET }}
+      AWS_KEY_SEC:            ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_SEC:         ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      SNOW_ID_SEC:            ${{ secrets.SNOWFLAKE_ACCOUNT_ID }}
+      SNOW_USER_SEC:          ${{ secrets.SNOWFLAKE_USER }}
+      SNOW_PASS_SEC:          ${{ secrets.SNOWFLAKE_PASSWORD }}
+
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Google OAuth
           - id: google-oauth
             spec: cypress/e2e/google-oauth
             extra_env: |
               -e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
-              -e DEKART_GOOGLE_OAUTH_CLIENT_ID=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }} \
-              -e DEKART_GOOGLE_OAUTH_SECRET=${{ secrets.GOOGLE_OAUTH_SECRET }} \
-              -e DEKART_DEV_REFRESH_TOKEN=${{ secrets.DEV_REFRESH_TOKEN }}
-          # BigQuery
+              -e DEKART_GOOGLE_OAUTH_CLIENT_ID=$GOOGLE_OAUTH_ID_SEC \
+              -e DEKART_GOOGLE_OAUTH_SECRET=$GOOGLE_OAUTH_SECRET_SEC \
+              -e DEKART_DEV_REFRESH_TOKEN=$DEV_REFRESH_TOKEN_SEC
+
           - id: bigquery
             spec: cypress/e2e/bq
             extra_env: |
               -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
               -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
               -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev
-          # Athena
+
           - id: athena
             spec: cypress/e2e/athena
             extra_env: |
               -e DEKART_STORAGE=S3 \
               -e DEKART_DATASOURCE=ATHENA \
-              -e DEKART_CLOUD_STORAGE_BUCKET=${{ secrets.S3_BUCKET }} \
-              -e DEKART_ATHENA_S3_OUTPUT_LOCATION=${{ secrets.S3_BUCKET }} \
+              -e DEKART_CLOUD_STORAGE_BUCKET=$S3_BUCKET_SEC \
+              -e DEKART_ATHENA_S3_OUTPUT_LOCATION=$S3_BUCKET_SEC \
               -e DEKART_ATHENA_CATALOG=AwsDataCatalog \
               -e AWS_REGION=$AWS_REGION \
-              -e AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} \
-              -e AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          # Snowflake + S3
+              -e AWS_ACCESS_KEY_ID=$AWS_KEY_SEC \
+              -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_SEC
+
           - id: snowflake-s3
             spec: cypress/e2e/snowflake-s3
             extra_env: |
               -e DEKART_STORAGE=S3 \
               -e DEKART_DATASOURCE=SNOWFLAKE \
-              -e DEKART_CLOUD_STORAGE_BUCKET=${{ secrets.S3_BUCKET }} \
+              -e DEKART_CLOUD_STORAGE_BUCKET=$S3_BUCKET_SEC \
               -e AWS_REGION=$AWS_REGION \
-              -e AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} \
-              -e AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} \
-              -e DEKART_SNOWFLAKE_ACCOUNT_ID=${{ secrets.SNOWFLAKE_ACCOUNT_ID }} \
-              -e DEKART_SNOWFLAKE_USER=${{ secrets.SNOWFLAKE_USER }} \
-              -e DEKART_SNOWFLAKE_PASSWORD=${{ secrets.SNOWFLAKE_PASSWORD }} \
+              -e AWS_ACCESS_KEY_ID=$AWS_KEY_SEC \
+              -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_SEC \
+              -e DEKART_SNOWFLAKE_ACCOUNT_ID=$SNOW_ID_SEC \
+              -e DEKART_SNOWFLAKE_USER=$SNOW_USER_SEC \
+              -e DEKART_SNOWFLAKE_PASSWORD=$SNOW_PASS_SEC \
               -e DEKART_REQUIRE_AMAZON_OIDC=1 \
               -e DEKART_DEV_CLAIMS_EMAIL=test@gmail.com
-          # Snowflake + SQLite
+
           - id: snowflake-sqlite
             spec: cypress/e2e/snowflake
             extra_env: |
               -e DEKART_STORAGE=SNOWFLAKE \
               -e DEKART_DATASOURCE=SNOWFLAKE \
-              -e DEKART_SNOWFLAKE_ACCOUNT_ID=${{ secrets.SNOWFLAKE_ACCOUNT_ID }} \
-              -e DEKART_SNOWFLAKE_USER=${{ secrets.SNOWFLAKE_USER }} \
-              -e DEKART_SNOWFLAKE_PASSWORD=${{ secrets.SNOWFLAKE_PASSWORD }} \
+              -e DEKART_SNOWFLAKE_ACCOUNT_ID=$SNOW_ID_SEC \
+              -e DEKART_SNOWFLAKE_USER=$SNOW_USER_SEC \
+              -e DEKART_SNOWFLAKE_PASSWORD=$SNOW_PASS_SEC \
               -e DEKART_SQLITE_DB_PATH=./dekart.db \
               -e DEKART_REQUIRE_SNOWFLAKE_CONTEXT=1 \
               -e DEKART_DEV_CLAIMS_EMAIL=bilonenko.v2@gmail.com
@@ -177,9 +188,9 @@ jobs:
         ports: ['5432:5432']
 
     steps:
-      - if: contains(matrix.id, 'google') || matrix.id == 'bigquery'
-        name: Create google credentials
-        run: echo '${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}' > $GOOGLE_APPLICATION_CREDENTIALS
+      - name: Create google creds (BigQuery / Google OAuth)
+        if: contains(matrix.id,'google') || matrix.id == 'bigquery'
+        run: echo "$GOOGLE_CRED_SEC" > $GOOGLE_APPLICATION_CREDENTIALS
 
       - uses: docker/setup-qemu-action@v2
       - uses: docker/setup-buildx-action@v2
