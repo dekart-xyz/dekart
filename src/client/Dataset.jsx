@@ -50,7 +50,6 @@ function DatasetSelector ({ dataset }) {
   const workspaceId = useSelector(state => state.user.stream?.workspaceId)
   const defaultConnection = connectionList.find(c => c.isDefault)
 
-
   if (!env.loaded) {
     // do not render until environment is loaded
     return null
