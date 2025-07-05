@@ -54,11 +54,12 @@ export function uploadFile (fileId, file) {
   }
 }
 
-export function createFile (datasetId) {
+export function createFile (datasetId, connectionId) {
   return (dispatch) => {
     dispatch({ type: createFile.name })
     const request = new CreateFileRequest()
     request.setDatasetId(datasetId)
+    request.setConnectionId(connectionId)
     dispatch(grpcCall(Dekart.CreateFile, request))
     track('CreateFile')
   }

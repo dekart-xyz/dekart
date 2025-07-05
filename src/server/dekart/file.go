@@ -161,6 +161,13 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if connection == nil {
+		err = fmt.Errorf("connection not found")
+		log.Error().Err(err).Msg("connection not found")
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
 	if !connection.CanStoreFiles {
 		err = fmt.Errorf("connection does not support file storage")
 		log.Warn().Err(err).Msg("connection does not support file storage")
@@ -237,10 +244,15 @@ func (s Server) CreateFile(ctx context.Context, req *proto.CreateFileRequest) (*
 		log.Err(err).Msg("insert into files failed")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+	connectionId := req.ConnectionId
+	if connectionId == "default" {
+		connectionId = "" // connectionId must be uuid, so if it's "default", we set it to empty string
+	}
 
 	result, err := s.db.ExecContext(ctx,
-		`update datasets set file_id=$1, updated_at=CURRENT_TIMESTAMP where id=$2 and file_id is null`,
+		`update datasets set file_id=$1, connection_id=$2, updated_at=CURRENT_TIMESTAMP where id=$3 and file_id is null`,
 		id,
+		connectionId,
 		req.DatasetId,
 	)
 	if err != nil {

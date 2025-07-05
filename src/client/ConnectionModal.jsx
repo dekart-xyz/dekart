@@ -298,6 +298,15 @@ function BigQueryConnectionModal ({ form }) {
     }
   }, [projects, bigqueryProjectId, form])
 
+  useEffect(() => {
+    if (!connection) {
+      form.resetFields()
+      form.setFieldsValue({
+        connectionName: 'BigQuery'
+      })
+    }
+  }, [id, form])
+
   return (
     <Modal
       open
@@ -313,14 +322,11 @@ function BigQueryConnectionModal ({ form }) {
             if (changedValues.bigqueryProjectId || changedValues.cloudStorageBucket) {
               dispatch(connectionChanged())
             }
-            if (changedValues.bigqueryProjectId && !allValues.connectionName) {
-              form.setFieldsValue({ connectionName: changedValues.bigqueryProjectId })
-            }
           }}
         >
           {nameChangeOnly ? <div className={styles.datasetsCountAlert}><Alert message={<>This connection is used in {connection.datasetCount} dataset{connection.datasetCount > 1 ? 's' : ''}.</>} description='Only the name can be changed.' type='warning' /></div> : null}
           <Form.Item label='Connection Name' name='connectionName'>
-            <Input placeholder='BigQuery' />
+            <Input />
           </Form.Item>
           <Form.Item
             label='Project ID' extra={(() => {

@@ -130,6 +130,8 @@ jobs:
               -e DEKART_GOOGLE_OAUTH_CLIENT_ID=$GOOGLE_OAUTH_ID_SEC \
               -e DEKART_GOOGLE_OAUTH_SECRET=$GOOGLE_OAUTH_SECRET_SEC \
               -e DEKART_DEV_REFRESH_TOKEN=$DEV_REFRESH_TOKEN_SEC \
+              -e DEKART_STORAGE=USER \
+              -e DEKART_DATASOURCE=USER \
 
           - id: bigquery
             spec: cypress/e2e/bq

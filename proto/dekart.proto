@@ -341,6 +341,10 @@ enum ConnectionType {
     CONNECTION_TYPE_BIGQUERY = 1;
     CONNECTION_TYPE_SNOWFLAKE = 2;
     CONNECTION_TYPE_WHEROBOTS = 3;
+    CONNECTION_TYPE_ATHENA = 4;
+    CONNECTION_TYPE_POSTGRES = 5;
+    CONNECTION_TYPE_CLICKHOUSE = 6;
+
 }
 
 message Connection {
@@ -433,6 +437,7 @@ message GetEnvResponse {
             TYPE_WORKSPACE_DEFAULT_ROLE = 22;
             TYPE_SECRETS_ENABLED = 23;
             TYPE_CLOUD_UX_CONFIG_JSON = 24;
+            TYPE_DEKART_CLOUD = 25;
         }
         Type type = 1;
         string value = 2;
@@ -632,6 +637,7 @@ message CreateDatasetResponse {
 
 message CreateFileRequest {
     string dataset_id = 1;
+    string connection_id = 2;
 }
 
 message CreateFileResponse {

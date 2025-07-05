@@ -53,7 +53,7 @@ func (s Server) TestConnection(ctx context.Context, req *proto.TestConnectionReq
 }
 
 func (s Server) getBucketNameFromConnection(conn *proto.Connection) string {
-	if conn == nil {
+	if conn == nil || conn.Id == "default" {
 		return storage.GetDefaultBucketName()
 	}
 
@@ -123,15 +123,45 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 
 	if connectionID == "default" || connectionID == "" {
 		con := proto.Connection{
-			Id:                 "default",
-			ConnectionName:     "default",
-			CloudStorageBucket: storage.GetDefaultBucketName(),
-			BigqueryProjectId:  os.Getenv("DEKART_BIGQUERY_PROJECT_ID"),
-			IsDefault:          true,
+			Id:             "default",
+			ConnectionName: "default",
+			IsDefault:      true,
 		}
-		if con.CloudStorageBucket != "" {
-			con.CanStoreFiles = true
+		if os.Getenv("DEKART_ALLOW_FILE_UPLOAD") == "" {
+			con.CanStoreFiles = false
 		}
+
+		switch os.Getenv("DEKART_DATASOURCE") {
+		case "USER":
+			if os.Getenv("DEKART_CLOUD") != "" {
+				con.CloudStorageBucket = storage.GetDefaultBucketName()
+				con.BigqueryProjectId = os.Getenv("DEKART_BIGQUERY_PROJECT_ID")
+				con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_BIGQUERY
+				return &con, nil
+			}
+			return nil, nil
+		case "SNOWFLAKE":
+			con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_SNOWFLAKE
+			con.ConnectionName = "Snowflake"
+			return &con, nil
+		case "ATHENA":
+			con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_ATHENA
+			con.ConnectionName = "Athena"
+		case "PG":
+			con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_POSTGRES
+			con.ConnectionName = "Postgres"
+		case "BQ":
+			con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_BIGQUERY
+			con.ConnectionName = "BigQuery"
+			con.BigqueryProjectId = os.Getenv("DEKART_BIGQUERY_PROJECT_ID")
+			con.CloudStorageBucket = storage.GetDefaultBucketName()
+		case "CH":
+			con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_CLICKHOUSE
+			con.ConnectionName = "ClickHouse"
+		default:
+			log.Fatal().Str("DEKART_STORAGE", os.Getenv("DEKART_STORAGE")).Msg("Unknown storage backend")
+		}
+
 		return &con, nil
 	}
 
@@ -607,7 +637,10 @@ func (s Server) GetConnectionList(ctx context.Context, req *proto.GetConnectionL
 		log.Err(err).Msg("getDefaultConnection failed")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	connections = append(connections, defaultConnection)
+	if defaultConnection != nil {
+		connections = append(connections, defaultConnection)
+	}
+
 	return &proto.GetConnectionListResponse{
 		Connections: connections,
 	}, nil
