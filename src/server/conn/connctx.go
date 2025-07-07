@@ -2,6 +2,7 @@ package conn
 
 import (
 	"context"
+	"database/sql"
 	"dekart/src/proto"
 	"fmt"
 	"os"
@@ -53,6 +54,19 @@ func FromCtx(ctx context.Context) *proto.Connection {
 		return &proto.Connection{}
 	}
 	return connection
+}
+
+const DefaultConnectionID = "00000000-0000-0000-0000-000000000000"
+
+func IsDefaultConnectionID(connectionID string) bool {
+	return connectionID == DefaultConnectionID || connectionID == "default" || connectionID == ""
+}
+
+func ConnectionIDToNullString(connectionID string) sql.NullString {
+	if IsDefaultConnectionID(connectionID) {
+		return sql.NullString{Valid: false}
+	}
+	return sql.NullString{String: connectionID, Valid: true}
 }
 
 func CopyConnectionCtx(sourceCtx, destCtx context.Context) context.Context {

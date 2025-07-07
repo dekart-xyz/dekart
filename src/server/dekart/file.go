@@ -244,19 +244,15 @@ func (s Server) CreateFile(ctx context.Context, req *proto.CreateFileRequest) (*
 		log.Err(err).Msg("insert into files failed")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	connectionId := req.ConnectionId
-	if connectionId == "default" {
-		connectionId = "" // connectionId must be uuid, so if it's "default", we set it to empty string
-	}
 
 	result, err := s.db.ExecContext(ctx,
 		`update datasets set file_id=$1, connection_id=$2, updated_at=CURRENT_TIMESTAMP where id=$3 and file_id is null`,
 		id,
-		connectionId,
+		conn.ConnectionIDToNullString(req.ConnectionId),
 		req.DatasetId,
 	)
 	if err != nil {
-		log.Err(err).Msg("update datasets failed when creating file")
+		log.Err(err).Str("connectionId", req.ConnectionId).Msg("update datasets failed when creating file")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 

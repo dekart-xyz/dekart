@@ -12,6 +12,7 @@ import { addReadme } from './actions/readme'
 import { updateSessionStorage } from './actions/sessionStorage'
 import { getDatasourceMeta } from './lib/datasource'
 import { track } from './lib/tracking'
+import { isDefaultConnectionID } from './actions/connection'
 
 function DatasetSelectorButton ({ icon, title, subtitle, onClick, id, disable, disabledNote }) {
   return (
@@ -42,7 +43,7 @@ function DatasetSelector ({ dataset }) {
   const connectionList = useSelector(state => state.connection.list)
 
   // filter out default connection in Dekart Cloud, so user cannot use BigQuery free
-  const filteredConnectionList = DEKART_CLOUD ? connectionList.filter(c => c.id !== 'default') : connectionList
+  const filteredConnectionList = DEKART_CLOUD ? connectionList.filter(c => !isDefaultConnectionID(c.id)) : connectionList
   const history = useHistory()
   const report = useSelector(state => state.report)
   const isAdmin = useSelector(state => state.user.isAdmin)
@@ -64,7 +65,7 @@ function DatasetSelector ({ dataset }) {
 
   let allowFileUpload = false
   let disabledNote = 'File upload is disabled in configuration'
-  if (ALLOW_FILE_UPLOAD && userDefinedConnection) {
+  if (ALLOW_FILE_UPLOAD) {
     // check if selected connection supports file upload
     allowFileUpload = defaultConnection?.canStoreFiles
     if (allowFileUpload) {

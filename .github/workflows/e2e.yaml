@@ -139,6 +139,8 @@ jobs:
               -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
               -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
               -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
+              -e DEKART_STORAGE=GCS \
+              -e DEKART_DATASOURCE=BQ \
 
           - id: athena
             spec: cypress/e2e/athena

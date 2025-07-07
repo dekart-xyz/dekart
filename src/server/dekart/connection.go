@@ -52,12 +52,12 @@ func (s Server) TestConnection(ctx context.Context, req *proto.TestConnectionReq
 	return storage.TestConnection(ctx, req.Connection)
 }
 
-func (s Server) getBucketNameFromConnection(conn *proto.Connection) string {
-	if conn == nil || conn.Id == "default" {
+func (s Server) getBucketNameFromConnection(con *proto.Connection) string {
+	if conn.IsDefaultConnectionID(con.Id) {
 		return storage.GetDefaultBucketName()
 	}
 
-	bucketName := conn.CloudStorageBucket
+	bucketName := con.CloudStorageBucket
 
 	return bucketName
 }
@@ -121,14 +121,11 @@ func (s Server) getConnectionFromFileID(ctx context.Context, fileID string) (*pr
 // getConnection gets connection by id; it does not check if user has access to it or if it is archived
 func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.Connection, error) {
 
-	if connectionID == "default" || connectionID == "" {
+	if conn.IsDefaultConnectionID(connectionID) {
 		con := proto.Connection{
-			Id:             "default",
+			Id:             conn.DefaultConnectionID,
 			ConnectionName: "default",
 			IsDefault:      true,
-		}
-		if os.Getenv("DEKART_ALLOW_FILE_UPLOAD") == "" {
-			con.CanStoreFiles = false
 		}
 
 		switch os.Getenv("DEKART_DATASOURCE") {
@@ -160,6 +157,10 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 			con.ConnectionName = "ClickHouse"
 		default:
 			log.Fatal().Str("DEKART_STORAGE", os.Getenv("DEKART_STORAGE")).Msg("Unknown storage backend")
+		}
+
+		if os.Getenv("DEKART_ALLOW_FILE_UPLOAD") != "" && con.CloudStorageBucket != "" {
+			con.CanStoreFiles = true
 		}
 
 		return &con, nil
@@ -623,24 +624,27 @@ func (s Server) GetConnectionList(ctx context.Context, req *proto.GetConnectionL
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	if checkWorkspace(ctx).ID == "" {
-		log.Warn().Msg("workspace not found when getting connection list")
-		return nil, status.Error(codes.NotFound, "workspace not found")
-	}
-	connections, err := s.getUserConnections(ctx)
-	if err != nil {
-		log.Err(err).Msg("getConnections failed")
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	defaultConnection, err := s.getConnection(ctx, "default")
-	if err != nil {
-		log.Err(err).Msg("getDefaultConnection failed")
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	if defaultConnection != nil {
-		connections = append(connections, defaultConnection)
+	connections := make([]*proto.Connection, 0)
+	if checkWorkspace(ctx).ID != "" {
+		// user connections stored in the workspace
+		// default workspace and playground workspace do not have user connections
+		userConnections, err := s.getUserConnections(ctx)
+		if err != nil {
+			log.Err(err).Msg("getConnections failed")
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		connections = append(connections, userConnections...)
 	}
 
+	if os.Getenv("DEKART_CLOUD") != "" || os.Getenv("DEKART_DATASOURCE") != "USER" {
+		// append default connection
+		defaultConnection, err := s.getConnection(ctx, conn.DefaultConnectionID)
+		if err != nil {
+			log.Err(err).Msg("getDefaultConnection failed")
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		connections = append(connections, defaultConnection)
+	}
 	return &proto.GetConnectionListResponse{
 		Connections: connections,
 	}, nil
