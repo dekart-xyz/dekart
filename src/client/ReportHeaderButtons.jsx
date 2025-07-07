@@ -40,6 +40,7 @@ function ForkButton ({ primary }) {
       <Button
         type='primary'
         icon={<ForkOutlined />}
+        id='dekart-fork-button'
         disabled={disabled}
         onClick={onClick}
       >Fork this Map

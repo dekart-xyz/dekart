@@ -2,11 +2,10 @@
 import copy from '../../fixtures/copy.json'
 
 describe('fork', () => {
-  it('should have same viz style after fork', async () => {
+  it('should have same viz style after fork', () => {
     cy.visit('/')
     cy.get('button#dekart-create-report').click()
-    cy.get('button:contains("Add data from...")').click()
-    cy.get('span:contains("SQL query")').click()
+    cy.get('button:contains("Run SQL")').click()
     cy.get('textarea').type('select 0 as lat, 0 as lon', { force: true })
     cy.get(`button:contains("${copy.execute}")`).click()
     cy.get('div:contains("1 rows")', { timeout: 20000 }).should('be.visible')

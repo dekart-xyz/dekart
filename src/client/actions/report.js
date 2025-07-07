@@ -302,7 +302,7 @@ export function createReport () {
     dispatch(grpcCall(Dekart.CreateReport, request, (res) => {
       const { report } = res
       dispatch(newReport(report.id))
-      dispatch(success('New Report Created'))
+      dispatch(success('New Map Created'))
     }))
   }
 }

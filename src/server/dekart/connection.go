@@ -140,7 +140,7 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 		case "SNOWFLAKE":
 			con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_SNOWFLAKE
 			con.ConnectionName = "Snowflake"
-			return &con, nil
+			con.CloudStorageBucket = storage.GetDefaultBucketName()
 		case "ATHENA":
 			con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_ATHENA
 			con.ConnectionName = "Athena"
