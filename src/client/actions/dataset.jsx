@@ -3,7 +3,6 @@ import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { setError, success, info, warn } from './message'
 import { addDataToMap, toggleSidePanel, reorderLayer, removeDataset as removeDatasetFromKepler, loadFiles } from '@kepler.gl/actions'
-import { processCsvData, processGeojson } from '@kepler.gl/processors'
 import { get } from '../lib/api'
 import getDatasetName from '../lib/getDatasetName'
 import { runQuery } from './query'
@@ -146,24 +145,19 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
     const label = getDatasetName(dataset, queries, files)
     let data
     try {
-      if (extension === 'csv') {
-        const csv = await res.text()
-        data = processCsvData(csv)
-      } else if (extension === 'geojson') {
-        const json = await res.json()
-        data = processGeojson(json)
-      } else if (extension === 'parquet') {
-        const blob = await res.blob()
-        data = await new Promise((resolve, reject) => {
-          dispatch(loadFiles([new File([blob], label)], (r) => {
-            const datasetData = r[0].data
-            resolve(datasetData)
-            return { type: 'none' } // dispatch a dummy action to satisfy loadFiles API
-          }))
-        })
-      } else {
-        throw new Error(`Unsupported dataset extension: ${extension}`)
-      }
+      const blob = await res.blob()
+      data = await new Promise((resolve, reject) => {
+        const file = new File(
+          [blob],
+          label,
+          { type: extension === 'csv' ? 'text/csv' : extension === 'json' ? 'application/json' : '' })
+        dispatch(loadFiles([file], (r) => {
+          console.log('loadFiles result', r)
+          const datasetData = r[0].data
+          resolve(datasetData)
+          return { type: 'none' } // dispatch a dummy action to satisfy loadFiles API
+        }))
+      })
     } catch (err) {
       dispatch(processDownloadError(err, dataset, label))
       return
