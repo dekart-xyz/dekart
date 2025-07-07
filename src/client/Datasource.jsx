@@ -2,6 +2,7 @@ import { useSelector } from 'react-redux'
 import styles from './Datasource.module.css'
 import { getDatasourceMeta } from './lib/datasource'
 import classNames from 'classnames'
+import { ConsoleSqlOutlined } from '@ant-design/icons'
 
 export function Datasource ({ connection }) {
   const env = useSelector(state => state.env)
@@ -25,6 +26,10 @@ export function Datasource ({ connection }) {
 }
 
 export function DatasourceIcon ({ type }) {
+  const style = getDatasourceMeta(type).style
+  if (!style) {
+    return <ConsoleSqlOutlined />
+  }
   return (
     <span className={classNames(
       styles.datasourceIcon,
