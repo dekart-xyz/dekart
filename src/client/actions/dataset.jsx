@@ -152,7 +152,6 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
           label,
           { type: extension === 'csv' ? 'text/csv' : extension === 'json' ? 'application/json' : '' })
         dispatch(loadFiles([file], (r) => {
-          console.log('loadFiles result', r)
           const datasetData = r[0].data
           resolve(datasetData)
           return { type: 'none' } // dispatch a dummy action to satisfy loadFiles API
