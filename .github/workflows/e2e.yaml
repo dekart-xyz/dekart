@@ -132,6 +132,7 @@ jobs:
               -e DEKART_DEV_REFRESH_TOKEN=$DEV_REFRESH_TOKEN_SEC \
               -e DEKART_STORAGE=USER \
               -e DEKART_DATASOURCE=USER \
+              -e DEKART_ALLOW_FILE_UPLOAD=1 \
 
           - id: bigquery
             spec: cypress/e2e/bq
@@ -141,6 +142,7 @@ jobs:
               -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
               -e DEKART_STORAGE=GCS \
               -e DEKART_DATASOURCE=BQ \
+              -e DEKART_ALLOW_FILE_UPLOAD=1 \
 
           - id: athena
             spec: cypress/e2e/athena
@@ -153,6 +155,7 @@ jobs:
               -e AWS_REGION=$AWS_REGION \
               -e AWS_ACCESS_KEY_ID=$AWS_KEY_SEC \
               -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_SEC \
+              -e DEKART_ALLOW_FILE_UPLOAD=1 \
 
           - id: snowflake-s3
             spec: cypress/e2e/snowflake-s3
@@ -168,6 +171,8 @@ jobs:
               -e DEKART_SNOWFLAKE_PASSWORD=$SNOW_PASS_SEC \
               -e DEKART_REQUIRE_AMAZON_OIDC=1 \
               -e DEKART_DEV_CLAIMS_EMAIL=test@gmail.com \
+              -e DEKART_ALLOW_FILE_UPLOAD=1 \
+
 
           - id: snowflake-sqlite
             spec: cypress/e2e/snowflake
@@ -219,7 +224,6 @@ jobs:
             -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
             -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
             -e DEKART_POSTGRES_HOST=localhost \
-            -e DEKART_ALLOW_FILE_UPLOAD=1 \
             -e DEKART_CORS_ORIGIN=http://localhost:3000 \
             -e TEST_SPEC=${{ matrix.spec }} \
             -e CYPRESS_CI=1 \
