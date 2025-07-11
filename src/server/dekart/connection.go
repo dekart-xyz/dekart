@@ -643,7 +643,18 @@ func (s Server) GetConnectionList(ctx context.Context, req *proto.GetConnectionL
 			log.Err(err).Msg("getConnection failed for system connection")
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-		connections = append(connections, systemConnection)
+		if systemConnection != nil {
+			// Create a new connection and copy only safe properties
+			safeConn := &proto.Connection{
+				Id:             systemConnection.Id,
+				ConnectionName: systemConnection.ConnectionName,
+				ConnectionType: systemConnection.ConnectionType,
+				IsDefault:      systemConnection.IsDefault,
+				CanStoreFiles:  systemConnection.CanStoreFiles,
+			}
+			connections = append(connections, safeConn)
+		}
+
 	}
 	return &proto.GetConnectionListResponse{
 		Connections: connections,
