@@ -89,6 +89,8 @@ jobs:
       with:
         context: .
         push: true
+        build-args: |
+          DEKART_UX_DISABLE_VERSION_CHECK=1
         tags:  ${{ steps.tags.outputs.app }}
         cache-from: type=registry,ref=${{ env.REGISTRY_BASE }}/dekart:buildcache
         cache-to:   type=registry,ref=${{ env.REGISTRY_BASE }}/dekart:buildcache,mode=max
