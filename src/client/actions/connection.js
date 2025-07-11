@@ -4,11 +4,11 @@ import { grpcCall } from './grpc'
 import { updateSessionStorage } from './sessionStorage'
 import { needSensitiveScopes } from './user'
 
-export const DefaultConnectionID = '00000000-0000-0000-0000-000000000000'
+export const SystemConnectionID = '00000000-0000-0000-0000-000000000000'
 
-export function isDefaultConnectionID (connectionID) {
+export function isSystemConnectionID (connectionID) {
   return (
-    connectionID === DefaultConnectionID ||
+    connectionID === SystemConnectionID ||
     connectionID === 'default' ||
     connectionID === ''
   )

@@ -438,7 +438,7 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if conn.IsDefaultConnectionID(connection.Id) {
+	if conn.IsSystemConnectionID(connection.Id) {
 		// dataset has no connection, it means it's a playground dataset
 		ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{IsPlayground: true})
 	}
@@ -448,7 +448,7 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	conCtx := conn.GetCtx(ctx, connection)
 
 	//TODO: pass whole connection?
-	defConCtx := conn.GetCtx(ctx, &proto.Connection{Id: conn.DefaultConnectionID})
+	defConCtx := conn.GetCtx(ctx, &proto.Connection{Id: conn.SystemConnectionID})
 	dwJobID, err := s.getDWJobIDFromResultID(ctx, vars["source"])
 	if err != nil {
 		log.Error().Err(err).Msg("Error getting dw job id")

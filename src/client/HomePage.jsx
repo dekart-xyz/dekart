@@ -10,7 +10,7 @@ import { PlusOutlined, FileSearchOutlined, UsergroupAddOutlined, ApiTwoTone, Loc
 import DataDocumentationLink from './DataDocumentationLink'
 import Switch from 'antd/es/switch'
 import { archiveReport, subscribeReports, unsubscribeReports, createReport } from './actions/report'
-import { editConnection, isDefaultConnectionID, newConnection, newConnectionScreen, setDefaultConnection } from './actions/connection'
+import { editConnection, isSystemConnectionID, newConnection, newConnectionScreen, setDefaultConnection } from './actions/connection'
 import ConnectionModal from './ConnectionModal'
 import Tooltip from 'antd/es/tooltip'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
@@ -352,7 +352,7 @@ function Reports ({ createReportButton, reportFilter }) {
   const [archived, setArchived] = useState(false)
   const reportsList = useSelector(state => state.reportsList)
   const { loaded: envLoaded, authEnabled } = useSelector(state => state.env)
-  const connectionList = useSelector(state => state.connection.list.filter(c => !isDefaultConnectionID(c.id)))
+  const connectionList = useSelector(state => state.connection.list.filter(c => !isSystemConnectionID(c.id)))
   // TODO: show default SQL connection in the list
   // const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const newConnectionScreen = useSelector(state => state.connection.screen)

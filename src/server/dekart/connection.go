@@ -53,7 +53,7 @@ func (s Server) TestConnection(ctx context.Context, req *proto.TestConnectionReq
 }
 
 func (s Server) getBucketNameFromConnection(con *proto.Connection) string {
-	if conn.IsDefaultConnectionID(con.Id) {
+	if conn.IsSystemConnectionID(con.Id) {
 		return storage.GetDefaultBucketName()
 	}
 
@@ -121,9 +121,9 @@ func (s Server) getConnectionFromFileID(ctx context.Context, fileID string) (*pr
 // getConnection gets connection by id; it does not check if user has access to it or if it is archived
 func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.Connection, error) {
 
-	if conn.IsDefaultConnectionID(connectionID) {
+	if conn.IsSystemConnectionID(connectionID) {
 		con := proto.Connection{
-			Id:             conn.DefaultConnectionID,
+			Id:             conn.SystemConnectionID,
 			ConnectionName: "default",
 			IsDefault:      true,
 		}
@@ -637,13 +637,13 @@ func (s Server) GetConnectionList(ctx context.Context, req *proto.GetConnectionL
 	}
 
 	if os.Getenv("DEKART_CLOUD") != "" || os.Getenv("DEKART_DATASOURCE") != "USER" {
-		// append default connection
-		defaultConnection, err := s.getConnection(ctx, conn.DefaultConnectionID)
+		// append system connection
+		systemConnection, err := s.getConnection(ctx, conn.SystemConnectionID)
 		if err != nil {
-			log.Err(err).Msg("getDefaultConnection failed")
+			log.Err(err).Msg("getConnection failed for system connection")
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-		connections = append(connections, defaultConnection)
+		connections = append(connections, systemConnection)
 	}
 	return &proto.GetConnectionListResponse{
 		Connections: connections,

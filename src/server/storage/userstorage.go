@@ -23,7 +23,7 @@ func (s *UserStorage) GetObject(ctx context.Context, resultURI string, object st
 	connection := conn.FromCtx(ctx)
 	parts := strings.Split(object, ".")
 	useUserToken := true
-	if conn.IsDefaultConnectionID(connection.Id) && os.Getenv("DEKART_CLOUD") != "" {
+	if conn.IsSystemConnectionID(connection.Id) && os.Getenv("DEKART_CLOUD") != "" {
 		// in cloud mode, we use app token for default connection, not user token
 		useUserToken = false
 	}

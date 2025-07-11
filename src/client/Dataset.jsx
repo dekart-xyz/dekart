@@ -12,7 +12,7 @@ import { addReadme } from './actions/readme'
 import { updateSessionStorage } from './actions/sessionStorage'
 import { getDatasourceMeta } from './lib/datasource'
 import { track } from './lib/tracking'
-import { isDefaultConnectionID } from './actions/connection'
+import { isSystemConnectionID } from './actions/connection'
 
 function DatasetSelectorButton ({ icon, title, subtitle, onClick, id, disable, disabledNote }) {
   return (
@@ -43,7 +43,7 @@ function DatasetSelector ({ dataset }) {
   const connectionList = useSelector(state => state.connection.list)
 
   // filter out default connection in Dekart Cloud, so user cannot use BigQuery free
-  const filteredConnectionList = DEKART_CLOUD ? connectionList.filter(c => !isDefaultConnectionID(c.id)) : connectionList
+  const filteredConnectionList = DEKART_CLOUD ? connectionList.filter(c => !isSystemConnectionID(c.id)) : connectionList
   const history = useHistory()
   const report = useSelector(state => state.report)
   const isAdmin = useSelector(state => state.user.isAdmin)
