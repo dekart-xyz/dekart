@@ -1,13 +1,13 @@
 import { grpc } from '@improbable-eng/grpc-web'
-import { StreamOptions } from '../../proto/dekart_pb'
+import { StreamOptions } from 'dekart-proto/dekart_pb'
 import { setError, setStreamError } from './message'
 
-const { REACT_APP_API_HOST } = process.env
-const host = REACT_APP_API_HOST || ''
+const { VITE_API_HOST } = import.meta.env
+const host = VITE_API_HOST || ''
 
-export function grpcCall (method, request, resolve = () => {}, reject = (err) => err) {
+export function grpcCall (method, request, resolve = () => {}, reject = (err) => err, maxRetries = 0) {
   return async function (dispatch, getState) {
-    const { token, user: { isPlayground } } = getState()
+    const { token, user: { isPlayground, claimEmailCookie } } = getState()
     const headers = new window.Headers()
     if (token) {
       headers.append('Authorization', `Bearer ${token.access_token}`)
@@ -15,15 +15,28 @@ export function grpcCall (method, request, resolve = () => {}, reject = (err) =>
     if (isPlayground) {
       headers.append('X-Dekart-Playground', 'true')
     }
-    try {
-      const response = await unary(method, request, headers)
-      resolve(response)
-    } catch (err) {
-      const passErr = reject(err)
-      if (passErr instanceof GrpcError) {
-        dispatch(setStreamError(passErr.code, passErr.message))
-      } else if (passErr) {
-        dispatch(setError(passErr))
+    if (claimEmailCookie) {
+      headers.append('X-Dekart-Claim-Email', claimEmailCookie)
+    }
+
+    let attempts = 0
+
+    while (attempts <= maxRetries) {
+      try {
+        const response = await unary(method, request, headers)
+        resolve(response)
+        return
+      } catch (err) {
+        attempts++
+        const passErr = reject(err)
+        if (attempts > maxRetries) {
+          if (passErr instanceof GrpcError) {
+            dispatch(setStreamError(passErr.code, passErr.message))
+          } else if (passErr) {
+            dispatch(setError(passErr))
+          }
+          return
+        }
       }
     }
   }
@@ -79,13 +92,16 @@ class GrpcError extends Error {
 
 export function grpcStream (endpoint, request, cb) {
   return (dispatch, getState) => {
-    const { token, user: { isPlayground } } = getState()
+    const { token, user: { isPlayground, claimEmailCookie } } = getState()
     const headers = new window.Headers()
     if (token) {
       headers.append('Authorization', `Bearer ${token.access_token}`)
     }
     if (isPlayground) {
       headers.append('X-Dekart-Playground', 'true')
+    }
+    if (claimEmailCookie) {
+      headers.append('X-Dekart-Claim-Email', claimEmailCookie)
     }
     const onMessage = (message) => {
       const err = cb(message, null)
@@ -115,6 +131,9 @@ export function grpcStream (endpoint, request, cb) {
     dispatch({ type: grpcStream.name, endpoint, cancelable })
 
     const cancelOnVisibilityChange = () => {
+      if (cancelable && cancelable.canceled) {
+        return
+      }
       if (document.hidden) {
         // close streams when tab is hidden
         // prevents blocking connections for multiple tabs

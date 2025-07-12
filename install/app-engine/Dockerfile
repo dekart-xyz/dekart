@@ -1,1 +1,1 @@
-FROM ghcr.io/dekart-xyz/dekart-premium/dekart:latest
+FROM dekartxyz/dekart:0.18

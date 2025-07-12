@@ -1,9 +1,4 @@
-
-# Target to log in to GitHub Container Registry
-docker-login:
-	docker login ghcr.io -u $(GITHUB_USERNAME) -p $(GITHUB_PAT)
-
-athena: docker-login
+athena:
 	docker run -it --rm \
 		-e AWS_REGION=${AWS_REGION} \
 		-e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
@@ -22,11 +17,10 @@ athena: docker-login
 		-e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
 		-e DEKART_CORS_ORIGIN=${DEKART_CORS_ORIGIN} \
 		-p 8080:8080 \
-		ghcr.io/dekart-xyz/dekart-premium/dekart:latest
+		dekartxyz/dekart:0.18
 
-bigquery: docker-login
+bigquery:
 	docker run -it --rm \
-		--platform linux/amd64 \
 		-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
 		-e GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} \
 		-e DEKART_POSTGRES_DB=${DEKART_POSTGRES_DB} \
@@ -42,9 +36,9 @@ bigquery: docker-login
 		-e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
 		-e DEKART_CORS_ORIGIN=${DEKART_CORS_ORIGIN} \
 		-p 8080:8080 \
-		ghcr.io/dekart-xyz/dekart-premium/dekart:latest
+		dekartxyz/dekart:0.18
 
-snowflake: docker-login
+snowflake:
 	docker run -it --rm \
 		-e AWS_REGION=${AWS_REGION} \
 		-e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
@@ -63,5 +57,5 @@ snowflake: docker-login
 		-e DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} \
 		-e DEKART_CORS_ORIGIN=${DEKART_CORS_ORIGIN} \
 		-p 8080:8080 \
-		ghcr.io/dekart-xyz/dekart-premium/dekart:latest
+		dekartxyz/dekart:0.18
 

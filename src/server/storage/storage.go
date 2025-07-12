@@ -2,12 +2,15 @@ package storage
 
 import (
 	"context"
+	"crypto/tls"
 	"dekart/src/proto"
 	"dekart/src/server/bqutils"
 	"dekart/src/server/conn"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/storage"
@@ -251,6 +254,25 @@ func NewS3Storage() Storage {
 	conf := aws.NewConfig().
 		WithMaxRetries(3).
 		WithS3ForcePathStyle(true)
+
+	endpoint := os.Getenv("AWS_ENDPOINT")
+	if len(endpoint) > 0 {
+		conf = conf.WithEndpoint(endpoint)
+	}
+
+	region := os.Getenv("AWS_REGION")
+	if len(region) > 0 {
+		conf = conf.WithRegion(region)
+	}
+
+	insecureTLS := os.Getenv("AWS_INSECURE")
+	if strings.ToUpper(insecureTLS) == "TRUE" {
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+		conf = conf.WithHTTPClient(&http.Client{Transport: tr})
+	}
+
 	ses := session.Must(session.NewSession(conf))
 	s3client := s3.New(ses)
 	return S3Storage{
@@ -291,7 +313,6 @@ func (o S3StorageObject) GetWriter(ctx context.Context) io.WriteCloser {
 			o.logger.Error().Err(err).Msg("error while uploading object")
 			return err
 		}
-		o.logger.Debug().Msg("object is successfully uploaded")
 		return nil
 	})
 

@@ -1,0 +1,25 @@
+
+.stats {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.statsColumn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.downloadButton {
+    margin-top: 2rem;
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+}
+
+.downloadTooltip {
+    margin-top: 0.5rem;
+    align-items: center;
+}

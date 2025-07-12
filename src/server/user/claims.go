@@ -129,7 +129,7 @@ func (c ClaimsCheck) validateAuthToken(ctx context.Context, header string) *Clai
 	})
 
 	if err != nil {
-		log.Debug().Err(err).Int("accessTokenLen", len(accessToken)).Msg("Error getting token info")
+		log.Warn().Err(err).Int("accessTokenLen", len(accessToken)).Msg("Error getting token info")
 		return nil
 	}
 	missingSensitiveScope := checkMissingScope(sensitiveScope, tokenInfo.Scope)
@@ -173,7 +173,15 @@ func GetTokenSource(ctx context.Context) oauth2.TokenSource {
 func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 	ctx := r.Context()
 	var claims *Claims
-	if c.RequireIAP {
+	if c.DevClaimsEmail != "" {
+		email := r.Header.Get("X-Dekart-Claim-Email")
+		if email == "" {
+			email = c.DevClaimsEmail
+		}
+		claims = &Claims{
+			Email: email,
+		}
+	} else if c.RequireIAP {
 		claims = c.validateJWTFromAppEngine(ctx, r.Header.Get("X-Goog-IAP-JWT-Assertion"))
 	} else if c.RequireAmazonOIDC {
 		claims = c.validateJWTFromAmazonOIDC(ctx, r.Header.Get("x-amzn-oidc-data"))
@@ -319,7 +327,9 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 			tokenInfo.Scope,
 		)
 		if err != nil {
-			log.Fatal().Err(err).Msg("Error updating user sensitive scope")
+			log.Error().Err(err).Msg("Error updating user sensitive scope")
+			redirectState.Error = "Error updating user sensitive scope"
+			return redirectState
 		}
 	} else {
 		// create or update user, do not update sensitive scope
@@ -330,7 +340,9 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 			tokenInfo.Scope,
 		)
 		if err != nil {
-			log.Fatal().Err(err).Msg("Error updating user")
+			log.Error().Err(err).Msg("Error updating user")
+			redirectState.Error = "Error updating user"
+			return redirectState
 		}
 	}
 
@@ -417,10 +429,9 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 	if c.DevRefreshToken != "" && state.Action == pb.AuthState_ACTION_REQUEST_CODE {
 		//skip request code from google
 		state.Action = pb.AuthState_ACTION_REQUEST_TOKEN
-		log.Debug().Msg("Skip request code from google, use dev token")
+		log.Info().Msg("Skip request code from google, use dev token")
 	}
 
-	log.Debug().Msgf("Authenticate state action: %s", state.Action)
 	switch state.Action {
 	case pb.AuthState_ACTION_REQUEST_CODE: // request code from google
 		state.Action = pb.AuthState_ACTION_REQUEST_TOKEN
@@ -489,7 +500,6 @@ func (c ClaimsCheck) getPublicKeyFromAmazon(token *jwt.Token) (interface{}, erro
 	if ok {
 		publicKey = publicKeyValue.(*ecdsa.PublicKey)
 	} else {
-		log.Debug().Interface("kid", kid).Msg("load public key")
 		url := fmt.Sprintf("https://public-keys.auth.elb.%s.amazonaws.com/%s", c.Region, kid)
 		resp, err := http.Get(url)
 		if err != nil {
@@ -520,11 +530,6 @@ func (c ClaimsCheck) getPublicKeyFromAmazon(token *jwt.Token) (interface{}, erro
 // validateJWTFromAmazonOIDC parses and validates token from x-amzn-oidc-data
 // see https://docs.aws.amazon.com/elasticloadbalancing/latest/application/listener-authenticate-users.html
 func (c ClaimsCheck) validateJWTFromAmazonOIDC(ctx context.Context, header string) *Claims {
-	if c.DevClaimsEmail != "" {
-		return &Claims{
-			Email: c.DevClaimsEmail,
-		}
-	}
 	if header == "" {
 		return nil
 	}
@@ -547,12 +552,6 @@ func (c ClaimsCheck) validateJWTFromAmazonOIDC(ctx context.Context, header strin
 // validateJWTFromAppEngine validates a JWT found in the
 // "x-goog-iap-jwt-assertion" header.
 func (c ClaimsCheck) validateJWTFromAppEngine(ctx context.Context, iapJWT string) *Claims {
-	if c.DevClaimsEmail != "" {
-		return &Claims{
-			Email: c.DevClaimsEmail,
-		}
-	}
-
 	payload, err := idtoken.Validate(ctx, iapJWT, c.Audience)
 	if err != nil {
 		log.Warn().Err(err).Msg("Error validating IAP JWT")

@@ -1,8 +1,18 @@
-import { ArchiveConnectionRequest, CreateConnectionRequest, GetConnectionListRequest, Connection, TestConnectionRequest, UpdateConnectionRequest, SetDefaultConnectionRequest, GetGcpProjectListRequest, Secret, ConnectionType } from '../../proto/dekart_pb'
-import { Dekart } from '../../proto/dekart_pb_service'
+import { ArchiveConnectionRequest, CreateConnectionRequest, GetConnectionListRequest, Connection, TestConnectionRequest, UpdateConnectionRequest, SetDefaultConnectionRequest, GetGcpProjectListRequest, Secret, ConnectionType, GetWherobotsConnectionHintRequest } from 'dekart-proto/dekart_pb'
+import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { updateSessionStorage } from './sessionStorage'
 import { needSensitiveScopes } from './user'
+
+export const SystemConnectionID = '00000000-0000-0000-0000-000000000000'
+
+export function isSystemConnectionID (connectionID) {
+  return (
+    connectionID === SystemConnectionID ||
+    connectionID === 'default' ||
+    connectionID === ''
+  )
+}
 
 export function connectionCreated ({ id, connectionName }) {
   return { type: connectionCreated.name, id, connectionName }
@@ -39,6 +49,7 @@ export function getProjectList () {
 export function editConnection (id, connectionType, bigqueryKey = false) {
   return async (dispatch) => {
     dispatch({ type: editConnection.name, id, connectionType, bigqueryKey })
+    dispatch(getConnectionsList()) // get the latest connections list to ensure the connection is up-to-date
     dispatch(getProjectList())
   }
 }
@@ -125,10 +136,10 @@ export function getConnectionsList () {
     })
 
     res.connectionsList.forEach((connection) => {
-      // replace password with placeholder
-      // no password is returned from the server, only the length
-      if (connection.snowflakePassword?.length > 0) {
-        connection.snowflakePassword = '*'.repeat(connection.snowflakePassword.length)
+      // replace key with placeholder
+      // no secret is returned from the server, only the length
+      if (connection.snowflakeKey?.length > 0) {
+        connection.snowflakeKey = '*'.repeat(connection.snowflakeKey.length)
       }
     })
     dispatch(connectionListUpdate(res.connectionsList))
@@ -160,8 +171,16 @@ export function saveConnection (id, connectionType, connectionProps) {
         connection.setSnowflakeUsername(connectionProps.snowflakeUsername)
         connection.setSnowflakeWarehouse(connectionProps.snowflakeWarehouse)
         const secret = new Secret()
-        secret.setClientEncrypted(await encryptPassword(connectionProps.snowflakePassword, getState().env.variables.AES_KEY, getState().env.variables.AES_IV))
-        connection.setSnowflakePassword(secret)
+        secret.setClientEncrypted(await encryptPassword(connectionProps.snowflakeKey, getState().env.variables.AES_KEY, getState().env.variables.AES_IV))
+        connection.setSnowflakeKey(secret)
+      } else if (connectionType === ConnectionType.CONNECTION_TYPE_WHEROBOTS) {
+        connection.setConnectionName(connectionProps.connectionName || 'Wherobots')
+        connection.setWherobotsHost(connectionProps.wherobotsHost)
+        connection.setWherobotsRegion(connectionProps.wherobotsRegion)
+        connection.setWherobotsRuntime(connectionProps.wherobotsRuntime)
+        const secret = new Secret()
+        secret.setClientEncrypted(await encryptPassword(connectionProps.wherobotsKey, getState().env.variables.AES_KEY, getState().env.variables.AES_IV))
+        connection.setWherobotsKey(secret)
       } else if (connectionProps.newBigqueryKey) { // bigquery service account key
         const { connectionName, cloudStorageBucket, newBigqueryKey } = connectionProps
         connection.setConnectionName(connectionName || 'BigQuery')
@@ -193,11 +212,11 @@ export function saveConnection (id, connectionType, connectionProps) {
         connection.setSnowflakeAccountId(connectionProps.snowflakeAccountId)
         connection.setSnowflakeUsername(connectionProps.snowflakeUsername)
         connection.setSnowflakeWarehouse(connectionProps.snowflakeWarehouse)
-        if (prevConnection?.snowflakePassword !== connectionProps.snowflakePassword) {
-          // update password only if it was changed, otherwise it's just a placeholder
+        if (prevConnection?.snowflakeKey !== connectionProps.snowflakeKey) {
+          // update secret only if it was changed, otherwise it's just a placeholder
           const secret = new Secret()
-          secret.setClientEncrypted(await encryptPassword(connectionProps.snowflakePassword, getState().env.variables.AES_KEY, getState().env.variables.AES_IV))
-          connection.setSnowflakePassword(secret)
+          secret.setClientEncrypted(await encryptPassword(connectionProps.snowflakeKey, getState().env.variables.AES_KEY, getState().env.variables.AES_IV))
+          connection.setSnowflakeKey(secret)
         }
       } else if (prevConnection.bigqueryKey) { // bigquery service account key
         connection.setConnectionName(connectionProps.connectionName)
@@ -280,6 +299,37 @@ function arrayBufferToBase64 (buffer) {
   return window.btoa(binary)
 }
 
+export function wherobotsConnectionHintError (err) {
+  return { type: wherobotsConnectionHintError.name, error: err }
+}
+
+export function wherobotsConnectionHintResponse (hint) {
+  const regions = hint?.regions?.hint?.filter((r) => r.enabled).map((r) => ({ value: r.regionName, label: r.regionName }))
+  const runtimes = hint?.runtimes?.hint?.filter((r) => r.enabled).map((r) => ({ value: r.id, label: r.id }))
+  return { type: wherobotsConnectionHintResponse.name, runtimes, regions }
+}
+
+export function getWherobotsConnectionHint (wherobotsHost, wherobotsKey) {
+  return async (dispatch, getState) => {
+    dispatch({ type: getWherobotsConnectionHint.name })
+    const { env: { variables: { AES_IV, AES_KEY } } } = getState()
+    const request = new GetWherobotsConnectionHintRequest()
+    request.setWherobotsHost(wherobotsHost)
+    const secret = new Secret()
+    secret.setClientEncrypted(await encryptPassword(wherobotsKey, AES_KEY, AES_IV))
+    request.setWherobotsKey(secret)
+    const res = await new Promise((resolve) => {
+      dispatch(grpcCall(Dekart.GetWherobotsConnectionHint, request, resolve, (err) => {
+        dispatch(wherobotsConnectionHintError(err))
+        if (err.code !== 13) {
+          return err
+        }
+      }))
+    })
+    dispatch(wherobotsConnectionHintResponse(JSON.parse(res.hintJson)))
+  }
+}
+
 export function testConnection (connectionType, values) {
   return async (dispatch, getState) => {
     dispatch({ type: testConnection.name })
@@ -288,14 +338,23 @@ export function testConnection (connectionType, values) {
     const connection = new Connection()
     connection.setConnectionType(connectionType)
     if (connectionType === ConnectionType.CONNECTION_TYPE_SNOWFLAKE) {
-      const { connectionName, snowflakeAccountId, snowflakeUsername, snowflakeWarehouse, snowflakePassword } = values
+      const { connectionName, snowflakeAccountId, snowflakeUsername, snowflakeWarehouse, snowflakeKey } = values
       connection.setConnectionName(connectionName)
       connection.setSnowflakeAccountId(snowflakeAccountId)
       connection.setSnowflakeUsername(snowflakeUsername)
       connection.setSnowflakeWarehouse(snowflakeWarehouse)
       const secret = new Secret()
-      secret.setClientEncrypted(await encryptPassword(snowflakePassword, AES_KEY, AES_IV))
-      connection.setSnowflakePassword(secret)
+      secret.setClientEncrypted(await encryptPassword(snowflakeKey, AES_KEY, AES_IV))
+      connection.setSnowflakeKey(secret)
+    } else if (connectionType === ConnectionType.CONNECTION_TYPE_WHEROBOTS) {
+      const { connectionName, wherobotsKey, wherobotsHost, wherobotsRegion, wherobotsRuntime } = values
+      connection.setConnectionName(connectionName)
+      connection.setWherobotsHost(wherobotsHost)
+      connection.setWherobotsRegion(wherobotsRegion)
+      connection.setWherobotsRuntime(wherobotsRuntime)
+      const secret = new Secret()
+      secret.setClientEncrypted(await encryptPassword(wherobotsKey, AES_KEY, AES_IV))
+      connection.setWherobotsKey(secret)
     } else if (values.newBigqueryKey) { // bigquery service account key
       const { connectionName, cloudStorageBucket, newBigqueryKey } = values
       connection.setConnectionName(connectionName)
@@ -313,7 +372,7 @@ export function testConnection (connectionType, values) {
     request.setConnection(connection)
 
     const res = await new Promise((resolve) => {
-      dispatch(grpcCall(Dekart.TestConnection, request, resolve))
+      dispatch(grpcCall(Dekart.TestConnection, request, resolve, (err) => err, 1))
     })
 
     dispatch(testConnectionResponse(res))

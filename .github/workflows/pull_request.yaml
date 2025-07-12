@@ -2,28 +2,52 @@ name: Pull Request
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
+  flavour:
+    uses: ./.github/workflows/flavour.yaml
+
   changes:
-    uses: ./.github/workflows/changes.yaml
+    needs: [flavour]
     if: startsWith(github.head_ref, 'release') != true
+    uses: ./.github/workflows/changes.yaml
     permissions:
       pull-requests: read
-      contents: read
+      contents:       read
+
   node_tests:
-    needs: changes
-    if: needs.changes.outputs.js == 'true'
+    if: needs.flavour.outputs.is_premium == 'true' &&
+        needs.changes.outputs.js == 'true'
+    needs: [changes]
     uses: ./.github/workflows/node_test.yaml
     secrets: inherit
+
   go_tests:
-    needs: changes
-    if: needs.changes.outputs.go == 'true'
+    if: needs.flavour.outputs.is_premium == 'true' &&
+        needs.changes.outputs.go == 'true'
+    needs: [changes]
     uses: ./.github/workflows/go_test.yaml
     secrets: inherit
+
+  build_e2e:
+    if: needs.changes.outputs.e2e == 'true' &&
+        github.event.pull_request.head.repo.full_name == github.repository
+    needs: [changes, flavour]
+    with:
+      build_e2e: true
+    uses: ./.github/workflows/build.yaml
+    secrets: inherit
+
+  pulumi_preview:
+    if: needs.flavour.outputs.is_cloud == 'true'
+    needs: [flavour]
+    uses: ./.github/workflows/pulumi_preview.yaml
+    secrets: inherit
+
   e2e_tests:
-    needs: changes
+    if: needs.changes.outputs.e2e == 'true' &&
+        github.event.pull_request.head.repo.full_name == github.repository
+    needs: [build_e2e, changes]
     uses: ./.github/workflows/e2e.yaml
-    if: needs.changes.outputs.e2e == 'true' && github.event.pull_request.head.repo.full_name == github.repository
     secrets: inherit

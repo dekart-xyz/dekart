@@ -9,7 +9,7 @@
 .middle {
     position: absolute;
     left: 250px;
-    width: calc(100% - 2*250px);
+    width: calc(100% - 2*305px);
 }
 
 .titleWrap {

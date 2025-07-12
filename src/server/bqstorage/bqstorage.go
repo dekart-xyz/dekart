@@ -41,7 +41,6 @@ func (s BigQueryStorageObject) getClient(ctx context.Context) (*bigquery.Client,
 }
 
 func (s BigQueryStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, error) {
-	log.Debug().Str("jobID", s.JobID).Msg("BigQueryStorageObject GetCreatedAt")
 	client, err := s.getClient(ctx)
 	if err != nil {
 		return nil, err
@@ -60,7 +59,6 @@ func (s BigQueryStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, er
 }
 
 func (s BigQueryStorageObject) GetReader(ctx context.Context) (io.ReadCloser, error) {
-	log.Debug().Str("jobID", s.JobID).Msg("BigQueryStorageObject GetReader")
 	connCtx := conn.GetCtx(ctx, s.Connection)
 	client, err := s.getClient(ctx)
 	if err != nil {
@@ -133,7 +131,7 @@ func (s BigQueryStorageObject) GetReader(ctx context.Context) (io.ReadCloser, er
 						return
 					}
 				case <-ctx.Done():
-					log.Debug().Msg("context canceled")
+					log.Warn().Msg("context canceled while reading BigQuery rows")
 					return
 				}
 			}

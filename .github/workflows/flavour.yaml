@@ -1,0 +1,34 @@
+name: Detect flavour (cloud / premium)
+
+on:
+  workflow_call:
+    outputs:
+      target:
+        description: "cloud or premium"
+        value: ${{ jobs.detect.outputs.target }}
+      is_cloud:
+        description: "true if this is a cloud repo"
+        value: ${{ jobs.detect.outputs.is_cloud }}
+      is_premium:
+        description: "true if this is a premium/oss repo"
+        value: ${{ jobs.detect.outputs.is_premium }}
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      target:     ${{ steps.set.outputs.target }}
+      is_cloud:   ${{ steps.set.outputs.is_cloud }}
+      is_premium: ${{ steps.set.outputs.is_premium }}
+    steps:
+      - id: set
+        run: |
+          if [[ '${{ github.repository }}' == *dekart-cloud ]]; then
+            echo "target=cloud"     >> $GITHUB_OUTPUT
+            echo "is_cloud=true"    >> $GITHUB_OUTPUT
+            echo "is_premium=false" >> $GITHUB_OUTPUT
+          else
+            echo "target=premium"   >> $GITHUB_OUTPUT
+            echo "is_cloud=false"   >> $GITHUB_OUTPUT
+            echo "is_premium=true"  >> $GITHUB_OUTPUT
+          fi

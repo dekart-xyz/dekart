@@ -2,10 +2,15 @@ package conn
 
 import (
 	"context"
+	"database/sql"
 	"dekart/src/proto"
+	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/rs/zerolog/log"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type ConnectionContextKey string
@@ -36,13 +41,69 @@ func GetCtx(ctx context.Context, connection *proto.Connection) context.Context {
 func FromCtx(ctx context.Context) *proto.Connection {
 	connection, ok := ctx.Value(connectionContextKey).(*proto.Connection)
 	if !ok {
-		log.Error().Msg("Connection not found in context")
+		_, file1, line1, _ := runtime.Caller(1)
+		_, file2, line2, _ := runtime.Caller(2)
+		_, file3, line3, _ := runtime.Caller(3)
+		log.Error().Caller().Str(
+			"called_from_1", fmt.Sprintf("%s:%d", file1, line1),
+		).Str(
+			"called_from_2", fmt.Sprintf("%s:%d", file2, line2),
+		).Str(
+			"called_from_3", fmt.Sprintf("%s:%d", file3, line3),
+		).Msg("Connection not found in context")
 		return &proto.Connection{}
 	}
 	return connection
 }
 
+// SystemConnectionID is a special connection ID used for connection configured in env variables
+const SystemConnectionID = "00000000-0000-0000-0000-000000000000"
+
+func IsSystemConnectionID(connectionID string) bool {
+	return connectionID == SystemConnectionID || connectionID == "default" || connectionID == ""
+}
+
+func ConnectionIDToNullString(connectionID string) sql.NullString {
+	if IsSystemConnectionID(connectionID) {
+		return sql.NullString{Valid: false}
+	}
+	return sql.NullString{String: connectionID, Valid: true}
+}
+
 func CopyConnectionCtx(sourceCtx, destCtx context.Context) context.Context {
 	connection := FromCtx(sourceCtx)
 	return GetCtx(destCtx, connection)
+}
+
+func ValidateReqConnection(con *proto.Connection) error {
+	if con == nil {
+		return status.Error(codes.InvalidArgument, "connection is required")
+	}
+	if con.ConnectionName == "" {
+		return status.Error(codes.InvalidArgument, "connection_name is required")
+	}
+	if con.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_SNOWFLAKE {
+		if con.SnowflakeAccountId == "" {
+			return status.Error(codes.InvalidArgument, "snowflake_account_id is required")
+		}
+		if con.SnowflakeUsername == "" {
+			return status.Error(codes.InvalidArgument, "snowflake_username is required")
+		}
+	}
+	if con.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_WHEROBOTS {
+		if con.WherobotsHost == "" {
+			return status.Error(codes.InvalidArgument, "wherobots_host is required")
+		}
+		if con.WherobotsKey == nil {
+			return status.Error(codes.InvalidArgument, "wherobots_key is required")
+		}
+		if con.WherobotsRegion == "" {
+			return status.Error(codes.InvalidArgument, "wherobots_region is required")
+		}
+		if con.WherobotsRuntime == "" {
+			return status.Error(codes.InvalidArgument, "wherobots_runtime is required")
+		}
+
+	}
+	return nil
 }

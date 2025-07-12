@@ -2,14 +2,10 @@
 
 Welcome to the **Dekart Premium** codebase! This repository is accessible to paying organizations with **read-only access**. Below, you'll find all the information you need to start using and managing Dekart Premium effectively.
 
-Here’s the rewritten section with a focus on using the **Project** for tracking:
-
----
-
-## 📦 **Project Access & Permissions**
+## 📦 **Repository Access & Permissions**
 
 - You have **read-only access** to the code in this repository.
-- To submit issues and feature requests, please use the **Private Issue Tracker** project, where all requests can be tracked and monitored in real time. It cab be found in the **Projects** tab.
+- Any issues or feature requests should be raised in a dedicated repository named **dekart-premium-[your_team_name]**.
 - For live support, join our **[Slack community](https://slack.dekart.xyz/)**.
 
 ## 🛠️ **Installing Dekart Premium**
@@ -43,15 +39,12 @@ You can install the Dekart Premium Docker image directly from **GitHub Packages*
 
 If you need personalized assistance, you can schedule a 1-on-1 call with a developer through our **[Calendly link](https://calendly.com/vladi-dekart/30min)**. We'll be happy to walk you through advanced features or help troubleshoot any issues.
 
-Here’s the revised section, focused on using the dedicated project for issue tracking:
-
----
-
 ## 🚨 **Raising Issues**
 
-- Use the **Private Issue Tracker** project to submit and track issues or feature requests.
-- To create a new issue, navigate to the project’s linked repository and open an issue with detailed information, including:
-  - Steps to reproduce the issue
+- Each team has its own repository for tracking issues. Use the format **dekart-premium-[your_team_name]** to create a new issue.
+- **Example Issue Repo**: `https://github.com/dekart-xyz/dekart-premium-[your_team_name]/issues`
+- Please provide as much detail as possible in your reports, including:
+  - Steps to reproduce
   - Expected behavior
   - Logs or screenshots, if available
 

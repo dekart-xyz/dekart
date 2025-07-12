@@ -20,6 +20,12 @@ import (
 func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStreamServer, sequence int64) error {
 	ctx := srv.Context()
 
+	claims := user.GetClaims(ctx)
+
+	if claims == nil {
+		return Unauthenticated
+	}
+
 	report, err := s.getReport(ctx, reportID)
 	if err != nil {
 		log.Err(err).Msg("Cannot retrieve report")
@@ -29,6 +35,20 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 		err := fmt.Errorf("report %s not found", reportID)
 		log.Warn().Err(err).Send()
 		return status.Errorf(codes.NotFound, err.Error())
+	}
+
+	// update report_analytics
+	_, err = s.db.ExecContext(ctx,
+		`insert into report_analytics (report_id, email)
+		values ($1, $2)
+		on conflict (report_id, email) do update set updated_at = CURRENT_TIMESTAMP,
+		num_views = report_analytics.num_views + 1`,
+		reportID,
+		claims.Email,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return status.Errorf(codes.Internal, err.Error())
 	}
 
 	datasets, err := s.getDatasets(ctx, reportID)
@@ -55,6 +75,12 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 		return status.Errorf(codes.Internal, err.Error())
 	}
 
+	directAccessEmails, err := s.getDirectAccessEmails(ctx, reportID)
+	if err != nil {
+		log.Err(err).Msg("Cannot retrieve direct access emails")
+		return status.Errorf(codes.Internal, err.Error())
+	}
+
 	res := proto.ReportStreamResponse{
 		Report:   report,
 		Queries:  queries,
@@ -63,7 +89,8 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 		StreamOptions: &proto.StreamOptions{
 			Sequence: sequence,
 		},
-		QueryJobs: queryJobs,
+		QueryJobs:          queryJobs,
+		DirectAccessEmails: directAccessEmails,
 	}
 
 	err = srv.Send(&res)
@@ -124,10 +151,8 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 	for {
 		select {
 		case sequence := <-ping:
-			log.Debug().Str("reportID", req.Report.Id).Int64("sequence", sequence).Msg("Sending report message")
 			return s.sendReportMessage(req.Report.Id, srv, sequence)
 		case <-ctx.Done():
-			log.Debug().Str("reportID", req.Report.Id).Msg("GetReportStream ctx done")
 			return nil
 		}
 	}
@@ -152,7 +177,17 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 				updated_at,
 				created_at,
 				is_public,
-				is_playground
+				is_playground,
+				exists (
+					select 1
+					from (
+						select email, access_level, status,
+							row_number() over (partition by email order by created_at desc) as rn
+						from report_access_log
+						where report_id = r.id
+					) t
+					where rn = 1 and status != 2
+				) as has_direct_access
 			from reports as r
 			where author_email=$1 and is_playground=true
 			order by updated_at desc`,
@@ -161,21 +196,31 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 	} else {
 		reportRows, err = s.db.QueryContext(ctx,
 			`select
-				id,
-				case when title is null then 'Untitled' else title end as title,
-				archived,
-				(author_email = $1) or allow_edit as can_write,
-				author_email = $1 as is_author,
-				author_email,
-				discoverable,
-				allow_edit,
-				updated_at,
-				created_at,
-				is_public,
-				is_playground
+				r.id,
+				case when r.title is null then 'Untitled' else r.title end as title,
+				r.archived,
+				(r.author_email = $1) or r.allow_edit as can_write,
+				r.author_email = $1 as is_author,
+				r.author_email,
+				r.discoverable,
+				r.allow_edit,
+				r.updated_at,
+				r.created_at,
+				r.is_public,
+				r.is_playground,
+				exists (
+					select 1
+					from (
+						select email, access_level, status,
+							row_number() over (partition by email order by created_at desc) as rn
+						from report_access_log
+						where report_id = r.id
+					) t
+					where rn = 1 and status != 2
+				) as has_direct_access
 			from reports as r
-			where (author_email=$1 or (discoverable=true and archived=false) or allow_edit=true) and workspace_id=$2
-			order by updated_at desc`,
+			where (r.author_email=$1 or (r.discoverable=true and r.archived=false) or r.allow_edit=true) and r.workspace_id=$2
+			order by r.updated_at desc`,
 			claims.Email,
 			checkWorkspace(ctx).ID,
 		)
@@ -208,6 +253,7 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			&createdAt,
 			&report.IsPublic,
 			&report.IsPlayground,
+			&report.HasDirectAccess,
 		)
 		if err != nil {
 			log.Err(err).Send()

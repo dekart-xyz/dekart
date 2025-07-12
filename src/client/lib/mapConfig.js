@@ -1,5 +1,5 @@
-import { receiveMapConfig } from '@dekart-xyz/kepler.gl/dist/actions/actions'
-import { KeplerGlSchema } from '@dekart-xyz/kepler.gl/dist/schemas'
+import { receiveMapConfig } from '@kepler.gl/actions'
+import { KeplerGlSchema } from '@kepler.gl/schemas'
 import { setReportChanged } from '../actions/report'
 import { useDispatch, useSelector } from 'react-redux'
 import { useEffect } from 'react'
@@ -55,7 +55,7 @@ function checkMapConfig (kepler, mapConfigInputStr, dispatch, datasets) {
       }
     }
     checkMapConfigTimer = null
-  }, 500)
+  }, 100) // 100ms delay to avoid calls when playing animation
   return () => {
     if (checkMapConfigTimer) {
       clearTimeout(checkMapConfigTimer)

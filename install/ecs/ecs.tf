@@ -16,7 +16,7 @@ resource "aws_ecs_task_definition" "dekart" {
 [
     {
        "name": "${var.dekart_deployment_name}",
-       "image": "ghcr.io/dekart-xyz/dekart-premium:${var.dekart_version}",
+       "image": "dekartxyz/dekart:${var.dekart_version}",
        "portmappings": [
           {
             "hostport": 8080,

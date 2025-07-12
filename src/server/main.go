@@ -15,6 +15,7 @@ import (
 	"dekart/src/server/app"
 	"dekart/src/server/athenajob"
 	"dekart/src/server/bqjob"
+	chjob "dekart/src/server/clickhousejob"
 	"dekart/src/server/dekart"
 	"dekart/src/server/errtype"
 	"dekart/src/server/job"
@@ -64,7 +65,7 @@ func configureDb() *sql.DB {
 	if sqliteOk {
 		// Use SQLite
 		log.Info().Msg("Using SQLite database")
-		log.Debug().Msg("Restoring SQLite database from backup")
+		log.Info().Msg("Restoring SQLite database from backup")
 		dekart.RestoreDbFile()
 		db, err := sql.Open("sqlite3", sqlitePath)
 		if err != nil {
@@ -128,12 +129,30 @@ func applyMigrations(db *sql.DB) {
 		if err != nil {
 			log.Fatal().Err(err).Msg("NewWithDatabaseInstance")
 		}
+		version, dirty, err := m.Version()
+		if err != nil {
+			if err == migrate.ErrNilVersion {
+				log.Info().Msg("No migrations applied yet")
+			} else {
+				log.Fatal().Err(err).Msg("Version")
+			}
+		} else {
+			log.Info().Int("version", int(version)).Bool("dirty", dirty).Msg("Current migration version")
+		}
+
 		err = m.Up()
 		if err != nil {
 			if err == migrate.ErrNoChange {
+				log.Info().Msg("No new migrations to apply")
 				return
 			}
 			log.Fatal().Err(err).Msg("Migrations Up")
+		}
+		version, dirty, err = m.Version()
+		if err != nil {
+			log.Fatal().Err(err).Msg("Version")
+		} else {
+			log.Info().Int("version", int(version)).Bool("dirty", dirty).Msg("Migrations applied")
 		}
 	}
 }
@@ -144,7 +163,7 @@ func configureBucket() storage.Storage {
 	case "S3":
 		log.Info().Msg("Using S3 storage backend")
 		bucket = storage.NewS3Storage()
-	case "GCS", "":
+	case "GCS":
 		log.Info().Msg("Using GCS storage backend")
 		bucket = storage.NewGoogleCloudStorage()
 	case "SNOWFLAKE":
@@ -177,6 +196,9 @@ func configureJobStore(bucket storage.Storage) job.Store {
 	case "BQ", "":
 		log.Info().Msg("Using BigQuery Datasource backend")
 		jobStore = bqjob.NewStore()
+	case "CH":
+		log.Info().Msg("Using Clickhouse Datasource backend")
+		jobStore = chjob.NewStore()
 	default:
 		log.Fatal().Str("DEKART_STORAGE", os.Getenv("DEKART_STORAGE")).Msg("Unknown storage backend")
 	}
@@ -220,7 +242,7 @@ func main() {
 
 	go startHttpServer(httpServer)
 
-	log.Debug().Msg("dekart server started")
+	log.Info().Msg("dekart server started")
 
 	sig := <-waitForInterrupt()
 
@@ -235,13 +257,13 @@ func main() {
 	go func() {
 		defer wg.Done()
 		dekartServer.Shutdown(shutdownCtx)
-		log.Debug().Msg("dekart server shutdown complete")
+		log.Info().Msg("dekart server shutdown complete")
 	}()
 
 	go func() {
 		defer wg.Done()
 		httpServer.Shutdown(shutdownCtx)
-		log.Debug().Msg("http server shutdown complete")
+		log.Info().Msg("http server shutdown complete")
 	}()
 
 	shutdown := make(chan bool)

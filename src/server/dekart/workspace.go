@@ -60,7 +60,6 @@ func (s Server) CreateWorkspace(ctx context.Context, req *proto.CreateWorkspaceR
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	log.Debug().Msgf("CreateWorkspace: %v", req)
 	workspaceID := newUUID()
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO workspaces (id, name)

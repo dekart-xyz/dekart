@@ -77,6 +77,7 @@ func getFileExtension(mimeType string) string {
 func (s Server) moveFileToStorage(reqConCtx context.Context, fileSourceID string, fileExtension string, file multipart.File, report *proto.Report, bucketName string) {
 	defer file.Close()
 	userCtx, cancel := context.WithTimeout(user.CopyUserContext(reqConCtx, context.Background()), 10*time.Minute)
+	userConnCtx := conn.CopyConnectionCtx(reqConCtx, userCtx)
 	defer cancel()
 	var storageWriter io.WriteCloser
 	if report.IsPublic {
@@ -84,7 +85,7 @@ func (s Server) moveFileToStorage(reqConCtx context.Context, fileSourceID string
 		storageWriter = s.GetObject(userCtx, s.GetDefaultBucketName(), fmt.Sprintf("%s.%s", fileSourceID, fileExtension)).GetWriter(userCtx)
 	} else {
 		// reqConCtx is used because it has connection information, userCtx does not have it
-		storageWriter = s.storage.GetObject(reqConCtx, bucketName, fmt.Sprintf("%s.%s", fileSourceID, fileExtension)).GetWriter(userCtx)
+		storageWriter = s.storage.GetObject(userConnCtx, bucketName, fmt.Sprintf("%s.%s", fileSourceID, fileExtension)).GetWriter(userConnCtx)
 	}
 	_, err := io.Copy(storageWriter, file)
 	if err != nil {
@@ -97,8 +98,8 @@ func (s Server) moveFileToStorage(reqConCtx context.Context, fileSourceID string
 	if err != nil {
 		log.Err(err).Msg("error closing storage writer")
 		s.setUploadError(report.Id, fileSourceID, err)
+		return
 	}
-	log.Debug().Msgf("file %s.csv moved to storage", fileSourceID)
 	_, err = s.db.ExecContext(userCtx,
 		`update files set file_status=3, updated_at=CURRENT_TIMESTAMP where file_source_id=$1`,
 		fileSourceID,
@@ -157,6 +158,13 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Err(err).Msg("getConnectionFromFileID failed")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if connection == nil {
+		err = fmt.Errorf("connection not found")
+		log.Error().Err(err).Msg("connection not found")
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
@@ -238,12 +246,13 @@ func (s Server) CreateFile(ctx context.Context, req *proto.CreateFileRequest) (*
 	}
 
 	result, err := s.db.ExecContext(ctx,
-		`update datasets set file_id=$1, updated_at=CURRENT_TIMESTAMP where id=$2 and file_id is null`,
+		`update datasets set file_id=$1, connection_id=$2, updated_at=CURRENT_TIMESTAMP where id=$3 and file_id is null`,
 		id,
+		conn.ConnectionIDToNullString(req.ConnectionId),
 		req.DatasetId,
 	)
 	if err != nil {
-		log.Err(err).Msg("update datasets failed when creating file")
+		log.Err(err).Str("connectionId", req.ConnectionId).Msg("update datasets failed when creating file")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 

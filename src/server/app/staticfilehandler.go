@@ -18,7 +18,7 @@ type StaticFilesHandler struct {
 	indexFileModTime time.Time
 }
 
-var customCodeRe = regexp.MustCompile(`CUSTOM_CODE`)
+var customCodeRe = regexp.MustCompile(`<!--\s*%CUSTOM_CODE%\s*-->`)
 
 // NewStaticFilesHandler creates a new StaticFilesHandler
 func NewStaticFilesHandler(staticPath string) StaticFilesHandler {
@@ -64,5 +64,9 @@ func (h StaticFilesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // ServeIndex serves index.html
 func (h StaticFilesHandler) ServeIndex(w http.ResponseWriter, r *http.Request) {
+	// Set caching headers for index.html
+	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate") // Prevent caching
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Expires", "0")
 	http.ServeContent(w, r, "index.html", h.indexFileModTime, bytes.NewReader(h.indexFileBuffer))
 }

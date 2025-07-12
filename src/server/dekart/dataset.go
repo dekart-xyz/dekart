@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -169,6 +170,22 @@ func (s Server) UpdateDatasetName(ctx context.Context, req *proto.UpdateDatasetN
 	return &proto.UpdateDatasetNameResponse{}, nil
 }
 
+func (s Server) updateDatasetConnection(ctx context.Context, datasetID string, connectionID string) error {
+	_, err := s.db.ExecContext(ctx,
+		`update
+			datasets set
+			connection_id = $1
+			where id=$2`,
+		conn.ConnectionIDToNullString(connectionID),
+		datasetID,
+	)
+	if err != nil {
+		log.Err(err).Msg("Error updating dataset connection")
+		return err
+	}
+	return nil
+}
+
 func (s Server) UpdateDatasetConnection(ctx context.Context, req *proto.UpdateDatasetConnectionRequest) (*proto.UpdateDatasetConnectionResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
@@ -188,14 +205,8 @@ func (s Server) UpdateDatasetConnection(ctx context.Context, req *proto.UpdateDa
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	_, err = s.db.ExecContext(ctx,
-		`update
-			datasets set
-			connection_id = $1
-			where id=$2`,
-		req.ConnectionId,
-		req.DatasetId,
-	)
+	err = s.updateDatasetConnection(ctx, req.DatasetId, req.ConnectionId)
+
 	if err != nil {
 		log.Err(err).Msg("Error updating dataset connection")
 		return nil, status.Error(codes.Internal, err.Error())
@@ -272,38 +283,17 @@ func (s Server) insertDataset(ctx context.Context, reportID string) (res sql.Res
 			claims.Email,
 		)
 	}
-	connection, err := s.getDefaultConnection(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if connection == nil {
-		return s.db.ExecContext(ctx,
-			`insert into datasets (id, report_id)
+	return s.db.ExecContext(ctx,
+		`insert into datasets (id, report_id)
 		select
 			$1 as id,
 			id as report_id
 		from reports
 		where id=$2 and not archived and (author_email=$3 or allow_edit) and workspace_id=$4 limit 1
 		`,
-			id,
-			reportID,
-			claims.Email,
-			checkWorkspace(ctx).ID,
-		)
-	}
-	return s.db.ExecContext(ctx,
-		`insert into datasets (id, report_id, connection_id)
-			select
-				$1 as id,
-				id as report_id,
-				$4 as connection_id
-			from reports
-			where id=$2 and not archived and (author_email=$3 or allow_edit) and workspace_id=$5 limit 1
-	`,
 		id,
 		reportID,
 		claims.Email,
-		connection.Id,
 		checkWorkspace(ctx).ID,
 	)
 }
@@ -345,6 +335,26 @@ func storageError(w http.ResponseWriter, err error) {
 		return
 	}
 	HttpError(w, err)
+}
+
+func (s Server) getResultURI(ctx context.Context, resultID string) (string, error) {
+	var uri sql.NullString
+	rows, err := s.db.QueryContext(ctx,
+		`select result_uri from query_jobs where job_result_id=$1`,
+		resultID,
+	)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	if rows.Next() {
+		err := rows.Scan(&uri)
+		if err != nil {
+			return "", err
+		}
+		return uri.String, nil
+	}
+	return "", nil
 }
 
 func (s Server) getDWJobIDFromResultID(ctx context.Context, resultID string) (string, error) {
@@ -428,7 +438,7 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if connection.Id == "default" {
+	if conn.IsSystemConnectionID(connection.Id) {
 		// dataset has no connection, it means it's a playground dataset
 		ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{IsPlayground: true})
 	}
@@ -436,10 +446,19 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	bucketName := s.getBucketNameFromConnection(connection)
 
 	conCtx := conn.GetCtx(ctx, connection)
-	defConCtx := conn.GetCtx(ctx, &proto.Connection{Id: "default"})
+
+	//TODO: pass whole connection?
+	defConCtx := conn.GetCtx(ctx, &proto.Connection{Id: conn.SystemConnectionID})
 	dwJobID, err := s.getDWJobIDFromResultID(ctx, vars["source"])
 	if err != nil {
 		log.Error().Err(err).Msg("Error getting dw job id")
+		HttpError(w, err)
+		return
+	}
+
+	resultURI, err := s.getResultURI(ctx, vars["source"])
+	if err != nil {
+		log.Error().Err(err).Msg("Error getting result URI")
 		HttpError(w, err)
 		return
 	}
@@ -450,17 +469,16 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 
 	if report.IsPublic {
 		// public report, load from public storage bucket
-		log.Debug().Str("source", vars["source"]).Msg("Serving dataset source from public storage")
 		publicStorage := storage.NewPublicStorage()
 		obj = publicStorage.GetObject(defConCtx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
 		useCtx = defConCtx // public storage does not require connection
+	} else if resultURI != "" {
+		obj = storage.NewPresignedS3Storage().GetObject(conCtx, "", resultURI)
 	} else if dwJobID != "" {
 		// temp data warehouse table is used as source
-		log.Debug().Str("source", vars["source"]).Msg("Serving dataset source from temporary storage")
 		obj = s.storage.GetObject(conCtx, bucketName, dwJobID)
 	} else {
 		// file stored on the bucket is used as source
-		log.Debug().Str("source", vars["source"]).Msg("Serving dataset source from user storage")
 		obj = s.storage.GetObject(conCtx, bucketName, fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
 	}
 
@@ -469,15 +487,23 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 		storageError(w, err)
 		return
 	}
+
 	objectReader, err := obj.GetReader(useCtx)
 	if err != nil {
 		storageError(w, err)
 		return
 	}
 	defer objectReader.Close()
-	w.Header().Set("Content-Type", "text/csv")
-	w.Header().Set("Cache-Control", "public, max-age=31536000")
-	w.Header().Set("Last-Modified", created.Format(time.UnixDate))
+	if os.Getenv("DEKART_DEV_NO_DATASET_CACHE") == "1" {
+		log.Warn().Msg("DEKART_DEV_NO_DATASET_CACHE is set, disabling cache for dataset source")
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate") // Prevent caching
+		w.Header().Set("Pragma", "no-cache")
+		w.Header().Set("Expires", "0")
+	} else {
+		w.Header().Set("Content-Type", "text/csv")
+		w.Header().Set("Cache-Control", "public, max-age=31536000")
+		w.Header().Set("Last-Modified", created.Format(time.UnixDate))
+	}
 	if _, err := io.Copy(w, objectReader); err != nil {
 		HttpError(w, err)
 		return

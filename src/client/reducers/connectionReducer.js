@@ -1,5 +1,5 @@
 import { combineReducers } from 'redux'
-import { closeConnectionDialog, connectionChanged, connectionCreated, connectionListUpdate, connectionSaved, editConnection, newConnection, newConnectionScreen, projectListUpdate, reOpenDialog, saveConnection, testConnection, testConnectionResponse } from '../actions/connection'
+import { closeConnectionDialog, connectionChanged, connectionCreated, connectionListUpdate, connectionSaved, editConnection, getWherobotsConnectionHint, newConnection, newConnectionScreen, projectListUpdate, reOpenDialog, saveConnection, testConnection, testConnectionResponse, wherobotsConnectionHintError, wherobotsConnectionHintResponse } from '../actions/connection'
 import { setEnv } from '../actions/env'
 import { sessionStorageInit, updateSessionStorage } from '../actions/sessionStorage'
 
@@ -120,6 +120,33 @@ function userDefined (state = true, action) {
   }
 }
 
+function wherobotsHint (state = {
+  loading: false,
+  regions: [],
+  runtimes: []
+}, action) {
+  switch (action.type) {
+    case wherobotsConnectionHintResponse.name:
+      return {
+        loading: false,
+        regions: action.regions || [],
+        runtimes: action.runtimes || []
+      }
+    case getWherobotsConnectionHint.name:
+      return {
+        ...state,
+        loading: true
+      }
+    case wherobotsConnectionHintError.name:
+      return {
+        ...state,
+        loading: false
+      }
+    default:
+      return state
+  }
+}
+
 function projects (state = null, action) {
   switch (action.type) {
     case projectListUpdate.name:
@@ -170,5 +197,6 @@ export default combineReducers({
   projects,
   screen,
   lastOpenedDialog,
-  redirectWhenSaveConnection
+  redirectWhenSaveConnection,
+  wherobotsHint
 })

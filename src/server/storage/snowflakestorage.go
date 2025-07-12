@@ -50,7 +50,6 @@ func (s SnowflakeStorageObject) CanSaveQuery(context.Context, string) bool {
 }
 
 func (s SnowflakeStorageObject) GetReader(ctx context.Context) (io.ReadCloser, error) {
-	log.Debug().Str("queryID", s.queryID).Msg("GetReader")
 	fetchResultByIDCtx := sf.WithStreamDownloader(sf.WithFetchResultByID(ctx, s.queryID))
 	db := sql.OpenDB(s.connector)
 	rows, err := db.QueryContext(fetchResultByIDCtx, "")
@@ -126,8 +125,6 @@ func (s SnowflakeStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, e
 		return nil, &errtype.Expired{}
 	}
 	createdAt := time.Unix(status.EndTime/1000, 0)
-
-	log.Debug().Str("queryID", s.queryID).Time("createdAt", createdAt).Msg("GetCreatedAt")
 
 	//check if query is too old
 	if time.Since(createdAt) > deadline.GetQueryCacheDeadline() {

@@ -1,9 +1,18 @@
 import { combineReducers } from 'redux'
-import { needSensitiveScopes, userStreamUpdate } from '../actions/user'
+import { needSensitiveScopes, setClaimEmailCookie, userStreamUpdate } from '../actions/user'
 import { localStorageInit } from '../actions/localStorage'
 import { sessionStorageInit } from '../actions/sessionStorage'
 import { setRedirectState } from '../actions/redirect'
-import { PlanType, UserRole } from '../../proto/dekart_pb'
+import { PlanType, UserRole } from 'dekart-proto/dekart_pb'
+
+function claimEmailCookie (state = null, action) {
+  switch (action.type) {
+    case setClaimEmailCookie.name:
+      return action.claimEmailCookie
+    default:
+      return state
+  }
+}
 
 function stream (state = null, action) {
   switch (action.type) {
@@ -132,5 +141,6 @@ export default combineReducers({
   redirectStateReceived,
   isViewer,
   isAdmin,
-  isSelfHosted
+  isSelfHosted,
+  claimEmailCookie
 })

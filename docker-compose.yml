@@ -1,7 +1,7 @@
 version: "3.9"
 services:
   db:
-    image: postgres:15
+    image: postgres
     profiles:
       - local
     ports:
@@ -11,88 +11,12 @@ services:
       POSTGRES_USER: "${DEKART_POSTGRES_USER}"
       POSTGRES_DB: "${DEKART_POSTGRES_DB}"
   adminer:
-      image: adminer
-      restart: always
-      profiles:
-        - local
-        - cloudsql
-      ports:
-        - 8081:8080
-  dekart-oss-bigquery:
-    image: ghcr.io/dekart-xyz/dekart-premium/dekart:latest
-    platform: linux/amd64
+    image: adminer
+    profiles:
+      - local
     restart: always
     ports:
-      - 8080:8080
-    profiles:
-      - bigquery
-    volumes:
-      - "${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS}"
-    environment:
-      DEKART_POSTGRES_DB: "${DEKART_POSTGRES_DB}"
-      DEKART_POSTGRES_USER: "${DEKART_POSTGRES_USER}"
-      DEKART_POSTGRES_PASSWORD: "${DEKART_POSTGRES_PASSWORD}"
-      DEKART_POSTGRES_PORT: "5432"
-      DEKART_POSTGRES_HOST: "host.docker.internal"
-      DEKART_CLOUD_STORAGE_BUCKET: "${DEKART_CLOUD_STORAGE_BUCKET}"
-      DEKART_BIGQUERY_PROJECT_ID: "${DEKART_BIGQUERY_PROJECT_ID}"
-      DEKART_BIGQUERY_MAX_BYTES_BILLED: "53687091200"
-      DEKART_MAPBOX_TOKEN: "${DEKART_MAPBOX_TOKEN}"
-      GOOGLE_APPLICATION_CREDENTIALS: "${GOOGLE_APPLICATION_CREDENTIALS}"
-      DEKART_CORS_ORIGIN: "${DEKART_CORS_ORIGIN}"
-  dekart-oss-googleoauth:
-    image: ghcr.io/dekart-xyz/dekart-premium/dekart:latest
-    platform: linux/amd64
-    restart: always
-    ports:
-      - 8080:8080
-    profiles:
-      - googleoauth
-    volumes:
-      - "${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS}"
-    environment:
-      DEKART_POSTGRES_DB: "${DEKART_POSTGRES_DB}"
-      DEKART_POSTGRES_USER: "${DEKART_POSTGRES_USER}"
-      DEKART_POSTGRES_PASSWORD: "${DEKART_POSTGRES_PASSWORD}"
-      DEKART_POSTGRES_PORT: "5432"
-      DEKART_POSTGRES_HOST: "host.docker.internal"
-      DEKART_MAPBOX_TOKEN: "${DEKART_MAPBOX_TOKEN}"
-      DEKART_ALLOW_FILE_UPLOAD: "${DEKART_ALLOW_FILE_UPLOAD}"
-      DEKART_REQUIRE_GOOGLE_OAUTH: "${DEKART_REQUIRE_GOOGLE_OAUTH}"
-      DEKART_GOOGLE_OAUTH_CLIENT_ID: "${DEKART_GOOGLE_OAUTH_CLIENT_ID}"
-      DEKART_GOOGLE_OAUTH_SECRET: "${DEKART_GOOGLE_OAUTH_SECRET}"
-  test:
-    image: alpine
-    env_file:
-      - .env.snowflake-s3
-    command: ["sh", "-c", "echo $DEKART_DATASOURCE"]
-  dekart-oss-snowflake-s3:
-    image: dekartxyz/dekart:0.17
-    platform: linux/amd64
-    restart: always
-    ports:
-      - 8080:8080
-    profiles:
-      - snowflake-s3
-    environment:
-      DEKART_POSTGRES_DB: "${DEKART_POSTGRES_DB}"
-      DEKART_POSTGRES_USER: "${DEKART_POSTGRES_USER}"
-      DEKART_POSTGRES_PASSWORD: "${DEKART_POSTGRES_PASSWORD}"
-      DEKART_POSTGRES_PORT: "5432"
-      DEKART_POSTGRES_HOST: "host.docker.internal"
-      DEKART_MAPBOX_TOKEN: "${DEKART_MAPBOX_TOKEN}"
-      DEKART_STORAGE: "${DEKART_STORAGE}"
-      DEKART_DATASOURCE: "${DEKART_DATASOURCE}"
-      DEKART_CLOUD_STORAGE_BUCKET: "${DEKART_CLOUD_STORAGE_BUCKET}"
-      AWS_REGION: "${AWS_REGION}"
-      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
-      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
-      DEKART_ALLOW_FILE_UPLOAD: "${DEKART_ALLOW_FILE_UPLOAD}"
-      DEKART_SNOWFLAKE_ACCOUNT_ID: "${DEKART_SNOWFLAKE_ACCOUNT_ID}"
-      DEKART_SNOWFLAKE_USER: "${DEKART_SNOWFLAKE_USER}"
-      DEKART_SNOWFLAKE_PASSWORD: "${DEKART_SNOWFLAKE_PASSWORD}"
-      DEKART_DEV_CLAIMS_EMAIL: "${DEKART_DEV_CLAIMS_EMAIL}"
-      DEKART_REQUIRE_AMAZON_OIDC: "${DEKART_REQUIRE_AMAZON_OIDC}"
+      - 8081:8080
   cloudsql:
     build: ./cloud_sql_proxy
     ports:
@@ -105,7 +29,7 @@ services:
       GOOGLE_APPLICATION_CREDENTIALS: "${GOOGLE_APPLICATION_CREDENTIALS}"
       INSTANCE_CONNECTION_NAME: "${INSTANCE_CONNECTION_NAME}"
   dekart-cloud:
-    image: europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:sha-d288d16
+    image: europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:sha-61b48b2
     platform: linux/amd64
     mem_limit: 512m
     ports:
@@ -143,5 +67,58 @@ services:
       DEKART_UX_HOMEPAGE: "${DEKART_UX_HOMEPAGE}"
       DEKART_STORAGE: "${DEKART_STORAGE}"
       DEKART_DATASOURCE: "${DEKART_DATASOURCE}"
+      DEKART_DEV_CLAIMS_EMAIL: "${DEKART_DEV_CLAIMS_EMAIL}"
+      DEKART_ALLOW_WORKSPACE_CREATION: "1"
+      DEKART_UX_DISABLE_VERSION_CHECK: "1"
+      DEKART_CLOUD: "1"
+  dekart-oss-googleoauth:
+    image: ghcr.io/dekart-xyz/dekart-premium/dekart:0.18.4
+    platform: linux/amd64
+    restart: always
+    ports:
+      - 8080:8080
+    profiles:
+      - googleoauth
+    environment:
+      DEKART_POSTGRES_DB: "${DEKART_POSTGRES_DB}"
+      DEKART_POSTGRES_USER: "${DEKART_POSTGRES_USER}"
+      DEKART_POSTGRES_PASSWORD: "${DEKART_POSTGRES_PASSWORD}"
+      DEKART_POSTGRES_PORT: "5432"
+      DEKART_POSTGRES_HOST: "host.docker.internal"
+      DEKART_MAPBOX_TOKEN: "${DEKART_MAPBOX_TOKEN}"
+      DEKART_ALLOW_FILE_UPLOAD: "${DEKART_ALLOW_FILE_UPLOAD}"
+      DEKART_REQUIRE_GOOGLE_OAUTH: "${DEKART_REQUIRE_GOOGLE_OAUTH}"
+      DEKART_GOOGLE_OAUTH_CLIENT_ID: "${DEKART_GOOGLE_OAUTH_CLIENT_ID}"
+      DEKART_GOOGLE_OAUTH_SECRET: "${DEKART_GOOGLE_OAUTH_SECRET}"
+
+  # docker compose --env-file .env.snowflake-s3 --profile dekart-oss-snowflake-s3 up
+  dekart-oss-snowflake-s3:
+    image: dekartxyz/dekart:0.17
+    platform: linux/amd64
+    restart: always
+    ports:
+      - 8080:8080
+    profiles:
+      - snowflake-s3
+    environment:
+      DEKART_POSTGRES_DB: "${DEKART_POSTGRES_DB}"
+      DEKART_POSTGRES_USER: "${DEKART_POSTGRES_USER}"
+      DEKART_POSTGRES_PASSWORD: "${DEKART_POSTGRES_PASSWORD}"
+      DEKART_POSTGRES_PORT: "5432"
+      DEKART_POSTGRES_HOST: "host.docker.internal"
+      DEKART_MAPBOX_TOKEN: "${DEKART_MAPBOX_TOKEN}"
+      DEKART_STORAGE: "${DEKART_STORAGE}"
+      DEKART_DATASOURCE: "${DEKART_DATASOURCE}"
+      DEKART_CLOUD_STORAGE_BUCKET: "${DEKART_CLOUD_STORAGE_BUCKET}"
+      AWS_REGION: "${AWS_REGION}"
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+      DEKART_ALLOW_FILE_UPLOAD: "${DEKART_ALLOW_FILE_UPLOAD}"
+      DEKART_SNOWFLAKE_ACCOUNT_ID: "${DEKART_SNOWFLAKE_ACCOUNT_ID}"
+      DEKART_SNOWFLAKE_USER: "${DEKART_SNOWFLAKE_USER}"
+      DEKART_SNOWFLAKE_PASSWORD: "${DEKART_SNOWFLAKE_PASSWORD}"
+      DEKART_DEV_CLAIMS_EMAIL: "${DEKART_DEV_CLAIMS_EMAIL}"
+      DEKART_REQUIRE_AMAZON_OIDC: "${DEKART_REQUIRE_AMAZON_OIDC}"
+
 
 

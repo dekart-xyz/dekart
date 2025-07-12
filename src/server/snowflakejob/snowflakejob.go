@@ -82,7 +82,6 @@ func (j *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 		return
 	}
 
-	j.Logger.Debug().Msg("Writing Done")
 	j.Lock()
 	j.ResultSize = *resultSize
 	j.ResultReady = true // results available now
@@ -146,7 +145,7 @@ func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connect
 			j.QueryText,
 		)
 		if err != nil {
-			j.Logger.Debug().Err(err).Msg("Error querying snowflake")
+			j.Logger.Warn().Err(err).Msg("Error querying snowflake")
 			j.CancelWithError(err)
 			return
 		}
@@ -239,15 +238,26 @@ func TestConnection(ctx context.Context, req *proto.TestConnectionRequest) (*pro
 	if conn == nil {
 		return nil, fmt.Errorf("connection is nil")
 	}
-	if conn.SnowflakePassword == nil {
-		return nil, status.Error(codes.InvalidArgument, "snowflake_password is required")
+	if conn.SnowflakeKey == nil {
+		return nil, status.Error(codes.InvalidArgument, "snowflake_key is required")
 	}
-	conn.SnowflakePassword = secrets.ClientToServer(conn.SnowflakePassword, claims)
+
+	privateKey := secrets.SecretToString(conn.SnowflakeKey, claims)
+	_, err := snowflakeutils.ParsePrivateKey(privateKey)
+	if err != nil {
+		return &proto.TestConnectionResponse{
+			Success: false,
+			Error:   err.Error(),
+		}, nil
+	}
+
+	conn.SnowflakeKey = secrets.ClientToServer(conn.SnowflakeKey, claims)
+
 	connector := snowflakeutils.GetConnector(conn)
 	db := sql.OpenDB(connector)
-	err := db.PingContext(ctx)
+	err = db.PingContext(ctx)
 	if err != nil {
-		log.Debug().Err(err).Msg("snowflake.Ping failed when testing connection")
+		log.Warn().Err(err).Msg("snowflake.Ping failed when testing connection")
 		return &proto.TestConnectionResponse{
 			Success: false,
 			Error:   err.Error(),

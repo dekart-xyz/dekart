@@ -1,57 +1,78 @@
-name: Release
+name: Release – Premium
 
 on:
   push:
-    tags:
-      - '**'
+    tags: ['**']
+
 jobs:
+  flavour:
+    uses: ./.github/workflows/flavour.yaml      # ← tiny helper workflow
+
   node_tests:
+    if: needs.flavour.outputs.is_premium == 'true'
+    needs: [flavour]
     uses: ./.github/workflows/node_test.yaml
     secrets: inherit
+
   go_tests:
+    if: needs.flavour.outputs.is_premium == 'true'
+    needs: [flavour]
     uses: ./.github/workflows/go_test.yaml
     secrets: inherit
-  e2e_tests:
-    uses: ./.github/workflows/e2e.yaml
+
+  build_e2e:
+    if: needs.flavour.outputs.is_premium == 'true'
+    needs: [flavour, node_tests, go_tests]
+    with:
+      build_e2e: true
+      target: ${{ needs.flavour.outputs.target }}   # ← pass flavour
+    uses: ./.github/workflows/build.yaml
     secrets: inherit
+
+  e2e_tests:
+    if: needs.flavour.outputs.is_premium == 'true'
+    needs: [flavour, node_tests, go_tests, build_e2e]
+    uses: ./.github/workflows/e2e.yaml
+    with:
+      target: ${{ needs.flavour.outputs.target }}   # ← pass flavour
+    secrets: inherit
+
   docker:
-    needs: [node_tests, go_tests, e2e_tests]
+    if: needs.flavour.outputs.is_premium == 'true'
+    needs: [flavour, node_tests, go_tests, e2e_tests]
     runs-on: ubuntu-latest
+
     steps:
-      - name: Check out the repo
-        uses: actions/checkout@v2
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v4
+      - uses: actions/checkout@v4
+
+      - id: meta
+        uses: docker/metadata-action@v5
         with:
-          images: |
-            ghcr.io/${{ github.repository }}/dekart
+          images: ghcr.io/${{ github.repository }}/dekart
           tags: |
-            type=ref,event=branch
-            type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-      - name: Create .npmrc
-        run: |
+            type=ref,event=branch
+            type=ref,event=pr
+
+      - run: |
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_GH_TOKEN }}" > .npmrc
           echo "@dekart-xyz:registry=https://npm.pkg.github.com" >> .npmrc
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-      - name: Login to Docker
-        uses: docker/login-action@v1
+
+      - uses: docker/setup-qemu-action@v2
+      - uses: docker/setup-buildx-action@v2
+
+      - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push
-        id: docker_build
-        uses: docker/build-push-action@v4
+
+      - uses: docker/build-push-action@v5
         with:
-          push: true
           context: .
-          tags: ${{ steps.meta.outputs.tags }}
+          push: true
+          tags:   ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}/dekart:buildcache
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}/dekart:buildcache,mode=max
+          cache-to:   type=registry,ref=ghcr.io/${{ github.repository }}/dekart:buildcache,mode=max

@@ -1,10 +1,10 @@
-import { KeplerGlSchema } from '@dekart-xyz/kepler.gl/dist/schemas'
-import { removeDataset } from '@dekart-xyz/kepler.gl/dist/actions'
+import { KeplerGlSchema } from '@kepler.gl/schemas'
+import { removeDataset } from '@kepler.gl/actions'
 
 import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
 import { success } from './message'
-import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme } from '../../proto/dekart_pb'
-import { Dekart } from '../../proto/dekart_pb_service'
+import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType } from 'dekart-proto/dekart_pb'
+import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { createQuery, downloadQuerySource } from './query'
 import { downloadDataset } from './dataset'
 import { shouldAddQuery } from '../lib/shouldAddQuery'
@@ -41,6 +41,10 @@ export function toggleReportEdit (edit) {
     }
     dispatch({ type: toggleReportEdit.name, edit, fullscreen })
   }
+}
+
+export function reportWillOpen (reportId) {
+  return { type: reportWillOpen.name, reportId }
 }
 
 export function openReport (reportId) {
@@ -107,7 +111,7 @@ export function setReportChanged (changed) {
 }
 
 export function reportUpdate (reportStreamResponse) {
-  const { report, queriesList, datasetsList, filesList, queryJobsList } = reportStreamResponse
+  const { report, queriesList, datasetsList, filesList, queryJobsList, directAccessEmailsList } = reportStreamResponse
   return async (dispatch, getState) => {
     const {
       queries: prevQueriesList,
@@ -118,13 +122,8 @@ export function reportUpdate (reportStreamResponse) {
       user,
       queryJobs: prevQueryJobsList,
       queryParams: { hash },
-      reportStatus: { lastChanged, lastSaved }
+      reportStatus: { lastChanged, lastSaved, savedReportVersion }
     } = getState()
-
-    if (lastChanged > lastSaved) {
-      // report was changed locally, prevent remote update
-      return
-    }
 
     dispatch({
       type: reportUpdate.name,
@@ -135,15 +134,19 @@ export function reportUpdate (reportStreamResponse) {
       prevDatasetsList,
       filesList,
       queryJobsList,
-      hash
+      hash,
+      directAccessEmailsList
     })
     let mapConfigUpdated = false
-    if (report.mapConfig) {
+    if (
+      report.mapConfig &&
+      report.updatedAt > savedReportVersion && // ignore when updated version same as last saved to prevent maps reloads
+      lastSaved >= lastChanged // ignore overwriting unsaved changes
+    ) {
       mapConfigUpdated = receiveReportUpdateMapConfig(report, dispatch, getState)
     }
 
-    if (!mapConfigUpdated) {
-      // new map config reset data anyway
+    if (!mapConfigUpdated) { // new map config reset data anyway
       prevQueriesList.forEach(query => {
         if (!queriesList.find(q => q.id === query.id)) {
           const dataset = prevDatasetsList.find(d => d.queryId === query.id)
@@ -176,6 +179,9 @@ export function reportUpdate (reportStreamResponse) {
         const query = queriesList.find(q => q.id === dataset.queryId)
         const queryJob = queryJobsList.find(job => job.queryId === query.id && job.queryParamsHash === queryParams.hash)
         if (shouldAddQuery(queryJob, prevQueryJobsList, mapConfigUpdated) || shouldUpdateDataset(dataset, prevDatasetsList)) {
+          if (dataset.connectionType === ConnectionType.CONNECTION_TYPE_WHEROBOTS) {
+            extension = 'parquet'
+          }
           dispatch(downloadDataset(
             dataset,
             queryJob.jobResultId,
@@ -296,7 +302,7 @@ export function createReport () {
     dispatch(grpcCall(Dekart.CreateReport, request, (res) => {
       const { report } = res
       dispatch(newReport(report.id))
-      dispatch(success('New Report Created'))
+      dispatch(success('New Map Created'))
     }))
   }
 }
@@ -308,19 +314,31 @@ export function reportTitleChange (title) {
   }
 }
 
-export function savedReport (lastSaved) {
-  return { type: savedReport.name, lastSaved }
+export function savedReport (lastSaved, savedReportVersion) {
+  return { type: savedReport.name, lastSaved, savedReportVersion }
 }
 
 export function toggleReportFullscreen () {
   return { type: toggleReportFullscreen.name }
 }
 
+export function addReportDirectAccess (reportId, emails) {
+  return async (dispatch) => {
+    dispatch({ type: addReportDirectAccess.name })
+    const request = new AddReportDirectAccessRequest()
+    request.setReportId(reportId)
+    request.setEmailsList(emails)
+    dispatch(grpcCall(Dekart.AddReportDirectAccess, request, () => {
+      dispatch(success('Direct access updated'))
+    }))
+  }
+}
+
 export function saveMap (onSaveComplete = () => {}) {
   return async (dispatch, getState) => {
-    const lastSaved = Date.now()
     dispatch({ type: saveMap.name })
     const { keplerGl, report, reportStatus, queryStatus, queryParams, readme } = getState()
+    const lastSaved = reportStatus.lastChanged
     const configToSave = KeplerGlSchema.getConfigToSave(keplerGl.kepler)
     const request = new UpdateReportRequest()
     const queries = Object.keys(queryStatus).reduce((queries, id) => {
@@ -344,9 +362,9 @@ export function saveMap (onSaveComplete = () => {}) {
     request.setTitle(reportStatus.title)
     request.setQueryList(queries)
     request.setQueryParamsList(getQueryParamsObjArr(queryParams.list))
-    dispatch(grpcCall(Dekart.UpdateReport, request, () => {
+    dispatch(grpcCall(Dekart.UpdateReport, request, (res) => {
       onSaveComplete()
-      dispatch(savedReport(lastSaved))
+      dispatch(savedReport(lastSaved, res.updatedAt))
     }))
   }
 }
