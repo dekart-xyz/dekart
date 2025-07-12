@@ -152,7 +152,7 @@ func TestConnection(ctx context.Context, req *proto.TestConnectionRequest) (*pro
 		}, nil
 	}
 	apiKey := secrets.SecretToString(conn.WherobotsKey, claims)
-	wConn, err := wherobotsdb.Connect(
+	_, err := wherobotsdb.GetSession(
 		ctx,
 		conn.WherobotsHost,
 		"",
@@ -169,8 +169,6 @@ func TestConnection(ctx context.Context, req *proto.TestConnectionRequest) (*pro
 			Error:   err.Error(),
 		}, nil
 	}
-	defer wConn.Close()
-
 	return &proto.TestConnectionResponse{
 		Success: true,
 	}, nil

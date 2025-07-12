@@ -211,8 +211,6 @@ function ConnectionTypeSelector () {
   const dispatch = useDispatch()
   const [bigqueryModalOpen, setBigqueryModalOpen] = useState(false)
   const secretsEnabled = useSelector(state => state.env.secretsEnabled)
-  const { uxConfig } = useSelector(state => state.env)
-  const workspaceId = useSelector(state => state.user.stream?.workspaceId)
   useEffect(() => {
     track('ConnectionTypeSelector')
   }, [])

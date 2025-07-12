@@ -41,8 +41,6 @@ function DatasetSelector ({ dataset }) {
   const history = useHistory()
   const report = useSelector(state => state.report)
   const isAdmin = useSelector(state => state.user.isAdmin)
-  const { uxConfig } = useSelector(state => state.env)
-  const workspaceId = useSelector(state => state.user.stream?.workspaceId)
 
   if (!env.loaded) {
     // do not render until environment is loaded
