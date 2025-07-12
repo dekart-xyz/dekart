@@ -108,13 +108,13 @@ function QueryTooltip ({ job, dataset }) {
       <span title={updatedAt.toISOString()}>{updatedAt.toLocaleString()}</span>
       <span>{processed}</span>
       {
-        job.resultSize ? <span>Result {prettyBites(job.resultSize)}</span> : null
+        job?.resultSize ? <span>Result {prettyBites(job.resultSize)}</span> : null
       }
     </span>
   )
 }
 
-function getTabPane (dataset, queries, files, status, queryJobs, closable) {
+function getTabPane (dataset, queries, files, status, queryJobs, closable, lastDataset) {
   let changed = false
   const title = getDatasetName(dataset, queries, files)
   let tabIcon = null
@@ -136,7 +136,7 @@ function getTabPane (dataset, queries, files, status, queryJobs, closable) {
     <Tabs.TabPane
       tab={<Tooltip placement='bottom' title={tooltip}>{tabIcon}{tabTitle}</Tooltip>}
       key={dataset.id}
-      closable={closable}
+      closable={Boolean((closable && !lastDataset) || closeIcon)}
       closeIcon={closeIcon}
     />
   )
@@ -156,6 +156,7 @@ function DatasetSection ({ reportId }) {
   const readmeTab = []
   const showReadme = useSelector(state => state.readme.showTab)
   const closable = Boolean(canWrite && edit && datasets.length > 1)
+  const lastDataset = datasets.length === 1
 
   if (report.readme) {
     readmeTab.push(
@@ -202,7 +203,7 @@ function DatasetSection ({ reportId }) {
                   hideAdd={!(canWrite && edit)}
                   onEdit={getOnTabEditHandler(dispatch, reportId, datasets)}
                 >
-                  {readmeTab.concat(datasets.map((dataset) => getTabPane(dataset, queries, files, queryStatus, queryJobs, closable)))}
+                  {readmeTab.concat(datasets.map((dataset) => getTabPane(dataset, queries, files, queryStatus, queryJobs, closable, lastDataset)))}
                 </Tabs>
               </div>
               {showReadme ? <Readme readme={report.readme} /> : <Dataset dataset={activeDataset} />}

@@ -5,7 +5,6 @@ import (
 	"dekart/src/proto"
 	"fmt"
 	"os"
-	"runtime"
 
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
@@ -40,16 +39,7 @@ func GetCtx(ctx context.Context, connection *proto.Connection) context.Context {
 func FromCtx(ctx context.Context) *proto.Connection {
 	connection, ok := ctx.Value(connectionContextKey).(*proto.Connection)
 	if !ok {
-		_, file1, line1, _ := runtime.Caller(1)
-		_, file2, line2, _ := runtime.Caller(2)
-		_, file3, line3, _ := runtime.Caller(3)
-		log.Error().Caller().Str(
-			"called_from_1", fmt.Sprintf("%s:%d", file1, line1),
-		).Str(
-			"called_from_2", fmt.Sprintf("%s:%d", file2, line2),
-		).Str(
-			"called_from_3", fmt.Sprintf("%s:%d", file3, line3),
-		).Msg("Connection not found in context")
+		log.Error().Err(fmt.Errorf("connection not found in context")).Stack().Send()
 		return &proto.Connection{}
 	}
 	return connection

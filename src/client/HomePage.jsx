@@ -211,8 +211,6 @@ function ConnectionTypeSelector () {
   const dispatch = useDispatch()
   const [bigqueryModalOpen, setBigqueryModalOpen] = useState(false)
   const secretsEnabled = useSelector(state => state.env.secretsEnabled)
-  const { uxConfig } = useSelector(state => state.env)
-  const workspaceId = useSelector(state => state.user.stream?.workspaceId)
   useEffect(() => {
     track('ConnectionTypeSelector')
   }, [])
@@ -236,15 +234,13 @@ function ConnectionTypeSelector () {
           }}
         >Snowflake
         </Button>
-        {uxConfig?.enableWherobotsWorkspaces?.includes(workspaceId) && (
-          <Button
-            icon={<DatasourceIcon type={ConnectionType.CONNECTION_TYPE_WHEROBOTS} />} size='large' onClick={() => {
-              track('ConnectionTypeSelectorWherobots')
-              dispatch(newConnection(ConnectionType.CONNECTION_TYPE_WHEROBOTS))
-            }}
-          >Wherobots
-          </Button>
-        )}
+        <Button
+          icon={<DatasourceIcon type={ConnectionType.CONNECTION_TYPE_WHEROBOTS} />} size='large' onClick={() => {
+            track('ConnectionTypeSelectorWherobots')
+            dispatch(newConnection(ConnectionType.CONNECTION_TYPE_WHEROBOTS))
+          }}
+        >Wherobots
+        </Button>
       </div>
       <ConnectionTypeSelectorBottom />
     </>

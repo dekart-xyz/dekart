@@ -34,20 +34,19 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/rs/zerolog/pkgerrors"
 )
 
 func configureLogger() {
 	rand.Seed(time.Now().UnixNano())
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	zerolog.ErrorStackFieldName = "stacktrace"
-	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
+	zerolog.ErrorStackMarshaler = dekart.MarshalStackSimple
 
 	pretty := os.Getenv("DEKART_LOG_PRETTY")
 	if pretty != "" {
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339}).With().Caller().Logger()
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339}).With().Stack().Logger()
 	} else {
-		log.Logger = log.Logger.With().Caller().Stack().Logger().Output(&errtype.LogWriter{Writer: os.Stderr})
+		log.Logger = log.Logger.With().Caller().Logger().Output(&errtype.LogWriter{Writer: os.Stderr})
 	}
 
 	debug := os.Getenv("DEKART_LOG_DEBUG")

@@ -311,7 +311,7 @@ export function getWherobotsConnectionHint (wherobotsHost, wherobotsKey) {
     const res = await new Promise((resolve) => {
       dispatch(grpcCall(Dekart.GetWherobotsConnectionHint, request, resolve, (err) => {
         dispatch(wherobotsConnectionHintError(err))
-        if (err.code !== 13) {
+        if (err.code !== 3) { // Invalid argument error (e.g. wrong host or key)
           return err
         }
       }))
