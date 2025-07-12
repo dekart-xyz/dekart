@@ -94,7 +94,7 @@ function DatasetSelector ({ dataset }) {
             icon={<ApiTwoTone />}
             id='dekart-add-connection'
             title='Add connection'
-            subtitle={uxConfig?.enableWherobotsWorkspaces?.includes(workspaceId) ? 'Connect BigQuery, Snowflake, Wherobots' : 'Connect BigQuery, Snowflake'}
+            subtitle='Connect BigQuery, Snowflake, Wherobots'
             onClick={() => {
               dispatch(updateSessionStorage('redirectWhenSaveConnection', { reportId: report.id, edit: true }))
               history.push('/connections')

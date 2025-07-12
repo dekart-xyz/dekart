@@ -236,15 +236,13 @@ function ConnectionTypeSelector () {
           }}
         >Snowflake
         </Button>
-        {uxConfig?.enableWherobotsWorkspaces?.includes(workspaceId) && (
-          <Button
-            icon={<DatasourceIcon type={ConnectionType.CONNECTION_TYPE_WHEROBOTS} />} size='large' onClick={() => {
-              track('ConnectionTypeSelectorWherobots')
-              dispatch(newConnection(ConnectionType.CONNECTION_TYPE_WHEROBOTS))
-            }}
-          >Wherobots
-          </Button>
-        )}
+        <Button
+          icon={<DatasourceIcon type={ConnectionType.CONNECTION_TYPE_WHEROBOTS} />} size='large' onClick={() => {
+            track('ConnectionTypeSelectorWherobots')
+            dispatch(newConnection(ConnectionType.CONNECTION_TYPE_WHEROBOTS))
+          }}
+        >Wherobots
+        </Button>
       </div>
       <ConnectionTypeSelectorBottom />
     </>
