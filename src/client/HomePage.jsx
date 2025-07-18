@@ -235,6 +235,8 @@ function ConnectionTypeSelector () {
         >Snowflake
         </Button>
         <Button
+          disabled={!secretsEnabled}
+          title={secretsEnabled ? '' : 'Feature is disabled. Contact your administrator to enable it.'}
           icon={<DatasourceIcon type={ConnectionType.CONNECTION_TYPE_WHEROBOTS} />} size='large' onClick={() => {
             track('ConnectionTypeSelectorWherobots')
             dispatch(newConnection(ConnectionType.CONNECTION_TYPE_WHEROBOTS))
