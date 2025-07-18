@@ -57,10 +57,7 @@ require (
 	dario.cat/mergo v1.0.0 // indirect
 )
 
-require (
-	github.com/mattn/go-sqlite3 v1.14.16
-	github.com/pkg/errors v0.9.1
-)
+require github.com/mattn/go-sqlite3 v1.14.16
 
 require (
 	cloud.google.com/go/auth v0.7.0 // indirect
@@ -199,6 +196,7 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkg/term v1.1.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
