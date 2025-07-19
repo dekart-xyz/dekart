@@ -25,12 +25,6 @@ jobs:
     uses: ./.github/workflows/build.yaml
     secrets: inherit
 
-  pulumi_preview:
-    if: needs.flavour.outputs.is_cloud == 'true'
-    needs: [flavour]
-    uses: ./.github/workflows/pulumi_preview.yaml
-    secrets: inherit
-
   e2e_tests:
     if: needs.changes.outputs.e2e == 'true'
     needs: [build, changes]
