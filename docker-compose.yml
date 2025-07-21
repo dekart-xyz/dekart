@@ -72,7 +72,7 @@ services:
       DEKART_UX_DISABLE_VERSION_CHECK: "1"
       DEKART_CLOUD: "1"
   dekart-oss-googleoauth:
-    image: ghcr.io/dekart-xyz/dekart-premium/dekart:0.18.4
+    image: ghcr.io/dekart-xyz/dekart-premium/dekart:0.19.0-rc.0
     platform: linux/amd64
     restart: always
     ports:
@@ -90,6 +90,8 @@ services:
       DEKART_REQUIRE_GOOGLE_OAUTH: "${DEKART_REQUIRE_GOOGLE_OAUTH}"
       DEKART_GOOGLE_OAUTH_CLIENT_ID: "${DEKART_GOOGLE_OAUTH_CLIENT_ID}"
       DEKART_GOOGLE_OAUTH_SECRET: "${DEKART_GOOGLE_OAUTH_SECRET}"
+      DEKART_STORAGE: "${DEKART_STORAGE}"
+      DEKART_DATASOURCE: "${DEKART_DATASOURCE}"
 
   # docker compose --env-file .env.snowflake-s3 --profile dekart-oss-snowflake-s3 up
   dekart-oss-snowflake-s3:
