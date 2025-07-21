@@ -203,9 +203,6 @@ function DatasetSection ({ reportId }) {
                   hideAdd={!(canWrite && edit)}
                   onEdit={getOnTabEditHandler(dispatch, reportId, datasets)}
                 >
-                  const lastDataset = datasets.length === 1
-                  const lastDataset = datasets.length === 1
-                  const lastDataset = datasets.length === 1
                   {readmeTab.concat(datasets.map((dataset) => getTabPane(dataset, queries, files, queryStatus, queryJobs, closable, lastDataset)))}
                 </Tabs>
               </div>

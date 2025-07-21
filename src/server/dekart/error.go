@@ -56,13 +56,22 @@ func HttpError(w http.ResponseWriter, err error) {
 		return
 	}
 
-	// Capture the caller information
-	pc, file, line, ok := runtime.Caller(1)
-	caller := ""
-	if ok {
-		fn := runtime.FuncForPC(pc)
-		caller = fmt.Sprintf("called from %s:%d %s", file, line, fn.Name())
-	}
-	log.Err(err).Interface("details", err).Str("caller_trace", caller).Msg("Unknown API Error")
+	log.Err(err).Interface("details", err).Stack().Msg("Unknown API Error")
 	http.Error(w, err.Error(), http.StatusInternalServerError)
+}
+
+func MarshalStackSimple(err error) interface{} {
+	return getTraceString()
+}
+
+func getTraceString() string {
+	var trace []string
+	for i := 3; i < 12; i++ {
+		_, file, line, ok := runtime.Caller(i)
+		if !ok {
+			break
+		}
+		trace = append(trace, fmt.Sprintf("%s:%d", file, line))
+	}
+	return fmt.Sprintf("%v", trace)
 }

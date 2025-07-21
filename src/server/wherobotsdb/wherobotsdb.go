@@ -319,7 +319,17 @@ const (
 	userAgent             = "wherobots-go-dbapi/1.0"
 )
 
-func Connect(
+func getHeaders(token string, apiKey string) map[string]string {
+	headers := map[string]string{"User-Agent": userAgent}
+	if token != "" {
+		headers["Authorization"] = "Bearer " + token
+	} else {
+		headers["X-API-Key"] = apiKey
+	}
+	return headers
+}
+
+func GetSession(
 	ctx context.Context,
 	endpoint string,
 	token string,
@@ -328,13 +338,12 @@ func Connect(
 	region Region,
 	sessionWaitSec int, // 0 = default
 	readTimeoutSec int, // 0 = default
-) (*Connection, error) {
-
+) (string, error) {
 	if token == "" && apiKey == "" {
-		return nil, errors.New("token or apiKey required")
+		return "", errors.New("token or apiKey required")
 	}
 	if token != "" && apiKey != "" {
-		return nil, errors.New("cannot provide both token and apiKey")
+		return "", errors.New("cannot provide both token and apiKey")
 	}
 	if endpoint == "" {
 		endpoint = DEFAULT_ENDPOINT
@@ -350,15 +359,25 @@ func Connect(
 		readTimeoutSec = DEFAULT_WS_READ_SECONDS
 	}
 
-	/*──── 1. POST /sql/session ────*/
-	headers := map[string]string{"User-Agent": userAgent}
-	if token != "" {
-		headers["Authorization"] = "Bearer " + token
-	} else {
-		headers["X-API-Key"] = apiKey
-	}
+	headers := getHeaders(token, apiKey)
 
-	sessionURL, err := createSession(endpoint, runtime, region, headers)
+	return createSession(endpoint, runtime, region, headers)
+}
+
+func Connect(
+	ctx context.Context,
+	endpoint string,
+	token string,
+	apiKey string,
+	runtime Runtime,
+	region Region,
+	sessionWaitSec int, // 0 = default
+	readTimeoutSec int, // 0 = default
+) (*Connection, error) {
+
+	headers := getHeaders(token, apiKey)
+	sessionURL, err := GetSession(ctx, endpoint, token, apiKey, runtime, region, sessionWaitSec, readTimeoutSec)
+
 	if err != nil {
 		return nil, err
 	}
