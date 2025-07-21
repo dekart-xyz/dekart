@@ -3,7 +3,7 @@ import { needSensitiveScopes, setClaimEmailCookie, userStreamUpdate } from '../a
 import { localStorageInit } from '../actions/localStorage'
 import { sessionStorageInit } from '../actions/sessionStorage'
 import { setRedirectState } from '../actions/redirect'
-import { PlanType, UserRole } from '../../proto/dekart_pb'
+import { PlanType, UserRole } from 'dekart-proto/dekart_pb'
 
 function claimEmailCookie (state = null, action) {
   switch (action.type) {

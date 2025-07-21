@@ -34,20 +34,19 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/rs/zerolog/pkgerrors"
 )
 
 func configureLogger() {
 	rand.Seed(time.Now().UnixNano())
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	zerolog.ErrorStackFieldName = "stacktrace"
-	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
+	zerolog.ErrorStackMarshaler = dekart.MarshalStackSimple
 
 	pretty := os.Getenv("DEKART_LOG_PRETTY")
 	if pretty != "" {
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339}).With().Caller().Logger()
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339}).With().Stack().Logger()
 	} else {
-		log.Logger = log.Logger.With().Caller().Stack().Logger().Output(&errtype.LogWriter{Writer: os.Stderr})
+		log.Logger = log.Logger.With().Caller().Logger().Output(&errtype.LogWriter{Writer: os.Stderr})
 	}
 
 	debug := os.Getenv("DEKART_LOG_DEBUG")
@@ -65,7 +64,7 @@ func configureDb() *sql.DB {
 	if sqliteOk {
 		// Use SQLite
 		log.Info().Msg("Using SQLite database")
-		log.Debug().Msg("Restoring SQLite database from backup")
+		log.Info().Msg("Restoring SQLite database from backup")
 		dekart.RestoreDbFile()
 		db, err := sql.Open("sqlite3", sqlitePath)
 		if err != nil {
@@ -129,12 +128,30 @@ func applyMigrations(db *sql.DB) {
 		if err != nil {
 			log.Fatal().Err(err).Msg("NewWithDatabaseInstance")
 		}
+		version, dirty, err := m.Version()
+		if err != nil {
+			if err == migrate.ErrNilVersion {
+				log.Info().Msg("No migrations applied yet")
+			} else {
+				log.Fatal().Err(err).Msg("Version")
+			}
+		} else {
+			log.Info().Int("version", int(version)).Bool("dirty", dirty).Msg("Current migration version")
+		}
+
 		err = m.Up()
 		if err != nil {
 			if err == migrate.ErrNoChange {
+				log.Info().Msg("No new migrations to apply")
 				return
 			}
 			log.Fatal().Err(err).Msg("Migrations Up")
+		}
+		version, dirty, err = m.Version()
+		if err != nil {
+			log.Fatal().Err(err).Msg("Version")
+		} else {
+			log.Info().Int("version", int(version)).Bool("dirty", dirty).Msg("Migrations applied")
 		}
 	}
 }
@@ -145,7 +162,7 @@ func configureBucket() storage.Storage {
 	case "S3":
 		log.Info().Msg("Using S3 storage backend")
 		bucket = storage.NewS3Storage()
-	case "GCS", "":
+	case "GCS":
 		log.Info().Msg("Using GCS storage backend")
 		bucket = storage.NewGoogleCloudStorage()
 	case "SNOWFLAKE":
@@ -224,7 +241,7 @@ func main() {
 
 	go startHttpServer(httpServer)
 
-	log.Debug().Msg("dekart server started")
+	log.Info().Msg("dekart server started")
 
 	sig := <-waitForInterrupt()
 
@@ -239,13 +256,13 @@ func main() {
 	go func() {
 		defer wg.Done()
 		dekartServer.Shutdown(shutdownCtx)
-		log.Debug().Msg("dekart server shutdown complete")
+		log.Info().Msg("dekart server shutdown complete")
 	}()
 
 	go func() {
 		defer wg.Done()
 		httpServer.Shutdown(shutdownCtx)
-		log.Debug().Msg("http server shutdown complete")
+		log.Info().Msg("http server shutdown complete")
 	}()
 
 	shutdown := make(chan bool)

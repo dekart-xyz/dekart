@@ -1,10 +1,13 @@
 .inviteUsers {
     margin-bottom: 20px;
     padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    flex-direction: row;
 }
 
 .inviteUsersInput {
-    width: calc(100% - 100px)!important;
+    width: calc(100% - 350px)!important;
 }
 
 .inviteUsersButton {

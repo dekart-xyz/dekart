@@ -129,7 +129,7 @@ func (c ClaimsCheck) validateAuthToken(ctx context.Context, header string) *Clai
 	})
 
 	if err != nil {
-		log.Debug().Err(err).Int("accessTokenLen", len(accessToken)).Msg("Error getting token info")
+		log.Warn().Err(err).Int("accessTokenLen", len(accessToken)).Msg("Error getting token info")
 		return nil
 	}
 	missingSensitiveScope := checkMissingScope(sensitiveScope, tokenInfo.Scope)
@@ -216,6 +216,11 @@ var sensitiveScope = append(
 )
 
 func (c ClaimsCheck) getSnowflakeContext(user string) *Claims {
+	if c.DevClaimsEmail != "" {
+		return &Claims{
+			Email: c.DevClaimsEmail,
+		}
+	}
 	if user == "" {
 		return &Claims{
 			Email: UnknownEmail,
@@ -322,7 +327,9 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 			tokenInfo.Scope,
 		)
 		if err != nil {
-			log.Fatal().Err(err).Msg("Error updating user sensitive scope")
+			log.Error().Err(err).Msg("Error updating user sensitive scope")
+			redirectState.Error = "Error updating user sensitive scope"
+			return redirectState
 		}
 	} else {
 		// create or update user, do not update sensitive scope
@@ -333,7 +340,9 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 			tokenInfo.Scope,
 		)
 		if err != nil {
-			log.Fatal().Err(err).Msg("Error updating user")
+			log.Error().Err(err).Msg("Error updating user")
+			redirectState.Error = "Error updating user"
+			return redirectState
 		}
 	}
 
@@ -420,10 +429,9 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 	if c.DevRefreshToken != "" && state.Action == pb.AuthState_ACTION_REQUEST_CODE {
 		//skip request code from google
 		state.Action = pb.AuthState_ACTION_REQUEST_TOKEN
-		log.Debug().Msg("Skip request code from google, use dev token")
+		log.Info().Msg("Skip request code from google, use dev token")
 	}
 
-	log.Debug().Msgf("Authenticate state action: %s", state.Action)
 	switch state.Action {
 	case pb.AuthState_ACTION_REQUEST_CODE: // request code from google
 		state.Action = pb.AuthState_ACTION_REQUEST_TOKEN
@@ -492,7 +500,6 @@ func (c ClaimsCheck) getPublicKeyFromAmazon(token *jwt.Token) (interface{}, erro
 	if ok {
 		publicKey = publicKeyValue.(*ecdsa.PublicKey)
 	} else {
-		log.Debug().Interface("kid", kid).Msg("load public key")
 		url := fmt.Sprintf("https://public-keys.auth.elb.%s.amazonaws.com/%s", c.Region, kid)
 		resp, err := http.Get(url)
 		if err != nil {

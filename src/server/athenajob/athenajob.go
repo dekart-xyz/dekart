@@ -114,7 +114,6 @@ func (j *Job) wait() {
 		j.CancelWithError(err)
 		return
 	}
-	j.Logger.Debug().Msg("job done")
 	{
 		j.Lock()
 		j.ProcessedBytes = *queryExecution.Statistics.DataScannedInBytes
@@ -151,7 +150,6 @@ func (j *Job) Run(storageObject storage.StorageObject, conn *proto.Connection) e
 		j.Logger.Warn().Msg("athena workgroup not set or empty, this will default to the primary workgroup")
 	} else {
 		athenaWorkgroup = aws.String(os.Getenv("DEKART_ATHENA_WORKGROUP"))
-		j.Logger.Debug().Msgf("athena workgroup set to %s", *athenaWorkgroup)
 	}
 
 	queryString := j.GetQueryText()
@@ -174,7 +172,6 @@ func (j *Job) Run(storageObject storage.StorageObject, conn *proto.Connection) e
 
 	j.Status() <- int32(proto.QueryJob_JOB_STATUS_RUNNING)
 
-	j.Logger.Debug().Str("queryExecutionId", j.queryExecutionId).Msg("waiting")
 	go j.wait()
 	return nil
 }

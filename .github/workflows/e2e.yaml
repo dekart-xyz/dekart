@@ -1,294 +1,237 @@
 name: e2e_tests
 
-on: [workflow_call]
+on:
+  workflow_call:
+    inputs:
+      # optional: flavour forwarded from flavour.yaml
+      target:
+        type: string   # "cloud" | "premium"
+        required: false
 
 env:
+  TARGET: ${{ inputs.target != '' &&
+              inputs.target ||
+              (contains(github.repository, 'dekart-cloud') && 'cloud' || 'premium') }}
+
   DEKART_POSTGRES_PASSWORD: dekart
-  DEKART_POSTGRES_USER: postgres
-  DEKART_POSTGRES_DB: dekart
+  DEKART_POSTGRES_USER:     postgres
+  DEKART_POSTGRES_DB:       dekart
+
   GOOGLE_APPLICATION_CREDENTIALS: GOOGLE_APPLICATION_CREDENTIALS.json
-  AWS_REGION: us-east-1
+  AWS_REGION:  us-east-1
   IMAGE_CACHE_KEY: e2etest-${{ github.run_id }}-${{ github.run_attempt }}
 
 jobs:
-  build:
+  # is_cloud  =  explicit target is cloud
+  #          OR no target AND repo name ends with dekart-cloud
+  e2e-cloud:
+    if: ${{ (inputs.target != '' && inputs.target == 'cloud') ||
+            (inputs.target == '' && contains(github.repository,'dekart-cloud')) }}
     runs-on: ubuntu-latest
-    steps:
-      - name: Check out the repo
-        uses: actions/checkout@v2
-      - name: Create .npmrc
-        run: |
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_GH_TOKEN }}" > .npmrc
-          echo "@dekart-xyz:registry=https://npm.pkg.github.com" >> .npmrc
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      - name: Login to DockerHub
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: E2E build
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: dekartxyz/dekart:${{ env.IMAGE_CACHE_KEY }}
-          target: e2etest
-          cache-from: type=registry,ref=dekartxyz/dekart:buildcache
-          cache-to: type=registry,ref=dekartxyz/dekart:buildcache,mode=max
-  google-oauth:
-    runs-on: ubuntu-latest
-    needs: build
     services:
       postgres:
-        image: postgres
+        image: postgres:15
         env:
           POSTGRES_PASSWORD: ${{ env.DEKART_POSTGRES_PASSWORD }}
-          POSTGRES_USER: ${{ env.DEKART_POSTGRES_USER }}
-          POSTGRES_DB: ${{ env.DEKART_POSTGRES_DB }}
+          POSTGRES_USER:     ${{ env.DEKART_POSTGRES_USER }}
+          POSTGRES_DB:       ${{ env.DEKART_POSTGRES_DB }}
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
+          --health-timeout   5s
+          --health-retries   5
+        ports: ['5432:5432']
+
     steps:
-      - name: Create google credentials
+      - uses: google-github-actions/setup-gcloud@v0
+        with:
+          project_id: dekart-cloud
+          service_account_key: ${{ secrets.PRIVATE_GITHUB_ACTIONS_DEKART_CLOUD }}
+          export_default_credentials: true
+
+      - run: gcloud auth configure-docker europe-west3-docker.pkg.dev
+      - uses: docker/setup-qemu-action@v2
+      - uses: docker/setup-buildx-action@v2
+
+      - name: Run cloud E2E specs
         run: |
-          echo '${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}' > $GOOGLE_APPLICATION_CREDENTIALS
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      - name: E2E test
-        run: |
-          docker run -i \
-            --network="host" \
-            -v /tmp/cypress/videos:/dekart/cypress/videos/ \
-          	-v /tmp/cypress/screenshots:/dekart/cypress/screenshots/ \
-            -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
-            -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
-            -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
-            -e DEKART_POSTGRES_HOST=localhost \
-            -e DEKART_ALLOW_FILE_UPLOAD=1 \
-            -e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
-            -e DEKART_GOOGLE_OAUTH_CLIENT_ID=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }} \
-            -e DEKART_GOOGLE_OAUTH_SECRET=${{ secrets.GOOGLE_OAUTH_SECRET }} \
-            -e DEKART_DEV_REFRESH_TOKEN=${{ secrets.DEV_REFRESH_TOKEN }} \
-            -e TEST_SPEC=cypress/e2e/google-oauth \
-            -e CYPRESS_CI=1 \
-            dekartxyz/dekart:${{ env.IMAGE_CACHE_KEY }}
-      - name: Upload cypress artifacts
+          for SPEC in \
+            cypress/e2e/cloud/cloudBasicFlowStart.cy.js \
+            cypress/e2e/cloud/cloudBasicFlowEnd.cy.js
+          do
+            TOKEN=$([ "$SPEC" == *cloudBasicFlowStart* ] && \
+              echo '${{ secrets.DEV_REFRESH_TOKEN_INFO }}' || \
+              echo '${{ secrets.DEV_REFRESH_TOKEN }}')
+
+            docker run -i --network host \
+              -v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
+              -v /tmp/cypress/videos:/dekart/cypress/videos \
+              -v /tmp/cypress/screenshots:/dekart/cypress/screenshots \
+              -e DEKART_LOG_DEBUG=1 \
+              -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
+              -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
+              -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
+              -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
+              -e DEKART_POSTGRES_HOST=localhost \
+              -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
+              -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
+              -e DEKART_STORAGE=USER \
+              -e DEKART_DATASOURCE=USER \
+              -e DEKART_ALLOW_FILE_UPLOAD=1 \
+              -e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
+              -e DEKART_GOOGLE_OAUTH_CLIENT_ID='${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}' \
+              -e DEKART_GOOGLE_OAUTH_SECRET='${{ secrets.GOOGLE_OAUTH_SECRET }}' \
+              -e DEKART_DEV_REFRESH_TOKEN="$TOKEN" \
+              -e DEKART_DATA_ENCRYPTION_KEY=projects/398860824064/secrets/dekart-prod-user-data-encoding-key/versions/1 \
+              -e DEKART_CORS_ORIGIN=http://localhost:3000 \
+              -e DEKART_ALLOW_WORKSPACE_CREATION=1 \
+              -e DEKART_UX_DISABLE_VERSION_CHECK=1 \
+              -e DEKART_DEV_NO_DATASET_CACHE=1 \
+              -e DEKART_CLOUD=1 \
+              -e TEST_SPEC=$SPEC \
+              -e CYPRESS_CI=1 \
+              europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:${{ env.IMAGE_CACHE_KEY }}
+          done
+
+      - uses: actions/upload-artifact@v4
         if: failure()
-        uses: actions/upload-artifact@v4
         with:
-          name: google-oauth
+          name: cloud
           path: /tmp/cypress
-  bigquery:
+
+  e2e-premium:
+    # premium branch is simply "not cloud"
+    if: ${{ !(
+            (inputs.target != '' && inputs.target == 'cloud') ||
+            (inputs.target == '' && contains(github.repository,'dekart-cloud'))
+          ) }}
     runs-on: ubuntu-latest
-    needs: build
+
+    env:            # secrets mapped to env so matrix can reference them
+      GOOGLE_CRED_SEC:         ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+      GOOGLE_OAUTH_ID_SEC:     ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+      GOOGLE_OAUTH_SECRET_SEC: ${{ secrets.GOOGLE_OAUTH_SECRET }}
+      DEV_REFRESH_TOKEN_SEC:   ${{ secrets.DEV_REFRESH_TOKEN }}
+      S3_BUCKET_SEC:           ${{ secrets.S3_BUCKET }}
+      AWS_KEY_SEC:             ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_SEC:          ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      SNOW_ID_SEC:             ${{ secrets.SNOWFLAKE_ACCOUNT_ID }}
+      SNOW_USER_SEC:           ${{ secrets.SNOWFLAKE_USER }}
+      SNOW_PASS_SEC:           ${{ secrets.SNOWFLAKE_PASSWORD }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: google-oauth
+            spec: cypress/e2e/google-oauth
+            extra_env: |
+              -e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
+              -e DEKART_GOOGLE_OAUTH_CLIENT_ID=$GOOGLE_OAUTH_ID_SEC \
+              -e DEKART_GOOGLE_OAUTH_SECRET=$GOOGLE_OAUTH_SECRET_SEC \
+              -e DEKART_DEV_REFRESH_TOKEN=$DEV_REFRESH_TOKEN_SEC \
+              -e DEKART_STORAGE=USER \
+              -e DEKART_DATASOURCE=USER \
+              -e DEKART_ALLOW_FILE_UPLOAD=1 \
+
+          - id: bigquery
+            spec: cypress/e2e/bq
+            extra_env: |
+              -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
+              -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
+              -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
+              -e DEKART_STORAGE=GCS \
+              -e DEKART_DATASOURCE=BQ \
+              -e DEKART_ALLOW_FILE_UPLOAD=1 \
+
+          - id: athena
+            spec: cypress/e2e/athena
+            extra_env: |
+              -e DEKART_STORAGE=S3 \
+              -e DEKART_DATASOURCE=ATHENA \
+              -e DEKART_CLOUD_STORAGE_BUCKET=$S3_BUCKET_SEC \
+              -e DEKART_ATHENA_S3_OUTPUT_LOCATION=$S3_BUCKET_SEC \
+              -e DEKART_ATHENA_CATALOG=AwsDataCatalog \
+              -e AWS_REGION=$AWS_REGION \
+              -e AWS_ACCESS_KEY_ID=$AWS_KEY_SEC \
+              -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_SEC \
+              -e DEKART_ALLOW_FILE_UPLOAD=1 \
+
+          - id: snowflake-s3
+            spec: cypress/e2e/snowflake-s3
+            extra_env: |
+              -e DEKART_STORAGE=S3 \
+              -e DEKART_DATASOURCE=SNOWFLAKE \
+              -e DEKART_CLOUD_STORAGE_BUCKET=$S3_BUCKET_SEC \
+              -e AWS_REGION=$AWS_REGION \
+              -e AWS_ACCESS_KEY_ID=$AWS_KEY_SEC \
+              -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_SEC \
+              -e DEKART_SNOWFLAKE_ACCOUNT_ID=$SNOW_ID_SEC \
+              -e DEKART_SNOWFLAKE_USER=$SNOW_USER_SEC \
+              -e DEKART_SNOWFLAKE_PASSWORD=$SNOW_PASS_SEC \
+              -e DEKART_REQUIRE_AMAZON_OIDC=1 \
+              -e DEKART_DEV_CLAIMS_EMAIL=test@gmail.com \
+              -e DEKART_ALLOW_FILE_UPLOAD=1 \
+
+
+          - id: snowflake-sqlite
+            spec: cypress/e2e/snowflake
+            extra_env: |
+              -e DEKART_STORAGE=SNOWFLAKE \
+              -e DEKART_DATASOURCE=SNOWFLAKE \
+              -e DEKART_SNOWFLAKE_ACCOUNT_ID=$SNOW_ID_SEC \
+              -e DEKART_SNOWFLAKE_USER=$SNOW_USER_SEC \
+              -e DEKART_SNOWFLAKE_PASSWORD=$SNOW_PASS_SEC \
+              -e DEKART_SQLITE_DB_PATH=./dekart.db \
+              -e DEKART_REQUIRE_SNOWFLAKE_CONTEXT=1 \
+              -e DEKART_DEV_CLAIMS_EMAIL=bilonenko.v2@gmail.com \
+
     services:
       postgres:
         image: postgres
         env:
           POSTGRES_PASSWORD: ${{ env.DEKART_POSTGRES_PASSWORD }}
-          POSTGRES_USER: ${{ env.DEKART_POSTGRES_USER }}
-          POSTGRES_DB: ${{ env.DEKART_POSTGRES_DB }}
+          POSTGRES_USER:     ${{ env.DEKART_POSTGRES_USER }}
+          POSTGRES_DB:       ${{ env.DEKART_POSTGRES_DB }}
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
+          --health-timeout   5s
+          --health-retries   5
+        ports: ['5432:5432']
+
     steps:
-      - name: Create google credentials
+      - name: Create google creds (BigQuery / Google OAuth)
+        run: echo "$GOOGLE_CRED_SEC" > $GOOGLE_APPLICATION_CREDENTIALS
+
+      - uses: docker/setup-qemu-action@v2
+      - uses: docker/setup-buildx-action@v2
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run ${{ matrix.id }} suite
         run: |
-          echo '${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}' > $GOOGLE_APPLICATION_CREDENTIALS
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      - name: E2E test BigQuery
-        run: |
-          docker run -i \
-            --network="host" \
+          docker run -i --network host \
+            -v /tmp/cypress/videos:/dekart/cypress/videos \
+            -v /tmp/cypress/screenshots:/dekart/cypress/screenshots \
             -v $(pwd)/$GOOGLE_APPLICATION_CREDENTIALS:/dekart/$GOOGLE_APPLICATION_CREDENTIALS \
-            -v /tmp/cypress/videos:/dekart/cypress/videos/ \
-          	-v /tmp/cypress/screenshots:/dekart/cypress/screenshots/ \
-            -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
-            -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
-            -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
-            -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
-            -e DEKART_POSTGRES_HOST=localhost \
-            -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
-            -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
-            -e DEKART_ALLOW_FILE_UPLOAD=1 \
-            -e TEST_SPEC=cypress/e2e/bq \
-            -e CYPRESS_CI=1 \
-            dekartxyz/dekart:${{ env.IMAGE_CACHE_KEY }}
-      - name: Upload cypress artifacts
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: bigquery
-          path: /tmp/cypress
-  athena:
-    runs-on: ubuntu-latest
-    needs: build
-    services:
-      postgres:
-        image: postgres
-        env:
-          POSTGRES_PASSWORD: ${{ env.DEKART_POSTGRES_PASSWORD }}
-          POSTGRES_USER: ${{ env.DEKART_POSTGRES_USER }}
-          POSTGRES_DB: ${{ env.DEKART_POSTGRES_DB }}
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-    steps:
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      - name: E2E test Athena
-        run: |
-          docker run -i \
-            --network="host" \
-            -v /tmp/cypress/videos:/dekart/cypress/videos/ \
-          	-v /tmp/cypress/screenshots:/dekart/cypress/screenshots/ \
             -e DEKART_LOG_DEBUG=1 \
             -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
             -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
             -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
             -e DEKART_POSTGRES_HOST=localhost \
-            -e DEKART_STORAGE=S3 \
-            -e DEKART_DATASOURCE=ATHENA \
-            -e DEKART_CLOUD_STORAGE_BUCKET=${{ secrets.S3_BUCKET }} \
-            -e DEKART_ATHENA_S3_OUTPUT_LOCATION=${{ secrets.S3_BUCKET }} \
-            -e DEKART_ATHENA_CATALOG=AwsDataCatalog \
-            -e AWS_REGION=$AWS_REGION \
-            -e AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} \
-            -e AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} \
-            -e DEKART_ALLOW_FILE_UPLOAD=1 \
             -e DEKART_CORS_ORIGIN=http://localhost:3000 \
-            -e TEST_SPEC=cypress/e2e/athena \
+            -e TEST_SPEC=${{ matrix.spec }} \
             -e CYPRESS_CI=1 \
-            dekartxyz/dekart:${{ env.IMAGE_CACHE_KEY }}
-      - name: Upload cypress artifacts
+            ${{ matrix.extra_env }} \
+            ghcr.io/${{ github.repository }}/dekart:${{ env.IMAGE_CACHE_KEY }}
+
+      - uses: actions/upload-artifact@v4
         if: failure()
-        uses: actions/upload-artifact@v4
         with:
-          name: athena
-          path: /tmp/cypress
-  snowflake-s3:
-    runs-on: ubuntu-latest
-    needs: build
-    services:
-      postgres:
-        image: postgres
-        env:
-          POSTGRES_PASSWORD: ${{ env.DEKART_POSTGRES_PASSWORD }}
-          POSTGRES_USER: ${{ env.DEKART_POSTGRES_USER }}
-          POSTGRES_DB: ${{ env.DEKART_POSTGRES_DB }}
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-    steps:
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      - name: E2E test Snowflake
-        run: |
-          docker run -i \
-            --network="host" \
-            -v /tmp/cypress/videos:/dekart/cypress/videos/ \
-          	-v /tmp/cypress/screenshots:/dekart/cypress/screenshots/ \
-            -e DEKART_LOG_DEBUG=1 \
-            -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
-            -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
-            -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
-            -e DEKART_POSTGRES_HOST=localhost \
-            -e DEKART_STORAGE=S3 \
-            -e DEKART_DATASOURCE=SNOWFLAKE \
-            -e DEKART_CLOUD_STORAGE_BUCKET=${{ secrets.S3_BUCKET }} \
-            -e AWS_REGION=$AWS_REGION \
-            -e AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} \
-            -e AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} \
-            -e DEKART_ALLOW_FILE_UPLOAD=1 \
-            -e DEKART_CORS_ORIGIN=http://localhost:3000 \
-            -e TEST_SPEC=cypress/e2e/snowflake-s3 \
-            -e CYPRESS_CI=1 \
-            -e DEKART_SNOWFLAKE_ACCOUNT_ID=${{ secrets.SNOWFLAKE_ACCOUNT_ID }} \
-            -e DEKART_SNOWFLAKE_USER=${{ secrets.SNOWFLAKE_USER }} \
-            -e DEKART_SNOWFLAKE_PASSWORD=${{ secrets.SNOWFLAKE_PASSWORD }} \
-            -e DEKART_SNOWFLAKE_PRIVATE_KEY=${{ secrets.DEKART_SNOWFLAKE_PRIVATE_KEY }} \
-            -e DEKART_DEV_CLAIMS_EMAIL=test@gmail.com \
-            -e DEKART_REQUIRE_AMAZON_OIDC=1 \
-            dekartxyz/dekart:${{ env.IMAGE_CACHE_KEY }}
-      - name: Upload cypress artifacts
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: snowflake-s3
-          path: /tmp/cypress
-  snowflake:
-    runs-on: ubuntu-latest
-    needs: build
-    services:
-      postgres:
-        image: postgres
-        env:
-          POSTGRES_PASSWORD: ${{ env.DEKART_POSTGRES_PASSWORD }}
-          POSTGRES_USER: ${{ env.DEKART_POSTGRES_USER }}
-          POSTGRES_DB: ${{ env.DEKART_POSTGRES_DB }}
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-    steps:
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      - name: E2E test Snowflake
-        run: |
-          docker run -i \
-            --network="host" \
-            -v /tmp/cypress/videos:/dekart/cypress/videos/ \
-          	-v /tmp/cypress/screenshots:/dekart/cypress/screenshots/ \
-            -e DEKART_LOG_DEBUG=1 \
-            -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
-            -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
-            -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
-            -e DEKART_POSTGRES_HOST=localhost \
-            -e DEKART_STORAGE=SNOWFLAKE \
-            -e DEKART_DATASOURCE=SNOWFLAKE \
-            -e DEKART_CORS_ORIGIN=null \
-            -e TEST_SPEC=cypress/e2e/snowflake \
-            -e CYPRESS_CI=1 \
-            -e DEKART_SNOWFLAKE_ACCOUNT_ID=${{ secrets.SNOWFLAKE_ACCOUNT_ID }} \
-            -e DEKART_SNOWFLAKE_USER=${{ secrets.SNOWFLAKE_USER }} \
-            -e DEKART_SNOWFLAKE_PASSWORD=${{ secrets.SNOWFLAKE_PASSWORD }} \
-            dekartxyz/dekart:${{ env.IMAGE_CACHE_KEY }}
-      - name: Upload cypress artifacts
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: snowflake
+          name: ${{ matrix.id }}
           path: /tmp/cypress

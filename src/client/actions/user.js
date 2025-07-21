@@ -1,5 +1,5 @@
-import { GetUserStreamRequest } from '../../proto/dekart_pb'
-import { Dekart } from '../../proto/dekart_pb_service'
+import { GetUserStreamRequest } from 'dekart-proto/dekart_pb'
+import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { getConnectionsList } from './connection'
 import { grpcStream, grpcStreamCancel } from './grpc'
 import { updateLocalStorage } from './localStorage'
@@ -36,7 +36,7 @@ export function subscribeUserStream () {
           prevRes.workspaceUpdate = message.workspaceUpdate
           dispatch(getWorkspace())
         }
-        if (message.planType > 0) {
+        if (message.planType > 0 || message.isDefaultWorkspace) {
           // update only when subscription is active to avoid 404 errors
           if (prevRes.connectionUpdate !== message.connectionUpdate) {
             prevRes.connectionUpdate = message.connectionUpdate

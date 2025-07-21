@@ -74,7 +74,7 @@ func (s *Store) TestConnection(ctx context.Context, req *proto.TestConnectionReq
 func TestConnection(ctx context.Context, req *proto.TestConnectionRequest) (*proto.TestConnectionResponse, error) {
 	client, err := bqutils.GetClient(ctx, req.Connection)
 	if err != nil {
-		log.Debug().Err(err).Msg("bigquery.NewClient failed")
+		log.Warn().Err(err).Msg("bigquery.NewClient failed")
 		return &proto.TestConnectionResponse{
 			Success: false,
 			Error:   err.Error(),
@@ -94,7 +94,7 @@ func TestConnection(ctx context.Context, req *proto.TestConnectionRequest) (*pro
 	// Attempt to create a read session to check for permissions
 	bqReadClient, err := bqutils.GetReadClient(ctx, req.Connection)
 	if err != nil {
-		log.Debug().Err(err).Msg("bigquery.NewBigQueryReadClient failed")
+		log.Warn().Err(err).Msg("bigquery.NewBigQueryReadClient failed")
 		return &proto.TestConnectionResponse{
 			Success: false,
 			Error:   err.Error(),

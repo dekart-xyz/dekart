@@ -58,7 +58,6 @@ func (s *Streams) Register(claims Claims, sequence int64) (chan int64, string) {
 	ch := make(chan int64)
 	streamMap[streamID] = ch
 	if currentSequence > sequence {
-		log.Debug().Str("user", user).Str("streamID", streamID).Int64("sequence", sequence).Int64("currentSequence", currentSequence).Msgf("Update outdated subscription")
 		go func() {
 			ch <- currentSequence
 		}()

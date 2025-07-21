@@ -1,4 +1,4 @@
-import { AuthState } from '../../proto/dekart_pb'
+import { AuthState } from 'dekart-proto/dekart_pb'
 import { updateLocalStorage } from './localStorage'
 
 export function setRedirectState (redirectState) {
@@ -23,7 +23,8 @@ export function requestSensitiveScopes (returnPath) {
   }
 }
 
-const { REACT_APP_API_HOST } = process.env // this never changes, passed during build
+const { VITE_API_HOST } = import.meta.env
+const host = VITE_API_HOST || ''
 
 // authRedirect will redirect the browser to the authentication endpoint
 export function authRedirect (state) {
@@ -33,7 +34,7 @@ export function authRedirect (state) {
     if (loginHint) {
       state.setLoginHint(loginHint)
     }
-    const req = new URL('/api/v1/authenticate', REACT_APP_API_HOST || window.location.href)
+    const req = new URL('/api/v1/authenticate', host || window.location.href)
     state.setAuthUrl(req.href)
     const stateBase64 = btoa(String.fromCharCode.apply(null, state.serializeBinary()))
     req.searchParams.set('state', stateBase64)

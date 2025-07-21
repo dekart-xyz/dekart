@@ -7,9 +7,10 @@
 }
 
 .middle {
+    --header-side-width: 400px;
     position: absolute;
-    left: 250px;
-    width: calc(100% - 2*250px);
+    left: var(--header-side-width);
+    width: calc(100% - 2 * var(--header-side-width));
 }
 
 .titleWrap {

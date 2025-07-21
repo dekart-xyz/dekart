@@ -1,0 +1,107 @@
+name: Dekart Build (cloud | premium)
+
+on:
+  workflow_call:
+    inputs:
+      build_app:
+        type: boolean
+        default: false
+      build_e2e:
+        type: boolean
+        default: false
+      # optional: let the caller pass flavour from flavour.yaml
+      target:
+        type: string          # "cloud" or "premium"
+        required: false
+        description: 'Repo flavour; defaults to auto-detect'
+    outputs:
+      app_image:
+        value: ${{ jobs.build.outputs.app_image }}
+        description: Full tag of the app image (if built)
+      e2e_image:
+        value: ${{ jobs.build.outputs.e2e_image }}
+        description: Full tag of the e2e image (if built)
+
+###############################################################################
+# Decide flavour once
+###############################################################################
+env:
+  TARGET: ${{ inputs.target != '' &&
+              inputs.target ||
+              (contains(github.repository, 'dekart-cloud') && 'cloud' || 'premium') }}
+  IMAGE_CACHE_KEY: e2etest-${{ github.run_id }}-${{ github.run_attempt }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      app_image: ${{ steps.tags.outputs.app }}
+      e2e_image: ${{ steps.tags.outputs.e2e }}
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: docker/setup-qemu-action@v2
+    - uses: docker/setup-buildx-action@v2
+
+    # ------------------------------------------------------------------ choose registry
+    - name: Decide registry & tags
+      id: tags
+      run: |
+        if [ "${{ env.TARGET }}" = "cloud" ]; then
+          REGISTRY="europe-west3-docker.pkg.dev/dekart-cloud/dekart"
+          echo "LOGIN=cloud" >> $GITHUB_ENV
+        else
+          REGISTRY="ghcr.io/${{ github.repository }}"
+          echo "LOGIN=ghcr"  >> $GITHUB_ENV
+        fi
+        echo "REGISTRY_BASE=$REGISTRY"                    >> $GITHUB_ENV
+        echo "app=${REGISTRY}/dekart:sha-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+        echo "e2e=${REGISTRY}/dekart:${IMAGE_CACHE_KEY}"   >> $GITHUB_OUTPUT
+      shell: bash
+
+    # ----------------------------------------------------------------- registry login
+    - name: Auth to Google Artifact Registry
+      if: env.LOGIN == 'cloud'
+      uses: google-github-actions/setup-gcloud@v0
+      with:
+        project_id: dekart-cloud
+        service_account_key: ${{ secrets.PRIVATE_GITHUB_ACTIONS_DEKART_CLOUD }}
+        export_default_credentials: true
+    - run: gcloud auth configure-docker europe-west3-docker.pkg.dev
+      if: env.LOGIN == 'cloud'
+
+    - name: Login to GHCR
+      if: env.LOGIN == 'ghcr'
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Create .npmrc
+      run: |
+        echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_GH_TOKEN }}" > .npmrc
+        echo "@dekart-xyz:registry=https://npm.pkg.github.com"             >> .npmrc
+
+    - name: Build & push APP image
+      if: inputs.build_app
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        build-args: |
+          DEKART_UX_DISABLE_VERSION_CHECK=1
+        tags:  ${{ steps.tags.outputs.app }}
+        cache-from: type=registry,ref=${{ env.REGISTRY_BASE }}/dekart:buildcache
+        cache-to:   type=registry,ref=${{ env.REGISTRY_BASE }}/dekart:buildcache,mode=max
+
+    - name: Build & push E2E image
+      if: inputs.build_e2e
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        target: e2etest
+        push: true
+        tags:  ${{ steps.tags.outputs.e2e }}
+        cache-from: type=registry,ref=${{ env.REGISTRY_BASE }}/dekart:buildcache
+        cache-to:   type=registry,ref=${{ env.REGISTRY_BASE }}/dekart:buildcache,mode=max

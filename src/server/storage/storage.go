@@ -221,7 +221,7 @@ func (o GoogleCloudStorageObject) GetReader(ctx context.Context) (io.ReadCloser,
 func (o GoogleCloudStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, error) {
 	attrs, err := o.getObject(ctx).Attrs(ctx)
 	if err != nil {
-		o.logger.Error().Err(err).Msg("error getting attributes")
+		o.logger.Error().Stack().Err(err).Msg("error getting attributes")
 		return nil, err
 	}
 	return &attrs.Created, nil
@@ -313,7 +313,6 @@ func (o S3StorageObject) GetWriter(ctx context.Context) io.WriteCloser {
 			o.logger.Error().Err(err).Msg("error while uploading object")
 			return err
 		}
-		o.logger.Debug().Msg("object is successfully uploaded")
 		return nil
 	})
 

@@ -1,5 +1,5 @@
-import { CancelJobRequest, CreateQueryRequest, QueryParam, RunAllQueriesRequest, RunQueryRequest } from '../../proto/dekart_pb'
-import { Dekart } from '../../proto/dekart_pb_service'
+import { CancelJobRequest, CreateQueryRequest, QueryParam, RunAllQueriesRequest, RunQueryRequest } from 'dekart-proto/dekart_pb'
+import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { get } from '../lib/api'
 import { getQueryParamsObjArr, getQueryParamsString } from '../lib/queryParams'
 import { grpcCall } from './grpc'
@@ -51,11 +51,12 @@ export function updateQueryParamsFromQueries () {
   }
 }
 
-export function createQuery (datasetId) {
+export function createQuery (datasetId, connectionId) {
   return (dispatch) => {
     dispatch({ type: createQuery.name })
     const request = new CreateQueryRequest()
     request.setDatasetId(datasetId)
+    request.setConnectionId(connectionId)
     dispatch(grpcCall(Dekart.CreateQuery, request))
   }
 }

@@ -54,7 +54,22 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 				log.Err(err).Msg("Cannot retrieve job id")
 				return
 			}
-			if dwJobID != "" { // query result is in temporary storage, we need just to remove from public storage
+			resultURI, err := s.getResultURI(userCtx, queryJob.JobResultId)
+			if err != nil {
+				log.Error().Err(err).Msg("Error getting result URI")
+				return
+			}
+
+			if resultURI != "" { // query result is in presigned storage, we need just to remove from public storage
+				publicStorage := storage.NewPublicStorage()
+				extension := "csv"
+				if connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_WHEROBOTS {
+					extension = "parquet"
+				}
+				obj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", queryJob.JobResultId, extension))
+				objectsToDelete = append(objectsToDelete, obj)
+				sourceIDsToDelete = append(sourceIDsToDelete, queryJob.JobResultId)
+			} else if dwJobID != "" { // query result is in temporary storage, we need just to remove from public storage
 				publicStorage := storage.NewPublicStorage()
 				obj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.csv", queryJob.JobResultId))
 				objectsToDelete = append(objectsToDelete, obj)
@@ -62,17 +77,19 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 			} else {
 				// query result is in user storage bucket, we need to move it back
 				publicStorage := storage.NewPublicStorage()
-				srcObj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.csv", queryJob.JobResultId))
-				if userBucketName != "" {
-					dstObj := s.storage.GetObject(conCtx, userBucketName, fmt.Sprintf("%s.csv", queryJob.JobResultId))
-					err = srcObj.CopyTo(defConnCtx, dstObj.GetWriter(conCtx))
-					if err != nil {
-						log.Err(err).Msg("Cannot copy query result to user storage")
-						return
+				if userBucketName != publicStorage.GetDefaultBucketName() {
+					srcObj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.csv", queryJob.JobResultId))
+					if userBucketName != "" {
+						dstObj := s.storage.GetObject(conCtx, userBucketName, fmt.Sprintf("%s.csv", queryJob.JobResultId))
+						err = srcObj.CopyTo(defConnCtx, dstObj.GetWriter(conCtx))
+						if err != nil {
+							log.Err(err).Msg("Cannot copy query result to user storage")
+							return
+						}
 					}
+					objectsToDelete = append(objectsToDelete, srcObj)
+					sourceIDsToDelete = append(sourceIDsToDelete, queryJob.JobResultId)
 				}
-				objectsToDelete = append(objectsToDelete, srcObj)
-				sourceIDsToDelete = append(sourceIDsToDelete, queryJob.JobResultId)
 			}
 		}
 	}
@@ -98,15 +115,18 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 			}
 			conCtx := conn.GetCtx(userCtx, connection)
 			publicStorage := storage.NewPublicStorage()
-			srcObj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", file.SourceId, getFileExtension(file.MimeType)))
-			dstObj := s.storage.GetObject(conCtx, s.getBucketNameFromConnection(connection), fmt.Sprintf("%s.%s", file.SourceId, getFileExtension(file.MimeType)))
-			err = srcObj.CopyTo(ctx, dstObj.GetWriter(conCtx))
-			if err != nil {
-				log.Err(err).Msg("Cannot copy file to public storage")
-				return
+			if connection.CloudStorageBucket != publicStorage.GetDefaultBucketName() {
+				// delete only of they are on the different buckets
+				srcObj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", file.SourceId, getFileExtension(file.MimeType)))
+				dstObj := s.storage.GetObject(conCtx, s.getBucketNameFromConnection(connection), fmt.Sprintf("%s.%s", file.SourceId, getFileExtension(file.MimeType)))
+				err = srcObj.CopyTo(conCtx, dstObj.GetWriter(conCtx))
+				if err != nil {
+					log.Err(err).Msg("Cannot copy file to public storage")
+					return
+				}
+				objectsToDelete = append(objectsToDelete, srcObj)
+				sourceIDsToDelete = append(sourceIDsToDelete, file.SourceId)
 			}
-			objectsToDelete = append(objectsToDelete, srcObj)
-			sourceIDsToDelete = append(sourceIDsToDelete, file.SourceId)
 		}
 	}
 
@@ -183,17 +203,29 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 			}
 			userBucketName := s.getBucketNameFromConnection(connection)
 
-			// TODO: moving query text to database
-
 			dwJobID, err := s.getDWJobIDFromResultID(userCtx, queryJob.JobResultId)
+
 			if err != nil {
 				log.Err(err).Msg("Cannot retrieve job id")
 				return
 			}
+
+			resultURI, err := s.getResultURI(userCtx, queryJob.JobResultId)
+			if err != nil {
+				log.Error().Err(err).Msg("Error getting result URI")
+				return
+			}
+
 			publicStorage := storage.NewPublicStorage()
-			dstObj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.csv", queryJob.JobResultId))
+			extension := "csv"
+			if connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_WHEROBOTS {
+				extension = "parquet"
+			}
+			dstObj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", queryJob.JobResultId, extension))
 			var srcObj storage.StorageObject
-			if dwJobID != "" { // query result is in temporary storage
+			if resultURI != "" {
+				srcObj = storage.NewPresignedS3Storage().GetObject(conCtx, "", resultURI)
+			} else if dwJobID != "" { // query result is in temporary storage
 				srcObj = s.storage.GetObject(conCtx, "", dwJobID)
 			} else { // query result is in user storage bucket
 				srcObj = s.storage.GetObject(conCtx, userBucketName, fmt.Sprintf("%s.csv", queryJob.JobResultId))
@@ -229,7 +261,7 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 			publicStorage := storage.NewPublicStorage()
 			dstObj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", file.SourceId, getFileExtension(file.MimeType)))
 			srcObj := s.storage.GetObject(conCtx, s.getBucketNameFromConnection(connection), fmt.Sprintf("%s.%s", file.SourceId, getFileExtension(file.MimeType)))
-			err = srcObj.CopyTo(conCtx, dstObj.GetWriter(ctx))
+			err = srcObj.CopyTo(conCtx, dstObj.GetWriter(conCtx))
 			if err != nil {
 				log.Err(err).Msg("Cannot copy file to public storage")
 				return

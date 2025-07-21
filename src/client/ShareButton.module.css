@@ -20,6 +20,12 @@
     color: #666;
 }
 
+.viewAnalytics {
+    font-size: 0.8em;
+    margin-top: 5px;
+    margin-left: -7px;
+}
+
 .workspaceStatusIcon {
     font-size: 1.2em;
     position: relative;
@@ -72,15 +78,15 @@
     align-items: flex-start;
 }
 
-.boolStatusS {
-    font-size: 0.9em;
+.userSelect {
     padding: 20px;
-    padding-top: 0px;
-    padding-left: 45px;
+    padding-left: 40px;
+    padding-top: 0;
     display: flex;
     flex-direction: row;
     align-items: flex-start;
 }
+
 
 .reportStatus {
     padding: 20px;
@@ -109,4 +115,8 @@
 .boolStatusIcon {
     position: relative;
     top: 2px;
+}
+
+.nonSharableWarning{
+    background-color: #fff9c4;
 }
