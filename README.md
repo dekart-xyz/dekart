@@ -1,67 +1,49 @@
-# Dekart Premium
+# Dekart
 
-Welcome to the **Dekart Premium** codebase! This repository is accessible to paying organizations with **read-only access**. Below, you'll find all the information you need to start using and managing Dekart Premium effectively.
+Open-source SQL → Map backend for **Kepler.gl**, built for data scientists, analysts, and sales engineers working with Spatial SQL:
 
-## 📦 **Repository Access & Permissions**
+* Connects to *BigQuery*, *Snowflake*, *Wherobots*, Postgres, Amazon Athena, and ClickHouse
+* Enables map sharing with secure links, email, and access control
+* Supports README.md for adding context to maps
+* Global filters and map templates
 
-- You have **read-only access** to the code in this repository.
-- Any issues or feature requests should be raised in a dedicated repository named **dekart-premium-[your_team_name]**.
-- For live support, join our **[Slack community](https://slack.dekart.xyz/)**.
+Alternative to CARTO Builder, Foursquare Studio, and BigQuery GeoViz.
 
-## 🛠️ **Installing Dekart Premium**
+<a href="https://cloud.dekart.xyz/reports/62130325-9fc7-4687-ac05-52f6b7513502/source?ref=github-pic"><img src="https://dekart.xyz/docs/about/map-templates/62130325-9fc7-4687-ac05-52f6b7513502_huc0563c5f6ac939a1614c238afd308de4_2022917_1600x0_resize_box_3.png"></a>
+<div align="center"><a href="https://cloud.dekart.xyz/?ref=github-try-live-demo">Try Live Demo</a></div>
 
-### From GitHub Packages
-You can install the Dekart Premium Docker image directly from **GitHub Packages**. Follow the instructions below:
+## How it works
 
-1. **Authenticate to GitHub Packages** with your GitHub account.
-   ```bash
-   docker login ghcr.io -u [USERNAME] -p [TOKEN]
-   ```
-2. **Pull the Premium image**:
-   ```bash
-   docker pull ghcr.io/dekart-xyz/dekart-premium/dekart:latest
-   ```
-3. **Run the image** with your desired configurations:
-   ```bash
-   docker run -d -p 8080:8080 ghcr.io/dekart-xyz/dekart-premium/dekart:latest
-   ```
+Dekart is a self-hosted backend for Kepler.gl,  built with Golang and React. It connects to your data warehouse, caches query results, and serves them to the frontend for visualization.
 
-### Deploying Examples
+* [BigQuery Examples](https://dekart.xyz/docs/about/overture-maps-examples/)
+* [Snowflake Examples](https://dekart.xyz/docs/about/snowflake-kepler-gl-examples/)
+* [Video: How to Create a Map in Dekart](https://www.youtube.com/watch?v=qwOqLm3i7Ik)
 
-* [Deploy to AWS/ECS with Terraform](https://dekart.xyz/docs/self-hosting/aws-ecs-terraform/?ref=github)  and manage access with Google IAP
-* [Deploy to Google App Engine](https://dekart.xyz/docs/self-hosting/app-engine/?ref=github)  and manage access with Google IAP
-* [Run with Docker](https://dekart.xyz/docs/self-hosting/docker/?ref=github)
+## Deployment Options
+
+Dekart is single Docker container that can be deployed to any cloud provider or on-premises server. It requires a PostgreSQL database to store user data and Cloud Storage for caching query results.
+
+👉 [Documentation](https://dekart.xyz/docs/configuration/environment-variables/)
 
 
-👉 [Environment Variables Documentation](https://dekart.xyz/docs/configuration/environment-variables/?ref=github)
+### Deployment Guides:
 
-## 📅 **Schedule Developer Support Calls**
+- [Deploy to AWS/ECS (Terraform)](https://dekart.xyz/docs/self-hosting/aws-ecs-terraform/?ref=github)
+- [Deploy to Google App Engine](https://dekart.xyz/docs/self-hosting/app-engine/?ref=github) with Google IAP.
+- [Run with Docker](https://dekart.xyz/docs/self-hosting/docker/?ref=github)
 
-If you need personalized assistance, you can schedule a 1-on-1 call with a developer through our **[Calendly link](https://calendly.com/vladi-dekart/30min)**. We'll be happy to walk you through advanced features or help troubleshoot any issues.
+## Support
 
-## 🚨 **Raising Issues**
+* [Slack Community](https://slack.dekart.xyz)
+* [Schedule a Demo](https://calendly.com/dekartxyz/demo?ref=github)
 
-- Each team has its own repository for tracking issues. Use the format **dekart-premium-[your_team_name]** to create a new issue.
-- **Example Issue Repo**: `https://github.com/dekart-xyz/dekart-premium-[your_team_name]/issues`
-- Please provide as much detail as possible in your reports, including:
-  - Steps to reproduce
-  - Expected behavior
-  - Logs or screenshots, if available
-
-## 🔗 **Premium Support in Slack**
-
-If you need real-time support, we offer premium support via **[Slack](https://slack.dekart.xyz/)**. Feel free to ask questions, report bugs, or suggest features directly to the team.
-
-## 📄 **Resources**
-
-👉 [Documentation](https://dekart.xyz/docs/)
-
+👉 If you like Dekart, make sure to star the repo!
 
 ## License
 
-This repository is licensed under the **Dekart On-Premise Premium License**.
+This project is open source under the GNU Affero General Public License Version 3 (AGPLv3) or any later version.
 
-- You may modify, distribute, and use this software for commercial purposes, with certain restrictions.
-- The software is subject to the terms outlined in the commercial license.
+[Commercial Licenses Available](https://dekart.xyz/self-hosted/)
 
-For full details, see the [`LICENSE`](./LICENSE) file or visit the [Dekart Premium License Terms](https://dekart.xyz/legal/dekart-premium-terms).
+Copyright (c) 2025 Volodymyr Bilonenko
