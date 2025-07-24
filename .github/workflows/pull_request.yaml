@@ -14,7 +14,7 @@ jobs:
     uses: ./.github/workflows/changes.yaml
     permissions:
       pull-requests: read
-      contents:       read
+      contents: read
 
   node_tests:
     if: needs.changes.outputs.js == 'true'
@@ -30,7 +30,7 @@ jobs:
 
   build_e2e:
     if: needs.changes.outputs.e2e == 'true' &&
-        github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository
     needs: [changes, flavour]
     with:
       build_e2e: true
@@ -39,7 +39,7 @@ jobs:
 
   e2e_tests:
     if: needs.changes.outputs.e2e == 'true' &&
-        github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository
     needs: [build_e2e, changes]
     uses: ./.github/workflows/e2e.yaml
     secrets: inherit
