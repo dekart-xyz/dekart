@@ -35,6 +35,9 @@ jobs:
     with:
       build_e2e: true
     uses: ./.github/workflows/build.yaml
+    permissions:
+      contents: read
+      packages: write
     secrets: inherit
 
   e2e_tests:
@@ -42,4 +45,7 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository
     needs: [build_e2e, changes]
     uses: ./.github/workflows/e2e.yaml
+    permissions:
+      contents: read
+      packages: write
     secrets: inherit
