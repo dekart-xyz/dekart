@@ -80,7 +80,7 @@ jobs:
       - name: Configure .npmrc
         run: |
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_GH_TOKEN }}" > .npmrc
-          echo "@dekart-xyz:registry=https://npm.pkg.github.com"             >> .npmrc
+          echo "@dekart-xyz:registry=https://npm.pkg.github.com" >> .npmrc
 
       - id: meta
         uses: docker/metadata-action@v5
@@ -115,7 +115,7 @@ jobs:
         if: inputs.build_e2e
         uses: docker/build-push-action@v5
         with:
-          conP>text: .
+          context: .
           target: e2etest
           push: true
           tags: ${{ steps.collect.outputs.e2e_tags }}
