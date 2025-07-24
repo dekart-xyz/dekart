@@ -34,6 +34,7 @@ jobs:
     needs: [changes, flavour]
     with:
       build_e2e: true
+      target:    ${{ needs.flavour.outputs.target }}
     uses: ./.github/workflows/build.yaml
     permissions:
       contents: read
