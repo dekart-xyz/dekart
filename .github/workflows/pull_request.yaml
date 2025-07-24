@@ -34,7 +34,7 @@ jobs:
     needs: [changes, flavour]
     with:
       build_e2e: true
-      target:    ${{ needs.flavour.outputs.target }}
+      target: ${{ needs.flavour.outputs.target }}
     uses: ./.github/workflows/build.yaml
     permissions:
       contents: read
@@ -46,6 +46,8 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository
     needs: [build_e2e, changes]
     uses: ./.github/workflows/e2e.yaml
+    with:
+      target: ${{ needs.flavour.outputs.target }}
     permissions:
       contents: read
       packages: write
