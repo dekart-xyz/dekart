@@ -113,11 +113,8 @@ jobs:
       SNOW_PASS_SEC:           ${{ secrets.SNOWFLAKE_PASSWORD }}
 
       # registry prefix + login target
-      REG_PREFIX: ${{ env.TARGET == 'premium'
-                      && format('ghcr.io/{0}', github.repository)
-                      || 'dekartxyz' }}
-      LOGIN_REG:  ${{ env.TARGET == 'premium' && 'ghcr' || 'dh' }}
-
+      REG_PREFIX: ${{ inputs.target == 'premium' && format('ghcr.io/{0}', github.repository) || 'dekartxyz' }}
+      LOGIN_REG:  ${{ inputs.target == 'premium' && 'ghcr' || 'dh' }}
     strategy:
       fail-fast: false
       matrix:
