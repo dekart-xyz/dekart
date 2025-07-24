@@ -17,15 +17,13 @@ jobs:
       contents:       read
 
   node_tests:
-    if: needs.flavour.outputs.is_premium == 'true' &&
-        needs.changes.outputs.js == 'true'
+    if: needs.changes.outputs.js == 'true'
     needs: [changes]
     uses: ./.github/workflows/node_test.yaml
     secrets: inherit
 
   go_tests:
-    if: needs.flavour.outputs.is_premium == 'true' &&
-        needs.changes.outputs.go == 'true'
+    if: needs.changes.outputs.go == 'true'
     needs: [changes]
     uses: ./.github/workflows/go_test.yaml
     secrets: inherit

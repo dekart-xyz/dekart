@@ -1,78 +1,55 @@
-name: Release – Premium
+name: Release
 
 on:
   push:
-    tags: ['**']
+    tags: ['**']                       # any tag (vX.Y.Z, nightly‑foo, …)
 
 jobs:
+
   flavour:
-    uses: ./.github/workflows/flavour.yaml      # ← tiny helper workflow
+    uses: ./.github/workflows/flavour.yaml      # → target + is_* booleans
 
   node_tests:
-    if: needs.flavour.outputs.is_premium == 'true'
+    if: needs.flavour.outputs.is_premium == 'true' ||
+        needs.flavour.outputs.is_oss     == 'true'
     needs: [flavour]
     uses: ./.github/workflows/node_test.yaml
     secrets: inherit
 
   go_tests:
-    if: needs.flavour.outputs.is_premium == 'true'
+    if: needs.flavour.outputs.is_premium == 'true' ||
+        needs.flavour.outputs.is_oss     == 'true'
     needs: [flavour]
     uses: ./.github/workflows/go_test.yaml
     secrets: inherit
 
   build_e2e:
-    if: needs.flavour.outputs.is_premium == 'true'
+    if: needs.flavour.outputs.is_premium == 'true' ||
+        needs.flavour.outputs.is_oss     == 'true'
     needs: [flavour, node_tests, go_tests]
-    with:
-      build_e2e: true
-      target: ${{ needs.flavour.outputs.target }}   # ← pass flavour
     uses: ./.github/workflows/build.yaml
+    with:
+      target:    ${{ needs.flavour.outputs.target }}
+      build_app: false
+      build_e2e: true
     secrets: inherit
 
   e2e_tests:
-    if: needs.flavour.outputs.is_premium == 'true'
+    if: needs.flavour.outputs.is_premium == 'true' ||
+        needs.flavour.outputs.is_oss     == 'true'
     needs: [flavour, node_tests, go_tests, build_e2e]
     uses: ./.github/workflows/e2e.yaml
     with:
-      target: ${{ needs.flavour.outputs.target }}   # ← pass flavour
+      target: ${{ needs.flavour.outputs.target }}
     secrets: inherit
 
-  docker:
-    if: needs.flavour.outputs.is_premium == 'true'
+  build_app_release:
+    if: needs.flavour.outputs.is_premium == 'true' ||
+        needs.flavour.outputs.is_oss     == 'true'
     needs: [flavour, node_tests, go_tests, e2e_tests]
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}/dekart
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=ref,event=branch
-            type=ref,event=pr
-
-      - run: |
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_GH_TOKEN }}" > .npmrc
-          echo "@dekart-xyz:registry=https://npm.pkg.github.com" >> .npmrc
-
-      - uses: docker/setup-qemu-action@v2
-      - uses: docker/setup-buildx-action@v2
-
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags:   ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}/dekart:buildcache
-          cache-to:   type=registry,ref=ghcr.io/${{ github.repository }}/dekart:buildcache,mode=max
+    uses: ./.github/workflows/build.yaml
+    with:
+      target:    ${{ needs.flavour.outputs.target }}
+      build_app: true
+      build_e2e: false
+    secrets: inherit

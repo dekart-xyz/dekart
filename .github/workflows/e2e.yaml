@@ -3,31 +3,31 @@ name: e2e_tests
 on:
   workflow_call:
     inputs:
-      # optional: flavour forwarded from flavour.yaml
+      # optional override from flavour.yaml
       target:
-        type: string   # "cloud" | "premium"
-        required: false
+        type: string          # cloud | premium | oss
+        required: true
 
 env:
-  TARGET: ${{ inputs.target != '' &&
-              inputs.target ||
-              (contains(github.repository, 'dekart-cloud') && 'cloud' || 'premium') }}
+  TARGET: ${{ inputs.target }}
 
+  # database defaults for every spec
   DEKART_POSTGRES_PASSWORD: dekart
   DEKART_POSTGRES_USER:     postgres
   DEKART_POSTGRES_DB:       dekart
 
   GOOGLE_APPLICATION_CREDENTIALS: GOOGLE_APPLICATION_CREDENTIALS.json
-  AWS_REGION:  us-east-1
+  AWS_REGION: us-east-1
   IMAGE_CACHE_KEY: e2etest-${{ github.run_id }}-${{ github.run_attempt }}
 
+###############################################################################
+# ------------------------------- CLOUD JOB -----------------------------------
+###############################################################################
 jobs:
-  # is_cloud  =  explicit target is cloud
-  #          OR no target AND repo name ends with dekart-cloud
   e2e-cloud:
-    if: ${{ (inputs.target != '' && inputs.target == 'cloud') ||
-            (inputs.target == '' && contains(github.repository,'dekart-cloud')) }}
+    if: ${{ env.TARGET == 'cloud' }}
     runs-on: ubuntu-latest
+
     services:
       postgres:
         image: postgres:15
@@ -50,6 +50,7 @@ jobs:
           export_default_credentials: true
 
       - run: gcloud auth configure-docker europe-west3-docker.pkg.dev
+
       - uses: docker/setup-qemu-action@v2
       - uses: docker/setup-buildx-action@v2
 
@@ -59,9 +60,9 @@ jobs:
             cypress/e2e/cloud/cloudBasicFlowStart.cy.js \
             cypress/e2e/cloud/cloudBasicFlowEnd.cy.js
           do
-            TOKEN=$([ "$SPEC" == *cloudBasicFlowStart* ] && \
-              echo '${{ secrets.DEV_REFRESH_TOKEN_INFO }}' || \
-              echo '${{ secrets.DEV_REFRESH_TOKEN }}')
+            TOKEN=$([ "$SPEC" == *cloudBasicFlowStart* ] \
+                    && echo '${{ secrets.DEV_REFRESH_TOKEN_INFO }}' \
+                    || echo '${{ secrets.DEV_REFRESH_TOKEN }}')
 
             docker run -i --network host \
               -v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
@@ -84,7 +85,6 @@ jobs:
               -e DEKART_DEV_REFRESH_TOKEN="$TOKEN" \
               -e DEKART_DATA_ENCRYPTION_KEY=projects/398860824064/secrets/dekart-prod-user-data-encoding-key/versions/1 \
               -e DEKART_CORS_ORIGIN=http://localhost:3000 \
-              -e DEKART_ALLOW_WORKSPACE_CREATION=1 \
               -e DEKART_UX_DISABLE_VERSION_CHECK=1 \
               -e DEKART_DEV_NO_DATASET_CACHE=1 \
               -e DEKART_CLOUD=1 \
@@ -99,15 +99,15 @@ jobs:
           name: cloud
           path: /tmp/cypress
 
-  e2e-premium:
-    # premium branch is simply "not cloud"
-    if: ${{ !(
-            (inputs.target != '' && inputs.target == 'cloud') ||
-            (inputs.target == '' && contains(github.repository,'dekart-cloud'))
-          ) }}
+###############################################################################
+# ----------------------- PREMIUM + OSS (shared) ------------------------------
+###############################################################################
+  e2e-premium-oss:
+    if: ${{ env.TARGET != 'cloud' }}
     runs-on: ubuntu-latest
 
-    env:            # secrets mapped to env so matrix can reference them
+    env:
+      # secret → env for easy reuse in matrix
       GOOGLE_CRED_SEC:         ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
       GOOGLE_OAUTH_ID_SEC:     ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
       GOOGLE_OAUTH_SECRET_SEC: ${{ secrets.GOOGLE_OAUTH_SECRET }}
@@ -118,6 +118,12 @@ jobs:
       SNOW_ID_SEC:             ${{ secrets.SNOWFLAKE_ACCOUNT_ID }}
       SNOW_USER_SEC:           ${{ secrets.SNOWFLAKE_USER }}
       SNOW_PASS_SEC:           ${{ secrets.SNOWFLAKE_PASSWORD }}
+
+      # registry prefix + login target
+      REG_PREFIX: ${{ env.TARGET == 'premium'
+                      && format('ghcr.io/{0}', github.repository)
+                      || 'dekartxyz' }}
+      LOGIN_REG:  ${{ env.TARGET == 'premium' && 'ghcr' || 'dh' }}
 
     strategy:
       fail-fast: false
@@ -173,7 +179,6 @@ jobs:
               -e DEKART_DEV_CLAIMS_EMAIL=test@gmail.com \
               -e DEKART_ALLOW_FILE_UPLOAD=1 \
 
-
           - id: snowflake-sqlite
             spec: cypress/e2e/snowflake
             extra_env: |
@@ -201,18 +206,27 @@ jobs:
         ports: ['5432:5432']
 
     steps:
-      - name: Create google creds (BigQuery / Google OAuth)
-        run: echo "$GOOGLE_CRED_SEC" > $GOOGLE_APPLICATION_CREDENTIALS
+      # credentials file for any variant that may need it
+      - run: echo "$GOOGLE_CRED_SEC" > "$GOOGLE_APPLICATION_CREDENTIALS"
 
       - uses: docker/setup-qemu-action@v2
       - uses: docker/setup-buildx-action@v2
 
+      # --------------------------- registry login ----------------------------
       - uses: docker/login-action@v3
+        if: env.LOGIN_REG == 'ghcr'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - uses: docker/login-action@v3
+        if: env.LOGIN_REG == 'dh'
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # ----------------------------- run tests -------------------------------
       - name: Run ${{ matrix.id }} suite
         run: |
           docker run -i --network host \
@@ -228,7 +242,7 @@ jobs:
             -e TEST_SPEC=${{ matrix.spec }} \
             -e CYPRESS_CI=1 \
             ${{ matrix.extra_env }} \
-            ghcr.io/${{ github.repository }}/dekart:${{ env.IMAGE_CACHE_KEY }}
+            ${REG_PREFIX}/dekart:${{ env.IMAGE_CACHE_KEY }}
 
       - uses: actions/upload-artifact@v4
         if: failure()
