@@ -9,7 +9,6 @@ on:
         required: true
 
 env:
-  TARGET: ${{ inputs.target }}
 
   # database defaults for every spec
   DEKART_POSTGRES_PASSWORD: dekart
@@ -20,12 +19,9 @@ env:
   AWS_REGION: us-east-1
   IMAGE_CACHE_KEY: e2etest-${{ github.run_id }}-${{ github.run_attempt }}
 
-###############################################################################
-# ------------------------------- CLOUD JOB -----------------------------------
-###############################################################################
 jobs:
   e2e-cloud:
-    if: ${{ env.TARGET == 'cloud' }}
+    if: ${{ inputs.target == 'cloud' }}
     runs-on: ubuntu-latest
 
     services:
@@ -99,11 +95,8 @@ jobs:
           name: cloud
           path: /tmp/cypress
 
-###############################################################################
-# ----------------------- PREMIUM + OSS (shared) ------------------------------
-###############################################################################
   e2e-premium-oss:
-    if: ${{ env.TARGET != 'cloud' }}
+    if: ${{ inputs.target != 'cloud' }}
     runs-on: ubuntu-latest
 
     env:
