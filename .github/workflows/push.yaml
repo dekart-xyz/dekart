@@ -2,16 +2,31 @@ name: Push to main
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+
 jobs:
+  flavour:
+    uses: ./.github/workflows/flavour.yaml
+
   changes:
+    needs: [flavour]
     uses: ./.github/workflows/changes.yaml
     permissions:
       pull-requests: read
-      contents: read
+      contents:       read
+
+  build:
+    needs: [changes, flavour]
+    if: needs.flavour.outputs.is_cloud == 'true' ||
+        needs.changes.outputs.e2e == 'true'
+    with:
+      build_app: ${{ needs.flavour.outputs.is_cloud == 'true' }}
+      build_e2e: ${{ needs.changes.outputs.e2e == 'true' }}
+    uses: ./.github/workflows/build.yaml
+    secrets: inherit
+
   e2e_tests:
-    needs: changes
-    uses: ./.github/workflows/e2e.yaml
     if: needs.changes.outputs.e2e == 'true'
+    needs: [build, changes]
+    uses: ./.github/workflows/e2e.yaml
     secrets: inherit

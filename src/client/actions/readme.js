@@ -1,5 +1,5 @@
-import { AddReadmeRequest, RemoveReadmeRequest } from '../../proto/dekart_pb'
-import { Dekart } from '../../proto/dekart_pb_service'
+import { AddReadmeRequest, RemoveReadmeRequest } from 'dekart-proto/dekart_pb'
+import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { track } from '../lib/tracking'
 import { grpcCall } from './grpc'
 
@@ -13,7 +13,7 @@ export function removeReadme () {
   }
 }
 
-export function addReadme () {
+export function addReadme (datasetId) {
   return (dispatch, getState) => {
     track('AddReadme')
     const markdown = `# My Readme
@@ -30,6 +30,7 @@ Use **Markdown** to document your map:
     const request = new AddReadmeRequest()
     request.setReportId(reportId)
     request.setMarkdown(markdown)
+    request.setFromDatasetId(datasetId)
     dispatch(grpcCall(Dekart.AddReadme, request))
   }
 }

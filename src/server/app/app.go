@@ -98,12 +98,20 @@ func setOriginHeader(w http.ResponseWriter, r *http.Request) {
 func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *mux.Router {
 	router := mux.NewRouter()
 	api := router.PathPrefix("/api/v1/").Subrouter()
-	api.HandleFunc("/dataset-source/{dataset}/{source}.{extension:csv|geojson}", func(w http.ResponseWriter, r *http.Request) {
+	api.HandleFunc("/dataset-source/{dataset}/{source}.{extension:csv|geojson|parquet}", func(w http.ResponseWriter, r *http.Request) {
 		setOriginHeader(w, r)
 		if r.Method == http.MethodOptions {
 			return
 		}
 		dekartServer.ServeDatasetSource(w, r)
+	}).Methods("GET", "OPTIONS")
+
+	api.HandleFunc("/report/{report}/analytics.csv", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeader(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.ServeReportAnalytics(w, r)
 	}).Methods("GET", "OPTIONS")
 
 	api.HandleFunc("/query-source/{query}/{source}.sql", func(w http.ResponseWriter, r *http.Request) {

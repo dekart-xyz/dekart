@@ -1,13 +1,16 @@
 # Dekart
 
-**Open-source backend for Kepler.gl:** Adds SQL support, map hosting, user management, Markdown to Kepler.gl.
+Open-source SQL → Map backend for **Kepler.gl**, built for data scientists, analysts, and sales engineers working with Spatial SQL:
 
-* Supports **BigQuery**, **Snowflake**, Postgres, Amazon Athena and ClickHouse
-* Designed for data scientists, data analysts and sales engineers working with geo data.
-* Alternative to CARTO Builder, Foursquare Studio and BigQuery GeoViz.
+* Connects to *BigQuery*, *Snowflake*, *Wherobots*, Postgres, Amazon Athena, and ClickHouse
+* Enables map sharing with secure links, email, and access control
+* Supports README.md for adding context to maps
+* Global filters and map templates
 
-<a href="https://cloud.dekart.xyz/reports/62130325-9fc7-4687-ac05-52f6b7513502/source"><img src="https://dekart.xyz/docs/about/map-templates/62130325-9fc7-4687-ac05-52f6b7513502_huc0563c5f6ac939a1614c238afd308de4_2022917_1600x0_resize_box_3.png"></a>
-<div align="center">Try it Live → <a href="https://cloud.dekart.xyz/reports/62130325-9fc7-4687-ac05-52f6b7513502/source">Sign in with Google</a></div>
+Alternative to CARTO Builder, Foursquare Studio, and BigQuery GeoViz.
+
+<a href="https://cloud.dekart.xyz/reports/62130325-9fc7-4687-ac05-52f6b7513502/source?ref=github-pic"><img src="https://dekart.xyz/docs/about/map-templates/62130325-9fc7-4687-ac05-52f6b7513502_huc0563c5f6ac939a1614c238afd308de4_2022917_1600x0_resize_box_3.png"></a>
+<div align="center"><a href="https://cloud.dekart.xyz/?ref=github-try-live-demo">Try Live Demo</a></div>
 
 ## How it works
 

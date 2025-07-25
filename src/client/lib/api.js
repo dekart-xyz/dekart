@@ -16,8 +16,8 @@ export class AbortError extends Error {
 export function get (endpoint, token = null, signal = null, onProgress = null, claimEmailCookie = null) {
   return new Promise((resolve, reject) => {
     const xhr = new window.XMLHttpRequest()
-    const { REACT_APP_API_HOST } = process.env
-    const host = REACT_APP_API_HOST || ''
+    const { VITE_API_HOST } = import.meta.env
+    const host = VITE_API_HOST || ''
     const url = `${host}/api/v1${endpoint}`
 
     xhr.open('GET', url, true)

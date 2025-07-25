@@ -28,9 +28,10 @@ type Job interface {
 	GetID() string
 	GetReportID() string
 	GetQueryID() string
-	GetResultID() *string // same as GetID(); nil means no result yet
-	IsResultReady() bool  // true if result is ready
-	GetDWJobID() *string  // DW job ID, nil if not applicable or not yet known
+	GetResultID() *string  // same as GetID(); nil means no result yet
+	IsResultReady() bool   // true if result is ready
+	GetDWJobID() *string   // DW job ID, nil if not applicable or not yet known
+	GetResultURI() *string // URI of the result, nil if not applicable or not yet known
 	GetTotalRows() int64
 	GetProcessedBytes() int64
 	GetResultSize() int64
@@ -55,10 +56,10 @@ type BasicJob struct {
 	TotalRows      int64
 	ResultReady    bool
 	DWJobID        *string
+	ResultURI      *string // URI of the result, nil if not applicable or not yet known
 	ProcessedBytes int64
 	ResultSize     int64
 	Logger         zerolog.Logger
-	// AccessToken    string
 }
 
 func (j *BasicJob) Init(userCtx context.Context) {
@@ -100,6 +101,13 @@ func (j *BasicJob) GetResultID() *string {
 	}
 	return nil
 }
+
+func (j *BasicJob) GetResultURI() *string {
+	j.Lock()
+	defer j.Unlock()
+	return j.ResultURI
+}
+
 func (j *BasicJob) GetDWJobID() *string {
 	j.Lock()
 	defer j.Unlock()
@@ -176,9 +184,7 @@ func (s *BasicStore) StoreJob(job Job) {
 // RemoveJobWhenDone blocks until the job is finished
 func (s *BasicStore) RemoveJobWhenDone(job Job) {
 	<-job.GetCtx().Done()
-	log.Debug().Str("queryId", job.GetQueryID()).Msg("Removing job from store")
 	s.Lock()
-	log.Debug().Str("queryId", job.GetQueryID()).Int("jobs", len(s.Jobs)).Msg("lock acquired")
 	for i, j := range s.Jobs {
 		if job.GetID() == j.GetID() {
 			// removing job from slice
@@ -193,10 +199,8 @@ func (s *BasicStore) RemoveJobWhenDone(job Job) {
 
 func (s *BasicStore) Cancel(jobID string) bool {
 	s.Lock()
-	log.Debug().Str("jobID", jobID).Int("jobs", len(s.Jobs)).Msg("Canceling query in store")
 	defer s.Unlock()
 	for _, job := range s.Jobs {
-		log.Debug().Str("jobID", jobID).Msg("Canceling query in store")
 		if job.GetID() == jobID {
 			job.Status() <- int32(proto.QueryJob_JOB_STATUS_UNSPECIFIED)
 			job.Cancel()

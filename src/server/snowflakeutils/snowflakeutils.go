@@ -29,7 +29,7 @@ func readSnowparkToken() string {
 	return string(token)
 }
 
-func parsePrivateKey(base64Key string) (*rsa.PrivateKey, error) {
+func ParsePrivateKey(base64Key string) (*rsa.PrivateKey, error) {
 	// Decode the base64-encoded private key
 	decodedKey, err := base64.StdEncoding.DecodeString(base64Key)
 	if err != nil {
@@ -54,12 +54,28 @@ func parsePrivateKey(base64Key string) (*rsa.PrivateKey, error) {
 func getConfig(conn *proto.Connection) sf.Config {
 	if conn != nil && !conn.IsDefault { // for default connection we use environment variables
 		password := secrets.SecretToString(conn.SnowflakePassword, nil)
+		privateKey := secrets.SecretToString(conn.SnowflakeKey, nil)
+		if password != "" && privateKey == "" {
+			// legacy support for password
+			return sf.Config{
+				Account:   conn.SnowflakeAccountId,
+				User:      conn.SnowflakeUsername,
+				Warehouse: conn.SnowflakeWarehouse,
+				Password:  password,
+				Params:    map[string]*string{},
+			}
+		}
+
+		pk, err := ParsePrivateKey(privateKey)
+		if err != nil {
+			return sf.Config{}
+		}
 		return sf.Config{
-			Account:   conn.SnowflakeAccountId,
-			User:      conn.SnowflakeUsername,
-			Warehouse: conn.SnowflakeWarehouse,
-			Password:  password,
-			Params:    map[string]*string{},
+			Account:       conn.SnowflakeAccountId,
+			User:          conn.SnowflakeUsername,
+			Authenticator: sf.AuthTypeJwt,
+			PrivateKey:    pk,
+			Params:        map[string]*string{},
 		}
 	}
 	privateKey := os.Getenv("DEKART_SNOWFLAKE_PRIVATE_KEY")
@@ -68,8 +84,7 @@ func getConfig(conn *proto.Connection) sf.Config {
 	dekartSnowflakeAccount := os.Getenv("DEKART_SNOWFLAKE_ACCOUNT_ID")
 
 	if privateKey != "" {
-		log.Debug().Msg("Using snowflake private key")
-		pk, err := parsePrivateKey(privateKey)
+		pk, err := ParsePrivateKey(privateKey)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to parse private key")
 			return sf.Config{}
@@ -93,7 +108,6 @@ func getConfig(conn *proto.Connection) sf.Config {
 	}
 	token := readSnowparkToken()
 	if token != "" {
-		log.Debug().Msg("Using snowpark token")
 		// https://docs.snowflake.com/en/developer-guide/snowpark-container-services/tutorials/tutorial-2#main-py-file
 		// https://docs.snowflake.com/en/developer-guide/snowpark-container-services/additional-considerations-services-jobs
 		return sf.Config{

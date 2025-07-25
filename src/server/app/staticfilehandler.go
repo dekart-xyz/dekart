@@ -18,7 +18,7 @@ type StaticFilesHandler struct {
 	indexFileModTime time.Time
 }
 
-var customCodeRe = regexp.MustCompile(`CUSTOM_CODE`)
+var customCodeRe = regexp.MustCompile(`<!--\s*%CUSTOM_CODE%\s*-->`)
 
 // NewStaticFilesHandler creates a new StaticFilesHandler
 func NewStaticFilesHandler(staticPath string) StaticFilesHandler {

@@ -1,4 +1,4 @@
-.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down sqlite
+.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down sqlite proto-copy-to-node proto-stub
 
 # load .env
 # https://lithic.tech/blog/2020-05/makefile-dot-env
@@ -12,10 +12,14 @@ proto-clean:
 	rm -rf ./src/proto/*.go
 	rm -rf ./src/proto/*.js
 	rm -rf ./src/proto/*.ts
+	rm -rf ./proto/*.go
+	rm -rf ./proto/*.js
+	rm -rf ./proto/*.ts
+	rm -rf ./node_modules/dekart-proto
 
 proto-build: proto-clean  #to run inside docker
-	protoc --js_out=import_style=commonjs,binary:./src $$(find proto -type f -name "*.proto")
-	protoc --ts_out=service=grpc-web:./src $$(find proto -type f -name "*.proto")
+	protoc --proto_path=./proto --js_out=import_style=commonjs,binary:./proto $$(find proto -type f -name "*.proto")
+	protoc --proto_path=./proto --ts_out=service=grpc-web:./proto $$(find proto -type f -name "*.proto")
 	protoc --go_out=./src $$(find proto -type f -name "*.proto")
 	protoc --go-grpc_out=./src $$(find proto -type f -name "*.proto")
 
@@ -26,7 +30,15 @@ else
 	docker build -t dekart-proto -f ./proto/Dockerfile .
 endif
 
-proto: proto-docker # build proto stubs
+proto-copy-to-node:
+	rm -rf ./node_modules/dekart-proto
+	rm -rf ./node_modules/.vite
+	mkdir -p ./node_modules/dekart-proto
+	cp -r ./proto/* ./node_modules/dekart-proto/
+
+proto: proto-stub proto-copy-to-node
+
+proto-stub: proto-docker # build proto stubs
 	docker run -it --rm \
 		-v $$(pwd):/home/root/dekart \
 		dekart-proto \
@@ -102,6 +114,8 @@ docker: # build docker for local use
 
 up-and-down:
 	docker compose  --env-file .env --profile local up; docker compose --env-file .env --profile local down --volumes
+cloud:
+	docker compose  --env-file .env.cloud --profile cloud up; docker compose --profile cloud down --volumes
 up:
 	docker compose  --env-file .env --profile local up
 

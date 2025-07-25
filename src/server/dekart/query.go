@@ -10,6 +10,7 @@ import (
 
 	"dekart/src/proto"
 	"dekart/src/server/conn"
+	"dekart/src/server/query"
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
 
@@ -36,6 +37,12 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		err := fmt.Errorf("dataset not found or permission not granted")
 		log.Warn().Err(err).Str("dataset_id", req.DatasetId).Msg("Dataset not found")
 		return nil, status.Error(codes.NotFound, err.Error())
+	}
+
+	err = s.updateDatasetConnection(ctx, req.DatasetId, req.ConnectionId)
+	if err != nil {
+		log.Err(err).Msg("Error updating dataset connection")
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	id := newUUID()
@@ -171,10 +178,12 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 
 	for i := range queries {
 		go func(i int) {
-			if queries[i].queryText == "" {
-				// for SNOWFLAKE storage queryText is stored in db
-				queryText, err := s.getQueryText(ctx, querySourceIds[i], queries[i].userBucketName)
+			if queries[i].queryText == "" && queries[i].userBucketName != "" {
+				// legacy queries stored in user storage
+				connCtx := conn.GetCtx(ctx, queries[i].connection)
+				queryText, err := s.getQueryText(connCtx, querySourceIds[i], queries[i].userBucketName)
 				if err != nil {
+					log.Err(err).Msgf("Error getting query text for query %s", queries[i].queryID)
 					res <- err
 					return
 				}
@@ -213,70 +222,30 @@ type runQueryOptions struct {
 func (s Server) runQuery(ctx context.Context, o runQueryOptions) error {
 	connCtx := conn.GetCtx(ctx, o.connection)
 	job, jobStatus, err := s.jobs.Create(o.reportID, o.queryID, o.queryText, connCtx)
-	log.Debug().Str("jobID", job.GetID()).Msg("Job created")
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create job")
 		return err
 	}
-	log.Debug().Str("jobID", job.GetID()).Msg("Job created")
 	var obj storage.StorageObject
 	if o.isPublic {
 		st := storage.NewPublicStorage()
+		extension := "csv"
+		if o.connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_WHEROBOTS {
+			extension = "parquet"
+		}
 		// Result ID should be same as job ID once available
-		obj = st.GetObject(ctx, st.GetDefaultBucketName(), fmt.Sprintf("%s.csv", job.GetID()))
+		obj = st.GetObject(ctx, st.GetDefaultBucketName(), fmt.Sprintf("%s.%s", job.GetID(), extension))
 	} else {
 		// Result ID should be same as job ID once available
 		obj = s.storage.GetObject(connCtx, o.userBucketName, fmt.Sprintf("%s.csv", job.GetID()))
 	}
-	go s.updateJobStatus(job, jobStatus, o.queryParamsHash)
+	go s.updateJobStatus(job, jobStatus, o.queryParamsHash, o.queryText)
 	job.Status() <- int32(proto.QueryJob_JOB_STATUS_PENDING)
 	err = job.Run(obj, o.connection)
 	if err != nil {
 		return err
 	}
 	return nil
-}
-
-type queryDetails struct {
-	reportID, prevQuerySourceId, connectionID, queryText string
-}
-
-func (s Server) getQueryDetails(ctx context.Context, queryID string) (*queryDetails, error) {
-	queriesRows, err := s.db.QueryContext(ctx,
-		`select
-			reports.id,
-			queries.query_source_id,
-			datasets.connection_id,
-			queries.query_text
-		from queries
-			left join datasets on queries.id = datasets.query_id
-			left join reports on (datasets.report_id = reports.id or queries.report_id = reports.id)
-		where queries.id = $1
-		limit 1`,
-		queryID,
-	)
-	if err != nil {
-		log.Err(err).Send()
-		return nil, err
-	}
-	defer queriesRows.Close()
-	var reportID string
-	var prevQuerySourceId string
-	var connectionID sql.NullString
-	var queryText string
-	for queriesRows.Next() {
-		err := queriesRows.Scan(&reportID, &prevQuerySourceId, &connectionID, &queryText)
-		if err != nil {
-			log.Err(err).Send()
-			return nil, err
-		}
-	}
-	return &queryDetails{
-		reportID:          reportID,
-		prevQuerySourceId: prevQuerySourceId,
-		connectionID:      connectionID.String,
-		queryText:         queryText,
-	}, nil
 }
 
 // injectQueryParams replaces query parameters with values, returns new query text and values hash
@@ -324,19 +293,19 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, Unauthenticated
 	}
 
-	q, err := s.getQueryDetails(ctx, req.QueryId)
+	q, err := query.GetQueryDetails(ctx, s.db, req.QueryId)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if q.reportID == "" {
+	if q.ReportID == "" {
 		err := fmt.Errorf("query not found id:%s", req.QueryId)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	report, err := s.getReport(ctx, q.reportID)
+	report, err := s.getReport(ctx, q.ReportID)
 
 	if err != nil {
 		log.Err(err).Send()
@@ -344,7 +313,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	}
 
 	if report == nil {
-		err := fmt.Errorf("report not found id:%s", q.reportID)
+		err := fmt.Errorf("report not found id:%s", q.ReportID)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
@@ -355,7 +324,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, status.Error(codes.PermissionDenied, err.Error())
 	}
 
-	connection, err := s.getConnection(ctx, q.connectionID)
+	connection, err := s.getConnection(ctx, q.ConnectionID)
 
 	if err != nil {
 		log.Err(err).Send()
@@ -365,11 +334,13 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	if report.CanWrite {
 		// update query text if it was changed by user if user has write permission
 		// otherwise use query text from db
-		q.queryText = req.QueryText
-		err = s.storeQuerySync(ctx, req.QueryId, req.QueryText, q.prevQuerySourceId)
+		q.QueryText = req.QueryText
+		err = s.storeQuerySync(ctx, req.QueryId, req.QueryText, q.PrevQuerySourceId)
 		if err != nil {
 			code := codes.Internal
 			if _, ok := err.(*queryWasNotUpdated); ok {
+				//this leads to canceled query when run and save at the same time
+				//TODO: in this case we should get query from db and compare it with the one in request
 				code = codes.Canceled
 				log.Warn().Err(err).Send()
 			} else {
@@ -380,16 +351,16 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	}
 
 	var queryParamsHash string
-	q.queryText, queryParamsHash, err = injectQueryParams(q.queryText, req.QueryParams, req.QueryParamsValues)
+	q.QueryText, queryParamsHash, err = injectQueryParams(q.QueryText, req.QueryParams, req.QueryParamsValues)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	err = s.runQuery(ctx, runQueryOptions{
-		reportID:        q.reportID,
+		reportID:        q.ReportID,
 		queryID:         req.QueryId,
-		queryText:       q.queryText,
+		queryText:       q.QueryText,
 		connection:      connection,
 		userBucketName:  s.getBucketNameFromConnection(connection),
 		isPublic:        report.IsPublic,
@@ -401,7 +372,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 			log.Warn().Err(err).Send()
 			return nil, status.Error(codes.Canceled, err.Error())
 		}
-		log.Err(err).Send()
+		log.Err(err).Str("QueryId", req.QueryId).Str("connectionID", connection.Id).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 

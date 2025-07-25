@@ -161,8 +161,6 @@ func (j *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 		return
 	}
 
-	j.Logger.Debug().Msg("Writing Done")
-
 	j.Lock()
 	j.ResultSize = *resultSize
 	j.ResultReady = true

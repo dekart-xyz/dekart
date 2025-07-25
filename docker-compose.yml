@@ -11,29 +11,20 @@ services:
       POSTGRES_USER: "${DEKART_POSTGRES_USER}"
       POSTGRES_DB: "${DEKART_POSTGRES_DB}"
   adminer:
-      image: adminer
-      restart: always
-      ports:
-        - 8081:8080
-  cloudsql:
-    build: ./cloud_sql_proxy
-    ports:
-      - "5432:5432"
+    image: adminer
     profiles:
-      - cloudsql
-    volumes:
-      - "${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS}"
-    environment:
-      GOOGLE_APPLICATION_CREDENTIALS: "${GOOGLE_APPLICATION_CREDENTIALS}"
-      INSTANCE_CONNECTION_NAME: "${INSTANCE_CONNECTION_NAME}"
-  dekart-oss-bigquery:
-    image: dekartxyz/dekart:0.18
-    platform: linux/amd64
+      - local
     restart: always
+    ports:
+      - 8081:8080
+  dekart-cloud:
+    image: "${DOCKER_COMPOSE_IMAGE}"
+    platform: linux/amd64
+    mem_limit: 512m
     ports:
       - 8080:8080
     profiles:
-      - bigquery
+      - cloud
     volumes:
       - "${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS}"
     environment:
@@ -48,9 +39,52 @@ services:
       DEKART_MAPBOX_TOKEN: "${DEKART_MAPBOX_TOKEN}"
       GOOGLE_APPLICATION_CREDENTIALS: "${GOOGLE_APPLICATION_CREDENTIALS}"
       DEKART_CORS_ORIGIN: "${DEKART_CORS_ORIGIN}"
-  # docker compose --env-file .env.snowflake-s3 --profile dekart-oss-snowflake-s3 up
+      DEKART_LOG_DEBUG: "${DEKART_LOG_DEBUG}"
+      DEKART_LOG_PRETTY: "${DEKART_LOG_PRETTY}"
+      DEKART_PORT: "${DEKART_PORT}"
+      DEKART_STATIC_FILES: "${DEKART_STATIC_FILES}"
+      DEKART_ALLOW_FILE_UPLOAD: "${DEKART_ALLOW_FILE_UPLOAD}"
+      DEKART_REQUIRE_GOOGLE_OAUTH: "${DEKART_REQUIRE_GOOGLE_OAUTH}"
+      DEKART_GOOGLE_OAUTH_CLIENT_ID: "${DEKART_GOOGLE_OAUTH_CLIENT_ID}"
+      DEKART_GOOGLE_OAUTH_SECRET: "${DEKART_GOOGLE_OAUTH_SECRET}"
+      STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY}"
+      STRIPE_PRICE_ID: "${STRIPE_PRICE_ID}"
+      STRIPE_PRICE_ID_GROW: "${STRIPE_PRICE_ID_GROW}"
+      STRIPE_PRICE_ID_MAX: "${STRIPE_PRICE_ID_MAX}"
+      DEKART_CLOUD_PUBLIC_STORAGE_BUCKET: "${DEKART_CLOUD_PUBLIC_STORAGE_BUCKET}"
+      DEKART_DATA_ENCRYPTION_KEY: "${DEKART_DATA_ENCRYPTION_KEY}"
+      DEKART_UX_HOMEPAGE: "${DEKART_UX_HOMEPAGE}"
+      DEKART_STORAGE: "${DEKART_STORAGE}"
+      DEKART_DATASOURCE: "${DEKART_DATASOURCE}"
+      DEKART_DEV_CLAIMS_EMAIL: "${DEKART_DEV_CLAIMS_EMAIL}"
+      DEKART_ALLOW_WORKSPACE_CREATION: "1"
+      DEKART_UX_DISABLE_VERSION_CHECK: "1"
+      DEKART_CLOUD: "1"
+  dekart-oss-googleoauth:
+    image: "${DOCKER_COMPOSE_IMAGE}"
+    platform: linux/amd64
+    restart: always
+    ports:
+      - 8080:8080
+    profiles:
+      - googleoauth
+    environment:
+      DEKART_POSTGRES_DB: "${DEKART_POSTGRES_DB}"
+      DEKART_POSTGRES_USER: "${DEKART_POSTGRES_USER}"
+      DEKART_POSTGRES_PASSWORD: "${DEKART_POSTGRES_PASSWORD}"
+      DEKART_POSTGRES_PORT: "5432"
+      DEKART_POSTGRES_HOST: "host.docker.internal"
+      DEKART_MAPBOX_TOKEN: "${DEKART_MAPBOX_TOKEN}"
+      DEKART_ALLOW_FILE_UPLOAD: "${DEKART_ALLOW_FILE_UPLOAD}"
+      DEKART_REQUIRE_GOOGLE_OAUTH: "${DEKART_REQUIRE_GOOGLE_OAUTH}"
+      DEKART_GOOGLE_OAUTH_CLIENT_ID: "${DEKART_GOOGLE_OAUTH_CLIENT_ID}"
+      DEKART_GOOGLE_OAUTH_SECRET: "${DEKART_GOOGLE_OAUTH_SECRET}"
+      DEKART_STORAGE: "${DEKART_STORAGE}"
+      DEKART_DATASOURCE: "${DEKART_DATASOURCE}"
+
+  # docker compose --env-file .env.snowflake-s3 --profile snowflake-s3 up
   dekart-oss-snowflake-s3:
-    image: dekartxyz/dekart:0.17
+    image: "${DOCKER_COMPOSE_IMAGE}"
     platform: linux/amd64
     restart: always
     ports:

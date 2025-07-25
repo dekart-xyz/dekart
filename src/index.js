@@ -1,1 +1,1 @@
-import './client/index.js'
+import './client/index.jsx'

@@ -1,10 +1,24 @@
 .datasetSelector {
+    top: 60px;
+    bottom: 0;
     display: flex;
-    flex: 1;
     flex-direction: column;
-    align-items: stretch;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    padding-bottom: 80px;
+    overflow-y: scroll;
+    position: absolute;
 }
 
+.datasetSelectorInner {
+    margin-bottom: 10px;
+}
+.datasetSelector .datasetSelectorInner  :global(.ant-btn) {
+    font-size: 1.4em;
+    height: 80px;
+    margin: 0.5em;
+}
 .selectorButtons>* {
     margin: 10px;
 }
@@ -17,8 +31,43 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     justify-content: center;
+}
+
+.datasetSelectorIcon {
+    position: absolute;
+    font-size: 1.6em;
+    left: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgb(87, 183, 211);
+}
+
+
+.datasetSelectorButtonInner {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    position: relative;
+    height: 100%;
+    width: 100%;
+    padding-left: 50px;
+    color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.datasetSelectorTitle {
+    display: block;
+    text-align: left;
+    margin-bottom: 4px;
+    color: #262626;
+}
+
+.datasetSelectorSubtitle {
+    display: block;
+    font-size: 0.7em;
+    opacity: 0.7;
+    text-align: left;
 }
 
 .datasource {
@@ -56,4 +105,13 @@
 .modalFooter {
     display: flex;
     flex-direction: row;
+}
+
+.datasetSelectorButton {
+    width: 100%;
+}
+
+.datasetSelectorButton:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
 }

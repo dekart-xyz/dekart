@@ -11,14 +11,26 @@
 
 .bigquery {
     background-image: url('./bigquery.svg');
+    background-repeat: no-repeat;
+    background-size: contain;
 }
 
 .snowflake {
     background-image: url('./snowflake.svg');
+    background-repeat: no-repeat;
+    background-size: contain;
 }
 
 .athena {
     background-image: url('./athena.svg');
+    background-repeat: no-repeat;
+    background-size: contain;
+}
+
+.wherobots {
+    background-image: url('./wherobots.svg');
+    background-repeat: no-repeat;
+    background-size: contain;
 }
 
 .datasourceIcon {
@@ -27,4 +39,5 @@
     display: inline-block;
     color: #57B7D3;
     background-size: contain;
+    background-repeat: no-repeat;
 }

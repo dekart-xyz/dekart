@@ -97,7 +97,6 @@ func (r *Reader) getStreams() ([]*bqStoragePb.ReadStream, error) {
 		err := &errtype.EmptyResult{}
 		return readStreams, err
 	}
-	r.logger.Debug().Int32("maxReadStreamsCount", r.maxReadStreamsCount).Msgf("Number of Streams %d", len(readStreams))
 	return readStreams, nil
 }
 
@@ -159,7 +158,6 @@ func Read(
 	}
 
 	processWaitGroup.Wait() // to close channels and client, see defer statements
-	r.logger.Debug().Msg("All Reading Streams Done")
 }
 
 // rpcOpts is used to configure the underlying gRPC client to accept large
@@ -170,9 +168,7 @@ var rpcOpts = gax.WithGRPCOptions(
 )
 
 func (r *StreamReader) readStream() {
-	r.logger.Debug().Msg("Start Reading Stream")
 	defer close(r.resCh)
-	defer r.logger.Debug().Msg("Finish Reading Stream")
 	rowStream, err := r.bqReadClient.ReadRows(r.ctx, &bqStoragePb.ReadRowsRequest{
 		ReadStream: r.streamName,
 	}, rpcOpts)
@@ -204,7 +200,6 @@ func (r *StreamReader) readStream() {
 
 func (r *StreamReader) processStreamResponse(processWaitGroup *sync.WaitGroup) {
 	defer processWaitGroup.Done()
-	defer r.logger.Debug().Str("readStream", r.streamName).Msg("processStreamResponse Done")
 	var err error
 	for {
 		select {

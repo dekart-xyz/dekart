@@ -1,48 +1,52 @@
 {
   "name": "dekart",
-  "version": "0.18.5",
+  "version": "0.19.0",
   "private": true,
   "dependencies": {
-    "@dekart-xyz/kepler.gl": "2.5.5-fix.5",
     "@improbable-eng/grpc-web": "^0.15.0",
-    "@testing-library/jest-dom": "^5.11.6",
-    "@testing-library/react": "^11.2.2",
+    "@kepler.gl/actions": "^3.1.8",
+    "@kepler.gl/components": "^3.1.8",
+    "@kepler.gl/reducers": "^3.1.8",
     "@testing-library/user-event": "^12.5.0",
     "ace-builds": "^1.36.5",
+    "ajv": "^8.17.1",
     "antd": "^4.9.4",
+    "assert": "^2.1.0",
     "classnames": "^2.2.6",
     "copy-to-clipboard": "^3.3.1",
     "crypto-js": "^4.1.1",
     "cypress": "^13.15.0",
+    "dekart-proto": "file:./proto",
     "google-protobuf": "^3.14.0",
     "immer": "^9.0.7",
     "js-md5": "^0.8.3",
     "luxon": "^1.25.0",
     "pretty-bytes": "^5.5.0",
     "re-resizable": "^6.9.11",
-    "react": "^17.0.1",
+    "react": "^17.0.2",
     "react-ace": "^13.0.0",
-    "react-dom": "^17.0.1",
+    "react-dom": "^17.0.2",
     "react-error-overlay": "^6.0.9",
     "react-markdown": "^8.0.7",
-    "react-palm": "^3.3.7",
     "react-redux": "^7.1.3",
     "react-router-dom": "^5.2.0",
-    "react-scripts": "^4.0.3",
     "react-virtualized": "^9.22.3",
     "redux": "^4.0.5",
     "redux-logger": "^3.0.6",
     "redux-thunk": "^2.3.0",
     "semver": "^7.3.5",
     "styled-components": "^5.2.1",
+    "vite-plugin-top-level-await": "^1.5.0",
+    "vite-plugin-wasm": "^3.4.1",
     "web-vitals": "^0.2.4"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "REACT_APP_CUSTOM_CODE=CUSTOM_CODE react-scripts --max_old_space_size=4096 build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "analyze": "source-map-explorer 'build/static/js/*.js'"
+    "start": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "lint": "standard ./src/client ",
+    "postinstall": "make proto-copy-to-node"
   },
   "eslintConfig": {
     "globals": {
@@ -67,28 +71,24 @@
     ]
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@vitejs/plugin-react": "^4.4.1",
+    "cypress-file-upload": "^5.0.8",
     "eslint-plugin-cypress": "^2.12.1",
-    "source-map-explorer": "^2.5.1",
-    "standard": "^17.0.0"
+    "jsdom": "^26.1.0",
+    "standard": "^17.0.0",
+    "vite": "^6.3.5",
+    "vitest": "^3.1.3"
   },
   "overrides": {
-    "@deck.gl/aggregation-layers": "8.6.5",
-    "@deck.gl/core": "8.6.5",
-    "@deck.gl/extensions": "8.6.5",
-    "@deck.gl/geo-layers": "8.6.5",
-    "@deck.gl/layers": "8.6.5",
-    "@deck.gl/mesh-layers": "8.6.5",
-    "@deck.gl/react": "8.6.5",
-    "deck.gl": "8.6.5",
-    "@luma.gl/shadertools": "8.5.10",
-    "@luma.gl/core": "8.5.10",
-    "@luma.gl/experimental": "8.5.10",
-    "@luma.gl/constants": "8.5.10",
-    "@luma.gl/engine": "8.5.10",
-    "@luma.gl/gltools": "8.5.10",
-    "@luma.gl/webgl": "8.5.10",
     "react-dev-utils": {
       "immer": "$immer"
-    }
+    },
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-markdown": "^8.0.7",
+    "react-redux": "^7.1.3",
+    "styled-components": "^5.2.1"
   }
 }

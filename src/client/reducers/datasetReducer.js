@@ -62,6 +62,12 @@ function active (state = null, action) {
       return action.dataset
     case reportUpdate.name:
       if (!state) {
+        if (datasetsList.length > 1) {
+          const newDataset = datasetsList.find(d => !(d.queryId || d.fileId))
+          if (newDataset) {
+            return newDataset
+          }
+        }
         return datasetsList[0] || state
       }
       if (datasetsList.length > prevDatasetsList.length) {
