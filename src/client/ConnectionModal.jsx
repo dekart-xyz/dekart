@@ -153,6 +153,16 @@ function SnowflakeConnectionModal ({ form }) {
   const datasetUsed = connection?.datasetCount > 0
   const keyChanged = form.getFieldValue('snowflakeKey') !== connection?.snowflakeKey
 
+  useEffect(() => {
+    if (!connection) {
+      // new connection, set default values
+      form.resetFields()
+      form.setFieldsValue({
+        connectionName: 'Snowflake'
+      })
+    }
+  }, [id, form])
+
   return (
     <Modal
       open
@@ -284,6 +294,16 @@ function BigQueryConnectionModal ({ form }) {
   useEffect(() => {
     track('BigQueryConnectionModal')
   }, [])
+
+  useEffect(() => {
+    if (!connection) {
+      // new connection, set default values
+      form.resetFields()
+      form.setFieldsValue({
+        connectionName: 'BigQuery'
+      })
+    }
+  }, [id, form])
 
   // only name can be changed for connections used in datasets
   const nameChangeOnly = connection?.datasetCount > 0
