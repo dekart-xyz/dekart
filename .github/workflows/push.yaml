@@ -18,15 +18,17 @@ jobs:
       contents: read
 
   node_tests:
+    needs: [changes]
     uses: ./.github/workflows/node_test.yaml
     secrets: inherit
 
   go_tests:
+    needs: [changes]
     uses: ./.github/workflows/go_test.yaml
     secrets: inherit
 
   build_e2e:
-    needs: [flavour]
+    needs: [flavour, changes]
     with:
       build_e2e: true
       target: ${{ needs.flavour.outputs.target }}
