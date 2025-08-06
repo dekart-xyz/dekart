@@ -45,17 +45,20 @@ export function info (content) {
 export function setError (err, transitive = true) {
   return (dispatch) => {
     console.error(err)
-    track('setError', {
-      message: err.message
-    })
     if ([401, 403].includes(err.status)) {
       dispatch(setHttpError(err.status, `${err.message}: ${err.errorDetails}`))
     } else if (transitive) {
+      track('setError', {
+        message: err.message
+      })
       message.error({
         content: err.message,
         style
       })
     } else {
+      track('setError', {
+        message: err.message
+      })
       message.error({
         content: (<PermanentError message={err.message} />),
         duration: 10000,
@@ -81,10 +84,6 @@ export function setStreamError (code, msg) {
   return (dispatch) => {
     dispatch({ type: setStreamError.name })
     console.error(code)
-    track('setStreamError', {
-      code,
-      message: msg
-    })
     // https://github.com/grpc/grpc/blob/master/doc/statuscodes.md
     switch (code) {
       case 1:
@@ -100,6 +99,10 @@ export function setStreamError (code, msg) {
         dispatch(setHttpError(401))
         return
       default:
+        track('setStreamError', {
+          code,
+          message: msg
+        })
         message.error({
           content: (<StreamError code={code} message={msg} />),
           duration: 10000,
