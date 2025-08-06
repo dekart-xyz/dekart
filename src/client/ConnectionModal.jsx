@@ -83,7 +83,7 @@ function WherobotsConnectionModal ({ form }) {
         wherobotsHost: 'api.cloud.wherobots.com'
       })
     }
-  }, [id, form])
+  }, [connection, form])
 
   return (
     <Modal
@@ -161,7 +161,7 @@ function SnowflakeConnectionModal ({ form }) {
         connectionName: 'Snowflake'
       })
     }
-  }, [id, form])
+  }, [connection, form])
 
   return (
     <Modal
@@ -303,7 +303,7 @@ function BigQueryConnectionModal ({ form }) {
         connectionName: 'BigQuery'
       })
     }
-  }, [id, form])
+  }, [connection, form])
 
   // only name can be changed for connections used in datasets
   const nameChangeOnly = connection?.datasetCount > 0
