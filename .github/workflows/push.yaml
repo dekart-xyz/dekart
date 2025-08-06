@@ -11,18 +11,24 @@ jobs:
   flavour:
     uses: ./.github/workflows/flavour.yaml
 
+  changes:
+    needs: [flavour]
+    if: startsWith(github.head_ref, 'release') != true
+    uses: ./.github/workflows/changes.yaml
+    permissions:
+      pull-requests: read
+      contents: read
+
   node_tests:
-    needs: [changes]
     uses: ./.github/workflows/node_test.yaml
     secrets: inherit
 
   go_tests:
-    needs: [changes]
     uses: ./.github/workflows/go_test.yaml
     secrets: inherit
 
   build_e2e:
-    needs: [changes, flavour]
+    needs: [flavour]
     with:
       build_e2e: true
       target: ${{ needs.flavour.outputs.target }}
@@ -33,7 +39,7 @@ jobs:
     secrets: inherit
 
   e2e_tests:
-    needs: [build_e2e, changes]
+    needs: [build_e2e]
     uses: ./.github/workflows/e2e.yaml
     with:
       target: ${{ needs.flavour.outputs.target }}
