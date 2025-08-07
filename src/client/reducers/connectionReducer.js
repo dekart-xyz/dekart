@@ -80,6 +80,7 @@ function test (state = {
         error: action.error
       }
     case connectionChanged.name:
+    case closeConnectionDialog.name:
       return {
         ...state,
         tested: false,
