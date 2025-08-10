@@ -178,6 +178,13 @@ func (s Server) createCheckoutSession(ctx context.Context, workspaceInfo user.Wo
 				Quantity: stripe.Int64(quantity),
 			},
 		},
+		TaxIDCollection: &stripe.CheckoutSessionTaxIDCollectionParams{
+			Enabled: stripe.Bool(true),
+		},
+		CustomerUpdate: &stripe.CheckoutSessionCustomerUpdateParams{
+			Name:    stripe.String("auto"),
+			Address: stripe.String("auto"),
+		},
 		SuccessURL:          stripe.String(req.UiUrl),
 		CancelURL:           stripe.String(req.UiUrl),
 		AllowPromotionCodes: stripe.Bool(true),
