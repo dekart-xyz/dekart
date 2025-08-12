@@ -86,7 +86,10 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ steps.registry.outputs.REG }}/dekart
-          tags: type=sha,format=short,prefix=sha-
+          tags: |
+            type=sha,format=short,prefix=sha-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
           flavor: latest=false # never add “latest” automatically
 
       - id: collect
