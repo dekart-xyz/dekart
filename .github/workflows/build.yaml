@@ -97,7 +97,6 @@ jobs:
           APP_TAGS='${{ steps.meta.outputs.tags }}'
           E2E_TAG="${{ steps.registry.outputs.REG }}/dekart:${IMAGE_CACHE_KEY}"
 
-          echo "app_tags=$APP_TAGS"      >>"$GITHUB_OUTPUT"
           echo "e2e_tags=$E2E_TAG"       >>"$GITHUB_OUTPUT"
           echo "app_primary=$(echo "$APP_TAGS" | head -n1)" >>"$GITHUB_OUTPUT"
           echo "e2e_primary=$E2E_TAG"    >>"$GITHUB_OUTPUT"
