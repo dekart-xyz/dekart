@@ -1,6 +1,6 @@
 {
   "name": "dekart",
-  "version": "0.19.1-rc.4",
+  "version": "0.19.1",
   "private": true,
   "dependencies": {
     "@improbable-eng/grpc-web": "^0.15.0",
