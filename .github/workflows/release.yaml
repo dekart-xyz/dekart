@@ -28,6 +28,9 @@ jobs:
         needs.flavour.outputs.is_oss     == 'true'
     needs: [flavour, node_tests, go_tests]
     uses: ./.github/workflows/build.yaml
+    permissions:
+      contents: read
+      packages: write
     with:
       target:    ${{ needs.flavour.outputs.target }}
       build_app: false
@@ -39,6 +42,9 @@ jobs:
         needs.flavour.outputs.is_oss     == 'true'
     needs: [flavour, node_tests, go_tests, build_e2e]
     uses: ./.github/workflows/e2e.yaml
+    permissions:
+      contents: read
+      packages: write
     with:
       target: ${{ needs.flavour.outputs.target }}
     secrets: inherit
