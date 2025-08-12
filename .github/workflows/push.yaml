@@ -2,7 +2,8 @@ name: Push to main
 
 on:
   push:
-    branches: [main]
+    branches: [main, oss-fix-merge-ci]
+
 
 jobs:
   flavour:
@@ -10,23 +11,39 @@ jobs:
 
   changes:
     needs: [flavour]
+    if: startsWith(github.head_ref, 'release') != true
     uses: ./.github/workflows/changes.yaml
     permissions:
       pull-requests: read
-      contents:       read
+      contents: read
 
-  build:
-    needs: [changes, flavour]
-    if: needs.flavour.outputs.is_cloud == 'true' ||
-        needs.changes.outputs.e2e == 'true'
+  node_tests:
+    needs: [changes]
+    uses: ./.github/workflows/node_test.yaml
+    secrets: inherit
+
+  go_tests:
+    needs: [changes]
+    uses: ./.github/workflows/go_test.yaml
+    secrets: inherit
+
+  build_e2e:
+    needs: [flavour, changes]
     with:
-      build_app: ${{ needs.flavour.outputs.is_cloud == 'true' }}
-      build_e2e: ${{ needs.changes.outputs.e2e == 'true' }}
+      build_e2e: true
+      target: ${{ needs.flavour.outputs.target }}
     uses: ./.github/workflows/build.yaml
+    permissions:
+      contents: read
+      packages: write
     secrets: inherit
 
   e2e_tests:
-    if: needs.changes.outputs.e2e == 'true'
-    needs: [build, changes]
+    needs: [build_e2e]
     uses: ./.github/workflows/e2e.yaml
+    with:
+      target: ${{ needs.flavour.outputs.target }}
+    permissions:
+      contents: read
+      packages: write
     secrets: inherit
