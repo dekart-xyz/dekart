@@ -4,6 +4,10 @@ on:
   push:
     tags: ['**']                       # any tag (vX.Y.Z, nightly‑foo, …)
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
 
   flavour:
