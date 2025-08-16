@@ -11,12 +11,14 @@ import 'ace-builds/src-noconflict/keybinding-vscode'
 import 'ace-builds/src-noconflict/ext-beautify'
 import 'ace-builds/src-noconflict/ext-emmet'
 import { ConnectionType, QueryJob } from 'dekart-proto/dekart_pb'
-import { SendOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
+import { SendOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone, CopyOutlined } from '@ant-design/icons'
 import { Duration } from 'luxon'
 import DataDocumentationLink from './DataDocumentationLink'
 import { cancelJob, queryChanged, runQuery } from './actions/query'
 import Tooltip from 'antd/es/tooltip'
 import { getDatasourceMeta } from './lib/datasource'
+import message from 'antd/es/message'
+import { copyErrorToClipboard } from './actions/clipboard'
 
 function CancelButton ({ queryJob }) {
   const dispatch = useDispatch()
@@ -110,8 +112,10 @@ function QueryStatus ({ children, query }) {
   const queryJob = useSelector(state => state.queryJobs.find(job => job.queryId === query.id && job.queryParamsHash === hash))
   let message, errorMessage, action, style, tooltip, errorInfoHtml
   let icon = null
+  const dispatch = useDispatch()
+
   if (queryJob?.jobError) {
-    message = 'Error'
+    message = 'Query Error'
     style = styles.error
     errorMessage = queryJob.jobError
     if (env.variables.UX_ACCESS_ERROR_INFO_HTML && errorMessage.includes('Error 403')) {
@@ -170,11 +174,27 @@ function QueryStatus ({ children, query }) {
           <div className={styles.spacer} />
           {action ? <div className={styles.action}>{action}</div> : null}
         </div>
-        {errorMessage ? <div className={styles.errorMessage}>{errorMessage}</div> : null}
-        {errorInfoHtml ? <div className={styles.errorInfoHtml} dangerouslySetInnerHTML={{ __html: errorInfoHtml }} /> : null}
+        {errorMessage
+          ? (
+            <div className={styles.errorMessage}>
+              <Button
+                type='text'
+                size='small'
+                icon={<CopyOutlined />}
+                onClick={() => dispatch(copyErrorToClipboard(errorMessage))}
+                className={styles.copyErrorButton}
+                title='Copy error to clipboard'
+              />
+
+              <div className={styles.errorMessageContent}>
+                {errorMessage}
+              </div>
+            </div>
+            )
+          : null}
+        {/* {errorInfoHtml ? <div className={styles.errorInfoHtml} dangerouslySetInnerHTML={{ __html: errorInfoHtml }} /> : null} */}
       </div>
       {children ? <div className={styles.button}>{children}</div> : null}
-
     </div>
   )
 }
