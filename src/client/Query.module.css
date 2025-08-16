@@ -103,17 +103,19 @@
 .errorMessage {
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
     font-size: 0.85em;
-    /* margin-left: 28px; */
-    margin-top: 8px;
-    background-color: #f5f5f5;
     border: 1px solid #d9d9d9;
     border-radius: 6px;
     padding: 12px 16px;
     position: relative;
     min-height: 60px;
-    /* top: -33px; */
-    /* padding-top: 33px; */
     z-index: 10;
+}
+
+.messageInline {
+    background-color: #ffd6d2;
+    padding: 1px 4px;
+    border-radius: 4px;
+    border: 1px solid #ffccc7;
 }
 
 .errorMessageContent {

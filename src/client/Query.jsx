@@ -167,32 +167,28 @@ function QueryStatus ({ children, query }) {
     <div className={[styles.queryStatus, style].join(' ')}>
       <div className={styles.status}>
         <div className={styles.statusHead}>
-          <Tooltip title={tooltip} className={styles.tooltip}>
-            {icon}
-            <div id='dekart-query-status-message' className={styles.message}>{message}</div>
-          </Tooltip>
+          {icon}
+          {errorMessage
+            ? (
+              <div className={styles.errorMessage}>
+                <Button
+                  type='text'
+                  size='small'
+                  icon={<CopyOutlined />}
+                  onClick={() => dispatch(copyErrorToClipboard(errorMessage))}
+                  className={styles.copyErrorButton}
+                  title='Copy error to clipboard'
+                />
+
+                <div className={styles.errorMessageContent}>
+                  <span id='dekart-query-status-message' className={styles.messageInline}>{message}</span> {errorMessage}
+                </div>
+              </div>
+              )
+            : <div id='dekart-query-status-message' className={styles.message}>{message}</div>}
           <div className={styles.spacer} />
           {action ? <div className={styles.action}>{action}</div> : null}
         </div>
-        {errorMessage
-          ? (
-            <div className={styles.errorMessage}>
-              <Button
-                type='text'
-                size='small'
-                icon={<CopyOutlined />}
-                onClick={() => dispatch(copyErrorToClipboard(errorMessage))}
-                className={styles.copyErrorButton}
-                title='Copy error to clipboard'
-              />
-
-              <div className={styles.errorMessageContent}>
-                {errorMessage}
-              </div>
-            </div>
-            )
-          : null}
-        {/* {errorInfoHtml ? <div className={styles.errorInfoHtml} dangerouslySetInnerHTML={{ __html: errorInfoHtml }} /> : null} */}
       </div>
       {children ? <div className={styles.button}>{children}</div> : null}
     </div>
