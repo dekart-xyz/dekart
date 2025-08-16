@@ -17,7 +17,6 @@ import DataDocumentationLink from './DataDocumentationLink'
 import { cancelJob, queryChanged, runQuery } from './actions/query'
 import Tooltip from 'antd/es/tooltip'
 import { getDatasourceMeta } from './lib/datasource'
-import message from 'antd/es/message'
 import { copyErrorToClipboard } from './actions/clipboard'
 
 function CancelButton ({ queryJob }) {
@@ -107,10 +106,9 @@ function QueryEditor ({ queryId, queryText, onChange, canWrite }) {
 }
 
 function QueryStatus ({ children, query }) {
-  const env = useSelector(state => state.env)
   const hash = useSelector(state => state.queryParams.hash)
   const queryJob = useSelector(state => state.queryJobs.find(job => job.queryId === query.id && job.queryParamsHash === hash))
-  let message, errorMessage, action, style, tooltip, errorInfoHtml
+  let message, errorMessage, action, style
   let icon = null
   const dispatch = useDispatch()
 
@@ -118,11 +116,6 @@ function QueryStatus ({ children, query }) {
     message = 'Query Error'
     style = styles.error
     errorMessage = queryJob.jobError
-    if (env.variables.UX_ACCESS_ERROR_INFO_HTML && errorMessage.includes('Error 403')) {
-      errorInfoHtml = ''
-    } else if (env.variables.UX_NOT_FOUND_ERROR_INFO_HTML && errorMessage.includes('Error 404')) {
-      errorInfoHtml = env.variables.UX_NOT_FOUND_ERROR_INFO_HTML
-    }
     icon = <ExclamationCircleTwoTone className={styles.icon} twoToneColor='#F66B55' />
   }
   switch (queryJob?.jobStatus) {
