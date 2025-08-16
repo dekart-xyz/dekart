@@ -253,3 +253,14 @@
 .addTabPane {
     background-color: #15232F;
 }
+
+.hideExport :global #kepler-gl__kepler .dataset-name {
+pointer-events: none;
+cursor: default !important;
+}
+.hideExport :global #kepler-gl__kepler .show-data-table {
+    display: none !important;
+}
+.hideInteraction :global #kepler-gl__kepler [data-for=interaction-nav] {
+    display: none !important;
+}

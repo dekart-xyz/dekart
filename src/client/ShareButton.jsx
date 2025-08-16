@@ -192,11 +192,8 @@ function AllowExportData () {
       <div className={styles.boolStatusIcon}><DownloadOutlined /></div>
       <div className={styles.boolStatusLabel}>
         <div className={styles.statusLabelTitle}>Allow exporting data</div>
-        <div className={styles.statusLabelDescription}>{
-          allowExport
-            ? 'Users can export data from this map'
-            : 'Users cannot export data from this map'
-        }
+        <div className={styles.statusLabelDescription}>
+          When disabled, users can still view the data in the map, but cannot export CSV, view data table, change tooltips settings and view SQL.
         </div>
       </div>
       <div className={styles.boolStatusControl}>
