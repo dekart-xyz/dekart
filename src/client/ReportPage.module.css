@@ -255,7 +255,7 @@
 }
 
 .hideExport :global #kepler-gl__kepler .dataset-name {
-pointer-events: none;
+    pointer-events: none;
 cursor: default !important;
 }
 .hideExport :global #kepler-gl__kepler .show-data-table {
