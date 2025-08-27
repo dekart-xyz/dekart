@@ -127,20 +127,9 @@ func (s Server) createCheckoutSession(ctx context.Context, workspaceInfo user.Wo
 	var customerID string
 	if sub != nil {
 		customerID = sub.CustomerId
-		if sub.PlanType == req.PlanType {
+		if sub.StripeSubscriptionId != "" {
 			log.Error().Str("customerID", customerID).Msg("Subscription already exists")
 			return nil, status.Error(codes.InvalidArgument, "Subscription already exists")
-		}
-		if sub.StripeSubscriptionId != "" {
-			// cancel stripe subscription
-			params := &stripe.SubscriptionCancelParams{
-				Prorate: stripe.Bool(true),
-			}
-			_, err := subscription.Cancel(sub.StripeSubscriptionId, params)
-			if err != nil {
-				log.Err(err).Send()
-				return nil, status.Error(codes.Internal, err.Error())
-			}
 		}
 	}
 	if customerID == "" { // create new customer
@@ -321,6 +310,57 @@ func (s Server) CreateSubscription(ctx context.Context, req *proto.CreateSubscri
 			RedirectUrl: "/", // redirect to home page
 		}, nil
 	case proto.PlanType_TYPE_TEAM, proto.PlanType_TYPE_GROW, proto.PlanType_TYPE_MAX:
+		sub, err := s.getSubscription(ctx, workspaceInfo.ID)
+		if err != nil {
+			log.Err(err).Send()
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		if sub != nil {
+			// updating existing subscription
+			if sub.PlanType == req.PlanType {
+				log.Error().Msg("Subscription already exists when creating subscription")
+				return nil, status.Error(codes.InvalidArgument, "Subscription already exists")
+			}
+			if sub.StripeSubscriptionId != "" {
+				// update subscription to new plan
+				newPriceID := getPriceID(req.PlanType)
+				if newPriceID == "" {
+					log.Error().Int("plan_type", int(req.PlanType)).Msg("Unknown plan type")
+					return nil, status.Error(codes.InvalidArgument, "Unknown plan type")
+				}
+				var quantity int64 = 1
+				if req.PlanType == proto.PlanType_TYPE_GROW {
+					quantity = workspaceInfo.BilledUsers
+				}
+				params := &stripe.SubscriptionParams{
+					Items: []*stripe.SubscriptionItemsParams{
+						{
+							ID:       stripe.String(sub.ItemId),
+							Price:    stripe.String(newPriceID),
+							Quantity: stripe.Int64(quantity),
+						},
+					},
+				}
+				_, err = subscription.Update(sub.StripeSubscriptionId, params)
+				if err != nil {
+					log.Err(err).Send()
+					return nil, status.Error(codes.Internal, err.Error())
+				}
+				_, err = s.db.ExecContext(ctx, `insert into subscription_log (workspace_id, plan_type, customer_id, authored_by) values ($1, $2, $3, $4)`,
+					workspaceInfo.ID,
+					req.PlanType,
+					sub.CustomerId,
+					claims.Email,
+				)
+				if err != nil {
+					log.Err(err).Send()
+					return nil, status.Error(codes.Internal, err.Error())
+				}
+
+				s.userStreams.Ping([]string{claims.Email})
+				return &proto.CreateSubscriptionResponse{}, nil
+			}
+		}
 		session, err := s.createCheckoutSession(ctx, workspaceInfo, req)
 		if err != nil {
 			log.Err(err).Send()
