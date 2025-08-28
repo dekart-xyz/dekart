@@ -36,9 +36,9 @@ jobs:
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_GH_TOKEN }}" > .npmrc
           echo "@dekart-xyz:registry=https://npm.pkg.github.com" >> .npmrc
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v4
@@ -52,7 +52,7 @@ jobs:
       - name: Build App
         if: ${{ inputs.build_app }}
         id: docker_build
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           cache-from: type=registry,ref=europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:buildcache
           cache-to: type=registry,ref=europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:buildcache,mode=max
@@ -62,7 +62,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
       - name: Build E2E
         if: inputs.build_e2e
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
