@@ -1594,6 +1594,7 @@ export namespace GetEnvResponse {
       TYPE_WORKSPACE_DEFAULT_ROLE: 22;
       TYPE_SECRETS_ENABLED: 23;
       TYPE_CLOUD_UX_CONFIG_JSON: 24;
+      TYPE_DEKART_CLOUD: 25;
     }
 
     export const Type: TypeMap;
@@ -2395,6 +2396,9 @@ export class CreateFileRequest extends jspb.Message {
   getDatasetId(): string;
   setDatasetId(value: string): void;
 
+  getConnectionId(): string;
+  setConnectionId(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CreateFileRequest.AsObject;
   static toObject(includeInstance: boolean, msg: CreateFileRequest): CreateFileRequest.AsObject;
@@ -2408,6 +2412,7 @@ export class CreateFileRequest extends jspb.Message {
 export namespace CreateFileRequest {
   export type AsObject = {
     datasetId: string,
+    connectionId: string,
   }
 }
 
@@ -2715,6 +2720,9 @@ export interface ConnectionTypeMap {
   CONNECTION_TYPE_BIGQUERY: 1;
   CONNECTION_TYPE_SNOWFLAKE: 2;
   CONNECTION_TYPE_WHEROBOTS: 3;
+  CONNECTION_TYPE_ATHENA: 4;
+  CONNECTION_TYPE_POSTGRES: 5;
+  CONNECTION_TYPE_CLICKHOUSE: 6;
 }
 
 export const ConnectionType: ConnectionTypeMap;

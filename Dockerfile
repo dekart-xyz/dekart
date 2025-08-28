@@ -88,6 +88,8 @@ RUN groupadd -g $USER_GID $USERNAME \
 # Set environment variables
 ENV DEKART_PORT=8080
 ENV DEKART_STATIC_FILES=./build
+ARG DEKART_UX_DISABLE_VERSION_CHECK
+ENV DEKART_UX_DISABLE_VERSION_CHECK=${DEKART_UX_DISABLE_VERSION_CHECK}
 
 # Change ownership of the working directory to the new user
 RUN chown -R $USERNAME:$USERNAME /dekart

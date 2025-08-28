@@ -61,6 +61,7 @@ WHERE
     RAND() < 0.1 / 100.0;  -- Randomly select approximately 0.1% of the records
 `
       }
+    case ConnectionType.CONNECTION_TYPE_ATHENA:
     case 'ATHENA':
       return {
         name: 'Athena',

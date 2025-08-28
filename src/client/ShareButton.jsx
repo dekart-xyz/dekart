@@ -106,9 +106,10 @@ function DirectAccess () {
   const { id: reportId } = useSelector(state => state.report)
   const loading = reportDirectAccessEmails.join(',') !== emails.join(',') // check if emails are loaded
   const users = useSelector(state => state.workspace.users)
+  const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
   const gated = planType === PlanType.TYPE_PERSONAL || planType === PlanType.TYPE_UNSPECIFIED || planType === PlanType.TYPE_TEAM
 
-  if (!canWrite || !isSharable || isPublic) {
+  if (!canWrite || !isSharable || isPublic || isDefaultWorkspace) {
     return null
   }
 

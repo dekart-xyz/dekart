@@ -2,11 +2,10 @@
 import copy from '../../fixtures/copy.json'
 
 describe('fork', () => {
-  it('should have same viz style after fork', async () => {
+  it('should have same viz style after fork', () => {
     cy.visit('/')
     cy.get('button#dekart-create-report').click()
-    cy.get('button:contains("Add data from...")').click()
-    cy.get('span:contains("SQL query")').click()
+    cy.get('button:contains("Run SQL")').click()
     cy.get('textarea').type('select 0 as lat, 0 as lon', { force: true })
     cy.get(`button:contains("${copy.execute}")`).click()
     cy.get('div:contains("1 rows")', { timeout: 20000 }).should('be.visible')
@@ -22,7 +21,7 @@ describe('fork', () => {
     // share report
     cy.get('button#dekart-share-report').click()
     cy.get('span:contains("No Access")').click()
-    cy.get('div.dekart-share-view').click()
+    cy.get('div.dekart-share-view').click({ force: true })
     cy.get('button').contains('Done').click()
 
     // change user

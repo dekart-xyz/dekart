@@ -1,0 +1,42 @@
+name: Detect flavour (cloud / premium / oss)
+
+on:
+  workflow_call:
+    outputs:
+      target:
+        description: "cloud • premium • oss"
+        value: ${{ jobs.detect.outputs.target }}
+      is_cloud:
+        description: "true when target == cloud"
+        value: ${{ jobs.detect.outputs.is_cloud }}
+      is_premium:
+        description: "true when target == premium"
+        value: ${{ jobs.detect.outputs.is_premium }}
+      is_oss:
+        description: "true when target == oss"
+        value: ${{ jobs.detect.outputs.is_oss }}
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      target:     ${{ steps.set.outputs.target }}
+      is_cloud:   ${{ steps.set.outputs.is_cloud }}
+      is_premium: ${{ steps.set.outputs.is_premium }}
+      is_oss:     ${{ steps.set.outputs.is_oss }}
+    steps:
+      - id: set
+        run: |
+          REPO='${{ github.repository }}'   # owner/name
+          if [[ "$REPO" == *dekart-cloud ]]; then
+            TARGET=cloud
+          elif [[ "$REPO" == *dekart-premium ]]; then
+            TARGET=premium
+          else
+            TARGET=oss                      # default → open‑source repo
+          fi
+
+          echo "target=$TARGET" >>"$GITHUB_OUTPUT"
+          [[ $TARGET == cloud   ]] && echo "is_cloud=true"    >>"$GITHUB_OUTPUT" || echo "is_cloud=false"    >>"$GITHUB_OUTPUT"
+          [[ $TARGET == premium ]] && echo "is_premium=true"  >>"$GITHUB_OUTPUT" || echo "is_premium=false"  >>"$GITHUB_OUTPUT"
+          [[ $TARGET == oss     ]] && echo "is_oss=true"      >>"$GITHUB_OUTPUT" || echo "is_oss=false"      >>"$GITHUB_OUTPUT"

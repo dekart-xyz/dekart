@@ -10,7 +10,7 @@ import { PlusOutlined, FileSearchOutlined, UsergroupAddOutlined, ApiTwoTone, Loc
 import DataDocumentationLink from './DataDocumentationLink'
 import Switch from 'antd/es/switch'
 import { archiveReport, subscribeReports, unsubscribeReports, createReport } from './actions/report'
-import { editConnection, newConnection, newConnectionScreen, setDefaultConnection } from './actions/connection'
+import { editConnection, isSystemConnectionID, newConnection, newConnectionScreen, setDefaultConnection } from './actions/connection'
 import ConnectionModal from './ConnectionModal'
 import Tooltip from 'antd/es/tooltip'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
@@ -235,6 +235,8 @@ function ConnectionTypeSelector () {
         >Snowflake
         </Button>
         <Button
+          disabled={!secretsEnabled}
+          title={secretsEnabled ? '' : 'Feature is disabled. Contact your administrator to enable it.'}
           icon={<DatasourceIcon type={ConnectionType.CONNECTION_TYPE_WHEROBOTS} />} size='large' onClick={() => {
             track('ConnectionTypeSelectorWherobots')
             dispatch(newConnection(ConnectionType.CONNECTION_TYPE_WHEROBOTS))
@@ -348,7 +350,7 @@ function Reports ({ createReportButton, reportFilter }) {
   const [archived, setArchived] = useState(false)
   const reportsList = useSelector(state => state.reportsList)
   const { loaded: envLoaded, authEnabled } = useSelector(state => state.env)
-  const connectionList = useSelector(state => state.connection.list.filter(c => c.id !== 'default'))
+  const connectionList = useSelector(state => state.connection.list.filter(c => !isSystemConnectionID(c.id)))
   // TODO: show default SQL connection in the list
   // const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const newConnectionScreen = useSelector(state => state.connection.screen)
