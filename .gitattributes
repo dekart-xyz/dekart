@@ -1,3 +1,4 @@
 README.md    merge=ours
 LICENSE     merge=ours
 pulumi/*    merge=ours
+.gitattributes merge=ours
