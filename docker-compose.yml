@@ -17,6 +17,7 @@ services:
     restart: always
     ports:
       - 8081:8080
+  # docker compose --env-file .env.cloud --profile cloud up
   dekart-cloud:
     image: "${DOCKER_COMPOSE_IMAGE}"
     platform: linux/amd64
