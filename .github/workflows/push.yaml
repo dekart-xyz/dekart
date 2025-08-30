@@ -26,20 +26,20 @@ jobs:
     needs: [changes]
     uses: ./.github/workflows/go_test.yaml
     secrets: inherit
-
-  build_e2e:
+  build:
+    if: needs.flavour.outputs.is_cloud == 'true'
     needs: [flavour, changes]
-    with:
-      build_e2e: true
-      target: ${{ needs.flavour.outputs.target }}
     uses: ./.github/workflows/build.yaml
+    with:
+      target:    ${{ needs.flavour.outputs.target }}
+      build_app: true
+      build_e2e: true
     permissions:
       contents: read
       packages: write
     secrets: inherit
-
   e2e_tests:
-    needs: [build_e2e]
+    needs: [build, flavour]
     uses: ./.github/workflows/e2e.yaml
     with:
       target: ${{ needs.flavour.outputs.target }}
@@ -47,25 +47,13 @@ jobs:
       contents: read
       packages: write
     secrets: inherit
-  build_cloud_release:
-    if: needs.flavour.outputs.is_cloud == 'true'
-    needs: [build_e2e]
-    uses: ./.github/workflows/build.yaml
-    with:
-      target:    ${{ needs.flavour.outputs.target }}
-      build_app: true
-      build_e2e: false
-    permissions:
-      contents: read
-      packages: write
-    secrets: inherit
 
   create_pulumi_pr:
     if: needs.flavour.outputs.is_cloud == 'true'
-    needs: [build_cloud_release]
+    needs: [build, e2e_tests, go_tests, node_tests]
     uses: ./.github/workflows/create-pulumi-pr.yaml
     with:
-      app_image: ${{ needs.build_cloud_release.outputs.app_image }}
+      app_image: ${{ needs.build.outputs.app_image }}
     permissions:
       contents: write
       pull-requests: write
