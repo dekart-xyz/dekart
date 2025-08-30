@@ -177,10 +177,12 @@ function DatasetSection ({ reportId }) {
   }
 
   if (disableSQL) {
-    if (!report.readme) {
-      return null
-    }
     datasets = []
+  }
+
+  if (!report.readme && datasets.length === 0) {
+    // nothing to show
+    return null
   }
 
   useEffect(() => {
