@@ -1,0 +1,95 @@
+name: Create Pulumi PR
+
+on:
+  workflow_call:
+    inputs:
+      app_image:
+        type: string
+        required: true
+        description: "The app image to get digest from"
+      is_cloud:
+        type: string
+        required: true
+        description: "Whether this is a cloud build"
+
+jobs:
+  create_pulumi_pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout dekart-cloud-deploy
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/dekart-cloud-deploy
+          token: ${{ secrets.DEPLOY_REPO_TOKEN }}
+          path: deploy-repo
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v0
+        with:
+          service_account_key: ${{ secrets.PRIVATE_GITHUB_ACTIONS_DEKART_CLOUD }}
+          project_id: dekart-cloud
+          export_default_credentials: true
+
+      - name: Configure Docker to use the gcloud command-line tool as a credential helper
+        run: gcloud auth configure-docker europe-west3-docker.pkg.dev
+
+      - name: Pull Docker image
+        run: docker pull ${{ inputs.app_image }}
+
+      - name: Get image digest
+        id: get_digest
+        run: |
+          digest=$(docker image inspect ${{ inputs.app_image }} --format='{{index .RepoDigests 0}}')
+          echo "digest=$digest" >> $GITHUB_OUTPUT
+
+      - name: Create branch
+        id: create-branch
+        run: |
+          cd deploy-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          BRANCH_NAME="update-image-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b $BRANCH_NAME
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+      - name: Update image digest in Pulumi config
+        run: |
+          cd deploy-repo/src
+
+          # Update the APP_IMAGE in Pulumi.prod.yaml with the image digest
+          # This assumes the line format: dekart-cloud:APP_IMAGE: europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart@sha256:abc123...
+          sed -i "s|dekart-cloud:APP_IMAGE:.*|dekart-cloud:APP_IMAGE: ${{ steps.get_digest.outputs.digest }}|" Pulumi.prod.yaml
+
+          # Commit the change
+          git add Pulumi.prod.yaml
+
+          COMMIT_MSG="Update application image digest to ${{ steps.get_digest.outputs.digest }}"
+          git commit -m "$COMMIT_MSG"
+
+      - name: Push changes and create PR
+        run: |
+          cd deploy-repo
+
+          # Push the branch
+          git push origin ${{ steps.create-branch.outputs.branch_name }}
+
+          # Create pull request
+          gh pr create \
+            --title "Update application image digest" \
+            --body "This PR updates the application image digest to: ${{ steps.get_digest.outputs.digest }}
+
+            **Changes:**
+            - Updated \`dekart-cloud:APP_IMAGE\` in \`src/Pulumi.prod.yaml\` with image digest
+
+            **Image Digest:** ${{ steps.get_digest.outputs.digest }}
+            **Original Image:** ${{ inputs.app_image }}
+
+            This PR was automatically created by GitHub Actions after a successful cloud release build." \
+            --base main \
+            --head ${{ steps.create-branch.outputs.branch_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.DEPLOY_REPO_TOKEN }}

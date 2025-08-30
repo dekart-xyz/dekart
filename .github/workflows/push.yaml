@@ -60,63 +60,8 @@ jobs:
   create_pulumi_pr:
     if: needs.flavour.outputs.is_cloud == 'true'
     needs: [build_cloud_release]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - name: Checkout dekart-cloud-deploy
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ github.repository_owner }}/dekart-cloud-deploy
-          token: ${{ secrets.DEPLOY_REPO_TOKEN }}
-          path: deploy-repo
-
-      - name: Create branch
-        id: create-branch
-        run: |
-          cd deploy-repo
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          BRANCH_NAME="update-image-$(date +%Y%m%d-%H%M%S)"
-          git checkout -b $BRANCH_NAME
-          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
-
-      - name: Update image in Pulumi config
-        run: |
-          cd deploy-repo/src
-
-          # Update the APP_IMAGE in Pulumi.prod.yaml
-          # This assumes the line format: dekart-cloud:APP_IMAGE: europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:sha-abc123
-          sed -i "s|dekart-cloud:APP_IMAGE:.*|dekart-cloud:APP_IMAGE: ${{ needs.build_cloud_release.outputs.app_image }}|" Pulumi.prod.yaml
-
-          # Commit the change
-          git add Pulumi.prod.yaml
-
-          COMMIT_MSG="Update application image to ${{ needs.build_cloud_release.outputs.app_image }}"
-          git commit -m "$COMMIT_MSG"
-
-      - name: Push changes and create PR
-        run: |
-          cd deploy-repo
-
-          # Push the branch
-          git push origin ${{ steps.create-branch.outputs.branch_name }}
-
-          # Create pull request
-          gh pr create \
-            --title "Update application image" \
-            --body "This PR updates the application image to: ${{ needs.build_cloud_release.outputs.app_image }}
-
-            **Changes:**
-            - Updated \`dekart-cloud:APP_IMAGE\` in \`src/Pulumi.prod.yaml\`
-
-            **Image:** ${{ needs.build_cloud_release.outputs.app_image }}
-
-            This PR was automatically created by GitHub Actions after a successful cloud release build." \
-            --base main \
-            --head ${{ steps.create-branch.outputs.branch_name }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.DEPLOY_REPO_TOKEN }}
+    uses: ./.github/workflows/create-pulumi-pr.yaml
+    with:
+      app_image: ${{ needs.build_cloud_release.outputs.app_image }}
+    secrets: inherit
 
