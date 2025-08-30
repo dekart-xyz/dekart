@@ -50,44 +50,68 @@ jobs:
       - uses: docker/setup-qemu-action@v2
       - uses: docker/setup-buildx-action@v2
 
-      - name: Run cloud E2E specs
+      - name: E2E part 1
         run: |
-          for SPEC in \
-            cypress/e2e/cloud/cloudBasicFlowStart.cy.js \
-            cypress/e2e/cloud/cloudBasicFlowEnd.cy.js
-          do
-            TOKEN=$([ "$SPEC" == *cloudBasicFlowStart* ] \
-                    && echo '${{ secrets.DEV_REFRESH_TOKEN_INFO }}' \
-                    || echo '${{ secrets.DEV_REFRESH_TOKEN }}')
-
-            docker run -i --network host \
-              -v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
-              -v /tmp/cypress/videos:/dekart/cypress/videos \
-              -v /tmp/cypress/screenshots:/dekart/cypress/screenshots \
-              -e DEKART_LOG_DEBUG=1 \
-              -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
-              -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
-              -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
-              -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
-              -e DEKART_POSTGRES_HOST=localhost \
-              -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
-              -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
-              -e DEKART_STORAGE=USER \
-              -e DEKART_DATASOURCE=USER \
-              -e DEKART_ALLOW_FILE_UPLOAD=1 \
-              -e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
-              -e DEKART_GOOGLE_OAUTH_CLIENT_ID='${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}' \
-              -e DEKART_GOOGLE_OAUTH_SECRET='${{ secrets.GOOGLE_OAUTH_SECRET }}' \
-              -e DEKART_DEV_REFRESH_TOKEN="$TOKEN" \
-              -e DEKART_DATA_ENCRYPTION_KEY=projects/398860824064/secrets/dekart-prod-user-data-encoding-key/versions/1 \
-              -e DEKART_CORS_ORIGIN=http://localhost:3000 \
-              -e DEKART_UX_DISABLE_VERSION_CHECK=1 \
-              -e DEKART_DEV_NO_DATASET_CACHE=1 \
-              -e DEKART_CLOUD=1 \
-              -e TEST_SPEC=$SPEC \
-              -e CYPRESS_CI=1 \
-              europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:${{ env.IMAGE_CACHE_KEY }}
-          done
+          docker run -i \
+            --network="host" \
+            -v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
+            -v /tmp/cypress/videos:/dekart/cypress/videos/ \
+            -v /tmp/cypress/screenshots:/dekart/cypress/screenshots/ \
+            -e DEKART_LOG_DEBUG=1 \
+            -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
+            -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
+            -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
+            -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
+            -e DEKART_POSTGRES_HOST=localhost \
+            -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
+            -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
+            -e DEKART_STORAGE=USER \
+            -e DEKART_DATASOURCE=USER \
+            -e DEKART_ALLOW_FILE_UPLOAD=1 \
+            -e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
+            -e DEKART_GOOGLE_OAUTH_CLIENT_ID=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }} \
+            -e DEKART_GOOGLE_OAUTH_SECRET=${{ secrets.GOOGLE_OAUTH_SECRET }} \
+            -e DEKART_DEV_REFRESH_TOKEN=${{ secrets.DEV_REFRESH_TOKEN_INFO }} \
+            -e DEKART_DATA_ENCRYPTION_KEY=projects/398860824064/secrets/dekart-prod-user-data-encoding-key/versions/1 \
+          	-e DEKART_CORS_ORIGIN=http://localhost:3000 \
+            -e DEKART_ALLOW_WORKSPACE_CREATION=1 \
+            -e DEKART_UX_DISABLE_VERSION_CHECK=1 \
+            -e DEKART_DEV_NO_DATASET_CACHE=1 \
+            -e DEKART_CLOUD=1 \
+            -e TEST_SPEC=cypress/e2e/cloud/cloudBasicFlowStart.cy.js \
+            -e CYPRESS_CI=1 \
+            europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:${{ env.IMAGE_CACHE_KEY }}
+      - name: E2E part 2
+        run: |
+          docker run -i \
+            --network="host" \
+            -v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
+            -v /tmp/cypress/videos:/dekart/cypress/videos/ \
+            -v /tmp/cypress/screenshots:/dekart/cypress/screenshots/ \
+            -e DEKART_LOG_DEBUG=1 \
+            -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
+            -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
+            -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
+            -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
+            -e DEKART_POSTGRES_HOST=localhost \
+            -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
+            -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
+            -e DEKART_STORAGE=USER \
+            -e DEKART_DATASOURCE=USER \
+            -e DEKART_ALLOW_FILE_UPLOAD=1 \
+            -e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
+            -e DEKART_GOOGLE_OAUTH_CLIENT_ID=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }} \
+            -e DEKART_GOOGLE_OAUTH_SECRET=${{ secrets.GOOGLE_OAUTH_SECRET }} \
+            -e DEKART_DEV_REFRESH_TOKEN=${{ secrets.DEV_REFRESH_TOKEN }} \
+            -e DEKART_DATA_ENCRYPTION_KEY=projects/398860824064/secrets/dekart-prod-user-data-encoding-key/versions/1 \
+            -e DEKART_CORS_ORIGIN=http://localhost:3000 \
+            -e DEKART_ALLOW_WORKSPACE_CREATION=1 \
+            -e DEKART_UX_DISABLE_VERSION_CHECK=1 \
+            -e DEKART_DEV_NO_DATASET_CACHE=1 \
+            -e DEKART_CLOUD=1 \
+            -e TEST_SPEC=cypress/e2e/cloud/cloudBasicFlowEnd.cy.js \
+            -e CYPRESS_CI=1 \
+            europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:${{ env.IMAGE_CACHE_KEY }}
 
       - uses: actions/upload-artifact@v4
         if: failure()
