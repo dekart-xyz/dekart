@@ -55,6 +55,9 @@ jobs:
       target:    ${{ needs.flavour.outputs.target }}
       build_app: true
       build_e2e: false
+    permissions:
+      contents: read
+      packages: write
     secrets: inherit
 
   create_pulumi_pr:
