@@ -7,10 +7,6 @@ on:
         type: string
         required: true
         description: "The app image to get digest from"
-      is_cloud:
-        type: string
-        required: true
-        description: "Whether this is a cloud build"
 
 jobs:
   create_pulumi_pr:

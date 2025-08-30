@@ -66,5 +66,8 @@ jobs:
     uses: ./.github/workflows/create-pulumi-pr.yaml
     with:
       app_image: ${{ needs.build_cloud_release.outputs.app_image }}
+    permissions:
+      contents: write
+      pull-requests: write
     secrets: inherit
 
