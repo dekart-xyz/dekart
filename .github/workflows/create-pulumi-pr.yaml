@@ -66,6 +66,18 @@ jobs:
           COMMIT_MSG="Update application image digest to ${{ steps.get_digest.outputs.digest }}"
           git commit -m "$COMMIT_MSG"
 
+      - name: Get commit information
+        id: get-commit-info
+        run: |
+          # Get the triggering commit SHA and message
+          echo "commit_sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "commit_message=$(git log -1 --pretty=format:'%s')" >> $GITHUB_OUTPUT
+          echo "commit_author=$(git log -1 --pretty=format:'%an')" >> $GITHUB_OUTPUT
+          echo "commit_date=$(git log -1 --pretty=format:'%cd')" >> $GITHUB_OUTPUT
+
+          # Get the repository URL
+          echo "repo_url=https://github.com/${{ github.repository }}" >> $GITHUB_OUTPUT
+
       - name: Push changes and create PR
         run: |
           cd deploy-repo
@@ -78,13 +90,19 @@ jobs:
             --title "Update application image digest" \
             --body "This PR updates the application image digest to: ${{ steps.get_digest.outputs.digest }}
 
-            **Changes:**
+            **Source Commit Information:**
+            - **Commit:** [${{ steps.get-commit-info.outputs.commit_sha }}](${{ steps.get-commit-info.outputs.repo_url }}/commit/${{ steps.get-commit-info.outputs.commit_sha }})
+            - **Message:** ${{ steps.get-commit-info.outputs.commit_message }}
+            - **Author:** ${{ steps.get-commit-info.outputs.commit_author }}
+            - **Date:** ${{ steps.get-commit-info.outputs.commit_date }}
+
+            **Changes in this PR:**
             - Updated \`dekart-cloud:IMAGE_DIGEST\` in \`src/Pulumi.prod.yaml\` with image digest
 
             **Image Digest:** ${{ steps.get_digest.outputs.digest }}
             **Original Image:** ${{ inputs.app_image }}
 
-            This PR was automatically created by GitHub Actions after a successful cloud release build." \
+            This PR was automatically created by GitHub Actions after a successful cloud release build triggered by the above commit." \
             --base main \
             --head ${{ steps.create-branch.outputs.branch_name }}
         env:
