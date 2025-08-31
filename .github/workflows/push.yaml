@@ -2,7 +2,7 @@ name: Push to main
 
 on:
   push:
-    branches: [main, cloud-merge-oss-2025-08]
+    branches: [main]
 
 
 jobs:
