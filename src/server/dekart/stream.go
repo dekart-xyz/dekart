@@ -102,7 +102,7 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 
 }
 
-const defaultStreamTimeout = 50 * time.Second
+const defaultStreamTimeout = 30 * time.Second
 
 // parse int constant from os env variable DEKART_STREAM_TIMEOUT
 func getStreamTimeout() time.Duration {
