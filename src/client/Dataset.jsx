@@ -12,14 +12,17 @@ import { addReadme } from './actions/readme'
 import { updateSessionStorage } from './actions/sessionStorage'
 import { getDatasourceMeta } from './lib/datasource'
 import { track } from './lib/tracking'
+import { isSystemConnectionID } from './actions/connection'
 
-function DatasetSelectorButton ({ icon, title, subtitle, onClick, id }) {
+function DatasetSelectorButton ({ icon, title, subtitle, onClick, id, disable, disabledNote }) {
   return (
     <Button
       id={id}
       size='large'
       className={styles.datasetSelectorButton}
       onClick={onClick}
+      disabled={disable}
+      title={disabledNote}
     >
       <span className={styles.datasetSelectorButtonInner}>
         <span className={styles.datasetSelectorIcon}>{icon}</span>
@@ -36,11 +39,15 @@ function DatasetSelector ({ dataset }) {
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const isPlayground = useSelector(state => state.user.isPlayground)
   const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
+  const { ALLOW_FILE_UPLOAD, DEKART_CLOUD } = env.variables
   const connectionList = useSelector(state => state.connection.list)
-  const noneDefaultConnectionList = connectionList.filter(c => c.id !== 'default')
+
+  // filter out default connection in Dekart Cloud, so user cannot use BigQuery free
+  const filteredConnectionList = DEKART_CLOUD ? connectionList.filter(c => !isSystemConnectionID(c.id)) : connectionList
   const history = useHistory()
   const report = useSelector(state => state.report)
   const isAdmin = useSelector(state => state.user.isAdmin)
+  const fileUploadConnection = connectionList.find(c => c.isDefault && c.canStoreFiles)
 
   if (!env.loaded) {
     // do not render until environment is loaded
@@ -50,24 +57,33 @@ function DatasetSelector ({ dataset }) {
     // do not render in playground mode, but render in default workspace
     return null
   }
-  const { ALLOW_FILE_UPLOAD } = env.variables
   if (!ALLOW_FILE_UPLOAD && !userDefinedConnection) {
     return null
   }
+
+  const allowFileUpload = ALLOW_FILE_UPLOAD && fileUploadConnection
+  let disabledNote = ''
+  if (!allowFileUpload) {
+    disabledNote = !ALLOW_FILE_UPLOAD ? 'File upload is disabled in configuration' : 'Add default connection with file upload support'
+  }
+
   return (
     <div className={styles.datasetSelector}>
       <div className={styles.datasetSelectorInner}>
         <DatasetSelectorButton
           icon={<InboxOutlined />}
+          disable={!(allowFileUpload && report.canWrite)}
+          disabledNote={disabledNote}
           title='Upload File'
           subtitle='Load files in CSV or GeoJSON formats'
           onClick={() => {
-            dispatch(createFile(dataset.id))
+            dispatch(createFile(dataset.id, fileUploadConnection?.id))
           }}
         />
         {!report.readme && (
           <DatasetSelectorButton
             icon={<ReadOutlined />}
+            disable={!report.canWrite}
             title='Write README'
             subtitle='Add Markdown description to your map'
             onClick={() => {
@@ -76,9 +92,10 @@ function DatasetSelector ({ dataset }) {
           />
         )}
 
-        {noneDefaultConnectionList.map((connection) => (
+        {filteredConnectionList.map((connection) => (
           <DatasetSelectorButton
             key={connection.id}
+            disable={!report.canWrite}
             icon={<DatasourceIcon type={connection.connectionType} />}
             title={`${connection.connectionName}`}
             subtitle={`Run SQL directly on ${getDatasourceMeta(connection.connectionType).name}`}
@@ -87,9 +104,10 @@ function DatasetSelector ({ dataset }) {
             }}
           />
         ))}
-        {noneDefaultConnectionList.length === 0 && (
+        {filteredConnectionList.length === 0 && (
           <DatasetSelectorButton
             icon={<ApiTwoTone />}
+            disable={!report.canWrite}
             id='dekart-add-connection'
             title='Add connection'
             subtitle='Connect BigQuery, Snowflake, Wherobots'
@@ -101,7 +119,7 @@ function DatasetSelector ({ dataset }) {
           />
         )}
       </div>
-      {isAdmin && noneDefaultConnectionList.length > 0 && (
+      {isAdmin && filteredConnectionList.length > 0 && (
         <Button
           type='link'
           onClick={() => {

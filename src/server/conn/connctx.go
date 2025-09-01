@@ -2,6 +2,7 @@ package conn
 
 import (
 	"context"
+	"database/sql"
 	"dekart/src/proto"
 	"fmt"
 	"os"
@@ -43,6 +44,20 @@ func FromCtx(ctx context.Context) *proto.Connection {
 		return &proto.Connection{}
 	}
 	return connection
+}
+
+// SystemConnectionID is a special connection ID used for connection configured in env variables
+const SystemConnectionID = "00000000-0000-0000-0000-000000000000"
+
+func IsSystemConnectionID(connectionID string) bool {
+	return connectionID == SystemConnectionID || connectionID == "default" || connectionID == ""
+}
+
+func ConnectionIDToNullString(connectionID string) sql.NullString {
+	if IsSystemConnectionID(connectionID) {
+		return sql.NullString{Valid: false}
+	}
+	return sql.NullString{String: connectionID, Valid: true}
 }
 
 func CopyConnectionCtx(sourceCtx, destCtx context.Context) context.Context {

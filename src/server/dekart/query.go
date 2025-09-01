@@ -39,12 +39,10 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	if req.ConnectionId != "" {
-		err = s.updateDatasetConnection(ctx, req.DatasetId, req.ConnectionId)
-		if err != nil {
-			log.Err(err).Msg("Error updating dataset connection")
-			return nil, status.Error(codes.Internal, err.Error())
-		}
+	err = s.updateDatasetConnection(ctx, req.DatasetId, req.ConnectionId)
+	if err != nil {
+		log.Err(err).Msg("Error updating dataset connection")
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	id := newUUID()

@@ -52,12 +52,12 @@ func (s Server) TestConnection(ctx context.Context, req *proto.TestConnectionReq
 	return storage.TestConnection(ctx, req.Connection)
 }
 
-func (s Server) getBucketNameFromConnection(conn *proto.Connection) string {
-	if conn == nil {
+func (s Server) getBucketNameFromConnection(con *proto.Connection) string {
+	if conn.IsSystemConnectionID(con.Id) {
 		return storage.GetDefaultBucketName()
 	}
 
-	bucketName := conn.CloudStorageBucket
+	bucketName := con.CloudStorageBucket
 
 	return bucketName
 }
@@ -120,18 +120,48 @@ func (s Server) getConnectionFromFileID(ctx context.Context, fileID string) (*pr
 
 // getConnection gets connection by id; it does not check if user has access to it or if it is archived
 func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.Connection, error) {
-
-	if connectionID == "default" || connectionID == "" {
+	if conn.IsSystemConnectionID(connectionID) {
 		con := proto.Connection{
-			Id:                 "default",
-			ConnectionName:     "default",
-			CloudStorageBucket: storage.GetDefaultBucketName(),
-			BigqueryProjectId:  os.Getenv("DEKART_BIGQUERY_PROJECT_ID"),
-			IsDefault:          true,
+			Id:             conn.SystemConnectionID,
+			ConnectionName: "default",
+			IsDefault:      true,
 		}
-		if con.CloudStorageBucket != "" {
+
+		switch os.Getenv("DEKART_DATASOURCE") {
+		case "USER":
+			if os.Getenv("DEKART_CLOUD") != "" {
+				con.CloudStorageBucket = storage.GetDefaultBucketName()
+				con.BigqueryProjectId = os.Getenv("DEKART_BIGQUERY_PROJECT_ID")
+				con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_BIGQUERY
+				con.CanStoreFiles = true
+				return &con, nil
+			}
+			return nil, nil
+		case "SNOWFLAKE":
+			con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_SNOWFLAKE
+			con.ConnectionName = "Snowflake"
+			con.CloudStorageBucket = storage.GetDefaultBucketName()
+		case "ATHENA":
+			con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_ATHENA
+			con.ConnectionName = "Athena"
+		case "PG":
+			con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_POSTGRES
+			con.ConnectionName = "Postgres"
+		case "BQ":
+			con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_BIGQUERY
+			con.ConnectionName = "BigQuery"
+			con.BigqueryProjectId = os.Getenv("DEKART_BIGQUERY_PROJECT_ID")
+			con.CloudStorageBucket = storage.GetDefaultBucketName()
+		case "CH":
+			con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_CLICKHOUSE
+			con.ConnectionName = "ClickHouse"
+		default:
+			log.Fatal().Str("DEKART_STORAGE", os.Getenv("DEKART_STORAGE")).Msg("Unknown storage backend")
+		}
+		if os.Getenv("DEKART_ALLOW_FILE_UPLOAD") != "" && con.CloudStorageBucket != "" {
 			con.CanStoreFiles = true
 		}
+
 		return &con, nil
 	}
 
@@ -369,6 +399,9 @@ func (s Server) SetDefaultConnection(ctx context.Context, req *proto.SetDefaultC
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "only admins can edit connections")
+	}
 	_, err := s.db.ExecContext(ctx,
 		`update connections set
 			is_default=true,
@@ -593,21 +626,38 @@ func (s Server) GetConnectionList(ctx context.Context, req *proto.GetConnectionL
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	if checkWorkspace(ctx).ID == "" {
-		log.Warn().Msg("workspace not found when getting connection list")
-		return nil, status.Error(codes.NotFound, "workspace not found")
+	connections := make([]*proto.Connection, 0)
+	if checkWorkspace(ctx).ID != "" {
+		// user connections stored in the workspace
+		// default workspace and playground workspace do not have user connections
+		userConnections, err := s.getUserConnections(ctx)
+		if err != nil {
+			log.Err(err).Msg("getConnections failed")
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		connections = append(connections, userConnections...)
 	}
-	connections, err := s.getUserConnections(ctx)
-	if err != nil {
-		log.Err(err).Msg("getConnections failed")
-		return nil, status.Error(codes.Internal, err.Error())
+
+	if os.Getenv("DEKART_CLOUD") != "" || os.Getenv("DEKART_DATASOURCE") != "USER" {
+		// append system connection
+		systemConnection, err := s.getConnection(ctx, conn.SystemConnectionID)
+		if err != nil {
+			log.Err(err).Msg("getConnection failed for system connection")
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		if systemConnection != nil {
+			// Create a new connection and copy only safe properties
+			safeConn := &proto.Connection{
+				Id:             systemConnection.Id,
+				ConnectionName: systemConnection.ConnectionName,
+				ConnectionType: systemConnection.ConnectionType,
+				IsDefault:      systemConnection.IsDefault,
+				CanStoreFiles:  systemConnection.CanStoreFiles,
+			}
+			connections = append(connections, safeConn)
+		}
+
 	}
-	defaultConnection, err := s.getConnection(ctx, "default")
-	if err != nil {
-		log.Err(err).Msg("getDefaultConnection failed")
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	connections = append(connections, defaultConnection)
 	return &proto.GetConnectionListResponse{
 		Connections: connections,
 	}, nil

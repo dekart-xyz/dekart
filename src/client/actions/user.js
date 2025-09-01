@@ -36,7 +36,7 @@ export function subscribeUserStream () {
           prevRes.workspaceUpdate = message.workspaceUpdate
           dispatch(getWorkspace())
         }
-        if (message.planType > 0) {
+        if (message.planType > 0 || message.isDefaultWorkspace) {
           // update only when subscription is active to avoid 404 errors
           if (prevRes.connectionUpdate !== message.connectionUpdate) {
             prevRes.connectionUpdate = message.connectionUpdate

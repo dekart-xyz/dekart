@@ -162,7 +162,7 @@ func configureBucket() storage.Storage {
 	case "S3":
 		log.Info().Msg("Using S3 storage backend")
 		bucket = storage.NewS3Storage()
-	case "GCS", "":
+	case "GCS":
 		log.Info().Msg("Using GCS storage backend")
 		bucket = storage.NewGoogleCloudStorage()
 	case "SNOWFLAKE":

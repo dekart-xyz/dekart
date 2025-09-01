@@ -3,7 +3,6 @@ import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { setError, success, info, warn } from './message'
 import { addDataToMap, toggleSidePanel, reorderLayer, removeDataset as removeDatasetFromKepler, loadFiles } from '@kepler.gl/actions'
-import { processCsvData, processGeojson } from '@kepler.gl/processors'
 import { get } from '../lib/api'
 import getDatasetName from '../lib/getDatasetName'
 import { runQuery } from './query'
@@ -132,6 +131,42 @@ export function finishAddingDatasetToMap (dataset) {
 
 let isWasmInitialized = false
 
+// Queue to ensure loadFiles calls are sequential
+const loadFilesQueue = []
+let isLoadFilesProcessing = false
+
+async function processLoadFilesQueue (dispatch) {
+  if (isLoadFilesProcessing || loadFilesQueue.length === 0) {
+    return
+  }
+
+  isLoadFilesProcessing = true
+
+  while (loadFilesQueue.length > 0) {
+    const { file, resolve, reject } = loadFilesQueue.shift()
+
+    try {
+      const result = await new Promise((_resolve, _reject) => {
+        dispatch(loadFiles([file], (r) => {
+          const datasetData = r[0].data
+          _resolve(datasetData)
+          return { type: 'none' } // dispatch a dummy action to satisfy loadFiles API
+        }))
+      })
+      resolve(result)
+    } catch (err) {
+      reject(err)
+    }
+  }
+
+  isLoadFilesProcessing = false
+}
+
+function addToLoadFilesQueue (file, resolve, reject) {
+  loadFilesQueue.push({ file, resolve, reject })
+  return loadFilesQueue.length - 1 // return queue position
+}
+
 export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
   return async function (dispatch, getState) {
     // must be before async so dataset is not added twice
@@ -146,24 +181,18 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
     const label = getDatasetName(dataset, queries, files)
     let data
     try {
-      if (extension === 'csv') {
-        const csv = await res.text()
-        data = processCsvData(csv)
-      } else if (extension === 'geojson') {
-        const json = await res.json()
-        data = processGeojson(json)
-      } else if (extension === 'parquet') {
-        const blob = await res.blob()
-        data = await new Promise((resolve, reject) => {
-          dispatch(loadFiles([new File([blob], label)], (r) => {
-            const datasetData = r[0].data
-            resolve(datasetData)
-            return { type: 'none' } // dispatch a dummy action to satisfy loadFiles API
-          }))
-        })
-      } else {
-        throw new Error(`Unsupported dataset extension: ${extension}`)
-      }
+      const blob = await res.blob()
+      const file = new File(
+        [blob],
+        label,
+        { type: extension === 'csv' ? 'text/csv' : extension === 'json' ? 'application/json' : '' })
+
+      // Add to queue and wait for sequential processing
+      // Kepler loadFiles should not be called before all previous loadFiles are finished
+      data = await new Promise((resolve, reject) => {
+        addToLoadFilesQueue(file, resolve, reject)
+        processLoadFilesQueue(dispatch)
+      })
     } catch (err) {
       dispatch(processDownloadError(err, dataset, label))
       return

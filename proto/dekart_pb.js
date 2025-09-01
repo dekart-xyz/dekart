@@ -12769,7 +12769,8 @@ proto.GetEnvResponse.Variable.Type = {
   TYPE_ALLOW_WORKSPACE_CREATION: 21,
   TYPE_WORKSPACE_DEFAULT_ROLE: 22,
   TYPE_SECRETS_ENABLED: 23,
-  TYPE_CLOUD_UX_CONFIG_JSON: 24
+  TYPE_CLOUD_UX_CONFIG_JSON: 24,
+  TYPE_DEKART_CLOUD: 25
 };
 
 /**
@@ -18211,7 +18212,8 @@ proto.CreateFileRequest.prototype.toObject = function(opt_includeInstance) {
  */
 proto.CreateFileRequest.toObject = function(includeInstance, msg) {
   var f, obj = {
-    datasetId: jspb.Message.getFieldWithDefault(msg, 1, "")
+    datasetId: jspb.Message.getFieldWithDefault(msg, 1, ""),
+    connectionId: jspb.Message.getFieldWithDefault(msg, 2, "")
   };
 
   if (includeInstance) {
@@ -18252,6 +18254,10 @@ proto.CreateFileRequest.deserializeBinaryFromReader = function(msg, reader) {
       var value = /** @type {string} */ (reader.readString());
       msg.setDatasetId(value);
       break;
+    case 2:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setConnectionId(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -18288,6 +18294,13 @@ proto.CreateFileRequest.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
+  f = message.getConnectionId();
+  if (f.length > 0) {
+    writer.writeString(
+      2,
+      f
+    );
+  }
 };
 
 
@@ -18306,6 +18319,24 @@ proto.CreateFileRequest.prototype.getDatasetId = function() {
  */
 proto.CreateFileRequest.prototype.setDatasetId = function(value) {
   return jspb.Message.setProto3StringField(this, 1, value);
+};
+
+
+/**
+ * optional string connection_id = 2;
+ * @return {string}
+ */
+proto.CreateFileRequest.prototype.getConnectionId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 2, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.CreateFileRequest} returns this
+ */
+proto.CreateFileRequest.prototype.setConnectionId = function(value) {
+  return jspb.Message.setProto3StringField(this, 2, value);
 };
 
 
@@ -20202,7 +20233,10 @@ proto.ConnectionType = {
   CONNECTION_TYPE_UNSPECIFIED: 0,
   CONNECTION_TYPE_BIGQUERY: 1,
   CONNECTION_TYPE_SNOWFLAKE: 2,
-  CONNECTION_TYPE_WHEROBOTS: 3
+  CONNECTION_TYPE_WHEROBOTS: 3,
+  CONNECTION_TYPE_ATHENA: 4,
+  CONNECTION_TYPE_POSTGRES: 5,
+  CONNECTION_TYPE_CLICKHOUSE: 6
 };
 
 goog.object.extend(exports, proto);
