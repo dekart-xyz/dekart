@@ -46,7 +46,7 @@ func configureLogger() {
 	if pretty != "" {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339}).With().Stack().Logger()
 	} else {
-		log.Logger = log.Logger.With().Caller().Logger().Output(&errtype.LogWriter{Writer: os.Stderr})
+		log.Logger = log.Logger.With().Stack().Caller().Logger().Output(&errtype.LogWriter{Writer: os.Stderr})
 	}
 
 	debug := os.Getenv("DEKART_LOG_DEBUG")

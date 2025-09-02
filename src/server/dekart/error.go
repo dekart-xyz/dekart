@@ -30,6 +30,15 @@ func HttpError(w http.ResponseWriter, err error) {
 		return
 	}
 	if googleErr, ok := err.(*googleapi.Error); ok {
+
+		// Check for BigQuery job not found error and provide helpful message
+		if googleErr.Code == 404 && googleErr.Message != "" {
+			if errtype.BigQueryJobNotFoundRe.MatchString(googleErr.Message) {
+				log.Warn().Err(err).Msg("BigQuery Job Not Found")
+				http.Error(w, googleErr.Message+" Check missing bigquery.jobs.get permission on the submitting project", http.StatusNotFound)
+				return
+			}
+		}
 		log.Err(err).Interface("googleapi.Error", googleErr).Msg("Google API Error")
 		http.Error(w, googleErr.Message, googleErr.Code)
 		return
@@ -41,6 +50,13 @@ func HttpError(w http.ResponseWriter, err error) {
 		log.Warn().Err(err).Msg("Permission Denied Error")
 		desc := matches[1]
 		http.Error(w, "Permission Denied: "+desc, http.StatusForbidden)
+		return
+	}
+
+	// Handle Snowflake JWT token invalid error as Forbidden
+	if errtype.SnowflakeJWTInvalidRe.MatchString(err.Error()) {
+		log.Warn().Err(err).Msg("JWT token is invalid")
+		http.Error(w, "Snowflake: 390144 (08004): JWT token is invalid. Check that your Snowflake public key or OAuth configuration is up to date.", http.StatusForbidden)
 		return
 	}
 
