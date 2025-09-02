@@ -48,10 +48,10 @@ jobs:
     secrets: inherit
   build_cloud:
     needs: [flavour, changes, build_e2e]
-    if: needs.flavour.outputs.is_cloud == 'true'
+    if: needs.flavour.outputs.is_premium == 'true'
     uses: ./.github/workflows/build.yaml
     with:
-      target:    ${{ needs.flavour.outputs.target }}
+      target: cloud
       build_app: true
       build_e2e: false
     permissions:
@@ -59,7 +59,7 @@ jobs:
       packages: write
     secrets: inherit
   create_pulumi_pr:
-    if: needs.flavour.outputs.is_cloud == 'true'
+    if: needs.flavour.outputs.is_premium == 'true'
     needs: [e2e_tests, go_tests, node_tests, build_cloud]
     uses: ./.github/workflows/create-pulumi-pr.yaml
     with:

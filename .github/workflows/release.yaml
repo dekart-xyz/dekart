@@ -14,22 +14,16 @@ jobs:
     uses: ./.github/workflows/flavour.yaml      # → target + is_* booleans
 
   node_tests:
-    if: needs.flavour.outputs.is_premium == 'true' ||
-        needs.flavour.outputs.is_oss     == 'true'
     needs: [flavour]
     uses: ./.github/workflows/node_test.yaml
     secrets: inherit
 
   go_tests:
-    if: needs.flavour.outputs.is_premium == 'true' ||
-        needs.flavour.outputs.is_oss     == 'true'
     needs: [flavour]
     uses: ./.github/workflows/go_test.yaml
     secrets: inherit
 
   build_e2e:
-    if: needs.flavour.outputs.is_premium == 'true' ||
-        needs.flavour.outputs.is_oss     == 'true'
     needs: [flavour, node_tests, go_tests]
     uses: ./.github/workflows/build.yaml
     permissions:
@@ -42,8 +36,6 @@ jobs:
     secrets: inherit
 
   e2e_tests:
-    if: needs.flavour.outputs.is_premium == 'true' ||
-        needs.flavour.outputs.is_oss     == 'true'
     needs: [flavour, node_tests, go_tests, build_e2e]
     uses: ./.github/workflows/e2e.yaml
     permissions:
@@ -54,8 +46,6 @@ jobs:
     secrets: inherit
 
   build_app_release:
-    if: needs.flavour.outputs.is_premium == 'true' ||
-        needs.flavour.outputs.is_oss     == 'true'
     needs: [flavour, node_tests, go_tests, e2e_tests]
     uses: ./.github/workflows/build.yaml
     with:
