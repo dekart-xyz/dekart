@@ -176,6 +176,12 @@ function DatasetSection ({ reportId }) {
     )
   }
 
+  useEffect(() => {
+    if (report && !(activeDataset) && !disableSQL) {
+      dispatch(createDataset(reportId))
+    }
+  }, [reportId, report, activeDataset, dispatch, disableSQL])
+
   if (disableSQL) {
     if (!report.readme) {
       return null
@@ -183,11 +189,6 @@ function DatasetSection ({ reportId }) {
     datasets = []
   }
 
-  useEffect(() => {
-    if (report && !(activeDataset)) {
-      dispatch(createDataset(reportId))
-    }
-  }, [reportId, report, activeDataset, dispatch])
   if (activeDataset || showReadme) {
     return (
       <>
