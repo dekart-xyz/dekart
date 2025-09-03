@@ -147,14 +147,14 @@ function DatasetSection ({ reportId }) {
   const queries = useSelector(state => state.queries)
   const queryJobs = useSelector(state => state.queryJobs)
   const files = useSelector(state => state.files)
-  let activeDataset = useSelector(state => state.dataset.active)
+  const activeDataset = useSelector(state => state.dataset.active)
   const report = useSelector(state => state.report)
   const queryStatus = useSelector(state => state.queryStatus)
   const { canWrite } = report
   const edit = useSelector(state => state.reportStatus.edit)
   const dispatch = useDispatch()
   const readmeTab = []
-  const showReadme = useSelector(state => state.readme.showTab)
+  let showReadme = useSelector(state => state.readme.showTab)
   const closable = Boolean(canWrite && edit && datasets.length > 1)
   const lastDataset = datasets.length === 1
 
@@ -186,7 +186,7 @@ function DatasetSection ({ reportId }) {
     if (!report.readme) {
       return null
     }
-    activeDataset = null
+    showReadme = true
     datasets = []
   }
 
