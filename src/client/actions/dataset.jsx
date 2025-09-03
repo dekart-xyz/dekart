@@ -132,51 +132,57 @@ export function finishAddingDatasetToMap (dataset) {
 let isWasmInitialized = false
 
 // Queue to ensure loadFiles calls are sequential
-const loadFilesQueue = []
-let isLoadFilesProcessing = false
+// Moved to reducer state - no longer using module-level variables
 
-async function processLoadFilesQueue (dispatch) {
-  if (isLoadFilesProcessing || loadFilesQueue.length === 0) {
+async function processLoadFilesQueue (dispatch, getState) {
+  const { loadFilesQueue } = getState().dataset
+  if (loadFilesQueue.isProcessing || loadFilesQueue.queue.length === 0) {
     return
   }
 
-  isLoadFilesProcessing = true
+  dispatch(setLoadFilesProcessing(true))
 
-  while (loadFilesQueue.length > 0) {
-    const { file, resolve, reject } = loadFilesQueue.shift()
+  while (getState().dataset.loadFilesQueue.queue.length > 0) {
+    const { file, resolve, reject } = getState().dataset.loadFilesQueue.queue[0]
 
     try {
       const result = await new Promise((_resolve, _reject) => {
-        dispatch(loadFiles([file], (r) => {
-          const datasetData = r[0].data
-          _resolve(datasetData)
-          return { type: 'none' } // dispatch a dummy action to satisfy loadFiles API
-        }))
+        try {
+          dispatch(loadFiles([file], (r) => {
+            const datasetData = r[0].data
+            _resolve(datasetData)
+            return { type: 'none' } // dispatch a dummy action to satisfy loadFiles API
+          }))
+        } catch (err) {
+          _reject(err)
+        }
       })
       resolve(result)
     } catch (err) {
       reject(err)
     }
+
+    // Remove the processed item from queue
+    dispatch(removeFromLoadFilesQueue())
   }
 
-  isLoadFilesProcessing = false
-}
-
-function addToLoadFilesQueue (file, resolve, reject) {
-  loadFilesQueue.push({ file, resolve, reject })
-  return loadFilesQueue.length - 1 // return queue position
+  dispatch(setLoadFilesProcessing(false))
 }
 
 export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
   return async function (dispatch, getState) {
     // must be before async so dataset is not added twice
     dispatch({ type: addDatasetToMap.name, dataset })
-
+    const reportId = getState().report?.id
     if (!isWasmInitialized) {
       isWasmInitialized = true
       await wasmInit()
+      const newReportId = getState().report?.id
+      if (newReportId !== reportId) {
+        // new report opened while waiting for wasmInit
+        return
+      }
     }
-
     const { dataset: { list: datasets }, files, queries, keplerGl } = getState()
     const label = getDatasetName(dataset, queries, files)
     let data
@@ -190,8 +196,8 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
       // Add to queue and wait for sequential processing
       // Kepler loadFiles should not be called before all previous loadFiles are finished
       data = await new Promise((resolve, reject) => {
-        addToLoadFilesQueue(file, resolve, reject)
-        processLoadFilesQueue(dispatch)
+        dispatch(addToLoadFilesQueue(file, resolve, reject))
+        processLoadFilesQueue(dispatch, getState)
       })
     } catch (err) {
       dispatch(processDownloadError(err, dataset, label))
@@ -203,6 +209,7 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
     const prevDataset = prevDatasetsList.find(d => d.id in addedDatasets)
     const i = datasets.findIndex(d => d.id === dataset.id)
     if (i < 0) {
+      dispatch(finishAddingDatasetToMap(dataset))
       return
     }
     try {
@@ -270,17 +277,14 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
         }))
       }
     } catch (err) {
-      dispatch(setError(
-        new Error(`Failed to add data to map: ${err.message}`),
-        false
-      ))
+      dispatch(processDownloadError(err, dataset, label))
       return
     }
     const { reportStatus } = getState()
     if (reportStatus.edit) {
       dispatch(toggleSidePanel('layer'))
     }
-    dispatch({ type: finishAddingDatasetToMap.name, dataset })
+    dispatch(finishAddingDatasetToMap(dataset))
   }
 }
 
@@ -319,4 +323,20 @@ export function openDatasetSettingsModal (datasetId) {
 
 export function closeDatasetSettingsModal (datasetId) {
   return { type: closeDatasetSettingsModal.name, datasetId }
+}
+
+// LoadFiles queue action creators
+export function addToLoadFilesQueue (file, resolve, reject) {
+  return (dispatch, getState) => {
+    dispatch({ type: addToLoadFilesQueue.name, item: { file, resolve, reject } })
+    return getState().dataset.loadFilesQueue.queue.length - 1 // return queue position
+  }
+}
+
+export function removeFromLoadFilesQueue () {
+  return { type: removeFromLoadFilesQueue.name }
+}
+
+export function setLoadFilesProcessing (isProcessing) {
+  return { type: setLoadFilesProcessing.name, isProcessing }
 }
