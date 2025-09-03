@@ -147,7 +147,7 @@ function DatasetSection ({ reportId }) {
   const queries = useSelector(state => state.queries)
   const queryJobs = useSelector(state => state.queryJobs)
   const files = useSelector(state => state.files)
-  const activeDataset = useSelector(state => state.dataset.active)
+  let activeDataset = useSelector(state => state.dataset.active)
   const report = useSelector(state => state.report)
   const queryStatus = useSelector(state => state.queryStatus)
   const { canWrite } = report
@@ -186,6 +186,7 @@ function DatasetSection ({ reportId }) {
     if (!report.readme) {
       return null
     }
+    activeDataset = null
     datasets = []
   }
 

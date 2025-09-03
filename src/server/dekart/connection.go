@@ -133,7 +133,7 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 				con.CloudStorageBucket = storage.GetDefaultBucketName()
 				con.BigqueryProjectId = os.Getenv("DEKART_BIGQUERY_PROJECT_ID")
 				con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_BIGQUERY
-				con.CanStoreFiles = true
+				con.CanStoreFiles = os.Getenv("DEKART_ALLOW_FILE_UPLOAD") != ""
 				return &con, nil
 			}
 			return nil, nil
