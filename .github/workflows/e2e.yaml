@@ -28,6 +28,8 @@ jobs:
       # registry prefix + login target
       REG_PREFIX: ${{format('ghcr.io/{0}', github.repository)}}
       LOGIN_REG:  ghcr
+      GOOGLE_CRED_SEC: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+
 
     services:
       postgres:
@@ -44,6 +46,8 @@ jobs:
         ports: ['5432:5432']
 
     steps:
+      # credentials file for any variant that may need it
+      - run: echo "$GOOGLE_CRED_SEC" > "$GOOGLE_APPLICATION_CREDENTIALS"
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
