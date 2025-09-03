@@ -80,7 +80,7 @@ jobs:
             -e DEKART_GOOGLE_OAUTH_CLIENT_ID=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }} \
             -e DEKART_GOOGLE_OAUTH_SECRET=${{ secrets.GOOGLE_OAUTH_SECRET }} \
             -e DEKART_DEV_REFRESH_TOKEN=${{ secrets.DEV_REFRESH_TOKEN_INFO }} \
-            -e DEKART_DATA_ENCRYPTION_KEY=projects/398860824064/secrets/dekart-prod-user-data-encoding-key/versions/1 \
+            -e DEKART_DATA_ENCRYPTION_KEY=projects/910252011719/secrets/dekart-dev-user-data-encoding-key/versions/latest \
           	-e DEKART_CORS_ORIGIN=http://localhost:3000 \
             -e DEKART_ALLOW_WORKSPACE_CREATION=1 \
             -e DEKART_UX_DISABLE_VERSION_CHECK=1 \
@@ -111,7 +111,7 @@ jobs:
             -e DEKART_GOOGLE_OAUTH_CLIENT_ID=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }} \
             -e DEKART_GOOGLE_OAUTH_SECRET=${{ secrets.GOOGLE_OAUTH_SECRET }} \
             -e DEKART_DEV_REFRESH_TOKEN=${{ secrets.DEV_REFRESH_TOKEN }} \
-            -e DEKART_DATA_ENCRYPTION_KEY=projects/398860824064/secrets/dekart-prod-user-data-encoding-key/versions/1 \
+            -e DEKART_DATA_ENCRYPTION_KEY=projects/910252011719/secrets/dekart-dev-user-data-encoding-key/versions/latest \
             -e DEKART_CORS_ORIGIN=http://localhost:3000 \
             -e DEKART_ALLOW_WORKSPACE_CREATION=1 \
             -e DEKART_UX_DISABLE_VERSION_CHECK=1 \
