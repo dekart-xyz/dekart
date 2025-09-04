@@ -19,9 +19,10 @@ function ForkButton ({ primary }) {
   const userStream = useSelector(state => state.user.stream)
   const userIsPlayground = useSelector(state => state.user.isPlayground)
   const workspaceId = userStream?.workspaceId
+  const { allowExport, canWrite } = useSelector(state => state.report)
   const isViewer = useSelector(state => state.user.isViewer)
 
-  const disabled = isViewer
+  const disabled = isViewer || (!allowExport && !canWrite)
 
   const history = useHistory()
 
@@ -35,7 +36,10 @@ function ForkButton ({ primary }) {
     }
   }
 
-  if (primary && !disabled) {
+  if (primary) {
+    if (disabled) {
+      return null
+    }
     return (
       <Button
         type='primary'

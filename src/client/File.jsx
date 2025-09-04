@@ -108,9 +108,13 @@ function FileStatus ({ file, fileToUpload, fileUploadStatus, children }) {
 
 export default function File ({ file }) {
   const [fileToUpload, setFileToUpload] = useState(null)
+  const report = useSelector(state => state.report)
+  const { canWrite } = report
+  const edit = useSelector(state => state.reportStatus.edit)
+
   const fileUploadStatus = useSelector(state => state.fileUploadStatus[file.id])
   const dispatch = useDispatch()
-  const uploadButtonDisabled = !fileToUpload || fileUploadStatus
+  const uploadButtonDisabled = !fileToUpload || fileUploadStatus || !(canWrite && edit)
   let fileInfo = null
   if (file.fileStatus > 1) {
     fileInfo = {
@@ -137,6 +141,7 @@ export default function File ({ file }) {
             <div className={styles.upload}>
               <Upload
                 maxCount={1}
+                disabled={!(canWrite && edit)}
                 accept='.csv,.geojson'
                 fileList={[]}
                 beforeUpload={(file) => {

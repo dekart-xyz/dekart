@@ -83,7 +83,7 @@ function WherobotsConnectionModal ({ form }) {
         wherobotsHost: 'api.cloud.wherobots.com'
       })
     }
-  }, [id, form])
+  }, [connection, form])
 
   return (
     <Modal
@@ -152,6 +152,16 @@ function SnowflakeConnectionModal ({ form }) {
   const connection = useSelector(state => state.connection.list.find(s => s.id === id))
   const datasetUsed = connection?.datasetCount > 0
   const keyChanged = form.getFieldValue('snowflakeKey') !== connection?.snowflakeKey
+
+  useEffect(() => {
+    if (!connection) {
+      // new connection, set default values
+      form.resetFields()
+      form.setFieldsValue({
+        connectionName: 'Snowflake'
+      })
+    }
+  }, [connection, form])
 
   return (
     <Modal
@@ -284,6 +294,16 @@ function BigQueryConnectionModal ({ form }) {
   useEffect(() => {
     track('BigQueryConnectionModal')
   }, [])
+
+  useEffect(() => {
+    if (!connection) {
+      // new connection, set default values
+      form.resetFields()
+      form.setFieldsValue({
+        connectionName: 'BigQuery'
+      })
+    }
+  }, [connection, form])
 
   // only name can be changed for connections used in datasets
   const nameChangeOnly = connection?.datasetCount > 0

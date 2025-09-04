@@ -1,5 +1,5 @@
 import { combineReducers } from 'redux'
-import { addDatasetToMap, cancelDownloading, closeDatasetSettingsModal, downloadDataset, downloadingProgress, finishAddingDatasetToMap, finishDownloading, keplerDatasetFinishUpdating, keplerDatasetStartUpdating, openDatasetSettingsModal, processDownloadError, setActiveDataset } from '../actions/dataset'
+import { addDatasetToMap, addToLoadFilesQueue, cancelDownloading, closeDatasetSettingsModal, downloadDataset, downloadingProgress, finishAddingDatasetToMap, finishDownloading, keplerDatasetFinishUpdating, keplerDatasetStartUpdating, openDatasetSettingsModal, processDownloadError, removeFromLoadFilesQueue, setActiveDataset, setLoadFilesProcessing } from '../actions/dataset'
 import { openReport, reportUpdate } from '../actions/report'
 
 function downloading (state = [], action) {
@@ -20,6 +20,7 @@ function downloading (state = [], action) {
         }
         return d
       })
+    case openReport.name:
     case cancelDownloading.name:
       return []
     case addDatasetToMap.name:
@@ -121,10 +122,36 @@ function updatingNum (state = 0, action) {
   }
 }
 
+// LoadFiles queue state
+function loadFilesQueue (state = { queue: [], isProcessing: false }, action) {
+  switch (action.type) {
+    case openReport.name:
+      return { queue: [], isProcessing: false }
+    case addToLoadFilesQueue.name:
+      return {
+        ...state,
+        queue: [...state.queue, action.item]
+      }
+    case removeFromLoadFilesQueue.name:
+      return {
+        ...state,
+        queue: state.queue.slice(1)
+      }
+    case setLoadFilesProcessing.name:
+      return {
+        ...state,
+        isProcessing: action.isProcessing
+      }
+    default:
+      return state
+  }
+}
+
 export default combineReducers({
   downloading,
   active,
   settings,
   list,
-  updatingNum
+  updatingNum,
+  loadFilesQueue
 })

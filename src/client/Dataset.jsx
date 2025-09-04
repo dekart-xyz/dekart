@@ -47,7 +47,7 @@ function DatasetSelector ({ dataset }) {
   const history = useHistory()
   const report = useSelector(state => state.report)
   const isAdmin = useSelector(state => state.user.isAdmin)
-  const defaultConnection = connectionList.find(c => c.isDefault)
+  const fileUploadConnection = connectionList.find(c => c.isDefault && c.canStoreFiles)
 
   if (!env.loaded) {
     // do not render until environment is loaded
@@ -61,16 +61,10 @@ function DatasetSelector ({ dataset }) {
     return null
   }
 
-  let allowFileUpload = false
-  let disabledNote = 'File upload is disabled in configuration'
-  if (ALLOW_FILE_UPLOAD) {
-    // check if selected connection supports file upload
-    allowFileUpload = defaultConnection?.canStoreFiles
-    if (allowFileUpload) {
-      disabledNote = ''
-    } else {
-      disabledNote = 'Add connection with file upload support to enable this button'
-    }
+  const allowFileUpload = ALLOW_FILE_UPLOAD && fileUploadConnection
+  let disabledNote = ''
+  if (!allowFileUpload) {
+    disabledNote = !ALLOW_FILE_UPLOAD ? 'File upload is disabled in configuration' : 'Add default connection with file upload support'
   }
 
   return (
@@ -78,17 +72,18 @@ function DatasetSelector ({ dataset }) {
       <div className={styles.datasetSelectorInner}>
         <DatasetSelectorButton
           icon={<InboxOutlined />}
-          disable={!allowFileUpload}
+          disable={!(allowFileUpload && report.canWrite)}
           disabledNote={disabledNote}
           title='Upload File'
           subtitle='Load files in CSV or GeoJSON formats'
           onClick={() => {
-            dispatch(createFile(dataset.id, defaultConnection.id))
+            dispatch(createFile(dataset.id, fileUploadConnection?.id))
           }}
         />
         {!report.readme && (
           <DatasetSelectorButton
             icon={<ReadOutlined />}
+            disable={!report.canWrite}
             title='Write README'
             subtitle='Add Markdown description to your map'
             onClick={() => {
@@ -100,6 +95,7 @@ function DatasetSelector ({ dataset }) {
         {filteredConnectionList.map((connection) => (
           <DatasetSelectorButton
             key={connection.id}
+            disable={!report.canWrite}
             icon={<DatasourceIcon type={connection.connectionType} />}
             title={`${connection.connectionName}`}
             subtitle={`Run SQL directly on ${getDatasourceMeta(connection.connectionType).name}`}
@@ -111,6 +107,7 @@ function DatasetSelector ({ dataset }) {
         {filteredConnectionList.length === 0 && (
           <DatasetSelectorButton
             icon={<ApiTwoTone />}
+            disable={!report.canWrite}
             id='dekart-add-connection'
             title='Add connection'
             subtitle='Connect BigQuery, Snowflake, Wherobots'
