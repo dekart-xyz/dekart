@@ -27,3 +27,16 @@
 docker compose  --env-file .env.bigquery --profile dekart-oss-bigquery up
 docker compose  --profile dekart-oss-bigquery down
 ```
+
+## Generating GIFs from videos for screencasts
+
+To convert video files to optimized GIFs for documentation:
+
+```bash
+ffmpeg -i input.mp4 -an \
+  -filter_complex "[0:v]setpts=0.5*PTS,fps=15,scale=iw/2:ih/2:flags=lanczos,format=rgb24,split[s0][s1];\
+                   [s0]palettegen=max_colors=256[p];\
+                   [s1][p]paletteuse=dither=sierra2_4a" \
+  -loop 0 output.gif
+```
+

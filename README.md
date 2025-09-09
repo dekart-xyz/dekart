@@ -1,23 +1,41 @@
-# Dekart
+<div align="center">
+  <h1 align="center">Dekart</h1>
+  <h3>Create Kepler.gl maps with SQL</h3>
+  <div>for BigQuery, Snowflake, Wherobots</div>
+</div>
 
-SQL → Map backend for **Kepler.gl**, for data scientists, analysts, and sales engineers working with Spatial SQL.
+<br/>
 
-Support to **BigQuery**, **Snowflake**, **Wherobots**, Postgres, Amazon Athena, and ClickHouse
+<div align="center">
+  <a href="https://dekart.xyz/self-hosted/?ref=github-license"><img alt="License" src="https://img.shields.io/badge/license-AGPLv3-purple"></a>
+</div>
 
-Alternative to CARTO Builder, Foursquare Studio, and BigQuery GeoViz.
+<br/>
 
-<a href="https://cloud.dekart.xyz/reports/62130325-9fc7-4687-ac05-52f6b7513502/source?ref=github-pic"><img src="https://dekart.xyz/docs/about/map-templates/62130325-9fc7-4687-ac05-52f6b7513502_huc0563c5f6ac939a1614c238afd308de4_2022917_1600x0_resize_box_3.png"></a>
-<div align="center"><a href="https://cloud.dekart.xyz/?ref=github-try-live-demo">Try Live Demo</a></div>
+Self-hosted alternative to CARTO & Foursquare Studio for your data warehouse.
+
+## Features
+
+* Shareable map links
+* Manage data access & sharing
+* Up-to-date maps from BigQuery, Snowflake, Wherobots datasets
+
+<br/>
+<p><a href="https://dekart.xyz/?ref=github-pic"><img alt="Self-hosted alternative to CARTO & Foursquare Studio for your data warehouse." src="https://dekart.xyz/main-page-screencast-4.gif"></a></p>
+<div align="center">
+  <a href="https://dekart.xyz/?ref=github-try-live-demo"><img alt="Live Demo" src="https://img.shields.io/badge/Live%20Demo-blue?style=for-the-badge"></a>
+</div>
+
+## Live Map Examples
+
+* [BigQuery](https://dekart.xyz/docs/about/overture-maps-examples/)
+* [Snowflake](https://dekart.xyz/docs/about/snowflake-kepler-gl-examples/)
+* [Wherobots](https://dekart.xyz/docs/usage/wherobots-sql-tutorial/)
 
 
 ## How it works
 
-Dekart is a self-hosted backend for Kepler.gl,  built with Golang and React. It connects to your data warehouse, caches query results, and serves them to the frontend for visualization.
-
-* [BigQuery Examples](https://dekart.xyz/docs/about/overture-maps-examples/)
-* [Snowflake Examples](https://dekart.xyz/docs/about/snowflake-kepler-gl-examples/)
-* [Wherobots Tutorial](https://dekart.xyz/docs/usage/wherobots-sql-tutorial/)
-
+Dekart is a self-hosted backend for Kepler.gl, built with Golang and React. It connects to your data warehouse, caches query results, and serves them to the frontend for visualization.
 
 ## Deployment Options
 
