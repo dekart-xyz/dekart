@@ -78,11 +78,12 @@ func (s Server) moveFileToStorage(reqConCtx context.Context, fileSourceID string
 	defer file.Close()
 	userCtx, cancel := context.WithTimeout(user.CopyUserContext(reqConCtx, context.Background()), 10*time.Minute)
 	userConnCtx := conn.CopyConnectionCtx(reqConCtx, userCtx)
+	defConnCtx := conn.GetCtx(userCtx, &proto.Connection{})
 	defer cancel()
 	var storageWriter io.WriteCloser
 	if report.IsPublic {
-		s := storage.NewPublicStorage()
-		storageWriter = s.GetObject(userCtx, s.GetDefaultBucketName(), fmt.Sprintf("%s.%s", fileSourceID, fileExtension)).GetWriter(userCtx)
+		pubStorage := storage.NewPublicStorage()
+		storageWriter = pubStorage.GetObject(defConnCtx, pubStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", fileSourceID, fileExtension)).GetWriter(defConnCtx)
 	} else {
 		// reqConCtx is used because it has connection information, userCtx does not have it
 		storageWriter = s.storage.GetObject(userConnCtx, bucketName, fmt.Sprintf("%s.%s", fileSourceID, fileExtension)).GetWriter(userConnCtx)
