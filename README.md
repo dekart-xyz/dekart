@@ -21,7 +21,7 @@ Self-hosted alternative to CARTO & Foursquare Studio for your data warehouse.
 * Up-to-date maps from BigQuery, Snowflake, Wherobots datasets
 
 <br/>
-<p><a href="https://dekart.xyz/?ref=github-pic"><img alt="Self-hosted alternative to CARTO & Foursquare Studio for your data warehouse." src="https://dekart.xyz/main-page-screencast-4.gif"></a></p>
+<p align="center"><a href="https://dekart.xyz/?ref=github-pic"><img alt="Self-hosted alternative to CARTO & Foursquare Studio for your data warehouse." src=".github/images/github-screencast.gif"></a></p>
 <div align="center">
   <a href="https://dekart.xyz/?ref=github-try-live-demo"><img alt="Live Demo" src="https://img.shields.io/badge/Live%20Demo-blue?style=for-the-badge"></a>
 </div>
