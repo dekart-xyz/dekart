@@ -45,19 +45,15 @@ Dekart is single Docker container that can be deployed to any cloud provider or 
 
 ⭐️ **Press GitHub Star to Get Notified of Updates**
 
-
-
 ### Deployment Guides:
 
-- [Deploy to AWS/ECS (Terraform)](https://dekart.xyz/docs/self-hosting/aws-ecs-terraform/?ref=github)
-- [Deploy to Google App Engine](https://dekart.xyz/docs/self-hosting/app-engine/?ref=github) with Google IAP.
 - [Run with Docker](https://dekart.xyz/docs/self-hosting/docker/?ref=github)
+- [Deploy to AWS/ECS (Terraform)](https://mailchi.mp/team/request-self-hosting-documentation)
+- [Deploy to Google App Engine](https://mailchi.mp/team/request-self-hosting-documentation) with Google IAP.
 
 ## Support
 
 * [Slack Community](https://slack.dekart.xyz)
-* [Schedule a Demo](https://calendly.com/dekartxyz/demo?ref=github)
-
 ## License
 
 This project is open source under the GNU Affero General Public License Version 3 (AGPLv3) or any later version.
