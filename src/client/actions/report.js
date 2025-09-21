@@ -279,7 +279,13 @@ export function publishReport (reportId, publish) {
     const req = new PublishReportRequest()
     req.setReportId(reportId)
     req.setPublish(publish)
-    dispatch(grpcCall(Dekart.PublishReport, req))
+    dispatch(grpcCall(Dekart.PublishReport, req, (response) => {
+      console.log('response', response)
+      // Handle response when publishing is blocked
+      if (response.publicMapsLimitReached) {
+        dispatch(success('Freemium plan allows only 1 public map. Upgrade to publish more maps.'))
+      }
+    }))
   }
 }
 

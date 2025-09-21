@@ -354,6 +354,9 @@ export namespace PublishReportRequest {
 }
 
 export class PublishReportResponse extends jspb.Message {
+  getPublicMapsLimitReached(): boolean;
+  setPublicMapsLimitReached(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): PublishReportResponse.AsObject;
   static toObject(includeInstance: boolean, msg: PublishReportResponse): PublishReportResponse.AsObject;
@@ -366,6 +369,7 @@ export class PublishReportResponse extends jspb.Message {
 
 export namespace PublishReportResponse {
   export type AsObject = {
+    publicMapsLimitReached: boolean,
   }
 }
 

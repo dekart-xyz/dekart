@@ -748,6 +748,21 @@ func (s Server) ArchiveReport(ctx context.Context, req *proto.ArchiveReportReque
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
 	}
+	report, err := s.getReport(ctx, req.ReportId)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if !report.CanWrite {
+		err := fmt.Errorf("cannot archive report %s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.PermissionDenied, "Cannot archive report")
+	}
 	var result sql.Result
 	if checkWorkspace(ctx).IsPlayground {
 		result, err = s.db.ExecContext(ctx,
@@ -781,6 +796,12 @@ func (s Server) ArchiveReport(ctx context.Context, req *proto.ArchiveReportReque
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
+
+	// If report was archived and was public, also unpublish it (clean up public storage)
+	if req.Archive && report.IsPublic {
+		go s.unpublishReport(ctx, req.ReportId)
+	}
+
 	s.reportStreams.Ping(req.ReportId)
 
 	return &proto.ArchiveReportResponse{}, nil

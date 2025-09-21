@@ -137,6 +137,7 @@ message PublishReportRequest {
 }
 
 message PublishReportResponse {
+    bool public_maps_limit_reached = 1; // true if publishing was blocked due to freemium plan limit
 }
 
 message GetStripePortalSessionRequest {

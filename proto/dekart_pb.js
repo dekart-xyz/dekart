@@ -4615,7 +4615,7 @@ proto.PublishReportResponse.prototype.toObject = function(opt_includeInstance) {
  */
 proto.PublishReportResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
-
+    publicMapsLimitReached: jspb.Message.getBooleanFieldWithDefault(msg, 1, false)
   };
 
   if (includeInstance) {
@@ -4652,6 +4652,10 @@ proto.PublishReportResponse.deserializeBinaryFromReader = function(msg, reader) 
     }
     var field = reader.getFieldNumber();
     switch (field) {
+    case 1:
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setPublicMapsLimitReached(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -4681,6 +4685,31 @@ proto.PublishReportResponse.prototype.serializeBinary = function() {
  */
 proto.PublishReportResponse.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
+  f = message.getPublicMapsLimitReached();
+  if (f) {
+    writer.writeBool(
+      1,
+      f
+    );
+  }
+};
+
+
+/**
+ * optional bool public_maps_limit_reached = 1;
+ * @return {boolean}
+ */
+proto.PublishReportResponse.prototype.getPublicMapsLimitReached = function() {
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 1, false));
+};
+
+
+/**
+ * @param {boolean} value
+ * @return {!proto.PublishReportResponse} returns this
+ */
+proto.PublishReportResponse.prototype.setPublicMapsLimitReached = function(value) {
+  return jspb.Message.setProto3BooleanField(this, 1, value);
 };
 
 
