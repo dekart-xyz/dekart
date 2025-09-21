@@ -661,7 +661,7 @@ func (s Server) SetTrackViewers(ctx context.Context, req *proto.SetTrackViewersR
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
-	if !report.IsAuthor {
+	if !report.CanWrite {
 		err := fmt.Errorf("cannot set track_viewers for report %s", req.ReportId)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.PermissionDenied, "Cannot set track viewers")

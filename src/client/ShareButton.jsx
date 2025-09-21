@@ -6,7 +6,7 @@ import styles from './ShareButton.module.css'
 import { useDispatch, useSelector } from 'react-redux'
 import Switch from 'antd/es/switch'
 import { copyUrlToClipboard } from './actions/clipboard'
-import { addReportDirectAccess, allowExportDatasets, publishReport, setDiscoverable } from './actions/report'
+import { addReportDirectAccess, allowExportDatasets, publishReport, setDiscoverable, setTrackViewers } from './actions/report'
 import Select from 'antd/es/select'
 import { setAnalyticsModalOpen } from './actions/analytics'
 import { track } from './lib/tracking'
@@ -72,10 +72,38 @@ function PublishSwitch () {
   )
 }
 
-function ViewAnalytics () {
-  const { isPublic, canWrite, isPlayground } = useSelector(state => state.report)
+function TrackViewersSwitch () {
+  const { trackViewers, id, canWrite } = useSelector(state => state.report)
+  const report = useSelector(state => state.report)
+  console.log('TrackViewersSwitch', report)
+  const [switchState, setSwitchState] = useState(trackViewers)
   const dispatch = useDispatch()
-  const disabled = !isPublic
+
+  useEffect(() => {
+    setSwitchState(trackViewers)
+  }, [trackViewers])
+
+  if (!canWrite) {
+    return null
+  }
+
+  return (
+    <Switch
+      checked={switchState}
+      id='dekart-track-viewers'
+      onChange={(checked) => {
+        setSwitchState(checked)
+        dispatch(setTrackViewers(id, checked))
+      }}
+      loading={switchState !== trackViewers}
+    />
+  )
+}
+
+function ViewAnalytics () {
+  const { isPublic, canWrite, isPlayground, trackViewers } = useSelector(state => state.report)
+  const dispatch = useDispatch()
+  const disabled = !isPublic || !trackViewers
   if (
     !canWrite || // show for authors and editors
     isPlayground // show for public reports
@@ -90,7 +118,7 @@ function ViewAnalytics () {
           track('OpenAnalyticsModal')
         }} icon={<BarChartOutlined />} size='small' disabled={disabled}
       >
-        {disabled ? 'Enable link sharing to see analytics' : 'View analytics'}
+        {disabled ? (trackViewers ? 'Enable link sharing to see analytics' : 'Enable tracking to see analytics') : 'View analytics'}
       </Button>
     </div>
   )
@@ -151,6 +179,33 @@ function DirectAccess () {
   )
 }
 
+function TrackViewersDescription () {
+  const { trackViewers } = useSelector(state => state.report)
+  return trackViewers ? <>Viewer analytics are being tracked.</> : <>Viewer analytics are not being tracked.</>
+}
+
+function TrackViewers () {
+  const { canWrite } = useSelector(state => state.report)
+
+  if (!canWrite) {
+    return null
+  }
+
+  return (
+    <div className={styles.boolStatus}>
+      <div className={styles.boolStatusIcon}><BarChartOutlined /></div>
+      <div className={styles.boolStatusLabel}>
+        <div className={styles.statusLabelTitle}>Track viewer analytics</div>
+        <div className={styles.statusLabelDescription}><TrackViewersDescription /></div>
+        <ViewAnalytics />
+      </div>
+      <div className={styles.boolStatusControl}>
+        <TrackViewersSwitch />
+      </div>
+    </div>
+  )
+}
+
 function PublicPermissions () {
   const { isPublic, isPlayground, canWrite } = useSelector(state => state.report)
   const planType = useSelector(state => state.user.stream?.planType)
@@ -171,7 +226,6 @@ function PublicPermissions () {
       <div className={styles.boolStatusLabel}>
         <div className={styles.statusLabelTitle}>Share to anyone with the link</div>
         <div className={styles.statusLabelDescription}><PublishSwitchDescription /></div>
-        <ViewAnalytics />
       </div>
       <div className={styles.boolStatusControl}>
         <PublishSwitch />
@@ -370,6 +424,7 @@ function ModalContent () {
     <>
       <NonShareableWarning />
       <PublicPermissions />
+      <TrackViewers />
       <DirectAccess />
       <WorkspacePermissions />
       <AllowExportData />
