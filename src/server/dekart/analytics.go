@@ -15,10 +15,6 @@ import (
 
 func (s Server) getReportAnalytics(ctx context.Context, report *proto.Report) (*proto.ReportAnalytics, error) {
 
-	if !report.IsPublic {
-		return nil, nil
-	}
-
 	var reportAnalytics proto.ReportAnalytics
 
 	err := s.db.QueryRowContext(ctx,
@@ -60,8 +56,8 @@ func (s Server) GetReportAnalytics(ctx context.Context, req *proto.GetReportAnal
 		return nil, status.Error(codes.NotFound, "report not found")
 	}
 
-	if !(report.CanWrite && report.IsPublic) {
-		return nil, status.Error(codes.PermissionDenied, "report is not public")
+	if !(report.CanWrite) {
+		return nil, status.Error(codes.PermissionDenied, "not allowed")
 	}
 
 	reportAnalytics, err := s.getReportAnalytics(ctx, report)
@@ -112,8 +108,8 @@ func (s Server) ServeReportAnalytics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !(report.CanWrite && report.IsPublic) {
-		http.Error(w, "report is not public", http.StatusForbidden)
+	if !(report.CanWrite) {
+		http.Error(w, "not allowed", http.StatusForbidden)
 		return
 	}
 

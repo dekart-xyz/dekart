@@ -74,8 +74,6 @@ function PublishSwitch () {
 
 function TrackViewersSwitch () {
   const { trackViewers, id, canWrite } = useSelector(state => state.report)
-  const report = useSelector(state => state.report)
-  console.log('TrackViewersSwitch', report)
   const [switchState, setSwitchState] = useState(trackViewers)
   const dispatch = useDispatch()
 
@@ -101,9 +99,9 @@ function TrackViewersSwitch () {
 }
 
 function ViewAnalytics () {
-  const { isPublic, canWrite, isPlayground, trackViewers } = useSelector(state => state.report)
+  const { canWrite, isPlayground, trackViewers } = useSelector(state => state.report)
   const dispatch = useDispatch()
-  const disabled = !isPublic || !trackViewers
+  const disabled = !trackViewers
   if (
     !canWrite || // show for authors and editors
     isPlayground // show for public reports
@@ -118,7 +116,7 @@ function ViewAnalytics () {
           track('OpenAnalyticsModal')
         }} icon={<BarChartOutlined />} size='small' disabled={disabled}
       >
-        {disabled ? (trackViewers ? 'Enable link sharing to see analytics' : 'Enable tracking to see analytics') : 'View analytics'}
+        {disabled ? 'Enable tracking to see analytics' : 'View analytics'}
       </Button>
     </div>
   )
@@ -181,7 +179,10 @@ function DirectAccess () {
 
 function TrackViewersDescription () {
   const { trackViewers } = useSelector(state => state.report)
-  return trackViewers ? <>Viewer analytics are being tracked.</> : <>Viewer analytics are not being tracked.</>
+  const isPublic = useSelector(state => state.report.isPublic)
+  return trackViewers
+    ? <>{isPublic ? 'Login required for public reports.' : 'Viewer analytics are being tracked.'}</>
+    : <>Viewer analytics are not being tracked.</>
 }
 
 function TrackViewers () {
@@ -208,9 +209,9 @@ function TrackViewers () {
 
 function PublicPermissions () {
   const { isPublic, isPlayground, canWrite } = useSelector(state => state.report)
-  const planType = useSelector(state => state.user.stream?.planType)
+  const isSelfHosted = useSelector(state => state.user.isSelfHosted)
 
-  if (planType === PlanType.TYPE_SELF_HOSTED || planType === PlanType.TYPE_UNSPECIFIED) {
+  if (isSelfHosted) {
     // do not show feature for self-hosted users yet
     return null
   }
