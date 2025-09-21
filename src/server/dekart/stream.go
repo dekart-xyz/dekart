@@ -37,18 +37,20 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 		return status.Errorf(codes.NotFound, err.Error())
 	}
 
-	// update report_analytics
-	_, err = s.db.ExecContext(ctx,
-		`insert into report_analytics (report_id, email)
-		values ($1, $2)
-		on conflict (report_id, email) do update set updated_at = CURRENT_TIMESTAMP,
-		num_views = report_analytics.num_views + 1`,
-		reportID,
-		claims.Email,
-	)
-	if err != nil {
-		log.Err(err).Send()
-		return status.Errorf(codes.Internal, err.Error())
+	// update report_analytics only when tracking is enabled
+	if report.TrackViewers {
+		_, err = s.db.ExecContext(ctx,
+			`insert into report_analytics (report_id, email)
+			values ($1, $2)
+			on conflict (report_id, email) do update set updated_at = CURRENT_TIMESTAMP,
+			num_views = report_analytics.num_views + 1`,
+			reportID,
+			claims.Email,
+		)
+		if err != nil {
+			log.Err(err).Send()
+			return status.Errorf(codes.Internal, err.Error())
+		}
 	}
 
 	datasets, err := s.getDatasets(ctx, reportID)
@@ -177,6 +179,7 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 				updated_at,
 				created_at,
 				is_public,
+				track_viewers,
 				is_playground,
 				exists (
 					select 1
@@ -207,6 +210,7 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 				r.updated_at,
 				r.created_at,
 				r.is_public,
+				r.track_viewers,
 				r.is_playground,
 				exists (
 					select 1
@@ -252,6 +256,7 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			&updatedAt,
 			&createdAt,
 			&report.IsPublic,
+			&report.TrackViewers,
 			&report.IsPlayground,
 			&report.HasDirectAccess,
 		)

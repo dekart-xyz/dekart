@@ -100,6 +100,15 @@ Dekart.AddReportDirectAccess = {
   responseType: dekart_pb.AddReportDirectAccessResponse
 };
 
+Dekart.SetTrackViewers = {
+  methodName: "SetTrackViewers",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: dekart_pb.SetTrackViewersRequest,
+  responseType: dekart_pb.SetTrackViewersResponse
+};
+
 Dekart.CreateDataset = {
   methodName: "CreateDataset",
   service: Dekart,
@@ -661,6 +670,37 @@ DekartClient.prototype.addReportDirectAccess = function addReportDirectAccess(re
     callback = arguments[1];
   }
   var client = grpc.unary(Dekart.AddReportDirectAccess, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.setTrackViewers = function setTrackViewers(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.SetTrackViewers, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,

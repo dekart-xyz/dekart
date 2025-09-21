@@ -1,0 +1,5 @@
+ALTER TABLE reports
+ADD COLUMN track_viewers BOOLEAN DEFAULT FALSE;
+
+
+
