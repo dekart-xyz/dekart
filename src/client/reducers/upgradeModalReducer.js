@@ -2,7 +2,7 @@ import { showUpgradeModal, hideUpgradeModal } from '../actions/upgradeModal'
 
 const defaultUpgradeModal = {
   visible: false,
-  type: 'publish'
+  modalType: 'publish'
 }
 
 export function upgradeModal (state = defaultUpgradeModal, action) {
@@ -11,7 +11,7 @@ export function upgradeModal (state = defaultUpgradeModal, action) {
       return {
         ...state,
         visible: true,
-        type: action.type
+        modalType: action.modalType
       }
     case hideUpgradeModal.name:
       return {

@@ -1,7 +1,7 @@
-export function showUpgradeModal (type = 'publish') {
+export function showUpgradeModal (modalType = 'publish') {
   return {
     type: showUpgradeModal.name,
-    type
+    modalType
   }
 }
 
