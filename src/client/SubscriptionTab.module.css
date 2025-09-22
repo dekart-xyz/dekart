@@ -13,3 +13,7 @@
   font-size: 1.2em;
 }
 
+.subscriptionTab {
+  width: 100%;
+  min-width: 900px;
+}
