@@ -140,6 +140,10 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 		}
 
 		report.NeedSensitiveScope = connectionsWithSensitiveScopeNum > 0
+		if report.IsPublic && !report.CanWrite {
+			// viewers of public reports don't need sensitive scope
+			report.NeedSensitiveScope = false
+		}
 		report.Discoverable = (report.Discoverable &&
 			report.IsSharable && // only sharable reports can be discoverable
 			reportWorkspaceID.String == checkWorkspace(ctx).ID)
