@@ -12,6 +12,7 @@ import { shouldUpdateDataset } from '../lib/shouldUpdateDataset'
 import { needSensitiveScopes } from './user'
 import { getQueryParamsObjArr } from '../lib/queryParams'
 import { receiveReportUpdateMapConfig } from '../lib/mapConfig'
+import { showUpgradeModal } from './upgradeModal'
 
 export function closeReport () {
   return (dispatch) => {
@@ -273,17 +274,17 @@ export function allowExportDatasets (reportId, allowExport) {
   }
 }
 
-export function publishReport (reportId, publish) {
+export function publishReport (reportId, publish, cancelPublish) {
   return async (dispatch) => {
     dispatch({ type: publishReport.name })
     const req = new PublishReportRequest()
     req.setReportId(reportId)
     req.setPublish(publish)
     dispatch(grpcCall(Dekart.PublishReport, req, (response) => {
-      console.log('response', response)
       // Handle response when publishing is blocked
       if (response.publicMapsLimitReached) {
-        dispatch(success('Freemium plan allows only 1 public map. Upgrade to publish more maps.'))
+        dispatch(showUpgradeModal())
+        cancelPublish()
       }
     }))
   }

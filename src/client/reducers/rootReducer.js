@@ -20,6 +20,7 @@ import { setRedirectState } from '../actions/redirect'
 import sessionStorage from './sessionStorageReducer'
 import readme from './readmeReducer'
 import analytics from './analyticsReducer'
+import { upgradeModal } from './upgradeModalReducer'
 import { report, reportDirectAccessEmails, reportsList, reportStatus } from './reportReducer'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
@@ -157,5 +158,6 @@ export default combineReducers({
   numRunningQueries,
   sessionStorage,
   readme,
-  analytics
+  analytics,
+  upgradeModal
 })

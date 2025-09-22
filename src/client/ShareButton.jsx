@@ -1,7 +1,7 @@
 import Button from 'antd/es/button'
 import Modal from 'antd/es/modal'
 import { BarChartOutlined, GlobalOutlined, LockOutlined, TeamOutlined, LinkOutlined, UserAddOutlined, DownloadOutlined, WarningOutlined } from '@ant-design/icons'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import styles from './ShareButton.module.css'
 import { useDispatch, useSelector } from 'react-redux'
 import Switch from 'antd/es/switch'
@@ -50,6 +50,9 @@ function PublishSwitch () {
   const { isPublic, id, isPlayground, canWrite } = useSelector(state => state.report)
   const [switchState, setSwitchState] = useState(isPublic || isPlayground)
   const dispatch = useDispatch()
+  const cancelPublish = useCallback(() => {
+    setSwitchState(false)
+  }, [])
   useEffect(() => {
     setSwitchState(isPublic || isPlayground)
   }, [isPublic, isPlayground])
@@ -65,7 +68,7 @@ function PublishSwitch () {
       id='dekart-publish-report'
       onChange={(checked) => {
         setSwitchState(checked)
-        dispatch(publishReport(id, checked))
+        dispatch(publishReport(id, checked, cancelPublish))
       }}
       loading={isPlayground ? false : switchState !== isPublic}
     />
