@@ -22,6 +22,7 @@ import { switchPlayground } from './actions/user'
 import { useParams } from 'react-router-dom'
 import { track } from './lib/tracking'
 import Select from 'antd/es/select'
+import { Loading } from './Loading'
 
 function Invites () {
   const workspace = useSelector(state => state.workspace)
@@ -361,6 +362,7 @@ export default function WorkspacePage () {
   const workspaceId = userStream?.workspaceId
   const [nextStep, setNextStep] = useState(null)
   const isPlayground = useSelector(state => state.user.isPlayground)
+  const isAnonymous = useSelector(state => state.user.isAnonymous)
   const dispatch = useDispatch()
   useEffect(() => {
     if (isPlayground) {
@@ -369,6 +371,9 @@ export default function WorkspacePage () {
   }, [isPlayground, dispatch])
   if (isPlayground) {
     return null
+  }
+  if (isAnonymous) {
+    return <Loading />
   }
   return (
     <div className={styles.workspacePage}>

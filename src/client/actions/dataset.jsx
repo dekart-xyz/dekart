@@ -300,6 +300,8 @@ export function downloadDataset (dataset, sourceId, extension, prevDatasetsList)
     const { files, queries } = getState()
     const label = getDatasetName(dataset, queries, files)
     const controller = new AbortController()
+    const reportId = getState().report?.id
+    const loginHint = getState().user?.loginHint
     dispatch({ type: downloadDataset.name, dataset, controller })
     const { token, user: { claimEmailCookie } } = getState()
     try {
@@ -308,7 +310,9 @@ export function downloadDataset (dataset, sourceId, extension, prevDatasetsList)
         token,
         controller.signal,
         (loaded) => dispatch(downloadingProgress(dataset, loaded)),
-        claimEmailCookie
+        claimEmailCookie,
+        reportId,
+        loginHint
       )
       dispatch(finishDownloading(dataset, prevDatasetsList, res, extension, label))
     } catch (err) {

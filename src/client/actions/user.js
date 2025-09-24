@@ -5,6 +5,7 @@ import { grpcStream, grpcStreamCancel } from './grpc'
 import { updateLocalStorage } from './localStorage'
 import { updateSessionStorage } from './sessionStorage'
 import { getWorkspace } from './workspace'
+import { UNKNOWN_EMAIL } from '../lib/constants'
 
 export function setClaimEmailCookie () {
   const claimEmailCookie = document.cookie
@@ -14,9 +15,13 @@ export function setClaimEmailCookie () {
 }
 
 export function userStreamUpdate (userStream) {
-  return {
-    type: userStreamUpdate.name,
-    userStream
+  return async (dispatch, getState) => {
+    const isCloud = getState().env.isCloud
+    dispatch({
+      type: userStreamUpdate.name,
+      userStream,
+      isAnonymous: userStream.email === UNKNOWN_EMAIL && isCloud
+    })
   }
 }
 

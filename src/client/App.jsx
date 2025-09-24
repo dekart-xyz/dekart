@@ -52,6 +52,11 @@ function RedirectState () {
   return <AppRedirect />
 }
 
+function useIsReportUrl () {
+  const location = useLocation()
+  return location.pathname.startsWith('/reports/')
+}
+
 function AppRedirect () {
   const httpError = useSelector(state => state.httpError)
   const { status, doNotAuthenticate } = httpError
@@ -65,16 +70,21 @@ function AppRedirect () {
   const report = useSelector(state => state.report)
   const redirectStateReceived = useSelector(state => state.user.redirectStateReceived)
   const dispatch = useDispatch()
+  const isAnonymous = useSelector(state => state.user.isAnonymous)
+  const isReportUrl = useIsReportUrl()
 
   useEffect(() => {
-    if (status === 401 && doNotAuthenticate === false) {
+    if (
+      (status === 401 && doNotAuthenticate === false) ||
+      (isAnonymous && !isReportUrl) // login anonymous users for any other page than report page
+    ) {
       const state = new AuthState()
       state.setUiUrl(window.location.href)
       state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
       state.setSensitiveScope(sensitiveScopesGranted || sensitiveScopesGrantedOnce) // if user has granted sensitive scopes on this device request token with sensitive scopes
       dispatch(authRedirect(state))
     }
-  }, [status, doNotAuthenticate, dispatch, sensitiveScopesGrantedOnce, sensitiveScopesGranted])
+  }, [status, doNotAuthenticate, dispatch, sensitiveScopesGrantedOnce, sensitiveScopesGranted, isAnonymous, isReportUrl])
 
   if (status === 401 && doNotAuthenticate === false) {
     // redirect to authentication endpoint from useEffect above

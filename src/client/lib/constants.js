@@ -1,0 +1,1 @@
+export const UNKNOWN_EMAIL = 'UNKNOWN_EMAIL'
