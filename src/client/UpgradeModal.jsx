@@ -6,7 +6,7 @@ import { track } from './lib/tracking'
 import styles from './UpgradeModal.module.css'
 import Plans from './Plans'
 
-const { Title, Text, Paragraph } = Typography
+const { Title } = Typography
 
 const UpgradeModal = ({ visible, onClose }) => {
   const isSelfHosted = useSelector(state => state.user.isSelfHosted)
