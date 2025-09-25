@@ -53,7 +53,7 @@ export function Plan ({ title, children, planType, cancelAt, addedUsersCount, is
   )
 
   if (planType === PlanType.TYPE_PERSONAL) {
-    if (userStream.planType > PlanType.TYPE_PERSONAL) {
+    if (userStream.planType !== PlanType.TYPE_PERSONAL) {
       actionButton = (
         <Button disabled title='Downgrading from Team to Personal is not supported' className={styles.actionButton}>
           Choose plan
@@ -61,12 +61,6 @@ export function Plan ({ title, children, planType, cancelAt, addedUsersCount, is
       )
     } else if (userStream.planType === PlanType.TYPE_PERSONAL) {
       actionButton = <Button disabled className={styles.actionButton}>Current plan</Button>
-    } else if (addedUsersCount > 1) {
-      actionButton = (
-        <Button disabled title='Workspace has more then one member' className={styles.actionButton}>
-          Choose plan
-        </Button>
-      )
     }
   } else if (planType === userStream.planType) {
     actionButton = (
