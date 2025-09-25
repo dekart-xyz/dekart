@@ -67,6 +67,7 @@ function PublishSwitch () {
       checked={switchState}
       id='dekart-publish-report'
       onChange={(checked) => {
+        track('PublishReportChanged')
         setSwitchState(checked)
         dispatch(publishReport(id, checked, cancelPublish))
       }}
@@ -93,6 +94,7 @@ function TrackViewersSwitch () {
       checked={switchState}
       id='dekart-track-viewers'
       onChange={(checked) => {
+        track('TrackViewersChanged')
         setSwitchState(checked)
         dispatch(setTrackViewers(id, checked))
       }}
