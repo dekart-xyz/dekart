@@ -23,6 +23,8 @@ import { useHistory, useLocation } from 'react-router-dom/cjs/react-router-dom'
 import { Button } from 'antd'
 import { loadSessionStorage } from './actions/sessionStorage'
 import { Loading } from './Loading'
+import UpgradeModal from './UpgradeModal'
+import { hideUpgradeModal } from './actions/upgradeModal'
 
 // RedirectState reads states passed in the URL from the server
 function RedirectState () {
@@ -50,6 +52,11 @@ function RedirectState () {
   return <AppRedirect />
 }
 
+function useIsReportUrl () {
+  const location = useLocation()
+  return location.pathname.startsWith('/reports/')
+}
+
 function AppRedirect () {
   const httpError = useSelector(state => state.httpError)
   const { status, doNotAuthenticate } = httpError
@@ -63,16 +70,21 @@ function AppRedirect () {
   const report = useSelector(state => state.report)
   const redirectStateReceived = useSelector(state => state.user.redirectStateReceived)
   const dispatch = useDispatch()
+  const isAnonymous = useSelector(state => state.user.isAnonymous)
+  const isReportUrl = useIsReportUrl()
 
   useEffect(() => {
-    if (status === 401 && doNotAuthenticate === false) {
+    if (
+      (status === 401 && doNotAuthenticate === false) ||
+      (isAnonymous && !isReportUrl) // login anonymous users for any other page than report page
+    ) {
       const state = new AuthState()
       state.setUiUrl(window.location.href)
       state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
       state.setSensitiveScope(sensitiveScopesGranted || sensitiveScopesGrantedOnce) // if user has granted sensitive scopes on this device request token with sensitive scopes
       dispatch(authRedirect(state))
     }
-  }, [status, doNotAuthenticate, dispatch, sensitiveScopesGrantedOnce, sensitiveScopesGranted])
+  }, [status, doNotAuthenticate, dispatch, sensitiveScopesGrantedOnce, sensitiveScopesGranted, isAnonymous, isReportUrl])
 
   if (status === 401 && doNotAuthenticate === false) {
     // redirect to authentication endpoint from useEffect above
@@ -187,6 +199,7 @@ export default function App () {
   const visitedPages = React.useRef(['/'])
   const storageLoaded = useSelector(state => state.storage.loaded)
   const page401 = window.location.pathname.startsWith('/401')
+  const upgradeModalVisible = useSelector(state => state.upgradeModal.visible)
 
   useEffect(() => {
     dispatch(loadSessionStorage())
@@ -278,6 +291,10 @@ export default function App () {
           <NotFoundPage />
         </Route>
       </Switch>
+      <UpgradeModal
+        visible={upgradeModalVisible}
+        onClose={() => dispatch(hideUpgradeModal())}
+      />
     </Router>
   )
 }

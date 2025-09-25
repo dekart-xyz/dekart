@@ -1,13 +1,15 @@
 import { grpc } from '@improbable-eng/grpc-web'
 import { StreamOptions } from 'dekart-proto/dekart_pb'
 import { setError, setStreamError } from './message'
+import { getReportIdFromUrl } from '../lib/getReportIdFromUrl'
+import { UNKNOWN_EMAIL } from '../lib/constants'
 
 const { VITE_API_HOST } = import.meta.env
 const host = VITE_API_HOST || ''
 
 export function grpcCall (method, request, resolve = () => {}, reject = (err) => err, maxRetries = 0) {
   return async function (dispatch, getState) {
-    const { token, user: { isPlayground, claimEmailCookie } } = getState()
+    const { token, user: { isPlayground, claimEmailCookie, loginHint } } = getState()
     const headers = new window.Headers()
     if (token) {
       headers.append('Authorization', `Bearer ${token.access_token}`)
@@ -17,6 +19,12 @@ export function grpcCall (method, request, resolve = () => {}, reject = (err) =>
     }
     if (claimEmailCookie) {
       headers.append('X-Dekart-Claim-Email', claimEmailCookie)
+    }
+    if (getReportIdFromUrl()) {
+      headers.append('X-Dekart-Report-Id', getReportIdFromUrl())
+    }
+    if (loginHint && loginHint !== UNKNOWN_EMAIL) {
+      headers.append('X-Dekart-Logged-In', 'true')
     }
 
     let attempts = 0
@@ -92,7 +100,7 @@ class GrpcError extends Error {
 
 export function grpcStream (endpoint, request, cb) {
   return (dispatch, getState) => {
-    const { token, user: { isPlayground, claimEmailCookie } } = getState()
+    const { token, user: { isPlayground, claimEmailCookie, loginHint } } = getState()
     const headers = new window.Headers()
     if (token) {
       headers.append('Authorization', `Bearer ${token.access_token}`)
@@ -102,6 +110,12 @@ export function grpcStream (endpoint, request, cb) {
     }
     if (claimEmailCookie) {
       headers.append('X-Dekart-Claim-Email', claimEmailCookie)
+    }
+    if (getReportIdFromUrl()) {
+      headers.append('X-Dekart-Report-Id', getReportIdFromUrl())
+    }
+    if (loginHint && loginHint !== UNKNOWN_EMAIL) {
+      headers.append('X-Dekart-Logged-In', 'true')
     }
     const onMessage = (message) => {
       const err = cb(message, null)

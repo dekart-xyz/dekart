@@ -29,6 +29,7 @@ const (
 	Dekart_AddReadme_FullMethodName                  = "/Dekart/AddReadme"
 	Dekart_RemoveReadme_FullMethodName               = "/Dekart/RemoveReadme"
 	Dekart_AddReportDirectAccess_FullMethodName      = "/Dekart/AddReportDirectAccess"
+	Dekart_SetTrackViewers_FullMethodName            = "/Dekart/SetTrackViewers"
 	Dekart_CreateDataset_FullMethodName              = "/Dekart/CreateDataset"
 	Dekart_RemoveDataset_FullMethodName              = "/Dekart/RemoveDataset"
 	Dekart_UpdateDatasetName_FullMethodName          = "/Dekart/UpdateDatasetName"
@@ -76,6 +77,7 @@ type DekartClient interface {
 	AddReadme(ctx context.Context, in *AddReadmeRequest, opts ...grpc.CallOption) (*AddReadmeResponse, error)
 	RemoveReadme(ctx context.Context, in *RemoveReadmeRequest, opts ...grpc.CallOption) (*RemoveReadmeResponse, error)
 	AddReportDirectAccess(ctx context.Context, in *AddReportDirectAccessRequest, opts ...grpc.CallOption) (*AddReportDirectAccessResponse, error)
+	SetTrackViewers(ctx context.Context, in *SetTrackViewersRequest, opts ...grpc.CallOption) (*SetTrackViewersResponse, error)
 	// datasets
 	CreateDataset(ctx context.Context, in *CreateDatasetRequest, opts ...grpc.CallOption) (*CreateDatasetResponse, error)
 	RemoveDataset(ctx context.Context, in *RemoveDatasetRequest, opts ...grpc.CallOption) (*RemoveDatasetResponse, error)
@@ -220,6 +222,16 @@ func (c *dekartClient) AddReportDirectAccess(ctx context.Context, in *AddReportD
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(AddReportDirectAccessResponse)
 	err := c.cc.Invoke(ctx, Dekart_AddReportDirectAccess_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) SetTrackViewers(ctx context.Context, in *SetTrackViewersRequest, opts ...grpc.CallOption) (*SetTrackViewersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetTrackViewersResponse)
+	err := c.cc.Invoke(ctx, Dekart_SetTrackViewers_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -568,6 +580,7 @@ type DekartServer interface {
 	AddReadme(context.Context, *AddReadmeRequest) (*AddReadmeResponse, error)
 	RemoveReadme(context.Context, *RemoveReadmeRequest) (*RemoveReadmeResponse, error)
 	AddReportDirectAccess(context.Context, *AddReportDirectAccessRequest) (*AddReportDirectAccessResponse, error)
+	SetTrackViewers(context.Context, *SetTrackViewersRequest) (*SetTrackViewersResponse, error)
 	// datasets
 	CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error)
 	RemoveDataset(context.Context, *RemoveDatasetRequest) (*RemoveDatasetResponse, error)
@@ -647,6 +660,9 @@ func (UnimplementedDekartServer) RemoveReadme(context.Context, *RemoveReadmeRequ
 }
 func (UnimplementedDekartServer) AddReportDirectAccess(context.Context, *AddReportDirectAccessRequest) (*AddReportDirectAccessResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddReportDirectAccess not implemented")
+}
+func (UnimplementedDekartServer) SetTrackViewers(context.Context, *SetTrackViewersRequest) (*SetTrackViewersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetTrackViewers not implemented")
 }
 func (UnimplementedDekartServer) CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateDataset not implemented")
@@ -935,6 +951,24 @@ func _Dekart_AddReportDirectAccess_Handler(srv interface{}, ctx context.Context,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DekartServer).AddReportDirectAccess(ctx, req.(*AddReportDirectAccessRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_SetTrackViewers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetTrackViewersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).SetTrackViewers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_SetTrackViewers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).SetTrackViewers(ctx, req.(*SetTrackViewersRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1504,6 +1538,10 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AddReportDirectAccess",
 			Handler:    _Dekart_AddReportDirectAccess_Handler,
+		},
+		{
+			MethodName: "SetTrackViewers",
+			Handler:    _Dekart_SetTrackViewers_Handler,
 		},
 		{
 			MethodName: "CreateDataset",

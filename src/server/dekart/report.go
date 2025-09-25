@@ -66,6 +66,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 				and (c.bigquery_key_encrypted is null or c.bigquery_key_encrypted = '') -- BigQuery passthrough
 			) as connections_with_sensitive_scope_num,
 			is_public,
+			track_viewers,
 			query_params,
 			allow_export,
 			readme,
@@ -110,6 +111,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			&connectionsNum,
 			&connectionsWithSensitiveScopeNum,
 			&report.IsPublic,
+			&report.TrackViewers,
 			&queryParams,
 			&report.AllowExport,
 			&readme,
@@ -138,6 +140,10 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 		}
 
 		report.NeedSensitiveScope = connectionsWithSensitiveScopeNum > 0
+		if report.IsPublic && !report.CanWrite {
+			// viewers of public reports don't need sensitive scope
+			report.NeedSensitiveScope = false
+		}
 		report.Discoverable = (report.Discoverable &&
 			report.IsSharable && // only sharable reports can be discoverable
 			reportWorkspaceID.String == checkWorkspace(ctx).ID)
@@ -639,6 +645,45 @@ func (s Server) AllowExportDatasets(ctx context.Context, req *proto.AllowExportD
 	return &proto.AllowExportDatasetsResponse{}, nil
 }
 
+// SetTrackViewers toggles tracking viewers for a report
+func (s Server) SetTrackViewers(ctx context.Context, req *proto.SetTrackViewersRequest) (*proto.SetTrackViewersResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	_, err := uuid.Parse(req.ReportId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+	report, err := s.getReport(ctx, req.ReportId)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if !report.CanWrite {
+		err := fmt.Errorf("cannot set track_viewers for report %s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.PermissionDenied, "Cannot set track viewers")
+	}
+
+	_, err = s.db.ExecContext(ctx,
+		`update reports set track_viewers=$1 where id=$2`,
+		req.TrackViewers,
+		req.ReportId,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	s.reportStreams.Ping(req.ReportId)
+	return &proto.SetTrackViewersResponse{}, nil
+}
+
 func (s Server) SetDiscoverable(ctx context.Context, req *proto.SetDiscoverableRequest) (*proto.SetDiscoverableResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
@@ -707,6 +752,21 @@ func (s Server) ArchiveReport(ctx context.Context, req *proto.ArchiveReportReque
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
 	}
+	report, err := s.getReport(ctx, req.ReportId)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if !report.CanWrite {
+		err := fmt.Errorf("cannot archive report %s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.PermissionDenied, "Cannot archive report")
+	}
 	var result sql.Result
 	if checkWorkspace(ctx).IsPlayground {
 		result, err = s.db.ExecContext(ctx,
@@ -740,6 +800,12 @@ func (s Server) ArchiveReport(ctx context.Context, req *proto.ArchiveReportReque
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
+
+	// If report was archived and was public, also unpublish it (clean up public storage)
+	if req.Archive && report.IsPublic {
+		go s.unpublishReport(ctx, req.ReportId)
+	}
+
 	s.reportStreams.Ping(req.ReportId)
 
 	return &proto.ArchiveReportResponse{}, nil

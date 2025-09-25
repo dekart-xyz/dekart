@@ -29,6 +29,7 @@ import { removeReadme, showReadmeTab } from './actions/readme'
 import Modal from 'antd/es/modal'
 import { MapControlButton } from '@kepler.gl/components/dist/common/styled-components'
 import { Loading } from './Loading'
+import { UNKNOWN_EMAIL } from './lib/constants'
 
 function TabIcon ({ job }) {
   let iconColor = 'transparent'
@@ -423,8 +424,8 @@ export default function ReportPage ({ edit }) {
             <Kepler />
             <div className={styles.meta}>
               {updatedAt ? <span className={styles.lastUpdated} title={`${updatedAtDate.toISOString()}`}>{updatedAtDate.toLocaleString()}</span> : null}
-              {updatedAt && report.authorEmail !== 'UNKNOWN_EMAIL' ? <span className={styles.dot}> | </span> : null}
-              {report.authorEmail !== 'UNKNOWN_EMAIL' ? <span className={styles.author} title='Map author'>{report.authorEmail}</span> : null}
+              {updatedAt && report.authorEmail !== UNKNOWN_EMAIL ? <span className={styles.dot}> | </span> : null}
+              {report.authorEmail !== UNKNOWN_EMAIL ? <span className={styles.author} title='Map author'>{report.authorEmail}</span> : null}
             </div>
           </div>
         </div>

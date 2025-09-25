@@ -14,6 +14,7 @@ service Dekart {
     rpc AddReadme(AddReadmeRequest) returns (AddReadmeResponse) {}
     rpc RemoveReadme(RemoveReadmeRequest) returns (RemoveReadmeResponse) {}
     rpc AddReportDirectAccess(AddReportDirectAccessRequest) returns (AddReportDirectAccessResponse) {}
+    rpc SetTrackViewers(SetTrackViewersRequest) returns (SetTrackViewersResponse) {}
 
     // datasets
     rpc CreateDataset(CreateDatasetRequest) returns (CreateDatasetResponse) {}
@@ -65,6 +66,14 @@ service Dekart {
     rpc UpdateWorkspace(UpdateWorkspaceRequest) returns (UpdateWorkspaceResponse) {}
     rpc GetWorkspace(GetWorkspaceRequest) returns (GetWorkspaceResponse) {}
     rpc UpdateWorkspaceUser(UpdateWorkspaceUserRequest) returns (UpdateWorkspaceUserResponse) {}
+}
+
+message SetTrackViewersRequest {
+    string report_id = 1;
+    bool track_viewers = 2;
+}
+
+message SetTrackViewersResponse {
 }
 
 message GetWherobotsConnectionHintRequest {
@@ -128,6 +137,7 @@ message PublishReportRequest {
 }
 
 message PublishReportResponse {
+    bool public_maps_limit_reached = 1; // true if publishing was blocked due to freemium plan limit
 }
 
 message GetStripePortalSessionRequest {
@@ -515,6 +525,7 @@ message Report {
     repeated QueryParam query_params = 17;
     Readme readme = 18;
     bool has_direct_access = 19; // true - report has direct access for other users, false - no direct access
+    bool track_viewers = 20; // true - track viewers, false - don't track viewers
 }
 
 message Dataset {
