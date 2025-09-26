@@ -58,6 +58,22 @@ jobs:
       - uses: docker/setup-qemu-action@v2
       - uses: docker/setup-buildx-action@v2
 
+      - name: Pre-pull test image (retry)
+        run: |
+          image="${REG_PREFIX}/dekart:${IMAGE_CACHE_KEY}"
+          for attempt in 1 2 3 4 5; do
+            echo "Pulling $image (attempt $attempt)..."
+            if docker pull "$image"; then
+              echo "Pulled $image"
+              break
+            fi
+            if [ "$attempt" -eq 5 ]; then
+              echo "Failed to pull $image after $attempt attempts"
+              exit 1
+            fi
+            sleep $((attempt * 10))
+          done
+
       - name: E2E part 1
         run: |
           docker run -i \
@@ -246,6 +262,23 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Pre-pull test image (retry)
+        run: |
+          image="${REG_PREFIX}/dekart:${IMAGE_CACHE_KEY}"
+          for attempt in 1 2 3 4 5; do
+            echo "Pulling $image (attempt $attempt)..."
+            if docker pull "$image"; then
+              echo "Pulled $image"
+              break
+            fi
+            if [ "$attempt" -eq 5 ]; then
+              echo "Failed to pull $image after $attempt attempts"
+              exit 1
+            fi
+            sleep $((attempt * 10))
+          done
+
 
       # ----------------------------- run tests -------------------------------
       - name: Run ${{ matrix.id }} suite
