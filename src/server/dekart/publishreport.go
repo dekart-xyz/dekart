@@ -232,7 +232,10 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 			}
 			err = srcObj.CopyTo(conCtx, dstObj.GetWriter(defConnCtx))
 			if err != nil {
-				log.Err(err).Msg("Cannot copy query result to public storage")
+				log.Err(err).
+					Str("resultURI", resultURI).
+					Str("dwJobID", dwJobID).
+					Msg("Cannot copy query result to public storage")
 				return
 			}
 		}
