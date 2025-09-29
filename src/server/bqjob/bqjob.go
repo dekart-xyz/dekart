@@ -136,6 +136,20 @@ func (job *Job) getResultTable() (*bigquery.Table, error) {
 	return table, nil
 }
 
+func (job *Job) getResultsMeta(queryStatus *bigquery.JobStatus) (*bigquery.Table, error) {
+	table, err := job.getResultTable()
+	if err != nil {
+		return nil, err
+	}
+
+	err = job.setJobStats(queryStatus, table)
+	if err != nil {
+		return nil, err
+	}
+
+	return table, nil
+}
+
 func (job *Job) wait() {
 	queryStatus, err := job.bigqueryJob.Wait(job.GetCtx())
 	if err == context.Canceled {
@@ -162,18 +176,20 @@ func (job *Job) wait() {
 		job.DWJobID = &bqJobID // identify result storage
 		job.ResultReady = true
 		job.Unlock()
+		job.Status() <- int32(proto.QueryJob_JOB_STATUS_READING_RESULTS)
+
+		_, err = job.getResultsMeta(queryStatus)
+		if err != nil {
+			job.CancelWithError(err)
+			return
+		}
+
 		job.Status() <- int32(proto.QueryJob_JOB_STATUS_DONE)
 		job.Cancel()
 		return
 	}
 
-	table, err := job.getResultTable()
-	if err != nil {
-		job.CancelWithError(err)
-		return
-	}
-
-	err = job.setJobStats(queryStatus, table)
+	table, err := job.getResultsMeta(queryStatus)
 	if err != nil {
 		job.CancelWithError(err)
 		return
