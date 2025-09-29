@@ -9,6 +9,14 @@ import { runQuery } from './query'
 import { KeplerGlSchema } from '@kepler.gl/schemas'
 import wasmInit from 'parquet-wasm'
 
+// Custom error to mark empty result cases for downstream handling
+class EmptyResultError extends Error {
+  constructor (message = 'Empty result') {
+    super(message)
+    this.name = 'EmptyResultError'
+  }
+}
+
 export function createDataset (reportId) {
   return (dispatch) => {
     dispatch({ type: createDataset.name })
@@ -98,7 +106,7 @@ export function downloadingProgress (dataset, loaded) {
 export function processDownloadError (err, dataset, label) {
   return function (dispatch, getState) {
     dispatch({ type: processDownloadError.name, dataset })
-    if (err.message.includes('CSV is empty')) {
+    if (err instanceof EmptyResultError || err.message.includes('CSV is empty')) {
       dispatch(warn(<><i>{label}</i> Result is empty</>))
     } else if (err.status === 410 && dataset.queryId) { // gone from dw query temporary storage
       const { canRun, queryText } = getState().queryStatus[dataset.queryId]
@@ -143,14 +151,22 @@ async function processLoadFilesQueue (dispatch, getState) {
   dispatch(setLoadFilesProcessing(true))
 
   while (getState().dataset.loadFilesQueue.queue.length > 0) {
-    const { file, resolve, reject } = getState().dataset.loadFilesQueue.queue[0]
+    const { file, resolve, reject, totalRows } = getState().dataset.loadFilesQueue.queue[0]
 
     try {
       const result = await new Promise((_resolve, _reject) => {
         try {
           dispatch(loadFiles([file], (r) => {
-            const datasetData = r[0].data
-            _resolve(datasetData)
+            const datasetData = r[0]?.data
+            if (!datasetData) {
+              if (totalRows === 0) {
+                _reject(new EmptyResultError('Empty result'))
+              } else {
+                _reject(new Error('Error loading dataset'))
+              }
+            } else {
+              _resolve(datasetData)
+            }
             return { type: 'none' } // dispatch a dummy action to satisfy loadFiles API
           }))
         } catch (err) {
@@ -183,7 +199,8 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
         return
       }
     }
-    const { dataset: { list: datasets }, files, queries, keplerGl } = getState()
+    const { dataset: { list: datasets }, files, queries, keplerGl, queryJobs } = getState()
+    const queryJob = queryJobs.find(j => j.queryId === dataset.queryId)
     const label = getDatasetName(dataset, queries, files)
     let data
     try {
@@ -196,7 +213,7 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
       // Add to queue and wait for sequential processing
       // Kepler loadFiles should not be called before all previous loadFiles are finished
       data = await new Promise((resolve, reject) => {
-        dispatch(addToLoadFilesQueue(file, resolve, reject))
+        dispatch(addToLoadFilesQueue(file, resolve, reject, queryJob?.totalRows))
         processLoadFilesQueue(dispatch, getState)
       })
     } catch (err) {
@@ -330,9 +347,9 @@ export function closeDatasetSettingsModal (datasetId) {
 }
 
 // LoadFiles queue action creators
-export function addToLoadFilesQueue (file, resolve, reject) {
+export function addToLoadFilesQueue (file, resolve, reject, totalRows) {
   return (dispatch, getState) => {
-    dispatch({ type: addToLoadFilesQueue.name, item: { file, resolve, reject } })
+    dispatch({ type: addToLoadFilesQueue.name, item: { file, resolve, reject, totalRows } })
     return getState().dataset.loadFilesQueue.queue.length - 1 // return queue position
   }
 }

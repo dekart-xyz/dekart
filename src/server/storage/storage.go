@@ -174,15 +174,17 @@ func (o GoogleCloudStorageObject) CopyFromS3(ctx context.Context, source string)
 func (o GoogleCloudStorageObject) CopyTo(ctx context.Context, writer io.WriteCloser) error {
 	reader, err := o.GetReader(ctx)
 	if err != nil {
-		log.Err(err).Msg("Error getting reader while copying to")
+		log.Err(err).Msg("Error getting reader while copying to Google Cloud Storage")
 		return err
 	}
 	_, err = io.Copy(writer, reader)
 	if err != nil {
+		log.Err(err).Msg("Error while copying to Google Cloud Storage")
 		return err
 	}
 	err = writer.Close()
 	if err != nil {
+		log.Err(err).Msg("Error closing writer while copying to Google Cloud Storage")
 		return err
 	}
 	return nil

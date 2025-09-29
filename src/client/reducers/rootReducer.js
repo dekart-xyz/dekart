@@ -33,6 +33,8 @@ const customKeplerGlReducer = keplerGlReducer.initialState({
 function keplerGl (state, action) {
   const newState = customKeplerGlReducer(state, action)
   switch (action.type) {
+    case KeplerActionTypes.LOAD_FILES_ERR:
+      return state // suppress file loading error
     case KeplerActionTypes.REGISTER_ENTRY:
       // set mapbox token for map export
       newState.kepler.uiState = setUserMapboxAccessTokenUpdater(newState.kepler.uiState, {
