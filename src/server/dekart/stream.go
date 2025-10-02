@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/errtype"
 	"dekart/src/server/report"
 	"dekart/src/server/user"
 	"fmt"
@@ -97,6 +98,10 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 
 	err = srv.Send(&res)
 	if err != nil {
+		if errtype.TransportClosingRe.MatchString(err.Error()) {
+			log.Warn().Err(err).Msg("Client disconnected during report stream")
+			return nil // Client disconnected gracefully
+		}
 		log.Err(err).Send()
 		return err
 	}
@@ -270,6 +275,10 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 	}
 	err = srv.Send(&res)
 	if err != nil {
+		if errtype.TransportClosingRe.MatchString(err.Error()) {
+			log.Warn().Err(err).Msg("Client disconnected during stream")
+			return nil // Client disconnected gracefully
+		}
 		log.Err(err).Send()
 		return status.Errorf(codes.Internal, err.Error())
 	}
@@ -313,6 +322,10 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 
 	err = srv.Send(&response)
 	if err != nil {
+		if errtype.TransportClosingRe.MatchString(err.Error()) {
+			log.Warn().Err(err).Msg("Client disconnected during user stream")
+			return nil // Client disconnected gracefully
+		}
 		log.Err(err).Send()
 		return status.Errorf(codes.Internal, err.Error())
 	}
