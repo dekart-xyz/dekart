@@ -96,6 +96,20 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 		DirectAccessEmails: directAccessEmails,
 	}
 
+	// Validate map config size to prevent gRPC message size errors
+	// Since map config is the main contributor to message size, check it directly
+	if len(report.MapConfig) > MaxMapConfigSize {
+		log.Warn().
+			Str("reportId", reportID).
+			Int("mapConfigSize", len(report.MapConfig)).
+			Int("maxAllowed", MaxMapConfigSize).
+			Msg("Report map configuration too large for stream")
+
+		return status.Errorf(codes.ResourceExhausted,
+			"Report map configuration is too large (%d bytes). Maximum allowed size is %d bytes. Please simplify your map configuration.",
+			len(report.MapConfig), MaxMapConfigSize)
+	}
+
 	err = srv.Send(&res)
 	if err != nil {
 		if errtype.TransportClosingRe.MatchString(err.Error()) {
