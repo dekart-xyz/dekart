@@ -252,6 +252,20 @@ func updateDatasetIds(report *proto.Report, datasets []*proto.Dataset) (newMapCo
 
 func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Report, datasets []*proto.Dataset, jobs []*proto.QueryJob) error {
 	claims := user.GetClaims(ctx)
+
+	// Validate map config size to prevent gRPC message size errors
+	if len(report.MapConfig) > MaxMapConfigSize {
+		log.Warn().
+			Str("reportId", report.Id).
+			Str("authorEmail", claims.Email).
+			Int("mapConfigSize", len(report.MapConfig)).
+			Int("maxAllowed", MaxMapConfigSize).
+			Msg("Map configuration too large during fork")
+		return status.Errorf(codes.InvalidArgument,
+			"Map configuration is too large (%d bytes). Maximum allowed size is %d bytes. Please simplify your map configuration.",
+			len(report.MapConfig), MaxMapConfigSize)
+	}
+
 	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return err
@@ -521,6 +535,19 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	}
 	if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
 		return nil, status.Error(codes.PermissionDenied, "Only admins and editors can update reports")
+	}
+
+	// Validate map config size to prevent gRPC message size errors
+	if len(req.MapConfig) > MaxMapConfigSize {
+		log.Warn().
+			Str("reportId", req.ReportId).
+			Str("authorEmail", claims.Email).
+			Int("mapConfigSize", len(req.MapConfig)).
+			Int("maxAllowed", MaxMapConfigSize).
+			Msg("Map configuration too large")
+		return nil, status.Errorf(codes.InvalidArgument,
+			"Map configuration is too large (%d bytes). Maximum allowed size is %d bytes. Please simplify your map configuration.",
+			len(req.MapConfig), MaxMapConfigSize)
 	}
 	var paramsJSON []byte
 	if req.QueryParams != nil {

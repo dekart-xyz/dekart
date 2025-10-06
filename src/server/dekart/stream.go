@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/errtype"
 	"dekart/src/server/report"
 	"dekart/src/server/user"
 	"fmt"
@@ -95,8 +96,26 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 		DirectAccessEmails: directAccessEmails,
 	}
 
+	// Validate map config size to prevent gRPC message size errors
+	// Since map config is the main contributor to message size, check it directly
+	if len(report.MapConfig) > MaxMapConfigSize {
+		log.Warn().
+			Str("reportId", reportID).
+			Int("mapConfigSize", len(report.MapConfig)).
+			Int("maxAllowed", MaxMapConfigSize).
+			Msg("Report map configuration too large for stream")
+
+		return status.Errorf(codes.ResourceExhausted,
+			"Report map configuration is too large (%d bytes). Maximum allowed size is %d bytes. Please simplify your map configuration.",
+			len(report.MapConfig), MaxMapConfigSize)
+	}
+
 	err = srv.Send(&res)
 	if err != nil {
+		if errtype.TransportClosingRe.MatchString(err.Error()) {
+			log.Warn().Err(err).Msg("Client disconnected during report stream")
+			return nil // Client disconnected gracefully
+		}
 		log.Err(err).Send()
 		return err
 	}
@@ -270,6 +289,10 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 	}
 	err = srv.Send(&res)
 	if err != nil {
+		if errtype.TransportClosingRe.MatchString(err.Error()) {
+			log.Warn().Err(err).Msg("Client disconnected during stream")
+			return nil // Client disconnected gracefully
+		}
 		log.Err(err).Send()
 		return status.Errorf(codes.Internal, err.Error())
 	}
@@ -313,6 +336,10 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 
 	err = srv.Send(&response)
 	if err != nil {
+		if errtype.TransportClosingRe.MatchString(err.Error()) {
+			log.Warn().Err(err).Msg("Client disconnected during user stream")
+			return nil // Client disconnected gracefully
+		}
 		log.Err(err).Send()
 		return status.Errorf(codes.Internal, err.Error())
 	}

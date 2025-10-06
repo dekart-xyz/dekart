@@ -18,6 +18,9 @@ var WriteClosedPipeRe = regexp.MustCompile(`write on closed pipe`)
 
 var RPCPermissionDeniedRe = regexp.MustCompile(`rpc error: code = PermissionDenied desc = (.*)`)
 
+// Transport closing - client disconnected during gRPC stream
+var TransportClosingRe = regexp.MustCompile(`transport is closing`)
+
 // 8080-> timeout, perhaps client disconnected
 var WriteTimeoutRe = regexp.MustCompile(`write tcp.*8080`)
 
