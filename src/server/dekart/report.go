@@ -25,11 +25,11 @@ func newUUID() string {
 	return u.String()
 }
 
-// getReport returns report by id, checks if user has access to it
-func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, error) {
+// getReportWithOptions returns report by id, checks if user has access to it
+func (s Server) getReportWithOptions(ctx context.Context, reportID string, archived bool) (*proto.Report, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
-		log.Fatal().Msg("getReport require claims")
+		log.Fatal().Msg("getReportWithOptions require claims")
 		return nil, nil
 	}
 	reportRows, err := s.db.QueryContext(ctx,
@@ -72,7 +72,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			readme,
 			workspace_id
 		from reports as r
-		where (id=$6) and (not archived)
+		where (id=$6) and (archived = $7)
 		limit 1`,
 		claims.Email,
 		claims.Email,
@@ -80,6 +80,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 		reportID, // sqlite does not support positional parameters reuse
 		reportID,
 		reportID,
+		archived,
 	)
 	if err != nil {
 		log.Err(err).Str("workspace", checkWorkspace(ctx).ID).Str("reportID", reportID).Send()
@@ -188,6 +189,12 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 		}
 	}
 	return nil, nil // not found
+}
+
+// getReport returns report by id, checks if user has access to it
+// Excludes archived reports for backward compatibility
+func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, error) {
+	return s.getReportWithOptions(ctx, reportID, false)
 }
 
 // CreateReport implementation
@@ -779,7 +786,9 @@ func (s Server) ArchiveReport(ctx context.Context, req *proto.ArchiveReportReque
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
 	}
-	report, err := s.getReport(ctx, req.ReportId)
+
+	// Use getReportWithOptions to include archived reports (needed for unarchiving)
+	report, err := s.getReportWithOptions(ctx, req.ReportId, !req.Archive)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
@@ -794,6 +803,13 @@ func (s Server) ArchiveReport(ctx context.Context, req *proto.ArchiveReportReque
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.PermissionDenied, "Cannot archive report")
 	}
+
+	if req.Archive && report.IsPublic {
+		err := fmt.Errorf("cannot archive public report %s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.InvalidArgument, "Cannot archive public report")
+	}
+
 	var result sql.Result
 	if checkWorkspace(ctx).IsPlayground {
 		result, err = s.db.ExecContext(ctx,
@@ -826,11 +842,6 @@ func (s Server) ArchiveReport(ctx context.Context, req *proto.ArchiveReportReque
 		err := fmt.Errorf("report not found id:%s", req.ReportId)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
-	}
-
-	// If report was archived and was public, also unpublish it (clean up public storage)
-	if req.Archive && report.IsPublic {
-		go s.unpublishReport(ctx, req.ReportId)
 	}
 
 	s.reportStreams.Ping(req.ReportId)
