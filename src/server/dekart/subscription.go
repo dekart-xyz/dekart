@@ -330,6 +330,31 @@ func (s Server) CreateSubscription(ctx context.Context, req *proto.CreateSubscri
 				if req.PlanType == proto.PlanType_TYPE_GROW {
 					quantity = workspaceInfo.BilledUsers
 				}
+
+				// Use transaction to ensure consistency
+				// If Stripe update fails, subscription_log insert will be rolled back
+				tx, err := s.db.BeginTx(ctx, nil)
+				if err != nil {
+					log.Err(err).Send()
+					return nil, status.Error(codes.Internal, err.Error())
+				}
+				defer tx.Rollback()
+
+				// Insert new subscription log entry
+				_, err = tx.ExecContext(ctx, `
+					INSERT INTO subscription_log (workspace_id, plan_type, customer_id, authored_by)
+					VALUES ($1, $2, $3, $4)`,
+					workspaceInfo.ID,
+					req.PlanType,
+					sub.CustomerId,
+					claims.Email,
+				)
+				if err != nil {
+					log.Err(err).Send()
+					return nil, status.Error(codes.Internal, err.Error())
+				}
+
+				// Update Stripe subscription
 				params := &stripe.SubscriptionParams{
 					Items: []*stripe.SubscriptionItemsParams{
 						{
@@ -341,15 +366,13 @@ func (s Server) CreateSubscription(ctx context.Context, req *proto.CreateSubscri
 				}
 				_, err = subscription.Update(sub.StripeSubscriptionId, params)
 				if err != nil {
-					log.Err(err).Send()
+					// Transaction will rollback, keeping DB consistent
+					log.Err(err).Str("workspace_id", workspaceInfo.ID).Msg("Failed to update Stripe subscription, rolling back")
 					return nil, status.Error(codes.Internal, err.Error())
 				}
-				_, err = s.db.ExecContext(ctx, `insert into subscription_log (workspace_id, plan_type, customer_id, authored_by) values ($1, $2, $3, $4)`,
-					workspaceInfo.ID,
-					req.PlanType,
-					sub.CustomerId,
-					claims.Email,
-				)
+
+				// Commit transaction
+				err = tx.Commit()
 				if err != nil {
 					log.Err(err).Send()
 					return nil, status.Error(codes.Internal, err.Error())

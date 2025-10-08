@@ -33,8 +33,32 @@ func TestHttpError_SnowflakeJWTInvalid(t *testing.T) {
 }
 
 func TestHttpError_BigQueryJobNotFound(t *testing.T) {
-	// Test the specific BigQuery job not found error case
+	// Test the specific BigQuery job not found error case with ", notFound" suffix
 	errorMessage := "Not found: Job village-data-analytics:IWd2upGJrrRp5Wf4C6Olta8J5g2, notFound"
+	expectedStatus := http.StatusNotFound
+	expectedBody := errorMessage + " Check missing bigquery.jobs.get permission on the submitting project\n"
+
+	// Create a mock Google API error
+	mockGoogleErr := &googleapi.Error{
+		Code:    404,
+		Message: errorMessage,
+	}
+
+	// Create a response recorder
+	recorder := httptest.NewRecorder()
+
+	// Call HttpError
+	HttpError(recorder, mockGoogleErr)
+
+	// Assert the response
+	assert.Equal(t, expectedStatus, recorder.Code)
+	assert.Equal(t, expectedBody, recorder.Body.String())
+}
+
+func TestHttpError_BigQueryJobNotFoundWithoutSuffix(t *testing.T) {
+	// Test BigQuery job not found error without ", notFound" suffix
+	// This format can occur when the Message field doesn't include the reason code
+	errorMessage := "Not found: Job contact-energy-main:xMgFTQoLiOWXBZHnNAUHBTOi8V0"
 	expectedStatus := http.StatusNotFound
 	expectedBody := errorMessage + " Check missing bigquery.jobs.get permission on the submitting project\n"
 
