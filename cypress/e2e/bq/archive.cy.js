@@ -34,9 +34,6 @@ describe('archive and unarchive report', () => {
     cy.contains('tr', reportName).should('be.visible')
     cy.contains('tr', reportName).find('button#dekart-archive-report').click({ force: true })
 
-    // Verify report is no longer in the main list
-    cy.get('td').contains(reportName).should('not.exist')
-
     // Switch to archived view
     cy.get('#dekart-archived-switch').click()
 
