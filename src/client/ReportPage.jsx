@@ -249,6 +249,7 @@ function Title () {
     return (
       <div className={styles.title}>
         <Input
+          id='dekart-report-title-input'
           className={styles.titleInput}
           value={value}
           onChange={(e) => {
