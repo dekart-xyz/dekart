@@ -16,14 +16,21 @@ import (
 func (s Server) getReportAnalytics(ctx context.Context, report *proto.Report) (*proto.ReportAnalytics, error) {
 
 	var reportAnalytics proto.ReportAnalytics
+	var query string
 
-	err := s.db.QueryRowContext(ctx,
-		`select
+	if IsSqlite() {
+		query = `select
+			(select count(*) from report_analytics where report_id=$1) as viewers_total,
+			(select count(*) from report_analytics where report_id=$1 and updated_at > datetime('now', '-7 days')) as viewers_7d,
+			(select count(*) from report_analytics where report_id=$1 and updated_at > datetime('now', '-1 day')) as viewers_24h`
+	} else {
+		query = `select
 			(select count(*) from report_analytics where report_id=$1) as viewers_total,
 			(select count(*) from report_analytics where report_id=$1 and updated_at > now() - interval '7 days') as viewers_7d,
-			(select count(*) from report_analytics where report_id=$1 and updated_at > now() - interval '1 day') as viewers_24h`,
-		report.Id,
-	).Scan(
+			(select count(*) from report_analytics where report_id=$1 and updated_at > now() - interval '1 day') as viewers_24h`
+	}
+
+	err := s.db.QueryRowContext(ctx, query, report.Id).Scan(
 		&reportAnalytics.ViewersTotal,
 		&reportAnalytics.Viewers_7D,
 		&reportAnalytics.Viewers_24H,
