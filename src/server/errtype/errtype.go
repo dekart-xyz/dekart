@@ -27,7 +27,8 @@ var WriteTimeoutRe = regexp.MustCompile(`write tcp.*8080`)
 var SnowflakeJWTInvalidRe = regexp.MustCompile(`(390144|08004)`)
 
 // BigQuery job not found error pattern
-var BigQueryJobNotFoundRe = regexp.MustCompile(`Not found: Job .*, notFound`)
+// Matches messages like "Not found: Job project:location.jobid" or "Not found: Job project:jobid, notFound"
+var BigQueryJobNotFoundRe = regexp.MustCompile(`Not found: Job [^,]+`)
 
 // Expired Error is returned when temp storage is expired
 type Expired struct {
