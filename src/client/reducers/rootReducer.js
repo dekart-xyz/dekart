@@ -20,6 +20,7 @@ import { setRedirectState } from '../actions/redirect'
 import sessionStorage from './sessionStorageReducer'
 import readme from './readmeReducer'
 import analytics from './analyticsReducer'
+import { upgradeModal } from './upgradeModalReducer'
 import { report, reportDirectAccessEmails, reportsList, reportStatus } from './reportReducer'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
@@ -32,6 +33,8 @@ const customKeplerGlReducer = keplerGlReducer.initialState({
 function keplerGl (state, action) {
   const newState = customKeplerGlReducer(state, action)
   switch (action.type) {
+    case KeplerActionTypes.LOAD_FILES_ERR:
+      return state // suppress file loading error
     case KeplerActionTypes.REGISTER_ENTRY:
       // set mapbox token for map export
       newState.kepler.uiState = setUserMapboxAccessTokenUpdater(newState.kepler.uiState, {
@@ -81,7 +84,8 @@ function env (state = defaultEnv, action) {
         variables: action.variables,
         authEnabled: Boolean(action.variables.AUTH_ENABLED),
         secretsEnabled: Boolean(action.variables.SECRETS_ENABLED),
-        uxConfig: JSON.parse(action.variables.CLOUD_UX_CONFIG_JSON || '{}')
+        uxConfig: JSON.parse(action.variables.CLOUD_UX_CONFIG_JSON || '{}'),
+        isCloud: Boolean(action.variables.DEKART_CLOUD)
       }
     default:
       return state
@@ -157,5 +161,6 @@ export default combineReducers({
   numRunningQueries,
   sessionStorage,
   readme,
-  analytics
+  analytics,
+  upgradeModal
 })

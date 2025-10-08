@@ -1,0 +1,53 @@
+.modal {
+  .ant-modal-header {
+    border-bottom: none;
+    padding: 24px 24px 0;
+  }
+
+  .ant-modal-body {
+    padding: 0 24px 24px;
+  }
+}
+
+.title {
+  margin-bottom: 0 !important;
+}
+
+.description {
+  margin-top: 0px !important;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.crownIcon {
+  color: #faad14;
+  font-size: 24px;
+}
+
+.title {
+  margin: 0 !important;
+  color: #1890ff;
+}
+
+.content {
+  text-align: center;
+}
+
+.limitMessage {
+  margin-bottom: 24px;
+}
+
+.limitText {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.description {
+  margin-top: 8px;
+  color: #666;
+  font-size: 14px;
+}

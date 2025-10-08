@@ -372,7 +372,13 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 			log.Warn().Err(err).Send()
 			return nil, status.Error(codes.Canceled, err.Error())
 		}
-		log.Err(err).Str("QueryId", req.QueryId).Str("connectionID", connection.Id).Send()
+		log.Err(err).
+			Str("queryID", req.QueryId).
+			Str("connectionID", connection.Id).
+			Str("connectionType", connection.ConnectionType.String()).
+			Str("workspaceID", checkWorkspace(ctx).ID).
+			Str("email", claims.Email).
+			Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 

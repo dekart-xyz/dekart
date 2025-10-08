@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -20,6 +21,18 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+// getContentTypeFromExtension returns the appropriate content type based on file extension
+func getContentTypeFromExtension(extension string) string {
+	switch strings.ToLower(extension) {
+	case "geojson":
+		return "application/geo+json"
+	case "parquet":
+		return "application/octet-stream"
+	default:
+		return "text/csv"
+	}
+}
 
 func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Dataset, error) {
 	datasets := make([]*proto.Dataset, 0)
@@ -494,13 +507,13 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer objectReader.Close()
+	w.Header().Set("Content-Type", getContentTypeFromExtension(vars["extension"]))
 	if os.Getenv("DEKART_DEV_NO_DATASET_CACHE") == "1" {
 		log.Warn().Msg("DEKART_DEV_NO_DATASET_CACHE is set, disabling cache for dataset source")
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate") // Prevent caching
 		w.Header().Set("Pragma", "no-cache")
 		w.Header().Set("Expires", "0")
 	} else {
-		w.Header().Set("Content-Type", "text/csv")
 		w.Header().Set("Cache-Control", "public, max-age=31536000")
 		w.Header().Set("Last-Modified", created.Format(time.UnixDate))
 	}

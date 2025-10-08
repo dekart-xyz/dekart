@@ -3,6 +3,46 @@
 
 import * as jspb from "google-protobuf";
 
+export class SetTrackViewersRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  getTrackViewers(): boolean;
+  setTrackViewers(value: boolean): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): SetTrackViewersRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: SetTrackViewersRequest): SetTrackViewersRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: SetTrackViewersRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): SetTrackViewersRequest;
+  static deserializeBinaryFromReader(message: SetTrackViewersRequest, reader: jspb.BinaryReader): SetTrackViewersRequest;
+}
+
+export namespace SetTrackViewersRequest {
+  export type AsObject = {
+    reportId: string,
+    trackViewers: boolean,
+  }
+}
+
+export class SetTrackViewersResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): SetTrackViewersResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: SetTrackViewersResponse): SetTrackViewersResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: SetTrackViewersResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): SetTrackViewersResponse;
+  static deserializeBinaryFromReader(message: SetTrackViewersResponse, reader: jspb.BinaryReader): SetTrackViewersResponse;
+}
+
+export namespace SetTrackViewersResponse {
+  export type AsObject = {
+  }
+}
+
 export class GetWherobotsConnectionHintRequest extends jspb.Message {
   getWherobotsHost(): string;
   setWherobotsHost(value: string): void;
@@ -314,6 +354,9 @@ export namespace PublishReportRequest {
 }
 
 export class PublishReportResponse extends jspb.Message {
+  getPublicMapsLimitReached(): boolean;
+  setPublicMapsLimitReached(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): PublishReportResponse.AsObject;
   static toObject(includeInstance: boolean, msg: PublishReportResponse): PublishReportResponse.AsObject;
@@ -326,6 +369,7 @@ export class PublishReportResponse extends jspb.Message {
 
 export namespace PublishReportResponse {
   export type AsObject = {
+    publicMapsLimitReached: boolean,
   }
 }
 
@@ -1882,6 +1926,9 @@ export class Report extends jspb.Message {
   getHasDirectAccess(): boolean;
   setHasDirectAccess(value: boolean): void;
 
+  getTrackViewers(): boolean;
+  setTrackViewers(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Report.AsObject;
   static toObject(includeInstance: boolean, msg: Report): Report.AsObject;
@@ -1913,6 +1960,7 @@ export namespace Report {
     queryParamsList: Array<QueryParam.AsObject>,
     readme?: Readme.AsObject,
     hasDirectAccess: boolean,
+    trackViewers: boolean,
   }
 }
 

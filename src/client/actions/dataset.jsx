@@ -9,6 +9,14 @@ import { runQuery } from './query'
 import { KeplerGlSchema } from '@kepler.gl/schemas'
 import wasmInit from 'parquet-wasm'
 
+// Custom error to mark empty result cases for downstream handling
+class EmptyResultError extends Error {
+  constructor (message = 'Empty result') {
+    super(message)
+    this.name = 'EmptyResultError'
+  }
+}
+
 export function createDataset (reportId) {
   return (dispatch) => {
     dispatch({ type: createDataset.name })
@@ -98,7 +106,7 @@ export function downloadingProgress (dataset, loaded) {
 export function processDownloadError (err, dataset, label) {
   return function (dispatch, getState) {
     dispatch({ type: processDownloadError.name, dataset })
-    if (err.message.includes('CSV is empty')) {
+    if (err instanceof EmptyResultError || err.message.includes('CSV is empty')) {
       dispatch(warn(<><i>{label}</i> Result is empty</>))
     } else if (err.status === 410 && dataset.queryId) { // gone from dw query temporary storage
       const { canRun, queryText } = getState().queryStatus[dataset.queryId]
@@ -132,52 +140,67 @@ export function finishAddingDatasetToMap (dataset) {
 let isWasmInitialized = false
 
 // Queue to ensure loadFiles calls are sequential
-const loadFilesQueue = []
-let isLoadFilesProcessing = false
+// Moved to reducer state - no longer using module-level variables
 
-async function processLoadFilesQueue (dispatch) {
-  if (isLoadFilesProcessing || loadFilesQueue.length === 0) {
+async function processLoadFilesQueue (dispatch, getState) {
+  const { loadFilesQueue } = getState().dataset
+  if (loadFilesQueue.isProcessing || loadFilesQueue.queue.length === 0) {
     return
   }
 
-  isLoadFilesProcessing = true
+  dispatch(setLoadFilesProcessing(true))
 
-  while (loadFilesQueue.length > 0) {
-    const { file, resolve, reject } = loadFilesQueue.shift()
+  while (getState().dataset.loadFilesQueue.queue.length > 0) {
+    const { file, resolve, reject, totalRows } = getState().dataset.loadFilesQueue.queue[0]
 
     try {
       const result = await new Promise((_resolve, _reject) => {
-        dispatch(loadFiles([file], (r) => {
-          const datasetData = r[0].data
-          _resolve(datasetData)
-          return { type: 'none' } // dispatch a dummy action to satisfy loadFiles API
-        }))
+        try {
+          dispatch(loadFiles([file], (r) => {
+            const datasetData = r[0]?.data
+            if (!datasetData) {
+              if (totalRows === 0) {
+                _reject(new EmptyResultError('Empty result'))
+              } else {
+                _reject(new Error('Error loading dataset'))
+              }
+            } else {
+              _resolve(datasetData)
+            }
+            return { type: 'none' } // dispatch a dummy action to satisfy loadFiles API
+          }))
+        } catch (err) {
+          _reject(err)
+        }
       })
       resolve(result)
     } catch (err) {
       reject(err)
     }
+
+    // Remove the processed item from queue
+    dispatch(removeFromLoadFilesQueue())
   }
 
-  isLoadFilesProcessing = false
-}
-
-function addToLoadFilesQueue (file, resolve, reject) {
-  loadFilesQueue.push({ file, resolve, reject })
-  return loadFilesQueue.length - 1 // return queue position
+  dispatch(setLoadFilesProcessing(false))
 }
 
 export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
   return async function (dispatch, getState) {
     // must be before async so dataset is not added twice
     dispatch({ type: addDatasetToMap.name, dataset })
-
+    const reportId = getState().report?.id
     if (!isWasmInitialized) {
       isWasmInitialized = true
       await wasmInit()
+      const newReportId = getState().report?.id
+      if (newReportId !== reportId) {
+        // new report opened while waiting for wasmInit
+        return
+      }
     }
-
-    const { dataset: { list: datasets }, files, queries, keplerGl } = getState()
+    const { dataset: { list: datasets }, files, queries, keplerGl, queryJobs } = getState()
+    const queryJob = queryJobs.find(j => j.queryId === dataset.queryId)
     const label = getDatasetName(dataset, queries, files)
     let data
     try {
@@ -190,8 +213,8 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
       // Add to queue and wait for sequential processing
       // Kepler loadFiles should not be called before all previous loadFiles are finished
       data = await new Promise((resolve, reject) => {
-        addToLoadFilesQueue(file, resolve, reject)
-        processLoadFilesQueue(dispatch)
+        dispatch(addToLoadFilesQueue(file, resolve, reject, queryJob?.totalRows))
+        processLoadFilesQueue(dispatch, getState)
       })
     } catch (err) {
       dispatch(processDownloadError(err, dataset, label))
@@ -203,6 +226,7 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
     const prevDataset = prevDatasetsList.find(d => d.id in addedDatasets)
     const i = datasets.findIndex(d => d.id === dataset.id)
     if (i < 0) {
+      dispatch(finishAddingDatasetToMap(dataset))
       return
     }
     try {
@@ -270,17 +294,14 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
         }))
       }
     } catch (err) {
-      dispatch(setError(
-        new Error(`Failed to add data to map: ${err.message}`),
-        false
-      ))
+      dispatch(processDownloadError(err, dataset, label))
       return
     }
     const { reportStatus } = getState()
     if (reportStatus.edit) {
       dispatch(toggleSidePanel('layer'))
     }
-    dispatch({ type: finishAddingDatasetToMap.name, dataset })
+    dispatch(finishAddingDatasetToMap(dataset))
   }
 }
 
@@ -296,6 +317,8 @@ export function downloadDataset (dataset, sourceId, extension, prevDatasetsList)
     const { files, queries } = getState()
     const label = getDatasetName(dataset, queries, files)
     const controller = new AbortController()
+    const reportId = getState().report?.id
+    const loginHint = getState().user?.loginHint
     dispatch({ type: downloadDataset.name, dataset, controller })
     const { token, user: { claimEmailCookie } } = getState()
     try {
@@ -304,7 +327,9 @@ export function downloadDataset (dataset, sourceId, extension, prevDatasetsList)
         token,
         controller.signal,
         (loaded) => dispatch(downloadingProgress(dataset, loaded)),
-        claimEmailCookie
+        claimEmailCookie,
+        reportId,
+        loginHint
       )
       dispatch(finishDownloading(dataset, prevDatasetsList, res, extension, label))
     } catch (err) {
@@ -319,4 +344,20 @@ export function openDatasetSettingsModal (datasetId) {
 
 export function closeDatasetSettingsModal (datasetId) {
   return { type: closeDatasetSettingsModal.name, datasetId }
+}
+
+// LoadFiles queue action creators
+export function addToLoadFilesQueue (file, resolve, reject, totalRows) {
+  return (dispatch, getState) => {
+    dispatch({ type: addToLoadFilesQueue.name, item: { file, resolve, reject, totalRows } })
+    return getState().dataset.loadFilesQueue.queue.length - 1 // return queue position
+  }
+}
+
+export function removeFromLoadFilesQueue () {
+  return { type: removeFromLoadFilesQueue.name }
+}
+
+export function setLoadFilesProcessing (isProcessing) {
+  return { type: setLoadFilesProcessing.name, isProcessing }
 }

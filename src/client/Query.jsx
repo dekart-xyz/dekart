@@ -11,12 +11,13 @@ import 'ace-builds/src-noconflict/keybinding-vscode'
 import 'ace-builds/src-noconflict/ext-beautify'
 import 'ace-builds/src-noconflict/ext-emmet'
 import { ConnectionType, QueryJob } from 'dekart-proto/dekart_pb'
-import { SendOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
+import { SendOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone, CopyOutlined } from '@ant-design/icons'
 import { Duration } from 'luxon'
 import DataDocumentationLink from './DataDocumentationLink'
 import { cancelJob, queryChanged, runQuery } from './actions/query'
 import Tooltip from 'antd/es/tooltip'
 import { getDatasourceMeta } from './lib/datasource'
+import { copyErrorToClipboard } from './actions/clipboard'
 
 function CancelButton ({ queryJob }) {
   const dispatch = useDispatch()
@@ -105,20 +106,16 @@ function QueryEditor ({ queryId, queryText, onChange, canWrite }) {
 }
 
 function QueryStatus ({ children, query }) {
-  const env = useSelector(state => state.env)
   const hash = useSelector(state => state.queryParams.hash)
   const queryJob = useSelector(state => state.queryJobs.find(job => job.queryId === query.id && job.queryParamsHash === hash))
-  let message, errorMessage, action, style, tooltip, errorInfoHtml
+  let message, errorMessage, action, style
   let icon = null
+  const dispatch = useDispatch()
+
   if (queryJob?.jobError) {
-    message = 'Error'
+    message = 'Query Error'
     style = styles.error
     errorMessage = queryJob.jobError
-    if (env.variables.UX_ACCESS_ERROR_INFO_HTML && errorMessage.includes('Error 403')) {
-      errorInfoHtml = ''
-    } else if (env.variables.UX_NOT_FOUND_ERROR_INFO_HTML && errorMessage.includes('Error 404')) {
-      errorInfoHtml = env.variables.UX_NOT_FOUND_ERROR_INFO_HTML
-    }
     icon = <ExclamationCircleTwoTone className={styles.icon} twoToneColor='#F66B55' />
   }
   switch (queryJob?.jobStatus) {
@@ -163,18 +160,30 @@ function QueryStatus ({ children, query }) {
     <div className={[styles.queryStatus, style].join(' ')}>
       <div className={styles.status}>
         <div className={styles.statusHead}>
-          <Tooltip title={tooltip} className={styles.tooltip}>
-            {icon}
-            <div id='dekart-query-status-message' className={styles.message}>{message}</div>
-          </Tooltip>
+          {icon}
+          {errorMessage
+            ? (
+              <div className={styles.errorMessage}>
+                <Button
+                  type='text'
+                  size='small'
+                  icon={<CopyOutlined />}
+                  onClick={() => dispatch(copyErrorToClipboard(errorMessage))}
+                  className={styles.copyErrorButton}
+                  title='Copy error to clipboard'
+                />
+
+                <div className={styles.errorMessageContent}>
+                  <span id='dekart-query-status-message' className={styles.messageInline}>{message}</span> {errorMessage}
+                </div>
+              </div>
+              )
+            : <div id='dekart-query-status-message' className={styles.message}>{message}</div>}
           <div className={styles.spacer} />
           {action ? <div className={styles.action}>{action}</div> : null}
         </div>
-        {errorMessage ? <div className={styles.errorMessage}>{errorMessage}</div> : null}
-        {errorInfoHtml ? <div className={styles.errorInfoHtml} dangerouslySetInnerHTML={{ __html: errorInfoHtml }} /> : null}
       </div>
       {children ? <div className={styles.button}>{children}</div> : null}
-
     </div>
   )
 }

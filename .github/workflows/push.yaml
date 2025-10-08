@@ -2,7 +2,7 @@ name: Push to main
 
 on:
   push:
-    branches: [main, oss-fix-merge-ci]
+    branches: [main]
 
 
 jobs:
@@ -26,20 +26,19 @@ jobs:
     needs: [changes]
     uses: ./.github/workflows/go_test.yaml
     secrets: inherit
-
   build_e2e:
     needs: [flavour, changes]
-    with:
-      build_e2e: true
-      target: ${{ needs.flavour.outputs.target }}
     uses: ./.github/workflows/build.yaml
+    with:
+      target:    ${{ needs.flavour.outputs.target }}
+      build_app: false
+      build_e2e: true
     permissions:
       contents: read
       packages: write
     secrets: inherit
-
   e2e_tests:
-    needs: [build_e2e]
+    needs: [build_e2e, flavour]
     uses: ./.github/workflows/e2e.yaml
     with:
       target: ${{ needs.flavour.outputs.target }}
@@ -47,3 +46,26 @@ jobs:
       contents: read
       packages: write
     secrets: inherit
+  build_cloud:
+    needs: [flavour, changes, build_e2e]
+    if: needs.flavour.outputs.is_premium == 'true'
+    uses: ./.github/workflows/build.yaml
+    with:
+      target: cloud
+      build_app: true
+      build_e2e: false
+    permissions:
+      contents: read
+      packages: write
+    secrets: inherit
+  create_pulumi_pr:
+    if: needs.flavour.outputs.is_premium == 'true'
+    needs: [e2e_tests, go_tests, node_tests, build_cloud]
+    uses: ./.github/workflows/create-pulumi-pr.yaml
+    with:
+      app_image: ${{ needs.build_cloud.outputs.app_image }}
+    permissions:
+      contents: write
+      pull-requests: write
+    secrets: inherit
+

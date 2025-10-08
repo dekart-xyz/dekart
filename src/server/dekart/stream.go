@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/errtype"
 	"dekart/src/server/report"
 	"dekart/src/server/user"
 	"fmt"
@@ -37,18 +38,20 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 		return status.Errorf(codes.NotFound, err.Error())
 	}
 
-	// update report_analytics
-	_, err = s.db.ExecContext(ctx,
-		`insert into report_analytics (report_id, email)
-		values ($1, $2)
-		on conflict (report_id, email) do update set updated_at = CURRENT_TIMESTAMP,
-		num_views = report_analytics.num_views + 1`,
-		reportID,
-		claims.Email,
-	)
-	if err != nil {
-		log.Err(err).Send()
-		return status.Errorf(codes.Internal, err.Error())
+	// update report_analytics only when tracking is enabled
+	if report.TrackViewers {
+		_, err = s.db.ExecContext(ctx,
+			`insert into report_analytics (report_id, email)
+			values ($1, $2)
+			on conflict (report_id, email) do update set updated_at = CURRENT_TIMESTAMP,
+			num_views = report_analytics.num_views + 1`,
+			reportID,
+			claims.Email,
+		)
+		if err != nil {
+			log.Err(err).Send()
+			return status.Errorf(codes.Internal, err.Error())
+		}
 	}
 
 	datasets, err := s.getDatasets(ctx, reportID)
@@ -93,8 +96,26 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 		DirectAccessEmails: directAccessEmails,
 	}
 
+	// Validate map config size to prevent gRPC message size errors
+	// Since map config is the main contributor to message size, check it directly
+	if len(report.MapConfig) > MaxMapConfigSize {
+		log.Warn().
+			Str("reportId", reportID).
+			Int("mapConfigSize", len(report.MapConfig)).
+			Int("maxAllowed", MaxMapConfigSize).
+			Msg("Report map configuration too large for stream")
+
+		return status.Errorf(codes.ResourceExhausted,
+			"Report map configuration is too large (%d bytes). Maximum allowed size is %d bytes. Please simplify your map configuration.",
+			len(report.MapConfig), MaxMapConfigSize)
+	}
+
 	err = srv.Send(&res)
 	if err != nil {
+		if errtype.TransportClosingRe.MatchString(err.Error()) {
+			log.Warn().Err(err).Msg("Client disconnected during report stream")
+			return nil // Client disconnected gracefully
+		}
 		log.Err(err).Send()
 		return err
 	}
@@ -102,7 +123,7 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 
 }
 
-const defaultStreamTimeout = 50 * time.Second
+const defaultStreamTimeout = 30 * time.Second
 
 // parse int constant from os env variable DEKART_STREAM_TIMEOUT
 func getStreamTimeout() time.Duration {
@@ -177,6 +198,7 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 				updated_at,
 				created_at,
 				is_public,
+				track_viewers,
 				is_playground,
 				exists (
 					select 1
@@ -207,6 +229,7 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 				r.updated_at,
 				r.created_at,
 				r.is_public,
+				r.track_viewers,
 				r.is_playground,
 				exists (
 					select 1
@@ -252,6 +275,7 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			&updatedAt,
 			&createdAt,
 			&report.IsPublic,
+			&report.TrackViewers,
 			&report.IsPlayground,
 			&report.HasDirectAccess,
 		)
@@ -265,6 +289,10 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 	}
 	err = srv.Send(&res)
 	if err != nil {
+		if errtype.TransportClosingRe.MatchString(err.Error()) {
+			log.Warn().Err(err).Msg("Client disconnected during stream")
+			return nil // Client disconnected gracefully
+		}
 		log.Err(err).Send()
 		return status.Errorf(codes.Internal, err.Error())
 	}
@@ -308,6 +336,10 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 
 	err = srv.Send(&response)
 	if err != nil {
+		if errtype.TransportClosingRe.MatchString(err.Error()) {
+			log.Warn().Err(err).Msg("Client disconnected during user stream")
+			return nil // Client disconnected gracefully
+		}
 		log.Err(err).Send()
 		return status.Errorf(codes.Internal, err.Error())
 	}

@@ -25,11 +25,14 @@ import { Loading } from './Loading'
 function ArchiveReportButton ({ report }) {
   const dispatch = useDispatch()
   const [disabled, setDisabled] = useState(false)
+  const disableArchivePublic = report.isPublic && !report.archived
   return (
     <Button
+      id={report.archived ? 'dekart-restore-report' : 'dekart-archive-report'}
       className={styles.deleteButton}
       type='text'
-      disabled={disabled}
+      disabled={disabled || disableArchivePublic}
+      title={disableArchivePublic ? 'Cannot archive public report. Unpublish it first.' : ''}
       onClick={() => {
         dispatch(archiveReport(report.id, !report.archived))
         setDisabled(true)
@@ -331,7 +334,7 @@ function ReportsHeader (
                     ? (
                       <div className={styles.archivedSwitch}>
                         <div className={styles.archivedSwitchLabel}>Archived</div>
-                        <Switch checked={archived} disabled={reportsList.archived.length === 0} onChange={(checked) => setArchived(checked)} />
+                        <Switch id='dekart-archived-switch' checked={archived} disabled={reportsList.archived.length === 0} onChange={(checked) => setArchived(checked)} />
                       </div>
                       )
                     : null
