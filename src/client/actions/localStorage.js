@@ -1,4 +1,4 @@
-const LOCAL_STORAGE_KEY = 'dekart-local-storage-v1'
+import { LOCAL_STORAGE_KEY } from '../lib/constants'
 
 const initialState = {
   sensitiveScopesGrantedOnce: false,

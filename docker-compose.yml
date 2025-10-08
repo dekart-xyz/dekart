@@ -17,6 +17,7 @@ services:
     restart: always
     ports:
       - 8081:8080
+  # docker compose --env-file .env.cloud --profile cloud up
   dekart-cloud:
     image: "${DOCKER_COMPOSE_IMAGE}"
     platform: linux/amd64
@@ -60,6 +61,7 @@ services:
       DEKART_ALLOW_WORKSPACE_CREATION: "1"
       DEKART_UX_DISABLE_VERSION_CHECK: "1"
       DEKART_CLOUD: "1"
+  # docker compose --env-file .env.googleoauth --profile googleoauth up
   dekart-oss-googleoauth:
     image: "${DOCKER_COMPOSE_IMAGE}"
     platform: linux/amd64

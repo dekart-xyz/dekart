@@ -120,7 +120,6 @@ func (s Server) getConnectionFromFileID(ctx context.Context, fileID string) (*pr
 
 // getConnection gets connection by id; it does not check if user has access to it or if it is archived
 func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.Connection, error) {
-
 	if conn.IsSystemConnectionID(connectionID) {
 		con := proto.Connection{
 			Id:             conn.SystemConnectionID,
@@ -134,6 +133,7 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 				con.CloudStorageBucket = storage.GetDefaultBucketName()
 				con.BigqueryProjectId = os.Getenv("DEKART_BIGQUERY_PROJECT_ID")
 				con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_BIGQUERY
+				con.CanStoreFiles = os.Getenv("DEKART_ALLOW_FILE_UPLOAD") != ""
 				return &con, nil
 			}
 			return nil, nil
@@ -158,7 +158,6 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 		default:
 			log.Fatal().Str("DEKART_STORAGE", os.Getenv("DEKART_STORAGE")).Msg("Unknown storage backend")
 		}
-
 		if os.Getenv("DEKART_ALLOW_FILE_UPLOAD") != "" && con.CloudStorageBucket != "" {
 			con.CanStoreFiles = true
 		}
@@ -399,6 +398,9 @@ func (s Server) SetDefaultConnection(ctx context.Context, req *proto.SetDefaultC
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
+	}
+	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "only admins can edit connections")
 	}
 	_, err := s.db.ExecContext(ctx,
 		`update connections set

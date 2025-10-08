@@ -117,6 +117,7 @@ func (j *Job) fetchQueryMetadata(queryIDChan chan string, resultsReady chan bool
 				j.ResultReady = true
 				j.DWJobID = &queryID
 			}
+			j.TotalRows = status.ProducedRows
 			j.ProcessedBytes = status.ScanBytes
 			j.Unlock()
 			return

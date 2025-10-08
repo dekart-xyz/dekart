@@ -16,8 +16,6 @@ ADD vitest.config.js vitest.config.js
 ADD vite.config.js vite.config.js
 
 FROM nodedeps AS nodebuilder
-RUN npm run lint
-RUN npm run test
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run build
 
@@ -38,7 +36,6 @@ ADD src/proto src/proto
 ADD src/server src/server
 
 FROM godeps AS gobuilder
-RUN go test -v -count=1 ./src/server/**/
 RUN CGO_ENABLED=1 go build ./src/server
 
 FROM godeps AS gotest

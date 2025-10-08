@@ -29,6 +29,7 @@ import { removeReadme, showReadmeTab } from './actions/readme'
 import Modal from 'antd/es/modal'
 import { MapControlButton } from '@kepler.gl/components/dist/common/styled-components'
 import { Loading } from './Loading'
+import { UNKNOWN_EMAIL } from './lib/constants'
 
 function TabIcon ({ job }) {
   let iconColor = 'transparent'
@@ -143,7 +144,7 @@ function getTabPane (dataset, queries, files, status, queryJobs, closable, lastD
 }
 
 function DatasetSection ({ reportId }) {
-  const datasets = useSelector(state => state.dataset.list)
+  let datasets = useSelector(state => state.dataset.list)
   const queries = useSelector(state => state.queries)
   const queryJobs = useSelector(state => state.queryJobs)
   const files = useSelector(state => state.files)
@@ -154,17 +155,22 @@ function DatasetSection ({ reportId }) {
   const edit = useSelector(state => state.reportStatus.edit)
   const dispatch = useDispatch()
   const readmeTab = []
-  const showReadme = useSelector(state => state.readme.showTab)
+  let showReadme = useSelector(state => state.readme.showTab)
   const closable = Boolean(canWrite && edit && datasets.length > 1)
   const lastDataset = datasets.length === 1
+
+  // disable SQL panels when export is disabled
+  const disableSQL = !report.allowExport && !report.canWrite
 
   if (report.readme) {
     readmeTab.push(
       <Tabs.TabPane
         className={styles.addTabPane}
         tab={
-          <><ReadOutlined /> Readme</>
-      }
+          <>
+            <ReadOutlined /> Readme
+          </>
+        }
         key='readme'
         closable={canWrite && edit}
       />
@@ -172,10 +178,19 @@ function DatasetSection ({ reportId }) {
   }
 
   useEffect(() => {
-    if (report && !(activeDataset)) {
+    if (report && !(activeDataset) && !disableSQL) {
       dispatch(createDataset(reportId))
     }
-  }, [reportId, report, activeDataset, dispatch])
+  }, [reportId, report, activeDataset, dispatch, disableSQL])
+
+  if (disableSQL) {
+    if (!report.readme) {
+      return null
+    }
+    showReadme = true
+    datasets = []
+  }
+
   if (activeDataset || showReadme) {
     return (
       <>
@@ -234,6 +249,7 @@ function Title () {
     return (
       <div className={styles.title}>
         <Input
+          id='dekart-report-title-input'
           className={styles.titleInput}
           value={value}
           onChange={(e) => {
@@ -299,11 +315,13 @@ class CatchKeplerError extends Component {
 
 function ToggleFullscreenButton () {
   const dispatch = useDispatch()
+  const report = useSelector(state => state.report)
+  const hideFullscreen = !report.allowExport && !report.canWrite && !report.readme
 
   return (
     <div className={styles.toggleFullscreen}>
       <Tooltip title='Toggle fullscreen' placement='left'>
-        <MapControlButton active className={styles.toggleFullscreenButton} onClick={() => dispatch(toggleReportFullscreen())}>
+        <MapControlButton active disabled={hideFullscreen} className={styles.toggleFullscreenButton} onClick={() => dispatch(toggleReportFullscreen())}>
           <VerticalAlignBottomOutlined />
         </MapControlButton>
       </Tooltip>
@@ -313,14 +331,21 @@ function ToggleFullscreenButton () {
 
 function Kepler () {
   const env = useSelector(state => state.env)
+  const report = useSelector(state => state.report)
   const dispatch = useDispatch()
   if (!env.loaded) {
     return (
       <div className={styles.keplerBlock} />
     )
   }
+  const hideInteraction = !report.allowExport && !report.canWrite
   return (
-    <div className={styles.keplerBlock}>
+    <div className={classnames(
+      styles.keplerBlock, {
+        [styles.hideExport]: !report.allowExport,
+        [styles.hideInteraction]: hideInteraction
+      })}
+    >
       <ToggleFullscreenButton />
       <AutoSizer>
         {({ height, width }) => (
@@ -400,8 +425,8 @@ export default function ReportPage ({ edit }) {
             <Kepler />
             <div className={styles.meta}>
               {updatedAt ? <span className={styles.lastUpdated} title={`${updatedAtDate.toISOString()}`}>{updatedAtDate.toLocaleString()}</span> : null}
-              {updatedAt && report.authorEmail !== 'UNKNOWN_EMAIL' ? <span className={styles.dot}> | </span> : null}
-              {report.authorEmail !== 'UNKNOWN_EMAIL' ? <span className={styles.author} title='Map author'>{report.authorEmail}</span> : null}
+              {updatedAt && report.authorEmail !== UNKNOWN_EMAIL ? <span className={styles.dot}> | </span> : null}
+              {report.authorEmail !== UNKNOWN_EMAIL ? <span className={styles.author} title='Map author'>{report.authorEmail}</span> : null}
             </div>
           </div>
         </div>

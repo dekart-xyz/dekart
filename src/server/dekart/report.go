@@ -25,11 +25,11 @@ func newUUID() string {
 	return u.String()
 }
 
-// getReport returns report by id, checks if user has access to it
-func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, error) {
+// getReportWithOptions returns report by id, checks if user has access to it
+func (s Server) getReportWithOptions(ctx context.Context, reportID string, archived bool) (*proto.Report, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
-		log.Fatal().Msg("getReport require claims")
+		log.Fatal().Msg("getReportWithOptions require claims")
 		return nil, nil
 	}
 	reportRows, err := s.db.QueryContext(ctx,
@@ -66,12 +66,13 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 				and (c.bigquery_key_encrypted is null or c.bigquery_key_encrypted = '') -- BigQuery passthrough
 			) as connections_with_sensitive_scope_num,
 			is_public,
+			track_viewers,
 			query_params,
 			allow_export,
 			readme,
 			workspace_id
 		from reports as r
-		where (id=$6) and (not archived)
+		where (id=$6) and (archived = $7)
 		limit 1`,
 		claims.Email,
 		claims.Email,
@@ -79,6 +80,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 		reportID, // sqlite does not support positional parameters reuse
 		reportID,
 		reportID,
+		archived,
 	)
 	if err != nil {
 		log.Err(err).Str("workspace", checkWorkspace(ctx).ID).Str("reportID", reportID).Send()
@@ -110,6 +112,7 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 			&connectionsNum,
 			&connectionsWithSensitiveScopeNum,
 			&report.IsPublic,
+			&report.TrackViewers,
 			&queryParams,
 			&report.AllowExport,
 			&readme,
@@ -138,6 +141,10 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 		}
 
 		report.NeedSensitiveScope = connectionsWithSensitiveScopeNum > 0
+		if report.IsPublic && !report.CanWrite {
+			// viewers of public reports don't need sensitive scope
+			report.NeedSensitiveScope = false
+		}
 		report.Discoverable = (report.Discoverable &&
 			report.IsSharable && // only sharable reports can be discoverable
 			reportWorkspaceID.String == checkWorkspace(ctx).ID)
@@ -182,6 +189,12 @@ func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, 
 		}
 	}
 	return nil, nil // not found
+}
+
+// getReport returns report by id, checks if user has access to it
+// Excludes archived reports for backward compatibility
+func (s Server) getReport(ctx context.Context, reportID string) (*proto.Report, error) {
+	return s.getReportWithOptions(ctx, reportID, false)
 }
 
 // CreateReport implementation
@@ -246,6 +259,20 @@ func updateDatasetIds(report *proto.Report, datasets []*proto.Dataset) (newMapCo
 
 func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Report, datasets []*proto.Dataset, jobs []*proto.QueryJob) error {
 	claims := user.GetClaims(ctx)
+
+	// Validate map config size to prevent gRPC message size errors
+	if len(report.MapConfig) > MaxMapConfigSize {
+		log.Warn().
+			Str("reportId", report.Id).
+			Str("authorEmail", claims.Email).
+			Int("mapConfigSize", len(report.MapConfig)).
+			Int("maxAllowed", MaxMapConfigSize).
+			Msg("Map configuration too large during fork")
+		return status.Errorf(codes.InvalidArgument,
+			"Map configuration is too large (%d bytes). Maximum allowed size is %d bytes. Please simplify your map configuration.",
+			len(report.MapConfig), MaxMapConfigSize)
+	}
+
 	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return err
@@ -516,6 +543,19 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
 		return nil, status.Error(codes.PermissionDenied, "Only admins and editors can update reports")
 	}
+
+	// Validate map config size to prevent gRPC message size errors
+	if len(req.MapConfig) > MaxMapConfigSize {
+		log.Warn().
+			Str("reportId", req.ReportId).
+			Str("authorEmail", claims.Email).
+			Int("mapConfigSize", len(req.MapConfig)).
+			Int("maxAllowed", MaxMapConfigSize).
+			Msg("Map configuration too large")
+		return nil, status.Errorf(codes.InvalidArgument,
+			"Map configuration is too large (%d bytes). Maximum allowed size is %d bytes. Please simplify your map configuration.",
+			len(req.MapConfig), MaxMapConfigSize)
+	}
 	var paramsJSON []byte
 	if req.QueryParams != nil {
 		var err error
@@ -639,6 +679,45 @@ func (s Server) AllowExportDatasets(ctx context.Context, req *proto.AllowExportD
 	return &proto.AllowExportDatasetsResponse{}, nil
 }
 
+// SetTrackViewers toggles tracking viewers for a report
+func (s Server) SetTrackViewers(ctx context.Context, req *proto.SetTrackViewersRequest) (*proto.SetTrackViewersResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	_, err := uuid.Parse(req.ReportId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+	report, err := s.getReport(ctx, req.ReportId)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if !report.CanWrite {
+		err := fmt.Errorf("cannot set track_viewers for report %s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.PermissionDenied, "Cannot set track viewers")
+	}
+
+	_, err = s.db.ExecContext(ctx,
+		`update reports set track_viewers=$1 where id=$2`,
+		req.TrackViewers,
+		req.ReportId,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	s.reportStreams.Ping(req.ReportId)
+	return &proto.SetTrackViewersResponse{}, nil
+}
+
 func (s Server) SetDiscoverable(ctx context.Context, req *proto.SetDiscoverableRequest) (*proto.SetDiscoverableResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
@@ -707,6 +786,30 @@ func (s Server) ArchiveReport(ctx context.Context, req *proto.ArchiveReportReque
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, err.Error())
 	}
+
+	// Use getReportWithOptions to include archived reports (needed for unarchiving)
+	report, err := s.getReportWithOptions(ctx, req.ReportId, !req.Archive)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if !report.CanWrite {
+		err := fmt.Errorf("cannot archive report %s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.PermissionDenied, "Cannot archive report")
+	}
+
+	if req.Archive && report.IsPublic {
+		err := fmt.Errorf("cannot archive public report %s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.InvalidArgument, "Cannot archive public report")
+	}
+
 	var result sql.Result
 	if checkWorkspace(ctx).IsPlayground {
 		result, err = s.db.ExecContext(ctx,
@@ -740,6 +843,7 @@ func (s Server) ArchiveReport(ctx context.Context, req *proto.ArchiveReportReque
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
+
 	s.reportStreams.Ping(req.ReportId)
 
 	return &proto.ArchiveReportResponse{}, nil

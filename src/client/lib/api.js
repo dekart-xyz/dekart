@@ -1,3 +1,5 @@
+import { UNKNOWN_EMAIL } from './constants'
+
 export class ApiError extends Error {
   constructor (url, status, errorDetails) {
     super(`${status} GET ${url}`)
@@ -13,7 +15,7 @@ export class AbortError extends Error {
   }
 }
 
-export function get (endpoint, token = null, signal = null, onProgress = null, claimEmailCookie = null) {
+export function get (endpoint, token = null, signal = null, onProgress = null, claimEmailCookie = null, reportId = '', loginHint = null) {
   return new Promise((resolve, reject) => {
     const xhr = new window.XMLHttpRequest()
     const { VITE_API_HOST } = import.meta.env
@@ -27,6 +29,12 @@ export function get (endpoint, token = null, signal = null, onProgress = null, c
     }
     if (claimEmailCookie) {
       xhr.setRequestHeader('X-Dekart-Claim-Email', claimEmailCookie)
+    }
+    if (reportId) {
+      xhr.setRequestHeader('X-Dekart-Report-Id', reportId)
+    }
+    if (loginHint && loginHint !== UNKNOWN_EMAIL) {
+      xhr.setRequestHeader('X-Dekart-Logged-In', 'true')
     }
 
     xhr.responseType = 'arraybuffer'

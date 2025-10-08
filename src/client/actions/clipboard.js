@@ -1,4 +1,4 @@
-import { success } from './message'
+import { info, success } from './message'
 import copy from 'copy-to-clipboard'
 
 export function copyUrlToClipboard (url, successMessage) {
@@ -8,5 +8,13 @@ export function copyUrlToClipboard (url, successMessage) {
     if (successMessage) {
       dispatch(success(successMessage))
     }
+  }
+}
+
+export function copyErrorToClipboard (error) {
+  return (dispatch) => {
+    dispatch({ type: copyErrorToClipboard.name, error })
+    copy(error)
+    dispatch(info('Error copied to clipboard'))
   }
 }

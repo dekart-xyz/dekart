@@ -94,6 +94,15 @@ type DekartAddReportDirectAccess = {
   readonly responseType: typeof dekart_pb.AddReportDirectAccessResponse;
 };
 
+type DekartSetTrackViewers = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof dekart_pb.SetTrackViewersRequest;
+  readonly responseType: typeof dekart_pb.SetTrackViewersResponse;
+};
+
 type DekartCreateDataset = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -376,6 +385,7 @@ export class Dekart {
   static readonly AddReadme: DekartAddReadme;
   static readonly RemoveReadme: DekartRemoveReadme;
   static readonly AddReportDirectAccess: DekartAddReportDirectAccess;
+  static readonly SetTrackViewers: DekartSetTrackViewers;
   static readonly CreateDataset: DekartCreateDataset;
   static readonly RemoveDataset: DekartRemoveDataset;
   static readonly UpdateDatasetName: DekartUpdateDatasetName;
@@ -529,6 +539,15 @@ export class DekartClient {
   addReportDirectAccess(
     requestMessage: dekart_pb.AddReportDirectAccessRequest,
     callback: (error: ServiceError|null, responseMessage: dekart_pb.AddReportDirectAccessResponse|null) => void
+  ): UnaryResponse;
+  setTrackViewers(
+    requestMessage: dekart_pb.SetTrackViewersRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.SetTrackViewersResponse|null) => void
+  ): UnaryResponse;
+  setTrackViewers(
+    requestMessage: dekart_pb.SetTrackViewersRequest,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.SetTrackViewersResponse|null) => void
   ): UnaryResponse;
   createDataset(
     requestMessage: dekart_pb.CreateDatasetRequest,

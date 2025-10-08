@@ -21,8 +21,15 @@ env:
 
 jobs:
   e2e-cloud:
-    if: ${{ inputs.target == 'cloud' }}
+    if: ${{ inputs.target == 'premium' }}
     runs-on: ubuntu-latest
+
+    env:
+      # registry prefix + login target
+      REG_PREFIX: ${{format('ghcr.io/{0}', github.repository)}}
+      LOGIN_REG:  ghcr
+      GOOGLE_CRED_SEC: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+
 
     services:
       postgres:
@@ -39,55 +46,96 @@ jobs:
         ports: ['5432:5432']
 
     steps:
-      - uses: google-github-actions/setup-gcloud@v0
+      # credentials file for any variant that may need it
+      - run: echo "$GOOGLE_CRED_SEC" > "$GOOGLE_APPLICATION_CREDENTIALS"
+      - uses: docker/login-action@v3
         with:
-          project_id: dekart-cloud
-          service_account_key: ${{ secrets.PRIVATE_GITHUB_ACTIONS_DEKART_CLOUD }}
-          export_default_credentials: true
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - run: gcloud auth configure-docker europe-west3-docker.pkg.dev
 
       - uses: docker/setup-qemu-action@v2
       - uses: docker/setup-buildx-action@v2
 
-      - name: Run cloud E2E specs
+      - name: Pre-pull test image (retry)
         run: |
-          for SPEC in \
-            cypress/e2e/cloud/cloudBasicFlowStart.cy.js \
-            cypress/e2e/cloud/cloudBasicFlowEnd.cy.js
-          do
-            TOKEN=$([ "$SPEC" == *cloudBasicFlowStart* ] \
-                    && echo '${{ secrets.DEV_REFRESH_TOKEN_INFO }}' \
-                    || echo '${{ secrets.DEV_REFRESH_TOKEN }}')
-
-            docker run -i --network host \
-              -v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
-              -v /tmp/cypress/videos:/dekart/cypress/videos \
-              -v /tmp/cypress/screenshots:/dekart/cypress/screenshots \
-              -e DEKART_LOG_DEBUG=1 \
-              -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
-              -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
-              -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
-              -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
-              -e DEKART_POSTGRES_HOST=localhost \
-              -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
-              -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
-              -e DEKART_STORAGE=USER \
-              -e DEKART_DATASOURCE=USER \
-              -e DEKART_ALLOW_FILE_UPLOAD=1 \
-              -e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
-              -e DEKART_GOOGLE_OAUTH_CLIENT_ID='${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}' \
-              -e DEKART_GOOGLE_OAUTH_SECRET='${{ secrets.GOOGLE_OAUTH_SECRET }}' \
-              -e DEKART_DEV_REFRESH_TOKEN="$TOKEN" \
-              -e DEKART_DATA_ENCRYPTION_KEY=projects/398860824064/secrets/dekart-prod-user-data-encoding-key/versions/1 \
-              -e DEKART_CORS_ORIGIN=http://localhost:3000 \
-              -e DEKART_UX_DISABLE_VERSION_CHECK=1 \
-              -e DEKART_DEV_NO_DATASET_CACHE=1 \
-              -e DEKART_CLOUD=1 \
-              -e TEST_SPEC=$SPEC \
-              -e CYPRESS_CI=1 \
-              europe-west3-docker.pkg.dev/dekart-cloud/dekart/dekart:${{ env.IMAGE_CACHE_KEY }}
+          image="${REG_PREFIX}/dekart:${IMAGE_CACHE_KEY}"
+          for attempt in 1 2 3 4 5; do
+            echo "Pulling $image (attempt $attempt)..."
+            if docker pull "$image"; then
+              echo "Pulled $image"
+              break
+            fi
+            if [ "$attempt" -eq 5 ]; then
+              echo "Failed to pull $image after $attempt attempts"
+              exit 1
+            fi
+            sleep $((attempt * 10))
           done
+
+      - name: E2E part 1
+        run: |
+          docker run -i \
+            --network="host" \
+            -v $(pwd)/${GOOGLE_APPLICATION_CREDENTIALS}:/dekart/${GOOGLE_APPLICATION_CREDENTIALS} \
+            -v /tmp/cypress/videos:/dekart/cypress/videos/ \
+            -v /tmp/cypress/screenshots:/dekart/cypress/screenshots/ \
+            -e DEKART_LOG_DEBUG=1 \
+            -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
+            -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
+            -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
+            -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
+            -e DEKART_POSTGRES_HOST=localhost \
+            -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
+            -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
+            -e DEKART_STORAGE=USER \
+            -e DEKART_DATASOURCE=USER \
+            -e DEKART_ALLOW_FILE_UPLOAD=1 \
+            -e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
+            -e DEKART_GOOGLE_OAUTH_CLIENT_ID=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }} \
+            -e DEKART_GOOGLE_OAUTH_SECRET=${{ secrets.GOOGLE_OAUTH_SECRET }} \
+            -e DEKART_DEV_REFRESH_TOKEN=${{ secrets.DEV_REFRESH_TOKEN_INFO }} \
+            -e DEKART_DATA_ENCRYPTION_KEY=projects/910252011719/secrets/dekart-dev-user-data-encoding-key/versions/latest \
+          	-e DEKART_CORS_ORIGIN=http://localhost:3000 \
+            -e DEKART_ALLOW_WORKSPACE_CREATION=1 \
+            -e DEKART_UX_DISABLE_VERSION_CHECK=1 \
+            -e DEKART_DEV_NO_DATASET_CACHE=1 \
+            -e DEKART_CLOUD=1 \
+            -e TEST_SPEC=cypress/e2e/cloud/cloudBasicFlowStart.cy.js \
+            -e CYPRESS_CI=1 \
+            ${REG_PREFIX}/dekart:${{ env.IMAGE_CACHE_KEY }}
+      - name: E2E part 2
+        run: |
+          docker run -i \
+            --network="host" \
+            -v $(pwd)/${GOOGLE_APPLICATION_CREDENTIALS}:/dekart/${GOOGLE_APPLICATION_CREDENTIALS} \
+            -v /tmp/cypress/videos:/dekart/cypress/videos/ \
+            -v /tmp/cypress/screenshots:/dekart/cypress/screenshots/ \
+            -e DEKART_LOG_DEBUG=1 \
+            -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
+            -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
+            -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
+            -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
+            -e DEKART_POSTGRES_HOST=localhost \
+            -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
+            -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
+            -e DEKART_STORAGE=USER \
+            -e DEKART_DATASOURCE=USER \
+            -e DEKART_ALLOW_FILE_UPLOAD=1 \
+            -e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
+            -e DEKART_GOOGLE_OAUTH_CLIENT_ID=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }} \
+            -e DEKART_GOOGLE_OAUTH_SECRET=${{ secrets.GOOGLE_OAUTH_SECRET }} \
+            -e DEKART_DEV_REFRESH_TOKEN=${{ secrets.DEV_REFRESH_TOKEN }} \
+            -e DEKART_DATA_ENCRYPTION_KEY=projects/910252011719/secrets/dekart-dev-user-data-encoding-key/versions/latest \
+            -e DEKART_CORS_ORIGIN=http://localhost:3000 \
+            -e DEKART_ALLOW_WORKSPACE_CREATION=1 \
+            -e DEKART_UX_DISABLE_VERSION_CHECK=1 \
+            -e DEKART_DEV_NO_DATASET_CACHE=1 \
+            -e DEKART_CLOUD=1 \
+            -e TEST_SPEC=cypress/e2e/cloud/cloudBasicFlowEnd.cy.js \
+            -e CYPRESS_CI=1 \
+            ${REG_PREFIX}/dekart:${{ env.IMAGE_CACHE_KEY }}
 
       - uses: actions/upload-artifact@v4
         if: failure()
@@ -96,7 +144,6 @@ jobs:
           path: /tmp/cypress
 
   e2e-premium-oss:
-    if: ${{ inputs.target != 'cloud' }}
     runs-on: ubuntu-latest
 
     env:
@@ -215,6 +262,23 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Pre-pull test image (retry)
+        run: |
+          image="${REG_PREFIX}/dekart:${IMAGE_CACHE_KEY}"
+          for attempt in 1 2 3 4 5; do
+            echo "Pulling $image (attempt $attempt)..."
+            if docker pull "$image"; then
+              echo "Pulled $image"
+              break
+            fi
+            if [ "$attempt" -eq 5 ]; then
+              echo "Failed to pull $image after $attempt attempts"
+              exit 1
+            fi
+            sleep $((attempt * 10))
+          done
+
 
       # ----------------------------- run tests -------------------------------
       - name: Run ${{ matrix.id }} suite

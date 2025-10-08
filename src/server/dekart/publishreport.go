@@ -232,7 +232,10 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 			}
 			err = srcObj.CopyTo(conCtx, dstObj.GetWriter(defConnCtx))
 			if err != nil {
-				log.Err(err).Msg("Cannot copy query result to public storage")
+				log.Err(err).
+					Str("resultURI", resultURI).
+					Str("dwJobID", dwJobID).
+					Msg("Cannot copy query result to public storage")
 				return
 			}
 		}
@@ -307,7 +310,32 @@ func (s Server) PublishReport(ctx context.Context, req *proto.PublishReportReque
 		log.Warn().Err(err).Msg("No permission to publish report")
 		return nil, status.Errorf(codes.PermissionDenied, err.Error())
 	}
+
+	// Check if user is trying to publish and if they have a freemium plan
 	if req.Publish {
+		workspaceInfo := user.CheckWorkspaceCtx(ctx)
+
+		// Check if user has freemium plan (TYPE_PERSONAL) and limit to 1 public map
+		if workspaceInfo.PlanType == proto.PlanType_TYPE_PERSONAL {
+			// Count existing public reports for this workspace
+			var publicReportsCount int
+			err = s.db.QueryRowContext(ctx,
+				`SELECT COUNT(*) FROM reports WHERE workspace_id = $1 AND is_public = true AND NOT archived`,
+				workspaceInfo.ID,
+			).Scan(&publicReportsCount)
+			if err != nil {
+				log.Err(err).Msg("Cannot count public reports")
+				return nil, status.Errorf(codes.Internal, err.Error())
+			}
+
+			// If user already has 1 public report and this report is not already public, block publishing
+			if publicReportsCount >= 1 && !report.IsPublic {
+				return &proto.PublishReportResponse{
+					PublicMapsLimitReached: true,
+				}, nil
+			}
+		}
+
 		go s.publishReport(ctx, req.ReportId)
 	} else {
 		go s.unpublishReport(ctx, req.ReportId)

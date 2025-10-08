@@ -16,6 +16,7 @@ import (
 	"sync"
 
 	"github.com/golang-jwt/jwt"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -173,6 +174,7 @@ func GetTokenSource(ctx context.Context) oauth2.TokenSource {
 func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 	ctx := r.Context()
 	var claims *Claims
+
 	if c.DevClaimsEmail != "" {
 		email := r.Header.Get("X-Dekart-Claim-Email")
 		if email == "" {
@@ -186,7 +188,16 @@ func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 	} else if c.RequireAmazonOIDC {
 		claims = c.validateJWTFromAmazonOIDC(ctx, r.Header.Get("x-amzn-oidc-data"))
 	} else if c.RequireGoogleOAuth {
-		claims = c.validateAuthToken(ctx, r.Header.Get("Authorization"))
+		reportID := r.Header.Get("X-Dekart-Report-Id")
+		loggedIn := r.Header.Get("X-Dekart-Logged-In")
+		isPublicReportRequest := c.isPublicReportRequest(ctx, reportID)
+		if loggedIn != "true" && isPublicReportRequest {
+			claims = &Claims{
+				Email: UnknownEmail,
+			}
+		} else {
+			claims = c.validateAuthToken(ctx, r.Header.Get("Authorization"))
+		}
 	} else if c.RequireSnowflakeContext {
 		claims = c.getSnowflakeContext(r.Header.Get("Sf-Context-Current-User"))
 	} else {
@@ -214,6 +225,38 @@ var sensitiveScope = append(
 	[]string{googleOAuth.UserinfoProfileScope, googleOAuth.UserinfoEmailScope, "https://www.googleapis.com/auth/devstorage.read_write"},
 	GetBigQueryAuthScopes()..., // includes extra configured scopes
 )
+
+func (c ClaimsCheck) isPublicReportRequest(ctx context.Context, reportID string) bool {
+	if reportID == "" {
+		return false
+	}
+
+	// UUID format validation
+	_, err := uuid.Parse(reportID)
+	if err != nil {
+		return false
+	}
+
+	// check if report is public and tracking is disabled
+	res, err := c.db.QueryContext(ctx, "SELECT is_public, track_viewers FROM reports WHERE id = $1", reportID)
+	if err != nil {
+		log.Error().Err(err).Msg("Error checking if report is public")
+		return false
+	}
+	// Ensure rows are closed to avoid leaking connections
+	defer res.Close()
+	// scan result
+	var isPublic bool
+	var trackViewers bool
+	if res.Next() {
+		err = res.Scan(&isPublic, &trackViewers)
+		if err != nil {
+			log.Error().Err(err).Msg("Error scanning report")
+			return false
+		}
+	}
+	return isPublic && !trackViewers
+}
 
 func (c ClaimsCheck) getSnowflakeContext(user string) *Claims {
 	if c.DevClaimsEmail != "" {

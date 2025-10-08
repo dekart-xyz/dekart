@@ -226,7 +226,6 @@ func (c *Connection) backgroundLoop() {
 			log.Error().Err(err).Msg("websocket read error")
 			return
 		}
-
 		var msg inboundMessage
 		switch mt {
 		case websocket.TextMessage:

@@ -45,17 +45,20 @@ export function info (content) {
 export function setError (err, transitive = true) {
   return (dispatch) => {
     console.error(err)
-    track('setError', {
-      message: err.message
-    })
     if ([401, 403].includes(err.status)) {
       dispatch(setHttpError(err.status, `${err.message}: ${err.errorDetails}`))
     } else if (transitive) {
+      track('setError', {
+        message: err.message
+      })
       message.error({
         content: err.message,
         style
       })
     } else {
+      track('setError', {
+        message: err.message
+      })
       message.error({
         content: (<PermanentError message={err.message} />),
         duration: 10000,
@@ -67,28 +70,47 @@ export function setError (err, transitive = true) {
 }
 
 export function setHttpError (status, message = '') {
-  if (status === 404) {
-    console.trace('404')
+  if (status !== 401) {
+    // 401 is normal part of auth flow, so we don't need to track it
+    track('setHttpError', {
+      status,
+      message
+    })
   }
-  track('setHttpError', {
-    status,
-    message
-  })
   return { type: setHttpError.name, status, message }
 }
 
+// Helper to show error message with tracking
+function showStreamError (errorCode, errorMsg) {
+  track('setStreamError', {
+    status: errorCode,
+    message: errorMsg
+  })
+  message.error({
+    content: (<StreamError code={errorCode} message={errorMsg} />),
+    duration: 10000,
+    style
+  })
+}
+
 export function setStreamError (code, msg) {
-  return (dispatch) => {
+  return (dispatch, getState) => {
+    const httpError = getState().httpError
+    const serverErrorMessage = 'The server is currently unavailable.'
     dispatch({ type: setStreamError.name })
     console.error(code)
-    track('setStreamError', {
-      code,
-      message: msg
-    })
+
     // https://github.com/grpc/grpc/blob/master/doc/statuscodes.md
     switch (code) {
       case 1:
         dispatch(info('Request cancelled'))
+        return
+      case 2:
+        if (httpError.status === 401) {
+          // we already navigate off the page, so we don't need to show the error
+          return
+        }
+        showStreamError(code, serverErrorMessage)
         return
       case 5:
         dispatch(setHttpError(404))
@@ -100,11 +122,7 @@ export function setStreamError (code, msg) {
         dispatch(setHttpError(401))
         return
       default:
-        message.error({
-          content: (<StreamError code={code} message={msg} />),
-          duration: 10000,
-          style
-        })
+        showStreamError(code, msg)
     }
   }
 }

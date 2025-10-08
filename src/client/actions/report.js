@@ -3,7 +3,7 @@ import { removeDataset } from '@kepler.gl/actions'
 
 import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
 import { success } from './message'
-import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType } from 'dekart-proto/dekart_pb'
+import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType, SetTrackViewersRequest } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { createQuery, downloadQuerySource } from './query'
 import { downloadDataset } from './dataset'
@@ -12,6 +12,7 @@ import { shouldUpdateDataset } from '../lib/shouldUpdateDataset'
 import { needSensitiveScopes } from './user'
 import { getQueryParamsObjArr } from '../lib/queryParams'
 import { receiveReportUpdateMapConfig } from '../lib/mapConfig'
+import { showUpgradeModal } from './upgradeModal'
 
 export function closeReport () {
   return (dispatch) => {
@@ -273,13 +274,19 @@ export function allowExportDatasets (reportId, allowExport) {
   }
 }
 
-export function publishReport (reportId, publish) {
+export function publishReport (reportId, publish, cancelPublish) {
   return async (dispatch) => {
     dispatch({ type: publishReport.name })
     const req = new PublishReportRequest()
     req.setReportId(reportId)
     req.setPublish(publish)
-    dispatch(grpcCall(Dekart.PublishReport, req))
+    dispatch(grpcCall(Dekart.PublishReport, req, (response) => {
+      // Handle response when publishing is blocked
+      if (response.publicMapsLimitReached) {
+        dispatch(showUpgradeModal())
+        cancelPublish()
+      }
+    }))
   }
 }
 
@@ -331,6 +338,16 @@ export function addReportDirectAccess (reportId, emails) {
     dispatch(grpcCall(Dekart.AddReportDirectAccess, request, () => {
       dispatch(success('Direct access updated'))
     }))
+  }
+}
+
+export function setTrackViewers (reportId, trackViewers) {
+  return async (dispatch) => {
+    dispatch({ type: setTrackViewers.name })
+    const req = new SetTrackViewersRequest()
+    req.setReportId(reportId)
+    req.setTrackViewers(trackViewers)
+    dispatch(grpcCall(Dekart.SetTrackViewers, req))
   }
 }
 

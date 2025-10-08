@@ -103,6 +103,15 @@ function isPlayground (state = false, action) {
   }
 }
 
+function isAnonymous (state = false, action) {
+  switch (action.type) {
+    case userStreamUpdate.name:
+      return action.isAnonymous
+    default:
+      return state
+  }
+}
+
 function redirectStateReceived (state = false, action) {
   switch (action.type) {
     case setRedirectState.name:
@@ -142,5 +151,6 @@ export default combineReducers({
   isViewer,
   isAdmin,
   isSelfHosted,
-  claimEmailCookie
+  claimEmailCookie,
+  isAnonymous
 })
