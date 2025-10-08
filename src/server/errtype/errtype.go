@@ -12,7 +12,7 @@ func (e *EmptyResult) Error() string {
 	return "Empty result"
 }
 
-var ContextCancelledRe = regexp.MustCompile(`context canceled`)
+var ContextCancelledRe = regexp.MustCompile(`context canceled|canceling statement due to user request`)
 
 var WriteClosedPipeRe = regexp.MustCompile(`write on closed pipe`)
 
