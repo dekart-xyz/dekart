@@ -75,7 +75,7 @@ function DatasetSelector ({ dataset }) {
           disable={!(allowFileUpload && report.canWrite)}
           disabledNote={disabledNote}
           title='Upload File'
-          subtitle='Load files in CSV or GeoJSON formats'
+          subtitle='Load files in CSV, GeoJSON, or Parquet formats'
           onClick={() => {
             dispatch(createFile(dataset.id, fileUploadConnection?.id))
           }}

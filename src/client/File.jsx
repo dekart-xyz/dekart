@@ -6,13 +6,15 @@ import { useState } from 'react'
 import prettyBites from 'pretty-bytes'
 import { useSelector, useDispatch } from 'react-redux'
 import { uploadFile } from './actions/file'
+import { extensionFromMime, inferMimeFromName } from './lib/mime'
 
 function getFileExtensionName (type) {
   switch (type) {
     case 'application/geo+json':
-      return 'geojson'
     case 'text/csv':
-      return 'csv'
+    case 'application/vnd.apache.parquet':
+    case 'application/octet-stream':
+      return extensionFromMime(type) || '???'
     default:
       return '???'
   }
@@ -124,7 +126,7 @@ export default function File ({ file }) {
   } else if (fileToUpload) {
     fileInfo = {
       name: fileToUpload.name,
-      type: fileToUpload.type
+      type: fileToUpload.type || inferMimeFromName(fileToUpload.name)
     }
   }
   return (
@@ -142,7 +144,7 @@ export default function File ({ file }) {
               <Upload
                 maxCount={1}
                 disabled={!(canWrite && edit)}
-                accept='.csv,.geojson'
+                accept='.csv,.geojson,.parquet'
                 fileList={[]}
                 beforeUpload={(file) => {
                   setFileToUpload(file)
@@ -151,7 +153,7 @@ export default function File ({ file }) {
               >
                 <div className={styles.uploadIcon}><InboxOutlined /></div>
                 <div className={styles.uploadHeader}>Click or drag file to this area to upload</div>
-                <div className={styles.uploadSubtitle}>Supported format: .csv .geojson</div>
+                <div className={styles.uploadSubtitle}>Supported format: .csv .geojson .parquet</div>
               </Upload>
             </div>
             )}
