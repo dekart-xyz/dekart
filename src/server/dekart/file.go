@@ -63,17 +63,6 @@ func (s Server) setUploadError(reportID string, fileSourceID string, err error) 
 	s.reportStreams.Ping(reportID)
 }
 
-func getFileExtension(mimeType string) string {
-	switch mimeType {
-	case "text/csv":
-		return "csv"
-	case "application/geo+json":
-		return "geojson"
-	default:
-		return ""
-	}
-}
-
 func (s Server) moveFileToStorage(reqConCtx context.Context, fileSourceID string, fileExtension string, file multipart.File, report *proto.Report, bucketName string) {
 	defer file.Close()
 	userCtx, cancel := context.WithTimeout(user.CopyUserContext(reqConCtx, context.Background()), 10*time.Minute)
@@ -186,7 +175,7 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 	mimeType := handler.Header.Get("Content-Type")
 
-	fileExtension := getFileExtension(mimeType)
+	fileExtension := getFileExtensionFromMime(mimeType)
 
 	if fileExtension == "" {
 		err = fmt.Errorf("unsupported file type")

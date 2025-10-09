@@ -12,7 +12,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,14 +23,7 @@ import (
 
 // getContentTypeFromExtension returns the appropriate content type based on file extension
 func getContentTypeFromExtension(extension string) string {
-	switch strings.ToLower(extension) {
-	case "geojson":
-		return "application/geo+json"
-	case "parquet":
-		return "application/octet-stream"
-	default:
-		return "text/csv"
-	}
+	return getContentTypeFromExtensionCentral(extension)
 }
 
 func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Dataset, error) {

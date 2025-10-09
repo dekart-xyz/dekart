@@ -117,8 +117,8 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 			publicStorage := storage.NewPublicStorage()
 			if connection.CloudStorageBucket != publicStorage.GetDefaultBucketName() {
 				// delete only of they are on the different buckets
-				srcObj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", file.SourceId, getFileExtension(file.MimeType)))
-				dstObj := s.storage.GetObject(conCtx, s.getBucketNameFromConnection(connection), fmt.Sprintf("%s.%s", file.SourceId, getFileExtension(file.MimeType)))
+				srcObj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", file.SourceId, getFileExtensionFromMime(file.MimeType)))
+				dstObj := s.storage.GetObject(conCtx, s.getBucketNameFromConnection(connection), fmt.Sprintf("%s.%s", file.SourceId, getFileExtensionFromMime(file.MimeType)))
 				err = srcObj.CopyTo(conCtx, dstObj.GetWriter(conCtx))
 				if err != nil {
 					log.Err(err).Msg("Cannot copy file to public storage")
@@ -262,8 +262,8 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 			}
 			conCtx := conn.GetCtx(userCtx, connection)
 			publicStorage := storage.NewPublicStorage()
-			dstObj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", file.SourceId, getFileExtension(file.MimeType)))
-			srcObj := s.storage.GetObject(conCtx, s.getBucketNameFromConnection(connection), fmt.Sprintf("%s.%s", file.SourceId, getFileExtension(file.MimeType)))
+			dstObj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", file.SourceId, getFileExtensionFromMime(file.MimeType)))
+			srcObj := s.storage.GetObject(conCtx, s.getBucketNameFromConnection(connection), fmt.Sprintf("%s.%s", file.SourceId, getFileExtensionFromMime(file.MimeType)))
 			err = srcObj.CopyTo(conCtx, dstObj.GetWriter(conCtx))
 			if err != nil {
 				log.Err(err).Msg("Cannot copy file to public storage")

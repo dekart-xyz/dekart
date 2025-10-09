@@ -8,6 +8,7 @@ import getDatasetName from '../lib/getDatasetName'
 import { runQuery } from './query'
 import { KeplerGlSchema } from '@kepler.gl/schemas'
 import wasmInit from 'parquet-wasm'
+import { mimeFromExtension } from '../lib/mime'
 
 // Custom error to mark empty result cases for downstream handling
 class EmptyResultError extends Error {
@@ -208,7 +209,7 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
       const file = new File(
         [blob],
         label,
-        { type: extension === 'csv' ? 'text/csv' : extension === 'json' ? 'application/json' : '' })
+        { type: mimeFromExtension(extension) })
 
       // Add to queue and wait for sequential processing
       // Kepler loadFiles should not be called before all previous loadFiles are finished

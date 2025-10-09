@@ -12,6 +12,7 @@ import { shouldUpdateDataset } from '../lib/shouldUpdateDataset'
 import { needSensitiveScopes } from './user'
 import { getQueryParamsObjArr } from '../lib/queryParams'
 import { receiveReportUpdateMapConfig } from '../lib/mapConfig'
+import { extensionFromMime } from '../lib/mime'
 import { showUpgradeModal } from './upgradeModal'
 
 export function closeReport () {
@@ -193,9 +194,8 @@ export function reportUpdate (reportStreamResponse) {
       } else if (dataset.fileId) {
         const file = filesList.find(f => f.id === dataset.fileId)
         if (shouldAddFile(file, prevFileList, filesList, mapConfigUpdated) || shouldUpdateDataset(dataset, prevDatasetsList)) {
-          if (file.mimeType === 'application/geo+json') {
-            extension = 'geojson'
-          }
+          // Determine extension from MIME using centralized helper
+          extension = extensionFromMime(file.mimeType) || extension
           dispatch(downloadDataset(
             dataset,
             file.sourceId,
