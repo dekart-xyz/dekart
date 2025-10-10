@@ -685,7 +685,8 @@ func (s Server) getLastConnectionUpdate(ctx context.Context) (int64, error) {
 		if !lastConnectionUpdateDate.Valid {
 			return 0, nil // or any default value you prefer
 		}
-		lastConnectionUpdateDateParsed, err := time.Parse("2006-01-02 15:04:05", lastConnectionUpdateDate.String)
+		// Parse SQLite timestamp (stored in UTC)
+		lastConnectionUpdateDateParsed, err := time.ParseInLocation("2006-01-02 15:04:05", lastConnectionUpdateDate.String, time.UTC)
 		if err != nil {
 			log.Err(err).Send()
 			return 0, err

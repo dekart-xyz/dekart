@@ -362,26 +362,6 @@ func (s Server) getResultURI(ctx context.Context, resultID string) (string, erro
 	return "", nil
 }
 
-func (s Server) getDWJobIDFromResultID(ctx context.Context, resultID string) (string, error) {
-	var jobID sql.NullString
-	rows, err := s.db.QueryContext(ctx,
-		`select dw_job_id from query_jobs where job_result_id=$1`,
-		resultID,
-	)
-	if err != nil {
-		return "", err
-	}
-	defer rows.Close()
-	if rows.Next() {
-		err := rows.Scan(&jobID)
-		if err != nil {
-			return "", err
-		}
-		return jobID.String, nil
-	}
-	return "", nil
-}
-
 // since reading is using connection no auth is needed here
 func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -469,8 +449,8 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var obj storage.StorageObject
-
 	useCtx := conCtx
+	var jobIsRecent bool
 
 	if report.IsPublic {
 		// public report, load from public storage bucket
@@ -481,6 +461,18 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 		obj = storage.NewPresignedS3Storage().GetObject(conCtx, "", resultURI)
 	} else if dwJobID != "" {
 		// temp data warehouse table is used as source
+		expired, recent, err := s.checkJobExpiration(ctx, vars["source"])
+		jobIsRecent = recent
+		if err != nil {
+			log.Err(err).Msg("Error checking job expiration")
+			storageError(w, err)
+			return
+		}
+		if expired {
+			// Job is definitely too old, return expired immediately
+			storageError(w, &errtype.Expired{})
+			return
+		}
 		obj = s.storage.GetObject(conCtx, bucketName, dwJobID)
 	} else {
 		// file stored on the bucket is used as source
@@ -489,6 +481,13 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 
 	created, err := obj.GetCreatedAt(useCtx)
 	if err != nil {
+		// For DW jobs, determine if error should be treated as expiration
+		if dwJobID != "" && !jobIsRecent {
+			// Job is not recent, treat error as expiration
+			storageError(w, &errtype.Expired{})
+			return
+		}
+		// Job is recent or not a DW job, propagate the actual error
 		storageError(w, err)
 		return
 	}

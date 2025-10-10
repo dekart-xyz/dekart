@@ -136,13 +136,15 @@ define run_server
 	go run ./src/server/main.go
 endef
 
-# Pattern rule to match any target starting with ".env."
-server-%:
-	$(call run_server,.env.$*)
-
-# Rule for the default .env file
+# Rule for the default .env file or custom env file passed as argument
+# Usage: make server           -> uses .env
+#        make server .env.cloud -> uses .env.cloud
 server:
-	$(call run_server,.env)
+	$(call run_server,$(or $(filter-out server,$(MAKECMDGOALS)),.env))
+
+# Dummy target to prevent Make from trying to build .env files as targets
+.env%:
+	@:
 
 npm:
 	npm i --legacy-peer-deps

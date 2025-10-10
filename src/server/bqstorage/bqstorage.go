@@ -5,8 +5,6 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/bqutils"
 	"dekart/src/server/conn"
-	"dekart/src/server/deadline"
-	"dekart/src/server/errtype"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -49,12 +47,11 @@ func (s BigQueryStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, er
 	if err != nil {
 		return nil, err
 	}
-	endTime := jobFromJobId.LastStatus().Statistics.EndTime
-
-	if time.Since(endTime) > deadline.GetQueryCacheDeadline() {
-		return nil, &errtype.Expired{}
+	lastStatus := jobFromJobId.LastStatus()
+	if lastStatus == nil {
+		return nil, fmt.Errorf("BQ job last status is nil")
 	}
-
+	endTime := lastStatus.Statistics.EndTime
 	return &endTime, nil
 }
 
@@ -66,6 +63,8 @@ func (s BigQueryStorageObject) GetReader(ctx context.Context) (io.ReadCloser, er
 	}
 	jobFromJobId, err := client.JobFromID(connCtx, s.JobID)
 	if err != nil {
+		// Return the error as-is. The caller will decide if it's an expiration or permission issue
+		// based on the job age from the database
 		return nil, err
 	}
 	table, err := bqutils.GetTableFromJob(jobFromJobId)

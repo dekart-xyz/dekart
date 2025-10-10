@@ -20,3 +20,10 @@ func GetQueryCacheDeadline() time.Duration {
 	}
 	return deadline
 }
+
+// GetMinJobAgeForErrorPropagation returns the minimum age threshold for propagating real errors
+// For jobs updated more recently than this, we propagate actual errors (e.g., permission issues)
+// rather than treating them as expired
+func GetMinJobAgeForErrorPropagation() time.Duration {
+	return 8 * time.Minute
+}
