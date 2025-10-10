@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/conn"
-	"dekart/src/server/deadline"
 	"dekart/src/server/errtype"
 	"dekart/src/server/snowflakeutils"
 	"encoding/csv"
@@ -119,17 +118,10 @@ func (s SnowflakeStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, e
 	}
 	defer conn.Close()
 	status, err := conn.(sf.SnowflakeConnection).GetQueryStatus(ctx, s.queryID)
-
 	if err != nil {
-		log.Warn().Err(err).Msg("failed to get query status")
-		return nil, &errtype.Expired{}
+		return nil, err
 	}
 	createdAt := time.Unix(status.EndTime/1000, 0)
-
-	//check if query is too old
-	if time.Since(createdAt) > deadline.GetQueryCacheDeadline() {
-		return nil, &errtype.Expired{}
-	}
 	return &createdAt, nil
 }
 

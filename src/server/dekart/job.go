@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/deadline"
 	"dekart/src/server/job"
 	"dekart/src/server/user"
 	"fmt"
@@ -325,4 +326,61 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 		jobs = append(jobs, job)
 	}
 	return jobs, nil
+}
+
+func (s Server) getDWJobIDFromResultID(ctx context.Context, resultID string) (string, error) {
+	var jobID sql.NullString
+	rows, err := s.db.QueryContext(ctx,
+		`select dw_job_id from query_jobs where job_result_id=$1`,
+		resultID,
+	)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	if rows.Next() {
+		err := rows.Scan(&jobID)
+		if err != nil {
+			return "", err
+		}
+		return jobID.String, nil
+	}
+	return "", nil
+}
+
+func (s Server) getJobTimestampsFromResultID(ctx context.Context, resultID string) (createdAt *time.Time, updatedAt *time.Time, err error) {
+	var created, updated time.Time
+	err = s.db.QueryRowContext(ctx,
+		`select created_at, updated_at from query_jobs where job_result_id=$1`,
+		resultID,
+	).Scan(&created, &updated)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil, nil
+		}
+		return nil, nil, err
+	}
+	return &created, &updated, nil
+}
+
+// checkJobExpiration determines if a job should be treated as expired based on its age
+// Returns expired (true if too old) and recent (true if updated recently)
+func (s Server) checkJobExpiration(ctx context.Context, resultID string) (expired bool, recent bool, err error) {
+	createdAt, updatedAt, err := s.getJobTimestampsFromResultID(ctx, resultID)
+	if err != nil {
+		return false, false, err
+	}
+	if createdAt == nil {
+		return false, false, nil
+	}
+
+	// Use created_at for max age check (job could be expired)
+	timeSinceCreated := time.Since(*createdAt)
+	isExpired := timeSinceCreated > deadline.GetQueryCacheDeadline()
+
+	// Use updated_at to determine if job is recent (for error propagation)
+	timeSinceUpdated := time.Since(*updatedAt)
+	isRecent := timeSinceUpdated < deadline.GetMinJobAgeForErrorPropagation()
+
+	return isExpired, isRecent, nil
 }
