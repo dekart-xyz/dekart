@@ -44,8 +44,8 @@ func (s Server) getWorkspaceUpdate(ctx context.Context) (int64, error) {
 		if !updatedAtStr.Valid {
 			return 0, nil
 		}
-		// Parse the timestamp string into a time.Time
-		parsedTime, err := time.Parse("2006-01-02 15:04:05", updatedAtStr.String)
+		// Parse the timestamp string into a time.Time (SQLite stores in UTC)
+		parsedTime, err := time.ParseInLocation("2006-01-02 15:04:05", updatedAtStr.String, time.UTC)
 		if err != nil {
 			log.Err(err).Msg("Error parsing updated_at timestamp")
 			return 0, err
