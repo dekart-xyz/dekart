@@ -349,6 +349,31 @@ func (s Server) getDWJobIDFromResultID(ctx context.Context, resultID string) (st
 }
 
 func (s Server) getJobTimestampsFromResultID(ctx context.Context, resultID string) (createdAt *time.Time, updatedAt *time.Time, err error) {
+	if IsSqlite() {
+		var createdStr, updatedStr string
+		err = s.db.QueryRowContext(ctx,
+			`select created_at, updated_at from query_jobs where job_result_id=$1`,
+			resultID,
+		).Scan(&createdStr, &updatedStr)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, nil, nil
+			}
+			return nil, nil, err
+		}
+		// Parse SQLite timestamp strings
+		created, err := time.Parse("2006-01-02 15:04:05", createdStr)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to parse created_at timestamp: %v", err)
+		}
+		updated, err := time.Parse("2006-01-02 15:04:05", updatedStr)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to parse updated_at timestamp: %v", err)
+		}
+		return &created, &updated, nil
+	}
+
+	// PostgreSQL
 	var created, updated time.Time
 	err = s.db.QueryRowContext(ctx,
 		`select created_at, updated_at from query_jobs where job_result_id=$1`,
