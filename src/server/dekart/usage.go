@@ -19,7 +19,7 @@ func (s Server) GetUsage(ctx context.Context, req *proto.GetUsageRequest) (*prot
 		`select
 		(select count(*) from reports) as total_reports,
 		(select count(*) from queries) as total_queries,
-		(select count(*) from queries) as total_files,
+		(select count(*) from files) as total_files,
 		(select count(distinct author_email) from reports) as total_authors`)
 	if err != nil {
 		log.Err(err).Send()
@@ -38,6 +38,11 @@ func (s Server) GetUsage(ctx context.Context, req *proto.GetUsageRequest) (*prot
 			return nil, err
 		}
 		return res, nil
+	}
+	// Check if there was an error during iteration
+	if err = usage.Err(); err != nil {
+		log.Err(err).Msg("error iterating usage stats")
+		return nil, err
 	}
 	err = fmt.Errorf("no stats")
 	log.Err(err).Send()
