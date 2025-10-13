@@ -2,11 +2,12 @@ import Upload from 'antd/lib/upload/Upload'
 import styles from './File.module.css'
 import { InboxOutlined, UploadOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
 import Button from 'antd/es/button'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import prettyBites from 'pretty-bytes'
 import { useSelector, useDispatch } from 'react-redux'
 import { uploadFile } from './actions/file'
 import { extensionFromMime, inferMimeFromName } from './lib/mime'
+import { track } from './lib/tracking'
 
 function getFileExtensionName (type) {
   switch (type) {
@@ -47,6 +48,21 @@ function getStorageName (env) {
 
 function FileStatus ({ file, fileToUpload, fileUploadStatus, fileSizeError, children }) {
   const env = useSelector(state => state.env)
+
+  // Track file size errors
+  useEffect(() => {
+    if (fileSizeError) {
+      track('FileSizeError', { uerror: fileSizeError }) // User error - file too large
+    }
+  }, [fileSizeError])
+
+  // Track file upload errors
+  useEffect(() => {
+    if (file.fileStatus === 2 && file.uploadError) {
+      track('FileUploadError', { message: file.uploadError, fileId: file.id }) // System error
+    }
+  }, [file.fileStatus, file.uploadError, file.id])
+
   if (!env.loaded) {
     return null
   }
@@ -163,6 +179,10 @@ export default function File ({ file }) {
                 accept='.csv,.geojson,.parquet'
                 fileList={[]}
                 beforeUpload={(file) => {
+                  track('FileSelected', {
+                    fileSize: file.size,
+                    fileType: file.type || inferMimeFromName(file.name)
+                  })
                   // Validate file size
                   if (file.size > maxFileSize) {
                     setFileSizeError(`File size (${prettyBites(file.size)}) exceeds maximum allowed size of ${prettyBites(maxFileSize)}`)
@@ -185,7 +205,12 @@ export default function File ({ file }) {
       <FileStatus file={file} fileToUpload={fileToUpload} fileUploadStatus={fileUploadStatus} fileSizeError={fileSizeError}>
         <Button
           size='large'
-          icon={<UploadOutlined />} disabled={uploadButtonDisabled} onClick={() => dispatch(uploadFile(file.id, fileToUpload))}
+          icon={<UploadOutlined />}
+          disabled={uploadButtonDisabled}
+          onClick={() => {
+            track('ClickUploadFile', { fileId: file.id })
+            dispatch(uploadFile(file.id, fileToUpload))
+          }}
         >Upload
         </Button>
       </FileStatus>

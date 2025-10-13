@@ -13,6 +13,7 @@ import Tooltip from 'antd/es/tooltip'
 import { switchPlayground } from './actions/user'
 import localStorageReset from './actions/localStorage'
 import { GlobalOutlined, LockOutlined } from '@ant-design/icons'
+import { track } from './lib/tracking'
 
 function getSignature (email) {
   if (!email) {
@@ -45,6 +46,7 @@ function User ({ buttonDivider }) {
     items.push({
       label: 'Manage workspace',
       onClick: () => {
+        track('ManageWorkspace')
         history.push('/workspace')
       }
     })
@@ -52,6 +54,7 @@ function User ({ buttonDivider }) {
     items.push({
       label: 'Switch to workspace',
       onClick: () => {
+        track('SwitchToWorkspace')
         history.push('/workspace')
       }
     })
@@ -61,6 +64,7 @@ function User ({ buttonDivider }) {
     items.push({
       label: 'Switch account',
       onClick: () => {
+        track('SwitchAccount')
         dispatch(localStorageReset())
         const state = new AuthState()
         state.setUiUrl(window.location.href)
@@ -72,6 +76,7 @@ function User ({ buttonDivider }) {
     items.push({
       label: 'Sign out',
       onClick: () => {
+        track('SignOut')
         dispatch(localStorageReset())
         const state = new AuthState()
         state.setUiUrl(window.location.href)
@@ -106,7 +111,19 @@ export function Workspace () {
   }
   return (
     <div className={styles.workspace}>
-      <Tooltip title={<>You are in private workspace.<br />Click to manage workspace access.</>}><Button type='link' size='small' onClick={() => history.push('/workspace')} className={styles.workspaceButton}><LockOutlined />{workspaceName}</Button></Tooltip>
+      <Tooltip title={<>You are in private workspace.<br />Click to manage workspace access.</>}>
+        <Button
+          type='link'
+          size='small'
+          onClick={() => {
+            track('WorkspaceButtonClicked')
+            history.push('/workspace')
+          }}
+          className={styles.workspaceButton}
+        >
+          <LockOutlined />{workspaceName}
+        </Button>
+      </Tooltip>
     </div>
   )
 }
@@ -127,7 +144,10 @@ export function PlaygroundMode () {
           <div className={styles.playgroundTooltip}>
             <div>Public playground mode is enabled. Your queries are public. Only public datasets are accessible.</div>
             <Button
-              size='small' type='link' onClick={() => dispatch(switchPlayground(false))}
+              size='small' type='link' onClick={() => {
+                track('SwitchToPrivateWorkspace')
+                dispatch(switchPlayground(false))
+              }}
             >Switch to private workspace
             </Button>
           </div>

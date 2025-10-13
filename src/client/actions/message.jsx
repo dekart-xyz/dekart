@@ -12,6 +12,7 @@ export function downloading (dataset, controller) {
 }
 
 export function warn (content, transitive = true) {
+  track('WarnMessage', { transitive })
   if (!transitive) {
     message.warn({
       content,
@@ -27,6 +28,7 @@ export function warn (content, transitive = true) {
   return { type: warn.name }
 }
 export function success (content) {
+  track('SuccessMessage')
   message.success({
     content,
     style
@@ -35,6 +37,7 @@ export function success (content) {
 }
 
 export function info (content) {
+  track('InfoMessage')
   message.info({
     content,
     style
@@ -49,7 +52,7 @@ export function setError (err, transitive = true) {
       dispatch(setHttpError(err.status, `${err.message}: ${err.errorDetails}`))
     } else if (transitive) {
       track('setError', {
-        message: err.message
+        message: err.message // System error
       })
       message.error({
         content: err.message,
@@ -57,7 +60,7 @@ export function setError (err, transitive = true) {
       })
     } else {
       track('setError', {
-        message: err.message
+        message: err.message // System error
       })
       message.error({
         content: (<PermanentError message={err.message} />),

@@ -18,6 +18,7 @@ import { cancelJob, queryChanged, runQuery } from './actions/query'
 import Tooltip from 'antd/es/tooltip'
 import { getDatasourceMeta } from './lib/datasource'
 import { copyErrorToClipboard } from './actions/clipboard'
+import { track } from './lib/tracking'
 
 function CancelButton ({ queryJob }) {
   const dispatch = useDispatch()
@@ -25,7 +26,10 @@ function CancelButton ({ queryJob }) {
     <Button
       size='small'
       type='ghost'
-      onClick={() => dispatch(cancelJob(queryJob.id))}
+      onClick={() => {
+        track('QueryCancelled', { jobId: queryJob.id })
+        dispatch(cancelJob(queryJob.id))
+      }}
     >Cancel
     </Button>
   )
@@ -112,6 +116,28 @@ function QueryStatus ({ children, query }) {
   let icon = null
   const dispatch = useDispatch()
 
+  // Track query errors
+  useEffect(() => {
+    if (queryJob?.jobError) {
+      track('QueryError', {
+        queryId: query.id,
+        uerror: queryJob.jobError, // User error - SQL error
+        jobId: queryJob.id
+      })
+    }
+  }, [queryJob?.jobError, query.id, queryJob?.id])
+
+  // Track query success
+  useEffect(() => {
+    if (queryJob?.jobStatus === QueryJob.JobStatus.JOB_STATUS_DONE && queryJob.jobResultId) {
+      track('QuerySuccess', {
+        queryId: query.id,
+        jobId: queryJob.id,
+        bytesProcessed: queryJob.bytesProcessed
+      })
+    }
+  }, [queryJob?.jobStatus, queryJob?.jobResultId, query.id, queryJob?.id, queryJob?.bytesProcessed])
+
   if (queryJob?.jobError) {
     message = 'Query Error'
     style = styles.error
@@ -168,7 +194,10 @@ function QueryStatus ({ children, query }) {
                   type='text'
                   size='small'
                   icon={<CopyOutlined />}
-                  onClick={() => dispatch(copyErrorToClipboard(errorMessage))}
+                  onClick={() => {
+                    track('CopyErrorToClipboard', { queryId: query.id })
+                    dispatch(copyErrorToClipboard(errorMessage))
+                  }}
                   className={styles.copyErrorButton}
                   title='Copy error to clipboard'
                 />
@@ -233,6 +262,7 @@ function SampleQuery ({ queryId }) {
         <Tooltip title={<>Don't know where to start?<br />Try running public dataset query.</>}>
           <Button
             type='link' onClick={() => {
+              track('SampleQueryClicked', { queryId })
               dispatch(queryChanged(queryId, showSampleQuery))
             }}
           >💡 Start with a sample query
@@ -280,7 +310,10 @@ export default function Query ({ query }) {
                 size='large'
                 disabled={!canRun || !queryText}
                 icon={<SendOutlined />}
-                onClick={() => dispatch(runQuery(query.id, queryText))}
+                onClick={() => {
+                  track('QueryExecute', { queryId: query.id })
+                  dispatch(runQuery(query.id, queryText))
+                }}
               >Execute
               </Button>
               )

@@ -6,6 +6,7 @@ import { MenuOutlined, MessageOutlined, GlobalOutlined, LockOutlined } from '@an
 import { Link } from 'react-router-dom/cjs/react-router-dom'
 import { createReport } from './actions/report'
 import Tooltip from 'antd/es/tooltip'
+import { track } from './lib/tracking'
 
 const popupOffset = [-10, 0]
 
@@ -56,37 +57,52 @@ export default function DekartMenu () {
             ? (
               <>
                 <WorkspaceIndicator />
-                <Menu.Item key='my'>
+                <Menu.Item key='my' onClick={() => track('NavigateToMyMaps')}>
                   <Link to='/'>My Maps</Link>
                 </Menu.Item>
-                <Menu.Item key='shared' disabled={isPlayground}>
+                <Menu.Item key='shared' disabled={isPlayground} onClick={() => track('NavigateToSharedMaps')}>
                   <Link to='/shared'>Shared Maps</Link>
                 </Menu.Item>
               </>
               )
             : (
-              <Menu.Item key='reports'>
+              <Menu.Item key='reports' onClick={() => track('NavigateToMaps')}>
                 <Link to='/'>Maps</Link>
               </Menu.Item>
               )}
-          {userDefinedConnection ? (<Menu.Item key='connections'><Link to='/connections'>Connections</Link></Menu.Item>) : null}
-          <Menu.Item key='create' disabled={isViewer} onClick={() => dispatch(createReport())}>New Map</Menu.Item>
+          {userDefinedConnection
+            ? (
+              <Menu.Item key='connections' onClick={() => track('NavigateToConnections')}>
+                <Link to='/connections'>Connections</Link>
+              </Menu.Item>
+              )
+            : null}
+          <Menu.Item
+            key='create'
+            disabled={isViewer}
+            onClick={() => {
+              track('CreateNewMap')
+              dispatch(createReport())
+            }}
+          >
+            New Map
+          </Menu.Item>
         </Menu.SubMenu>
         <Menu.SubMenu popupClassName={styles.subMenu} popupOffset={popupOffset} title={<MessageOutlined />} key='community' active='yes'>
-          <Menu.Item key='gpt'>
+          <Menu.Item key='gpt' onClick={() => track('ClickedOvertureMapsGPT')}>
             <a target='_blank' rel='noopener noreferrer' href='https://chatgpt.com/g/g-onSLtzQQB-overture-maps-gpt'>Overture Maps GPT</a>
           </Menu.Item>
-          <Menu.Item key='examples'>
+          <Menu.Item key='examples' onClick={() => track('ClickedMapExamples')}>
             <a target='_blank' rel='noopener noreferrer' href={'https://dekart.xyz/docs/about/kepler-gl-map-examples?ref=' + ref}>Map Examples</a>
           </Menu.Item>
-          <Menu.Item key='slack'>
+          <Menu.Item key='slack' onClick={() => track('ClickedAskInSlack')}>
             <a target='_blank' rel='noopener noreferrer' href='https://slack.dekart.xyz'>Ask in Slack</a>
           </Menu.Item>
-          <Menu.Item key='issues'>
+          <Menu.Item key='issues' onClick={() => track('ClickedReportIssue')}>
             <a target='_blank' rel='noopener noreferrer' href={'https://github.com/dekart-xyz/dekart/issues?ref=' + ref}>Report Issue</a>
           </Menu.Item>
         </Menu.SubMenu>
-        <Menu.Item key='contribute'>
+        <Menu.Item key='contribute' onClick={() => track('ClickedGitHubStar')}>
           <Tooltip color='#328EB2' title={<>Loving Dekart?<br />Help community find it.<br />Give us ⭐️ on GitHub!</>}><a target='_blank' rel='noopener noreferrer' href='https://github.com/dekart-xyz/dekart'>🩵</a></Tooltip>
         </Menu.Item>
       </Menu>

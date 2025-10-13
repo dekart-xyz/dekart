@@ -12,6 +12,7 @@ import Dropdown from 'antd/es/dropdown'
 import { useEffect } from 'react'
 import { ForkOnboarding, useRequireOnboarding } from './ForkOnboarding'
 import Select from 'antd/es/select'
+import { track } from './lib/tracking'
 
 function ForkButton ({ primary }) {
   const dispatch = useDispatch()
@@ -27,11 +28,13 @@ function ForkButton ({ primary }) {
   const history = useHistory()
 
   let onClick = () => {
+    track('ForkReport', { reportId })
     dispatch(forkReport(reportId))
   }
   if (!workspaceId && !userIsPlayground) {
     // user has no workspace, redirect to workspace page
     onClick = () => {
+      track('ForkReportNoWorkspace', { reportId })
       history.push('/workspace')
     }
   }
@@ -82,6 +85,7 @@ function RefreshButton () {
         if (numRunningQueries) {
           return
         }
+        track('RefreshAllQueries')
         dispatch(runAllQueries())
       }}
     />
@@ -150,7 +154,10 @@ function EditModeButtons () {
               ghost
               icon={saving || changed ? <CloudSyncOutlined /> : <CloudOutlined />}
               disabled={saving}
-              onClick={() => dispatch(saveMap())}
+              onClick={() => {
+                track('SaveMap')
+                dispatch(saveMap())
+              }}
             />
             <ViewSelect value='edit' />
             <ShareButton />
@@ -182,18 +189,21 @@ function ExportDropdown () {
     {
       label: 'Map',
       onClick: () => {
+        track('ExportMap')
         dispatch(toggleModal(EXPORT_MAP_ID))
       }
     },
     {
       label: 'Data',
       onClick: () => {
+        track('ExportData')
         dispatch(toggleModal(EXPORT_DATA_ID))
       }
     },
     {
       label: 'Image',
       onClick: () => {
+        track('ExportImage')
         dispatch(toggleModal(EXPORT_IMAGE_ID))
       }
     }
@@ -225,8 +235,10 @@ function ViewSelect (value) {
       defaultValue={value}
       onChange={(value) => {
         if (value === 'edit') {
+          track('SwitchToEditMode', { reportId: id })
           goToSource(history, id)
         } else if (value === 'view') {
+          track('SwitchToViewMode', { reportId: id })
           goToPresent(history, id)
         }
       }}
