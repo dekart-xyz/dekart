@@ -14,12 +14,47 @@ import (
 	"os"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/gorilla/mux"
 	"github.com/lib/pq"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+// parseFileSizeLimit parses file size strings with units using go-humanize library
+// Supports various formats like "32MB", "100KB", "1GB", "50000000" (bytes)
+// Returns size in bytes
+func parseFileSizeLimit(sizeStr string) (int64, error) {
+	if sizeStr == "" {
+		return 0, fmt.Errorf("empty size string")
+	}
+
+	size, err := humanize.ParseBytes(sizeStr)
+	if err != nil {
+		return 0, fmt.Errorf("invalid size format: %s (expected format: '32MB', '100KB', '1GB', or bytes)", sizeStr)
+	}
+
+	return int64(size), nil
+}
+
+// getMaxFileUploadSize reads DEKART_MAX_FILE_UPLOAD_SIZE env var and returns size in bytes
+// Defaults to 32MB (32000000 bytes) if not set or invalid
+func getMaxFileUploadSize() int64 {
+	const defaultSize = 32 * 1000 * 1000 // 32MB (decimal)
+	sizeStr := os.Getenv("DEKART_MAX_FILE_UPLOAD_SIZE")
+
+	if sizeStr == "" {
+		return defaultSize
+	}
+
+	size, err := parseFileSizeLimit(sizeStr)
+	if err != nil {
+		log.Fatal().Err(err).Str("DEKART_MAX_FILE_UPLOAD_SIZE", sizeStr).Msg("Invalid DEKART_MAX_FILE_UPLOAD_SIZE")
+	}
+
+	return size
+}
 
 func (s Server) getFileReports(ctx context.Context, fileId string) (*string, error) {
 	fileRows, err := s.db.QueryContext(ctx,
@@ -173,6 +208,19 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	// Check file size limit
+	maxSize := getMaxFileUploadSize()
+	if handler.Size > maxSize {
+		err = fmt.Errorf("file size (%s) exceeds maximum allowed size of %s",
+			humanize.Bytes(uint64(handler.Size)),
+			humanize.Bytes(uint64(maxSize)))
+		log.Warn().Err(err).Int64("fileSize", handler.Size).Int64("maxSize", maxSize).Msg("file size exceeds limit")
+		http.Error(w, err.Error(), http.StatusRequestEntityTooLarge)
+		file.Close()
+		return
+	}
+
 	mimeType := handler.Header.Get("Content-Type")
 
 	fileExtension := getFileExtensionFromMime(mimeType)

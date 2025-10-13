@@ -30,6 +30,7 @@ import Modal from 'antd/es/modal'
 import { MapControlButton } from '@kepler.gl/components/dist/common/styled-components'
 import { Loading } from './Loading'
 import { UNKNOWN_EMAIL } from './lib/constants'
+import { track } from './lib/tracking'
 
 function TabIcon ({ job }) {
   let iconColor = 'transparent'
@@ -65,21 +66,28 @@ function getOnTabEditHandler (dispatch, reportId, datasets) {
   return (datasetId, action) => {
     switch (action) {
       case 'add':
+        track('AddDatasetTab', { reportId })
         return dispatch(createDataset(reportId))
       case 'remove': {
         if (datasetId === 'readme') {
+          track('RemoveReadmeClicked', { reportId })
           Modal.confirm({
             title: 'Remove readme from report?',
             okText: 'Yes',
             okType: 'danger',
             cancelText: 'No',
-            onOk: () => dispatch(removeReadme())
+            onOk: () => {
+              track('RemoveReadmeConfirmed', { reportId })
+              dispatch(removeReadme())
+            }
           })
         } else if (datasetId) {
           const datasetsToRemove = datasets.find(d => d.id === datasetId)
           if (datasetsToRemove.fileId || datasetsToRemove.queryId) {
+            track('OpenDatasetSettings', { datasetId })
             dispatch(openDatasetSettingsModal(datasetId))
           } else {
+            track('RemoveDataset', { datasetId })
             dispatch(removeDataset(datasetsToRemove.id, true))
           }
         }
@@ -209,9 +217,11 @@ function DatasetSection ({ reportId }) {
                   onChange={(tabId) => {
                     switch (tabId) {
                       case 'readme':
+                        track('ViewReadmeTab', { reportId })
                         dispatch(showReadmeTab())
                         return
                       default:
+                        track('SwitchDatasetTab', { datasetId: tabId, reportId })
                         dispatch(setActiveDataset(tabId))
                     }
                   }}
@@ -257,10 +267,12 @@ function Title () {
           }}
           onBlur={() => {
             setEdit(false)
+            track('ReportTitleChanged')
             dispatch(reportTitleChange(value))
           }}
           onPressEnter={() => {
             setEdit(false)
+            track('ReportTitleChanged')
             dispatch(reportTitleChange(value))
           }}
           placeholder='Untitled'
@@ -279,7 +291,12 @@ function Title () {
               [styles.titleTextEdit]: reportStatus.edit && canWrite
             }
           )}
-          onClick={() => reportStatus.edit && setEdit(true)}
+          onClick={() => {
+            if (reportStatus.edit) {
+              track('ReportTitleEditClicked')
+              setEdit(true)
+            }
+          }}
           title='Click to edit map title'
         >{
             reportStatus.edit && canWrite ? <EditOutlined className={styles.titleEditIcon} /> : null
@@ -298,6 +315,7 @@ class CatchKeplerError extends Component {
 
   componentDidCatch (error, errorInfo) {
     this.setState({ hasError: true })
+    track('KeplerError', { message: error.message }) // System error
     this.props.onError(error)
   }
 
@@ -321,7 +339,15 @@ function ToggleFullscreenButton () {
   return (
     <div className={styles.toggleFullscreen}>
       <Tooltip title='Toggle fullscreen' placement='left'>
-        <MapControlButton active disabled={hideFullscreen} className={styles.toggleFullscreenButton} onClick={() => dispatch(toggleReportFullscreen())}>
+        <MapControlButton
+          active
+          disabled={hideFullscreen}
+          className={styles.toggleFullscreenButton}
+          onClick={() => {
+            track('ToggleFullscreen')
+            dispatch(toggleReportFullscreen())
+          }}
+        >
           <VerticalAlignBottomOutlined />
         </MapControlButton>
       </Tooltip>
@@ -380,6 +406,13 @@ export default function ReportPage ({ edit }) {
   const updatedAtDate = new Date(updatedAt * 1000)
 
   const dispatch = useDispatch()
+
+  // Track report page views
+  useEffect(() => {
+    if (id && envLoaded) {
+      track('ReportPageViewed', { reportId: id, edit })
+    }
+  }, [id, envLoaded, edit])
 
   useEffect(() => {
     // make sure kepler loaded before firing kepler actions
