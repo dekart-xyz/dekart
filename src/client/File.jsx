@@ -45,7 +45,7 @@ function getStorageName (env) {
   return storageName
 }
 
-function FileStatus ({ file, fileToUpload, fileUploadStatus, children }) {
+function FileStatus ({ file, fileToUpload, fileUploadStatus, fileSizeError, children }) {
   const env = useSelector(state => state.env)
   if (!env.loaded) {
     return null
@@ -54,7 +54,13 @@ function FileStatus ({ file, fileToUpload, fileUploadStatus, children }) {
   let icon = null
   let style = styles.info
   const errorMessage = ''
-  if (file.fileStatus > 1) {
+
+  // Check for file size error
+  if (fileSizeError) {
+    icon = <ExclamationCircleTwoTone className={styles.icon} twoToneColor='#f5222d' />
+    message = <span>Error uploading file: <span className={styles.errorStatus}>{fileSizeError}</span></span>
+    style = styles.error
+  } else if (file.fileStatus > 1) {
     // file uploaded by user
     if (file.fileStatus === 2) {
       // file in temporary storage
@@ -83,7 +89,7 @@ function FileStatus ({ file, fileToUpload, fileUploadStatus, children }) {
           icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
         } else {
           icon = <ExclamationCircleTwoTone className={styles.icon} twoToneColor='#f5222d' />
-          message = <span>Error uploading file <span className={styles.errorStatus}>(status={fileUploadStatus.status})</span></span>
+          message = <span>Error uploading file: <span className={styles.errorStatus}>(status={fileUploadStatus.status})</span></span>
           style = styles.error
         }
       } else {
@@ -110,13 +116,23 @@ function FileStatus ({ file, fileToUpload, fileUploadStatus, children }) {
 
 export default function File ({ file }) {
   const [fileToUpload, setFileToUpload] = useState(null)
+  const [fileSizeError, setFileSizeError] = useState(null)
   const report = useSelector(state => state.report)
   const { canWrite } = report
   const edit = useSelector(state => state.reportStatus.edit)
+  const env = useSelector(state => state.env)
 
   const fileUploadStatus = useSelector(state => state.fileUploadStatus[file.id])
   const dispatch = useDispatch()
-  const uploadButtonDisabled = !fileToUpload || fileUploadStatus || !(canWrite && edit)
+
+  if (!env.loaded) {
+    return null
+  }
+
+  // Get max file upload size from environment (in bytes)
+  const maxFileSize = parseInt(env.variables.MAX_FILE_UPLOAD_SIZE || '32000000', 10)
+
+  const uploadButtonDisabled = !fileToUpload || fileUploadStatus || !(canWrite && edit) || fileSizeError !== null
   let fileInfo = null
   if (file.fileStatus > 1) {
     fileInfo = {
@@ -132,7 +148,7 @@ export default function File ({ file }) {
   return (
     <div className={styles.file}>
       <div className={styles.fileInfo}>
-        {fileInfo
+        {fileInfo && !fileSizeError
           ? (
             <div className={styles.uploadFileInfo}>
               <FileIcon fileInfo={fileInfo} />
@@ -147,18 +163,26 @@ export default function File ({ file }) {
                 accept='.csv,.geojson,.parquet'
                 fileList={[]}
                 beforeUpload={(file) => {
-                  setFileToUpload(file)
+                  // Validate file size
+                  if (file.size > maxFileSize) {
+                    setFileSizeError(`File size (${prettyBites(file.size)}) exceeds maximum allowed size of ${prettyBites(maxFileSize)}`)
+                    setFileToUpload(file)
+                  } else {
+                    setFileSizeError(null)
+                    setFileToUpload(file)
+                  }
                   return false
                 }}
               >
                 <div className={styles.uploadIcon}><InboxOutlined /></div>
                 <div className={styles.uploadHeader}>Click or drag file to this area to upload</div>
                 <div className={styles.uploadSubtitle}>Supported format: .csv .geojson .parquet</div>
+                <div className={styles.uploadLimit}>{prettyBites(maxFileSize)} limit</div>
               </Upload>
             </div>
             )}
       </div>
-      <FileStatus file={file} fileToUpload={fileToUpload} fileUploadStatus={fileUploadStatus}>
+      <FileStatus file={file} fileToUpload={fileToUpload} fileUploadStatus={fileUploadStatus} fileSizeError={fileSizeError}>
         <Button
           size='large'
           icon={<UploadOutlined />} disabled={uploadButtonDisabled} onClick={() => dispatch(uploadFile(file.id, fileToUpload))}

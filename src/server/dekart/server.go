@@ -263,6 +263,10 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 				Type:  proto.GetEnvResponse_Variable_TYPE_DEKART_CLOUD,
 				Value: defaultString(os.Getenv("DEKART_CLOUD"), ""),
 			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_MAX_FILE_UPLOAD_SIZE,
+				Value: fmt.Sprintf("%d", getMaxFileUploadSize()),
+			},
 		}
 
 	}

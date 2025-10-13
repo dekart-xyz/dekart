@@ -43,6 +43,7 @@
     position: relative;
 }
 
+.uploadLimit ,
 .uploadSubtitle {
     opacity: 0.45;
 }
@@ -156,6 +157,10 @@
     display: flex;
     flex-direction: column;
     min-height: 40px;
+}
+
+.errorStatus{
+    display: inline-block;
 }
 
 .errorStatus,
