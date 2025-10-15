@@ -329,7 +329,6 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 		})
 		return ctx
 	}
-
 	if claims.Email == user.UnknownEmail && os.Getenv("DEKART_CLOUD") == "" {
 		// For backward compatibility, we switch to playground mode if the user is not authenticated
 		ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{

@@ -14694,7 +14694,8 @@ proto.Report.toObject = function(includeInstance, msg) {
     proto.QueryParam.toObject, includeInstance),
     readme: (f = msg.getReadme()) && proto.Readme.toObject(includeInstance, f),
     hasDirectAccess: jspb.Message.getBooleanFieldWithDefault(msg, 19, false),
-    trackViewers: jspb.Message.getBooleanFieldWithDefault(msg, 20, false)
+    trackViewers: jspb.Message.getBooleanFieldWithDefault(msg, 20, false),
+    canRefresh: jspb.Message.getBooleanFieldWithDefault(msg, 21, false)
   };
 
   if (includeInstance) {
@@ -14812,6 +14813,10 @@ proto.Report.deserializeBinaryFromReader = function(msg, reader) {
     case 20:
       var value = /** @type {boolean} */ (reader.readBool());
       msg.setTrackViewers(value);
+      break;
+    case 21:
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setCanRefresh(value);
       break;
     default:
       reader.skipField();
@@ -14981,6 +14986,13 @@ proto.Report.serializeBinaryToWriter = function(message, writer) {
   if (f) {
     writer.writeBool(
       20,
+      f
+    );
+  }
+  f = message.getCanRefresh();
+  if (f) {
+    writer.writeBool(
+      21,
       f
     );
   }
@@ -15383,6 +15395,24 @@ proto.Report.prototype.getTrackViewers = function() {
  */
 proto.Report.prototype.setTrackViewers = function(value) {
   return jspb.Message.setProto3BooleanField(this, 20, value);
+};
+
+
+/**
+ * optional bool can_refresh = 21;
+ * @return {boolean}
+ */
+proto.Report.prototype.getCanRefresh = function() {
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 21, false));
+};
+
+
+/**
+ * @param {boolean} value
+ * @return {!proto.Report} returns this
+ */
+proto.Report.prototype.setCanRefresh = function(value) {
+  return jspb.Message.setProto3BooleanField(this, 21, value);
 };
 
 

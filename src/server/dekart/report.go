@@ -37,8 +37,8 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 			id,
 			case when map_config is null then '' else map_config end as map_config,
 			case when title is null then 'Untitled' else title end as title,
-			(author_email = $1) or allow_edit as can_write,
-			author_email = $2 as is_author,
+			(author_email = $1) or (allow_edit and workspace_id::text = $2) as can_write,
+			author_email = $3 as is_author,
 			author_email,
 			discoverable,
 			allow_edit,
@@ -48,7 +48,7 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 			(
 				select count(*) from connections as c
 				join datasets as d on c.id=d.connection_id
-				where d.report_id=$3 and cloud_storage_bucket is not null and (
+				where d.report_id=$4 and cloud_storage_bucket is not null and (
 					cloud_storage_bucket != ''
 					or connection_type > 1 -- snowflake allows sharing without bucket
 					or (bigquery_key_encrypted is not null and bigquery_key_encrypted != '') -- bigquery service account
@@ -57,12 +57,12 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 			(
 				select count(*) from connections as c
 				join datasets as d on c.id=d.connection_id
-				where d.report_id=$4
+				where d.report_id=$5
 			) as connections_num,
 			(
 				select count(*) from connections as c
 				join datasets as d on c.id=d.connection_id
-				where d.report_id=$5 and  connection_type <= 1 -- BigQuery
+				where d.report_id=$6 and  connection_type <= 1 -- BigQuery
 				and (c.bigquery_key_encrypted is null or c.bigquery_key_encrypted = '') -- BigQuery passthrough
 			) as connections_with_sensitive_scope_num,
 			is_public,
@@ -72,9 +72,10 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 			readme,
 			workspace_id
 		from reports as r
-		where (id=$6) and (archived = $7)
+		where (id=$7) and (archived = $8)
 		limit 1`,
 		claims.Email,
+		checkWorkspace(ctx).ID,
 		claims.Email,
 		reportID,
 		reportID, // sqlite does not support positional parameters reuse
@@ -139,7 +140,6 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 			// for configured connections, report is sharable if cloud storage bucket is set
 			report.IsSharable = conn.CanShareReports()
 		}
-
 		report.NeedSensitiveScope = connectionsWithSensitiveScopeNum > 0
 		if report.IsPublic && !report.CanWrite {
 			// viewers of public reports don't need sensitive scope
@@ -149,6 +149,7 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 			report.IsSharable && // only sharable reports can be discoverable
 			reportWorkspaceID.String == checkWorkspace(ctx).ID)
 
+		report.CanRefresh = reportWorkspaceID.String == checkWorkspace(ctx).ID
 		report.CreatedAt = createdAt.Unix()
 		report.UpdatedAt = updatedAt.Unix()
 
