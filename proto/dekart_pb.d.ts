@@ -1930,6 +1930,9 @@ export class Report extends jspb.Message {
   getTrackViewers(): boolean;
   setTrackViewers(value: boolean): void;
 
+  getCanRefresh(): boolean;
+  setCanRefresh(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Report.AsObject;
   static toObject(includeInstance: boolean, msg: Report): Report.AsObject;
@@ -1962,6 +1965,7 @@ export namespace Report {
     readme?: Readme.AsObject,
     hasDirectAccess: boolean,
     trackViewers: boolean,
+    canRefresh: boolean,
   }
 }
 

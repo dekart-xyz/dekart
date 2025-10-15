@@ -96,17 +96,19 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
-		return nil, status.Error(codes.PermissionDenied, "Only editors can run queries")
-	}
 	report, err := s.getReport(ctx, req.ReportId)
 	if err != nil {
 		log.Err(err).Msg("Error getting report by ID in RunAllQueries")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	if !(report.CanWrite || report.Discoverable) {
-		err := fmt.Errorf("permission denied")
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", req.ReportId)
 		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if !report.CanRefresh {
+		err := fmt.Errorf("user cannot refresh report")
+		log.Err(err).Send()
 		return nil, status.Error(codes.PermissionDenied, err.Error())
 	}
 
@@ -318,7 +320,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	if !(report.CanWrite || report.Discoverable) {
+	if !report.CanRefresh {
 		err := fmt.Errorf("permission denied")
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.PermissionDenied, err.Error())

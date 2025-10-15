@@ -67,12 +67,11 @@ function ForkButton ({ primary }) {
 }
 
 function RefreshButton () {
-  const { discoverable, canWrite } = useSelector(state => state.report)
-  const isViewer = useSelector(state => state.user.isViewer)
+  const { canRefresh } = useSelector(state => state.report)
   const numRunningQueries = useSelector(state => state.numRunningQueries)
   const numQueries = useSelector(state => state.queries.length)
   const dispatch = useDispatch()
-  if ((!canWrite && !discoverable) || isViewer || numQueries === 0) {
+  if (!canRefresh || numQueries === 0) {
     return null
   }
   return (

@@ -527,6 +527,7 @@ message Report {
     Readme readme = 18;
     bool has_direct_access = 19; // true - report has direct access for other users, false - no direct access
     bool track_viewers = 20; // true - track viewers, false - don't track viewers
+    bool can_refresh = 21; // true - can refresh, false - cannot refresh
 }
 
 message Dataset {
