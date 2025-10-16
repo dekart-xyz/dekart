@@ -1,7 +1,7 @@
 import { useHistory } from 'react-router'
 import styles from './ReportHeaderButtons.module.css'
 import Button from 'antd/es/button'
-import { EyeOutlined, DownloadOutlined, CloudOutlined, EditOutlined, ForkOutlined, ReloadOutlined, LoadingOutlined, CloudSyncOutlined } from '@ant-design/icons'
+import { EyeOutlined, DownloadOutlined, CloudOutlined, EditOutlined, ForkOutlined, ReloadOutlined, LoadingOutlined, CloudSyncOutlined, PlusOutlined, InfoCircleOutlined } from '@ant-design/icons'
 import { useDispatch, useSelector } from 'react-redux'
 import ShareButton from './ShareButton'
 import { forkReport, saveMap } from './actions/report'
@@ -10,7 +10,6 @@ import { toggleModal } from '@kepler.gl/actions/dist/ui-state-actions'
 import { EXPORT_DATA_ID, EXPORT_IMAGE_ID, EXPORT_MAP_ID } from '@kepler.gl/constants'
 import Dropdown from 'antd/es/dropdown'
 import { useEffect } from 'react'
-import { ForkOnboarding, useRequireOnboarding } from './ForkOnboarding'
 import Select from 'antd/es/select'
 import { track } from './lib/tracking'
 
@@ -120,23 +119,48 @@ function goToPresent (history, id) {
   history.replace(`/reports/${id}?${searchParams.toString()}`)
 }
 
+function useRequireWorkspace () {
+  const isCloud = useSelector(state => state.env.isCloud)
+  const userStream = useSelector(state => state.user.stream)
+  const workspaceId = userStream?.workspaceId
+  return !workspaceId && isCloud
+}
+
+function WorkspaceOnboarding () {
+  const history = useHistory()
+  useEffect(() => {
+    track('WorkspaceOnboarding')
+  }, [])
+  return (
+    <div className={styles.reportHeaderButtons}>
+      <Button
+        type='text' icon={<InfoCircleOutlined />}
+        href='https://dekart.xyz/?ref=about-maps-button'
+        target='_blank'
+        title='About Dekart Maps'
+        onClick={() => {
+          track('AboutDekartMaps')
+        }}
+      >About Dekart Maps
+      </Button>
+      <Button
+        icon={<PlusOutlined />}
+        type='primary' onClick={() => {
+          track('WorkspaceOnboardingCreateMap')
+          history.push('/workspace')
+        }}
+      >Create Map
+      </Button>
+    </div>
+  )
+}
+
 function EditModeButtons () {
   const dispatch = useDispatch()
   const { canWrite } = useSelector(state => state.report)
   const { saving } = useSelector(state => state.reportStatus)
   const changed = useReportChanged()
-
   useAutoSave()
-
-  const requireOnboarding = useRequireOnboarding()
-
-  if (requireOnboarding) {
-    return (
-      <div className={styles.reportHeaderButtons}>
-        <ForkOnboarding requireOnboarding={requireOnboarding} edit />
-      </div>
-    )
-  }
 
   return (
     <div className={styles.reportHeaderButtons}>
@@ -253,16 +277,6 @@ function ViewSelect (value) {
 function ViewModeButtons () {
   const { canWrite } = useSelector(state => state.report)
 
-  const requireOnboarding = useRequireOnboarding()
-
-  if (requireOnboarding) {
-    return (
-      <div className={styles.reportHeaderButtons}>
-        <ForkOnboarding requireOnboarding={requireOnboarding} />
-      </div>
-    )
-  }
-
   if (canWrite) {
     return (
       <div className={styles.reportHeaderButtons}>
@@ -286,6 +300,13 @@ function ViewModeButtons () {
 }
 
 export default function ReportHeaderButtons ({ edit }) {
+  const requireWorkspace = useRequireWorkspace()
+  if (requireWorkspace) {
+    return (
+      <WorkspaceOnboarding />
+    )
+  }
+
   if (edit) {
     return <EditModeButtons />
   }
