@@ -120,9 +120,10 @@ function goToPresent (history, id) {
 }
 
 function useRequireWorkspace () {
+  const isCloud = useSelector(state => state.env.isCloud)
   const userStream = useSelector(state => state.user.stream)
   const workspaceId = userStream?.workspaceId
-  return !workspaceId
+  return !workspaceId && isCloud
 }
 
 function WorkspaceOnboarding () {
