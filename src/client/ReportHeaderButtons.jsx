@@ -123,12 +123,13 @@ function useRequireWorkspace () {
   const isCloud = useSelector(state => state.env.isCloud)
   const userStream = useSelector(state => state.user.stream)
   const workspaceId = userStream?.workspaceId
-  return !workspaceId && isCloud
+  return !workspaceId && isCloud && userStream
 }
 
 function WorkspaceOnboarding () {
   const history = useHistory()
   useEffect(() => {
+    console.log('WorkspaceOnboarding')
     track('WorkspaceOnboarding')
   }, [])
   return (

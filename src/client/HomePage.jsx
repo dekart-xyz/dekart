@@ -112,6 +112,7 @@ function SetDefault ({ connection }) {
         type='text'
         className={styles.deleteButton}
         onClick={() => {
+          track('SetDefaultConnection', { connectionId: connection.id })
           dispatch(setDefaultConnection(connection.id))
         }}
       >Set default
@@ -126,6 +127,7 @@ function OpenConnectionButton ({ connection }) {
     <Button
       type='link'
       onClick={() => {
+        track('OpenConnectionSettings', { connectionId: connection.id, connectionType: connection.connectionType })
         dispatch(editConnection(connection.id, connection.connectionType, Boolean(connection.bigqueryKey)))
       }}
     >{connection.connectionName}
@@ -166,7 +168,15 @@ function FirstReportOnboarding () {
         subTitle='Everything is ready to create you first map.'
         extra={(
           <>
-            <Button icon={<PlusOutlined />} disabled={isViewer} type='primary' id='dekart-create-report' onClick={() => dispatch(createReport())}>Create map</Button>
+            <Button
+              icon={<PlusOutlined />} disabled={isViewer} type='primary' id='dekart-create-report' onClick={
+                () => {
+                  track('CreateMap')
+                  dispatch(createReport())
+                }
+              }
+            >Create map
+            </Button>
             <If condition={isPlayground && !isSelfHosted}><div className={styles.stepBySetLink}><a target='_blank' href='https://dekart.xyz/docs/about/playground/#quick-start' rel='noreferrer'>Check step-by-step guide</a></div></If>
           </>
         )}
@@ -187,6 +197,7 @@ function ConnectionTypeSelectorBottom () {
       <div className={styles.connectionSelectorBack}>
         <Button
           type='ghost' onClick={() => {
+            track('ReturnFromConnectionSelector')
             if (newScreen) {
               dispatch(newConnectionScreen(false))
             } else {
@@ -202,7 +213,7 @@ function ConnectionTypeSelectorBottom () {
     return (
       <div className={styles.notSure}>
         <p>or</p>
-        <Button ghost type='primary' href='https://dekart.xyz/self-hosted/?ref=ConnectionTypeSelector' target='_blank'>Get Started with Self-Hosting</Button>
+        <Button ghost type='primary' href='https://dekart.xyz/self-hosted/?ref=ConnectionTypeSelector' target='_blank' onClick={() => track('GetStartedWithSelfHosting')}>Get Started with Self-Hosting</Button>
       </div>
     )
   }
@@ -323,7 +334,10 @@ function ReportsHeader (
                 disabled={!isAdmin}
                 type='primary'
                 title={isAdmin ? 'Create new connection' : 'Only admin can create new connection'}
-                onClick={() => { dispatch(newConnectionScreen(true)) }}
+                onClick={() => {
+                  track('NewConnectionButton')
+                  dispatch(newConnectionScreen(true))
+                }}
               >New Connection
               </Button>
               )
@@ -339,7 +353,13 @@ function ReportsHeader (
                       )
                     : null
                 }
-                <Button id='dekart-create-report' type='primary' disabled={isViewer} onClick={() => dispatch(createReport())}>New Map</Button>
+                <Button
+                  id='dekart-create-report' type='primary' disabled={isViewer} onClick={() => {
+                    track('NewMap')
+                    dispatch(createReport())
+                  }}
+                >New Map
+                </Button>
               </>
               )
         }

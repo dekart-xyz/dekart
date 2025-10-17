@@ -28,7 +28,10 @@ function CopyLinkButton ({ ghost }) {
       ghost={ghost}
       disabled={!playgroundReport && !isPublic && !discoverable && !hasDirectAccess}
       title='Copy link to report'
-      onClick={() => dispatch(copyUrlToClipboard(window.location.toString(), 'Map URL copied to clipboard'))}
+      onClick={() => {
+        track('CopyMapLink')
+        dispatch(copyUrlToClipboard(window.location.toString(), 'Map URL copied to clipboard'))
+      }}
     >Copy Link
     </Button>
   )
@@ -344,7 +347,7 @@ function WorkspacePermissionsSelect () {
   }, [value])
 
   if (isPlayground) {
-    return <Button href='/workspace'>Manage workspace</Button>
+    return <Button href='/workspace' onClick={() => track('ManageWorkspaceFromShareModal')}>Manage workspace</Button>
   }
   const disabled = !isAuthor
   return (
@@ -412,7 +415,13 @@ function NonShareableWarning () {
         </div>
       </div>
       <div className={styles.workspaceStatusControl}>
-        <Button onClick={() => history.push('/connections')}>Manage connections</Button>
+        <Button
+          onClick={() => {
+            track('ManageConnectionsFromShareModal')
+            history.push('/connections')
+          }}
+        >Manage connections
+        </Button>
       </div>
     </div>
   )
@@ -488,10 +497,15 @@ export default function ShareButton () {
         bodyStyle={{ padding: '0px' }}
         footer={
           <div className={styles.modalFooter}>
-            {workspaceId ? <Button icon='+ ' type='primary' href='/workspace'>Add users to workspace</Button> : null}
+            {workspaceId ? <Button icon='+ ' type='primary' href='/workspace' onClick={() => track('AddUsersToWorkspaceFromShareModal')}>Add users to workspace</Button> : null}
             <div className={styles.modalFooterSpacer} />
             <CopyLinkButton />
-            <Button onClick={() => setModalOpen(false)}>
+            <Button
+              onClick={() => {
+                track('CloseShareModal')
+                setModalOpen(false)
+              }}
+            >
               Done
             </Button>
           </div>

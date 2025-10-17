@@ -68,12 +68,18 @@ function Invites () {
                       <Button
                         ghost
                         type='primary'
-                        className={styles.acceptButton} onClick={() => dispatch(respondToInvite(invite.inviteId, true))}
+                        className={styles.acceptButton} onClick={() => {
+                          track('AcceptWorkspaceInvite', { inviteId: invite.inviteId })
+                          dispatch(respondToInvite(invite.inviteId, true))
+                        }}
                       >Accept
                       </Button>
                       <Button
                         type='danger'
-                        ghost onClick={() => dispatch(respondToInvite(invite.inviteId, false))}
+                        ghost onClick={() => {
+                          track('DeclineWorkspaceInvite', { inviteId: invite.inviteId })
+                          dispatch(respondToInvite(invite.inviteId, false))
+                        }}
                       >Decline
                       </Button>
                     </>)
@@ -174,6 +180,7 @@ function UpdateWorkspaceForm () {
         disabled={disabled}
         initialValues={{ name: workspace.name, workspaceIDReadOnly: workspace.id }}
         layout='vertical' onFinish={(values) => {
+          track('UpdateWorkspace')
           setDisabled(true)
           dispatch(updateWorkspace(values.name))
         }}
@@ -342,14 +349,22 @@ function WelcomeScreen ({ setNextStep }) {
           >
             Create Workspace
           </Button>
-          <Button key='2' onClick={() => setNextStep('invites')}><Badge color='blue' count={invites.length} offset={[14, -10]}>Join Existing Workspace</Badge></Button>
+          <Button
+            key='2'
+            onClick={() => {
+              track('JoinExistingWorkspaceButton')
+              setNextStep('invites')
+            }}
+          >
+            <Badge color='blue' count={invites.length} offset={[14, -10]}>Join Existing Workspace</Badge>
+          </Button>
           <div className={styles.notSure}>
             <div className={styles.notSureItems}>
               <div>→ Connect Instantly to BigQuery and Snowflake</div>
               <div>→ Create Your First Map in 30 Seconds</div>
               <div>→ No credit card required.</div>
             </div>
-            <Button ghost type='primary' href='https://dekart.xyz/docs/about/screencast/' target='_blank'>🎬 Watch a 40-Second Walkthrough</Button>
+            <Button ghost type='primary' href='https://dekart.xyz/docs/about/screencast/' target='_blank' onClick={() => track('WatchWalkthrough')}>🎬 Watch a 40-Second Walkthrough</Button>
           </div>
         </>
       )}
