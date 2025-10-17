@@ -10,6 +10,7 @@ import { get } from './lib/api'
 import { useEffect, useRef, useState } from 'react'
 import { setError } from './actions/message'
 import Skeleton from 'antd/es/skeleton'
+import { track } from './lib/tracking'
 
 export default function AnalyticsModal () {
   const { modalOpen, data: analytics } = useSelector(state => state.analytics)
@@ -76,7 +77,7 @@ export default function AnalyticsModal () {
                 </div>
               </div>
               <div className={styles.downloadButton}>
-                <Button loading={loading} type='primary' ref={buttonRef} href='#' icon={!allowedToExport && <LockOutlined />} disabled={!allowedToExport || loading}>Download CSV</Button>
+                <Button loading={loading} type='primary' ref={buttonRef} href='#' icon={!allowedToExport && <LockOutlined />} disabled={!allowedToExport || loading} onClick={() => track('DownloadAnalyticsCSV', { reportId: report.id })}>Download CSV</Button>
                 {!allowedToExport && <p className={styles.downloadTooltip}>Requires <a href='/workspace'>paid plan</a> to export viewer emails.</p>}
               </div>
             </div>

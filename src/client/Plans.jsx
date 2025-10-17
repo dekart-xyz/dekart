@@ -10,6 +10,7 @@ import { CheckCircleOutlined } from '@ant-design/icons'
 import Text from 'antd/es/typography/Text'
 import Tooltip from 'antd/es/tooltip'
 import classNames from 'classnames'
+import { track } from './lib/tracking'
 
 export function PlanTitle ({ name, price, icon, color, description, selected }) {
   return (
@@ -42,6 +43,7 @@ export function Plan ({ title, children, planType, cancelAt, addedUsersCount, is
       disabled={waitForRedirect || !isAdmin}
       loading={waitForRedirect}
       onClick={() => {
+        track('ChoosePlan', { planType })
         setWaitForRedirect(true)
         dispatch(createSubscription(planType))
       }}
@@ -69,6 +71,7 @@ export function Plan ({ title, children, planType, cancelAt, addedUsersCount, is
           disabled={waitForRedirect || !isAdmin}
           loading={waitForRedirect}
           onClick={() => {
+            track('ManageSubscription')
             setWaitForRedirect(true)
             dispatch(redirectToCustomerPortal())
           }}

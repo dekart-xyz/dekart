@@ -238,6 +238,15 @@ type DekartGetReportAnalytics = {
   readonly responseType: typeof dekart_pb.GetReportAnalyticsResponse;
 };
 
+type DekartTrackEvent = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof dekart_pb.TrackEventRequest;
+  readonly responseType: typeof dekart_pb.TrackEventResponse;
+};
+
 type DekartCreateConnection = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -401,6 +410,7 @@ export class Dekart {
   static readonly GetUserStream: DekartGetUserStream;
   static readonly GetUsage: DekartGetUsage;
   static readonly GetReportAnalytics: DekartGetReportAnalytics;
+  static readonly TrackEvent: DekartTrackEvent;
   static readonly CreateConnection: DekartCreateConnection;
   static readonly GetGcpProjectList: DekartGetGcpProjectList;
   static readonly UpdateConnection: DekartUpdateConnection;
@@ -659,6 +669,15 @@ export class DekartClient {
   getReportAnalytics(
     requestMessage: dekart_pb.GetReportAnalyticsRequest,
     callback: (error: ServiceError|null, responseMessage: dekart_pb.GetReportAnalyticsResponse|null) => void
+  ): UnaryResponse;
+  trackEvent(
+    requestMessage: dekart_pb.TrackEventRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.TrackEventResponse|null) => void
+  ): UnaryResponse;
+  trackEvent(
+    requestMessage: dekart_pb.TrackEventRequest,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.TrackEventResponse|null) => void
   ): UnaryResponse;
   createConnection(
     requestMessage: dekart_pb.CreateConnectionRequest,
