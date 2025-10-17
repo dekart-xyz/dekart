@@ -3,7 +3,20 @@ import { LOCAL_STORAGE_KEY } from './constants'
 
 window.plausible = window.plausible || function () { (window.plausible.q = window.plausible.q || []).push(arguments) }
 
-export function track (event, props) {
+// Store reference to Redux store - will be set by setTrackingStore
+let reduxStore = null
+let trackEventToServerFn = null
+
+export function setTrackingStore (store) {
+  reduxStore = store
+}
+
+// Set the trackEventToServer function to avoid circular dependency
+export function setTrackEventToServer (fn) {
+  trackEventToServerFn = fn
+}
+
+export function track (event, props = {}) {
   if (window.plausible) {
     setTimeout(async () => {
       try {
@@ -29,6 +42,11 @@ export function track (event, props) {
           ...(shortEmailIdValue && { seid: shortEmailIdValue })
         }
         window.plausible(event, { props: trackingProps })
+
+        // For Dekart Cloud, also send to server
+        if (reduxStore && trackEventToServerFn) {
+          reduxStore.dispatch(trackEventToServerFn(event, trackingProps))
+        }
       } catch (error) {
         // Fallback: track with original props even if loginHint processing fails
         console.warn('Tracking error, falling back to basic tracking:', error)

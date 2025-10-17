@@ -3,6 +3,46 @@
 
 import * as jspb from "google-protobuf";
 
+export class TrackEventRequest extends jspb.Message {
+  getEventName(): string;
+  setEventName(value: string): void;
+
+  getEventDataJson(): string;
+  setEventDataJson(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): TrackEventRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: TrackEventRequest): TrackEventRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: TrackEventRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): TrackEventRequest;
+  static deserializeBinaryFromReader(message: TrackEventRequest, reader: jspb.BinaryReader): TrackEventRequest;
+}
+
+export namespace TrackEventRequest {
+  export type AsObject = {
+    eventName: string,
+    eventDataJson: string,
+  }
+}
+
+export class TrackEventResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): TrackEventResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: TrackEventResponse): TrackEventResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: TrackEventResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): TrackEventResponse;
+  static deserializeBinaryFromReader(message: TrackEventResponse, reader: jspb.BinaryReader): TrackEventResponse;
+}
+
+export namespace TrackEventResponse {
+  export type AsObject = {
+  }
+}
+
 export class SetTrackViewersRequest extends jspb.Message {
   getReportId(): string;
   setReportId(value: string): void;
