@@ -12,6 +12,7 @@ import Dropdown from 'antd/es/dropdown'
 import { useEffect } from 'react'
 import Select from 'antd/es/select'
 import { track } from './lib/tracking'
+import { ForkOnboarding, useRequireOnboarding } from './ForkOnboarding'
 
 function ForkButton ({ primary }) {
   const dispatch = useDispatch()
@@ -49,7 +50,7 @@ function ForkButton ({ primary }) {
         id='dekart-fork-button'
         disabled={disabled}
         onClick={onClick}
-      >Fork this Map
+      >Duplicate Map
       </Button>
     )
   }
@@ -60,7 +61,7 @@ function ForkButton ({ primary }) {
       disabled={disabled}
       onClick={onClick}
       id='dekart-fork-button'
-      title={disabled ? 'Forking is disabled for viewers' : 'Fork this Map'}
+      title={disabled ? 'Forking maps is disabled for viewers' : 'Duplicate Map'}
     />
   )
 }
@@ -129,7 +130,6 @@ function useRequireWorkspace () {
 function WorkspaceOnboarding () {
   const history = useHistory()
   useEffect(() => {
-    console.log('WorkspaceOnboarding')
     track('WorkspaceOnboarding')
   }, [])
   return (
@@ -161,6 +161,7 @@ function EditModeButtons () {
   const { canWrite } = useSelector(state => state.report)
   const { saving } = useSelector(state => state.reportStatus)
   const changed = useReportChanged()
+  const forkOnboarding = useRequireOnboarding()
   useAutoSave()
 
   return (
@@ -190,7 +191,7 @@ function EditModeButtons () {
         : (
           <>
             <ShareButton />
-            <ForkButton primary />
+            {forkOnboarding ? <ForkOnboarding requireOnboarding={forkOnboarding} edit /> : <ForkButton primary />}
           </>
           )}
 
@@ -294,7 +295,6 @@ function ViewModeButtons () {
     <div className={styles.reportHeaderButtons}>
       <RefreshButton />
       <ExportDropdown />
-      <ForkButton />
       <ShareButton />
     </div>
   )
