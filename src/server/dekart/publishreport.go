@@ -4,6 +4,7 @@ import (
 	"context"
 	"dekart/src/proto"
 	"dekart/src/server/conn"
+	"dekart/src/server/errtype"
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
 	"fmt"
@@ -22,14 +23,14 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 	userCtx := user.CopyUserContext(reqCtx, ctx)
 	datasets, err := s.getDatasets(userCtx, reportID)
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve datasets")
+		errtype.LogError(err, "Cannot retrieve datasets")
 		return
 	}
 
 	// handling queryJobs
 	queryJobs, err := s.getDatasetsQueryJobs(userCtx, datasets)
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve query jobs")
+		errtype.LogError(err, "Cannot retrieve query jobs")
 		return
 	}
 
@@ -41,7 +42,7 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 			connection, err := s.getConnectionFromQueryID(userCtx, queryJob.QueryId)
 			conCtx := conn.GetCtx(userCtx, connection)
 			if err != nil {
-				log.Err(err).Msg("Cannot retrieve connection while publishing report")
+				errtype.LogError(err, "Cannot retrieve connection while publishing report")
 				return
 			}
 			if connection == nil {
@@ -51,12 +52,12 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 			userBucketName := s.getBucketNameFromConnection(connection)
 			dwJobID, err := s.getDWJobIDFromResultID(userCtx, queryJob.JobResultId)
 			if err != nil {
-				log.Err(err).Msg("Cannot retrieve job id")
+				errtype.LogError(err, "Cannot retrieve job id")
 				return
 			}
 			resultURI, err := s.getResultURI(userCtx, queryJob.JobResultId)
 			if err != nil {
-				log.Error().Err(err).Msg("Error getting result URI")
+				errtype.LogError(err, "Error getting result URI")
 				return
 			}
 
@@ -83,7 +84,7 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 						dstObj := s.storage.GetObject(conCtx, userBucketName, fmt.Sprintf("%s.csv", queryJob.JobResultId))
 						err = srcObj.CopyTo(defConnCtx, dstObj.GetWriter(conCtx))
 						if err != nil {
-							log.Err(err).Msg("Cannot copy query result to user storage")
+							errtype.LogError(err, "Cannot copy query result to user storage")
 							return
 						}
 					}
@@ -98,7 +99,7 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 	files, err := s.getFiles(userCtx, datasets)
 
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve files")
+		errtype.LogError(err, "Cannot retrieve files")
 		return
 	}
 
@@ -106,7 +107,7 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 		if file.SourceId != "" {
 			connection, err := s.getConnectionFromFileID(userCtx, file.Id)
 			if err != nil {
-				log.Err(err).Msg("Cannot retrieve connection from file while publishing report")
+				errtype.LogError(err, "Cannot retrieve connection from file while publishing report")
 				return
 			}
 			if connection == nil {
@@ -121,7 +122,7 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 				dstObj := s.storage.GetObject(conCtx, s.getBucketNameFromConnection(connection), fmt.Sprintf("%s.%s", file.SourceId, getFileExtensionFromMime(file.MimeType)))
 				err = srcObj.CopyTo(conCtx, dstObj.GetWriter(conCtx))
 				if err != nil {
-					log.Err(err).Msg("Cannot copy file to public storage")
+					errtype.LogError(err, "Cannot copy file to public storage")
 					return
 				}
 				objectsToDelete = append(objectsToDelete, srcObj)
@@ -136,7 +137,7 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 		reportID,
 	)
 	if err != nil {
-		log.Err(err).Msg("Cannot update report while unpublishing report")
+		errtype.LogError(err, "Cannot update report while unpublishing report")
 		return
 	}
 	s.reportStreams.Ping(reportID)
@@ -156,7 +157,7 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 			)`, sourceID).Scan(&count)
 
 		if err != nil {
-			log.Err(err).Msg("Cannot query number of public reports with this sourceID")
+			errtype.LogError(err, "Cannot query number of public reports with this sourceID")
 			return
 		}
 		if count > 0 { // sourceID is used in other public reports, do not delete
@@ -164,7 +165,7 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 		}
 		err = obj.Delete(defConnCtx)
 		if err != nil {
-			log.Err(err).Msg("Cannot delete object from public storage")
+			errtype.LogError(err, "Cannot delete object from public storage")
 			return
 		}
 	}
@@ -177,14 +178,14 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 	userCtx := user.CopyUserContext(reqCtx, ctx)
 	datasets, err := s.getDatasets(userCtx, reportID)
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve datasets")
+		errtype.LogError(err, "Cannot retrieve datasets")
 		return
 	}
 
 	// handling queryJobs
 	queryJobs, err := s.getDatasetsQueryJobs(userCtx, datasets)
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve queries")
+		errtype.LogError(err, "Cannot retrieve queries")
 		return
 	}
 
@@ -194,7 +195,7 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 			connection, err := s.getConnectionFromQueryID(userCtx, queryJob.QueryId)
 			conCtx := conn.GetCtx(userCtx, connection)
 			if err != nil {
-				log.Err(err).Msg("Cannot retrieve connection while publishing report")
+				errtype.LogError(err, "Cannot retrieve connection while publishing report")
 				return
 			}
 			if connection == nil {
@@ -206,13 +207,13 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 			dwJobID, err := s.getDWJobIDFromResultID(userCtx, queryJob.JobResultId)
 
 			if err != nil {
-				log.Err(err).Msg("Cannot retrieve job id")
+				errtype.LogError(err, "Cannot retrieve job id")
 				return
 			}
 
 			resultURI, err := s.getResultURI(userCtx, queryJob.JobResultId)
 			if err != nil {
-				log.Error().Err(err).Msg("Error getting result URI")
+				errtype.LogError(err, "Error getting result URI")
 				return
 			}
 
@@ -245,7 +246,7 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 	files, err := s.getFiles(userCtx, datasets)
 
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve files")
+		errtype.LogError(err, "Cannot retrieve files")
 		return
 	}
 
@@ -253,7 +254,7 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 		if file.SourceId != "" {
 			connection, err := s.getConnectionFromFileID(userCtx, file.Id)
 			if err != nil {
-				log.Err(err).Msg("Cannot retrieve connection from file while publishing report")
+				errtype.LogError(err, "Cannot retrieve connection from file while publishing report")
 				return
 			}
 			if connection == nil {
@@ -277,7 +278,7 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 		reportID,
 	)
 	if err != nil {
-		log.Err(err).Msg("Cannot update report while publishing report")
+		errtype.LogError(err, "Cannot update report while publishing report")
 		return
 	}
 
@@ -297,7 +298,7 @@ func (s Server) PublishReport(ctx context.Context, req *proto.PublishReportReque
 	}
 	report, err := s.getReport(ctx, req.ReportId)
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve report")
+		errtype.LogError(err, "Cannot retrieve report")
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 	if report == nil {
@@ -324,7 +325,7 @@ func (s Server) PublishReport(ctx context.Context, req *proto.PublishReportReque
 				workspaceInfo.ID,
 			).Scan(&publicReportsCount)
 			if err != nil {
-				log.Err(err).Msg("Cannot count public reports")
+				errtype.LogError(err, "Cannot count public reports")
 				return nil, status.Errorf(codes.Internal, err.Error())
 			}
 

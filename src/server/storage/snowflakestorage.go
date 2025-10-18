@@ -58,7 +58,7 @@ func (s SnowflakeStorageObject) GetReader(ctx context.Context) (io.ReadCloser, e
 				return nil, &errtype.Expired{}
 			}
 		}
-		log.Error().Err(err).Msg("failed to query snowflake")
+		errtype.LogError(err, "failed to query snowflake")
 		return nil, err
 	}
 	pr, pw := io.Pipe()
@@ -71,19 +71,19 @@ func (s SnowflakeStorageObject) GetReader(ctx context.Context) (io.ReadCloser, e
 				firstRow = false
 				columnNames, err := snowflakeutils.GetColumns(rows)
 				if err != nil {
-					log.Error().Err(err).Msg("Error getting column names")
+					errtype.LogError(err, "Error getting column names")
 					return
 				}
 				err = csvWriter.Write(columnNames)
 				if err != nil {
-					log.Error().Err(err).Msg("Error writing column names")
+					errtype.LogError(err, "Error writing column names")
 					return
 				}
 
 			}
 			csvRow, err := snowflakeutils.GetRow(rows)
 			if err != nil {
-				log.Error().Err(err).Msg("Error getting row")
+				errtype.LogError(err, "Error getting row")
 				return
 			}
 			err = csvWriter.Write(csvRow)
@@ -99,7 +99,7 @@ func (s SnowflakeStorageObject) GetReader(ctx context.Context) (io.ReadCloser, e
 		csvWriter.Flush()
 		err := pw.Close()
 		if err != nil {
-			log.Error().Err(err).Msg("Error closing pipe writer")
+			errtype.LogError(err, "Error closing pipe writer")
 		}
 	}()
 
@@ -139,7 +139,7 @@ func (s SnowflakeStorageObject) CopyFromS3(ctx context.Context, source string) e
 func (s SnowflakeStorageObject) CopyTo(ctx context.Context, writer io.WriteCloser) error {
 	reader, err := s.GetReader(ctx)
 	if err != nil {
-		log.Err(err).Msg("Error getting reader while copying to")
+		errtype.LogError(err, "Error getting reader while copying to")
 		return err
 	}
 	_, err = io.Copy(writer, reader)

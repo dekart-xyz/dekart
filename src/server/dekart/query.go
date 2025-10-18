@@ -10,6 +10,7 @@ import (
 
 	"dekart/src/proto"
 	"dekart/src/server/conn"
+	"dekart/src/server/errtype"
 	"dekart/src/server/query"
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
@@ -29,7 +30,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
-		log.Err(err).Msg("Error getting report ID")
+		errtype.LogError(err, "Error getting report ID")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -41,7 +42,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 
 	err = s.updateDatasetConnection(ctx, req.DatasetId, req.ConnectionId)
 	if err != nil {
-		log.Err(err).Msg("Error updating dataset connection")
+		errtype.LogError(err, "Error updating dataset connection")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -52,7 +53,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		id,
 	)
 	if err != nil {
-		log.Err(err).Msg("Error creating query")
+		errtype.LogError(err, "Error creating query")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -60,7 +61,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 
 	if err != nil {
 		if _, ok := err.(*queryWasNotUpdated); !ok {
-			log.Err(err).Msg("Error updating query text")
+			errtype.LogError(err, "Error updating query text")
 			return &proto.CreateQueryResponse{}, status.Error(codes.Internal, err.Error())
 		}
 		log.Warn().Msg("Query text not updated")
@@ -72,13 +73,13 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		req.DatasetId,
 	)
 	if err != nil {
-		log.Err(err).Msg("Error updating dataset")
+		errtype.LogError(err, "Error updating dataset")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	affectedRows, err := result.RowsAffected()
 	if err != nil {
-		log.Err(err).Msg("Error getting affected rows count after updating dataset")
+		errtype.LogError(err, "Error getting affected rows count after updating dataset")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -98,7 +99,7 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 	}
 	report, err := s.getReport(ctx, req.ReportId)
 	if err != nil {
-		log.Err(err).Msg("Error getting report by ID in RunAllQueries")
+		errtype.LogError(err, "Error getting report by ID in RunAllQueries")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if report == nil {
@@ -126,7 +127,7 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 	)
 
 	if err != nil {
-		log.Err(err).Send()
+		errtype.LogError(err, "database operation failed")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	defer queriesRows.Close()
@@ -297,7 +298,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 
 	q, err := query.GetQueryDetails(ctx, s.db, req.QueryId)
 	if err != nil {
-		log.Err(err).Send()
+		errtype.LogError(err, "database operation failed")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -310,7 +311,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	report, err := s.getReport(ctx, q.ReportID)
 
 	if err != nil {
-		log.Err(err).Send()
+		errtype.LogError(err, "database operation failed")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -329,7 +330,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	connection, err := s.getConnection(ctx, q.ConnectionID)
 
 	if err != nil {
-		log.Err(err).Send()
+		errtype.LogError(err, "database operation failed")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 

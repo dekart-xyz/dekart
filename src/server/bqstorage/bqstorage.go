@@ -5,6 +5,7 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/bqutils"
 	"dekart/src/server/conn"
+	"dekart/src/server/errtype"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -108,7 +109,7 @@ func (s BigQueryStorageObject) GetReader(ctx context.Context) (io.ReadCloser, er
 			// write first row
 			err := csvWriter.Write(firstRow)
 			if err != nil {
-				log.Err(err).Msg("error writing first row")
+				errtype.LogError(err, "error writing first row")
 				return
 			}
 
@@ -121,12 +122,12 @@ func (s BigQueryStorageObject) GetReader(ctx context.Context) (io.ReadCloser, er
 					}
 					err := csvWriter.Write(csvRow)
 					if err != nil {
-						log.Err(err).Msg("error writing row")
+						errtype.LogError(err, "error writing row")
 						return
 					}
 				case err := <-errors:
 					if err != nil {
-						log.Err(err).Msg("error reading row")
+						errtype.LogError(err, "error reading row")
 						return
 					}
 				case <-ctx.Done():
@@ -154,7 +155,7 @@ func (s BigQueryStorageObject) Delete(ctx context.Context) error {
 func (s BigQueryStorageObject) CopyTo(ctx context.Context, writer io.WriteCloser) error {
 	reader, err := s.GetReader(ctx)
 	if err != nil {
-		log.Err(err).Msg("Error getting reader while copying to")
+		errtype.LogError(err, "Error getting reader while copying to")
 		return err
 	}
 	_, err = io.Copy(writer, reader)

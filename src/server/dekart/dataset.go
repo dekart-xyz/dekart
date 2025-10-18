@@ -46,7 +46,8 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 		reportID,
 	)
 	if err != nil {
-		log.Fatal().Err(err).Str("reportID", reportID).Msg("select from queries failed")
+		errtype.LogError(err, "select from datasets failed")
+		return nil, err
 	}
 	defer datasetRows.Close()
 	for datasetRows.Next() {
@@ -69,7 +70,7 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 			&connectionID,
 			&connectionType,
 		); err != nil {
-			log.Err(err).Msg("Error scanning dataset results")
+			errtype.LogError(err, "Error scanning dataset results")
 			return nil, err
 		}
 		dataset.CreatedAt = createdAt.Unix()
@@ -147,7 +148,7 @@ func (s Server) UpdateDatasetName(ctx context.Context, req *proto.UpdateDatasetN
 	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
-		log.Err(err).Msg("Error getting report id")
+		errtype.LogError(err, "Error getting report id")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -166,7 +167,7 @@ func (s Server) UpdateDatasetName(ctx context.Context, req *proto.UpdateDatasetN
 		req.DatasetId,
 	)
 	if err != nil {
-		log.Err(err).Msg("Error updating dataset name")
+		errtype.LogError(err, "Error updating dataset name")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -185,7 +186,7 @@ func (s Server) updateDatasetConnection(ctx context.Context, datasetID string, c
 		datasetID,
 	)
 	if err != nil {
-		log.Err(err).Msg("Error updating dataset connection")
+		errtype.LogError(err, "Error updating dataset connection")
 		return err
 	}
 	return nil
@@ -200,7 +201,7 @@ func (s Server) UpdateDatasetConnection(ctx context.Context, req *proto.UpdateDa
 	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
-		log.Err(err).Msg("Error getting report id")
+		errtype.LogError(err, "Error getting report id")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -213,7 +214,7 @@ func (s Server) UpdateDatasetConnection(ctx context.Context, req *proto.UpdateDa
 	err = s.updateDatasetConnection(ctx, req.DatasetId, req.ConnectionId)
 
 	if err != nil {
-		log.Err(err).Msg("Error updating dataset connection")
+		errtype.LogError(err, "Error updating dataset connection")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -235,7 +236,7 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
-		log.Err(err).Msg("Error getting report id")
+		errtype.LogError(err, "Error getting report id")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -252,7 +253,7 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 		req.DatasetId,
 	)
 	if err != nil {
-		log.Err(err).Msg("Error deleting dataset")
+		errtype.LogError(err, "Error deleting dataset")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -262,7 +263,7 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 		req.DatasetId,
 	)
 	if err != nil {
-		log.Err(err).Msg("Error deleting legacy query")
+		errtype.LogError(err, "Error deleting legacy query")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -311,13 +312,13 @@ func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetReque
 	result, err := s.insertDataset(ctx, req.ReportId)
 
 	if err != nil {
-		log.Err(err).Msg("Error inserting dataset")
+		errtype.LogError(err, "Error inserting dataset")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	affectedRows, err := result.RowsAffected()
 	if err != nil {
-		log.Err(err).Msg("Error getting affected rows")
+		errtype.LogError(err, "Error getting affected rows")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -382,7 +383,7 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	reportID, err := s.getReportID(ctx, vars["dataset"], false)
 
 	if err != nil {
-		log.Err(err).Msg("Error getting report id")
+		errtype.LogError(err, "Error getting report id")
 		HttpError(w, err)
 		return
 	}
@@ -397,7 +398,7 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	report, err := s.getReport(ctx, *reportID)
 
 	if err != nil {
-		log.Err(err).Msg("Error getting report")
+		errtype.LogError(err, "Error getting report")
 		HttpError(w, err)
 		return
 	}
@@ -436,14 +437,14 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	defConCtx := conn.GetCtx(ctx, &proto.Connection{Id: conn.SystemConnectionID})
 	dwJobID, err := s.getDWJobIDFromResultID(ctx, vars["source"])
 	if err != nil {
-		log.Error().Err(err).Msg("Error getting dw job id")
+		errtype.LogError(err, "Error getting dw job id")
 		HttpError(w, err)
 		return
 	}
 
 	resultURI, err := s.getResultURI(ctx, vars["source"])
 	if err != nil {
-		log.Error().Err(err).Msg("Error getting result URI")
+		errtype.LogError(err, "Error getting result URI")
 		HttpError(w, err)
 		return
 	}
@@ -464,7 +465,7 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 		expired, recent, err := s.checkJobExpiration(ctx, vars["source"])
 		jobIsRecent = recent
 		if err != nil {
-			log.Err(err).Msg("Error checking job expiration")
+			errtype.LogError(err, "Error checking job expiration")
 			storageError(w, err)
 			return
 		}

@@ -1,6 +1,7 @@
 package dekart
 
 import (
+	"dekart/src/server/errtype"
 	"context"
 	"database/sql"
 	"dekart/src/proto"
@@ -132,7 +133,7 @@ func (s Server) getReportIDFromJobID(ctx context.Context, jobID string) (string,
 		jobID,
 	).Scan(&reportID)
 	if err != nil {
-		log.Err(err).Msg("getReportIDFromJobID failed")
+		errtype.LogError(err, "getReportIDFromJobID failed")
 		return "", err
 	}
 	return reportID, nil
@@ -148,7 +149,7 @@ func (s Server) CancelJob(ctx context.Context, req *proto.CancelJobRequest) (*pr
 	}
 	job, err := s.getQueryJob(ctx, req.JobId)
 	if err != nil {
-		log.Err(err).Msg("getQueryJob failed")
+		errtype.LogError(err, "getQueryJob failed")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if job == nil {
@@ -157,7 +158,7 @@ func (s Server) CancelJob(ctx context.Context, req *proto.CancelJobRequest) (*pr
 	}
 	reportID, err := s.getReportIDFromJobID(ctx, req.JobId)
 	if err != nil {
-		log.Err(err).Msg("getReportIDFromJobID failed")
+		errtype.LogError(err, "getReportIDFromJobID failed")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if reportID == "" {
@@ -166,7 +167,7 @@ func (s Server) CancelJob(ctx context.Context, req *proto.CancelJobRequest) (*pr
 	}
 	report, err := s.getReport(ctx, reportID)
 	if err != nil {
-		log.Err(err).Msg("getReport failed")
+		errtype.LogError(err, "getReport failed")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if report == nil {
@@ -185,7 +186,7 @@ func (s Server) CancelJob(ctx context.Context, req *proto.CancelJobRequest) (*pr
 				req.JobId,
 			)
 			if err != nil {
-				log.Err(err).Msg("update query_jobs failed")
+				errtype.LogError(err, "update query_jobs failed")
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 			s.reportStreams.Ping(reportID)
