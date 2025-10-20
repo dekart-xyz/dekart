@@ -1,15 +1,14 @@
 package dekart
 
 import (
-	"dekart/src/server/errtype"
 	"context"
 	"dekart/src/proto"
+	"dekart/src/server/errtype"
 	"dekart/src/server/user"
 	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
