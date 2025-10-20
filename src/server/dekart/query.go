@@ -342,14 +342,24 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		if err != nil {
 			code := codes.Internal
 			if _, ok := err.(*queryWasNotUpdated); ok {
-				//this leads to canceled query when run and save at the same time
-				//TODO: in this case we should get query from db and compare it with the one in request
-				code = codes.Canceled
-				log.Warn().Err(err).Send()
+				// Query was not updated, possibly due to concurrent run and save
+				// Get the current query text from DB and compare with the request
+				dbQuery, dbErr := query.GetQueryDetails(ctx, s.db, req.QueryId)
+				if dbErr != nil {
+					log.Error().Err(dbErr).Msg("Failed to get query details from database")
+					return nil, status.Error(codes.Internal, dbErr.Error())
+				}
+				// If the query text in DB matches the request, proceed with running
+				// Otherwise, cancel due to concurrent modification
+				if dbQuery.QueryText != req.QueryText {
+					code = codes.Canceled
+					log.Warn().Err(err).Msg("Query was modified concurrently, canceling")
+					return nil, status.Error(code, err.Error())
+				}
 			} else {
 				log.Error().Err(err).Send()
+				return nil, status.Error(code, err.Error())
 			}
-			return nil, status.Error(code, err.Error())
 		}
 	}
 
