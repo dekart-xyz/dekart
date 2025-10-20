@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/conn"
+	"dekart/src/server/errtype"
 	"dekart/src/server/user"
 	"encoding/json"
 	"fmt"
@@ -81,7 +82,7 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 		archived,
 	)
 	if err != nil {
-		log.Err(err).Str("workspace", checkWorkspace(ctx).ID).Str("reportID", reportID).Send()
+		errtype.LogError(err, fmt.Sprintf("select from reports failed: workspace=%s reportID=%s", checkWorkspace(ctx).ID, reportID))
 		return nil, err
 	}
 	defer reportRows.Close()
@@ -116,7 +117,7 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 			&reportWorkspaceID,
 		)
 		if err != nil {
-			log.Err(err).Send()
+			errtype.LogError(err, "failed to scan report")
 			return nil, err
 		}
 		report.CanWrite = report.IsAuthor || (report.AllowEdit && reportWorkspaceID.String == checkWorkspace(ctx).ID)
@@ -161,7 +162,7 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 		if len(queryParams) > 0 {
 			err = json.Unmarshal(queryParams, &report.QueryParams)
 			if err != nil {
-				log.Err(err).Send()
+				errtype.LogError(err, "failed to unmarshal query params")
 				return nil, err
 			}
 		}
@@ -169,7 +170,7 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 	if report.Id != "" {
 		directAccessEmails, err := s.getDirectAccessEmails(ctx, report.Id)
 		if err != nil {
-			log.Err(err).Msg("getDirectAccessEmails failed")
+			errtype.LogError(err, "getDirectAccessEmails failed")
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 		if len(directAccessEmails) > 0 {
@@ -226,7 +227,7 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 
 	}
 	if err != nil {
-		log.Err(err).Send()
+		errtype.LogError(err, "database operation failed")
 		return nil, err
 	}
 	res := &proto.CreateReportResponse{
@@ -282,7 +283,7 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 		var err error
 		paramsJSON, err = json.Marshal(report.QueryParams)
 		if err != nil {
-			log.Err(err).Send()
+			errtype.LogError(err, "database operation failed")
 			return err
 		}
 	}
@@ -458,7 +459,7 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 
 	report, err := s.getReport(ctx, req.ReportId)
 	if err != nil {
-		log.Err(err).Send()
+		errtype.LogError(err, "database operation failed")
 		return nil, err
 	}
 	if report == nil {
@@ -476,7 +477,7 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 
 	datasets, err := s.getDatasets(ctx, req.ReportId)
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve datasets")
+		errtype.LogError(err, "Cannot retrieve datasets")
 		return nil, err
 	}
 	connectionUpdated := false
@@ -487,7 +488,7 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 	if report.IsPublic || (report.IsPlayground && !isPlayground) {
 		userConnections, err := s.getUserConnections(ctx)
 		if err != nil {
-			log.Err(err).Msg("Cannot retrieve connections")
+			errtype.LogError(err, "Cannot retrieve connections")
 			return nil, err
 		}
 		// replace dataset connection ids with new connection ids with same connection type
@@ -517,14 +518,14 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 		// copy query jobs only if user has access to the connection
 		jobs, err = s.getDatasetsQueryJobs(ctx, datasets)
 		if err != nil {
-			log.Err(err).Msg("Cannot retrieve query jobs")
+			errtype.LogError(err, "Cannot retrieve query jobs")
 			return nil, err
 		}
 	}
 
 	err = s.commitReportWithDatasets(ctx, report, datasets, jobs)
 	if err != nil {
-		log.Err(err).Send()
+		errtype.LogError(err, "database operation failed")
 		return nil, err
 	}
 
@@ -862,7 +863,7 @@ func (s Server) getDirectAccessEmails(ctx context.Context, reportID string) ([]s
 		WHERE rn = 1 AND status != 2
 	`, reportID)
 	if err != nil {
-		log.Err(err).Send()
+		errtype.LogError(err, "database operation failed")
 		return nil, err
 	}
 	defer rows.Close()

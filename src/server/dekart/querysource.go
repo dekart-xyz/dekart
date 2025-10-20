@@ -1,6 +1,7 @@
 package dekart
 
 import (
+	"dekart/src/server/errtype"
 	"context"
 	"crypto/sha1"
 	"dekart/src/proto"
@@ -27,7 +28,7 @@ func (s Server) ServeQuerySource(w http.ResponseWriter, r *http.Request) {
 	connection, err := s.getConnectionFromQueryID(ctx, vars["query"])
 
 	if err != nil {
-		log.Err(err).Msg("Error getting connection from query id")
+		errtype.LogError(err, "Error getting connection from query id")
 		HttpError(w, err)
 		return
 	}
@@ -88,7 +89,7 @@ func (s Server) storeQuerySync(ctx context.Context, queryID string, queryText st
 		prevQuerySourceId,
 	)
 	if err != nil {
-		log.Err(err).Msg("Error updating query text")
+		errtype.LogError(err, "Error updating query text")
 		return err
 	}
 	affectedRows, _ := result.RowsAffected()
@@ -108,7 +109,7 @@ func (s Server) storeQuery(userCtx context.Context, reportID string, queryID str
 		log.Warn().Msg("Query text not updated")
 		return
 	} else if err != nil {
-		log.Err(err).Msg("Error updating query text")
+		errtype.LogError(err, "Error updating query text")
 		return
 	}
 	s.reportStreams.Ping(reportID)

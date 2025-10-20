@@ -1,6 +1,7 @@
 package dekart
 
 import (
+	"dekart/src/server/errtype"
 	"context"
 	"database/sql"
 	"dekart/src/proto"
@@ -35,7 +36,7 @@ func (s Server) getWorkspaceUpdate(ctx context.Context) (int64, error) {
 		err = s.db.QueryRowContext(ctx, query).Scan(&updatedAtTime)
 	}
 	if err != nil {
-		log.Err(err).Msg("Error fetching max updated_at")
+		errtype.LogError(err, "Error fetching max updated_at")
 		return 0, err
 	}
 
@@ -47,7 +48,7 @@ func (s Server) getWorkspaceUpdate(ctx context.Context) (int64, error) {
 		// Parse the timestamp string into a time.Time (SQLite stores in UTC)
 		parsedTime, err := time.ParseInLocation("2006-01-02 15:04:05", updatedAtStr.String, time.UTC)
 		if err != nil {
-			log.Err(err).Msg("Error parsing updated_at timestamp")
+			errtype.LogError(err, "Error parsing updated_at timestamp")
 			return 0, err
 		}
 

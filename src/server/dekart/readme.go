@@ -1,6 +1,7 @@
 package dekart
 
 import (
+	"dekart/src/server/errtype"
 	"context"
 	"dekart/src/proto"
 	"dekart/src/server/user"
@@ -49,7 +50,7 @@ func (s Server) AddReadme(ctx context.Context, req *proto.AddReadmeRequest) (*pr
 		req.FromDatasetId,
 	)
 	if err != nil {
-		log.Err(err).Msg("Error deleting dataset")
+		errtype.LogError(err, "Error deleting dataset")
 	}
 	s.reportStreams.Ping(req.ReportId)
 	return &proto.AddReadmeResponse{}, nil

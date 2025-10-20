@@ -3,12 +3,12 @@ package dekart
 import (
 	"context"
 	"dekart/src/proto"
+	"dekart/src/server/errtype"
 	"dekart/src/server/user"
 	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -50,13 +50,13 @@ func (s Server) GetReportAnalytics(ctx context.Context, req *proto.GetReportAnal
 
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
-		log.Err(err).Msg("invalid report id")
+		errtype.LogError(err, "invalid report id")
 		return nil, status.Error(codes.InvalidArgument, "invalid report id")
 	}
 
 	report, err := s.getReport(ctx, req.ReportId)
 	if err != nil {
-		log.Err(err).Msg("failed to get report")
+		errtype.LogError(err, "failed to get report")
 		return nil, status.Error(codes.Internal, "failed to get report")
 	}
 	if report == nil {
@@ -70,7 +70,7 @@ func (s Server) GetReportAnalytics(ctx context.Context, req *proto.GetReportAnal
 	reportAnalytics, err := s.getReportAnalytics(ctx, report)
 
 	if err != nil {
-		log.Err(err).Msg("failed to get report analytics")
+		errtype.LogError(err, "failed to get report analytics")
 		return nil, status.Error(codes.Internal, "failed to get report analytics")
 	}
 
@@ -98,7 +98,7 @@ func (s Server) ServeReportAnalytics(w http.ResponseWriter, r *http.Request) {
 
 	_, err := uuid.Parse(reportID)
 	if err != nil {
-		log.Err(err).Msg("invalid report id")
+		errtype.LogError(err, "invalid report id")
 		http.Error(w, "invalid report id", http.StatusBadRequest)
 		return
 	}
@@ -106,7 +106,7 @@ func (s Server) ServeReportAnalytics(w http.ResponseWriter, r *http.Request) {
 	report, err := s.getReport(ctx, reportID)
 
 	if err != nil {
-		log.Err(err).Msg("failed to get report")
+		errtype.LogError(err, "failed to get report")
 		http.Error(w, "failed to get report", http.StatusInternalServerError)
 		return
 	}
@@ -124,7 +124,7 @@ func (s Server) ServeReportAnalytics(w http.ResponseWriter, r *http.Request) {
 
 	res, err := s.db.QueryContext(ctx, "SELECT report_id, email, created_at, updated_at FROM report_analytics WHERE report_id = $1", reportID)
 	if err != nil {
-		log.Err(err).Msg("failed to get report analytics")
+		errtype.LogError(err, "failed to get report analytics")
 		http.Error(w, "failed to get report analytics", http.StatusInternalServerError)
 		return
 	}
@@ -148,7 +148,7 @@ func (s Server) ServeReportAnalytics(w http.ResponseWriter, r *http.Request) {
 		var updatedAt string
 		err = res.Scan(&reportID, &email, &createdAt, &updatedAt)
 		if err != nil {
-			log.Err(err).Msg("failed to scan report analytics")
+			errtype.LogError(err, "failed to scan report analytics")
 			http.Error(w, "failed to scan report analytics", http.StatusInternalServerError)
 			return
 		}

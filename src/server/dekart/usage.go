@@ -1,6 +1,7 @@
 package dekart
 
 import (
+	"dekart/src/server/errtype"
 	"context"
 	"dekart/src/proto"
 	"dekart/src/server/user"
@@ -41,7 +42,7 @@ func (s Server) GetUsage(ctx context.Context, req *proto.GetUsageRequest) (*prot
 	}
 	// Check if there was an error during iteration
 	if err = usage.Err(); err != nil {
-		log.Err(err).Msg("error iterating usage stats")
+		errtype.LogError(err, "error iterating usage stats")
 		return nil, err
 	}
 	err = fmt.Errorf("no stats")

@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"database/sql"
 	pb "dekart/src/proto"
+	"dekart/src/server/errtype"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -240,7 +241,7 @@ func (c ClaimsCheck) isPublicReportRequest(ctx context.Context, reportID string)
 	// check if report is public and tracking is disabled
 	res, err := c.db.QueryContext(ctx, "SELECT is_public, track_viewers FROM reports WHERE id = $1", reportID)
 	if err != nil {
-		log.Error().Err(err).Msg("Error checking if report is public")
+		errtype.LogError(err, "Error checking if report is public")
 		return false
 	}
 	// Ensure rows are closed to avoid leaking connections
@@ -251,7 +252,7 @@ func (c ClaimsCheck) isPublicReportRequest(ctx context.Context, reportID string)
 	if res.Next() {
 		err = res.Scan(&isPublic, &trackViewers)
 		if err != nil {
-			log.Error().Err(err).Msg("Error scanning report")
+			errtype.LogError(err, "Error scanning report")
 			return false
 		}
 	}
@@ -312,7 +313,7 @@ func (c ClaimsCheck) getTokenInfo(ctx context.Context, token *oauth2.Token) (*go
 	client := auth.Client(ctx, token)
 	service, err := googleOAuth.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
-		log.Error().Err(err).Msg("Error creating Google OAuth service")
+		errtype.LogError(err, "Error creating Google OAuth service")
 		return nil, err
 	}
 	tokenInfo, err := service.Tokeninfo().AccessToken(token.AccessToken).Do()
@@ -341,13 +342,13 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 	var auth = c.getAuthConfig(state)
 	token, err := auth.Exchange(ctx, code)
 	if err != nil {
-		log.Error().Err(err).Msg("Error exchanging code for token")
+		errtype.LogError(err, "Error exchanging code for token")
 		redirectState.Error = "Error exchanging code for token"
 		return redirectState
 	}
 	tokenInfo, err := c.getTokenInfo(ctx, token)
 	if err != nil {
-		log.Error().Err(err).Msg("Error getting token info")
+		errtype.LogError(err, "Error getting token info")
 		redirectState.Error = "Error getting token info"
 		return redirectState
 	}
@@ -370,7 +371,7 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 			tokenInfo.Scope,
 		)
 		if err != nil {
-			log.Error().Err(err).Msg("Error updating user sensitive scope")
+			errtype.LogError(err, "Error updating user sensitive scope")
 			redirectState.Error = "Error updating user sensitive scope"
 			return redirectState
 		}
@@ -383,7 +384,7 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 			tokenInfo.Scope,
 		)
 		if err != nil {
-			log.Error().Err(err).Msg("Error updating user")
+			errtype.LogError(err, "Error updating user")
 			redirectState.Error = "Error updating user"
 			return redirectState
 		}
@@ -414,14 +415,14 @@ func (c ClaimsCheck) requestDevToken(state *pb.AuthState, r *http.Request) *pb.R
 	// Get a new token
 	token, err := tokenSource.Token()
 	if err != nil {
-		log.Error().Err(err).Msg("Error exchanging code for token")
+		errtype.LogError(err, "Error exchanging code for token")
 		redirectState.Error = "Error exchanging code for token"
 		return redirectState
 	}
 
 	tokenInfo, err := c.getTokenInfo(ctx, token)
 	if err != nil {
-		log.Error().Err(err).Msg("Error getting token info")
+		errtype.LogError(err, "Error getting token info")
 		redirectState.Error = "Error getting token info"
 		return redirectState
 	}
@@ -451,20 +452,20 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 	stateBase64 := r.URL.Query().Get("state")
 	stateBin, err := base64.StdEncoding.DecodeString(stateBase64)
 	if err != nil {
-		log.Error().Err(err).Msg("Error decoding state")
+		errtype.LogError(err, "Error decoding state")
 		http.Error(w, "Error decoding state", http.StatusBadRequest)
 		return
 	}
 	var state pb.AuthState
 	err = proto.Unmarshal(stateBin, &state)
 	if err != nil {
-		log.Error().Err(err).Msg("Error unmarshalling state")
+		errtype.LogError(err, "Error unmarshalling state")
 		http.Error(w, "Error unmarshalling state", http.StatusBadRequest)
 		return
 	}
 	uiURL, err := url.Parse(state.UiUrl)
 	if err != nil {
-		log.Error().Err(err).Msg("Error parsing ui url")
+		errtype.LogError(err, "Error parsing ui url")
 		http.Error(w, "Error parsing ui url", http.StatusBadRequest)
 		return
 	}
@@ -513,7 +514,7 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 	case pb.AuthState_ACTION_REVOKE:
 		response, err := http.PostForm(tokenRevokeURL, url.Values{"token": {state.AccessTokenToRevoke}})
 		if err != nil {
-			log.Error().Err(err).Msg("Error revoking token")
+			errtype.LogError(err, "Error revoking token")
 			http.Error(w, "Error revoking token", http.StatusBadRequest)
 			return
 		}
@@ -561,7 +562,7 @@ func (c ClaimsCheck) getPublicKeyFromAmazon(token *jwt.Token) (interface{}, erro
 		}
 		publicKey, err = jwt.ParseECPublicKeyFromPEM(pem)
 		if err != nil {
-			log.Error().Err(err).Msg("error parsing public key")
+			errtype.LogError(err, "error parsing public key")
 			return nil, err
 		} else {
 			c.publicKeys.Store(kid, publicKey)

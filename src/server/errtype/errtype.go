@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"io"
 	"regexp"
+
+	"github.com/rs/zerolog/log"
 )
 
 type EmptyResult struct{}
@@ -56,4 +58,19 @@ func (cw *LogWriter) Write(p []byte) (n int, err error) {
 
 	// If no modification is needed, write the original log entry
 	return cw.Writer.Write(p)
+}
+
+func IsContextCancelled(err error) bool {
+	if err == nil {
+		return false
+	}
+	return ContextCancelledRe.MatchString(err.Error())
+}
+
+func LogError(err error, msg string) {
+	if IsContextCancelled(err) {
+		log.Warn().Err(err).Msgf("Context Canceled %s", msg)
+		return
+	}
+	log.Error().Err(err).Msg(msg)
 }

@@ -6,6 +6,7 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/bqutils"
 	"dekart/src/server/conn"
+	"dekart/src/server/errtype"
 	"io"
 	"net/http"
 	"net/url"
@@ -174,17 +175,17 @@ func (o GoogleCloudStorageObject) CopyFromS3(ctx context.Context, source string)
 func (o GoogleCloudStorageObject) CopyTo(ctx context.Context, writer io.WriteCloser) error {
 	reader, err := o.GetReader(ctx)
 	if err != nil {
-		log.Err(err).Msg("Error getting reader while copying to Google Cloud Storage")
+		errtype.LogError(err, "Error getting reader while copying to Google Cloud Storage")
 		return err
 	}
 	_, err = io.Copy(writer, reader)
 	if err != nil {
-		log.Err(err).Msg("Error while copying to Google Cloud Storage")
+		errtype.LogError(err, "Error while copying to Google Cloud Storage")
 		return err
 	}
 	err = writer.Close()
 	if err != nil {
-		log.Err(err).Msg("Error closing writer while copying to Google Cloud Storage")
+		errtype.LogError(err, "Error closing writer while copying to Google Cloud Storage")
 		return err
 	}
 	return nil
@@ -203,7 +204,7 @@ func (o GoogleCloudStorageObject) Delete(ctx context.Context) error {
 func (o GoogleCloudStorageObject) getObject(ctx context.Context) *storage.ObjectHandle {
 	client, err := bqutils.GetStorageClient(ctx, conn.FromCtx(ctx), !o.useUserToken)
 	if err != nil {
-		log.Err(err).Msg("error getting storage client")
+		errtype.LogError(err, "error getting storage client")
 		return nil
 	}
 	bucket := client.Bucket(o.bucketName)
