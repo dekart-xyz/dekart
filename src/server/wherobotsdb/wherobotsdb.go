@@ -380,7 +380,6 @@ func Connect(
 	if err != nil {
 		return nil, err
 	}
-
 	wsBaseURL, err := waitUntilReady(ctx, sessionURL, headers)
 	if err != nil {
 		return nil, err

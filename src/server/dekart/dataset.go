@@ -340,6 +340,10 @@ func storageError(w http.ResponseWriter, err error) {
 		http.Error(w, "expired", http.StatusGone)
 		return
 	}
+	if _, ok := err.(*errtype.EmptyResult); ok {
+		http.Error(w, "Empty result", http.StatusNoContent)
+		return
+	}
 	HttpError(w, err)
 }
 
@@ -446,6 +450,11 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		errtype.LogError(err, "Error getting result URI")
 		HttpError(w, err)
+		return
+	}
+
+	if resultURI == "" && connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_WHEROBOTS {
+		storageError(w, &errtype.EmptyResult{})
 		return
 	}
 

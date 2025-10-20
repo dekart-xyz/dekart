@@ -107,7 +107,7 @@ export function downloadingProgress (dataset, loaded) {
 export function processDownloadError (err, dataset, label) {
   return function (dispatch, getState) {
     dispatch({ type: processDownloadError.name, dataset })
-    if (err instanceof EmptyResultError || err.message.includes('CSV is empty')) {
+    if (err instanceof EmptyResultError || err.message.includes('CSV is empty') || err.message.includes('Empty result') || err.status === 204) {
       dispatch(warn(<><i>{label}</i> Result is empty</>))
     } else if (err.status === 410 && dataset.queryId) { // gone from dw query temporary storage
       const { canRun, queryText } = getState().queryStatus[dataset.queryId]
