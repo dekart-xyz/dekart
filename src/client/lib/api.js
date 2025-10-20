@@ -41,6 +41,13 @@ export function get (endpoint, token = null, signal = null, onProgress = null, c
 
     xhr.onload = () => {
       const headers = parseHeaders(xhr.getAllResponseHeaders())
+      if (xhr.status === 204) {
+        resolve(new window.Response(null, {
+          status: xhr.status,
+          statusText: xhr.statusText
+        }))
+        return
+      }
       const res = new window.Response(xhr.response, {
         status: xhr.status,
         statusText: xhr.statusText,
