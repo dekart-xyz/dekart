@@ -1,11 +1,11 @@
 package dekart
 
 import (
-	"dekart/src/server/errtype"
 	"context"
 	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/deadline"
+	"dekart/src/server/errtype"
 	"dekart/src/server/job"
 	"dekart/src/server/user"
 	"fmt"
@@ -253,6 +253,9 @@ func (s Server) getDatasetsQueryJobs(ctx context.Context, datasets []*proto.Data
 			)
 		}
 		if err != nil {
+			if errtype.IsContextCancelled(err) {
+				return nil, err
+			}
 			log.Fatal().Err(err).Interface("queryIds", queryIds).Msgf("select from query_jobs failed, ids: %s", queryIdsStr)
 		}
 		defer queryRows.Close()

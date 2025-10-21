@@ -9,11 +9,8 @@ describe('basic query flow', () => {
     cy.get('button:contains("Run SQL")').click()
     cy.get('textarea').type(copy.simple_athena_query, { force: true })
     cy.get(`button:contains("${copy.execute}")`).click()
-    cy.get('#dekart-query-status-message').should('contain', 'Running')
-    cy.get(`button:contains("${copy.cancel}")`).click()
-    // Temp downtime of Athena
-    // cy.get(`span:contains("${copy.ready}")`, { timeout: 20000 }).should('be.visible')
-    // cy.get(`span:contains("${copy.downloading}")`).should('contain', 'kB') // size of result shown
+    cy.get(`span:contains("${copy.ready}")`, { timeout: 20000 }).should('be.visible')
+    cy.get(`span:contains("${copy.downloading}")`).should('contain', 'kB') // size of result shown
   })
 })
 
