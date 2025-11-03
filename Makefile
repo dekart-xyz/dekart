@@ -1,4 +1,4 @@
-.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down sqlite proto-copy-to-node proto-stub
+.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down sqlite proto-copy-to-node proto-stub server
 
 # load .env
 # https://lithic.tech/blog/2020-05/makefile-dot-env
@@ -143,6 +143,7 @@ server:
 	$(call run_server,$(or $(filter-out server,$(MAKECMDGOALS)),.env))
 
 # Dummy target to prevent Make from trying to build .env files as targets
+# This pattern rule makes .env* targets as no-ops that are always "up to date"
 .env%:
 	@:
 
