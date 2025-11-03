@@ -34,7 +34,7 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 	if report == nil {
 		err := fmt.Errorf("report %s not found", reportID)
 		log.Warn().Err(err).Send()
-		return status.Errorf(codes.NotFound, err.Error())
+		return status.Error(codes.NotFound, err.Error())
 	}
 
 	// update report_analytics only when tracking is enabled
@@ -148,7 +148,7 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 
 	_, err := uuid.Parse(req.Report.Id)
 	if err != nil {
-		return status.Errorf(codes.InvalidArgument, err.Error())
+		return status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	streamID, err := uuid.NewRandom()
@@ -285,7 +285,7 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			return nil // Client disconnected gracefully
 		}
 		log.Err(err).Send()
-		return status.Errorf(codes.Internal, err.Error())
+		return status.Error(codes.Internal, err.Error())
 	}
 	return nil
 }
@@ -331,7 +331,7 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 			return nil // Client disconnected gracefully
 		}
 		log.Err(err).Send()
-		return status.Errorf(codes.Internal, err.Error())
+		return status.Error(codes.Internal, err.Error())
 	}
 	return nil
 }

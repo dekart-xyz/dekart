@@ -452,7 +452,7 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	newReportID := newUUID()
@@ -465,7 +465,7 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 	if report == nil {
 		err := fmt.Errorf("report %s not found", newReportID)
 		log.Warn().Err(err).Send()
-		return nil, status.Errorf(codes.NotFound, err.Error())
+		return nil, status.Error(codes.NotFound, err.Error())
 	}
 	if isPlayground && !report.IsPlayground {
 		// cannot fork non-playground report in playground
@@ -649,7 +649,7 @@ func (s Server) AllowExportDatasets(ctx context.Context, req *proto.AllowExportD
 	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	report, err := s.getReport(ctx, req.ReportId)
 	if err != nil {
@@ -687,7 +687,7 @@ func (s Server) SetTrackViewers(ctx context.Context, req *proto.SetTrackViewersR
 	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	report, err := s.getReport(ctx, req.ReportId)
 	if err != nil {
@@ -729,7 +729,7 @@ func (s Server) SetDiscoverable(ctx context.Context, req *proto.SetDiscoverableR
 	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	report, err := s.getReport(ctx, req.ReportId)
 	if err != nil {
@@ -784,7 +784,7 @@ func (s Server) ArchiveReport(ctx context.Context, req *proto.ArchiveReportReque
 	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	// Use getReportWithOptions to include archived reports (needed for unarchiving)
@@ -892,7 +892,7 @@ func (s Server) AddReportDirectAccess(ctx context.Context, req *proto.AddReportD
 	// Validate report ID
 	_, err := uuid.Parse(reportID)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	report, err := s.getReport(ctx, req.ReportId)
@@ -975,7 +975,7 @@ func (s Server) AddReportDirectAccess(ctx context.Context, req *proto.AddReportD
 	for email, level := range toAddOrUpdate {
 		_, err = tx.ExecContext(ctx, `
 			INSERT INTO report_access_log (report_id, email, status, access_level, authored_by)
-			VALUES ($1, $2, $3, 1, $4)
+			VALUES ($1, $2, 1, $3, $4)
 		`, reportID, email, level, claims.Email)
 		if err != nil {
 			log.Err(err).Send()
