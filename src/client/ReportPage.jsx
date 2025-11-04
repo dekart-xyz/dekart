@@ -380,8 +380,21 @@ function Kepler () {
     const mapLibreStyleIds = ['dark-matter', 'positron', 'voyager']
 
     // Convert object to array and filter out MapLibre styles
-    return Object.values(allDefaultStyles).filter(style => !mapLibreStyleIds.includes(style.id))
-  }, [isSnowpark])
+    const mapboxOnly = Object.values(allDefaultStyles).filter(style => !mapLibreStyleIds.includes(style.id))
+
+    // Replace icons with Mapbox Static Images so previews are served from Mapbox
+    const token = env.variables.MAPBOX_TOKEN
+    const toStaticIcon = (styleUrl) => {
+      // styleUrl is like 'mapbox://styles/{user}/{styleId}'
+      const path = styleUrl.replace('mapbox://styles/', '')
+      return `https://api.mapbox.com/styles/v1/${path}/static/0,0,1/160x120?access_token=${token}&logo=false&attribution=false`
+    }
+
+    return mapboxOnly.map(style => ({
+      ...style,
+      icon: toStaticIcon(style.url)
+    }))
+  }, [isSnowpark, env])
 
   if (!env.loaded) {
     return (
