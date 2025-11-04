@@ -294,12 +294,12 @@ func (s Server) PublishReport(ctx context.Context, req *proto.PublishReportReque
 	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	report, err := s.getReport(ctx, req.ReportId)
 	if err != nil {
 		errtype.LogError(err, "Cannot retrieve report")
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if report == nil {
 		err := status.Errorf(codes.NotFound, "report %s not found", req.ReportId)
@@ -309,7 +309,7 @@ func (s Server) PublishReport(ctx context.Context, req *proto.PublishReportReque
 	if !report.CanWrite {
 		err := status.Errorf(codes.PermissionDenied, "no permission to publish report %s", req.ReportId)
 		log.Warn().Err(err).Msg("No permission to publish report")
-		return nil, status.Errorf(codes.PermissionDenied, err.Error())
+		return nil, status.Error(codes.PermissionDenied, err.Error())
 	}
 
 	// Check if user is trying to publish and if they have a freemium plan
@@ -326,7 +326,7 @@ func (s Server) PublishReport(ctx context.Context, req *proto.PublishReportReque
 			).Scan(&publicReportsCount)
 			if err != nil {
 				errtype.LogError(err, "Cannot count public reports")
-				return nil, status.Errorf(codes.Internal, err.Error())
+				return nil, status.Error(codes.Internal, err.Error())
 			}
 
 			// If user already has 1 public report and this report is not already public, block publishing

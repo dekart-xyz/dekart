@@ -1680,6 +1680,7 @@ export namespace GetEnvResponse {
       TYPE_CLOUD_UX_CONFIG_JSON: 24;
       TYPE_DEKART_CLOUD: 25;
       TYPE_MAX_FILE_UPLOAD_SIZE: 26;
+      TYPE_IS_SNOWPARK: 27;
     }
 
     export const Type: TypeMap;

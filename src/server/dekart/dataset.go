@@ -230,7 +230,7 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 	}
 	_, err := uuid.Parse(req.DatasetId)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	reportID, err := s.getReportID(ctx, req.DatasetId, true)
@@ -325,7 +325,7 @@ func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetReque
 	if affectedRows == 0 {
 		err := fmt.Errorf("report=%s, author_email=%s not found", req.ReportId, claims.Email)
 		log.Warn().Err(err).Msg("Report not found")
-		return nil, status.Errorf(codes.NotFound, err.Error())
+		return nil, status.Error(codes.NotFound, err.Error())
 	}
 	s.reportStreams.Ping(req.ReportId)
 	s.userStreams.PingAll() // because dataset count is now part of connection info

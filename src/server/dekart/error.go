@@ -21,7 +21,7 @@ func GRPCError(msg string, err error) error {
 		return status.Errorf(codes.Canceled, "Context Cancelled")
 	}
 	log.Err(err).Msg(msg)
-	return status.Errorf(codes.Internal, err.Error())
+	return status.Error(codes.Internal, err.Error())
 }
 
 // HttpError writes error to http.ResponseWriter based on error type from service providers like Google API

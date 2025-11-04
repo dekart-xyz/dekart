@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom'
 import Input from 'antd/es/input'
-import { useEffect, useState, Component } from 'react'
+import { useEffect, useState, Component, useMemo } from 'react'
 import { KeplerGl } from '@kepler.gl/components'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
@@ -31,6 +31,8 @@ import { MapControlButton } from '@kepler.gl/components/dist/common/styled-compo
 import { Loading } from './Loading'
 import { UNKNOWN_EMAIL } from './lib/constants'
 import { track } from './lib/tracking'
+import { getDefaultMapStyles } from '@kepler.gl/reducers'
+import { getApplicationConfig } from '@kepler.gl/utils'
 
 function TabIcon ({ job }) {
   let iconColor = 'transparent'
@@ -358,7 +360,42 @@ function ToggleFullscreenButton () {
 function Kepler () {
   const env = useSelector(state => state.env)
   const report = useSelector(state => state.report)
+  const isSnowpark = useSelector(state => state.env.isSnowpark)
   const dispatch = useDispatch()
+
+  // Filter out MapLibre styles (dark-matter, positron, voyager) only when isSnowpark is true
+  // Keep only Mapbox styles and no-basemap option
+  // Use getDefaultMapStyles to ensure icons have proper CDN URLs
+  const mapStylesWithoutMapLibre = useMemo(() => {
+    if (!isSnowpark) {
+      return undefined
+    }
+    // Get CDN URL from application config
+    const cdnUrl = getApplicationConfig().cdnUrl
+
+    // Get all default styles with proper icon URLs
+    const allDefaultStyles = getDefaultMapStyles(cdnUrl)
+
+    // MapLibre style IDs to exclude
+    const mapLibreStyleIds = ['dark-matter', 'positron', 'voyager']
+
+    // Convert object to array and filter out MapLibre styles
+    const mapboxOnly = Object.values(allDefaultStyles).filter(style => !mapLibreStyleIds.includes(style.id))
+
+    // Replace icons with Mapbox Static Images so previews are served from Mapbox
+    const token = env.variables.MAPBOX_TOKEN
+    const toStaticIcon = (styleUrl) => {
+      // styleUrl is like 'mapbox://styles/{user}/{styleId}'
+      const path = styleUrl.replace('mapbox://styles/', '')
+      return `https://api.mapbox.com/styles/v1/${path}/static/0,0,1/160x120?access_token=${token}&logo=false&attribution=false`
+    }
+
+    return mapboxOnly.map(style => ({
+      ...style,
+      icon: toStaticIcon(style.url)
+    }))
+  }, [isSnowpark, env])
+
   if (!env.loaded) {
     return (
       <div className={styles.keplerBlock} />
@@ -381,6 +418,8 @@ function Kepler () {
               mapboxApiAccessToken={env.variables.MAPBOX_TOKEN}
               width={width}
               height={height}
+              mapStyles={mapStylesWithoutMapLibre}
+              mapStylesReplaceDefault={isSnowpark || undefined}
             />
           </CatchKeplerError>
         )}

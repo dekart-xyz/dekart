@@ -43,6 +43,7 @@ export default function DekartMenu () {
   const dispatch = useDispatch()
   const { authEnabled } = env
   const isPlayground = useSelector(state => state.user.isPlayground)
+  const isSnowpark = useSelector(state => state.env.isSnowpark)
   const isViewer = useSelector(state => state.user.isViewer)
   const ref = getUrlRef(env, usage)
   return (
@@ -89,11 +90,23 @@ export default function DekartMenu () {
           </Menu.Item>
         </Menu.SubMenu>
         <Menu.SubMenu popupClassName={styles.subMenu} popupOffset={popupOffset} title={<MessageOutlined />} key='community' active='yes'>
-          <Menu.Item key='gpt' onClick={() => track('ClickedOvertureMapsGPT')}>
-            <a target='_blank' rel='noopener noreferrer' href='https://chatgpt.com/g/g-onSLtzQQB-overture-maps-gpt'>Overture Maps GPT</a>
-          </Menu.Item>
+          {isSnowpark && (
+            <Menu.Item key='snowflake-kepler-gl-examples' onClick={() => track('ClickedSnowflakeKeplerGlExamples')}>
+              <a target='_blank' rel='noopener noreferrer' href={'https://dekart.xyz/docs/snowflake-snowpark/about/?ref=' + ref}>Configure Access</a>
+            </Menu.Item>
+          )}
+          {!isSnowpark && (
+            <Menu.Item key='gpt' onClick={() => track('ClickedOvertureMapsGPT')}>
+              <a target='_blank' rel='noopener noreferrer' href='https://chatgpt.com/g/g-onSLtzQQB-overture-maps-gpt'>Overture Maps GPT</a>
+            </Menu.Item>
+          )}
           <Menu.Item key='examples' onClick={() => track('ClickedMapExamples')}>
-            <a target='_blank' rel='noopener noreferrer' href={'https://dekart.xyz/docs/about/kepler-gl-map-examples?ref=' + ref}>Map Examples</a>
+            <a
+              target='_blank' rel='noopener noreferrer' href={
+              isSnowpark ? 'https://dekart.xyz/docs/about/snowflake-kepler-gl-examples/?ref=' + ref : 'https://dekart.xyz/docs/about/kepler-gl-map-examples?ref=' + ref
+            }
+            >Map Examples
+            </a>
           </Menu.Item>
           <Menu.Item key='slack' onClick={() => track('ClickedAskInSlack')}>
             <a target='_blank' rel='noopener noreferrer' href='https://slack.dekart.xyz'>Ask in Slack</a>
@@ -102,9 +115,13 @@ export default function DekartMenu () {
             <a target='_blank' rel='noopener noreferrer' href={'https://github.com/dekart-xyz/dekart/issues?ref=' + ref}>Report Issue</a>
           </Menu.Item>
         </Menu.SubMenu>
-        <Menu.Item key='contribute' onClick={() => track('ClickedGitHubStar')}>
-          <Tooltip color='#328EB2' title={<>Loving Dekart?<br />Help community find it.<br />Give us ⭐️ on GitHub!</>}><a target='_blank' rel='noopener noreferrer' href='https://github.com/dekart-xyz/dekart'>🩵</a></Tooltip>
-        </Menu.Item>
+        {
+          !isSnowpark && (
+            <Menu.Item key='contribute' onClick={() => track('ClickedGitHubStar')}>
+              <Tooltip color='#328EB2' title={<>Loving Dekart?<br />Help community find it.<br />Give us ⭐️ on GitHub!</>}><a target='_blank' rel='noopener noreferrer' href='https://github.com/dekart-xyz/dekart'>🩵</a></Tooltip>
+            </Menu.Item>
+          )
+        }
       </Menu>
     </div>
   )
