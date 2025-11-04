@@ -33,6 +33,7 @@ function User ({ buttonDivider }) {
   const userStream = useSelector(state => state.user.stream)
   const { authEnabled } = useSelector(state => state.env)
   const isPlayground = useSelector(state => state.user.isPlayground)
+  const isSnowpark = useSelector(state => state.env.isSnowpark)
   const dispatch = useDispatch()
   if (!userStream || !authEnabled) {
     return null
@@ -42,7 +43,7 @@ function User ({ buttonDivider }) {
     disabled: true
   }]
 
-  if (!isPlayground) {
+  if (!isPlayground && !isSnowpark) {
     items.push({
       label: 'Manage workspace',
       onClick: () => {
@@ -50,7 +51,7 @@ function User ({ buttonDivider }) {
         history.push('/workspace')
       }
     })
-  } else {
+  } else if (!isSnowpark) {
     items.push({
       label: 'Switch to workspace',
       onClick: () => {

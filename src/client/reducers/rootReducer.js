@@ -85,7 +85,8 @@ function env (state = defaultEnv, action) {
         authEnabled: Boolean(action.variables.AUTH_ENABLED),
         secretsEnabled: Boolean(action.variables.SECRETS_ENABLED),
         uxConfig: JSON.parse(action.variables.CLOUD_UX_CONFIG_JSON || '{}'),
-        isCloud: Boolean(action.variables.DEKART_CLOUD)
+        isCloud: Boolean(action.variables.DEKART_CLOUD),
+        isSnowpark: Boolean(action.variables.IS_SNOWPARK)
       }
     default:
       return state

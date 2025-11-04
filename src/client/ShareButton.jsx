@@ -133,6 +133,7 @@ function ViewAnalytics () {
 function DirectAccess () {
   const { canWrite, isSharable, isPublic } = useSelector(state => state.report)
   const planType = useSelector(state => state.user.stream?.planType)
+  const isSnowpark = useSelector(state => state.env.isSnowpark)
   const reportDirectAccessEmails = useSelector(state => state.reportDirectAccessEmails)
   const [emails, setEmails] = useState(reportDirectAccessEmails)
   const inputRef = useRef(null)
@@ -143,7 +144,7 @@ function DirectAccess () {
   const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
   const gated = planType === PlanType.TYPE_PERSONAL || planType === PlanType.TYPE_UNSPECIFIED || planType === PlanType.TYPE_TEAM
 
-  if (!canWrite || !isSharable || isPublic || isDefaultWorkspace) {
+  if (!canWrite || !isSharable || isPublic || isDefaultWorkspace || isSnowpark) {
     return null
   }
 
@@ -195,7 +196,10 @@ function TrackViewersDescription () {
 
 function TrackViewers () {
   const { canWrite } = useSelector(state => state.report)
-
+  const isSnowpark = useSelector(state => state.env.isSnowpark)
+  if (isSnowpark) {
+    return null
+  }
   if (!canWrite) {
     return null
   }
@@ -451,6 +455,7 @@ export default function ShareButton () {
   const [modalOpen, setModalOpen] = useState(false)
   const workspaceId = useSelector(state => state.user.stream?.workspaceId)
   const { isPublic, isPlayground, discoverable, canWrite } = useSelector(state => state.report)
+  const isSnowpark = useSelector(state => state.env.isSnowpark)
   const analyticsModalOpen = useSelector(state => state.analytics.modalOpen)
   const hasDirectAccess = useSelector(state => state.report.hasDirectAccess)
   useEffect(() => {
@@ -497,7 +502,7 @@ export default function ShareButton () {
         bodyStyle={{ padding: '0px' }}
         footer={
           <div className={styles.modalFooter}>
-            {workspaceId ? <Button icon='+ ' type='primary' href='/workspace' onClick={() => track('AddUsersToWorkspaceFromShareModal')}>Add users to workspace</Button> : null}
+            {workspaceId && !isSnowpark ? <Button icon='+ ' type='primary' href='/workspace' onClick={() => track('AddUsersToWorkspaceFromShareModal')}>Add users to workspace</Button> : null}
             <div className={styles.modalFooterSpacer} />
             <CopyLinkButton />
             <Button
