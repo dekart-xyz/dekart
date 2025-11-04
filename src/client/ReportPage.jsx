@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom'
 import Input from 'antd/es/input'
-import { useEffect, useState, Component } from 'react'
+import { useEffect, useState, Component, useMemo } from 'react'
 import { KeplerGl } from '@kepler.gl/components'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
@@ -31,6 +31,8 @@ import { MapControlButton } from '@kepler.gl/components/dist/common/styled-compo
 import { Loading } from './Loading'
 import { UNKNOWN_EMAIL } from './lib/constants'
 import { track } from './lib/tracking'
+import { getDefaultMapStyles } from '@kepler.gl/reducers'
+import { getApplicationConfig } from '@kepler.gl/utils'
 
 function TabIcon ({ job }) {
   let iconColor = 'transparent'
@@ -358,7 +360,29 @@ function ToggleFullscreenButton () {
 function Kepler () {
   const env = useSelector(state => state.env)
   const report = useSelector(state => state.report)
+  const isSnowpark = useSelector(state => state.env.isSnowpark)
   const dispatch = useDispatch()
+
+  // Filter out MapLibre styles (dark-matter, positron, voyager) only when isSnowpark is true
+  // Keep only Mapbox styles and no-basemap option
+  // Use getDefaultMapStyles to ensure icons have proper CDN URLs
+  const mapStylesWithoutMapLibre = useMemo(() => {
+    if (!isSnowpark) {
+      return undefined
+    }
+    // Get CDN URL from application config
+    const cdnUrl = getApplicationConfig().cdnUrl
+
+    // Get all default styles with proper icon URLs
+    const allDefaultStyles = getDefaultMapStyles(cdnUrl)
+
+    // MapLibre style IDs to exclude
+    const mapLibreStyleIds = ['dark-matter', 'positron', 'voyager']
+
+    // Convert object to array and filter out MapLibre styles
+    return Object.values(allDefaultStyles).filter(style => !mapLibreStyleIds.includes(style.id))
+  }, [isSnowpark])
+
   if (!env.loaded) {
     return (
       <div className={styles.keplerBlock} />
@@ -381,6 +405,8 @@ function Kepler () {
               mapboxApiAccessToken={env.variables.MAPBOX_TOKEN}
               width={width}
               height={height}
+              mapStyles={mapStylesWithoutMapLibre}
+              mapStylesReplaceDefault={isSnowpark || undefined}
             />
           </CatchKeplerError>
         )}

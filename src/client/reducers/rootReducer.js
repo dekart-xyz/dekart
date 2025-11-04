@@ -27,6 +27,9 @@ const customKeplerGlReducer = keplerGlReducer.initialState({
   uiState: {
     currentModal: null,
     activeSidePanel: null
+  },
+  mapStyle: {
+    styleType: 'dark'
   }
 })
 
