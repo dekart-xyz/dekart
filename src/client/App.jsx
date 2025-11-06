@@ -275,8 +275,14 @@ export default function App () {
         <Route path='/workspace/invite/:inviteId'>
           <WorkspacePage userInvite />
         </Route>
+        <Route exact path='/workspace/plan'>
+          <WorkspacePage step='plan' />
+        </Route>
+        <Route exact path='/workspace/members'>
+          <WorkspacePage step='members' />
+        </Route>
         <Route path='/workspace'>
-          <WorkspacePage />
+          <WorkspacePage step='workspace' />
         </Route>
         <Route path='/400'>
           <ErrorPage icon={<WarningOutlined />} title='400' subTitle='Bad Request' />
