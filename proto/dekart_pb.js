@@ -20924,7 +20924,8 @@ proto.PlanType = {
   TYPE_TEAM: 2,
   TYPE_GROW: 3,
   TYPE_MAX: 4,
-  TYPE_SELF_HOSTED: 5
+  TYPE_SELF_HOSTED: 5,
+  TYPE_TRIAL: 6
 };
 
 /**

@@ -2805,6 +2805,7 @@ export interface PlanTypeMap {
   TYPE_GROW: 3;
   TYPE_MAX: 4;
   TYPE_SELF_HOSTED: 5;
+  TYPE_TRIAL: 6;
 }
 
 export const PlanType: PlanTypeMap;

@@ -37,25 +37,41 @@ func (s Server) getSubscription(ctx context.Context, workspaceId string) (*proto
 	var createdAt sql.NullTime
 	var customerID sql.NullString
 	var planType proto.PlanType
+	var trialEndsAt sql.NullTime
 
 	err := s.db.QueryRowContext(ctx, `
-		SELECT
-			customer_id,
-			plan_type,
-			created_at
-		FROM subscription_log
-		WHERE workspace_id = $1
-		ORDER BY created_at DESC
-		LIMIT 1
-		`,
+        SELECT
+            sl.customer_id,
+            sl.plan_type,
+            sl.created_at,
+			sl.trial_ends_at
+        FROM subscription_log sl
+        WHERE sl.workspace_id = $1
+        ORDER BY sl.created_at DESC
+        LIMIT 1
+        `,
 		workspaceId,
-	).Scan(&customerID, &planType, &createdAt)
+	).Scan(&customerID, &planType, &createdAt, &trialEndsAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		log.Err(err).Send()
 		return nil, err
+	}
+
+	// If latest plan is TRIAL, use preselected latestTrialEndsAt and bypass Stripe
+	if planType == proto.PlanType_TYPE_TRIAL {
+		var cancelAt int64
+		if trialEndsAt.Valid {
+			cancelAt = trialEndsAt.Time.Unix()
+		}
+		return &proto.Subscription{
+			PlanType:   planType,
+			CustomerId: customerID.String,
+			UpdatedAt:  createdAt.Time.Unix(),
+			CancelAt:   cancelAt,
+		}, nil
 	}
 
 	priceID := getPriceID(planType)
