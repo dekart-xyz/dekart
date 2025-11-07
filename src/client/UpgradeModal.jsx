@@ -74,10 +74,6 @@ const UpgradeModal = ({ visible, onClose }) => {
               <CheckCircleOutlined className={styles.checkIcon} />
               <Text>Viewer analytics + lead capture</Text>
             </div>
-            <div className={styles.feature}>
-              <CheckCircleOutlined className={styles.checkIcon} />
-              <Text>Priority workspace performance</Text>
-            </div>
           </div>
         </div>
 

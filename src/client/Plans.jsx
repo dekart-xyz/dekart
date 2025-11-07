@@ -6,7 +6,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import Button from 'antd/es/button'
 import { createSubscription, redirectToCustomerPortal } from './actions/workspace'
 import { PlanType } from 'dekart-proto/dekart_pb'
-import { CheckCircleOutlined } from '@ant-design/icons'
+import { CheckCircleOutlined, CrownOutlined } from '@ant-design/icons'
 import Text from 'antd/es/typography/Text'
 import Tooltip from 'antd/es/tooltip'
 import classNames from 'classnames'
@@ -54,7 +54,30 @@ export function Plan ({ title, children, planType, cancelAt, addedUsersCount, is
     </Button>
   )
 
-  if (planType === PlanType.TYPE_PERSONAL) {
+  if (planType === PlanType.TYPE_TRIAL) {
+    if (userStream.planType === PlanType.TYPE_TRIAL) {
+      actionButton = <Button disabled className={styles.actionButton}>Current plan</Button>
+    } else {
+      actionButton = (
+        <Button
+          key='1'
+          type={isCurrentPlan ? 'primary' : (hover ? 'primary' : 'default')}
+          id={`dekart-${planType}-choose-plan`}
+          disabled={waitForRedirect || !isAdmin}
+          loading={waitForRedirect}
+          onClick={() => {
+            track('ChoosePlan', { planType })
+            setWaitForRedirect(true)
+            dispatch(createSubscription(planType))
+          }}
+          ghost={hover && !isCurrentPlan}
+          className={styles.actionButton}
+        >
+          Start Free Trial
+        </Button>
+      )
+    }
+  } else if (planType === PlanType.TYPE_PERSONAL) {
     if (userStream.planType !== PlanType.TYPE_PERSONAL) {
       actionButton = (
         <Button disabled title='Downgrading from Team to Personal is not supported' className={styles.actionButton}>
@@ -110,33 +133,35 @@ export default function Plans () {
   const workspace = useSelector(state => state.workspace)
   return (
     <div className={styles.plans}>
-      {userStream.planType !== PlanType.TYPE_TEAM && (
-        <Plan
-          addedUsersCount={workspace.addedUsersCount}
-          title={<PlanTitle
-            name='Personal'
-            selected={userStream.planType === PlanType.TYPE_PERSONAL}
-            price='Free'
-            description='Single-person use'
-                 />}
-          planType={PlanType.TYPE_PERSONAL}
-          isCurrentPlan={userStream.planType === PlanType.TYPE_PERSONAL}
-        >
-          <div className={styles.feature}>
-            <CheckCircleOutlined className={styles.checkIcon} />
-            <Text>Unlimited Private Maps</Text>
-          </div>
-          <div className={styles.feature}>
-            <CheckCircleOutlined className={styles.checkIcon} />
-            <Text>Unlimited Connectors</Text>
-          </div>
-          <div className={styles.feature}>
-            <CheckCircleOutlined className={styles.checkIcon} />
-            <Text>1 Shared Map</Text>
-          </div>
-        </Plan>
-
-      )}
+      <Plan
+        addedUsersCount={workspace.addedUsersCount}
+        title={<PlanTitle
+          name='Trial'
+          selected={userStream.planType === PlanType.TYPE_TRIAL}
+          price='14-Day Free Trial'
+          description='Try premium features'
+          icon={<CrownOutlined />}
+               />}
+        planType={PlanType.TYPE_TRIAL}
+        isCurrentPlan={userStream.planType === PlanType.TYPE_TRIAL}
+      >
+        <div className={styles.feature}>
+          <CheckCircleOutlined className={styles.checkIcon} />
+          <Text>Unlimited shared maps</Text>
+        </div>
+        <div className={styles.feature}>
+          <CheckCircleOutlined className={styles.checkIcon} />
+          <Text>Roles management</Text>
+        </div>
+        <div className={styles.feature}>
+          <CheckCircleOutlined className={styles.checkIcon} />
+          <Text>Team invites</Text>
+        </div>
+        <div className={styles.feature}>
+          <CheckCircleOutlined className={styles.checkIcon} />
+          <Text>Viewer emails</Text>
+        </div>
+      </Plan>
       {userStream.planType === PlanType.TYPE_TEAM
         ? (
           <Plan
@@ -151,10 +176,6 @@ export default function Plans () {
             cancelAt={workspace?.subscription?.cancelAt}
             isCurrentPlan={userStream.planType === PlanType.TYPE_TEAM}
           >
-            <div className={styles.feature}>
-              <CheckCircleOutlined className={styles.checkIcon} />
-              <Text>Everything from Personal</Text>
-            </div>
             <div className={styles.feature}>
               <CheckCircleOutlined className={styles.checkIcon} />
               <Text>Unlimited Shared Maps</Text>
