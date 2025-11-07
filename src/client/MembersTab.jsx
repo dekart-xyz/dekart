@@ -1,6 +1,6 @@
 import { useDispatch, useSelector } from 'react-redux'
 import styles from './MembersTab.module.css'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { updateWorkspaceUser } from './actions/workspace'
 import { PlanType, UpdateWorkspaceUserRequest, UserRole } from 'dekart-proto/dekart_pb'
 import Input from 'antd/es/input'
@@ -44,7 +44,13 @@ export default function MembersTab () {
       setEmail('')
     }
   }, [dispatch, email, isAdmin, inviteRole])
-  if (!users) {
+  const usersLoaded = Boolean(users)
+  useEffect(() => {
+    if (usersLoaded) {
+      track('MembersTabLoaded')
+    }
+  }, [usersLoaded])
+  if (!usersLoaded) {
     return null
   }
 
