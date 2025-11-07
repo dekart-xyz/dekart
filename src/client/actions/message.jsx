@@ -36,6 +36,15 @@ export function success (content) {
   return { type: success.name }
 }
 
+export function trialSuccess () {
+  track('TrialSuccessMessage')
+  message.success({
+    content: 'Trial started! You now have full access',
+    style
+  })
+  return { type: trialSuccess.name }
+}
+
 export function info (content) {
   track('InfoMessage')
   message.info({

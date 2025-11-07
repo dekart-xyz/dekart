@@ -27,6 +27,8 @@ func (s Server) getWorkspaceUpdate(ctx context.Context) (int64, error) {
 			SELECT MAX(created_at) AS updated_at FROM workspace_log
 			UNION
 			SELECT MAX(created_at) AS updated_at FROM confirmation_log
+			UNION
+			SELECT MAX(created_at) AS updated_at FROM subscription_log
 		) max_updated_at;
 	`
 	var err error

@@ -1,7 +1,7 @@
 import { CreateWorkspaceRequest, CreateSubscriptionRequest, GetInvitesRequest, GetWorkspaceRequest, GetStripePortalSessionRequest, ListUsersRequest, RespondToInviteRequest, UpdateWorkspaceRequest, UpdateWorkspaceUserRequest, PlanType } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { grpcCall } from './grpc'
-import { success } from './message'
+import { success, trialSuccess } from './message'
 import { hideUpgradeModal } from './upgradeModal'
 
 export function redirectToCustomerPortal () {
@@ -81,7 +81,7 @@ export function createSubscription (plantType) {
         window.location.href = res.redirectUrl
       } else if (plantType === PlanType.TYPE_TRIAL) {
         dispatch(hideUpgradeModal())
-        success('Trial created')
+        dispatch(trialSuccess())
       } else {
         success('Subscription created')
       }
