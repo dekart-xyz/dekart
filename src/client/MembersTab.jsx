@@ -11,6 +11,7 @@ import { copyUrlToClipboard } from './actions/clipboard'
 import { CopyOutlined } from '@ant-design/icons'
 import Select from 'antd/es/select'
 import { track } from './lib/tracking'
+import { showUpgradeModal } from './actions/upgradeModal'
 
 function getRoleTitle (role, planType) {
   const roleLabels = {
@@ -38,6 +39,7 @@ export default function MembersTab () {
   const [email, setEmail] = useState('')
   const [inviteRole, setInviteRole] = useState(UserRole.ROLE_VIEWER)
   const isAdmin = useSelector(state => state.user.isAdmin)
+  const isFreemium = useSelector(state => state.user.isFreemium)
   const addUserCb = useCallback(() => {
     if (email && isAdmin) {
       dispatch(updateWorkspaceUser(email, UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_ADD, inviteRole))
@@ -57,7 +59,7 @@ export default function MembersTab () {
   let inviteDisabled
   if (planType === PlanType.TYPE_TEAM) {
     inviteDisabled = !isAdmin || addedUsersCount >= 20
-  } else if (planType > PlanType.TYPE_PERSONAL) {
+  } else {
     inviteDisabled = !isAdmin
   }
 
@@ -100,6 +102,10 @@ export default function MembersTab () {
         <Button
           disabled={inviteDisabled}
           className={styles.inviteUsersButton} type='primary' onClick={() => {
+            if (isFreemium) {
+              dispatch(showUpgradeModal('invite'))
+              return
+            }
             track('InviteUser', { role: inviteRole })
             addUserCb()
           }}

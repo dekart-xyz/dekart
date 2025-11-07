@@ -139,6 +139,37 @@ function isAdmin (state = false, action) {
   }
 }
 
+function isPaid (state = null, action) {
+  switch (action.type) {
+    case userStreamUpdate.name:
+      return [
+        PlanType.TYPE_GROW,
+        PlanType.TYPE_MAX,
+        PlanType.TYPE_TEAM
+      ].includes(action.userStream.planType)
+    default:
+      return state
+  }
+}
+
+function isTrial (state = null, action) {
+  switch (action.type) {
+    case userStreamUpdate.name:
+      return action.userStream.planType === PlanType.TYPE_TRIAL
+    default:
+      return state
+  }
+}
+
+function isFreemium (state = null, action) {
+  switch (action.type) {
+    case userStreamUpdate.name:
+      return action.userStream.planType === PlanType.TYPE_PERSONAL
+    default:
+      return state
+  }
+}
+
 export default combineReducers({
   stream,
   sensitiveScopesGrantedOnce,
@@ -152,5 +183,8 @@ export default combineReducers({
   isAdmin,
   isSelfHosted,
   claimEmailCookie,
-  isAnonymous
+  isAnonymous,
+  isPaid,
+  isTrial,
+  isFreemium
 })
