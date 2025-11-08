@@ -12,6 +12,7 @@ const { Title, Text } = Typography
 const UpgradeModal = ({ visible, onClose }) => {
   const isSelfHosted = useSelector(state => state.user.isSelfHosted)
   const dispatch = useDispatch()
+  // const modalType = useSelector(state => state.upgradeModal.modalType)
   const [loading, setLoading] = useState(false)
 
   // Don't show modal for self-hosted instances
