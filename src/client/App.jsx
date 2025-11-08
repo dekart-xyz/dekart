@@ -24,6 +24,8 @@ import { Button } from 'antd'
 import { loadSessionStorage } from './actions/sessionStorage'
 import { Loading } from './Loading'
 import UpgradeModal from './UpgradeModal'
+import WorkspaceReadOnlyBanner from './WorkspaceReadOnlyBanner'
+import styles from './App.module.css'
 import { hideUpgradeModal } from './actions/upgradeModal'
 
 // RedirectState reads states passed in the URL from the server
@@ -240,67 +242,72 @@ export default function App () {
   }
   return (
     <Router>
-      <PageHistory visitedPages={visitedPages} />
-      <RedirectState />
-      <Switch>
-        <Route exact path='/playground'>
-          <SwitchToPlayground />
-        </Route>
-        <Route exact path='/'>
-          <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
-          <HomePage reportFilter='my' />
-        </Route>
-        <Route exact path='/grant-scopes'>
-          <GrantScopesPage visitedPages={visitedPages} />
-        </Route>
-        <Route exact path='/shared'>
-          <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
-          <HomePage reportFilter='discoverable' />
-        </Route>
-        <Route exact path='/connections'>
-          <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
-          {userDefinedConnection ? <HomePage reportFilter='connections' /> : <Redirect to='/' />}
-        </Route>
-        <Route path='/reports/:id/edit'>
-          <RedirectToSource />
-        </Route>
-        <Route path='/reports/:id/source'>
-          <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
-          <ReportPage edit />
-        </Route>
-        <Route path='/reports/:id'>
-          <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
-          <ReportPage />
-        </Route>
-        <Route path='/workspace/invite/:inviteId'>
-          <WorkspacePage userInvite />
-        </Route>
-        <Route exact path='/workspace/plan'>
-          <WorkspacePage step='plan' />
-        </Route>
-        <Route exact path='/workspace/members'>
-          <WorkspacePage step='members' />
-        </Route>
-        <Route path='/workspace'>
-          <WorkspacePage step='workspace' />
-        </Route>
-        <Route path='/400'>
-          <ErrorPage icon={<WarningOutlined />} title='400' subTitle='Bad Request' />
-        </Route>
-        <Route path='/403'>
-          <ErrorPage icon={<WarningOutlined />} title='403' subTitle={errorMessage || 'Forbidden'} />
-        </Route>
-        <Route path='/401'>
-          <ErrorPage icon={<WarningOutlined />} title='401' subTitle={errorMessage || 'Unauthorized'} />
-        </Route>
-        <Route path='*'>
-          <NotFoundPage />
-        </Route>
-      </Switch>
-      <UpgradeModal
-        visible={upgradeModalVisible}
-        onClose={() => dispatch(hideUpgradeModal())}
-      />
+      <div className={styles.appWithBanner}>
+        <PageHistory visitedPages={visitedPages} />
+        <RedirectState />
+        <div className={styles.main}>
+          <Switch>
+            <Route exact path='/playground'>
+              <SwitchToPlayground />
+            </Route>
+            <Route exact path='/'>
+              <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
+              <HomePage reportFilter='my' />
+            </Route>
+            <Route exact path='/grant-scopes'>
+              <GrantScopesPage visitedPages={visitedPages} />
+            </Route>
+            <Route exact path='/shared'>
+              <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
+              <HomePage reportFilter='discoverable' />
+            </Route>
+            <Route exact path='/connections'>
+              <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
+              {userDefinedConnection ? <HomePage reportFilter='connections' /> : <Redirect to='/' />}
+            </Route>
+            <Route path='/reports/:id/edit'>
+              <RedirectToSource />
+            </Route>
+            <Route path='/reports/:id/source'>
+              <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
+              <ReportPage edit />
+            </Route>
+            <Route path='/reports/:id'>
+              <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
+              <ReportPage />
+            </Route>
+            <Route path='/workspace/invite/:inviteId'>
+              <WorkspacePage userInvite />
+            </Route>
+            <Route exact path='/workspace/plan'>
+              <WorkspacePage step='plan' />
+            </Route>
+            <Route exact path='/workspace/members'>
+              <WorkspacePage step='members' />
+            </Route>
+            <Route path='/workspace'>
+              <WorkspacePage step='workspace' />
+            </Route>
+            <Route path='/400'>
+              <ErrorPage icon={<WarningOutlined />} title='400' subTitle='Bad Request' />
+            </Route>
+            <Route path='/403'>
+              <ErrorPage icon={<WarningOutlined />} title='403' subTitle={errorMessage || 'Forbidden'} />
+            </Route>
+            <Route path='/401'>
+              <ErrorPage icon={<WarningOutlined />} title='401' subTitle={errorMessage || 'Unauthorized'} />
+            </Route>
+            <Route path='*'>
+              <NotFoundPage />
+            </Route>
+          </Switch>
+        </div>
+        <UpgradeModal
+          visible={upgradeModalVisible}
+          onClose={() => dispatch(hideUpgradeModal())}
+        />
+        <WorkspaceReadOnlyBanner />
+      </div>
     </Router>
   )
 }
