@@ -4,16 +4,37 @@ import { CrownOutlined, RocketOutlined, LockOutlined, CheckCircleOutlined } from
 import { useSelector, useDispatch } from 'react-redux'
 import { track } from './lib/tracking'
 import { createSubscription } from './actions/workspace'
+import { UpgradeModalType } from './actions/upgradeModal'
 import { PlanType } from 'dekart-proto/dekart_pb'
 import styles from './UpgradeModal.module.css'
 
 const { Title, Text } = Typography
 
+const COPY_BY_MODAL_TYPE = {
+  [UpgradeModalType.PUBLISH]: {
+    mainTitle: 'Go beyond your first shared map!',
+    description: 'Share more maps, track your viewers, and collect leads.'
+  },
+  [UpgradeModalType.DIRECT_ACCESS]: {
+    mainTitle: 'Unlock direct access sharing',
+    description: 'Invite people by email and control exactly who sees your maps.'
+  },
+  [UpgradeModalType.ANALYTICS]: {
+    mainTitle: 'Unlock viewer analytics insights',
+    description: 'Track engagement, export CSVs, and capture leads from your reports.'
+  },
+  [UpgradeModalType.INVITE]: {
+    mainTitle: 'Invite teammates to collaborate',
+    description: 'Add editors and viewers to build maps together without limits.'
+  }
+}
+
 const UpgradeModal = ({ visible, onClose }) => {
   const isSelfHosted = useSelector(state => state.user.isSelfHosted)
   const dispatch = useDispatch()
-  // const modalType = useSelector(state => state.upgradeModal.modalType)
+  const modalType = useSelector(state => state.upgradeModal.modalType)
   const [loading, setLoading] = useState(false)
+  const { mainTitle, description } = COPY_BY_MODAL_TYPE[modalType] || COPY_BY_MODAL_TYPE[UpgradeModalType.PUBLISH]
 
   // Don't show modal for self-hosted instances
   if (isSelfHosted) {
@@ -50,10 +71,10 @@ const UpgradeModal = ({ visible, onClose }) => {
       <div className={styles.content}>
         <div className={styles.limitMessage}>
           <Title level={2} className={styles.mainTitle}>
-            Go beyond your first shared map!
+            {mainTitle}
           </Title>
           <Title level={4} type='secondary' className={styles.description}>
-            Share more maps, track your viewers, and collect leads.
+            {description}
           </Title>
         </div>
 

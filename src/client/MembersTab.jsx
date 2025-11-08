@@ -11,7 +11,7 @@ import { copyUrlToClipboard } from './actions/clipboard'
 import { CopyOutlined } from '@ant-design/icons'
 import Select from 'antd/es/select'
 import { track } from './lib/tracking'
-import { showUpgradeModal } from './actions/upgradeModal'
+import { showUpgradeModal, UpgradeModalType } from './actions/upgradeModal'
 
 function getRoleTitle (role, planType) {
   const roleLabels = {
@@ -103,7 +103,7 @@ export default function MembersTab () {
           disabled={inviteDisabled}
           className={styles.inviteUsersButton} type='primary' onClick={() => {
             if (isFreemium) {
-              dispatch(showUpgradeModal('invite'))
+              dispatch(showUpgradeModal(UpgradeModalType.INVITE))
               return
             }
             track('InviteUser', { role: inviteRole })

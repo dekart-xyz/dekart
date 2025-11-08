@@ -4,14 +4,13 @@ import styles from './AnalyticsModal.module.css'
 import { useDispatch, useSelector } from 'react-redux'
 import { getAnalyticsData, setAnalyticsModalOpen } from './actions/analytics'
 import Statistic from 'antd/es/statistic'
-import { UserOutlined, LockOutlined } from '@ant-design/icons'
-import { PlanType } from 'dekart-proto/dekart_pb'
+import { UserOutlined } from '@ant-design/icons'
 import { get } from './lib/api'
 import { useEffect, useRef, useState } from 'react'
 import { setError } from './actions/message'
 import Skeleton from 'antd/es/skeleton'
 import { track } from './lib/tracking'
-import { showUpgradeModal } from './actions/upgradeModal'
+import { showUpgradeModal, UpgradeModalType } from './actions/upgradeModal'
 
 export default function AnalyticsModal () {
   const { modalOpen, data: analytics } = useSelector(state => state.analytics)
@@ -81,7 +80,7 @@ export default function AnalyticsModal () {
                 <Button
                   loading={loading} type='primary' ref={buttonRef} href='#' disabled={loading} onClick={() => {
                     if (isFreemium) {
-                      dispatch(showUpgradeModal('analytics'))
+                      dispatch(showUpgradeModal(UpgradeModalType.ANALYTICS))
                     } else {
                       track('DownloadAnalyticsCSV', { reportId: report.id })
                     }

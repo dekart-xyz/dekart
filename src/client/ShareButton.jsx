@@ -14,7 +14,7 @@ import AnalyticsModal from './AnalyticsModal'
 import Tooltip from 'antd/es/tooltip'
 import classNames from 'classnames'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
-import { showUpgradeModal } from './actions/upgradeModal'
+import { showUpgradeModal, UpgradeModalType } from './actions/upgradeModal'
 
 function CopyLinkButton ({ ghost }) {
   const dispatch = useDispatch()
@@ -168,7 +168,7 @@ function DirectAccess () {
           disabled={loading}
           onChange={(emails) => {
             if (isFreemium) {
-              dispatch(showUpgradeModal('direct-access'))
+              dispatch(showUpgradeModal(UpgradeModalType.DIRECT_ACCESS))
             } else if (hasAllFeatures) {
               setEmails(emails)
               dispatch(addReportDirectAccess(reportId, emails))
