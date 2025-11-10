@@ -148,6 +148,15 @@ function isFreemium (state = null, action) {
   }
 }
 
+function isTrial (state = null, action) {
+  switch (action.type) {
+    case userStreamUpdate.name:
+      return action.userStream.planType === PlanType.TYPE_TRIAL
+    default:
+      return state
+  }
+}
+
 function hasAllFeatures (state = null, action) {
   switch (action.type) {
     case userStreamUpdate.name:
@@ -178,5 +187,6 @@ export default combineReducers({
   claimEmailCookie,
   isAnonymous,
   isFreemium,
-  hasAllFeatures
+  hasAllFeatures,
+  isTrial
 })

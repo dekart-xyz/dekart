@@ -1,9 +1,43 @@
 import styles from './SubscriptionTab.module.css'
-import Title from 'antd/es/typography/Title'
+import Button from 'antd/es/button'
+import { AlertOutlined } from '@ant-design/icons'
 import { useEffect } from 'react'
 import { useSelector } from 'react-redux'
 import { track } from './lib/tracking'
 import Plans from './Plans'
+
+function TrialBanner () {
+  const isTrial = useSelector(state => state.user.isTrial)
+  const expired = useSelector(state => state.workspace.expired)
+  if (!(isTrial && expired)) {
+    return null
+  }
+  return (
+    <div className={styles.trialBanner}>
+      <div className={styles.trialMessage}>
+        <AlertOutlined className={styles.trialIcon} />
+        <div>
+          <div className={styles.trialHeadline}>Trial ended — workspace is paused.</div>
+          <div className={styles.trialDescription}>
+            Upgrade to resume creating maps and sharing with your team, or book a quick call to extend your trial free.
+          </div>
+        </div>
+      </div>
+      <div className={styles.trialActions}>
+        <Button
+          type='default'
+      // className={styles.secondaryAction}
+          href='https://calendly.com/vladi-dekart/30min'
+          ghost
+          target='_blank'
+          rel='noreferrer'
+        >
+          Book a call
+        </Button>
+      </div>
+    </div>
+  )
+}
 
 export default function SubscriptionTab () {
   const userStream = useSelector(state => state.user.stream)
@@ -21,12 +55,9 @@ export default function SubscriptionTab () {
   }
   return (
     <div className={styles.subscriptionTab}>
+      <TrialBanner />
       <Plans />
       <div className={styles.termsLink}><a href='https://dekart.xyz/legal/terms/' target='_blank' rel='noreferrer'>🎓 Terms and conditions</a></div>
-      <div className={styles.notSure}>
-        <Title level={2}>Not sure what plan to choose?</Title>
-        <p><a href='https://calendly.com/vladi-dekart/30min' target='_blank' rel='noreferrer'>Book a call with the Dekart team</a> — Unlock insider discounts and learn about our roadmap.</p>
-      </div>
     </div>
   )
 }
