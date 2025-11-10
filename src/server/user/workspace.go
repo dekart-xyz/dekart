@@ -27,6 +27,7 @@ type WorkspaceInfo struct {
 	IsPlayground       bool
 	IsDefaultWorkspace bool // Default workspace for the instance, similar to playground
 	UserRole           proto.UserRole
+	Expired            bool
 }
 
 func SetWorkspaceCtx(ctx context.Context, workspace WorkspaceInfo) context.Context {

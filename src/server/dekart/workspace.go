@@ -96,18 +96,21 @@ func (s Server) UpdateWorkspace(ctx context.Context, req *proto.UpdateWorkspaceR
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	workspaceID := checkWorkspace(ctx).ID
-	if workspaceID == "" {
+	workspaceInfo := checkWorkspace(ctx)
+	if workspaceInfo.ID == "" {
 		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
-	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
+	if workspaceInfo.Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	}
+	if workspaceInfo.UserRole != proto.UserRole_ROLE_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Only admins can update workspace")
 	}
 	_, err := s.db.ExecContext(ctx, `
 		UPDATE workspaces
 		SET name = $2, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1
-	`, workspaceID, req.WorkspaceName)
+	`, workspaceInfo.ID, req.WorkspaceName)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
@@ -348,6 +351,7 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 	}
 	var workspaceId string
 	var planType proto.PlanType
+	var expired bool
 	var name string
 	var addedUsersCount int64 = 0
 	var billedUsers int64 = 0
@@ -361,6 +365,7 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 		}
 		if subscription != nil {
 			planType = subscription.PlanType
+			expired = subscription.Expired
 		}
 		addedUsersCount, billedUsers, err = s.countActiveWorkspaceUsers(ctx, workspaceId)
 		if err != nil {
@@ -376,6 +381,7 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 		AddedUsersCount: addedUsersCount,
 		BilledUsers:     billedUsers,
 		UserRole:        *role,
+		Expired:         expired,
 	})
 	return ctx
 }

@@ -318,7 +318,7 @@ func (s Server) CreateSubscription(ctx context.Context, req *proto.CreateSubscri
 	if workspaceInfo.ID == "" {
 		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
-	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
+	if workspaceInfo.UserRole != proto.UserRole_ROLE_ADMIN {
 		log.Error().Msg("Only admins can create subscriptions when creating subscription")
 		return nil, status.Error(codes.PermissionDenied, "Only admins can create subscriptions")
 	}

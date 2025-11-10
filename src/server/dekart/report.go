@@ -122,6 +122,11 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 		}
 		report.CanWrite = report.IsAuthor || (report.AllowEdit && reportWorkspaceID.String == checkWorkspace(ctx).ID)
 
+		if checkWorkspace(ctx).Expired {
+			report.CanWrite = false
+			report.AllowEdit = false
+		}
+
 		if report.IsPlayground && !checkWorkspace(ctx).IsPlayground {
 			// report is playground but user is not in playground
 			report.AllowEdit = false
@@ -149,6 +154,9 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 			reportWorkspaceID.String == checkWorkspace(ctx).ID)
 
 		report.CanRefresh = reportWorkspaceID.String == checkWorkspace(ctx).ID
+		if checkWorkspace(ctx).Expired {
+			report.CanRefresh = false
+		}
 		report.CreatedAt = createdAt.Unix()
 		report.UpdatedAt = updatedAt.Unix()
 
@@ -203,15 +211,19 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	if checkWorkspace(ctx).ID == "" && !checkWorkspace(ctx).IsPlayground {
+	workspaceInfo := checkWorkspace(ctx)
+	if workspaceInfo.ID == "" && !workspaceInfo.IsPlayground {
 		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
-	if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
+	if workspaceInfo.Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	}
+	if workspaceInfo.UserRole == proto.UserRole_ROLE_VIEWER {
 		return nil, status.Error(codes.PermissionDenied, "Only admins and editors can create reports")
 	}
 	id := newUUID()
 	var err error
-	if checkWorkspace(ctx).IsPlayground {
+	if workspaceInfo.IsPlayground {
 		_, err = s.db.ExecContext(ctx,
 			"INSERT INTO reports (id, author_email, is_playground) VALUES ($1, $2, true)",
 			id,
@@ -222,7 +234,7 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 			"INSERT INTO reports (id, author_email, workspace_id) VALUES ($1, $2, $3)",
 			id,
 			claims.Email,
-			checkWorkspace(ctx).ID,
+			workspaceInfo.ID,
 		)
 
 	}
@@ -442,12 +454,16 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	isPlayground := checkWorkspace(ctx).IsPlayground
-	workspaceID := checkWorkspace(ctx).ID
+	workspaceInfo := checkWorkspace(ctx)
+	isPlayground := workspaceInfo.IsPlayground
+	workspaceID := workspaceInfo.ID
 	if workspaceID == "" && !isPlayground {
 		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
-	if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
+	if workspaceInfo.Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	}
+	if workspaceInfo.UserRole == proto.UserRole_ROLE_VIEWER {
 		return nil, status.Error(codes.PermissionDenied, "Only admins and editors can fork reports")
 	}
 	_, err := uuid.Parse(req.ReportId)
@@ -540,7 +556,11 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
+	workspaceInfo := checkWorkspace(ctx)
+	if workspaceInfo.Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	}
+	if workspaceInfo.UserRole == proto.UserRole_ROLE_VIEWER {
 		return nil, status.Error(codes.PermissionDenied, "Only admins and editors can update reports")
 	}
 
@@ -581,7 +601,7 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	var result sql.Result
 	var err error
 	updated_at := time.Now()
-	if checkWorkspace(ctx).IsPlayground {
+	if workspaceInfo.IsPlayground {
 		result, err = s.db.ExecContext(ctx,
 			`update
 			reports
@@ -608,7 +628,7 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 			updated_at,
 			req.ReportId,
 			claims.Email,
-			checkWorkspace(ctx).ID,
+			workspaceInfo.ID,
 		)
 	}
 	if err != nil {
