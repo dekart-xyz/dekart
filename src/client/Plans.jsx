@@ -118,11 +118,13 @@ export function Plan ({ title, children, planType, cancelAt, addedUsersCount, is
           >
             Upgrade
           </Button>
-          {trialEndDate && (
-            <div className={styles.cancelAt}>
-              Trial ends at {(new Date(trialEndDate)).toLocaleDateString()}
-            </div>
-          )}
+          {workspace?.expired
+            ? (<div className={styles.cancelAt}>Trial expired</div>)
+            : trialEndDate && (
+              <div className={styles.cancelAt}>
+                Trial ends at {(new Date(trialEndDate)).toLocaleDateString()}
+              </div>
+            )}
         </>
       )
     } else if (userStream.planType === PlanType.TYPE_GROW) {

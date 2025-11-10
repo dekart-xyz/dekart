@@ -3,10 +3,13 @@ import { AlertOutlined } from '@ant-design/icons'
 import { Button, Typography } from 'antd'
 import styles from './WorkspaceReadOnlyBanner.module.css'
 import { useSelector } from 'react-redux'
+import { useLocation } from 'react-router-dom'
 
 export default function WorkspaceReadOnlyBanner () {
   const expired = useSelector(state => state.workspace.expired)
-  if (!expired) {
+  const location = useLocation()
+
+  if (!expired || location.pathname === '/workspace/plan') {
     return null
   }
   return (
