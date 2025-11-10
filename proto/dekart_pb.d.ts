@@ -954,6 +954,9 @@ export class Subscription extends jspb.Message {
   getItemId(): string;
   setItemId(value: string): void;
 
+  getExpired(): boolean;
+  setExpired(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Subscription.AsObject;
   static toObject(includeInstance: boolean, msg: Subscription): Subscription.AsObject;
@@ -973,6 +976,7 @@ export namespace Subscription {
     stripeCustomerEmail: string,
     cancelAt: number,
     itemId: string,
+    expired: boolean,
   }
 }
 

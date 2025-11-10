@@ -281,6 +281,7 @@ message Subscription {
     string stripe_customer_email = 8;
     int64 cancel_at = 9; //seconds
     string item_id = 10; // stripe subscription item id
+    bool expired = 11; // true if subscription is expired
 }
 
 enum PlanType {

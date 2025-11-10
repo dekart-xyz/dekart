@@ -64,14 +64,17 @@ func (s Server) getSubscription(ctx context.Context, workspaceId string) (*proto
 	// If latest plan is TRIAL, use preselected latestTrialEndsAt and bypass Stripe
 	if planType == proto.PlanType_TYPE_TRIAL {
 		var cancelAt int64
+		var expired bool
 		if trialEndsAt.Valid {
 			cancelAt = trialEndsAt.Time.Unix()
+			expired = trialEndsAt.Time.Unix() < time.Now().Unix()
 		}
 		return &proto.Subscription{
 			PlanType:   planType,
 			CustomerId: customerID.String,
 			UpdatedAt:  createdAt.Time.Unix(),
 			CancelAt:   cancelAt,
+			Expired:    expired,
 		}, nil
 	}
 

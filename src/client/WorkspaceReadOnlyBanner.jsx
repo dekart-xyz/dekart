@@ -2,8 +2,13 @@ import React from 'react'
 import { AlertOutlined } from '@ant-design/icons'
 import { Button, Typography } from 'antd'
 import styles from './WorkspaceReadOnlyBanner.module.css'
+import { useSelector } from 'react-redux'
 
 export default function WorkspaceReadOnlyBanner () {
+  const expired = useSelector(state => state.workspace.expired)
+  if (!expired) {
+    return null
+  }
   return (
     <div className={styles.banner} role='status'>
       <div className={styles.message}>

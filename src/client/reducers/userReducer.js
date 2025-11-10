@@ -139,42 +139,10 @@ function isAdmin (state = false, action) {
   }
 }
 
-function hasPaidOrTrial (state = null, action) {
-  switch (action.type) {
-    case userStreamUpdate.name:
-      return [
-        PlanType.TYPE_GROW,
-        PlanType.TYPE_MAX,
-        PlanType.TYPE_TEAM,
-        PlanType.TYPE_TRIAL
-      ].includes(action.userStream.planType)
-    default:
-      return state
-  }
-}
-
-function isTrial (state = null, action) {
-  switch (action.type) {
-    case userStreamUpdate.name:
-      return action.userStream.planType === PlanType.TYPE_TRIAL
-    default:
-      return state
-  }
-}
-
 function isFreemium (state = null, action) {
   switch (action.type) {
     case userStreamUpdate.name:
       return action.userStream.planType === PlanType.TYPE_PERSONAL
-    default:
-      return state
-  }
-}
-
-function hasPlan (state = false, action) {
-  switch (action.type) {
-    case userStreamUpdate.name:
-      return action.userStream.planType > 0
     default:
       return state
   }
@@ -209,9 +177,6 @@ export default combineReducers({
   isSelfHosted,
   claimEmailCookie,
   isAnonymous,
-  hasPaidOrTrial,
-  isTrial,
   isFreemium,
-  hasPlan,
   hasAllFeatures
 })
