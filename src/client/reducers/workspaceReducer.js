@@ -7,7 +7,7 @@ export default function workspace (state = {
   users: [],
   invites: [],
   addedUsersCount: NaN,
-  expired: false
+  expired: null
 }, action) {
   switch (action.type) {
     case workspaceUpdate.name:

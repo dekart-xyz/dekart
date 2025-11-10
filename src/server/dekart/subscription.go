@@ -90,10 +90,13 @@ func (s Server) getSubscription(ctx context.Context, workspaceId string) (*proto
 			log.Err(err).Send()
 			return nil, err
 		}
-		if c.Subscriptions == nil {
+		if c.Subscriptions == nil { // no subscription on stripe
+			// then we consider it expired
 			return &proto.Subscription{
+				PlanType:   planType,
 				CustomerId: customerID.String,
 				UpdatedAt:  createdAt.Time.Unix(),
+				Expired:    true,
 			}, nil
 		}
 		for _, sub := range c.Subscriptions.Data {
@@ -116,8 +119,10 @@ func (s Server) getSubscription(ctx context.Context, workspaceId string) (*proto
 		}
 		// no active subscription
 		return &proto.Subscription{
+			PlanType:   planType,
 			CustomerId: customerID.String,
 			UpdatedAt:  createdAt.Time.Unix(),
+			Expired:    true,
 		}, nil
 	}
 	// free plan or unknown plan

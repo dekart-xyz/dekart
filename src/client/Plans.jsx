@@ -28,6 +28,27 @@ export function PlanTitle ({ name, price, icon, color, description, selected }) 
   )
 }
 
+function ManageSubscriptionButton ({ disabled, loading, isContinue, cancelAt, onManage }) {
+  return (
+    <>
+      <Button
+        disabled={disabled}
+        loading={loading}
+        onClick={onManage}
+        type={isContinue ? 'primary' : 'default'}
+        className={styles.actionButton}
+      >
+        {isContinue ? 'Continue' : 'Manage subscription'}
+      </Button>
+      {Boolean(cancelAt) && (
+        <div className={styles.cancelAt}>
+          Cancels {(new Date(1000 * cancelAt)).toLocaleString()}
+        </div>
+      )}
+    </>
+  )
+}
+
 export function Plan ({ title, children, planType, cancelAt, addedUsersCount, isCurrentPlan }) {
   const [hover, setHover] = useState(false)
   const userStream = useSelector(state => state.user.stream)
@@ -128,40 +149,33 @@ export function Plan ({ title, children, planType, cancelAt, addedUsersCount, is
     } else if (userStream.planType === PlanType.TYPE_GROW) {
       // When already on Grow plan, show manage subscription
       actionButton = (
-        <>
-          <Button
-            disabled={waitForRedirect || !isAdmin}
-            loading={waitForRedirect}
-            onClick={() => {
-              track('ManageSubscription')
-              setWaitForRedirect(true)
-              dispatch(redirectToCustomerPortal())
-            }}
-            className={styles.actionButton}
-          >
-            Manage subscription
-          </Button>
-          {cancelAt ? (<div className={styles.cancelAt}>Cancels {(new Date(1000 * cancelAt)).toLocaleString()}</div>) : null}
-        </>
-      )
-    }
-  } else if (planType === userStream.planType) {
-    actionButton = (
-      <>
-        <Button
+        <ManageSubscriptionButton
           disabled={waitForRedirect || !isAdmin}
           loading={waitForRedirect}
-          onClick={() => {
+          isContinue={workspace?.expired}
+          cancelAt={cancelAt}
+          onManage={() => {
             track('ManageSubscription')
             setWaitForRedirect(true)
             dispatch(redirectToCustomerPortal())
           }}
-          className={styles.actionButton}
-        >
-          Manage subscription
-        </Button>
-        {cancelAt ? (<div className={styles.cancelAt}>Cancels {(new Date(1000 * cancelAt)).toLocaleString()}</div>) : null}
-      </>
+        />
+      )
+    }
+  } else if (planType === userStream.planType) {
+    actionButton = (
+      <ManageSubscriptionButton
+        disabled={waitForRedirect || !isAdmin}
+        loading={waitForRedirect}
+        isContinue={workspace?.expired}
+        buttonText='Manage subscription'
+        cancelAt={cancelAt}
+        onManage={() => {
+          track('ManageSubscription')
+          setWaitForRedirect(true)
+          dispatch(redirectToCustomerPortal())
+        }}
+      />
     )
   }
 

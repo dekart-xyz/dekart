@@ -359,6 +359,8 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 		workspaceId = workspace.Id
 		name = workspace.Name
 		subscription, err := s.getSubscription(ctx, workspaceId)
+		//debug
+		log.Debug().Msgf("subscription: %+v", subscription)
 		if err != nil {
 			log.Err(err).Send()
 			return ctx
@@ -373,6 +375,8 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 			return ctx
 		}
 	}
+
+	log.Debug().Msgf("expired: %+v", expired)
 
 	ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{
 		ID:              workspaceId,
