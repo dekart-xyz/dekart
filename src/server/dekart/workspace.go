@@ -359,8 +359,6 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 		workspaceId = workspace.Id
 		name = workspace.Name
 		subscription, err := s.getSubscription(ctx, workspaceId)
-		//debug
-		log.Debug().Msgf("subscription: %+v", subscription)
 		if err != nil {
 			log.Err(err).Send()
 			return ctx
@@ -375,8 +373,6 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 			return ctx
 		}
 	}
-
-	log.Debug().Msgf("expired: %+v", expired)
 
 	ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{
 		ID:              workspaceId,
@@ -441,6 +437,9 @@ func (s Server) UpdateWorkspaceUser(ctx context.Context, req *proto.UpdateWorksp
 	workspaceInfo := checkWorkspace(ctx)
 	if workspaceInfo.ID == "" {
 		return nil, status.Error(codes.NotFound, "Workspace not found")
+	}
+	if workspaceInfo.Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
 	}
 	if workspaceInfo.UserRole != proto.UserRole_ROLE_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Only admin can update users")

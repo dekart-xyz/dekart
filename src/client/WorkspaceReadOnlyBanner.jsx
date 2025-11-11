@@ -17,7 +17,7 @@ export default function WorkspaceReadOnlyBanner () {
   const headline = isTrial
     ? 'Workspace is read-only — your trial has ended.'
     : 'Workspace is read-only — no active subscription.'
-  const ctaLabel = isTrial ? 'Upgrade Now' : 'Subscribe'
+  const ctaLabel = isTrial ? 'Upgrade Now' : 'Manage Subscription'
 
   return (
     <div className={styles.banner} role='status'>

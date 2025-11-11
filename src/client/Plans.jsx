@@ -28,21 +28,21 @@ export function PlanTitle ({ name, price, icon, color, description, selected }) 
   )
 }
 
-function ManageSubscriptionButton ({ disabled, loading, isContinue, cancelAt, onManage }) {
+function ManageSubscriptionButton ({ disabled, loading, cancelAt, onManage }) {
   return (
     <>
       <Button
         disabled={disabled}
         loading={loading}
         onClick={onManage}
-        type={isContinue ? 'primary' : 'default'}
+        type='default'
         className={styles.actionButton}
       >
-        {isContinue ? 'Continue' : 'Manage subscription'}
+        Manage subscription
       </Button>
       {Boolean(cancelAt) && (
         <div className={styles.cancelAt}>
-          Cancels {(new Date(1000 * cancelAt)).toLocaleString()}
+          Cancels {(new Date(1000 * cancelAt)).toLocaleDateString()}
         </div>
       )}
     </>
@@ -80,7 +80,7 @@ export function Plan ({ title, children, planType, cancelAt, addedUsersCount, is
       ghost={hover && !isCurrentPlan}
       className={styles.actionButton}
     >
-      Upgrade
+      {isCurrentPlan ? 'Continue' : 'Upgrade'}
     </Button>
   )
 
@@ -146,13 +146,12 @@ export function Plan ({ title, children, planType, cancelAt, addedUsersCount, is
           )}
         </>
       )
-    } else if (userStream.planType === PlanType.TYPE_GROW) {
+    } else if (userStream.planType === PlanType.TYPE_GROW && !workspace?.expired) {
       // When already on Grow plan, show manage subscription
       actionButton = (
         <ManageSubscriptionButton
           disabled={waitForRedirect || !isAdmin}
           loading={waitForRedirect}
-          isContinue={workspace?.expired}
           cancelAt={cancelAt}
           onManage={() => {
             track('ManageSubscription')
@@ -162,13 +161,11 @@ export function Plan ({ title, children, planType, cancelAt, addedUsersCount, is
         />
       )
     }
-  } else if (planType === userStream.planType) {
+  } else if (planType === userStream.planType && !workspace?.expired) {
     actionButton = (
       <ManageSubscriptionButton
         disabled={waitForRedirect || !isAdmin}
         loading={waitForRedirect}
-        isContinue={workspace?.expired}
-        buttonText='Manage subscription'
         cancelAt={cancelAt}
         onManage={() => {
           track('ManageSubscription')
@@ -283,15 +280,15 @@ export default function Plans () {
         </div>
         <div className={styles.feature}>
           <CheckCircleOutlined className={styles.checkIcon} />
-          <Text>Invite unlimited viewers</Text>
+          <Text>Unlimited Workspace Viewers</Text>
         </div>
         <div className={styles.feature}>
           <CheckCircleOutlined className={styles.checkIcon} />
-          <Text>Manage team roles</Text>
+          <Text>Manage Team Roles</Text>
         </div>
         <div className={styles.feature}>
           <CheckCircleOutlined className={styles.checkIcon} />
-          <Text>Capture emails from public maps</Text>
+          <Text>Capture Emails from Public Maps</Text>
         </div>
       </Plan>
       <Plan
@@ -312,11 +309,11 @@ export default function Plans () {
         </div>
         <div className={styles.feature}>
           <CheckCircleOutlined className={styles.checkIcon} />
-          <Text>Unlimited Editors</Text>
+          <Text>Unlimited Workspace Editors</Text>
         </div>
         <div className={styles.feature}>
           <CheckCircleOutlined className={styles.checkIcon} />
-          <Text>Unlimited Admins</Text>
+          <Text>Unlimited Workspace Admins</Text>
         </div>
       </Plan>
     </div>

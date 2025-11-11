@@ -90,29 +90,22 @@ func (s Server) getSubscription(ctx context.Context, workspaceId string) (*proto
 			log.Err(err).Send()
 			return nil, err
 		}
-		if c.Subscriptions == nil { // no subscription on stripe
-			// then we consider it expired
-			return &proto.Subscription{
-				PlanType:   planType,
-				CustomerId: customerID.String,
-				UpdatedAt:  createdAt.Time.Unix(),
-				Expired:    true,
-			}, nil
-		}
-		for _, sub := range c.Subscriptions.Data {
-			if sub.Status == "active" || sub.Status == "past_due" {
-				for _, item := range sub.Items.Data {
-					if item.Price.ID == priceID && !item.Deleted {
-						return &proto.Subscription{
-							PlanType:             planType,
-							UpdatedAt:            createdAt.Time.Unix(),
-							CustomerId:           customerID.String,
-							StripeSubscriptionId: sub.ID,
-							StripeCustomerEmail:  c.Email,
-							CancelAt:             sub.CancelAt,
-							ItemId:               item.ID,
-						}, nil
+		if c.Subscriptions != nil {
+			for _, sub := range c.Subscriptions.Data {
+				if sub.Status == "active" || sub.Status == "past_due" {
+					for _, item := range sub.Items.Data {
+						if item.Price.ID == priceID && !item.Deleted {
+							return &proto.Subscription{
+								PlanType:             planType,
+								UpdatedAt:            createdAt.Time.Unix(),
+								CustomerId:           customerID.String,
+								StripeSubscriptionId: sub.ID,
+								StripeCustomerEmail:  c.Email,
+								CancelAt:             sub.CancelAt,
+								ItemId:               item.ID,
+							}, nil
 
+						}
 					}
 				}
 			}
@@ -368,7 +361,7 @@ func (s Server) CreateSubscription(ctx context.Context, req *proto.CreateSubscri
 		}
 		if sub != nil {
 			// updating existing subscription
-			if sub.PlanType == req.PlanType {
+			if sub.PlanType == req.PlanType && !sub.Expired {
 				log.Error().Msg("Subscription already exists when creating subscription")
 				return nil, status.Error(codes.InvalidArgument, "Subscription already exists")
 			}

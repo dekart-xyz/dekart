@@ -21,14 +21,10 @@ function TrialBanner () {
   if (isTrial) {
     headline = 'Trial ended — workspace is paused.'
     description = 'Upgrade to resume creating maps and sharing with your team, or book a quick call to extend your trial free.'
-  } else if (cancelAt > 0) {
-    // Subscription Ended
-    headline = 'Subscription Ended'
-    description = 'Upgrade to resume creating maps and sharing with your team.'
   } else {
-    // No active subscription (cancelAt = 0)
-    headline = 'Checkout not completed'
-    description = 'Your upgrade is still pending — finish your payment.'
+    // Subscription Ended
+    headline = 'No active subscription'
+    description = 'Upgrade to resume creating maps and sharing with your team.'
   }
 
   return (

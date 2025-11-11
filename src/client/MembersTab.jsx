@@ -39,13 +39,15 @@ export default function MembersTab () {
   const [email, setEmail] = useState('')
   const [inviteRole, setInviteRole] = useState(UserRole.ROLE_VIEWER)
   const isAdmin = useSelector(state => state.user.isAdmin)
+  const expired = useSelector(state => state.workspace.expired)
+  const canManageUsers = isAdmin && !expired
   const isFreemium = useSelector(state => state.user.isFreemium)
   const addUserCb = useCallback(() => {
-    if (email && isAdmin) {
+    if (email && canManageUsers) {
       dispatch(updateWorkspaceUser(email, UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_ADD, inviteRole))
       setEmail('')
     }
-  }, [dispatch, email, isAdmin, inviteRole])
+  }, [dispatch, email, canManageUsers, inviteRole])
   const usersLoaded = Boolean(users)
   useEffect(() => {
     if (usersLoaded) {
@@ -58,9 +60,9 @@ export default function MembersTab () {
 
   let inviteDisabled
   if (planType === PlanType.TYPE_TEAM) {
-    inviteDisabled = !isAdmin || addedUsersCount >= 20
+    inviteDisabled = !canManageUsers || addedUsersCount >= 20
   } else {
-    inviteDisabled = !isAdmin
+    inviteDisabled = !canManageUsers
   }
 
   return (
@@ -162,7 +164,7 @@ export default function MembersTab () {
                 <Select
                   defaultValue={role}
                   style={{ width: 220 }}
-                  disabled={u.email === userStream.email || !isAdmin}
+                  disabled={u.email === userStream.email || !canManageUsers}
                   onChange={(value) => {
                     track('ChangeUserRole', { email: u.email, newRole: value })
                     dispatch(updateWorkspaceUser(u.email, UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_UPDATE, value))
