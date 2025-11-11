@@ -46,6 +46,7 @@ function TrialBanner () {
           ghost
           target='_blank'
           rel='noreferrer'
+          onClick={() => track('BookCallFromTrialBanner', { isTrial })}
         >
           Book a call
         </Button>

@@ -4,6 +4,7 @@ import { Button, Typography } from 'antd'
 import styles from './WorkspaceReadOnlyBanner.module.css'
 import { useSelector } from 'react-redux'
 import { useLocation, useHistory } from 'react-router-dom'
+import { track } from './lib/tracking'
 
 export default function WorkspaceReadOnlyBanner () {
   const expired = useSelector(state => state.workspace.expired)
@@ -31,7 +32,10 @@ export default function WorkspaceReadOnlyBanner () {
         <Button
           type='default'
           ghost
-          onClick={() => history.push('/workspace/plan')}
+          onClick={() => {
+            track('WorkspaceReadOnlyBannerClick', { isTrial, ctaLabel })
+            history.push('/workspace/plan')
+          }}
         >
           {ctaLabel}
         </Button>
