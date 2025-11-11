@@ -954,6 +954,9 @@ export class Subscription extends jspb.Message {
   getItemId(): string;
   setItemId(value: string): void;
 
+  getExpired(): boolean;
+  setExpired(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Subscription.AsObject;
   static toObject(includeInstance: boolean, msg: Subscription): Subscription.AsObject;
@@ -973,6 +976,7 @@ export namespace Subscription {
     stripeCustomerEmail: string,
     cancelAt: number,
     itemId: string,
+    expired: boolean,
   }
 }
 
@@ -2805,6 +2809,7 @@ export interface PlanTypeMap {
   TYPE_GROW: 3;
   TYPE_MAX: 4;
   TYPE_SELF_HOSTED: 5;
+  TYPE_TRIAL: 6;
 }
 
 export const PlanType: PlanTypeMap;

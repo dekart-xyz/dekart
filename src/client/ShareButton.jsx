@@ -11,10 +11,10 @@ import Select from 'antd/es/select'
 import { setAnalyticsModalOpen } from './actions/analytics'
 import { track } from './lib/tracking'
 import AnalyticsModal from './AnalyticsModal'
-import { PlanType } from 'dekart-proto/dekart_pb'
 import Tooltip from 'antd/es/tooltip'
 import classNames from 'classnames'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
+import { showUpgradeModal, UpgradeModalType } from './actions/upgradeModal'
 
 function CopyLinkButton ({ ghost }) {
   const dispatch = useDispatch()
@@ -132,7 +132,6 @@ function ViewAnalytics () {
 
 function DirectAccess () {
   const { canWrite, isSharable, isPublic } = useSelector(state => state.report)
-  const planType = useSelector(state => state.user.stream?.planType)
   const isSnowpark = useSelector(state => state.env.isSnowpark)
   const reportDirectAccessEmails = useSelector(state => state.reportDirectAccessEmails)
   const [emails, setEmails] = useState(reportDirectAccessEmails)
@@ -142,8 +141,8 @@ function DirectAccess () {
   const loading = reportDirectAccessEmails.join(',') !== emails.join(',') // check if emails are loaded
   const users = useSelector(state => state.workspace.users)
   const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
-  const gated = planType === PlanType.TYPE_PERSONAL || planType === PlanType.TYPE_UNSPECIFIED || planType === PlanType.TYPE_TEAM
-
+  const isFreemium = useSelector(state => state.user.isFreemium)
+  const hasAllFeatures = useSelector(state => state.user.hasAllFeatures)
   if (!canWrite || !isSharable || isPublic || isDefaultWorkspace || isSnowpark) {
     return null
   }
@@ -155,9 +154,7 @@ function DirectAccess () {
         <div className={styles.boolStatusLabel}>
           <div className={styles.statusLabelTitle}>Invite people (view only)</div>
           <div className={styles.statusLabelDescription}>
-            {gated
-              ? <>This feature is not available in your plan. <a href='/workspace'>Upgrade.</a></>
-              : 'Share this map with specific users by email address.'}
+            Share this map with specific users by email address.
           </div>
         </div>
       </div>
@@ -168,10 +165,14 @@ function DirectAccess () {
           placeholder='Enter email addresses'
           value={reportDirectAccessEmails}
           loading={loading}
-          disabled={loading || gated}
+          disabled={loading}
           onChange={(emails) => {
-            setEmails(emails)
-            dispatch(addReportDirectAccess(reportId, emails))
+            if (isFreemium) {
+              dispatch(showUpgradeModal(UpgradeModalType.DIRECT_ACCESS))
+            } else if (hasAllFeatures) {
+              setEmails(emails)
+              dispatch(addReportDirectAccess(reportId, emails))
+            }
           }}
           tokenSeparators={[',', ' ']}
           ref={inputRef}
@@ -502,7 +503,7 @@ export default function ShareButton () {
         bodyStyle={{ padding: '0px' }}
         footer={
           <div className={styles.modalFooter}>
-            {workspaceId && !isSnowpark ? <Button icon='+ ' type='primary' href='/workspace' onClick={() => track('AddUsersToWorkspaceFromShareModal')}>Add users to workspace</Button> : null}
+            {workspaceId && !isSnowpark ? <Button icon='+ ' type='primary' href='/workspace/members' onClick={() => track('AddUsersToWorkspaceFromShareModal')}>Add users to workspace</Button> : null}
             <div className={styles.modalFooterSpacer} />
             <CopyLinkButton />
             <Button

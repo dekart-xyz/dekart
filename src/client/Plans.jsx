@@ -1,7 +1,7 @@
 import Tag from 'antd/es/tag'
 import styles from './Plans.module.css'
 import Title from 'antd/es/typography/Title'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import Button from 'antd/es/button'
 import { createSubscription, redirectToCustomerPortal } from './actions/workspace'
@@ -28,12 +28,42 @@ export function PlanTitle ({ name, price, icon, color, description, selected }) 
   )
 }
 
+function ManageSubscriptionButton ({ disabled, loading, cancelAt, onManage }) {
+  return (
+    <>
+      <Button
+        disabled={disabled}
+        loading={loading}
+        onClick={onManage}
+        type='default'
+        className={styles.actionButton}
+      >
+        Manage subscription
+      </Button>
+      {Boolean(cancelAt) && (
+        <div className={styles.cancelAt}>
+          Cancels {(new Date(1000 * cancelAt)).toLocaleDateString()}
+        </div>
+      )}
+    </>
+  )
+}
+
 export function Plan ({ title, children, planType, cancelAt, addedUsersCount, isCurrentPlan }) {
   const [hover, setHover] = useState(false)
   const userStream = useSelector(state => state.user.stream)
   const dispatch = useDispatch()
   const [waitForRedirect, setWaitForRedirect] = useState(false)
+  const [waitForPlanChange, setWaitForPlanChange] = useState(false)
+  const [upgradeDisabled, setUpgradeDisabled] = useState(false)
   const isAdmin = useSelector(state => state.user.isAdmin)
+  const workspace = useSelector(state => state.workspace)
+
+  useEffect(() => {
+    if (waitForPlanChange) {
+      setWaitForPlanChange(false)
+    }
+  }, [planType])
 
   let actionButton = (
     <Button
@@ -50,7 +80,7 @@ export function Plan ({ title, children, planType, cancelAt, addedUsersCount, is
       ghost={hover && !isCurrentPlan}
       className={styles.actionButton}
     >
-      Choose plan
+      {isCurrentPlan ? 'Continue' : 'Upgrade'}
     </Button>
   )
 
@@ -64,23 +94,85 @@ export function Plan ({ title, children, planType, cancelAt, addedUsersCount, is
     } else if (userStream.planType === PlanType.TYPE_PERSONAL) {
       actionButton = <Button disabled className={styles.actionButton}>Current plan</Button>
     }
-  } else if (planType === userStream.planType) {
-    actionButton = (
-      <>
-        <Button
+  } else if (planType === PlanType.TYPE_GROW) {
+    // Handle Grow plan with trial functionality
+    if (userStream.planType === PlanType.TYPE_PERSONAL) {
+      // When on Personal plan, show "Start trial" button
+      actionButton = (
+        <>
+          <Button
+            type='primary'
+            id='dekart-grow-start-trial'
+            disabled={waitForRedirect || !isAdmin}
+            loading={waitForPlanChange}
+            onClick={() => {
+              track('StartTrial', { planType: PlanType.TYPE_GROW })
+              setWaitForPlanChange(true)
+              setUpgradeDisabled(true) // disable upgrade button after clicking, so user cannot click it again, otherwise it will cancel the trial
+              dispatch(createSubscription(PlanType.TYPE_TRIAL))
+            }}
+            className={styles.actionButton}
+          >
+            Start free 14-day trial
+          </Button>
+          <div className={styles.cancelAt}>
+            No credit card required
+          </div>
+        </>
+      )
+    } else if (userStream.planType === PlanType.TYPE_TRIAL) {
+      // When on Trial plan, show trial end date and "Upgrade" button
+      const trialEndDate = workspace?.subscription?.cancelAt * 1000
+      actionButton = (
+        <>
+          <Button
+            type='primary'
+            id='dekart-grow-upgrade'
+            disabled={waitForRedirect || !isAdmin || upgradeDisabled}
+            loading={waitForRedirect}
+            onClick={() => {
+              track('UpgradeFromTrial', { planType: PlanType.TYPE_GROW })
+              setWaitForRedirect(true)
+              dispatch(createSubscription(PlanType.TYPE_GROW))
+            }}
+            className={styles.actionButton}
+          >
+            Upgrade
+          </Button>
+          {!workspace?.expired && trialEndDate && (
+            <div className={styles.cancelAt}>
+              Trial ends at {(new Date(trialEndDate)).toLocaleDateString()}
+            </div>
+          )}
+        </>
+      )
+    } else if (userStream.planType === PlanType.TYPE_GROW && !workspace?.expired) {
+      // When already on Grow plan, show manage subscription
+      actionButton = (
+        <ManageSubscriptionButton
           disabled={waitForRedirect || !isAdmin}
           loading={waitForRedirect}
-          onClick={() => {
+          cancelAt={cancelAt}
+          onManage={() => {
             track('ManageSubscription')
             setWaitForRedirect(true)
             dispatch(redirectToCustomerPortal())
           }}
-          className={styles.actionButton}
-        >
-          Manage subscription
-        </Button>
-        {cancelAt ? (<div className={styles.cancelAt}>Cancels {(new Date(1000 * cancelAt)).toLocaleString()}</div>) : null}
-      </>
+        />
+      )
+    }
+  } else if (planType === userStream.planType && !workspace?.expired) {
+    actionButton = (
+      <ManageSubscriptionButton
+        disabled={waitForRedirect || !isAdmin}
+        loading={waitForRedirect}
+        cancelAt={cancelAt}
+        onManage={() => {
+          track('ManageSubscription')
+          setWaitForRedirect(true)
+          dispatch(redirectToCustomerPortal())
+        }}
+      />
     )
   }
 
@@ -171,16 +263,16 @@ export default function Plans () {
         title={<PlanTitle
           name='Grow'
           price='$49/month'
-          selected={userStream.planType === PlanType.TYPE_GROW}
+          selected={userStream.planType === PlanType.TYPE_GROW || userStream.planType === PlanType.TYPE_TRIAL}
           description='Per editor or admin'
                />}
         planType={PlanType.TYPE_GROW}
         cancelAt={workspace?.subscription?.cancelAt}
-        isCurrentPlan={userStream.planType === PlanType.TYPE_GROW}
+        isCurrentPlan={userStream.planType === PlanType.TYPE_GROW || userStream.planType === PlanType.TYPE_TRIAL}
       >
         <div className={styles.feature}>
           <CheckCircleOutlined className={styles.checkIcon} />
-          <Text>Everything from Personal</Text>
+          <Text>Includes all Free features</Text>
         </div>
         <div className={styles.feature}>
           <CheckCircleOutlined className={styles.checkIcon} />
@@ -188,15 +280,15 @@ export default function Plans () {
         </div>
         <div className={styles.feature}>
           <CheckCircleOutlined className={styles.checkIcon} />
-          <Text>Unlimited Viewers</Text>
+          <Text>Unlimited Workspace Viewers</Text>
         </div>
         <div className={styles.feature}>
           <CheckCircleOutlined className={styles.checkIcon} />
-          <Text>Manage Access</Text>
+          <Text>Manage Team Roles</Text>
         </div>
         <div className={styles.feature}>
           <CheckCircleOutlined className={styles.checkIcon} />
-          <Text>Capture viewers emails</Text>
+          <Text>Capture Emails from Public Maps</Text>
         </div>
       </Plan>
       <Plan
@@ -217,11 +309,11 @@ export default function Plans () {
         </div>
         <div className={styles.feature}>
           <CheckCircleOutlined className={styles.checkIcon} />
-          <Text>Unlimited Editors</Text>
+          <Text>Unlimited Workspace Editors</Text>
         </div>
         <div className={styles.feature}>
           <CheckCircleOutlined className={styles.checkIcon} />
-          <Text>Unlimited Admins</Text>
+          <Text>Unlimited Workspace Admins</Text>
         </div>
       </Plan>
     </div>

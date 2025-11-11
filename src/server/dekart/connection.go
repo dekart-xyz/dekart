@@ -400,6 +400,9 @@ func (s Server) SetDefaultConnection(ctx context.Context, req *proto.SetDefaultC
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	if checkWorkspace(ctx).Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	}
 	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "only admins can edit connections")
 	}
@@ -422,6 +425,9 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
+	}
+	if checkWorkspace(ctx).Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
 	}
 	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "only admins can edit connections")
@@ -572,10 +578,13 @@ func (s Server) ArchiveConnection(ctx context.Context, req *proto.ArchiveConnect
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
+	workspaceInfo := checkWorkspace(ctx)
+	if workspaceInfo.Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	}
+	if workspaceInfo.UserRole != proto.UserRole_ROLE_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "only admins can edit connections")
 	}
-	workspaceInfo := checkWorkspace(ctx)
 	res, err := s.db.ExecContext(ctx,
 		`update connections set
 			archived=true,
@@ -716,10 +725,14 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	if checkWorkspace(ctx).ID == "" {
+	workspaceInfo := checkWorkspace(ctx)
+	if workspaceInfo.ID == "" {
 		return nil, status.Error(codes.NotFound, "workspace not found")
 	}
-	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
+	if workspaceInfo.Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	}
+	if workspaceInfo.UserRole != proto.UserRole_ROLE_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "only admins can create connections")
 	}
 	err := conn.ValidateReqConnection(req.Connection)
@@ -761,7 +774,7 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 		secrets.SecretToServerEncrypted(req.Connection.SnowflakeKey, claims),
 		secrets.SecretToServerEncrypted(req.Connection.BigqueryKey, claims),
 		claims.Email,
-		checkWorkspace(ctx).ID,
+		workspaceInfo.ID,
 		req.Connection.WherobotsHost,
 		secrets.SecretToServerEncrypted(req.Connection.WherobotsKey, claims),
 		req.Connection.WherobotsRegion,

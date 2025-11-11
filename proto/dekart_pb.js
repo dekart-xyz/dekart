@@ -8516,7 +8516,8 @@ proto.Subscription.toObject = function(includeInstance, msg) {
     stripeSubscriptionId: jspb.Message.getFieldWithDefault(msg, 7, ""),
     stripeCustomerEmail: jspb.Message.getFieldWithDefault(msg, 8, ""),
     cancelAt: jspb.Message.getFieldWithDefault(msg, 9, 0),
-    itemId: jspb.Message.getFieldWithDefault(msg, 10, "")
+    itemId: jspb.Message.getFieldWithDefault(msg, 10, ""),
+    expired: jspb.Message.getBooleanFieldWithDefault(msg, 11, false)
   };
 
   if (includeInstance) {
@@ -8580,6 +8581,10 @@ proto.Subscription.deserializeBinaryFromReader = function(msg, reader) {
     case 10:
       var value = /** @type {string} */ (reader.readString());
       msg.setItemId(value);
+      break;
+    case 11:
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setExpired(value);
       break;
     default:
       reader.skipField();
@@ -8656,6 +8661,13 @@ proto.Subscription.serializeBinaryToWriter = function(message, writer) {
   if (f.length > 0) {
     writer.writeString(
       10,
+      f
+    );
+  }
+  f = message.getExpired();
+  if (f) {
+    writer.writeBool(
+      11,
       f
     );
   }
@@ -8785,6 +8797,24 @@ proto.Subscription.prototype.getItemId = function() {
  */
 proto.Subscription.prototype.setItemId = function(value) {
   return jspb.Message.setProto3StringField(this, 10, value);
+};
+
+
+/**
+ * optional bool expired = 11;
+ * @return {boolean}
+ */
+proto.Subscription.prototype.getExpired = function() {
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 11, false));
+};
+
+
+/**
+ * @param {boolean} value
+ * @return {!proto.Subscription} returns this
+ */
+proto.Subscription.prototype.setExpired = function(value) {
+  return jspb.Message.setProto3BooleanField(this, 11, value);
 };
 
 
@@ -20924,7 +20954,8 @@ proto.PlanType = {
   TYPE_TEAM: 2,
   TYPE_GROW: 3,
   TYPE_MAX: 4,
-  TYPE_SELF_HOSTED: 5
+  TYPE_SELF_HOSTED: 5,
+  TYPE_TRIAL: 6
 };
 
 /**
