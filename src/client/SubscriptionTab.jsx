@@ -10,7 +10,7 @@ import { Loading } from './Loading'
 function TrialBanner () {
   const expired = useSelector(state => state.workspace.expired)
   const isTrial = useSelector(state => state.user.isTrial)
-  if (!expired || expired === null) {
+  if (!expired) {
     return null
   }
 
