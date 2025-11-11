@@ -10,7 +10,6 @@ import { Loading } from './Loading'
 function TrialBanner () {
   const expired = useSelector(state => state.workspace.expired)
   const isTrial = useSelector(state => state.user.isTrial)
-  const cancelAt = useSelector(state => state.workspace.subscription?.cancelAt)
   if (!expired || expired === null) {
     return null
   }
