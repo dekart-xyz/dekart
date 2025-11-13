@@ -155,12 +155,22 @@ async function processLoadFilesQueue (dispatch, getState) {
     const { file, resolve, reject, totalRows } = getState().dataset.loadFilesQueue.queue[0]
 
     try {
+      // Check if result is empty before calling loadFiles
+      // This prevents kepler.gl from trying to parse an empty file
+      if (file.size === 0) {
+        reject(new EmptyResultError('Empty result'))
+        // Remove the processed item from queue
+        dispatch(removeFromLoadFilesQueue())
+        continue
+      }
+
       const result = await new Promise((_resolve, _reject) => {
         try {
           dispatch(loadFiles([file], (r) => {
             const datasetData = r[0]?.data
             if (!datasetData) {
-              if (totalRows === 0) {
+              // totalRows may be undefined for wherobots queries
+              if (totalRows !== undefined && totalRows === 0) {
                 _reject(new EmptyResultError('Empty result'))
               } else {
                 _reject(new Error('Error loading dataset'))

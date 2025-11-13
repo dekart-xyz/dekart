@@ -145,6 +145,7 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 		case "ATHENA":
 			con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_ATHENA
 			con.ConnectionName = "Athena"
+			con.CloudStorageBucket = storage.GetDefaultBucketName()
 		case "PG":
 			con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_POSTGRES
 			con.ConnectionName = "Postgres"

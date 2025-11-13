@@ -140,6 +140,7 @@ func (c *Cursor) ensure() error {
 }
 
 // GetResultURI blocks until the query finishes and returns the presigned URL.
+// Returns an empty string if the query succeeded but returned no rows (empty result).
 func (c *Cursor) GetResultURI() (string, error) {
 	if err := c.ensure(); err != nil {
 		return "", err

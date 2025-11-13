@@ -8,6 +8,8 @@ import (
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
 	"fmt"
+	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -169,6 +171,104 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 			return
 		}
 	}
+}
+
+func (s Server) checkExpiredQueryResult(ctx context.Context, reportID string) (bool, error) {
+	datasets, err := s.getDatasets(ctx, reportID)
+	if err != nil {
+		return false, fmt.Errorf("cannot retrieve datasets: %w", err)
+	}
+
+	queryJobs, err := s.getDatasetsQueryJobs(ctx, datasets)
+	if err != nil {
+		return false, fmt.Errorf("cannot retrieve query jobs: %w", err)
+	}
+
+	for _, queryJob := range queryJobs {
+		if queryJob.JobResultId == "" {
+			continue
+		}
+
+		dwJobID, err := s.getDWJobIDFromResultID(ctx, queryJob.JobResultId)
+		if err != nil {
+			return false, fmt.Errorf("cannot retrieve job id: %w", err)
+		}
+
+		resultURI, err := s.getResultURI(ctx, queryJob.JobResultId)
+		if err != nil {
+			return false, fmt.Errorf("error getting result URI: %w", err)
+		}
+
+		if dwJobID != "" {
+			// if dwJobID use checkJobExpiration
+			expired, _, err := s.checkJobExpiration(ctx, queryJob.JobResultId)
+			if err != nil {
+				return false, fmt.Errorf("error checking job expiration: %w", err)
+			}
+			if expired {
+				return true, nil
+			}
+		} else if resultURI != "" {
+			// if resultURI parse presigned url and check expiration
+			expired, err := s.checkPresignedURLExpiration(resultURI, time.Time{})
+			if err != nil {
+				return false, fmt.Errorf("error checking presigned URL expiration: %w", err)
+			}
+			if expired {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
+}
+
+// checkPresignedURLExpiration parses a presigned S3 URL and checks if it has expired
+// If now is zero time, it uses time.Now() for the current time check
+func (s Server) checkPresignedURLExpiration(resultURI string, now time.Time) (bool, error) {
+	parsedURL, err := url.Parse(resultURI)
+	if err != nil {
+		return false, fmt.Errorf("failed to parse presigned URL: %w", err)
+	}
+
+	queryParams := parsedURL.Query()
+
+	// Get X-Amz-Date (timestamp when URL was signed)
+	amzDateStr := queryParams.Get("X-Amz-Date")
+	if amzDateStr == "" {
+		log.Error().Str("resultURI", resultURI).Msg("No X-Amz-Date in presigned URL")
+		return true, nil
+	}
+
+	// Parse X-Amz-Date (format: YYYYMMDDTHHMMSSZ)
+	amzDate, err := time.Parse("20060102T150405Z", amzDateStr)
+	if err != nil {
+		return true, err
+	}
+
+	// Get X-Amz-Expires (seconds until expiration)
+	amzExpiresStr := queryParams.Get("X-Amz-Expires")
+	if amzExpiresStr == "" {
+		log.Error().Str("resultURI", resultURI).Msg("No X-Amz-Expires in presigned URL")
+		return true, nil
+	}
+
+	amzExpires, err := strconv.ParseInt(amzExpiresStr, 10, 64)
+	if err != nil {
+		return true, err
+	}
+
+	// Calculate expiration time
+	expirationTime := amzDate.Add(time.Duration(amzExpires) * time.Second)
+
+	// Use provided time or current time
+	currentTime := now
+	if currentTime.IsZero() {
+		currentTime = time.Now()
+	}
+
+	// Check if expired
+	return currentTime.After(expirationTime), nil
 }
 
 func (s Server) publishReport(reqCtx context.Context, reportID string) {
@@ -337,6 +437,14 @@ func (s Server) PublishReport(ctx context.Context, req *proto.PublishReportReque
 			}
 		}
 
+		// Check if query results are expired
+		expired, err := s.checkExpiredQueryResult(ctx, req.ReportId)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		if expired {
+			return nil, status.Error(codes.Aborted, "Query results are expired before publishing. Please refresh the page.")
+		}
 		go s.publishReport(ctx, req.ReportId)
 	} else {
 		go s.unpublishReport(ctx, req.ReportId)
