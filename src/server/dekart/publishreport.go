@@ -237,7 +237,6 @@ func (s Server) checkPresignedURLExpiration(resultURI string, now time.Time) (bo
 	amzDateStr := queryParams.Get("X-Amz-Date")
 	if amzDateStr == "" {
 		log.Error().Str("resultURI", resultURI).Msg("No X-Amz-Date in presigned URL")
-		// If no X-Amz-Date, we can't determine expiration, assume not expired
 		return true, nil
 	}
 
