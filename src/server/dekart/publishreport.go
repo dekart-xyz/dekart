@@ -236,28 +236,27 @@ func (s Server) checkPresignedURLExpiration(resultURI string, now time.Time) (bo
 	// Get X-Amz-Date (timestamp when URL was signed)
 	amzDateStr := queryParams.Get("X-Amz-Date")
 	if amzDateStr == "" {
+		log.Error().Str("resultURI", resultURI).Msg("No X-Amz-Date in presigned URL")
 		// If no X-Amz-Date, we can't determine expiration, assume not expired
-		return false, nil
+		return true, nil
 	}
 
 	// Parse X-Amz-Date (format: YYYYMMDDTHHMMSSZ)
 	amzDate, err := time.Parse("20060102T150405Z", amzDateStr)
 	if err != nil {
-		// If we can't parse the date, assume not expired
-		return false, nil
+		return true, err
 	}
 
 	// Get X-Amz-Expires (seconds until expiration)
 	amzExpiresStr := queryParams.Get("X-Amz-Expires")
 	if amzExpiresStr == "" {
-		// If no X-Amz-Expires, we can't determine expiration, assume not expired
-		return false, nil
+		log.Error().Str("resultURI", resultURI).Msg("No X-Amz-Expires in presigned URL")
+		return true, nil
 	}
 
 	amzExpires, err := strconv.ParseInt(amzExpiresStr, 10, 64)
 	if err != nil {
-		// If we can't parse expires, assume not expired
-		return false, nil
+		return true, err
 	}
 
 	// Calculate expiration time
