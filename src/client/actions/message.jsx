@@ -6,7 +6,7 @@ import { track } from '../lib/tracking'
 const style = {}
 const STREAM_ERROR_KEY = 'stream-error'
 
-message.config({ top: 100 })
+message.config({ top: 40 })
 
 export function downloading (dataset, controller) {
   return { type: downloading.name, dataset, controller }
