@@ -5,6 +5,7 @@ import (
 	"context"
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -42,8 +43,8 @@ type ReportAccessGranted struct {
 
 // Service defines supported notification hooks.
 type Service interface {
-	SendWorkspaceInvite(WorkspaceInvite) error
-	SendReportAccessGranted(ReportAccessGranted) error
+	SendWorkspaceInvite(WorkspaceInvite)
+	SendReportAccessGranted(ReportAccessGranted)
 }
 
 type noopService struct{}
@@ -53,13 +54,9 @@ func NewNoop() Service {
 	return noopService{}
 }
 
-func (noopService) SendWorkspaceInvite(WorkspaceInvite) error {
-	return nil
-}
+func (noopService) SendWorkspaceInvite(WorkspaceInvite) {}
 
-func (noopService) SendReportAccessGranted(ReportAccessGranted) error {
-	return nil
-}
+func (noopService) SendReportAccessGranted(ReportAccessGranted) {}
 
 // NewFromEnv builds a Service backed by Resend when all required env vars are set;
 // otherwise a noop implementation is returned.
@@ -110,6 +107,15 @@ type reportAccessGrantedTemplateData struct {
 	ReportURL string
 }
 
+// errInvalidRecipientEmail indicates Resend rejected the payload because of an invalid recipient address.
+var errInvalidRecipientEmail = errors.New("invalid recipient email format")
+
+type resendErrorResponse struct {
+	StatusCode int    `json:"statusCode"`
+	Name       string `json:"name"`
+	Message    string `json:"message"`
+}
+
 var (
 	//go:embed templates/*
 	templateFS embed.FS
@@ -144,10 +150,33 @@ func templateFuncMap() map[string]any {
 	return funcs
 }
 
-func (s *resendService) SendWorkspaceInvite(invite WorkspaceInvite) error {
-	if invite.InviteeEmail == "" {
-		return fmt.Errorf("invitee email is empty")
+func (s *resendService) SendWorkspaceInvite(invite WorkspaceInvite) {
+	if strings.TrimSpace(invite.InviteeEmail) == "" {
+		log.Warn().
+			Str("inviteId", invite.InviteID).
+			Str("workspaceId", invite.WorkspaceID).
+			Msg("Skipping workspace invite email; invitee email is empty")
+		return
 	}
+	if err := s.dispatchWorkspaceInvite(invite); err != nil {
+		if errors.Is(err, errInvalidRecipientEmail) {
+			log.Warn().
+				Err(err).
+				Str("inviteId", invite.InviteID).
+				Str("workspaceId", invite.WorkspaceID).
+				Str("email", invite.InviteeEmail).
+				Msg("Skipping workspace invite email; invalid recipient email format")
+			return
+		}
+		log.Err(err).
+			Str("inviteId", invite.InviteID).
+			Str("workspaceId", invite.WorkspaceID).
+			Str("email", invite.InviteeEmail).
+			Msg("Failed to send workspace invite email via Resend")
+	}
+}
+
+func (s *resendService) dispatchWorkspaceInvite(invite WorkspaceInvite) error {
 	inviteURL := fmt.Sprintf("%s/workspace/invite/%s", s.appURL, invite.InviteID)
 	subject := fmt.Sprintf("%s invited you to %s on Dekart", invite.InviterEmail, invite.WorkspaceName)
 	templateData := workspaceInviteTemplateData{
@@ -187,6 +216,9 @@ func (s *resendService) SendWorkspaceInvite(invite WorkspaceInvite) error {
 	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {
 		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4*1024))
+		if isInvalidRecipientEmail(resp.StatusCode, respBody) {
+			return errInvalidRecipientEmail
+		}
 		return fmt.Errorf("resend responded with %d: %s", resp.StatusCode, strings.TrimSpace(string(respBody)))
 	}
 	return nil
@@ -205,10 +237,30 @@ func workspaceRoleLabel(role proto.UserRole) string {
 	}
 }
 
-func (s *resendService) SendReportAccessGranted(notification ReportAccessGranted) error {
-	if notification.RecipientEmail == "" {
-		return fmt.Errorf("recipient email is empty")
+func (s *resendService) SendReportAccessGranted(notification ReportAccessGranted) {
+	if strings.TrimSpace(notification.RecipientEmail) == "" {
+		log.Warn().
+			Str("reportId", notification.ReportID).
+			Msg("Skipping report access notification; recipient email is empty")
+		return
 	}
+	if err := s.dispatchReportAccessGranted(notification); err != nil {
+		if errors.Is(err, errInvalidRecipientEmail) {
+			log.Warn().
+				Err(err).
+				Str("reportId", notification.ReportID).
+				Str("email", notification.RecipientEmail).
+				Msg("Skipping report access notification; invalid recipient email format")
+			return
+		}
+		log.Err(err).
+			Str("reportId", notification.ReportID).
+			Str("email", notification.RecipientEmail).
+			Msg("Failed to send report access notification via Resend")
+	}
+}
+
+func (s *resendService) dispatchReportAccessGranted(notification ReportAccessGranted) error {
 	reportURL := fmt.Sprintf("%s/reports/%s", s.appURL, notification.ReportID)
 	subject := fmt.Sprintf("%s shared a report with you", notification.GrantedByEmail)
 	templateData := reportAccessGrantedTemplateData{
@@ -247,9 +299,24 @@ func (s *resendService) SendReportAccessGranted(notification ReportAccessGranted
 	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {
 		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4*1024))
+		if isInvalidRecipientEmail(resp.StatusCode, respBody) {
+			return errInvalidRecipientEmail
+		}
 		return fmt.Errorf("resend responded with %d: %s", resp.StatusCode, strings.TrimSpace(string(respBody)))
 	}
 	return nil
+}
+
+func isInvalidRecipientEmail(statusCode int, body []byte) bool {
+	if statusCode != http.StatusUnprocessableEntity {
+		return false
+	}
+	var resendErr resendErrorResponse
+	if err := json.Unmarshal(body, &resendErr); err != nil {
+		return false
+	}
+	message := strings.ToLower(resendErr.Message)
+	return strings.Contains(message, "invalid `to` field") || strings.Contains(message, "invalid 'to' field")
 }
 
 func reportAccessLevelLabel(level int) string {

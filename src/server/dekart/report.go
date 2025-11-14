@@ -1034,15 +1034,7 @@ func (s Server) AddReportDirectAccess(ctx context.Context, req *proto.AddReportD
 	defer s.reportStreams.Ping(req.ReportId)
 
 	for _, notificationPayload := range notificationPayloads {
-		go func(payload notifications.ReportAccessGranted) {
-			err := s.notifications.SendReportAccessGranted(payload)
-			if err != nil {
-				log.Err(err).
-					Str("reportId", payload.ReportID).
-					Str("email", payload.RecipientEmail).
-					Msg("Failed to send report access notification via Resend")
-			}
-		}(notificationPayload)
+		go s.notifications.SendReportAccessGranted(notificationPayload)
 	}
 
 	return &proto.AddReportDirectAccessResponse{}, nil

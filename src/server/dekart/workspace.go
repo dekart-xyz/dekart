@@ -482,16 +482,7 @@ func (s Server) UpdateWorkspaceUser(ctx context.Context, req *proto.UpdateWorksp
 	}
 
 	if req.UserUpdateType == proto.UpdateWorkspaceUserRequest_USER_UPDATE_TYPE_ADD {
-		go func(invite notifications.WorkspaceInvite) {
-			err := s.notifications.SendWorkspaceInvite(invite)
-			if err != nil {
-				log.Err(err).
-					Str("inviteId", invite.InviteID).
-					Str("workspaceId", invite.WorkspaceID).
-					Str("email", invite.InviteeEmail).
-					Msg("Failed to send workspace invite email via Resend")
-			}
-		}(notifications.WorkspaceInvite{
+		go s.notifications.SendWorkspaceInvite(notifications.WorkspaceInvite{
 			InviteID:      logID,
 			WorkspaceID:   workspaceInfo.ID,
 			WorkspaceName: workspaceInfo.Name,
