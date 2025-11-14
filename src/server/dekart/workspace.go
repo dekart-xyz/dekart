@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/errtype"
+	"dekart/src/server/notifications"
 	"dekart/src/server/user"
 	"net/http"
 	"os"
@@ -283,7 +284,7 @@ func (s Server) getUserWorkspace(ctx context.Context, email string) (*proto.Work
 		LIMIT 1
 	`, email)
 	if err != nil {
-		log.Err(err).Send()
+		errtype.LogError(err, "Error getting user workspace")
 		return nil, nil, err
 	}
 	defer res.Close()
@@ -346,7 +347,7 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 
 	workspace, role, err := s.getUserWorkspace(ctx, claims.Email)
 	if err != nil {
-		log.Err(err).Send()
+		errtype.LogError(err, "Error getting user workspace")
 		return ctx
 	}
 	var workspaceId string
@@ -360,7 +361,7 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 		name = workspace.Name
 		subscription, err := s.getSubscription(ctx, workspaceId)
 		if err != nil {
-			log.Err(err).Send()
+			errtype.LogError(err, "Error getting subscription")
 			return ctx
 		}
 		if subscription != nil {
@@ -462,10 +463,11 @@ func (s Server) UpdateWorkspaceUser(ctx context.Context, req *proto.UpdateWorksp
 			return nil, status.Error(codes.InvalidArgument, "Cannot add more users to team workspace")
 		}
 	}
+	logID := newUUID()
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO workspace_log (id, workspace_id, email, status, authored_by, role)
 		VALUES ($1, $2, $3, $4, $5, $6)
-	`, newUUID(), workspaceInfo.ID, req.Email, req.UserUpdateType, claims.Email, req.Role)
+	`, logID, workspaceInfo.ID, req.Email, req.UserUpdateType, claims.Email, req.Role)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
@@ -477,6 +479,17 @@ func (s Server) UpdateWorkspaceUser(ctx context.Context, req *proto.UpdateWorksp
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if req.UserUpdateType == proto.UpdateWorkspaceUserRequest_USER_UPDATE_TYPE_ADD {
+		go s.notifications.SendWorkspaceInvite(notifications.WorkspaceInvite{
+			InviteID:      logID,
+			WorkspaceID:   workspaceInfo.ID,
+			WorkspaceName: workspaceInfo.Name,
+			InviteeEmail:  req.Email,
+			InviterEmail:  claims.Email,
+			Role:          req.Role,
+		})
 	}
 
 	s.userStreams.PingAll()

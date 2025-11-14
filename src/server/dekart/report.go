@@ -6,6 +6,7 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/conn"
 	"dekart/src/server/errtype"
+	"dekart/src/server/notifications"
 	"dekart/src/server/user"
 	"encoding/json"
 	"fmt"
@@ -991,6 +992,8 @@ func (s Server) AddReportDirectAccess(ctx context.Context, req *proto.AddReportD
 		}
 	}
 
+	notificationPayloads := make([]notifications.ReportAccessGranted, 0, len(toAddOrUpdate))
+
 	// Apply additions
 	for email, level := range toAddOrUpdate {
 		_, err = tx.ExecContext(ctx, `
@@ -1001,6 +1004,13 @@ func (s Server) AddReportDirectAccess(ctx context.Context, req *proto.AddReportD
 			log.Err(err).Send()
 			return nil, status.Error(codes.Internal, err.Error())
 		}
+		notificationPayloads = append(notificationPayloads, notifications.ReportAccessGranted{
+			ReportID:       reportID,
+			ReportTitle:    report.Title,
+			RecipientEmail: email,
+			GrantedByEmail: claims.Email,
+			AccessLevel:    level,
+		})
 	}
 
 	// Apply removals
@@ -1022,6 +1032,10 @@ func (s Server) AddReportDirectAccess(ctx context.Context, req *proto.AddReportD
 	}
 
 	defer s.reportStreams.Ping(req.ReportId)
+
+	for _, notificationPayload := range notificationPayloads {
+		go s.notifications.SendReportAccessGranted(notificationPayload)
+	}
 
 	return &proto.AddReportDirectAccessResponse{}, nil
 }

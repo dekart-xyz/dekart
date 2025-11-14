@@ -4,8 +4,9 @@ import StreamError from '../StreamError'
 import { track } from '../lib/tracking'
 
 const style = {}
+const STREAM_ERROR_KEY = 'stream-error'
 
-message.config({ top: 100 })
+message.config({ top: 40 })
 
 export function downloading (dataset, controller) {
   return { type: downloading.name, dataset, controller }
@@ -99,6 +100,7 @@ function showStreamError (errorCode, errorMsg) {
     message: errorMsg
   })
   message.error({
+    key: STREAM_ERROR_KEY,
     content: (<StreamError code={errorCode} message={errorMsg} />),
     duration: 10000,
     style

@@ -6,6 +6,7 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/conn"
 	"dekart/src/server/job"
+	"dekart/src/server/notifications"
 	"dekart/src/server/report"
 	"dekart/src/server/secrets"
 	"dekart/src/server/storage"
@@ -28,6 +29,7 @@ type Server struct {
 	reportStreams *report.Streams
 	userStreams   *user.Streams
 	storage       storage.Storage
+	notifications notifications.Service
 	proto.UnimplementedDekartServer
 	jobs job.Store
 }
@@ -43,6 +45,7 @@ func NewServer(db *sql.DB, storageBucket storage.Storage, jobs job.Store) *Serve
 		userStreams:   user.NewStreams(),
 		storage:       storageBucket,
 		jobs:          jobs,
+		notifications: notifications.NewFromEnv(),
 	}
 	if IsSqlite() {
 		go server.startBackups()
