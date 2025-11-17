@@ -34,8 +34,8 @@ function ModalContent ({ interval, onIntervalChange, loadding }) {
         <div className={shareStyles.statusLabelTitle}>Refresh Interval</div>
         <div className={shareStyles.statusLabelDescription}>
           {isEnabled
-            ? `When enabled, all queries will automatically re-run every ${intervalLabel.toLowerCase()} when the map is open and visible. You can manually refresh at any time using the refresh button.`
-            : 'Auto-refresh is disabled. Queries will only run when you manually refresh. Select an interval to enable auto-refresh.'}
+            ? `Queries will automatically re-run every ${intervalLabel.toLowerCase()} when the map is in view mode.`
+            : 'Auto-refresh is disabled. Select an interval to enable auto-refresh.'}
         </div>
       </div>
       <div className={shareStyles.boolStatusControl}>
@@ -97,37 +97,4 @@ export function AutoRefreshSettingsModal ({ visible, onClose }) {
       />
     </Modal>
   )
-}
-
-export default function AutoRefreshSettings ({ canWrite, edit }) {
-  const [modalVisible, setModalVisible] = useState(false)
-  const autoRefreshIntervalSeconds = useSelector(state => state.reportStatus.autoRefreshIntervalSeconds)
-
-  // Only show in edit mode for editors
-  if (!canWrite || !edit) {
-    return null
-  }
-
-  return (
-    <>
-      <Tooltip title='Configure auto refresh settings'>
-        <Button
-          type='text'
-          icon={<SettingOutlined />}
-          onClick={() => setModalVisible(true)}
-          title='Auto Refresh Settings'
-        />
-      </Tooltip>
-      <AutoRefreshSettingsModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        initialInterval={autoRefreshIntervalSeconds}
-      />
-    </>
-  )
-}
-
-// Export config getter for use in other components
-export function getAutoRefreshConfig () {
-  return { enabled: false, intervalSeconds: 0 }
 }

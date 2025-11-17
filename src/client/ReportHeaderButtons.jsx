@@ -13,7 +13,7 @@ import { useEffect, useState } from 'react'
 import Select from 'antd/es/select'
 import { track } from './lib/tracking'
 import { ForkOnboarding, useRequireOnboarding } from './ForkOnboarding'
-import { getAutoRefreshConfig, AutoRefreshSettingsModal } from './AutoRefreshSettings'
+import { AutoRefreshSettingsModal } from './AutoRefreshSettings'
 
 function formatIntervalLabel (seconds) {
   if (seconds === 0) return 'None'
@@ -84,6 +84,7 @@ function RefreshButton ({ showAutoRefreshSettings = false }) {
   const numQueries = useSelector(state => state.queries.length)
   const dispatch = useDispatch()
   const { canWrite } = useSelector(state => state.report)
+  const edit = useSelector(state => state.reportStatus.edit)
   const [autoRefreshModalVisible, setAutoRefreshModalVisible] = useState(false)
   const autoRefreshIntervalSeconds = useSelector(state => state.report?.autoRefreshIntervalSeconds)
 
@@ -132,7 +133,7 @@ function RefreshButton ({ showAutoRefreshSettings = false }) {
           <Button
             id='dekart-refresh-button'
             type='text'
-            icon={autoRefreshIntervalSeconds > 0 ? <ClockCircleOutlined /> : numRunningQueries ? <LoadingOutlined /> : <ReloadOutlined />}
+            icon={numRunningQueries ? <LoadingOutlined /> : autoRefreshIntervalSeconds > 0 && !edit ? <span className={styles.shimmerIcon}><ClockCircleOutlined /></span> : <ReloadOutlined />}
             title={autoRefreshIntervalSeconds > 0 ? 'Refresh (Auto-refresh enabled)' : 'Refresh'}
           />
         </Dropdown>
