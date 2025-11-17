@@ -1,16 +1,18 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Modal from 'antd/es/modal'
 import Select from 'antd/es/select'
 import { ClockCircleOutlined, SettingOutlined } from '@ant-design/icons'
 import Button from 'antd/es/button'
 import Tooltip from 'antd/es/tooltip'
 import shareStyles from './ShareButton.module.css'
+import { setAutoRefreshIntervalSeconds } from './actions/report'
+import { useDispatch, useSelector } from 'react-redux'
 
-// UX Prototype - No backend integration
-// This component manages auto-refresh settings using local state only
+// Auto-refresh settings component
+// Changes are saved immediately via setAutoRefreshIntervalSeconds action
 
 const INTERVAL_OPTIONS = [
-  { value: 0, label: 'None (disabled)' },
+  { value: 0, label: 'None' },
   { value: 60, label: '1 minute' },
   { value: 300, label: '5 minutes' },
   { value: 600, label: '10 minutes' },
@@ -19,8 +21,8 @@ const INTERVAL_OPTIONS = [
   { value: 3600, label: '1 hour' }
 ]
 
-function ModalContent ({ interval, onIntervalChange }) {
-  const intervalLabel = INTERVAL_OPTIONS.find(opt => opt.value === interval)?.label || 'None (disabled)'
+function ModalContent ({ interval, onIntervalChange, loadding }) {
+  const intervalLabel = INTERVAL_OPTIONS.find(opt => opt.value === interval)?.label || 'None'
   const isEnabled = interval > 0
 
   return (
@@ -42,32 +44,28 @@ function ModalContent ({ interval, onIntervalChange }) {
           onChange={onIntervalChange}
           style={{ minWidth: 130 }}
           options={INTERVAL_OPTIONS}
+          disabled={loadding}
+          loading={loadding}
         />
       </div>
     </div>
   )
 }
 
-export function AutoRefreshSettingsModal ({ visible, onClose, onSave, initialInterval }) {
-  const [interval, setInterval] = useState(initialInterval || 0) // Default: disabled (0)
-  const [loading, setLoading] = useState(false)
+export function AutoRefreshSettingsModal ({ visible, onClose }) {
+  const autoRefreshIntervalSeconds = useSelector(state => state.report?.autoRefreshIntervalSeconds)
+  const [interval, setInterval] = useState(autoRefreshIntervalSeconds)
+  const dispatch = useDispatch()
+  const reportId = useSelector(state => state.report.id)
+  const loadding = autoRefreshIntervalSeconds !== interval
 
-  const handleSave = () => {
-    setLoading(true)
-    onSave({
-      enabled: interval > 0,
-      intervalSeconds: interval
-    })
-    // Simulate a small delay for better UX
-    setTimeout(() => {
-      setLoading(false)
-      onClose()
-    }, 200)
-  }
+  useEffect(() => {
+    if (visible) {
+      setInterval(autoRefreshIntervalSeconds || 0)
+    }
+  }, [visible, autoRefreshIntervalSeconds, setInterval])
 
   const handleCancel = () => {
-    // Reset to initial values
-    setInterval(initialInterval || 0)
     onClose()
   }
 
@@ -83,14 +81,7 @@ export function AutoRefreshSettingsModal ({ visible, onClose, onSave, initialInt
           <Button
             onClick={handleCancel}
           >
-            Cancel
-          </Button>
-          <Button
-            type='primary'
-            onClick={handleSave}
-            loading={loading}
-          >
-            Save
+            Close
           </Button>
         </div>
       }
@@ -98,7 +89,11 @@ export function AutoRefreshSettingsModal ({ visible, onClose, onSave, initialInt
     >
       <ModalContent
         interval={interval}
-        onIntervalChange={setInterval}
+        loadding={loadding}
+        onIntervalChange={(value) => {
+          setInterval(value)
+          dispatch(setAutoRefreshIntervalSeconds(reportId, value))
+        }}
       />
     </Modal>
   )
@@ -106,16 +101,7 @@ export function AutoRefreshSettingsModal ({ visible, onClose, onSave, initialInt
 
 export default function AutoRefreshSettings ({ canWrite, edit }) {
   const [modalVisible, setModalVisible] = useState(false)
-  // UX Prototype: Using local state only (no persistence)
-  const [autoRefreshConfig, setAutoRefreshConfig] = useState({
-    enabled: false,
-    intervalSeconds: 0
-  })
-
-  // Handle save - just update local state
-  const handleSave = (config) => {
-    setAutoRefreshConfig(config)
-  }
+  const autoRefreshIntervalSeconds = useSelector(state => state.reportStatus.autoRefreshIntervalSeconds)
 
   // Only show in edit mode for editors
   if (!canWrite || !edit) {
@@ -135,15 +121,13 @@ export default function AutoRefreshSettings ({ canWrite, edit }) {
       <AutoRefreshSettingsModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        onSave={handleSave}
-        initialInterval={autoRefreshConfig.intervalSeconds}
+        initialInterval={autoRefreshIntervalSeconds}
       />
     </>
   )
 }
 
 // Export config getter for use in other components
-// UX Prototype: Returns default config (no persistence)
 export function getAutoRefreshConfig () {
   return { enabled: false, intervalSeconds: 0 }
 }

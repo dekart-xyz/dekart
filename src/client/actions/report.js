@@ -3,7 +3,7 @@ import { removeDataset } from '@kepler.gl/actions'
 
 import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
 import { success } from './message'
-import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType, SetTrackViewersRequest } from 'dekart-proto/dekart_pb'
+import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType, SetTrackViewersRequest, SetAutoRefreshIntervalSecondsRequest } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { createQuery, downloadQuerySource } from './query'
 import { downloadDataset } from './dataset'
@@ -348,6 +348,16 @@ export function setTrackViewers (reportId, trackViewers) {
     req.setReportId(reportId)
     req.setTrackViewers(trackViewers)
     dispatch(grpcCall(Dekart.SetTrackViewers, req))
+  }
+}
+
+export function setAutoRefreshIntervalSeconds (reportId, autoRefreshIntervalSeconds) {
+  return async (dispatch) => {
+    dispatch({ type: setAutoRefreshIntervalSeconds.name, autoRefreshIntervalSeconds })
+    const req = new SetAutoRefreshIntervalSecondsRequest()
+    req.setReportId(reportId)
+    req.setAutoRefreshIntervalSeconds(autoRefreshIntervalSeconds)
+    dispatch(grpcCall(Dekart.SetAutoRefreshIntervalSeconds, req))
   }
 }
 

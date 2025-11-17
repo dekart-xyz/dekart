@@ -2,7 +2,7 @@ import { ActionTypes as KeplerActionTypes } from '@kepler.gl/actions'
 import { setStreamError } from '../actions/message'
 import { queryChanged, queryParamChanged, updateQueryParamsFromQueries } from '../actions/query'
 import { setReadmeValue } from '../actions/readme'
-import { closeReport, forkReport, newForkedReport, newReport, openReport, reportsListUpdate, reportTitleChange, reportUpdate, reportWillOpen, savedReport, saveMap, setReportChanged, toggleReportEdit, toggleReportFullscreen, unsubscribeReports } from '../actions/report'
+import { closeReport, forkReport, newForkedReport, newReport, openReport, reportsListUpdate, reportTitleChange, reportUpdate, reportWillOpen, savedReport, saveMap, setAutoRefreshIntervalSeconds, setReportChanged, toggleReportEdit, toggleReportFullscreen, unsubscribeReports } from '../actions/report'
 
 export function reportDirectAccessEmails (state = [], action) {
   switch (action.type) {
@@ -41,7 +41,8 @@ const defaultReportStatus = {
   lastChanged: 0,
   lastSaved: 0,
   savedReportVersion: 0,
-  fullscreen: null
+  fullscreen: null,
+  autoRefreshIntervalSeconds: 0
 }
 export function reportStatus (state = defaultReportStatus, action) {
   switch (action.type) {
@@ -96,7 +97,8 @@ export function reportStatus (state = defaultReportStatus, action) {
         online: true,
         title: action.report.title,
         lastUpdated: Date.now(),
-        fullscreen
+        fullscreen,
+        autoRefreshIntervalSeconds: action.report.autoRefreshIntervalSeconds || 0
       }
     }
     case openReport.name: {
@@ -134,6 +136,11 @@ export function reportStatus (state = defaultReportStatus, action) {
       return {
         ...state,
         newReportId: action.id
+      }
+    case setAutoRefreshIntervalSeconds.name:
+      return {
+        ...state,
+        autoRefreshIntervalSeconds: action.autoRefreshIntervalSeconds
       }
     default:
       return state
