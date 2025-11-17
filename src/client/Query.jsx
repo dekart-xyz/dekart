@@ -121,7 +121,7 @@ function QueryStatus ({ children, query }) {
     if (queryJob?.jobError) {
       track('QueryError', {
         queryId: query.id,
-        uerror: queryJob.jobError, // User error - SQL error
+        uerror: queryJob.jobError?.substring(0, 1000), // User error - SQL error
         jobId: queryJob.id
       })
     }
