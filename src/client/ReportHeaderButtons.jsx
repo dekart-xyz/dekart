@@ -1,7 +1,7 @@
 import { useHistory } from 'react-router'
 import styles from './ReportHeaderButtons.module.css'
 import Button from 'antd/es/button'
-import { EyeOutlined, DownloadOutlined, CloudOutlined, EditOutlined, ForkOutlined, ReloadOutlined, LoadingOutlined, CloudSyncOutlined, PlusOutlined, InfoCircleOutlined } from '@ant-design/icons'
+import { EyeOutlined, DownloadOutlined, CloudOutlined, EditOutlined, ForkOutlined, ReloadOutlined, LoadingOutlined, CloudSyncOutlined, PlusOutlined, InfoCircleOutlined, SettingOutlined } from '@ant-design/icons'
 import { useDispatch, useSelector } from 'react-redux'
 import ShareButton from './ShareButton'
 import { forkReport, saveMap } from './actions/report'
@@ -9,10 +9,22 @@ import { runAllQueries } from './actions/query'
 import { toggleModal } from '@kepler.gl/actions/dist/ui-state-actions'
 import { EXPORT_DATA_ID, EXPORT_IMAGE_ID, EXPORT_MAP_ID } from '@kepler.gl/constants'
 import Dropdown from 'antd/es/dropdown'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Select from 'antd/es/select'
 import { track } from './lib/tracking'
 import { ForkOnboarding, useRequireOnboarding } from './ForkOnboarding'
+import { getAutoRefreshConfig, AutoRefreshSettingsModal } from './AutoRefreshSettings'
+
+function formatIntervalLabel (seconds) {
+  if (seconds === 0) return 'None'
+  if (seconds === 60) return '1 min'
+  if (seconds === 300) return '5 min'
+  if (seconds === 600) return '10 min'
+  if (seconds === 900) return '15 min'
+  if (seconds === 1800) return '30 min'
+  if (seconds === 3600) return '1 hour'
+  return `${seconds}s`
+}
 
 function ForkButton ({ primary }) {
   const dispatch = useDispatch()
@@ -66,27 +78,97 @@ function ForkButton ({ primary }) {
   )
 }
 
-function RefreshButton () {
+function RefreshButton ({ showAutoRefreshSettings = false }) {
   const { canRefresh } = useSelector(state => state.report)
   const numRunningQueries = useSelector(state => state.numRunningQueries)
   const numQueries = useSelector(state => state.queries.length)
   const dispatch = useDispatch()
+  const { canWrite } = useSelector(state => state.report)
+  const [autoRefreshModalVisible, setAutoRefreshModalVisible] = useState(false)
+  const [autoRefreshConfig, setAutoRefreshConfig] = useState(() => getAutoRefreshConfig())
+
+  // Update config when it changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const newConfig = getAutoRefreshConfig()
+      if (JSON.stringify(newConfig) !== JSON.stringify(autoRefreshConfig)) {
+        setAutoRefreshConfig(newConfig)
+      }
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [autoRefreshConfig])
+
   if (!canRefresh || numQueries === 0) {
     return null
   }
+
+  const handleRefresh = () => {
+    if (numRunningQueries) {
+      return
+    }
+    track('RefreshAllQueries')
+    dispatch(runAllQueries())
+  }
+
+  const handleSaveAutoRefresh = (config) => {
+    setAutoRefreshConfig(config)
+  }
+
+  // If auto-refresh settings should be shown and user can write
+  if (showAutoRefreshSettings && canWrite) {
+    const items = [
+      {
+        label: 'Refresh Now',
+        key: 'refresh',
+        icon: numRunningQueries ? <LoadingOutlined /> : <ReloadOutlined />,
+        disabled: numRunningQueries,
+        onClick: handleRefresh
+      },
+      {
+        type: 'divider'
+      },
+      {
+        label: autoRefreshConfig.enabled && autoRefreshConfig.intervalSeconds > 0
+          ? `Auto Refresh: ${formatIntervalLabel(autoRefreshConfig.intervalSeconds)}`
+          : 'Auto Refresh Settings',
+        key: 'auto-refresh',
+        icon: <SettingOutlined />,
+        onClick: () => setAutoRefreshModalVisible(true)
+      }
+    ]
+
+    return (
+      <>
+        <Dropdown
+          menu={{ items }}
+          placement='bottomLeft'
+          trigger={['click']}
+        >
+          <Button
+            id='dekart-refresh-button'
+            type='text'
+            icon={numRunningQueries ? <LoadingOutlined /> : <ReloadOutlined />}
+            title={autoRefreshConfig.enabled && autoRefreshConfig.intervalSeconds > 0 ? 'Refresh (Auto-refresh enabled)' : 'Refresh'}
+          />
+        </Dropdown>
+        <AutoRefreshSettingsModal
+          visible={autoRefreshModalVisible}
+          onClose={() => setAutoRefreshModalVisible(false)}
+          onSave={handleSaveAutoRefresh}
+          initialInterval={autoRefreshConfig.intervalSeconds}
+        />
+      </>
+    )
+  }
+
+  // Simple refresh button without dropdown
   return (
     <Button
       id='dekart-refresh-button'
       type='text'
       icon={numRunningQueries ? <LoadingOutlined /> : <ReloadOutlined />}
       title='Re-run all queries'
-      onClick={() => {
-        if (numRunningQueries) {
-          return
-        }
-        track('RefreshAllQueries')
-        dispatch(runAllQueries())
-      }}
+      onClick={handleRefresh}
     />
   )
 }
@@ -166,7 +248,7 @@ function EditModeButtons () {
 
   return (
     <div className={styles.reportHeaderButtons}>
-      <RefreshButton />
+      <RefreshButton showAutoRefreshSettings />
       <ExportDropdown />
       {canWrite
         ? (
@@ -282,7 +364,7 @@ function ViewModeButtons () {
   if (canWrite) {
     return (
       <div className={styles.reportHeaderButtons}>
-        <RefreshButton />
+        <RefreshButton showAutoRefreshSettings />
         <ExportDropdown />
         <ForkButton />
         <ViewSelect value='view' />
