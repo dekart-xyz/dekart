@@ -154,6 +154,91 @@ function isReportOutOfDate (reportStreamResponse, getState) {
   return elapsedTime >= autoRefreshIntervalSeconds
 }
 
+function isQueryJobOutOfDate (reportStreamResponse, getState, queryJob) {
+  const { report } = reportStreamResponse
+  const { env } = getState()
+
+  // If auto-refresh is not enabled, report is not outdated
+  const autoRefreshIntervalSeconds = report?.autoRefreshIntervalSeconds || 0
+  if (autoRefreshIntervalSeconds <= 0) {
+    return false
+  }
+
+  // If we don't have server time info, we can't accurately determine if it's outdated
+  if (!env.serverTime || !env.receivedTime) {
+    return false
+  }
+
+  // Calculate current server time accounting for clock skew
+  const currentClientTime = Math.floor(Date.now() / 1000)
+  const timeSinceReceived = currentClientTime - env.receivedTime
+  const currentServerTime = env.serverTime + timeSinceReceived
+
+  // Calculate elapsed time since last update
+  const elapsedTime = currentServerTime - queryJob.updatedAt
+
+  // Report is outdated if elapsed time exceeds the auto-refresh interval
+  return elapsedTime >= autoRefreshIntervalSeconds
+}
+
+export function scheduleQueryJobRefresh (reportStreamResponse) {
+  return (dispatch, getState) => {
+    const { report } = reportStreamResponse
+    const autoRefreshIntervalSeconds = report?.autoRefreshIntervalSeconds || 0
+
+    // Only schedule if auto-refresh is enabled
+    if (autoRefreshIntervalSeconds <= 0) {
+      return
+    }
+
+    // Schedule the refresh timeout
+    const timeoutId = setTimeout(() => {
+      const state = getState()
+      const { queries, dataset: { list: datasetsList }, queryJobs, queryParams, report: currentReport, reportStatus: { edit } } = state
+
+      // Only proceed if auto-refresh is still enabled
+      if (!currentReport || (currentReport.autoRefreshIntervalSeconds || 0) <= 0) {
+        return
+      }
+
+      // Create a fresh reportStreamResponse-like object with current state for isQueryJobOutOfDate
+      const currentReportStreamResponse = {
+        report: currentReport,
+        queryJobsList: queryJobs
+      }
+
+      // Check each dataset with a query and rerun if needed
+      datasetsList.forEach((dataset) => {
+        if (dataset.queryId) {
+          const query = queries.find(q => q.id === dataset.queryId)
+          if (!query) return
+
+          const queryJob = queryJobs.find(job => job.queryId === query.id && job.queryParamsHash === queryParams.hash)
+          if (!queryJob) return
+
+          const { canRun, queryText } = state.queryStatus[dataset.queryId] || {}
+          if (!edit && canRun && isQueryJobOutOfDate(currentReportStreamResponse, getState, queryJob)) {
+            dispatch(runQuery(dataset.queryId, queryText))
+          }
+        }
+      })
+
+      // Schedule the next refresh with current state
+      dispatch(scheduleQueryJobRefresh(currentReportStreamResponse))
+    }, autoRefreshIntervalSeconds * 1000)
+
+    // Store the timeout ID in Redux
+    dispatch({
+      type: setQueryJobRefreshTimeout.name,
+      timeoutId
+    })
+  }
+}
+
+export function setQueryJobRefreshTimeout (timeoutId) {
+  return { type: setQueryJobRefreshTimeout.name, timeoutId }
+}
+
 export function reportUpdate (reportStreamResponse) {
   const { report, queriesList, datasetsList, filesList, queryJobsList, directAccessEmailsList } = reportStreamResponse
   return async (dispatch, getState) => {
@@ -169,7 +254,6 @@ export function reportUpdate (reportStreamResponse) {
       reportStatus: { lastChanged, lastSaved, savedReportVersion }
     } = getState()
 
-    const isOutOfDate = isReportOutOfDate(reportStreamResponse, getState)
     dispatch({
       type: reportUpdate.name,
       report,
@@ -180,8 +264,7 @@ export function reportUpdate (reportStreamResponse) {
       filesList,
       queryJobsList,
       hash,
-      directAccessEmailsList,
-      isOutOfDate
+      directAccessEmailsList
     })
     let mapConfigUpdated = false
     if (
@@ -224,22 +307,19 @@ export function reportUpdate (reportStreamResponse) {
       if (dataset.queryId) {
         const query = queriesList.find(q => q.id === dataset.queryId)
         const queryJob = queryJobsList.find(job => job.queryId === query.id && job.queryParamsHash === queryParams.hash)
-        if (shouldAddQuery(queryJob, prevQueryJobsList, mapConfigUpdated) || shouldUpdateDataset(dataset, prevDatasetsList)) {
+        const { canRun, queryText } = getState().queryStatus[dataset.queryId]
+        if (canRun && isQueryJobOutOfDate(reportStreamResponse, getState, queryJob)) {
+          dispatch(runQuery(dataset.queryId, queryText))
+        } else if (shouldAddQuery(queryJob, prevQueryJobsList, mapConfigUpdated) || shouldUpdateDataset(dataset, prevDatasetsList)) {
           if (dataset.connectionType === ConnectionType.CONNECTION_TYPE_WHEROBOTS) {
             extension = 'parquet'
           }
-          const { canRun, queryText } = getState().queryStatus[dataset.queryId]
-
-          if (isOutOfDate && canRun) {
-            dispatch(runQuery(dataset.queryId, queryText))
-          } else {
-            dispatch(downloadDataset(
-              dataset,
-              queryJob.jobResultId,
-              extension,
-              prevDatasetsList
-            ))
-          }
+          dispatch(downloadDataset(
+            dataset,
+            queryJob.jobResultId,
+            extension,
+            prevDatasetsList
+          ))
         }
       } else if (dataset.fileId) {
         const file = filesList.find(f => f.id === dataset.fileId)
@@ -258,6 +338,9 @@ export function reportUpdate (reportStreamResponse) {
         dispatch(createQuery(dataset.id))
       }
     })
+
+    // Schedule query job refresh if auto-refresh is enabled
+    dispatch(scheduleQueryJobRefresh(reportStreamResponse))
   }
 }
 

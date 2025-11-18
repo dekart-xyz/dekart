@@ -2,7 +2,7 @@ import { ActionTypes as KeplerActionTypes } from '@kepler.gl/actions'
 import { setStreamError } from '../actions/message'
 import { queryChanged, queryParamChanged, updateQueryParamsFromQueries } from '../actions/query'
 import { setReadmeValue } from '../actions/readme'
-import { closeReport, forkReport, newForkedReport, newReport, openReport, reportsListUpdate, reportTitleChange, reportUpdate, reportWillOpen, savedReport, saveMap, setAutoRefreshIntervalSeconds, setReportChanged, toggleReportEdit, toggleReportFullscreen, unsubscribeReports } from '../actions/report'
+import { closeReport, forkReport, newForkedReport, newReport, openReport, reportsListUpdate, reportTitleChange, reportUpdate, reportWillOpen, savedReport, saveMap, setAutoRefreshIntervalSeconds, setQueryJobRefreshTimeout, setReportChanged, toggleReportEdit, toggleReportFullscreen, unsubscribeReports } from '../actions/report'
 
 export function reportDirectAccessEmails (state = [], action) {
   switch (action.type) {
@@ -42,7 +42,8 @@ const defaultReportStatus = {
   lastSaved: 0,
   savedReportVersion: 0,
   fullscreen: null,
-  autoRefreshIntervalSeconds: 0
+  autoRefreshIntervalSeconds: 0,
+  queryJobRefreshTimeoutId: null
 }
 export function reportStatus (state = defaultReportStatus, action) {
   switch (action.type) {
@@ -102,6 +103,9 @@ export function reportStatus (state = defaultReportStatus, action) {
       }
     }
     case openReport.name: {
+      if (state.queryJobRefreshTimeoutId) {
+        clearTimeout(state.queryJobRefreshTimeoutId)
+      }
       return {
         ...defaultReportStatus,
         opened: true,
@@ -117,6 +121,9 @@ export function reportStatus (state = defaultReportStatus, action) {
       }
     }
     case closeReport.name:
+      if (state.queryJobRefreshTimeoutId) {
+        clearTimeout(state.queryJobRefreshTimeoutId)
+      }
       return {
         ...defaultReportStatus,
         willOpen: true
@@ -138,9 +145,21 @@ export function reportStatus (state = defaultReportStatus, action) {
         newReportId: action.id
       }
     case setAutoRefreshIntervalSeconds.name:
+      if (state.queryJobRefreshTimeoutId) {
+        clearTimeout(state.queryJobRefreshTimeoutId)
+      }
       return {
         ...state,
-        autoRefreshIntervalSeconds: action.autoRefreshIntervalSeconds
+        autoRefreshIntervalSeconds: action.autoRefreshIntervalSeconds,
+        queryJobRefreshTimeoutId: null
+      }
+    case setQueryJobRefreshTimeout.name:
+      if (state.queryJobRefreshTimeoutId) {
+        clearTimeout(state.queryJobRefreshTimeoutId)
+      }
+      return {
+        ...state,
+        queryJobRefreshTimeoutId: action.timeoutId
       }
     default:
       return state
