@@ -2,7 +2,7 @@ import { combineReducers } from 'redux'
 import { ActionTypes as KeplerActionTypes } from '@kepler.gl/actions'
 import { setUserMapboxAccessTokenUpdater } from '@kepler.gl/reducers/dist/ui-state-updaters'
 import { openReport, reportUpdate } from '../actions/report'
-import { lastQueryExecutionTime, numRunningQueries, queries, queryJobs, queryParams, queryStatus } from './queryReducer'
+import { numRunningQueries, queries, queryJobs, queryParams, queryStatus } from './queryReducer'
 import { setUsage } from '../actions/usage'
 import { setEnv } from '../actions/env'
 import { newRelease } from '../actions/version'
@@ -168,6 +168,5 @@ export default combineReducers({
   sessionStorage,
   readme,
   analytics,
-  upgradeModal,
-  lastQueryExecutionTime
+  upgradeModal
 })

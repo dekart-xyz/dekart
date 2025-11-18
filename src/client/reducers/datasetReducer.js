@@ -2,6 +2,21 @@ import { combineReducers } from 'redux'
 import { addDatasetToMap, addToLoadFilesQueue, cancelDownloading, closeDatasetSettingsModal, downloadDataset, downloadingProgress, finishAddingDatasetToMap, finishDownloading, keplerDatasetFinishUpdating, keplerDatasetStartUpdating, openDatasetSettingsModal, processDownloadError, removeFromLoadFilesQueue, setActiveDataset, setLoadFilesProcessing } from '../actions/dataset'
 import { openReport, reportUpdate } from '../actions/report'
 
+function lastAddedQueryParamsHash (state = {}, action) {
+  switch (action.type) {
+    case addDatasetToMap.name:
+      if (action.dataset.queryId) {
+        return {
+          ...state,
+          [action.dataset.queryIda]: action.queryParamsHash
+        }
+      }
+      return state
+    default:
+      return state
+  }
+}
+
 function downloading (state = [], action) {
   switch (action.type) {
     case downloadDataset.name:
@@ -153,5 +168,6 @@ export default combineReducers({
   settings,
   list,
   updatingNum,
-  loadFilesQueue
+  loadFilesQueue,
+  lastAddedQueryParamsHash
 })
