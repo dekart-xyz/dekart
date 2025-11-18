@@ -8,7 +8,7 @@ function lastAddedQueryParamsHash (state = {}, action) {
       if (action.dataset.queryId) {
         return {
           ...state,
-          [action.dataset.queryIda]: action.queryParamsHash
+          [action.dataset.queryId]: action.queryParamsHash
         }
       }
       return state
