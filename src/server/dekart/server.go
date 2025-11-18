@@ -17,6 +17,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
@@ -278,7 +279,8 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 
 	}
 	return &proto.GetEnvResponse{
-		Variables: variables,
+		Variables:  variables,
+		ServerTime: time.Now().Unix(),
 	}, nil
 }
 

@@ -1658,6 +1658,9 @@ export class GetEnvResponse extends jspb.Message {
   setVariablesList(value: Array<GetEnvResponse.Variable>): void;
   addVariables(value?: GetEnvResponse.Variable, index?: number): GetEnvResponse.Variable;
 
+  getServerTime(): number;
+  setServerTime(value: number): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetEnvResponse.AsObject;
   static toObject(includeInstance: boolean, msg: GetEnvResponse): GetEnvResponse.AsObject;
@@ -1671,6 +1674,7 @@ export class GetEnvResponse extends jspb.Message {
 export namespace GetEnvResponse {
   export type AsObject = {
     variablesList: Array<GetEnvResponse.Variable.AsObject>,
+    serverTime: number,
   }
 
   export class Variable extends jspb.Message {

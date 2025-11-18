@@ -475,6 +475,7 @@ message GetEnvResponse {
         string value = 2;
     }
     repeated Variable variables = 1;
+    int64 server_time = 2; // server time in seconds
 }
 
 // RedirectState is used to pass state between the server and the UI via redirect

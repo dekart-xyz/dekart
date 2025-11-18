@@ -323,7 +323,7 @@ export function cancelDownloading () {
   }
 }
 
-export function downloadDataset (dataset, sourceId, extension, prevDatasetsList) {
+export function downloadDataset (dataset, sourceId, extension, prevDatasetsList, isOutOfDate = false) {
   return async (dispatch, getState) => {
     const { files, queries } = getState()
     const label = getDatasetName(dataset, queries, files)

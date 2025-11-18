@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
 import Modal from 'antd/es/modal'
 import Select from 'antd/es/select'
-import { ClockCircleOutlined, SettingOutlined } from '@ant-design/icons'
+import { ClockCircleOutlined } from '@ant-design/icons'
 import Button from 'antd/es/button'
-import Tooltip from 'antd/es/tooltip'
 import shareStyles from './ShareButton.module.css'
 import { setAutoRefreshIntervalSeconds } from './actions/report'
 import { useDispatch, useSelector } from 'react-redux'
@@ -13,6 +12,8 @@ import { useDispatch, useSelector } from 'react-redux'
 
 const INTERVAL_OPTIONS = [
   { value: 0, label: 'None' },
+  { value: 5, label: '5 seconds' },
+  { value: 10, label: '10 seconds' },
   { value: 60, label: '1 minute' },
   { value: 300, label: '5 minutes' },
   { value: 600, label: '10 minutes' },

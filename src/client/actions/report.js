@@ -5,7 +5,7 @@ import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
 import { success } from './message'
 import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType, SetTrackViewersRequest, SetAutoRefreshIntervalSecondsRequest } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
-import { createQuery, downloadQuerySource } from './query'
+import { createQuery, downloadQuerySource, runQuery } from './query'
 import { downloadDataset } from './dataset'
 import { shouldAddQuery } from '../lib/shouldAddQuery'
 import { shouldUpdateDataset } from '../lib/shouldUpdateDataset'
@@ -112,6 +112,48 @@ export function setReportChanged (changed) {
   return { type: setReportChanged.name, changed }
 }
 
+function isReportOutOfDate (reportStreamResponse, getState) {
+  const { report, queryJobsList } = reportStreamResponse
+  const { env, queryParams } = getState()
+
+  // If auto-refresh is not enabled, report is not outdated
+  const autoRefreshIntervalSeconds = report?.autoRefreshIntervalSeconds || 0
+  if (autoRefreshIntervalSeconds <= 0) {
+    return false
+  }
+
+  // If we don't have server time info, we can't accurately determine if it's outdated
+  if (!env.serverTime || !env.receivedTime) {
+    return false
+  }
+
+  // Calculate current server time accounting for clock skew
+  const currentClientTime = Math.floor(Date.now() / 1000)
+  const timeSinceReceived = currentClientTime - env.receivedTime
+  const currentServerTime = env.serverTime + timeSinceReceived
+
+  // Find the most recent query job update time, filtering by queryParamsHash
+  let mostRecentUpdatedAt = 0
+  if (queryJobsList && queryJobsList.length > 0) {
+    const matchingJobs = queryJobsList.filter(job => job.queryParamsHash === queryParams.hash)
+    if (matchingJobs.length > 0) {
+      mostRecentUpdatedAt = Math.max(...matchingJobs.map(job => job.updatedAt || 0))
+    }
+  }
+
+  // If no query jobs have been updated, consider it outdated if interval has passed
+  if (mostRecentUpdatedAt === 0) {
+    // Use report updatedAt as fallback
+    mostRecentUpdatedAt = report?.updatedAt || 0
+  }
+
+  // Calculate elapsed time since last update
+  const elapsedTime = currentServerTime - mostRecentUpdatedAt
+
+  // Report is outdated if elapsed time exceeds the auto-refresh interval
+  return elapsedTime >= autoRefreshIntervalSeconds
+}
+
 export function reportUpdate (reportStreamResponse) {
   const { report, queriesList, datasetsList, filesList, queryJobsList, directAccessEmailsList } = reportStreamResponse
   return async (dispatch, getState) => {
@@ -127,6 +169,7 @@ export function reportUpdate (reportStreamResponse) {
       reportStatus: { lastChanged, lastSaved, savedReportVersion }
     } = getState()
 
+    const isOutOfDate = isReportOutOfDate(reportStreamResponse, getState)
     dispatch({
       type: reportUpdate.name,
       report,
@@ -137,7 +180,8 @@ export function reportUpdate (reportStreamResponse) {
       filesList,
       queryJobsList,
       hash,
-      directAccessEmailsList
+      directAccessEmailsList,
+      isOutOfDate
     })
     let mapConfigUpdated = false
     if (
@@ -184,12 +228,18 @@ export function reportUpdate (reportStreamResponse) {
           if (dataset.connectionType === ConnectionType.CONNECTION_TYPE_WHEROBOTS) {
             extension = 'parquet'
           }
-          dispatch(downloadDataset(
-            dataset,
-            queryJob.jobResultId,
-            extension,
-            prevDatasetsList
-          ))
+          const { canRun, queryText } = getState().queryStatus[dataset.queryId]
+
+          if (isOutOfDate && canRun) {
+            dispatch(runQuery(dataset.queryId, queryText))
+          } else {
+            dispatch(downloadDataset(
+              dataset,
+              queryJob.jobResultId,
+              extension,
+              prevDatasetsList
+            ))
+          }
         }
       } else if (dataset.fileId) {
         const file = filesList.find(f => f.id === dataset.fileId)

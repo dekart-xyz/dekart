@@ -2,7 +2,7 @@ import { combineReducers } from 'redux'
 import { ActionTypes as KeplerActionTypes } from '@kepler.gl/actions'
 import { setUserMapboxAccessTokenUpdater } from '@kepler.gl/reducers/dist/ui-state-updaters'
 import { openReport, reportUpdate } from '../actions/report'
-import { numRunningQueries, queries, queryJobs, queryParams, queryStatus } from './queryReducer'
+import { lastQueryExecutionTime, numRunningQueries, queries, queryJobs, queryParams, queryStatus } from './queryReducer'
 import { setUsage } from '../actions/usage'
 import { setEnv } from '../actions/env'
 import { newRelease } from '../actions/version'
@@ -73,7 +73,7 @@ function usage (state = defaultUsage, action) {
   }
 }
 
-const defaultEnv = { loaded: false, variables: {}, authEnabled: null, authType: 'UNSPECIFIED' }
+const defaultEnv = { loaded: false, variables: {}, authEnabled: null, authType: 'UNSPECIFIED', serverTime: null, receivedTime: null }
 function env (state = defaultEnv, action) {
   switch (action.type) {
     case setRedirectState.name:
@@ -89,7 +89,9 @@ function env (state = defaultEnv, action) {
         secretsEnabled: Boolean(action.variables.SECRETS_ENABLED),
         uxConfig: JSON.parse(action.variables.CLOUD_UX_CONFIG_JSON || '{}'),
         isCloud: Boolean(action.variables.DEKART_CLOUD),
-        isSnowpark: Boolean(action.variables.IS_SNOWPARK)
+        isSnowpark: Boolean(action.variables.IS_SNOWPARK),
+        serverTime: action.serverTime,
+        receivedTime: Math.floor(Date.now() / 1000)
       }
     default:
       return state
@@ -166,5 +168,6 @@ export default combineReducers({
   sessionStorage,
   readme,
   analytics,
-  upgradeModal
+  upgradeModal,
+  lastQueryExecutionTime
 })

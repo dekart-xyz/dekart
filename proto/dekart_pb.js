@@ -13509,7 +13509,8 @@ proto.GetEnvResponse.prototype.toObject = function(opt_includeInstance) {
 proto.GetEnvResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
     variablesList: jspb.Message.toObjectList(msg.getVariablesList(),
-    proto.GetEnvResponse.Variable.toObject, includeInstance)
+    proto.GetEnvResponse.Variable.toObject, includeInstance),
+    serverTime: jspb.Message.getFieldWithDefault(msg, 2, 0)
   };
 
   if (includeInstance) {
@@ -13551,6 +13552,10 @@ proto.GetEnvResponse.deserializeBinaryFromReader = function(msg, reader) {
       reader.readMessage(value,proto.GetEnvResponse.Variable.deserializeBinaryFromReader);
       msg.addVariables(value);
       break;
+    case 2:
+      var value = /** @type {number} */ (reader.readInt64());
+      msg.setServerTime(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -13586,6 +13591,13 @@ proto.GetEnvResponse.serializeBinaryToWriter = function(message, writer) {
       1,
       f,
       proto.GetEnvResponse.Variable.serializeBinaryToWriter
+    );
+  }
+  f = message.getServerTime();
+  if (f !== 0) {
+    writer.writeInt64(
+      2,
+      f
     );
   }
 };
@@ -13820,6 +13832,24 @@ proto.GetEnvResponse.prototype.addVariables = function(opt_value, opt_index) {
  */
 proto.GetEnvResponse.prototype.clearVariablesList = function() {
   return this.setVariablesList([]);
+};
+
+
+/**
+ * optional int64 server_time = 2;
+ * @return {number}
+ */
+proto.GetEnvResponse.prototype.getServerTime = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 2, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.GetEnvResponse} returns this
+ */
+proto.GetEnvResponse.prototype.setServerTime = function(value) {
+  return jspb.Message.setProto3IntField(this, 2, value);
 };
 
 

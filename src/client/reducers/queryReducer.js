@@ -16,6 +16,17 @@ export function queries (state = [], action) {
   }
 }
 
+export function lastQueryExecutionTime (state = null, action) {
+  switch (action.type) {
+    case reportUpdate.name:
+      return action.queryJobsList.reduce((lastTime, job) => {
+        return Math.min(lastTime, job.updatedAt)
+      }, 0)
+    default:
+      return state
+  }
+}
+
 export function numRunningQueries (state = 0, action) {
   switch (action.type) {
     case openReport.name:
