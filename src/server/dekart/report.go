@@ -71,7 +71,8 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 			query_params,
 			allow_export,
 			readme,
-			workspace_id
+			workspace_id,
+			auto_refresh_interval_seconds
 		from reports as r
 		where (id=$5) and (archived = $6)
 		limit 1`,
@@ -116,6 +117,7 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 			&report.AllowExport,
 			&readme,
 			&reportWorkspaceID,
+			&report.AutoRefreshIntervalSeconds,
 		)
 		if err != nil {
 			errtype.LogError(err, "failed to scan report")
@@ -551,6 +553,53 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 	}, nil
 }
 
+func (s Server) SetAutoRefreshIntervalSeconds(ctx context.Context, req *proto.SetAutoRefreshIntervalSecondsRequest) (*proto.SetAutoRefreshIntervalSecondsResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	workspaceInfo := checkWorkspace(ctx)
+	if workspaceInfo.Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	}
+	_, err := uuid.Parse(req.ReportId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	report, err := s.getReport(ctx, req.ReportId)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if !report.CanWrite {
+		err := fmt.Errorf("cannot set auto refresh interval seconds for report %s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.PermissionDenied, "Cannot set auto refresh interval seconds")
+	}
+	if req.AutoRefreshIntervalSeconds > 0 && req.AutoRefreshIntervalSeconds < 30 {
+		return nil, status.Error(codes.InvalidArgument, "Auto refresh interval seconds must be greater than 0 and less than 30")
+	}
+	if req.AutoRefreshIntervalSeconds < 0 {
+		return nil, status.Error(codes.InvalidArgument, "Auto refresh interval seconds must be greater than 0")
+	}
+	_, err = s.db.ExecContext(ctx,
+		`update reports set auto_refresh_interval_seconds=$1 where id=$2`,
+		req.AutoRefreshIntervalSeconds,
+		req.ReportId,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	s.reportStreams.Ping(req.ReportId)
+	return &proto.SetAutoRefreshIntervalSecondsResponse{}, nil
+}
+
 // UpdateReport implementation
 func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest) (*proto.UpdateReportResponse, error) {
 	claims := user.GetClaims(ctx)
@@ -561,8 +610,24 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	if workspaceInfo.Expired {
 		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
 	}
-	if workspaceInfo.UserRole == proto.UserRole_ROLE_VIEWER {
-		return nil, status.Error(codes.PermissionDenied, "Only admins and editors can update reports")
+	_, err := uuid.Parse(req.ReportId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	report, err := s.getReport(ctx, req.ReportId)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if !report.CanWrite {
+		err := fmt.Errorf("cannot allow export for report %s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.PermissionDenied, "Cannot allow export")
 	}
 
 	// Validate map config size to prevent gRPC message size errors
@@ -600,7 +665,6 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	}
 
 	var result sql.Result
-	var err error
 	updated_at := time.Now()
 	if workspaceInfo.IsPlayground {
 		result, err = s.db.ExecContext(ctx,

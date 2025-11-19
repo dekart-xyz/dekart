@@ -199,7 +199,11 @@ async function processLoadFilesQueue (dispatch, getState) {
 export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
   return async function (dispatch, getState) {
     // must be before async so dataset is not added twice
-    dispatch({ type: addDatasetToMap.name, dataset })
+    const { lastAddedQueryParamsHash } = getState().dataset
+    const queryParamsHash = getState().queryParams.hash
+    const { dataset: { list: datasets }, files, queries, keplerGl, queryJobs } = getState()
+    const queryJob = queryJobs.find(j => j.queryId === dataset.queryId && j.queryParamsHash === queryParamsHash)
+    dispatch({ type: addDatasetToMap.name, dataset, queryParamsHash, queryJob })
     const reportId = getState().report?.id
     if (!isWasmInitialized) {
       isWasmInitialized = true
@@ -210,8 +214,6 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
         return
       }
     }
-    const { dataset: { list: datasets }, files, queries, keplerGl, queryJobs } = getState()
-    const queryJob = queryJobs.find(j => j.queryId === dataset.queryId)
     const label = getDatasetName(dataset, queries, files)
     let data
     try {
@@ -272,6 +274,12 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
         dispatch(removeDatasetFromKepler(dataset.id))
 
         // add dataset with previous config
+        const { reportStatus } = getState()
+        const updateOptions = { keepExistingConfig: true }
+        // In view mode, prevent auto-centering/zooming
+        if (!reportStatus.edit && queryJob && queryJob.queryParamsHash === lastAddedQueryParamsHash[dataset.queryId]) {
+          updateOptions.centerMap = false
+        }
         dispatch(addDataToMap({
           datasets: {
             info: {
@@ -280,7 +288,7 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
             },
             data
           },
-          options: { keepExistingConfig: true },
+          options: updateOptions,
           config // https://github.com/keplergl/kepler.gl/issues/176#issuecomment-410326304
         }))
 

@@ -129,6 +129,46 @@ export namespace GetWherobotsConnectionHintResponse {
   }
 }
 
+export class SetAutoRefreshIntervalSecondsRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  getAutoRefreshIntervalSeconds(): number;
+  setAutoRefreshIntervalSeconds(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): SetAutoRefreshIntervalSecondsRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: SetAutoRefreshIntervalSecondsRequest): SetAutoRefreshIntervalSecondsRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: SetAutoRefreshIntervalSecondsRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): SetAutoRefreshIntervalSecondsRequest;
+  static deserializeBinaryFromReader(message: SetAutoRefreshIntervalSecondsRequest, reader: jspb.BinaryReader): SetAutoRefreshIntervalSecondsRequest;
+}
+
+export namespace SetAutoRefreshIntervalSecondsRequest {
+  export type AsObject = {
+    reportId: string,
+    autoRefreshIntervalSeconds: number,
+  }
+}
+
+export class SetAutoRefreshIntervalSecondsResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): SetAutoRefreshIntervalSecondsResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: SetAutoRefreshIntervalSecondsResponse): SetAutoRefreshIntervalSecondsResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: SetAutoRefreshIntervalSecondsResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): SetAutoRefreshIntervalSecondsResponse;
+  static deserializeBinaryFromReader(message: SetAutoRefreshIntervalSecondsResponse, reader: jspb.BinaryReader): SetAutoRefreshIntervalSecondsResponse;
+}
+
+export namespace SetAutoRefreshIntervalSecondsResponse {
+  export type AsObject = {
+  }
+}
+
 export class AddReportDirectAccessRequest extends jspb.Message {
   getReportId(): string;
   setReportId(value: string): void;
@@ -1618,6 +1658,9 @@ export class GetEnvResponse extends jspb.Message {
   setVariablesList(value: Array<GetEnvResponse.Variable>): void;
   addVariables(value?: GetEnvResponse.Variable, index?: number): GetEnvResponse.Variable;
 
+  getServerTime(): number;
+  setServerTime(value: number): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetEnvResponse.AsObject;
   static toObject(includeInstance: boolean, msg: GetEnvResponse): GetEnvResponse.AsObject;
@@ -1631,6 +1674,7 @@ export class GetEnvResponse extends jspb.Message {
 export namespace GetEnvResponse {
   export type AsObject = {
     variablesList: Array<GetEnvResponse.Variable.AsObject>,
+    serverTime: number,
   }
 
   export class Variable extends jspb.Message {
@@ -1978,6 +2022,9 @@ export class Report extends jspb.Message {
   getCanRefresh(): boolean;
   setCanRefresh(value: boolean): void;
 
+  getAutoRefreshIntervalSeconds(): number;
+  setAutoRefreshIntervalSeconds(value: number): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Report.AsObject;
   static toObject(includeInstance: boolean, msg: Report): Report.AsObject;
@@ -2011,6 +2058,7 @@ export namespace Report {
     hasDirectAccess: boolean,
     trackViewers: boolean,
     canRefresh: boolean,
+    autoRefreshIntervalSeconds: number,
   }
 }
 

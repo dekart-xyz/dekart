@@ -1,7 +1,7 @@
-import { useHistory } from 'react-router'
+import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 import styles from './ReportHeaderButtons.module.css'
 import Button from 'antd/es/button'
-import { EyeOutlined, DownloadOutlined, CloudOutlined, EditOutlined, ForkOutlined, ReloadOutlined, LoadingOutlined, CloudSyncOutlined, PlusOutlined, InfoCircleOutlined } from '@ant-design/icons'
+import { EyeOutlined, DownloadOutlined, CloudOutlined, EditOutlined, ForkOutlined, ReloadOutlined, LoadingOutlined, CloudSyncOutlined, PlusOutlined, InfoCircleOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import { useDispatch, useSelector } from 'react-redux'
 import ShareButton from './ShareButton'
 import { forkReport, saveMap } from './actions/report'
@@ -9,10 +9,24 @@ import { runAllQueries } from './actions/query'
 import { toggleModal } from '@kepler.gl/actions/dist/ui-state-actions'
 import { EXPORT_DATA_ID, EXPORT_IMAGE_ID, EXPORT_MAP_ID } from '@kepler.gl/constants'
 import Dropdown from 'antd/es/dropdown'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Select from 'antd/es/select'
 import { track } from './lib/tracking'
 import { ForkOnboarding, useRequireOnboarding } from './ForkOnboarding'
+import { AutoRefreshSettingsModal } from './AutoRefreshSettings'
+import classNames from 'classnames'
+import { goToPresent, goToSource } from './lib/navigation'
+
+function formatIntervalLabel (seconds) {
+  if (seconds === 0) return 'None'
+  if (seconds === 60) return '1 min'
+  if (seconds === 300) return '5 min'
+  if (seconds === 600) return '10 min'
+  if (seconds === 900) return '15 min'
+  if (seconds === 1800) return '30 min'
+  if (seconds === 3600) return '1 hour'
+  return `${seconds}s`
+}
 
 function ForkButton ({ primary }) {
   const dispatch = useDispatch()
@@ -66,28 +80,69 @@ function ForkButton ({ primary }) {
   )
 }
 
-function RefreshButton () {
+function RefreshButton ({ showAutoRefreshSettings = false }) {
   const { canRefresh } = useSelector(state => state.report)
   const numRunningQueries = useSelector(state => state.numRunningQueries)
   const numQueries = useSelector(state => state.queries.length)
   const dispatch = useDispatch()
+  const { canWrite } = useSelector(state => state.report)
+  const edit = useSelector(state => state.reportStatus.edit)
+  const [autoRefreshModalVisible, setAutoRefreshModalVisible] = useState(false)
+  const autoRefreshIntervalSeconds = useSelector(state => state.report?.autoRefreshIntervalSeconds)
   if (!canRefresh || numQueries === 0) {
     return null
   }
+
+  const handleRefresh = () => {
+    if (numRunningQueries) {
+      return
+    }
+    track('RefreshAllQueries')
+    dispatch(runAllQueries())
+  }
+
+  const items = [
+    {
+      label: 'Refresh Now',
+      key: 'refresh',
+      id: 'dekart-refresh-now-button',
+      icon: numRunningQueries ? <LoadingOutlined /> : <ReloadOutlined />,
+      disabled: numRunningQueries,
+      onClick: handleRefresh
+    },
+    {
+      type: 'divider'
+    },
+    {
+      label: autoRefreshIntervalSeconds > 0
+        ? `Auto Refresh: ${formatIntervalLabel(autoRefreshIntervalSeconds)} ${edit ? '(paused)' : ''}`
+        : 'Auto Refresh Settings',
+      key: 'auto-refresh',
+      icon: <ClockCircleOutlined />,
+      disabled: !canWrite,
+      onClick: () => setAutoRefreshModalVisible(true)
+    }
+  ]
+
   return (
-    <Button
-      id='dekart-refresh-button'
-      type='text'
-      icon={numRunningQueries ? <LoadingOutlined /> : <ReloadOutlined />}
-      title='Re-run all queries'
-      onClick={() => {
-        if (numRunningQueries) {
-          return
-        }
-        track('RefreshAllQueries')
-        dispatch(runAllQueries())
-      }}
-    />
+    <>
+      <Dropdown
+        menu={{ items }}
+        placement='bottomLeft'
+        trigger={['click']}
+      >
+        <Button
+          id='dekart-refresh-button'
+          type='text'
+          icon={numRunningQueries ? <LoadingOutlined /> : autoRefreshIntervalSeconds > 0 ? <span className={classNames({ [styles.shimmerIcon]: !edit })}><ClockCircleOutlined /></span> : <ReloadOutlined />}
+          title={autoRefreshIntervalSeconds > 0 ? 'Refresh (Auto-refresh enabled)' : 'Refresh'}
+        />
+      </Dropdown>
+      <AutoRefreshSettingsModal
+        visible={autoRefreshModalVisible}
+        onClose={() => setAutoRefreshModalVisible(false)}
+      />
+    </>
   )
 }
 
@@ -113,11 +168,6 @@ function useAutoSave () {
       clearTimeout(handler)
     }
   }, [canWrite, saving, changed, online, dispatch])
-}
-
-function goToPresent (history, id) {
-  const searchParams = new URLSearchParams(window.location.search)
-  history.replace(`/reports/${id}?${searchParams.toString()}`)
 }
 
 function useRequireWorkspace () {
@@ -166,7 +216,7 @@ function EditModeButtons () {
 
   return (
     <div className={styles.reportHeaderButtons}>
-      <RefreshButton />
+      <RefreshButton showAutoRefreshSettings />
       <ExportDropdown />
       {canWrite
         ? (
@@ -244,12 +294,6 @@ function ExportDropdown () {
   )
 }
 
-// goToSource redirects to the source view while preserving the current query params
-function goToSource (history, id) {
-  const searchParams = new URLSearchParams(window.location.search)
-  history.replace(`/reports/${id}/source?${searchParams.toString()}`)
-}
-
 function ViewSelect (value) {
   const history = useHistory()
   const { id } = useSelector(state => state.report)
@@ -282,7 +326,7 @@ function ViewModeButtons () {
   if (canWrite) {
     return (
       <div className={styles.reportHeaderButtons}>
-        <RefreshButton />
+        <RefreshButton showAutoRefreshSettings />
         <ExportDropdown />
         <ForkButton />
         <ViewSelect value='view' />

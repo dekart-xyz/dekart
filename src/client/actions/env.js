@@ -2,8 +2,8 @@ import { GetEnvRequest, GetEnvResponse } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 
-export function setEnv (variables) {
-  return { type: setEnv.name, variables }
+export function setEnv (variables, serverTime) {
+  return { type: setEnv.name, variables, serverTime }
 }
 
 const typeToName = Object.keys(GetEnvResponse.Variable.Type).map(n => n.slice(5))
@@ -13,12 +13,12 @@ export function getEnv () {
     dispatch({ type: getEnv.name })
     const req = new GetEnvRequest()
     dispatch(grpcCall(Dekart.GetEnv, req, (res) => {
-      const { variablesList } = res
+      const { variablesList, serverTime } = res
       const variables = variablesList.reduce((variables, v) => {
         variables[typeToName[v.type]] = v.value
         return variables
       }, {})
-      dispatch(setEnv(variables))
+      dispatch(setEnv(variables, serverTime))
     }))
   }
 }

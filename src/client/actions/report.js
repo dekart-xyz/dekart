@@ -3,9 +3,9 @@ import { removeDataset } from '@kepler.gl/actions'
 
 import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
 import { success } from './message'
-import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType, SetTrackViewersRequest } from 'dekart-proto/dekart_pb'
+import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType, SetTrackViewersRequest, SetAutoRefreshIntervalSecondsRequest } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
-import { createQuery, downloadQuerySource } from './query'
+import { createQuery, downloadQuerySource, runQuery } from './query'
 import { downloadDataset } from './dataset'
 import { shouldAddQuery } from '../lib/shouldAddQuery'
 import { shouldUpdateDataset } from '../lib/shouldUpdateDataset'
@@ -112,6 +112,95 @@ export function setReportChanged (changed) {
   return { type: setReportChanged.name, changed }
 }
 
+function isQueryJobOutOfDate (reportStreamResponse, getState, queryJob) {
+  const { report } = reportStreamResponse
+  const { env } = getState()
+
+  if (!queryJob) {
+    return false
+  }
+
+  // If auto-refresh is not enabled, report is not outdated
+  const autoRefreshIntervalSeconds = report?.autoRefreshIntervalSeconds || 0
+  if (autoRefreshIntervalSeconds <= 0) {
+    return false
+  }
+
+  // If we don't have server time info, we can't accurately determine if it's outdated
+  if (!env.serverTime || !env.receivedTime) {
+    return false
+  }
+
+  // Calculate current server time accounting for clock skew
+  const currentClientTime = Math.floor(Date.now() / 1000)
+  const timeSinceReceived = currentClientTime - env.receivedTime
+  const currentServerTime = env.serverTime + timeSinceReceived
+
+  // Calculate elapsed time since last update
+  const elapsedTime = currentServerTime - queryJob.updatedAt
+
+  // Report is outdated if elapsed time exceeds the auto-refresh interval
+  return elapsedTime >= autoRefreshIntervalSeconds
+}
+
+export function scheduleQueryJobRefresh (reportStreamResponse) {
+  return (dispatch, getState) => {
+    const { report } = reportStreamResponse
+    const autoRefreshIntervalSeconds = report?.autoRefreshIntervalSeconds || 0
+
+    // Only schedule if auto-refresh is enabled
+    if (autoRefreshIntervalSeconds <= 0) {
+      return
+    }
+
+    // Schedule the refresh timeout
+    const timeoutId = setTimeout(() => {
+      const state = getState()
+      const { queries, dataset: { list: datasetsList }, queryJobs, queryParams, report: currentReport, reportStatus: { edit } } = state
+
+      // Only proceed if auto-refresh is still enabled
+      if (!currentReport || (currentReport.autoRefreshIntervalSeconds || 0) <= 0 || !currentReport.canRefresh) {
+        return
+      }
+
+      // Create a fresh reportStreamResponse-like object with current state for isQueryJobOutOfDate
+      const currentReportStreamResponse = {
+        report: currentReport,
+        queryJobsList: queryJobs
+      }
+
+      // Check each dataset with a query and rerun if needed
+      datasetsList.forEach((dataset) => {
+        if (dataset.queryId) {
+          const query = queries.find(q => q.id === dataset.queryId)
+          if (!query) return
+
+          const queryJob = queryJobs.find(job => job.queryId === query.id && job.queryParamsHash === queryParams.hash)
+          if (!queryJob) return
+
+          const { canRun, queryText } = state.queryStatus[dataset.queryId] || {}
+          if (!edit && canRun && isQueryJobOutOfDate(currentReportStreamResponse, getState, queryJob)) {
+            dispatch(runQuery(dataset.queryId, queryText))
+          }
+        }
+      })
+
+      // Schedule the next refresh with current state
+      dispatch(scheduleQueryJobRefresh(currentReportStreamResponse))
+    }, autoRefreshIntervalSeconds * 1000)
+
+    // Store the timeout ID in Redux
+    dispatch({
+      type: setQueryJobRefreshTimeout.name,
+      timeoutId
+    })
+  }
+}
+
+export function setQueryJobRefreshTimeout (timeoutId) {
+  return { type: setQueryJobRefreshTimeout.name, timeoutId }
+}
+
 export function reportUpdate (reportStreamResponse) {
   const { report, queriesList, datasetsList, filesList, queryJobsList, directAccessEmailsList } = reportStreamResponse
   return async (dispatch, getState) => {
@@ -180,7 +269,13 @@ export function reportUpdate (reportStreamResponse) {
       if (dataset.queryId) {
         const query = queriesList.find(q => q.id === dataset.queryId)
         const queryJob = queryJobsList.find(job => job.queryId === query.id && job.queryParamsHash === queryParams.hash)
-        if (shouldAddQuery(queryJob, prevQueryJobsList, mapConfigUpdated) || shouldUpdateDataset(dataset, prevDatasetsList)) {
+        const { canRun, queryText } = getState().queryStatus[dataset.queryId]
+        const { edit } = getState().reportStatus
+        const lastAddedQueryQueryJob = getState().dataset.lastAddedQueryQueryJob[dataset.queryId]
+        const doNotRefreshWhenEdit = edit && lastAddedQueryQueryJob && queryJob && lastAddedQueryQueryJob.id === queryJob.id
+        if (report.canRefresh && canRun && isQueryJobOutOfDate(reportStreamResponse, getState, queryJob) && !doNotRefreshWhenEdit) {
+          dispatch(runQuery(dataset.queryId, queryText))
+        } else if (shouldAddQuery(queryJob, prevQueryJobsList, mapConfigUpdated) || shouldUpdateDataset(dataset, prevDatasetsList)) {
           if (dataset.connectionType === ConnectionType.CONNECTION_TYPE_WHEROBOTS) {
             extension = 'parquet'
           }
@@ -208,6 +303,9 @@ export function reportUpdate (reportStreamResponse) {
         dispatch(createQuery(dataset.id))
       }
     })
+
+    // Schedule query job refresh if auto-refresh is enabled
+    dispatch(scheduleQueryJobRefresh(reportStreamResponse))
   }
 }
 
@@ -348,6 +446,16 @@ export function setTrackViewers (reportId, trackViewers) {
     req.setReportId(reportId)
     req.setTrackViewers(trackViewers)
     dispatch(grpcCall(Dekart.SetTrackViewers, req))
+  }
+}
+
+export function setAutoRefreshIntervalSeconds (reportId, autoRefreshIntervalSeconds) {
+  return async (dispatch) => {
+    dispatch({ type: setAutoRefreshIntervalSeconds.name, autoRefreshIntervalSeconds })
+    const req = new SetAutoRefreshIntervalSecondsRequest()
+    req.setReportId(reportId)
+    req.setAutoRefreshIntervalSeconds(autoRefreshIntervalSeconds)
+    dispatch(grpcCall(Dekart.SetAutoRefreshIntervalSeconds, req))
   }
 }
 
