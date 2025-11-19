@@ -1,4 +1,4 @@
-import { useHistory } from 'react-router'
+import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 import styles from './ReportHeaderButtons.module.css'
 import Button from 'antd/es/button'
 import { EyeOutlined, DownloadOutlined, CloudOutlined, EditOutlined, ForkOutlined, ReloadOutlined, LoadingOutlined, CloudSyncOutlined, PlusOutlined, InfoCircleOutlined, ClockCircleOutlined } from '@ant-design/icons'
@@ -15,6 +15,7 @@ import { track } from './lib/tracking'
 import { ForkOnboarding, useRequireOnboarding } from './ForkOnboarding'
 import { AutoRefreshSettingsModal } from './AutoRefreshSettings'
 import classNames from 'classnames'
+import { goToPresent, goToSource } from './lib/navigation'
 
 function formatIntervalLabel (seconds) {
   if (seconds === 0) return 'None'
@@ -88,7 +89,6 @@ function RefreshButton ({ showAutoRefreshSettings = false }) {
   const edit = useSelector(state => state.reportStatus.edit)
   const [autoRefreshModalVisible, setAutoRefreshModalVisible] = useState(false)
   const autoRefreshIntervalSeconds = useSelector(state => state.report?.autoRefreshIntervalSeconds)
-
   if (!canRefresh || numQueries === 0) {
     return null
   }
@@ -115,7 +115,7 @@ function RefreshButton ({ showAutoRefreshSettings = false }) {
     },
     {
       label: autoRefreshIntervalSeconds > 0
-        ? `Auto Refresh: ${formatIntervalLabel(autoRefreshIntervalSeconds)}`
+        ? `Auto Refresh: ${formatIntervalLabel(autoRefreshIntervalSeconds)} ${edit ? '(paused)' : ''}`
         : 'Auto Refresh Settings',
       key: 'auto-refresh',
       icon: <ClockCircleOutlined />,
@@ -168,11 +168,6 @@ function useAutoSave () {
       clearTimeout(handler)
     }
   }, [canWrite, saving, changed, online, dispatch])
-}
-
-function goToPresent (history, id) {
-  const searchParams = new URLSearchParams(window.location.search)
-  history.replace(`/reports/${id}?${searchParams.toString()}`)
 }
 
 function useRequireWorkspace () {
@@ -297,12 +292,6 @@ function ExportDropdown () {
       />
     </Dropdown>
   )
-}
-
-// goToSource redirects to the source view while preserving the current query params
-function goToSource (history, id) {
-  const searchParams = new URLSearchParams(window.location.search)
-  history.replace(`/reports/${id}/source?${searchParams.toString()}`)
 }
 
 function ViewSelect (value) {

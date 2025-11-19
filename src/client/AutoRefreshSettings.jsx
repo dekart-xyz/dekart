@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import Modal from 'antd/es/modal'
 import Select from 'antd/es/select'
-import { ClockCircleOutlined } from '@ant-design/icons'
+import { ClockCircleOutlined, PauseOutlined } from '@ant-design/icons'
 import Button from 'antd/es/button'
 import shareStyles from './ShareButton.module.css'
 import { setAutoRefreshIntervalSeconds } from './actions/report'
 import { useDispatch, useSelector } from 'react-redux'
 import { track } from './lib/tracking'
+import { goToPresent } from './lib/navigation'
+import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 
 const INTERVAL_OPTIONS = [
   { value: 0, label: 'None' },
@@ -20,34 +22,52 @@ const INTERVAL_OPTIONS = [
   { value: 3600, label: '1 hour' }
 ]
 
-function ModalContent ({ interval, onIntervalChange, loadding }) {
+function ModalContent ({ interval, onIntervalChange, loading, edit }) {
   const intervalLabel = INTERVAL_OPTIONS.find(opt => opt.value === interval)?.label || 'None'
   const isEnabled = interval > 0
+  const history = useHistory()
+  const { id: reportId } = useSelector(state => state.report)
 
   return (
-    <div className={shareStyles.boolStatus}>
-      <div className={shareStyles.boolStatusIcon}>
-        <ClockCircleOutlined />
-      </div>
-      <div className={shareStyles.boolStatusLabel}>
-        <div className={shareStyles.statusLabelTitle}>Refresh Interval</div>
-        <div className={shareStyles.statusLabelDescription}>
-          {isEnabled
-            ? `Queries will automatically re-run every ${intervalLabel.toLowerCase()} when the map is in view mode.`
-            : 'Auto-refresh is disabled. Select an interval to enable auto-refresh.'}
+    <>
+      {isEnabled && edit && (
+        <div className={shareStyles.boolStatus} style={{ backgroundColor: '#fffbe6' }}>
+          <div className={shareStyles.boolStatusIcon}>
+            <PauseOutlined />
+          </div>
+          <div className={shareStyles.boolStatusLabel}>
+            <div className={shareStyles.statusLabelTitle}>Auto-refresh is paused in edit mode</div>
+            <div className={shareStyles.statusLabelDescription}>Auto-refresh will resume when you switch to view mode.</div>
+          </div>
+          <div className={shareStyles.boolStatusControl}>
+            <Button onClick={() => goToPresent(history, reportId)}>View Mode</Button>
+          </div>
+        </div>
+      )}
+      <div className={shareStyles.boolStatus}>
+        <div className={shareStyles.boolStatusIcon}>
+          <ClockCircleOutlined />
+        </div>
+        <div className={shareStyles.boolStatusLabel}>
+          <div className={shareStyles.statusLabelTitle}>Refresh Interval</div>
+          <div className={shareStyles.statusLabelDescription}>
+            {isEnabled
+              ? `Queries will automatically re-run every ${intervalLabel.toLowerCase()} when the map is in view mode.`
+              : 'Auto-refresh is disabled. Select an interval to enable auto-refresh.'}
+          </div>
+        </div>
+        <div className={shareStyles.boolStatusControl}>
+          <Select
+            value={interval}
+            onChange={onIntervalChange}
+            style={{ minWidth: 130 }}
+            options={INTERVAL_OPTIONS}
+            disabled={loading}
+            loading={loading}
+          />
         </div>
       </div>
-      <div className={shareStyles.boolStatusControl}>
-        <Select
-          value={interval}
-          onChange={onIntervalChange}
-          style={{ minWidth: 130 }}
-          options={INTERVAL_OPTIONS}
-          disabled={loadding}
-          loading={loadding}
-        />
-      </div>
-    </div>
+    </>
   )
 }
 
@@ -56,6 +76,7 @@ export function AutoRefreshSettingsModal ({ visible, onClose }) {
   const [refreshInterval, setRefreshInterval] = useState(autoRefreshIntervalSeconds)
   const dispatch = useDispatch()
   const reportId = useSelector(state => state.report.id)
+  const edit = useSelector(state => state.reportStatus.edit)
   const loading = autoRefreshIntervalSeconds !== refreshInterval
 
   useEffect(() => {
@@ -63,7 +84,7 @@ export function AutoRefreshSettingsModal ({ visible, onClose }) {
       setRefreshInterval(autoRefreshIntervalSeconds || 0)
       track('OpenAutoRefreshSettingsModal')
     }
-  }, [visible, autoRefreshIntervalSeconds, setRefreshInterval])
+  }, [visible, autoRefreshIntervalSeconds])
 
   const handleCancel = () => {
     onClose()
@@ -89,7 +110,8 @@ export function AutoRefreshSettingsModal ({ visible, onClose }) {
     >
       <ModalContent
         interval={refreshInterval}
-        loadding={loading}
+        loading={loading}
+        edit={edit}
         onIntervalChange={(value) => {
           setRefreshInterval(value)
           track('AutoRefreshIntervalChanged')
