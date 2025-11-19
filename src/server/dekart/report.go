@@ -581,6 +581,12 @@ func (s Server) SetAutoRefreshIntervalSeconds(ctx context.Context, req *proto.Se
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.PermissionDenied, "Cannot set auto refresh interval seconds")
 	}
+	if req.AutoRefreshIntervalSeconds > 0 && req.AutoRefreshIntervalSeconds < 30 {
+		return nil, status.Error(codes.InvalidArgument, "Auto refresh interval seconds must be greater than 0 and less than 30")
+	}
+	if req.AutoRefreshIntervalSeconds < 0 {
+		return nil, status.Error(codes.InvalidArgument, "Auto refresh interval seconds must be greater than 0")
+	}
 	_, err = s.db.ExecContext(ctx,
 		`update reports set auto_refresh_interval_seconds=$1 where id=$2`,
 		req.AutoRefreshIntervalSeconds,
@@ -604,9 +610,24 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	if workspaceInfo.Expired {
 		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
 	}
-	// TODO: why is it needed if we have can_write check?
-	if workspaceInfo.UserRole == proto.UserRole_ROLE_VIEWER {
-		return nil, status.Error(codes.PermissionDenied, "Only admins and editors can update reports")
+	_, err := uuid.Parse(req.ReportId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	report, err := s.getReport(ctx, req.ReportId)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if !report.CanWrite {
+		err := fmt.Errorf("cannot allow export for report %s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.PermissionDenied, "Cannot allow export")
 	}
 
 	// Validate map config size to prevent gRPC message size errors
@@ -644,7 +665,6 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	}
 
 	var result sql.Result
-	var err error
 	updated_at := time.Now()
 	if workspaceInfo.IsPlayground {
 		result, err = s.db.ExecContext(ctx,

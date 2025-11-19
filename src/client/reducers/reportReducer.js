@@ -102,7 +102,8 @@ export function reportStatus (state = defaultReportStatus, action) {
         title: action.report.title,
         lastUpdated: Date.now(),
         fullscreen,
-        autoRefreshIntervalSeconds: action.report.autoRefreshIntervalSeconds || 0
+        autoRefreshIntervalSeconds: action.report.autoRefreshIntervalSeconds || 0,
+        queryJobRefreshTimeoutId: null
       }
     }
     case openReport.name: {

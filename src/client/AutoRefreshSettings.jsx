@@ -58,7 +58,7 @@ export function AutoRefreshSettingsModal ({ visible, onClose }) {
   const [interval, setInterval] = useState(autoRefreshIntervalSeconds)
   const dispatch = useDispatch()
   const reportId = useSelector(state => state.report.id)
-  const loadding = autoRefreshIntervalSeconds !== interval
+  const loading = autoRefreshIntervalSeconds !== interval
 
   useEffect(() => {
     if (visible) {
@@ -90,7 +90,7 @@ export function AutoRefreshSettingsModal ({ visible, onClose }) {
     >
       <ModalContent
         interval={interval}
-        loadding={loadding}
+        loadding={loading}
         onIntervalChange={(value) => {
           setInterval(value)
           dispatch(setAutoRefreshIntervalSeconds(reportId, value))
