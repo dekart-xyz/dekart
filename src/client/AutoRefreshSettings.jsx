@@ -6,9 +6,7 @@ import Button from 'antd/es/button'
 import shareStyles from './ShareButton.module.css'
 import { setAutoRefreshIntervalSeconds } from './actions/report'
 import { useDispatch, useSelector } from 'react-redux'
-
-// Auto-refresh settings component
-// Changes are saved immediately via setAutoRefreshIntervalSeconds action
+import { track } from './lib/tracking'
 
 const INTERVAL_OPTIONS = [
   { value: 0, label: 'None' },
@@ -55,16 +53,17 @@ function ModalContent ({ interval, onIntervalChange, loadding }) {
 
 export function AutoRefreshSettingsModal ({ visible, onClose }) {
   const autoRefreshIntervalSeconds = useSelector(state => state.report?.autoRefreshIntervalSeconds)
-  const [interval, setInterval] = useState(autoRefreshIntervalSeconds)
+  const [refreshInterval, setRefreshInterval] = useState(autoRefreshIntervalSeconds)
   const dispatch = useDispatch()
   const reportId = useSelector(state => state.report.id)
-  const loading = autoRefreshIntervalSeconds !== interval
+  const loading = autoRefreshIntervalSeconds !== refreshInterval
 
   useEffect(() => {
     if (visible) {
-      setInterval(autoRefreshIntervalSeconds || 0)
+      setRefreshInterval(autoRefreshIntervalSeconds || 0)
+      track('OpenAutoRefreshSettingsModal')
     }
-  }, [visible, autoRefreshIntervalSeconds, setInterval])
+  }, [visible, autoRefreshIntervalSeconds, setRefreshInterval])
 
   const handleCancel = () => {
     onClose()
@@ -89,10 +88,11 @@ export function AutoRefreshSettingsModal ({ visible, onClose }) {
       width={600}
     >
       <ModalContent
-        interval={interval}
+        interval={refreshInterval}
         loadding={loading}
         onIntervalChange={(value) => {
-          setInterval(value)
+          setRefreshInterval(value)
+          track('AutoRefreshIntervalChanged')
           dispatch(setAutoRefreshIntervalSeconds(reportId, value))
         }}
       />
