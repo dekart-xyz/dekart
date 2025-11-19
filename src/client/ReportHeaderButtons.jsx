@@ -1,7 +1,7 @@
 import { useHistory } from 'react-router'
 import styles from './ReportHeaderButtons.module.css'
 import Button from 'antd/es/button'
-import { EyeOutlined, DownloadOutlined, CloudOutlined, EditOutlined, ForkOutlined, ReloadOutlined, LoadingOutlined, CloudSyncOutlined, PlusOutlined, InfoCircleOutlined, SettingOutlined, ClockCircleOutlined } from '@ant-design/icons'
+import { EyeOutlined, DownloadOutlined, CloudOutlined, EditOutlined, ForkOutlined, ReloadOutlined, LoadingOutlined, CloudSyncOutlined, PlusOutlined, InfoCircleOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import { useDispatch, useSelector } from 'react-redux'
 import ShareButton from './ShareButton'
 import { forkReport, saveMap } from './actions/report'

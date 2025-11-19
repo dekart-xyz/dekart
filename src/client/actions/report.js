@@ -112,48 +112,6 @@ export function setReportChanged (changed) {
   return { type: setReportChanged.name, changed }
 }
 
-function isReportOutOfDate (reportStreamResponse, getState) {
-  const { report, queryJobsList } = reportStreamResponse
-  const { env, queryParams } = getState()
-
-  // If auto-refresh is not enabled, report is not outdated
-  const autoRefreshIntervalSeconds = report?.autoRefreshIntervalSeconds || 0
-  if (autoRefreshIntervalSeconds <= 0) {
-    return false
-  }
-
-  // If we don't have server time info, we can't accurately determine if it's outdated
-  if (!env.serverTime || !env.receivedTime) {
-    return false
-  }
-
-  // Calculate current server time accounting for clock skew
-  const currentClientTime = Math.floor(Date.now() / 1000)
-  const timeSinceReceived = currentClientTime - env.receivedTime
-  const currentServerTime = env.serverTime + timeSinceReceived
-
-  // Find the most recent query job update time, filtering by queryParamsHash
-  let mostRecentUpdatedAt = 0
-  if (queryJobsList && queryJobsList.length > 0) {
-    const matchingJobs = queryJobsList.filter(job => job.queryParamsHash === queryParams.hash)
-    if (matchingJobs.length > 0) {
-      mostRecentUpdatedAt = Math.max(...matchingJobs.map(job => job.updatedAt || 0))
-    }
-  }
-
-  // If no query jobs have been updated, consider it outdated if interval has passed
-  if (mostRecentUpdatedAt === 0) {
-    // Use report updatedAt as fallback
-    mostRecentUpdatedAt = report?.updatedAt || 0
-  }
-
-  // Calculate elapsed time since last update
-  const elapsedTime = currentServerTime - mostRecentUpdatedAt
-
-  // Report is outdated if elapsed time exceeds the auto-refresh interval
-  return elapsedTime >= autoRefreshIntervalSeconds
-}
-
 function isQueryJobOutOfDate (reportStreamResponse, getState, queryJob) {
   const { report } = reportStreamResponse
   const { env } = getState()
