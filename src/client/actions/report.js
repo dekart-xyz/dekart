@@ -197,7 +197,7 @@ export function scheduleQueryJobRefresh (reportStreamResponse) {
       const { queries, dataset: { list: datasetsList }, queryJobs, queryParams, report: currentReport, reportStatus: { edit } } = state
 
       // Only proceed if auto-refresh is still enabled
-      if (!currentReport || (currentReport.autoRefreshIntervalSeconds || 0) <= 0) {
+      if (!currentReport || (currentReport.autoRefreshIntervalSeconds || 0) <= 0 || !currentReport.canRefresh) {
         return
       }
 
@@ -308,7 +308,10 @@ export function reportUpdate (reportStreamResponse) {
         const query = queriesList.find(q => q.id === dataset.queryId)
         const queryJob = queryJobsList.find(job => job.queryId === query.id && job.queryParamsHash === queryParams.hash)
         const { canRun, queryText } = getState().queryStatus[dataset.queryId]
-        if (canRun && isQueryJobOutOfDate(reportStreamResponse, getState, queryJob)) {
+        const { edit } = getState().reportStatus
+        const lastAddedQueryQueryJob = getState().dataset.lastAddedQueryQueryJob[dataset.queryId]
+        const doNotRefreshWhenEdit = edit && lastAddedQueryQueryJob && lastAddedQueryQueryJob.id === queryJob.id
+        if (report.canRefresh && canRun && isQueryJobOutOfDate(reportStreamResponse, getState, queryJob) && !doNotRefreshWhenEdit) {
           dispatch(runQuery(dataset.queryId, queryText))
         } else if (shouldAddQuery(queryJob, prevQueryJobsList, mapConfigUpdated) || shouldUpdateDataset(dataset, prevDatasetsList)) {
           if (dataset.connectionType === ConnectionType.CONNECTION_TYPE_WHEROBOTS) {

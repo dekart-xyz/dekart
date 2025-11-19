@@ -201,7 +201,9 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
     // must be before async so dataset is not added twice
     const { lastAddedQueryParamsHash } = getState().dataset
     const queryParamsHash = getState().queryParams.hash
-    dispatch({ type: addDatasetToMap.name, dataset, queryParamsHash })
+    const { dataset: { list: datasets }, files, queries, keplerGl, queryJobs } = getState()
+    const queryJob = queryJobs.find(j => j.queryId === dataset.queryId && j.queryParamsHash === queryParamsHash)
+    dispatch({ type: addDatasetToMap.name, dataset, queryParamsHash, queryJob })
     const reportId = getState().report?.id
     if (!isWasmInitialized) {
       isWasmInitialized = true
@@ -212,8 +214,6 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
         return
       }
     }
-    const { dataset: { list: datasets }, files, queries, keplerGl, queryJobs } = getState()
-    const queryJob = queryJobs.find(j => j.queryId === dataset.queryId && j.queryParamsHash === queryParamsHash)
     const label = getDatasetName(dataset, queries, files)
     let data
     try {

@@ -14,6 +14,7 @@ import Select from 'antd/es/select'
 import { track } from './lib/tracking'
 import { ForkOnboarding, useRequireOnboarding } from './ForkOnboarding'
 import { AutoRefreshSettingsModal } from './AutoRefreshSettings'
+import classNames from 'classnames'
 
 function formatIntervalLabel (seconds) {
   if (seconds === 0) return 'None'
@@ -100,60 +101,47 @@ function RefreshButton ({ showAutoRefreshSettings = false }) {
     dispatch(runAllQueries())
   }
 
-  // If auto-refresh settings should be shown and user can write
-  if (showAutoRefreshSettings && canWrite) {
-    const items = [
-      {
-        label: 'Refresh Now',
-        key: 'refresh',
-        icon: numRunningQueries ? <LoadingOutlined /> : <ReloadOutlined />,
-        disabled: numRunningQueries,
-        onClick: handleRefresh
-      },
-      {
-        type: 'divider'
-      },
-      {
-        label: autoRefreshIntervalSeconds > 0
-          ? `Auto Refresh: ${formatIntervalLabel(autoRefreshIntervalSeconds)}`
-          : 'Auto Refresh Settings',
-        key: 'auto-refresh',
-        icon: <ClockCircleOutlined />,
-        onClick: () => setAutoRefreshModalVisible(true)
-      }
-    ]
+  const items = [
+    {
+      label: 'Refresh Now',
+      key: 'refresh',
+      icon: numRunningQueries ? <LoadingOutlined /> : <ReloadOutlined />,
+      disabled: numRunningQueries,
+      onClick: handleRefresh
+    },
+    {
+      type: 'divider'
+    },
+    {
+      label: autoRefreshIntervalSeconds > 0
+        ? `Auto Refresh: ${formatIntervalLabel(autoRefreshIntervalSeconds)}`
+        : 'Auto Refresh Settings',
+      key: 'auto-refresh',
+      icon: <ClockCircleOutlined />,
+      disabled: !canWrite,
+      onClick: () => setAutoRefreshModalVisible(true)
+    }
+  ]
 
-    return (
-      <>
-        <Dropdown
-          menu={{ items }}
-          placement='bottomLeft'
-          trigger={['click']}
-        >
-          <Button
-            id='dekart-refresh-button'
-            type='text'
-            icon={numRunningQueries ? <LoadingOutlined /> : autoRefreshIntervalSeconds > 0 && !edit ? <span className={styles.shimmerIcon}><ClockCircleOutlined /></span> : <ReloadOutlined />}
-            title={autoRefreshIntervalSeconds > 0 ? 'Refresh (Auto-refresh enabled)' : 'Refresh'}
-          />
-        </Dropdown>
-        <AutoRefreshSettingsModal
-          visible={autoRefreshModalVisible}
-          onClose={() => setAutoRefreshModalVisible(false)}
-        />
-      </>
-    )
-  }
-
-  // Simple refresh button without dropdown
   return (
-    <Button
-      id='dekart-refresh-button'
-      type='text'
-      icon={numRunningQueries ? <LoadingOutlined /> : <ReloadOutlined />}
-      title='Re-run all queries'
-      onClick={handleRefresh}
-    />
+    <>
+      <Dropdown
+        menu={{ items }}
+        placement='bottomLeft'
+        trigger={['click']}
+      >
+        <Button
+          id='dekart-refresh-button'
+          type='text'
+          icon={numRunningQueries ? <LoadingOutlined /> : autoRefreshIntervalSeconds > 0 ? <span className={classNames({ [styles.shimmerIcon]: !edit })}><ClockCircleOutlined /></span> : <ReloadOutlined />}
+          title={autoRefreshIntervalSeconds > 0 ? 'Refresh (Auto-refresh enabled)' : 'Refresh'}
+        />
+      </Dropdown>
+      <AutoRefreshSettingsModal
+        visible={autoRefreshModalVisible}
+        onClose={() => setAutoRefreshModalVisible(false)}
+      />
+    </>
   )
 }
 

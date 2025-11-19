@@ -93,6 +93,9 @@ export function reportStatus (state = defaultReportStatus, action) {
         const { readme } = action.report
         fullscreen = !(readme || state.edit)
       }
+      if (state.queryJobRefreshTimeoutId) {
+        clearTimeout(state.queryJobRefreshTimeoutId)
+      }
       return {
         ...state,
         online: true,
