@@ -92,15 +92,13 @@ export default function QueryParams () {
   const modalQueryParam = useSelector(state => state.queryParams.list.find(p => p.name === name))
   const { lastChanged, lastSaved } = useSelector(state => state.reportStatus)
   const numRunningQueries = useSelector(state => state.numRunningQueries)
-  const { discoverable, canWrite } = useSelector(state => state.report)
-  const isViewer = useSelector(state => state.user.isViewer)
-
+  const { canRefresh } = useSelector(state => state.report)
   const reportChanged = lastChanged > lastSaved
 
   const applyButtonDisabled = (
     reportChanged || // report has unsaved changes
     numRunningQueries > 0 || // some queries are running
-    ((!canWrite && !discoverable) || isViewer) || // user can't write or report is not discoverable
+    !canRefresh || // report can't refresh
     tempDisabled // apply button was clicked
   )
 

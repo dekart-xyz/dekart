@@ -158,6 +158,10 @@ function isQueryJobOutOfDate (reportStreamResponse, getState, queryJob) {
   const { report } = reportStreamResponse
   const { env } = getState()
 
+  if (!queryJob) {
+    return false
+  }
+
   // If auto-refresh is not enabled, report is not outdated
   const autoRefreshIntervalSeconds = report?.autoRefreshIntervalSeconds || 0
   if (autoRefreshIntervalSeconds <= 0) {
@@ -310,7 +314,7 @@ export function reportUpdate (reportStreamResponse) {
         const { canRun, queryText } = getState().queryStatus[dataset.queryId]
         const { edit } = getState().reportStatus
         const lastAddedQueryQueryJob = getState().dataset.lastAddedQueryQueryJob[dataset.queryId]
-        const doNotRefreshWhenEdit = edit && lastAddedQueryQueryJob && lastAddedQueryQueryJob.id === queryJob.id
+        const doNotRefreshWhenEdit = edit && lastAddedQueryQueryJob && queryJob && lastAddedQueryQueryJob.id === queryJob.id
         if (report.canRefresh && canRun && isQueryJobOutOfDate(reportStreamResponse, getState, queryJob) && !doNotRefreshWhenEdit) {
           dispatch(runQuery(dataset.queryId, queryText))
         } else if (shouldAddQuery(queryJob, prevQueryJobsList, mapConfigUpdated) || shouldUpdateDataset(dataset, prevDatasetsList)) {
