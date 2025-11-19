@@ -11,6 +11,7 @@ describe('run all queries', () => {
     cy.get('div:contains("10,000 rows")', { timeout: 20000 }).should('be.visible')
 
     cy.get('button#dekart-refresh-button').click()
+    cy.get('#dekart-refresh-now-button').click()
     cy.get('#dekart-query-status-message').should('contain', 'Running')
     cy.get('#dekart-query-status-message').should('contain', 'Ready')
     cy.get('div:contains("10,000 rows")', { timeout: 20000 }).should('be.visible')

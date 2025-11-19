@@ -105,6 +105,7 @@ function RefreshButton ({ showAutoRefreshSettings = false }) {
     {
       label: 'Refresh Now',
       key: 'refresh',
+      id: 'dekart-refresh-now-button',
       icon: numRunningQueries ? <LoadingOutlined /> : <ReloadOutlined />,
       disabled: numRunningQueries,
       onClick: handleRefresh
