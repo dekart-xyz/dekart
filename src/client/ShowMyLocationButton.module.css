@@ -1,0 +1,28 @@
+.showMyLocation {
+    position: relative;
+}
+
+.showMyLocationButton {
+    /* Base styles inherited from MapControlButton */
+}
+
+.showMyLocationButton.active {
+    background-color: #1890ff;
+    color: #FFFFFF;
+}
+
+.showMyLocationButton.active:hover {
+    background-color: #40a9ff;
+    color: #FFFFFF;
+}
+
+.showMyLocationButton.inactive {
+    background-color: #29323C;
+    color: #6A7485;
+}
+
+.showMyLocationButton.inactive:hover {
+    background-color: #3A4552;
+    color: #FFFFFF;
+}
+
