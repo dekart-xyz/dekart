@@ -45,17 +45,20 @@ function UserPositionOverlay ({ map }) {
     }
   }, [map, location, overlay])
 
-  console.log('overlay', overlay)
-  console.log('location', location)
   if (!overlay || !location) return null
 
   return ReactDOM.createPortal(
     <div
       className={styles.marker}
       style={{
-        transform: `translate(${pos.x - 10}px, ${pos.y - 10}px)`
+        left: `${pos.x}px`,
+        top: `${pos.y}px`
       }}
-    />,
+    >
+      <div className={styles.pulse} />
+      <div className={styles.pulse2} />
+      <div className={styles.dot} />
+    </div>,
     overlay
   )
 }
