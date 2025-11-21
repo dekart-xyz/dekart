@@ -35,7 +35,7 @@ import { track } from './lib/tracking'
 import { getDefaultMapStyles } from '@kepler.gl/reducers'
 import { getApplicationConfig } from '@kepler.gl/utils'
 import { useLocationMarker } from './hooks/useLocationMarker'
-import mapboxgl from 'mapbox-gl'
+import MarkerOverlay from './MarkerOverlay'
 
 function TabIcon ({ job }) {
   let iconColor = 'transparent'
@@ -343,6 +343,7 @@ function Kepler () {
   const location = useSelector(state => state.location)
   const dispatch = useDispatch()
   const mapInstanceRef = useRef(null)
+  const [mapboxRef, setMapboxRef] = useState(null)
 
   // Add location marker layer to the map
   useLocationMarker(mapInstanceRef, location)
@@ -411,11 +412,14 @@ function Kepler () {
                 if (mapbox) {
                   const map = mapbox.getMap()
                   mapInstanceRef.current = map
+                  setMapboxRef(mapbox)
                 } else {
                   mapInstanceRef.current = null
+                  setMapboxRef(null)
                 }
               }}
             />
+            {mapboxRef && <MarkerOverlay map={mapboxRef} lng={13.404954} lat={52.520008} />}
           </CatchKeplerError>
         )}
       </AutoSizer>
