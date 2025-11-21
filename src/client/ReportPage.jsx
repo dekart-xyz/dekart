@@ -34,8 +34,7 @@ import { UNKNOWN_EMAIL } from './lib/constants'
 import { track } from './lib/tracking'
 import { getDefaultMapStyles } from '@kepler.gl/reducers'
 import { getApplicationConfig } from '@kepler.gl/utils'
-import { useLocationMarker } from './hooks/useLocationMarker'
-import MarkerOverlay from './MarkerOverlay'
+import UserPositionOverlay from './UserPositionOverlay'
 
 function TabIcon ({ job }) {
   let iconColor = 'transparent'
@@ -340,13 +339,9 @@ function Kepler () {
   const env = useSelector(state => state.env)
   const report = useSelector(state => state.report)
   const isSnowpark = useSelector(state => state.env.isSnowpark)
-  const location = useSelector(state => state.location)
   const dispatch = useDispatch()
   const mapInstanceRef = useRef(null)
   const [mapboxRef, setMapboxRef] = useState(null)
-
-  // Add location marker layer to the map
-  useLocationMarker(mapInstanceRef, location)
 
   // Filter out MapLibre styles (dark-matter, positron, voyager) only when isSnowpark is true
   // Keep only Mapbox styles and no-basemap option
@@ -419,7 +414,7 @@ function Kepler () {
                 }
               }}
             />
-            {mapboxRef && <MarkerOverlay map={mapboxRef} lng={13.404954} lat={52.520008} />}
+            {mapboxRef && <UserPositionOverlay map={mapboxRef} />}
           </CatchKeplerError>
         )}
       </AutoSizer>

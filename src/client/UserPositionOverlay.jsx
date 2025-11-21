@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import ReactDOM from 'react-dom'
 import { useSelector } from 'react-redux'
+import styles from './UserPositionOverlay.module.css'
 
 function UserPositionOverlay ({ map }) {
   const location = useSelector(state => state.location)
@@ -9,16 +10,10 @@ function UserPositionOverlay ({ map }) {
 
   // Find the overlay element
   useEffect(() => {
-    const findOverlay = () => {
-      const element = document.querySelector('#default-deckgl-overlay-wrapper')
-      if (element) {
-        setOverlay(element)
-      } else {
-        // Retry if overlay not found yet (Kepler might not be fully initialized)
-        setTimeout(findOverlay, 100)
-      }
+    const element = document.querySelector('#default-deckgl-overlay-wrapper')
+    if (element) {
+      setOverlay(element)
     }
-    findOverlay()
   }, [])
 
   // Update marker position when map changes
@@ -48,20 +43,15 @@ function UserPositionOverlay ({ map }) {
       mb.off('pitch', update)
       mb.off('rotate', update)
     }
-  }, [map, location.latitude, location.longitude, overlay])
+  }, [map, location, overlay])
 
   if (!overlay || location.latitude === null || location.longitude === null) return null
 
   return ReactDOM.createPortal(
     <div
+      className={styles.marker}
       style={{
-        position: 'absolute',
-        transform: `translate(${pos.x - 10}px, ${pos.y - 10}px)`,
-        width: 20,
-        height: 20,
-        borderRadius: '50%',
-        background: 'red',
-        pointerEvents: 'none'
+        transform: `translate(${pos.x - 10}px, ${pos.y - 10}px)`
       }}
     />,
     overlay
