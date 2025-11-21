@@ -101,3 +101,14 @@
         mask-position: 200% 0;
     }
 }
+
+.hideOnMobile {
+    display: flex;
+    align-items: center;
+}
+
+@media (max-width: 480px) {
+    .hideOnMobile {
+        display: none;
+    }
+}

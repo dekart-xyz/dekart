@@ -327,10 +327,16 @@ function ViewModeButtons () {
     return (
       <div className={styles.reportHeaderButtons}>
         <RefreshButton showAutoRefreshSettings />
-        <ExportDropdown />
-        <ForkButton />
+        <div className={styles.hideOnMobile}>
+          <ExportDropdown />
+        </div>
+        <div className={styles.hideOnMobile}>
+          <ForkButton />
+        </div>
         <ViewSelect value='view' />
-        <ShareButton />
+        <div className={styles.hideOnMobile}>
+          <ShareButton />
+        </div>
       </div>
     )
   }
@@ -338,8 +344,12 @@ function ViewModeButtons () {
   return (
     <div className={styles.reportHeaderButtons}>
       <RefreshButton />
-      <ExportDropdown />
-      <ShareButton />
+      <div className={styles.hideOnMobile}>
+        <ExportDropdown />
+      </div>
+      <div className={styles.hideOnMobile}>
+        <ShareButton />
+      </div>
     </div>
   )
 }
