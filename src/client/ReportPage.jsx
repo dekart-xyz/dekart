@@ -5,7 +5,7 @@ import { KeplerGl } from '@kepler.gl/components'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
 import { useDispatch, useSelector } from 'react-redux'
-import { EditOutlined, WarningFilled, MoreOutlined, ReadOutlined, VerticalAlignBottomOutlined } from '@ant-design/icons'
+import { EditOutlined, WarningFilled, MoreOutlined, ReadOutlined } from '@ant-design/icons'
 import { QueryJob } from 'dekart-proto/dekart_pb'
 import Tabs from 'antd/es/tabs'
 import classnames from 'classnames'
@@ -17,7 +17,7 @@ import { Resizable } from 're-resizable'
 import DatasetSettingsModal from './DatasetSettingsModal'
 import getDatasetName from './lib/getDatasetName'
 import { createDataset, openDatasetSettingsModal, removeDataset, setActiveDataset } from './actions/dataset'
-import { closeReport, openReport, reportTitleChange, reportWillOpen, toggleReportEdit, toggleReportFullscreen } from './actions/report'
+import { closeReport, openReport, reportTitleChange, reportWillOpen, toggleReportEdit } from './actions/report'
 import { setError } from './actions/message'
 import Tooltip from 'antd/es/tooltip'
 import prettyBites from 'pretty-bytes'
@@ -27,12 +27,14 @@ import { useCheckMapConfig } from './lib/mapConfig'
 import Readme from './Readme'
 import { removeReadme, showReadmeTab } from './actions/readme'
 import Modal from 'antd/es/modal'
-import { MapControlButton } from '@kepler.gl/components/dist/common/styled-components'
 import { Loading } from './Loading'
+import ToggleFullscreenButton from './ToggleFullscreenButton'
+import ShowMyLocationButton from './ShowMyLocationButton'
 import { UNKNOWN_EMAIL } from './lib/constants'
 import { track } from './lib/tracking'
 import { getDefaultMapStyles } from '@kepler.gl/reducers'
 import { getApplicationConfig } from '@kepler.gl/utils'
+import UserPositionOverlay from './UserPositionOverlay'
 
 function TabIcon ({ job }) {
   let iconColor = 'transparent'
@@ -333,35 +335,12 @@ class CatchKeplerError extends Component {
   }
 }
 
-function ToggleFullscreenButton () {
-  const dispatch = useDispatch()
-  const report = useSelector(state => state.report)
-  const hideFullscreen = !report.allowExport && !report.canWrite && !report.readme
-
-  return (
-    <div className={styles.toggleFullscreen}>
-      <Tooltip title='Toggle fullscreen' placement='left'>
-        <MapControlButton
-          active
-          disabled={hideFullscreen}
-          className={styles.toggleFullscreenButton}
-          onClick={() => {
-            track('ToggleFullscreen')
-            dispatch(toggleReportFullscreen())
-          }}
-        >
-          <VerticalAlignBottomOutlined />
-        </MapControlButton>
-      </Tooltip>
-    </div>
-  )
-}
-
 function Kepler () {
   const env = useSelector(state => state.env)
   const report = useSelector(state => state.report)
   const isSnowpark = useSelector(state => state.env.isSnowpark)
   const dispatch = useDispatch()
+  const [mapboxRef, setMapboxRef] = useState(null)
 
   // Filter out MapLibre styles (dark-matter, positron, voyager) only when isSnowpark is true
   // Keep only Mapbox styles and no-basemap option
@@ -409,7 +388,10 @@ function Kepler () {
         [styles.hideInteraction]: hideInteraction
       })}
     >
-      <ToggleFullscreenButton />
+      <div className={styles.mapControlButtons}>
+        <ToggleFullscreenButton />
+        <ShowMyLocationButton />
+      </div>
       <AutoSizer>
         {({ height, width }) => (
           <CatchKeplerError onError={(err) => dispatch(setError(err))}>
@@ -420,7 +402,15 @@ function Kepler () {
               height={height}
               mapStyles={mapStylesWithoutMapLibre}
               mapStylesReplaceDefault={isSnowpark || undefined}
+              getMapboxRef={(mapbox) => {
+                if (mapbox) {
+                  setMapboxRef(mapbox)
+                } else {
+                  setMapboxRef(null)
+                }
+              }}
             />
+            {mapboxRef && <UserPositionOverlay map={mapboxRef} />}
           </CatchKeplerError>
         )}
       </AutoSizer>

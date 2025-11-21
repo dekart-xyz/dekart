@@ -13,6 +13,7 @@ import token from './tokenReducer'
 import connection from './connectionReducer'
 import user from './userReducer'
 import workspace from './workspaceReducer'
+import location from './locationReducer'
 import httpError from './httpErrorReducer'
 import dataset from './datasetReducer'
 import storage from './storageReducer'
@@ -168,5 +169,6 @@ export default combineReducers({
   sessionStorage,
   readme,
   analytics,
-  upgradeModal
+  upgradeModal,
+  location
 })
