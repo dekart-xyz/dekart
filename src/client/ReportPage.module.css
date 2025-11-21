@@ -246,3 +246,9 @@ cursor: default !important;
 .hideInteraction :global #kepler-gl__kepler [data-for=interaction-nav] {
     display: none !important;
 }
+
+@media (max-width: 1023px) {
+    .title {
+        display: none;
+    }
+}
