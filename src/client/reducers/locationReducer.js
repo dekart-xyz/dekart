@@ -6,8 +6,7 @@ export default function location (state = null, action) {
       return {
         latitude: action.location.latitude,
         longitude: action.location.longitude,
-        heading: action.location.heading ?? null,
-        precision: action.location.precision ?? null
+        heading: action.location.heading ?? null
       }
     case stopLocationTracking.name:
       return null
