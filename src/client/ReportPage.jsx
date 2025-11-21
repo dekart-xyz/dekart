@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom'
 import Input from 'antd/es/input'
-import { useEffect, useState, Component, useMemo, useRef } from 'react'
+import { useEffect, useState, Component, useMemo } from 'react'
 import { KeplerGl } from '@kepler.gl/components'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
@@ -340,7 +340,6 @@ function Kepler () {
   const report = useSelector(state => state.report)
   const isSnowpark = useSelector(state => state.env.isSnowpark)
   const dispatch = useDispatch()
-  const mapInstanceRef = useRef(null)
   const [mapboxRef, setMapboxRef] = useState(null)
 
   // Filter out MapLibre styles (dark-matter, positron, voyager) only when isSnowpark is true
@@ -405,11 +404,8 @@ function Kepler () {
               mapStylesReplaceDefault={isSnowpark || undefined}
               getMapboxRef={(mapbox) => {
                 if (mapbox) {
-                  const map = mapbox.getMap()
-                  mapInstanceRef.current = map
                   setMapboxRef(mapbox)
                 } else {
-                  mapInstanceRef.current = null
                   setMapboxRef(null)
                 }
               }}

@@ -7,11 +7,13 @@ import styles from './ShowMyLocationButton.module.css'
 import classnames from 'classnames'
 import { setLocation, stopLocationTracking } from './actions/location'
 import { setError } from './actions/message'
+import { track } from './lib/tracking'
 
 function useUserLocation (isActive) {
   const [isGeolocationSupported, setIsGeolocationSupported] = useState(true)
   const dispatch = useDispatch()
   const watchIdRef = useRef(null)
+  const isFirstUpdateRef = useRef(true)
 
   // Check geolocation support on init
   useEffect(() => {
@@ -28,13 +30,23 @@ function useUserLocation (isActive) {
         watchIdRef.current = null
       }
       dispatch(stopLocationTracking())
+      // Reset first update flag when deactivating
+      isFirstUpdateRef.current = true
       return
     }
 
+    // Reset first update flag when activating
+    isFirstUpdateRef.current = true
+
     const handleSuccess = (position) => {
       const { latitude, longitude, heading, accuracy } = position.coords
+      // Only zoom on first location update after enabling button
+      const shouldZoom = isFirstUpdateRef.current
+      if (isFirstUpdateRef.current) {
+        isFirstUpdateRef.current = false
+      }
       // Dispatch setLocation action on init or when location changes
-      dispatch(setLocation({ latitude, longitude, heading, accuracy }))
+      dispatch(setLocation({ latitude, longitude, heading, accuracy }, shouldZoom))
     }
 
     const handleError = (error) => {
@@ -69,6 +81,7 @@ export default function ShowMyLocationButton () {
   const { isGeolocationSupported } = useUserLocation(isActive)
 
   const handleClick = () => {
+    track('ShowMyLocationButtonClick')
     setIsActive(!isActive)
   }
 
