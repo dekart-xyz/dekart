@@ -18,7 +18,7 @@ function UserPositionOverlay ({ map }) {
 
   // Update marker position when map changes
   useEffect(() => {
-    if (!map || !overlay || location.latitude === null || location.longitude === null) {
+    if (!map || !overlay || !location) {
       return
     }
 
@@ -45,7 +45,9 @@ function UserPositionOverlay ({ map }) {
     }
   }, [map, location, overlay])
 
-  if (!overlay || location.latitude === null || location.longitude === null) return null
+  console.log('overlay', overlay)
+  console.log('location', location)
+  if (!overlay || !location) return null
 
   return ReactDOM.createPortal(
     <div

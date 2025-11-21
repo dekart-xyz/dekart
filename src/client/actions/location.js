@@ -12,3 +12,7 @@ export function setLocation (location) {
     dispatch(updateMap(mapUpdate))
   }
 }
+
+export function stopLocationTracking () {
+  return { type: stopLocationTracking.name }
+}

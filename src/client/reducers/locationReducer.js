@@ -1,19 +1,16 @@
-import { setLocation } from '../actions/location'
+import { setLocation, stopLocationTracking } from '../actions/location'
 
-const defaultLocation = {
-  latitude: null,
-  longitude: null,
-  heading: null
-}
-
-export default function location (state = defaultLocation, action) {
+export default function location (state = null, action) {
   switch (action.type) {
     case setLocation.name:
       return {
         latitude: action.location.latitude,
         longitude: action.location.longitude,
-        heading: action.location.heading ?? null
+        heading: action.location.heading ?? null,
+        precision: action.location.precision ?? null
       }
+    case stopLocationTracking.name:
+      return null
     default:
       return state
   }

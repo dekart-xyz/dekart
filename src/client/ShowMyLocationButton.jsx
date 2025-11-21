@@ -5,7 +5,7 @@ import { AimOutlined } from '@ant-design/icons'
 import MapControlButton from './MapControlButton'
 import styles from './ShowMyLocationButton.module.css'
 import classnames from 'classnames'
-import { setLocation } from './actions/location'
+import { setLocation, stopLocationTracking } from './actions/location'
 import { setError } from './actions/message'
 
 function useUserLocation (isActive) {
@@ -27,13 +27,14 @@ function useUserLocation (isActive) {
         navigator.geolocation.clearWatch(watchIdRef.current)
         watchIdRef.current = null
       }
+      dispatch(stopLocationTracking())
       return
     }
 
     const handleSuccess = (position) => {
-      const { latitude, longitude, heading } = position.coords
+      const { latitude, longitude, heading, accuracy } = position.coords
       // Dispatch setLocation action on init or when location changes
-      dispatch(setLocation({ latitude, longitude, heading }))
+      dispatch(setLocation({ latitude, longitude, heading, accuracy }))
     }
 
     const handleError = (error) => {
