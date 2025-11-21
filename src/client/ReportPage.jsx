@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom'
 import Input from 'antd/es/input'
-import { useEffect, useState, Component, useMemo } from 'react'
+import { useEffect, useState, Component, useMemo, useRef } from 'react'
 import { KeplerGl } from '@kepler.gl/components'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
@@ -34,6 +34,8 @@ import { UNKNOWN_EMAIL } from './lib/constants'
 import { track } from './lib/tracking'
 import { getDefaultMapStyles } from '@kepler.gl/reducers'
 import { getApplicationConfig } from '@kepler.gl/utils'
+import { useLocationMarker } from './hooks/useLocationMarker'
+import mapboxgl from 'mapbox-gl'
 
 function TabIcon ({ job }) {
   let iconColor = 'transparent'
@@ -338,7 +340,12 @@ function Kepler () {
   const env = useSelector(state => state.env)
   const report = useSelector(state => state.report)
   const isSnowpark = useSelector(state => state.env.isSnowpark)
+  const location = useSelector(state => state.location)
   const dispatch = useDispatch()
+  const mapInstanceRef = useRef(null)
+
+  // Add location marker layer to the map
+  useLocationMarker(mapInstanceRef, location)
 
   // Filter out MapLibre styles (dark-matter, positron, voyager) only when isSnowpark is true
   // Keep only Mapbox styles and no-basemap option
@@ -400,6 +407,14 @@ function Kepler () {
               height={height}
               mapStyles={mapStylesWithoutMapLibre}
               mapStylesReplaceDefault={isSnowpark || undefined}
+              getMapboxRef={(mapbox) => {
+                if (mapbox) {
+                  const map = mapbox.getMap()
+                  mapInstanceRef.current = map
+                } else {
+                  mapInstanceRef.current = null
+                }
+              }}
             />
           </CatchKeplerError>
         )}
