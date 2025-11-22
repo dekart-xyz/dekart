@@ -91,6 +91,9 @@
     mask-size: 200% 100%;
     mask-repeat: repeat-x;
     animation: shimmer-icon 1.5s linear infinite;
+    /* This is needed to prevent the shimmer effect from cutting off in Safari */
+    transform: translateZ(0);
+    overflow: visible;
 }
 
 @keyframes shimmer-icon {

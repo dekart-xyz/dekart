@@ -30,7 +30,12 @@ function CopyLinkButton ({ ghost }) {
       title='Copy link to report'
       onClick={() => {
         track('CopyMapLink')
-        dispatch(copyUrlToClipboard(window.location.toString(), 'Map URL copied to clipboard'))
+        const url = new URL(window.location.href)
+        // Remove /source from pathname to ensure view mode
+        if (url.pathname.endsWith('/source')) {
+          url.pathname = url.pathname.slice(0, -7) // Remove '/source'
+        }
+        dispatch(copyUrlToClipboard(url.toString(), 'Map URL copied to clipboard'))
       }}
     >Copy Link
     </Button>

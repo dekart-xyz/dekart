@@ -4,5 +4,13 @@
 html, body, #root {
     width: 100%;
     min-height: 100%;
+
 }
 
+html, body {
+    background-color: #2B323B;
+}
+
+#root {
+    background-color: white;
+}
