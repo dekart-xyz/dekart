@@ -100,18 +100,28 @@ function groupChangesByTime (changes) {
   return grouped
 }
 
-function DaySection ({ dayLabel, hourGroups, expandedKeys, onToggle, currentVersionId }) {
+function DaySection ({ dayLabel, hourGroups, expandedKeys, onToggle, currentVersionId, renderedHours, onHourRendered }) {
   const hourKeys = Object.keys(hourGroups).sort((a, b) => {
     // Sort by hour, descending (newest first)
     return hourGroups[b].hour - hourGroups[a].hour
   })
+
+  const handleToggle = (keys) => {
+    // Track which hours have been expanded for lazy rendering
+    keys.forEach(key => {
+      if (!renderedHours.has(key)) {
+        onHourRendered(key)
+      }
+    })
+    onToggle(keys)
+  }
 
   return (
     <div className={styles.daySection}>
       <Collapse
         ghost
         activeKey={expandedKeys}
-        onChange={onToggle}
+        onChange={handleToggle}
         expandIcon={({ isActive }) => <DownOutlined rotate={isActive ? 180 : 0} />}
         className={styles.hourCollapse}
       >
@@ -119,6 +129,10 @@ function DaySection ({ dayLabel, hourGroups, expandedKeys, onToggle, currentVers
           const hourGroup = hourGroups[hourKey]
           const hourLabel = formatHour(new Date(2024, 0, 1, hourGroup.hour))
           const changes = hourGroup.changes.sort((a, b) => b.timestamp - a.timestamp)
+          const isExpanded = expandedKeys.includes(hourKey)
+          const hasBeenRendered = renderedHours.has(hourKey)
+          // Render if expanded OR if it has been rendered before (lazy render, but keep after first render)
+          const shouldRender = isExpanded || hasBeenRendered
 
           return (
             <Panel
@@ -132,44 +146,46 @@ function DaySection ({ dayLabel, hourGroups, expandedKeys, onToggle, currentVers
               }
               className={styles.hourPanel}
             >
-              <div className={styles.changesList}>
-                {changes.map(change => (
-                  <div key={change.id} className={`${styles.changeItem} ${change.id === currentVersionId ? styles.currentVersion : ''}`}>
-                    <div className={styles.changeTime}>{formatTime(change.timestamp)}</div>
-                    <div className={styles.changeContent}>
-                      <div className={styles.changeTypeBadge}>
-                        {change.type === 'restore'
-                          ? (
-                            <Tag icon={<RollbackOutlined />} color='orange' className={styles.typeTag}>
-                              Restore
-                            </Tag>
-                            )
-                          : (
-                            <Tag icon={<EditOutlined />} color='blue' className={styles.typeTag}>
-                              Map Edit
-                            </Tag>
-                            )}
+              {shouldRender && (
+                <div className={styles.changesList}>
+                  {changes.map(change => (
+                    <div key={change.id} className={`${styles.changeItem} ${change.id === currentVersionId ? styles.currentVersion : ''}`}>
+                      <div className={styles.changeTime}>{formatTime(change.timestamp)}</div>
+                      <div className={styles.changeContent}>
+                        <div className={styles.changeTypeBadge}>
+                          {change.type === 'restore'
+                            ? (
+                              <Tag icon={<RollbackOutlined />} color='orange' className={styles.typeTag}>
+                                Restore
+                              </Tag>
+                              )
+                            : (
+                              <Tag icon={<EditOutlined />} color='blue' className={styles.typeTag}>
+                                Map Edit
+                              </Tag>
+                              )}
+                        </div>
+                        <div className={styles.changeUser}>
+                          <UserOutlined className={styles.userIcon} />
+                          {change.user}
+                        </div>
                       </div>
-                      <div className={styles.changeUser}>
-                        <UserOutlined className={styles.userIcon} />
-                        {change.user}
-                      </div>
+                      <Button
+                        type='text'
+                        size='small'
+                        icon={<RollbackOutlined />}
+                        className={styles.restoreButton}
+                        onClick={() => {
+                          // TODO: Implement restore functionality
+                          console.log('Restore to:', change.id, change.timestamp)
+                        }}
+                      >
+                        Restore
+                      </Button>
                     </div>
-                    <Button
-                      type='text'
-                      size='small'
-                      icon={<RollbackOutlined />}
-                      className={styles.restoreButton}
-                      onClick={() => {
-                        // TODO: Implement restore functionality
-                        console.log('Restore to:', change.id, change.timestamp)
-                      }}
-                    >
-                      Restore
-                    </Button>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </Panel>
           )
         })}
@@ -180,6 +196,7 @@ function DaySection ({ dayLabel, hourGroups, expandedKeys, onToggle, currentVers
 
 export function MapChangeHistoryModal ({ open, onClose }) {
   const [expandedHours, setExpandedHours] = useState(new Set())
+  const [renderedHours, setRenderedHours] = useState(new Set())
 
   // Generate and group mock data
   const historyData = useMemo(() => generateMockHistoryData(), [])
@@ -262,6 +279,10 @@ export function MapChangeHistoryModal ({ open, onClose }) {
                     hourGroups={hourGroups}
                     expandedKeys={Array.from(expandedHours).filter(key => key.startsWith(dayLabel))}
                     currentVersionId={currentVersionId}
+                    renderedHours={renderedHours}
+                    onHourRendered={(hourKey) => {
+                      setRenderedHours(prev => new Set([...prev, hourKey]))
+                    }}
                     onToggle={(keys) => {
                       const newExpanded = new Set()
                       keys.forEach(key => {
