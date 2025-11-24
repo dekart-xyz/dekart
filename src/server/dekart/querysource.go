@@ -1,11 +1,11 @@
 package dekart
 
 import (
-	"dekart/src/server/errtype"
 	"context"
 	"crypto/sha1"
 	"dekart/src/proto"
 	"dekart/src/server/conn"
+	"dekart/src/server/errtype"
 	"dekart/src/server/user"
 	"fmt"
 	"io"
@@ -74,45 +74,53 @@ func (e *queryWasNotUpdated) Error() string {
 	return "query was not updated"
 }
 
-func (s Server) storeQuerySync(ctx context.Context, queryID string, queryText string, prevQuerySourceId string) error {
+// storeQuerySync creates a new immutable query record and updates the dataset to reference it
+// Returns the new query ID, or error if the dataset was already updated (optimistic locking failure)
+func (s Server) storeQuerySync(ctx context.Context, queryID string, queryText string) (string, error) {
 	h := sha1.New()
 	queryTextByte := []byte(queryText)
 	h.Write(queryTextByte)
 	newQuerySourceId := fmt.Sprintf("%x", h.Sum(nil))
-	// now we always store the query text in the database
-	result, err := s.db.ExecContext(ctx,
-		`update queries set query_text=$1, query_source_id=$2, query_source=$3, updated_at=CURRENT_TIMESTAMP where id=$4 and query_source_id=$5`,
+
+	// Create new query record
+	newQueryID := newUUID()
+
+	// Insert new query record
+	_, err := s.db.ExecContext(ctx,
+		`insert into queries (id, query_text, query_source, query_source_id)
+			 values ($1, $2, $3, $4)`,
+		newQueryID,
 		queryText,
-		newQuerySourceId,
 		proto.Query_QUERY_SOURCE_INLINE,
+		newQuerySourceId,
+	)
+
+	if err != nil {
+		errtype.LogError(err, "Error creating new query record")
+		return "", err
+	}
+
+	// Optimistically update dataset to reference new query ID
+	// Only update if dataset still references the old query ID
+	result, err := s.db.ExecContext(ctx,
+		`update datasets set query_id=$1, updated_at=CURRENT_TIMESTAMP
+		 where query_id=$2`,
+		newQueryID,
 		queryID,
-		prevQuerySourceId,
 	)
 	if err != nil {
-		errtype.LogError(err, "Error updating query text")
-		return err
+		errtype.LogError(err, "Error updating dataset query_id")
+		return "", err
 	}
+
 	affectedRows, _ := result.RowsAffected()
 	if affectedRows == 0 {
-		log.Warn().Str("prevQuerySourceId", prevQuerySourceId).Str("newQuerySourceId", newQuerySourceId).Msg("Query text not updated")
-		return &queryWasNotUpdated{}
+		// Dataset was already updated to reference a different query
+		log.Warn().Str("prevQueryId", queryID).Str("newQueryId", newQueryID).Msg("Dataset query_id not updated - already changed")
+		return "", &queryWasNotUpdated{}
 	}
-	return nil
-}
 
-func (s Server) storeQuery(userCtx context.Context, reportID string, queryID string, queryText string, prevQuerySourceId string) {
-	ctx, cancel := context.WithTimeout(user.CopyUserContext(userCtx, context.Background()), time.Second*5)
-	defer cancel()
-
-	err := s.storeQuerySync(ctx, queryID, queryText, prevQuerySourceId)
-	if _, ok := err.(*queryWasNotUpdated); ok {
-		log.Warn().Msg("Query text not updated")
-		return
-	} else if err != nil {
-		errtype.LogError(err, "Error updating query text")
-		return
-	}
-	s.reportStreams.Ping(reportID)
+	return newQueryID, nil
 }
 
 // legacy for query source stored in the storage

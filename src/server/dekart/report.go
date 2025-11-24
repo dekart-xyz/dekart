@@ -717,7 +717,15 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 
 	// save queries
 	for _, query := range req.Query {
-		go s.storeQuery(ctx, req.ReportId, query.Id, query.QueryText, query.QuerySourceId)
+		_, err := s.storeQuerySync(ctx, query.Id, query.QueryText)
+		if err != nil {
+			if _, ok := err.(*queryWasNotUpdated); ok {
+				log.Warn().Str("queryId", query.Id).Msg("Query text not updated")
+			} else {
+				errtype.LogError(err, "Error storing query")
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+		}
 	}
 
 	defer s.reportStreams.Ping(req.ReportId)

@@ -9,14 +9,13 @@ import (
 )
 
 type QueryDetails struct {
-	ReportID, PrevQuerySourceId, ConnectionID, QueryText string
+	ReportID, ConnectionID, QueryText string
 }
 
 func GetQueryDetails(ctx context.Context, db *sql.DB, queryID string) (*QueryDetails, error) {
 	queriesRows, err := db.QueryContext(ctx,
 		`select
 			reports.id,
-			queries.query_source_id,
 			datasets.connection_id,
 			queries.query_text
 		from queries
@@ -31,22 +30,21 @@ func GetQueryDetails(ctx context.Context, db *sql.DB, queryID string) (*QueryDet
 		return nil, err
 	}
 	defer queriesRows.Close()
-	var reportID string
-	var prevQuerySourceId string
+	var reportID sql.NullString
 	var connectionID sql.NullString
-	var queryText string
-	for queriesRows.Next() {
-		err := queriesRows.Scan(&reportID, &prevQuerySourceId, &connectionID, &queryText)
-		if err != nil {
-			log.Err(err).Send()
-			return nil, err
-		}
+	var queryText sql.NullString
+	if !queriesRows.Next() {
+		return nil, fmt.Errorf("query not found id:%s", queryID)
+	}
+	err = queriesRows.Scan(&reportID, &connectionID, &queryText)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, err
 	}
 	return &QueryDetails{
-		ReportID:          reportID,
-		PrevQuerySourceId: prevQuerySourceId,
-		ConnectionID:      connectionID.String,
-		QueryText:         queryText,
+		ReportID:     reportID.String,
+		ConnectionID: connectionID.String,
+		QueryText:    queryText.String,
 	}, nil
 }
 
@@ -55,7 +53,6 @@ func GetQueryDetailsByResultID(ctx context.Context, db *sql.DB, resultID string)
 	queriesRows, err := db.QueryContext(ctx,
 		`select
 			reports.id,
-			queries.query_source_id,
 			datasets.connection_id,
 			queries.query_text
 		from query_jobs
@@ -72,24 +69,23 @@ func GetQueryDetailsByResultID(ctx context.Context, db *sql.DB, resultID string)
 	}
 	defer queriesRows.Close()
 
-	var reportID string
-	var prevQuerySourceId string
+	var reportID sql.NullString
 	var connectionID sql.NullString
-	var queryText string
-	for queriesRows.Next() {
-		err := queriesRows.Scan(&reportID, &prevQuerySourceId, &connectionID, &queryText)
-		if err != nil {
-			log.Err(err).Send()
-			return nil, err
-		}
+	var queryText sql.NullString
+	if !queriesRows.Next() {
+		return nil, fmt.Errorf("query not found for dw_job_id: %s", resultID)
 	}
-	if reportID == "" {
+	err = queriesRows.Scan(&reportID, &connectionID, &queryText)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, err
+	}
+	if !reportID.Valid {
 		return nil, fmt.Errorf("query not found for dw_job_id: %s", resultID)
 	}
 	return &QueryDetails{
-		ReportID:          reportID,
-		PrevQuerySourceId: prevQuerySourceId,
-		ConnectionID:      connectionID.String,
-		QueryText:         queryText,
+		ReportID:     reportID.String,
+		ConnectionID: connectionID.String,
+		QueryText:    queryText.String,
 	}, nil
 }

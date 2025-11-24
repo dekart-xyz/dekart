@@ -46,30 +46,33 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	id := newUUID()
-
+	// Create initial query record with empty text
+	initialQueryID := newUUID()
 	_, err = s.db.ExecContext(ctx,
 		`insert into queries (id, query_text) values ($1, '')`,
-		id,
+		initialQueryID,
 	)
 	if err != nil {
 		errtype.LogError(err, "Error creating query")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	err = s.storeQuerySync(ctx, id, "", "")
-
+	// storeQuerySync will create a new immutable query record
+	newQueryID, err := s.storeQuerySync(ctx, initialQueryID, "")
 	if err != nil {
 		if _, ok := err.(*queryWasNotUpdated); !ok {
-			errtype.LogError(err, "Error updating query text")
+			errtype.LogError(err, "Error storing query")
 			return &proto.CreateQueryResponse{}, status.Error(codes.Internal, err.Error())
 		}
 		log.Warn().Msg("Query text not updated")
+		// If storeQuerySync failed due to optimistic locking, use the initial query ID
+		newQueryID = initialQueryID
 	}
 
+	// Update dataset to reference the new query ID
 	result, err := s.db.ExecContext(ctx,
 		`update datasets set query_id=$1, updated_at=CURRENT_TIMESTAMP where id=$2 and query_id is null`,
-		id,
+		newQueryID,
 		req.DatasetId,
 	)
 	if err != nil {
@@ -338,7 +341,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		// update query text if it was changed by user if user has write permission
 		// otherwise use query text from db
 		q.QueryText = req.QueryText
-		err = s.storeQuerySync(ctx, req.QueryId, req.QueryText, q.PrevQuerySourceId)
+		newQueryID, err := s.storeQuerySync(ctx, req.QueryId, req.QueryText)
 		if err != nil {
 			code := codes.Internal
 			if _, ok := err.(*queryWasNotUpdated); ok {
@@ -356,10 +359,17 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 					log.Warn().Err(err).Msg("Query was modified concurrently, canceling")
 					return nil, status.Error(code, err.Error())
 				}
+				// Use the original query ID if update failed
+				newQueryID = req.QueryId
 			} else {
 				log.Error().Err(err).Send()
 				return nil, status.Error(code, err.Error())
 			}
+		}
+		// Update req.QueryId to use the new query ID for running the query
+		if newQueryID != req.QueryId {
+			log.Info().Str("oldQueryId", req.QueryId).Str("newQueryId", newQueryID).Msg("Using new immutable query version")
+			req.QueryId = newQueryID
 		}
 	}
 
