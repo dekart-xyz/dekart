@@ -590,6 +590,7 @@ message QueryJob {
     JobStatus job_status = 12;
     string dw_job_id = 13;
     string query_params_hash = 14;
+    string dataset_id = 15;
 }
 
 message Query {

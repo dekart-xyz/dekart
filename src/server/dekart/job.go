@@ -99,7 +99,8 @@ func (s Server) getQueryJob(ctx context.Context, jobID string) (*proto.QueryJob,
 			dw_job_id,
 			updated_at,
 			created_at,
-			EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - created_at))::bigint * 1000 as job_duration
+			EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - created_at))::bigint * 1000 as job_duration,
+			dataset_id
 		from query_jobs
 		where id = $1
 		order by created_at desc
@@ -250,7 +251,8 @@ func (s Server) getDatasetsQueryJobs(ctx context.Context, datasets []*proto.Data
 				dw_job_id,
 				updated_at,
 				created_at,
-				EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - created_at))::bigint * 1000 as job_duration
+				EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - created_at))::bigint * 1000 as job_duration,
+				dataset_id
 			from query_jobs where query_id = ANY($1) order by query_params_hash, query_id, created_at desc`,
 				pq.Array(queryIds),
 			)
@@ -290,6 +292,7 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 				&updatedAtStr, // SQLite timestamp string in this case
 				&createdAtStr,
 				&job.JobDuration,
+				&job.DatasetId,
 			)
 			if err != nil {
 				return nil, fmt.Errorf("scan failed in rowsToQueryJobs error=%q", err)
@@ -321,6 +324,7 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 				&updatedAt,
 				&createdAt,
 				&job.JobDuration,
+				&job.DatasetId,
 			)
 			if err != nil {
 				return nil, fmt.Errorf("scan failed in rowsToQueryJobs error=%q", err)
