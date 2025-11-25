@@ -72,7 +72,8 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 			allow_export,
 			readme,
 			workspace_id,
-			auto_refresh_interval_seconds
+			auto_refresh_interval_seconds,
+			version_id
 		from reports as r
 		where (id=$5) and (archived = $6)
 		limit 1`,
@@ -97,6 +98,7 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 		reportWorkspaceID := sql.NullString{}
 		var connectionsWithCacheNum, connectionsNum, connectionsWithSensitiveScopeNum int
 		var queryParams []byte
+		var versionID sql.NullString
 		err = reportRows.Scan(
 			&report.Id,
 			&report.MapConfig,
@@ -118,6 +120,7 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 			&readme,
 			&reportWorkspaceID,
 			&report.AutoRefreshIntervalSeconds,
+			&versionID,
 		)
 		if err != nil {
 			errtype.LogError(err, "failed to scan report")
@@ -162,6 +165,10 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 		}
 		report.CreatedAt = createdAt.Unix()
 		report.UpdatedAt = updatedAt.Unix()
+
+		if versionID.Valid {
+			report.VersionId = versionID.String
+		}
 
 		if readme.Valid {
 			report.Readme = &proto.Readme{
