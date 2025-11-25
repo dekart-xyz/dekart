@@ -2025,6 +2025,9 @@ export class Report extends jspb.Message {
   getAutoRefreshIntervalSeconds(): number;
   setAutoRefreshIntervalSeconds(value: number): void;
 
+  getVersionId(): string;
+  setVersionId(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Report.AsObject;
   static toObject(includeInstance: boolean, msg: Report): Report.AsObject;
@@ -2059,6 +2062,7 @@ export namespace Report {
     trackViewers: boolean,
     canRefresh: boolean,
     autoRefreshIntervalSeconds: number,
+    versionId: string,
   }
 }
 

@@ -551,6 +551,7 @@ message Report {
     bool track_viewers = 20; // true - track viewers, false - don't track viewers
     bool can_refresh = 21; // true - can refresh, false - cannot refresh
     int32 auto_refresh_interval_seconds = 22; // auto refresh interval in seconds
+    string version_id = 23; // version id of the report
 }
 
 message Dataset {

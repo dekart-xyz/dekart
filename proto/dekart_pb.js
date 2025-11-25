@@ -15367,7 +15367,8 @@ proto.Report.toObject = function(includeInstance, msg) {
     hasDirectAccess: jspb.Message.getBooleanFieldWithDefault(msg, 19, false),
     trackViewers: jspb.Message.getBooleanFieldWithDefault(msg, 20, false),
     canRefresh: jspb.Message.getBooleanFieldWithDefault(msg, 21, false),
-    autoRefreshIntervalSeconds: jspb.Message.getFieldWithDefault(msg, 22, 0)
+    autoRefreshIntervalSeconds: jspb.Message.getFieldWithDefault(msg, 22, 0),
+    versionId: jspb.Message.getFieldWithDefault(msg, 23, "")
   };
 
   if (includeInstance) {
@@ -15493,6 +15494,10 @@ proto.Report.deserializeBinaryFromReader = function(msg, reader) {
     case 22:
       var value = /** @type {number} */ (reader.readInt32());
       msg.setAutoRefreshIntervalSeconds(value);
+      break;
+    case 23:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setVersionId(value);
       break;
     default:
       reader.skipField();
@@ -15676,6 +15681,13 @@ proto.Report.serializeBinaryToWriter = function(message, writer) {
   if (f !== 0) {
     writer.writeInt32(
       22,
+      f
+    );
+  }
+  f = message.getVersionId();
+  if (f.length > 0) {
+    writer.writeString(
+      23,
       f
     );
   }
@@ -16114,6 +16126,24 @@ proto.Report.prototype.getAutoRefreshIntervalSeconds = function() {
  */
 proto.Report.prototype.setAutoRefreshIntervalSeconds = function(value) {
   return jspb.Message.setProto3IntField(this, 22, value);
+};
+
+
+/**
+ * optional string version_id = 23;
+ * @return {string}
+ */
+proto.Report.prototype.getVersionId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 23, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.Report} returns this
+ */
+proto.Report.prototype.setVersionId = function(value) {
+  return jspb.Message.setProto3StringField(this, 23, value);
 };
 
 
