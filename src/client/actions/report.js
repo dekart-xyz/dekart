@@ -238,20 +238,9 @@ export function reportUpdate (reportStreamResponse) {
     }
 
     if (!mapConfigUpdated) { // new map config reset data anyway
-      prevQueriesList.forEach(query => {
-        if (!queriesList.find(q => q.id === query.id)) {
-          const dataset = prevDatasetsList.find(d => d.queryId === query.id)
-          if (dataset) {
-            dispatch(removeDataset(dataset.id))
-          }
-        }
-      })
-      prevFileList.forEach(file => {
-        if (!filesList.find(f => f.id === file.id)) {
-          const dataset = prevDatasetsList.find(d => d.fileId === file.id)
-          if (dataset) {
-            dispatch(removeDataset(dataset.id))
-          }
+      prevDatasetsList.forEach(dataset => {
+        if (!datasetsList.find(d => d.id === dataset.id)) {
+          dispatch(removeDataset(dataset.id))
         }
       })
     }
