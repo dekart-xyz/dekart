@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import Modal from 'antd/es/modal'
 import Button from 'antd/es/button'
@@ -32,21 +32,7 @@ function buildHistoryFromSnapshots (reportSnapshotsList = []) {
   // Sort newest first
   changes.sort((a, b) => b.timestamp - a.timestamp)
 
-  // Deduplicate per minute/author (keep most recent)
-  const seen = new Map()
-  const deduped = []
-
-  for (const change of changes) {
-    if (!change.timestamp || !change.user) continue
-    const ts = change.timestamp
-    const key = `${change.user}-${ts.getFullYear()}-${ts.getMonth()}-${ts.getDate()}-${ts.getHours()}-${ts.getMinutes()}`
-    if (!seen.has(key)) {
-      seen.set(key, true)
-      deduped.push(change)
-    }
-  }
-
-  return deduped
+  return changes
 }
 
 // Format date for display
@@ -68,7 +54,7 @@ function formatDate (date) {
 }
 
 function formatTime (date) {
-  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })
 }
 
 function formatHour (date) {
@@ -203,13 +189,21 @@ export function MapChangeHistoryModal ({ open, onClose }) {
 
   const [expandedHours, setExpandedHours] = useState(new Set())
   const [renderedHours, setRenderedHours] = useState(new Set())
+  const prevOpenRef = useRef(false)
 
-  // Load snapshots when modal is opened
+  // Always reload snapshots when modal is opened
   useEffect(() => {
-    if (!open || !report?.id) {
-      return
+    if (open && !prevOpenRef.current && report?.id) {
+      // Modal just opened - always reload data
+      dispatch(getSnapshots())
     }
-    dispatch(getSnapshots())
+    prevOpenRef.current = open
+
+    // Reset UI state when modal closes
+    if (!open && prevOpenRef.current) {
+      setExpandedHours(new Set())
+      setRenderedHours(new Set())
+    }
   }, [open, report?.id, dispatch])
 
   // Build history data from snapshots
