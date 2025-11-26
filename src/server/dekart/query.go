@@ -47,10 +47,10 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	}
 
 	// Create initial query record with empty text
-	initialQueryID := newUUID()
+	queryID := newUUID()
 	_, err = s.db.ExecContext(ctx,
 		`insert into queries (id, query_text) values ($1, '')`,
-		initialQueryID,
+		queryID,
 	)
 	if err != nil {
 		errtype.LogError(err, "Error creating query")
@@ -58,21 +58,18 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	}
 
 	// storeQuerySync will create a new immutable query record
-	newQueryID, err := s.storeQuerySync(ctx, initialQueryID, "")
+	err = s.storeQuerySync(ctx, queryID, "", "")
 	if err != nil {
 		if _, ok := err.(*queryWasNotUpdated); !ok {
 			errtype.LogError(err, "Error storing query")
 			return &proto.CreateQueryResponse{}, status.Error(codes.Internal, err.Error())
 		}
-		log.Warn().Msg("Query text not updated")
-		// If storeQuerySync failed due to optimistic locking, use the initial query ID
-		newQueryID = initialQueryID
 	}
 
 	// Update dataset to reference the new query ID
 	result, err := s.db.ExecContext(ctx,
 		`update datasets set query_id=$1, updated_at=CURRENT_TIMESTAMP where id=$2 and query_id is null`,
-		newQueryID,
+		queryID,
 		req.DatasetId,
 	)
 	if err != nil {
@@ -87,6 +84,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	}
 
 	if affectedRows == 0 {
+		// race condition, another user created the query first
 		log.Warn().Str("reportID", *reportID).Str("dataset", req.DatasetId).Msg("dataset query was already created")
 	} else {
 		// Create snapshot
@@ -345,16 +343,9 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	}
 	queryID := req.QueryId
 	queryText := q.QueryText
-	if q.NewQueryID != queryID { // query changed on the backend, let's use the new query id
-		queryID = q.NewQueryID
-		q, err = query.GetQueryDetails(ctx, s.db, q.NewQueryID)
-		if err != nil {
-			errtype.LogError(err, "database operation failed")
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-	} else if report.CanWrite && req.QueryText != q.QueryText { // update query text if it was changed by user if user has write permission
+	if report.CanWrite && req.QueryText != q.QueryText { // update query text if it was changed by user if user has write permission
 		queryText = req.QueryText
-		queryID, err = s.storeQuerySync(ctx, req.QueryId, req.QueryText)
+		err = s.storeQuerySync(ctx, queryID, req.QueryText, q.PrevQuerySourceId)
 		if err != nil {
 			if _, ok := err.(*queryWasNotUpdated); ok { // query was not updated, it was changed by another user
 				log.Warn().Str("queryId", req.QueryId).Msg("Query was not updated")

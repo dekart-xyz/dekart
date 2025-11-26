@@ -268,13 +268,6 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 	return res, nil
 }
 
-func rollback(tx *sql.Tx) {
-	err := tx.Rollback()
-	if err != nil {
-		log.Err(err).Send()
-	}
-}
-
 func (s Server) createReportSnapshot(ctx context.Context, reportID string) error {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
@@ -297,11 +290,11 @@ func (s Server) createReportSnapshot(ctx context.Context, reportID string) error
 	return nil
 }
 
-// createReportSnapshot creates a snapshot of the report content
-func (s Server) createReportSnapshotWithVersionID(ctx context.Context, versionID string, reportID string, changedBy string) error {
-
+// createReportSnapshotWithVersionIDTx creates a snapshot of the report content
+// using the provided transaction.
+func (s Server) createReportSnapshotWithVersionIDTx(ctx context.Context, tx *sql.Tx, versionID string, reportID string, changedBy string) error {
 	// Create report snapshot using INSERT ... SELECT from reports
-	_, err := s.db.ExecContext(ctx,
+	_, err := tx.ExecContext(ctx,
 		`INSERT INTO report_snapshots (
 			version_id, report_id, map_config, title, query_params, readme, author_email
 		)
@@ -318,84 +311,69 @@ func (s Server) createReportSnapshotWithVersionID(ctx context.Context, versionID
 	}
 
 	// Create dataset snapshots for all datasets belonging to this report/version
-	datasets, err := s.getDatasets(ctx, reportID)
+	_, err = tx.ExecContext(ctx,
+		`INSERT INTO dataset_snapshots (
+			report_version_id, dataset_id, report_id, query_id, file_id, name, connection_id, author_email
+		)
+		SELECT
+			$1::uuid AS report_version_id,
+			d.id AS dataset_id,
+			d.report_id,
+			d.query_id,
+			d.file_id,
+			COALESCE(d.name, ''),
+			d.connection_id,
+			$2 AS author_email
+		FROM datasets d
+		WHERE d.report_id = $3`,
+		versionID,
+		changedBy,
+		reportID,
+	)
 	if err != nil {
-		errtype.LogError(err, "Cannot load datasets for snapshot")
+		errtype.LogError(err, "Cannot create dataset snapshots")
 		return err
 	}
 
-	for _, dataset := range datasets {
-		snapshotID := newUUID()
-
-		var queryID *string
-		if dataset.QueryId != "" {
-			q := dataset.QueryId
-			queryID = &q
-		}
-
-		var fileID *string
-		if dataset.FileId != "" {
-			f := dataset.FileId
-			fileID = &f
-		}
-
-		var connectionID *string
-		if dataset.ConnectionId != "" {
-			c := dataset.ConnectionId
-			connectionID = &c
-		}
-
-		_, err = s.db.ExecContext(ctx,
-			`INSERT INTO dataset_snapshots (
-				snapshot_id, report_version_id, dataset_id, report_id, query_id, file_id, name, connection_id, author_email
-			)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-			snapshotID,
-			versionID,
-			dataset.Id,
-			reportID,
-			queryID,
-			fileID,
-			dataset.Name,
-			connectionID,
-			changedBy,
+	// Create query snapshots for all queries referenced by this report's datasets
+	_, err = tx.ExecContext(ctx,
+		`INSERT INTO query_snapshots (
+			report_version_id, query_id, report_id, query_text, author_email
 		)
-		if err != nil {
-			errtype.LogError(err, "Cannot create dataset snapshot")
-			return err
-		}
+		SELECT DISTINCT
+			$1::uuid AS report_version_id,
+			q.id AS query_id,
+			q.report_id,
+			q.query_text,
+			$2 AS author_email
+		FROM queries q
+		JOIN datasets d ON d.query_id = q.id
+		WHERE d.report_id = $3`,
+		versionID,
+		changedBy,
+		reportID,
+	)
+	if err != nil {
+		errtype.LogError(err, "Cannot create query snapshots")
+		return err
 	}
 
 	return nil
 }
 
-// // createDatasetSnapshot creates a snapshot of a single dataset
-// func (s Server) createDatasetSnapshotWithQueryID(ctx context.Context, queryID string) error {
-// 	claims := user.GetClaims(ctx)
-// 	if claims == nil {
-// 		return fmt.Errorf("createDatasetSnapshotWithQueryID requires authenticated user")
-// 	}
-// 	// Create dataset snapshot using INSERT ... SELECT from datasets
-// 	// Generate a unique snapshot_id to allow multiple snapshots per report version
-// 	snapshotID := newUUID()
-// 	_, err := s.db.ExecContext(ctx,
-// 		`INSERT INTO dataset_snapshots (
-// 			snapshot_id, report_version_id, dataset_id, report_id, query_id, file_id, name, connection_id, author_email
-// 		)
-// 		SELECT $1, r.version_id, d.id, d.report_id, d.query_id, d.file_id, d.name, d.connection_id, $2
-// 		FROM datasets d
-// 		JOIN reports r ON d.report_id = r.id
-// 		WHERE d.query_id = $3`,
-// 		snapshotID,
-// 		claims.Email,
-// 		queryID,
-// 	)
-// 	if err != nil {
-// 		errtype.LogError(err, "Cannot create dataset snapshot")
-// 		return err
-// 	}
-// 	return nil
-// }
+func (s Server) createReportSnapshotWithVersionID(ctx context.Context, versionID string, reportID string, changedBy string) error {
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := s.createReportSnapshotWithVersionIDTx(ctx, tx, versionID, reportID, changedBy); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
 
 // updateDatasetIds updates the map config with new dataset ids when forked
 func updateDatasetIds(report *proto.Report, datasets []*proto.Dataset) (newMapConfig string, newDatasetIds []string) {
@@ -429,7 +407,7 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 	if err != nil {
 		return err
 	}
-	defer rollback(tx)
+	defer tx.Rollback()
 	newMapConfig, newDatasetIds := updateDatasetIds(report, datasets)
 	var paramsJSON []byte
 	if report.QueryParams != nil {
@@ -896,7 +874,7 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 
 	// save queries
 	for _, query := range req.Query {
-		_, err := s.storeQuerySync(ctx, query.Id, query.QueryText)
+		err := s.storeQuerySync(ctx, query.Id, query.QueryText, query.QuerySourceId)
 		if err != nil {
 			if _, ok := err.(*queryWasNotUpdated); ok {
 				log.Warn().Str("queryId", query.Id).Msg("Query text not updated")
@@ -1195,11 +1173,7 @@ func (s Server) AddReportDirectAccess(ctx context.Context, req *proto.AddReportD
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	defer func() {
-		if err != nil {
-			rollback(tx)
-		}
-	}()
+	defer tx.Rollback()
 
 	// Derive current access state from the latest log entries
 	// Only include emails whose latest entry is not a removal (status != 2)
