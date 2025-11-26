@@ -1,51 +1,64 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import Modal from 'antd/es/modal'
 import Button from 'antd/es/button'
 import Collapse from 'antd/es/collapse'
 import { HistoryOutlined, UserOutlined, ClockCircleOutlined, DownOutlined, RollbackOutlined, EditOutlined } from '@ant-design/icons'
 import Tag from 'antd/es/tag'
 import styles from './MapChangeHistoryModal.module.css'
+import { getSnapshots } from './actions/snapshots'
+import { Loading } from './Loading'
 
 const { Panel } = Collapse
 
-// Mock data generator - creates changes over the past few days
-function generateMockHistoryData () {
-  const now = new Date()
+// Build linear history from report and dataset snapshots
+function buildHistoryFromSnapshots (reportSnapshotsList = [], datasetSnapshotsList = []) {
   const changes = []
-  const users = ['alice.johnson@example.com', 'bob.smith@example.com', 'carol.williams@example.com', 'david.brown@example.com', 'eve.davis@example.com']
 
-  // Generate changes for the past 3 days
-  for (let dayOffset = 0; dayOffset < 3; dayOffset++) {
-    const day = new Date(now)
-    day.setDate(day.getDate() - dayOffset)
-    day.setHours(0, 0, 0, 0)
+  // Report-level snapshots
+  reportSnapshotsList.forEach(s => {
+    if (!s || !s.createdAt) return
+    const ts = new Date(s.createdAt)
+    if (Number.isNaN(ts.getTime())) return
+    changes.push({
+      id: s.versionId,
+      timestamp: ts,
+      user: s.authorEmail,
+      type: 'edit'
+    })
+  })
 
-    // Generate 5-15 changes per day
-    const changesPerDay = Math.floor(Math.random() * 11) + 5
-    for (let i = 0; i < changesPerDay; i++) {
-      const changeTime = new Date(day)
-      // Distribute changes throughout the day
-      const hour = Math.floor(Math.random() * 24)
-      const minute = Math.floor(Math.random() * 60)
-      changeTime.setHours(hour, minute, 0, 0)
+  // Dataset-level snapshots
+  datasetSnapshotsList.forEach(s => {
+    if (!s || !s.createdAt) return
+    const ts = new Date(s.createdAt)
+    if (Number.isNaN(ts.getTime())) return
+    changes.push({
+      id: s.snapshotId,
+      timestamp: ts,
+      user: s.authorEmail,
+      type: 'edit'
+    })
+  })
 
-      // Don't create future dates
-      if (changeTime > now) continue
+  // Sort newest first
+  changes.sort((a, b) => b.timestamp - a.timestamp)
 
-      // Randomly assign type: 'edit' or 'restore' (more edits than restores)
-      const changeType = Math.random() > 0.2 ? 'edit' : 'restore'
+  // Deduplicate per minute/author (keep most recent)
+  const seen = new Map()
+  const deduped = []
 
-      changes.push({
-        id: `change-${dayOffset}-${i}`,
-        timestamp: changeTime,
-        user: users[Math.floor(Math.random() * users.length)],
-        type: changeType
-      })
+  for (const change of changes) {
+    if (!change.timestamp || !change.user) continue
+    const ts = change.timestamp
+    const key = `${change.user}-${ts.getFullYear()}-${ts.getMonth()}-${ts.getDate()}-${ts.getHours()}-${ts.getMinutes()}`
+    if (!seen.has(key)) {
+      seen.set(key, true)
+      deduped.push(change)
     }
   }
 
-  // Sort by timestamp, newest first
-  return changes.sort((a, b) => b.timestamp - a.timestamp)
+  return deduped
 }
 
 // Format date for display
@@ -195,15 +208,33 @@ function DaySection ({ dayLabel, hourGroups, expandedKeys, onToggle, currentVers
 }
 
 export function MapChangeHistoryModal ({ open, onClose }) {
+  const dispatch = useDispatch()
+  const { data: snapshots, loading } = useSelector(state => state.snapshots || {})
+  const report = useSelector(state => state.report)
+
   const [expandedHours, setExpandedHours] = useState(new Set())
   const [renderedHours, setRenderedHours] = useState(new Set())
 
-  // Generate and group mock data
-  const historyData = useMemo(() => generateMockHistoryData(), [])
+  // Load snapshots when modal is opened
+  useEffect(() => {
+    if (!open || !report?.id) {
+      return
+    }
+    dispatch(getSnapshots())
+  }, [open, report?.id, dispatch])
+
+  // Build history data from snapshots
+  const historyData = useMemo(() => {
+    if (!snapshots) return []
+    const reportSnapshotsList = snapshots.reportSnapshotsList || []
+    const datasetSnapshotsList = snapshots.datasetSnapshotsList || []
+    return buildHistoryFromSnapshots(reportSnapshotsList, datasetSnapshotsList)
+  }, [snapshots])
+
   const groupedData = useMemo(() => groupChangesByTime(historyData), [historyData])
 
-  // Current version is the most recent change (first in sorted list)
-  const currentVersionId = historyData.length > 0 ? historyData[0].id : null
+  // Current version comes from the report
+  const currentVersionId = report?.versionId || (historyData.length > 0 ? historyData[0].id : null)
 
   const dayLabels = Object.keys(groupedData).sort((a, b) => {
     // Sort: Today first, then Yesterday, then by date
@@ -247,63 +278,75 @@ export function MapChangeHistoryModal ({ open, onClose }) {
       bodyStyle={{ padding: '0px' }}
     >
       <div className={styles.content}>
-        <div className={styles.summary}>
-          <span className={styles.totalChanges}>{historyData.length} total changes</span>
-        </div>
+        {loading && !snapshots && (
+          <Loading />
+        )}
+        {!loading && historyData.length === 0 && (
+          <div className={styles.summary}>
+            <span className={styles.totalChanges}>No changes yet</span>
+          </div>
+        )}
+        {!loading && historyData.length > 0 && (
+          <>
+            <div className={styles.summary}>
+              <span className={styles.totalChanges}>{historyData.length} total changes</span>
+            </div>
 
-        <div className={styles.historyContainer}>
-          <Collapse
-            ghost
-            activeKey={Array.from(currentExpandedDays)}
-            onChange={(keys) => setCurrentExpandedDays(new Set(keys))}
-            expandIcon={({ isActive }) => <DownOutlined rotate={isActive ? 180 : 0} />}
-            className={styles.dayCollapse}
-          >
-            {dayLabels.map(dayLabel => {
-              const hourGroups = groupedData[dayLabel]
-              const totalChanges = Object.values(hourGroups).reduce((sum, hg) => sum + hg.changes.length, 0)
+            <div className={styles.historyContainer}>
+              <Collapse
+                ghost
+                activeKey={Array.from(currentExpandedDays)}
+                onChange={(keys) => setCurrentExpandedDays(new Set(keys))}
+                expandIcon={({ isActive }) => <DownOutlined rotate={isActive ? 180 : 0} />}
+                className={styles.dayCollapse}
+              >
+                {dayLabels.map(dayLabel => {
+                  const hourGroups = groupedData[dayLabel]
+                  const totalChanges = Object.values(hourGroups).reduce((sum, hg) => sum + hg.changes.length, 0)
 
-              return (
-                <Panel
-                  key={dayLabel}
-                  header={
-                    <div className={styles.dayPanelHeader}>
-                      <span className={styles.dayPanelLabel}>{dayLabel}</span>
-                      <span className={styles.dayPanelCount}>{totalChanges} change{totalChanges !== 1 ? 's' : ''}</span>
-                    </div>
-                  }
-                  className={styles.dayPanel}
-                >
-                  <DaySection
-                    dayLabel={dayLabel}
-                    hourGroups={hourGroups}
-                    expandedKeys={Array.from(expandedHours).filter(key => key.startsWith(dayLabel))}
-                    currentVersionId={currentVersionId}
-                    renderedHours={renderedHours}
-                    onHourRendered={(hourKey) => {
-                      setRenderedHours(prev => new Set([...prev, hourKey]))
-                    }}
-                    onToggle={(keys) => {
-                      const newExpanded = new Set()
-                      keys.forEach(key => {
-                        if (key.startsWith(dayLabel)) {
-                          newExpanded.add(key)
-                        }
-                      })
-                      // Keep other expanded hours
-                      expandedHours.forEach(key => {
-                        if (!key.startsWith(dayLabel)) {
-                          newExpanded.add(key)
-                        }
-                      })
-                      setExpandedHours(newExpanded)
-                    }}
-                  />
-                </Panel>
-              )
-            })}
-          </Collapse>
-        </div>
+                  return (
+                    <Panel
+                      key={dayLabel}
+                      header={
+                        <div className={styles.dayPanelHeader}>
+                          <span className={styles.dayPanelLabel}>{dayLabel}</span>
+                          <span className={styles.dayPanelCount}>{totalChanges} change{totalChanges !== 1 ? 's' : ''}</span>
+                        </div>
+                      }
+                      className={styles.dayPanel}
+                    >
+                      <DaySection
+                        dayLabel={dayLabel}
+                        hourGroups={hourGroups}
+                        expandedKeys={Array.from(expandedHours).filter(key => key.startsWith(dayLabel))}
+                        currentVersionId={currentVersionId}
+                        renderedHours={renderedHours}
+                        onHourRendered={(hourKey) => {
+                          setRenderedHours(prev => new Set([...prev, hourKey]))
+                        }}
+                        onToggle={(keys) => {
+                          const newExpanded = new Set()
+                          keys.forEach(key => {
+                            if (key.startsWith(dayLabel)) {
+                              newExpanded.add(key)
+                            }
+                          })
+                          // Keep other expanded hours
+                          expandedHours.forEach(key => {
+                            if (!key.startsWith(dayLabel)) {
+                              newExpanded.add(key)
+                            }
+                          })
+                          setExpandedHours(newExpanded)
+                        }}
+                      />
+                    </Panel>
+                  )
+                })}
+              </Collapse>
+            </div>
+          </>
+        )}
       </div>
     </Modal>
   )

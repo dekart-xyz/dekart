@@ -21,6 +21,7 @@ import { setRedirectState } from '../actions/redirect'
 import sessionStorage from './sessionStorageReducer'
 import readme from './readmeReducer'
 import analytics from './analyticsReducer'
+import snapshots from './snapshotsReducer'
 import { upgradeModal } from './upgradeModalReducer'
 import { report, reportDirectAccessEmails, reportsList, reportStatus } from './reportReducer'
 
@@ -169,6 +170,7 @@ export default combineReducers({
   sessionStorage,
   readme,
   analytics,
+  snapshots,
   upgradeModal,
   location
 })
