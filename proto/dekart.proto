@@ -16,6 +16,7 @@ service Dekart {
     rpc AddReportDirectAccess(AddReportDirectAccessRequest) returns (AddReportDirectAccessResponse) {}
     rpc SetTrackViewers(SetTrackViewersRequest) returns (SetTrackViewersResponse) {}
     rpc SetAutoRefreshIntervalSeconds(SetAutoRefreshIntervalSecondsRequest) returns (SetAutoRefreshIntervalSecondsResponse) {}  // set auto refresh interval in seconds
+    rpc GetReportVersion(GetReportVersionRequest) returns (GetReportVersionResponse) {}
 
     // datasets
     rpc CreateDataset(CreateDatasetRequest) returns (CreateDatasetResponse) {}
@@ -69,6 +70,32 @@ service Dekart {
     rpc GetWorkspace(GetWorkspaceRequest) returns (GetWorkspaceResponse) {}
     rpc UpdateWorkspaceUser(UpdateWorkspaceUserRequest) returns (UpdateWorkspaceUserResponse) {}
 }
+
+message GetReportVersionRequest {
+    string report_id = 1;
+}
+
+message ReportSnapshot {
+    string version_id = 1;
+    string report_id = 2;
+    string author_email = 3;
+    string created_at = 4;
+}
+
+message DatasetSnapshot {
+    string snapshot_id = 1;
+    string report_version_id = 2;
+    string dataset_id = 3;
+    string report_id = 4;
+    string author_email = 5;
+    string created_at = 6;
+}
+
+message GetReportVersionResponse {
+    repeated ReportSnapshot report_snapshots = 1;
+    repeated DatasetSnapshot dataset_snapshots = 2;
+}
+
 
 message TrackEventRequest {
     string event_name = 1;

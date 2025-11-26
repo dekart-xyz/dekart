@@ -298,7 +298,7 @@ func (x UpdateWorkspaceUserRequest_UserUpdateType) Number() protoreflect.EnumNum
 
 // Deprecated: Use UpdateWorkspaceUserRequest_UserUpdateType.Descriptor instead.
 func (UpdateWorkspaceUserRequest_UserUpdateType) EnumDescriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{24, 0}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{28, 0}
 }
 
 type GetEnvResponse_Variable_Type int32
@@ -422,7 +422,7 @@ func (x GetEnvResponse_Variable_Type) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use GetEnvResponse_Variable_Type.Descriptor instead.
 func (GetEnvResponse_Variable_Type) EnumDescriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{70, 0, 0}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{74, 0, 0}
 }
 
 type AuthState_Action int32
@@ -474,7 +474,7 @@ func (x AuthState_Action) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use AuthState_Action.Descriptor instead.
 func (AuthState_Action) EnumDescriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{72, 0}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{76, 0}
 }
 
 type QueryJob_JobStatus int32
@@ -532,7 +532,7 @@ func (x QueryJob_JobStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use QueryJob_JobStatus.Descriptor instead.
 func (QueryJob_JobStatus) EnumDescriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{81, 0}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{85, 0}
 }
 
 type Query_QuerySource int32
@@ -581,7 +581,7 @@ func (x Query_QuerySource) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Query_QuerySource.Descriptor instead.
 func (Query_QuerySource) EnumDescriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{82, 0}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{86, 0}
 }
 
 type File_Status int32
@@ -633,7 +633,7 @@ func (x File_Status) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use File_Status.Descriptor instead.
 func (File_Status) EnumDescriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{83, 0}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{87, 0}
 }
 
 type QueryParam_Type int32
@@ -679,7 +679,259 @@ func (x QueryParam_Type) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use QueryParam_Type.Descriptor instead.
 func (QueryParam_Type) EnumDescriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{104, 0}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{108, 0}
+}
+
+type GetReportVersionRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ReportId string `protobuf:"bytes,1,opt,name=report_id,json=reportId,proto3" json:"report_id,omitempty"`
+}
+
+func (x *GetReportVersionRequest) Reset() {
+	*x = GetReportVersionRequest{}
+	mi := &file_proto_dekart_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetReportVersionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetReportVersionRequest) ProtoMessage() {}
+
+func (x *GetReportVersionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dekart_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetReportVersionRequest.ProtoReflect.Descriptor instead.
+func (*GetReportVersionRequest) Descriptor() ([]byte, []int) {
+	return file_proto_dekart_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *GetReportVersionRequest) GetReportId() string {
+	if x != nil {
+		return x.ReportId
+	}
+	return ""
+}
+
+type ReportSnapshot struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	VersionId   string `protobuf:"bytes,1,opt,name=version_id,json=versionId,proto3" json:"version_id,omitempty"`
+	ReportId    string `protobuf:"bytes,2,opt,name=report_id,json=reportId,proto3" json:"report_id,omitempty"`
+	AuthorEmail string `protobuf:"bytes,3,opt,name=author_email,json=authorEmail,proto3" json:"author_email,omitempty"`
+	CreatedAt   string `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+}
+
+func (x *ReportSnapshot) Reset() {
+	*x = ReportSnapshot{}
+	mi := &file_proto_dekart_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportSnapshot) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportSnapshot) ProtoMessage() {}
+
+func (x *ReportSnapshot) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dekart_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportSnapshot.ProtoReflect.Descriptor instead.
+func (*ReportSnapshot) Descriptor() ([]byte, []int) {
+	return file_proto_dekart_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ReportSnapshot) GetVersionId() string {
+	if x != nil {
+		return x.VersionId
+	}
+	return ""
+}
+
+func (x *ReportSnapshot) GetReportId() string {
+	if x != nil {
+		return x.ReportId
+	}
+	return ""
+}
+
+func (x *ReportSnapshot) GetAuthorEmail() string {
+	if x != nil {
+		return x.AuthorEmail
+	}
+	return ""
+}
+
+func (x *ReportSnapshot) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+type DatasetSnapshot struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	SnapshotId      string `protobuf:"bytes,1,opt,name=snapshot_id,json=snapshotId,proto3" json:"snapshot_id,omitempty"`
+	ReportVersionId string `protobuf:"bytes,2,opt,name=report_version_id,json=reportVersionId,proto3" json:"report_version_id,omitempty"`
+	DatasetId       string `protobuf:"bytes,3,opt,name=dataset_id,json=datasetId,proto3" json:"dataset_id,omitempty"`
+	ReportId        string `protobuf:"bytes,4,opt,name=report_id,json=reportId,proto3" json:"report_id,omitempty"`
+	AuthorEmail     string `protobuf:"bytes,5,opt,name=author_email,json=authorEmail,proto3" json:"author_email,omitempty"`
+	CreatedAt       string `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+}
+
+func (x *DatasetSnapshot) Reset() {
+	*x = DatasetSnapshot{}
+	mi := &file_proto_dekart_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DatasetSnapshot) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DatasetSnapshot) ProtoMessage() {}
+
+func (x *DatasetSnapshot) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dekart_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DatasetSnapshot.ProtoReflect.Descriptor instead.
+func (*DatasetSnapshot) Descriptor() ([]byte, []int) {
+	return file_proto_dekart_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *DatasetSnapshot) GetSnapshotId() string {
+	if x != nil {
+		return x.SnapshotId
+	}
+	return ""
+}
+
+func (x *DatasetSnapshot) GetReportVersionId() string {
+	if x != nil {
+		return x.ReportVersionId
+	}
+	return ""
+}
+
+func (x *DatasetSnapshot) GetDatasetId() string {
+	if x != nil {
+		return x.DatasetId
+	}
+	return ""
+}
+
+func (x *DatasetSnapshot) GetReportId() string {
+	if x != nil {
+		return x.ReportId
+	}
+	return ""
+}
+
+func (x *DatasetSnapshot) GetAuthorEmail() string {
+	if x != nil {
+		return x.AuthorEmail
+	}
+	return ""
+}
+
+func (x *DatasetSnapshot) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+type GetReportVersionResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ReportSnapshots  []*ReportSnapshot  `protobuf:"bytes,1,rep,name=report_snapshots,json=reportSnapshots,proto3" json:"report_snapshots,omitempty"`
+	DatasetSnapshots []*DatasetSnapshot `protobuf:"bytes,2,rep,name=dataset_snapshots,json=datasetSnapshots,proto3" json:"dataset_snapshots,omitempty"`
+}
+
+func (x *GetReportVersionResponse) Reset() {
+	*x = GetReportVersionResponse{}
+	mi := &file_proto_dekart_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetReportVersionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetReportVersionResponse) ProtoMessage() {}
+
+func (x *GetReportVersionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dekart_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetReportVersionResponse.ProtoReflect.Descriptor instead.
+func (*GetReportVersionResponse) Descriptor() ([]byte, []int) {
+	return file_proto_dekart_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *GetReportVersionResponse) GetReportSnapshots() []*ReportSnapshot {
+	if x != nil {
+		return x.ReportSnapshots
+	}
+	return nil
+}
+
+func (x *GetReportVersionResponse) GetDatasetSnapshots() []*DatasetSnapshot {
+	if x != nil {
+		return x.DatasetSnapshots
+	}
+	return nil
 }
 
 type TrackEventRequest struct {
@@ -693,7 +945,7 @@ type TrackEventRequest struct {
 
 func (x *TrackEventRequest) Reset() {
 	*x = TrackEventRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[0]
+	mi := &file_proto_dekart_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -705,7 +957,7 @@ func (x *TrackEventRequest) String() string {
 func (*TrackEventRequest) ProtoMessage() {}
 
 func (x *TrackEventRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[0]
+	mi := &file_proto_dekart_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -718,7 +970,7 @@ func (x *TrackEventRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrackEventRequest.ProtoReflect.Descriptor instead.
 func (*TrackEventRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{0}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *TrackEventRequest) GetEventName() string {
@@ -743,7 +995,7 @@ type TrackEventResponse struct {
 
 func (x *TrackEventResponse) Reset() {
 	*x = TrackEventResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[1]
+	mi := &file_proto_dekart_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -755,7 +1007,7 @@ func (x *TrackEventResponse) String() string {
 func (*TrackEventResponse) ProtoMessage() {}
 
 func (x *TrackEventResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[1]
+	mi := &file_proto_dekart_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -768,7 +1020,7 @@ func (x *TrackEventResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrackEventResponse.ProtoReflect.Descriptor instead.
 func (*TrackEventResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{1}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{5}
 }
 
 type SetTrackViewersRequest struct {
@@ -782,7 +1034,7 @@ type SetTrackViewersRequest struct {
 
 func (x *SetTrackViewersRequest) Reset() {
 	*x = SetTrackViewersRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[2]
+	mi := &file_proto_dekart_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -794,7 +1046,7 @@ func (x *SetTrackViewersRequest) String() string {
 func (*SetTrackViewersRequest) ProtoMessage() {}
 
 func (x *SetTrackViewersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[2]
+	mi := &file_proto_dekart_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -807,7 +1059,7 @@ func (x *SetTrackViewersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetTrackViewersRequest.ProtoReflect.Descriptor instead.
 func (*SetTrackViewersRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{2}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *SetTrackViewersRequest) GetReportId() string {
@@ -832,7 +1084,7 @@ type SetTrackViewersResponse struct {
 
 func (x *SetTrackViewersResponse) Reset() {
 	*x = SetTrackViewersResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[3]
+	mi := &file_proto_dekart_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -844,7 +1096,7 @@ func (x *SetTrackViewersResponse) String() string {
 func (*SetTrackViewersResponse) ProtoMessage() {}
 
 func (x *SetTrackViewersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[3]
+	mi := &file_proto_dekart_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -857,7 +1109,7 @@ func (x *SetTrackViewersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetTrackViewersResponse.ProtoReflect.Descriptor instead.
 func (*SetTrackViewersResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{3}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{7}
 }
 
 type GetWherobotsConnectionHintRequest struct {
@@ -871,7 +1123,7 @@ type GetWherobotsConnectionHintRequest struct {
 
 func (x *GetWherobotsConnectionHintRequest) Reset() {
 	*x = GetWherobotsConnectionHintRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[4]
+	mi := &file_proto_dekart_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -883,7 +1135,7 @@ func (x *GetWherobotsConnectionHintRequest) String() string {
 func (*GetWherobotsConnectionHintRequest) ProtoMessage() {}
 
 func (x *GetWherobotsConnectionHintRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[4]
+	mi := &file_proto_dekart_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -896,7 +1148,7 @@ func (x *GetWherobotsConnectionHintRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use GetWherobotsConnectionHintRequest.ProtoReflect.Descriptor instead.
 func (*GetWherobotsConnectionHintRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{4}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetWherobotsConnectionHintRequest) GetWherobotsHost() string {
@@ -923,7 +1175,7 @@ type GetWherobotsConnectionHintResponse struct {
 
 func (x *GetWherobotsConnectionHintResponse) Reset() {
 	*x = GetWherobotsConnectionHintResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[5]
+	mi := &file_proto_dekart_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -935,7 +1187,7 @@ func (x *GetWherobotsConnectionHintResponse) String() string {
 func (*GetWherobotsConnectionHintResponse) ProtoMessage() {}
 
 func (x *GetWherobotsConnectionHintResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[5]
+	mi := &file_proto_dekart_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -948,7 +1200,7 @@ func (x *GetWherobotsConnectionHintResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use GetWherobotsConnectionHintResponse.ProtoReflect.Descriptor instead.
 func (*GetWherobotsConnectionHintResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{5}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetWherobotsConnectionHintResponse) GetHintJson() string {
@@ -969,7 +1221,7 @@ type SetAutoRefreshIntervalSecondsRequest struct {
 
 func (x *SetAutoRefreshIntervalSecondsRequest) Reset() {
 	*x = SetAutoRefreshIntervalSecondsRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[6]
+	mi := &file_proto_dekart_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -981,7 +1233,7 @@ func (x *SetAutoRefreshIntervalSecondsRequest) String() string {
 func (*SetAutoRefreshIntervalSecondsRequest) ProtoMessage() {}
 
 func (x *SetAutoRefreshIntervalSecondsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[6]
+	mi := &file_proto_dekart_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -994,7 +1246,7 @@ func (x *SetAutoRefreshIntervalSecondsRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use SetAutoRefreshIntervalSecondsRequest.ProtoReflect.Descriptor instead.
 func (*SetAutoRefreshIntervalSecondsRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{6}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *SetAutoRefreshIntervalSecondsRequest) GetReportId() string {
@@ -1019,7 +1271,7 @@ type SetAutoRefreshIntervalSecondsResponse struct {
 
 func (x *SetAutoRefreshIntervalSecondsResponse) Reset() {
 	*x = SetAutoRefreshIntervalSecondsResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[7]
+	mi := &file_proto_dekart_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1031,7 +1283,7 @@ func (x *SetAutoRefreshIntervalSecondsResponse) String() string {
 func (*SetAutoRefreshIntervalSecondsResponse) ProtoMessage() {}
 
 func (x *SetAutoRefreshIntervalSecondsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[7]
+	mi := &file_proto_dekart_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1044,7 +1296,7 @@ func (x *SetAutoRefreshIntervalSecondsResponse) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use SetAutoRefreshIntervalSecondsResponse.ProtoReflect.Descriptor instead.
 func (*SetAutoRefreshIntervalSecondsResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{7}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{11}
 }
 
 type AddReportDirectAccessRequest struct {
@@ -1058,7 +1310,7 @@ type AddReportDirectAccessRequest struct {
 
 func (x *AddReportDirectAccessRequest) Reset() {
 	*x = AddReportDirectAccessRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[8]
+	mi := &file_proto_dekart_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1070,7 +1322,7 @@ func (x *AddReportDirectAccessRequest) String() string {
 func (*AddReportDirectAccessRequest) ProtoMessage() {}
 
 func (x *AddReportDirectAccessRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[8]
+	mi := &file_proto_dekart_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1083,7 +1335,7 @@ func (x *AddReportDirectAccessRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddReportDirectAccessRequest.ProtoReflect.Descriptor instead.
 func (*AddReportDirectAccessRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{8}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *AddReportDirectAccessRequest) GetReportId() string {
@@ -1108,7 +1360,7 @@ type AddReportDirectAccessResponse struct {
 
 func (x *AddReportDirectAccessResponse) Reset() {
 	*x = AddReportDirectAccessResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[9]
+	mi := &file_proto_dekart_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1120,7 +1372,7 @@ func (x *AddReportDirectAccessResponse) String() string {
 func (*AddReportDirectAccessResponse) ProtoMessage() {}
 
 func (x *AddReportDirectAccessResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[9]
+	mi := &file_proto_dekart_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1133,7 +1385,7 @@ func (x *AddReportDirectAccessResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddReportDirectAccessResponse.ProtoReflect.Descriptor instead.
 func (*AddReportDirectAccessResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{9}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{13}
 }
 
 type GetReportAnalyticsRequest struct {
@@ -1146,7 +1398,7 @@ type GetReportAnalyticsRequest struct {
 
 func (x *GetReportAnalyticsRequest) Reset() {
 	*x = GetReportAnalyticsRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[10]
+	mi := &file_proto_dekart_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1158,7 +1410,7 @@ func (x *GetReportAnalyticsRequest) String() string {
 func (*GetReportAnalyticsRequest) ProtoMessage() {}
 
 func (x *GetReportAnalyticsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[10]
+	mi := &file_proto_dekart_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1171,7 +1423,7 @@ func (x *GetReportAnalyticsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetReportAnalyticsRequest.ProtoReflect.Descriptor instead.
 func (*GetReportAnalyticsRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{10}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GetReportAnalyticsRequest) GetReportId() string {
@@ -1191,7 +1443,7 @@ type GetReportAnalyticsResponse struct {
 
 func (x *GetReportAnalyticsResponse) Reset() {
 	*x = GetReportAnalyticsResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[11]
+	mi := &file_proto_dekart_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1203,7 +1455,7 @@ func (x *GetReportAnalyticsResponse) String() string {
 func (*GetReportAnalyticsResponse) ProtoMessage() {}
 
 func (x *GetReportAnalyticsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[11]
+	mi := &file_proto_dekart_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1216,7 +1468,7 @@ func (x *GetReportAnalyticsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetReportAnalyticsResponse.ProtoReflect.Descriptor instead.
 func (*GetReportAnalyticsResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{11}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GetReportAnalyticsResponse) GetAnalytics() *ReportAnalytics {
@@ -1238,7 +1490,7 @@ type AddReadmeRequest struct {
 
 func (x *AddReadmeRequest) Reset() {
 	*x = AddReadmeRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[12]
+	mi := &file_proto_dekart_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1250,7 +1502,7 @@ func (x *AddReadmeRequest) String() string {
 func (*AddReadmeRequest) ProtoMessage() {}
 
 func (x *AddReadmeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[12]
+	mi := &file_proto_dekart_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1263,7 +1515,7 @@ func (x *AddReadmeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddReadmeRequest.ProtoReflect.Descriptor instead.
 func (*AddReadmeRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{12}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *AddReadmeRequest) GetReportId() string {
@@ -1295,7 +1547,7 @@ type AddReadmeResponse struct {
 
 func (x *AddReadmeResponse) Reset() {
 	*x = AddReadmeResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[13]
+	mi := &file_proto_dekart_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1307,7 +1559,7 @@ func (x *AddReadmeResponse) String() string {
 func (*AddReadmeResponse) ProtoMessage() {}
 
 func (x *AddReadmeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[13]
+	mi := &file_proto_dekart_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1320,7 +1572,7 @@ func (x *AddReadmeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddReadmeResponse.ProtoReflect.Descriptor instead.
 func (*AddReadmeResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{13}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{17}
 }
 
 type RemoveReadmeRequest struct {
@@ -1333,7 +1585,7 @@ type RemoveReadmeRequest struct {
 
 func (x *RemoveReadmeRequest) Reset() {
 	*x = RemoveReadmeRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[14]
+	mi := &file_proto_dekart_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1345,7 +1597,7 @@ func (x *RemoveReadmeRequest) String() string {
 func (*RemoveReadmeRequest) ProtoMessage() {}
 
 func (x *RemoveReadmeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[14]
+	mi := &file_proto_dekart_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1358,7 +1610,7 @@ func (x *RemoveReadmeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveReadmeRequest.ProtoReflect.Descriptor instead.
 func (*RemoveReadmeRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{14}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *RemoveReadmeRequest) GetReportId() string {
@@ -1376,7 +1628,7 @@ type RemoveReadmeResponse struct {
 
 func (x *RemoveReadmeResponse) Reset() {
 	*x = RemoveReadmeResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[15]
+	mi := &file_proto_dekart_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1388,7 +1640,7 @@ func (x *RemoveReadmeResponse) String() string {
 func (*RemoveReadmeResponse) ProtoMessage() {}
 
 func (x *RemoveReadmeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[15]
+	mi := &file_proto_dekart_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1401,7 +1653,7 @@ func (x *RemoveReadmeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveReadmeResponse.ProtoReflect.Descriptor instead.
 func (*RemoveReadmeResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{15}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{19}
 }
 
 type AllowExportDatasetsRequest struct {
@@ -1415,7 +1667,7 @@ type AllowExportDatasetsRequest struct {
 
 func (x *AllowExportDatasetsRequest) Reset() {
 	*x = AllowExportDatasetsRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[16]
+	mi := &file_proto_dekart_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1427,7 +1679,7 @@ func (x *AllowExportDatasetsRequest) String() string {
 func (*AllowExportDatasetsRequest) ProtoMessage() {}
 
 func (x *AllowExportDatasetsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[16]
+	mi := &file_proto_dekart_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1440,7 +1692,7 @@ func (x *AllowExportDatasetsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AllowExportDatasetsRequest.ProtoReflect.Descriptor instead.
 func (*AllowExportDatasetsRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{16}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *AllowExportDatasetsRequest) GetReportId() string {
@@ -1465,7 +1717,7 @@ type AllowExportDatasetsResponse struct {
 
 func (x *AllowExportDatasetsResponse) Reset() {
 	*x = AllowExportDatasetsResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[17]
+	mi := &file_proto_dekart_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1477,7 +1729,7 @@ func (x *AllowExportDatasetsResponse) String() string {
 func (*AllowExportDatasetsResponse) ProtoMessage() {}
 
 func (x *AllowExportDatasetsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[17]
+	mi := &file_proto_dekart_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1490,7 +1742,7 @@ func (x *AllowExportDatasetsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AllowExportDatasetsResponse.ProtoReflect.Descriptor instead.
 func (*AllowExportDatasetsResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{17}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{21}
 }
 
 type CancelJobRequest struct {
@@ -1503,7 +1755,7 @@ type CancelJobRequest struct {
 
 func (x *CancelJobRequest) Reset() {
 	*x = CancelJobRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[18]
+	mi := &file_proto_dekart_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1515,7 +1767,7 @@ func (x *CancelJobRequest) String() string {
 func (*CancelJobRequest) ProtoMessage() {}
 
 func (x *CancelJobRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[18]
+	mi := &file_proto_dekart_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1528,7 +1780,7 @@ func (x *CancelJobRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelJobRequest.ProtoReflect.Descriptor instead.
 func (*CancelJobRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{18}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *CancelJobRequest) GetJobId() string {
@@ -1546,7 +1798,7 @@ type CancelJobResponse struct {
 
 func (x *CancelJobResponse) Reset() {
 	*x = CancelJobResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[19]
+	mi := &file_proto_dekart_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1558,7 +1810,7 @@ func (x *CancelJobResponse) String() string {
 func (*CancelJobResponse) ProtoMessage() {}
 
 func (x *CancelJobResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[19]
+	mi := &file_proto_dekart_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1571,7 +1823,7 @@ func (x *CancelJobResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelJobResponse.ProtoReflect.Descriptor instead.
 func (*CancelJobResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{19}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{23}
 }
 
 type PublishReportRequest struct {
@@ -1585,7 +1837,7 @@ type PublishReportRequest struct {
 
 func (x *PublishReportRequest) Reset() {
 	*x = PublishReportRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[20]
+	mi := &file_proto_dekart_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1597,7 +1849,7 @@ func (x *PublishReportRequest) String() string {
 func (*PublishReportRequest) ProtoMessage() {}
 
 func (x *PublishReportRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[20]
+	mi := &file_proto_dekart_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1610,7 +1862,7 @@ func (x *PublishReportRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PublishReportRequest.ProtoReflect.Descriptor instead.
 func (*PublishReportRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{20}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *PublishReportRequest) GetReportId() string {
@@ -1637,7 +1889,7 @@ type PublishReportResponse struct {
 
 func (x *PublishReportResponse) Reset() {
 	*x = PublishReportResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[21]
+	mi := &file_proto_dekart_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1649,7 +1901,7 @@ func (x *PublishReportResponse) String() string {
 func (*PublishReportResponse) ProtoMessage() {}
 
 func (x *PublishReportResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[21]
+	mi := &file_proto_dekart_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1662,7 +1914,7 @@ func (x *PublishReportResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PublishReportResponse.ProtoReflect.Descriptor instead.
 func (*PublishReportResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{21}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *PublishReportResponse) GetPublicMapsLimitReached() bool {
@@ -1682,7 +1934,7 @@ type GetStripePortalSessionRequest struct {
 
 func (x *GetStripePortalSessionRequest) Reset() {
 	*x = GetStripePortalSessionRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[22]
+	mi := &file_proto_dekart_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1694,7 +1946,7 @@ func (x *GetStripePortalSessionRequest) String() string {
 func (*GetStripePortalSessionRequest) ProtoMessage() {}
 
 func (x *GetStripePortalSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[22]
+	mi := &file_proto_dekart_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1707,7 +1959,7 @@ func (x *GetStripePortalSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStripePortalSessionRequest.ProtoReflect.Descriptor instead.
 func (*GetStripePortalSessionRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{22}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *GetStripePortalSessionRequest) GetUiUrl() string {
@@ -1727,7 +1979,7 @@ type GetStripePortalSessionResponse struct {
 
 func (x *GetStripePortalSessionResponse) Reset() {
 	*x = GetStripePortalSessionResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[23]
+	mi := &file_proto_dekart_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1739,7 +1991,7 @@ func (x *GetStripePortalSessionResponse) String() string {
 func (*GetStripePortalSessionResponse) ProtoMessage() {}
 
 func (x *GetStripePortalSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[23]
+	mi := &file_proto_dekart_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1752,7 +2004,7 @@ func (x *GetStripePortalSessionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStripePortalSessionResponse.ProtoReflect.Descriptor instead.
 func (*GetStripePortalSessionResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{23}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *GetStripePortalSessionResponse) GetUrl() string {
@@ -1774,7 +2026,7 @@ type UpdateWorkspaceUserRequest struct {
 
 func (x *UpdateWorkspaceUserRequest) Reset() {
 	*x = UpdateWorkspaceUserRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[24]
+	mi := &file_proto_dekart_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1786,7 +2038,7 @@ func (x *UpdateWorkspaceUserRequest) String() string {
 func (*UpdateWorkspaceUserRequest) ProtoMessage() {}
 
 func (x *UpdateWorkspaceUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[24]
+	mi := &file_proto_dekart_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1799,7 +2051,7 @@ func (x *UpdateWorkspaceUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateWorkspaceUserRequest.ProtoReflect.Descriptor instead.
 func (*UpdateWorkspaceUserRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{24}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *UpdateWorkspaceUserRequest) GetEmail() string {
@@ -1831,7 +2083,7 @@ type UpdateWorkspaceUserResponse struct {
 
 func (x *UpdateWorkspaceUserResponse) Reset() {
 	*x = UpdateWorkspaceUserResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[25]
+	mi := &file_proto_dekart_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1843,7 +2095,7 @@ func (x *UpdateWorkspaceUserResponse) String() string {
 func (*UpdateWorkspaceUserResponse) ProtoMessage() {}
 
 func (x *UpdateWorkspaceUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[25]
+	mi := &file_proto_dekart_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1856,7 +2108,7 @@ func (x *UpdateWorkspaceUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateWorkspaceUserResponse.ProtoReflect.Descriptor instead.
 func (*UpdateWorkspaceUserResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{25}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{29}
 }
 
 type GetWorkspaceRequest struct {
@@ -1867,7 +2119,7 @@ type GetWorkspaceRequest struct {
 
 func (x *GetWorkspaceRequest) Reset() {
 	*x = GetWorkspaceRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[26]
+	mi := &file_proto_dekart_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1879,7 +2131,7 @@ func (x *GetWorkspaceRequest) String() string {
 func (*GetWorkspaceRequest) ProtoMessage() {}
 
 func (x *GetWorkspaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[26]
+	mi := &file_proto_dekart_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1892,7 +2144,7 @@ func (x *GetWorkspaceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWorkspaceRequest.ProtoReflect.Descriptor instead.
 func (*GetWorkspaceRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{26}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{30}
 }
 
 type GetWorkspaceResponse struct {
@@ -1909,7 +2161,7 @@ type GetWorkspaceResponse struct {
 
 func (x *GetWorkspaceResponse) Reset() {
 	*x = GetWorkspaceResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[27]
+	mi := &file_proto_dekart_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1921,7 +2173,7 @@ func (x *GetWorkspaceResponse) String() string {
 func (*GetWorkspaceResponse) ProtoMessage() {}
 
 func (x *GetWorkspaceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[27]
+	mi := &file_proto_dekart_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1934,7 +2186,7 @@ func (x *GetWorkspaceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWorkspaceResponse.ProtoReflect.Descriptor instead.
 func (*GetWorkspaceResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{27}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *GetWorkspaceResponse) GetWorkspace() *Workspace {
@@ -1982,7 +2234,7 @@ type CreateWorkspaceRequest struct {
 
 func (x *CreateWorkspaceRequest) Reset() {
 	*x = CreateWorkspaceRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[28]
+	mi := &file_proto_dekart_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1994,7 +2246,7 @@ func (x *CreateWorkspaceRequest) String() string {
 func (*CreateWorkspaceRequest) ProtoMessage() {}
 
 func (x *CreateWorkspaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[28]
+	mi := &file_proto_dekart_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2007,7 +2259,7 @@ func (x *CreateWorkspaceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateWorkspaceRequest.ProtoReflect.Descriptor instead.
 func (*CreateWorkspaceRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{28}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *CreateWorkspaceRequest) GetWorkspaceName() string {
@@ -2025,7 +2277,7 @@ type CreateWorkspaceResponse struct {
 
 func (x *CreateWorkspaceResponse) Reset() {
 	*x = CreateWorkspaceResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[29]
+	mi := &file_proto_dekart_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2037,7 +2289,7 @@ func (x *CreateWorkspaceResponse) String() string {
 func (*CreateWorkspaceResponse) ProtoMessage() {}
 
 func (x *CreateWorkspaceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[29]
+	mi := &file_proto_dekart_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2050,7 +2302,7 @@ func (x *CreateWorkspaceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateWorkspaceResponse.ProtoReflect.Descriptor instead.
 func (*CreateWorkspaceResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{29}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{33}
 }
 
 type UpdateWorkspaceRequest struct {
@@ -2063,7 +2315,7 @@ type UpdateWorkspaceRequest struct {
 
 func (x *UpdateWorkspaceRequest) Reset() {
 	*x = UpdateWorkspaceRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[30]
+	mi := &file_proto_dekart_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2075,7 +2327,7 @@ func (x *UpdateWorkspaceRequest) String() string {
 func (*UpdateWorkspaceRequest) ProtoMessage() {}
 
 func (x *UpdateWorkspaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[30]
+	mi := &file_proto_dekart_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2088,7 +2340,7 @@ func (x *UpdateWorkspaceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateWorkspaceRequest.ProtoReflect.Descriptor instead.
 func (*UpdateWorkspaceRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{30}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *UpdateWorkspaceRequest) GetWorkspaceName() string {
@@ -2106,7 +2358,7 @@ type UpdateWorkspaceResponse struct {
 
 func (x *UpdateWorkspaceResponse) Reset() {
 	*x = UpdateWorkspaceResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[31]
+	mi := &file_proto_dekart_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2118,7 +2370,7 @@ func (x *UpdateWorkspaceResponse) String() string {
 func (*UpdateWorkspaceResponse) ProtoMessage() {}
 
 func (x *UpdateWorkspaceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[31]
+	mi := &file_proto_dekart_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2131,7 +2383,7 @@ func (x *UpdateWorkspaceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateWorkspaceResponse.ProtoReflect.Descriptor instead.
 func (*UpdateWorkspaceResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{31}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{35}
 }
 
 type RespondToInviteRequest struct {
@@ -2145,7 +2397,7 @@ type RespondToInviteRequest struct {
 
 func (x *RespondToInviteRequest) Reset() {
 	*x = RespondToInviteRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[32]
+	mi := &file_proto_dekart_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2157,7 +2409,7 @@ func (x *RespondToInviteRequest) String() string {
 func (*RespondToInviteRequest) ProtoMessage() {}
 
 func (x *RespondToInviteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[32]
+	mi := &file_proto_dekart_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2170,7 +2422,7 @@ func (x *RespondToInviteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RespondToInviteRequest.ProtoReflect.Descriptor instead.
 func (*RespondToInviteRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{32}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *RespondToInviteRequest) GetInviteId() string {
@@ -2195,7 +2447,7 @@ type RespondToInviteResponse struct {
 
 func (x *RespondToInviteResponse) Reset() {
 	*x = RespondToInviteResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[33]
+	mi := &file_proto_dekart_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2207,7 +2459,7 @@ func (x *RespondToInviteResponse) String() string {
 func (*RespondToInviteResponse) ProtoMessage() {}
 
 func (x *RespondToInviteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[33]
+	mi := &file_proto_dekart_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2220,7 +2472,7 @@ func (x *RespondToInviteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RespondToInviteResponse.ProtoReflect.Descriptor instead.
 func (*RespondToInviteResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{33}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{37}
 }
 
 type GetInvitesRequest struct {
@@ -2231,7 +2483,7 @@ type GetInvitesRequest struct {
 
 func (x *GetInvitesRequest) Reset() {
 	*x = GetInvitesRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[34]
+	mi := &file_proto_dekart_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2243,7 +2495,7 @@ func (x *GetInvitesRequest) String() string {
 func (*GetInvitesRequest) ProtoMessage() {}
 
 func (x *GetInvitesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[34]
+	mi := &file_proto_dekart_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2256,7 +2508,7 @@ func (x *GetInvitesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetInvitesRequest.ProtoReflect.Descriptor instead.
 func (*GetInvitesRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{34}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{38}
 }
 
 type WorkspaceInvite struct {
@@ -2273,7 +2525,7 @@ type WorkspaceInvite struct {
 
 func (x *WorkspaceInvite) Reset() {
 	*x = WorkspaceInvite{}
-	mi := &file_proto_dekart_proto_msgTypes[35]
+	mi := &file_proto_dekart_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2285,7 +2537,7 @@ func (x *WorkspaceInvite) String() string {
 func (*WorkspaceInvite) ProtoMessage() {}
 
 func (x *WorkspaceInvite) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[35]
+	mi := &file_proto_dekart_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2298,7 +2550,7 @@ func (x *WorkspaceInvite) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkspaceInvite.ProtoReflect.Descriptor instead.
 func (*WorkspaceInvite) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{35}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *WorkspaceInvite) GetWorkspaceId() string {
@@ -2346,7 +2598,7 @@ type GetInvitesResponse struct {
 
 func (x *GetInvitesResponse) Reset() {
 	*x = GetInvitesResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[36]
+	mi := &file_proto_dekart_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2358,7 +2610,7 @@ func (x *GetInvitesResponse) String() string {
 func (*GetInvitesResponse) ProtoMessage() {}
 
 func (x *GetInvitesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[36]
+	mi := &file_proto_dekart_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2371,7 +2623,7 @@ func (x *GetInvitesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetInvitesResponse.ProtoReflect.Descriptor instead.
 func (*GetInvitesResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{36}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *GetInvitesResponse) GetInvites() []*WorkspaceInvite {
@@ -2395,7 +2647,7 @@ type User struct {
 
 func (x *User) Reset() {
 	*x = User{}
-	mi := &file_proto_dekart_proto_msgTypes[37]
+	mi := &file_proto_dekart_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2407,7 +2659,7 @@ func (x *User) String() string {
 func (*User) ProtoMessage() {}
 
 func (x *User) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[37]
+	mi := &file_proto_dekart_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2420,7 +2672,7 @@ func (x *User) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use User.ProtoReflect.Descriptor instead.
 func (*User) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{37}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *User) GetEmail() string {
@@ -2466,7 +2718,7 @@ type GetGcpProjectListRequest struct {
 
 func (x *GetGcpProjectListRequest) Reset() {
 	*x = GetGcpProjectListRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[38]
+	mi := &file_proto_dekart_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2478,7 +2730,7 @@ func (x *GetGcpProjectListRequest) String() string {
 func (*GetGcpProjectListRequest) ProtoMessage() {}
 
 func (x *GetGcpProjectListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[38]
+	mi := &file_proto_dekart_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2491,7 +2743,7 @@ func (x *GetGcpProjectListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGcpProjectListRequest.ProtoReflect.Descriptor instead.
 func (*GetGcpProjectListRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{38}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{42}
 }
 
 type GetGcpProjectListResponse struct {
@@ -2504,7 +2756,7 @@ type GetGcpProjectListResponse struct {
 
 func (x *GetGcpProjectListResponse) Reset() {
 	*x = GetGcpProjectListResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[39]
+	mi := &file_proto_dekart_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2516,7 +2768,7 @@ func (x *GetGcpProjectListResponse) String() string {
 func (*GetGcpProjectListResponse) ProtoMessage() {}
 
 func (x *GetGcpProjectListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[39]
+	mi := &file_proto_dekart_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2529,7 +2781,7 @@ func (x *GetGcpProjectListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGcpProjectListResponse.ProtoReflect.Descriptor instead.
 func (*GetGcpProjectListResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{39}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *GetGcpProjectListResponse) GetProjects() []string {
@@ -2549,7 +2801,7 @@ type SetDefaultConnectionRequest struct {
 
 func (x *SetDefaultConnectionRequest) Reset() {
 	*x = SetDefaultConnectionRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[40]
+	mi := &file_proto_dekart_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2561,7 +2813,7 @@ func (x *SetDefaultConnectionRequest) String() string {
 func (*SetDefaultConnectionRequest) ProtoMessage() {}
 
 func (x *SetDefaultConnectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[40]
+	mi := &file_proto_dekart_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2574,7 +2826,7 @@ func (x *SetDefaultConnectionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetDefaultConnectionRequest.ProtoReflect.Descriptor instead.
 func (*SetDefaultConnectionRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{40}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *SetDefaultConnectionRequest) GetConnectionId() string {
@@ -2592,7 +2844,7 @@ type SetDefaultConnectionResponse struct {
 
 func (x *SetDefaultConnectionResponse) Reset() {
 	*x = SetDefaultConnectionResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[41]
+	mi := &file_proto_dekart_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2604,7 +2856,7 @@ func (x *SetDefaultConnectionResponse) String() string {
 func (*SetDefaultConnectionResponse) ProtoMessage() {}
 
 func (x *SetDefaultConnectionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[41]
+	mi := &file_proto_dekart_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2617,7 +2869,7 @@ func (x *SetDefaultConnectionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetDefaultConnectionResponse.ProtoReflect.Descriptor instead.
 func (*SetDefaultConnectionResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{41}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{45}
 }
 
 type RunAllQueriesRequest struct {
@@ -2632,7 +2884,7 @@ type RunAllQueriesRequest struct {
 
 func (x *RunAllQueriesRequest) Reset() {
 	*x = RunAllQueriesRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[42]
+	mi := &file_proto_dekart_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2644,7 +2896,7 @@ func (x *RunAllQueriesRequest) String() string {
 func (*RunAllQueriesRequest) ProtoMessage() {}
 
 func (x *RunAllQueriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[42]
+	mi := &file_proto_dekart_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2657,7 +2909,7 @@ func (x *RunAllQueriesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunAllQueriesRequest.ProtoReflect.Descriptor instead.
 func (*RunAllQueriesRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{42}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *RunAllQueriesRequest) GetReportId() string {
@@ -2689,7 +2941,7 @@ type RunAllQueriesResponse struct {
 
 func (x *RunAllQueriesResponse) Reset() {
 	*x = RunAllQueriesResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[43]
+	mi := &file_proto_dekart_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2701,7 +2953,7 @@ func (x *RunAllQueriesResponse) String() string {
 func (*RunAllQueriesResponse) ProtoMessage() {}
 
 func (x *RunAllQueriesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[43]
+	mi := &file_proto_dekart_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2714,7 +2966,7 @@ func (x *RunAllQueriesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunAllQueriesResponse.ProtoReflect.Descriptor instead.
 func (*RunAllQueriesResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{43}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{47}
 }
 
 type Workspace struct {
@@ -2728,7 +2980,7 @@ type Workspace struct {
 
 func (x *Workspace) Reset() {
 	*x = Workspace{}
-	mi := &file_proto_dekart_proto_msgTypes[44]
+	mi := &file_proto_dekart_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2740,7 +2992,7 @@ func (x *Workspace) String() string {
 func (*Workspace) ProtoMessage() {}
 
 func (x *Workspace) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[44]
+	mi := &file_proto_dekart_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2753,7 +3005,7 @@ func (x *Workspace) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Workspace.ProtoReflect.Descriptor instead.
 func (*Workspace) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{44}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *Workspace) GetId() string {
@@ -2787,7 +3039,7 @@ type Subscription struct {
 
 func (x *Subscription) Reset() {
 	*x = Subscription{}
-	mi := &file_proto_dekart_proto_msgTypes[45]
+	mi := &file_proto_dekart_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2799,7 +3051,7 @@ func (x *Subscription) String() string {
 func (*Subscription) ProtoMessage() {}
 
 func (x *Subscription) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[45]
+	mi := &file_proto_dekart_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2812,7 +3064,7 @@ func (x *Subscription) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Subscription.ProtoReflect.Descriptor instead.
 func (*Subscription) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{45}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *Subscription) GetPlanType() PlanType {
@@ -2882,7 +3134,7 @@ type CreateSubscriptionRequest struct {
 
 func (x *CreateSubscriptionRequest) Reset() {
 	*x = CreateSubscriptionRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[46]
+	mi := &file_proto_dekart_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2894,7 +3146,7 @@ func (x *CreateSubscriptionRequest) String() string {
 func (*CreateSubscriptionRequest) ProtoMessage() {}
 
 func (x *CreateSubscriptionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[46]
+	mi := &file_proto_dekart_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2907,7 +3159,7 @@ func (x *CreateSubscriptionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSubscriptionRequest.ProtoReflect.Descriptor instead.
 func (*CreateSubscriptionRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{46}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *CreateSubscriptionRequest) GetPlanType() PlanType {
@@ -2934,7 +3186,7 @@ type CreateSubscriptionResponse struct {
 
 func (x *CreateSubscriptionResponse) Reset() {
 	*x = CreateSubscriptionResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[47]
+	mi := &file_proto_dekart_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2946,7 +3198,7 @@ func (x *CreateSubscriptionResponse) String() string {
 func (*CreateSubscriptionResponse) ProtoMessage() {}
 
 func (x *CreateSubscriptionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[47]
+	mi := &file_proto_dekart_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2959,7 +3211,7 @@ func (x *CreateSubscriptionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSubscriptionResponse.ProtoReflect.Descriptor instead.
 func (*CreateSubscriptionResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{47}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *CreateSubscriptionResponse) GetRedirectUrl() string {
@@ -2977,7 +3229,7 @@ type GetConnectionListRequest struct {
 
 func (x *GetConnectionListRequest) Reset() {
 	*x = GetConnectionListRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[48]
+	mi := &file_proto_dekart_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2989,7 +3241,7 @@ func (x *GetConnectionListRequest) String() string {
 func (*GetConnectionListRequest) ProtoMessage() {}
 
 func (x *GetConnectionListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[48]
+	mi := &file_proto_dekart_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3002,7 +3254,7 @@ func (x *GetConnectionListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetConnectionListRequest.ProtoReflect.Descriptor instead.
 func (*GetConnectionListRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{48}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{52}
 }
 
 type GetConnectionListResponse struct {
@@ -3015,7 +3267,7 @@ type GetConnectionListResponse struct {
 
 func (x *GetConnectionListResponse) Reset() {
 	*x = GetConnectionListResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[49]
+	mi := &file_proto_dekart_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3027,7 +3279,7 @@ func (x *GetConnectionListResponse) String() string {
 func (*GetConnectionListResponse) ProtoMessage() {}
 
 func (x *GetConnectionListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[49]
+	mi := &file_proto_dekart_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3040,7 +3292,7 @@ func (x *GetConnectionListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetConnectionListResponse.ProtoReflect.Descriptor instead.
 func (*GetConnectionListResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{49}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *GetConnectionListResponse) GetConnections() []*Connection {
@@ -3060,7 +3312,7 @@ type GetUserStreamRequest struct {
 
 func (x *GetUserStreamRequest) Reset() {
 	*x = GetUserStreamRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[50]
+	mi := &file_proto_dekart_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3072,7 +3324,7 @@ func (x *GetUserStreamRequest) String() string {
 func (*GetUserStreamRequest) ProtoMessage() {}
 
 func (x *GetUserStreamRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[50]
+	mi := &file_proto_dekart_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3085,7 +3337,7 @@ func (x *GetUserStreamRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUserStreamRequest.ProtoReflect.Descriptor instead.
 func (*GetUserStreamRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{50}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *GetUserStreamRequest) GetStreamOptions() *StreamOptions {
@@ -3113,7 +3365,7 @@ type GetUserStreamResponse struct {
 
 func (x *GetUserStreamResponse) Reset() {
 	*x = GetUserStreamResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[51]
+	mi := &file_proto_dekart_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3125,7 +3377,7 @@ func (x *GetUserStreamResponse) String() string {
 func (*GetUserStreamResponse) ProtoMessage() {}
 
 func (x *GetUserStreamResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[51]
+	mi := &file_proto_dekart_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3138,7 +3390,7 @@ func (x *GetUserStreamResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUserStreamResponse.ProtoReflect.Descriptor instead.
 func (*GetUserStreamResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{51}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *GetUserStreamResponse) GetStreamOptions() *StreamOptions {
@@ -3214,7 +3466,7 @@ type TestConnectionRequest struct {
 
 func (x *TestConnectionRequest) Reset() {
 	*x = TestConnectionRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[52]
+	mi := &file_proto_dekart_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3226,7 +3478,7 @@ func (x *TestConnectionRequest) String() string {
 func (*TestConnectionRequest) ProtoMessage() {}
 
 func (x *TestConnectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[52]
+	mi := &file_proto_dekart_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3239,7 +3491,7 @@ func (x *TestConnectionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TestConnectionRequest.ProtoReflect.Descriptor instead.
 func (*TestConnectionRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{52}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *TestConnectionRequest) GetConnection() *Connection {
@@ -3260,7 +3512,7 @@ type TestConnectionResponse struct {
 
 func (x *TestConnectionResponse) Reset() {
 	*x = TestConnectionResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[53]
+	mi := &file_proto_dekart_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3272,7 +3524,7 @@ func (x *TestConnectionResponse) String() string {
 func (*TestConnectionResponse) ProtoMessage() {}
 
 func (x *TestConnectionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[53]
+	mi := &file_proto_dekart_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3285,7 +3537,7 @@ func (x *TestConnectionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TestConnectionResponse.ProtoReflect.Descriptor instead.
 func (*TestConnectionResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{53}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *TestConnectionResponse) GetSuccess() bool {
@@ -3312,7 +3564,7 @@ type ArchiveConnectionRequest struct {
 
 func (x *ArchiveConnectionRequest) Reset() {
 	*x = ArchiveConnectionRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[54]
+	mi := &file_proto_dekart_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3324,7 +3576,7 @@ func (x *ArchiveConnectionRequest) String() string {
 func (*ArchiveConnectionRequest) ProtoMessage() {}
 
 func (x *ArchiveConnectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[54]
+	mi := &file_proto_dekart_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3337,7 +3589,7 @@ func (x *ArchiveConnectionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ArchiveConnectionRequest.ProtoReflect.Descriptor instead.
 func (*ArchiveConnectionRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{54}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *ArchiveConnectionRequest) GetConnectionId() string {
@@ -3355,7 +3607,7 @@ type ArchiveConnectionResponse struct {
 
 func (x *ArchiveConnectionResponse) Reset() {
 	*x = ArchiveConnectionResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[55]
+	mi := &file_proto_dekart_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3367,7 +3619,7 @@ func (x *ArchiveConnectionResponse) String() string {
 func (*ArchiveConnectionResponse) ProtoMessage() {}
 
 func (x *ArchiveConnectionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[55]
+	mi := &file_proto_dekart_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3380,7 +3632,7 @@ func (x *ArchiveConnectionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ArchiveConnectionResponse.ProtoReflect.Descriptor instead.
 func (*ArchiveConnectionResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{55}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{59}
 }
 
 type UpdateConnectionRequest struct {
@@ -3393,7 +3645,7 @@ type UpdateConnectionRequest struct {
 
 func (x *UpdateConnectionRequest) Reset() {
 	*x = UpdateConnectionRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[56]
+	mi := &file_proto_dekart_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3405,7 +3657,7 @@ func (x *UpdateConnectionRequest) String() string {
 func (*UpdateConnectionRequest) ProtoMessage() {}
 
 func (x *UpdateConnectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[56]
+	mi := &file_proto_dekart_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3418,7 +3670,7 @@ func (x *UpdateConnectionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateConnectionRequest.ProtoReflect.Descriptor instead.
 func (*UpdateConnectionRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{56}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *UpdateConnectionRequest) GetConnection() *Connection {
@@ -3438,7 +3690,7 @@ type UpdateConnectionResponse struct {
 
 func (x *UpdateConnectionResponse) Reset() {
 	*x = UpdateConnectionResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[57]
+	mi := &file_proto_dekart_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3450,7 +3702,7 @@ func (x *UpdateConnectionResponse) String() string {
 func (*UpdateConnectionResponse) ProtoMessage() {}
 
 func (x *UpdateConnectionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[57]
+	mi := &file_proto_dekart_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3463,7 +3715,7 @@ func (x *UpdateConnectionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateConnectionResponse.ProtoReflect.Descriptor instead.
 func (*UpdateConnectionResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{57}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *UpdateConnectionResponse) GetConnection() *Connection {
@@ -3483,7 +3735,7 @@ type CreateConnectionRequest struct {
 
 func (x *CreateConnectionRequest) Reset() {
 	*x = CreateConnectionRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[58]
+	mi := &file_proto_dekart_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3495,7 +3747,7 @@ func (x *CreateConnectionRequest) String() string {
 func (*CreateConnectionRequest) ProtoMessage() {}
 
 func (x *CreateConnectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[58]
+	mi := &file_proto_dekart_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3508,7 +3760,7 @@ func (x *CreateConnectionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateConnectionRequest.ProtoReflect.Descriptor instead.
 func (*CreateConnectionRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{58}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *CreateConnectionRequest) GetConnection() *Connection {
@@ -3528,7 +3780,7 @@ type CreateConnectionResponse struct {
 
 func (x *CreateConnectionResponse) Reset() {
 	*x = CreateConnectionResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[59]
+	mi := &file_proto_dekart_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3540,7 +3792,7 @@ func (x *CreateConnectionResponse) String() string {
 func (*CreateConnectionResponse) ProtoMessage() {}
 
 func (x *CreateConnectionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[59]
+	mi := &file_proto_dekart_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3553,7 +3805,7 @@ func (x *CreateConnectionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateConnectionResponse.ProtoReflect.Descriptor instead.
 func (*CreateConnectionResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{59}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *CreateConnectionResponse) GetConnection() *Connection {
@@ -3593,7 +3845,7 @@ type Connection struct {
 
 func (x *Connection) Reset() {
 	*x = Connection{}
-	mi := &file_proto_dekart_proto_msgTypes[60]
+	mi := &file_proto_dekart_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3605,7 +3857,7 @@ func (x *Connection) String() string {
 func (*Connection) ProtoMessage() {}
 
 func (x *Connection) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[60]
+	mi := &file_proto_dekart_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3618,7 +3870,7 @@ func (x *Connection) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Connection.ProtoReflect.Descriptor instead.
 func (*Connection) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{60}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *Connection) GetId() string {
@@ -3780,7 +4032,7 @@ type Secret struct {
 
 func (x *Secret) Reset() {
 	*x = Secret{}
-	mi := &file_proto_dekart_proto_msgTypes[61]
+	mi := &file_proto_dekart_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3792,7 +4044,7 @@ func (x *Secret) String() string {
 func (*Secret) ProtoMessage() {}
 
 func (x *Secret) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[61]
+	mi := &file_proto_dekart_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3805,7 +4057,7 @@ func (x *Secret) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Secret.ProtoReflect.Descriptor instead.
 func (*Secret) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{61}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *Secret) GetClientEncrypted() string {
@@ -3837,7 +4089,7 @@ type GetUsageRequest struct {
 
 func (x *GetUsageRequest) Reset() {
 	*x = GetUsageRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[62]
+	mi := &file_proto_dekart_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3849,7 +4101,7 @@ func (x *GetUsageRequest) String() string {
 func (*GetUsageRequest) ProtoMessage() {}
 
 func (x *GetUsageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[62]
+	mi := &file_proto_dekart_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3862,7 +4114,7 @@ func (x *GetUsageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUsageRequest.ProtoReflect.Descriptor instead.
 func (*GetUsageRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{62}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{66}
 }
 
 type GetUsageResponse struct {
@@ -3878,7 +4130,7 @@ type GetUsageResponse struct {
 
 func (x *GetUsageResponse) Reset() {
 	*x = GetUsageResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[63]
+	mi := &file_proto_dekart_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3890,7 +4142,7 @@ func (x *GetUsageResponse) String() string {
 func (*GetUsageResponse) ProtoMessage() {}
 
 func (x *GetUsageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[63]
+	mi := &file_proto_dekart_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3903,7 +4155,7 @@ func (x *GetUsageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUsageResponse.ProtoReflect.Descriptor instead.
 func (*GetUsageResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{63}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *GetUsageResponse) GetTotalReports() int64 {
@@ -3946,7 +4198,7 @@ type SetDiscoverableRequest struct {
 
 func (x *SetDiscoverableRequest) Reset() {
 	*x = SetDiscoverableRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[64]
+	mi := &file_proto_dekart_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3958,7 +4210,7 @@ func (x *SetDiscoverableRequest) String() string {
 func (*SetDiscoverableRequest) ProtoMessage() {}
 
 func (x *SetDiscoverableRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[64]
+	mi := &file_proto_dekart_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3971,7 +4223,7 @@ func (x *SetDiscoverableRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetDiscoverableRequest.ProtoReflect.Descriptor instead.
 func (*SetDiscoverableRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{64}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *SetDiscoverableRequest) GetReportId() string {
@@ -4003,7 +4255,7 @@ type SetDiscoverableResponse struct {
 
 func (x *SetDiscoverableResponse) Reset() {
 	*x = SetDiscoverableResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[65]
+	mi := &file_proto_dekart_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4015,7 +4267,7 @@ func (x *SetDiscoverableResponse) String() string {
 func (*SetDiscoverableResponse) ProtoMessage() {}
 
 func (x *SetDiscoverableResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[65]
+	mi := &file_proto_dekart_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4028,7 +4280,7 @@ func (x *SetDiscoverableResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetDiscoverableResponse.ProtoReflect.Descriptor instead.
 func (*SetDiscoverableResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{65}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{69}
 }
 
 type RemoveDatasetRequest struct {
@@ -4041,7 +4293,7 @@ type RemoveDatasetRequest struct {
 
 func (x *RemoveDatasetRequest) Reset() {
 	*x = RemoveDatasetRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[66]
+	mi := &file_proto_dekart_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4053,7 +4305,7 @@ func (x *RemoveDatasetRequest) String() string {
 func (*RemoveDatasetRequest) ProtoMessage() {}
 
 func (x *RemoveDatasetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[66]
+	mi := &file_proto_dekart_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4066,7 +4318,7 @@ func (x *RemoveDatasetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveDatasetRequest.ProtoReflect.Descriptor instead.
 func (*RemoveDatasetRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{66}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *RemoveDatasetRequest) GetDatasetId() string {
@@ -4086,7 +4338,7 @@ type RemoveDatasetResponse struct {
 
 func (x *RemoveDatasetResponse) Reset() {
 	*x = RemoveDatasetResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[67]
+	mi := &file_proto_dekart_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4098,7 +4350,7 @@ func (x *RemoveDatasetResponse) String() string {
 func (*RemoveDatasetResponse) ProtoMessage() {}
 
 func (x *RemoveDatasetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[67]
+	mi := &file_proto_dekart_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4111,7 +4363,7 @@ func (x *RemoveDatasetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveDatasetResponse.ProtoReflect.Descriptor instead.
 func (*RemoveDatasetResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{67}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *RemoveDatasetResponse) GetDatasetId() string {
@@ -4131,7 +4383,7 @@ type StreamOptions struct {
 
 func (x *StreamOptions) Reset() {
 	*x = StreamOptions{}
-	mi := &file_proto_dekart_proto_msgTypes[68]
+	mi := &file_proto_dekart_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4143,7 +4395,7 @@ func (x *StreamOptions) String() string {
 func (*StreamOptions) ProtoMessage() {}
 
 func (x *StreamOptions) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[68]
+	mi := &file_proto_dekart_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4156,7 +4408,7 @@ func (x *StreamOptions) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamOptions.ProtoReflect.Descriptor instead.
 func (*StreamOptions) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{68}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *StreamOptions) GetSequence() int64 {
@@ -4174,7 +4426,7 @@ type GetEnvRequest struct {
 
 func (x *GetEnvRequest) Reset() {
 	*x = GetEnvRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[69]
+	mi := &file_proto_dekart_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4186,7 +4438,7 @@ func (x *GetEnvRequest) String() string {
 func (*GetEnvRequest) ProtoMessage() {}
 
 func (x *GetEnvRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[69]
+	mi := &file_proto_dekart_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4199,7 +4451,7 @@ func (x *GetEnvRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetEnvRequest.ProtoReflect.Descriptor instead.
 func (*GetEnvRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{69}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{73}
 }
 
 type GetEnvResponse struct {
@@ -4213,7 +4465,7 @@ type GetEnvResponse struct {
 
 func (x *GetEnvResponse) Reset() {
 	*x = GetEnvResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[70]
+	mi := &file_proto_dekart_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4225,7 +4477,7 @@ func (x *GetEnvResponse) String() string {
 func (*GetEnvResponse) ProtoMessage() {}
 
 func (x *GetEnvResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[70]
+	mi := &file_proto_dekart_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4238,7 +4490,7 @@ func (x *GetEnvResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetEnvResponse.ProtoReflect.Descriptor instead.
 func (*GetEnvResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{70}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *GetEnvResponse) GetVariables() []*GetEnvResponse_Variable {
@@ -4268,7 +4520,7 @@ type RedirectState struct {
 
 func (x *RedirectState) Reset() {
 	*x = RedirectState{}
-	mi := &file_proto_dekart_proto_msgTypes[71]
+	mi := &file_proto_dekart_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4280,7 +4532,7 @@ func (x *RedirectState) String() string {
 func (*RedirectState) ProtoMessage() {}
 
 func (x *RedirectState) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[71]
+	mi := &file_proto_dekart_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4293,7 +4545,7 @@ func (x *RedirectState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RedirectState.ProtoReflect.Descriptor instead.
 func (*RedirectState) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{71}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *RedirectState) GetTokenJson() string {
@@ -4334,7 +4586,7 @@ type AuthState struct {
 
 func (x *AuthState) Reset() {
 	*x = AuthState{}
-	mi := &file_proto_dekart_proto_msgTypes[72]
+	mi := &file_proto_dekart_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4346,7 +4598,7 @@ func (x *AuthState) String() string {
 func (*AuthState) ProtoMessage() {}
 
 func (x *AuthState) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[72]
+	mi := &file_proto_dekart_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4359,7 +4611,7 @@ func (x *AuthState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuthState.ProtoReflect.Descriptor instead.
 func (*AuthState) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{72}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *AuthState) GetAction() AuthState_Action {
@@ -4422,7 +4674,7 @@ type ArchiveReportRequest struct {
 
 func (x *ArchiveReportRequest) Reset() {
 	*x = ArchiveReportRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[73]
+	mi := &file_proto_dekart_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4434,7 +4686,7 @@ func (x *ArchiveReportRequest) String() string {
 func (*ArchiveReportRequest) ProtoMessage() {}
 
 func (x *ArchiveReportRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[73]
+	mi := &file_proto_dekart_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4447,7 +4699,7 @@ func (x *ArchiveReportRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ArchiveReportRequest.ProtoReflect.Descriptor instead.
 func (*ArchiveReportRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{73}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *ArchiveReportRequest) GetReportId() string {
@@ -4472,7 +4724,7 @@ type ArchiveReportResponse struct {
 
 func (x *ArchiveReportResponse) Reset() {
 	*x = ArchiveReportResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[74]
+	mi := &file_proto_dekart_proto_msgTypes[78]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4484,7 +4736,7 @@ func (x *ArchiveReportResponse) String() string {
 func (*ArchiveReportResponse) ProtoMessage() {}
 
 func (x *ArchiveReportResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[74]
+	mi := &file_proto_dekart_proto_msgTypes[78]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4497,7 +4749,7 @@ func (x *ArchiveReportResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ArchiveReportResponse.ProtoReflect.Descriptor instead.
 func (*ArchiveReportResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{74}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{78}
 }
 
 type ReportListRequest struct {
@@ -4510,7 +4762,7 @@ type ReportListRequest struct {
 
 func (x *ReportListRequest) Reset() {
 	*x = ReportListRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[75]
+	mi := &file_proto_dekart_proto_msgTypes[79]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4522,7 +4774,7 @@ func (x *ReportListRequest) String() string {
 func (*ReportListRequest) ProtoMessage() {}
 
 func (x *ReportListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[75]
+	mi := &file_proto_dekart_proto_msgTypes[79]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4535,7 +4787,7 @@ func (x *ReportListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportListRequest.ProtoReflect.Descriptor instead.
 func (*ReportListRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{75}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *ReportListRequest) GetStreamOptions() *StreamOptions {
@@ -4556,7 +4808,7 @@ type ReportListResponse struct {
 
 func (x *ReportListResponse) Reset() {
 	*x = ReportListResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[76]
+	mi := &file_proto_dekart_proto_msgTypes[80]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4568,7 +4820,7 @@ func (x *ReportListResponse) String() string {
 func (*ReportListResponse) ProtoMessage() {}
 
 func (x *ReportListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[76]
+	mi := &file_proto_dekart_proto_msgTypes[80]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4581,7 +4833,7 @@ func (x *ReportListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportListResponse.ProtoReflect.Descriptor instead.
 func (*ReportListResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{76}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{80}
 }
 
 func (x *ReportListResponse) GetReports() []*Report {
@@ -4608,7 +4860,7 @@ type Readme struct {
 
 func (x *Readme) Reset() {
 	*x = Readme{}
-	mi := &file_proto_dekart_proto_msgTypes[77]
+	mi := &file_proto_dekart_proto_msgTypes[81]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4620,7 +4872,7 @@ func (x *Readme) String() string {
 func (*Readme) ProtoMessage() {}
 
 func (x *Readme) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[77]
+	mi := &file_proto_dekart_proto_msgTypes[81]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4633,7 +4885,7 @@ func (x *Readme) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Readme.ProtoReflect.Descriptor instead.
 func (*Readme) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{77}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{81}
 }
 
 func (x *Readme) GetMarkdown() string {
@@ -4655,7 +4907,7 @@ type ReportAnalytics struct {
 
 func (x *ReportAnalytics) Reset() {
 	*x = ReportAnalytics{}
-	mi := &file_proto_dekart_proto_msgTypes[78]
+	mi := &file_proto_dekart_proto_msgTypes[82]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4667,7 +4919,7 @@ func (x *ReportAnalytics) String() string {
 func (*ReportAnalytics) ProtoMessage() {}
 
 func (x *ReportAnalytics) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[78]
+	mi := &file_proto_dekart_proto_msgTypes[82]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4680,7 +4932,7 @@ func (x *ReportAnalytics) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportAnalytics.ProtoReflect.Descriptor instead.
 func (*ReportAnalytics) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{78}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{82}
 }
 
 func (x *ReportAnalytics) GetViewersTotal() int64 {
@@ -4736,7 +4988,7 @@ type Report struct {
 
 func (x *Report) Reset() {
 	*x = Report{}
-	mi := &file_proto_dekart_proto_msgTypes[79]
+	mi := &file_proto_dekart_proto_msgTypes[83]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4748,7 +5000,7 @@ func (x *Report) String() string {
 func (*Report) ProtoMessage() {}
 
 func (x *Report) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[79]
+	mi := &file_proto_dekart_proto_msgTypes[83]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4761,7 +5013,7 @@ func (x *Report) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Report.ProtoReflect.Descriptor instead.
 func (*Report) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{79}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{83}
 }
 
 func (x *Report) GetId() string {
@@ -4943,7 +5195,7 @@ type Dataset struct {
 
 func (x *Dataset) Reset() {
 	*x = Dataset{}
-	mi := &file_proto_dekart_proto_msgTypes[80]
+	mi := &file_proto_dekart_proto_msgTypes[84]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4955,7 +5207,7 @@ func (x *Dataset) String() string {
 func (*Dataset) ProtoMessage() {}
 
 func (x *Dataset) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[80]
+	mi := &file_proto_dekart_proto_msgTypes[84]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4968,7 +5220,7 @@ func (x *Dataset) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Dataset.ProtoReflect.Descriptor instead.
 func (*Dataset) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{80}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{84}
 }
 
 func (x *Dataset) GetId() string {
@@ -5058,7 +5310,7 @@ type QueryJob struct {
 
 func (x *QueryJob) Reset() {
 	*x = QueryJob{}
-	mi := &file_proto_dekart_proto_msgTypes[81]
+	mi := &file_proto_dekart_proto_msgTypes[85]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5070,7 +5322,7 @@ func (x *QueryJob) String() string {
 func (*QueryJob) ProtoMessage() {}
 
 func (x *QueryJob) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[81]
+	mi := &file_proto_dekart_proto_msgTypes[85]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5083,7 +5335,7 @@ func (x *QueryJob) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QueryJob.ProtoReflect.Descriptor instead.
 func (*QueryJob) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{81}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *QueryJob) GetId() string {
@@ -5206,7 +5458,7 @@ type Query struct {
 
 func (x *Query) Reset() {
 	*x = Query{}
-	mi := &file_proto_dekart_proto_msgTypes[82]
+	mi := &file_proto_dekart_proto_msgTypes[86]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5218,7 +5470,7 @@ func (x *Query) String() string {
 func (*Query) ProtoMessage() {}
 
 func (x *Query) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[82]
+	mi := &file_proto_dekart_proto_msgTypes[86]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5231,7 +5483,7 @@ func (x *Query) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Query.ProtoReflect.Descriptor instead.
 func (*Query) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{82}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{86}
 }
 
 func (x *Query) GetId() string {
@@ -5294,7 +5546,7 @@ type File struct {
 
 func (x *File) Reset() {
 	*x = File{}
-	mi := &file_proto_dekart_proto_msgTypes[83]
+	mi := &file_proto_dekart_proto_msgTypes[87]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5306,7 +5558,7 @@ func (x *File) String() string {
 func (*File) ProtoMessage() {}
 
 func (x *File) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[83]
+	mi := &file_proto_dekart_proto_msgTypes[87]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5319,7 +5571,7 @@ func (x *File) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use File.ProtoReflect.Descriptor instead.
 func (*File) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{83}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{87}
 }
 
 func (x *File) GetId() string {
@@ -5400,7 +5652,7 @@ type UpdateReportRequest struct {
 
 func (x *UpdateReportRequest) Reset() {
 	*x = UpdateReportRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[84]
+	mi := &file_proto_dekart_proto_msgTypes[88]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5412,7 +5664,7 @@ func (x *UpdateReportRequest) String() string {
 func (*UpdateReportRequest) ProtoMessage() {}
 
 func (x *UpdateReportRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[84]
+	mi := &file_proto_dekart_proto_msgTypes[88]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5425,7 +5677,7 @@ func (x *UpdateReportRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateReportRequest.ProtoReflect.Descriptor instead.
 func (*UpdateReportRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{84}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{88}
 }
 
 func (x *UpdateReportRequest) GetReportId() string {
@@ -5480,7 +5732,7 @@ type UpdateReportResponse struct {
 
 func (x *UpdateReportResponse) Reset() {
 	*x = UpdateReportResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[85]
+	mi := &file_proto_dekart_proto_msgTypes[89]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5492,7 +5744,7 @@ func (x *UpdateReportResponse) String() string {
 func (*UpdateReportResponse) ProtoMessage() {}
 
 func (x *UpdateReportResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[85]
+	mi := &file_proto_dekart_proto_msgTypes[89]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5505,7 +5757,7 @@ func (x *UpdateReportResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateReportResponse.ProtoReflect.Descriptor instead.
 func (*UpdateReportResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{85}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{89}
 }
 
 func (x *UpdateReportResponse) GetUpdatedAt() int64 {
@@ -5528,7 +5780,7 @@ type RunQueryRequest struct {
 
 func (x *RunQueryRequest) Reset() {
 	*x = RunQueryRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[86]
+	mi := &file_proto_dekart_proto_msgTypes[90]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5540,7 +5792,7 @@ func (x *RunQueryRequest) String() string {
 func (*RunQueryRequest) ProtoMessage() {}
 
 func (x *RunQueryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[86]
+	mi := &file_proto_dekart_proto_msgTypes[90]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5553,7 +5805,7 @@ func (x *RunQueryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunQueryRequest.ProtoReflect.Descriptor instead.
 func (*RunQueryRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{86}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{90}
 }
 
 func (x *RunQueryRequest) GetQueryId() string {
@@ -5592,7 +5844,7 @@ type RunQueryResponse struct {
 
 func (x *RunQueryResponse) Reset() {
 	*x = RunQueryResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[87]
+	mi := &file_proto_dekart_proto_msgTypes[91]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5604,7 +5856,7 @@ func (x *RunQueryResponse) String() string {
 func (*RunQueryResponse) ProtoMessage() {}
 
 func (x *RunQueryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[87]
+	mi := &file_proto_dekart_proto_msgTypes[91]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5617,7 +5869,7 @@ func (x *RunQueryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunQueryResponse.ProtoReflect.Descriptor instead.
 func (*RunQueryResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{87}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{91}
 }
 
 type UpdateDatasetNameRequest struct {
@@ -5631,7 +5883,7 @@ type UpdateDatasetNameRequest struct {
 
 func (x *UpdateDatasetNameRequest) Reset() {
 	*x = UpdateDatasetNameRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[88]
+	mi := &file_proto_dekart_proto_msgTypes[92]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5643,7 +5895,7 @@ func (x *UpdateDatasetNameRequest) String() string {
 func (*UpdateDatasetNameRequest) ProtoMessage() {}
 
 func (x *UpdateDatasetNameRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[88]
+	mi := &file_proto_dekart_proto_msgTypes[92]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5656,7 +5908,7 @@ func (x *UpdateDatasetNameRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateDatasetNameRequest.ProtoReflect.Descriptor instead.
 func (*UpdateDatasetNameRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{88}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{92}
 }
 
 func (x *UpdateDatasetNameRequest) GetDatasetId() string {
@@ -5681,7 +5933,7 @@ type UpdateDatasetNameResponse struct {
 
 func (x *UpdateDatasetNameResponse) Reset() {
 	*x = UpdateDatasetNameResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[89]
+	mi := &file_proto_dekart_proto_msgTypes[93]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5693,7 +5945,7 @@ func (x *UpdateDatasetNameResponse) String() string {
 func (*UpdateDatasetNameResponse) ProtoMessage() {}
 
 func (x *UpdateDatasetNameResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[89]
+	mi := &file_proto_dekart_proto_msgTypes[93]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5706,7 +5958,7 @@ func (x *UpdateDatasetNameResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateDatasetNameResponse.ProtoReflect.Descriptor instead.
 func (*UpdateDatasetNameResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{89}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{93}
 }
 
 type UpdateDatasetConnectionRequest struct {
@@ -5720,7 +5972,7 @@ type UpdateDatasetConnectionRequest struct {
 
 func (x *UpdateDatasetConnectionRequest) Reset() {
 	*x = UpdateDatasetConnectionRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[90]
+	mi := &file_proto_dekart_proto_msgTypes[94]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5732,7 +5984,7 @@ func (x *UpdateDatasetConnectionRequest) String() string {
 func (*UpdateDatasetConnectionRequest) ProtoMessage() {}
 
 func (x *UpdateDatasetConnectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[90]
+	mi := &file_proto_dekart_proto_msgTypes[94]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5745,7 +5997,7 @@ func (x *UpdateDatasetConnectionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateDatasetConnectionRequest.ProtoReflect.Descriptor instead.
 func (*UpdateDatasetConnectionRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{90}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{94}
 }
 
 func (x *UpdateDatasetConnectionRequest) GetDatasetId() string {
@@ -5770,7 +6022,7 @@ type UpdateDatasetConnectionResponse struct {
 
 func (x *UpdateDatasetConnectionResponse) Reset() {
 	*x = UpdateDatasetConnectionResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[91]
+	mi := &file_proto_dekart_proto_msgTypes[95]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5782,7 +6034,7 @@ func (x *UpdateDatasetConnectionResponse) String() string {
 func (*UpdateDatasetConnectionResponse) ProtoMessage() {}
 
 func (x *UpdateDatasetConnectionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[91]
+	mi := &file_proto_dekart_proto_msgTypes[95]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5795,7 +6047,7 @@ func (x *UpdateDatasetConnectionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateDatasetConnectionResponse.ProtoReflect.Descriptor instead.
 func (*UpdateDatasetConnectionResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{91}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{95}
 }
 
 type CreateDatasetRequest struct {
@@ -5808,7 +6060,7 @@ type CreateDatasetRequest struct {
 
 func (x *CreateDatasetRequest) Reset() {
 	*x = CreateDatasetRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[92]
+	mi := &file_proto_dekart_proto_msgTypes[96]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5820,7 +6072,7 @@ func (x *CreateDatasetRequest) String() string {
 func (*CreateDatasetRequest) ProtoMessage() {}
 
 func (x *CreateDatasetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[92]
+	mi := &file_proto_dekart_proto_msgTypes[96]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5833,7 +6085,7 @@ func (x *CreateDatasetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateDatasetRequest.ProtoReflect.Descriptor instead.
 func (*CreateDatasetRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{92}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{96}
 }
 
 func (x *CreateDatasetRequest) GetReportId() string {
@@ -5851,7 +6103,7 @@ type CreateDatasetResponse struct {
 
 func (x *CreateDatasetResponse) Reset() {
 	*x = CreateDatasetResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[93]
+	mi := &file_proto_dekart_proto_msgTypes[97]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5863,7 +6115,7 @@ func (x *CreateDatasetResponse) String() string {
 func (*CreateDatasetResponse) ProtoMessage() {}
 
 func (x *CreateDatasetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[93]
+	mi := &file_proto_dekart_proto_msgTypes[97]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5876,7 +6128,7 @@ func (x *CreateDatasetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateDatasetResponse.ProtoReflect.Descriptor instead.
 func (*CreateDatasetResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{93}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{97}
 }
 
 type CreateFileRequest struct {
@@ -5890,7 +6142,7 @@ type CreateFileRequest struct {
 
 func (x *CreateFileRequest) Reset() {
 	*x = CreateFileRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[94]
+	mi := &file_proto_dekart_proto_msgTypes[98]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5902,7 +6154,7 @@ func (x *CreateFileRequest) String() string {
 func (*CreateFileRequest) ProtoMessage() {}
 
 func (x *CreateFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[94]
+	mi := &file_proto_dekart_proto_msgTypes[98]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5915,7 +6167,7 @@ func (x *CreateFileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateFileRequest.ProtoReflect.Descriptor instead.
 func (*CreateFileRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{94}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{98}
 }
 
 func (x *CreateFileRequest) GetDatasetId() string {
@@ -5942,7 +6194,7 @@ type CreateFileResponse struct {
 
 func (x *CreateFileResponse) Reset() {
 	*x = CreateFileResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[95]
+	mi := &file_proto_dekart_proto_msgTypes[99]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5954,7 +6206,7 @@ func (x *CreateFileResponse) String() string {
 func (*CreateFileResponse) ProtoMessage() {}
 
 func (x *CreateFileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[95]
+	mi := &file_proto_dekart_proto_msgTypes[99]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5967,7 +6219,7 @@ func (x *CreateFileResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateFileResponse.ProtoReflect.Descriptor instead.
 func (*CreateFileResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{95}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{99}
 }
 
 func (x *CreateFileResponse) GetFileId() string {
@@ -5988,7 +6240,7 @@ type CreateQueryRequest struct {
 
 func (x *CreateQueryRequest) Reset() {
 	*x = CreateQueryRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[96]
+	mi := &file_proto_dekart_proto_msgTypes[100]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6000,7 +6252,7 @@ func (x *CreateQueryRequest) String() string {
 func (*CreateQueryRequest) ProtoMessage() {}
 
 func (x *CreateQueryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[96]
+	mi := &file_proto_dekart_proto_msgTypes[100]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6013,7 +6265,7 @@ func (x *CreateQueryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateQueryRequest.ProtoReflect.Descriptor instead.
 func (*CreateQueryRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{96}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{100}
 }
 
 func (x *CreateQueryRequest) GetDatasetId() string {
@@ -6040,7 +6292,7 @@ type CreateQueryResponse struct {
 
 func (x *CreateQueryResponse) Reset() {
 	*x = CreateQueryResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[97]
+	mi := &file_proto_dekart_proto_msgTypes[101]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6052,7 +6304,7 @@ func (x *CreateQueryResponse) String() string {
 func (*CreateQueryResponse) ProtoMessage() {}
 
 func (x *CreateQueryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[97]
+	mi := &file_proto_dekart_proto_msgTypes[101]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6065,7 +6317,7 @@ func (x *CreateQueryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateQueryResponse.ProtoReflect.Descriptor instead.
 func (*CreateQueryResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{97}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{101}
 }
 
 func (x *CreateQueryResponse) GetQuery() *Query {
@@ -6086,7 +6338,7 @@ type ReportStreamRequest struct {
 
 func (x *ReportStreamRequest) Reset() {
 	*x = ReportStreamRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[98]
+	mi := &file_proto_dekart_proto_msgTypes[102]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6098,7 +6350,7 @@ func (x *ReportStreamRequest) String() string {
 func (*ReportStreamRequest) ProtoMessage() {}
 
 func (x *ReportStreamRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[98]
+	mi := &file_proto_dekart_proto_msgTypes[102]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6111,7 +6363,7 @@ func (x *ReportStreamRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportStreamRequest.ProtoReflect.Descriptor instead.
 func (*ReportStreamRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{98}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{102}
 }
 
 func (x *ReportStreamRequest) GetReport() *Report {
@@ -6144,7 +6396,7 @@ type ReportStreamResponse struct {
 
 func (x *ReportStreamResponse) Reset() {
 	*x = ReportStreamResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[99]
+	mi := &file_proto_dekart_proto_msgTypes[103]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6156,7 +6408,7 @@ func (x *ReportStreamResponse) String() string {
 func (*ReportStreamResponse) ProtoMessage() {}
 
 func (x *ReportStreamResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[99]
+	mi := &file_proto_dekart_proto_msgTypes[103]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6169,7 +6421,7 @@ func (x *ReportStreamResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportStreamResponse.ProtoReflect.Descriptor instead.
 func (*ReportStreamResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{99}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{103}
 }
 
 func (x *ReportStreamResponse) GetReport() *Report {
@@ -6231,7 +6483,7 @@ type ForkReportRequest struct {
 
 func (x *ForkReportRequest) Reset() {
 	*x = ForkReportRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[100]
+	mi := &file_proto_dekart_proto_msgTypes[104]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6243,7 +6495,7 @@ func (x *ForkReportRequest) String() string {
 func (*ForkReportRequest) ProtoMessage() {}
 
 func (x *ForkReportRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[100]
+	mi := &file_proto_dekart_proto_msgTypes[104]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6256,7 +6508,7 @@ func (x *ForkReportRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForkReportRequest.ProtoReflect.Descriptor instead.
 func (*ForkReportRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{100}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{104}
 }
 
 func (x *ForkReportRequest) GetReportId() string {
@@ -6276,7 +6528,7 @@ type ForkReportResponse struct {
 
 func (x *ForkReportResponse) Reset() {
 	*x = ForkReportResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[101]
+	mi := &file_proto_dekart_proto_msgTypes[105]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6288,7 +6540,7 @@ func (x *ForkReportResponse) String() string {
 func (*ForkReportResponse) ProtoMessage() {}
 
 func (x *ForkReportResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[101]
+	mi := &file_proto_dekart_proto_msgTypes[105]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6301,7 +6553,7 @@ func (x *ForkReportResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForkReportResponse.ProtoReflect.Descriptor instead.
 func (*ForkReportResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{101}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{105}
 }
 
 func (x *ForkReportResponse) GetReportId() string {
@@ -6319,7 +6571,7 @@ type CreateReportRequest struct {
 
 func (x *CreateReportRequest) Reset() {
 	*x = CreateReportRequest{}
-	mi := &file_proto_dekart_proto_msgTypes[102]
+	mi := &file_proto_dekart_proto_msgTypes[106]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6331,7 +6583,7 @@ func (x *CreateReportRequest) String() string {
 func (*CreateReportRequest) ProtoMessage() {}
 
 func (x *CreateReportRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[102]
+	mi := &file_proto_dekart_proto_msgTypes[106]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6344,7 +6596,7 @@ func (x *CreateReportRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateReportRequest.ProtoReflect.Descriptor instead.
 func (*CreateReportRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{102}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{106}
 }
 
 type CreateReportResponse struct {
@@ -6357,7 +6609,7 @@ type CreateReportResponse struct {
 
 func (x *CreateReportResponse) Reset() {
 	*x = CreateReportResponse{}
-	mi := &file_proto_dekart_proto_msgTypes[103]
+	mi := &file_proto_dekart_proto_msgTypes[107]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6369,7 +6621,7 @@ func (x *CreateReportResponse) String() string {
 func (*CreateReportResponse) ProtoMessage() {}
 
 func (x *CreateReportResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[103]
+	mi := &file_proto_dekart_proto_msgTypes[107]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6382,7 +6634,7 @@ func (x *CreateReportResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateReportResponse.ProtoReflect.Descriptor instead.
 func (*CreateReportResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{103}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{107}
 }
 
 func (x *CreateReportResponse) GetReport() *Report {
@@ -6405,7 +6657,7 @@ type QueryParam struct {
 
 func (x *QueryParam) Reset() {
 	*x = QueryParam{}
-	mi := &file_proto_dekart_proto_msgTypes[104]
+	mi := &file_proto_dekart_proto_msgTypes[108]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6417,7 +6669,7 @@ func (x *QueryParam) String() string {
 func (*QueryParam) ProtoMessage() {}
 
 func (x *QueryParam) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[104]
+	mi := &file_proto_dekart_proto_msgTypes[108]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6430,7 +6682,7 @@ func (x *QueryParam) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QueryParam.ProtoReflect.Descriptor instead.
 func (*QueryParam) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{104}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{108}
 }
 
 func (x *QueryParam) GetName() string {
@@ -6472,7 +6724,7 @@ type GetEnvResponse_Variable struct {
 
 func (x *GetEnvResponse_Variable) Reset() {
 	*x = GetEnvResponse_Variable{}
-	mi := &file_proto_dekart_proto_msgTypes[105]
+	mi := &file_proto_dekart_proto_msgTypes[109]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6484,7 +6736,7 @@ func (x *GetEnvResponse_Variable) String() string {
 func (*GetEnvResponse_Variable) ProtoMessage() {}
 
 func (x *GetEnvResponse_Variable) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dekart_proto_msgTypes[105]
+	mi := &file_proto_dekart_proto_msgTypes[109]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6497,7 +6749,7 @@ func (x *GetEnvResponse_Variable) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetEnvResponse_Variable.ProtoReflect.Descriptor instead.
 func (*GetEnvResponse_Variable) Descriptor() ([]byte, []int) {
-	return file_proto_dekart_proto_rawDescGZIP(), []int{70, 0}
+	return file_proto_dekart_proto_rawDescGZIP(), []int{74, 0}
 }
 
 func (x *GetEnvResponse_Variable) GetType() GetEnvResponse_Variable_Type {
@@ -6518,7 +6770,43 @@ var File_proto_dekart_proto protoreflect.FileDescriptor
 
 var file_proto_dekart_proto_rawDesc = []byte{
 	0x0a, 0x12, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x64, 0x65, 0x6b, 0x61, 0x72, 0x74, 0x2e, 0x70,
-	0x72, 0x6f, 0x74, 0x6f, 0x22, 0x5a, 0x0a, 0x11, 0x54, 0x72, 0x61, 0x63, 0x6b, 0x45, 0x76, 0x65,
+	0x72, 0x6f, 0x74, 0x6f, 0x22, 0x36, 0x0a, 0x17, 0x47, 0x65, 0x74, 0x52, 0x65, 0x70, 0x6f, 0x72,
+	0x74, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12,
+	0x1b, 0x0a, 0x09, 0x72, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x08, 0x72, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x49, 0x64, 0x22, 0x8e, 0x01, 0x0a,
+	0x0e, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x53, 0x6e, 0x61, 0x70, 0x73, 0x68, 0x6f, 0x74, 0x12,
+	0x1d, 0x0a, 0x0a, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x09, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x49, 0x64, 0x12, 0x1b,
+	0x0a, 0x09, 0x72, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x5f, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x08, 0x72, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x49, 0x64, 0x12, 0x21, 0x0a, 0x0c, 0x61,
+	0x75, 0x74, 0x68, 0x6f, 0x72, 0x5f, 0x65, 0x6d, 0x61, 0x69, 0x6c, 0x18, 0x03, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x0b, 0x61, 0x75, 0x74, 0x68, 0x6f, 0x72, 0x45, 0x6d, 0x61, 0x69, 0x6c, 0x12, 0x1d,
+	0x0a, 0x0a, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x5f, 0x61, 0x74, 0x18, 0x04, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x09, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x41, 0x74, 0x22, 0xdc, 0x01,
+	0x0a, 0x0f, 0x44, 0x61, 0x74, 0x61, 0x73, 0x65, 0x74, 0x53, 0x6e, 0x61, 0x70, 0x73, 0x68, 0x6f,
+	0x74, 0x12, 0x1f, 0x0a, 0x0b, 0x73, 0x6e, 0x61, 0x70, 0x73, 0x68, 0x6f, 0x74, 0x5f, 0x69, 0x64,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x73, 0x6e, 0x61, 0x70, 0x73, 0x68, 0x6f, 0x74,
+	0x49, 0x64, 0x12, 0x2a, 0x0a, 0x11, 0x72, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x5f, 0x76, 0x65, 0x72,
+	0x73, 0x69, 0x6f, 0x6e, 0x5f, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0f, 0x72,
+	0x65, 0x70, 0x6f, 0x72, 0x74, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x49, 0x64, 0x12, 0x1d,
+	0x0a, 0x0a, 0x64, 0x61, 0x74, 0x61, 0x73, 0x65, 0x74, 0x5f, 0x69, 0x64, 0x18, 0x03, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x09, 0x64, 0x61, 0x74, 0x61, 0x73, 0x65, 0x74, 0x49, 0x64, 0x12, 0x1b, 0x0a,
+	0x09, 0x72, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x5f, 0x69, 0x64, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x08, 0x72, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x49, 0x64, 0x12, 0x21, 0x0a, 0x0c, 0x61, 0x75,
+	0x74, 0x68, 0x6f, 0x72, 0x5f, 0x65, 0x6d, 0x61, 0x69, 0x6c, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x0b, 0x61, 0x75, 0x74, 0x68, 0x6f, 0x72, 0x45, 0x6d, 0x61, 0x69, 0x6c, 0x12, 0x1d, 0x0a,
+	0x0a, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x5f, 0x61, 0x74, 0x18, 0x06, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x09, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x41, 0x74, 0x22, 0x95, 0x01, 0x0a,
+	0x18, 0x47, 0x65, 0x74, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f,
+	0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x3a, 0x0a, 0x10, 0x72, 0x65, 0x70,
+	0x6f, 0x72, 0x74, 0x5f, 0x73, 0x6e, 0x61, 0x70, 0x73, 0x68, 0x6f, 0x74, 0x73, 0x18, 0x01, 0x20,
+	0x03, 0x28, 0x0b, 0x32, 0x0f, 0x2e, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x53, 0x6e, 0x61, 0x70,
+	0x73, 0x68, 0x6f, 0x74, 0x52, 0x0f, 0x72, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x53, 0x6e, 0x61, 0x70,
+	0x73, 0x68, 0x6f, 0x74, 0x73, 0x12, 0x3d, 0x0a, 0x11, 0x64, 0x61, 0x74, 0x61, 0x73, 0x65, 0x74,
+	0x5f, 0x73, 0x6e, 0x61, 0x70, 0x73, 0x68, 0x6f, 0x74, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b,
+	0x32, 0x10, 0x2e, 0x44, 0x61, 0x74, 0x61, 0x73, 0x65, 0x74, 0x53, 0x6e, 0x61, 0x70, 0x73, 0x68,
+	0x6f, 0x74, 0x52, 0x10, 0x64, 0x61, 0x74, 0x61, 0x73, 0x65, 0x74, 0x53, 0x6e, 0x61, 0x70, 0x73,
+	0x68, 0x6f, 0x74, 0x73, 0x22, 0x5a, 0x0a, 0x11, 0x54, 0x72, 0x61, 0x63, 0x6b, 0x45, 0x76, 0x65,
 	0x6e, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1d, 0x0a, 0x0a, 0x65, 0x76, 0x65,
 	0x6e, 0x74, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x65,
 	0x76, 0x65, 0x6e, 0x74, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x26, 0x0a, 0x0f, 0x65, 0x76, 0x65, 0x6e,
@@ -7340,7 +7628,7 @@ var file_proto_dekart_proto_rawDesc = []byte{
 	0x4e, 0x45, 0x43, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x54, 0x59, 0x50, 0x45, 0x5f, 0x50, 0x4f, 0x53,
 	0x54, 0x47, 0x52, 0x45, 0x53, 0x10, 0x05, 0x12, 0x1e, 0x0a, 0x1a, 0x43, 0x4f, 0x4e, 0x4e, 0x45,
 	0x43, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x54, 0x59, 0x50, 0x45, 0x5f, 0x43, 0x4c, 0x49, 0x43, 0x4b,
-	0x48, 0x4f, 0x55, 0x53, 0x45, 0x10, 0x06, 0x32, 0x8e, 0x18, 0x0a, 0x06, 0x44, 0x65, 0x6b, 0x61,
+	0x48, 0x4f, 0x55, 0x53, 0x45, 0x10, 0x06, 0x32, 0xd9, 0x18, 0x0a, 0x06, 0x44, 0x65, 0x6b, 0x61,
 	0x72, 0x74, 0x12, 0x3d, 0x0a, 0x0c, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x52, 0x65, 0x70, 0x6f,
 	0x72, 0x74, 0x12, 0x14, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x52, 0x65, 0x70, 0x6f, 0x72,
 	0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x15, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74,
@@ -7395,146 +7683,151 @@ var file_proto_dekart_proto_rawDesc = []byte{
 	0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x26, 0x2e, 0x53, 0x65, 0x74, 0x41, 0x75,
 	0x74, 0x6f, 0x52, 0x65, 0x66, 0x72, 0x65, 0x73, 0x68, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x76, 0x61,
 	0x6c, 0x53, 0x65, 0x63, 0x6f, 0x6e, 0x64, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
-	0x22, 0x00, 0x12, 0x40, 0x0a, 0x0d, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x44, 0x61, 0x74, 0x61,
-	0x73, 0x65, 0x74, 0x12, 0x15, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x44, 0x61, 0x74, 0x61,
-	0x73, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x16, 0x2e, 0x43, 0x72, 0x65,
-	0x61, 0x74, 0x65, 0x44, 0x61, 0x74, 0x61, 0x73, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
-	0x73, 0x65, 0x22, 0x00, 0x12, 0x40, 0x0a, 0x0d, 0x52, 0x65, 0x6d, 0x6f, 0x76, 0x65, 0x44, 0x61,
-	0x74, 0x61, 0x73, 0x65, 0x74, 0x12, 0x15, 0x2e, 0x52, 0x65, 0x6d, 0x6f, 0x76, 0x65, 0x44, 0x61,
-	0x74, 0x61, 0x73, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x16, 0x2e, 0x52,
-	0x65, 0x6d, 0x6f, 0x76, 0x65, 0x44, 0x61, 0x74, 0x61, 0x73, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x4c, 0x0a, 0x11, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65,
-	0x44, 0x61, 0x74, 0x61, 0x73, 0x65, 0x74, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x19, 0x2e, 0x55, 0x70,
-	0x64, 0x61, 0x74, 0x65, 0x44, 0x61, 0x74, 0x61, 0x73, 0x65, 0x74, 0x4e, 0x61, 0x6d, 0x65, 0x52,
-	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1a, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x44,
-	0x61, 0x74, 0x61, 0x73, 0x65, 0x74, 0x4e, 0x61, 0x6d, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
-	0x73, 0x65, 0x22, 0x00, 0x12, 0x5e, 0x0a, 0x17, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x44, 0x61,
-	0x74, 0x61, 0x73, 0x65, 0x74, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12,
-	0x1f, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x44, 0x61, 0x74, 0x61, 0x73, 0x65, 0x74, 0x43,
-	0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
-	0x1a, 0x20, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x44, 0x61, 0x74, 0x61, 0x73, 0x65, 0x74,
-	0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
-	0x73, 0x65, 0x22, 0x00, 0x12, 0x37, 0x0a, 0x0a, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x46, 0x69,
-	0x6c, 0x65, 0x12, 0x12, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x46, 0x69, 0x6c, 0x65, 0x52,
-	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x13, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x46,
-	0x69, 0x6c, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x3a, 0x0a,
-	0x0b, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x51, 0x75, 0x65, 0x72, 0x79, 0x12, 0x13, 0x2e, 0x43,
-	0x72, 0x65, 0x61, 0x74, 0x65, 0x51, 0x75, 0x65, 0x72, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x1a, 0x14, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x51, 0x75, 0x65, 0x72, 0x79, 0x52,
-	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x31, 0x0a, 0x08, 0x52, 0x75, 0x6e,
-	0x51, 0x75, 0x65, 0x72, 0x79, 0x12, 0x10, 0x2e, 0x52, 0x75, 0x6e, 0x51, 0x75, 0x65, 0x72, 0x79,
-	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x11, 0x2e, 0x52, 0x75, 0x6e, 0x51, 0x75, 0x65,
-	0x72, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x40, 0x0a, 0x0d,
-	0x52, 0x75, 0x6e, 0x41, 0x6c, 0x6c, 0x51, 0x75, 0x65, 0x72, 0x69, 0x65, 0x73, 0x12, 0x15, 0x2e,
-	0x52, 0x75, 0x6e, 0x41, 0x6c, 0x6c, 0x51, 0x75, 0x65, 0x72, 0x69, 0x65, 0x73, 0x52, 0x65, 0x71,
-	0x75, 0x65, 0x73, 0x74, 0x1a, 0x16, 0x2e, 0x52, 0x75, 0x6e, 0x41, 0x6c, 0x6c, 0x51, 0x75, 0x65,
-	0x72, 0x69, 0x65, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x34,
-	0x0a, 0x09, 0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x4a, 0x6f, 0x62, 0x12, 0x11, 0x2e, 0x43, 0x61,
-	0x6e, 0x63, 0x65, 0x6c, 0x4a, 0x6f, 0x62, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x12,
-	0x2e, 0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x4a, 0x6f, 0x62, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
-	0x73, 0x65, 0x22, 0x00, 0x12, 0x2b, 0x0a, 0x06, 0x47, 0x65, 0x74, 0x45, 0x6e, 0x76, 0x12, 0x0e,
-	0x2e, 0x47, 0x65, 0x74, 0x45, 0x6e, 0x76, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x0f,
-	0x2e, 0x47, 0x65, 0x74, 0x45, 0x6e, 0x76, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22,
-	0x00, 0x12, 0x42, 0x0a, 0x0f, 0x47, 0x65, 0x74, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x53, 0x74,
-	0x72, 0x65, 0x61, 0x6d, 0x12, 0x14, 0x2e, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x53, 0x74, 0x72,
-	0x65, 0x61, 0x6d, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x15, 0x2e, 0x52, 0x65, 0x70,
-	0x6f, 0x72, 0x74, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
-	0x65, 0x22, 0x00, 0x30, 0x01, 0x12, 0x42, 0x0a, 0x13, 0x47, 0x65, 0x74, 0x52, 0x65, 0x70, 0x6f,
-	0x72, 0x74, 0x4c, 0x69, 0x73, 0x74, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x12, 0x12, 0x2e, 0x52,
-	0x65, 0x70, 0x6f, 0x72, 0x74, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
-	0x1a, 0x13, 0x2e, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x65, 0x73,
-	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x30, 0x01, 0x12, 0x42, 0x0a, 0x0d, 0x47, 0x65, 0x74,
-	0x55, 0x73, 0x65, 0x72, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x12, 0x15, 0x2e, 0x47, 0x65, 0x74,
-	0x55, 0x73, 0x65, 0x72, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x1a, 0x16, 0x2e, 0x47, 0x65, 0x74, 0x55, 0x73, 0x65, 0x72, 0x53, 0x74, 0x72, 0x65, 0x61,
-	0x6d, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x30, 0x01, 0x12, 0x31, 0x0a,
-	0x08, 0x47, 0x65, 0x74, 0x55, 0x73, 0x61, 0x67, 0x65, 0x12, 0x10, 0x2e, 0x47, 0x65, 0x74, 0x55,
-	0x73, 0x61, 0x67, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x11, 0x2e, 0x47, 0x65,
-	0x74, 0x55, 0x73, 0x61, 0x67, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00,
-	0x12, 0x4f, 0x0a, 0x12, 0x47, 0x65, 0x74, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x41, 0x6e, 0x61,
-	0x6c, 0x79, 0x74, 0x69, 0x63, 0x73, 0x12, 0x1a, 0x2e, 0x47, 0x65, 0x74, 0x52, 0x65, 0x70, 0x6f,
-	0x72, 0x74, 0x41, 0x6e, 0x61, 0x6c, 0x79, 0x74, 0x69, 0x63, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x1a, 0x1b, 0x2e, 0x47, 0x65, 0x74, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x41, 0x6e,
-	0x61, 0x6c, 0x79, 0x74, 0x69, 0x63, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22,
-	0x00, 0x12, 0x37, 0x0a, 0x0a, 0x54, 0x72, 0x61, 0x63, 0x6b, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x12,
-	0x12, 0x2e, 0x54, 0x72, 0x61, 0x63, 0x6b, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x71, 0x75,
-	0x65, 0x73, 0x74, 0x1a, 0x13, 0x2e, 0x54, 0x72, 0x61, 0x63, 0x6b, 0x45, 0x76, 0x65, 0x6e, 0x74,
-	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x49, 0x0a, 0x10, 0x43, 0x72,
-	0x65, 0x61, 0x74, 0x65, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x18,
-	0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f,
-	0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x19, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74,
-	0x65, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f,
-	0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x4c, 0x0a, 0x11, 0x47, 0x65, 0x74, 0x47, 0x63, 0x70, 0x50,
-	0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x4c, 0x69, 0x73, 0x74, 0x12, 0x19, 0x2e, 0x47, 0x65, 0x74,
-	0x47, 0x63, 0x70, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x65,
-	0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1a, 0x2e, 0x47, 0x65, 0x74, 0x47, 0x63, 0x70, 0x50, 0x72,
-	0x6f, 0x6a, 0x65, 0x63, 0x74, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
-	0x65, 0x22, 0x00, 0x12, 0x49, 0x0a, 0x10, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x43, 0x6f, 0x6e,
-	0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x18, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65,
-	0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x1a, 0x19, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63,
-	0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x4c,
-	0x0a, 0x11, 0x41, 0x72, 0x63, 0x68, 0x69, 0x76, 0x65, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74,
-	0x69, 0x6f, 0x6e, 0x12, 0x19, 0x2e, 0x41, 0x72, 0x63, 0x68, 0x69, 0x76, 0x65, 0x43, 0x6f, 0x6e,
-	0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1a,
-	0x2e, 0x41, 0x72, 0x63, 0x68, 0x69, 0x76, 0x65, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69,
-	0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x4c, 0x0a, 0x11,
-	0x47, 0x65, 0x74, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x4c, 0x69, 0x73,
-	0x74, 0x12, 0x19, 0x2e, 0x47, 0x65, 0x74, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f,
-	0x6e, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1a, 0x2e, 0x47,
-	0x65, 0x74, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x4c, 0x69, 0x73, 0x74,
-	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x43, 0x0a, 0x0e, 0x54, 0x65,
-	0x73, 0x74, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x16, 0x2e, 0x54,
-	0x65, 0x73, 0x74, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71,
-	0x75, 0x65, 0x73, 0x74, 0x1a, 0x17, 0x2e, 0x54, 0x65, 0x73, 0x74, 0x43, 0x6f, 0x6e, 0x6e, 0x65,
+	0x22, 0x00, 0x12, 0x49, 0x0a, 0x10, 0x47, 0x65, 0x74, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x56,
+	0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x12, 0x18, 0x2e, 0x47, 0x65, 0x74, 0x52, 0x65, 0x70, 0x6f,
+	0x72, 0x74, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x1a, 0x19, 0x2e, 0x47, 0x65, 0x74, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x56, 0x65, 0x72, 0x73,
+	0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x40, 0x0a,
+	0x0d, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x44, 0x61, 0x74, 0x61, 0x73, 0x65, 0x74, 0x12, 0x15,
+	0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x44, 0x61, 0x74, 0x61, 0x73, 0x65, 0x74, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x16, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x44, 0x61,
+	0x74, 0x61, 0x73, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12,
+	0x40, 0x0a, 0x0d, 0x52, 0x65, 0x6d, 0x6f, 0x76, 0x65, 0x44, 0x61, 0x74, 0x61, 0x73, 0x65, 0x74,
+	0x12, 0x15, 0x2e, 0x52, 0x65, 0x6d, 0x6f, 0x76, 0x65, 0x44, 0x61, 0x74, 0x61, 0x73, 0x65, 0x74,
+	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x16, 0x2e, 0x52, 0x65, 0x6d, 0x6f, 0x76, 0x65,
+	0x44, 0x61, 0x74, 0x61, 0x73, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22,
+	0x00, 0x12, 0x4c, 0x0a, 0x11, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x44, 0x61, 0x74, 0x61, 0x73,
+	0x65, 0x74, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x19, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x44,
+	0x61, 0x74, 0x61, 0x73, 0x65, 0x74, 0x4e, 0x61, 0x6d, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x1a, 0x1a, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x44, 0x61, 0x74, 0x61, 0x73, 0x65,
+	0x74, 0x4e, 0x61, 0x6d, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12,
+	0x5e, 0x0a, 0x17, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x44, 0x61, 0x74, 0x61, 0x73, 0x65, 0x74,
+	0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x1f, 0x2e, 0x55, 0x70, 0x64,
+	0x61, 0x74, 0x65, 0x44, 0x61, 0x74, 0x61, 0x73, 0x65, 0x74, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63,
+	0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x20, 0x2e, 0x55, 0x70,
+	0x64, 0x61, 0x74, 0x65, 0x44, 0x61, 0x74, 0x61, 0x73, 0x65, 0x74, 0x43, 0x6f, 0x6e, 0x6e, 0x65,
 	0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12,
-	0x55, 0x0a, 0x14, 0x53, 0x65, 0x74, 0x44, 0x65, 0x66, 0x61, 0x75, 0x6c, 0x74, 0x43, 0x6f, 0x6e,
-	0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x1c, 0x2e, 0x53, 0x65, 0x74, 0x44, 0x65, 0x66,
-	0x61, 0x75, 0x6c, 0x74, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65,
-	0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1d, 0x2e, 0x53, 0x65, 0x74, 0x44, 0x65, 0x66, 0x61, 0x75,
-	0x6c, 0x74, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x67, 0x0a, 0x1a, 0x47, 0x65, 0x74, 0x57, 0x68, 0x65,
-	0x72, 0x6f, 0x62, 0x6f, 0x74, 0x73, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e,
-	0x48, 0x69, 0x6e, 0x74, 0x12, 0x22, 0x2e, 0x47, 0x65, 0x74, 0x57, 0x68, 0x65, 0x72, 0x6f, 0x62,
-	0x6f, 0x74, 0x73, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x48, 0x69, 0x6e,
-	0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x23, 0x2e, 0x47, 0x65, 0x74, 0x57, 0x68,
-	0x65, 0x72, 0x6f, 0x62, 0x6f, 0x74, 0x73, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f,
-	0x6e, 0x48, 0x69, 0x6e, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12,
-	0x46, 0x0a, 0x0f, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x64, 0x54, 0x6f, 0x49, 0x6e, 0x76, 0x69,
-	0x74, 0x65, 0x12, 0x17, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x64, 0x54, 0x6f, 0x49, 0x6e,
-	0x76, 0x69, 0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x18, 0x2e, 0x52, 0x65,
-	0x73, 0x70, 0x6f, 0x6e, 0x64, 0x54, 0x6f, 0x49, 0x6e, 0x76, 0x69, 0x74, 0x65, 0x52, 0x65, 0x73,
-	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x4f, 0x0a, 0x12, 0x43, 0x72, 0x65, 0x61, 0x74,
-	0x65, 0x53, 0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x1a, 0x2e,
-	0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x53, 0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69,
-	0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1b, 0x2e, 0x43, 0x72, 0x65, 0x61,
-	0x74, 0x65, 0x53, 0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65,
-	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x5b, 0x0a, 0x16, 0x47, 0x65, 0x74, 0x53,
-	0x74, 0x72, 0x69, 0x70, 0x65, 0x50, 0x6f, 0x72, 0x74, 0x61, 0x6c, 0x53, 0x65, 0x73, 0x73, 0x69,
-	0x6f, 0x6e, 0x12, 0x1e, 0x2e, 0x47, 0x65, 0x74, 0x53, 0x74, 0x72, 0x69, 0x70, 0x65, 0x50, 0x6f,
-	0x72, 0x74, 0x61, 0x6c, 0x53, 0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x1a, 0x1f, 0x2e, 0x47, 0x65, 0x74, 0x53, 0x74, 0x72, 0x69, 0x70, 0x65, 0x50, 0x6f,
-	0x72, 0x74, 0x61, 0x6c, 0x53, 0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f,
-	0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x46, 0x0a, 0x0f, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x57,
-	0x6f, 0x72, 0x6b, 0x73, 0x70, 0x61, 0x63, 0x65, 0x12, 0x17, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74,
-	0x65, 0x57, 0x6f, 0x72, 0x6b, 0x73, 0x70, 0x61, 0x63, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x1a, 0x18, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x57, 0x6f, 0x72, 0x6b, 0x73, 0x70,
-	0x61, 0x63, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x46, 0x0a,
-	0x0f, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x57, 0x6f, 0x72, 0x6b, 0x73, 0x70, 0x61, 0x63, 0x65,
-	0x12, 0x17, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x57, 0x6f, 0x72, 0x6b, 0x73, 0x70, 0x61,
-	0x63, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x18, 0x2e, 0x55, 0x70, 0x64, 0x61,
-	0x74, 0x65, 0x57, 0x6f, 0x72, 0x6b, 0x73, 0x70, 0x61, 0x63, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f,
-	0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x3d, 0x0a, 0x0c, 0x47, 0x65, 0x74, 0x57, 0x6f, 0x72, 0x6b,
-	0x73, 0x70, 0x61, 0x63, 0x65, 0x12, 0x14, 0x2e, 0x47, 0x65, 0x74, 0x57, 0x6f, 0x72, 0x6b, 0x73,
-	0x70, 0x61, 0x63, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x15, 0x2e, 0x47, 0x65,
-	0x74, 0x57, 0x6f, 0x72, 0x6b, 0x73, 0x70, 0x61, 0x63, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
-	0x73, 0x65, 0x22, 0x00, 0x12, 0x52, 0x0a, 0x13, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x57, 0x6f,
-	0x72, 0x6b, 0x73, 0x70, 0x61, 0x63, 0x65, 0x55, 0x73, 0x65, 0x72, 0x12, 0x1b, 0x2e, 0x55, 0x70,
-	0x64, 0x61, 0x74, 0x65, 0x57, 0x6f, 0x72, 0x6b, 0x73, 0x70, 0x61, 0x63, 0x65, 0x55, 0x73, 0x65,
-	0x72, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1c, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74,
-	0x65, 0x57, 0x6f, 0x72, 0x6b, 0x73, 0x70, 0x61, 0x63, 0x65, 0x55, 0x73, 0x65, 0x72, 0x52, 0x65,
-	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x42, 0x09, 0x5a, 0x07, 0x2e, 0x2f, 0x70, 0x72,
-	0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x37, 0x0a, 0x0a, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x46, 0x69, 0x6c, 0x65, 0x12, 0x12, 0x2e,
+	0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x46, 0x69, 0x6c, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x1a, 0x13, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x46, 0x69, 0x6c, 0x65, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x3a, 0x0a, 0x0b, 0x43, 0x72, 0x65, 0x61,
+	0x74, 0x65, 0x51, 0x75, 0x65, 0x72, 0x79, 0x12, 0x13, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65,
+	0x51, 0x75, 0x65, 0x72, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x14, 0x2e, 0x43,
+	0x72, 0x65, 0x61, 0x74, 0x65, 0x51, 0x75, 0x65, 0x72, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x22, 0x00, 0x12, 0x31, 0x0a, 0x08, 0x52, 0x75, 0x6e, 0x51, 0x75, 0x65, 0x72, 0x79,
+	0x12, 0x10, 0x2e, 0x52, 0x75, 0x6e, 0x51, 0x75, 0x65, 0x72, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x1a, 0x11, 0x2e, 0x52, 0x75, 0x6e, 0x51, 0x75, 0x65, 0x72, 0x79, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x40, 0x0a, 0x0d, 0x52, 0x75, 0x6e, 0x41, 0x6c,
+	0x6c, 0x51, 0x75, 0x65, 0x72, 0x69, 0x65, 0x73, 0x12, 0x15, 0x2e, 0x52, 0x75, 0x6e, 0x41, 0x6c,
+	0x6c, 0x51, 0x75, 0x65, 0x72, 0x69, 0x65, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a,
+	0x16, 0x2e, 0x52, 0x75, 0x6e, 0x41, 0x6c, 0x6c, 0x51, 0x75, 0x65, 0x72, 0x69, 0x65, 0x73, 0x52,
+	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x34, 0x0a, 0x09, 0x43, 0x61, 0x6e,
+	0x63, 0x65, 0x6c, 0x4a, 0x6f, 0x62, 0x12, 0x11, 0x2e, 0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x4a,
+	0x6f, 0x62, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x12, 0x2e, 0x43, 0x61, 0x6e, 0x63,
+	0x65, 0x6c, 0x4a, 0x6f, 0x62, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12,
+	0x2b, 0x0a, 0x06, 0x47, 0x65, 0x74, 0x45, 0x6e, 0x76, 0x12, 0x0e, 0x2e, 0x47, 0x65, 0x74, 0x45,
+	0x6e, 0x76, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x0f, 0x2e, 0x47, 0x65, 0x74, 0x45,
+	0x6e, 0x76, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x42, 0x0a, 0x0f,
+	0x47, 0x65, 0x74, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x12,
+	0x14, 0x2e, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x15, 0x2e, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x53, 0x74,
+	0x72, 0x65, 0x61, 0x6d, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x30, 0x01,
+	0x12, 0x42, 0x0a, 0x13, 0x47, 0x65, 0x74, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x4c, 0x69, 0x73,
+	0x74, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x12, 0x12, 0x2e, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74,
+	0x4c, 0x69, 0x73, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x13, 0x2e, 0x52, 0x65,
+	0x70, 0x6f, 0x72, 0x74, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
+	0x22, 0x00, 0x30, 0x01, 0x12, 0x42, 0x0a, 0x0d, 0x47, 0x65, 0x74, 0x55, 0x73, 0x65, 0x72, 0x53,
+	0x74, 0x72, 0x65, 0x61, 0x6d, 0x12, 0x15, 0x2e, 0x47, 0x65, 0x74, 0x55, 0x73, 0x65, 0x72, 0x53,
+	0x74, 0x72, 0x65, 0x61, 0x6d, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x16, 0x2e, 0x47,
+	0x65, 0x74, 0x55, 0x73, 0x65, 0x72, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x30, 0x01, 0x12, 0x31, 0x0a, 0x08, 0x47, 0x65, 0x74, 0x55,
+	0x73, 0x61, 0x67, 0x65, 0x12, 0x10, 0x2e, 0x47, 0x65, 0x74, 0x55, 0x73, 0x61, 0x67, 0x65, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x11, 0x2e, 0x47, 0x65, 0x74, 0x55, 0x73, 0x61, 0x67,
+	0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x4f, 0x0a, 0x12, 0x47,
+	0x65, 0x74, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x41, 0x6e, 0x61, 0x6c, 0x79, 0x74, 0x69, 0x63,
+	0x73, 0x12, 0x1a, 0x2e, 0x47, 0x65, 0x74, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x41, 0x6e, 0x61,
+	0x6c, 0x79, 0x74, 0x69, 0x63, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1b, 0x2e,
+	0x47, 0x65, 0x74, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x41, 0x6e, 0x61, 0x6c, 0x79, 0x74, 0x69,
+	0x63, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x37, 0x0a, 0x0a,
+	0x54, 0x72, 0x61, 0x63, 0x6b, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x12, 0x12, 0x2e, 0x54, 0x72, 0x61,
+	0x63, 0x6b, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x13,
+	0x2e, 0x54, 0x72, 0x61, 0x63, 0x6b, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x49, 0x0a, 0x10, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x43,
+	0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x18, 0x2e, 0x43, 0x72, 0x65, 0x61,
+	0x74, 0x65, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x1a, 0x19, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x43, 0x6f, 0x6e, 0x6e,
+	0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00,
+	0x12, 0x4c, 0x0a, 0x11, 0x47, 0x65, 0x74, 0x47, 0x63, 0x70, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63,
+	0x74, 0x4c, 0x69, 0x73, 0x74, 0x12, 0x19, 0x2e, 0x47, 0x65, 0x74, 0x47, 0x63, 0x70, 0x50, 0x72,
+	0x6f, 0x6a, 0x65, 0x63, 0x74, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x1a, 0x1a, 0x2e, 0x47, 0x65, 0x74, 0x47, 0x63, 0x70, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74,
+	0x4c, 0x69, 0x73, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x49,
+	0x0a, 0x10, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69,
+	0x6f, 0x6e, 0x12, 0x18, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x43, 0x6f, 0x6e, 0x6e, 0x65,
+	0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x19, 0x2e, 0x55,
+	0x70, 0x64, 0x61, 0x74, 0x65, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52,
+	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x4c, 0x0a, 0x11, 0x41, 0x72, 0x63,
+	0x68, 0x69, 0x76, 0x65, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x19,
+	0x2e, 0x41, 0x72, 0x63, 0x68, 0x69, 0x76, 0x65, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69,
+	0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1a, 0x2e, 0x41, 0x72, 0x63, 0x68,
+	0x69, 0x76, 0x65, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x4c, 0x0a, 0x11, 0x47, 0x65, 0x74, 0x43, 0x6f,
+	0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x4c, 0x69, 0x73, 0x74, 0x12, 0x19, 0x2e, 0x47,
+	0x65, 0x74, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x4c, 0x69, 0x73, 0x74,
+	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1a, 0x2e, 0x47, 0x65, 0x74, 0x43, 0x6f, 0x6e,
+	0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x43, 0x0a, 0x0e, 0x54, 0x65, 0x73, 0x74, 0x43, 0x6f, 0x6e,
+	0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x16, 0x2e, 0x54, 0x65, 0x73, 0x74, 0x43, 0x6f,
+	0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a,
+	0x17, 0x2e, 0x54, 0x65, 0x73, 0x74, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x55, 0x0a, 0x14, 0x53, 0x65,
+	0x74, 0x44, 0x65, 0x66, 0x61, 0x75, 0x6c, 0x74, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69,
+	0x6f, 0x6e, 0x12, 0x1c, 0x2e, 0x53, 0x65, 0x74, 0x44, 0x65, 0x66, 0x61, 0x75, 0x6c, 0x74, 0x43,
+	0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x1a, 0x1d, 0x2e, 0x53, 0x65, 0x74, 0x44, 0x65, 0x66, 0x61, 0x75, 0x6c, 0x74, 0x43, 0x6f, 0x6e,
+	0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22,
+	0x00, 0x12, 0x67, 0x0a, 0x1a, 0x47, 0x65, 0x74, 0x57, 0x68, 0x65, 0x72, 0x6f, 0x62, 0x6f, 0x74,
+	0x73, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x48, 0x69, 0x6e, 0x74, 0x12,
+	0x22, 0x2e, 0x47, 0x65, 0x74, 0x57, 0x68, 0x65, 0x72, 0x6f, 0x62, 0x6f, 0x74, 0x73, 0x43, 0x6f,
+	0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x48, 0x69, 0x6e, 0x74, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x1a, 0x23, 0x2e, 0x47, 0x65, 0x74, 0x57, 0x68, 0x65, 0x72, 0x6f, 0x62, 0x6f,
+	0x74, 0x73, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x48, 0x69, 0x6e, 0x74,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x46, 0x0a, 0x0f, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x64, 0x54, 0x6f, 0x49, 0x6e, 0x76, 0x69, 0x74, 0x65, 0x12, 0x17, 0x2e,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x64, 0x54, 0x6f, 0x49, 0x6e, 0x76, 0x69, 0x74, 0x65, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x18, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x64,
+	0x54, 0x6f, 0x49, 0x6e, 0x76, 0x69, 0x74, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
+	0x22, 0x00, 0x12, 0x4f, 0x0a, 0x12, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x53, 0x75, 0x62, 0x73,
+	0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x1a, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74,
+	0x65, 0x53, 0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x1a, 0x1b, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x53, 0x75, 0x62,
+	0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x22, 0x00, 0x12, 0x5b, 0x0a, 0x16, 0x47, 0x65, 0x74, 0x53, 0x74, 0x72, 0x69, 0x70, 0x65,
+	0x50, 0x6f, 0x72, 0x74, 0x61, 0x6c, 0x53, 0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e, 0x12, 0x1e, 0x2e,
+	0x47, 0x65, 0x74, 0x53, 0x74, 0x72, 0x69, 0x70, 0x65, 0x50, 0x6f, 0x72, 0x74, 0x61, 0x6c, 0x53,
+	0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1f, 0x2e,
+	0x47, 0x65, 0x74, 0x53, 0x74, 0x72, 0x69, 0x70, 0x65, 0x50, 0x6f, 0x72, 0x74, 0x61, 0x6c, 0x53,
+	0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00,
+	0x12, 0x46, 0x0a, 0x0f, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x57, 0x6f, 0x72, 0x6b, 0x73, 0x70,
+	0x61, 0x63, 0x65, 0x12, 0x17, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x57, 0x6f, 0x72, 0x6b,
+	0x73, 0x70, 0x61, 0x63, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x18, 0x2e, 0x43,
+	0x72, 0x65, 0x61, 0x74, 0x65, 0x57, 0x6f, 0x72, 0x6b, 0x73, 0x70, 0x61, 0x63, 0x65, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x46, 0x0a, 0x0f, 0x55, 0x70, 0x64, 0x61,
+	0x74, 0x65, 0x57, 0x6f, 0x72, 0x6b, 0x73, 0x70, 0x61, 0x63, 0x65, 0x12, 0x17, 0x2e, 0x55, 0x70,
+	0x64, 0x61, 0x74, 0x65, 0x57, 0x6f, 0x72, 0x6b, 0x73, 0x70, 0x61, 0x63, 0x65, 0x52, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x1a, 0x18, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x57, 0x6f, 0x72,
+	0x6b, 0x73, 0x70, 0x61, 0x63, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00,
+	0x12, 0x3d, 0x0a, 0x0c, 0x47, 0x65, 0x74, 0x57, 0x6f, 0x72, 0x6b, 0x73, 0x70, 0x61, 0x63, 0x65,
+	0x12, 0x14, 0x2e, 0x47, 0x65, 0x74, 0x57, 0x6f, 0x72, 0x6b, 0x73, 0x70, 0x61, 0x63, 0x65, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x15, 0x2e, 0x47, 0x65, 0x74, 0x57, 0x6f, 0x72, 0x6b,
+	0x73, 0x70, 0x61, 0x63, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12,
+	0x52, 0x0a, 0x13, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x57, 0x6f, 0x72, 0x6b, 0x73, 0x70, 0x61,
+	0x63, 0x65, 0x55, 0x73, 0x65, 0x72, 0x12, 0x1b, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x57,
+	0x6f, 0x72, 0x6b, 0x73, 0x70, 0x61, 0x63, 0x65, 0x55, 0x73, 0x65, 0x72, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x1a, 0x1c, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x57, 0x6f, 0x72, 0x6b,
+	0x73, 0x70, 0x61, 0x63, 0x65, 0x55, 0x73, 0x65, 0x72, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x22, 0x00, 0x42, 0x09, 0x5a, 0x07, 0x2e, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -7550,7 +7843,7 @@ func file_proto_dekart_proto_rawDescGZIP() []byte {
 }
 
 var file_proto_dekart_proto_enumTypes = make([]protoimpl.EnumInfo, 11)
-var file_proto_dekart_proto_msgTypes = make([]protoimpl.MessageInfo, 106)
+var file_proto_dekart_proto_msgTypes = make([]protoimpl.MessageInfo, 110)
 var file_proto_dekart_proto_goTypes = []any{
 	(UserStatus)(0),     // 0: UserStatus
 	(UserRole)(0),       // 1: UserRole
@@ -7563,261 +7856,269 @@ var file_proto_dekart_proto_goTypes = []any{
 	(Query_QuerySource)(0),                         // 8: Query.QuerySource
 	(File_Status)(0),                               // 9: File.Status
 	(QueryParam_Type)(0),                           // 10: QueryParam.Type
-	(*TrackEventRequest)(nil),                      // 11: TrackEventRequest
-	(*TrackEventResponse)(nil),                     // 12: TrackEventResponse
-	(*SetTrackViewersRequest)(nil),                 // 13: SetTrackViewersRequest
-	(*SetTrackViewersResponse)(nil),                // 14: SetTrackViewersResponse
-	(*GetWherobotsConnectionHintRequest)(nil),      // 15: GetWherobotsConnectionHintRequest
-	(*GetWherobotsConnectionHintResponse)(nil),     // 16: GetWherobotsConnectionHintResponse
-	(*SetAutoRefreshIntervalSecondsRequest)(nil),   // 17: SetAutoRefreshIntervalSecondsRequest
-	(*SetAutoRefreshIntervalSecondsResponse)(nil),  // 18: SetAutoRefreshIntervalSecondsResponse
-	(*AddReportDirectAccessRequest)(nil),           // 19: AddReportDirectAccessRequest
-	(*AddReportDirectAccessResponse)(nil),          // 20: AddReportDirectAccessResponse
-	(*GetReportAnalyticsRequest)(nil),              // 21: GetReportAnalyticsRequest
-	(*GetReportAnalyticsResponse)(nil),             // 22: GetReportAnalyticsResponse
-	(*AddReadmeRequest)(nil),                       // 23: AddReadmeRequest
-	(*AddReadmeResponse)(nil),                      // 24: AddReadmeResponse
-	(*RemoveReadmeRequest)(nil),                    // 25: RemoveReadmeRequest
-	(*RemoveReadmeResponse)(nil),                   // 26: RemoveReadmeResponse
-	(*AllowExportDatasetsRequest)(nil),             // 27: AllowExportDatasetsRequest
-	(*AllowExportDatasetsResponse)(nil),            // 28: AllowExportDatasetsResponse
-	(*CancelJobRequest)(nil),                       // 29: CancelJobRequest
-	(*CancelJobResponse)(nil),                      // 30: CancelJobResponse
-	(*PublishReportRequest)(nil),                   // 31: PublishReportRequest
-	(*PublishReportResponse)(nil),                  // 32: PublishReportResponse
-	(*GetStripePortalSessionRequest)(nil),          // 33: GetStripePortalSessionRequest
-	(*GetStripePortalSessionResponse)(nil),         // 34: GetStripePortalSessionResponse
-	(*UpdateWorkspaceUserRequest)(nil),             // 35: UpdateWorkspaceUserRequest
-	(*UpdateWorkspaceUserResponse)(nil),            // 36: UpdateWorkspaceUserResponse
-	(*GetWorkspaceRequest)(nil),                    // 37: GetWorkspaceRequest
-	(*GetWorkspaceResponse)(nil),                   // 38: GetWorkspaceResponse
-	(*CreateWorkspaceRequest)(nil),                 // 39: CreateWorkspaceRequest
-	(*CreateWorkspaceResponse)(nil),                // 40: CreateWorkspaceResponse
-	(*UpdateWorkspaceRequest)(nil),                 // 41: UpdateWorkspaceRequest
-	(*UpdateWorkspaceResponse)(nil),                // 42: UpdateWorkspaceResponse
-	(*RespondToInviteRequest)(nil),                 // 43: RespondToInviteRequest
-	(*RespondToInviteResponse)(nil),                // 44: RespondToInviteResponse
-	(*GetInvitesRequest)(nil),                      // 45: GetInvitesRequest
-	(*WorkspaceInvite)(nil),                        // 46: WorkspaceInvite
-	(*GetInvitesResponse)(nil),                     // 47: GetInvitesResponse
-	(*User)(nil),                                   // 48: User
-	(*GetGcpProjectListRequest)(nil),               // 49: GetGcpProjectListRequest
-	(*GetGcpProjectListResponse)(nil),              // 50: GetGcpProjectListResponse
-	(*SetDefaultConnectionRequest)(nil),            // 51: SetDefaultConnectionRequest
-	(*SetDefaultConnectionResponse)(nil),           // 52: SetDefaultConnectionResponse
-	(*RunAllQueriesRequest)(nil),                   // 53: RunAllQueriesRequest
-	(*RunAllQueriesResponse)(nil),                  // 54: RunAllQueriesResponse
-	(*Workspace)(nil),                              // 55: Workspace
-	(*Subscription)(nil),                           // 56: Subscription
-	(*CreateSubscriptionRequest)(nil),              // 57: CreateSubscriptionRequest
-	(*CreateSubscriptionResponse)(nil),             // 58: CreateSubscriptionResponse
-	(*GetConnectionListRequest)(nil),               // 59: GetConnectionListRequest
-	(*GetConnectionListResponse)(nil),              // 60: GetConnectionListResponse
-	(*GetUserStreamRequest)(nil),                   // 61: GetUserStreamRequest
-	(*GetUserStreamResponse)(nil),                  // 62: GetUserStreamResponse
-	(*TestConnectionRequest)(nil),                  // 63: TestConnectionRequest
-	(*TestConnectionResponse)(nil),                 // 64: TestConnectionResponse
-	(*ArchiveConnectionRequest)(nil),               // 65: ArchiveConnectionRequest
-	(*ArchiveConnectionResponse)(nil),              // 66: ArchiveConnectionResponse
-	(*UpdateConnectionRequest)(nil),                // 67: UpdateConnectionRequest
-	(*UpdateConnectionResponse)(nil),               // 68: UpdateConnectionResponse
-	(*CreateConnectionRequest)(nil),                // 69: CreateConnectionRequest
-	(*CreateConnectionResponse)(nil),               // 70: CreateConnectionResponse
-	(*Connection)(nil),                             // 71: Connection
-	(*Secret)(nil),                                 // 72: Secret
-	(*GetUsageRequest)(nil),                        // 73: GetUsageRequest
-	(*GetUsageResponse)(nil),                       // 74: GetUsageResponse
-	(*SetDiscoverableRequest)(nil),                 // 75: SetDiscoverableRequest
-	(*SetDiscoverableResponse)(nil),                // 76: SetDiscoverableResponse
-	(*RemoveDatasetRequest)(nil),                   // 77: RemoveDatasetRequest
-	(*RemoveDatasetResponse)(nil),                  // 78: RemoveDatasetResponse
-	(*StreamOptions)(nil),                          // 79: StreamOptions
-	(*GetEnvRequest)(nil),                          // 80: GetEnvRequest
-	(*GetEnvResponse)(nil),                         // 81: GetEnvResponse
-	(*RedirectState)(nil),                          // 82: RedirectState
-	(*AuthState)(nil),                              // 83: AuthState
-	(*ArchiveReportRequest)(nil),                   // 84: ArchiveReportRequest
-	(*ArchiveReportResponse)(nil),                  // 85: ArchiveReportResponse
-	(*ReportListRequest)(nil),                      // 86: ReportListRequest
-	(*ReportListResponse)(nil),                     // 87: ReportListResponse
-	(*Readme)(nil),                                 // 88: Readme
-	(*ReportAnalytics)(nil),                        // 89: ReportAnalytics
-	(*Report)(nil),                                 // 90: Report
-	(*Dataset)(nil),                                // 91: Dataset
-	(*QueryJob)(nil),                               // 92: QueryJob
-	(*Query)(nil),                                  // 93: Query
-	(*File)(nil),                                   // 94: File
-	(*UpdateReportRequest)(nil),                    // 95: UpdateReportRequest
-	(*UpdateReportResponse)(nil),                   // 96: UpdateReportResponse
-	(*RunQueryRequest)(nil),                        // 97: RunQueryRequest
-	(*RunQueryResponse)(nil),                       // 98: RunQueryResponse
-	(*UpdateDatasetNameRequest)(nil),               // 99: UpdateDatasetNameRequest
-	(*UpdateDatasetNameResponse)(nil),              // 100: UpdateDatasetNameResponse
-	(*UpdateDatasetConnectionRequest)(nil),         // 101: UpdateDatasetConnectionRequest
-	(*UpdateDatasetConnectionResponse)(nil),        // 102: UpdateDatasetConnectionResponse
-	(*CreateDatasetRequest)(nil),                   // 103: CreateDatasetRequest
-	(*CreateDatasetResponse)(nil),                  // 104: CreateDatasetResponse
-	(*CreateFileRequest)(nil),                      // 105: CreateFileRequest
-	(*CreateFileResponse)(nil),                     // 106: CreateFileResponse
-	(*CreateQueryRequest)(nil),                     // 107: CreateQueryRequest
-	(*CreateQueryResponse)(nil),                    // 108: CreateQueryResponse
-	(*ReportStreamRequest)(nil),                    // 109: ReportStreamRequest
-	(*ReportStreamResponse)(nil),                   // 110: ReportStreamResponse
-	(*ForkReportRequest)(nil),                      // 111: ForkReportRequest
-	(*ForkReportResponse)(nil),                     // 112: ForkReportResponse
-	(*CreateReportRequest)(nil),                    // 113: CreateReportRequest
-	(*CreateReportResponse)(nil),                   // 114: CreateReportResponse
-	(*QueryParam)(nil),                             // 115: QueryParam
-	(*GetEnvResponse_Variable)(nil),                // 116: GetEnvResponse.Variable
+	(*GetReportVersionRequest)(nil),                // 11: GetReportVersionRequest
+	(*ReportSnapshot)(nil),                         // 12: ReportSnapshot
+	(*DatasetSnapshot)(nil),                        // 13: DatasetSnapshot
+	(*GetReportVersionResponse)(nil),               // 14: GetReportVersionResponse
+	(*TrackEventRequest)(nil),                      // 15: TrackEventRequest
+	(*TrackEventResponse)(nil),                     // 16: TrackEventResponse
+	(*SetTrackViewersRequest)(nil),                 // 17: SetTrackViewersRequest
+	(*SetTrackViewersResponse)(nil),                // 18: SetTrackViewersResponse
+	(*GetWherobotsConnectionHintRequest)(nil),      // 19: GetWherobotsConnectionHintRequest
+	(*GetWherobotsConnectionHintResponse)(nil),     // 20: GetWherobotsConnectionHintResponse
+	(*SetAutoRefreshIntervalSecondsRequest)(nil),   // 21: SetAutoRefreshIntervalSecondsRequest
+	(*SetAutoRefreshIntervalSecondsResponse)(nil),  // 22: SetAutoRefreshIntervalSecondsResponse
+	(*AddReportDirectAccessRequest)(nil),           // 23: AddReportDirectAccessRequest
+	(*AddReportDirectAccessResponse)(nil),          // 24: AddReportDirectAccessResponse
+	(*GetReportAnalyticsRequest)(nil),              // 25: GetReportAnalyticsRequest
+	(*GetReportAnalyticsResponse)(nil),             // 26: GetReportAnalyticsResponse
+	(*AddReadmeRequest)(nil),                       // 27: AddReadmeRequest
+	(*AddReadmeResponse)(nil),                      // 28: AddReadmeResponse
+	(*RemoveReadmeRequest)(nil),                    // 29: RemoveReadmeRequest
+	(*RemoveReadmeResponse)(nil),                   // 30: RemoveReadmeResponse
+	(*AllowExportDatasetsRequest)(nil),             // 31: AllowExportDatasetsRequest
+	(*AllowExportDatasetsResponse)(nil),            // 32: AllowExportDatasetsResponse
+	(*CancelJobRequest)(nil),                       // 33: CancelJobRequest
+	(*CancelJobResponse)(nil),                      // 34: CancelJobResponse
+	(*PublishReportRequest)(nil),                   // 35: PublishReportRequest
+	(*PublishReportResponse)(nil),                  // 36: PublishReportResponse
+	(*GetStripePortalSessionRequest)(nil),          // 37: GetStripePortalSessionRequest
+	(*GetStripePortalSessionResponse)(nil),         // 38: GetStripePortalSessionResponse
+	(*UpdateWorkspaceUserRequest)(nil),             // 39: UpdateWorkspaceUserRequest
+	(*UpdateWorkspaceUserResponse)(nil),            // 40: UpdateWorkspaceUserResponse
+	(*GetWorkspaceRequest)(nil),                    // 41: GetWorkspaceRequest
+	(*GetWorkspaceResponse)(nil),                   // 42: GetWorkspaceResponse
+	(*CreateWorkspaceRequest)(nil),                 // 43: CreateWorkspaceRequest
+	(*CreateWorkspaceResponse)(nil),                // 44: CreateWorkspaceResponse
+	(*UpdateWorkspaceRequest)(nil),                 // 45: UpdateWorkspaceRequest
+	(*UpdateWorkspaceResponse)(nil),                // 46: UpdateWorkspaceResponse
+	(*RespondToInviteRequest)(nil),                 // 47: RespondToInviteRequest
+	(*RespondToInviteResponse)(nil),                // 48: RespondToInviteResponse
+	(*GetInvitesRequest)(nil),                      // 49: GetInvitesRequest
+	(*WorkspaceInvite)(nil),                        // 50: WorkspaceInvite
+	(*GetInvitesResponse)(nil),                     // 51: GetInvitesResponse
+	(*User)(nil),                                   // 52: User
+	(*GetGcpProjectListRequest)(nil),               // 53: GetGcpProjectListRequest
+	(*GetGcpProjectListResponse)(nil),              // 54: GetGcpProjectListResponse
+	(*SetDefaultConnectionRequest)(nil),            // 55: SetDefaultConnectionRequest
+	(*SetDefaultConnectionResponse)(nil),           // 56: SetDefaultConnectionResponse
+	(*RunAllQueriesRequest)(nil),                   // 57: RunAllQueriesRequest
+	(*RunAllQueriesResponse)(nil),                  // 58: RunAllQueriesResponse
+	(*Workspace)(nil),                              // 59: Workspace
+	(*Subscription)(nil),                           // 60: Subscription
+	(*CreateSubscriptionRequest)(nil),              // 61: CreateSubscriptionRequest
+	(*CreateSubscriptionResponse)(nil),             // 62: CreateSubscriptionResponse
+	(*GetConnectionListRequest)(nil),               // 63: GetConnectionListRequest
+	(*GetConnectionListResponse)(nil),              // 64: GetConnectionListResponse
+	(*GetUserStreamRequest)(nil),                   // 65: GetUserStreamRequest
+	(*GetUserStreamResponse)(nil),                  // 66: GetUserStreamResponse
+	(*TestConnectionRequest)(nil),                  // 67: TestConnectionRequest
+	(*TestConnectionResponse)(nil),                 // 68: TestConnectionResponse
+	(*ArchiveConnectionRequest)(nil),               // 69: ArchiveConnectionRequest
+	(*ArchiveConnectionResponse)(nil),              // 70: ArchiveConnectionResponse
+	(*UpdateConnectionRequest)(nil),                // 71: UpdateConnectionRequest
+	(*UpdateConnectionResponse)(nil),               // 72: UpdateConnectionResponse
+	(*CreateConnectionRequest)(nil),                // 73: CreateConnectionRequest
+	(*CreateConnectionResponse)(nil),               // 74: CreateConnectionResponse
+	(*Connection)(nil),                             // 75: Connection
+	(*Secret)(nil),                                 // 76: Secret
+	(*GetUsageRequest)(nil),                        // 77: GetUsageRequest
+	(*GetUsageResponse)(nil),                       // 78: GetUsageResponse
+	(*SetDiscoverableRequest)(nil),                 // 79: SetDiscoverableRequest
+	(*SetDiscoverableResponse)(nil),                // 80: SetDiscoverableResponse
+	(*RemoveDatasetRequest)(nil),                   // 81: RemoveDatasetRequest
+	(*RemoveDatasetResponse)(nil),                  // 82: RemoveDatasetResponse
+	(*StreamOptions)(nil),                          // 83: StreamOptions
+	(*GetEnvRequest)(nil),                          // 84: GetEnvRequest
+	(*GetEnvResponse)(nil),                         // 85: GetEnvResponse
+	(*RedirectState)(nil),                          // 86: RedirectState
+	(*AuthState)(nil),                              // 87: AuthState
+	(*ArchiveReportRequest)(nil),                   // 88: ArchiveReportRequest
+	(*ArchiveReportResponse)(nil),                  // 89: ArchiveReportResponse
+	(*ReportListRequest)(nil),                      // 90: ReportListRequest
+	(*ReportListResponse)(nil),                     // 91: ReportListResponse
+	(*Readme)(nil),                                 // 92: Readme
+	(*ReportAnalytics)(nil),                        // 93: ReportAnalytics
+	(*Report)(nil),                                 // 94: Report
+	(*Dataset)(nil),                                // 95: Dataset
+	(*QueryJob)(nil),                               // 96: QueryJob
+	(*Query)(nil),                                  // 97: Query
+	(*File)(nil),                                   // 98: File
+	(*UpdateReportRequest)(nil),                    // 99: UpdateReportRequest
+	(*UpdateReportResponse)(nil),                   // 100: UpdateReportResponse
+	(*RunQueryRequest)(nil),                        // 101: RunQueryRequest
+	(*RunQueryResponse)(nil),                       // 102: RunQueryResponse
+	(*UpdateDatasetNameRequest)(nil),               // 103: UpdateDatasetNameRequest
+	(*UpdateDatasetNameResponse)(nil),              // 104: UpdateDatasetNameResponse
+	(*UpdateDatasetConnectionRequest)(nil),         // 105: UpdateDatasetConnectionRequest
+	(*UpdateDatasetConnectionResponse)(nil),        // 106: UpdateDatasetConnectionResponse
+	(*CreateDatasetRequest)(nil),                   // 107: CreateDatasetRequest
+	(*CreateDatasetResponse)(nil),                  // 108: CreateDatasetResponse
+	(*CreateFileRequest)(nil),                      // 109: CreateFileRequest
+	(*CreateFileResponse)(nil),                     // 110: CreateFileResponse
+	(*CreateQueryRequest)(nil),                     // 111: CreateQueryRequest
+	(*CreateQueryResponse)(nil),                    // 112: CreateQueryResponse
+	(*ReportStreamRequest)(nil),                    // 113: ReportStreamRequest
+	(*ReportStreamResponse)(nil),                   // 114: ReportStreamResponse
+	(*ForkReportRequest)(nil),                      // 115: ForkReportRequest
+	(*ForkReportResponse)(nil),                     // 116: ForkReportResponse
+	(*CreateReportRequest)(nil),                    // 117: CreateReportRequest
+	(*CreateReportResponse)(nil),                   // 118: CreateReportResponse
+	(*QueryParam)(nil),                             // 119: QueryParam
+	(*GetEnvResponse_Variable)(nil),                // 120: GetEnvResponse.Variable
 }
 var file_proto_dekart_proto_depIdxs = []int32{
-	72,  // 0: GetWherobotsConnectionHintRequest.wherobots_key:type_name -> Secret
-	89,  // 1: GetReportAnalyticsResponse.analytics:type_name -> ReportAnalytics
-	4,   // 2: UpdateWorkspaceUserRequest.user_update_type:type_name -> UpdateWorkspaceUserRequest.UserUpdateType
-	1,   // 3: UpdateWorkspaceUserRequest.role:type_name -> UserRole
-	55,  // 4: GetWorkspaceResponse.Workspace:type_name -> Workspace
-	56,  // 5: GetWorkspaceResponse.subscription:type_name -> Subscription
-	48,  // 6: GetWorkspaceResponse.users:type_name -> User
-	46,  // 7: GetWorkspaceResponse.invites:type_name -> WorkspaceInvite
-	46,  // 8: GetInvitesResponse.invites:type_name -> WorkspaceInvite
-	0,   // 9: User.status:type_name -> UserStatus
-	1,   // 10: User.role:type_name -> UserRole
-	115, // 11: RunAllQueriesRequest.query_params:type_name -> QueryParam
-	2,   // 12: Subscription.plan_type:type_name -> PlanType
-	2,   // 13: CreateSubscriptionRequest.plan_type:type_name -> PlanType
-	71,  // 14: GetConnectionListResponse.connections:type_name -> Connection
-	79,  // 15: GetUserStreamRequest.stream_options:type_name -> StreamOptions
-	79,  // 16: GetUserStreamResponse.stream_options:type_name -> StreamOptions
-	2,   // 17: GetUserStreamResponse.plan_type:type_name -> PlanType
-	1,   // 18: GetUserStreamResponse.role:type_name -> UserRole
-	71,  // 19: TestConnectionRequest.connection:type_name -> Connection
-	71,  // 20: UpdateConnectionRequest.connection:type_name -> Connection
-	71,  // 21: UpdateConnectionResponse.connection:type_name -> Connection
-	71,  // 22: CreateConnectionRequest.connection:type_name -> Connection
-	71,  // 23: CreateConnectionResponse.connection:type_name -> Connection
-	3,   // 24: Connection.connection_type:type_name -> ConnectionType
-	72,  // 25: Connection.snowflake_password:type_name -> Secret
-	72,  // 26: Connection.bigquery_key:type_name -> Secret
-	72,  // 27: Connection.snowflake_key:type_name -> Secret
-	72,  // 28: Connection.wherobots_key:type_name -> Secret
-	116, // 29: GetEnvResponse.variables:type_name -> GetEnvResponse.Variable
-	6,   // 30: AuthState.action:type_name -> AuthState.Action
-	79,  // 31: ReportListRequest.stream_options:type_name -> StreamOptions
-	90,  // 32: ReportListResponse.reports:type_name -> Report
-	79,  // 33: ReportListResponse.stream_options:type_name -> StreamOptions
-	115, // 34: Report.query_params:type_name -> QueryParam
-	88,  // 35: Report.readme:type_name -> Readme
-	3,   // 36: Dataset.connection_type:type_name -> ConnectionType
-	7,   // 37: QueryJob.job_status:type_name -> QueryJob.JobStatus
-	8,   // 38: Query.query_source:type_name -> Query.QuerySource
-	9,   // 39: File.file_status:type_name -> File.Status
-	93,  // 40: UpdateReportRequest.query:type_name -> Query
-	115, // 41: UpdateReportRequest.query_params:type_name -> QueryParam
-	88,  // 42: UpdateReportRequest.readme:type_name -> Readme
-	115, // 43: RunQueryRequest.query_params:type_name -> QueryParam
-	93,  // 44: CreateQueryResponse.query:type_name -> Query
-	90,  // 45: ReportStreamRequest.report:type_name -> Report
-	79,  // 46: ReportStreamRequest.stream_options:type_name -> StreamOptions
-	90,  // 47: ReportStreamResponse.report:type_name -> Report
-	93,  // 48: ReportStreamResponse.queries:type_name -> Query
-	79,  // 49: ReportStreamResponse.stream_options:type_name -> StreamOptions
-	91,  // 50: ReportStreamResponse.datasets:type_name -> Dataset
-	94,  // 51: ReportStreamResponse.files:type_name -> File
-	92,  // 52: ReportStreamResponse.query_jobs:type_name -> QueryJob
-	90,  // 53: CreateReportResponse.report:type_name -> Report
-	10,  // 54: QueryParam.type:type_name -> QueryParam.Type
-	5,   // 55: GetEnvResponse.Variable.type:type_name -> GetEnvResponse.Variable.Type
-	113, // 56: Dekart.CreateReport:input_type -> CreateReportRequest
-	111, // 57: Dekart.ForkReport:input_type -> ForkReportRequest
-	95,  // 58: Dekart.UpdateReport:input_type -> UpdateReportRequest
-	84,  // 59: Dekart.ArchiveReport:input_type -> ArchiveReportRequest
-	75,  // 60: Dekart.SetDiscoverable:input_type -> SetDiscoverableRequest
-	31,  // 61: Dekart.PublishReport:input_type -> PublishReportRequest
-	27,  // 62: Dekart.AllowExportDatasets:input_type -> AllowExportDatasetsRequest
-	23,  // 63: Dekart.AddReadme:input_type -> AddReadmeRequest
-	25,  // 64: Dekart.RemoveReadme:input_type -> RemoveReadmeRequest
-	19,  // 65: Dekart.AddReportDirectAccess:input_type -> AddReportDirectAccessRequest
-	13,  // 66: Dekart.SetTrackViewers:input_type -> SetTrackViewersRequest
-	17,  // 67: Dekart.SetAutoRefreshIntervalSeconds:input_type -> SetAutoRefreshIntervalSecondsRequest
-	103, // 68: Dekart.CreateDataset:input_type -> CreateDatasetRequest
-	77,  // 69: Dekart.RemoveDataset:input_type -> RemoveDatasetRequest
-	99,  // 70: Dekart.UpdateDatasetName:input_type -> UpdateDatasetNameRequest
-	101, // 71: Dekart.UpdateDatasetConnection:input_type -> UpdateDatasetConnectionRequest
-	105, // 72: Dekart.CreateFile:input_type -> CreateFileRequest
-	107, // 73: Dekart.CreateQuery:input_type -> CreateQueryRequest
-	97,  // 74: Dekart.RunQuery:input_type -> RunQueryRequest
-	53,  // 75: Dekart.RunAllQueries:input_type -> RunAllQueriesRequest
-	29,  // 76: Dekart.CancelJob:input_type -> CancelJobRequest
-	80,  // 77: Dekart.GetEnv:input_type -> GetEnvRequest
-	109, // 78: Dekart.GetReportStream:input_type -> ReportStreamRequest
-	86,  // 79: Dekart.GetReportListStream:input_type -> ReportListRequest
-	61,  // 80: Dekart.GetUserStream:input_type -> GetUserStreamRequest
-	73,  // 81: Dekart.GetUsage:input_type -> GetUsageRequest
-	21,  // 82: Dekart.GetReportAnalytics:input_type -> GetReportAnalyticsRequest
-	11,  // 83: Dekart.TrackEvent:input_type -> TrackEventRequest
-	69,  // 84: Dekart.CreateConnection:input_type -> CreateConnectionRequest
-	49,  // 85: Dekart.GetGcpProjectList:input_type -> GetGcpProjectListRequest
-	67,  // 86: Dekart.UpdateConnection:input_type -> UpdateConnectionRequest
-	65,  // 87: Dekart.ArchiveConnection:input_type -> ArchiveConnectionRequest
-	59,  // 88: Dekart.GetConnectionList:input_type -> GetConnectionListRequest
-	63,  // 89: Dekart.TestConnection:input_type -> TestConnectionRequest
-	51,  // 90: Dekart.SetDefaultConnection:input_type -> SetDefaultConnectionRequest
-	15,  // 91: Dekart.GetWherobotsConnectionHint:input_type -> GetWherobotsConnectionHintRequest
-	43,  // 92: Dekart.RespondToInvite:input_type -> RespondToInviteRequest
-	57,  // 93: Dekart.CreateSubscription:input_type -> CreateSubscriptionRequest
-	33,  // 94: Dekart.GetStripePortalSession:input_type -> GetStripePortalSessionRequest
-	39,  // 95: Dekart.CreateWorkspace:input_type -> CreateWorkspaceRequest
-	41,  // 96: Dekart.UpdateWorkspace:input_type -> UpdateWorkspaceRequest
-	37,  // 97: Dekart.GetWorkspace:input_type -> GetWorkspaceRequest
-	35,  // 98: Dekart.UpdateWorkspaceUser:input_type -> UpdateWorkspaceUserRequest
-	114, // 99: Dekart.CreateReport:output_type -> CreateReportResponse
-	112, // 100: Dekart.ForkReport:output_type -> ForkReportResponse
-	96,  // 101: Dekart.UpdateReport:output_type -> UpdateReportResponse
-	85,  // 102: Dekart.ArchiveReport:output_type -> ArchiveReportResponse
-	76,  // 103: Dekart.SetDiscoverable:output_type -> SetDiscoverableResponse
-	32,  // 104: Dekart.PublishReport:output_type -> PublishReportResponse
-	28,  // 105: Dekart.AllowExportDatasets:output_type -> AllowExportDatasetsResponse
-	24,  // 106: Dekart.AddReadme:output_type -> AddReadmeResponse
-	26,  // 107: Dekart.RemoveReadme:output_type -> RemoveReadmeResponse
-	20,  // 108: Dekart.AddReportDirectAccess:output_type -> AddReportDirectAccessResponse
-	14,  // 109: Dekart.SetTrackViewers:output_type -> SetTrackViewersResponse
-	18,  // 110: Dekart.SetAutoRefreshIntervalSeconds:output_type -> SetAutoRefreshIntervalSecondsResponse
-	104, // 111: Dekart.CreateDataset:output_type -> CreateDatasetResponse
-	78,  // 112: Dekart.RemoveDataset:output_type -> RemoveDatasetResponse
-	100, // 113: Dekart.UpdateDatasetName:output_type -> UpdateDatasetNameResponse
-	102, // 114: Dekart.UpdateDatasetConnection:output_type -> UpdateDatasetConnectionResponse
-	106, // 115: Dekart.CreateFile:output_type -> CreateFileResponse
-	108, // 116: Dekart.CreateQuery:output_type -> CreateQueryResponse
-	98,  // 117: Dekart.RunQuery:output_type -> RunQueryResponse
-	54,  // 118: Dekart.RunAllQueries:output_type -> RunAllQueriesResponse
-	30,  // 119: Dekart.CancelJob:output_type -> CancelJobResponse
-	81,  // 120: Dekart.GetEnv:output_type -> GetEnvResponse
-	110, // 121: Dekart.GetReportStream:output_type -> ReportStreamResponse
-	87,  // 122: Dekart.GetReportListStream:output_type -> ReportListResponse
-	62,  // 123: Dekart.GetUserStream:output_type -> GetUserStreamResponse
-	74,  // 124: Dekart.GetUsage:output_type -> GetUsageResponse
-	22,  // 125: Dekart.GetReportAnalytics:output_type -> GetReportAnalyticsResponse
-	12,  // 126: Dekart.TrackEvent:output_type -> TrackEventResponse
-	70,  // 127: Dekart.CreateConnection:output_type -> CreateConnectionResponse
-	50,  // 128: Dekart.GetGcpProjectList:output_type -> GetGcpProjectListResponse
-	68,  // 129: Dekart.UpdateConnection:output_type -> UpdateConnectionResponse
-	66,  // 130: Dekart.ArchiveConnection:output_type -> ArchiveConnectionResponse
-	60,  // 131: Dekart.GetConnectionList:output_type -> GetConnectionListResponse
-	64,  // 132: Dekart.TestConnection:output_type -> TestConnectionResponse
-	52,  // 133: Dekart.SetDefaultConnection:output_type -> SetDefaultConnectionResponse
-	16,  // 134: Dekart.GetWherobotsConnectionHint:output_type -> GetWherobotsConnectionHintResponse
-	44,  // 135: Dekart.RespondToInvite:output_type -> RespondToInviteResponse
-	58,  // 136: Dekart.CreateSubscription:output_type -> CreateSubscriptionResponse
-	34,  // 137: Dekart.GetStripePortalSession:output_type -> GetStripePortalSessionResponse
-	40,  // 138: Dekart.CreateWorkspace:output_type -> CreateWorkspaceResponse
-	42,  // 139: Dekart.UpdateWorkspace:output_type -> UpdateWorkspaceResponse
-	38,  // 140: Dekart.GetWorkspace:output_type -> GetWorkspaceResponse
-	36,  // 141: Dekart.UpdateWorkspaceUser:output_type -> UpdateWorkspaceUserResponse
-	99,  // [99:142] is the sub-list for method output_type
-	56,  // [56:99] is the sub-list for method input_type
-	56,  // [56:56] is the sub-list for extension type_name
-	56,  // [56:56] is the sub-list for extension extendee
-	0,   // [0:56] is the sub-list for field type_name
+	12,  // 0: GetReportVersionResponse.report_snapshots:type_name -> ReportSnapshot
+	13,  // 1: GetReportVersionResponse.dataset_snapshots:type_name -> DatasetSnapshot
+	76,  // 2: GetWherobotsConnectionHintRequest.wherobots_key:type_name -> Secret
+	93,  // 3: GetReportAnalyticsResponse.analytics:type_name -> ReportAnalytics
+	4,   // 4: UpdateWorkspaceUserRequest.user_update_type:type_name -> UpdateWorkspaceUserRequest.UserUpdateType
+	1,   // 5: UpdateWorkspaceUserRequest.role:type_name -> UserRole
+	59,  // 6: GetWorkspaceResponse.Workspace:type_name -> Workspace
+	60,  // 7: GetWorkspaceResponse.subscription:type_name -> Subscription
+	52,  // 8: GetWorkspaceResponse.users:type_name -> User
+	50,  // 9: GetWorkspaceResponse.invites:type_name -> WorkspaceInvite
+	50,  // 10: GetInvitesResponse.invites:type_name -> WorkspaceInvite
+	0,   // 11: User.status:type_name -> UserStatus
+	1,   // 12: User.role:type_name -> UserRole
+	119, // 13: RunAllQueriesRequest.query_params:type_name -> QueryParam
+	2,   // 14: Subscription.plan_type:type_name -> PlanType
+	2,   // 15: CreateSubscriptionRequest.plan_type:type_name -> PlanType
+	75,  // 16: GetConnectionListResponse.connections:type_name -> Connection
+	83,  // 17: GetUserStreamRequest.stream_options:type_name -> StreamOptions
+	83,  // 18: GetUserStreamResponse.stream_options:type_name -> StreamOptions
+	2,   // 19: GetUserStreamResponse.plan_type:type_name -> PlanType
+	1,   // 20: GetUserStreamResponse.role:type_name -> UserRole
+	75,  // 21: TestConnectionRequest.connection:type_name -> Connection
+	75,  // 22: UpdateConnectionRequest.connection:type_name -> Connection
+	75,  // 23: UpdateConnectionResponse.connection:type_name -> Connection
+	75,  // 24: CreateConnectionRequest.connection:type_name -> Connection
+	75,  // 25: CreateConnectionResponse.connection:type_name -> Connection
+	3,   // 26: Connection.connection_type:type_name -> ConnectionType
+	76,  // 27: Connection.snowflake_password:type_name -> Secret
+	76,  // 28: Connection.bigquery_key:type_name -> Secret
+	76,  // 29: Connection.snowflake_key:type_name -> Secret
+	76,  // 30: Connection.wherobots_key:type_name -> Secret
+	120, // 31: GetEnvResponse.variables:type_name -> GetEnvResponse.Variable
+	6,   // 32: AuthState.action:type_name -> AuthState.Action
+	83,  // 33: ReportListRequest.stream_options:type_name -> StreamOptions
+	94,  // 34: ReportListResponse.reports:type_name -> Report
+	83,  // 35: ReportListResponse.stream_options:type_name -> StreamOptions
+	119, // 36: Report.query_params:type_name -> QueryParam
+	92,  // 37: Report.readme:type_name -> Readme
+	3,   // 38: Dataset.connection_type:type_name -> ConnectionType
+	7,   // 39: QueryJob.job_status:type_name -> QueryJob.JobStatus
+	8,   // 40: Query.query_source:type_name -> Query.QuerySource
+	9,   // 41: File.file_status:type_name -> File.Status
+	97,  // 42: UpdateReportRequest.query:type_name -> Query
+	119, // 43: UpdateReportRequest.query_params:type_name -> QueryParam
+	92,  // 44: UpdateReportRequest.readme:type_name -> Readme
+	119, // 45: RunQueryRequest.query_params:type_name -> QueryParam
+	97,  // 46: CreateQueryResponse.query:type_name -> Query
+	94,  // 47: ReportStreamRequest.report:type_name -> Report
+	83,  // 48: ReportStreamRequest.stream_options:type_name -> StreamOptions
+	94,  // 49: ReportStreamResponse.report:type_name -> Report
+	97,  // 50: ReportStreamResponse.queries:type_name -> Query
+	83,  // 51: ReportStreamResponse.stream_options:type_name -> StreamOptions
+	95,  // 52: ReportStreamResponse.datasets:type_name -> Dataset
+	98,  // 53: ReportStreamResponse.files:type_name -> File
+	96,  // 54: ReportStreamResponse.query_jobs:type_name -> QueryJob
+	94,  // 55: CreateReportResponse.report:type_name -> Report
+	10,  // 56: QueryParam.type:type_name -> QueryParam.Type
+	5,   // 57: GetEnvResponse.Variable.type:type_name -> GetEnvResponse.Variable.Type
+	117, // 58: Dekart.CreateReport:input_type -> CreateReportRequest
+	115, // 59: Dekart.ForkReport:input_type -> ForkReportRequest
+	99,  // 60: Dekart.UpdateReport:input_type -> UpdateReportRequest
+	88,  // 61: Dekart.ArchiveReport:input_type -> ArchiveReportRequest
+	79,  // 62: Dekart.SetDiscoverable:input_type -> SetDiscoverableRequest
+	35,  // 63: Dekart.PublishReport:input_type -> PublishReportRequest
+	31,  // 64: Dekart.AllowExportDatasets:input_type -> AllowExportDatasetsRequest
+	27,  // 65: Dekart.AddReadme:input_type -> AddReadmeRequest
+	29,  // 66: Dekart.RemoveReadme:input_type -> RemoveReadmeRequest
+	23,  // 67: Dekart.AddReportDirectAccess:input_type -> AddReportDirectAccessRequest
+	17,  // 68: Dekart.SetTrackViewers:input_type -> SetTrackViewersRequest
+	21,  // 69: Dekart.SetAutoRefreshIntervalSeconds:input_type -> SetAutoRefreshIntervalSecondsRequest
+	11,  // 70: Dekart.GetReportVersion:input_type -> GetReportVersionRequest
+	107, // 71: Dekart.CreateDataset:input_type -> CreateDatasetRequest
+	81,  // 72: Dekart.RemoveDataset:input_type -> RemoveDatasetRequest
+	103, // 73: Dekart.UpdateDatasetName:input_type -> UpdateDatasetNameRequest
+	105, // 74: Dekart.UpdateDatasetConnection:input_type -> UpdateDatasetConnectionRequest
+	109, // 75: Dekart.CreateFile:input_type -> CreateFileRequest
+	111, // 76: Dekart.CreateQuery:input_type -> CreateQueryRequest
+	101, // 77: Dekart.RunQuery:input_type -> RunQueryRequest
+	57,  // 78: Dekart.RunAllQueries:input_type -> RunAllQueriesRequest
+	33,  // 79: Dekart.CancelJob:input_type -> CancelJobRequest
+	84,  // 80: Dekart.GetEnv:input_type -> GetEnvRequest
+	113, // 81: Dekart.GetReportStream:input_type -> ReportStreamRequest
+	90,  // 82: Dekart.GetReportListStream:input_type -> ReportListRequest
+	65,  // 83: Dekart.GetUserStream:input_type -> GetUserStreamRequest
+	77,  // 84: Dekart.GetUsage:input_type -> GetUsageRequest
+	25,  // 85: Dekart.GetReportAnalytics:input_type -> GetReportAnalyticsRequest
+	15,  // 86: Dekart.TrackEvent:input_type -> TrackEventRequest
+	73,  // 87: Dekart.CreateConnection:input_type -> CreateConnectionRequest
+	53,  // 88: Dekart.GetGcpProjectList:input_type -> GetGcpProjectListRequest
+	71,  // 89: Dekart.UpdateConnection:input_type -> UpdateConnectionRequest
+	69,  // 90: Dekart.ArchiveConnection:input_type -> ArchiveConnectionRequest
+	63,  // 91: Dekart.GetConnectionList:input_type -> GetConnectionListRequest
+	67,  // 92: Dekart.TestConnection:input_type -> TestConnectionRequest
+	55,  // 93: Dekart.SetDefaultConnection:input_type -> SetDefaultConnectionRequest
+	19,  // 94: Dekart.GetWherobotsConnectionHint:input_type -> GetWherobotsConnectionHintRequest
+	47,  // 95: Dekart.RespondToInvite:input_type -> RespondToInviteRequest
+	61,  // 96: Dekart.CreateSubscription:input_type -> CreateSubscriptionRequest
+	37,  // 97: Dekart.GetStripePortalSession:input_type -> GetStripePortalSessionRequest
+	43,  // 98: Dekart.CreateWorkspace:input_type -> CreateWorkspaceRequest
+	45,  // 99: Dekart.UpdateWorkspace:input_type -> UpdateWorkspaceRequest
+	41,  // 100: Dekart.GetWorkspace:input_type -> GetWorkspaceRequest
+	39,  // 101: Dekart.UpdateWorkspaceUser:input_type -> UpdateWorkspaceUserRequest
+	118, // 102: Dekart.CreateReport:output_type -> CreateReportResponse
+	116, // 103: Dekart.ForkReport:output_type -> ForkReportResponse
+	100, // 104: Dekart.UpdateReport:output_type -> UpdateReportResponse
+	89,  // 105: Dekart.ArchiveReport:output_type -> ArchiveReportResponse
+	80,  // 106: Dekart.SetDiscoverable:output_type -> SetDiscoverableResponse
+	36,  // 107: Dekart.PublishReport:output_type -> PublishReportResponse
+	32,  // 108: Dekart.AllowExportDatasets:output_type -> AllowExportDatasetsResponse
+	28,  // 109: Dekart.AddReadme:output_type -> AddReadmeResponse
+	30,  // 110: Dekart.RemoveReadme:output_type -> RemoveReadmeResponse
+	24,  // 111: Dekart.AddReportDirectAccess:output_type -> AddReportDirectAccessResponse
+	18,  // 112: Dekart.SetTrackViewers:output_type -> SetTrackViewersResponse
+	22,  // 113: Dekart.SetAutoRefreshIntervalSeconds:output_type -> SetAutoRefreshIntervalSecondsResponse
+	14,  // 114: Dekart.GetReportVersion:output_type -> GetReportVersionResponse
+	108, // 115: Dekart.CreateDataset:output_type -> CreateDatasetResponse
+	82,  // 116: Dekart.RemoveDataset:output_type -> RemoveDatasetResponse
+	104, // 117: Dekart.UpdateDatasetName:output_type -> UpdateDatasetNameResponse
+	106, // 118: Dekart.UpdateDatasetConnection:output_type -> UpdateDatasetConnectionResponse
+	110, // 119: Dekart.CreateFile:output_type -> CreateFileResponse
+	112, // 120: Dekart.CreateQuery:output_type -> CreateQueryResponse
+	102, // 121: Dekart.RunQuery:output_type -> RunQueryResponse
+	58,  // 122: Dekart.RunAllQueries:output_type -> RunAllQueriesResponse
+	34,  // 123: Dekart.CancelJob:output_type -> CancelJobResponse
+	85,  // 124: Dekart.GetEnv:output_type -> GetEnvResponse
+	114, // 125: Dekart.GetReportStream:output_type -> ReportStreamResponse
+	91,  // 126: Dekart.GetReportListStream:output_type -> ReportListResponse
+	66,  // 127: Dekart.GetUserStream:output_type -> GetUserStreamResponse
+	78,  // 128: Dekart.GetUsage:output_type -> GetUsageResponse
+	26,  // 129: Dekart.GetReportAnalytics:output_type -> GetReportAnalyticsResponse
+	16,  // 130: Dekart.TrackEvent:output_type -> TrackEventResponse
+	74,  // 131: Dekart.CreateConnection:output_type -> CreateConnectionResponse
+	54,  // 132: Dekart.GetGcpProjectList:output_type -> GetGcpProjectListResponse
+	72,  // 133: Dekart.UpdateConnection:output_type -> UpdateConnectionResponse
+	70,  // 134: Dekart.ArchiveConnection:output_type -> ArchiveConnectionResponse
+	64,  // 135: Dekart.GetConnectionList:output_type -> GetConnectionListResponse
+	68,  // 136: Dekart.TestConnection:output_type -> TestConnectionResponse
+	56,  // 137: Dekart.SetDefaultConnection:output_type -> SetDefaultConnectionResponse
+	20,  // 138: Dekart.GetWherobotsConnectionHint:output_type -> GetWherobotsConnectionHintResponse
+	48,  // 139: Dekart.RespondToInvite:output_type -> RespondToInviteResponse
+	62,  // 140: Dekart.CreateSubscription:output_type -> CreateSubscriptionResponse
+	38,  // 141: Dekart.GetStripePortalSession:output_type -> GetStripePortalSessionResponse
+	44,  // 142: Dekart.CreateWorkspace:output_type -> CreateWorkspaceResponse
+	46,  // 143: Dekart.UpdateWorkspace:output_type -> UpdateWorkspaceResponse
+	42,  // 144: Dekart.GetWorkspace:output_type -> GetWorkspaceResponse
+	40,  // 145: Dekart.UpdateWorkspaceUser:output_type -> UpdateWorkspaceUserResponse
+	102, // [102:146] is the sub-list for method output_type
+	58,  // [58:102] is the sub-list for method input_type
+	58,  // [58:58] is the sub-list for extension type_name
+	58,  // [58:58] is the sub-list for extension extendee
+	0,   // [0:58] is the sub-list for field type_name
 }
 
 func init() { file_proto_dekart_proto_init() }
@@ -7831,7 +8132,7 @@ func file_proto_dekart_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_proto_dekart_proto_rawDesc,
 			NumEnums:      11,
-			NumMessages:   106,
+			NumMessages:   110,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS report_snapshots (
   query_params TEXT DEFAULT '',
   readme TEXT,
 
-  changed_by TEXT NOT NULL,  -- author_email of user who made change
+  author_email TEXT NOT NULL,  -- author_email of user who made change
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 
   FOREIGN KEY(report_id) REFERENCES reports(id) ON DELETE CASCADE
@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS dataset_snapshots (
   name VARCHAR DEFAULT '',
   connection_id TEXT,
 
+  author_email TEXT NOT NULL,  -- author_email of user who made change
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 
   FOREIGN KEY(report_version_id) REFERENCES report_snapshots(version_id) ON DELETE CASCADE,
@@ -52,7 +53,7 @@ CREATE INDEX IF NOT EXISTS idx_dataset_snapshots_version_dataset ON dataset_snap
 
 -- Create snapshots for existing reports using report_id as version_id
 INSERT INTO report_snapshots (
-  version_id, report_id, map_config, title, query_params, readme, changed_by, created_at
+  version_id, report_id, map_config, title, query_params, readme, author_email, created_at
 )
 SELECT
   id,
@@ -68,7 +69,7 @@ WHERE version_id = '00000000-0000-0000-0000-000000000000';
 
 -- Create dataset snapshots for existing datasets
 INSERT INTO dataset_snapshots (
-  snapshot_id, report_version_id, dataset_id, report_id, query_id, file_id, name, connection_id, created_at
+  snapshot_id, report_version_id, dataset_id, report_id, query_id, file_id, name, connection_id, author_email, created_at
 )
 SELECT
   lower(hex(randomblob(4))) || '-' ||
@@ -83,6 +84,7 @@ SELECT
   d.file_id,
   COALESCE(d.name, ''),
   d.connection_id,
+  r.author_email,
   COALESCE(d.updated_at, d.created_at)
 FROM datasets d
 JOIN reports r ON d.report_id = r.id

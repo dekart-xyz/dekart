@@ -112,6 +112,15 @@ type DekartSetAutoRefreshIntervalSeconds = {
   readonly responseType: typeof dekart_pb.SetAutoRefreshIntervalSecondsResponse;
 };
 
+type DekartGetReportVersion = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof dekart_pb.GetReportVersionRequest;
+  readonly responseType: typeof dekart_pb.GetReportVersionResponse;
+};
+
 type DekartCreateDataset = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -405,6 +414,7 @@ export class Dekart {
   static readonly AddReportDirectAccess: DekartAddReportDirectAccess;
   static readonly SetTrackViewers: DekartSetTrackViewers;
   static readonly SetAutoRefreshIntervalSeconds: DekartSetAutoRefreshIntervalSeconds;
+  static readonly GetReportVersion: DekartGetReportVersion;
   static readonly CreateDataset: DekartCreateDataset;
   static readonly RemoveDataset: DekartRemoveDataset;
   static readonly UpdateDatasetName: DekartUpdateDatasetName;
@@ -577,6 +587,15 @@ export class DekartClient {
   setAutoRefreshIntervalSeconds(
     requestMessage: dekart_pb.SetAutoRefreshIntervalSecondsRequest,
     callback: (error: ServiceError|null, responseMessage: dekart_pb.SetAutoRefreshIntervalSecondsResponse|null) => void
+  ): UnaryResponse;
+  getReportVersion(
+    requestMessage: dekart_pb.GetReportVersionRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.GetReportVersionResponse|null) => void
+  ): UnaryResponse;
+  getReportVersion(
+    requestMessage: dekart_pb.GetReportVersionRequest,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.GetReportVersionResponse|null) => void
   ): UnaryResponse;
   createDataset(
     requestMessage: dekart_pb.CreateDatasetRequest,

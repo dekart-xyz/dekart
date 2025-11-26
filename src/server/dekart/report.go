@@ -255,7 +255,7 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 		errtype.LogError(err, "database operation failed")
 		return nil, err
 	}
-	s.createReportSnapshot(ctx, versionID, id, claims.Email)
+	err = s.createReportSnapshot(ctx, versionID, id, claims.Email)
 	if err != nil {
 		errtype.LogError(err, "Cannot create report snapshot")
 		return nil, err
@@ -281,7 +281,7 @@ func (s Server) createReportSnapshot(ctx context.Context, versionID string, repo
 	// Create report snapshot using INSERT ... SELECT from reports
 	_, err := s.db.ExecContext(ctx,
 		`INSERT INTO report_snapshots (
-			version_id, report_id, map_config, title, query_params, readme, changed_by
+			version_id, report_id, map_config, title, query_params, readme, author_email
 		)
 		SELECT $1, id, map_config, title, query_params, readme, $2
 		FROM reports
@@ -300,18 +300,23 @@ func (s Server) createReportSnapshot(ctx context.Context, versionID string, repo
 
 // createDatasetSnapshot creates a snapshot of a single dataset
 func (s Server) createDatasetSnapshotWithQueryID(ctx context.Context, queryID string) error {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return fmt.Errorf("createDatasetSnapshotWithQueryID requires authenticated user")
+	}
 	// Create dataset snapshot using INSERT ... SELECT from datasets
 	// Generate a unique snapshot_id to allow multiple snapshots per report version
 	snapshotID := newUUID()
 	_, err := s.db.ExecContext(ctx,
 		`INSERT INTO dataset_snapshots (
-			snapshot_id, report_version_id, dataset_id, report_id, query_id, file_id, name, connection_id
+			snapshot_id, report_version_id, dataset_id, report_id, query_id, file_id, name, connection_id, author_email
 		)
-		SELECT $1, r.version_id, d.id, d.report_id, d.query_id, d.file_id, d.name, d.connection_id
+		SELECT $1, r.version_id, d.id, d.report_id, d.query_id, d.file_id, d.name, d.connection_id, $2
 		FROM datasets d
 		JOIN reports r ON d.report_id = r.id
-		WHERE d.query_id = $2`,
+		WHERE d.query_id = $3`,
 		snapshotID,
+		claims.Email,
 		queryID,
 	)
 	if err != nil {
@@ -408,7 +413,7 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 	// create report snapshot
 	_, err = tx.ExecContext(ctx,
 		`INSERT INTO report_snapshots (
-			version_id, report_id, map_config, title, query_params, readme, changed_by
+			version_id, report_id, map_config, title, query_params, readme, author_email
 		)
 		SELECT $1, id, map_config, title, query_params, readme, $2
 		FROM reports
@@ -524,13 +529,24 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 			return err
 		}
 		// create dataset snapshot
+		snapshotID := newUUID()
 		_, err = tx.ExecContext(ctx,
 			`INSERT INTO dataset_snapshots (
-				snapshot_id, report_version_id, dataset_id, report_id, query_id, file_id, name, connection_id
+				snapshot_id, report_version_id, dataset_id, report_id, query_id, file_id, name, connection_id, author_email
 			)
-			SELECT $1, $2, $3, $4, $5, $6, $7, $8
+			SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9
 			FROM datasets
-			WHERE id = $9`,
+			WHERE id = $10`,
+			snapshotID,
+			newVersionID,
+			datasetId,
+			report.Id,
+			queryId,
+			fileId,
+			dataset.Name,
+			connectionId,
+			claims.Email,
+			datasetId,
 		)
 		if err != nil {
 			log.Warn().Err(err).Send()

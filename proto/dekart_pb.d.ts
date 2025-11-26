@@ -3,6 +3,126 @@
 
 import * as jspb from "google-protobuf";
 
+export class GetReportVersionRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetReportVersionRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: GetReportVersionRequest): GetReportVersionRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetReportVersionRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetReportVersionRequest;
+  static deserializeBinaryFromReader(message: GetReportVersionRequest, reader: jspb.BinaryReader): GetReportVersionRequest;
+}
+
+export namespace GetReportVersionRequest {
+  export type AsObject = {
+    reportId: string,
+  }
+}
+
+export class ReportSnapshot extends jspb.Message {
+  getVersionId(): string;
+  setVersionId(value: string): void;
+
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  getAuthorEmail(): string;
+  setAuthorEmail(value: string): void;
+
+  getCreatedAt(): string;
+  setCreatedAt(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): ReportSnapshot.AsObject;
+  static toObject(includeInstance: boolean, msg: ReportSnapshot): ReportSnapshot.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: ReportSnapshot, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): ReportSnapshot;
+  static deserializeBinaryFromReader(message: ReportSnapshot, reader: jspb.BinaryReader): ReportSnapshot;
+}
+
+export namespace ReportSnapshot {
+  export type AsObject = {
+    versionId: string,
+    reportId: string,
+    authorEmail: string,
+    createdAt: string,
+  }
+}
+
+export class DatasetSnapshot extends jspb.Message {
+  getSnapshotId(): string;
+  setSnapshotId(value: string): void;
+
+  getReportVersionId(): string;
+  setReportVersionId(value: string): void;
+
+  getDatasetId(): string;
+  setDatasetId(value: string): void;
+
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  getAuthorEmail(): string;
+  setAuthorEmail(value: string): void;
+
+  getCreatedAt(): string;
+  setCreatedAt(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): DatasetSnapshot.AsObject;
+  static toObject(includeInstance: boolean, msg: DatasetSnapshot): DatasetSnapshot.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: DatasetSnapshot, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): DatasetSnapshot;
+  static deserializeBinaryFromReader(message: DatasetSnapshot, reader: jspb.BinaryReader): DatasetSnapshot;
+}
+
+export namespace DatasetSnapshot {
+  export type AsObject = {
+    snapshotId: string,
+    reportVersionId: string,
+    datasetId: string,
+    reportId: string,
+    authorEmail: string,
+    createdAt: string,
+  }
+}
+
+export class GetReportVersionResponse extends jspb.Message {
+  clearReportSnapshotsList(): void;
+  getReportSnapshotsList(): Array<ReportSnapshot>;
+  setReportSnapshotsList(value: Array<ReportSnapshot>): void;
+  addReportSnapshots(value?: ReportSnapshot, index?: number): ReportSnapshot;
+
+  clearDatasetSnapshotsList(): void;
+  getDatasetSnapshotsList(): Array<DatasetSnapshot>;
+  setDatasetSnapshotsList(value: Array<DatasetSnapshot>): void;
+  addDatasetSnapshots(value?: DatasetSnapshot, index?: number): DatasetSnapshot;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetReportVersionResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: GetReportVersionResponse): GetReportVersionResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetReportVersionResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetReportVersionResponse;
+  static deserializeBinaryFromReader(message: GetReportVersionResponse, reader: jspb.BinaryReader): GetReportVersionResponse;
+}
+
+export namespace GetReportVersionResponse {
+  export type AsObject = {
+    reportSnapshotsList: Array<ReportSnapshot.AsObject>,
+    datasetSnapshotsList: Array<DatasetSnapshot.AsObject>,
+  }
+}
+
 export class TrackEventRequest extends jspb.Message {
   getEventName(): string;
   setEventName(value: string): void;

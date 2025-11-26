@@ -31,6 +31,7 @@ const (
 	Dekart_AddReportDirectAccess_FullMethodName         = "/Dekart/AddReportDirectAccess"
 	Dekart_SetTrackViewers_FullMethodName               = "/Dekart/SetTrackViewers"
 	Dekart_SetAutoRefreshIntervalSeconds_FullMethodName = "/Dekart/SetAutoRefreshIntervalSeconds"
+	Dekart_GetReportVersion_FullMethodName              = "/Dekart/GetReportVersion"
 	Dekart_CreateDataset_FullMethodName                 = "/Dekart/CreateDataset"
 	Dekart_RemoveDataset_FullMethodName                 = "/Dekart/RemoveDataset"
 	Dekart_UpdateDatasetName_FullMethodName             = "/Dekart/UpdateDatasetName"
@@ -81,6 +82,7 @@ type DekartClient interface {
 	AddReportDirectAccess(ctx context.Context, in *AddReportDirectAccessRequest, opts ...grpc.CallOption) (*AddReportDirectAccessResponse, error)
 	SetTrackViewers(ctx context.Context, in *SetTrackViewersRequest, opts ...grpc.CallOption) (*SetTrackViewersResponse, error)
 	SetAutoRefreshIntervalSeconds(ctx context.Context, in *SetAutoRefreshIntervalSecondsRequest, opts ...grpc.CallOption) (*SetAutoRefreshIntervalSecondsResponse, error)
+	GetReportVersion(ctx context.Context, in *GetReportVersionRequest, opts ...grpc.CallOption) (*GetReportVersionResponse, error)
 	// datasets
 	CreateDataset(ctx context.Context, in *CreateDatasetRequest, opts ...grpc.CallOption) (*CreateDatasetResponse, error)
 	RemoveDataset(ctx context.Context, in *RemoveDatasetRequest, opts ...grpc.CallOption) (*RemoveDatasetResponse, error)
@@ -246,6 +248,16 @@ func (c *dekartClient) SetAutoRefreshIntervalSeconds(ctx context.Context, in *Se
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SetAutoRefreshIntervalSecondsResponse)
 	err := c.cc.Invoke(ctx, Dekart_SetAutoRefreshIntervalSeconds_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) GetReportVersion(ctx context.Context, in *GetReportVersionRequest, opts ...grpc.CallOption) (*GetReportVersionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetReportVersionResponse)
+	err := c.cc.Invoke(ctx, Dekart_GetReportVersion_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -606,6 +618,7 @@ type DekartServer interface {
 	AddReportDirectAccess(context.Context, *AddReportDirectAccessRequest) (*AddReportDirectAccessResponse, error)
 	SetTrackViewers(context.Context, *SetTrackViewersRequest) (*SetTrackViewersResponse, error)
 	SetAutoRefreshIntervalSeconds(context.Context, *SetAutoRefreshIntervalSecondsRequest) (*SetAutoRefreshIntervalSecondsResponse, error)
+	GetReportVersion(context.Context, *GetReportVersionRequest) (*GetReportVersionResponse, error)
 	// datasets
 	CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error)
 	RemoveDataset(context.Context, *RemoveDatasetRequest) (*RemoveDatasetResponse, error)
@@ -692,6 +705,9 @@ func (UnimplementedDekartServer) SetTrackViewers(context.Context, *SetTrackViewe
 }
 func (UnimplementedDekartServer) SetAutoRefreshIntervalSeconds(context.Context, *SetAutoRefreshIntervalSecondsRequest) (*SetAutoRefreshIntervalSecondsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetAutoRefreshIntervalSeconds not implemented")
+}
+func (UnimplementedDekartServer) GetReportVersion(context.Context, *GetReportVersionRequest) (*GetReportVersionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetReportVersion not implemented")
 }
 func (UnimplementedDekartServer) CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateDataset not implemented")
@@ -1019,6 +1035,24 @@ func _Dekart_SetAutoRefreshIntervalSeconds_Handler(srv interface{}, ctx context.
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DekartServer).SetAutoRefreshIntervalSeconds(ctx, req.(*SetAutoRefreshIntervalSecondsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_GetReportVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetReportVersionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).GetReportVersion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_GetReportVersion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).GetReportVersion(ctx, req.(*GetReportVersionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1614,6 +1648,10 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetAutoRefreshIntervalSeconds",
 			Handler:    _Dekart_SetAutoRefreshIntervalSeconds_Handler,
+		},
+		{
+			MethodName: "GetReportVersion",
+			Handler:    _Dekart_GetReportVersion_Handler,
 		},
 		{
 			MethodName: "CreateDataset",
