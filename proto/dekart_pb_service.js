@@ -118,13 +118,13 @@ Dekart.SetAutoRefreshIntervalSeconds = {
   responseType: dekart_pb.SetAutoRefreshIntervalSecondsResponse
 };
 
-Dekart.GetReportVersion = {
-  methodName: "GetReportVersion",
+Dekart.GetSnapshots = {
+  methodName: "GetSnapshots",
   service: Dekart,
   requestStream: false,
   responseStream: false,
-  requestType: dekart_pb.GetReportVersionRequest,
-  responseType: dekart_pb.GetReportVersionResponse
+  requestType: dekart_pb.GetSnapshotsRequest,
+  responseType: dekart_pb.GetSnapshotsResponse
 };
 
 Dekart.CreateDataset = {
@@ -785,11 +785,11 @@ DekartClient.prototype.setAutoRefreshIntervalSeconds = function setAutoRefreshIn
   };
 };
 
-DekartClient.prototype.getReportVersion = function getReportVersion(requestMessage, metadata, callback) {
+DekartClient.prototype.getSnapshots = function getSnapshots(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
-  var client = grpc.unary(Dekart.GetReportVersion, {
+  var client = grpc.unary(Dekart.GetSnapshots, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,

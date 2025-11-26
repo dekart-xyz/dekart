@@ -1226,3 +1226,105 @@ func (s Server) AddReportDirectAccess(ctx context.Context, req *proto.AddReportD
 
 	return &proto.AddReportDirectAccessResponse{}, nil
 }
+
+func (s Server) GetSnapshots(ctx context.Context, req *proto.GetSnapshotsRequest) (*proto.GetSnapshotsResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+
+	// Validate report ID
+	_, err := uuid.Parse(req.ReportId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	// Ensure user has access to the report (reuses existing access logic)
+	report, err := s.getReport(ctx, req.ReportId)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+
+	// Fetch report snapshots ordered from newest to oldest
+	reportRows, err := s.db.QueryContext(ctx, `
+		SELECT version_id, report_id, author_email, created_at
+		FROM report_snapshots
+		WHERE report_id = $1
+		ORDER BY created_at DESC`,
+		req.ReportId,
+	)
+	if err != nil {
+		errtype.LogError(err, "database operation failed")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer reportRows.Close()
+
+	reportSnapshots := []*proto.ReportSnapshot{}
+	for reportRows.Next() {
+		var (
+			versionID   string
+			reportID    string
+			authorEmail string
+			createdAt   time.Time
+		)
+		if err := reportRows.Scan(&versionID, &reportID, &authorEmail, &createdAt); err != nil {
+			errtype.LogError(err, "failed to scan report snapshot")
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		reportSnapshots = append(reportSnapshots, &proto.ReportSnapshot{
+			VersionId:   versionID,
+			ReportId:    reportID,
+			AuthorEmail: authorEmail,
+			CreatedAt:   createdAt.UTC().Format(time.RFC3339),
+		})
+	}
+
+	// Fetch dataset snapshots ordered from newest to oldest
+	datasetRows, err := s.db.QueryContext(ctx, `
+		SELECT snapshot_id, report_version_id, dataset_id, report_id, author_email, created_at
+		FROM dataset_snapshots
+		WHERE report_id = $1
+		ORDER BY created_at DESC`,
+		req.ReportId,
+	)
+	if err != nil {
+		errtype.LogError(err, "database operation failed")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer datasetRows.Close()
+
+	datasetSnapshots := []*proto.DatasetSnapshot{}
+	for datasetRows.Next() {
+		var (
+			snapshotID      string
+			reportVersionID string
+			datasetID       string
+			reportID        string
+			authorEmail     string
+			createdAt       time.Time
+		)
+		if err := datasetRows.Scan(&snapshotID, &reportVersionID, &datasetID, &reportID, &authorEmail, &createdAt); err != nil {
+			errtype.LogError(err, "failed to scan dataset snapshot")
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		datasetSnapshots = append(datasetSnapshots, &proto.DatasetSnapshot{
+			SnapshotId:      snapshotID,
+			ReportVersionId: reportVersionID,
+			DatasetId:       datasetID,
+			ReportId:        reportID,
+			AuthorEmail:     authorEmail,
+			CreatedAt:       createdAt.UTC().Format(time.RFC3339),
+		})
+	}
+
+	return &proto.GetSnapshotsResponse{
+		ReportSnapshots:  reportSnapshots,
+		DatasetSnapshots: datasetSnapshots,
+	}, nil
+}
