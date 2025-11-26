@@ -272,11 +272,13 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 	return &proto.RemoveDatasetResponse{}, nil
 }
 
-func (s Server) insertDataset(ctx context.Context, reportID string) (res sql.Result, err error) {
+func (s Server) insertDataset(ctx context.Context, reportID string) (sql.Result, error) {
 	id := newUUID()
 	claims := user.GetClaims(ctx)
+	var res sql.Result
+	var err error
 	if checkWorkspace(ctx).IsPlayground {
-		return s.db.ExecContext(ctx,
+		res, err = s.db.ExecContext(ctx,
 			`insert into datasets (id, report_id)
 			select
 				$1 as id,
@@ -288,20 +290,26 @@ func (s Server) insertDataset(ctx context.Context, reportID string) (res sql.Res
 			reportID,
 			claims.Email,
 		)
+	} else {
+		res, err = s.db.ExecContext(ctx,
+			`insert into datasets (id, report_id)
+			select
+				$1 as id,
+				id as report_id
+			from reports
+			where id=$2 and not archived and (author_email=$3 or allow_edit) and workspace_id=$4 limit 1
+			`,
+			id,
+			reportID,
+			claims.Email,
+			checkWorkspace(ctx).ID,
+		)
 	}
-	return s.db.ExecContext(ctx,
-		`insert into datasets (id, report_id)
-		select
-			$1 as id,
-			id as report_id
-		from reports
-		where id=$2 and not archived and (author_email=$3 or allow_edit) and workspace_id=$4 limit 1
-		`,
-		id,
-		reportID,
-		claims.Email,
-		checkWorkspace(ctx).ID,
-	)
+	if err != nil {
+		errtype.LogError(err, "Error inserting dataset")
+		return nil, err
+	}
+	return res, err
 }
 
 func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetRequest) (*proto.CreateDatasetResponse, error) {

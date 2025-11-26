@@ -118,6 +118,13 @@ func (s Server) storeQuerySync(ctx context.Context, queryID string, queryText st
 		// Dataset was already updated to reference a different query
 		log.Warn().Str("prevQueryId", queryID).Str("newQueryId", newQueryID).Msg("Dataset query_id not updated - already changed")
 		return "", &queryWasNotUpdated{}
+	} else {
+		// Create dataset snapshot
+		err := s.createDatasetSnapshotWithQueryID(ctx, newQueryID)
+		if err != nil {
+			errtype.LogError(err, "Error creating dataset snapshot")
+			return "", err
+		}
 	}
 
 	return newQueryID, nil

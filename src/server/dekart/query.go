@@ -88,6 +88,13 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 
 	if affectedRows == 0 {
 		log.Warn().Str("reportID", *reportID).Str("dataset", req.DatasetId).Msg("dataset query was already created")
+	} else {
+		// Create dataset snapshot
+		err = s.createDatasetSnapshotWithQueryID(ctx, newQueryID)
+		if err != nil {
+			errtype.LogError(err, "Error creating dataset snapshot")
+			return nil, status.Error(codes.Internal, err.Error())
+		}
 	}
 
 	s.reportStreams.Ping(*reportID)
@@ -336,45 +343,31 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		errtype.LogError(err, "database operation failed")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-
-	if report.CanWrite {
-		// update query text if it was changed by user if user has write permission
-		// otherwise use query text from db
-		q.QueryText = req.QueryText
-		newQueryID, err := s.storeQuerySync(ctx, req.QueryId, req.QueryText)
+	queryID := req.QueryId
+	queryText := q.QueryText
+	if q.NewQueryID != queryID { // query changed on the backend, let's use the new query id
+		queryID = q.NewQueryID
+		q, err = query.GetQueryDetails(ctx, s.db, q.NewQueryID)
 		if err != nil {
-			code := codes.Internal
-			if _, ok := err.(*queryWasNotUpdated); ok {
-				// Query was not updated, possibly due to concurrent run and save
-				// Get the current query text from DB and compare with the request
-				dbQuery, dbErr := query.GetQueryDetails(ctx, s.db, req.QueryId)
-				if dbErr != nil {
-					log.Error().Err(dbErr).Msg("Failed to get query details from database")
-					return nil, status.Error(codes.Internal, dbErr.Error())
-				}
-				// If the query text in DB matches the request, proceed with running
-				// Otherwise, cancel due to concurrent modification
-				if dbQuery.QueryText != req.QueryText {
-					code = codes.Canceled
-					log.Warn().Err(err).Msg("Query was modified concurrently, canceling")
-					return nil, status.Error(code, err.Error())
-				}
-				// Use the original query ID if update failed
-				newQueryID = req.QueryId
+			errtype.LogError(err, "database operation failed")
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	} else if report.CanWrite && req.QueryText != q.QueryText { // update query text if it was changed by user if user has write permission
+		queryText = req.QueryText
+		queryID, err = s.storeQuerySync(ctx, req.QueryId, req.QueryText)
+		if err != nil {
+			if _, ok := err.(*queryWasNotUpdated); ok { // query was not updated, it was changed by another user
+				log.Warn().Str("queryId", req.QueryId).Msg("Query was not updated")
+				return nil, status.Error(codes.Canceled, err.Error())
 			} else {
 				log.Error().Err(err).Send()
-				return nil, status.Error(code, err.Error())
+				return nil, status.Error(codes.Internal, err.Error())
 			}
-		}
-		// Update req.QueryId to use the new query ID for running the query
-		if newQueryID != req.QueryId {
-			log.Info().Str("oldQueryId", req.QueryId).Str("newQueryId", newQueryID).Msg("Using new immutable query version")
-			req.QueryId = newQueryID
 		}
 	}
 
 	var queryParamsHash string
-	q.QueryText, queryParamsHash, err = injectQueryParams(q.QueryText, req.QueryParams, req.QueryParamsValues)
+	queryText, queryParamsHash, err = injectQueryParams(queryText, req.QueryParams, req.QueryParamsValues)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -382,8 +375,8 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 
 	err = s.runQuery(ctx, runQueryOptions{
 		reportID:        q.ReportID,
-		queryID:         req.QueryId,
-		queryText:       q.QueryText,
+		queryID:         queryID,
+		queryText:       queryText,
 		connection:      connection,
 		userBucketName:  s.getBucketNameFromConnection(connection),
 		isPublic:        report.IsPublic,

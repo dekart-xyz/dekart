@@ -232,24 +232,32 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 		return nil, status.Error(codes.PermissionDenied, "Only admins and editors can create reports")
 	}
 	id := newUUID()
+	versionID := newUUID()
 	var err error
 	if workspaceInfo.IsPlayground {
 		_, err = s.db.ExecContext(ctx,
-			"INSERT INTO reports (id, author_email, is_playground) VALUES ($1, $2, true)",
+			"INSERT INTO reports (id, author_email, is_playground, version_id) VALUES ($1, $2, true, $3)",
 			id,
 			claims.Email,
+			versionID,
 		)
 	} else {
 		_, err = s.db.ExecContext(ctx,
-			"INSERT INTO reports (id, author_email, workspace_id) VALUES ($1, $2, $3)",
+			"INSERT INTO reports (id, author_email, workspace_id, version_id) VALUES ($1, $2, $3, $4)",
 			id,
 			claims.Email,
 			workspaceInfo.ID,
+			versionID,
 		)
 
 	}
 	if err != nil {
 		errtype.LogError(err, "database operation failed")
+		return nil, err
+	}
+	s.createReportSnapshot(ctx, versionID, id, claims.Email)
+	if err != nil {
+		errtype.LogError(err, "Cannot create report snapshot")
 		return nil, err
 	}
 	res := &proto.CreateReportResponse{
@@ -267,6 +275,52 @@ func rollback(tx *sql.Tx) {
 	}
 }
 
+// createReportSnapshot creates a snapshot of the report content
+func (s Server) createReportSnapshot(ctx context.Context, versionID string, reportID string, changedBy string) error {
+
+	// Create report snapshot using INSERT ... SELECT from reports
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO report_snapshots (
+			version_id, report_id, map_config, title, query_params, readme, changed_by
+		)
+		SELECT $1, id, map_config, title, query_params, readme, $2
+		FROM reports
+		WHERE id = $3 AND version_id = $4`,
+		versionID,
+		changedBy,
+		reportID,
+		versionID,
+	)
+	if err != nil {
+		errtype.LogError(err, "Cannot create report snapshot")
+		return err
+	}
+	return nil
+}
+
+// createDatasetSnapshot creates a snapshot of a single dataset
+func (s Server) createDatasetSnapshotWithQueryID(ctx context.Context, queryID string) error {
+	// Create dataset snapshot using INSERT ... SELECT from datasets
+	// Generate a unique snapshot_id to allow multiple snapshots per report version
+	snapshotID := newUUID()
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO dataset_snapshots (
+			snapshot_id, report_version_id, dataset_id, report_id, query_id, file_id, name, connection_id
+		)
+		SELECT $1, r.version_id, d.id, d.report_id, d.query_id, d.file_id, d.name, d.connection_id
+		FROM datasets d
+		JOIN reports r ON d.report_id = r.id
+		WHERE d.query_id = $2`,
+		snapshotID,
+		queryID,
+	)
+	if err != nil {
+		errtype.LogError(err, "Cannot create dataset snapshot")
+		return err
+	}
+	return nil
+}
+
 // updateDatasetIds updates the map config with new dataset ids when forked
 func updateDatasetIds(report *proto.Report, datasets []*proto.Dataset) (newMapConfig string, newDatasetIds []string) {
 	newMapConfig = report.MapConfig
@@ -281,7 +335,7 @@ func updateDatasetIds(report *proto.Report, datasets []*proto.Dataset) (newMapCo
 
 func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Report, datasets []*proto.Dataset, jobs []*proto.QueryJob) error {
 	claims := user.GetClaims(ctx)
-
+	newVersionID := newUUID()
 	// Validate map config size to prevent gRPC message size errors
 	if len(report.MapConfig) > MaxMapConfigSize {
 		log.Warn().
@@ -299,6 +353,7 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 	if err != nil {
 		return err
 	}
+	defer rollback(tx)
 	newMapConfig, newDatasetIds := updateDatasetIds(report, datasets)
 	var paramsJSON []byte
 	if report.QueryParams != nil {
@@ -324,17 +379,18 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 
 	if checkWorkspace(ctx).IsPlayground {
 		_, err = tx.ExecContext(ctx,
-			"INSERT INTO reports (id, author_email, map_config, title, query_params, is_playground, readme) VALUES ($1, $2, $3, $4, $5, true, $6)",
+			"INSERT INTO reports (id, author_email, map_config, title, query_params, is_playground, readme, version_id) VALUES ($1, $2, $3, $4, $5, true, $6, $7)",
 			report.Id,
 			claims.Email,
 			newMapConfig,
 			report.Title,
 			paramsJSON,
 			readme,
+			newVersionID,
 		)
 	} else {
 		_, err = tx.ExecContext(ctx,
-			"INSERT INTO reports (id, author_email, map_config, title, query_params, is_public, workspace_id, readme) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+			"INSERT INTO reports (id, author_email, map_config, title, query_params, is_public, workspace_id, readme, version_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
 			report.Id,
 			claims.Email,
 			newMapConfig,
@@ -343,10 +399,27 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 			report.IsPublic,
 			checkWorkspace(ctx).ID,
 			readme,
+			newVersionID,
 		)
 	}
 	if err != nil {
-		rollback(tx)
+		return err
+	}
+	// create report snapshot
+	_, err = tx.ExecContext(ctx,
+		`INSERT INTO report_snapshots (
+			version_id, report_id, map_config, title, query_params, readme, changed_by
+		)
+		SELECT $1, id, map_config, title, query_params, readme, $2
+		FROM reports
+		WHERE id = $3 AND version_id = $4`,
+		newVersionID,
+		claims.Email,
+		report.Id,
+		newVersionID,
+	)
+	if err != nil {
+		errtype.LogError(err, "Cannot create report snapshot")
 		return err
 	}
 	for i, dataset := range datasets {
@@ -377,7 +450,6 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 			)
 			if err != nil {
 				log.Warn().Err(err).Send()
-				rollback(tx)
 				return err
 			}
 			// iterate over query jobs and insert new query jobs with new query id and new id
@@ -407,7 +479,6 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 					)
 					if err != nil {
 						log.Warn().Err(err).Send()
-						rollback(tx)
 						return err
 					}
 				}
@@ -435,7 +506,6 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 				from files where id=$2`, newFileID, dataset.FileId)
 			if err != nil {
 				log.Warn().Err(err).Send()
-				rollback(tx)
 				return err
 			}
 		}
@@ -451,7 +521,19 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 		)
 		if err != nil {
 			log.Warn().Err(err).Send()
-			rollback(tx)
+			return err
+		}
+		// create dataset snapshot
+		_, err = tx.ExecContext(ctx,
+			`INSERT INTO dataset_snapshots (
+				snapshot_id, report_version_id, dataset_id, report_id, query_id, file_id, name, connection_id
+			)
+			SELECT $1, $2, $3, $4, $5, $6, $7, $8
+			FROM datasets
+			WHERE id = $9`,
+		)
+		if err != nil {
+			log.Warn().Err(err).Send()
 			return err
 		}
 	}
@@ -671,19 +753,22 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 		}
 	}
 
-	var result sql.Result
+	// Update report with new values
+	newVersionID := newUUID()
 	updated_at := time.Now()
+	var result sql.Result
 	if workspaceInfo.IsPlayground {
 		result, err = s.db.ExecContext(ctx,
 			`update
 			reports
-		set map_config=$1, title=$2, query_params=$3, readme=$4, updated_at=$5
-		where id=$6 and author_email=$7 and is_playground=true`,
+		set map_config=$1, title=$2, query_params=$3, readme=$4, updated_at=$5, version_id=$6
+		where id=$7 and author_email=$8 and is_playground=true`,
 			req.MapConfig,
 			req.Title,
 			string(paramsJSON),
 			readme,
 			updated_at,
+			newVersionID,
 			req.ReportId,
 			claims.Email,
 		)
@@ -691,13 +776,14 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 		result, err = s.db.ExecContext(ctx,
 			`update
 			reports
-		set map_config=$1, title=$2, query_params=$3, readme=$4, updated_at=$5
-		where id=$6 and (author_email=$7 or allow_edit) and workspace_id=$8`,
+		set map_config=$1, title=$2, query_params=$3, readme=$4, updated_at=$5, version_id=$6
+		where id=$7 and (author_email=$8 or allow_edit) and workspace_id=$9`,
 			req.MapConfig,
 			req.Title,
 			string(paramsJSON),
 			readme,
 			updated_at,
+			newVersionID,
 			req.ReportId,
 			claims.Email,
 			workspaceInfo.ID,
@@ -709,7 +795,6 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	}
 
 	affectedRows, err := result.RowsAffected()
-
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
@@ -720,6 +805,13 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 		err := fmt.Errorf("report not found id:%s", req.ReportId)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
+	}
+
+	// Create report snapshot (non-blocking, no transaction)
+	err = s.createReportSnapshot(ctx, newVersionID, req.ReportId, claims.Email)
+	if err != nil {
+		errtype.LogError(err, "Cannot create report snapshot")
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	// save queries
