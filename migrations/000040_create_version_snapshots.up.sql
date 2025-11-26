@@ -54,6 +54,8 @@ CREATE TABLE IF NOT EXISTS query_snapshots (
   report_id uuid,
   query_text text NOT NULL,
   author_email text NOT NULL,  -- author_email of user who made change
+  query_source text,
+  query_source_id varchar(40) DEFAULT '',
   created_at timestamptz DEFAULT CURRENT_TIMESTAMP,
 
   CONSTRAINT fk_query_snapshots_version FOREIGN KEY(report_version_id) REFERENCES report_snapshots(version_id) ON DELETE CASCADE,
@@ -113,6 +115,7 @@ INSERT INTO query_snapshots (
   report_id,
   query_text,
   author_email,
+  query_source_id,
   created_at
 )
 SELECT
@@ -122,6 +125,7 @@ SELECT
   q.report_id,
   q.query_text,
   r.author_email,
+  COALESCE(q.query_source_id, ''),
   COALESCE(q.updated_at, q.created_at)
 FROM queries q
 JOIN reports r ON q.report_id = r.id

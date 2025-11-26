@@ -7,6 +7,7 @@ import { HistoryOutlined, UserOutlined, ClockCircleOutlined, DownOutlined, Rollb
 import Tag from 'antd/es/tag'
 import styles from './MapChangeHistoryModal.module.css'
 import { getSnapshots } from './actions/snapshots'
+import { restoreReportSnapshot } from './actions/report'
 import { Loading } from './Loading'
 
 const { Panel } = Collapse
@@ -100,7 +101,7 @@ function groupChangesByTime (changes) {
   return grouped
 }
 
-function DaySection ({ dayLabel, hourGroups, expandedKeys, onToggle, currentVersionId, renderedHours, onHourRendered }) {
+function DaySection ({ dayLabel, hourGroups, expandedKeys, onToggle, currentVersionId, renderedHours, onHourRendered, onRestore }) {
   const hourKeys = Object.keys(hourGroups).sort((a, b) => {
     // Sort by hour, descending (newest first)
     return hourGroups[b].hour - hourGroups[a].hour
@@ -176,8 +177,9 @@ function DaySection ({ dayLabel, hourGroups, expandedKeys, onToggle, currentVers
                         icon={<RollbackOutlined />}
                         className={styles.restoreButton}
                         onClick={() => {
-                          // TODO: Implement restore functionality
-                          console.log('Restore to:', change.id, change.timestamp)
+                          if (onRestore) {
+                            onRestore(change.id)
+                          }
                         }}
                       >
                         Restore
@@ -240,6 +242,10 @@ export function MapChangeHistoryModal ({ open, onClose }) {
   }, [dayLabels])
 
   const [currentExpandedDays, setCurrentExpandedDays] = useState(defaultExpandedDays)
+
+  const handleRestore = (versionId) => {
+    dispatch(restoreReportSnapshot(versionId))
+  }
 
   return (
     <Modal
@@ -307,6 +313,7 @@ export function MapChangeHistoryModal ({ open, onClose }) {
                         expandedKeys={Array.from(expandedHours).filter(key => key.startsWith(dayLabel))}
                         currentVersionId={currentVersionId}
                         renderedHours={renderedHours}
+                        onRestore={handleRestore}
                         onHourRendered={(hourKey) => {
                           setRenderedHours(prev => new Set([...prev, hourKey]))
                         }}

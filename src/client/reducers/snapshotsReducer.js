@@ -32,5 +32,3 @@ export default combineReducers({
   data,
   loading
 })
-
-

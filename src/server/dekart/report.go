@@ -338,13 +338,14 @@ func (s Server) createReportSnapshotWithVersionIDTx(ctx context.Context, tx *sql
 	// Create query snapshots for all queries referenced by this report's datasets
 	_, err = tx.ExecContext(ctx,
 		`INSERT INTO query_snapshots (
-			report_version_id, query_id, report_id, query_text, author_email
+			report_version_id, query_id, report_id, query_text, query_source_id, author_email
 		)
 		SELECT DISTINCT
 			$1::uuid AS report_version_id,
 			q.id AS query_id,
 			q.report_id,
 			q.query_text,
+			COALESCE(q.query_source_id, ''),
 			$2 AS author_email
 		FROM queries q
 		JOIN datasets d ON d.query_id = q.id
@@ -1336,6 +1337,288 @@ func (s Server) GetSnapshots(ctx context.Context, req *proto.GetSnapshotsRequest
 }
 
 func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreReportSnapshotRequest) (*proto.RestoreReportSnapshotResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
 
-	return nil, status.Error(codes.Unimplemented, "RestoreReportSnapshot not implemented yet")
+	workspaceInfo := checkWorkspace(ctx)
+	if workspaceInfo.Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	}
+
+	// Validate IDs
+	if _, err := uuid.Parse(req.ReportId); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	if _, err := uuid.Parse(req.VersionId); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	// Ensure user has access and can write to the report
+	report, err := s.getReport(ctx, req.ReportId)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if !report.CanWrite {
+		err := fmt.Errorf("cannot restore snapshot for report %s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.PermissionDenied, "Cannot restore snapshot")
+	}
+
+	// Load snapshot of report content
+	var (
+		snapshotMapConfig  sql.NullString
+		snapshotTitle      sql.NullString
+		snapshotParamsText sql.NullString
+		snapshotReadme     sql.NullString
+	)
+
+	err = s.db.QueryRowContext(ctx, `
+		SELECT map_config, title, query_params, readme
+		FROM report_snapshots
+		WHERE version_id = $1 AND report_id = $2
+	`, req.VersionId, req.ReportId).Scan(
+		&snapshotMapConfig,
+		&snapshotTitle,
+		&snapshotParamsText,
+		&snapshotReadme,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			err := fmt.Errorf("snapshot not found version_id:%s report_id:%s", req.VersionId, req.ReportId)
+			log.Warn().Err(err).Send()
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+		errtype.LogError(err, "failed to load report snapshot")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer tx.Rollback()
+
+	updatedAt := time.Now()
+
+	// Restore report content (map_config, title, query_params, readme, version_id)
+	_, err = tx.ExecContext(ctx, `
+		UPDATE reports
+		SET map_config = $1,
+			title = $2,
+			query_params = $3,
+			readme = $4,
+			updated_at = $5,
+			version_id = $6
+		WHERE id = $7
+	`, snapshotMapConfig, snapshotTitle, snapshotParamsText, snapshotReadme, updatedAt, req.VersionId, req.ReportId)
+	if err != nil {
+		errtype.LogError(err, "failed to restore report from snapshot")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	// ---- Restore queries from query_snapshots (no delta, only update existing) ----
+	_, err = tx.ExecContext(ctx, `
+		UPDATE queries
+		SET query_text = (
+				SELECT qs.query_text
+				FROM query_snapshots qs
+				WHERE qs.report_version_id = $1
+				  AND qs.report_id = $2
+				  AND qs.query_id = queries.id
+			),
+			query_source_id = (
+				SELECT qs.query_source_id
+				FROM query_snapshots qs
+				WHERE qs.report_version_id = $1
+				  AND qs.report_id = $2
+				  AND qs.query_id = queries.id
+			),
+			updated_at = $3
+		WHERE id IN (
+			SELECT query_id
+			FROM query_snapshots
+			WHERE report_version_id = $1
+			  AND report_id = $2
+		)
+		  AND report_id = $2
+	`, req.VersionId, req.ReportId, updatedAt)
+	if err != nil {
+		errtype.LogError(err, "failed to update queries from snapshot")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	// ---- Restore datasets from dataset_snapshots using diff (add/update/remove) ----
+	type datasetState struct {
+		id           string
+		queryID      sql.NullString
+		fileID       sql.NullString
+		name         string
+		connectionID sql.NullString
+	}
+
+	currentDatasets := map[string]datasetState{}
+	rows, err := tx.QueryContext(ctx, `
+		SELECT id, query_id, file_id, name, connection_id
+		FROM datasets
+		WHERE report_id = $1
+	`, req.ReportId)
+	if err != nil {
+		errtype.LogError(err, "failed to load current datasets")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	for rows.Next() {
+		var d datasetState
+		if err := rows.Scan(&d.id, &d.queryID, &d.fileID, &d.name, &d.connectionID); err != nil {
+			errtype.LogError(err, "failed to scan current dataset")
+			rows.Close()
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		currentDatasets[d.id] = d
+	}
+	rows.Close()
+
+	snapshotDatasets := map[string]datasetState{}
+	rows, err = tx.QueryContext(ctx, `
+		SELECT dataset_id, query_id, file_id, name, connection_id
+		FROM dataset_snapshots
+		WHERE report_version_id = $1 AND report_id = $2
+	`, req.VersionId, req.ReportId)
+	if err != nil {
+		errtype.LogError(err, "failed to load dataset snapshots")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	for rows.Next() {
+		var d datasetState
+		if err := rows.Scan(&d.id, &d.queryID, &d.fileID, &d.name, &d.connectionID); err != nil {
+			errtype.LogError(err, "failed to scan dataset snapshot")
+			rows.Close()
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		snapshotDatasets[d.id] = d
+	}
+	rows.Close()
+
+	// Determine datasets to delete (present now but not in snapshot)
+	for id := range currentDatasets {
+		if _, ok := snapshotDatasets[id]; !ok {
+			_, err = tx.ExecContext(ctx, `
+				DELETE FROM datasets
+				WHERE id = $1 AND report_id = $2
+			`, id, req.ReportId)
+			if err != nil {
+				errtype.LogError(err, "failed to delete dataset not present in snapshot")
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+		}
+	}
+
+	// Datasets to insert or update to match snapshot
+	for id, snap := range snapshotDatasets {
+		cur, exists := currentDatasets[id]
+		// Helper to compare NullString
+		equalNullString := func(a, b sql.NullString) bool {
+			if a.Valid != b.Valid {
+				return false
+			}
+			if !a.Valid {
+				return true
+			}
+			return a.String == b.String
+		}
+
+		if !exists {
+			// Insert missing dataset
+			var queryID interface{}
+			if snap.queryID.Valid {
+				queryID = snap.queryID.String
+			} else {
+				queryID = nil
+			}
+			var fileID interface{}
+			if snap.fileID.Valid {
+				fileID = snap.fileID.String
+			} else {
+				fileID = nil
+			}
+			var connectionID interface{}
+			if snap.connectionID.Valid {
+				connectionID = snap.connectionID.String
+			} else {
+				connectionID = nil
+			}
+
+			_, err = tx.ExecContext(ctx, `
+				INSERT INTO datasets (id, report_id, query_id, file_id, name, connection_id)
+				VALUES ($1, $2, $3, $4, $5, $6)
+			`, id, req.ReportId, queryID, fileID, snap.name, connectionID)
+			if err != nil {
+				errtype.LogError(err, "failed to insert dataset from snapshot")
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+			continue
+		}
+
+		// Update existing dataset if any field differs
+		if !equalNullString(cur.queryID, snap.queryID) ||
+			!equalNullString(cur.fileID, snap.fileID) ||
+			!equalNullString(cur.connectionID, snap.connectionID) ||
+			cur.name != snap.name {
+
+			var queryID interface{}
+			if snap.queryID.Valid {
+				queryID = snap.queryID.String
+			} else {
+				queryID = nil
+			}
+			var fileID interface{}
+			if snap.fileID.Valid {
+				fileID = snap.fileID.String
+			} else {
+				fileID = nil
+			}
+			var connectionID interface{}
+			if snap.connectionID.Valid {
+				connectionID = snap.connectionID.String
+			} else {
+				connectionID = nil
+			}
+
+			_, err = tx.ExecContext(ctx, `
+				UPDATE datasets
+				SET query_id = $1,
+					file_id = $2,
+					name = $3,
+					connection_id = $4
+				WHERE id = $5 AND report_id = $6
+			`, queryID, fileID, snap.name, connectionID, id, req.ReportId)
+			if err != nil {
+				errtype.LogError(err, "failed to update dataset from snapshot")
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		errtype.LogError(err, "failed to commit snapshot restore transaction")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.createReportSnapshot(ctx, req.ReportId)
+	if err != nil {
+		errtype.LogError(err, "failed to create report snapshot")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	// Notify subscribers that report has changed
+	s.reportStreams.Ping(req.ReportId)
+
+	return &proto.RestoreReportSnapshotResponse{}, nil
 }

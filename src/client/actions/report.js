@@ -3,7 +3,7 @@ import { removeDataset } from '@kepler.gl/actions'
 
 import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
 import { success } from './message'
-import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType, SetTrackViewersRequest, SetAutoRefreshIntervalSecondsRequest } from 'dekart-proto/dekart_pb'
+import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType, SetTrackViewersRequest, SetAutoRefreshIntervalSecondsRequest, RestoreReportSnapshotRequest } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { createQuery, downloadQuerySource, runQuery } from './query'
 import { downloadDataset } from './dataset'
@@ -480,5 +480,18 @@ export function saveMap (onSaveComplete = () => {}) {
       onSaveComplete()
       dispatch(savedReport(lastSaved, res.updatedAt))
     }))
+  }
+}
+
+export function restoreReportSnapshot (versionId) {
+  return async (dispatch, getState) => {
+    const reportId = getState().report?.id
+    if (!reportId || !versionId) {
+      return
+    }
+    const req = new RestoreReportSnapshotRequest()
+    req.setReportId(reportId)
+    req.setVersionId(versionId)
+    dispatch(grpcCall(Dekart.RestoreReportSnapshot, req))
   }
 }
