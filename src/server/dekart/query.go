@@ -89,8 +89,8 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	if affectedRows == 0 {
 		log.Warn().Str("reportID", *reportID).Str("dataset", req.DatasetId).Msg("dataset query was already created")
 	} else {
-		// Create dataset snapshot
-		err = s.createDatasetSnapshotWithQueryID(ctx, newQueryID)
+		// Create snapshot
+		err = s.createReportSnapshot(ctx, *reportID)
 		if err != nil {
 			errtype.LogError(err, "Error creating dataset snapshot")
 			return nil, status.Error(codes.Internal, err.Error())
@@ -363,6 +363,11 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 				log.Error().Err(err).Send()
 				return nil, status.Error(codes.Internal, err.Error())
 			}
+		}
+		err = s.createReportSnapshot(ctx, q.ReportID)
+		if err != nil {
+			errtype.LogError(err, "Error creating report snapshot")
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 	}
 

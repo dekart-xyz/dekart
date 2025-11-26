@@ -3,6 +3,50 @@
 
 import * as jspb from "google-protobuf";
 
+export class RestoreReportSnapshotRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  getVersionId(): string;
+  setVersionId(value: string): void;
+
+  getDatasetSnapshotId(): string;
+  setDatasetSnapshotId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): RestoreReportSnapshotRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: RestoreReportSnapshotRequest): RestoreReportSnapshotRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: RestoreReportSnapshotRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RestoreReportSnapshotRequest;
+  static deserializeBinaryFromReader(message: RestoreReportSnapshotRequest, reader: jspb.BinaryReader): RestoreReportSnapshotRequest;
+}
+
+export namespace RestoreReportSnapshotRequest {
+  export type AsObject = {
+    reportId: string,
+    versionId: string,
+    datasetSnapshotId: string,
+  }
+}
+
+export class RestoreReportSnapshotResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): RestoreReportSnapshotResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: RestoreReportSnapshotResponse): RestoreReportSnapshotResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: RestoreReportSnapshotResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RestoreReportSnapshotResponse;
+  static deserializeBinaryFromReader(message: RestoreReportSnapshotResponse, reader: jspb.BinaryReader): RestoreReportSnapshotResponse;
+}
+
+export namespace RestoreReportSnapshotResponse {
+  export type AsObject = {
+  }
+}
+
 export class GetSnapshotsRequest extends jspb.Message {
   getReportId(): string;
   setReportId(value: string): void;
@@ -101,11 +145,6 @@ export class GetSnapshotsResponse extends jspb.Message {
   setReportSnapshotsList(value: Array<ReportSnapshot>): void;
   addReportSnapshots(value?: ReportSnapshot, index?: number): ReportSnapshot;
 
-  clearDatasetSnapshotsList(): void;
-  getDatasetSnapshotsList(): Array<DatasetSnapshot>;
-  setDatasetSnapshotsList(value: Array<DatasetSnapshot>): void;
-  addDatasetSnapshots(value?: DatasetSnapshot, index?: number): DatasetSnapshot;
-
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetSnapshotsResponse.AsObject;
   static toObject(includeInstance: boolean, msg: GetSnapshotsResponse): GetSnapshotsResponse.AsObject;
@@ -119,7 +158,6 @@ export class GetSnapshotsResponse extends jspb.Message {
 export namespace GetSnapshotsResponse {
   export type AsObject = {
     reportSnapshotsList: Array<ReportSnapshot.AsObject>,
-    datasetSnapshotsList: Array<DatasetSnapshot.AsObject>,
   }
 }
 

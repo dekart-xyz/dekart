@@ -11,8 +11,8 @@ import { Loading } from './Loading'
 
 const { Panel } = Collapse
 
-// Build linear history from report and dataset snapshots
-function buildHistoryFromSnapshots (reportSnapshotsList = [], datasetSnapshotsList = []) {
+// Build linear history from report snapshots only
+function buildHistoryFromSnapshots (reportSnapshotsList = []) {
   const changes = []
 
   // Report-level snapshots
@@ -22,19 +22,6 @@ function buildHistoryFromSnapshots (reportSnapshotsList = [], datasetSnapshotsLi
     if (Number.isNaN(ts.getTime())) return
     changes.push({
       id: s.versionId,
-      timestamp: ts,
-      user: s.authorEmail,
-      type: 'edit'
-    })
-  })
-
-  // Dataset-level snapshots
-  datasetSnapshotsList.forEach(s => {
-    if (!s || !s.createdAt) return
-    const ts = new Date(s.createdAt)
-    if (Number.isNaN(ts.getTime())) return
-    changes.push({
-      id: s.snapshotId,
       timestamp: ts,
       user: s.authorEmail,
       type: 'edit'
@@ -227,8 +214,7 @@ export function MapChangeHistoryModal ({ open, onClose }) {
   const historyData = useMemo(() => {
     if (!snapshots) return []
     const reportSnapshotsList = snapshots.reportSnapshotsList || []
-    const datasetSnapshotsList = snapshots.datasetSnapshotsList || []
-    return buildHistoryFromSnapshots(reportSnapshotsList, datasetSnapshotsList)
+    return buildHistoryFromSnapshots(reportSnapshotsList)
   }, [snapshots])
 
   const groupedData = useMemo(() => groupChangesByTime(historyData), [historyData])

@@ -17,6 +17,7 @@ service Dekart {
     rpc SetTrackViewers(SetTrackViewersRequest) returns (SetTrackViewersResponse) {}
     rpc SetAutoRefreshIntervalSeconds(SetAutoRefreshIntervalSecondsRequest) returns (SetAutoRefreshIntervalSecondsResponse) {}  // set auto refresh interval in seconds
     rpc GetSnapshots(GetSnapshotsRequest) returns (GetSnapshotsResponse) {}
+    rpc RestoreReportSnapshot(RestoreReportSnapshotRequest) returns (RestoreReportSnapshotResponse) {}
 
     // datasets
     rpc CreateDataset(CreateDatasetRequest) returns (CreateDatasetResponse) {}
@@ -71,6 +72,15 @@ service Dekart {
     rpc UpdateWorkspaceUser(UpdateWorkspaceUserRequest) returns (UpdateWorkspaceUserResponse) {}
 }
 
+message RestoreReportSnapshotRequest {
+    string report_id = 1;
+    string version_id = 2;
+    string dataset_snapshot_id = 3;
+}
+
+message RestoreReportSnapshotResponse {
+}
+
 message GetSnapshotsRequest {
     string report_id = 1;
 }
@@ -93,7 +103,6 @@ message DatasetSnapshot {
 
 message GetSnapshotsResponse {
     repeated ReportSnapshot report_snapshots = 1;
-    repeated DatasetSnapshot dataset_snapshots = 2;
 }
 
 
