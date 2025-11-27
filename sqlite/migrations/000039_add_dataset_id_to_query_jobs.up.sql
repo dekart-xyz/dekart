@@ -1,10 +1,5 @@
--- Add dataset_id column to query_jobs table
 ALTER TABLE query_jobs
 ADD COLUMN dataset_id uuid;
-
--- Add foreign key constraint (allows NULL values)
-ALTER TABLE query_jobs
-ADD CONSTRAINT fk_dataset FOREIGN KEY(dataset_id) REFERENCES datasets;
 
 -- Add index for better query performance
 CREATE INDEX IF NOT EXISTS idx_query_jobs_dataset_id ON query_jobs(dataset_id);

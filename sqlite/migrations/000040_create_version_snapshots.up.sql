@@ -10,6 +10,7 @@ CREATE INDEX IF NOT EXISTS idx_reports_version_id ON reports(version_id);
 CREATE TABLE IF NOT EXISTS report_snapshots (
   version_id TEXT NOT NULL PRIMARY KEY,
   report_id TEXT NOT NULL,
+  trigger_type INT NOT NULL,
 
   -- Only user-editable content fields
   map_config TEXT,
