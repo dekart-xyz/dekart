@@ -6,7 +6,7 @@ import Collapse from 'antd/es/collapse'
 import { HistoryOutlined, UserOutlined, ClockCircleOutlined, DownOutlined, RollbackOutlined, EditOutlined } from '@ant-design/icons'
 import Tag from 'antd/es/tag'
 import styles from './MapChangeHistoryModal.module.css'
-import { getSnapshots } from './actions/snapshots'
+import { getSnapshots, toggleSnapshotModal } from './actions/snapshots'
 import { restoreReportSnapshot } from './actions/report'
 import { Loading } from './Loading'
 
@@ -88,6 +88,7 @@ function groupChangesByTime (changes) {
 }
 
 function DaySection ({ dayLabel, hourGroups, expandedKeys, onToggle, currentVersionId, renderedHours, onHourRendered, onRestore }) {
+  const restoring = useSelector(state => state.snapshots.restoring)
   const hourKeys = Object.keys(hourGroups).sort((a, b) => {
     // Sort by hour, descending (newest first)
     return hourGroups[b].hour - hourGroups[a].hour
@@ -162,11 +163,8 @@ function DaySection ({ dayLabel, hourGroups, expandedKeys, onToggle, currentVers
                         size='small'
                         icon={<RollbackOutlined />}
                         className={styles.restoreButton}
-                        onClick={() => {
-                          if (onRestore) {
-                            onRestore(change.id)
-                          }
-                        }}
+                        disabled={restoring}
+                        onClick={() => onRestore(change.id)}
                       >
                         Restore
                       </Button>
@@ -182,11 +180,11 @@ function DaySection ({ dayLabel, hourGroups, expandedKeys, onToggle, currentVers
   )
 }
 
-export function MapChangeHistoryModal ({ open, onClose }) {
+export function MapChangeHistoryModal () {
   const dispatch = useDispatch()
   const { data: snapshots, loading } = useSelector(state => state.snapshots || {})
   const report = useSelector(state => state.report)
-
+  const open = useSelector(state => state.snapshots.open)
   const [expandedHours, setExpandedHours] = useState(new Set())
   const [renderedHours, setRenderedHours] = useState(new Set())
   const prevOpenRef = useRef(false)
@@ -250,15 +248,8 @@ export function MapChangeHistoryModal ({ open, onClose }) {
         </div>
       }
       open={open}
-      onCancel={onClose}
-      footer={
-        <div className={styles.modalFooter}>
-          <div className={styles.modalFooterSpacer} />
-          <Button onClick={onClose}>
-            Close
-          </Button>
-        </div>
-      }
+      onCancel={() => dispatch(toggleSnapshotModal(false))}
+      footer={null}
       width={700}
       className={styles.modal}
       bodyStyle={{ padding: '0px' }}

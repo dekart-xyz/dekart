@@ -343,7 +343,7 @@ func (s Server) createReportSnapshotWithVersionIDTx(ctx context.Context, tx *sql
 		SELECT DISTINCT
 			$1::uuid AS report_version_id,
 			q.id AS query_id,
-			q.report_id,
+			d.report_id,
 			q.query_text,
 			COALESCE(q.query_source_id, ''),
 			$2 AS author_email
@@ -1393,7 +1393,7 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 	if err != nil {
 		if err == sql.ErrNoRows {
 			err := fmt.Errorf("snapshot not found version_id:%s report_id:%s", req.VersionId, req.ReportId)
-			log.Warn().Err(err).Send()
+			errtype.LogError(err, "failed to load report snapshot")
 			return nil, status.Error(codes.NotFound, err.Error())
 		}
 		errtype.LogError(err, "failed to load report snapshot")
@@ -1406,8 +1406,6 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 	}
 	defer tx.Rollback()
 
-	updatedAt := time.Now()
-
 	// Restore report content (map_config, title, query_params, readme, version_id)
 	_, err = tx.ExecContext(ctx, `
 		UPDATE reports
@@ -1415,10 +1413,10 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 			title = $2,
 			query_params = $3,
 			readme = $4,
-			updated_at = $5,
-			version_id = $6
-		WHERE id = $7
-	`, snapshotMapConfig, snapshotTitle, snapshotParamsText, snapshotReadme, updatedAt, req.VersionId, req.ReportId)
+			updated_at = CURRENT_TIMESTAMP,
+			version_id = $5
+		WHERE id = $6
+	`, snapshotMapConfig, snapshotTitle, snapshotParamsText, snapshotReadme, req.VersionId, req.ReportId)
 	if err != nil {
 		errtype.LogError(err, "failed to restore report from snapshot")
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1431,25 +1429,22 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 				SELECT qs.query_text
 				FROM query_snapshots qs
 				WHERE qs.report_version_id = $1
-				  AND qs.report_id = $2
 				  AND qs.query_id = queries.id
 			),
 			query_source_id = (
 				SELECT qs.query_source_id
 				FROM query_snapshots qs
-				WHERE qs.report_version_id = $1
-				  AND qs.report_id = $2
+				WHERE qs.report_version_id = $2
 				  AND qs.query_id = queries.id
 			),
-			updated_at = $3
+			updated_at = CURRENT_TIMESTAMP
 		WHERE id IN (
 			SELECT query_id
 			FROM query_snapshots
-			WHERE report_version_id = $1
-			  AND report_id = $2
+			WHERE report_version_id = $3
+			  AND report_id = $4
 		)
-		  AND report_id = $2
-	`, req.VersionId, req.ReportId, updatedAt)
+	`, req.VersionId, req.VersionId, req.VersionId, req.ReportId)
 	if err != nil {
 		errtype.LogError(err, "failed to update queries from snapshot")
 		return nil, status.Error(codes.Internal, err.Error())

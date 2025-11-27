@@ -1,6 +1,6 @@
 import { combineReducers } from 'redux'
-import { closeReport, openReport } from '../actions/report'
-import { getSnapshots, setSnapshotsData, setSnapshotsLoading } from '../actions/snapshots'
+import { closeReport, openReport, restoreReportSnapshot, restoreReportSnapshotSuccess } from '../actions/report'
+import { getSnapshots, setSnapshotsData, setSnapshotsLoading, toggleSnapshotModal } from '../actions/snapshots'
 
 function data (state = null, action) {
   switch (action.type) {
@@ -28,7 +28,30 @@ function loading (state = false, action) {
   }
 }
 
+function restoring (state = false, action) {
+  switch (action.type) {
+    case restoreReportSnapshot.name:
+      return true
+    case restoreReportSnapshotSuccess.name:
+      return false
+    default:
+      return state
+  }
+}
+
+function open (state = false, action) {
+  switch (action.type) {
+    case restoreReportSnapshotSuccess.name:
+      return false
+    case toggleSnapshotModal.name:
+      return action.open
+    default:
+      return state
+  }
+}
 export default combineReducers({
   data,
-  loading
+  loading,
+  restoring,
+  open
 })

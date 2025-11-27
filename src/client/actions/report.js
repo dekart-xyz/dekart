@@ -483,8 +483,13 @@ export function saveMap (onSaveComplete = () => {}) {
   }
 }
 
+export function restoreReportSnapshotSuccess (versionId) {
+  return { type: restoreReportSnapshotSuccess.name, versionId }
+}
+
 export function restoreReportSnapshot (versionId) {
   return async (dispatch, getState) => {
+    dispatch({ type: restoreReportSnapshot.name, versionId })
     const reportId = getState().report?.id
     if (!reportId || !versionId) {
       return
@@ -492,6 +497,9 @@ export function restoreReportSnapshot (versionId) {
     const req = new RestoreReportSnapshotRequest()
     req.setReportId(reportId)
     req.setVersionId(versionId)
-    dispatch(grpcCall(Dekart.RestoreReportSnapshot, req))
+    dispatch(grpcCall(Dekart.RestoreReportSnapshot, req, () => {
+      dispatch(success('Snapshot restored'))
+      dispatch(restoreReportSnapshotSuccess(versionId))
+    }))
   }
 }

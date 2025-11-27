@@ -29,3 +29,7 @@ export function getSnapshots () {
     }))
   }
 }
+
+export function toggleSnapshotModal (open) {
+  return { type: toggleSnapshotModal.name, open }
+}

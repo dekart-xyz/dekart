@@ -18,6 +18,7 @@ import { AutoRefreshSettingsModal } from './AutoRefreshSettings'
 import MapChangeHistoryModal from './MapChangeHistoryModal'
 import classNames from 'classnames'
 import { goToPresent, goToSource } from './lib/navigation'
+import { toggleSnapshotModal } from './actions/snapshots'
 
 function formatIntervalLabel (seconds) {
   if (seconds === 0) return 'None'
@@ -323,9 +324,9 @@ function ViewSelectDropdown ({ menu, onHistoryClick }) {
 }
 
 function ViewSelect (value) {
+  const dispatch = useDispatch()
   const history = useHistory()
   const { id } = useSelector(state => state.report)
-  const [historyModalVisible, setHistoryModalVisible] = useState(false)
 
   const handleChange = (value) => {
     if (value === 'edit') {
@@ -336,7 +337,7 @@ function ViewSelect (value) {
       goToPresent(history, id)
     } else if (value === 'history') {
       track('OpenHistory', { reportId: id })
-      setHistoryModalVisible(true)
+      dispatch(toggleSnapshotModal(true))
     }
   }
 
@@ -360,10 +361,7 @@ function ViewSelect (value) {
           <ViewSelectDropdown menu={menu} onHistoryClick={handleHistoryClick} />
         )}
       />
-      <MapChangeHistoryModal
-        open={historyModalVisible}
-        onClose={() => setHistoryModalVisible(false)}
-      />
+      <MapChangeHistoryModal />
     </>
   )
 }
