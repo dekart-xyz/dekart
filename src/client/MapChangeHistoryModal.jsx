@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import Modal from 'antd/es/modal'
 import Button from 'antd/es/button'
@@ -202,22 +202,17 @@ export function MapChangeHistoryModal () {
   const open = useSelector(state => state.snapshots.open)
   const [expandedHours, setExpandedHours] = useState(new Set())
   const [renderedHours, setRenderedHours] = useState(new Set())
-  const prevOpenRef = useRef(false)
 
   // Always reload snapshots when modal is opened
   useEffect(() => {
-    if (open && !prevOpenRef.current && report?.id) {
-      // Modal just opened - always reload data
+    if (open) {
       dispatch(getSnapshots())
     }
-    prevOpenRef.current = open
-
-    // Reset UI state when modal closes
-    if (!open && prevOpenRef.current) {
+    if (!open) {
       setExpandedHours(new Set())
       setRenderedHours(new Set())
     }
-  }, [open, report?.id, dispatch])
+  }, [open, dispatch])
 
   // Build history data from snapshots
   const historyData = useMemo(() => {
