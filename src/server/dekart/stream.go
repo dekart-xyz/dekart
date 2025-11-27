@@ -202,7 +202,8 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 						where report_id = r.id
 					) t
 					where rn = 1 and status != 2
-				) as has_direct_access
+				) as has_direct_access,
+				version_id
 			from reports as r
 			where author_email=$1 and is_playground=true
 			order by updated_at desc`,
@@ -233,7 +234,8 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 						where report_id = r.id
 					) t
 					where rn = 1 and status != 2
-				) as has_direct_access
+				) as has_direct_access,
+				r.version_id
 			from reports as r
 			where (r.author_email=$1 or (r.discoverable=true and r.archived=false) or r.allow_edit=true) and r.workspace_id=$2
 			order by r.updated_at desc`,
@@ -255,6 +257,7 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 		report := proto.Report{}
 		createdAt := time.Time{}
 		updatedAt := time.Time{}
+		var versionID sql.NullString
 		err = reportRows.Scan(
 			&report.Id,
 			&report.Title,
@@ -270,12 +273,16 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			&report.TrackViewers,
 			&report.IsPlayground,
 			&report.HasDirectAccess,
+			&versionID,
 		)
 		if err != nil {
 			return GRPCError("Cannot scan report row", err)
 		}
 		report.CreatedAt = createdAt.Unix()
 		report.UpdatedAt = updatedAt.Unix()
+		if versionID.Valid {
+			report.VersionId = versionID.String
+		}
 		res.Reports = append(res.Reports, &report)
 	}
 	err = srv.Send(&res)

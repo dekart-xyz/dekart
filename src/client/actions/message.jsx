@@ -117,6 +117,7 @@ export function setStreamError (code, msg) {
     // https://github.com/grpc/grpc/blob/master/doc/statuscodes.md
     switch (code) {
       case 1:
+        track('RequestCancelled')
         dispatch(info('Request cancelled'))
         return
       case 2:

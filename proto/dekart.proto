@@ -16,6 +16,8 @@ service Dekart {
     rpc AddReportDirectAccess(AddReportDirectAccessRequest) returns (AddReportDirectAccessResponse) {}
     rpc SetTrackViewers(SetTrackViewersRequest) returns (SetTrackViewersResponse) {}
     rpc SetAutoRefreshIntervalSeconds(SetAutoRefreshIntervalSecondsRequest) returns (SetAutoRefreshIntervalSecondsResponse) {}  // set auto refresh interval in seconds
+    rpc GetSnapshots(GetSnapshotsRequest) returns (GetSnapshotsResponse) {}
+    rpc RestoreReportSnapshot(RestoreReportSnapshotRequest) returns (RestoreReportSnapshotResponse) {}
 
     // datasets
     rpc CreateDataset(CreateDatasetRequest) returns (CreateDatasetResponse) {}
@@ -69,6 +71,40 @@ service Dekart {
     rpc GetWorkspace(GetWorkspaceRequest) returns (GetWorkspaceResponse) {}
     rpc UpdateWorkspaceUser(UpdateWorkspaceUserRequest) returns (UpdateWorkspaceUserResponse) {}
 }
+
+message RestoreReportSnapshotRequest {
+    string report_id = 1;
+    string version_id = 2;
+    string dataset_snapshot_id = 3;
+}
+
+message RestoreReportSnapshotResponse {
+}
+
+message GetSnapshotsRequest {
+    string report_id = 1;
+}
+
+message ReportSnapshot {
+    string version_id = 1;
+    string report_id = 2;
+    string author_email = 3;
+    string created_at = 4;
+    enum TriggerType {
+        TRIGGER_TYPE_UNSPECIFIED = 0;
+        TRIGGER_TYPE_QUERY_CHANGE = 1;
+        TRIGGER_TYPE_REPORT_CHANGE = 2;
+        TRIGGER_TYPE_SNAPSHOT_RESTORE = 3;
+        TRIGGER_TYPE_DATASET_CHANGE = 4;
+    }
+    TriggerType trigger_type = 5;
+}
+
+
+message GetSnapshotsResponse {
+    repeated ReportSnapshot report_snapshots = 1;
+}
+
 
 message TrackEventRequest {
     string event_name = 1;
@@ -551,6 +587,7 @@ message Report {
     bool track_viewers = 20; // true - track viewers, false - don't track viewers
     bool can_refresh = 21; // true - can refresh, false - cannot refresh
     int32 auto_refresh_interval_seconds = 22; // auto refresh interval in seconds
+    string version_id = 23; // version id of the report
 }
 
 message Dataset {
@@ -590,6 +627,7 @@ message QueryJob {
     JobStatus job_status = 12;
     string dw_job_id = 13;
     string query_params_hash = 14;
+    string dataset_id = 15;
 }
 
 message Query {

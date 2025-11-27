@@ -46,30 +46,30 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	id := newUUID()
-
+	// Create initial query record with empty text
+	queryID := newUUID()
 	_, err = s.db.ExecContext(ctx,
 		`insert into queries (id, query_text) values ($1, '')`,
-		id,
+		queryID,
 	)
 	if err != nil {
 		errtype.LogError(err, "Error creating query")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	err = s.storeQuerySync(ctx, id, "", "")
-
+	// storeQuerySync will create a new immutable query record
+	err = s.storeQuerySync(ctx, queryID, "", "")
 	if err != nil {
 		if _, ok := err.(*queryWasNotUpdated); !ok {
-			errtype.LogError(err, "Error updating query text")
+			errtype.LogError(err, "Error storing query")
 			return &proto.CreateQueryResponse{}, status.Error(codes.Internal, err.Error())
 		}
-		log.Warn().Msg("Query text not updated")
 	}
 
+	// Update dataset to reference the new query ID
 	result, err := s.db.ExecContext(ctx,
 		`update datasets set query_id=$1, updated_at=CURRENT_TIMESTAMP where id=$2 and query_id is null`,
-		id,
+		queryID,
 		req.DatasetId,
 	)
 	if err != nil {
@@ -84,7 +84,15 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	}
 
 	if affectedRows == 0 {
+		// race condition, another user created the query first
 		log.Warn().Str("reportID", *reportID).Str("dataset", req.DatasetId).Msg("dataset query was already created")
+	} else {
+		// Create snapshot
+		err = s.createReportSnapshot(ctx, *reportID, proto.ReportSnapshot_TRIGGER_TYPE_QUERY_CHANGE)
+		if err != nil {
+			errtype.LogError(err, "Error creating dataset snapshot")
+			return nil, status.Error(codes.Internal, err.Error())
+		}
 	}
 
 	s.reportStreams.Ping(*reportID)
@@ -333,38 +341,29 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		errtype.LogError(err, "database operation failed")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-
-	if report.CanWrite {
-		// update query text if it was changed by user if user has write permission
-		// otherwise use query text from db
-		q.QueryText = req.QueryText
-		err = s.storeQuerySync(ctx, req.QueryId, req.QueryText, q.PrevQuerySourceId)
+	queryID := req.QueryId
+	queryText := q.QueryText
+	if report.CanWrite && req.QueryText != q.QueryText { // update query text if it was changed by user if user has write permission
+		queryText = req.QueryText
+		err = s.storeQuerySync(ctx, queryID, req.QueryText, q.PrevQuerySourceId)
 		if err != nil {
-			code := codes.Internal
-			if _, ok := err.(*queryWasNotUpdated); ok {
-				// Query was not updated, possibly due to concurrent run and save
-				// Get the current query text from DB and compare with the request
-				dbQuery, dbErr := query.GetQueryDetails(ctx, s.db, req.QueryId)
-				if dbErr != nil {
-					log.Error().Err(dbErr).Msg("Failed to get query details from database")
-					return nil, status.Error(codes.Internal, dbErr.Error())
-				}
-				// If the query text in DB matches the request, proceed with running
-				// Otherwise, cancel due to concurrent modification
-				if dbQuery.QueryText != req.QueryText {
-					code = codes.Canceled
-					log.Warn().Err(err).Msg("Query was modified concurrently, canceling")
-					return nil, status.Error(code, err.Error())
-				}
+			if _, ok := err.(*queryWasNotUpdated); ok { // query was not updated, it was changed by another user
+				log.Warn().Str("queryId", req.QueryId).Msg("Query was not updated")
+				return nil, status.Error(codes.Canceled, err.Error())
 			} else {
 				log.Error().Err(err).Send()
-				return nil, status.Error(code, err.Error())
+				return nil, status.Error(codes.Internal, err.Error())
 			}
+		}
+		err = s.createReportSnapshot(ctx, q.ReportID, proto.ReportSnapshot_TRIGGER_TYPE_QUERY_CHANGE)
+		if err != nil {
+			errtype.LogError(err, "Error creating report snapshot")
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 	}
 
 	var queryParamsHash string
-	q.QueryText, queryParamsHash, err = injectQueryParams(q.QueryText, req.QueryParams, req.QueryParamsValues)
+	queryText, queryParamsHash, err = injectQueryParams(queryText, req.QueryParams, req.QueryParamsValues)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -372,8 +371,8 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 
 	err = s.runQuery(ctx, runQueryOptions{
 		reportID:        q.ReportID,
-		queryID:         req.QueryId,
-		queryText:       q.QueryText,
+		queryID:         queryID,
+		queryText:       queryText,
 		connection:      connection,
 		userBucketName:  s.getBucketNameFromConnection(connection),
 		isPublic:        report.IsPublic,

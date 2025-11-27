@@ -3,7 +3,7 @@ import { removeDataset } from '@kepler.gl/actions'
 
 import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
 import { success } from './message'
-import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType, SetTrackViewersRequest, SetAutoRefreshIntervalSecondsRequest } from 'dekart-proto/dekart_pb'
+import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType, SetTrackViewersRequest, SetAutoRefreshIntervalSecondsRequest, RestoreReportSnapshotRequest } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { createQuery, downloadQuerySource, runQuery } from './query'
 import { downloadDataset } from './dataset'
@@ -238,20 +238,9 @@ export function reportUpdate (reportStreamResponse) {
     }
 
     if (!mapConfigUpdated) { // new map config reset data anyway
-      prevQueriesList.forEach(query => {
-        if (!queriesList.find(q => q.id === query.id)) {
-          const dataset = prevDatasetsList.find(d => d.queryId === query.id)
-          if (dataset) {
-            dispatch(removeDataset(dataset.id))
-          }
-        }
-      })
-      prevFileList.forEach(file => {
-        if (!filesList.find(f => f.id === file.id)) {
-          const dataset = prevDatasetsList.find(d => d.fileId === file.id)
-          if (dataset) {
-            dispatch(removeDataset(dataset.id))
-          }
+      prevDatasetsList.forEach(dataset => {
+        if (!datasetsList.find(d => d.id === dataset.id)) {
+          dispatch(removeDataset(dataset.id))
         }
       })
     }
@@ -490,6 +479,27 @@ export function saveMap (onSaveComplete = () => {}) {
     dispatch(grpcCall(Dekart.UpdateReport, request, (res) => {
       onSaveComplete()
       dispatch(savedReport(lastSaved, res.updatedAt))
+    }))
+  }
+}
+
+export function restoreReportSnapshotSuccess (versionId) {
+  return { type: restoreReportSnapshotSuccess.name, versionId }
+}
+
+export function restoreReportSnapshot (versionId) {
+  return async (dispatch, getState) => {
+    dispatch({ type: restoreReportSnapshot.name, versionId })
+    const reportId = getState().report?.id
+    if (!reportId || !versionId) {
+      return
+    }
+    const req = new RestoreReportSnapshotRequest()
+    req.setReportId(reportId)
+    req.setVersionId(versionId)
+    dispatch(grpcCall(Dekart.RestoreReportSnapshot, req, () => {
+      dispatch(success('Snapshot restored'))
+      dispatch(restoreReportSnapshotSuccess(versionId))
     }))
   }
 }

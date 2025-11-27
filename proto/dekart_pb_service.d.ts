@@ -112,6 +112,24 @@ type DekartSetAutoRefreshIntervalSeconds = {
   readonly responseType: typeof dekart_pb.SetAutoRefreshIntervalSecondsResponse;
 };
 
+type DekartGetSnapshots = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof dekart_pb.GetSnapshotsRequest;
+  readonly responseType: typeof dekart_pb.GetSnapshotsResponse;
+};
+
+type DekartRestoreReportSnapshot = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof dekart_pb.RestoreReportSnapshotRequest;
+  readonly responseType: typeof dekart_pb.RestoreReportSnapshotResponse;
+};
+
 type DekartCreateDataset = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -405,6 +423,8 @@ export class Dekart {
   static readonly AddReportDirectAccess: DekartAddReportDirectAccess;
   static readonly SetTrackViewers: DekartSetTrackViewers;
   static readonly SetAutoRefreshIntervalSeconds: DekartSetAutoRefreshIntervalSeconds;
+  static readonly GetSnapshots: DekartGetSnapshots;
+  static readonly RestoreReportSnapshot: DekartRestoreReportSnapshot;
   static readonly CreateDataset: DekartCreateDataset;
   static readonly RemoveDataset: DekartRemoveDataset;
   static readonly UpdateDatasetName: DekartUpdateDatasetName;
@@ -577,6 +597,24 @@ export class DekartClient {
   setAutoRefreshIntervalSeconds(
     requestMessage: dekart_pb.SetAutoRefreshIntervalSecondsRequest,
     callback: (error: ServiceError|null, responseMessage: dekart_pb.SetAutoRefreshIntervalSecondsResponse|null) => void
+  ): UnaryResponse;
+  getSnapshots(
+    requestMessage: dekart_pb.GetSnapshotsRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.GetSnapshotsResponse|null) => void
+  ): UnaryResponse;
+  getSnapshots(
+    requestMessage: dekart_pb.GetSnapshotsRequest,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.GetSnapshotsResponse|null) => void
+  ): UnaryResponse;
+  restoreReportSnapshot(
+    requestMessage: dekart_pb.RestoreReportSnapshotRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.RestoreReportSnapshotResponse|null) => void
+  ): UnaryResponse;
+  restoreReportSnapshot(
+    requestMessage: dekart_pb.RestoreReportSnapshotRequest,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.RestoreReportSnapshotResponse|null) => void
   ): UnaryResponse;
   createDataset(
     requestMessage: dekart_pb.CreateDatasetRequest,

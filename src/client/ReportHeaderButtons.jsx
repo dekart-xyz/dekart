@@ -1,7 +1,7 @@
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 import styles from './ReportHeaderButtons.module.css'
 import Button from 'antd/es/button'
-import { EyeOutlined, DownloadOutlined, CloudOutlined, EditOutlined, ForkOutlined, ReloadOutlined, LoadingOutlined, CloudSyncOutlined, PlusOutlined, InfoCircleOutlined, ClockCircleOutlined } from '@ant-design/icons'
+import { EyeOutlined, DownloadOutlined, CloudOutlined, EditOutlined, ForkOutlined, ReloadOutlined, LoadingOutlined, CloudSyncOutlined, PlusOutlined, InfoCircleOutlined, ClockCircleOutlined, HistoryOutlined } from '@ant-design/icons'
 import { useDispatch, useSelector } from 'react-redux'
 import ShareButton from './ShareButton'
 import { forkReport, saveMap } from './actions/report'
@@ -11,11 +11,14 @@ import { EXPORT_DATA_ID, EXPORT_IMAGE_ID, EXPORT_MAP_ID } from '@kepler.gl/const
 import Dropdown from 'antd/es/dropdown'
 import { useEffect, useState } from 'react'
 import Select from 'antd/es/select'
+import Divider from 'antd/es/divider'
 import { track } from './lib/tracking'
 import { ForkOnboarding, useRequireOnboarding } from './ForkOnboarding'
 import { AutoRefreshSettingsModal } from './AutoRefreshSettings'
+import MapChangeHistoryModal from './MapChangeHistoryModal'
 import classNames from 'classnames'
 import { goToPresent, goToSource } from './lib/navigation'
+import { toggleSnapshotModal } from './actions/snapshots'
 
 function formatIntervalLabel (seconds) {
   if (seconds === 0) return 'None'
@@ -294,29 +297,72 @@ function ExportDropdown () {
   )
 }
 
+// adds history option to the dropdown after divider
+function ViewSelectDropdown ({ menu, onHistoryClick }) {
+  return (
+    <>
+      {menu}
+      <Divider style={{ margin: '4px 0' }} />
+      <div
+        style={{
+          padding: '5px 12px',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          transition: 'background-color 0.2s'
+        }}
+        onClick={onHistoryClick}
+        onMouseDown={(e) => e.preventDefault()}
+        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f5f5f5' }}
+        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+      >
+        <HistoryOutlined /> History
+      </div>
+    </>
+  )
+}
+
 function ViewSelect (value) {
+  const dispatch = useDispatch()
   const history = useHistory()
   const { id } = useSelector(state => state.report)
-  return (
-    <Select
-      ghost
-      className={styles.reportViewSelect}
-      defaultValue={value}
-      onChange={(value) => {
-        if (value === 'edit') {
-          track('SwitchToEditMode', { reportId: id })
-          goToSource(history, id)
-        } else if (value === 'view') {
-          track('SwitchToViewMode', { reportId: id })
-          goToPresent(history, id)
-        }
-      }}
-      options={[
-        { value: 'view', label: <><EyeOutlined /> Viewing</> },
-        { value: 'edit', label: <><EditOutlined /> Editing</> }
-      ]}
-    />
 
+  const handleChange = (value) => {
+    if (value === 'edit') {
+      track('SwitchToEditMode', { reportId: id })
+      goToSource(history, id)
+    } else if (value === 'view') {
+      track('SwitchToViewMode', { reportId: id })
+      goToPresent(history, id)
+    } else if (value === 'history') {
+      track('OpenHistory', { reportId: id })
+      dispatch(toggleSnapshotModal(true))
+    }
+  }
+
+  const handleHistoryClick = () => {
+    handleChange('history')
+  }
+
+  return (
+    <>
+      <Select
+        ghost
+        className={styles.reportViewSelect}
+        defaultValue={value}
+        onChange={handleChange}
+        options={[
+          { value: 'view', label: <><EyeOutlined /> Viewing</> },
+          { value: 'edit', label: <><EditOutlined /> Editing</> }
+        ]}
+        dropdownRender={(menu) => (
+          // add history option to the dropdown after divider
+          <ViewSelectDropdown menu={menu} onHistoryClick={handleHistoryClick} />
+        )}
+      />
+      <MapChangeHistoryModal />
+    </>
   )
 }
 

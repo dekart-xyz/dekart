@@ -3,6 +3,7 @@ package dekart
 import (
 	"context"
 	"dekart/src/proto"
+	"dekart/src/server/errtype"
 	"dekart/src/server/user"
 	"os"
 
@@ -54,7 +55,7 @@ func (s Server) TrackEvent(ctx context.Context, req *proto.TrackEventRequest) (*
 	)
 
 	if err != nil {
-		log.Err(err).Str("event_name", req.EventName).Msg("Failed to store track event")
+		errtype.LogError(err, "Failed to store track event")
 		// Don't return error to client, just log it
 		// We don't want tracking failures to break the UI
 	}

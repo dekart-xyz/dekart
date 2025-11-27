@@ -11,7 +11,6 @@ import Select from 'antd/es/select'
 import { setAnalyticsModalOpen } from './actions/analytics'
 import { track } from './lib/tracking'
 import AnalyticsModal from './AnalyticsModal'
-import Tooltip from 'antd/es/tooltip'
 import classNames from 'classnames'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 import { showUpgradeModal, UpgradeModalType } from './actions/upgradeModal'
@@ -471,35 +470,29 @@ export default function ShareButton () {
   }, [analyticsModalOpen])
   const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
   let icon = <LockOutlined />
-  let tooltip = 'Private map, only you can see it'
   if (isDefaultWorkspace) {
     icon = <LinkOutlined />
-    tooltip = 'Share map with workspace users'
   } else if (isPublic || isPlayground) {
     icon = <GlobalOutlined />
-    tooltip = 'Public map, anyone with the link can see it'
   } else if (discoverable || hasDirectAccess) {
     icon = <TeamOutlined />
-    tooltip = 'Anyone in workspace can view and refresh this report'
   }
   if (!canWrite) {
     return <CopyLinkButton ghost />
   }
   return (
     <>
-      <Tooltip title={tooltip} placement='bottom'>
-        <Button
-          icon={icon}
-          type='primary'
-          id='dekart-share-report'
-          title='Share Map'
-          onClick={() => {
-            setModalOpen(true)
-            track('OpenShareModal')
-          }}
-        >Share
-        </Button>
-      </Tooltip>
+      <Button
+        icon={icon}
+        type='primary'
+        id='dekart-share-report'
+        title='Map sharing options'
+        onClick={() => {
+          setModalOpen(true)
+          track('OpenShareModal')
+        }}
+      >Share
+      </Button>
       <Modal
         title='Share Map'
         visible={modalOpen}

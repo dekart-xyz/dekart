@@ -31,6 +31,8 @@ const (
 	Dekart_AddReportDirectAccess_FullMethodName         = "/Dekart/AddReportDirectAccess"
 	Dekart_SetTrackViewers_FullMethodName               = "/Dekart/SetTrackViewers"
 	Dekart_SetAutoRefreshIntervalSeconds_FullMethodName = "/Dekart/SetAutoRefreshIntervalSeconds"
+	Dekart_GetSnapshots_FullMethodName                  = "/Dekart/GetSnapshots"
+	Dekart_RestoreReportSnapshot_FullMethodName         = "/Dekart/RestoreReportSnapshot"
 	Dekart_CreateDataset_FullMethodName                 = "/Dekart/CreateDataset"
 	Dekart_RemoveDataset_FullMethodName                 = "/Dekart/RemoveDataset"
 	Dekart_UpdateDatasetName_FullMethodName             = "/Dekart/UpdateDatasetName"
@@ -81,6 +83,8 @@ type DekartClient interface {
 	AddReportDirectAccess(ctx context.Context, in *AddReportDirectAccessRequest, opts ...grpc.CallOption) (*AddReportDirectAccessResponse, error)
 	SetTrackViewers(ctx context.Context, in *SetTrackViewersRequest, opts ...grpc.CallOption) (*SetTrackViewersResponse, error)
 	SetAutoRefreshIntervalSeconds(ctx context.Context, in *SetAutoRefreshIntervalSecondsRequest, opts ...grpc.CallOption) (*SetAutoRefreshIntervalSecondsResponse, error)
+	GetSnapshots(ctx context.Context, in *GetSnapshotsRequest, opts ...grpc.CallOption) (*GetSnapshotsResponse, error)
+	RestoreReportSnapshot(ctx context.Context, in *RestoreReportSnapshotRequest, opts ...grpc.CallOption) (*RestoreReportSnapshotResponse, error)
 	// datasets
 	CreateDataset(ctx context.Context, in *CreateDatasetRequest, opts ...grpc.CallOption) (*CreateDatasetResponse, error)
 	RemoveDataset(ctx context.Context, in *RemoveDatasetRequest, opts ...grpc.CallOption) (*RemoveDatasetResponse, error)
@@ -246,6 +250,26 @@ func (c *dekartClient) SetAutoRefreshIntervalSeconds(ctx context.Context, in *Se
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SetAutoRefreshIntervalSecondsResponse)
 	err := c.cc.Invoke(ctx, Dekart_SetAutoRefreshIntervalSeconds_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) GetSnapshots(ctx context.Context, in *GetSnapshotsRequest, opts ...grpc.CallOption) (*GetSnapshotsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetSnapshotsResponse)
+	err := c.cc.Invoke(ctx, Dekart_GetSnapshots_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) RestoreReportSnapshot(ctx context.Context, in *RestoreReportSnapshotRequest, opts ...grpc.CallOption) (*RestoreReportSnapshotResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RestoreReportSnapshotResponse)
+	err := c.cc.Invoke(ctx, Dekart_RestoreReportSnapshot_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -606,6 +630,8 @@ type DekartServer interface {
 	AddReportDirectAccess(context.Context, *AddReportDirectAccessRequest) (*AddReportDirectAccessResponse, error)
 	SetTrackViewers(context.Context, *SetTrackViewersRequest) (*SetTrackViewersResponse, error)
 	SetAutoRefreshIntervalSeconds(context.Context, *SetAutoRefreshIntervalSecondsRequest) (*SetAutoRefreshIntervalSecondsResponse, error)
+	GetSnapshots(context.Context, *GetSnapshotsRequest) (*GetSnapshotsResponse, error)
+	RestoreReportSnapshot(context.Context, *RestoreReportSnapshotRequest) (*RestoreReportSnapshotResponse, error)
 	// datasets
 	CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error)
 	RemoveDataset(context.Context, *RemoveDatasetRequest) (*RemoveDatasetResponse, error)
@@ -692,6 +718,12 @@ func (UnimplementedDekartServer) SetTrackViewers(context.Context, *SetTrackViewe
 }
 func (UnimplementedDekartServer) SetAutoRefreshIntervalSeconds(context.Context, *SetAutoRefreshIntervalSecondsRequest) (*SetAutoRefreshIntervalSecondsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetAutoRefreshIntervalSeconds not implemented")
+}
+func (UnimplementedDekartServer) GetSnapshots(context.Context, *GetSnapshotsRequest) (*GetSnapshotsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSnapshots not implemented")
+}
+func (UnimplementedDekartServer) RestoreReportSnapshot(context.Context, *RestoreReportSnapshotRequest) (*RestoreReportSnapshotResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RestoreReportSnapshot not implemented")
 }
 func (UnimplementedDekartServer) CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateDataset not implemented")
@@ -1019,6 +1051,42 @@ func _Dekart_SetAutoRefreshIntervalSeconds_Handler(srv interface{}, ctx context.
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DekartServer).SetAutoRefreshIntervalSeconds(ctx, req.(*SetAutoRefreshIntervalSecondsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_GetSnapshots_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSnapshotsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).GetSnapshots(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_GetSnapshots_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).GetSnapshots(ctx, req.(*GetSnapshotsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_RestoreReportSnapshot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RestoreReportSnapshotRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).RestoreReportSnapshot(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_RestoreReportSnapshot_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).RestoreReportSnapshot(ctx, req.(*RestoreReportSnapshotRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1614,6 +1682,14 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetAutoRefreshIntervalSeconds",
 			Handler:    _Dekart_SetAutoRefreshIntervalSeconds_Handler,
+		},
+		{
+			MethodName: "GetSnapshots",
+			Handler:    _Dekart_GetSnapshots_Handler,
+		},
+		{
+			MethodName: "RestoreReportSnapshot",
+			Handler:    _Dekart_RestoreReportSnapshot_Handler,
 		},
 		{
 			MethodName: "CreateDataset",
