@@ -5,6 +5,7 @@ import Button from 'antd/es/button'
 import Collapse from 'antd/es/collapse'
 import { HistoryOutlined, UserOutlined, ClockCircleOutlined, DownOutlined, RollbackOutlined, EditOutlined, DatabaseOutlined, FileTextOutlined } from '@ant-design/icons'
 import Tag from 'antd/es/tag'
+import { DateTime } from 'luxon'
 import styles from './MapChangeHistoryModal.module.css'
 import { getSnapshots, toggleSnapshotModal } from './actions/snapshots'
 import { restoreReportSnapshot } from './actions/report'
@@ -13,55 +14,39 @@ import { ReportSnapshot } from 'dekart-proto/dekart_pb'
 
 const { Panel } = Collapse
 
-// Build linear history from report snapshots only
-function buildHistoryFromSnapshots (reportSnapshotsList = []) {
-  const changes = []
-
-  // Report-level snapshots
-  reportSnapshotsList.forEach(s => {
-    if (!s || !s.createdAt) return
-    const ts = new Date(s.createdAt)
-    if (Number.isNaN(ts.getTime())) return
-    const triggerType = s.triggerType
-
-    changes.push({
-      id: s.versionId,
-      timestamp: ts,
-      user: s.authorEmail,
-      triggerType
-    })
-  })
-
-  // Sort newest first
-  changes.sort((a, b) => b.timestamp - a.timestamp)
-
-  return changes
-}
-
-// Format date for display
+// Format date for display using luxon
 function formatDate (date) {
-  const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const yesterday = new Date(today)
-  yesterday.setDate(yesterday.getDate() - 1)
+  const dateOnly = DateTime.fromJSDate(date).startOf('day')
+  const today = DateTime.local().startOf('day')
+  const yesterday = today.minus({ days: 1 })
 
-  const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-
-  if (dateOnly.getTime() === today.getTime()) {
+  const dateISO = dateOnly.toISODate()
+  if (dateISO === today.toISODate()) {
     return 'Today'
-  } else if (dateOnly.getTime() === yesterday.getTime()) {
+  } else if (dateISO === yesterday.toISODate()) {
     return 'Yesterday'
-  } else {
-    return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
   }
+
+  return dateOnly
+    .setLocale('en-US')
+    .toLocaleString({ weekday: 'long', month: 'long', day: 'numeric' })
 }
 
 function formatTime (date) {
-  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })
+  return DateTime.fromJSDate(date)
+    .setLocale('en-US')
+    .toLocaleString({
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    })
 }
 
 function formatHour (date) {
-  return date.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true })
+  return DateTime.fromJSDate(date)
+    .setLocale('en-US')
+    .toFormat('h a')
 }
 
 // Render tag based on trigger type
@@ -238,7 +223,23 @@ export function MapChangeHistoryModal () {
   const historyData = useMemo(() => {
     if (!snapshots) return []
     const reportSnapshotsList = snapshots.reportSnapshotsList || []
-    return buildHistoryFromSnapshots(reportSnapshotsList)
+
+    // Map raw snapshots into change objects while preserving original order (no additional sorting)
+    return reportSnapshotsList
+      .filter(s => s && s.createdAt)
+      .map(s => {
+        const ts = new Date(s.createdAt)
+        if (Number.isNaN(ts.getTime())) {
+          return null
+        }
+        return {
+          id: s.versionId,
+          timestamp: ts,
+          user: s.authorEmail,
+          triggerType: s.triggerType
+        }
+      })
+      .filter(Boolean)
   }, [snapshots])
 
   const groupedData = useMemo(() => groupChangesByTime(historyData), [historyData])
