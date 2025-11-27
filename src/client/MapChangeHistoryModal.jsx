@@ -291,7 +291,7 @@ export function MapChangeHistoryModal () {
         )}
         {!loading && historyData.length === 0 && (
           <div className={styles.summary}>
-            <span className={styles.totalChanges}>No changes yet</span>
+            <span className={styles.totalChanges}>No changes yet. New records will appear after you edit the map.</span>
           </div>
         )}
         {!loading && historyData.length > 0 && (
