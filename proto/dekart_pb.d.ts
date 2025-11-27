@@ -80,6 +80,9 @@ export class ReportSnapshot extends jspb.Message {
   getCreatedAt(): string;
   setCreatedAt(value: string): void;
 
+  getTriggerType(): ReportSnapshot.TriggerTypeMap[keyof ReportSnapshot.TriggerTypeMap];
+  setTriggerType(value: ReportSnapshot.TriggerTypeMap[keyof ReportSnapshot.TriggerTypeMap]): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): ReportSnapshot.AsObject;
   static toObject(includeInstance: boolean, msg: ReportSnapshot): ReportSnapshot.AsObject;
@@ -96,47 +99,18 @@ export namespace ReportSnapshot {
     reportId: string,
     authorEmail: string,
     createdAt: string,
+    triggerType: ReportSnapshot.TriggerTypeMap[keyof ReportSnapshot.TriggerTypeMap],
   }
-}
 
-export class DatasetSnapshot extends jspb.Message {
-  getSnapshotId(): string;
-  setSnapshotId(value: string): void;
-
-  getReportVersionId(): string;
-  setReportVersionId(value: string): void;
-
-  getDatasetId(): string;
-  setDatasetId(value: string): void;
-
-  getReportId(): string;
-  setReportId(value: string): void;
-
-  getAuthorEmail(): string;
-  setAuthorEmail(value: string): void;
-
-  getCreatedAt(): string;
-  setCreatedAt(value: string): void;
-
-  serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): DatasetSnapshot.AsObject;
-  static toObject(includeInstance: boolean, msg: DatasetSnapshot): DatasetSnapshot.AsObject;
-  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
-  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: DatasetSnapshot, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): DatasetSnapshot;
-  static deserializeBinaryFromReader(message: DatasetSnapshot, reader: jspb.BinaryReader): DatasetSnapshot;
-}
-
-export namespace DatasetSnapshot {
-  export type AsObject = {
-    snapshotId: string,
-    reportVersionId: string,
-    datasetId: string,
-    reportId: string,
-    authorEmail: string,
-    createdAt: string,
+  export interface TriggerTypeMap {
+    TRIGGER_TYPE_UNSPECIFIED: 0;
+    TRIGGER_TYPE_QUERY_CHANGE: 1;
+    TRIGGER_TYPE_REPORT_CHANGE: 2;
+    TRIGGER_TYPE_SNAPSHOT_RESTORE: 3;
+    TRIGGER_TYPE_DATASET_CHANGE: 4;
   }
+
+  export const TriggerType: TriggerTypeMap;
 }
 
 export class GetSnapshotsResponse extends jspb.Message {

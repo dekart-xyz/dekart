@@ -3,12 +3,13 @@ import { useDispatch, useSelector } from 'react-redux'
 import Modal from 'antd/es/modal'
 import Button from 'antd/es/button'
 import Collapse from 'antd/es/collapse'
-import { HistoryOutlined, UserOutlined, ClockCircleOutlined, DownOutlined, RollbackOutlined, EditOutlined } from '@ant-design/icons'
+import { HistoryOutlined, UserOutlined, ClockCircleOutlined, DownOutlined, RollbackOutlined, EditOutlined, DatabaseOutlined, FileTextOutlined } from '@ant-design/icons'
 import Tag from 'antd/es/tag'
 import styles from './MapChangeHistoryModal.module.css'
 import { getSnapshots, toggleSnapshotModal } from './actions/snapshots'
 import { restoreReportSnapshot } from './actions/report'
 import { Loading } from './Loading'
+import { ReportSnapshot } from 'dekart-proto/dekart_pb'
 
 const { Panel } = Collapse
 
@@ -21,11 +22,13 @@ function buildHistoryFromSnapshots (reportSnapshotsList = []) {
     if (!s || !s.createdAt) return
     const ts = new Date(s.createdAt)
     if (Number.isNaN(ts.getTime())) return
+    const triggerType = s.triggerType
+
     changes.push({
       id: s.versionId,
       timestamp: ts,
       user: s.authorEmail,
-      type: 'edit'
+      triggerType
     })
   })
 
@@ -59,6 +62,43 @@ function formatTime (date) {
 
 function formatHour (date) {
   return date.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true })
+}
+
+// Render tag based on trigger type
+function renderChangeTypeTag (triggerType) {
+  switch (triggerType) {
+    case ReportSnapshot.TriggerType.TRIGGER_TYPE_SNAPSHOT_RESTORE:
+      return (
+        <Tag icon={<RollbackOutlined />} color='orange' className={styles.typeTag}>
+          Restore
+        </Tag>
+      )
+    case ReportSnapshot.TriggerType.TRIGGER_TYPE_QUERY_CHANGE:
+      return (
+        <Tag icon={<DatabaseOutlined />} color='purple' className={styles.typeTag}>
+          Query Change
+        </Tag>
+      )
+    case ReportSnapshot.TriggerType.TRIGGER_TYPE_DATASET_CHANGE:
+      return (
+        <Tag icon={<DatabaseOutlined />} color='cyan' className={styles.typeTag}>
+          Dataset Change
+        </Tag>
+      )
+    case ReportSnapshot.TriggerType.TRIGGER_TYPE_REPORT_CHANGE:
+      return (
+        <Tag icon={<EditOutlined />} color='blue' className={styles.typeTag}>
+          Map Edit
+        </Tag>
+      )
+    case ReportSnapshot.TriggerType.TRIGGER_TYPE_UNSPECIFIED:
+    default:
+      return (
+        <Tag icon={<FileTextOutlined />} color='default' className={styles.typeTag}>
+          Change
+        </Tag>
+      )
+  }
 }
 
 // Group changes by day, then by hour
@@ -141,17 +181,7 @@ function DaySection ({ dayLabel, hourGroups, expandedKeys, onToggle, currentVers
                       <div className={styles.changeTime}>{formatTime(change.timestamp)}</div>
                       <div className={styles.changeContent}>
                         <div className={styles.changeTypeBadge}>
-                          {change.type === 'restore'
-                            ? (
-                              <Tag icon={<RollbackOutlined />} color='orange' className={styles.typeTag}>
-                                Restore
-                              </Tag>
-                              )
-                            : (
-                              <Tag icon={<EditOutlined />} color='blue' className={styles.typeTag}>
-                                Map Edit
-                              </Tag>
-                              )}
+                          {renderChangeTypeTag(change.triggerType)}
                         </div>
                         <div className={styles.changeUser}>
                           <UserOutlined className={styles.userIcon} />

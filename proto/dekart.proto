@@ -90,16 +90,16 @@ message ReportSnapshot {
     string report_id = 2;
     string author_email = 3;
     string created_at = 4;
+    enum TriggerType {
+        TRIGGER_TYPE_UNSPECIFIED = 0;
+        TRIGGER_TYPE_QUERY_CHANGE = 1;
+        TRIGGER_TYPE_REPORT_CHANGE = 2;
+        TRIGGER_TYPE_SNAPSHOT_RESTORE = 3;
+        TRIGGER_TYPE_DATASET_CHANGE = 4;
+    }
+    TriggerType trigger_type = 5;
 }
 
-message DatasetSnapshot {
-    string snapshot_id = 1;
-    string report_version_id = 2;
-    string dataset_id = 3;
-    string report_id = 4;
-    string author_email = 5;
-    string created_at = 6;
-}
 
 message GetSnapshotsResponse {
     repeated ReportSnapshot report_snapshots = 1;

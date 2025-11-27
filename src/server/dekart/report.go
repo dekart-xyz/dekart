@@ -255,7 +255,7 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 		errtype.LogError(err, "database operation failed")
 		return nil, err
 	}
-	err = s.createReportSnapshotWithVersionID(ctx, versionID, id, claims.Email)
+	err = s.createReportSnapshotWithVersionID(ctx, versionID, id, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE)
 	if err != nil {
 		errtype.LogError(err, "Cannot create report snapshot")
 		return nil, err
@@ -268,7 +268,7 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 	return res, nil
 }
 
-func (s Server) createReportSnapshot(ctx context.Context, reportID string) error {
+func (s Server) createReportSnapshot(ctx context.Context, reportID string, triggerType proto.ReportSnapshot_TriggerType) error {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return fmt.Errorf("createReportSnapshot requires authenticated user")
@@ -283,7 +283,7 @@ func (s Server) createReportSnapshot(ctx context.Context, reportID string) error
 	if err != nil {
 		return err
 	}
-	err = s.createReportSnapshotWithVersionID(ctx, newVersionID, reportID, claims.Email)
+	err = s.createReportSnapshotWithVersionID(ctx, newVersionID, reportID, claims.Email, triggerType)
 	if err != nil {
 		return err
 	}
@@ -292,17 +292,18 @@ func (s Server) createReportSnapshot(ctx context.Context, reportID string) error
 
 // createReportSnapshotWithVersionIDTx creates a snapshot of the report content
 // using the provided transaction.
-func (s Server) createReportSnapshotWithVersionIDTx(ctx context.Context, tx *sql.Tx, versionID string, reportID string, changedBy string) error {
+func (s Server) createReportSnapshotWithVersionIDTx(ctx context.Context, tx *sql.Tx, versionID string, reportID string, changedBy string, triggerType proto.ReportSnapshot_TriggerType) error {
 	// Create report snapshot using INSERT ... SELECT from reports
 	_, err := tx.ExecContext(ctx,
 		`INSERT INTO report_snapshots (
-			version_id, report_id, map_config, title, query_params, readme, author_email
+			version_id, report_id, map_config, title, query_params, readme, author_email, trigger_type
 		)
-		SELECT $1, id, map_config, title, query_params, readme, $2
+		SELECT $1, id, map_config, title, query_params, readme, $2, $3
 		FROM reports
-		WHERE id = $3`,
+		WHERE id = $4`,
 		versionID,
 		changedBy,
+		triggerType,
 		reportID,
 	)
 	if err != nil {
@@ -362,14 +363,14 @@ func (s Server) createReportSnapshotWithVersionIDTx(ctx context.Context, tx *sql
 	return nil
 }
 
-func (s Server) createReportSnapshotWithVersionID(ctx context.Context, versionID string, reportID string, changedBy string) error {
+func (s Server) createReportSnapshotWithVersionID(ctx context.Context, versionID string, reportID string, changedBy string, triggerType proto.ReportSnapshot_TriggerType) error {
 	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	if err := s.createReportSnapshotWithVersionIDTx(ctx, tx, versionID, reportID, changedBy); err != nil {
+	if err := s.createReportSnapshotWithVersionIDTx(ctx, tx, versionID, reportID, changedBy, triggerType); err != nil {
 		return err
 	}
 
@@ -887,7 +888,7 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	}
 
 	// Create report snapshot (non-blocking, no transaction)
-	err = s.createReportSnapshotWithVersionID(ctx, newVersionID, req.ReportId, claims.Email)
+	err = s.createReportSnapshotWithVersionID(ctx, newVersionID, req.ReportId, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE)
 	if err != nil {
 		errtype.LogError(err, "Cannot create report snapshot")
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1299,7 +1300,7 @@ func (s Server) GetSnapshots(ctx context.Context, req *proto.GetSnapshotsRequest
 
 	// Fetch report snapshots ordered from newest to oldest
 	reportRows, err := s.db.QueryContext(ctx, `
-		SELECT version_id, report_id, author_email, created_at
+		SELECT version_id, report_id, author_email, created_at, trigger_type
 		FROM report_snapshots
 		WHERE report_id = $1
 		ORDER BY created_at DESC`,
@@ -1318,8 +1319,9 @@ func (s Server) GetSnapshots(ctx context.Context, req *proto.GetSnapshotsRequest
 			reportID    string
 			authorEmail string
 			createdAt   time.Time
+			triggerType proto.ReportSnapshot_TriggerType
 		)
-		if err := reportRows.Scan(&versionID, &reportID, &authorEmail, &createdAt); err != nil {
+		if err := reportRows.Scan(&versionID, &reportID, &authorEmail, &createdAt, &triggerType); err != nil {
 			errtype.LogError(err, "failed to scan report snapshot")
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -1328,6 +1330,7 @@ func (s Server) GetSnapshots(ctx context.Context, req *proto.GetSnapshotsRequest
 			ReportId:    reportID,
 			AuthorEmail: authorEmail,
 			CreatedAt:   createdAt.UTC().Format(time.RFC3339),
+			TriggerType: triggerType,
 		})
 	}
 
@@ -1606,7 +1609,7 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	err = s.createReportSnapshot(ctx, req.ReportId)
+	err = s.createReportSnapshot(ctx, req.ReportId, proto.ReportSnapshot_TRIGGER_TYPE_SNAPSHOT_RESTORE)
 	if err != nil {
 		errtype.LogError(err, "failed to create report snapshot")
 		return nil, status.Error(codes.Internal, err.Error())
