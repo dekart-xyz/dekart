@@ -46,10 +46,11 @@ export function trialSuccess () {
   return { type: trialSuccess.name }
 }
 
-export function info (content) {
+export function info (content, key = undefined) {
   track('InfoMessage')
   message.info({
     content,
+    key,
     style
   })
   return { type: info.name }
