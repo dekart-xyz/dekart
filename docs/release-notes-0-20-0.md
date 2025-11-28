@@ -14,10 +14,23 @@ Configure automatic refresh intervals for your queries to keep your maps up-to-d
 
 Added user position overlay to display location markers on maps.
 
+### Parquet File Uploads
+
+Upload and visualize `.parquet` files directly, alongside existing `.csv` and `.geojson` support.
+
+### 📧 Email Notifications
+
+- **Resend Integration**: Workspace invite and report access emails are now sent via Resend when configured.
+- **New Environment Variables**:
+  - `DEKART_RESEND_API_KEY` – Resend API key used to send emails.
+  - `DEKART_RESEND_FROM_EMAIL` – Verified sender address used for outgoing notifications.
+  - `DEKART_APP_URL` – Base URL used to build links inside notification emails (e.g. workspace invites and shared reports).
+
 ## 🔧 Fixes & Improvements
 
 - **Mobile Experience**: Improved responsive layouts for report pages and header buttons, ensuring better usability on mobile devices (map view only).
 - **Error Handling**: Enhanced error handling for empty query results, file loading issues, and presigned URL validation
+
 
 ## 🚀 Migration Steps
 
