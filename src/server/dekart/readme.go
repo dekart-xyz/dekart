@@ -3,6 +3,7 @@ package dekart
 import (
 	"context"
 	"dekart/src/proto"
+	"dekart/src/server/errtype"
 	"dekart/src/server/user"
 	"fmt"
 
@@ -19,7 +20,7 @@ func (s Server) AddReadme(ctx context.Context, req *proto.AddReadmeRequest) (*pr
 	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	report, err := s.getReport(ctx, req.ReportId)
 	if err != nil {
@@ -49,7 +50,7 @@ func (s Server) AddReadme(ctx context.Context, req *proto.AddReadmeRequest) (*pr
 		req.FromDatasetId,
 	)
 	if err != nil {
-		log.Err(err).Msg("Error deleting dataset")
+		errtype.LogError(err, "Error deleting dataset")
 	}
 	s.reportStreams.Ping(req.ReportId)
 	return &proto.AddReadmeResponse{}, nil
@@ -62,7 +63,7 @@ func (s Server) RemoveReadme(ctx context.Context, req *proto.RemoveReadmeRequest
 	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	report, err := s.getReport(ctx, req.ReportId)
 	if err != nil {

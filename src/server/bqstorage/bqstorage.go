@@ -5,7 +5,6 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/bqutils"
 	"dekart/src/server/conn"
-	"dekart/src/server/deadline"
 	"dekart/src/server/errtype"
 	"encoding/csv"
 	"fmt"
@@ -49,12 +48,11 @@ func (s BigQueryStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, er
 	if err != nil {
 		return nil, err
 	}
-	endTime := jobFromJobId.LastStatus().Statistics.EndTime
-
-	if time.Since(endTime) > deadline.GetQueryCacheDeadline() {
-		return nil, &errtype.Expired{}
+	lastStatus := jobFromJobId.LastStatus()
+	if lastStatus == nil {
+		return nil, fmt.Errorf("BQ job last status is nil")
 	}
-
+	endTime := lastStatus.Statistics.EndTime
 	return &endTime, nil
 }
 
@@ -66,6 +64,8 @@ func (s BigQueryStorageObject) GetReader(ctx context.Context) (io.ReadCloser, er
 	}
 	jobFromJobId, err := client.JobFromID(connCtx, s.JobID)
 	if err != nil {
+		// Return the error as-is. The caller will decide if it's an expiration or permission issue
+		// based on the job age from the database
 		return nil, err
 	}
 	table, err := bqutils.GetTableFromJob(jobFromJobId)
@@ -109,7 +109,7 @@ func (s BigQueryStorageObject) GetReader(ctx context.Context) (io.ReadCloser, er
 			// write first row
 			err := csvWriter.Write(firstRow)
 			if err != nil {
-				log.Err(err).Msg("error writing first row")
+				errtype.LogError(err, "error writing first row")
 				return
 			}
 
@@ -122,12 +122,12 @@ func (s BigQueryStorageObject) GetReader(ctx context.Context) (io.ReadCloser, er
 					}
 					err := csvWriter.Write(csvRow)
 					if err != nil {
-						log.Err(err).Msg("error writing row")
+						errtype.LogError(err, "error writing row")
 						return
 					}
 				case err := <-errors:
 					if err != nil {
-						log.Err(err).Msg("error reading row")
+						errtype.LogError(err, "error reading row")
 						return
 					}
 				case <-ctx.Done():
@@ -155,7 +155,7 @@ func (s BigQueryStorageObject) Delete(ctx context.Context) error {
 func (s BigQueryStorageObject) CopyTo(ctx context.Context, writer io.WriteCloser) error {
 	reader, err := s.GetReader(ctx)
 	if err != nil {
-		log.Err(err).Msg("Error getting reader while copying to")
+		errtype.LogError(err, "Error getting reader while copying to")
 		return err
 	}
 	_, err = io.Copy(writer, reader)

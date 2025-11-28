@@ -13,6 +13,7 @@ import token from './tokenReducer'
 import connection from './connectionReducer'
 import user from './userReducer'
 import workspace from './workspaceReducer'
+import location from './locationReducer'
 import httpError from './httpErrorReducer'
 import dataset from './datasetReducer'
 import storage from './storageReducer'
@@ -20,6 +21,7 @@ import { setRedirectState } from '../actions/redirect'
 import sessionStorage from './sessionStorageReducer'
 import readme from './readmeReducer'
 import analytics from './analyticsReducer'
+import snapshots from './snapshotsReducer'
 import { upgradeModal } from './upgradeModalReducer'
 import { report, reportDirectAccessEmails, reportsList, reportStatus } from './reportReducer'
 
@@ -27,6 +29,9 @@ const customKeplerGlReducer = keplerGlReducer.initialState({
   uiState: {
     currentModal: null,
     activeSidePanel: null
+  },
+  mapStyle: {
+    styleType: 'dark'
   }
 })
 
@@ -70,7 +75,7 @@ function usage (state = defaultUsage, action) {
   }
 }
 
-const defaultEnv = { loaded: false, variables: {}, authEnabled: null, authType: 'UNSPECIFIED' }
+const defaultEnv = { loaded: false, variables: {}, authEnabled: null, authType: 'UNSPECIFIED', serverTime: null, receivedTime: null }
 function env (state = defaultEnv, action) {
   switch (action.type) {
     case setRedirectState.name:
@@ -85,7 +90,10 @@ function env (state = defaultEnv, action) {
         authEnabled: Boolean(action.variables.AUTH_ENABLED),
         secretsEnabled: Boolean(action.variables.SECRETS_ENABLED),
         uxConfig: JSON.parse(action.variables.CLOUD_UX_CONFIG_JSON || '{}'),
-        isCloud: Boolean(action.variables.DEKART_CLOUD)
+        isCloud: Boolean(action.variables.DEKART_CLOUD),
+        isSnowpark: Boolean(action.variables.IS_SNOWPARK),
+        serverTime: action.serverTime,
+        receivedTime: Math.floor(Date.now() / 1000)
       }
     default:
       return state
@@ -162,5 +170,7 @@ export default combineReducers({
   sessionStorage,
   readme,
   analytics,
-  upgradeModal
+  snapshots,
+  upgradeModal,
+  location
 })

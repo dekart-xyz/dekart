@@ -4,14 +4,16 @@ import StreamError from '../StreamError'
 import { track } from '../lib/tracking'
 
 const style = {}
+const STREAM_ERROR_KEY = 'stream-error'
 
-message.config({ top: 100 })
+message.config({ top: 40 })
 
 export function downloading (dataset, controller) {
   return { type: downloading.name, dataset, controller }
 }
 
 export function warn (content, transitive = true) {
+  track('WarnMessage', { transitive })
   if (!transitive) {
     message.warn({
       content,
@@ -27,6 +29,7 @@ export function warn (content, transitive = true) {
   return { type: warn.name }
 }
 export function success (content) {
+  track('SuccessMessage')
   message.success({
     content,
     style
@@ -34,9 +37,20 @@ export function success (content) {
   return { type: success.name }
 }
 
-export function info (content) {
+export function trialSuccess () {
+  track('TrialSuccessMessage')
+  message.success({
+    content: 'Trial started! You now have full access',
+    style
+  })
+  return { type: trialSuccess.name }
+}
+
+export function info (content, key = undefined) {
+  track('InfoMessage')
   message.info({
     content,
+    key,
     style
   })
   return { type: info.name }
@@ -49,7 +63,7 @@ export function setError (err, transitive = true) {
       dispatch(setHttpError(err.status, `${err.message}: ${err.errorDetails}`))
     } else if (transitive) {
       track('setError', {
-        message: err.message
+        message: err.message // System error
       })
       message.error({
         content: err.message,
@@ -57,7 +71,7 @@ export function setError (err, transitive = true) {
       })
     } else {
       track('setError', {
-        message: err.message
+        message: err.message // System error
       })
       message.error({
         content: (<PermanentError message={err.message} />),
@@ -87,6 +101,7 @@ function showStreamError (errorCode, errorMsg) {
     message: errorMsg
   })
   message.error({
+    key: STREAM_ERROR_KEY,
     content: (<StreamError code={errorCode} message={errorMsg} />),
     duration: 10000,
     style
@@ -103,6 +118,7 @@ export function setStreamError (code, msg) {
     // https://github.com/grpc/grpc/blob/master/doc/statuscodes.md
     switch (code) {
       case 1:
+        track('RequestCancelled')
         dispatch(info('Request cancelled'))
         return
       case 2:

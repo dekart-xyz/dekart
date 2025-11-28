@@ -24,6 +24,8 @@ export function uploadFileStateChange (fileId, readyState, status) {
 export function uploadFile (fileId, file) {
   return async (dispatch, getState) => {
     dispatch({ type: uploadFile.name, fileId, file })
+    track('FileUploadStarted', { fileId, fileSize: file.size })
+
     const formData = new window.FormData()
     formData.append('file', file)
 
@@ -40,6 +42,13 @@ export function uploadFile (fileId, file) {
     })
     request.addEventListener('readystatechange', (event) => {
       dispatch(uploadFileStateChange(fileId, request.readyState, request.status))
+      if (request.readyState === 4) {
+        if (request.status === 200) {
+          track('FileUploadCompleted', { fileId })
+        } else if (request.status !== 0) {
+          track('FileUploadFailed', { fileId, status: request.status }) // System error - HTTP status
+        }
+      }
     })
 
     request.open('POST', url)

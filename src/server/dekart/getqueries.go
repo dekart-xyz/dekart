@@ -1,6 +1,7 @@
 package dekart
 
 import (
+	"dekart/src/server/errtype"
 	"context"
 	"database/sql"
 	"dekart/src/proto"
@@ -33,7 +34,7 @@ func rowsToQueries(queryRows *sql.Rows) ([]*proto.Query, error) {
 		switch query.QuerySource {
 		case proto.Query_QUERY_SOURCE_UNSPECIFIED:
 			err := fmt.Errorf("unknown query source query id=%s", query.Id)
-			log.Err(err).Msg("unknown query source")
+			errtype.LogError(err, "unknown query source")
 			return nil, err
 		case proto.Query_QUERY_SOURCE_INLINE:
 			query.QueryText = queryText

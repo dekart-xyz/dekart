@@ -19,47 +19,51 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Dekart_CreateReport_FullMethodName               = "/Dekart/CreateReport"
-	Dekart_ForkReport_FullMethodName                 = "/Dekart/ForkReport"
-	Dekart_UpdateReport_FullMethodName               = "/Dekart/UpdateReport"
-	Dekart_ArchiveReport_FullMethodName              = "/Dekart/ArchiveReport"
-	Dekart_SetDiscoverable_FullMethodName            = "/Dekart/SetDiscoverable"
-	Dekart_PublishReport_FullMethodName              = "/Dekart/PublishReport"
-	Dekart_AllowExportDatasets_FullMethodName        = "/Dekart/AllowExportDatasets"
-	Dekart_AddReadme_FullMethodName                  = "/Dekart/AddReadme"
-	Dekart_RemoveReadme_FullMethodName               = "/Dekart/RemoveReadme"
-	Dekart_AddReportDirectAccess_FullMethodName      = "/Dekart/AddReportDirectAccess"
-	Dekart_SetTrackViewers_FullMethodName            = "/Dekart/SetTrackViewers"
-	Dekart_CreateDataset_FullMethodName              = "/Dekart/CreateDataset"
-	Dekart_RemoveDataset_FullMethodName              = "/Dekart/RemoveDataset"
-	Dekart_UpdateDatasetName_FullMethodName          = "/Dekart/UpdateDatasetName"
-	Dekart_UpdateDatasetConnection_FullMethodName    = "/Dekart/UpdateDatasetConnection"
-	Dekart_CreateFile_FullMethodName                 = "/Dekart/CreateFile"
-	Dekart_CreateQuery_FullMethodName                = "/Dekart/CreateQuery"
-	Dekart_RunQuery_FullMethodName                   = "/Dekart/RunQuery"
-	Dekart_RunAllQueries_FullMethodName              = "/Dekart/RunAllQueries"
-	Dekart_CancelJob_FullMethodName                  = "/Dekart/CancelJob"
-	Dekart_GetEnv_FullMethodName                     = "/Dekart/GetEnv"
-	Dekart_GetReportStream_FullMethodName            = "/Dekart/GetReportStream"
-	Dekart_GetReportListStream_FullMethodName        = "/Dekart/GetReportListStream"
-	Dekart_GetUserStream_FullMethodName              = "/Dekart/GetUserStream"
-	Dekart_GetUsage_FullMethodName                   = "/Dekart/GetUsage"
-	Dekart_GetReportAnalytics_FullMethodName         = "/Dekart/GetReportAnalytics"
-	Dekart_CreateConnection_FullMethodName           = "/Dekart/CreateConnection"
-	Dekart_GetGcpProjectList_FullMethodName          = "/Dekart/GetGcpProjectList"
-	Dekart_UpdateConnection_FullMethodName           = "/Dekart/UpdateConnection"
-	Dekart_ArchiveConnection_FullMethodName          = "/Dekart/ArchiveConnection"
-	Dekart_GetConnectionList_FullMethodName          = "/Dekart/GetConnectionList"
-	Dekart_TestConnection_FullMethodName             = "/Dekart/TestConnection"
-	Dekart_SetDefaultConnection_FullMethodName       = "/Dekart/SetDefaultConnection"
-	Dekart_GetWherobotsConnectionHint_FullMethodName = "/Dekart/GetWherobotsConnectionHint"
-	Dekart_RespondToInvite_FullMethodName            = "/Dekart/RespondToInvite"
-	Dekart_CreateSubscription_FullMethodName         = "/Dekart/CreateSubscription"
-	Dekart_GetStripePortalSession_FullMethodName     = "/Dekart/GetStripePortalSession"
-	Dekart_CreateWorkspace_FullMethodName            = "/Dekart/CreateWorkspace"
-	Dekart_UpdateWorkspace_FullMethodName            = "/Dekart/UpdateWorkspace"
-	Dekart_GetWorkspace_FullMethodName               = "/Dekart/GetWorkspace"
-	Dekart_UpdateWorkspaceUser_FullMethodName        = "/Dekart/UpdateWorkspaceUser"
+	Dekart_CreateReport_FullMethodName                  = "/Dekart/CreateReport"
+	Dekart_ForkReport_FullMethodName                    = "/Dekart/ForkReport"
+	Dekart_UpdateReport_FullMethodName                  = "/Dekart/UpdateReport"
+	Dekart_ArchiveReport_FullMethodName                 = "/Dekart/ArchiveReport"
+	Dekart_SetDiscoverable_FullMethodName               = "/Dekart/SetDiscoverable"
+	Dekart_PublishReport_FullMethodName                 = "/Dekart/PublishReport"
+	Dekart_AllowExportDatasets_FullMethodName           = "/Dekart/AllowExportDatasets"
+	Dekart_AddReadme_FullMethodName                     = "/Dekart/AddReadme"
+	Dekart_RemoveReadme_FullMethodName                  = "/Dekart/RemoveReadme"
+	Dekart_AddReportDirectAccess_FullMethodName         = "/Dekart/AddReportDirectAccess"
+	Dekart_SetTrackViewers_FullMethodName               = "/Dekart/SetTrackViewers"
+	Dekart_SetAutoRefreshIntervalSeconds_FullMethodName = "/Dekart/SetAutoRefreshIntervalSeconds"
+	Dekart_GetSnapshots_FullMethodName                  = "/Dekart/GetSnapshots"
+	Dekart_RestoreReportSnapshot_FullMethodName         = "/Dekart/RestoreReportSnapshot"
+	Dekart_CreateDataset_FullMethodName                 = "/Dekart/CreateDataset"
+	Dekart_RemoveDataset_FullMethodName                 = "/Dekart/RemoveDataset"
+	Dekart_UpdateDatasetName_FullMethodName             = "/Dekart/UpdateDatasetName"
+	Dekart_UpdateDatasetConnection_FullMethodName       = "/Dekart/UpdateDatasetConnection"
+	Dekart_CreateFile_FullMethodName                    = "/Dekart/CreateFile"
+	Dekart_CreateQuery_FullMethodName                   = "/Dekart/CreateQuery"
+	Dekart_RunQuery_FullMethodName                      = "/Dekart/RunQuery"
+	Dekart_RunAllQueries_FullMethodName                 = "/Dekart/RunAllQueries"
+	Dekart_CancelJob_FullMethodName                     = "/Dekart/CancelJob"
+	Dekart_GetEnv_FullMethodName                        = "/Dekart/GetEnv"
+	Dekart_GetReportStream_FullMethodName               = "/Dekart/GetReportStream"
+	Dekart_GetReportListStream_FullMethodName           = "/Dekart/GetReportListStream"
+	Dekart_GetUserStream_FullMethodName                 = "/Dekart/GetUserStream"
+	Dekart_GetUsage_FullMethodName                      = "/Dekart/GetUsage"
+	Dekart_GetReportAnalytics_FullMethodName            = "/Dekart/GetReportAnalytics"
+	Dekart_TrackEvent_FullMethodName                    = "/Dekart/TrackEvent"
+	Dekart_CreateConnection_FullMethodName              = "/Dekart/CreateConnection"
+	Dekart_GetGcpProjectList_FullMethodName             = "/Dekart/GetGcpProjectList"
+	Dekart_UpdateConnection_FullMethodName              = "/Dekart/UpdateConnection"
+	Dekart_ArchiveConnection_FullMethodName             = "/Dekart/ArchiveConnection"
+	Dekart_GetConnectionList_FullMethodName             = "/Dekart/GetConnectionList"
+	Dekart_TestConnection_FullMethodName                = "/Dekart/TestConnection"
+	Dekart_SetDefaultConnection_FullMethodName          = "/Dekart/SetDefaultConnection"
+	Dekart_GetWherobotsConnectionHint_FullMethodName    = "/Dekart/GetWherobotsConnectionHint"
+	Dekart_RespondToInvite_FullMethodName               = "/Dekart/RespondToInvite"
+	Dekart_CreateSubscription_FullMethodName            = "/Dekart/CreateSubscription"
+	Dekart_GetStripePortalSession_FullMethodName        = "/Dekart/GetStripePortalSession"
+	Dekart_CreateWorkspace_FullMethodName               = "/Dekart/CreateWorkspace"
+	Dekart_UpdateWorkspace_FullMethodName               = "/Dekart/UpdateWorkspace"
+	Dekart_GetWorkspace_FullMethodName                  = "/Dekart/GetWorkspace"
+	Dekart_UpdateWorkspaceUser_FullMethodName           = "/Dekart/UpdateWorkspaceUser"
 )
 
 // DekartClient is the client API for Dekart service.
@@ -78,6 +82,9 @@ type DekartClient interface {
 	RemoveReadme(ctx context.Context, in *RemoveReadmeRequest, opts ...grpc.CallOption) (*RemoveReadmeResponse, error)
 	AddReportDirectAccess(ctx context.Context, in *AddReportDirectAccessRequest, opts ...grpc.CallOption) (*AddReportDirectAccessResponse, error)
 	SetTrackViewers(ctx context.Context, in *SetTrackViewersRequest, opts ...grpc.CallOption) (*SetTrackViewersResponse, error)
+	SetAutoRefreshIntervalSeconds(ctx context.Context, in *SetAutoRefreshIntervalSecondsRequest, opts ...grpc.CallOption) (*SetAutoRefreshIntervalSecondsResponse, error)
+	GetSnapshots(ctx context.Context, in *GetSnapshotsRequest, opts ...grpc.CallOption) (*GetSnapshotsResponse, error)
+	RestoreReportSnapshot(ctx context.Context, in *RestoreReportSnapshotRequest, opts ...grpc.CallOption) (*RestoreReportSnapshotResponse, error)
 	// datasets
 	CreateDataset(ctx context.Context, in *CreateDatasetRequest, opts ...grpc.CallOption) (*CreateDatasetResponse, error)
 	RemoveDataset(ctx context.Context, in *RemoveDatasetRequest, opts ...grpc.CallOption) (*RemoveDatasetResponse, error)
@@ -99,6 +106,7 @@ type DekartClient interface {
 	// statistics
 	GetUsage(ctx context.Context, in *GetUsageRequest, opts ...grpc.CallOption) (*GetUsageResponse, error)
 	GetReportAnalytics(ctx context.Context, in *GetReportAnalyticsRequest, opts ...grpc.CallOption) (*GetReportAnalyticsResponse, error)
+	TrackEvent(ctx context.Context, in *TrackEventRequest, opts ...grpc.CallOption) (*TrackEventResponse, error)
 	// connections
 	CreateConnection(ctx context.Context, in *CreateConnectionRequest, opts ...grpc.CallOption) (*CreateConnectionResponse, error)
 	GetGcpProjectList(ctx context.Context, in *GetGcpProjectListRequest, opts ...grpc.CallOption) (*GetGcpProjectListResponse, error)
@@ -232,6 +240,36 @@ func (c *dekartClient) SetTrackViewers(ctx context.Context, in *SetTrackViewersR
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SetTrackViewersResponse)
 	err := c.cc.Invoke(ctx, Dekart_SetTrackViewers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) SetAutoRefreshIntervalSeconds(ctx context.Context, in *SetAutoRefreshIntervalSecondsRequest, opts ...grpc.CallOption) (*SetAutoRefreshIntervalSecondsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetAutoRefreshIntervalSecondsResponse)
+	err := c.cc.Invoke(ctx, Dekart_SetAutoRefreshIntervalSeconds_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) GetSnapshots(ctx context.Context, in *GetSnapshotsRequest, opts ...grpc.CallOption) (*GetSnapshotsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetSnapshotsResponse)
+	err := c.cc.Invoke(ctx, Dekart_GetSnapshots_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) RestoreReportSnapshot(ctx context.Context, in *RestoreReportSnapshotRequest, opts ...grpc.CallOption) (*RestoreReportSnapshotResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RestoreReportSnapshotResponse)
+	err := c.cc.Invoke(ctx, Dekart_RestoreReportSnapshot_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -415,6 +453,16 @@ func (c *dekartClient) GetReportAnalytics(ctx context.Context, in *GetReportAnal
 	return out, nil
 }
 
+func (c *dekartClient) TrackEvent(ctx context.Context, in *TrackEventRequest, opts ...grpc.CallOption) (*TrackEventResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TrackEventResponse)
+	err := c.cc.Invoke(ctx, Dekart_TrackEvent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *dekartClient) CreateConnection(ctx context.Context, in *CreateConnectionRequest, opts ...grpc.CallOption) (*CreateConnectionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateConnectionResponse)
@@ -581,6 +629,9 @@ type DekartServer interface {
 	RemoveReadme(context.Context, *RemoveReadmeRequest) (*RemoveReadmeResponse, error)
 	AddReportDirectAccess(context.Context, *AddReportDirectAccessRequest) (*AddReportDirectAccessResponse, error)
 	SetTrackViewers(context.Context, *SetTrackViewersRequest) (*SetTrackViewersResponse, error)
+	SetAutoRefreshIntervalSeconds(context.Context, *SetAutoRefreshIntervalSecondsRequest) (*SetAutoRefreshIntervalSecondsResponse, error)
+	GetSnapshots(context.Context, *GetSnapshotsRequest) (*GetSnapshotsResponse, error)
+	RestoreReportSnapshot(context.Context, *RestoreReportSnapshotRequest) (*RestoreReportSnapshotResponse, error)
 	// datasets
 	CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error)
 	RemoveDataset(context.Context, *RemoveDatasetRequest) (*RemoveDatasetResponse, error)
@@ -602,6 +653,7 @@ type DekartServer interface {
 	// statistics
 	GetUsage(context.Context, *GetUsageRequest) (*GetUsageResponse, error)
 	GetReportAnalytics(context.Context, *GetReportAnalyticsRequest) (*GetReportAnalyticsResponse, error)
+	TrackEvent(context.Context, *TrackEventRequest) (*TrackEventResponse, error)
 	// connections
 	CreateConnection(context.Context, *CreateConnectionRequest) (*CreateConnectionResponse, error)
 	GetGcpProjectList(context.Context, *GetGcpProjectListRequest) (*GetGcpProjectListResponse, error)
@@ -664,6 +716,15 @@ func (UnimplementedDekartServer) AddReportDirectAccess(context.Context, *AddRepo
 func (UnimplementedDekartServer) SetTrackViewers(context.Context, *SetTrackViewersRequest) (*SetTrackViewersResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetTrackViewers not implemented")
 }
+func (UnimplementedDekartServer) SetAutoRefreshIntervalSeconds(context.Context, *SetAutoRefreshIntervalSecondsRequest) (*SetAutoRefreshIntervalSecondsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetAutoRefreshIntervalSeconds not implemented")
+}
+func (UnimplementedDekartServer) GetSnapshots(context.Context, *GetSnapshotsRequest) (*GetSnapshotsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSnapshots not implemented")
+}
+func (UnimplementedDekartServer) RestoreReportSnapshot(context.Context, *RestoreReportSnapshotRequest) (*RestoreReportSnapshotResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RestoreReportSnapshot not implemented")
+}
 func (UnimplementedDekartServer) CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateDataset not implemented")
 }
@@ -708,6 +769,9 @@ func (UnimplementedDekartServer) GetUsage(context.Context, *GetUsageRequest) (*G
 }
 func (UnimplementedDekartServer) GetReportAnalytics(context.Context, *GetReportAnalyticsRequest) (*GetReportAnalyticsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetReportAnalytics not implemented")
+}
+func (UnimplementedDekartServer) TrackEvent(context.Context, *TrackEventRequest) (*TrackEventResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TrackEvent not implemented")
 }
 func (UnimplementedDekartServer) CreateConnection(context.Context, *CreateConnectionRequest) (*CreateConnectionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateConnection not implemented")
@@ -973,6 +1037,60 @@ func _Dekart_SetTrackViewers_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Dekart_SetAutoRefreshIntervalSeconds_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetAutoRefreshIntervalSecondsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).SetAutoRefreshIntervalSeconds(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_SetAutoRefreshIntervalSeconds_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).SetAutoRefreshIntervalSeconds(ctx, req.(*SetAutoRefreshIntervalSecondsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_GetSnapshots_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSnapshotsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).GetSnapshots(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_GetSnapshots_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).GetSnapshots(ctx, req.(*GetSnapshotsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_RestoreReportSnapshot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RestoreReportSnapshotRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).RestoreReportSnapshot(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_RestoreReportSnapshot_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).RestoreReportSnapshot(ctx, req.(*RestoreReportSnapshotRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Dekart_CreateDataset_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateDatasetRequest)
 	if err := dec(in); err != nil {
@@ -1218,6 +1336,24 @@ func _Dekart_GetReportAnalytics_Handler(srv interface{}, ctx context.Context, de
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DekartServer).GetReportAnalytics(ctx, req.(*GetReportAnalyticsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_TrackEvent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TrackEventRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).TrackEvent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_TrackEvent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).TrackEvent(ctx, req.(*TrackEventRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1544,6 +1680,18 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Dekart_SetTrackViewers_Handler,
 		},
 		{
+			MethodName: "SetAutoRefreshIntervalSeconds",
+			Handler:    _Dekart_SetAutoRefreshIntervalSeconds_Handler,
+		},
+		{
+			MethodName: "GetSnapshots",
+			Handler:    _Dekart_GetSnapshots_Handler,
+		},
+		{
+			MethodName: "RestoreReportSnapshot",
+			Handler:    _Dekart_RestoreReportSnapshot_Handler,
+		},
+		{
 			MethodName: "CreateDataset",
 			Handler:    _Dekart_CreateDataset_Handler,
 		},
@@ -1590,6 +1738,10 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetReportAnalytics",
 			Handler:    _Dekart_GetReportAnalytics_Handler,
+		},
+		{
+			MethodName: "TrackEvent",
+			Handler:    _Dekart_TrackEvent_Handler,
 		},
 		{
 			MethodName: "CreateConnection",

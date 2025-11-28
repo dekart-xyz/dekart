@@ -11,10 +11,9 @@ import Select from 'antd/es/select'
 import { setAnalyticsModalOpen } from './actions/analytics'
 import { track } from './lib/tracking'
 import AnalyticsModal from './AnalyticsModal'
-import { PlanType } from 'dekart-proto/dekart_pb'
-import Tooltip from 'antd/es/tooltip'
 import classNames from 'classnames'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
+import { showUpgradeModal, UpgradeModalType } from './actions/upgradeModal'
 
 function CopyLinkButton ({ ghost }) {
   const dispatch = useDispatch()
@@ -28,7 +27,15 @@ function CopyLinkButton ({ ghost }) {
       ghost={ghost}
       disabled={!playgroundReport && !isPublic && !discoverable && !hasDirectAccess}
       title='Copy link to report'
-      onClick={() => dispatch(copyUrlToClipboard(window.location.toString(), 'Map URL copied to clipboard'))}
+      onClick={() => {
+        track('CopyMapLink')
+        const url = new URL(window.location.href)
+        // Remove /source from pathname to ensure view mode
+        if (url.pathname.endsWith('/source')) {
+          url.pathname = url.pathname.slice(0, -7) // Remove '/source'
+        }
+        dispatch(copyUrlToClipboard(url.toString(), 'Map URL copied to clipboard'))
+      }}
     >Copy Link
     </Button>
   )
@@ -129,7 +136,7 @@ function ViewAnalytics () {
 
 function DirectAccess () {
   const { canWrite, isSharable, isPublic } = useSelector(state => state.report)
-  const planType = useSelector(state => state.user.stream?.planType)
+  const isSnowpark = useSelector(state => state.env.isSnowpark)
   const reportDirectAccessEmails = useSelector(state => state.reportDirectAccessEmails)
   const [emails, setEmails] = useState(reportDirectAccessEmails)
   const inputRef = useRef(null)
@@ -138,9 +145,9 @@ function DirectAccess () {
   const loading = reportDirectAccessEmails.join(',') !== emails.join(',') // check if emails are loaded
   const users = useSelector(state => state.workspace.users)
   const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
-  const gated = planType === PlanType.TYPE_PERSONAL || planType === PlanType.TYPE_UNSPECIFIED || planType === PlanType.TYPE_TEAM
-
-  if (!canWrite || !isSharable || isPublic || isDefaultWorkspace) {
+  const isFreemium = useSelector(state => state.user.isFreemium)
+  const hasAllFeatures = useSelector(state => state.user.hasAllFeatures)
+  if (!canWrite || !isSharable || isPublic || isDefaultWorkspace || isSnowpark) {
     return null
   }
 
@@ -151,9 +158,7 @@ function DirectAccess () {
         <div className={styles.boolStatusLabel}>
           <div className={styles.statusLabelTitle}>Invite people (view only)</div>
           <div className={styles.statusLabelDescription}>
-            {gated
-              ? <>This feature is not available in your plan. <a href='/workspace'>Upgrade.</a></>
-              : 'Share this map with specific users by email address.'}
+            Share this map with specific users by email address.
           </div>
         </div>
       </div>
@@ -164,10 +169,14 @@ function DirectAccess () {
           placeholder='Enter email addresses'
           value={reportDirectAccessEmails}
           loading={loading}
-          disabled={loading || gated}
+          disabled={loading}
           onChange={(emails) => {
-            setEmails(emails)
-            dispatch(addReportDirectAccess(reportId, emails))
+            if (isFreemium) {
+              dispatch(showUpgradeModal(UpgradeModalType.DIRECT_ACCESS))
+            } else if (hasAllFeatures) {
+              setEmails(emails)
+              dispatch(addReportDirectAccess(reportId, emails))
+            }
           }}
           tokenSeparators={[',', ' ']}
           ref={inputRef}
@@ -192,7 +201,10 @@ function TrackViewersDescription () {
 
 function TrackViewers () {
   const { canWrite } = useSelector(state => state.report)
-
+  const isSnowpark = useSelector(state => state.env.isSnowpark)
+  if (isSnowpark) {
+    return null
+  }
   if (!canWrite) {
     return null
   }
@@ -344,7 +356,7 @@ function WorkspacePermissionsSelect () {
   }, [value])
 
   if (isPlayground) {
-    return <Button href='/workspace'>Manage workspace</Button>
+    return <Button href='/workspace' onClick={() => track('ManageWorkspaceFromShareModal')}>Manage workspace</Button>
   }
   const disabled = !isAuthor
   return (
@@ -412,7 +424,13 @@ function NonShareableWarning () {
         </div>
       </div>
       <div className={styles.workspaceStatusControl}>
-        <Button onClick={() => history.push('/connections')}>Manage connections</Button>
+        <Button
+          onClick={() => {
+            track('ManageConnectionsFromShareModal')
+            history.push('/connections')
+          }}
+        >Manage connections
+        </Button>
       </div>
     </div>
   )
@@ -442,6 +460,7 @@ export default function ShareButton () {
   const [modalOpen, setModalOpen] = useState(false)
   const workspaceId = useSelector(state => state.user.stream?.workspaceId)
   const { isPublic, isPlayground, discoverable, canWrite } = useSelector(state => state.report)
+  const isSnowpark = useSelector(state => state.env.isSnowpark)
   const analyticsModalOpen = useSelector(state => state.analytics.modalOpen)
   const hasDirectAccess = useSelector(state => state.report.hasDirectAccess)
   useEffect(() => {
@@ -451,35 +470,29 @@ export default function ShareButton () {
   }, [analyticsModalOpen])
   const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
   let icon = <LockOutlined />
-  let tooltip = 'Private map, only you can see it'
   if (isDefaultWorkspace) {
     icon = <LinkOutlined />
-    tooltip = 'Share map with workspace users'
   } else if (isPublic || isPlayground) {
     icon = <GlobalOutlined />
-    tooltip = 'Public map, anyone with the link can see it'
   } else if (discoverable || hasDirectAccess) {
     icon = <TeamOutlined />
-    tooltip = 'Anyone in workspace can view and refresh this report'
   }
   if (!canWrite) {
     return <CopyLinkButton ghost />
   }
   return (
     <>
-      <Tooltip title={tooltip} placement='bottom'>
-        <Button
-          icon={icon}
-          type='primary'
-          id='dekart-share-report'
-          title='Share Map'
-          onClick={() => {
-            setModalOpen(true)
-            track('OpenShareModal')
-          }}
-        >Share
-        </Button>
-      </Tooltip>
+      <Button
+        icon={icon}
+        type='primary'
+        id='dekart-share-report'
+        title='Map sharing options'
+        onClick={() => {
+          setModalOpen(true)
+          track('OpenShareModal')
+        }}
+      >Share
+      </Button>
       <Modal
         title='Share Map'
         visible={modalOpen}
@@ -488,10 +501,15 @@ export default function ShareButton () {
         bodyStyle={{ padding: '0px' }}
         footer={
           <div className={styles.modalFooter}>
-            {workspaceId ? <Button icon='+ ' type='primary' href='/workspace'>Add users to workspace</Button> : null}
+            {workspaceId && !isSnowpark ? <Button icon='+ ' type='primary' href='/workspace/members' onClick={() => track('AddUsersToWorkspaceFromShareModal')}>Add users to workspace</Button> : null}
             <div className={styles.modalFooterSpacer} />
             <CopyLinkButton />
-            <Button onClick={() => setModalOpen(false)}>
+            <Button
+              onClick={() => {
+                track('CloseShareModal')
+                setModalOpen(false)
+              }}
+            >
               Done
             </Button>
           </div>

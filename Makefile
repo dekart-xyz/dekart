@@ -1,4 +1,4 @@
-.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down sqlite proto-copy-to-node proto-stub
+.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down sqlite proto-copy-to-node proto-stub server
 
 # load .env
 # https://lithic.tech/blog/2020-05/makefile-dot-env
@@ -65,7 +65,6 @@ snowpark-run: snowpark-build
 	-e DEKART_SNOWFLAKE_ACCOUNT_ID=${DEKART_SNOWFLAKE_ACCOUNT_ID} \
 	-e DEKART_SNOWFLAKE_USER=${DEKART_SNOWFLAKE_USER} \
 	-e DEKART_SNOWFLAKE_PASSWORD=${DEKART_SNOWFLAKE_PASSWORD} \
-	-e DEKART_CORS_ORIGIN=null \
 	-e DEKART_LOG_DEBUG=1 \
 	-e DEKART_CORS_ORIGIN=null \
 	-e DEKART_STREAM_TIMEOUT=10 \
@@ -136,13 +135,16 @@ define run_server
 	go run ./src/server/main.go
 endef
 
-# Pattern rule to match any target starting with ".env."
-server-%:
-	$(call run_server,.env.$*)
-
-# Rule for the default .env file
+# Rule for the default .env file or custom env file passed as argument
+# Usage: make server           -> uses .env
+#        make server .env.cloud -> uses .env.cloud
 server:
-	$(call run_server,.env)
+	$(call run_server,$(or $(filter-out server,$(MAKECMDGOALS)),.env))
+
+# Dummy target to prevent Make from trying to build .env files as targets
+# This pattern rule makes .env* targets as no-ops that are always "up to date"
+.env%:
+	@:
 
 npm:
 	npm i --legacy-peer-deps

@@ -109,6 +109,33 @@ Dekart.SetTrackViewers = {
   responseType: dekart_pb.SetTrackViewersResponse
 };
 
+Dekart.SetAutoRefreshIntervalSeconds = {
+  methodName: "SetAutoRefreshIntervalSeconds",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: dekart_pb.SetAutoRefreshIntervalSecondsRequest,
+  responseType: dekart_pb.SetAutoRefreshIntervalSecondsResponse
+};
+
+Dekart.GetSnapshots = {
+  methodName: "GetSnapshots",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: dekart_pb.GetSnapshotsRequest,
+  responseType: dekart_pb.GetSnapshotsResponse
+};
+
+Dekart.RestoreReportSnapshot = {
+  methodName: "RestoreReportSnapshot",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: dekart_pb.RestoreReportSnapshotRequest,
+  responseType: dekart_pb.RestoreReportSnapshotResponse
+};
+
 Dekart.CreateDataset = {
   methodName: "CreateDataset",
   service: Dekart,
@@ -242,6 +269,15 @@ Dekart.GetReportAnalytics = {
   responseStream: false,
   requestType: dekart_pb.GetReportAnalyticsRequest,
   responseType: dekart_pb.GetReportAnalyticsResponse
+};
+
+Dekart.TrackEvent = {
+  methodName: "TrackEvent",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: dekart_pb.TrackEventRequest,
+  responseType: dekart_pb.TrackEventResponse
 };
 
 Dekart.CreateConnection = {
@@ -701,6 +737,99 @@ DekartClient.prototype.setTrackViewers = function setTrackViewers(requestMessage
     callback = arguments[1];
   }
   var client = grpc.unary(Dekart.SetTrackViewers, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.setAutoRefreshIntervalSeconds = function setAutoRefreshIntervalSeconds(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.SetAutoRefreshIntervalSeconds, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.getSnapshots = function getSnapshots(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.GetSnapshots, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.restoreReportSnapshot = function restoreReportSnapshot(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.RestoreReportSnapshot, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
@@ -1190,6 +1319,37 @@ DekartClient.prototype.getReportAnalytics = function getReportAnalytics(requestM
     callback = arguments[1];
   }
   var client = grpc.unary(Dekart.GetReportAnalytics, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.trackEvent = function trackEvent(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.TrackEvent, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,

@@ -5,6 +5,7 @@ import Button from 'antd/es/button'
 import Markdown from 'react-markdown'
 import { useDispatch, useSelector } from 'react-redux'
 import { setPreview, setReadmeValue } from './actions/readme'
+import { track } from './lib/tracking'
 import 'ace-builds/src-noconflict/snippets/markdown'
 import 'ace-builds/src-noconflict/mode-markdown'
 import 'ace-builds/src-noconflict/theme-sqlserver'
@@ -25,7 +26,10 @@ export default function Readme ({ readme }) {
       <div className={styles.previewButton}>
         <Button
           size='small'
-          onClick={() => dispatch(setPreview(!showPreview))}
+          onClick={() => {
+            track('ToggleReadmePreview', { showPreview: !showPreview })
+            dispatch(setPreview(!showPreview))
+          }}
         >{showPreview ? (canWrite && edit ? 'Edit' : 'Markdown') : (canWrite && edit ? 'Preview' : 'View')}
         </Button>
       </div>

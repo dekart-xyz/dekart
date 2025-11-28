@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/errtype"
+	"dekart/src/server/notifications"
 	"dekart/src/server/user"
 	"net/http"
 	"os"
@@ -26,6 +28,8 @@ func (s Server) getWorkspaceUpdate(ctx context.Context) (int64, error) {
 			SELECT MAX(created_at) AS updated_at FROM workspace_log
 			UNION
 			SELECT MAX(created_at) AS updated_at FROM confirmation_log
+			UNION
+			SELECT MAX(created_at) AS updated_at FROM subscription_log
 		) max_updated_at;
 	`
 	var err error
@@ -35,7 +39,7 @@ func (s Server) getWorkspaceUpdate(ctx context.Context) (int64, error) {
 		err = s.db.QueryRowContext(ctx, query).Scan(&updatedAtTime)
 	}
 	if err != nil {
-		log.Err(err).Msg("Error fetching max updated_at")
+		errtype.LogError(err, "Error fetching max updated_at")
 		return 0, err
 	}
 
@@ -44,10 +48,10 @@ func (s Server) getWorkspaceUpdate(ctx context.Context) (int64, error) {
 		if !updatedAtStr.Valid {
 			return 0, nil
 		}
-		// Parse the timestamp string into a time.Time
-		parsedTime, err := time.Parse("2006-01-02 15:04:05", updatedAtStr.String)
+		// Parse the timestamp string into a time.Time (SQLite stores in UTC)
+		parsedTime, err := time.ParseInLocation("2006-01-02 15:04:05", updatedAtStr.String, time.UTC)
 		if err != nil {
-			log.Err(err).Msg("Error parsing updated_at timestamp")
+			errtype.LogError(err, "Error parsing updated_at timestamp")
 			return 0, err
 		}
 
@@ -93,18 +97,21 @@ func (s Server) UpdateWorkspace(ctx context.Context, req *proto.UpdateWorkspaceR
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	workspaceID := checkWorkspace(ctx).ID
-	if workspaceID == "" {
+	workspaceInfo := checkWorkspace(ctx)
+	if workspaceInfo.ID == "" {
 		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
-	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
+	if workspaceInfo.Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	}
+	if workspaceInfo.UserRole != proto.UserRole_ROLE_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Only admins can update workspace")
 	}
 	_, err := s.db.ExecContext(ctx, `
 		UPDATE workspaces
 		SET name = $2, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1
-	`, workspaceID, req.WorkspaceName)
+	`, workspaceInfo.ID, req.WorkspaceName)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
@@ -277,7 +284,7 @@ func (s Server) getUserWorkspace(ctx context.Context, email string) (*proto.Work
 		LIMIT 1
 	`, email)
 	if err != nil {
-		log.Err(err).Send()
+		errtype.LogError(err, "Error getting user workspace")
 		return nil, nil, err
 	}
 	defer res.Close()
@@ -329,7 +336,6 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 		})
 		return ctx
 	}
-
 	if claims.Email == user.UnknownEmail && os.Getenv("DEKART_CLOUD") == "" {
 		// For backward compatibility, we switch to playground mode if the user is not authenticated
 		ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{
@@ -341,11 +347,12 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 
 	workspace, role, err := s.getUserWorkspace(ctx, claims.Email)
 	if err != nil {
-		log.Err(err).Send()
+		errtype.LogError(err, "Error getting user workspace")
 		return ctx
 	}
 	var workspaceId string
 	var planType proto.PlanType
+	var expired bool
 	var name string
 	var addedUsersCount int64 = 0
 	var billedUsers int64 = 0
@@ -354,11 +361,12 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 		name = workspace.Name
 		subscription, err := s.getSubscription(ctx, workspaceId)
 		if err != nil {
-			log.Err(err).Send()
+			errtype.LogError(err, "Error getting subscription")
 			return ctx
 		}
 		if subscription != nil {
 			planType = subscription.PlanType
+			expired = subscription.Expired
 		}
 		addedUsersCount, billedUsers, err = s.countActiveWorkspaceUsers(ctx, workspaceId)
 		if err != nil {
@@ -374,6 +382,7 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 		AddedUsersCount: addedUsersCount,
 		BilledUsers:     billedUsers,
 		UserRole:        *role,
+		Expired:         expired,
 	})
 	return ctx
 }
@@ -430,6 +439,9 @@ func (s Server) UpdateWorkspaceUser(ctx context.Context, req *proto.UpdateWorksp
 	if workspaceInfo.ID == "" {
 		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
+	if workspaceInfo.Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	}
 	if workspaceInfo.UserRole != proto.UserRole_ROLE_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Only admin can update users")
 	}
@@ -451,10 +463,11 @@ func (s Server) UpdateWorkspaceUser(ctx context.Context, req *proto.UpdateWorksp
 			return nil, status.Error(codes.InvalidArgument, "Cannot add more users to team workspace")
 		}
 	}
+	logID := newUUID()
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO workspace_log (id, workspace_id, email, status, authored_by, role)
 		VALUES ($1, $2, $3, $4, $5, $6)
-	`, newUUID(), workspaceInfo.ID, req.Email, req.UserUpdateType, claims.Email, req.Role)
+	`, logID, workspaceInfo.ID, req.Email, req.UserUpdateType, claims.Email, req.Role)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
@@ -466,6 +479,17 @@ func (s Server) UpdateWorkspaceUser(ctx context.Context, req *proto.UpdateWorksp
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if req.UserUpdateType == proto.UpdateWorkspaceUserRequest_USER_UPDATE_TYPE_ADD {
+		go s.notifications.SendWorkspaceInvite(notifications.WorkspaceInvite{
+			InviteID:      logID,
+			WorkspaceID:   workspaceInfo.ID,
+			WorkspaceName: workspaceInfo.Name,
+			InviteeEmail:  req.Email,
+			InviterEmail:  claims.Email,
+			Role:          req.Role,
+		})
 	}
 
 	s.userStreams.PingAll()

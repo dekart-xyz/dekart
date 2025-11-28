@@ -1,8 +1,6 @@
-// import { version } from '../../../package.json'
+import { version } from '../../../package.json'
 import sha256 from 'crypto-js/sha256'
 import { getDatasourceMeta } from './datasource'
-
-const version = process.env.VERSION || '0.0.0'
 
 function getHostname (location) {
   switch (location.hostname) {

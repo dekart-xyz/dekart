@@ -45,6 +45,9 @@ type PresignedS3Object struct {
 }
 
 func (o PresignedS3Object) GetReader(ctx context.Context) (io.ReadCloser, error) {
+	if o.url == "" {
+		return nil, fmt.Errorf("presigned S3 URL is empty")
+	}
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, o.url, nil)
 
 	resp, err := http.DefaultClient.Do(req)
@@ -111,6 +114,9 @@ func (o PresignedS3Object) GetWriter(ctx context.Context) io.WriteCloser {
 	eg := new(errgroup.Group)
 
 	eg.Go(func() error {
+		if o.url == "" {
+			return fmt.Errorf("presigned S3 URL is empty")
+		}
 		req, _ := http.NewRequestWithContext(ctx, http.MethodPut, o.url, pr)
 		req.Header.Set("Content-Type", "application/octet-stream")
 
@@ -156,6 +162,9 @@ func (w presignedWriter) Close() error {
 // ─── METADATA (HEAD) ──────────────────────────────────────────────────────────
 
 func (o PresignedS3Object) head(ctx context.Context) (*http.Response, error) {
+	if o.url == "" {
+		return nil, fmt.Errorf("presigned S3 URL is empty")
+	}
 	req, _ := http.NewRequestWithContext(ctx, http.MethodHead, o.url, nil)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -217,6 +226,9 @@ func (o PresignedS3Object) CopyTo(ctx context.Context, w io.WriteCloser) error {
 }
 
 func (o PresignedS3Object) Delete(ctx context.Context) error {
+	if o.url == "" {
+		return fmt.Errorf("presigned S3 URL is empty")
+	}
 	req, _ := http.NewRequestWithContext(ctx, http.MethodDelete, o.url, nil)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/conn"
+	"dekart/src/server/errtype"
+	"dekart/src/server/notifications"
 	"dekart/src/server/user"
 	"encoding/json"
 	"fmt"
@@ -37,8 +39,7 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 			id,
 			case when map_config is null then '' else map_config end as map_config,
 			case when title is null then 'Untitled' else title end as title,
-			(author_email = $1) or allow_edit as can_write,
-			author_email = $2 as is_author,
+			author_email = $1 as is_author,
 			author_email,
 			discoverable,
 			allow_edit,
@@ -48,7 +49,7 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 			(
 				select count(*) from connections as c
 				join datasets as d on c.id=d.connection_id
-				where d.report_id=$3 and cloud_storage_bucket is not null and (
+				where d.report_id=$2 and cloud_storage_bucket is not null and (
 					cloud_storage_bucket != ''
 					or connection_type > 1 -- snowflake allows sharing without bucket
 					or (bigquery_key_encrypted is not null and bigquery_key_encrypted != '') -- bigquery service account
@@ -57,12 +58,12 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 			(
 				select count(*) from connections as c
 				join datasets as d on c.id=d.connection_id
-				where d.report_id=$4
+				where d.report_id=$3
 			) as connections_num,
 			(
 				select count(*) from connections as c
 				join datasets as d on c.id=d.connection_id
-				where d.report_id=$5 and  connection_type <= 1 -- BigQuery
+				where d.report_id=$4 and  connection_type <= 1 -- BigQuery
 				and (c.bigquery_key_encrypted is null or c.bigquery_key_encrypted = '') -- BigQuery passthrough
 			) as connections_with_sensitive_scope_num,
 			is_public,
@@ -70,11 +71,12 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 			query_params,
 			allow_export,
 			readme,
-			workspace_id
+			workspace_id,
+			auto_refresh_interval_seconds,
+			version_id
 		from reports as r
-		where (id=$6) and (archived = $7)
+		where (id=$5) and (archived = $6)
 		limit 1`,
-		claims.Email,
 		claims.Email,
 		reportID,
 		reportID, // sqlite does not support positional parameters reuse
@@ -83,7 +85,7 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 		archived,
 	)
 	if err != nil {
-		log.Err(err).Str("workspace", checkWorkspace(ctx).ID).Str("reportID", reportID).Send()
+		errtype.LogError(err, fmt.Sprintf("select from reports failed: workspace=%s reportID=%s", checkWorkspace(ctx).ID, reportID))
 		return nil, err
 	}
 	defer reportRows.Close()
@@ -96,11 +98,11 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 		reportWorkspaceID := sql.NullString{}
 		var connectionsWithCacheNum, connectionsNum, connectionsWithSensitiveScopeNum int
 		var queryParams []byte
+		var versionID sql.NullString
 		err = reportRows.Scan(
 			&report.Id,
 			&report.MapConfig,
 			&report.Title,
-			&report.CanWrite,
 			&report.IsAuthor,
 			&report.AuthorEmail,
 			&report.Discoverable,
@@ -117,11 +119,20 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 			&report.AllowExport,
 			&readme,
 			&reportWorkspaceID,
+			&report.AutoRefreshIntervalSeconds,
+			&versionID,
 		)
 		if err != nil {
-			log.Err(err).Send()
+			errtype.LogError(err, "failed to scan report")
 			return nil, err
 		}
+		report.CanWrite = report.IsAuthor || (report.AllowEdit && reportWorkspaceID.String == checkWorkspace(ctx).ID)
+
+		if checkWorkspace(ctx).Expired {
+			report.CanWrite = false
+			report.AllowEdit = false
+		}
+
 		if report.IsPlayground && !checkWorkspace(ctx).IsPlayground {
 			// report is playground but user is not in playground
 			report.AllowEdit = false
@@ -139,7 +150,6 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 			// for configured connections, report is sharable if cloud storage bucket is set
 			report.IsSharable = conn.CanShareReports()
 		}
-
 		report.NeedSensitiveScope = connectionsWithSensitiveScopeNum > 0
 		if report.IsPublic && !report.CanWrite {
 			// viewers of public reports don't need sensitive scope
@@ -149,8 +159,16 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 			report.IsSharable && // only sharable reports can be discoverable
 			reportWorkspaceID.String == checkWorkspace(ctx).ID)
 
+		report.CanRefresh = reportWorkspaceID.String == checkWorkspace(ctx).ID
+		if checkWorkspace(ctx).Expired {
+			report.CanRefresh = false
+		}
 		report.CreatedAt = createdAt.Unix()
 		report.UpdatedAt = updatedAt.Unix()
+
+		if versionID.Valid {
+			report.VersionId = versionID.String
+		}
 
 		if readme.Valid {
 			report.Readme = &proto.Readme{
@@ -162,7 +180,7 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 		if len(queryParams) > 0 {
 			err = json.Unmarshal(queryParams, &report.QueryParams)
 			if err != nil {
-				log.Err(err).Send()
+				errtype.LogError(err, "failed to unmarshal query params")
 				return nil, err
 			}
 		}
@@ -170,7 +188,7 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 	if report.Id != "" {
 		directAccessEmails, err := s.getDirectAccessEmails(ctx, report.Id)
 		if err != nil {
-			log.Err(err).Msg("getDirectAccessEmails failed")
+			errtype.LogError(err, "getDirectAccessEmails failed")
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 		if len(directAccessEmails) > 0 {
@@ -203,31 +221,43 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	if checkWorkspace(ctx).ID == "" && !checkWorkspace(ctx).IsPlayground {
+	workspaceInfo := checkWorkspace(ctx)
+	if workspaceInfo.ID == "" && !workspaceInfo.IsPlayground {
 		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
-	if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
+	if workspaceInfo.Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	}
+	if workspaceInfo.UserRole == proto.UserRole_ROLE_VIEWER {
 		return nil, status.Error(codes.PermissionDenied, "Only admins and editors can create reports")
 	}
 	id := newUUID()
+	versionID := newUUID()
 	var err error
-	if checkWorkspace(ctx).IsPlayground {
+	if workspaceInfo.IsPlayground {
 		_, err = s.db.ExecContext(ctx,
-			"INSERT INTO reports (id, author_email, is_playground) VALUES ($1, $2, true)",
+			"INSERT INTO reports (id, author_email, is_playground, version_id) VALUES ($1, $2, true, $3)",
 			id,
 			claims.Email,
+			versionID,
 		)
 	} else {
 		_, err = s.db.ExecContext(ctx,
-			"INSERT INTO reports (id, author_email, workspace_id) VALUES ($1, $2, $3)",
+			"INSERT INTO reports (id, author_email, workspace_id, version_id) VALUES ($1, $2, $3, $4)",
 			id,
 			claims.Email,
-			checkWorkspace(ctx).ID,
+			workspaceInfo.ID,
+			versionID,
 		)
 
 	}
 	if err != nil {
-		log.Err(err).Send()
+		errtype.LogError(err, "database operation failed")
+		return nil, err
+	}
+	err = s.createReportSnapshotWithVersionID(ctx, versionID, id, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE)
+	if err != nil {
+		errtype.LogError(err, "Cannot create report snapshot")
 		return nil, err
 	}
 	res := &proto.CreateReportResponse{
@@ -238,11 +268,113 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 	return res, nil
 }
 
-func rollback(tx *sql.Tx) {
-	err := tx.Rollback()
-	if err != nil {
-		log.Err(err).Send()
+func (s Server) createReportSnapshot(ctx context.Context, reportID string, triggerType proto.ReportSnapshot_TriggerType) error {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return fmt.Errorf("createReportSnapshot requires authenticated user")
 	}
+	newVersionID := newUUID()
+	// update report version id
+	_, err := s.db.ExecContext(ctx,
+		"UPDATE reports SET version_id = $1 WHERE id = $2",
+		newVersionID,
+		reportID,
+	)
+	if err != nil {
+		return err
+	}
+	err = s.createReportSnapshotWithVersionID(ctx, newVersionID, reportID, claims.Email, triggerType)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// createReportSnapshotWithVersionIDTx creates a snapshot of the report content
+// using the provided transaction.
+func (s Server) createReportSnapshotWithVersionIDTx(ctx context.Context, tx *sql.Tx, versionID string, reportID string, changedBy string, triggerType proto.ReportSnapshot_TriggerType) error {
+	// Create report snapshot using INSERT ... SELECT from reports
+	_, err := tx.ExecContext(ctx,
+		`INSERT INTO report_snapshots (
+			version_id, report_id, map_config, title, query_params, readme, author_email, trigger_type
+		)
+		SELECT $1, id, map_config, title, query_params, readme, $2, $3
+		FROM reports
+		WHERE id = $4`,
+		versionID,
+		changedBy,
+		triggerType,
+		reportID,
+	)
+	if err != nil {
+		errtype.LogError(err, "Cannot create report snapshot")
+		return err
+	}
+
+	// Create dataset snapshots for all datasets belonging to this report/version
+	_, err = tx.ExecContext(ctx,
+		`INSERT INTO dataset_snapshots (
+			report_version_id, dataset_id, report_id, query_id, file_id, name, connection_id, author_email
+		)
+		SELECT
+			$1::uuid AS report_version_id,
+			d.id AS dataset_id,
+			d.report_id,
+			d.query_id,
+			d.file_id,
+			COALESCE(d.name, ''),
+			d.connection_id,
+			$2 AS author_email
+		FROM datasets d
+		WHERE d.report_id = $3`,
+		versionID,
+		changedBy,
+		reportID,
+	)
+	if err != nil {
+		errtype.LogError(err, "Cannot create dataset snapshots")
+		return err
+	}
+
+	// Create query snapshots for all queries referenced by this report's datasets
+	_, err = tx.ExecContext(ctx,
+		`INSERT INTO query_snapshots (
+			report_version_id, query_id, report_id, query_text, query_source_id, author_email
+		)
+		SELECT DISTINCT
+			$1::uuid AS report_version_id,
+			q.id AS query_id,
+			d.report_id,
+			q.query_text,
+			COALESCE(q.query_source_id, ''),
+			$2 AS author_email
+		FROM queries q
+		JOIN datasets d ON d.query_id = q.id
+		WHERE d.report_id = $3`,
+		versionID,
+		changedBy,
+		reportID,
+	)
+	if err != nil {
+		errtype.LogError(err, "Cannot create query snapshots")
+		return err
+	}
+
+	return nil
+}
+
+func (s Server) createReportSnapshotWithVersionID(ctx context.Context, versionID string, reportID string, changedBy string, triggerType proto.ReportSnapshot_TriggerType) error {
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := s.createReportSnapshotWithVersionIDTx(ctx, tx, versionID, reportID, changedBy, triggerType); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 // updateDatasetIds updates the map config with new dataset ids when forked
@@ -259,7 +391,6 @@ func updateDatasetIds(report *proto.Report, datasets []*proto.Dataset) (newMapCo
 
 func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Report, datasets []*proto.Dataset, jobs []*proto.QueryJob) error {
 	claims := user.GetClaims(ctx)
-
 	// Validate map config size to prevent gRPC message size errors
 	if len(report.MapConfig) > MaxMapConfigSize {
 		log.Warn().
@@ -277,13 +408,14 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
 	newMapConfig, newDatasetIds := updateDatasetIds(report, datasets)
 	var paramsJSON []byte
 	if report.QueryParams != nil {
 		var err error
 		paramsJSON, err = json.Marshal(report.QueryParams)
 		if err != nil {
-			log.Err(err).Send()
+			errtype.LogError(err, "database operation failed")
 			return err
 		}
 	}
@@ -324,7 +456,6 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 		)
 	}
 	if err != nil {
-		rollback(tx)
 		return err
 	}
 	for i, dataset := range datasets {
@@ -355,7 +486,6 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 			)
 			if err != nil {
 				log.Warn().Err(err).Send()
-				rollback(tx)
 				return err
 			}
 			// iterate over query jobs and insert new query jobs with new query id and new id
@@ -385,7 +515,6 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 					)
 					if err != nil {
 						log.Warn().Err(err).Send()
-						rollback(tx)
 						return err
 					}
 				}
@@ -413,7 +542,6 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 				from files where id=$2`, newFileID, dataset.FileId)
 			if err != nil {
 				log.Warn().Err(err).Send()
-				rollback(tx)
 				return err
 			}
 		}
@@ -429,7 +557,6 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 		)
 		if err != nil {
 			log.Warn().Err(err).Send()
-			rollback(tx)
 			return err
 		}
 	}
@@ -442,30 +569,34 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	isPlayground := checkWorkspace(ctx).IsPlayground
-	workspaceID := checkWorkspace(ctx).ID
+	workspaceInfo := checkWorkspace(ctx)
+	isPlayground := workspaceInfo.IsPlayground
+	workspaceID := workspaceInfo.ID
 	if workspaceID == "" && !isPlayground {
 		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
-	if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
+	if workspaceInfo.Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	}
+	if workspaceInfo.UserRole == proto.UserRole_ROLE_VIEWER {
 		return nil, status.Error(codes.PermissionDenied, "Only admins and editors can fork reports")
 	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	newReportID := newUUID()
 
 	report, err := s.getReport(ctx, req.ReportId)
 	if err != nil {
-		log.Err(err).Send()
+		errtype.LogError(err, "database operation failed")
 		return nil, err
 	}
 	if report == nil {
 		err := fmt.Errorf("report %s not found", newReportID)
 		log.Warn().Err(err).Send()
-		return nil, status.Errorf(codes.NotFound, err.Error())
+		return nil, status.Error(codes.NotFound, err.Error())
 	}
 	if isPlayground && !report.IsPlayground {
 		// cannot fork non-playground report in playground
@@ -474,10 +605,11 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 
 	report.Id = newReportID
 	report.Title = fmt.Sprintf("Fork of %s", report.Title)
+	report.VersionId = newUUID()
 
 	datasets, err := s.getDatasets(ctx, req.ReportId)
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve datasets")
+		errtype.LogError(err, "Cannot retrieve datasets")
 		return nil, err
 	}
 	connectionUpdated := false
@@ -488,7 +620,7 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 	if report.IsPublic || (report.IsPlayground && !isPlayground) {
 		userConnections, err := s.getUserConnections(ctx)
 		if err != nil {
-			log.Err(err).Msg("Cannot retrieve connections")
+			errtype.LogError(err, "Cannot retrieve connections")
 			return nil, err
 		}
 		// replace dataset connection ids with new connection ids with same connection type
@@ -518,20 +650,69 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 		// copy query jobs only if user has access to the connection
 		jobs, err = s.getDatasetsQueryJobs(ctx, datasets)
 		if err != nil {
-			log.Err(err).Msg("Cannot retrieve query jobs")
+			errtype.LogError(err, "Cannot retrieve query jobs")
 			return nil, err
 		}
 	}
 
 	err = s.commitReportWithDatasets(ctx, report, datasets, jobs)
 	if err != nil {
-		log.Err(err).Send()
+		errtype.LogError(err, "database operation failed")
 		return nil, err
 	}
+
+	s.createReportSnapshotWithVersionID(ctx, report.VersionId, newReportID, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE)
 
 	return &proto.ForkReportResponse{
 		ReportId: newReportID,
 	}, nil
+}
+
+func (s Server) SetAutoRefreshIntervalSeconds(ctx context.Context, req *proto.SetAutoRefreshIntervalSecondsRequest) (*proto.SetAutoRefreshIntervalSecondsResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	workspaceInfo := checkWorkspace(ctx)
+	if workspaceInfo.Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	}
+	_, err := uuid.Parse(req.ReportId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	report, err := s.getReport(ctx, req.ReportId)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if !report.CanWrite {
+		err := fmt.Errorf("cannot set auto refresh interval seconds for report %s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.PermissionDenied, "Cannot set auto refresh interval seconds")
+	}
+	if req.AutoRefreshIntervalSeconds > 0 && req.AutoRefreshIntervalSeconds < 30 {
+		return nil, status.Error(codes.InvalidArgument, "Auto refresh interval seconds must be greater than 0 and less than 30")
+	}
+	if req.AutoRefreshIntervalSeconds < 0 {
+		return nil, status.Error(codes.InvalidArgument, "Auto refresh interval seconds must be greater than 0")
+	}
+	_, err = s.db.ExecContext(ctx,
+		`update reports set auto_refresh_interval_seconds=$1 where id=$2`,
+		req.AutoRefreshIntervalSeconds,
+		req.ReportId,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	s.reportStreams.Ping(req.ReportId)
+	return &proto.SetAutoRefreshIntervalSecondsResponse{}, nil
 }
 
 // UpdateReport implementation
@@ -540,8 +721,28 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
-		return nil, status.Error(codes.PermissionDenied, "Only admins and editors can update reports")
+	workspaceInfo := checkWorkspace(ctx)
+	if workspaceInfo.Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	}
+	_, err := uuid.Parse(req.ReportId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	report, err := s.getReport(ctx, req.ReportId)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if !report.CanWrite {
+		err := fmt.Errorf("cannot allow export for report %s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.PermissionDenied, "Cannot allow export")
 	}
 
 	// Validate map config size to prevent gRPC message size errors
@@ -578,20 +779,22 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 		}
 	}
 
-	var result sql.Result
-	var err error
+	// Update report with new values
+	newVersionID := newUUID()
 	updated_at := time.Now()
-	if checkWorkspace(ctx).IsPlayground {
+	var result sql.Result
+	if workspaceInfo.IsPlayground {
 		result, err = s.db.ExecContext(ctx,
 			`update
 			reports
-		set map_config=$1, title=$2, query_params=$3, readme=$4, updated_at=$5
-		where id=$6 and author_email=$7 and is_playground=true`,
+		set map_config=$1, title=$2, query_params=$3, readme=$4, updated_at=$5, version_id=$6
+		where id=$7 and author_email=$8 and is_playground=true`,
 			req.MapConfig,
 			req.Title,
 			string(paramsJSON),
 			readme,
 			updated_at,
+			newVersionID,
 			req.ReportId,
 			claims.Email,
 		)
@@ -599,16 +802,17 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 		result, err = s.db.ExecContext(ctx,
 			`update
 			reports
-		set map_config=$1, title=$2, query_params=$3, readme=$4, updated_at=$5
-		where id=$6 and (author_email=$7 or allow_edit) and workspace_id=$8`,
+		set map_config=$1, title=$2, query_params=$3, readme=$4, updated_at=$5, version_id=$6
+		where id=$7 and (author_email=$8 or allow_edit) and workspace_id=$9`,
 			req.MapConfig,
 			req.Title,
 			string(paramsJSON),
 			readme,
 			updated_at,
+			newVersionID,
 			req.ReportId,
 			claims.Email,
-			checkWorkspace(ctx).ID,
+			workspaceInfo.ID,
 		)
 	}
 	if err != nil {
@@ -617,7 +821,6 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	}
 
 	affectedRows, err := result.RowsAffected()
-
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
@@ -632,7 +835,22 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 
 	// save queries
 	for _, query := range req.Query {
-		go s.storeQuery(ctx, req.ReportId, query.Id, query.QueryText, query.QuerySourceId)
+		err := s.storeQuerySync(ctx, query.Id, query.QueryText, query.QuerySourceId)
+		if err != nil {
+			if _, ok := err.(*queryWasNotUpdated); ok {
+				log.Warn().Str("queryId", query.Id).Msg("Query text not updated")
+			} else {
+				errtype.LogError(err, "Error storing query")
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+		}
+	}
+
+	// Create report snapshot (non-blocking, no transaction)
+	err = s.createReportSnapshotWithVersionID(ctx, newVersionID, req.ReportId, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE)
+	if err != nil {
+		errtype.LogError(err, "Cannot create report snapshot")
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	defer s.reportStreams.Ping(req.ReportId)
@@ -649,7 +867,7 @@ func (s Server) AllowExportDatasets(ctx context.Context, req *proto.AllowExportD
 	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	report, err := s.getReport(ctx, req.ReportId)
 	if err != nil {
@@ -687,7 +905,7 @@ func (s Server) SetTrackViewers(ctx context.Context, req *proto.SetTrackViewersR
 	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	report, err := s.getReport(ctx, req.ReportId)
 	if err != nil {
@@ -729,7 +947,7 @@ func (s Server) SetDiscoverable(ctx context.Context, req *proto.SetDiscoverableR
 	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	report, err := s.getReport(ctx, req.ReportId)
 	if err != nil {
@@ -784,7 +1002,7 @@ func (s Server) ArchiveReport(ctx context.Context, req *proto.ArchiveReportReque
 	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	// Use getReportWithOptions to include archived reports (needed for unarchiving)
@@ -863,7 +1081,7 @@ func (s Server) getDirectAccessEmails(ctx context.Context, reportID string) ([]s
 		WHERE rn = 1 AND status != 2
 	`, reportID)
 	if err != nil {
-		log.Err(err).Send()
+		errtype.LogError(err, "database operation failed")
 		return nil, err
 	}
 	defer rows.Close()
@@ -892,7 +1110,7 @@ func (s Server) AddReportDirectAccess(ctx context.Context, req *proto.AddReportD
 	// Validate report ID
 	_, err := uuid.Parse(reportID)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	report, err := s.getReport(ctx, req.ReportId)
@@ -916,11 +1134,7 @@ func (s Server) AddReportDirectAccess(ctx context.Context, req *proto.AddReportD
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	defer func() {
-		if err != nil {
-			rollback(tx)
-		}
-	}()
+	defer tx.Rollback()
 
 	// Derive current access state from the latest log entries
 	// Only include emails whose latest entry is not a removal (status != 2)
@@ -971,16 +1185,25 @@ func (s Server) AddReportDirectAccess(ctx context.Context, req *proto.AddReportD
 		}
 	}
 
+	notificationPayloads := make([]notifications.ReportAccessGranted, 0, len(toAddOrUpdate))
+
 	// Apply additions
 	for email, level := range toAddOrUpdate {
 		_, err = tx.ExecContext(ctx, `
 			INSERT INTO report_access_log (report_id, email, status, access_level, authored_by)
-			VALUES ($1, $2, $3, 1, $4)
+			VALUES ($1, $2, 1, $3, $4)
 		`, reportID, email, level, claims.Email)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, status.Error(codes.Internal, err.Error())
 		}
+		notificationPayloads = append(notificationPayloads, notifications.ReportAccessGranted{
+			ReportID:       reportID,
+			ReportTitle:    report.Title,
+			RecipientEmail: email,
+			GrantedByEmail: claims.Email,
+			AccessLevel:    level,
+		})
 	}
 
 	// Apply removals
@@ -1003,5 +1226,356 @@ func (s Server) AddReportDirectAccess(ctx context.Context, req *proto.AddReportD
 
 	defer s.reportStreams.Ping(req.ReportId)
 
+	for _, notificationPayload := range notificationPayloads {
+		go s.notifications.SendReportAccessGranted(notificationPayload)
+	}
+
 	return &proto.AddReportDirectAccessResponse{}, nil
+}
+
+func (s Server) GetSnapshots(ctx context.Context, req *proto.GetSnapshotsRequest) (*proto.GetSnapshotsResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+
+	// Validate report ID
+	_, err := uuid.Parse(req.ReportId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	// Ensure user has access to the report (reuses existing access logic)
+	report, err := s.getReport(ctx, req.ReportId)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+
+	// Fetch report snapshots ordered from newest to oldest
+	reportRows, err := s.db.QueryContext(ctx, `
+		SELECT version_id, report_id, author_email, created_at, trigger_type
+		FROM report_snapshots
+		WHERE report_id = $1
+		ORDER BY created_at DESC`,
+		req.ReportId,
+	)
+	if err != nil {
+		errtype.LogError(err, "database operation failed")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer reportRows.Close()
+
+	reportSnapshots := []*proto.ReportSnapshot{}
+	for reportRows.Next() {
+		var (
+			versionID   string
+			reportID    string
+			authorEmail string
+			createdAt   time.Time
+			triggerType proto.ReportSnapshot_TriggerType
+		)
+		if err := reportRows.Scan(&versionID, &reportID, &authorEmail, &createdAt, &triggerType); err != nil {
+			errtype.LogError(err, "failed to scan report snapshot")
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		reportSnapshots = append(reportSnapshots, &proto.ReportSnapshot{
+			VersionId:   versionID,
+			ReportId:    reportID,
+			AuthorEmail: authorEmail,
+			CreatedAt:   createdAt.UTC().Format(time.RFC3339),
+			TriggerType: triggerType,
+		})
+	}
+
+	return &proto.GetSnapshotsResponse{
+		ReportSnapshots: reportSnapshots,
+	}, nil
+}
+
+func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreReportSnapshotRequest) (*proto.RestoreReportSnapshotResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+
+	workspaceInfo := checkWorkspace(ctx)
+	if workspaceInfo.Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	}
+
+	// Validate IDs
+	if _, err := uuid.Parse(req.ReportId); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	if _, err := uuid.Parse(req.VersionId); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	// Ensure user has access and can write to the report
+	report, err := s.getReport(ctx, req.ReportId)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if !report.CanWrite {
+		err := fmt.Errorf("cannot restore snapshot for report %s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.PermissionDenied, "Cannot restore snapshot")
+	}
+
+	// Load snapshot of report content
+	var (
+		snapshotMapConfig  sql.NullString
+		snapshotTitle      sql.NullString
+		snapshotParamsText sql.NullString
+		snapshotReadme     sql.NullString
+	)
+
+	err = s.db.QueryRowContext(ctx, `
+		SELECT map_config, title, query_params, readme
+		FROM report_snapshots
+		WHERE version_id = $1 AND report_id = $2
+	`, req.VersionId, req.ReportId).Scan(
+		&snapshotMapConfig,
+		&snapshotTitle,
+		&snapshotParamsText,
+		&snapshotReadme,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			err := fmt.Errorf("snapshot not found version_id:%s report_id:%s", req.VersionId, req.ReportId)
+			errtype.LogError(err, "failed to load report snapshot")
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+		errtype.LogError(err, "failed to load report snapshot")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer tx.Rollback()
+
+	// Restore report content (map_config, title, query_params, readme, version_id)
+	_, err = tx.ExecContext(ctx, `
+		UPDATE reports
+		SET map_config = $1,
+			title = $2,
+			query_params = $3,
+			readme = $4,
+			updated_at = CURRENT_TIMESTAMP,
+			version_id = $5
+		WHERE id = $6
+	`, snapshotMapConfig, snapshotTitle, snapshotParamsText, snapshotReadme, req.VersionId, req.ReportId)
+	if err != nil {
+		errtype.LogError(err, "failed to restore report from snapshot")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	// ---- Restore queries from query_snapshots (no delta, only update existing) ----
+	_, err = tx.ExecContext(ctx, `
+		UPDATE queries
+		SET query_text = (
+				SELECT qs.query_text
+				FROM query_snapshots qs
+				WHERE qs.report_version_id = $1
+				  AND qs.query_id = queries.id
+			),
+			query_source_id = (
+				SELECT qs.query_source_id
+				FROM query_snapshots qs
+				WHERE qs.report_version_id = $2
+				  AND qs.query_id = queries.id
+			),
+			updated_at = CURRENT_TIMESTAMP
+		WHERE id IN (
+			SELECT query_id
+			FROM query_snapshots
+			WHERE report_version_id = $3
+			  AND report_id = $4
+		)
+	`, req.VersionId, req.VersionId, req.VersionId, req.ReportId)
+	if err != nil {
+		errtype.LogError(err, "failed to update queries from snapshot")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	// ---- Restore datasets from dataset_snapshots using diff (add/update/remove) ----
+	type datasetState struct {
+		id           string
+		queryID      sql.NullString
+		fileID       sql.NullString
+		name         string
+		connectionID sql.NullString
+	}
+
+	currentDatasets := map[string]datasetState{}
+	rows, err := tx.QueryContext(ctx, `
+		SELECT id, query_id, file_id, name, connection_id
+		FROM datasets
+		WHERE report_id = $1
+	`, req.ReportId)
+	if err != nil {
+		errtype.LogError(err, "failed to load current datasets")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	for rows.Next() {
+		var d datasetState
+		if err := rows.Scan(&d.id, &d.queryID, &d.fileID, &d.name, &d.connectionID); err != nil {
+			errtype.LogError(err, "failed to scan current dataset")
+			rows.Close()
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		currentDatasets[d.id] = d
+	}
+	rows.Close()
+
+	snapshotDatasets := map[string]datasetState{}
+	rows, err = tx.QueryContext(ctx, `
+		SELECT dataset_id, query_id, file_id, name, connection_id
+		FROM dataset_snapshots
+		WHERE report_version_id = $1 AND report_id = $2
+	`, req.VersionId, req.ReportId)
+	if err != nil {
+		errtype.LogError(err, "failed to load dataset snapshots")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	for rows.Next() {
+		var d datasetState
+		if err := rows.Scan(&d.id, &d.queryID, &d.fileID, &d.name, &d.connectionID); err != nil {
+			errtype.LogError(err, "failed to scan dataset snapshot")
+			rows.Close()
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		snapshotDatasets[d.id] = d
+	}
+	rows.Close()
+
+	// Determine datasets to delete (present now but not in snapshot)
+	for id := range currentDatasets {
+		if _, ok := snapshotDatasets[id]; !ok {
+			_, err = tx.ExecContext(ctx, `
+				DELETE FROM datasets
+				WHERE id = $1 AND report_id = $2
+			`, id, req.ReportId)
+			if err != nil {
+				errtype.LogError(err, "failed to delete dataset not present in snapshot")
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+		}
+	}
+
+	// Datasets to insert or update to match snapshot
+	for id, snap := range snapshotDatasets {
+		cur, exists := currentDatasets[id]
+		// Helper to compare NullString
+		equalNullString := func(a, b sql.NullString) bool {
+			if a.Valid != b.Valid {
+				return false
+			}
+			if !a.Valid {
+				return true
+			}
+			return a.String == b.String
+		}
+
+		if !exists {
+			// Insert missing dataset
+			var queryID interface{}
+			if snap.queryID.Valid {
+				queryID = snap.queryID.String
+			} else {
+				queryID = nil
+			}
+			var fileID interface{}
+			if snap.fileID.Valid {
+				fileID = snap.fileID.String
+			} else {
+				fileID = nil
+			}
+			var connectionID interface{}
+			if snap.connectionID.Valid {
+				connectionID = snap.connectionID.String
+			} else {
+				connectionID = nil
+			}
+
+			_, err = tx.ExecContext(ctx, `
+				INSERT INTO datasets (id, report_id, query_id, file_id, name, connection_id)
+				VALUES ($1, $2, $3, $4, $5, $6)
+			`, id, req.ReportId, queryID, fileID, snap.name, connectionID)
+			if err != nil {
+				errtype.LogError(err, "failed to insert dataset from snapshot")
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+			continue
+		}
+
+		// Update existing dataset if any field differs
+		if !equalNullString(cur.queryID, snap.queryID) ||
+			!equalNullString(cur.fileID, snap.fileID) ||
+			!equalNullString(cur.connectionID, snap.connectionID) ||
+			cur.name != snap.name {
+
+			var queryID interface{}
+			if snap.queryID.Valid {
+				queryID = snap.queryID.String
+			} else {
+				queryID = nil
+			}
+			var fileID interface{}
+			if snap.fileID.Valid {
+				fileID = snap.fileID.String
+			} else {
+				fileID = nil
+			}
+			var connectionID interface{}
+			if snap.connectionID.Valid {
+				connectionID = snap.connectionID.String
+			} else {
+				connectionID = nil
+			}
+
+			_, err = tx.ExecContext(ctx, `
+				UPDATE datasets
+				SET query_id = $1,
+					file_id = $2,
+					name = $3,
+					connection_id = $4
+				WHERE id = $5 AND report_id = $6
+			`, queryID, fileID, snap.name, connectionID, id, req.ReportId)
+			if err != nil {
+				errtype.LogError(err, "failed to update dataset from snapshot")
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		errtype.LogError(err, "failed to commit snapshot restore transaction")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.createReportSnapshot(ctx, req.ReportId, proto.ReportSnapshot_TRIGGER_TYPE_SNAPSHOT_RESTORE)
+	if err != nil {
+		errtype.LogError(err, "failed to create report snapshot")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	// Notify subscribers that report has changed
+	s.reportStreams.Ping(req.ReportId)
+
+	return &proto.RestoreReportSnapshotResponse{}, nil
 }

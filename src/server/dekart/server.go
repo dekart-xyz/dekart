@@ -6,6 +6,7 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/conn"
 	"dekart/src/server/job"
+	"dekart/src/server/notifications"
 	"dekart/src/server/report"
 	"dekart/src/server/secrets"
 	"dekart/src/server/storage"
@@ -16,6 +17,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
@@ -28,6 +30,7 @@ type Server struct {
 	reportStreams *report.Streams
 	userStreams   *user.Streams
 	storage       storage.Storage
+	notifications notifications.Service
 	proto.UnimplementedDekartServer
 	jobs job.Store
 }
@@ -43,6 +46,7 @@ func NewServer(db *sql.DB, storageBucket storage.Storage, jobs job.Store) *Serve
 		userStreams:   user.NewStreams(),
 		storage:       storageBucket,
 		jobs:          jobs,
+		notifications: notifications.NewFromEnv(),
 	}
 	if IsSqlite() {
 		go server.startBackups()
@@ -263,11 +267,20 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 				Type:  proto.GetEnvResponse_Variable_TYPE_DEKART_CLOUD,
 				Value: defaultString(os.Getenv("DEKART_CLOUD"), ""),
 			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_MAX_FILE_UPLOAD_SIZE,
+				Value: fmt.Sprintf("%d", getMaxFileUploadSize()),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_IS_SNOWPARK,
+				Value: defaultString(os.Getenv("DEKART_REQUIRE_SNOWFLAKE_CONTEXT"), ""),
+			},
 		}
 
 	}
 	return &proto.GetEnvResponse{
-		Variables: variables,
+		Variables:  variables,
+		ServerTime: time.Now().Unix(),
 	}, nil
 }
 

@@ -1,11 +1,11 @@
 import { useParams } from 'react-router-dom'
 import Input from 'antd/es/input'
-import { useEffect, useState, Component } from 'react'
+import { useEffect, useState, Component, useMemo } from 'react'
 import { KeplerGl } from '@kepler.gl/components'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
 import { useDispatch, useSelector } from 'react-redux'
-import { EditOutlined, WarningFilled, MoreOutlined, ReadOutlined, VerticalAlignBottomOutlined } from '@ant-design/icons'
+import { EditOutlined, WarningFilled, MoreOutlined, ReadOutlined } from '@ant-design/icons'
 import { QueryJob } from 'dekart-proto/dekart_pb'
 import Tabs from 'antd/es/tabs'
 import classnames from 'classnames'
@@ -17,7 +17,7 @@ import { Resizable } from 're-resizable'
 import DatasetSettingsModal from './DatasetSettingsModal'
 import getDatasetName from './lib/getDatasetName'
 import { createDataset, openDatasetSettingsModal, removeDataset, setActiveDataset } from './actions/dataset'
-import { closeReport, openReport, reportTitleChange, reportWillOpen, toggleReportEdit, toggleReportFullscreen } from './actions/report'
+import { closeReport, openReport, reportTitleChange, reportWillOpen, toggleReportEdit } from './actions/report'
 import { setError } from './actions/message'
 import Tooltip from 'antd/es/tooltip'
 import prettyBites from 'pretty-bytes'
@@ -27,9 +27,14 @@ import { useCheckMapConfig } from './lib/mapConfig'
 import Readme from './Readme'
 import { removeReadme, showReadmeTab } from './actions/readme'
 import Modal from 'antd/es/modal'
-import { MapControlButton } from '@kepler.gl/components/dist/common/styled-components'
 import { Loading } from './Loading'
+import ToggleFullscreenButton from './ToggleFullscreenButton'
+import ShowMyLocationButton from './ShowMyLocationButton'
 import { UNKNOWN_EMAIL } from './lib/constants'
+import { track } from './lib/tracking'
+import { getDefaultMapStyles } from '@kepler.gl/reducers'
+import { getApplicationConfig } from '@kepler.gl/utils'
+import UserPositionOverlay from './UserPositionOverlay'
 
 function TabIcon ({ job }) {
   let iconColor = 'transparent'
@@ -65,21 +70,28 @@ function getOnTabEditHandler (dispatch, reportId, datasets) {
   return (datasetId, action) => {
     switch (action) {
       case 'add':
+        track('AddDatasetTab', { reportId })
         return dispatch(createDataset(reportId))
       case 'remove': {
         if (datasetId === 'readme') {
+          track('RemoveReadmeClicked', { reportId })
           Modal.confirm({
             title: 'Remove readme from report?',
             okText: 'Yes',
             okType: 'danger',
             cancelText: 'No',
-            onOk: () => dispatch(removeReadme())
+            onOk: () => {
+              track('RemoveReadmeConfirmed', { reportId })
+              dispatch(removeReadme())
+            }
           })
         } else if (datasetId) {
           const datasetsToRemove = datasets.find(d => d.id === datasetId)
           if (datasetsToRemove.fileId || datasetsToRemove.queryId) {
+            track('OpenDatasetSettings', { datasetId })
             dispatch(openDatasetSettingsModal(datasetId))
           } else {
+            track('RemoveDataset', { datasetId })
             dispatch(removeDataset(datasetsToRemove.id, true))
           }
         }
@@ -209,9 +221,11 @@ function DatasetSection ({ reportId }) {
                   onChange={(tabId) => {
                     switch (tabId) {
                       case 'readme':
+                        track('ViewReadmeTab', { reportId })
                         dispatch(showReadmeTab())
                         return
                       default:
+                        track('SwitchDatasetTab', { datasetId: tabId, reportId })
                         dispatch(setActiveDataset(tabId))
                     }
                   }}
@@ -257,10 +271,12 @@ function Title () {
           }}
           onBlur={() => {
             setEdit(false)
+            track('ReportTitleChanged')
             dispatch(reportTitleChange(value))
           }}
           onPressEnter={() => {
             setEdit(false)
+            track('ReportTitleChanged')
             dispatch(reportTitleChange(value))
           }}
           placeholder='Untitled'
@@ -279,7 +295,12 @@ function Title () {
               [styles.titleTextEdit]: reportStatus.edit && canWrite
             }
           )}
-          onClick={() => reportStatus.edit && setEdit(true)}
+          onClick={() => {
+            if (reportStatus.edit) {
+              track('ReportTitleEditClicked')
+              setEdit(true)
+            }
+          }}
           title='Click to edit map title'
         >{
             reportStatus.edit && canWrite ? <EditOutlined className={styles.titleEditIcon} /> : null
@@ -298,6 +319,7 @@ class CatchKeplerError extends Component {
 
   componentDidCatch (error, errorInfo) {
     this.setState({ hasError: true })
+    track('KeplerError', { message: error.message }) // System error
     this.props.onError(error)
   }
 
@@ -313,26 +335,46 @@ class CatchKeplerError extends Component {
   }
 }
 
-function ToggleFullscreenButton () {
-  const dispatch = useDispatch()
-  const report = useSelector(state => state.report)
-  const hideFullscreen = !report.allowExport && !report.canWrite && !report.readme
-
-  return (
-    <div className={styles.toggleFullscreen}>
-      <Tooltip title='Toggle fullscreen' placement='left'>
-        <MapControlButton active disabled={hideFullscreen} className={styles.toggleFullscreenButton} onClick={() => dispatch(toggleReportFullscreen())}>
-          <VerticalAlignBottomOutlined />
-        </MapControlButton>
-      </Tooltip>
-    </div>
-  )
-}
-
 function Kepler () {
   const env = useSelector(state => state.env)
   const report = useSelector(state => state.report)
+  const isSnowpark = useSelector(state => state.env.isSnowpark)
   const dispatch = useDispatch()
+  const [mapboxRef, setMapboxRef] = useState(null)
+
+  // Filter out MapLibre styles (dark-matter, positron, voyager) only when isSnowpark is true
+  // Keep only Mapbox styles and no-basemap option
+  // Use getDefaultMapStyles to ensure icons have proper CDN URLs
+  const mapStylesWithoutMapLibre = useMemo(() => {
+    if (!isSnowpark) {
+      return undefined
+    }
+    // Get CDN URL from application config
+    const cdnUrl = getApplicationConfig().cdnUrl
+
+    // Get all default styles with proper icon URLs
+    const allDefaultStyles = getDefaultMapStyles(cdnUrl)
+
+    // MapLibre style IDs to exclude
+    const mapLibreStyleIds = ['dark-matter', 'positron', 'voyager']
+
+    // Convert object to array and filter out MapLibre styles
+    const mapboxOnly = Object.values(allDefaultStyles).filter(style => !mapLibreStyleIds.includes(style.id))
+
+    // Replace icons with Mapbox Static Images so previews are served from Mapbox
+    const token = env.variables.MAPBOX_TOKEN
+    const toStaticIcon = (styleUrl) => {
+      // styleUrl is like 'mapbox://styles/{user}/{styleId}'
+      const path = styleUrl.replace('mapbox://styles/', '')
+      return `https://api.mapbox.com/styles/v1/${path}/static/0,0,1/160x120?access_token=${token}&logo=false&attribution=false`
+    }
+
+    return mapboxOnly.map(style => ({
+      ...style,
+      icon: toStaticIcon(style.url)
+    }))
+  }, [isSnowpark, env])
+
   if (!env.loaded) {
     return (
       <div className={styles.keplerBlock} />
@@ -346,7 +388,10 @@ function Kepler () {
         [styles.hideInteraction]: hideInteraction
       })}
     >
-      <ToggleFullscreenButton />
+      <div className={styles.mapControlButtons}>
+        <ToggleFullscreenButton />
+        <ShowMyLocationButton />
+      </div>
       <AutoSizer>
         {({ height, width }) => (
           <CatchKeplerError onError={(err) => dispatch(setError(err))}>
@@ -355,7 +400,17 @@ function Kepler () {
               mapboxApiAccessToken={env.variables.MAPBOX_TOKEN}
               width={width}
               height={height}
+              mapStyles={mapStylesWithoutMapLibre}
+              mapStylesReplaceDefault={isSnowpark || undefined}
+              getMapboxRef={(mapbox) => {
+                if (mapbox) {
+                  setMapboxRef(mapbox)
+                } else {
+                  setMapboxRef(null)
+                }
+              }}
             />
+            {mapboxRef && <UserPositionOverlay map={mapboxRef} />}
           </CatchKeplerError>
         )}
       </AutoSizer>
@@ -380,6 +435,13 @@ export default function ReportPage ({ edit }) {
   const updatedAtDate = new Date(updatedAt * 1000)
 
   const dispatch = useDispatch()
+
+  // Track report page views
+  useEffect(() => {
+    if (id && envLoaded) {
+      track('ReportPageViewed', { reportId: id, edit })
+    }
+  }, [id, envLoaded, edit])
 
   useEffect(() => {
     // make sure kepler loaded before firing kepler actions

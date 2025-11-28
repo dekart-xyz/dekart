@@ -1,6 +1,6 @@
 import { useDispatch, useSelector } from 'react-redux'
 import styles from './MembersTab.module.css'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { updateWorkspaceUser } from './actions/workspace'
 import { PlanType, UpdateWorkspaceUserRequest, UserRole } from 'dekart-proto/dekart_pb'
 import Input from 'antd/es/input'
@@ -10,6 +10,8 @@ import Tag from 'antd/es/tag'
 import { copyUrlToClipboard } from './actions/clipboard'
 import { CopyOutlined } from '@ant-design/icons'
 import Select from 'antd/es/select'
+import { track } from './lib/tracking'
+import { showUpgradeModal, UpgradeModalType } from './actions/upgradeModal'
 
 function getRoleTitle (role, planType) {
   const roleLabels = {
@@ -37,21 +39,30 @@ export default function MembersTab () {
   const [email, setEmail] = useState('')
   const [inviteRole, setInviteRole] = useState(UserRole.ROLE_VIEWER)
   const isAdmin = useSelector(state => state.user.isAdmin)
+  const expired = useSelector(state => state.workspace.expired)
+  const canManageUsers = isAdmin && !expired
+  const isFreemium = useSelector(state => state.user.isFreemium)
   const addUserCb = useCallback(() => {
-    if (email && isAdmin) {
+    if (email && canManageUsers) {
       dispatch(updateWorkspaceUser(email, UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_ADD, inviteRole))
       setEmail('')
     }
-  }, [dispatch, email, isAdmin, inviteRole])
-  if (!users) {
+  }, [dispatch, email, canManageUsers, inviteRole])
+  const usersLoaded = Boolean(users)
+  useEffect(() => {
+    if (usersLoaded) {
+      track('MembersTabLoaded')
+    }
+  }, [usersLoaded])
+  if (!usersLoaded) {
     return null
   }
 
   let inviteDisabled
   if (planType === PlanType.TYPE_TEAM) {
-    inviteDisabled = !isAdmin || addedUsersCount >= 20
-  } else if (planType > PlanType.TYPE_PERSONAL) {
-    inviteDisabled = !isAdmin
+    inviteDisabled = !canManageUsers || addedUsersCount >= 20
+  } else {
+    inviteDisabled = !canManageUsers
   }
 
   return (
@@ -92,7 +103,14 @@ export default function MembersTab () {
         />
         <Button
           disabled={inviteDisabled}
-          className={styles.inviteUsersButton} type='primary' onClick={addUserCb}
+          className={styles.inviteUsersButton} type='primary' onClick={() => {
+            if (isFreemium) {
+              dispatch(showUpgradeModal(UpgradeModalType.INVITE))
+              return
+            }
+            track('InviteUser', { role: inviteRole })
+            addUserCb()
+          }}
         >Invite user
         </Button>
       </div>
@@ -123,7 +141,10 @@ export default function MembersTab () {
                       icon={<CopyOutlined />}
                       className={styles.inviteButton}
                       title='Copy invite link'
-                      type='text' onClick={() => dispatch(copyUrlToClipboard(window.location.toString() + '/invite/' + u.inviteId, 'Invite link copied to clipboard'))}
+                      type='text' onClick={() => {
+                        track('CopyInviteLink', { inviteId: u.inviteId })
+                        dispatch(copyUrlToClipboard(window.location.toString() + '/invite/' + u.inviteId, 'Invite link copied to clipboard'))
+                      }}
                     />
                     )
                   : null
@@ -143,8 +164,9 @@ export default function MembersTab () {
                 <Select
                   defaultValue={role}
                   style={{ width: 220 }}
-                  disabled={u.email === userStream.email || !isAdmin}
+                  disabled={u.email === userStream.email || !canManageUsers}
                   onChange={(value) => {
+                    track('ChangeUserRole', { email: u.email, newRole: value })
                     dispatch(updateWorkspaceUser(u.email, UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_UPDATE, value))
                   }}
                   options={[
@@ -193,6 +215,7 @@ function RemoveButton ({ email }) {
       title={email === userStream.email ? 'You cannot remove yourself' : undefined}
       className={styles.removeButton}
       type='text' onClick={() => {
+        track('RemoveUserFromWorkspace', { email })
         setRemoving(true)
         dispatch(updateWorkspaceUser(email, UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_REMOVE))
       }}

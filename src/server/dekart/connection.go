@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/conn"
+	"dekart/src/server/errtype"
 	"dekart/src/server/secrets"
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
@@ -37,7 +38,7 @@ func (s Server) TestConnection(ctx context.Context, req *proto.TestConnectionReq
 
 	res, err := s.jobs.TestConnection(ctx, req)
 	if err != nil {
-		log.Err(err).Msg("TestConnection failed")
+		errtype.LogError(err, "TestConnection failed")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if !res.Success {
@@ -76,7 +77,7 @@ func (s Server) getConnectionFromDatasetID(ctx context.Context, datasetID string
 			// legacy query
 			return s.getConnection(ctx, "")
 		}
-		log.Err(err).Msg("select from datasets failed")
+		errtype.LogError(err, "select from datasets failed")
 		return nil, err
 	}
 	return s.getConnection(ctx, connectionID.String)
@@ -96,7 +97,7 @@ func (s Server) getConnectionFromQueryID(ctx context.Context, queryID string) (*
 			// legacy query
 			return s.getConnection(ctx, "")
 		}
-		log.Err(err).Msg("select from queries failed")
+		errtype.LogError(err, "select from queries failed")
 		return nil, err
 	}
 	return s.getConnection(ctx, connectionID.String)
@@ -112,7 +113,7 @@ func (s Server) getConnectionFromFileID(ctx context.Context, fileID string) (*pr
 		fileID,
 	).Scan(&connectionID)
 	if err != nil {
-		log.Err(err).Msg("select from files failed")
+		errtype.LogError(err, "select from files failed")
 		return nil, err
 	}
 	return s.getConnection(ctx, connectionID.String)
@@ -188,7 +189,7 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 		connectionID,
 	)
 	if err != nil {
-		log.Err(err).Msg("select from connections failed")
+		errtype.LogError(err, "select from connections failed")
 		return nil, err
 	}
 	defer res.Close()
@@ -260,7 +261,7 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 			connection.CanStoreFiles = true
 		}
 		if err != nil {
-			log.Err(err).Msg("scan failed")
+			errtype.LogError(err, "scan failed")
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	}
@@ -303,7 +304,7 @@ func (s Server) getUserConnections(ctx context.Context) ([]*proto.Connection, er
 		if err == context.Canceled {
 			return nil, err
 		}
-		log.Err(err).Msg("select from connections failed")
+		errtype.LogError(err, "select from connections failed")
 		return nil, err
 	}
 	defer rows.Close()
@@ -400,6 +401,9 @@ func (s Server) SetDefaultConnection(ctx context.Context, req *proto.SetDefaultC
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	if checkWorkspace(ctx).Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	}
 	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "only admins can edit connections")
 	}
@@ -411,7 +415,7 @@ func (s Server) SetDefaultConnection(ctx context.Context, req *proto.SetDefaultC
 		req.ConnectionId,
 	)
 	if err != nil {
-		log.Err(err).Msg("update connections failed")
+		errtype.LogError(err, "update connections failed")
 		return nil, err
 	}
 	s.userStreams.PingAll()
@@ -422,6 +426,9 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
+	}
+	if checkWorkspace(ctx).Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
 	}
 	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "only admins can edit connections")
@@ -521,12 +528,12 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 		}
 	}
 	if err != nil {
-		log.Err(err).Msg("update connections failed")
+		errtype.LogError(err, "update connections failed")
 		return nil, err
 	}
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		log.Err(err).Msg("rows affected failed")
+		errtype.LogError(err, "rows affected failed")
 		return nil, err
 	}
 	if rowsAffected == 0 {
@@ -549,7 +556,7 @@ func (s Server) getReportsAffectedByConnectionArchive(ctx context.Context, conne
 		connectionID,
 	)
 	if err != nil {
-		log.Err(err).Msg("select from reports failed")
+		errtype.LogError(err, "select from reports failed")
 		return nil, err
 	}
 	defer rows.Close()
@@ -559,7 +566,7 @@ func (s Server) getReportsAffectedByConnectionArchive(ctx context.Context, conne
 			&reportID,
 		)
 		if err != nil {
-			log.Err(err).Msg("scan failed")
+			errtype.LogError(err, "scan failed")
 			return nil, err
 		}
 		reportIDs = append(reportIDs, reportID.String)
@@ -572,10 +579,13 @@ func (s Server) ArchiveConnection(ctx context.Context, req *proto.ArchiveConnect
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
+	workspaceInfo := checkWorkspace(ctx)
+	if workspaceInfo.Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	}
+	if workspaceInfo.UserRole != proto.UserRole_ROLE_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "only admins can edit connections")
 	}
-	workspaceInfo := checkWorkspace(ctx)
 	res, err := s.db.ExecContext(ctx,
 		`update connections set
 			archived=true,
@@ -586,12 +596,12 @@ func (s Server) ArchiveConnection(ctx context.Context, req *proto.ArchiveConnect
 		workspaceInfo.ID,
 	)
 	if err != nil {
-		log.Err(err).Msg("update connections failed")
+		errtype.LogError(err, "update connections failed")
 		return nil, err
 	}
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		log.Err(err).Msg("rows affected failed")
+		errtype.LogError(err, "rows affected failed")
 		return nil, err
 	}
 	if rowsAffected == 0 {
@@ -600,7 +610,7 @@ func (s Server) ArchiveConnection(ctx context.Context, req *proto.ArchiveConnect
 	reports, err := s.getReportsAffectedByConnectionArchive(ctx, req.ConnectionId)
 
 	if err != nil {
-		log.Err(err).Msg("getReportsAffectedByConnectionArchive failed")
+		errtype.LogError(err, "getReportsAffectedByConnectionArchive failed")
 		return nil, err
 	}
 
@@ -613,7 +623,7 @@ func (s Server) ArchiveConnection(ctx context.Context, req *proto.ArchiveConnect
 	)
 
 	if err != nil {
-		log.Err(err).Msg("update datasets failed")
+		errtype.LogError(err, "update datasets failed")
 		return nil, err
 	}
 
@@ -633,7 +643,7 @@ func (s Server) GetConnectionList(ctx context.Context, req *proto.GetConnectionL
 		// default workspace and playground workspace do not have user connections
 		userConnections, err := s.getUserConnections(ctx)
 		if err != nil {
-			log.Err(err).Msg("getConnections failed")
+			errtype.LogError(err, "getConnections failed")
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 		connections = append(connections, userConnections...)
@@ -643,7 +653,7 @@ func (s Server) GetConnectionList(ctx context.Context, req *proto.GetConnectionL
 		// append system connection
 		systemConnection, err := s.getConnection(ctx, conn.SystemConnectionID)
 		if err != nil {
-			log.Err(err).Msg("getConnection failed for system connection")
+			errtype.LogError(err, "getConnection failed for system connection")
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 		if systemConnection != nil {
@@ -680,15 +690,16 @@ func (s Server) getLastConnectionUpdate(ctx context.Context) (int64, error) {
         ) AS combined`,
 		).Scan(&lastConnectionUpdateDate)
 		if err != nil {
-			log.Err(err).Send()
+			errtype.LogError(err, "failed to get last connection update (sqlite)")
 			return 0, err
 		}
 		if !lastConnectionUpdateDate.Valid {
 			return 0, nil // or any default value you prefer
 		}
-		lastConnectionUpdateDateParsed, err := time.Parse("2006-01-02 15:04:05", lastConnectionUpdateDate.String)
+		// Parse SQLite timestamp (stored in UTC)
+		lastConnectionUpdateDateParsed, err := time.ParseInLocation("2006-01-02 15:04:05", lastConnectionUpdateDate.String, time.UTC)
 		if err != nil {
-			log.Err(err).Send()
+			errtype.LogError(err, "failed to parse connection update timestamp")
 			return 0, err
 		}
 		lastConnectionUpdate = lastConnectionUpdateDateParsed.Unix()
@@ -703,7 +714,7 @@ func (s Server) getLastConnectionUpdate(ctx context.Context) (int64, error) {
 		).Scan(&lastConnectionUpdateDate)
 		lastConnectionUpdate = lastConnectionUpdateDate.Time.Unix()
 		if err != nil {
-			log.Err(err).Send()
+			errtype.LogError(err, "failed to get last connection update")
 			return 0, err
 		}
 	}
@@ -715,10 +726,14 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	if checkWorkspace(ctx).ID == "" {
+	workspaceInfo := checkWorkspace(ctx)
+	if workspaceInfo.ID == "" {
 		return nil, status.Error(codes.NotFound, "workspace not found")
 	}
-	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
+	if workspaceInfo.Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	}
+	if workspaceInfo.UserRole != proto.UserRole_ROLE_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "only admins can create connections")
 	}
 	err := conn.ValidateReqConnection(req.Connection)
@@ -760,14 +775,14 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 		secrets.SecretToServerEncrypted(req.Connection.SnowflakeKey, claims),
 		secrets.SecretToServerEncrypted(req.Connection.BigqueryKey, claims),
 		claims.Email,
-		checkWorkspace(ctx).ID,
+		workspaceInfo.ID,
 		req.Connection.WherobotsHost,
 		secrets.SecretToServerEncrypted(req.Connection.WherobotsKey, claims),
 		req.Connection.WherobotsRegion,
 		req.Connection.WherobotsRuntime,
 	)
 	if err != nil {
-		log.Err(err).Msg("insert into connections failed")
+		errtype.LogError(err, "insert into connections failed")
 		return nil, err
 	}
 

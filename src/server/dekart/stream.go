@@ -29,13 +29,12 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 
 	report, err := s.getReport(ctx, reportID)
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve report")
-		return status.Errorf(codes.Internal, err.Error())
+		return GRPCError("Cannot retrieve report", err)
 	}
 	if report == nil {
 		err := fmt.Errorf("report %s not found", reportID)
 		log.Warn().Err(err).Send()
-		return status.Errorf(codes.NotFound, err.Error())
+		return status.Error(codes.NotFound, err.Error())
 	}
 
 	// update report_analytics only when tracking is enabled
@@ -49,39 +48,33 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 			claims.Email,
 		)
 		if err != nil {
-			log.Err(err).Send()
-			return status.Errorf(codes.Internal, err.Error())
+			return GRPCError("Cannot insert report analytics", err)
 		}
 	}
 
 	datasets, err := s.getDatasets(ctx, reportID)
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve datasets")
-		return status.Errorf(codes.Internal, err.Error())
+		return GRPCError("Cannot retrieve datasets", err)
 	}
 
 	queries, err := s.getQueries(ctx, datasets)
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve queries")
-		return status.Errorf(codes.Internal, err.Error())
+		return GRPCError("Cannot retrieve queries", err)
 	}
 
 	files, err := s.getFiles(ctx, datasets)
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve queries")
-		return status.Errorf(codes.Internal, err.Error())
+		return GRPCError("Cannot retrieve files", err)
 	}
 
 	queryJobs, err := s.getDatasetsQueryJobs(ctx, datasets)
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve query jobs")
-		return status.Errorf(codes.Internal, err.Error())
+		return GRPCError("Cannot retrieve query jobs", err)
 	}
 
 	directAccessEmails, err := s.getDirectAccessEmails(ctx, reportID)
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve direct access emails")
-		return status.Errorf(codes.Internal, err.Error())
+		return GRPCError("Cannot retrieve direct access emails", err)
 	}
 
 	res := proto.ReportStreamResponse{
@@ -155,7 +148,7 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 
 	_, err := uuid.Parse(req.Report.Id)
 	if err != nil {
-		return status.Errorf(codes.InvalidArgument, err.Error())
+		return status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	streamID, err := uuid.NewRandom()
@@ -209,7 +202,8 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 						where report_id = r.id
 					) t
 					where rn = 1 and status != 2
-				) as has_direct_access
+				) as has_direct_access,
+				version_id
 			from reports as r
 			where author_email=$1 and is_playground=true
 			order by updated_at desc`,
@@ -240,7 +234,8 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 						where report_id = r.id
 					) t
 					where rn = 1 and status != 2
-				) as has_direct_access
+				) as has_direct_access,
+				r.version_id
 			from reports as r
 			where (r.author_email=$1 or (r.discoverable=true and r.archived=false) or r.allow_edit=true) and r.workspace_id=$2
 			order by r.updated_at desc`,
@@ -249,8 +244,7 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 		)
 	}
 	if err != nil {
-		log.Err(err).Send()
-		return status.Errorf(codes.Internal, err.Error())
+		return GRPCError("Cannot query report list", err)
 	}
 	defer reportRows.Close()
 	res := proto.ReportListResponse{
@@ -263,6 +257,7 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 		report := proto.Report{}
 		createdAt := time.Time{}
 		updatedAt := time.Time{}
+		var versionID sql.NullString
 		err = reportRows.Scan(
 			&report.Id,
 			&report.Title,
@@ -278,13 +273,16 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			&report.TrackViewers,
 			&report.IsPlayground,
 			&report.HasDirectAccess,
+			&versionID,
 		)
 		if err != nil {
-			log.Err(err).Send()
-			return status.Errorf(codes.Internal, err.Error())
+			return GRPCError("Cannot scan report row", err)
 		}
 		report.CreatedAt = createdAt.Unix()
 		report.UpdatedAt = updatedAt.Unix()
+		if versionID.Valid {
+			report.VersionId = versionID.String
+		}
 		res.Reports = append(res.Reports, &report)
 	}
 	err = srv.Send(&res)
@@ -294,7 +292,7 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			return nil // Client disconnected gracefully
 		}
 		log.Err(err).Send()
-		return status.Errorf(codes.Internal, err.Error())
+		return status.Error(codes.Internal, err.Error())
 	}
 	return nil
 }
@@ -316,8 +314,7 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 
 	workspaceUpdate, err := s.getWorkspaceUpdate(ctx)
 	if err != nil {
-		log.Err(err).Send()
-		return status.Errorf(codes.Internal, err.Error())
+		return GRPCError("Cannot get workspace update", err)
 	}
 
 	response := proto.GetUserStreamResponse{
@@ -341,7 +338,7 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 			return nil // Client disconnected gracefully
 		}
 		log.Err(err).Send()
-		return status.Errorf(codes.Internal, err.Error())
+		return status.Error(codes.Internal, err.Error())
 	}
 	return nil
 }

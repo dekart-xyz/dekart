@@ -29,6 +29,7 @@ jobs:
       REG_PREFIX: ${{format('ghcr.io/{0}', github.repository)}}
       LOGIN_REG:  ghcr
       GOOGLE_CRED_SEC: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+      MAPBOX_TOKEN_SEC: ${{ secrets.DEKART_MAPBOX_TOKEN }}
 
 
     services:
@@ -101,6 +102,7 @@ jobs:
             -e DEKART_ALLOW_WORKSPACE_CREATION=1 \
             -e DEKART_UX_DISABLE_VERSION_CHECK=1 \
             -e DEKART_DEV_NO_DATASET_CACHE=1 \
+            -e DEKART_MAPBOX_TOKEN=$MAPBOX_TOKEN_SEC \
             -e DEKART_CLOUD=1 \
             -e TEST_SPEC=cypress/e2e/cloud/cloudBasicFlowStart.cy.js \
             -e CYPRESS_CI=1 \
@@ -132,6 +134,7 @@ jobs:
             -e DEKART_ALLOW_WORKSPACE_CREATION=1 \
             -e DEKART_UX_DISABLE_VERSION_CHECK=1 \
             -e DEKART_DEV_NO_DATASET_CACHE=1 \
+            -e DEKART_MAPBOX_TOKEN=$MAPBOX_TOKEN_SEC \
             -e DEKART_CLOUD=1 \
             -e TEST_SPEC=cypress/e2e/cloud/cloudBasicFlowEnd.cy.js \
             -e CYPRESS_CI=1 \
@@ -158,6 +161,7 @@ jobs:
       SNOW_ID_SEC:             ${{ secrets.SNOWFLAKE_ACCOUNT_ID }}
       SNOW_USER_SEC:           ${{ secrets.SNOWFLAKE_USER }}
       SNOW_PASS_SEC:           ${{ secrets.SNOWFLAKE_PASSWORD }}
+      MAPBOX_TOKEN_SEC:        ${{ secrets.DEKART_MAPBOX_TOKEN }}
 
       # registry prefix + login target
       REG_PREFIX: ${{ inputs.target == 'premium' && format('ghcr.io/{0}', github.repository) || 'dekartxyz' }}
@@ -293,6 +297,7 @@ jobs:
             -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
             -e DEKART_POSTGRES_HOST=localhost \
             -e DEKART_CORS_ORIGIN=http://localhost:3000 \
+            -e DEKART_MAPBOX_TOKEN=$MAPBOX_TOKEN_SEC \
             -e TEST_SPEC=${{ matrix.spec }} \
             -e CYPRESS_CI=1 \
             ${{ matrix.extra_env }} \

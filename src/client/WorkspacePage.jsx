@@ -1,7 +1,7 @@
 import { Header } from './Header'
 import styles from './WorkspacePage.module.css'
 import Card from 'antd/es/card'
-import { AppstoreTwoTone, TeamOutlined, CreditCardOutlined } from '@ant-design/icons'
+import { TeamOutlined, CreditCardOutlined, AppstoreTwoTone } from '@ant-design/icons'
 import Title from 'antd/es/typography/Title'
 import Button from 'antd/es/button'
 import { useEffect, useState } from 'react'
@@ -12,14 +12,13 @@ import Table from 'antd/es/table'
 import Input from 'antd/es/input'
 import Onboarding from './Onboarding'
 import Badge from 'antd/es/badge'
-import Steps from 'antd/es/steps'
 import Radio from 'antd/es/radio'
 import Form from 'antd/es/form'
 import SubscriptionTab from './SubscriptionTab'
 import MembersTab from './MembersTab'
 import Result from 'antd/es/result'
 import { switchPlayground } from './actions/user'
-import { useParams } from 'react-router-dom'
+import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 import { track } from './lib/tracking'
 import Select from 'antd/es/select'
 import { Loading } from './Loading'
@@ -68,12 +67,18 @@ function Invites () {
                       <Button
                         ghost
                         type='primary'
-                        className={styles.acceptButton} onClick={() => dispatch(respondToInvite(invite.inviteId, true))}
+                        className={styles.acceptButton} onClick={() => {
+                          track('AcceptWorkspaceInvite', { inviteId: invite.inviteId })
+                          dispatch(respondToInvite(invite.inviteId, true))
+                        }}
                       >Accept
                       </Button>
                       <Button
                         type='danger'
-                        ghost onClick={() => dispatch(respondToInvite(invite.inviteId, false))}
+                        ghost onClick={() => {
+                          track('DeclineWorkspaceInvite', { inviteId: invite.inviteId })
+                          dispatch(respondToInvite(invite.inviteId, false))
+                        }}
                       >Decline
                       </Button>
                     </>)
@@ -174,6 +179,7 @@ function UpdateWorkspaceForm () {
         disabled={disabled}
         initialValues={{ name: workspace.name, workspaceIDReadOnly: workspace.id }}
         layout='vertical' onFinish={(values) => {
+          track('UpdateWorkspace')
           setDisabled(true)
           dispatch(updateWorkspace(values.name))
         }}
@@ -210,15 +216,13 @@ function WorkspaceTab ({ nextStep, setNextStep }) {
   if (nextStep === 'invites') {
     title = 'Join workspace'
   } else if (workspace.id) {
-    title = 'Edit workspace'
+    title = null
   }
 
   return (
     <div className={styles.workspaceTab}>
       <div className={styles.workspaceTabHeader}>
-        <div>
-          <Title level={4}>{title}</Title>
-        </div>
+        {title ? <Title level={4}>{title}</Title> : null}
         {userStream.workspaceId && invites.length === 0 // user is in workspace and has no invites
           ? null
           : (
@@ -242,80 +246,73 @@ function WorkspaceTab ({ nextStep, setNextStep }) {
 }
 
 function getMembersSubTitle (addedUsersCount, planType) {
-  if (isNaN(addedUsersCount) || planType > PlanType.TYPE_TEAM) {
-    return ''
-  }
   if (planType === PlanType.TYPE_TEAM) {
     return `(${addedUsersCount} of 20)`
   }
-  return '(paid plan)'
+  return ''
 }
 
-export function Workspace ({ nextStep, setNextStep }) {
-  const { inviteId } = useParams()
+export function Workspace ({ nextStep, setNextStep, stepId }) {
   const userStream = useSelector(state => state.user.stream)
   const addedUsersCount = useSelector(state => state.workspace.addedUsersCount)
   const workspaceId = userStream?.workspaceId
   const planType = userStream?.planType
-  const [step, setStep] = useState(0)
-  // move to the next step if workspaceId is set
-  useEffect(() => {
-    if (inviteId) {
-      setStep(0)
-    } else if (workspaceId) {
-      if (planType > PlanType.TYPE_PERSONAL) {
-        setStep(2)
-      } else {
-        setStep(1)
-      }
-    }
-  }, [workspaceId, planType, setStep, inviteId])
+  const step = stepId || 'workspace'
+  const history = useHistory()
+  // step is derived from URL via props; no local state needed
 
   if (!userStream) {
     return null
   }
   return (
     <div className={styles.workspace}>
-      {workspaceId
-        ? (
-          <div className={styles.workspaceSteps}>
-            <Steps
-              type='navigation'
-              size='default'
-              current={step}
-              onChange={(current) => {
-                setStep(current)
-              }}
-              className='site-navigation-steps'
-              items={[
-                {
-                  title: 'Workspace',
-                  icon: <AppstoreTwoTone />
-                },
-                userStream.planType !== PlanType.TYPE_SELF_HOSTED
-                  ? {
-                      title: 'Plan',
-                      icon: <CreditCardOutlined />,
-                      disabled: !userStream.workspaceId
-                    }
-                  : null,
-                {
-                  title: 'Members',
-                  icon: <TeamOutlined />,
-                  disabled: userStream.planType <= PlanType.TYPE_PERSONAL,
-                  subTitle: getMembersSubTitle(addedUsersCount, planType)
-                }
-              ].filter(Boolean)}
-            />
-          </div>
+      {
+        workspaceId
+          ? (
+            <div className={styles.workspaceSteps}>
+              <Radio.Group
+                value={step}
+                onChange={(e) => {
+                  const v = e.target.value
+                  if (v === 'plan') {
+                    history.push('/workspace/plan')
+                  } else if (v === 'members') {
+                    history.push('/workspace/members')
+                  } else {
+                    history.push('/workspace')
+                  }
+                }}
+                className={styles.radioCentered}
+              >
+                <Radio.Button value='workspace'>
+                  <AppstoreTwoTone /> Workspace
+                </Radio.Button>
+                {userStream.planType !== PlanType.TYPE_SELF_HOSTED
+                  ? (
+                    <Radio.Button value='plan' disabled={!userStream.workspaceId}>
+                      <CreditCardOutlined /> Plan
+                    </Radio.Button>
+                    )
+                  : null}
+                <Radio.Button value='members'>
+                  <Badge color='blue' count={getMembersSubTitle(addedUsersCount, planType) ? undefined : 0} style={{ display: 'none' }}>
+                    {/* keep layout consistent without visible badge when not needed */}
+                    <TeamOutlined /> Members {getMembersSubTitle(addedUsersCount, planType)}
+                  </Badge>
+                </Radio.Button>
+              </Radio.Group>
+            </div>
+            )
+          : null
+      }
 
-          )
-        : null}
-
-      {([
-        <WorkspaceTab key={0} nextStep={nextStep} setNextStep={setNextStep} />,
-        userStream.planType !== PlanType.TYPE_SELF_HOSTED ? <SubscriptionTab key={1} /> : <MembersTab key={1} />,
-        <MembersTab key={2} />])[step]}
+      {
+        step === 'workspace'
+          ? <WorkspaceTab nextStep={nextStep} setNextStep={setNextStep} />
+          : step === 'plan'
+            ? (userStream.planType !== PlanType.TYPE_SELF_HOSTED ? <SubscriptionTab /> : <MembersTab />)
+            : <MembersTab />
+      }
     </div>
   )
 }
@@ -335,21 +332,29 @@ function WelcomeScreen ({ setNextStep }) {
       extra={(
         <>
           <Button
-            type='primary' key='1' onClick={() => {
+            type='primary' key='1' disabled={invites.length > 0} onClick={() => {
               track('CreateWorkspace')
               setNextStep('workspace')
             }}
           >
             Create Workspace
           </Button>
-          <Button key='2' onClick={() => setNextStep('invites')}><Badge color='blue' count={invites.length} offset={[14, -10]}>Join Existing Workspace</Badge></Button>
+          <Button
+            key='2'
+            onClick={() => {
+              track('JoinExistingWorkspaceButton')
+              setNextStep('invites')
+            }}
+          >
+            <Badge color='blue' count={invites.length} offset={[14, -10]}>Join Existing Workspace</Badge>
+          </Button>
           <div className={styles.notSure}>
             <div className={styles.notSureItems}>
               <div>→ Connect Instantly to BigQuery and Snowflake</div>
               <div>→ Create Your First Map in 30 Seconds</div>
               <div>→ No credit card required.</div>
             </div>
-            <Button ghost type='primary' href='https://dekart.xyz/docs/about/screencast/' target='_blank'>🎬 Watch a 40-Second Walkthrough</Button>
+            <Button ghost type='primary' href='https://dekart.xyz/docs/about/screencast/' target='_blank' onClick={() => track('WatchWalkthrough')}>🎬 Watch a 40-Second Walkthrough</Button>
           </div>
         </>
       )}
@@ -357,7 +362,7 @@ function WelcomeScreen ({ setNextStep }) {
   )
 }
 
-export default function WorkspacePage () {
+export default function WorkspacePage ({ step }) {
   const userStream = useSelector(state => state.user.stream)
   const workspaceId = userStream?.workspaceId
   const [nextStep, setNextStep] = useState(null)
@@ -381,7 +386,7 @@ export default function WorkspacePage () {
       {userStream
         ? (
           <div className={styles.body}>
-            {workspaceId || nextStep ? <Workspace nextStep={nextStep} setNextStep={setNextStep} /> : <WelcomeScreen setNextStep={setNextStep} />}
+            {workspaceId || nextStep ? <Workspace nextStep={nextStep} setNextStep={setNextStep} stepId={step} /> : <WelcomeScreen setNextStep={setNextStep} />}
           </div>
           )
         : null}

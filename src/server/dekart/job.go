@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/deadline"
+	"dekart/src/server/errtype"
 	"dekart/src/server/job"
 	"dekart/src/server/user"
 	"fmt"
@@ -97,7 +99,8 @@ func (s Server) getQueryJob(ctx context.Context, jobID string) (*proto.QueryJob,
 			dw_job_id,
 			updated_at,
 			created_at,
-			EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - created_at))::bigint * 1000 as job_duration
+			EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - created_at))::bigint * 1000 as job_duration,
+			dataset_id
 		from query_jobs
 		where id = $1
 		order by created_at desc
@@ -131,7 +134,7 @@ func (s Server) getReportIDFromJobID(ctx context.Context, jobID string) (string,
 		jobID,
 	).Scan(&reportID)
 	if err != nil {
-		log.Err(err).Msg("getReportIDFromJobID failed")
+		errtype.LogError(err, "getReportIDFromJobID failed")
 		return "", err
 	}
 	return reportID, nil
@@ -142,12 +145,15 @@ func (s Server) CancelJob(ctx context.Context, req *proto.CancelJobRequest) (*pr
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	if checkWorkspace(ctx).Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	}
 	if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
 		return nil, status.Error(codes.PermissionDenied, "Only editors can cancel queries")
 	}
 	job, err := s.getQueryJob(ctx, req.JobId)
 	if err != nil {
-		log.Err(err).Msg("getQueryJob failed")
+		errtype.LogError(err, "getQueryJob failed")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if job == nil {
@@ -156,7 +162,7 @@ func (s Server) CancelJob(ctx context.Context, req *proto.CancelJobRequest) (*pr
 	}
 	reportID, err := s.getReportIDFromJobID(ctx, req.JobId)
 	if err != nil {
-		log.Err(err).Msg("getReportIDFromJobID failed")
+		errtype.LogError(err, "getReportIDFromJobID failed")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if reportID == "" {
@@ -165,7 +171,7 @@ func (s Server) CancelJob(ctx context.Context, req *proto.CancelJobRequest) (*pr
 	}
 	report, err := s.getReport(ctx, reportID)
 	if err != nil {
-		log.Err(err).Msg("getReport failed")
+		errtype.LogError(err, "getReport failed")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if report == nil {
@@ -184,7 +190,7 @@ func (s Server) CancelJob(ctx context.Context, req *proto.CancelJobRequest) (*pr
 				req.JobId,
 			)
 			if err != nil {
-				log.Err(err).Msg("update query_jobs failed")
+				errtype.LogError(err, "update query_jobs failed")
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 			s.reportStreams.Ping(reportID)
@@ -223,7 +229,8 @@ func (s Server) getDatasetsQueryJobs(ctx context.Context, datasets []*proto.Data
 					dw_job_id,
 					updated_at,
 					created_at,
-					(STRFTIME('%s', 'now') - STRFTIME('%s', created_at)) * 1000 as job_duration
+					(STRFTIME('%s', 'now') - STRFTIME('%s', created_at)) * 1000 as job_duration,
+					dataset_id
 				FROM query_jobs
 				WHERE query_id IN (`+queryIdsStr+`)
 				GROUP BY query_params_hash, query_id
@@ -245,12 +252,16 @@ func (s Server) getDatasetsQueryJobs(ctx context.Context, datasets []*proto.Data
 				dw_job_id,
 				updated_at,
 				created_at,
-				EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - created_at))::bigint * 1000 as job_duration
+				EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - created_at))::bigint * 1000 as job_duration,
+				dataset_id
 			from query_jobs where query_id = ANY($1) order by query_params_hash, query_id, created_at desc`,
 				pq.Array(queryIds),
 			)
 		}
 		if err != nil {
+			if errtype.IsContextCancelled(err) {
+				return nil, err
+			}
 			log.Fatal().Err(err).Interface("queryIds", queryIds).Msgf("select from query_jobs failed, ids: %s", queryIdsStr)
 		}
 		defer queryRows.Close()
@@ -266,6 +277,7 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 		job := &proto.QueryJob{}
 		var jobResultId sql.NullString
 		var dwJobId sql.NullString
+		var datasetId sql.NullString
 		if IsSqlite() {
 			var updatedAtStr, createdAtStr string
 			err := rows.Scan(
@@ -282,16 +294,17 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 				&updatedAtStr, // SQLite timestamp string in this case
 				&createdAtStr,
 				&job.JobDuration,
+				&datasetId,
 			)
 			if err != nil {
 				return nil, fmt.Errorf("scan failed in rowsToQueryJobs error=%q", err)
 			}
-			// Parse SQLite timestamp strings
-			updatedAtTime, err := time.Parse("2006-01-02 15:04:05", updatedAtStr)
+			// Parse SQLite timestamp strings (SQLite stores in UTC)
+			updatedAtTime, err := time.ParseInLocation("2006-01-02 15:04:05", updatedAtStr, time.UTC)
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse updated_at timestamp: %v", err)
 			}
-			createdAtTime, err := time.Parse("2006-01-02 15:04:05", createdAtStr)
+			createdAtTime, err := time.ParseInLocation("2006-01-02 15:04:05", createdAtStr, time.UTC)
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse created_at timestamp: %v", err)
 			}
@@ -313,6 +326,7 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 				&updatedAt,
 				&createdAt,
 				&job.JobDuration,
+				&datasetId,
 			)
 			if err != nil {
 				return nil, fmt.Errorf("scan failed in rowsToQueryJobs error=%q", err)
@@ -322,7 +336,90 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 		}
 		job.DwJobId = dwJobId.String
 		job.JobResultId = jobResultId.String
+		job.DatasetId = datasetId.String
 		jobs = append(jobs, job)
 	}
 	return jobs, nil
+}
+
+func (s Server) getDWJobIDFromResultID(ctx context.Context, resultID string) (string, error) {
+	var jobID sql.NullString
+	rows, err := s.db.QueryContext(ctx,
+		`select dw_job_id from query_jobs where job_result_id=$1`,
+		resultID,
+	)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	if rows.Next() {
+		err := rows.Scan(&jobID)
+		if err != nil {
+			return "", err
+		}
+		return jobID.String, nil
+	}
+	return "", nil
+}
+
+func (s Server) getJobTimestampsFromResultID(ctx context.Context, resultID string) (createdAt *time.Time, updatedAt *time.Time, err error) {
+	if IsSqlite() {
+		var createdStr, updatedStr string
+		err = s.db.QueryRowContext(ctx,
+			`select created_at, updated_at from query_jobs where job_result_id=$1`,
+			resultID,
+		).Scan(&createdStr, &updatedStr)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, nil, nil
+			}
+			return nil, nil, err
+		}
+		// Parse SQLite timestamp strings (SQLite stores in UTC)
+		created, err := time.ParseInLocation("2006-01-02 15:04:05", createdStr, time.UTC)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to parse created_at timestamp: %v", err)
+		}
+		updated, err := time.ParseInLocation("2006-01-02 15:04:05", updatedStr, time.UTC)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to parse updated_at timestamp: %v", err)
+		}
+		return &created, &updated, nil
+	}
+
+	// PostgreSQL
+	var created, updated time.Time
+	err = s.db.QueryRowContext(ctx,
+		`select created_at, updated_at from query_jobs where job_result_id=$1`,
+		resultID,
+	).Scan(&created, &updated)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil, nil
+		}
+		return nil, nil, err
+	}
+	return &created, &updated, nil
+}
+
+// checkJobExpiration determines if a job should be treated as expired based on its age
+// Returns expired (true if too old) and recent (true if updated recently)
+func (s Server) checkJobExpiration(ctx context.Context, resultID string) (expired bool, recent bool, err error) {
+	createdAt, updatedAt, err := s.getJobTimestampsFromResultID(ctx, resultID)
+	if err != nil {
+		return false, false, err
+	}
+	if createdAt == nil {
+		return false, false, nil
+	}
+
+	// Use created_at for max age check (job could be expired)
+	timeSinceCreated := time.Since(*createdAt)
+	isExpired := timeSinceCreated > deadline.GetQueryCacheDeadline()
+
+	// Use updated_at to determine if job is recent (for error propagation)
+	timeSinceUpdated := time.Since(*updatedAt)
+	isRecent := timeSinceUpdated < deadline.GetMinJobAgeForErrorPropagation()
+
+	return isExpired, isRecent, nil
 }

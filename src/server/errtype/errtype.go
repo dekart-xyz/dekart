@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"io"
 	"regexp"
+
+	"github.com/rs/zerolog/log"
 )
 
 type EmptyResult struct{}
@@ -12,7 +14,7 @@ func (e *EmptyResult) Error() string {
 	return "Empty result"
 }
 
-var ContextCancelledRe = regexp.MustCompile(`context canceled`)
+var ContextCancelledRe = regexp.MustCompile(`context canceled|canceling statement due to user request`)
 
 var WriteClosedPipeRe = regexp.MustCompile(`write on closed pipe`)
 
@@ -27,7 +29,8 @@ var WriteTimeoutRe = regexp.MustCompile(`write tcp.*8080`)
 var SnowflakeJWTInvalidRe = regexp.MustCompile(`(390144|08004)`)
 
 // BigQuery job not found error pattern
-var BigQueryJobNotFoundRe = regexp.MustCompile(`Not found: Job .*, notFound`)
+// Matches messages like "Not found: Job project:location.jobid" or "Not found: Job project:jobid, notFound"
+var BigQueryJobNotFoundRe = regexp.MustCompile(`Not found: Job [^,]+`)
 
 // Expired Error is returned when temp storage is expired
 type Expired struct {
@@ -55,4 +58,19 @@ func (cw *LogWriter) Write(p []byte) (n int, err error) {
 
 	// If no modification is needed, write the original log entry
 	return cw.Writer.Write(p)
+}
+
+func IsContextCancelled(err error) bool {
+	if err == nil {
+		return false
+	}
+	return ContextCancelledRe.MatchString(err.Error())
+}
+
+func LogError(err error, msg string) {
+	if IsContextCancelled(err) {
+		log.Warn().Err(err).Msgf("Context Canceled %s", msg)
+		return
+	}
+	log.Error().Err(err).Msg(msg)
 }

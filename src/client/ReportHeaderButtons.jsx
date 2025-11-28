@@ -1,7 +1,7 @@
-import { useHistory } from 'react-router'
+import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 import styles from './ReportHeaderButtons.module.css'
 import Button from 'antd/es/button'
-import { EyeOutlined, DownloadOutlined, CloudOutlined, EditOutlined, ForkOutlined, ReloadOutlined, LoadingOutlined, CloudSyncOutlined } from '@ant-design/icons'
+import { EyeOutlined, DownloadOutlined, CloudOutlined, EditOutlined, ForkOutlined, ReloadOutlined, LoadingOutlined, CloudSyncOutlined, PlusOutlined, InfoCircleOutlined, ClockCircleOutlined, HistoryOutlined } from '@ant-design/icons'
 import { useDispatch, useSelector } from 'react-redux'
 import ShareButton from './ShareButton'
 import { forkReport, saveMap } from './actions/report'
@@ -9,9 +9,27 @@ import { runAllQueries } from './actions/query'
 import { toggleModal } from '@kepler.gl/actions/dist/ui-state-actions'
 import { EXPORT_DATA_ID, EXPORT_IMAGE_ID, EXPORT_MAP_ID } from '@kepler.gl/constants'
 import Dropdown from 'antd/es/dropdown'
-import { useEffect } from 'react'
-import { ForkOnboarding, useRequireOnboarding } from './ForkOnboarding'
+import { useEffect, useState } from 'react'
 import Select from 'antd/es/select'
+import Divider from 'antd/es/divider'
+import { track } from './lib/tracking'
+import { ForkOnboarding, useRequireOnboarding } from './ForkOnboarding'
+import { AutoRefreshSettingsModal } from './AutoRefreshSettings'
+import MapChangeHistoryModal from './MapChangeHistoryModal'
+import classNames from 'classnames'
+import { goToPresent, goToSource } from './lib/navigation'
+import { toggleSnapshotModal } from './actions/snapshots'
+
+function formatIntervalLabel (seconds) {
+  if (seconds === 0) return 'None'
+  if (seconds === 60) return '1 min'
+  if (seconds === 300) return '5 min'
+  if (seconds === 600) return '10 min'
+  if (seconds === 900) return '15 min'
+  if (seconds === 1800) return '30 min'
+  if (seconds === 3600) return '1 hour'
+  return `${seconds}s`
+}
 
 function ForkButton ({ primary }) {
   const dispatch = useDispatch()
@@ -27,11 +45,13 @@ function ForkButton ({ primary }) {
   const history = useHistory()
 
   let onClick = () => {
+    track('ForkReport', { reportId })
     dispatch(forkReport(reportId))
   }
   if (!workspaceId && !userIsPlayground) {
     // user has no workspace, redirect to workspace page
     onClick = () => {
+      track('ForkReportNoWorkspace', { reportId })
       history.push('/workspace')
     }
   }
@@ -47,7 +67,7 @@ function ForkButton ({ primary }) {
         id='dekart-fork-button'
         disabled={disabled}
         onClick={onClick}
-      >Fork this Map
+      >Duplicate Map
       </Button>
     )
   }
@@ -58,33 +78,74 @@ function ForkButton ({ primary }) {
       disabled={disabled}
       onClick={onClick}
       id='dekart-fork-button'
-      title={disabled ? 'Forking is disabled for viewers' : 'Fork this Map'}
+      title={disabled ? 'Forking maps is disabled for viewers' : 'Duplicate Map'}
     />
   )
 }
 
-function RefreshButton () {
-  const { discoverable, canWrite } = useSelector(state => state.report)
-  const isViewer = useSelector(state => state.user.isViewer)
+function RefreshButton ({ showAutoRefreshSettings = false }) {
+  const { canRefresh } = useSelector(state => state.report)
   const numRunningQueries = useSelector(state => state.numRunningQueries)
   const numQueries = useSelector(state => state.queries.length)
   const dispatch = useDispatch()
-  if ((!canWrite && !discoverable) || isViewer || numQueries === 0) {
+  const { canWrite } = useSelector(state => state.report)
+  const edit = useSelector(state => state.reportStatus.edit)
+  const [autoRefreshModalVisible, setAutoRefreshModalVisible] = useState(false)
+  const autoRefreshIntervalSeconds = useSelector(state => state.report?.autoRefreshIntervalSeconds)
+  if (!canRefresh || numQueries === 0) {
     return null
   }
+
+  const handleRefresh = () => {
+    if (numRunningQueries) {
+      return
+    }
+    track('RefreshAllQueries')
+    dispatch(runAllQueries())
+  }
+
+  const items = [
+    {
+      label: 'Refresh Now',
+      key: 'refresh',
+      id: 'dekart-refresh-now-button',
+      icon: numRunningQueries ? <LoadingOutlined /> : <ReloadOutlined />,
+      disabled: numRunningQueries,
+      onClick: handleRefresh
+    },
+    {
+      type: 'divider'
+    },
+    {
+      label: autoRefreshIntervalSeconds > 0
+        ? `Auto Refresh: ${formatIntervalLabel(autoRefreshIntervalSeconds)} ${edit ? '(paused)' : ''}`
+        : 'Auto Refresh Settings',
+      key: 'auto-refresh',
+      icon: <ClockCircleOutlined />,
+      disabled: !canWrite,
+      onClick: () => setAutoRefreshModalVisible(true)
+    }
+  ]
+
   return (
-    <Button
-      id='dekart-refresh-button'
-      type='text'
-      icon={numRunningQueries ? <LoadingOutlined /> : <ReloadOutlined />}
-      title='Re-run all queries'
-      onClick={() => {
-        if (numRunningQueries) {
-          return
-        }
-        dispatch(runAllQueries())
-      }}
-    />
+    <>
+      <Dropdown
+        menu={{ items }}
+        placement='bottomLeft'
+        trigger={['click']}
+      >
+        <Button
+          id='dekart-refresh-button'
+          type='text'
+          icon={numRunningQueries ? <LoadingOutlined /> : autoRefreshIntervalSeconds > 0 ? <span className={classNames({ [styles.shimmerIcon]: !edit })}><ClockCircleOutlined /></span> : <ReloadOutlined />}
+          title={autoRefreshIntervalSeconds > 0 ? 'Refresh (Auto-refresh enabled)' : 'Refresh'}
+        />
+      </Dropdown>
+      <AutoRefreshSettingsModal
+        visible={autoRefreshModalVisible}
+        onClose={() => setAutoRefreshModalVisible(false)}
+      />
+    </>
   )
 }
 
@@ -112,9 +173,40 @@ function useAutoSave () {
   }, [canWrite, saving, changed, online, dispatch])
 }
 
-function goToPresent (history, id) {
-  const searchParams = new URLSearchParams(window.location.search)
-  history.replace(`/reports/${id}?${searchParams.toString()}`)
+function useRequireWorkspace () {
+  const isCloud = useSelector(state => state.env.isCloud)
+  const userStream = useSelector(state => state.user.stream)
+  const workspaceId = userStream?.workspaceId
+  return !workspaceId && isCloud && userStream
+}
+
+function WorkspaceOnboarding () {
+  const history = useHistory()
+  useEffect(() => {
+    track('WorkspaceOnboarding')
+  }, [])
+  return (
+    <div className={styles.reportHeaderButtons}>
+      <Button
+        type='text' icon={<InfoCircleOutlined />}
+        href='https://dekart.xyz/?ref=about-maps-button'
+        target='_blank'
+        title='About Dekart Maps'
+        onClick={() => {
+          track('AboutDekartMaps')
+        }}
+      >About Dekart Maps
+      </Button>
+      <Button
+        icon={<PlusOutlined />}
+        type='primary' onClick={() => {
+          track('WorkspaceOnboardingCreateMap')
+          history.push('/workspace')
+        }}
+      >Create Map
+      </Button>
+    </div>
+  )
 }
 
 function EditModeButtons () {
@@ -122,22 +214,12 @@ function EditModeButtons () {
   const { canWrite } = useSelector(state => state.report)
   const { saving } = useSelector(state => state.reportStatus)
   const changed = useReportChanged()
-
+  const forkOnboarding = useRequireOnboarding()
   useAutoSave()
-
-  const requireOnboarding = useRequireOnboarding()
-
-  if (requireOnboarding) {
-    return (
-      <div className={styles.reportHeaderButtons}>
-        <ForkOnboarding requireOnboarding={requireOnboarding} edit />
-      </div>
-    )
-  }
 
   return (
     <div className={styles.reportHeaderButtons}>
-      <RefreshButton />
+      <RefreshButton showAutoRefreshSettings />
       <ExportDropdown />
       {canWrite
         ? (
@@ -150,7 +232,10 @@ function EditModeButtons () {
               ghost
               icon={saving || changed ? <CloudSyncOutlined /> : <CloudOutlined />}
               disabled={saving}
-              onClick={() => dispatch(saveMap())}
+              onClick={() => {
+                track('SaveMap')
+                dispatch(saveMap())
+              }}
             />
             <ViewSelect value='edit' />
             <ShareButton />
@@ -159,7 +244,7 @@ function EditModeButtons () {
         : (
           <>
             <ShareButton />
-            <ForkButton primary />
+            {forkOnboarding ? <ForkOnboarding requireOnboarding={forkOnboarding} edit /> : <ForkButton primary />}
           </>
           )}
 
@@ -182,18 +267,21 @@ function ExportDropdown () {
     {
       label: 'Map',
       onClick: () => {
+        track('ExportMap')
         dispatch(toggleModal(EXPORT_MAP_ID))
       }
     },
     {
       label: 'Data',
       onClick: () => {
+        track('ExportData')
         dispatch(toggleModal(EXPORT_DATA_ID))
       }
     },
     {
       label: 'Image',
       onClick: () => {
+        track('ExportImage')
         dispatch(toggleModal(EXPORT_IMAGE_ID))
       }
     }
@@ -209,57 +297,92 @@ function ExportDropdown () {
   )
 }
 
-// goToSource redirects to the source view while preserving the current query params
-function goToSource (history, id) {
-  const searchParams = new URLSearchParams(window.location.search)
-  history.replace(`/reports/${id}/source?${searchParams.toString()}`)
+// adds history option to the dropdown after divider
+function ViewSelectDropdown ({ menu, onHistoryClick }) {
+  return (
+    <>
+      {menu}
+      <Divider style={{ margin: '4px 0' }} />
+      <div
+        style={{
+          padding: '5px 12px',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          transition: 'background-color 0.2s'
+        }}
+        onClick={onHistoryClick}
+        onMouseDown={(e) => e.preventDefault()}
+        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f5f5f5' }}
+        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+      >
+        <HistoryOutlined /> History
+      </div>
+    </>
+  )
 }
 
 function ViewSelect (value) {
+  const dispatch = useDispatch()
   const history = useHistory()
   const { id } = useSelector(state => state.report)
-  return (
-    <Select
-      ghost
-      className={styles.reportViewSelect}
-      defaultValue={value}
-      onChange={(value) => {
-        if (value === 'edit') {
-          goToSource(history, id)
-        } else if (value === 'view') {
-          goToPresent(history, id)
-        }
-      }}
-      options={[
-        { value: 'view', label: <><EyeOutlined /> Viewing</> },
-        { value: 'edit', label: <><EditOutlined /> Editing</> }
-      ]}
-    />
 
+  const handleChange = (value) => {
+    if (value === 'edit') {
+      track('SwitchToEditMode', { reportId: id })
+      goToSource(history, id)
+    } else if (value === 'view') {
+      track('SwitchToViewMode', { reportId: id })
+      goToPresent(history, id)
+    } else if (value === 'history') {
+      track('OpenHistory', { reportId: id })
+      dispatch(toggleSnapshotModal(true))
+    }
+  }
+
+  const handleHistoryClick = () => {
+    handleChange('history')
+  }
+
+  return (
+    <>
+      <Select
+        ghost
+        className={styles.reportViewSelect}
+        defaultValue={value}
+        onChange={handleChange}
+        options={[
+          { value: 'view', label: <><EyeOutlined /> Viewing</> },
+          { value: 'edit', label: <><EditOutlined /> Editing</> }
+        ]}
+        dropdownRender={(menu) => (
+          // add history option to the dropdown after divider
+          <ViewSelectDropdown menu={menu} onHistoryClick={handleHistoryClick} />
+        )}
+      />
+      <MapChangeHistoryModal />
+    </>
   )
 }
 
 function ViewModeButtons () {
   const { canWrite } = useSelector(state => state.report)
 
-  const requireOnboarding = useRequireOnboarding()
-
-  if (requireOnboarding) {
-    return (
-      <div className={styles.reportHeaderButtons}>
-        <ForkOnboarding requireOnboarding={requireOnboarding} />
-      </div>
-    )
-  }
-
   if (canWrite) {
     return (
       <div className={styles.reportHeaderButtons}>
-        <RefreshButton />
-        <ExportDropdown />
-        <ForkButton />
+        <RefreshButton showAutoRefreshSettings />
+        <div className={styles.hideOnMobile}>
+          <ExportDropdown />
+        </div>
+        <div className={styles.hideOnMobile}>
+          <ForkButton />
+        </div>
         <ViewSelect value='view' />
-        <ShareButton />
+        <div className={styles.hideOnMobile}>
+          <ShareButton />
+        </div>
       </div>
     )
   }
@@ -267,14 +390,24 @@ function ViewModeButtons () {
   return (
     <div className={styles.reportHeaderButtons}>
       <RefreshButton />
-      <ExportDropdown />
-      <ForkButton />
-      <ShareButton />
+      <div className={styles.hideOnMobile}>
+        <ExportDropdown />
+      </div>
+      <div className={styles.hideOnMobile}>
+        <ShareButton />
+      </div>
     </div>
   )
 }
 
 export default function ReportHeaderButtons ({ edit }) {
+  const requireWorkspace = useRequireWorkspace()
+  if (requireWorkspace) {
+    return (
+      <WorkspaceOnboarding />
+    )
+  }
+
   if (edit) {
     return <EditModeButtons />
   }

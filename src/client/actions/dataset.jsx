@@ -8,6 +8,7 @@ import getDatasetName from '../lib/getDatasetName'
 import { runQuery } from './query'
 import { KeplerGlSchema } from '@kepler.gl/schemas'
 import wasmInit from 'parquet-wasm'
+import { mimeFromExtension } from '../lib/mime'
 
 // Custom error to mark empty result cases for downstream handling
 class EmptyResultError extends Error {
@@ -106,7 +107,7 @@ export function downloadingProgress (dataset, loaded) {
 export function processDownloadError (err, dataset, label) {
   return function (dispatch, getState) {
     dispatch({ type: processDownloadError.name, dataset })
-    if (err instanceof EmptyResultError || err.message.includes('CSV is empty')) {
+    if (err instanceof EmptyResultError || err.message.includes('CSV is empty') || err.message.includes('Empty result') || err.status === 204) {
       dispatch(warn(<><i>{label}</i> Result is empty</>))
     } else if (err.status === 410 && dataset.queryId) { // gone from dw query temporary storage
       const { canRun, queryText } = getState().queryStatus[dataset.queryId]
@@ -117,7 +118,7 @@ export function processDownloadError (err, dataset, label) {
       // don't need to check if user can run query (report.CanWrite || report.Discoverable)
       // because report cannot be opened if it's not discoverable
       // so if user can open report, they can run query
-      dispatch(info(<><i>{label}</i> result expired, re-running</>))
+      dispatch(info(<><i>{label}</i> result expired, re-running</>, 'query-result-expired'))
       dispatch(runQuery(dataset.queryId, queryText))
     } else if (err.name === 'AbortError') {
       dispatch(setError(new Error('Download cancelled by user')))
@@ -154,12 +155,22 @@ async function processLoadFilesQueue (dispatch, getState) {
     const { file, resolve, reject, totalRows } = getState().dataset.loadFilesQueue.queue[0]
 
     try {
+      // Check if result is empty before calling loadFiles
+      // This prevents kepler.gl from trying to parse an empty file
+      if (file.size === 0) {
+        reject(new EmptyResultError('Empty result'))
+        // Remove the processed item from queue
+        dispatch(removeFromLoadFilesQueue())
+        continue
+      }
+
       const result = await new Promise((_resolve, _reject) => {
         try {
           dispatch(loadFiles([file], (r) => {
             const datasetData = r[0]?.data
             if (!datasetData) {
-              if (totalRows === 0) {
+              // totalRows may be undefined for wherobots queries
+              if (totalRows !== undefined && totalRows === 0) {
                 _reject(new EmptyResultError('Empty result'))
               } else {
                 _reject(new Error('Error loading dataset'))
@@ -188,7 +199,11 @@ async function processLoadFilesQueue (dispatch, getState) {
 export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
   return async function (dispatch, getState) {
     // must be before async so dataset is not added twice
-    dispatch({ type: addDatasetToMap.name, dataset })
+    const { lastAddedQueryParamsHash } = getState().dataset
+    const queryParamsHash = getState().queryParams.hash
+    const { dataset: { list: datasets }, files, queries, keplerGl, queryJobs } = getState()
+    const queryJob = queryJobs.find(j => j.queryId === dataset.queryId && j.queryParamsHash === queryParamsHash)
+    dispatch({ type: addDatasetToMap.name, dataset, queryParamsHash, queryJob })
     const reportId = getState().report?.id
     if (!isWasmInitialized) {
       isWasmInitialized = true
@@ -199,8 +214,6 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
         return
       }
     }
-    const { dataset: { list: datasets }, files, queries, keplerGl, queryJobs } = getState()
-    const queryJob = queryJobs.find(j => j.queryId === dataset.queryId)
     const label = getDatasetName(dataset, queries, files)
     let data
     try {
@@ -208,7 +221,7 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
       const file = new File(
         [blob],
         label,
-        { type: extension === 'csv' ? 'text/csv' : extension === 'json' ? 'application/json' : '' })
+        { type: mimeFromExtension(extension) })
 
       // Add to queue and wait for sequential processing
       // Kepler loadFiles should not be called before all previous loadFiles are finished
@@ -261,6 +274,12 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
         dispatch(removeDatasetFromKepler(dataset.id))
 
         // add dataset with previous config
+        const { reportStatus } = getState()
+        const updateOptions = { keepExistingConfig: true }
+        // In view mode, prevent auto-centering/zooming
+        if (!reportStatus.edit && queryJob && queryJob.queryParamsHash === lastAddedQueryParamsHash[dataset.queryId]) {
+          updateOptions.centerMap = false
+        }
         dispatch(addDataToMap({
           datasets: {
             info: {
@@ -269,7 +288,7 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
             },
             data
           },
-          options: { keepExistingConfig: true },
+          options: updateOptions,
           config // https://github.com/keplergl/kepler.gl/issues/176#issuecomment-410326304
         }))
 

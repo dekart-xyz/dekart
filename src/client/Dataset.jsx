@@ -75,8 +75,9 @@ function DatasetSelector ({ dataset }) {
           disable={!(allowFileUpload && report.canWrite)}
           disabledNote={disabledNote}
           title='Upload File'
-          subtitle='Load files in CSV or GeoJSON formats'
+          subtitle='Load files in CSV, GeoJSON, or Parquet formats'
           onClick={() => {
+            track('ClickUploadFileOption', { datasetId: dataset.id })
             dispatch(createFile(dataset.id, fileUploadConnection?.id))
           }}
         />
@@ -87,6 +88,7 @@ function DatasetSelector ({ dataset }) {
             title='Write README'
             subtitle='Add Markdown description to your map'
             onClick={() => {
+              track('ClickWriteReadme', { datasetId: dataset.id })
               dispatch(addReadme(dataset.id))
             }}
           />
@@ -100,6 +102,11 @@ function DatasetSelector ({ dataset }) {
             title={`${connection.connectionName}`}
             subtitle={`Run SQL directly on ${getDatasourceMeta(connection.connectionType).name}`}
             onClick={() => {
+              track('CreateQueryFromConnection', {
+                datasetId: dataset.id,
+                connectionId: connection.id,
+                connectionType: connection.connectionType
+              })
               dispatch(createQuery(dataset.id, connection.id))
             }}
           />
@@ -123,6 +130,7 @@ function DatasetSelector ({ dataset }) {
         <Button
           type='link'
           onClick={() => {
+            track('AddAndEditConnections')
             history.push('/connections')
           }}
         >

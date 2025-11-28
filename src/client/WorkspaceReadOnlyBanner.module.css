@@ -1,0 +1,64 @@
+.banner {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 20px;
+  background: #328EB2;
+  z-index: 2000;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  line-height: 20px;
+  width: 100%;
+  margin-top: auto;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+}
+
+.message {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 0;
+}
+
+.icon {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.95);
+  line-height: 1;
+}
+
+.headline {
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.94) !important;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .banner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .message {
+    align-items: flex-start;
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .actions :global(.ant-btn) {
+    width: 100%;
+  }
+}
+

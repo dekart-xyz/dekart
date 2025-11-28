@@ -58,7 +58,13 @@ function Footer ({ form, testDisabled }) {
       >
         Save
       </Button>
-      <Button disabled={!id || !isAdmin} onClick={() => dispatch(archiveConnection(id))}>
+      <Button
+        disabled={!id || !isAdmin}
+        onClick={() => {
+          track('ArchiveConnection', { connectionId: id })
+          dispatch(archiveConnection(id))
+        }}
+      >
         Archive
       </Button>
     </div>
@@ -266,10 +272,28 @@ function BigQueryServiceAccountConnectionModal ({ form }) {
           </Form.Item>
           <Form.Item
             required label='Service Account JSON Key' name='newBigqueryKey' extra={
-            !showKey
-              ? <>Keys are encrypted and cannot be displayed.<Button type='link' size='small' onClick={() => setShowKey(true)}>Enter new value</Button></>
-              : <>Paste the JSON key for the service account you want to use to connect to BigQuery. <a href='https://dekart.xyz/docs/usage/choose-bigquery-connection-method/#how-to-get-a-service-account-key' target='_blank' rel='noreferrer'>Read Documentation</a></>
-          }
+              !showKey
+                ? (
+                  <>
+                    Keys are encrypted and cannot be displayed.
+                    <Button
+                      type='link'
+                      size='small'
+                      onClick={() => {
+                        track('ShowServiceAccountKeyField')
+                        setShowKey(true)
+                      }}
+                    >
+                      Enter new value
+                    </Button>
+                  </>
+                  )
+                : (
+                  <>
+                    Paste the JSON key for the service account you want to use to connect to BigQuery. <a href='https://dekart.xyz/docs/usage/choose-bigquery-connection-method/#how-to-get-a-service-account-key' target='_blank' rel='noreferrer'>Read Documentation</a>
+                  </>
+                  )
+            }
           >
             <TextArea
               rows={4}
