@@ -1,0 +1,57 @@
+.workspaceSelector {
+  margin-left: 10px;
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.select {
+  /* min-width: 120px; */
+  /* max-width: 150px; */
+  font-size: 12px;
+}
+
+.select :global(.ant-select-selector) {
+  background-color: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+  height: 28px !important;
+  /* padding: 0 6px !important; */
+}
+
+.select :global(.ant-select-selector:hover) {
+  border-color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.select :global(.ant-select-selection-item) {
+  color: white !important;
+  line-height: 26px !important;
+  /* padding: 0 4px !important; */
+}
+
+.select :global(.ant-select-arrow) {
+  color: rgba(255, 255, 255, 0.65) !important;
+  font-size: 10px !important;
+  right: 6px !important;
+}
+
+.dropdown {
+}
+
+.manageHovered :global(.ant-select-item-option-active) {
+  background-color: transparent !important;
+}
+
+.manageOption {
+  padding: 5px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.manageOption:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+

@@ -304,14 +304,7 @@ function ViewSelectDropdown ({ menu, onHistoryClick }) {
       {menu}
       <Divider style={{ margin: '4px 0' }} />
       <div
-        style={{
-          padding: '5px 12px',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          transition: 'background-color 0.2s'
-        }}
+        className={styles.historyDropdownItem}
         onClick={onHistoryClick}
         onMouseDown={(e) => e.preventDefault()}
         onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f5f5f5' }}

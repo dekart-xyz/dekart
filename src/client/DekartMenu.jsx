@@ -2,39 +2,13 @@ import Menu from 'antd/es/menu'
 import styles from './DekartMenu.module.css'
 import { useDispatch, useSelector } from 'react-redux'
 import { getUrlRef } from './lib/ref'
-import { MenuOutlined, MessageOutlined, GlobalOutlined, LockOutlined } from '@ant-design/icons'
+import { MenuOutlined } from '@ant-design/icons'
 import { Link } from 'react-router-dom/cjs/react-router-dom'
 import { createReport } from './actions/report'
 import Tooltip from 'antd/es/tooltip'
 import { track } from './lib/tracking'
 
 const popupOffset = [-10, 0]
-
-function WorkspaceIndicator () {
-  const workspaceName = useSelector(state => state.workspace?.name)
-
-  const isPlayground = useSelector(state => state.user.isPlayground)
-  const workspaceId = useSelector(state => state.user.stream?.workspaceId)
-  if (!isPlayground && !workspaceId) {
-    return null
-  }
-
-  if (workspaceId) {
-    return (
-      <Menu.Item className={styles.workspaceIndicator} disabled key='workspaces'>
-        <LockOutlined /> {workspaceName} Workspace
-      </Menu.Item>
-    )
-  }
-
-  if (isPlayground) {
-    return (
-      <Menu.Item className={styles.workspaceIndicator} disabled key='workspaces'>
-        <GlobalOutlined /> Playground Workspace
-      </Menu.Item>
-    )
-  }
-}
 
 export default function DekartMenu () {
   const env = useSelector(state => state.env)
@@ -57,7 +31,6 @@ export default function DekartMenu () {
           {authEnabled
             ? (
               <>
-                <WorkspaceIndicator />
                 <Menu.Item key='my' onClick={() => track('NavigateToMyMaps')}>
                   <Link to='/'>My Maps</Link>
                 </Menu.Item>
@@ -88,8 +61,7 @@ export default function DekartMenu () {
           >
             New Map
           </Menu.Item>
-        </Menu.SubMenu>
-        <Menu.SubMenu popupClassName={styles.subMenu} popupOffset={popupOffset} title={<MessageOutlined />} key='community' active='yes'>
+          <Menu.Divider />
           {isSnowpark && (
             <Menu.Item key='snowflake-kepler-gl-examples' onClick={() => track('ClickedSnowflakeKeplerGlExamples')}>
               <a target='_blank' rel='noopener noreferrer' href={'https://dekart.xyz/docs/snowflake-snowpark/about/?ref=' + ref}>Configure Access</a>
@@ -109,10 +81,7 @@ export default function DekartMenu () {
             </a>
           </Menu.Item>
           <Menu.Item key='slack' onClick={() => track('ClickedAskInSlack')}>
-            <a target='_blank' rel='noopener noreferrer' href='https://slack.dekart.xyz'>Ask in Slack</a>
-          </Menu.Item>
-          <Menu.Item key='issues' onClick={() => track('ClickedReportIssue')}>
-            <a target='_blank' rel='noopener noreferrer' href={'https://github.com/dekart-xyz/dekart/issues?ref=' + ref}>Report Issue</a>
+            <a target='_blank' rel='noopener noreferrer' href='https://slack.dekart.xyz'>Slack Support</a>
           </Menu.Item>
         </Menu.SubMenu>
         {

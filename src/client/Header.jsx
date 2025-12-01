@@ -1,6 +1,7 @@
 import styles from './Header.module.css'
 import { useDispatch, useSelector } from 'react-redux'
 import DekartMenu from './DekartMenu'
+import WorkspaceSelector from './WorkspaceSelector'
 import { getUrlRef } from './lib/ref'
 import Avatar from 'antd/es/avatar'
 import Dropdown from 'antd/es/dropdown'
@@ -43,15 +44,7 @@ function User ({ buttonDivider }) {
     disabled: true
   }]
 
-  if (!isPlayground && !isSnowpark) {
-    items.push({
-      label: 'Manage workspace',
-      onClick: () => {
-        track('ManageWorkspace')
-        history.push('/workspace')
-      }
-    })
-  } else if (!isSnowpark) {
+  if (isPlayground && !isSnowpark) {
     items.push({
       label: 'Switch to workspace',
       onClick: () => {
@@ -173,6 +166,7 @@ export function Header ({ buttons, title, queryParams }) {
       <div className={styles.top}>
         <div className={styles.left}>
           <DekartMenu />
+          <WorkspaceSelector />
         </div>
         <div className={styles.middle}>
           {title ? (<div className={styles.titleWrap}><div className={styles.title}>{title}</div></div>) : (<div className={styles.dekartLinkHolder}><a target='_blank' rel='noopener noreferrer' className={styles.dekartLink} href={homePage}><span className={styles.dekartTitle} /></a></div>)}
