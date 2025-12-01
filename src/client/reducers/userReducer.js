@@ -62,6 +62,17 @@ function sensitiveScopesNeeded (state = false, action) {
   }
 }
 
+function preferredWorkspaceId (state = null, action) {
+  switch (action.type) {
+    case localStorageInit.name:
+      return action.current.preferredWorkspaceId || state
+    case userStreamUpdate.name:
+      return action.userStream.workspaceId
+    default:
+      return state
+  }
+}
+
 function loginHint (state = null, action) {
   switch (action.type) {
     case localStorageInit.name:
@@ -188,5 +199,6 @@ export default combineReducers({
   isAnonymous,
   isFreemium,
   hasAllFeatures,
-  isTrial
+  isTrial,
+  preferredWorkspaceId
 })
