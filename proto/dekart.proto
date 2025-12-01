@@ -316,6 +316,7 @@ message RunAllQueriesResponse {
 message Workspace {
     string id = 1;
     string name = 2;
+    UserRole role = 3;
 }
 
 message Subscription {

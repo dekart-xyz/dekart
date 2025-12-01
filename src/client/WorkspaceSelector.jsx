@@ -17,7 +17,10 @@ export default function WorkspaceSelector () {
   if (!userStream || !env.loaded || isPlayground || !env.variables.ALLOW_WORKSPACE_CREATION) {
     return null
   }
-
+  const workspaceId = userStream?.workspaceId
+  if (!workspaceId) {
+    return null
+  }
   const workspaces = userStream.userWorkspacesList || []
   const currentWorkspaceId = userStream.workspaceId || (workspaces[0] && workspaces[0].id) || null
 

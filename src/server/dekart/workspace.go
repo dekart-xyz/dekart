@@ -16,12 +16,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s Server) getUserWorkspaces(ctx context.Context) ([]*proto.Workspace, error) {
-	claims := user.GetClaims(ctx)
-	if claims == nil {
-		return nil, Unauthenticated
-	}
-
+func (s Server) getUserWorkspaces(ctx context.Context, email string) ([]*proto.Workspace, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		WITH last_status AS (
 			SELECT
@@ -47,18 +42,43 @@ func (s Server) getUserWorkspaces(ctx context.Context) ([]*proto.Workspace, erro
 			) AS ls2 ON wl.workspace_id = ls2.workspace_id AND wl.created_at = ls2.created_at
 			WHERE
 				wl.email = $1
+		),
+		user_role AS (
+			SELECT
+				ol.role,
+				ol.email,
+				ol.workspace_id
+			FROM
+				workspace_log ol
+			JOIN (
+				SELECT
+					workspace_id,
+					MAX(created_at) AS created_at
+				FROM
+					workspace_log
+				WHERE
+					email = $1
+					AND status IN (1, 3)
+				GROUP BY
+					workspace_id
+			) AS oll ON ol.workspace_id = oll.workspace_id AND ol.created_at = oll.created_at
+			WHERE
+				ol.email = $1
+				AND ol.status IN (1, 3)
 		)
 		SELECT
 			w.id,
-			w.name
+			w.name,
+			COALESCE(ur.role, 0) AS role
 		FROM workspaces w
 		JOIN last_status ls ON w.id = ls.workspace_id
 		LEFT JOIN confirmation_log AS cl ON ls.id = cl.workspace_log_id AND cl.authored_by = ls.email
+		LEFT JOIN user_role AS ur ON ls.workspace_id = ur.workspace_id AND ls.email = ur.email
 		WHERE
 			ls.status = 1
 			AND (ls.authored_by = $1 OR cl.accepted = TRUE)
 		ORDER BY COALESCE(cl.created_at, ls.created_at) DESC, ls.created_at DESC
-	`, claims.Email)
+	`, email)
 	if err != nil {
 		errtype.LogError(err, "Error getting user workspaces")
 		return nil, err
@@ -68,7 +88,7 @@ func (s Server) getUserWorkspaces(ctx context.Context) ([]*proto.Workspace, erro
 	workspaces := make([]*proto.Workspace, 0)
 	for rows.Next() {
 		w := proto.Workspace{}
-		if err := rows.Scan(&w.Id, &w.Name); err != nil {
+		if err := rows.Scan(&w.Id, &w.Name, &w.Role); err != nil {
 			errtype.LogError(err, "Error scanning user workspaces row")
 			return nil, err
 		}
@@ -406,15 +426,15 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 	if claims.Email == user.UnknownEmail && os.Getenv("DEKART_CLOUD") == "" {
 		// For backward compatibility, we switch to playground mode if the user is not authenticated
 		ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{
-			IsPlayground:       true,
+			IsPlayground:       true, // TODO: just use default workspace
 			IsDefaultWorkspace: true,
 		})
 		return ctx
 	}
 
-	workspace, role, err := s.getUserWorkspace(ctx, claims.Email)
+	workspaces, err := s.getUserWorkspaces(ctx, claims.Email)
 	if err != nil {
-		errtype.LogError(err, "Error getting user workspace")
+		errtype.LogError(err, "Error getting user workspaces")
 		return ctx
 	}
 	var workspaceId string
@@ -423,9 +443,14 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 	var name string
 	var addedUsersCount int64 = 0
 	var billedUsers int64 = 0
-	if workspace != nil {
+	var userRole proto.UserRole = proto.UserRole_ROLE_UNSPECIFIED
+	for _, workspace := range workspaces {
+		userRole = workspace.Role
 		workspaceId = workspace.Id
 		name = workspace.Name
+		break
+	}
+	if workspaceId != "" {
 		subscription, err := s.getSubscription(ctx, workspaceId)
 		if err != nil {
 			errtype.LogError(err, "Error getting subscription")
@@ -448,7 +473,7 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 		Name:            name,
 		AddedUsersCount: addedUsersCount,
 		BilledUsers:     billedUsers,
-		UserRole:        *role,
+		UserRole:        userRole,
 		Expired:         expired,
 	})
 	return ctx

@@ -9609,7 +9609,8 @@ proto.Workspace.prototype.toObject = function(opt_includeInstance) {
 proto.Workspace.toObject = function(includeInstance, msg) {
   var f, obj = {
     id: jspb.Message.getFieldWithDefault(msg, 1, ""),
-    name: jspb.Message.getFieldWithDefault(msg, 2, "")
+    name: jspb.Message.getFieldWithDefault(msg, 2, ""),
+    role: jspb.Message.getFieldWithDefault(msg, 3, 0)
   };
 
   if (includeInstance) {
@@ -9654,6 +9655,10 @@ proto.Workspace.deserializeBinaryFromReader = function(msg, reader) {
       var value = /** @type {string} */ (reader.readString());
       msg.setName(value);
       break;
+    case 3:
+      var value = /** @type {!proto.UserRole} */ (reader.readEnum());
+      msg.setRole(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -9697,6 +9702,13 @@ proto.Workspace.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
+  f = message.getRole();
+  if (f !== 0.0) {
+    writer.writeEnum(
+      3,
+      f
+    );
+  }
 };
 
 
@@ -9733,6 +9745,24 @@ proto.Workspace.prototype.getName = function() {
  */
 proto.Workspace.prototype.setName = function(value) {
   return jspb.Message.setProto3StringField(this, 2, value);
+};
+
+
+/**
+ * optional UserRole role = 3;
+ * @return {!proto.UserRole}
+ */
+proto.Workspace.prototype.getRole = function() {
+  return /** @type {!proto.UserRole} */ (jspb.Message.getFieldWithDefault(this, 3, 0));
+};
+
+
+/**
+ * @param {!proto.UserRole} value
+ * @return {!proto.Workspace} returns this
+ */
+proto.Workspace.prototype.setRole = function(value) {
+  return jspb.Message.setProto3EnumField(this, 3, value);
 };
 
 

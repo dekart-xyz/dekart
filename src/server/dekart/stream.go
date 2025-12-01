@@ -317,7 +317,7 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 		return GRPCError("Cannot get workspace update", err)
 	}
 
-	userWorkspaces, err := s.getUserWorkspaces(ctx)
+	userWorkspaces, err := s.getUserWorkspaces(ctx, claims.Email)
 	if err != nil {
 		return GRPCError("Cannot get user workspaces", err)
 	}
