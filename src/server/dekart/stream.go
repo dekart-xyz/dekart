@@ -317,6 +317,11 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 		return GRPCError("Cannot get workspace update", err)
 	}
 
+	userWorkspaces, err := s.getUserWorkspaces(ctx)
+	if err != nil {
+		return GRPCError("Cannot get user workspaces", err)
+	}
+
 	response := proto.GetUserStreamResponse{
 		StreamOptions: &proto.StreamOptions{
 			Sequence: sequence,
@@ -329,6 +334,7 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 		Role:               checkWorkspace(ctx).UserRole,
 		IsPlayground:       checkWorkspace(ctx).IsPlayground,
 		IsDefaultWorkspace: checkWorkspace(ctx).IsDefaultWorkspace,
+		UserWorkspaces:     userWorkspaces,
 	}
 
 	err = srv.Send(&response)

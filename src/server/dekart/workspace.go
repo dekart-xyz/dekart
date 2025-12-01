@@ -16,6 +16,73 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+func (s Server) getUserWorkspaces(ctx context.Context) ([]*proto.Workspace, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+
+	rows, err := s.db.QueryContext(ctx, `
+		WITH last_status AS (
+			SELECT
+				wl.workspace_id,
+				wl.email,
+				wl.status,
+				wl.created_at,
+				wl.authored_by,
+				wl.id
+			FROM
+				workspace_log wl
+			JOIN (
+				SELECT
+					workspace_id,
+					MAX(created_at) AS created_at
+				FROM
+					workspace_log
+				WHERE
+					email = $1
+					AND status IN (1, 2)
+				GROUP BY
+					workspace_id
+			) AS ls2 ON wl.workspace_id = ls2.workspace_id AND wl.created_at = ls2.created_at
+			WHERE
+				wl.email = $1
+		)
+		SELECT
+			w.id,
+			w.name
+		FROM workspaces w
+		JOIN last_status ls ON w.id = ls.workspace_id
+		LEFT JOIN confirmation_log AS cl ON ls.id = cl.workspace_log_id AND cl.authored_by = ls.email
+		WHERE
+			ls.status = 1
+			AND (ls.authored_by = $1 OR cl.accepted = TRUE)
+		ORDER BY COALESCE(cl.created_at, ls.created_at) DESC, ls.created_at DESC
+	`, claims.Email)
+	if err != nil {
+		errtype.LogError(err, "Error getting user workspaces")
+		return nil, err
+	}
+	defer rows.Close()
+
+	workspaces := make([]*proto.Workspace, 0)
+	for rows.Next() {
+		w := proto.Workspace{}
+		if err := rows.Scan(&w.Id, &w.Name); err != nil {
+			errtype.LogError(err, "Error scanning user workspaces row")
+			return nil, err
+		}
+		workspaces = append(workspaces, &w)
+	}
+
+	if err := rows.Err(); err != nil {
+		errtype.LogError(err, "Error iterating user workspaces rows")
+		return nil, err
+	}
+
+	return workspaces, nil
+}
+
 func (s Server) getWorkspaceUpdate(ctx context.Context) (int64, error) {
 	var updatedAtStr sql.NullString // Use NullString to handle both Postgres and SQLite outputs
 	var updatedAtTime sql.NullTime  // Use time for postgres

@@ -3,30 +3,29 @@ import Select from 'antd/es/select'
 import Divider from 'antd/es/divider'
 import { SettingOutlined } from '@ant-design/icons'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
+import { useSelector } from 'react-redux'
 import classNames from 'classnames'
 import styles from './WorkspaceSelector.module.css'
 
-// Mock data for prototyping - will be replaced with real data from Redux/backend later
-const MOCK_WORKSPACES = [
-  { id: '1', name: 'My Workspace', type: 'private' },
-  { id: '2', name: 'Team Alpha', type: 'team' },
-  { id: '3', name: 'Project Beta', type: 'team' },
-  { id: '4', name: 'Playground', type: 'playground' }
-]
-
 export default function WorkspaceSelector () {
-  // Mock current workspace - will come from Redux later
-  const [currentWorkspaceId, setCurrentWorkspaceId] = useState('1')
+  const userStream = useSelector(state => state.user.stream)
+  const isPlayground = useSelector(state => state.user.isPlayground)
+  const env = useSelector(state => state.env)
   const [isManageHovered, setIsManageHovered] = useState(false)
   const history = useHistory()
 
+  if (!userStream || !env.loaded || isPlayground || !env.variables.ALLOW_WORKSPACE_CREATION) {
+    return null
+  }
+
+  const workspaces = userStream.userWorkspacesList || []
+  const currentWorkspaceId = userStream.workspaceId || (workspaces[0] && workspaces[0].id) || null
+
   const handleChange = (value) => {
-    // Mock handler - will dispatch Redux action later
     if (value === 'manage') {
       history.push('/workspace')
       return
     }
-    setCurrentWorkspaceId(value)
     console.log('Workspace changed to:', value)
   }
 
@@ -37,6 +36,7 @@ export default function WorkspaceSelector () {
         onChange={handleChange}
         className={styles.select}
         showSearch={false}
+        dropdownMatchSelectWidth={false}
         optionLabelProp='label'
         dropdownRender={(menu) => (
           <div
@@ -59,7 +59,7 @@ export default function WorkspaceSelector () {
           </div>
         )}
       >
-        {MOCK_WORKSPACES.map(workspace => (
+        {workspaces.map(workspace => (
           <Select.Option key={workspace.id} value={workspace.id} label={workspace.name}>
             <div className={styles.option}>
               <span className={styles.optionName}>{workspace.name}</span>
