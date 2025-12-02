@@ -27,6 +27,14 @@
 
 .dekartMenu {
     flex: 1;
+    margin-left: 5px;
+}
+
+.dekartMenu :global(.ant-menu-item),
+.dekartMenu :global(.ant-menu-submenu) {
+    /* margin: 0 2.5px !important; */
+    padding: 0 17px !important;
+    /* width: 32px !important; */
 }
 
 .dekartIcon {

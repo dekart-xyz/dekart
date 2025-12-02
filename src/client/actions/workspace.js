@@ -3,6 +3,8 @@ import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { success, trialSuccess } from './message'
 import { hideUpgradeModal } from './upgradeModal'
+import { updateSessionStorage } from './sessionStorage'
+import { updateLocalStorage } from './localStorage'
 
 export function redirectToCustomerPortal () {
   return (dispatch) => {
@@ -24,6 +26,15 @@ export function respondToInvite (inviteId, accept) {
     dispatch(grpcCall(Dekart.RespondToInvite, request, () => {
       window.location.href = '/'
     }))
+  }
+}
+
+export function switchWorkspace (workspaceId, sourceURL = '/') {
+  return (dispatch) => {
+    dispatch({ type: switchWorkspace.name })
+    dispatch(updateSessionStorage('preferredWorkspaceId', workspaceId))
+    dispatch(updateLocalStorage('preferredWorkspaceId', workspaceId))
+    window.location.href = sourceURL
   }
 }
 

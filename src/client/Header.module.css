@@ -7,7 +7,7 @@
 }
 
 .middle {
-    --header-side-width: 400px;
+    --header-side-width: 350px;
     position: absolute;
     left: var(--header-side-width);
     width: calc(100% - 2 * var(--header-side-width));
@@ -23,10 +23,12 @@
 }
 
 .left {
-    width: 250px;
+    min-width: 180px;
     display: flex;
     flex-direction: row;
     align-items: center;
+    flex: 0 0 auto;
+    gap: 0px;
 }
 
 .workspace {

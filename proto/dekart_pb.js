@@ -1324,7 +1324,7 @@ if (goog.DEBUG && !COMPILED) {
  * @constructor
  */
 proto.GetUserStreamResponse = function(opt_data) {
-  jspb.Message.initialize(this, opt_data, 0, -1, null, null);
+  jspb.Message.initialize(this, opt_data, 0, -1, proto.GetUserStreamResponse.repeatedFields_, null);
 };
 goog.inherits(proto.GetUserStreamResponse, jspb.Message);
 if (goog.DEBUG && !COMPILED) {
@@ -9609,7 +9609,9 @@ proto.Workspace.prototype.toObject = function(opt_includeInstance) {
 proto.Workspace.toObject = function(includeInstance, msg) {
   var f, obj = {
     id: jspb.Message.getFieldWithDefault(msg, 1, ""),
-    name: jspb.Message.getFieldWithDefault(msg, 2, "")
+    name: jspb.Message.getFieldWithDefault(msg, 2, ""),
+    role: jspb.Message.getFieldWithDefault(msg, 3, 0),
+    planType: jspb.Message.getFieldWithDefault(msg, 4, 0)
   };
 
   if (includeInstance) {
@@ -9654,6 +9656,14 @@ proto.Workspace.deserializeBinaryFromReader = function(msg, reader) {
       var value = /** @type {string} */ (reader.readString());
       msg.setName(value);
       break;
+    case 3:
+      var value = /** @type {!proto.UserRole} */ (reader.readEnum());
+      msg.setRole(value);
+      break;
+    case 4:
+      var value = /** @type {!proto.PlanType} */ (reader.readEnum());
+      msg.setPlanType(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -9697,6 +9707,20 @@ proto.Workspace.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
+  f = message.getRole();
+  if (f !== 0.0) {
+    writer.writeEnum(
+      3,
+      f
+    );
+  }
+  f = message.getPlanType();
+  if (f !== 0.0) {
+    writer.writeEnum(
+      4,
+      f
+    );
+  }
 };
 
 
@@ -9733,6 +9757,42 @@ proto.Workspace.prototype.getName = function() {
  */
 proto.Workspace.prototype.setName = function(value) {
   return jspb.Message.setProto3StringField(this, 2, value);
+};
+
+
+/**
+ * optional UserRole role = 3;
+ * @return {!proto.UserRole}
+ */
+proto.Workspace.prototype.getRole = function() {
+  return /** @type {!proto.UserRole} */ (jspb.Message.getFieldWithDefault(this, 3, 0));
+};
+
+
+/**
+ * @param {!proto.UserRole} value
+ * @return {!proto.Workspace} returns this
+ */
+proto.Workspace.prototype.setRole = function(value) {
+  return jspb.Message.setProto3EnumField(this, 3, value);
+};
+
+
+/**
+ * optional PlanType plan_type = 4;
+ * @return {!proto.PlanType}
+ */
+proto.Workspace.prototype.getPlanType = function() {
+  return /** @type {!proto.PlanType} */ (jspb.Message.getFieldWithDefault(this, 4, 0));
+};
+
+
+/**
+ * @param {!proto.PlanType} value
+ * @return {!proto.Workspace} returns this
+ */
+proto.Workspace.prototype.setPlanType = function(value) {
+  return jspb.Message.setProto3EnumField(this, 4, value);
 };
 
 
@@ -10779,6 +10839,13 @@ proto.GetUserStreamRequest.prototype.hasStreamOptions = function() {
 
 
 
+/**
+ * List of repeated fields within this message type.
+ * @private {!Array<number>}
+ * @const
+ */
+proto.GetUserStreamResponse.repeatedFields_ = [10];
+
 
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
@@ -10818,7 +10885,9 @@ proto.GetUserStreamResponse.toObject = function(includeInstance, msg) {
     workspaceUpdate: jspb.Message.getFieldWithDefault(msg, 6, 0),
     role: jspb.Message.getFieldWithDefault(msg, 7, 0),
     isPlayground: jspb.Message.getBooleanFieldWithDefault(msg, 8, false),
-    isDefaultWorkspace: jspb.Message.getBooleanFieldWithDefault(msg, 9, false)
+    isDefaultWorkspace: jspb.Message.getBooleanFieldWithDefault(msg, 9, false),
+    userWorkspacesList: jspb.Message.toObjectList(msg.getUserWorkspacesList(),
+    proto.Workspace.toObject, includeInstance)
   };
 
   if (includeInstance) {
@@ -10891,6 +10960,11 @@ proto.GetUserStreamResponse.deserializeBinaryFromReader = function(msg, reader) 
     case 9:
       var value = /** @type {boolean} */ (reader.readBool());
       msg.setIsDefaultWorkspace(value);
+      break;
+    case 10:
+      var value = new proto.Workspace;
+      reader.readMessage(value,proto.Workspace.deserializeBinaryFromReader);
+      msg.addUserWorkspaces(value);
       break;
     default:
       reader.skipField();
@@ -10983,6 +11057,14 @@ proto.GetUserStreamResponse.serializeBinaryToWriter = function(message, writer) 
     writer.writeBool(
       9,
       f
+    );
+  }
+  f = message.getUserWorkspacesList();
+  if (f.length > 0) {
+    writer.writeRepeatedMessage(
+      10,
+      f,
+      proto.Workspace.serializeBinaryToWriter
     );
   }
 };
@@ -11166,6 +11248,44 @@ proto.GetUserStreamResponse.prototype.getIsDefaultWorkspace = function() {
  */
 proto.GetUserStreamResponse.prototype.setIsDefaultWorkspace = function(value) {
   return jspb.Message.setProto3BooleanField(this, 9, value);
+};
+
+
+/**
+ * repeated Workspace user_workspaces = 10;
+ * @return {!Array<!proto.Workspace>}
+ */
+proto.GetUserStreamResponse.prototype.getUserWorkspacesList = function() {
+  return /** @type{!Array<!proto.Workspace>} */ (
+    jspb.Message.getRepeatedWrapperField(this, proto.Workspace, 10));
+};
+
+
+/**
+ * @param {!Array<!proto.Workspace>} value
+ * @return {!proto.GetUserStreamResponse} returns this
+*/
+proto.GetUserStreamResponse.prototype.setUserWorkspacesList = function(value) {
+  return jspb.Message.setRepeatedWrapperField(this, 10, value);
+};
+
+
+/**
+ * @param {!proto.Workspace=} opt_value
+ * @param {number=} opt_index
+ * @return {!proto.Workspace}
+ */
+proto.GetUserStreamResponse.prototype.addUserWorkspaces = function(opt_value, opt_index) {
+  return jspb.Message.addToRepeatedWrapperField(this, 10, opt_value, proto.Workspace, opt_index);
+};
+
+
+/**
+ * Clears the list making it empty but non-null.
+ * @return {!proto.GetUserStreamResponse} returns this
+ */
+proto.GetUserStreamResponse.prototype.clearUserWorkspacesList = function() {
+  return this.setUserWorkspacesList([]);
 };
 
 

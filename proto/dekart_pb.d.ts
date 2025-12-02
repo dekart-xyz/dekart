@@ -1087,6 +1087,12 @@ export class Workspace extends jspb.Message {
   getName(): string;
   setName(value: string): void;
 
+  getRole(): UserRoleMap[keyof UserRoleMap];
+  setRole(value: UserRoleMap[keyof UserRoleMap]): void;
+
+  getPlanType(): PlanTypeMap[keyof PlanTypeMap];
+  setPlanType(value: PlanTypeMap[keyof PlanTypeMap]): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Workspace.AsObject;
   static toObject(includeInstance: boolean, msg: Workspace): Workspace.AsObject;
@@ -1101,6 +1107,8 @@ export namespace Workspace {
   export type AsObject = {
     id: string,
     name: string,
+    role: UserRoleMap[keyof UserRoleMap],
+    planType: PlanTypeMap[keyof PlanTypeMap],
   }
 }
 
@@ -1286,6 +1294,11 @@ export class GetUserStreamResponse extends jspb.Message {
   getIsDefaultWorkspace(): boolean;
   setIsDefaultWorkspace(value: boolean): void;
 
+  clearUserWorkspacesList(): void;
+  getUserWorkspacesList(): Array<Workspace>;
+  setUserWorkspacesList(value: Array<Workspace>): void;
+  addUserWorkspaces(value?: Workspace, index?: number): Workspace;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetUserStreamResponse.AsObject;
   static toObject(includeInstance: boolean, msg: GetUserStreamResponse): GetUserStreamResponse.AsObject;
@@ -1307,6 +1320,7 @@ export namespace GetUserStreamResponse {
     role: UserRoleMap[keyof UserRoleMap],
     isPlayground: boolean,
     isDefaultWorkspace: boolean,
+    userWorkspacesList: Array<Workspace.AsObject>,
   }
 }
 

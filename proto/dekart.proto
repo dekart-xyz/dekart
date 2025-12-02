@@ -316,6 +316,8 @@ message RunAllQueriesResponse {
 message Workspace {
     string id = 1;
     string name = 2;
+    UserRole role = 3;
+    PlanType plan_type = 4;
 }
 
 message Subscription {
@@ -368,6 +370,7 @@ message GetUserStreamResponse {
     UserRole role = 7;
     bool is_playground = 8;
     bool is_default_workspace = 9;
+    repeated Workspace user_workspaces = 10;
 }
 
 message TestConnectionRequest {

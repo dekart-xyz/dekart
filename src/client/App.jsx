@@ -27,6 +27,7 @@ import UpgradeModal from './UpgradeModal'
 import WorkspaceReadOnlyBanner from './WorkspaceReadOnlyBanner'
 import styles from './App.module.css'
 import { hideUpgradeModal } from './actions/upgradeModal'
+import { WorkspaceSelectorLight } from './WorkspaceSelector'
 
 // RedirectState reads states passed in the URL from the server
 function RedirectState () {
@@ -96,7 +97,6 @@ function AppRedirect () {
   if (httpError.status) {
     return <Redirect to={`/${httpError.status}`} push />
   }
-
   if (
     userStream &&
     !userStream.planType &&
@@ -150,6 +150,8 @@ function NotFoundPage () {
   const userStream = useSelector(state => state.user.stream)
   const workspaceId = userStream?.workspaceId
   const history = useHistory()
+  const workspaces = userStream?.userWorkspacesList
+  const sourceURL = useSelector(state => state.httpError.sourceURL)
   return (
     <Result
       icon={<QuestionOutlined />} title='404' subTitle={
@@ -163,10 +165,21 @@ function NotFoundPage () {
               </div>
               )
             : (
-              <>
-                <div>
-                  <Button onClick={() => history.push('/')}>Back to workspace</Button>
-                </div>
+              <>{workspaces
+                ? (
+                    (workspaces.length > 1)
+                      ? (
+                        <>
+                          <WorkspaceSelectorLight sourceURL={sourceURL} />
+                        </>
+                        )
+                      : (
+                        <div>
+                          <Button onClick={() => history.push('/')}>Back to workspace</Button>
+                        </div>
+                        )
+                  )
+                : null}
               </>
               )}
         </>
@@ -204,8 +217,8 @@ export default function App () {
   const upgradeModalVisible = useSelector(state => state.upgradeModal.visible)
 
   useEffect(() => {
-    dispatch(loadSessionStorage())
     dispatch(loadLocalStorage())
+    dispatch(loadSessionStorage())
     dispatch(setClaimEmailCookie())
   }, [dispatch])
 
