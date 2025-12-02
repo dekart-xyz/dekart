@@ -56,6 +56,7 @@ require (
 )
 
 require (
+	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/mattn/go-sqlite3 v1.14.16
 )
@@ -74,7 +75,6 @@ require (
 	github.com/JohnCGriffin/overflow v0.0.0-20211019200055-46fa312c352c // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.3.0 // indirect
-	github.com/Masterminds/sprig/v3 v3.3.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/apache/arrow/go/v14 v14.0.2 // indirect
 	github.com/apache/arrow/go/v15 v15.0.2 // indirect
