@@ -97,7 +97,6 @@ function AppRedirect () {
   if (httpError.status) {
     return <Redirect to={`/${httpError.status}`} push />
   }
-
   if (
     userStream &&
     !userStream.planType &&

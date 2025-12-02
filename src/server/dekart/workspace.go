@@ -120,6 +120,25 @@ func (s Server) getUserWorkspaces(ctx context.Context, email string) ([]*proto.W
 		return nil, err
 	}
 
+	if len(workspaces) == 0 && !user.CanCreateWorkspace() {
+		// if user cannot create workspace, we should add the default workspace
+		workspaceID := user.GetDefaultWorkspaceID()
+		_, err = s.db.ExecContext(ctx, `
+		INSERT INTO workspace_log (workspace_id, email, status, authored_by, id, role)
+		VALUES ($1, $2, 1, $2, $3, $4)
+	`, workspaceID, email, newUUID(), user.GetUserDefaultRole(email))
+		if err != nil {
+			log.Err(err).Send()
+			return nil, err
+		}
+		err = s.createDefaultSubscription(ctx, workspaceID, email)
+		if err != nil {
+			log.Err(err).Send()
+			return nil, err
+		}
+		return s.getUserWorkspaces(ctx, email)
+	}
+
 	return workspaces, nil
 }
 
