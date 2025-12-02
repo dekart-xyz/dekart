@@ -6,8 +6,8 @@
 }
 
 .select {
-  /* min-width: 120px; */
-  /* max-width: 150px; */
+  /* min-width: 140px; */
+  max-width: 160px;
   font-size: 12px;
 }
 
@@ -26,16 +26,13 @@
 .select :global(.ant-select-selection-item) {
   color: white !important;
   line-height: 26px !important;
-  /* padding: 0 4px !important; */
+  padding-right: 11px !important;
 }
 
 .select :global(.ant-select-arrow) {
   color: rgba(255, 255, 255, 0.65) !important;
   font-size: 10px !important;
   right: 6px !important;
-}
-
-.dropdown {
 }
 
 .manageHovered :global(.ant-select-item-option-active) {
@@ -77,6 +74,8 @@
 }
 
 .optionName {
-  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 

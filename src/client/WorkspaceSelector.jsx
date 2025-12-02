@@ -61,7 +61,7 @@ export default function WorkspaceSelector () {
               onMouseLeave={() => setIsManageHovered(false)}
             >
               <SettingOutlined />
-              <span>Manage</span>
+              <span>Manage Workspace</span>
             </div>
           </div>
         )}
@@ -75,7 +75,7 @@ export default function WorkspaceSelector () {
               label={
                 <div className={styles.optionLabel}>
                   <Icon className={styles.optionIcon} />
-                  <span>{workspace.name}</span>
+                  <span className={styles.optionName}>{workspace.name}</span>
                 </div>
               }
             >
