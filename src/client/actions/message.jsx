@@ -90,7 +90,8 @@ export function setHttpError (status, message = '') {
       message
     })
   }
-  return { type: setHttpError.name, status, message }
+  const sourceURL = window.location.href
+  return { type: setHttpError.name, status, message, sourceURL }
 }
 
 // Helper to show error message with tracking

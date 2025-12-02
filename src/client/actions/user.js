@@ -39,7 +39,6 @@ export function subscribeUserStream () {
         dispatch(userStreamUpdate(message))
         if (prevRes.workspaceUpdate !== message.workspaceUpdate) {
           prevRes.workspaceUpdate = message.workspaceUpdate
-          dispatch(updateLocalStorage('preferredWorkspaceId', message.workspaceId))
           dispatch(getWorkspace())
         }
         if (message.planType > 0 || message.isDefaultWorkspace) {

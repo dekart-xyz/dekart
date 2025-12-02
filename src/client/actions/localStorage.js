@@ -3,7 +3,7 @@ import { LOCAL_STORAGE_KEY } from '../lib/constants'
 const initialState = {
   sensitiveScopesGrantedOnce: false,
   loginHint: null,
-  preferredWorkspaceId: null
+  preferredWorkspaceId: ''
 }
 
 let current = initialState

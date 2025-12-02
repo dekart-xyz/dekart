@@ -9610,7 +9610,8 @@ proto.Workspace.toObject = function(includeInstance, msg) {
   var f, obj = {
     id: jspb.Message.getFieldWithDefault(msg, 1, ""),
     name: jspb.Message.getFieldWithDefault(msg, 2, ""),
-    role: jspb.Message.getFieldWithDefault(msg, 3, 0)
+    role: jspb.Message.getFieldWithDefault(msg, 3, 0),
+    planType: jspb.Message.getFieldWithDefault(msg, 4, 0)
   };
 
   if (includeInstance) {
@@ -9659,6 +9660,10 @@ proto.Workspace.deserializeBinaryFromReader = function(msg, reader) {
       var value = /** @type {!proto.UserRole} */ (reader.readEnum());
       msg.setRole(value);
       break;
+    case 4:
+      var value = /** @type {!proto.PlanType} */ (reader.readEnum());
+      msg.setPlanType(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -9706,6 +9711,13 @@ proto.Workspace.serializeBinaryToWriter = function(message, writer) {
   if (f !== 0.0) {
     writer.writeEnum(
       3,
+      f
+    );
+  }
+  f = message.getPlanType();
+  if (f !== 0.0) {
+    writer.writeEnum(
+      4,
       f
     );
   }
@@ -9763,6 +9775,24 @@ proto.Workspace.prototype.getRole = function() {
  */
 proto.Workspace.prototype.setRole = function(value) {
   return jspb.Message.setProto3EnumField(this, 3, value);
+};
+
+
+/**
+ * optional PlanType plan_type = 4;
+ * @return {!proto.PlanType}
+ */
+proto.Workspace.prototype.getPlanType = function() {
+  return /** @type {!proto.PlanType} */ (jspb.Message.getFieldWithDefault(this, 4, 0));
+};
+
+
+/**
+ * @param {!proto.PlanType} value
+ * @return {!proto.Workspace} returns this
+ */
+proto.Workspace.prototype.setPlanType = function(value) {
+  return jspb.Message.setProto3EnumField(this, 4, value);
 };
 
 

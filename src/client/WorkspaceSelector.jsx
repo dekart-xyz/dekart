@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import Select from 'antd/es/select'
 import Divider from 'antd/es/divider'
-import { SettingOutlined } from '@ant-design/icons'
+import Dropdown from 'antd/es/dropdown'
+import Button from 'antd/es/button'
+import { SettingOutlined, UserOutlined, TeamOutlined, DownOutlined } from '@ant-design/icons'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import classNames from 'classnames'
+import { PlanType } from 'dekart-proto/dekart_pb'
 import styles from './WorkspaceSelector.module.css'
+import { switchWorkspace } from './actions/workspace'
 
 export default function WorkspaceSelector () {
   const userStream = useSelector(state => state.user.stream)
@@ -13,23 +17,23 @@ export default function WorkspaceSelector () {
   const env = useSelector(state => state.env)
   const [isManageHovered, setIsManageHovered] = useState(false)
   const history = useHistory()
+  const dispatch = useDispatch()
 
   if (!userStream || !env.loaded || isPlayground || !env.variables.ALLOW_WORKSPACE_CREATION) {
     return null
   }
-  const workspaceId = userStream?.workspaceId
-  if (!workspaceId) {
+  const currentWorkspaceId = userStream.workspaceId
+  if (!currentWorkspaceId) {
     return null
   }
-  const workspaces = userStream.userWorkspacesList || []
-  const currentWorkspaceId = userStream.workspaceId || (workspaces[0] && workspaces[0].id) || null
+  const workspaces = userStream.userWorkspacesList
 
   const handleChange = (value) => {
     if (value === 'manage') {
       history.push('/workspace')
       return
     }
-    console.log('Workspace changed to:', value)
+    dispatch(switchWorkspace(value))
   }
 
   return (
@@ -62,14 +66,78 @@ export default function WorkspaceSelector () {
           </div>
         )}
       >
-        {workspaces.map(workspace => (
-          <Select.Option key={workspace.id} value={workspace.id} label={workspace.name}>
-            <div className={styles.option}>
-              <span className={styles.optionName}>{workspace.name}</span>
-            </div>
-          </Select.Option>
-        ))}
+        {workspaces.map(workspace => {
+          const Icon = workspace.planType === PlanType.TYPE_PERSONAL ? UserOutlined : TeamOutlined
+          return (
+            <Select.Option
+              key={workspace.id}
+              value={workspace.id}
+              label={
+                <div className={styles.optionLabel}>
+                  <Icon className={styles.optionIcon} />
+                  <span>{workspace.name}</span>
+                </div>
+              }
+            >
+              <div className={styles.option}>
+                <Icon className={styles.optionIcon} />
+                <span className={styles.optionName}>{workspace.name}</span>
+              </div>
+            </Select.Option>
+          )
+        })}
       </Select>
     </div>
+  )
+}
+
+// default styling and no management option
+export function WorkspaceSelectorLight ({ sourceURL } = { sourceURL: '/' }) {
+  const userStream = useSelector(state => state.user.stream)
+  const isPlayground = useSelector(state => state.user.isPlayground)
+  const env = useSelector(state => state.env)
+  const dispatch = useDispatch()
+
+  if (!userStream || !env.loaded || isPlayground || !env.variables.ALLOW_WORKSPACE_CREATION) {
+    return null
+  }
+  const currentWorkspaceId = userStream.workspaceId
+  if (!currentWorkspaceId) {
+    return null
+  }
+  const workspaces = userStream.userWorkspacesList.filter(
+    workspace => workspace.id !== currentWorkspaceId
+  )
+
+  if (workspaces.length === 0) {
+    return null
+  }
+
+  const items = workspaces.map(workspace => {
+    const Icon = workspace.planType === PlanType.TYPE_PERSONAL ? UserOutlined : TeamOutlined
+    return {
+      key: workspace.id,
+      label: (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Icon />
+          <span>{workspace.name}</span>
+        </div>
+      ),
+      onClick: () => {
+        dispatch(switchWorkspace(workspace.id, sourceURL))
+      }
+    }
+  })
+
+  return (
+    <Dropdown
+      menu={{ items }}
+      placement='bottomLeft'
+
+    >
+      <Button>
+        Switch workspace <DownOutlined />
+      </Button>
+    </Dropdown>
   )
 }

@@ -62,12 +62,12 @@ function sensitiveScopesNeeded (state = false, action) {
   }
 }
 
-function preferredWorkspaceId (state = null, action) {
+function preferredWorkspaceId (state = '', action) {
   switch (action.type) {
     case localStorageInit.name:
       return action.current.preferredWorkspaceId || state
-    case userStreamUpdate.name:
-      return action.userStream.workspaceId
+    case sessionStorageInit.name:
+      return action.current.preferredWorkspaceId || state
     default:
       return state
   }

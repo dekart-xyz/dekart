@@ -317,6 +317,7 @@ message Workspace {
     string id = 1;
     string name = 2;
     UserRole role = 3;
+    PlanType plan_type = 4;
 }
 
 message Subscription {

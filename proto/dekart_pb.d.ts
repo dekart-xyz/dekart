@@ -1090,6 +1090,9 @@ export class Workspace extends jspb.Message {
   getRole(): UserRoleMap[keyof UserRoleMap];
   setRole(value: UserRoleMap[keyof UserRoleMap]): void;
 
+  getPlanType(): PlanTypeMap[keyof PlanTypeMap];
+  setPlanType(value: PlanTypeMap[keyof PlanTypeMap]): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Workspace.AsObject;
   static toObject(includeInstance: boolean, msg: Workspace): Workspace.AsObject;
@@ -1105,6 +1108,7 @@ export namespace Workspace {
     id: string,
     name: string,
     role: UserRoleMap[keyof UserRoleMap],
+    planType: PlanTypeMap[keyof PlanTypeMap],
   }
 }
 
