@@ -342,7 +342,16 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 	var auth = c.getAuthConfig(state)
 	token, err := auth.Exchange(ctx, code)
 	if err != nil {
-		errtype.LogError(err, "Error exchanging code for token")
+		errorStr := err.Error()
+		errorType := "other"
+		if strings.Contains(errorStr, "invalid_grant") {
+			errorType = "invalid_grant"
+		}
+		log.Err(err).
+			Str("errorType", errorType).
+			Bool("hasCode", code != "").
+			Bool("redirectUrlEmpty", auth.RedirectURL == "").
+			Msg("OAuth token exchange failed (sanitized)")
 		redirectState.Error = "Error exchanging code for token"
 		return redirectState
 	}
