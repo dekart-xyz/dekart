@@ -1,5 +1,5 @@
 import { KeplerGlSchema } from '@kepler.gl/schemas'
-import { removeDataset } from '@kepler.gl/actions'
+import { cleanupExportImage, removeDataset, setExportImageSetting, startExportingImage } from '@kepler.gl/actions'
 
 import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
 import { success } from './message'
@@ -108,8 +108,8 @@ function shouldDownloadQueryText (query, prevQueriesList, queriesList) {
   return false
 }
 
-export function setReportChanged (changed) {
-  return { type: setReportChanged.name, changed }
+export function setLastMapConfigChanged () {
+  return { type: setLastMapConfigChanged.name }
 }
 
 function isQueryJobOutOfDate (reportStreamResponse, getState, queryJob) {
@@ -448,7 +448,37 @@ export function setAutoRefreshIntervalSeconds (reportId, autoRefreshIntervalSeco
   }
 }
 
-export function saveMap (onSaveComplete = () => {}) {
+export function saveMapPreview (dataUri) {
+  return (dispatch) => {
+    dispatch({ type: saveMapPreview.name })
+    dispatch(cleanupExportImage())
+    console.log('setMapPreview', dataUri)
+  }
+}
+
+export function exportMapPreview () {
+  return (dispatch, getState) => {
+    const exporting = getState().mapPreview.exporting
+    if (exporting) {
+      return
+    }
+    const timeoutId = setTimeout(() => {
+      dispatch(setExportImageSetting({
+        mapW: 640 / 2,
+        mapH: 360 / 2
+      }))
+      dispatch(startExportingImage({
+        ratio: 'SCREEN',
+        resolution: 'ONE_X',
+        legend: false,
+        center: false
+      }))
+    }, 5000)
+    dispatch({ type: exportMapPreview.name, timeoutId })
+  }
+}
+
+export function saveMap (mapConfigChanged = false) {
   return async (dispatch, getState) => {
     dispatch({ type: saveMap.name })
     const { keplerGl, report, reportStatus, queryStatus, queryParams, readme } = getState()
@@ -476,10 +506,14 @@ export function saveMap (onSaveComplete = () => {}) {
     request.setTitle(reportStatus.title)
     request.setQueryList(queries)
     request.setQueryParamsList(getQueryParamsObjArr(queryParams.list))
-    dispatch(grpcCall(Dekart.UpdateReport, request, (res) => {
-      onSaveComplete()
-      dispatch(savedReport(lastSaved, res.updatedAt))
-    }))
+    // TODO Promise all
+    const res = await new Promise(resolve => {
+      dispatch(grpcCall(Dekart.UpdateReport, request, resolve))
+    })
+    if (mapConfigChanged) {
+      dispatch(exportMapPreview())
+    }
+    dispatch(savedReport(lastSaved, res.updatedAt))
   }
 }
 

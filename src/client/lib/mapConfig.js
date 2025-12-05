@@ -1,6 +1,6 @@
 import { receiveMapConfig } from '@kepler.gl/actions'
 import { KeplerGlSchema } from '@kepler.gl/schemas'
-import { setReportChanged } from '../actions/report'
+import { setLastMapConfigChanged } from '../actions/report'
 import { useDispatch, useSelector } from 'react-redux'
 import { useEffect } from 'react'
 import { deepCompare } from './deepCompare'
@@ -31,10 +31,14 @@ export function useCheckMapConfig () {
   const { mapConfig } = report || {}
   const datasets = useSelector(state => state.dataset.list)
   const updatingNum = useSelector(state => state.dataset.updatingNum)
+  const downloadingNum = useSelector(state => state.dataset.downloading.length)
 
   useEffect(() => {
-    if (updatingNum > 0) {
+    if (updatingNum > 0 || downloadingNum > 0) {
       // skip checking map config while datasets are updating
+      if (checkMapConfigTimer) {
+        clearTimeout(checkMapConfigTimer)
+      }
       return
     }
     return checkMapConfig(kepler, mapConfig, dispatch, datasets)
@@ -51,7 +55,7 @@ function checkMapConfig (kepler, mapConfigInputStr, dispatch, datasets) {
       const configToSaveObj = KeplerGlSchema.getConfigToSave(kepler)
       const currentConfig = JSON.parse(mapConfigInputStr)
       if (shouldUpdateMapConfig(currentConfig, configToSaveObj)) {
-        dispatch(setReportChanged())
+        dispatch(setLastMapConfigChanged())
       }
     }
     checkMapConfigTimer = null
