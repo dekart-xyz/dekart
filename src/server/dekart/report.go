@@ -1579,3 +1579,52 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 
 	return &proto.RestoreReportSnapshotResponse{}, nil
 }
+
+// SaveMapPreview saves or updates the map preview for a report
+func (s Server) SaveMapPreview(ctx context.Context, req *proto.SaveMapPreviewRequest) (*proto.SaveMapPreviewResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	workspaceInfo := checkWorkspace(ctx)
+	if workspaceInfo.Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	}
+	_, err := uuid.Parse(req.ReportId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	report, err := s.getReport(ctx, req.ReportId)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if !report.CanWrite {
+		err := fmt.Errorf("cannot save map preview for report %s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.PermissionDenied, "Cannot save map preview")
+	}
+
+	// Insert or update map preview
+	// Use upsert pattern: insert if not exists, update if exists (based on unique constraint on report_id)
+	previewID := newUUID()
+	_, err = s.db.ExecContext(ctx,
+		`INSERT INTO map_previews (id, report_id, map_preview_data_uri, updated_at)
+		VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+		ON CONFLICT(report_id) DO UPDATE SET map_preview_data_uri = $3, updated_at = CURRENT_TIMESTAMP`,
+		previewID,
+		req.ReportId,
+		req.MapPreviewDataUri,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &proto.SaveMapPreviewResponse{}, nil
+}
