@@ -1,0 +1,5 @@
+---
+alwaysApply: true
+---
+
+Avoid redundant checks for multiple options when only one is possible (based on project structure or configuration), when other components already ensure the condition, or when configuration already requires a specific value. For example, don't check multiple relative paths like `"public/file.png"`, `"./public/file.png"`, `"../public/file.png"` when the project structure makes only one valid. Exceptions: environment-specific configurations, runtime variations, cross-platform needs, and user input validation.

@@ -2,18 +2,23 @@ package dekart
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/conn"
 	"dekart/src/server/errtype"
 	"dekart/src/server/notifications"
 	"dekart/src/server/user"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -1627,4 +1632,109 @@ func (s Server) SaveMapPreview(ctx context.Context, req *proto.SaveMapPreviewReq
 	}
 
 	return &proto.SaveMapPreviewResponse{}, nil
+}
+
+func (s Server) ServeMapPreview(w http.ResponseWriter, r *http.Request) {
+	reportID := mux.Vars(r)["report"]
+	ctx := r.Context()
+
+	_, err := uuid.Parse(reportID)
+	if err != nil {
+		errtype.LogError(err, "invalid report id")
+		http.Error(w, "invalid report id", http.StatusBadRequest)
+		return
+	}
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		claims = &user.Claims{
+			Email: user.UnknownEmail,
+		}
+		ctx = context.WithValue(ctx, user.ContextKey, claims)
+		ctx = s.SetWorkspaceContext(ctx, r)
+	}
+
+	// Check if user has access to the report
+	report, err := s.getReport(ctx, reportID)
+	if err != nil {
+		errtype.LogError(err, "failed to get report")
+		http.Error(w, "failed to get report", http.StatusInternalServerError)
+		return
+	}
+	if report == nil {
+		http.Error(w, "report not found", http.StatusNotFound)
+		return
+	}
+
+	// Query map preview from database
+	var mapPreviewDataURI string
+	var updatedAt time.Time
+	err = s.db.QueryRowContext(ctx,
+		"SELECT map_preview_data_uri, updated_at FROM map_previews WHERE report_id = $1",
+		reportID,
+	).Scan(&mapPreviewDataURI, &updatedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Serve default map preview when not found
+			s.serveDefaultMapPreview(w, r)
+			return
+		}
+		errtype.LogError(err, "failed to get map preview")
+		http.Error(w, "failed to get map preview", http.StatusInternalServerError)
+		return
+	}
+
+	// Parse data URI: format is "data:image/png;base64,<base64data>"
+	if !strings.HasPrefix(mapPreviewDataURI, "data:image/png;base64,") {
+		http.Error(w, "invalid map preview format", http.StatusInternalServerError)
+		return
+	}
+
+	// Extract base64 data
+	base64Data := strings.TrimPrefix(mapPreviewDataURI, "data:image/png;base64,")
+	imageData, err := base64.StdEncoding.DecodeString(base64Data)
+	if err != nil {
+		errtype.LogError(err, "failed to decode map preview")
+		http.Error(w, "failed to decode map preview", http.StatusInternalServerError)
+		return
+	}
+
+	// Set cache headers
+	// Use ETag based on updated_at timestamp for conditional caching
+	hash := sha256.Sum256([]byte(fmt.Sprintf("%s-%d", reportID, updatedAt.Unix())))
+	etag := fmt.Sprintf("\"%x\"", hash)
+	w.Header().Set("ETag", etag)
+
+	// Check If-None-Match header for 304 Not Modified
+	if match := r.Header.Get("If-None-Match"); match == etag {
+		w.WriteHeader(http.StatusNotModified)
+		return
+	}
+
+	// Set cache control - allow caching but revalidate
+	// Use max-age of 1 hour (3600 seconds) since previews can be updated
+	w.Header().Set("Cache-Control", "public, max-age=3600, must-revalidate")
+	w.Header().Set("Last-Modified", updatedAt.Format(http.TimeFormat))
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(imageData)))
+
+	w.WriteHeader(http.StatusOK)
+	if _, err := w.Write(imageData); err != nil {
+		errtype.LogError(err, "failed to write map preview")
+		return
+	}
+}
+
+// serveDefaultMapPreview serves the default map preview image
+func (s Server) serveDefaultMapPreview(w http.ResponseWriter, r *http.Request) {
+	staticPath := os.Getenv("DEKART_STATIC_FILES")
+	if staticPath == "" {
+		log.Warn().Msg("DEKART_STATIC_FILES is not set, cannot serve default map preview")
+		http.Error(w, "map preview not found", http.StatusNotFound)
+		return
+	}
+
+	// Create a new request with the path to default-map-preview.png
+	newReq := r.Clone(r.Context())
+	newReq.URL.Path = "/default-map-preview.png"
+	http.FileServer(http.Dir(staticPath)).ServeHTTP(w, newReq)
 }

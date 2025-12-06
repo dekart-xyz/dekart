@@ -3,7 +3,7 @@ import { cleanupExportImage, removeDataset, setExportImageSetting, startExportin
 
 import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
 import { success } from './message'
-import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType, SetTrackViewersRequest, SetAutoRefreshIntervalSecondsRequest, RestoreReportSnapshotRequest } from 'dekart-proto/dekart_pb'
+import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType, SetTrackViewersRequest, SetAutoRefreshIntervalSecondsRequest, RestoreReportSnapshotRequest, SaveMapPreviewRequest } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { createQuery, downloadQuerySource, runQuery } from './query'
 import { downloadDataset } from './dataset'
@@ -14,6 +14,7 @@ import { getQueryParamsObjArr } from '../lib/queryParams'
 import { receiveReportUpdateMapConfig } from '../lib/mapConfig'
 import { extensionFromMime } from '../lib/mime'
 import { showUpgradeModal } from './upgradeModal'
+import { track } from '../lib/tracking'
 
 export function closeReport () {
   return (dispatch) => {
@@ -449,10 +450,17 @@ export function setAutoRefreshIntervalSeconds (reportId, autoRefreshIntervalSeco
 }
 
 export function saveMapPreview (dataUri) {
-  return (dispatch) => {
+  return (dispatch, getState) => {
     dispatch({ type: saveMapPreview.name })
     dispatch(cleanupExportImage())
-    console.log('setMapPreview', dataUri)
+    const req = new SaveMapPreviewRequest()
+    const { report: { id: reportId } } = getState()
+    req.setReportId(reportId)
+    req.setMapPreviewDataUri(dataUri)
+    dispatch(grpcCall(Dekart.SaveMapPreview, req, () => {
+    }, err => {
+      track('saveMapPreviewFailed', { message: err.message })
+    }))
   }
 }
 

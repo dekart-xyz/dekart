@@ -166,13 +166,12 @@ function useAutoSave () {
   const reportChanged = useReportChanged()
   const mapConfigChanged = useMapConfigChanged()
   const changed = reportChanged || mapConfigChanged
-  const mapPreview = useSelector(state => state.mapPreview)
-
+  const { exporting, dataUri } = useSelector(state => state.mapPreview)
   useEffect(() => {
-    if (mapPreview.dataUri && !mapPreview.exporting) {
-      dispatch(saveMapPreview(mapPreview.dataUri))
+    if (dataUri && !exporting) {
+      dispatch(saveMapPreview(dataUri))
     }
-  }, [mapPreview, dispatch])
+  }, [dataUri, exporting, dispatch])
 
   useEffect(() => {
     const handler = setTimeout(() => {

@@ -342,12 +342,6 @@ function Kepler () {
   const dispatch = useDispatch()
   const [mapboxRef, setMapboxRef] = useState(null)
 
-  useEffect(() => {
-    if (mapboxRef) {
-      console.log(mapboxRef.getMap()._deck)
-    }
-  }, [mapboxRef])
-
   // Filter out MapLibre styles (dark-matter, positron, voyager) only when isSnowpark is true
   // Keep only Mapbox styles and no-basemap option
   // Use getDefaultMapStyles to ensure icons have proper CDN URLs
