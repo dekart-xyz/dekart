@@ -158,7 +158,7 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 	// Serve static files
 	staticPath := os.Getenv("DEKART_STATIC_FILES")
 	if staticPath != "" {
-		staticFilesHandler := NewStaticFilesHandler(staticPath)
+		staticFilesHandler := NewStaticFilesHandler(staticPath, dekartServer)
 
 		router.HandleFunc("/", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/shared", staticFilesHandler.ServeIndex)

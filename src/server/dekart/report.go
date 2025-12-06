@@ -1738,3 +1738,35 @@ func (s Server) serveDefaultMapPreview(w http.ResponseWriter, r *http.Request) {
 	newReq.URL.Path = "/default-map-preview.png"
 	http.FileServer(http.Dir(staticPath)).ServeHTTP(w, newReq)
 }
+
+// PublicReportMetadata contains metadata for public reports
+type PublicReportMetadata struct {
+	Title string
+}
+
+// GetPublicReportMetadata returns metadata for a public report
+// Returns nil if the report is not found or not public
+func (s Server) GetPublicReportMetadata(ctx context.Context, reportID string) (*PublicReportMetadata, error) {
+	var title sql.NullString
+	var isPublic bool
+	err := s.db.QueryRowContext(ctx,
+		"SELECT title, is_public FROM reports WHERE id = $1",
+		reportID,
+	).Scan(&title, &isPublic)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if !isPublic {
+		return nil, nil
+	}
+	reportTitle := "Untitled"
+	if title.Valid && title.String != "" {
+		reportTitle = title.String
+	}
+	return &PublicReportMetadata{
+		Title: reportTitle,
+	}, nil
+}
