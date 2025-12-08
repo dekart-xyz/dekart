@@ -24,7 +24,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const maxMapPreviewDataUriSize = 100 * 1024 // 100KB in bytes
+const maxMapPreviewDataUriSize = 300 * 1024 // 300KB in bytes
 
 func newUUID() string {
 	u, err := uuid.NewRandom()
@@ -43,16 +43,16 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 	}
 	reportRows, err := s.db.QueryContext(ctx,
 		`select
-			id,
-			case when map_config is null then '' else map_config end as map_config,
-			case when title is null then 'Untitled' else title end as title,
-			author_email = $1 as is_author,
-			author_email,
-			discoverable,
-			allow_edit,
-			created_at,
-			updated_at,
-			is_playground,
+			r.id,
+			case when r.map_config is null then '' else r.map_config end as map_config,
+			case when r.title is null then 'Untitled' else r.title end as title,
+			r.author_email = $1 as is_author,
+			r.author_email,
+			r.discoverable,
+			r.allow_edit,
+			r.created_at,
+			r.updated_at,
+			r.is_playground,
 			(
 				select count(*) from connections as c
 				join datasets as d on c.id=d.connection_id
@@ -73,16 +73,18 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 				where d.report_id=$4 and  connection_type <= 1 -- BigQuery
 				and (c.bigquery_key_encrypted is null or c.bigquery_key_encrypted = '') -- BigQuery passthrough
 			) as connections_with_sensitive_scope_num,
-			is_public,
-			track_viewers,
-			query_params,
-			allow_export,
-			readme,
-			workspace_id,
-			auto_refresh_interval_seconds,
-			version_id
+			r.is_public,
+			r.track_viewers,
+			r.query_params,
+			r.allow_export,
+			r.readme,
+			r.workspace_id,
+			r.auto_refresh_interval_seconds,
+			r.version_id,
+			case when mp.report_id is not null then true else false end as has_map_preview
 		from reports as r
-		where (id=$5) and (archived = $6)
+		left join map_previews as mp on r.id = mp.report_id
+		where (r.id=$5) and (r.archived = $6)
 		limit 1`,
 		claims.Email,
 		reportID,
@@ -128,6 +130,7 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 			&reportWorkspaceID,
 			&report.AutoRefreshIntervalSeconds,
 			&versionID,
+			&report.HasMapPreview,
 		)
 		if err != nil {
 			errtype.LogError(err, "failed to scan report")
@@ -1617,7 +1620,6 @@ func (s Server) SaveMapPreview(ctx context.Context, req *proto.SaveMapPreviewReq
 		return nil, status.Error(codes.PermissionDenied, "Cannot save map preview")
 	}
 
-	// Check size limit: 100KB
 	if len(req.MapPreviewDataUri) > maxMapPreviewDataUriSize {
 		err := fmt.Errorf("map preview data URI exceeds size limit of 100KB: %d bytes", len(req.MapPreviewDataUri))
 		log.Warn().Err(err).Send()

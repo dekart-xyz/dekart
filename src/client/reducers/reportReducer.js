@@ -31,7 +31,8 @@ export function report (state = null, action) {
 const defaultMapPreview = {
   dataUri: null,
   exporting: false,
-  timeoutId: null
+  timeoutId: null,
+  firstExport: true
 }
 export function mapPreview (state = defaultMapPreview, action) {
   switch (action.type) {
@@ -41,7 +42,8 @@ export function mapPreview (state = defaultMapPreview, action) {
       }
       return {
         ...state,
-        timeoutId: action.timeoutId
+        timeoutId: action.timeoutId,
+        firstExport: false
       }
     }
     case saveMapPreview.name: {
@@ -61,6 +63,8 @@ export function mapPreview (state = defaultMapPreview, action) {
         dataUri: action.payload?.payload,
         exporting: false
       }
+    case openReport.name:
+      return defaultMapPreview
     default:
       return state
   }

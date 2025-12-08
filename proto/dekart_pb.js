@@ -16746,7 +16746,8 @@ proto.Report.toObject = function(includeInstance, msg) {
     trackViewers: jspb.Message.getBooleanFieldWithDefault(msg, 20, false),
     canRefresh: jspb.Message.getBooleanFieldWithDefault(msg, 21, false),
     autoRefreshIntervalSeconds: jspb.Message.getFieldWithDefault(msg, 22, 0),
-    versionId: jspb.Message.getFieldWithDefault(msg, 23, "")
+    versionId: jspb.Message.getFieldWithDefault(msg, 23, ""),
+    hasMapPreview: jspb.Message.getBooleanFieldWithDefault(msg, 24, false)
   };
 
   if (includeInstance) {
@@ -16876,6 +16877,10 @@ proto.Report.deserializeBinaryFromReader = function(msg, reader) {
     case 23:
       var value = /** @type {string} */ (reader.readString());
       msg.setVersionId(value);
+      break;
+    case 24:
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setHasMapPreview(value);
       break;
     default:
       reader.skipField();
@@ -17066,6 +17071,13 @@ proto.Report.serializeBinaryToWriter = function(message, writer) {
   if (f.length > 0) {
     writer.writeString(
       23,
+      f
+    );
+  }
+  f = message.getHasMapPreview();
+  if (f) {
+    writer.writeBool(
+      24,
       f
     );
   }
@@ -17522,6 +17534,24 @@ proto.Report.prototype.getVersionId = function() {
  */
 proto.Report.prototype.setVersionId = function(value) {
   return jspb.Message.setProto3StringField(this, 23, value);
+};
+
+
+/**
+ * optional bool has_map_preview = 24;
+ * @return {boolean}
+ */
+proto.Report.prototype.getHasMapPreview = function() {
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 24, false));
+};
+
+
+/**
+ * @param {boolean} value
+ * @return {!proto.Report} returns this
+ */
+proto.Report.prototype.setHasMapPreview = function(value) {
+  return jspb.Message.setProto3BooleanField(this, 24, value);
 };
 
 

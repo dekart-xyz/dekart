@@ -2214,6 +2214,9 @@ export class Report extends jspb.Message {
   getVersionId(): string;
   setVersionId(value: string): void;
 
+  getHasMapPreview(): boolean;
+  setHasMapPreview(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Report.AsObject;
   static toObject(includeInstance: boolean, msg: Report): Report.AsObject;
@@ -2249,6 +2252,7 @@ export namespace Report {
     canRefresh: boolean,
     autoRefreshIntervalSeconds: number,
     versionId: string,
+    hasMapPreview: boolean,
   }
 }
 

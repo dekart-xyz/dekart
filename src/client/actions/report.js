@@ -466,7 +466,8 @@ export function saveMapPreview (dataUri) {
 
 export function exportMapPreview () {
   return (dispatch, getState) => {
-    const exporting = getState().mapPreview.exporting
+    const { exporting, firstExport } = getState().mapPreview
+    const hasMapPreview = getState().report.hasMapPreview
     if (exporting) {
       return
     }
@@ -481,7 +482,7 @@ export function exportMapPreview () {
         legend: false,
         center: false
       }))
-    }, 5000)
+    }, !hasMapPreview && firstExport ? 0 : 5000)
     dispatch({ type: exportMapPreview.name, timeoutId })
   }
 }
