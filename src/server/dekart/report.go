@@ -1623,18 +1623,17 @@ func (s Server) SaveMapPreview(ctx context.Context, req *proto.SaveMapPreviewReq
 	if len(req.MapPreviewDataUri) > maxMapPreviewDataUriSize {
 		err := fmt.Errorf("map preview data URI exceeds size limit of 100KB: %d bytes", len(req.MapPreviewDataUri))
 		log.Warn().Err(err).Send()
-		return nil, status.Error(codes.InvalidArgument, "Map preview data URI exceeds size limit of 100KB")
+		return nil, status.Error(codes.InvalidArgument, "Map preview data URI exceeds size limit")
 	}
 
 	// Insert or update map preview
 	// Use upsert pattern: insert if not exists, update if exists (based on unique constraint on report_id)
-	previewID := newUUID()
 	_, err = s.db.ExecContext(ctx,
-		`INSERT INTO map_previews (id, report_id, map_preview_data_uri, updated_at)
-		VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+		`INSERT INTO map_previews (report_id, map_preview_data_uri, updated_at)
+		VALUES ($1, $2, CURRENT_TIMESTAMP)
 		ON CONFLICT(report_id) DO UPDATE SET map_preview_data_uri = $3, updated_at = CURRENT_TIMESTAMP`,
-		previewID,
 		req.ReportId,
+		req.MapPreviewDataUri,
 		req.MapPreviewDataUri,
 	)
 	if err != nil {
