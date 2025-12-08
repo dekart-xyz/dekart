@@ -24,6 +24,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const maxMapPreviewDataUriSize = 100 * 1024 // 100KB in bytes
+
 func newUUID() string {
 	u, err := uuid.NewRandom()
 	if err != nil {
@@ -1613,6 +1615,13 @@ func (s Server) SaveMapPreview(ctx context.Context, req *proto.SaveMapPreviewReq
 		err := fmt.Errorf("cannot save map preview for report %s", req.ReportId)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.PermissionDenied, "Cannot save map preview")
+	}
+
+	// Check size limit: 100KB
+	if len(req.MapPreviewDataUri) > maxMapPreviewDataUriSize {
+		err := fmt.Errorf("map preview data URI exceeds size limit of 100KB: %d bytes", len(req.MapPreviewDataUri))
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.InvalidArgument, "Map preview data URI exceeds size limit of 100KB")
 	}
 
 	// Insert or update map preview
