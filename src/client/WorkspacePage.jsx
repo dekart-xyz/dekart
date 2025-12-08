@@ -1,4 +1,5 @@
 import { Header } from './Header'
+import { Helmet } from 'react-helmet'
 import styles from './WorkspacePage.module.css'
 import Card from 'antd/es/card'
 import { TeamOutlined, CreditCardOutlined, AppstoreTwoTone } from '@ant-design/icons'
@@ -362,6 +363,16 @@ function WelcomeScreen ({ setNextStep }) {
   )
 }
 
+function getWorkspacePageTitle (step) {
+  if (step === 'plan') {
+    return 'Workspace Plan'
+  }
+  if (step === 'members') {
+    return 'Workspace Members'
+  }
+  return 'Workspace'
+}
+
 export default function WorkspacePage ({ step }) {
   const userStream = useSelector(state => state.user.stream)
   const workspaceId = userStream?.workspaceId
@@ -380,8 +391,12 @@ export default function WorkspacePage ({ step }) {
   if (isAnonymous) {
     return <Loading />
   }
+
   return (
     <div className={styles.workspacePage}>
+      <Helmet>
+        <title>{getWorkspacePageTitle(step)} — Dekart</title>
+      </Helmet>
       <Header />
       {userStream
         ? (
