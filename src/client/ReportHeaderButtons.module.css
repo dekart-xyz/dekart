@@ -115,3 +115,17 @@
         display: none;
     }
 }
+
+.historyDropdownItem {
+    padding: 5px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+    background-color: transparent;
+}
+
+.historyDropdownItem:hover {
+    background-color: #f5f5f5;
+}

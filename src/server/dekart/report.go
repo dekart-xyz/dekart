@@ -2,22 +2,29 @@ package dekart
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/conn"
 	"dekart/src/server/errtype"
 	"dekart/src/server/notifications"
 	"dekart/src/server/user"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+const maxMapPreviewDataUriSize = 300 * 1024 // 300KB in bytes
 
 func newUUID() string {
 	u, err := uuid.NewRandom()
@@ -36,16 +43,16 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 	}
 	reportRows, err := s.db.QueryContext(ctx,
 		`select
-			id,
-			case when map_config is null then '' else map_config end as map_config,
-			case when title is null then 'Untitled' else title end as title,
-			author_email = $1 as is_author,
-			author_email,
-			discoverable,
-			allow_edit,
-			created_at,
-			updated_at,
-			is_playground,
+			r.id,
+			case when r.map_config is null then '' else r.map_config end as map_config,
+			case when r.title is null then 'Untitled' else r.title end as title,
+			r.author_email = $1 as is_author,
+			r.author_email,
+			r.discoverable,
+			r.allow_edit,
+			r.created_at,
+			r.updated_at,
+			r.is_playground,
 			(
 				select count(*) from connections as c
 				join datasets as d on c.id=d.connection_id
@@ -66,16 +73,18 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 				where d.report_id=$4 and  connection_type <= 1 -- BigQuery
 				and (c.bigquery_key_encrypted is null or c.bigquery_key_encrypted = '') -- BigQuery passthrough
 			) as connections_with_sensitive_scope_num,
-			is_public,
-			track_viewers,
-			query_params,
-			allow_export,
-			readme,
-			workspace_id,
-			auto_refresh_interval_seconds,
-			version_id
+			r.is_public,
+			r.track_viewers,
+			r.query_params,
+			r.allow_export,
+			r.readme,
+			r.workspace_id,
+			r.auto_refresh_interval_seconds,
+			r.version_id,
+			case when mp.report_id is not null then true else false end as has_map_preview
 		from reports as r
-		where (id=$5) and (archived = $6)
+		left join map_previews as mp on r.id = mp.report_id
+		where (r.id=$5) and (r.archived = $6)
 		limit 1`,
 		claims.Email,
 		reportID,
@@ -121,6 +130,7 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 			&reportWorkspaceID,
 			&report.AutoRefreshIntervalSeconds,
 			&versionID,
+			&report.HasMapPreview,
 		)
 		if err != nil {
 			errtype.LogError(err, "failed to scan report")
@@ -1578,4 +1588,195 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 	s.reportStreams.Ping(req.ReportId)
 
 	return &proto.RestoreReportSnapshotResponse{}, nil
+}
+
+// SaveMapPreview saves or updates the map preview for a report
+func (s Server) SaveMapPreview(ctx context.Context, req *proto.SaveMapPreviewRequest) (*proto.SaveMapPreviewResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	workspaceInfo := checkWorkspace(ctx)
+	if workspaceInfo.Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	}
+	_, err := uuid.Parse(req.ReportId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	report, err := s.getReport(ctx, req.ReportId)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if !report.CanWrite {
+		err := fmt.Errorf("cannot save map preview for report %s", req.ReportId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.PermissionDenied, "Cannot save map preview")
+	}
+
+	if len(req.MapPreviewDataUri) > maxMapPreviewDataUriSize {
+		err := fmt.Errorf("map preview data URI exceeds size limit of 100KB: %d bytes", len(req.MapPreviewDataUri))
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.InvalidArgument, "Map preview data URI exceeds size limit")
+	}
+
+	// Insert or update map preview
+	// Use upsert pattern: insert if not exists, update if exists (based on unique constraint on report_id)
+	_, err = s.db.ExecContext(ctx,
+		`INSERT INTO map_previews (report_id, map_preview_data_uri, updated_at)
+		VALUES ($1, $2, CURRENT_TIMESTAMP)
+		ON CONFLICT(report_id) DO UPDATE SET map_preview_data_uri = $3, updated_at = CURRENT_TIMESTAMP`,
+		req.ReportId,
+		req.MapPreviewDataUri,
+		req.MapPreviewDataUri,
+	)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &proto.SaveMapPreviewResponse{}, nil
+}
+
+func (s Server) ServeMapPreview(w http.ResponseWriter, r *http.Request) {
+	reportID := mux.Vars(r)["report"]
+	ctx := r.Context()
+
+	_, err := uuid.Parse(reportID)
+	if err != nil {
+		errtype.LogError(err, "invalid report id")
+		http.Error(w, "invalid report id", http.StatusBadRequest)
+		return
+	}
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		claims = &user.Claims{
+			Email: user.UnknownEmail,
+		}
+		ctx = context.WithValue(ctx, user.ContextKey, claims)
+		ctx = s.SetWorkspaceContext(ctx, r)
+	}
+
+	// Check if user has access to the report
+	report, err := s.getReport(ctx, reportID)
+	if err != nil {
+		errtype.LogError(err, "failed to get report")
+		http.Error(w, "failed to get report", http.StatusInternalServerError)
+		return
+	}
+	if report == nil {
+		http.Error(w, "report not found", http.StatusNotFound)
+		return
+	}
+
+	// Query map preview from database
+	var mapPreviewDataURI string
+	var updatedAt time.Time
+	err = s.db.QueryRowContext(ctx,
+		"SELECT map_preview_data_uri, updated_at FROM map_previews WHERE report_id = $1",
+		reportID,
+	).Scan(&mapPreviewDataURI, &updatedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Serve default map preview when not found
+			s.serveDefaultMapPreview(w, r)
+			return
+		}
+		errtype.LogError(err, "failed to get map preview")
+		http.Error(w, "failed to get map preview", http.StatusInternalServerError)
+		return
+	}
+
+	// Parse data URI: format is "data:image/png;base64,<base64data>"
+	if !strings.HasPrefix(mapPreviewDataURI, "data:image/png;base64,") {
+		http.Error(w, "invalid map preview format", http.StatusInternalServerError)
+		return
+	}
+
+	// Extract base64 data
+	base64Data := strings.TrimPrefix(mapPreviewDataURI, "data:image/png;base64,")
+	imageData, err := base64.StdEncoding.DecodeString(base64Data)
+	if err != nil {
+		errtype.LogError(err, "failed to decode map preview")
+		http.Error(w, "failed to decode map preview", http.StatusInternalServerError)
+		return
+	}
+
+	// Set cache headers
+	// Use ETag based on updated_at timestamp for conditional caching
+	hash := sha256.Sum256([]byte(fmt.Sprintf("%s-%d", reportID, updatedAt.Unix())))
+	etag := fmt.Sprintf("\"%x\"", hash)
+	w.Header().Set("ETag", etag)
+
+	// Check If-None-Match header for 304 Not Modified
+	if match := r.Header.Get("If-None-Match"); match == etag {
+		w.WriteHeader(http.StatusNotModified)
+		return
+	}
+
+	// Set cache control - allow caching but revalidate
+	// Use max-age of 1 hour (3600 seconds) since previews can be updated
+	w.Header().Set("Cache-Control", "public, max-age=3600, must-revalidate")
+	w.Header().Set("Last-Modified", updatedAt.Format(http.TimeFormat))
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(imageData)))
+
+	w.WriteHeader(http.StatusOK)
+	if _, err := w.Write(imageData); err != nil {
+		errtype.LogError(err, "failed to write map preview")
+		return
+	}
+}
+
+// serveDefaultMapPreview serves the default map preview image
+func (s Server) serveDefaultMapPreview(w http.ResponseWriter, r *http.Request) {
+	staticPath := os.Getenv("DEKART_STATIC_FILES")
+	if staticPath == "" {
+		log.Warn().Msg("DEKART_STATIC_FILES is not set, cannot serve default map preview")
+		http.Error(w, "map preview not found", http.StatusNotFound)
+		return
+	}
+
+	// Create a new request with the path to default-map-preview.png
+	newReq := r.Clone(r.Context())
+	newReq.URL.Path = "/default-map-preview.png"
+	http.FileServer(http.Dir(staticPath)).ServeHTTP(w, newReq)
+}
+
+// PublicReportMetadata contains metadata for public reports
+type PublicReportMetadata struct {
+	Title string
+}
+
+// GetPublicReportMetadata returns metadata for a public report
+// Returns nil if the report is not found or not public
+func (s Server) GetPublicReportMetadata(ctx context.Context, reportID string) (*PublicReportMetadata, error) {
+	var title sql.NullString
+	var isPublic bool
+	err := s.db.QueryRowContext(ctx,
+		"SELECT title, is_public FROM reports WHERE id = $1",
+		reportID,
+	).Scan(&title, &isPublic)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if !isPublic {
+		return nil, nil
+	}
+	reportTitle := "Untitled"
+	if title.Valid && title.String != "" {
+		reportTitle = title.String
+	}
+	return &PublicReportMetadata{
+		Title: reportTitle,
+	}, nil
 }

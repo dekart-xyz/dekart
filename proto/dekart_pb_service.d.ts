@@ -130,6 +130,15 @@ type DekartRestoreReportSnapshot = {
   readonly responseType: typeof dekart_pb.RestoreReportSnapshotResponse;
 };
 
+type DekartSaveMapPreview = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof dekart_pb.SaveMapPreviewRequest;
+  readonly responseType: typeof dekart_pb.SaveMapPreviewResponse;
+};
+
 type DekartCreateDataset = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -425,6 +434,7 @@ export class Dekart {
   static readonly SetAutoRefreshIntervalSeconds: DekartSetAutoRefreshIntervalSeconds;
   static readonly GetSnapshots: DekartGetSnapshots;
   static readonly RestoreReportSnapshot: DekartRestoreReportSnapshot;
+  static readonly SaveMapPreview: DekartSaveMapPreview;
   static readonly CreateDataset: DekartCreateDataset;
   static readonly RemoveDataset: DekartRemoveDataset;
   static readonly UpdateDatasetName: DekartUpdateDatasetName;
@@ -615,6 +625,15 @@ export class DekartClient {
   restoreReportSnapshot(
     requestMessage: dekart_pb.RestoreReportSnapshotRequest,
     callback: (error: ServiceError|null, responseMessage: dekart_pb.RestoreReportSnapshotResponse|null) => void
+  ): UnaryResponse;
+  saveMapPreview(
+    requestMessage: dekart_pb.SaveMapPreviewRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.SaveMapPreviewResponse|null) => void
+  ): UnaryResponse;
+  saveMapPreview(
+    requestMessage: dekart_pb.SaveMapPreviewRequest,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.SaveMapPreviewResponse|null) => void
   ): UnaryResponse;
   createDataset(
     requestMessage: dekart_pb.CreateDatasetRequest,

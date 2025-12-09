@@ -1,9 +1,9 @@
 import { KeplerGlSchema } from '@kepler.gl/schemas'
-import { removeDataset } from '@kepler.gl/actions'
+import { cleanupExportImage, removeDataset, setExportImageSetting, startExportingImage } from '@kepler.gl/actions'
 
 import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
 import { success } from './message'
-import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType, SetTrackViewersRequest, SetAutoRefreshIntervalSecondsRequest, RestoreReportSnapshotRequest } from 'dekart-proto/dekart_pb'
+import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType, SetTrackViewersRequest, SetAutoRefreshIntervalSecondsRequest, RestoreReportSnapshotRequest, SaveMapPreviewRequest } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { createQuery, downloadQuerySource, runQuery } from './query'
 import { downloadDataset } from './dataset'
@@ -14,6 +14,7 @@ import { getQueryParamsObjArr } from '../lib/queryParams'
 import { receiveReportUpdateMapConfig } from '../lib/mapConfig'
 import { extensionFromMime } from '../lib/mime'
 import { showUpgradeModal } from './upgradeModal'
+import { track } from '../lib/tracking'
 
 export function closeReport () {
   return (dispatch) => {
@@ -108,8 +109,8 @@ function shouldDownloadQueryText (query, prevQueriesList, queriesList) {
   return false
 }
 
-export function setReportChanged (changed) {
-  return { type: setReportChanged.name, changed }
+export function setLastMapConfigChanged () {
+  return { type: setLastMapConfigChanged.name }
 }
 
 function isQueryJobOutOfDate (reportStreamResponse, getState, queryJob) {
@@ -448,7 +449,45 @@ export function setAutoRefreshIntervalSeconds (reportId, autoRefreshIntervalSeco
   }
 }
 
-export function saveMap (onSaveComplete = () => {}) {
+export function saveMapPreview (dataUri) {
+  return (dispatch, getState) => {
+    dispatch({ type: saveMapPreview.name })
+    dispatch(cleanupExportImage())
+    const req = new SaveMapPreviewRequest()
+    const { report: { id: reportId } } = getState()
+    req.setReportId(reportId)
+    req.setMapPreviewDataUri(dataUri)
+    dispatch(grpcCall(Dekart.SaveMapPreview, req, () => {
+    }, err => {
+      track('saveMapPreviewFailed', { message: err.message })
+    }))
+  }
+}
+
+export function exportMapPreview () {
+  return (dispatch, getState) => {
+    const { exporting, firstExport } = getState().mapPreview
+    const hasMapPreview = getState().report.hasMapPreview
+    if (exporting) {
+      return
+    }
+    const timeoutId = setTimeout(() => {
+      dispatch(setExportImageSetting({
+        mapW: 640 / 2,
+        mapH: 360 / 2
+      }))
+      dispatch(startExportingImage({
+        ratio: 'SCREEN',
+        resolution: 'ONE_X',
+        legend: false,
+        center: false
+      }))
+    }, !hasMapPreview && firstExport ? 1000 : 5000)
+    dispatch({ type: exportMapPreview.name, timeoutId })
+  }
+}
+
+export function saveMap (mapConfigChanged = false) {
   return async (dispatch, getState) => {
     dispatch({ type: saveMap.name })
     const { keplerGl, report, reportStatus, queryStatus, queryParams, readme } = getState()
@@ -476,10 +515,14 @@ export function saveMap (onSaveComplete = () => {}) {
     request.setTitle(reportStatus.title)
     request.setQueryList(queries)
     request.setQueryParamsList(getQueryParamsObjArr(queryParams.list))
-    dispatch(grpcCall(Dekart.UpdateReport, request, (res) => {
-      onSaveComplete()
-      dispatch(savedReport(lastSaved, res.updatedAt))
-    }))
+    // TODO Promise all
+    const res = await new Promise(resolve => {
+      dispatch(grpcCall(Dekart.UpdateReport, request, resolve))
+    })
+    if (mapConfigChanged) {
+      dispatch(exportMapPreview())
+    }
+    dispatch(savedReport(lastSaved, res.updatedAt))
   }
 }
 

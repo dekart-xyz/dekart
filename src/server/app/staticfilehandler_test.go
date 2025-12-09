@@ -27,7 +27,7 @@ func TestServeHTTP(t *testing.T) {
 	}
 
 	// Initialize the handler
-	handler := NewStaticFilesHandler(testDir)
+	handler := NewStaticFilesHandler(testDir, nil)
 
 	// Create a test server
 	server := httptest.NewServer(handler)

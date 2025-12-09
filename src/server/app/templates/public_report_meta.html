@@ -1,0 +1,10 @@
+  <title>{{ .Title }} – Dekart</title>
+{{ if .HasSocialPreview }}
+  <meta property="og:title" content="{{ .Title }}" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="{{ .URL }}" />
+  <meta property="og:image" content="{{ .ImageURL }}" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="{{ .Title }}" />
+  <meta name="twitter:image" content="{{ .ImageURL }}" />
+{{ end }}

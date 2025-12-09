@@ -1,6 +1,7 @@
 import React from 'react'
 import { AlertOutlined } from '@ant-design/icons'
-import { Button, Typography } from 'antd'
+import Button from 'antd/es/button'
+import Text from 'antd/es/typography/Text'
 import styles from './WorkspaceReadOnlyBanner.module.css'
 import { useSelector } from 'react-redux'
 import { useLocation, useHistory } from 'react-router-dom'
@@ -24,9 +25,9 @@ export default function WorkspaceReadOnlyBanner () {
     <div className={styles.banner} role='status'>
       <div className={styles.message}>
         <AlertOutlined className={styles.icon} aria-hidden />
-        <Typography.Text className={styles.headline}>
+        <Text className={styles.headline}>
           {headline}
-        </Typography.Text>
+        </Text>
       </div>
       <div className={styles.actions}>
         <Button

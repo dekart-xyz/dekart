@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Helmet } from 'react-helmet'
 import { Header } from './Header'
 import styles from './HomePage.module.css'
 import Button from 'antd/es/button'
@@ -462,6 +463,18 @@ function OnboardingDiscoverableReports () {
   )
 }
 
+function getPageTitle (reportFilter) {
+  switch (reportFilter) {
+    case 'connections':
+      return 'Connections'
+    case 'discoverable':
+      return 'Shared Maps'
+    case 'my':
+    default:
+      return 'My Maps'
+  }
+}
+
 export default function HomePage ({ reportFilter }) {
   const reportsList = useSelector(state => state.reportsList)
   const isPlayground = useSelector(state => state.user.isPlayground)
@@ -477,8 +490,12 @@ export default function HomePage ({ reportFilter }) {
       dispatch(unsubscribeReports())
     }
   }, [dispatch])
+
   return (
     <div className={styles.homePage}>
+      <Helmet>
+        <title>{getPageTitle(reportFilter)} — Dekart</title>
+      </Helmet>
       <Header />
       <div className={styles.body}>
         {

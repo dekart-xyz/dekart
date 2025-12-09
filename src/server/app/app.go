@@ -92,7 +92,7 @@ func configureGRPC(dekartServer *dekart.Server) *grpcweb.WrappedGrpcServer {
 
 func setOriginHeader(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", getAllowedOrigin(r.Header.Get("Origin")))
-	w.Header().Set("Access-Control-Allow-Headers", "Authorization, X-Dekart-Playground, X-Dekart-Claim-Email, X-Dekart-Report-Id, X-Dekart-Logged-In")
+	w.Header().Set("Access-Control-Allow-Headers", "Authorization, X-Dekart-Playground, X-Dekart-Claim-Email, X-Dekart-Report-Id, X-Dekart-Logged-In, X-Dekart-Workspace-Id")
 }
 
 func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *mux.Router {
@@ -146,10 +146,19 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		w.WriteHeader(http.StatusOK)
 	}).Methods("GET")
 
+	// Serve map preview
+	router.HandleFunc("/map-preview/{report}.png", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeader(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.ServeMapPreview(w, r)
+	}).Methods("GET", "OPTIONS")
+
 	// Serve static files
 	staticPath := os.Getenv("DEKART_STATIC_FILES")
 	if staticPath != "" {
-		staticFilesHandler := NewStaticFilesHandler(staticPath)
+		staticFilesHandler := NewStaticFilesHandler(staticPath, dekartServer)
 
 		router.HandleFunc("/", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/shared", staticFilesHandler.ServeIndex)

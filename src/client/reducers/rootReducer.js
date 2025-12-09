@@ -23,7 +23,7 @@ import readme from './readmeReducer'
 import analytics from './analyticsReducer'
 import snapshots from './snapshotsReducer'
 import { upgradeModal } from './upgradeModalReducer'
-import { report, reportDirectAccessEmails, reportsList, reportStatus } from './reportReducer'
+import { mapPreview, report, reportDirectAccessEmails, reportsList, reportStatus } from './reportReducer'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
   uiState: {
@@ -172,5 +172,6 @@ export default combineReducers({
   analytics,
   snapshots,
   upgradeModal,
-  location
+  location,
+  mapPreview
 })

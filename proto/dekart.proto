@@ -18,6 +18,7 @@ service Dekart {
     rpc SetAutoRefreshIntervalSeconds(SetAutoRefreshIntervalSecondsRequest) returns (SetAutoRefreshIntervalSecondsResponse) {}  // set auto refresh interval in seconds
     rpc GetSnapshots(GetSnapshotsRequest) returns (GetSnapshotsResponse) {}
     rpc RestoreReportSnapshot(RestoreReportSnapshotRequest) returns (RestoreReportSnapshotResponse) {}
+    rpc SaveMapPreview(SaveMapPreviewRequest) returns (SaveMapPreviewResponse) {}
 
     // datasets
     rpc CreateDataset(CreateDatasetRequest) returns (CreateDatasetResponse) {}
@@ -70,6 +71,14 @@ service Dekart {
     rpc UpdateWorkspace(UpdateWorkspaceRequest) returns (UpdateWorkspaceResponse) {}
     rpc GetWorkspace(GetWorkspaceRequest) returns (GetWorkspaceResponse) {}
     rpc UpdateWorkspaceUser(UpdateWorkspaceUserRequest) returns (UpdateWorkspaceUserResponse) {}
+}
+
+message SaveMapPreviewRequest {
+    string report_id = 1;
+    string map_preview_data_uri = 2;
+}
+
+message SaveMapPreviewResponse {
 }
 
 message RestoreReportSnapshotRequest {
@@ -316,6 +325,8 @@ message RunAllQueriesResponse {
 message Workspace {
     string id = 1;
     string name = 2;
+    UserRole role = 3;
+    PlanType plan_type = 4;
 }
 
 message Subscription {
@@ -368,6 +379,7 @@ message GetUserStreamResponse {
     UserRole role = 7;
     bool is_playground = 8;
     bool is_default_workspace = 9;
+    repeated Workspace user_workspaces = 10;
 }
 
 message TestConnectionRequest {
@@ -588,6 +600,7 @@ message Report {
     bool can_refresh = 21; // true - can refresh, false - cannot refresh
     int32 auto_refresh_interval_seconds = 22; // auto refresh interval in seconds
     string version_id = 23; // version id of the report
+    bool has_map_preview = 24; // true - map preview exists, false - no map preview
 }
 
 message Dataset {

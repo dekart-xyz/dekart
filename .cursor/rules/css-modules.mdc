@@ -1,0 +1,6 @@
+---
+alwaysApply: true
+---
+
+All component-specific CSS styles must live in `*.module.css` files (CSS Modules). When you need to combine multiple CSS classes dynamically in JSX, use the `classnames` library instead of manual string concatenation.
+

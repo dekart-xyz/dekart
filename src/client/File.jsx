@@ -1,4 +1,4 @@
-import Upload from 'antd/lib/upload/Upload'
+import Upload from 'antd/es/upload/Upload'
 import styles from './File.module.css'
 import { InboxOutlined, UploadOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone } from '@ant-design/icons'
 import Button from 'antd/es/button'

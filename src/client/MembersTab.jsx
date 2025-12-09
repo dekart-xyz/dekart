@@ -43,11 +43,16 @@ export default function MembersTab () {
   const canManageUsers = isAdmin && !expired
   const isFreemium = useSelector(state => state.user.isFreemium)
   const addUserCb = useCallback(() => {
+    if (isFreemium) {
+      dispatch(showUpgradeModal(UpgradeModalType.INVITE))
+      return
+    }
+    track('InviteUser')
     if (email && canManageUsers) {
       dispatch(updateWorkspaceUser(email, UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_ADD, inviteRole))
       setEmail('')
     }
-  }, [dispatch, email, canManageUsers, inviteRole])
+  }, [dispatch, email, canManageUsers, inviteRole, isFreemium])
   const usersLoaded = Boolean(users)
   useEffect(() => {
     if (usersLoaded) {
@@ -104,11 +109,6 @@ export default function MembersTab () {
         <Button
           disabled={inviteDisabled}
           className={styles.inviteUsersButton} type='primary' onClick={() => {
-            if (isFreemium) {
-              dispatch(showUpgradeModal(UpgradeModalType.INVITE))
-              return
-            }
-            track('InviteUser', { role: inviteRole })
             addUserCb()
           }}
         >Invite user

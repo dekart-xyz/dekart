@@ -302,6 +302,7 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
         }
         dispatch(keplerDatasetFinishUpdating())
       } else {
+        dispatch(keplerDatasetStartUpdating())
         dispatch(addDataToMap({
           datasets: {
             info: {
@@ -311,6 +312,7 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
             data
           }
         }))
+        dispatch(keplerDatasetFinishUpdating())
       }
     } catch (err) {
       dispatch(processDownloadError(err, dataset, label))

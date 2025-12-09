@@ -1,5 +1,8 @@
 import React, { useState } from 'react'
-import { Modal, Typography, Button } from 'antd'
+import Modal from 'antd/es/modal'
+import Title from 'antd/es/typography/Title'
+import Text from 'antd/es/typography/Text'
+import Button from 'antd/es/button'
 import { CrownOutlined, RocketOutlined, LockOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import { useSelector, useDispatch } from 'react-redux'
 import { track } from './lib/tracking'
@@ -7,8 +10,6 @@ import { createSubscription } from './actions/workspace'
 import { UpgradeModalType } from './actions/upgradeModal'
 import { PlanType } from 'dekart-proto/dekart_pb'
 import styles from './UpgradeModal.module.css'
-
-const { Title, Text } = Typography
 
 const COPY_BY_MODAL_TYPE = {
   [UpgradeModalType.PUBLISH]: {

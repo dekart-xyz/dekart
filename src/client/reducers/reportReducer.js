@@ -2,7 +2,7 @@ import { ActionTypes as KeplerActionTypes } from '@kepler.gl/actions'
 import { setStreamError } from '../actions/message'
 import { queryChanged, queryParamChanged, updateQueryParamsFromQueries } from '../actions/query'
 import { setReadmeValue } from '../actions/readme'
-import { closeReport, forkReport, newForkedReport, newReport, openReport, reportsListUpdate, reportTitleChange, reportUpdate, reportWillOpen, savedReport, saveMap, setAutoRefreshIntervalSeconds, setQueryJobRefreshTimeout, setReportChanged, toggleReportEdit, toggleReportFullscreen, unsubscribeReports } from '../actions/report'
+import { closeReport, exportMapPreview, forkReport, newForkedReport, newReport, openReport, reportsListUpdate, reportTitleChange, reportUpdate, reportWillOpen, savedReport, saveMap, saveMapPreview, setAutoRefreshIntervalSeconds, setLastMapConfigChanged, setQueryJobRefreshTimeout, toggleReportEdit, toggleReportFullscreen, unsubscribeReports } from '../actions/report'
 
 export function reportDirectAccessEmails (state = [], action) {
   switch (action.type) {
@@ -28,6 +28,48 @@ export function report (state = null, action) {
   }
 }
 
+const defaultMapPreview = {
+  dataUri: null,
+  exporting: false,
+  timeoutId: null,
+  firstExport: true
+}
+export function mapPreview (state = defaultMapPreview, action) {
+  switch (action.type) {
+    case exportMapPreview.name: {
+      if (state.timeoutId) {
+        clearTimeout(state.timeoutId)
+      }
+      return {
+        ...state,
+        timeoutId: action.timeoutId,
+        firstExport: false
+      }
+    }
+    case saveMapPreview.name: {
+      return {
+        ...state,
+        dataUri: null
+      }
+    }
+    case KeplerActionTypes.START_EXPORTING_IMAGE:
+      return {
+        ...state,
+        exporting: true
+      }
+    case KeplerActionTypes.SET_EXPORT_IMAGE_DATA_URI:
+      return {
+        ...state,
+        dataUri: action.payload?.payload,
+        exporting: false
+      }
+    case openReport.name:
+      return defaultMapPreview
+    default:
+      return state
+  }
+}
+
 const defaultReportStatus = {
   dataAdded: false,
   title: null,
@@ -40,6 +82,8 @@ const defaultReportStatus = {
   saving: false,
   lastChanged: 0,
   lastSaved: 0,
+  lastMapConfigChanged: 0,
+  lastPreviewSaved: 0, // last time preview was saved
   savedReportVersion: 0,
   fullscreen: null,
   autoRefreshIntervalSeconds: 0,
@@ -50,11 +94,18 @@ export function reportStatus (state = defaultReportStatus, action) {
     case updateQueryParamsFromQueries.name:
     case queryParamChanged.name:
     case queryChanged.name:
-    case setReadmeValue.name:
-    case setReportChanged.name: {
+    case setReadmeValue.name: {
       const lastChanged = Date.now()
       return {
         ...state,
+        lastChanged
+      }
+    }
+    case setLastMapConfigChanged.name: {
+      const lastChanged = Date.now()
+      return {
+        ...state,
+        lastMapConfigChanged: lastChanged,
         lastChanged
       }
     }
@@ -74,6 +125,11 @@ export function reportStatus (state = defaultReportStatus, action) {
         ...state,
         title: action.title,
         lastChanged: Date.now()
+      }
+    case exportMapPreview.name:
+      return {
+        ...state,
+        lastPreviewSaved: Date.now()
       }
     case savedReport.name:
       return {

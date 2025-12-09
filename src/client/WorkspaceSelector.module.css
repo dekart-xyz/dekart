@@ -1,0 +1,81 @@
+.workspaceSelector {
+  margin-left: 10px;
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.select {
+  /* min-width: 140px; */
+  max-width: 160px;
+  font-size: 12px;
+}
+
+.select :global(.ant-select-selector) {
+  background-color: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+  height: 28px !important;
+  /* padding: 0 6px !important; */
+}
+
+.select :global(.ant-select-selector:hover) {
+  border-color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.select :global(.ant-select-selection-item) {
+  color: white !important;
+  line-height: 26px !important;
+  padding-right: 11px !important;
+}
+
+.select :global(.ant-select-arrow) {
+  color: rgba(255, 255, 255, 0.65) !important;
+  font-size: 10px !important;
+  right: 6px !important;
+}
+
+.manageHovered :global(.ant-select-item-option-active) {
+  background-color: transparent !important;
+}
+
+.manageOption {
+  padding: 5px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.manageOption:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.optionLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: white;
+}
+
+.optionIcon {
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.select :global(.ant-select-selection-item) .optionIcon {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.optionName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
