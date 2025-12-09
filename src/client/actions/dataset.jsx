@@ -118,7 +118,7 @@ export function processDownloadError (err, dataset, label) {
       // don't need to check if user can run query (report.CanWrite || report.Discoverable)
       // because report cannot be opened if it's not discoverable
       // so if user can open report, they can run query
-      dispatch(info(<><i>{label}</i> result expired, re-running</>))
+      dispatch(info(<><i>{label}</i> result expired, re-running</>, 'query-result-expired'))
       dispatch(runQuery(dataset.queryId, queryText))
     } else if (err.name === 'AbortError') {
       dispatch(setError(new Error('Download cancelled by user')))
