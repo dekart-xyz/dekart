@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import { Helmet } from 'react-helmet'
 import {
   BrowserRouter as Router,
   Switch,
@@ -20,7 +21,7 @@ import WorkspacePage from './WorkspacePage'
 import GrantScopesPage from './GrantScopesPage'
 import { loadLocalStorage } from './actions/localStorage'
 import { useHistory, useLocation } from 'react-router-dom/cjs/react-router-dom'
-import { Button } from 'antd'
+import Button from 'antd/es/button'
 import { loadSessionStorage } from './actions/sessionStorage'
 import { Loading } from './Loading'
 import UpgradeModal from './UpgradeModal'
@@ -153,54 +154,64 @@ function NotFoundPage () {
   const workspaces = userStream?.userWorkspacesList
   const sourceURL = useSelector(state => state.httpError.sourceURL)
   return (
-    <Result
-      icon={<QuestionOutlined />} title='404' subTitle={
-        <>
-          <p>Page not found</p>
-          {(userStream && !workspaceId) // stream is loaded and user is not in workspace
-            ? (
-              <div>
-                <p>To access private maps join workspace.</p>
-                <Button onClick={() => dispatch(switchPlayground(false, '/workspace'))}>Join workspace</Button>
-              </div>
-              )
-            : (
-              <>{workspaces
-                ? (
-                    (workspaces.length > 1)
-                      ? (
-                        <>
-                          <WorkspaceSelectorLight sourceURL={sourceURL} />
-                        </>
-                        )
-                      : (
-                        <div>
-                          <Button onClick={() => history.push('/')}>Back to workspace</Button>
-                        </div>
-                        )
-                  )
-                : null}
-              </>
-              )}
-        </>
-      }
-    />
+    <>
+      <Helmet>
+        <title>404 - Page Not Found — Dekart</title>
+      </Helmet>
+      <Result
+        icon={<QuestionOutlined />} title='404' subTitle={(
+          <>
+            <p>Page not found</p>
+            {(userStream && !workspaceId) // stream is loaded and user is not in workspace
+              ? (
+                <div>
+                  <p>To access private maps join workspace.</p>
+                  <Button onClick={() => dispatch(switchPlayground(false, '/workspace'))}>Join workspace</Button>
+                </div>
+                )
+              : (
+                <>{workspaces
+                  ? (
+                      (workspaces.length > 1)
+                        ? (
+                          <>
+                            <WorkspaceSelectorLight sourceURL={sourceURL} />
+                          </>
+                          )
+                        : (
+                          <div>
+                            <Button onClick={() => history.push('/')}>Back to workspace</Button>
+                          </div>
+                          )
+                    )
+                  : null}
+                </>
+                )}
+          </>
+        )}
+      />
+    </>
   )
 }
 
 function ErrorPage ({ icon, title, subTitle }) {
   const history = useHistory()
   return (
-    <Result
-      icon={icon} title={title} subTitle={
-        <>
-          <p>{subTitle}</p>
-          <div>
-            <Button onClick={() => history.push('/')}>Back to workspace</Button>
-          </div>
-        </>
-      }
-    />
+    <>
+      <Helmet>
+        <title>{title} — Dekart</title>
+      </Helmet>
+      <Result
+        icon={icon} title={title} subTitle={(
+          <>
+            <p>{subTitle}</p>
+            <div>
+              <Button onClick={() => history.push('/')}>Back to workspace</Button>
+            </div>
+          </>
+          )}
+      />
+    </>
   )
 }
 

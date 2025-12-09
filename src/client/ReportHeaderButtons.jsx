@@ -4,7 +4,7 @@ import Button from 'antd/es/button'
 import { EyeOutlined, DownloadOutlined, CloudOutlined, EditOutlined, ForkOutlined, ReloadOutlined, LoadingOutlined, CloudSyncOutlined, PlusOutlined, InfoCircleOutlined, ClockCircleOutlined, HistoryOutlined } from '@ant-design/icons'
 import { useDispatch, useSelector } from 'react-redux'
 import ShareButton from './ShareButton'
-import { forkReport, saveMap } from './actions/report'
+import { forkReport, saveMap, saveMapPreview } from './actions/report'
 import { runAllQueries } from './actions/query'
 import { toggleModal } from '@kepler.gl/actions/dist/ui-state-actions'
 import { EXPORT_DATA_ID, EXPORT_IMAGE_ID, EXPORT_MAP_ID } from '@kepler.gl/constants'
@@ -154,23 +154,36 @@ function useReportChanged () {
   return lastChanged > lastSaved
 }
 
+function useMapConfigChanged () {
+  const { lastMapConfigChanged, lastPreviewSaved } = useSelector(state => state.reportStatus)
+  return lastMapConfigChanged > lastPreviewSaved
+}
+
 function useAutoSave () {
   const { canWrite } = useSelector(state => state.report)
   const dispatch = useDispatch()
   const { saving, online } = useSelector(state => state.reportStatus)
-  const changed = useReportChanged()
+  const reportChanged = useReportChanged()
+  const mapConfigChanged = useMapConfigChanged()
+  const changed = reportChanged || mapConfigChanged
+  const { exporting, dataUri } = useSelector(state => state.mapPreview)
+  useEffect(() => {
+    if (dataUri && !exporting) {
+      dispatch(saveMapPreview(dataUri))
+    }
+  }, [dataUri, exporting, dispatch])
 
   useEffect(() => {
     const handler = setTimeout(() => {
       if (changed && canWrite && !saving && online) {
-        dispatch(saveMap())
+        dispatch(saveMap(mapConfigChanged))
       }
     }, 1000)
 
     return () => {
       clearTimeout(handler)
     }
-  }, [canWrite, saving, changed, online, dispatch])
+  }, [canWrite, saving, changed, online, dispatch, mapConfigChanged])
 }
 
 function useRequireWorkspace () {

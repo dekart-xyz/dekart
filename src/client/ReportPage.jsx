@@ -1,6 +1,7 @@
 import { useParams } from 'react-router-dom'
 import Input from 'antd/es/input'
 import { useEffect, useState, Component, useMemo } from 'react'
+import { Helmet } from 'react-helmet'
 import { KeplerGl } from '@kepler.gl/components'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
@@ -471,8 +472,14 @@ export default function ReportPage ({ edit }) {
     return <Loading />
   }
 
+  const reportTitle = report.title || 'Untitled Report'
+  const pageTitle = edit ? `${reportTitle} - Edit` : reportTitle
+
   return (
     <div className={styles.report}>
+      <Helmet>
+        <title>{pageTitle} — Dekart</title>
+      </Helmet>
       <Downloading />
       <Header
         title={(<Title />)}

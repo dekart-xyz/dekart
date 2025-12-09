@@ -34,10 +34,10 @@ type Claims struct {
 	SensitiveScopesGranted bool
 }
 
-// ContextKey type
-type ContextKey string
+// ContextKeyType type
+type ContextKeyType string
 
-const contextKey ContextKey = "userDetails"
+const ContextKey ContextKeyType = "userDetails"
 
 // ClaimsCheckConfig config for ClaimsCheck
 type ClaimsCheckConfig struct {
@@ -148,7 +148,7 @@ func copyClaims(sourceCtx, destCtx context.Context) context.Context {
 	if claims == nil {
 		return destCtx
 	}
-	return context.WithValue(destCtx, contextKey, claims)
+	return context.WithValue(destCtx, ContextKey, claims)
 }
 
 // CopyUserContext from one context to another
@@ -206,7 +206,7 @@ func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 			Email: UnknownEmail,
 		}
 	}
-	userCtx := context.WithValue(ctx, contextKey, claims)
+	userCtx := context.WithValue(ctx, ContextKey, claims)
 	return userCtx
 }
 
@@ -342,7 +342,16 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 	var auth = c.getAuthConfig(state)
 	token, err := auth.Exchange(ctx, code)
 	if err != nil {
-		errtype.LogError(err, "Error exchanging code for token")
+		errorStr := err.Error()
+		errorType := "other"
+		if strings.Contains(errorStr, "invalid_grant") {
+			errorType = "invalid_grant"
+		}
+		log.Err(err).
+			Str("errorType", errorType).
+			Bool("hasCode", code != "").
+			Bool("redirectUrlEmpty", auth.RedirectURL == "").
+			Msg("OAuth token exchange failed (sanitized)")
 		redirectState.Error = "Error exchanging code for token"
 		return redirectState
 	}
@@ -529,7 +538,7 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 
 // GetClaims from the context
 func GetClaims(ctx context.Context) *Claims {
-	value, isExist := ctx.Value(contextKey).(*Claims)
+	value, isExist := ctx.Value(ContextKey).(*Claims)
 	if isExist {
 		return value
 	}

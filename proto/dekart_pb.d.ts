@@ -3,6 +3,46 @@
 
 import * as jspb from "google-protobuf";
 
+export class SaveMapPreviewRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  getMapPreviewDataUri(): string;
+  setMapPreviewDataUri(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): SaveMapPreviewRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: SaveMapPreviewRequest): SaveMapPreviewRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: SaveMapPreviewRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): SaveMapPreviewRequest;
+  static deserializeBinaryFromReader(message: SaveMapPreviewRequest, reader: jspb.BinaryReader): SaveMapPreviewRequest;
+}
+
+export namespace SaveMapPreviewRequest {
+  export type AsObject = {
+    reportId: string,
+    mapPreviewDataUri: string,
+  }
+}
+
+export class SaveMapPreviewResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): SaveMapPreviewResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: SaveMapPreviewResponse): SaveMapPreviewResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: SaveMapPreviewResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): SaveMapPreviewResponse;
+  static deserializeBinaryFromReader(message: SaveMapPreviewResponse, reader: jspb.BinaryReader): SaveMapPreviewResponse;
+}
+
+export namespace SaveMapPreviewResponse {
+  export type AsObject = {
+  }
+}
+
 export class RestoreReportSnapshotRequest extends jspb.Message {
   getReportId(): string;
   setReportId(value: string): void;
@@ -2174,6 +2214,9 @@ export class Report extends jspb.Message {
   getVersionId(): string;
   setVersionId(value: string): void;
 
+  getHasMapPreview(): boolean;
+  setHasMapPreview(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Report.AsObject;
   static toObject(includeInstance: boolean, msg: Report): Report.AsObject;
@@ -2209,6 +2252,7 @@ export namespace Report {
     canRefresh: boolean,
     autoRefreshIntervalSeconds: number,
     versionId: string,
+    hasMapPreview: boolean,
   }
 }
 
