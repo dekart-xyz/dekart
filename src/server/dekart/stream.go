@@ -247,12 +247,52 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 		return GRPCError("Cannot query report list", err)
 	}
 	defer reportRows.Close()
+
+	// Query connection types using the same WHERE conditions as reports
+	var connectionTypeRows *sql.Rows
+	var connectionTypesMap map[string]map[int32]bool
+	if checkWorkspace(ctx).ID == "" {
+		connectionTypeRows, err = s.db.QueryContext(ctx,
+			`select distinct d.report_id, c.connection_type
+			from datasets as d
+			left join connections as c on d.connection_id = c.id
+			inner join reports as r on d.report_id = r.id
+			where r.author_email=$1 and r.is_playground=true and c.connection_type is not null`,
+			claims.Email,
+		)
+	} else {
+		connectionTypeRows, err = s.db.QueryContext(ctx,
+			`select distinct d.report_id, c.connection_type
+			from datasets as d
+			left join connections as c on d.connection_id = c.id
+			inner join reports as r on d.report_id = r.id
+			where (r.author_email=$1 or (r.discoverable=true and r.archived=false) or r.allow_edit=true) and r.workspace_id=$2 and c.connection_type is not null`,
+			claims.Email,
+			checkWorkspace(ctx).ID,
+		)
+	}
+	if err == nil {
+		defer connectionTypeRows.Close()
+		connectionTypesMap = make(map[string]map[int32]bool)
+		for connectionTypeRows.Next() {
+			var reportID string
+			var connectionType sql.NullInt32
+			if err := connectionTypeRows.Scan(&reportID, &connectionType); err == nil && connectionType.Valid {
+				if connectionTypesMap[reportID] == nil {
+					connectionTypesMap[reportID] = make(map[int32]bool)
+				}
+				connectionTypesMap[reportID][connectionType.Int32] = true
+			}
+		}
+	}
+
 	res := proto.ReportListResponse{
 		Reports: make([]*proto.Report, 0),
 		StreamOptions: &proto.StreamOptions{
 			Sequence: sequence,
 		},
 	}
+
 	for reportRows.Next() {
 		report := proto.Report{}
 		createdAt := time.Time{}
@@ -283,6 +323,16 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 		if versionID.Valid {
 			report.VersionId = versionID.String
 		}
+
+		// Assign connection types from the pre-queried map
+		if connectionTypesMap != nil {
+			if connectionTypes, exists := connectionTypesMap[report.Id]; exists {
+				for ct := range connectionTypes {
+					report.ConnectionTypes = append(report.ConnectionTypes, proto.ConnectionType(ct))
+				}
+			}
+		}
+
 		res.Reports = append(res.Reports, &report)
 	}
 	err = srv.Send(&res)

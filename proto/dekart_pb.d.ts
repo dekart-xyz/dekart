@@ -2217,6 +2217,11 @@ export class Report extends jspb.Message {
   getHasMapPreview(): boolean;
   setHasMapPreview(value: boolean): void;
 
+  clearConnectionTypesList(): void;
+  getConnectionTypesList(): Array<ConnectionTypeMap[keyof ConnectionTypeMap]>;
+  setConnectionTypesList(value: Array<ConnectionTypeMap[keyof ConnectionTypeMap]>): void;
+  addConnectionTypes(value: ConnectionTypeMap[keyof ConnectionTypeMap], index?: number): ConnectionTypeMap[keyof ConnectionTypeMap];
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Report.AsObject;
   static toObject(includeInstance: boolean, msg: Report): Report.AsObject;
@@ -2253,6 +2258,7 @@ export namespace Report {
     autoRefreshIntervalSeconds: number,
     versionId: string,
     hasMapPreview: boolean,
+    connectionTypesList: Array<ConnectionTypeMap[keyof ConnectionTypeMap]>,
   }
 }
 
