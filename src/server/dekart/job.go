@@ -75,7 +75,10 @@ func (s Server) updateJobStatus(job job.Job, jobStatus chan int32, paramHash str
 			}
 			cancel()
 			if err != nil {
-				log.Fatal().Err(err).Msg("updateJobStatus failed")
+				errtype.LogError(err, "updateJobStatus failed")
+				// Don't crash the server, just log and continue
+				// The job status update failure will be retried on next status change
+				continue
 			}
 			s.reportStreams.Ping(job.GetReportID())
 		case <-job.GetCtx().Done():
@@ -259,10 +262,8 @@ func (s Server) getDatasetsQueryJobs(ctx context.Context, datasets []*proto.Data
 			)
 		}
 		if err != nil {
-			if errtype.IsContextCancelled(err) {
-				return nil, err
-			}
-			log.Fatal().Err(err).Interface("queryIds", queryIds).Msgf("select from query_jobs failed, ids: %s", queryIdsStr)
+			errtype.LogError(err, "select from query_jobs failed")
+			return nil, fmt.Errorf("select from query_jobs failed, ids: %s: %w", queryIdsStr, err)
 		}
 		defer queryRows.Close()
 		return rowsToQueryJobs(queryRows)
