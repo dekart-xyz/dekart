@@ -129,3 +129,9 @@ a.dekartLink {
     background-image: url('./dekart-title.svg');
     background-repeat: no-repeat;
 }
+
+@media (max-width: 768px) {
+    .dekartLinkHolder {
+        display: none;
+    }
+}
