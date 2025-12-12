@@ -333,7 +333,7 @@
     top: 0;
     left: 0;
     z-index: 1;
-    filter: brightness(0.85) contrast(0.9);
+    filter: brightness(0.65) contrast(0.9);
     transition: filter 0.3s ease;
 }
 
