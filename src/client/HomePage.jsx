@@ -37,7 +37,7 @@ function ArchiveReportButton ({ report }) {
       className={styles.mapActionButton}
       type='default'
       size='small'
-      icon={<InboxOutlined />}
+      icon={!report.archived ? <InboxOutlined /> : null}
       disabled={disabled || disableArchivePublic}
       title={disableArchivePublic ? 'Cannot archive public report. Unpublish it first.' : (report.archived ? 'Restore' : 'Archive')}
       onClick={(e) => {
@@ -45,7 +45,9 @@ function ArchiveReportButton ({ report }) {
         dispatch(archiveReport(report.id, !report.archived))
         setDisabled(true)
       }}
-    />
+    >
+      {report.archived ? 'Restore' : undefined}
+    </Button>
   )
 }
 
@@ -424,16 +426,19 @@ function MapCard ({ report, reportFilter, archived, authEnabled }) {
   const handleEdit = (e) => {
     e.stopPropagation()
     track('EditMap', { reportId: report.id })
-    history.push(`/reports/${report.id}?edit=true`)
+    history.push(`/reports/${report.id}/source`)
   }
 
   const handleCardClick = () => {
+    if (report.archived) {
+      return
+    }
     track('ViewMap', { reportId: report.id })
     history.push(`/reports/${report.id}`)
   }
 
   return (
-    <div className={styles.mapCard} onClick={handleCardClick}>
+    <div className={classnames(styles.mapCard, { [styles.mapCardArchived]: report.archived })} onClick={handleCardClick}>
       <div className={styles.mapPreview}>
         <div className={classnames(styles.privacyBadge, styles.privacyBadgeOverlay, privacy.className)}>
           {privacy.icon}
@@ -488,7 +493,7 @@ function MapCard ({ report, reportFilter, archived, authEnabled }) {
             </div>
             {/* Action buttons - right side, shown on hover */}
             <div className={styles.mapActions}>
-              {report.canWrite && (
+              {report.canWrite && !report.archived && (
                 <Button
                   type='default'
                   size='small'
@@ -498,7 +503,7 @@ function MapCard ({ report, reportFilter, archived, authEnabled }) {
                   title='Edit'
                 />
               )}
-              {reportFilter === 'my' && !archived && (
+              {reportFilter === 'my' && (
                 <ArchiveReportButton report={report} />
               )}
             </div>
