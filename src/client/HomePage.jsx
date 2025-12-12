@@ -419,7 +419,7 @@ function MapCard ({ report, reportFilter, archived, authEnabled }) {
   const history = useHistory()
   const privacy = getPrivacyStatus(report)
   const modifiedDate = new Date(report.updatedAt * 1000)
-  const { previewUrl, previewLoading, previewError, setPreviewLoading, setPreviewError } = useMapPreview(report.id)
+  const { previewUrl, previewLoading, previewError, setPreviewLoading, setPreviewError } = useMapPreview(report)
 
   const handleEdit = (e) => {
     e.stopPropagation()

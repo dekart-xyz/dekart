@@ -204,8 +204,10 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 					where rn = 1 and status != 2
 				) as has_direct_access,
 				version_id,
-				map_config
+				map_config,
+				case when mp.report_id is not null then true else false end as has_map_preview
 			from reports as r
+			left join map_previews as mp on r.id = mp.report_id
 			where author_email=$1 and is_playground=true
 			order by updated_at desc`,
 			claims.Email,
@@ -237,8 +239,10 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 					where rn = 1 and status != 2
 				) as has_direct_access,
 				r.version_id,
-				r.map_config
+				r.map_config,
+				case when mp.report_id is not null then true else false end as has_map_preview
 			from reports as r
+			left join map_previews as mp on r.id = mp.report_id
 			where (r.author_email=$1 or (r.discoverable=true and r.archived=false) or r.allow_edit=true) and r.workspace_id=$2
 			order by r.updated_at desc`,
 			claims.Email,
@@ -318,6 +322,7 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			&report.HasDirectAccess,
 			&versionID,
 			&mapConfig,
+			&report.HasMapPreview,
 		)
 		if err != nil {
 			return GRPCError("Cannot scan report row", err)
