@@ -1071,7 +1071,6 @@ func (s Server) ArchiveReport(ctx context.Context, req *proto.ArchiveReportReque
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
-
 	s.reportStreams.Ping(req.ReportId)
 
 	return &proto.ArchiveReportResponse{}, nil

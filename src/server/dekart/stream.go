@@ -252,7 +252,46 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 	if err != nil {
 		return GRPCError("Cannot query report list", err)
 	}
-	defer reportRows.Close()
+	defer reportRows.Close() // Ensure cleanup even on early return
+
+	// Process report rows first and collect them
+	reports := make([]*proto.Report, 0)
+	for reportRows.Next() {
+		report := proto.Report{}
+		createdAt := time.Time{}
+		updatedAt := time.Time{}
+		var versionID sql.NullString
+		var mapConfig sql.NullString
+		err = reportRows.Scan(
+			&report.Id,
+			&report.Title,
+			&report.Archived,
+			&report.CanWrite,
+			&report.IsAuthor,
+			&report.AuthorEmail,
+			&report.Discoverable,
+			&report.AllowEdit,
+			&updatedAt,
+			&createdAt,
+			&report.IsPublic,
+			&report.TrackViewers,
+			&report.IsPlayground,
+			&report.HasDirectAccess,
+			&versionID,
+			&mapConfig,
+			&report.HasMapPreview,
+		)
+		if err != nil {
+			return GRPCError("Cannot scan report row", err)
+		}
+		report.CreatedAt = createdAt.Unix()
+		report.UpdatedAt = updatedAt.Unix()
+		report.VersionId = versionID.String
+		report.MapConfig = mapConfig.String
+
+		reports = append(reports, &report)
+	}
+	reportRows.Close() // Close reportRows before querying connectionTypeRows
 
 	// Query connection types using the same WHERE conditions as reports
 	var connectionTypeRows *sql.Rows
@@ -292,56 +331,22 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 		}
 	}
 
-	res := proto.ReportListResponse{
-		Reports: make([]*proto.Report, 0),
-		StreamOptions: &proto.StreamOptions{
-			Sequence: sequence,
-		},
-	}
-
-	for reportRows.Next() {
-		report := proto.Report{}
-		createdAt := time.Time{}
-		updatedAt := time.Time{}
-		var versionID sql.NullString
-		var mapConfig sql.NullString
-		err = reportRows.Scan(
-			&report.Id,
-			&report.Title,
-			&report.Archived,
-			&report.CanWrite,
-			&report.IsAuthor,
-			&report.AuthorEmail,
-			&report.Discoverable,
-			&report.AllowEdit,
-			&updatedAt,
-			&createdAt,
-			&report.IsPublic,
-			&report.TrackViewers,
-			&report.IsPlayground,
-			&report.HasDirectAccess,
-			&versionID,
-			&mapConfig,
-			&report.HasMapPreview,
-		)
-		if err != nil {
-			return GRPCError("Cannot scan report row", err)
-		}
-		report.CreatedAt = createdAt.Unix()
-		report.UpdatedAt = updatedAt.Unix()
-		report.VersionId = versionID.String
-		report.MapConfig = mapConfig.String
-
-		// Assign connection types from the pre-queried map
-		if connectionTypesMap != nil {
+	// Assign connection types to reports
+	if connectionTypesMap != nil {
+		for _, report := range reports {
 			if connectionTypes, exists := connectionTypesMap[report.Id]; exists {
 				for ct := range connectionTypes {
 					report.ConnectionTypes = append(report.ConnectionTypes, proto.ConnectionType(ct))
 				}
 			}
 		}
+	}
 
-		res.Reports = append(res.Reports, &report)
+	res := proto.ReportListResponse{
+		Reports: reports,
+		StreamOptions: &proto.StreamOptions{
+			Sequence: sequence,
+		},
 	}
 	err = srv.Send(&res)
 	if err != nil {
