@@ -300,6 +300,7 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 		createdAt := time.Time{}
 		updatedAt := time.Time{}
 		var versionID sql.NullString
+		var mapConfig sql.NullString
 		err = reportRows.Scan(
 			&report.Id,
 			&report.Title,
@@ -316,16 +317,15 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			&report.IsPlayground,
 			&report.HasDirectAccess,
 			&versionID,
-			&report.MapConfig,
+			&mapConfig,
 		)
 		if err != nil {
 			return GRPCError("Cannot scan report row", err)
 		}
 		report.CreatedAt = createdAt.Unix()
 		report.UpdatedAt = updatedAt.Unix()
-		if versionID.Valid {
-			report.VersionId = versionID.String
-		}
+		report.VersionId = versionID.String
+		report.MapConfig = mapConfig.String
 
 		// Assign connection types from the pre-queried map
 		if connectionTypesMap != nil {
