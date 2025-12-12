@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import { Helmet } from 'react-helmet'
 import { Header } from './Header'
 import styles from './HomePage.module.css'
@@ -6,8 +6,9 @@ import Button from 'antd/es/button'
 import Radio from 'antd/es/radio'
 import Result from 'antd/es/result'
 import Table from 'antd/es/table'
+import Input from 'antd/es/input'
 import { useDispatch, useSelector } from 'react-redux'
-import { PlusOutlined, FileSearchOutlined, UsergroupAddOutlined, ApiTwoTone, LockOutlined, TeamOutlined, GlobalOutlined } from '@ant-design/icons'
+import { PlusOutlined, FileSearchOutlined, UsergroupAddOutlined, ApiTwoTone, LockOutlined, TeamOutlined, GlobalOutlined, EditOutlined, SearchOutlined, InboxOutlined } from '@ant-design/icons'
 import DataDocumentationLink from './DataDocumentationLink'
 import Switch from 'antd/es/switch'
 import { archiveReport, subscribeReports, unsubscribeReports, createReport } from './actions/report'
@@ -20,8 +21,11 @@ import Onboarding from './Onboarding'
 import { DatasourceIcon } from './Datasource'
 import { track } from './lib/tracking'
 import { If } from './lib/helperElements'
+import { useMapPreview } from './lib/useMapPreview'
+import { getRelativeTime } from './lib/relativeTime'
 import BigQueryConnectionTypeSelectorModal from './BigQueryConnectionTypeSelectorModal'
 import { Loading } from './Loading'
+import classnames from 'classnames'
 
 function ArchiveReportButton ({ report }) {
   const dispatch = useDispatch()
@@ -30,16 +34,18 @@ function ArchiveReportButton ({ report }) {
   return (
     <Button
       id={report.archived ? 'dekart-restore-report' : 'dekart-archive-report'}
-      className={styles.deleteButton}
-      type='text'
+      className={styles.mapActionButton}
+      type='default'
+      size='small'
+      icon={<InboxOutlined />}
       disabled={disabled || disableArchivePublic}
-      title={disableArchivePublic ? 'Cannot archive public report. Unpublish it first.' : ''}
-      onClick={() => {
+      title={disableArchivePublic ? 'Cannot archive public report. Unpublish it first.' : (report.archived ? 'Restore' : 'Archive')}
+      onClick={(e) => {
+        e.stopPropagation()
         dispatch(archiveReport(report.id, !report.archived))
         setDisabled(true)
       }}
-    >{report.archived ? 'Restore' : 'Archive'}
-    </Button>
+    />
   )
 }
 
@@ -370,8 +376,142 @@ function ReportsHeader (
   )
 }
 
+function getPrivacyStatus (report) {
+  if (report.isPlayground || report.isPublic) {
+    return { label: 'Public', icon: <GlobalOutlined />, className: styles.public }
+  }
+  if (report.discoverable || report.hasDirectAccess) {
+    return { label: 'Shared', icon: <TeamOutlined />, className: styles.shared }
+  }
+  return { label: 'Private', icon: <LockOutlined />, className: styles.private }
+}
+
+function PreviewConnectionIcons ({ report }) {
+  const connectionTypes = report.connectionTypesList
+  if (connectionTypes.length === 0) return null
+  return (
+    <div className={styles.previewConnectionIcons}>
+      {connectionTypes.map((connectionType, index) => (
+        <span key={index} className={styles.previewConnectionIcon}>
+          <DatasourceIcon type={connectionType} />
+        </span>
+      ))}
+    </div>
+  )
+}
+
+function filterDataSource (dataSource, searchQuery, reportFilter) {
+  if (!searchQuery.trim()) {
+    return dataSource
+  }
+  const query = searchQuery.toLowerCase()
+  return dataSource.filter(item => {
+    if (reportFilter === 'connections') {
+      return item.connectionName?.toLowerCase().includes(query) ||
+             item.authorEmail?.toLowerCase().includes(query)
+    }
+    return item.title?.toLowerCase().includes(query) ||
+           item.authorEmail?.toLowerCase().includes(query)
+  })
+}
+
+function MapCard ({ report, reportFilter, archived, authEnabled }) {
+  const history = useHistory()
+  const privacy = getPrivacyStatus(report)
+  const modifiedDate = new Date(report.updatedAt * 1000)
+  const { previewUrl, previewLoading, previewError, setPreviewLoading, setPreviewError } = useMapPreview(report.id)
+
+  const handleEdit = (e) => {
+    e.stopPropagation()
+    track('EditMap', { reportId: report.id })
+    history.push(`/reports/${report.id}?edit=true`)
+  }
+
+  const handleCardClick = () => {
+    track('ViewMap', { reportId: report.id })
+    history.push(`/reports/${report.id}`)
+  }
+
+  return (
+    <div className={styles.mapCard} onClick={handleCardClick}>
+      <div className={styles.mapPreview}>
+        <div className={classnames(styles.privacyBadge, styles.privacyBadgeOverlay, privacy.className)}>
+          {privacy.icon}
+          {privacy.label === 'Public' && <span>{privacy.label}</span>}
+        </div>
+        <PreviewConnectionIcons report={report} />
+        <img
+          src={previewUrl}
+          alt={report.title}
+          className={classnames(styles.previewImage, { [styles.previewImageHidden]: previewLoading || previewError })}
+          onLoad={() => {
+            setPreviewLoading(false)
+            setPreviewError(false)
+          }}
+          onError={(e) => {
+            console.warn('Map preview failed to load:', previewUrl, e)
+            setPreviewError(true)
+            setPreviewLoading(false)
+          }}
+        />
+        {(previewLoading || previewError) && (
+          <div className={styles.previewPlaceholder}>
+            <FileSearchOutlined />
+          </div>
+        )}
+      </div>
+      <div className={styles.mapCardContent}>
+        <h3
+          className={classnames(styles.mapTitle, { [styles.mapTitleUntitled]: !report.title || report.title === 'Untitled' })}
+          title={(!report.title || report.title === 'Untitled') ? 'Click to rename this map' : undefined}
+        >
+          {report.title || 'Untitled'}
+        </h3>
+        <div className={styles.mapMeta}>
+          <div className={styles.mapMetaContent}>
+            <div className={styles.mapMetaLeft}>
+              <div className={styles.mapMetaRow}>
+                <span
+                  className={styles.mapUpdatedDate}
+                  title={`${modifiedDate.toLocaleString()} (${modifiedDate.toUTCString()})`}
+                >
+                  Updated {getRelativeTime(modifiedDate)}
+                </span>
+              </div>
+              {report.authorEmail && (
+                <div className={styles.mapMetaRow}>
+                  <span className={styles.mapAuthorInline}>
+                    {report.authorEmail}
+                  </span>
+                </div>
+              )}
+            </div>
+            {/* Action buttons - right side, shown on hover */}
+            <div className={styles.mapActions}>
+              {report.canWrite && (
+                <Button
+                  type='default'
+                  size='small'
+                  icon={<EditOutlined />}
+                  onClick={handleEdit}
+                  className={styles.mapActionButton}
+                  title='Edit'
+                />
+              )}
+              {reportFilter === 'my' && !archived && (
+                <ArchiveReportButton report={report} />
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function Reports ({ createReportButton, reportFilter }) {
   const [archived, setArchived] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const reportsList = useSelector(state => state.reportsList)
   const { loaded: envLoaded, authEnabled } = useSelector(state => state.env)
   const connectionList = useSelector(state => state.connection.list.filter(c => !isSystemConnectionID(c.id)))
@@ -384,6 +524,23 @@ function Reports ({ createReportButton, reportFilter }) {
       setArchived(false)
     }
   }, [reportsList, setArchived])
+
+  // Calculate dataSource - must be before useMemo
+  let dataSource = []
+  if (reportFilter === 'my') {
+    dataSource = archived ? reportsList.archived : reportsList.my
+  } else if (reportFilter === 'connections') {
+    dataSource = connectionList
+  } else {
+    dataSource = reportsList.discoverable
+  }
+
+  // Filter by search query - must be called before any early returns
+  const filteredDataSource = useMemo(() => {
+    return filterDataSource(dataSource, searchQuery, reportFilter)
+  }, [dataSource, searchQuery, reportFilter])
+
+  // Early returns after all hooks
   if (!envLoaded) {
     return null
   }
@@ -399,14 +556,31 @@ function Reports ({ createReportButton, reportFilter }) {
       <div className={styles.reports}><FirstReportOnboarding createReportButton={createReportButton} /></div>
     )
   } else {
-    let dataSource = []
-    if (reportFilter === 'my') {
-      dataSource = archived ? reportsList.archived : reportsList.my
-    } else if (reportFilter === 'connections') {
-      dataSource = connectionList
-    } else {
-      dataSource = reportsList.discoverable
+    // For connections, still use table view
+    if (reportFilter === 'connections') {
+      return (
+        <div className={styles.reports}>
+          <ReportsHeader
+            reportFilter={reportFilter}
+            archived={archived}
+            setArchived={setArchived}
+          />
+          {filteredDataSource.length
+            ? (
+              <Table
+                dataSource={filteredDataSource}
+                columns={getColumns(reportFilter, archived, authEnabled)}
+                showHeader={false}
+                rowClassName={styles.reportsRow}
+                pagination={false}
+                rowKey='id'
+              />
+              )
+            : null}
+        </div>
+      )
     }
+
     return (
       <div className={styles.reports}>
         <ReportsHeader
@@ -414,16 +588,29 @@ function Reports ({ createReportButton, reportFilter }) {
           archived={archived}
           setArchived={setArchived}
         />
-        {dataSource.length
+        <div className={styles.searchBar}>
+          <Input
+            placeholder='Search maps...'
+            prefix={<SearchOutlined />}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            allowClear
+            className={styles.searchInput}
+          />
+        </div>
+        {filteredDataSource.length
           ? (
-            <Table
-              dataSource={dataSource}
-              columns={getColumns(reportFilter, archived, authEnabled)}
-              showHeader={false}
-              rowClassName={styles.reportsRow}
-              pagination={false}
-              rowKey='id'
-            />
+            <div className={styles.mapsGrid}>
+              {filteredDataSource.map(report => (
+                <MapCard
+                  key={report.id}
+                  report={report}
+                  reportFilter={reportFilter}
+                  archived={archived}
+                  authEnabled={authEnabled}
+                />
+              ))}
+            </div>
             )
           : reportFilter === 'discoverable'
             ? (<OnboardingDiscoverableReports />)

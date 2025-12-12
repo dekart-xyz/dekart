@@ -63,7 +63,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 900px;
+    width: 100%;
+    max-width: 1400px;
 }
 
 .headerButtons {
@@ -174,3 +175,362 @@
 .connectionTypeSelector {
     margin-bottom: 10px;
 }
+
+.searchBar {
+    width: 100%;
+    margin-bottom: 24px;
+}
+
+.searchInput {
+    max-width: 400px;
+}
+
+.mapsGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    width: 100%;
+}
+
+@media (max-width: 1400px) {
+    .mapsGrid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 1200px) {
+    .mapsGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .mapsGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.mapCard {
+    background: white;
+    border: 1px solid #F0F0F0;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.mapCard:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.mapCardHeader {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #F0F0F0;
+}
+
+.privacyBadge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.privacyBadgeOverlay {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 4;
+    pointer-events: none;
+    opacity: 0.85;
+    backdrop-filter: blur(4px);
+    transition: opacity 0.3s ease;
+}
+
+.privacyBadge.public {
+    background-color: rgba(230, 247, 255, 0.9);
+    color: #1890FF;
+}
+
+.privacyBadge.shared {
+    background-color: transparent;
+    color: white;
+    padding: 4px 8px;
+}
+
+.privacyBadge.shared :global(.anticon) {
+    color: white;
+    font-size: 16px;
+}
+
+.privacyBadge.private {
+    background-color: transparent;
+    color: white;
+    padding: 4px 8px;
+}
+
+.privacyBadge.private :global(.anticon) {
+    color: white;
+    font-size: 16px;
+}
+
+.mapCard:hover .privacyBadgeOverlay {
+    opacity: 1;
+}
+
+.mapPreview {
+    width: 100%;
+    height: 150px;
+    background-color: #FAFAFA;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.mapPreview::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.2);
+    z-index: 2;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.previewImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    filter: brightness(0.85) contrast(0.9);
+    transition: filter 0.3s ease;
+}
+
+.mapCard:hover .mapPreview::after {
+    opacity: 0.1;
+}
+
+.mapCard:hover .previewImage {
+    filter: brightness(1) contrast(1);
+}
+
+.previewZoomIcon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 24px;
+    opacity: 0;
+    z-index: 3;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    background: rgba(0, 0, 0, 0.5);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+}
+
+.mapCard:hover .previewZoomIcon {
+    opacity: 1;
+}
+
+.previewConnectionIcons {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 4;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.mapCard:hover .previewConnectionIcons {
+    opacity: 1;
+}
+
+.previewConnectionIcon {
+    display: inline-flex;
+    align-items: center;
+    font-size: 24px;
+    color: white;
+    padding: 4px 8px;
+}
+
+.previewConnectionIcon :global(.anticon) {
+    color: white;
+    font-size: 24px;
+}
+
+.previewConnectionIcon :global(svg) {
+    color: white;
+    fill: white;
+}
+
+
+@media (max-width: 768px) {
+    .mapPreview {
+        height: 120px;
+    }
+
+    .archivedSwitch {
+        display: none;
+    }
+
+    /* Hide New Map button */
+    .rightCornerAction :global(#dekart-create-report) {
+        display: none !important;
+    }
+}
+
+.previewImageHidden {
+    opacity: 0;
+    z-index: 0;
+}
+
+.previewPlaceholder {
+    font-size: 48px;
+    color: #D9D9D9;
+    position: absolute;
+    z-index: 0;
+}
+
+.mapCardContent {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    position: relative;
+}
+
+.mapTitle {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 12px 0;
+    color: #262626;
+    line-height: 1.4;
+}
+
+.mapTitleUntitled {
+    color: #8C8C8C;
+    font-style: italic;
+    font-weight: 400;
+    opacity: 0.7;
+}
+
+.mapMeta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+    color: #595959;
+}
+
+.mapMetaContent {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.mapMetaLeft {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.mapActions {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.mapCard:hover .mapActions {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.mapActionButton {
+    pointer-events: all;
+}
+
+.mapMetaRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.mapUpdatedDate {
+    font-weight: 500;
+    color: #595959;
+}
+
+.mapAuthorInline {
+    color: #8C8C8C;
+}
+
+.mapSharedStatus {
+    color: #8C8C8C;
+}
+
+.mapLayersInfo {
+    color: #8C8C8C;
+    font-size: 12px;
+}
+
+.mapAuthor {
+    display: flex;
+    gap: 8px;
+}
+
+.mapDates {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mapDate {
+    display: flex;
+    gap: 8px;
+}
+
+.metaLabel {
+    font-weight: 500;
+    color: #8C8C8C;
+}
+
+
