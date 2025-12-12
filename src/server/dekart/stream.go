@@ -180,19 +180,19 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 	if checkWorkspace(ctx).ID == "" {
 		reportRows, err = s.db.QueryContext(ctx,
 			`select
-				id,
-				case when title is null then 'Untitled' else title end as title,
-				archived,
-				(author_email = $1) or allow_edit as can_write,
-				author_email = $1 as is_author,
-				author_email,
-				discoverable,
-				allow_edit,
-				updated_at,
-				created_at,
-				is_public,
-				track_viewers,
-				is_playground,
+				r.id,
+				case when r.title is null then 'Untitled' else r.title end as title,
+				r.archived,
+				(r.author_email = $1) or r.allow_edit as can_write,
+				r.author_email = $1 as is_author,
+				r.author_email,
+				r.discoverable,
+				r.allow_edit,
+				r.updated_at,
+				r.created_at,
+				r.is_public,
+				r.track_viewers,
+				r.is_playground,
 				exists (
 					select 1
 					from (
@@ -203,13 +203,13 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 					) t
 					where rn = 1 and status != 2
 				) as has_direct_access,
-				version_id,
-				map_config,
+				r.version_id,
+				r.map_config,
 				case when mp.report_id is not null then true else false end as has_map_preview
 			from reports as r
 			left join map_previews as mp on r.id = mp.report_id
-			where author_email=$1 and is_playground=true
-			order by updated_at desc`,
+			where r.author_email=$1 and r.is_playground=true
+			order by r.updated_at desc`,
 			claims.Email,
 		)
 	} else {

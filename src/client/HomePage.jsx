@@ -53,26 +53,13 @@ function ArchiveReportButton ({ report }) {
 
 const columns = [
   {
-    dataIndex: 'icon',
-    render: (t, report) => {
-      if (report.isPlayground || report.isPublic) {
-        return <GlobalOutlined title='This report accessible outside of workspace' />
-      }
-      if (report.discoverable || report.hasDirectAccess) {
-        return <TeamOutlined title='This report is discoverable by others users' />
-      }
-      return <LockOutlined title='This is visible only to you' />
-    },
+    dataIndex: 'connectionIcon',
+    render: (t, connection) => <DatasourceIcon type={connection.connectionType} />,
     className: styles.iconColumn
   },
   {
-    dataIndex: 'title',
-    render: (t, report) => <a href={`/reports/${report.id}`}>{report.title}</a>,
-    className: styles.titleColumn
-  },
-  {
-    dataIndex: 'archivedTitle',
-    render: (t, report) => report.title,
+    dataIndex: 'connectionName',
+    render: (t, connection) => <OpenConnectionButton connection={connection} />,
     className: styles.titleColumn
   },
   {
@@ -85,21 +72,6 @@ const columns = [
       >{item.authorEmail}
       </div>),
     className: styles.authorColumn
-  },
-  {
-    dataIndex: 'delete',
-    render: (t, report) => <ArchiveReportButton report={report} />,
-    className: styles.deleteColumn
-  },
-  {
-    dataIndex: 'connectionName',
-    render: (t, connection) => <OpenConnectionButton connection={connection} />,
-    className: styles.titleColumn
-  },
-  {
-    dataIndex: 'connectionIcon',
-    render: (t, connection) => <DatasourceIcon type={connection.connectionType} />,
-    className: styles.iconColumn
   },
   {
     dataIndex: 'setDefault',
@@ -142,26 +114,6 @@ function OpenConnectionButton ({ connection }) {
     >{connection.connectionName}
     </Button>
   )
-}
-
-function filterColumns (filter) {
-  return filter.map(f => columns.find(c => c.dataIndex === f))
-}
-
-function getColumns (reportFilter, archived, authEnabled) {
-  if (reportFilter === 'my') {
-    if (archived) {
-      return filterColumns(['archivedTitle', 'delete'])
-    }
-    if (authEnabled) {
-      return filterColumns(['icon', 'title', 'delete'])
-    }
-    return filterColumns(['title', 'delete'])
-  } else if (reportFilter === 'connections') {
-    return filterColumns(['connectionIcon', 'connectionName', 'author', 'setDefault'])
-  } else {
-    return filterColumns(['icon', 'title', 'author'])
-  }
 }
 
 function FirstReportOnboarding () {
@@ -574,11 +526,12 @@ function Reports ({ createReportButton, reportFilter }) {
             ? (
               <Table
                 dataSource={filteredDataSource}
-                columns={getColumns(reportFilter, archived, authEnabled)}
+                columns={columns}
                 showHeader={false}
                 rowClassName={styles.reportsRow}
                 pagination={false}
                 rowKey='id'
+                className={styles.reportsTable}
               />
               )
             : null}

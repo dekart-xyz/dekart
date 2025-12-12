@@ -3,9 +3,8 @@
     flex-direction: row;
     width: 100%;
     margin-top: 20px;
-    background-color: white;
     padding: 20px;
-    border: 1px solid #F0F0F0;
+    max-width: 1000px;
 }
 
 .onboardingIcon {
