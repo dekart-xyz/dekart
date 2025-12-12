@@ -373,7 +373,36 @@ function MapCard ({ report, reportFilter, archived, authEnabled }) {
   const history = useHistory()
   const privacy = getPrivacyStatus(report)
   const modifiedDate = new Date(report.updatedAt * 1000)
-  const { previewUrl, previewLoading, previewError, setPreviewLoading, setPreviewError } = useMapPreview(report)
+  const cardRef = useRef(null)
+  const [isVisible, setIsVisible] = useState(false)
+
+  useEffect(() => {
+    const card = cardRef.current
+    if (!card) return
+
+    const observer = new window.IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsVisible(true)
+            // Once visible, we can disconnect the observer
+            observer.disconnect()
+          }
+        })
+      },
+      {
+        rootMargin: '50px' // Start loading 50px before the card is visible
+      }
+    )
+
+    observer.observe(card)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [])
+
+  const { previewUrl, previewLoading, previewError, setPreviewLoading, setPreviewError } = useMapPreview(report, isVisible)
 
   const handleEdit = (e) => {
     e.stopPropagation()
@@ -390,7 +419,7 @@ function MapCard ({ report, reportFilter, archived, authEnabled }) {
   }
 
   return (
-    <div className={classnames(styles.mapCard, { [styles.mapCardArchived]: report.archived })} onClick={handleCardClick}>
+    <div ref={cardRef} className={classnames(styles.mapCard, { [styles.mapCardArchived]: report.archived })} onClick={handleCardClick}>
       <div className={styles.mapPreview}>
         <div className={classnames(styles.privacyBadge, styles.privacyBadgeOverlay, privacy.className)}>
           {privacy.icon}

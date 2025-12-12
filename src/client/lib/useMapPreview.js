@@ -91,7 +91,7 @@ async function loadServerPreview (reportId, host, token, claimEmailCookie, cance
   return URL.createObjectURL(blob)
 }
 
-export function useMapPreview (report) {
+export function useMapPreview (report, shouldLoad = true) {
   const reportId = report.id
   const token = useSelector(state => state.token)
   const claimEmailCookie = useSelector(state => state.user.claimEmailCookie)
@@ -100,12 +100,16 @@ export function useMapPreview (report) {
   const host = VITE_API_HOST || ''
 
   const [previewError, setPreviewError] = useState(false)
-  const [previewLoading, setPreviewLoading] = useState(true)
+  const [previewLoading, setPreviewLoading] = useState(shouldLoad)
   const [previewUrl, setPreviewUrl] = useState(null)
   const blobUrlRef = useRef(null)
   const cancelledRef = useRef(false)
 
   useEffect(() => {
+    if (!shouldLoad) {
+      return
+    }
+
     cancelledRef.current = false
     blobUrlRef.current = null
 
@@ -184,7 +188,7 @@ export function useMapPreview (report) {
         blobUrlRef.current = null
       }
     }
-  }, [reportId, token, claimEmailCookie, host, report.hasMapPreview, report.mapConfig, env])
+  }, [shouldLoad, reportId, token, claimEmailCookie, host, report.hasMapPreview, report.mapConfig, env])
 
   return {
     previewUrl,
