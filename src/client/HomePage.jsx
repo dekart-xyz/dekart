@@ -8,7 +8,7 @@ import Result from 'antd/es/result'
 import Table from 'antd/es/table'
 import Input from 'antd/es/input'
 import { useDispatch, useSelector } from 'react-redux'
-import { PlusOutlined, FileSearchOutlined, UsergroupAddOutlined, ApiTwoTone, LockOutlined, TeamOutlined, GlobalOutlined, EditOutlined, SearchOutlined, InboxOutlined } from '@ant-design/icons'
+import { PlusOutlined, FileSearchOutlined, UsergroupAddOutlined, ApiTwoTone, LockOutlined, TeamOutlined, GlobalOutlined, EditOutlined, SearchOutlined, EyeInvisibleOutlined } from '@ant-design/icons'
 import DataDocumentationLink from './DataDocumentationLink'
 import Switch from 'antd/es/switch'
 import { archiveReport, subscribeReports, unsubscribeReports, createReport } from './actions/report'
@@ -37,7 +37,7 @@ function ArchiveReportButton ({ report }) {
       className={styles.mapActionButton}
       type='default'
       size='small'
-      icon={!report.archived ? <InboxOutlined /> : null}
+      icon={!report.archived ? <EyeInvisibleOutlined /> : null}
       disabled={disabled || disableArchivePublic}
       title={disableArchivePublic ? 'Cannot archive public report. Unpublish it first.' : (report.archived ? 'Restore' : 'Archive')}
       onClick={(e) => {
