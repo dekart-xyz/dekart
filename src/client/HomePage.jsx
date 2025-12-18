@@ -599,9 +599,15 @@ function Reports ({ createReportButton, reportFilter }) {
               ))}
             </div>
             )
-          : reportFilter === 'discoverable'
-            ? (<OnboardingDiscoverableReports />)
-            : (<OnboardingMyReports />)}
+          : searchQuery.trim()
+            ? (
+              <div className={styles.noResults}>
+                No results found
+              </div>
+              )
+            : reportFilter === 'discoverable'
+              ? (<OnboardingDiscoverableReports />)
+              : (<OnboardingMyReports />)}
       </div>
     )
   }

@@ -192,6 +192,17 @@
     max-width: 400px;
 }
 
+.noResults {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    flex: 1;
+    min-height: 200px;
+    color: #8C8C8C;
+    font-size: 16px;
+}
+
 .mapsGrid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
