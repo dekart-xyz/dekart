@@ -1,6 +1,6 @@
-// Helper function to get relative time string
+const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
+
 export function getRelativeTime (date) {
-  const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
   const now = new Date()
   const diffMs = now - date
   const diffSecs = Math.floor(diffMs / 1000)
