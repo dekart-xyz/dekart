@@ -1724,7 +1724,7 @@ func (s Server) ServeMapPreview(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if resource_id is valid
-	if !resourceId.Valid || resourceId.String == "" {
+	if resourceId.String == "" {
 		// Serve default map preview when resource_id is not set
 		s.serveDefaultMapPreview(w, r)
 		return
