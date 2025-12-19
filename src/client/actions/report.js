@@ -468,7 +468,9 @@ export function exportMapPreview () {
   return (dispatch, getState) => {
     const { exporting, firstExport } = getState().mapPreview
     const hasMapPreview = getState().report.hasMapPreview
-    if (exporting) {
+    const { env } = getState()
+    const { STORE_MAP_PREVIEW } = env.variables
+    if (!STORE_MAP_PREVIEW || exporting) {
       return
     }
     const timeoutId = setTimeout(() => {

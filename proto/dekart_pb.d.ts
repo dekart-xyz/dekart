@@ -1915,6 +1915,7 @@ export namespace GetEnvResponse {
       TYPE_DEKART_CLOUD: 25;
       TYPE_MAX_FILE_UPLOAD_SIZE: 26;
       TYPE_IS_SNOWPARK: 27;
+      TYPE_STORE_MAP_PREVIEW: 28;
     }
 
     export const Type: TypeMap;

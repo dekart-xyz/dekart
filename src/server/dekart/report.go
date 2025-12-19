@@ -1,6 +1,7 @@
 package dekart
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"database/sql"
@@ -8,10 +9,12 @@ import (
 	"dekart/src/server/conn"
 	"dekart/src/server/errtype"
 	"dekart/src/server/notifications"
+	"dekart/src/server/storage"
 	"dekart/src/server/user"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -1591,6 +1594,10 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 
 // SaveMapPreview saves or updates the map preview for a report
 func (s Server) SaveMapPreview(ctx context.Context, req *proto.SaveMapPreviewRequest) (*proto.SaveMapPreviewResponse, error) {
+	if os.Getenv("DEKART_CLOUD_STORAGE_BUCKET") == "" {
+		log.Warn().Msg("DEKART_CLOUD_STORAGE_BUCKET is not set, cannot save map preview")
+		return nil, status.Error(codes.PermissionDenied, "map preview storage is not enabled")
+	}
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
@@ -1625,15 +1632,38 @@ func (s Server) SaveMapPreview(ctx context.Context, req *proto.SaveMapPreviewReq
 		return nil, status.Error(codes.InvalidArgument, "Map preview data URI exceeds size limit")
 	}
 
-	// Insert or update map preview
+	resourceId := newUUID()
+	pubStorage := storage.NewPublicStorage()
+	defConnCtx := conn.GetCtx(ctx, &proto.Connection{})
+	storageWriter := pubStorage.GetObject(defConnCtx, pubStorage.GetDefaultBucketName(), fmt.Sprintf("%s.png", resourceId)).GetWriter(defConnCtx)
+	defer storageWriter.Close()
+
+	// Parse data URI: data:[<mediatype>][;base64],<data>
+	commaIdx := strings.Index(req.MapPreviewDataUri, ",")
+	if commaIdx == -1 {
+		err := fmt.Errorf("invalid data URI format")
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.InvalidArgument, "Invalid data URI format")
+	}
+	base64Data := req.MapPreviewDataUri[commaIdx+1:]
+	decodedData, err := base64.StdEncoding.DecodeString(base64Data)
+	if err != nil {
+		errtype.LogError(err, "failed to decode base64 data from map preview data URI")
+		return nil, status.Error(codes.InvalidArgument, "Failed to decode base64 data")
+	}
+	_, err = io.Copy(storageWriter, bytes.NewReader(decodedData))
+	if err != nil {
+		errtype.LogError(err, "failed to copy map preview to storage")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 	// Use upsert pattern: insert if not exists, update if exists (based on unique constraint on report_id)
 	_, err = s.db.ExecContext(ctx,
-		`INSERT INTO map_previews (report_id, map_preview_data_uri, updated_at)
+		`INSERT INTO map_previews (report_id, resource_id, updated_at)
 		VALUES ($1, $2, CURRENT_TIMESTAMP)
-		ON CONFLICT(report_id) DO UPDATE SET map_preview_data_uri = $3, updated_at = CURRENT_TIMESTAMP`,
+		ON CONFLICT(report_id) DO UPDATE SET resource_id = $3, updated_at = CURRENT_TIMESTAMP`,
 		req.ReportId,
-		req.MapPreviewDataUri,
-		req.MapPreviewDataUri,
+		resourceId,
+		resourceId,
 	)
 	if err != nil {
 		log.Err(err).Send()
@@ -1676,12 +1706,12 @@ func (s Server) ServeMapPreview(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Query map preview from database
-	var mapPreviewDataURI string
+	var resourceId sql.NullString
 	var updatedAt time.Time
 	err = s.db.QueryRowContext(ctx,
-		"SELECT map_preview_data_uri, updated_at FROM map_previews WHERE report_id = $1",
+		"SELECT resource_id, updated_at FROM map_previews WHERE report_id = $1",
 		reportID,
-	).Scan(&mapPreviewDataURI, &updatedAt)
+	).Scan(&resourceId, &updatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// Serve default map preview when not found
@@ -1693,18 +1723,33 @@ func (s Server) ServeMapPreview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse data URI: format is "data:image/png;base64,<base64data>"
-	if !strings.HasPrefix(mapPreviewDataURI, "data:image/png;base64,") {
-		http.Error(w, "invalid map preview format", http.StatusInternalServerError)
+	// Check if resource_id is valid
+	if !resourceId.Valid || resourceId.String == "" {
+		// Serve default map preview when resource_id is not set
+		s.serveDefaultMapPreview(w, r)
 		return
 	}
 
-	// Extract base64 data
-	base64Data := strings.TrimPrefix(mapPreviewDataURI, "data:image/png;base64,")
-	imageData, err := base64.StdEncoding.DecodeString(base64Data)
+	// Get map preview from public storage bucket
+	publicStorage := storage.NewPublicStorage()
+	defConnCtx := conn.GetCtx(ctx, &proto.Connection{})
+	obj := publicStorage.GetObject(defConnCtx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.png", resourceId.String))
+
+	// Get object reader
+	objectReader, err := obj.GetReader(defConnCtx)
 	if err != nil {
-		errtype.LogError(err, "failed to decode map preview")
-		http.Error(w, "failed to decode map preview", http.StatusInternalServerError)
+		errtype.LogError(err, "failed to read map preview from storage")
+		// If object not found, serve default preview
+		s.serveDefaultMapPreview(w, r)
+		return
+	}
+	defer objectReader.Close()
+
+	// Read image data from storage
+	imageData, err := io.ReadAll(objectReader)
+	if err != nil {
+		errtype.LogError(err, "failed to read map preview data")
+		http.Error(w, "failed to read map preview", http.StatusInternalServerError)
 		return
 	}
 

@@ -166,6 +166,11 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 			secretsEnabled = "1"
 		}
 
+		var storeMapPreview string
+		if os.Getenv("DEKART_CLOUD_STORAGE_BUCKET") != "" {
+			storeMapPreview = "1"
+		}
+
 		variables = []*proto.GetEnvResponse_Variable{
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_MAPBOX_TOKEN,
@@ -274,6 +279,10 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_IS_SNOWPARK,
 				Value: defaultString(os.Getenv("DEKART_REQUIRE_SNOWFLAKE_CONTEXT"), ""),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_STORE_MAP_PREVIEW,
+				Value: storeMapPreview,
 			},
 		}
 
