@@ -84,7 +84,7 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 			r.workspace_id,
 			r.auto_refresh_interval_seconds,
 			r.version_id,
-			case when mp.report_id is not null then true else false end as has_map_preview
+			case when mp.resource_id is not null then true else false end as has_map_preview
 		from reports as r
 		left join map_previews as mp on r.id = mp.report_id
 		where (r.id=$5) and (r.archived = $6)
