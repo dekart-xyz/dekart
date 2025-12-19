@@ -482,7 +482,7 @@ export function exportMapPreview () {
         legend: false,
         center: false
       }))
-    }, !hasMapPreview && firstExport ? 1000 : 5000)
+    }, !hasMapPreview && firstExport ? 0 : 5000)
     dispatch({ type: exportMapPreview.name, timeoutId })
   }
 }

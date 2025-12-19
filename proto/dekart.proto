@@ -601,6 +601,7 @@ message Report {
     int32 auto_refresh_interval_seconds = 22; // auto refresh interval in seconds
     string version_id = 23; // version id of the report
     bool has_map_preview = 24; // true - map preview exists, false - no map preview
+    repeated ConnectionType connection_types = 25; // unique connection types used by datasets in this report
 }
 
 message Dataset {

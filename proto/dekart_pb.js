@@ -16690,7 +16690,7 @@ proto.ReportAnalytics.prototype.setViewers24h = function(value) {
  * @private {!Array<number>}
  * @const
  */
-proto.Report.repeatedFields_ = [17];
+proto.Report.repeatedFields_ = [17,25];
 
 
 
@@ -16747,7 +16747,8 @@ proto.Report.toObject = function(includeInstance, msg) {
     canRefresh: jspb.Message.getBooleanFieldWithDefault(msg, 21, false),
     autoRefreshIntervalSeconds: jspb.Message.getFieldWithDefault(msg, 22, 0),
     versionId: jspb.Message.getFieldWithDefault(msg, 23, ""),
-    hasMapPreview: jspb.Message.getBooleanFieldWithDefault(msg, 24, false)
+    hasMapPreview: jspb.Message.getBooleanFieldWithDefault(msg, 24, false),
+    connectionTypesList: (f = jspb.Message.getRepeatedField(msg, 25)) == null ? undefined : f
   };
 
   if (includeInstance) {
@@ -16881,6 +16882,12 @@ proto.Report.deserializeBinaryFromReader = function(msg, reader) {
     case 24:
       var value = /** @type {boolean} */ (reader.readBool());
       msg.setHasMapPreview(value);
+      break;
+    case 25:
+      var values = /** @type {!Array<!proto.ConnectionType>} */ (reader.isDelimited() ? reader.readPackedEnum() : [reader.readEnum()]);
+      for (var i = 0; i < values.length; i++) {
+        msg.addConnectionTypes(values[i]);
+      }
       break;
     default:
       reader.skipField();
@@ -17078,6 +17085,13 @@ proto.Report.serializeBinaryToWriter = function(message, writer) {
   if (f) {
     writer.writeBool(
       24,
+      f
+    );
+  }
+  f = message.getConnectionTypesList();
+  if (f.length > 0) {
+    writer.writePackedEnum(
+      25,
       f
     );
   }
@@ -17552,6 +17566,43 @@ proto.Report.prototype.getHasMapPreview = function() {
  */
 proto.Report.prototype.setHasMapPreview = function(value) {
   return jspb.Message.setProto3BooleanField(this, 24, value);
+};
+
+
+/**
+ * repeated ConnectionType connection_types = 25;
+ * @return {!Array<!proto.ConnectionType>}
+ */
+proto.Report.prototype.getConnectionTypesList = function() {
+  return /** @type {!Array<!proto.ConnectionType>} */ (jspb.Message.getRepeatedField(this, 25));
+};
+
+
+/**
+ * @param {!Array<!proto.ConnectionType>} value
+ * @return {!proto.Report} returns this
+ */
+proto.Report.prototype.setConnectionTypesList = function(value) {
+  return jspb.Message.setField(this, 25, value || []);
+};
+
+
+/**
+ * @param {!proto.ConnectionType} value
+ * @param {number=} opt_index
+ * @return {!proto.Report} returns this
+ */
+proto.Report.prototype.addConnectionTypes = function(value, opt_index) {
+  return jspb.Message.addToRepeatedField(this, 25, value, opt_index);
+};
+
+
+/**
+ * Clears the list making it empty but non-null.
+ * @return {!proto.Report} returns this
+ */
+proto.Report.prototype.clearConnectionTypesList = function() {
+  return this.setConnectionTypesList([]);
 };
 
 

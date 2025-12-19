@@ -180,19 +180,19 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 	if checkWorkspace(ctx).ID == "" {
 		reportRows, err = s.db.QueryContext(ctx,
 			`select
-				id,
-				case when title is null then 'Untitled' else title end as title,
-				archived,
-				(author_email = $1) or allow_edit as can_write,
-				author_email = $1 as is_author,
-				author_email,
-				discoverable,
-				allow_edit,
-				updated_at,
-				created_at,
-				is_public,
-				track_viewers,
-				is_playground,
+				r.id,
+				case when r.title is null then 'Untitled' else r.title end as title,
+				r.archived,
+				(r.author_email = $1) or r.allow_edit as can_write,
+				r.author_email = $1 as is_author,
+				r.author_email,
+				r.discoverable,
+				r.allow_edit,
+				r.updated_at,
+				r.created_at,
+				r.is_public,
+				r.track_viewers,
+				r.is_playground,
 				exists (
 					select 1
 					from (
@@ -203,10 +203,13 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 					) t
 					where rn = 1 and status != 2
 				) as has_direct_access,
-				version_id
+				r.version_id,
+				r.map_config,
+				case when mp.report_id is not null then true else false end as has_map_preview
 			from reports as r
-			where author_email=$1 and is_playground=true
-			order by updated_at desc`,
+			left join map_previews as mp on r.id = mp.report_id
+			where r.author_email=$1 and r.is_playground=true
+			order by r.updated_at desc`,
 			claims.Email,
 		)
 	} else {
@@ -235,8 +238,11 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 					) t
 					where rn = 1 and status != 2
 				) as has_direct_access,
-				r.version_id
+				r.version_id,
+				r.map_config,
+				case when mp.report_id is not null then true else false end as has_map_preview
 			from reports as r
+			left join map_previews as mp on r.id = mp.report_id
 			where (r.author_email=$1 or (r.discoverable=true and r.archived=false) or r.allow_edit=true) and r.workspace_id=$2
 			order by r.updated_at desc`,
 			claims.Email,
@@ -246,18 +252,16 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 	if err != nil {
 		return GRPCError("Cannot query report list", err)
 	}
-	defer reportRows.Close()
-	res := proto.ReportListResponse{
-		Reports: make([]*proto.Report, 0),
-		StreamOptions: &proto.StreamOptions{
-			Sequence: sequence,
-		},
-	}
+	defer reportRows.Close() // Ensure cleanup even on early return
+
+	// Process report rows first and collect them
+	reports := make([]*proto.Report, 0)
 	for reportRows.Next() {
 		report := proto.Report{}
 		createdAt := time.Time{}
 		updatedAt := time.Time{}
 		var versionID sql.NullString
+		var mapConfig sql.NullString
 		err = reportRows.Scan(
 			&report.Id,
 			&report.Title,
@@ -274,16 +278,75 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			&report.IsPlayground,
 			&report.HasDirectAccess,
 			&versionID,
+			&mapConfig,
+			&report.HasMapPreview,
 		)
 		if err != nil {
 			return GRPCError("Cannot scan report row", err)
 		}
 		report.CreatedAt = createdAt.Unix()
 		report.UpdatedAt = updatedAt.Unix()
-		if versionID.Valid {
-			report.VersionId = versionID.String
+		report.VersionId = versionID.String
+		report.MapConfig = mapConfig.String
+
+		reports = append(reports, &report)
+	}
+	reportRows.Close() // Close reportRows before querying connectionTypeRows
+
+	// Query connection types using the same WHERE conditions as reports
+	var connectionTypeRows *sql.Rows
+	var connectionTypesMap map[string]map[int32]bool
+	if checkWorkspace(ctx).ID == "" {
+		connectionTypeRows, err = s.db.QueryContext(ctx,
+			`select distinct d.report_id, c.connection_type
+			from datasets as d
+			left join connections as c on d.connection_id = c.id
+			inner join reports as r on d.report_id = r.id
+			where r.author_email=$1 and r.is_playground=true and c.connection_type is not null`,
+			claims.Email,
+		)
+	} else {
+		connectionTypeRows, err = s.db.QueryContext(ctx,
+			`select distinct d.report_id, c.connection_type
+			from datasets as d
+			left join connections as c on d.connection_id = c.id
+			inner join reports as r on d.report_id = r.id
+			where (r.author_email=$1 or (r.discoverable=true and r.archived=false) or r.allow_edit=true) and r.workspace_id=$2 and c.connection_type is not null`,
+			claims.Email,
+			checkWorkspace(ctx).ID,
+		)
+	}
+	if err == nil {
+		defer connectionTypeRows.Close()
+		connectionTypesMap = make(map[string]map[int32]bool)
+		for connectionTypeRows.Next() {
+			var reportID string
+			var connectionType sql.NullInt32
+			if err := connectionTypeRows.Scan(&reportID, &connectionType); err == nil && connectionType.Valid {
+				if connectionTypesMap[reportID] == nil {
+					connectionTypesMap[reportID] = make(map[int32]bool)
+				}
+				connectionTypesMap[reportID][connectionType.Int32] = true
+			}
 		}
-		res.Reports = append(res.Reports, &report)
+	}
+
+	// Assign connection types to reports
+	if connectionTypesMap != nil {
+		for _, report := range reports {
+			if connectionTypes, exists := connectionTypesMap[report.Id]; exists {
+				for ct := range connectionTypes {
+					report.ConnectionTypes = append(report.ConnectionTypes, proto.ConnectionType(ct))
+				}
+			}
+		}
+	}
+
+	res := proto.ReportListResponse{
+		Reports: reports,
+		StreamOptions: &proto.StreamOptions{
+			Sequence: sequence,
+		},
 	}
 	err = srv.Send(&res)
 	if err != nil {

@@ -9,6 +9,7 @@ import (
 	"dekart/src/server/secrets"
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
+	"fmt"
 	"os"
 	"time"
 
@@ -351,7 +352,8 @@ func (s Server) getUserConnections(ctx context.Context) ([]*proto.Connection, er
 			&wherobotsRuntime,
 		)
 		if err != nil {
-			log.Fatal().Err(err).Msg("scan failed")
+			errtype.LogError(err, "scan failed")
+			return nil, fmt.Errorf("scan failed: %w", err)
 		}
 		if isDefault {
 			if lastDefaultIndex == -1 {

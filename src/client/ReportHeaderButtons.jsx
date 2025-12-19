@@ -381,12 +381,8 @@ function ViewModeButtons () {
         <RefreshButton showAutoRefreshSettings />
         <div className={styles.hideOnMobile}>
           <ExportDropdown />
-        </div>
-        <div className={styles.hideOnMobile}>
           <ForkButton />
-        </div>
-        <ViewSelect value='view' />
-        <div className={styles.hideOnMobile}>
+          <ViewSelect value='view' />
           <ShareButton />
         </div>
       </div>

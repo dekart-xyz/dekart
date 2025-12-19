@@ -1,16 +1,15 @@
 package dekart
 
 import (
-	"dekart/src/server/errtype"
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/errtype"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/lib/pq"
-	"github.com/rs/zerolog/log"
 )
 
 func rowsToQueries(queryRows *sql.Rows) ([]*proto.Query, error) {
@@ -28,7 +27,8 @@ func rowsToQueries(queryRows *sql.Rows) ([]*proto.Query, error) {
 			&query.QuerySource,
 			&query.QuerySourceId,
 		); err != nil {
-			log.Fatal().Err(err).Msg("scan query failed")
+			errtype.LogError(err, "scan query failed")
+			return nil, fmt.Errorf("scan query failed: %w", err)
 		}
 
 		switch query.QuerySource {
@@ -87,7 +87,8 @@ func (s Server) getQueries(ctx context.Context, datasets []*proto.Dataset) ([]*p
 			)
 		}
 		if err != nil {
-			log.Fatal().Err(err).Msgf("select from queries failed, ids: %s", queryIdsStr)
+			errtype.LogError(err, "select from queries failed")
+			return nil, fmt.Errorf("select from queries failed, ids: %s: %w", queryIdsStr, err)
 		}
 		defer queryRows.Close()
 		return rowsToQueries(queryRows)
