@@ -489,7 +489,7 @@ export function exportMapPreview () {
   }
 }
 
-export function saveMap (mapConfigChanged = false) {
+export function saveMap (mapViewChanged = false) {
   return async (dispatch, getState) => {
     dispatch({ type: saveMap.name })
     const { keplerGl, report, reportStatus, queryStatus, queryParams, readme } = getState()
@@ -521,7 +521,7 @@ export function saveMap (mapConfigChanged = false) {
     const res = await new Promise(resolve => {
       dispatch(grpcCall(Dekart.UpdateReport, request, resolve))
     })
-    if (mapConfigChanged) {
+    if (mapViewChanged) {
       dispatch(exportMapPreview())
     }
     dispatch(savedReport(lastSaved, res.updatedAt))

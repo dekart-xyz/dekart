@@ -154,7 +154,7 @@ function useReportChanged () {
   return lastChanged > lastSaved
 }
 
-function useMapConfigChanged () {
+function useMapViewChanged () {
   const { lastMapConfigChanged, lastPreviewSaved } = useSelector(state => state.reportStatus)
   return lastMapConfigChanged > lastPreviewSaved
 }
@@ -164,8 +164,7 @@ function useAutoSave () {
   const dispatch = useDispatch()
   const { saving, online } = useSelector(state => state.reportStatus)
   const reportChanged = useReportChanged()
-  const mapConfigChanged = useMapConfigChanged()
-  const changed = reportChanged || mapConfigChanged
+  const mapViewChanged = useMapViewChanged()
   const { exporting, dataUri } = useSelector(state => state.mapPreview)
   useEffect(() => {
     if (dataUri && !exporting) {
@@ -175,15 +174,15 @@ function useAutoSave () {
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      if (changed && canWrite && !saving && online) {
-        dispatch(saveMap(mapConfigChanged))
+      if (reportChanged && canWrite && !saving && online) {
+        dispatch(saveMap(mapViewChanged))
       }
     }, 1000)
 
     return () => {
       clearTimeout(handler)
     }
-  }, [canWrite, saving, changed, online, dispatch, mapConfigChanged])
+  }, [canWrite, saving, online, dispatch, mapViewChanged, reportChanged])
 }
 
 function useRequireWorkspace () {
