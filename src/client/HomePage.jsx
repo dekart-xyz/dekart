@@ -419,7 +419,7 @@ function MapCard ({ report, reportFilter, archived, authEnabled }) {
   }
 
   return (
-    <div ref={cardRef} className={classnames(styles.mapCard, { [styles.mapCardArchived]: report.archived })} onClick={handleCardClick}>
+    <div ref={cardRef} className={classnames(styles.mapCard, 'dekart-map-card', { [styles.mapCardArchived]: report.archived })} onClick={handleCardClick}>
       <div className={styles.mapPreview}>
         <div className={classnames(styles.privacyBadge, styles.privacyBadgeOverlay, privacy.className)}>
           {privacy.icon}
