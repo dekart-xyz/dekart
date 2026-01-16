@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/lib/pq"
 	"github.com/rs/zerolog/log"
@@ -259,7 +260,17 @@ func (s Server) CreateFile(ctx context.Context, req *proto.CreateFileRequest) (*
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-
+	// Validate datasetId is not empty and is a valid UUID
+	_, err := uuid.Parse(req.DatasetId)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Str("datasetId", req.DatasetId).
+			Str("author_email", claims.Email).
+			Str("connection_id", req.ConnectionId).
+			Msg("CreateFile called with invalid datasetId format")
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid datasetId format: %v", err))
+	}
 	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
