@@ -284,7 +284,7 @@ func (s Server) insertDataset(ctx context.Context, reportID string) (sql.Result,
 				$1 as id,
 				id as report_id
 			from reports
-			where id=$2 and not archived and author_email=$3 or allow_edit and is_playground=true limit 1
+			where id=$2 and not archived and (author_email=$3 or allow_edit) and is_playground=true limit 1
 			`,
 			id,
 			reportID,
