@@ -1651,6 +1651,11 @@ func (s Server) SaveMapPreview(ctx context.Context, req *proto.SaveMapPreviewReq
 		errtype.LogError(err, "failed to decode base64 data from map preview data URI")
 		return nil, status.Error(codes.InvalidArgument, "Failed to decode base64 data")
 	}
+	// Skip saving empty/transparent previews (less than 2KB)
+	// These are likely corrupted or empty images from Kepler
+	if len(decodedData) < 2*1024 {
+		return &proto.SaveMapPreviewResponse{}, nil
+	}
 	_, err = io.Copy(storageWriter, bytes.NewReader(decodedData))
 	if err != nil {
 		errtype.LogError(err, "failed to copy map preview to storage")
