@@ -88,6 +88,12 @@ async function loadServerPreview (reportId, host, token, claimEmailCookie, cance
     return null
   }
 
+  // Hotfix: Detect empty/transparent previews (less than 2KB)
+  // These are likely corrupted or empty images from Kepler
+  if (blob.size < 2 * 1024) {
+    return null
+  }
+
   return URL.createObjectURL(blob)
 }
 
@@ -129,10 +135,7 @@ export function useMapPreview (report, shouldLoad = true) {
             return
           }
 
-          // Server preview failed to load
-          setPreviewError(true)
-          setPreviewLoading(false)
-          return
+          // Server preview failed to load or is empty (< 2KB) - fall through to Mapbox fallback
         }
 
         // If no server preview but we have map config, try to load static base map image

@@ -16,7 +16,7 @@ func (e *EmptyResult) Error() string {
 
 var ContextCancelledRe = regexp.MustCompile(`context canceled|canceling statement due to user request`)
 
-var WriteClosedPipeRe = regexp.MustCompile(`write on closed pipe`)
+var WriteClosedPipeRe = regexp.MustCompile(`(read|write) on closed pipe`)
 
 var RPCPermissionDeniedRe = regexp.MustCompile(`rpc error: code = PermissionDenied desc = (.*)`)
 
@@ -67,9 +67,20 @@ func IsContextCancelled(err error) bool {
 	return ContextCancelledRe.MatchString(err.Error())
 }
 
+func IsWriteClosedPipe(err error) bool {
+	if err == nil {
+		return false
+	}
+	return WriteClosedPipeRe.MatchString(err.Error())
+}
+
 func LogError(err error, msg string) {
 	if IsContextCancelled(err) {
 		log.Warn().Err(err).Msgf("Context Canceled %s", msg)
+		return
+	}
+	if IsWriteClosedPipe(err) {
+		log.Warn().Err(err).Msgf("Pipe closed %s", msg)
 		return
 	}
 	log.Error().Err(err).Msg(msg)

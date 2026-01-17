@@ -77,7 +77,7 @@ export function removeDataset (datasetId, silent = false) {
         dispatch(setError(new Error('Cannot remove last dataset')))
         return
       }
-      dispatch(setActiveDataset(datasetsLeft.id))
+      dispatch(setActiveDataset(datasetsLeft[0].id))
     }
     dispatch({ type: removeDataset.name, datasetId })
 
