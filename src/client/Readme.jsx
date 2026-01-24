@@ -57,7 +57,7 @@ export default function Readme ({ readme }) {
                 onChange={v => dispatch(setReadmeValue(v))}
                 value={markdown}
                 enableSnippets={false}
-                readOnly={!canWrite}
+                readOnly={!(canWrite && edit)}
                 editorProps={{ $blockScrolling: true }}
                 setOptions={{
                   enableBasicAutocompletion: true,
