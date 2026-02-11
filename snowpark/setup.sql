@@ -3,10 +3,10 @@
 CREATE APPLICATION ROLE IF NOT EXISTS app_admin;
 CREATE APPLICATION ROLE IF NOT EXISTS app_user;
 CREATE SCHEMA IF NOT EXISTS app_public;
-GRANT USAGE ON SCHEMA app_public TO APPLICATION ROLE app_admin;
+GRANT ALL PRIVILEGES ON SCHEMA app_public TO APPLICATION ROLE app_admin;
 GRANT USAGE ON SCHEMA app_public TO APPLICATION ROLE app_user;
 CREATE OR ALTER VERSIONED SCHEMA v1;
-GRANT USAGE ON SCHEMA v1 TO APPLICATION ROLE app_admin;
+GRANT ALL PRIVILEGES ON SCHEMA v1 TO APPLICATION ROLE app_admin;
 
 -- Create a stage to store application state
 CREATE STAGE IF NOT EXISTS app_public.app_state_stage;
@@ -102,12 +102,28 @@ CREATE OR REPLACE PROCEDURE v1.create_services(privileges array)
  AS
  $$
     BEGIN
-        CREATE COMPUTE POOL IF NOT EXISTS service_compute_pool
+        CREATE COMPUTE POOL IF NOT EXISTS dekart_cp
         MIN_NODES = 1
         MAX_NODES = 1
         INSTANCE_FAMILY = CPU_X64_XS;
+        GRANT ALL PRIVILEGES ON COMPUTE POOL dekart_cp TO APPLICATION ROLE app_admin;
         CREATE WAREHOUSE IF NOT EXISTS wh_dekart WITH WAREHOUSE_SIZE='XSMALL';
-        CALL v1.start_service('service_compute_pool');
+        CALL v1.start_service('dekart_cp');
     END;
 $$;
 GRANT USAGE ON PROCEDURE v1.create_services(array) TO APPLICATION ROLE app_admin;
+
+CREATE OR REPLACE PROCEDURE v1.set_query_warehouse(new_wh STRING)
+RETURNS STRING
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS
+$$
+BEGIN
+  ALTER SERVICE app_public.st_spcs
+    SET QUERY_WAREHOUSE = IDENTIFIER(:new_wh);
+  RETURN 'QUERY_WAREHOUSE set to ' || new_wh;
+END;
+$$;
+
+GRANT USAGE ON PROCEDURE v1.set_query_warehouse(STRING) TO APPLICATION ROLE app_admin;
