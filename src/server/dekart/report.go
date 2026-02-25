@@ -1642,11 +1642,6 @@ func (s Server) SaveMapPreview(ctx context.Context, req *proto.SaveMapPreviewReq
 		return nil, status.Error(codes.InvalidArgument, "Map preview data URI exceeds size limit")
 	}
 
-	resourceId := newUUID()
-	mapPreviewCtx, mapPreviewObject := s.getMapPreviewObject(ctx, resourceId)
-	storageWriter := mapPreviewObject.GetWriter(mapPreviewCtx)
-	defer storageWriter.Close()
-
 	// Parse data URI: data:[<mediatype>][;base64],<data>
 	commaIdx := strings.Index(req.MapPreviewDataUri, ",")
 	if commaIdx == -1 {
@@ -1665,9 +1660,19 @@ func (s Server) SaveMapPreview(ctx context.Context, req *proto.SaveMapPreviewReq
 	if len(decodedData) < 2*1024 {
 		return &proto.SaveMapPreviewResponse{}, nil
 	}
+
+	resourceId := newUUID()
+	mapPreviewCtx, mapPreviewObject := s.getMapPreviewObject(ctx, resourceId)
+	storageWriter := mapPreviewObject.GetWriter(mapPreviewCtx)
+
 	_, err = io.Copy(storageWriter, bytes.NewReader(decodedData))
 	if err != nil {
+		defer storageWriter.Close()
 		errtype.LogError(err, "failed to copy map preview to storage")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if err = storageWriter.Close(); err != nil {
+		errtype.LogError(err, "failed to close map preview storage writer")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	// Use upsert pattern: insert if not exists, update if exists (based on unique constraint on report_id)
