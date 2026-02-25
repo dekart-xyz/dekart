@@ -29,6 +29,16 @@ import (
 
 const maxMapPreviewDataUriSize = 300 * 1024 // 300KB in bytes
 
+func (s Server) getMapPreviewObject(ctx context.Context, resourceID string) (context.Context, storage.StorageObject) {
+	objectName := fmt.Sprintf("%s.png", resourceID)
+	defConnCtx := conn.GetCtx(ctx, &proto.Connection{})
+	if os.Getenv("DEKART_STORAGE") == "S3" {
+		return defConnCtx, s.storage.GetObject(defConnCtx, storage.GetBucketName(""), objectName)
+	}
+	publicStorage := storage.NewPublicStorage()
+	return defConnCtx, publicStorage.GetObject(defConnCtx, publicStorage.GetDefaultBucketName(), objectName)
+}
+
 func newUUID() string {
 	u, err := uuid.NewRandom()
 	if err != nil {
@@ -1633,9 +1643,8 @@ func (s Server) SaveMapPreview(ctx context.Context, req *proto.SaveMapPreviewReq
 	}
 
 	resourceId := newUUID()
-	pubStorage := storage.NewPublicStorage()
-	defConnCtx := conn.GetCtx(ctx, &proto.Connection{})
-	storageWriter := pubStorage.GetObject(defConnCtx, pubStorage.GetDefaultBucketName(), fmt.Sprintf("%s.png", resourceId)).GetWriter(defConnCtx)
+	mapPreviewCtx, mapPreviewObject := s.getMapPreviewObject(ctx, resourceId)
+	storageWriter := mapPreviewObject.GetWriter(mapPreviewCtx)
 	defer storageWriter.Close()
 
 	// Parse data URI: data:[<mediatype>][;base64],<data>
@@ -1736,12 +1745,10 @@ func (s Server) ServeMapPreview(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get map preview from public storage bucket
-	publicStorage := storage.NewPublicStorage()
-	defConnCtx := conn.GetCtx(ctx, &proto.Connection{})
-	obj := publicStorage.GetObject(defConnCtx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.png", resourceId.String))
+	mapPreviewCtx, obj := s.getMapPreviewObject(ctx, resourceId.String)
 
 	// Get object reader
-	objectReader, err := obj.GetReader(defConnCtx)
+	objectReader, err := obj.GetReader(mapPreviewCtx)
 	if err != nil {
 		errtype.LogError(err, "failed to read map preview from storage")
 		// If object not found, serve default preview
