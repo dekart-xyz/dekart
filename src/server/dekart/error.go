@@ -1,11 +1,14 @@
 package dekart
 
 import (
+	"errors"
 	"dekart/src/server/errtype"
 	"fmt"
 	"net/http"
 	"runtime"
 
+	gcsstorage "cloud.google.com/go/storage"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/grpc/codes"
@@ -29,6 +32,22 @@ func HttpError(w http.ResponseWriter, err error) {
 	if err == nil {
 		return
 	}
+
+	// Map missing storage objects to 404 instead of generic 500.
+	// This covers dataset-source fetches where source object no longer exists.
+	if errors.Is(err, gcsstorage.ErrObjectNotExist) {
+		log.Warn().Err(err).Msg("Storage object not found")
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	// S3-style not found errors
+	if awsErr, ok := err.(awserr.RequestFailure); ok && awsErr.StatusCode() == http.StatusNotFound {
+		log.Warn().Err(err).Msg("S3 object not found")
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
 	if googleErr, ok := err.(*googleapi.Error); ok {
 
 		// Check for BigQuery job not found error and provide helpful message

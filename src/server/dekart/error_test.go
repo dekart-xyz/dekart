@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	gcsstorage "cloud.google.com/go/storage"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/grpc/codes"
@@ -77,6 +79,21 @@ func TestHttpError_BigQueryJobNotFoundWithoutSuffix(t *testing.T) {
 	// Assert the response
 	assert.Equal(t, expectedStatus, recorder.Code)
 	assert.Equal(t, expectedBody, recorder.Body.String())
+}
+
+func TestHttpError_GCSObjectNotFound(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	HttpError(recorder, gcsstorage.ErrObjectNotExist)
+	assert.Equal(t, http.StatusNotFound, recorder.Code)
+	assert.Equal(t, "storage: object doesn't exist\n", recorder.Body.String())
+}
+
+func TestHttpError_S3ObjectNotFound(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	err := awserr.NewRequestFailure(awserr.New("NoSuchKey", "object does not exist", nil), http.StatusNotFound, "req-123")
+	HttpError(recorder, err)
+	assert.Equal(t, http.StatusNotFound, recorder.Code)
+	assert.Equal(t, "NoSuchKey: object does not exist\n\tstatus code: 404, request id: req-123\n", recorder.Body.String())
 }
 
 // mockError implements the error interface for testing
