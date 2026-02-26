@@ -7,6 +7,7 @@ import (
 	"dekart/src/server/bqutils"
 	"dekart/src/server/conn"
 	"dekart/src/server/errtype"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -192,8 +193,11 @@ func (o GoogleCloudStorageObject) CopyTo(ctx context.Context, writer io.WriteClo
 }
 
 func (o GoogleCloudStorageObject) Delete(ctx context.Context) error {
-	obj := o.getObject(ctx)
-	err := obj.Delete(ctx)
+	obj, err := o.getObject(ctx)
+	if err != nil {
+		return err
+	}
+	err = obj.Delete(ctx)
 	if err != nil {
 		o.logger.Error().Err(err).Msg("error deleting object")
 		return err
@@ -201,28 +205,40 @@ func (o GoogleCloudStorageObject) Delete(ctx context.Context) error {
 	return nil
 }
 
-func (o GoogleCloudStorageObject) getObject(ctx context.Context) *storage.ObjectHandle {
+func (o GoogleCloudStorageObject) getObject(ctx context.Context) (*storage.ObjectHandle, error) {
 	client, err := bqutils.GetStorageClient(ctx, conn.FromCtx(ctx), !o.useUserToken)
 	if err != nil {
 		errtype.LogError(err, "error getting storage client")
-		return nil
+		return nil, err
 	}
 	bucket := client.Bucket(o.bucketName)
-	return bucket.Object(o.object)
+	return bucket.Object(o.object), nil
 }
 
 func (o GoogleCloudStorageObject) GetWriter(ctx context.Context) io.WriteCloser {
-	writer := o.getObject(ctx).NewWriter(ctx)
+	obj, err := o.getObject(ctx)
+	if err != nil {
+		return errorWriteCloser{err: err}
+	}
+	writer := obj.NewWriter(ctx)
 	writer.ChunkSize = 0
 	return writer
 }
 
 func (o GoogleCloudStorageObject) GetReader(ctx context.Context) (io.ReadCloser, error) {
-	return o.getObject(ctx).NewReader(ctx)
+	obj, err := o.getObject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return obj.NewReader(ctx)
 }
 
 func (o GoogleCloudStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, error) {
-	attrs, err := o.getObject(ctx).Attrs(ctx)
+	obj, err := o.getObject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	attrs, err := obj.Attrs(ctx)
 	if err != nil {
 		o.logger.Error().Stack().Err(err).Msg("error getting attributes")
 		return nil, err
@@ -231,12 +247,31 @@ func (o GoogleCloudStorageObject) GetCreatedAt(ctx context.Context) (*time.Time,
 }
 
 func (o GoogleCloudStorageObject) GetSize(ctx context.Context) (*int64, error) {
-	attrs, err := o.getObject(ctx).Attrs(ctx)
+	obj, err := o.getObject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	attrs, err := obj.Attrs(ctx)
 	if err != nil {
 		o.logger.Error().Err(err).Msg("error getting attributes")
 		return nil, err
 	}
 	return &attrs.Size, nil
+}
+
+type errorWriteCloser struct {
+	err error
+}
+
+func (w errorWriteCloser) Write(_ []byte) (int, error) {
+	return 0, w.err
+}
+
+func (w errorWriteCloser) Close() error {
+	if w.err != nil {
+		return w.err
+	}
+	return errors.New("storage writer initialization failed")
 }
 
 type S3Storage struct {

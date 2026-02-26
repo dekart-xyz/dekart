@@ -29,6 +29,16 @@ import (
 
 const maxMapPreviewDataUriSize = 300 * 1024 // 300KB in bytes
 
+func (s Server) getMapPreviewObject(ctx context.Context, resourceID string) (context.Context, storage.StorageObject) {
+	objectName := fmt.Sprintf("%s.png", resourceID)
+	defConnCtx := conn.GetCtx(ctx, &proto.Connection{})
+	if os.Getenv("DEKART_STORAGE") == "S3" {
+		return defConnCtx, s.storage.GetObject(defConnCtx, storage.GetBucketName(""), objectName)
+	}
+	publicStorage := storage.NewPublicStorage()
+	return defConnCtx, publicStorage.GetObject(defConnCtx, publicStorage.GetDefaultBucketName(), objectName)
+}
+
 func newUUID() string {
 	u, err := uuid.NewRandom()
 	if err != nil {
@@ -1632,12 +1642,6 @@ func (s Server) SaveMapPreview(ctx context.Context, req *proto.SaveMapPreviewReq
 		return nil, status.Error(codes.InvalidArgument, "Map preview data URI exceeds size limit")
 	}
 
-	resourceId := newUUID()
-	pubStorage := storage.NewPublicStorage()
-	defConnCtx := conn.GetCtx(ctx, &proto.Connection{})
-	storageWriter := pubStorage.GetObject(defConnCtx, pubStorage.GetDefaultBucketName(), fmt.Sprintf("%s.png", resourceId)).GetWriter(defConnCtx)
-	defer storageWriter.Close()
-
 	// Parse data URI: data:[<mediatype>][;base64],<data>
 	commaIdx := strings.Index(req.MapPreviewDataUri, ",")
 	if commaIdx == -1 {
@@ -1656,9 +1660,19 @@ func (s Server) SaveMapPreview(ctx context.Context, req *proto.SaveMapPreviewReq
 	if len(decodedData) < 2*1024 {
 		return &proto.SaveMapPreviewResponse{}, nil
 	}
+
+	resourceId := newUUID()
+	mapPreviewCtx, mapPreviewObject := s.getMapPreviewObject(ctx, resourceId)
+	storageWriter := mapPreviewObject.GetWriter(mapPreviewCtx)
+
 	_, err = io.Copy(storageWriter, bytes.NewReader(decodedData))
 	if err != nil {
+		defer storageWriter.Close()
 		errtype.LogError(err, "failed to copy map preview to storage")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if err = storageWriter.Close(); err != nil {
+		errtype.LogError(err, "failed to close map preview storage writer")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	// Use upsert pattern: insert if not exists, update if exists (based on unique constraint on report_id)
@@ -1736,12 +1750,10 @@ func (s Server) ServeMapPreview(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get map preview from public storage bucket
-	publicStorage := storage.NewPublicStorage()
-	defConnCtx := conn.GetCtx(ctx, &proto.Connection{})
-	obj := publicStorage.GetObject(defConnCtx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.png", resourceId.String))
+	mapPreviewCtx, obj := s.getMapPreviewObject(ctx, resourceId.String)
 
 	// Get object reader
-	objectReader, err := obj.GetReader(defConnCtx)
+	objectReader, err := obj.GetReader(mapPreviewCtx)
 	if err != nil {
 		errtype.LogError(err, "failed to read map preview from storage")
 		// If object not found, serve default preview

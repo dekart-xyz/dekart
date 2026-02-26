@@ -43,7 +43,10 @@ RUN go test -v -count=1 ./src/server/**/
 
 FROM cypress/included:13.14.2 as e2etest
 WORKDIR /dekart
-RUN apt-get update && apt-get install  -y --no-install-recommends \
+RUN rm -f /etc/apt/sources.list.d/google-chrome.list \
+    && rm -f /etc/apt/sources.list.d/microsoft-edge.list \
+    && apt-get update \
+    && apt-get install  -y --no-install-recommends \
     gcc \
     curl \
     ca-certificates \

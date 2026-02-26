@@ -19,7 +19,7 @@ export default function WorkspaceSelector () {
   const history = useHistory()
   const dispatch = useDispatch()
 
-  if (!userStream || !env.loaded || isPlayground || !env.variables.ALLOW_WORKSPACE_CREATION) {
+  if (!userStream || !env.loaded || isPlayground) {
     return null
   }
   const currentWorkspaceId = userStream.workspaceId
