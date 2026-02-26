@@ -469,19 +469,36 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	var obj storage.StorageObject
 	useCtx := conCtx
 	var jobIsRecent bool
+	retrievalBranch := ""
+	logDatasetSourceError := func(err error, msg string) {
+		log.Error().
+			Err(err).
+			Str("dataset", vars["dataset"]).
+			Str("source", vars["source"]).
+			Str("extension", vars["extension"]).
+			Str("bucketName", bucketName).
+			Str("connectionID", connection.Id).
+			Str("dwJobID", dwJobID).
+			Bool("hasResultURI", resultURI != "").
+			Str("retrievalBranch", retrievalBranch).
+			Msg(msg)
+	}
 
 	if report.IsPublic {
 		// public report, load from public storage bucket
 		publicStorage := storage.NewPublicStorage()
 		obj = publicStorage.GetObject(defConCtx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
 		useCtx = defConCtx // public storage does not require connection
+		retrievalBranch = "public_storage"
 	} else if resultURI != "" {
 		obj = storage.NewPresignedS3Storage().GetObject(conCtx, "", resultURI)
+		retrievalBranch = "result_uri_presigned_s3"
 	} else if dwJobID != "" {
 		// temp data warehouse table is used as source
 		expired, recent, err := s.checkJobExpiration(ctx, vars["source"])
 		jobIsRecent = recent
 		if err != nil {
+			logDatasetSourceError(err, "ServeDatasetSource: checkJobExpiration failed")
 			errtype.LogError(err, "Error checking job expiration")
 			storageError(w, err)
 			return
@@ -492,13 +509,16 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		obj = s.storage.GetObject(conCtx, bucketName, dwJobID)
+		retrievalBranch = "dw_job_id_storage"
 	} else {
 		// file stored on the bucket is used as source
 		obj = s.storage.GetObject(conCtx, bucketName, fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
+		retrievalBranch = "source_extension_storage"
 	}
 
 	created, err := obj.GetCreatedAt(useCtx)
 	if err != nil {
+		logDatasetSourceError(err, "ServeDatasetSource: GetCreatedAt failed")
 		// For DW jobs, determine if error should be treated as expiration
 		if dwJobID != "" && !jobIsRecent {
 			// Job is not recent, treat error as expiration
@@ -512,6 +532,7 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 
 	objectReader, err := obj.GetReader(useCtx)
 	if err != nil {
+		logDatasetSourceError(err, "ServeDatasetSource: GetReader failed")
 		storageError(w, err)
 		return
 	}
