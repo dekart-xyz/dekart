@@ -154,7 +154,9 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 			from datasets d
 			join reports r on r.id = d.report_id
 			where r.is_public = true and (
-				d.query_id in (select id from queries where job_result_id = $1)
+				-- job_result_id is tracked in query_jobs; using queries.job_result_id can undercount
+				-- and accidentally delete a source still referenced by another public report.
+				d.query_id in (select query_id from query_jobs where job_result_id = $1)
 				or d.file_id in (select id from files where file_source_id = $1)
 			)`, sourceID).Scan(&count)
 
