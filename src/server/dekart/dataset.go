@@ -470,13 +470,17 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	useCtx := conCtx
 	var jobIsRecent bool
 	retrievalBranch := ""
+	// Keep both names in logs: connection bucket may differ from the actual object bucket
+	// (for public reports we read from public storage bucket).
+	connectionBucketName := bucketName
 	logDatasetSourceError := func(err error, msg string) {
 		log.Error().
 			Err(err).
 			Str("dataset", vars["dataset"]).
 			Str("source", vars["source"]).
 			Str("extension", vars["extension"]).
-			Str("bucketName", bucketName).
+			Str("connectionBucketName", connectionBucketName).
+			Str("objectBucketName", bucketName).
 			Str("connectionID", connection.Id).
 			Str("dwJobID", dwJobID).
 			Bool("hasResultURI", resultURI != "").
@@ -487,6 +491,7 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	if report.IsPublic {
 		// public report, load from public storage bucket
 		publicStorage := storage.NewPublicStorage()
+		bucketName = publicStorage.GetDefaultBucketName()
 		obj = publicStorage.GetObject(defConCtx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
 		useCtx = defConCtx // public storage does not require connection
 		retrievalBranch = "public_storage"
