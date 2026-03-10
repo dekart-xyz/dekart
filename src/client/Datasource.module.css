@@ -33,6 +33,12 @@
     background-size: contain;
 }
 
+.postgres {
+    background-image: url('./postgres.svg');
+    background-repeat: no-repeat;
+    background-size: contain;
+}
+
 .datasourceIcon {
     width: 1em;
     height: 1em;

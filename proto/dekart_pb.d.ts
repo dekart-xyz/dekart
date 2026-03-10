@@ -1916,6 +1916,7 @@ export namespace GetEnvResponse {
       TYPE_MAX_FILE_UPLOAD_SIZE: 26;
       TYPE_IS_SNOWPARK: 27;
       TYPE_STORE_MAP_PREVIEW: 28;
+      TYPE_REQUIRE_OIDC: 29;
     }
 
     export const Type: TypeMap;

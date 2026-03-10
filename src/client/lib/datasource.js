@@ -68,6 +68,23 @@ WHERE
         style: 'athena',
         usageStatsId: 1
       }
+    case ConnectionType.CONNECTION_TYPE_POSTGRES:
+    case 'PG':
+    case 'POSTGRES':
+      return {
+        name: 'Postgres',
+        style: 'postgres',
+        usageStatsId: 5,
+        sampleQuery: `SELECT
+    name,
+    category,
+    latitude,
+    longitude,
+    geom_wkt
+FROM sample.geospatial_points
+ORDER BY id
+LIMIT 100;`
+      }
     case 'WHEROBOTS':
     case ConnectionType.CONNECTION_TYPE_WHEROBOTS:
       return {

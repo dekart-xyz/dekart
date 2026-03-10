@@ -139,6 +139,10 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 				Type:  proto.GetEnvResponse_Variable_TYPE_REQUIRE_GOOGLE_OAUTH,
 				Value: defaultString(os.Getenv("DEKART_REQUIRE_GOOGLE_OAUTH"), ""),
 			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_REQUIRE_OIDC,
+				Value: defaultString(os.Getenv("DEKART_REQUIRE_OIDC"), ""),
+			},
 		}
 	} else {
 		// authenticated user
@@ -223,6 +227,10 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_REQUIRE_GOOGLE_OAUTH,
 				Value: defaultString(os.Getenv("DEKART_REQUIRE_GOOGLE_OAUTH"), ""),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_REQUIRE_OIDC,
+				Value: defaultString(os.Getenv("DEKART_REQUIRE_OIDC"), ""),
 			},
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_BIGQUERY_PROJECT_ID,

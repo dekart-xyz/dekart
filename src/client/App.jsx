@@ -64,6 +64,7 @@ function useIsReportUrl () {
 function AppRedirect () {
   const httpError = useSelector(state => state.httpError)
   const { status, doNotAuthenticate } = httpError
+  const { googleOAuthEnabled } = useSelector(state => state.env)
   const { newReportId } = useSelector(state => state.reportStatus)
   const userStream = useSelector(state => state.user.stream)
   const isPlayground = useSelector(state => state.user.isPlayground)
@@ -79,8 +80,8 @@ function AppRedirect () {
 
   useEffect(() => {
     if (
-      (status === 401 && doNotAuthenticate === false) ||
-      (isAnonymous && !isReportUrl) // login anonymous users for any other page than report page
+      (googleOAuthEnabled && status === 401 && doNotAuthenticate === false) ||
+      (googleOAuthEnabled && isAnonymous && !isReportUrl) // login anonymous users for any other page than report page
     ) {
       const state = new AuthState()
       state.setUiUrl(window.location.href)
@@ -88,9 +89,9 @@ function AppRedirect () {
       state.setSensitiveScope(sensitiveScopesGranted || sensitiveScopesGrantedOnce) // if user has granted sensitive scopes on this device request token with sensitive scopes
       dispatch(authRedirect(state))
     }
-  }, [status, doNotAuthenticate, dispatch, sensitiveScopesGrantedOnce, sensitiveScopesGranted, isAnonymous, isReportUrl])
+  }, [status, doNotAuthenticate, dispatch, sensitiveScopesGrantedOnce, sensitiveScopesGranted, isAnonymous, isReportUrl, googleOAuthEnabled])
 
-  if (status === 401 && doNotAuthenticate === false) {
+  if (googleOAuthEnabled && status === 401 && doNotAuthenticate === false) {
     // redirect to authentication endpoint from useEffect above
     return null
   }
