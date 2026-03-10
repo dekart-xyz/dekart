@@ -126,7 +126,7 @@ function DatasetSelector ({ dataset }) {
           />
         )}
       </div>
-      {isAdmin && filteredConnectionList.length > 0 && (
+      {isAdmin && userDefinedConnection && filteredConnectionList.length > 0 && (
         <Button
           type='link'
           onClick={() => {

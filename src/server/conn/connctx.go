@@ -30,7 +30,7 @@ func IsUserDefined() bool {
 // CanShareReports returns true if reports can be shared between users for backend configured connections
 func CanShareReports() bool {
 	// For backend configured connections, we can share reports only if the datasource is Snowflake or the cloud storage bucket is set
-	return ((dekartCloudStorageBucket != "" && dekartDataSource == "BQ") || dekartDataSource == "SNOWFLAKE")
+	return (dekartCloudStorageBucket != "" && (dekartDataSource == "BQ" || dekartDataSource == "PG")) || dekartDataSource == "SNOWFLAKE"
 }
 
 func GetCtx(ctx context.Context, connection *proto.Connection) context.Context {
