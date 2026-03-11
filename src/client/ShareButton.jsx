@@ -200,12 +200,9 @@ function TrackViewersDescription () {
 }
 
 function TrackViewers () {
-  const { canWrite, isSharable } = useSelector(state => state.report)
+  const { canWrite } = useSelector(state => state.report)
   const isSnowpark = useSelector(state => state.env.isSnowpark)
   if (isSnowpark) {
-    return null
-  }
-  if (!isSharable) {
     return null
   }
   if (!canWrite) {
