@@ -75,15 +75,12 @@ WHERE
         name: 'Postgres',
         style: 'postgres',
         usageStatsId: 5,
-        sampleQuery: `SELECT
-    name,
-    category,
-    latitude,
-    longitude,
-    geom_wkt
-FROM sample.geospatial_points
-ORDER BY id
-LIMIT 100;`
+        sampleQuery: `-- Generate 100 random latitude and longitude points
+SELECT
+    ROUND((random() * 180 - 90)::numeric, 6) AS latitude,
+    ROUND((random() * 360 - 180)::numeric, 6) AS longitude
+FROM
+    generate_series(1, 100);`
       }
     case 'WHEROBOTS':
     case ConnectionType.CONNECTION_TYPE_WHEROBOTS:
