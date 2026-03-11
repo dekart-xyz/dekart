@@ -32,7 +32,7 @@ const maxMapPreviewDataUriSize = 300 * 1024 // 300KB in bytes
 func (s Server) getMapPreviewObject(ctx context.Context, resourceID string) (context.Context, storage.StorageObject) {
 	objectName := fmt.Sprintf("%s.png", resourceID)
 	defConnCtx := conn.GetCtx(ctx, &proto.Connection{})
-	if os.Getenv("DEKART_STORAGE") == "S3" || os.Getenv("DEKART_STORAGE") == "PG" {
+	if os.Getenv("DEKART_STORAGE") == "S3" {
 		return defConnCtx, s.storage.GetObject(defConnCtx, storage.GetBucketName(""), objectName)
 	}
 	publicStorage := storage.NewPublicStorage()
@@ -1604,9 +1604,6 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 
 // SaveMapPreview saves or updates the map preview for a report
 func (s Server) SaveMapPreview(ctx context.Context, req *proto.SaveMapPreviewRequest) (*proto.SaveMapPreviewResponse, error) {
-	if os.Getenv("DEKART_STORAGE") == "PG" {
-		return nil, status.Error(codes.PermissionDenied, "map preview storage is not supported for DEKART_STORAGE=PG")
-	}
 	if os.Getenv("DEKART_CLOUD_STORAGE_BUCKET") == "" {
 		log.Warn().Msg("DEKART_CLOUD_STORAGE_BUCKET is not set, cannot save map preview")
 		return nil, status.Error(codes.PermissionDenied, "map preview storage is not enabled")

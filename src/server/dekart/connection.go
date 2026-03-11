@@ -162,7 +162,7 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 		default:
 			log.Fatal().Str("DEKART_STORAGE", os.Getenv("DEKART_STORAGE")).Msg("Unknown storage backend")
 		}
-		if os.Getenv("DEKART_ALLOW_FILE_UPLOAD") != "" && con.CloudStorageBucket != "" && os.Getenv("DEKART_STORAGE") != "PG" {
+		if os.Getenv("DEKART_ALLOW_FILE_UPLOAD") != "" && con.CloudStorageBucket != "" {
 			con.CanStoreFiles = true
 		}
 
@@ -259,7 +259,7 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 				ServerEncrypted: whererobotsKeyEncrypted.String,
 			}
 		}
-		if connection.CloudStorageBucket != "" && os.Getenv("DEKART_STORAGE") != "PG" {
+		if connection.CloudStorageBucket != "" {
 			connection.CanStoreFiles = true
 		}
 		if err != nil {
@@ -382,7 +382,7 @@ func (s Server) getUserConnections(ctx context.Context) ([]*proto.Connection, er
 		connection.WherobotsRegion = wherobotsRegion.String
 		connection.WherobotsRuntime = wherobotsRuntime.String
 		connection.WherobotsKey = secrets.EncryptedToClient(wherobotsKeyEncrypted.String)
-		if connection.CloudStorageBucket != "" && os.Getenv("DEKART_STORAGE") != "PG" {
+		if connection.CloudStorageBucket != "" {
 			connection.CanStoreFiles = true
 		}
 		connections = append(connections, &connection)
