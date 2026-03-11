@@ -20,6 +20,7 @@ type Job struct {
 	job.BasicJob
 	postgresDB    *sql.DB
 	storageObject storage.StorageObject
+	isReplayMode  bool
 }
 
 type Store struct {
@@ -29,6 +30,10 @@ type Store struct {
 
 func NewStore() *Store {
 	dbConnStr := os.Getenv("DEKART_POSTGRES_DATASOURCE_CONNECTION")
+	if dbConnStr == "" {
+		// Backward-compatible fallback for old env name.
+		dbConnStr = os.Getenv("DEKART_POSTGRES_DATA_CONNECTION")
+	}
 	db, err := sql.Open("postgres", dbConnStr)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect to postgres")
@@ -58,6 +63,7 @@ func (s *Store) Create(reportID string, queryID string, queryText string, userCt
 
 func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connection) error {
 	j.storageObject = storageObject
+	_, j.isReplayMode = j.storageObject.(storage.PGStorageObject)
 	go func() {
 		j.Status() <- int32(proto.QueryJob_JOB_STATUS_RUNNING)
 		rows, err := j.postgresDB.QueryContext(j.GetCtx(), j.QueryText)
@@ -67,6 +73,18 @@ func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connect
 			return
 		}
 		defer rows.Close()
+
+		if j.isReplayMode {
+			jobID := j.GetID()
+			j.Lock()
+			j.DWJobID = &jobID
+			j.ResultReady = true
+			j.ResultSize = 0
+			j.Unlock()
+			j.Status() <- int32(proto.QueryJob_JOB_STATUS_DONE)
+			j.Cancel()
+			return
+		}
 
 		csvRows := make(chan []string, 10_000)
 		defer close(csvRows)

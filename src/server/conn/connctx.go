@@ -19,6 +19,7 @@ const connectionContextKey ConnectionContextKey = "connection"
 var dekartBigQueryProjectID = os.Getenv("DEKART_BIGQUERY_PROJECT_ID")
 var dekartCloudStorageBucket = os.Getenv("DEKART_CLOUD_STORAGE_BUCKET")
 var dekartDataSource = os.Getenv("DEKART_DATASOURCE")
+var dekartStorage = os.Getenv("DEKART_STORAGE")
 var dekartRequireGoogleOAuth = os.Getenv("DEKART_REQUIRE_GOOGLE_OAUTH")
 
 func IsUserDefined() bool {
@@ -30,7 +31,9 @@ func IsUserDefined() bool {
 // CanShareReports returns true if reports can be shared between users for backend configured connections
 func CanShareReports() bool {
 	// For backend configured connections, we can share reports only if the datasource is Snowflake or the cloud storage bucket is set
-	return (dekartCloudStorageBucket != "" && (dekartDataSource == "BQ" || dekartDataSource == "PG")) || dekartDataSource == "SNOWFLAKE"
+	return (dekartCloudStorageBucket != "" && (dekartDataSource == "BQ" || dekartDataSource == "PG")) ||
+		dekartDataSource == "SNOWFLAKE" ||
+		(dekartDataSource == "PG" && dekartStorage == "PG")
 }
 
 func GetCtx(ctx context.Context, connection *proto.Connection) context.Context {

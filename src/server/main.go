@@ -156,7 +156,7 @@ func applyMigrations(db *sql.DB) {
 	}
 }
 
-func configureBucket() storage.Storage {
+func configureBucket(db *sql.DB) storage.Storage {
 	var bucket storage.Storage
 	switch os.Getenv("DEKART_STORAGE") {
 	case "S3":
@@ -168,6 +168,9 @@ func configureBucket() storage.Storage {
 	case "SNOWFLAKE":
 		log.Info().Msg("Using SNOWFLAKE query result cache")
 		bucket = storage.NewSnowflakeStorage()
+	case "PG":
+		log.Info().Msg("Using Postgres query replay storage")
+		bucket = storage.NewPGStorage(db)
 	case "USER":
 		log.Info().Msg("Using USER defined storage backend, based on connection dialog")
 		bucket = storage.NewUserStorage()
@@ -233,7 +236,7 @@ func main() {
 
 	applyMigrations(db)
 
-	bucket := configureBucket()
+	bucket := configureBucket(db)
 	jobStore := configureJobStore(bucket)
 
 	dekartServer := dekart.NewServer(db, bucket, jobStore)

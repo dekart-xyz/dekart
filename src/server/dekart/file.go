@@ -145,6 +145,10 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
+	if os.Getenv("DEKART_STORAGE") == "PG" {
+		http.Error(w, "file upload is not supported for DEKART_STORAGE=PG", http.StatusForbidden)
+		return
+	}
 	fileId := mux.Vars(r)["id"]
 	ctx := r.Context()
 	claims := user.GetClaims(ctx)

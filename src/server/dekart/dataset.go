@@ -500,18 +500,23 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 		retrievalBranch = "result_uri_presigned_s3"
 	} else if dwJobID != "" {
 		// temp data warehouse table is used as source
-		expired, recent, err := s.checkJobExpiration(ctx, vars["source"])
-		jobIsRecent = recent
-		if err != nil {
-			logDatasetSourceError(err, "ServeDatasetSource: checkJobExpiration failed")
-			errtype.LogError(err, "Error checking job expiration")
-			storageError(w, err)
-			return
-		}
-		if expired {
-			// Job is definitely too old, return expired immediately
-			storageError(w, &errtype.Expired{})
-			return
+		if os.Getenv("DEKART_STORAGE") == "PG" {
+			// PG replay mode can always re-execute the query, so dw_job_id is not treated as expirable.
+			jobIsRecent = true
+		} else {
+			expired, recent, err := s.checkJobExpiration(ctx, vars["source"])
+			jobIsRecent = recent
+			if err != nil {
+				logDatasetSourceError(err, "ServeDatasetSource: checkJobExpiration failed")
+				errtype.LogError(err, "Error checking job expiration")
+				storageError(w, err)
+				return
+			}
+			if expired {
+				// Job is definitely too old, return expired immediately
+				storageError(w, &errtype.Expired{})
+				return
+			}
 		}
 		obj = s.storage.GetObject(conCtx, bucketName, dwJobID)
 		retrievalBranch = "dw_job_id_storage"
