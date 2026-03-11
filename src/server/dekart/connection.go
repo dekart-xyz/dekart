@@ -150,6 +150,7 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 		case "PG":
 			con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_POSTGRES
 			con.ConnectionName = "Postgres"
+			con.CloudStorageBucket = storage.GetDefaultBucketName()
 		case "BQ":
 			con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_BIGQUERY
 			con.ConnectionName = "BigQuery"

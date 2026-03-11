@@ -191,12 +191,16 @@ func Configure(dekartServer *dekart.Server, db *sql.DB) *http.Server {
 		RequireIAP:              os.Getenv("DEKART_REQUIRE_IAP") == "1",
 		RequireSnowflakeContext: os.Getenv("DEKART_REQUIRE_SNOWFLAKE_CONTEXT") == "1",
 		RequireAmazonOIDC:       os.Getenv("DEKART_REQUIRE_AMAZON_OIDC") == "1",
+		RequireOIDC:             os.Getenv("DEKART_REQUIRE_OIDC") == "1",
 		RequireGoogleOAuth:      os.Getenv("DEKART_REQUIRE_GOOGLE_OAUTH") == "1",
 		Region:                  os.Getenv("AWS_REGION"),
 		DevClaimsEmail:          os.Getenv("DEKART_DEV_CLAIMS_EMAIL"),
 		DevRefreshToken:         os.Getenv("DEKART_DEV_REFRESH_TOKEN"),
 		GoogleOAuthClientId:     os.Getenv("DEKART_GOOGLE_OAUTH_CLIENT_ID"),
 		GoogleOAuthSecret:       os.Getenv("DEKART_GOOGLE_OAUTH_SECRET"),
+		OIDCJWKSURL:             os.Getenv("DEKART_OIDC_JWKS_URL"),
+		OIDCIssuer:              os.Getenv("DEKART_OIDC_ISSUER"),
+		OIDCAudience:            os.Getenv("DEKART_OIDC_AUDIENCE"),
 	}, db)
 
 	grpcServer := configureGRPC(dekartServer)

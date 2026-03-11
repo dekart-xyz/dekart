@@ -410,6 +410,11 @@ function WorkspacePermissions () {
 
 function NonShareableWarning () {
   const { isSharable } = useSelector(state => state.report)
+  const datasource = useSelector(state => state.env.variables.DATASOURCE)
+  const isPostgresDatasource = datasource === 'PG'
+  const canAddConnection = useSelector(state => state.user.isAdmin)
+  const connectionsEnabled = useSelector(state => state.connection.userDefined)
+  const canManageConnections = canAddConnection && connectionsEnabled
   const history = useHistory()
   if (isSharable) {
     return null
@@ -420,18 +425,22 @@ function NonShareableWarning () {
       <div className={styles.workspaceStatusLabel}>
         <div className={styles.statusLabelTitle}>Sharing options are limited</div>
         <div className={styles.statusLabelDescription}>
-          Use a BigQuery connection with a storage bucket or service account to enable sharing.
+          {isPostgresDatasource
+            ? 'Postgres sharing is not supported yet.'
+            : 'Sharing is currently available for Snowflake, or BigQuery with a storage bucket or service account.'}
         </div>
       </div>
-      <div className={styles.workspaceStatusControl}>
-        <Button
-          onClick={() => {
-            track('ManageConnectionsFromShareModal')
-            history.push('/connections')
-          }}
-        >Manage connections
-        </Button>
-      </div>
+      {canManageConnections && (
+        <div className={styles.workspaceStatusControl}>
+          <Button
+            onClick={() => {
+              track('ManageConnectionsFromShareModal')
+              history.push('/connections')
+            }}
+          >Manage connections
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

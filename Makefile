@@ -1,4 +1,4 @@
-.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down sqlite proto-copy-to-node proto-stub server
+.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down up-and-down-oidc sqlite proto-copy-to-node proto-stub server
 
 # load .env
 # https://lithic.tech/blog/2020-05/makefile-dot-env
@@ -113,6 +113,8 @@ docker: # build docker for local use
 
 up-and-down:
 	docker compose  --env-file .env --profile local up; docker compose --env-file .env --profile local down --volumes
+up-and-down-oidc:
+	docker compose --env-file .env.oidc --profile oidc up db adminer keycloak oauth2-proxy; docker compose --env-file .env.oidc --profile oidc down --volumes
 cloud:
 	docker compose  --env-file .env.cloud --profile cloud up; docker compose --profile cloud down --volumes
 up:

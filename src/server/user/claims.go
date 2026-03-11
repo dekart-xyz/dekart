@@ -44,6 +44,7 @@ type ClaimsCheckConfig struct {
 	Audience                string
 	RequireIAP              bool
 	RequireAmazonOIDC       bool
+	RequireOIDC             bool
 	RequireGoogleOAuth      bool
 	RequireSnowflakeContext bool
 	GoogleOAuthClientId     string
@@ -51,24 +52,33 @@ type ClaimsCheckConfig struct {
 	DevClaimsEmail          string
 	DevRefreshToken         string
 	Region                  string
+	OIDCJWKSURL             string
+	OIDCIssuer              string
+	OIDCAudience            string
 }
 
 // ClaimsCheck factory to add user claims to context
 type ClaimsCheck struct {
 	ClaimsCheckConfig
 	publicKeys *sync.Map
+	oidcJWT    *oidcJWTVerifier
 	db         *sql.DB
 }
 
 var b2i = map[bool]int{false: 0, true: 1}
 
 func validateConfig(c ClaimsCheckConfig) {
-	if b2i[c.RequireIAP]+b2i[c.RequireAmazonOIDC]+b2i[c.RequireGoogleOAuth]+b2i[c.RequireSnowflakeContext] > 1 {
-		log.Fatal().Msg("DEKART_REQUIRE_IAP and DEKART_REQUIRE_AMAZON_OIDC and DEKART_REQUIRE_GOOGLE_OAUTH are mutually exclusive")
+	if b2i[c.RequireIAP]+b2i[c.RequireAmazonOIDC]+b2i[c.RequireOIDC]+b2i[c.RequireGoogleOAuth]+b2i[c.RequireSnowflakeContext] > 1 {
+		log.Fatal().Msg("DEKART_REQUIRE_IAP, DEKART_REQUIRE_AMAZON_OIDC, DEKART_REQUIRE_OIDC, DEKART_REQUIRE_GOOGLE_OAUTH and DEKART_REQUIRE_SNOWFLAKE_CONTEXT are mutually exclusive")
 	}
 	switch {
 	case c.RequireSnowflakeContext:
 		log.Info().Msgf("Dekart configured to require Snowflake context")
+	case c.RequireOIDC:
+		log.Info().Msgf("Dekart configured to require OIDC JWT header auth")
+		if c.OIDCJWKSURL == "" {
+			log.Fatal().Msgf("DEKART_OIDC_JWKS_URL is required for OIDC JWT header auth")
+		}
 	case c.RequireIAP:
 		log.Info().Msgf("Dekart configured to require IAP")
 	case c.RequireAmazonOIDC:
@@ -102,9 +112,14 @@ func validateConfig(c ClaimsCheckConfig) {
 
 func NewClaimsCheck(c ClaimsCheckConfig, db *sql.DB) ClaimsCheck {
 	validateConfig(c)
+	var oidcJWT *oidcJWTVerifier
+	if c.RequireOIDC {
+		oidcJWT = newOIDCJWTVerifier(c)
+	}
 	return ClaimsCheck{
 		c,
 		&sync.Map{},
+		oidcJWT,
 		db,
 	}
 }
@@ -188,6 +203,8 @@ func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 		claims = c.validateJWTFromAppEngine(ctx, r.Header.Get("X-Goog-IAP-JWT-Assertion"))
 	} else if c.RequireAmazonOIDC {
 		claims = c.validateJWTFromAmazonOIDC(ctx, r.Header.Get("x-amzn-oidc-data"))
+	} else if c.RequireOIDC {
+		claims = c.validateJWTFromOIDCHeader(r)
 	} else if c.RequireGoogleOAuth {
 		reportID := r.Header.Get("X-Dekart-Report-Id")
 		loggedIn := r.Header.Get("X-Dekart-Logged-In")
@@ -461,20 +478,20 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 	stateBase64 := r.URL.Query().Get("state")
 	stateBin, err := base64.StdEncoding.DecodeString(stateBase64)
 	if err != nil {
-		errtype.LogError(err, "Error decoding state")
+		log.Warn().Err(err).Msg("Error decoding state")
 		http.Error(w, "Error decoding state", http.StatusBadRequest)
 		return
 	}
 	var state pb.AuthState
 	err = proto.Unmarshal(stateBin, &state)
 	if err != nil {
-		errtype.LogError(err, "Error unmarshalling state")
+		log.Warn().Err(err).Msg("Error unmarshalling state")
 		http.Error(w, "Error unmarshalling state", http.StatusBadRequest)
 		return
 	}
 	uiURL, err := url.Parse(state.UiUrl)
 	if err != nil {
-		errtype.LogError(err, "Error parsing ui url")
+		log.Warn().Err(err).Msg("Error parsing ui url")
 		http.Error(w, "Error parsing ui url", http.StatusBadRequest)
 		return
 	}
@@ -531,7 +548,7 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, uiURL.String(), http.StatusFound)
 		return
 	default:
-		log.Error().Msgf("Unknown action: %v", state.Action)
+		log.Warn().Msgf("Unknown action: %v", state.Action)
 		http.Error(w, "Unknown action", http.StatusBadRequest)
 	}
 }

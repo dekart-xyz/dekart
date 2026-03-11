@@ -9,6 +9,7 @@ import (
 	"dekart/src/server/user"
 	"fmt"
 	"net/url"
+	"os"
 	"strconv"
 	"time"
 
@@ -416,6 +417,9 @@ func (s Server) PublishReport(ctx context.Context, req *proto.PublishReportReque
 
 	// Check if user is trying to publish and if they have a freemium plan
 	if req.Publish {
+		if os.Getenv("DEKART_STORAGE") == "PG" {
+			return nil, status.Error(codes.InvalidArgument, "public publishing is not supported for DEKART_STORAGE=PG yet")
+		}
 		workspaceInfo := user.CheckWorkspaceCtx(ctx)
 
 		// Check if user has freemium plan (TYPE_PERSONAL) and limit to 1 public map

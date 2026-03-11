@@ -87,11 +87,13 @@ function env (state = defaultEnv, action) {
       return {
         loaded: true,
         variables: action.variables,
-        authEnabled: Boolean(action.variables.AUTH_ENABLED),
-        secretsEnabled: Boolean(action.variables.SECRETS_ENABLED),
+        authEnabled: action.variables.AUTH_ENABLED === '1',
+        googleOAuthEnabled: action.variables.REQUIRE_GOOGLE_OAUTH === '1',
+        oidcEnabled: action.variables.REQUIRE_OIDC === '1',
+        secretsEnabled: action.variables.SECRETS_ENABLED === '1',
         uxConfig: JSON.parse(action.variables.CLOUD_UX_CONFIG_JSON || '{}'),
-        isCloud: Boolean(action.variables.DEKART_CLOUD),
-        isSnowpark: Boolean(action.variables.IS_SNOWPARK),
+        isCloud: action.variables.DEKART_CLOUD === '1',
+        isSnowpark: action.variables.IS_SNOWPARK === '1',
         serverTime: action.serverTime,
         receivedTime: Math.floor(Date.now() / 1000)
       }
