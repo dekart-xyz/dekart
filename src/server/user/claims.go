@@ -478,20 +478,20 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 	stateBase64 := r.URL.Query().Get("state")
 	stateBin, err := base64.StdEncoding.DecodeString(stateBase64)
 	if err != nil {
-		errtype.LogError(err, "Error decoding state")
+		log.Warn().Err(err).Msg("Error decoding state")
 		http.Error(w, "Error decoding state", http.StatusBadRequest)
 		return
 	}
 	var state pb.AuthState
 	err = proto.Unmarshal(stateBin, &state)
 	if err != nil {
-		errtype.LogError(err, "Error unmarshalling state")
+		log.Warn().Err(err).Msg("Error unmarshalling state")
 		http.Error(w, "Error unmarshalling state", http.StatusBadRequest)
 		return
 	}
 	uiURL, err := url.Parse(state.UiUrl)
 	if err != nil {
-		errtype.LogError(err, "Error parsing ui url")
+		log.Warn().Err(err).Msg("Error parsing ui url")
 		http.Error(w, "Error parsing ui url", http.StatusBadRequest)
 		return
 	}
@@ -548,7 +548,7 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, uiURL.String(), http.StatusFound)
 		return
 	default:
-		log.Error().Msgf("Unknown action: %v", state.Action)
+		log.Warn().Msgf("Unknown action: %v", state.Action)
 		http.Error(w, "Unknown action", http.StatusBadRequest)
 	}
 }
