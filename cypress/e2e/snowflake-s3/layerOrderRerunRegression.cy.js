@@ -75,6 +75,7 @@ describe('layer order regression on query re-run', () => {
   it('shows visible names and reproduces 1,2,3 -> 3,1,2', () => {
     const query1Sql = 'SELECT ROUND(uniform(-90::float, 90::float, random()), 6) AS lat, ROUND(uniform(-180::float, 180::float, random()), 6) AS lon FROM TABLE(GENERATOR(ROWCOUNT => 111))'
     const query2InitialSql = 'SELECT ROUND(uniform(-90::float, 90::float, random()), 6) AS lat, ROUND(uniform(-180::float, 180::float, random()), 6) AS lon FROM TABLE(GENERATOR(ROWCOUNT => 222))'
+    const query1UpdatedSql = 'SELECT ROUND(uniform(-90::float, 90::float, random()), 6) AS lat, ROUND(uniform(-180::float, 180::float, random()), 6) AS lon FROM TABLE(GENERATOR(ROWCOUNT => 333))'
 
     cy.visit('/')
     cy.get('button#dekart-create-report').click()
@@ -99,8 +100,14 @@ describe('layer order regression on query re-run', () => {
 
     // Re-run Query 2 with changed SQL to refresh dataset B.
     cy.contains('.ant-tabs-tab', 'Query 1').click({ force: true })
+    // clear textarea and type new query
+    cy.get('textarea').first().clear({ force: true })
+    cy.get('textarea').first().clear({ force: true }).type(query1UpdatedSql, { force: true })
     cy.get(`button:contains("${copy.execute}")`).click()
     cy.get(`span:contains("${copy.ready}")`, { timeout: 60000 }).should('be.visible')
+
+    // check that dataset count updated to 333
+    cy.get('div:contains("333 rows")', { timeout: 60000 }).should('be.visible')
 
     getLayerNamesInVisualOrder().then((afterOrder) => {
       expect(afterOrder.join(',')).to.equal('1,2,3')
