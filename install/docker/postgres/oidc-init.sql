@@ -13,9 +13,22 @@ CREATE TABLE sample.geospatial_points (
     geom_wkt TEXT NOT NULL
 );
 
-INSERT INTO sample.geospatial_points (name, category, longitude, latitude, geom_wkt) VALUES
-    ('Berlin', 'city', 13.4050, 52.5200, 'POINT(13.4050 52.5200)'),
-    ('Paris', 'city', 2.3522, 48.8566, 'POINT(2.3522 48.8566)'),
-    ('London', 'city', -0.1276, 51.5072, 'POINT(-0.1276 51.5072)'),
-    ('Rome', 'city', 12.4964, 41.9028, 'POINT(12.4964 41.9028)'),
-    ('Madrid', 'city', -3.7038, 40.4168, 'POINT(-3.7038 40.4168)');
+CREATE TABLE sample.geospatial_points_raw (
+    name TEXT,
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
+    basic_category TEXT
+);
+
+COPY sample.geospatial_points_raw (name, latitude, longitude, basic_category)
+FROM '/docker-entrypoint-initdb.d/denmark-pois.csv'
+WITH (FORMAT csv, HEADER true);
+
+INSERT INTO sample.geospatial_points (name, category, longitude, latitude, geom_wkt)
+SELECT
+    name,
+    basic_category,
+    longitude,
+    latitude,
+    'POINT(' || longitude || ' ' || latitude || ')'
+FROM sample.geospatial_points_raw;

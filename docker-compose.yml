@@ -13,6 +13,7 @@ services:
       POSTGRES_DB: "${DEKART_POSTGRES_DB}"
     volumes:
       - ./install/docker/postgres/oidc-init.sql:/docker-entrypoint-initdb.d/10-oidc-init.sql:ro
+      - ./install/docker/postgres/denmark-pois.csv:/docker-entrypoint-initdb.d/denmark-pois.csv:ro
   adminer:
     image: adminer
     profiles:
