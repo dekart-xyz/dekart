@@ -1,8 +1,8 @@
 /* eslint-disable no-undef */
 import copy from '../../fixtures/copy.json'
-import { duplicateLayer } from '@kepler.gl/actions'
 
 const LAYER_NAME_INPUT_SELECTOR = '[data-testid="sortable-layer-item"] [data-testid="layer__title__editor"]:visible, [data-testid="static-layer-item"] [data-testid="layer__title__editor"]:visible'
+const DUPLICATE_LAYER_ACTION_TYPE = '@@kepler.gl/DUPLICATE_LAYER'
 
 function runQueryAndWaitReady (queryText) {
   cy.get('button:contains("Run SQL")').click()
@@ -67,7 +67,10 @@ function duplicateFirstLayer () {
     if (!store) throw new Error('Redux store not found')
     const firstLayerId = store.getState().keplerGl.kepler.visState.layers[0]?.id
     if (!firstLayerId) throw new Error('No layer to duplicate')
-    store.dispatch(duplicateLayer(firstLayerId))
+    store.dispatch({
+      type: DUPLICATE_LAYER_ACTION_TYPE,
+      id: firstLayerId
+    })
   })
 }
 
