@@ -473,8 +473,18 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	// Keep both names in logs: connection bucket may differ from the actual object bucket
 	// (for public reports we read from public storage bucket).
 	connectionBucketName := bucketName
+	isExpectedExpiredResultURI := func(err error) bool {
+		_, ok := err.(*errtype.Expired)
+		return ok && retrievalBranch == "result_uri_presigned_s3"
+	}
 	logDatasetSourceError := func(err error, msg string) {
-		log.Error().
+		event := log.Error()
+		// Presigned result URLs are intentionally short-lived; once they expire the
+		// correct user-facing behavior is 410 Gone, not an incident-grade error log.
+		if isExpectedExpiredResultURI(err) {
+			event = log.Warn()
+		}
+		event.
 			Err(err).
 			Str("dataset", vars["dataset"]).
 			Str("source", vars["source"]).
