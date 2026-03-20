@@ -9,7 +9,6 @@ describe('cloud basic flow', () => {
     cy.get('button:contains("Create")').click()
 
     // create new report
-    cy.visit('/')
     cy.get('button#dekart-create-report').click()
     cy.get('button:contains("Upload File")').click()
     cy.get('input[type="file"]').selectFile('cypress/fixtures/sample.csv', { force: true })
