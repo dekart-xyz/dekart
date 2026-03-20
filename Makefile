@@ -1,4 +1,4 @@
-.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down up-and-down-oidc sqlite proto-copy-to-node proto-stub server
+.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down up-and-down-oidc sqlite proto-copy-to-node proto-stub server runner-install runner-register runner-start runner-stop runner-status runner-service-install runner-service-start runner-service-stop runner-service-status github-runner
 
 # load .env
 # https://lithic.tech/blog/2020-05/makefile-dot-env
@@ -7,6 +7,12 @@ ifneq (,$(wildcard ./.env))
 endif
 
 UNAME := $(shell uname -m)
+RUNNER_DIR ?= $(HOME)/actions-runner
+RUNNER_URL ?= https://github.com/dekart-xyz/dekart
+RUNNER_LABELS ?= self-hosted,laptop-build
+RUNNER_NAME ?= $(shell hostname)-dekart-laptop
+GITHUB_RUNNER_TOKEN ?= $(RUNNER_TOKEN)
+RUNNER_VERSION ?= 2.328.0
 
 proto-clean:
 	rm -rf ./src/proto/*.go
@@ -166,3 +172,77 @@ patch: version
 
 test:
 	go test -v -count=1 ./src/server/**/
+
+# GitHub self-hosted runner helpers (local laptop runner).
+# Usage:
+#   make runner-register             # installs runner if needed, then registers
+#   make runner-start
+#   make runner-service-install
+#   make runner-service-start
+runner-install:
+	@if [ -x "$(RUNNER_DIR)/config.sh" ]; then \
+		echo "Runner already installed at $(RUNNER_DIR)"; \
+		exit 0; \
+	fi
+	@set -e; \
+	OS=$$(uname -s); \
+	ARCH=$$(uname -m); \
+	case "$$OS" in \
+		Darwin) OS_TAG="osx" ;; \
+		Linux) OS_TAG="linux" ;; \
+		*) echo "Unsupported OS: $$OS"; exit 1 ;; \
+	esac; \
+	case "$$ARCH" in \
+		x86_64|amd64) ARCH_TAG="x64" ;; \
+		arm64|aarch64) ARCH_TAG="arm64" ;; \
+		*) echo "Unsupported architecture: $$ARCH"; exit 1 ;; \
+	esac; \
+	PKG="actions-runner-$${OS_TAG}-$${ARCH_TAG}-$(RUNNER_VERSION).tar.gz"; \
+	URL="https://github.com/actions/runner/releases/download/v$(RUNNER_VERSION)/$$PKG"; \
+	echo "Installing GitHub runner $(RUNNER_VERSION) from $$URL"; \
+	mkdir -p "$(RUNNER_DIR)"; \
+	cd "$(RUNNER_DIR)"; \
+	curl -fL "$$URL" -o "$$PKG"; \
+	tar xzf "$$PKG"; \
+	rm -f "$$PKG"; \
+	test -x "$(RUNNER_DIR)/config.sh" || (echo "Runner install failed"; exit 1); \
+	echo "Runner installed in $(RUNNER_DIR)"
+
+runner-register: runner-install
+	@test -n "$(GITHUB_RUNNER_TOKEN)" || (echo "GITHUB_RUNNER_TOKEN (or RUNNER_TOKEN) is required. Add it to .env or pass on command line."; exit 1)
+	@cd "$(RUNNER_DIR)" && ./config.sh \
+		--url "$(RUNNER_URL)" \
+		--token "$(GITHUB_RUNNER_TOKEN)" \
+		--labels "$(RUNNER_LABELS)" \
+		--name "$(RUNNER_NAME)" \
+		--unattended \
+		--replace
+
+runner-start:
+	@test -x "$(RUNNER_DIR)/run.sh" || (echo "Missing $(RUNNER_DIR)/run.sh. Install and register runner first."; exit 1)
+	cd "$(RUNNER_DIR)" && ./run.sh
+
+runner-stop:
+	@pkill -f "$(RUNNER_DIR)/bin/Runner.Listener" || true
+
+runner-status:
+	@pgrep -af "$(RUNNER_DIR)/bin/Runner.Listener" || echo "Runner is not running."
+
+runner-service-install:
+	@test -x "$(RUNNER_DIR)/svc.sh" || (echo "Missing $(RUNNER_DIR)/svc.sh. Install actions runner first."; exit 1)
+	cd "$(RUNNER_DIR)" && sudo ./svc.sh install
+
+runner-service-start:
+	@test -x "$(RUNNER_DIR)/svc.sh" || (echo "Missing $(RUNNER_DIR)/svc.sh. Install actions runner first."; exit 1)
+	cd "$(RUNNER_DIR)" && sudo ./svc.sh start
+
+runner-service-stop:
+	@test -x "$(RUNNER_DIR)/svc.sh" || (echo "Missing $(RUNNER_DIR)/svc.sh. Install actions runner first."; exit 1)
+	cd "$(RUNNER_DIR)" && sudo ./svc.sh stop
+
+runner-service-status:
+	@test -x "$(RUNNER_DIR)/svc.sh" || (echo "Missing $(RUNNER_DIR)/svc.sh. Install actions runner first."; exit 1)
+	cd "$(RUNNER_DIR)" && sudo ./svc.sh status
+
+# Simplified foreground runner command (keeps terminal open with live logs).
+github-runner: runner-start

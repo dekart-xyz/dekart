@@ -9,6 +9,10 @@ on:
     inputs:
       build_app: { type: boolean, default: false }
       build_e2e: { type: boolean, default: false }
+      build_runner_labels:
+        type: string
+        default: '["self-hosted","laptop-build"]'
+        description: "JSON array of runner labels for build job"
       # REQUIRED – repo flavour
       target:
         type: string # cloud | premium | oss
@@ -24,7 +28,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(inputs.build_runner_labels) }}
     outputs:
       app_image: ${{ steps.collect.outputs.app_primary }}
       e2e_image: ${{ steps.collect.outputs.e2e_primary }}
@@ -33,6 +37,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
+        with:
+          name: dekart-laptop-builder
+          driver: docker-container
+          use: true
+          keep-state: true
 
       - id: registry
         run: |
@@ -106,12 +115,11 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
             DEKART_UX_DISABLE_VERSION_CHECK=${{ env.UX_DISABLE_VERSION_CHECK }}
-          cache-from: type=registry,ref=${{ steps.registry.outputs.REG }}/dekart:buildcache
-          cache-to: type=registry,ref=${{ steps.registry.outputs.REG }}/dekart:buildcache,mode=max
 
       - name: Build & push E2E image
         if: inputs.build_e2e
@@ -119,9 +127,8 @@ jobs:
         with:
           context: .
           target: e2etest
+          platforms: linux/amd64
           push: true
           tags: ${{ steps.collect.outputs.e2e_tags }}
           build-args: |
             DEKART_UX_DISABLE_VERSION_CHECK=${{ env.UX_DISABLE_VERSION_CHECK }}
-          cache-from: type=registry,ref=${{ steps.registry.outputs.REG }}/dekart:buildcache
-          cache-to: type=registry,ref=${{ steps.registry.outputs.REG }}/dekart:buildcache,mode=max
