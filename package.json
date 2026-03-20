@@ -47,7 +47,8 @@
     "preview": "vite preview",
     "test": "vitest",
     "lint": "standard ./src/client ",
-    "postinstall": "make proto-copy-to-node"
+    "proto-copy-to-node": "sh -c 'rm -rf ./node_modules/dekart-proto ./node_modules/.vite && mkdir -p ./node_modules/dekart-proto && cp -r ./proto/* ./node_modules/dekart-proto/'",
+    "postinstall": "npm run proto-copy-to-node"
   },
   "eslintConfig": {
     "globals": {
