@@ -1,19 +1,13 @@
+# syntax=docker/dockerfile:1.7
+
 FROM node:18 AS nodedeps
 WORKDIR /source
-ADD package.json .
-ADD package-lock.json .
-ADD .npmrc .
-ADD Makefile .
-ADD proto proto
+COPY package.json package-lock.json .npmrc ./
 ENV CI=true
-RUN npm i
-ADD public public
-ADD src/client src/client
-ADD index.html index.html
-ADD src/index.js src/index.js
-ADD src/setupTests.js src/setupTests.js
-ADD vitest.config.js vitest.config.js
-ADD vite.config.js vite.config.js
+RUN --mount=type=cache,target=/root/.npm npm ci
+COPY public public
+COPY src/client src/client
+COPY index.html src/index.js src/setupTests.js vitest.config.js vite.config.js ./
 
 FROM nodedeps AS nodebuilder
 ENV NODE_OPTIONS="--max-old-space-size=4096"
@@ -29,17 +23,22 @@ FROM golang:1.24 AS godeps
 RUN apt-get update && apt-get install -y gcc
 
 WORKDIR /source
-ADD go.mod .
-ADD go.sum .
-RUN go mod download -x
-ADD src/proto src/proto
-ADD src/server src/server
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go mod download -x
+COPY src/proto src/proto
+COPY src/server src/server
 
 FROM godeps AS gobuilder
-RUN CGO_ENABLED=1 go build ./src/server
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=1 go build ./src/server
 
 FROM godeps AS gotest
-RUN go test -v -count=1 ./src/server/**/
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go test -v -count=1 ./src/server/**/
 
 FROM cypress/included:13.14.2 as e2etest
 WORKDIR /dekart
@@ -57,11 +56,11 @@ ENV DEKART_STATIC_FILES=./build
 # ENV DEBUG=cypress:snapshot:error
 COPY --from=nodebuilder /source/build build
 COPY --from=gobuilder /source/server .
-ADD migrations migrations
-ADD sqlite sqlite
-ADD cypress cypress
-ADD cypress.config.js .
-ADD package.json .
+COPY migrations migrations
+COPY sqlite sqlite
+COPY cypress cypress
+COPY cypress.config.js .
+COPY package.json .
 ENTRYPOINT /bin/sh -c /dekart/server & cypress run --spec ${TEST_SPEC}
 
 FROM ubuntu:22.04
@@ -74,8 +73,8 @@ RUN apt-get clean && apt-get update --allow-releaseinfo-change && apt-get upgrad
 RUN update-ca-certificates
 COPY --from=nodebuilder /source/build build
 COPY --from=gobuilder /source/server .
-ADD migrations migrations
-ADD sqlite sqlite
+COPY migrations migrations
+COPY sqlite sqlite
 
 # Create a user and group
 ARG USERNAME=appuser
