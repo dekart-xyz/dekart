@@ -1,0 +1,5 @@
+---
+alwaysApply: true
+---
+
+In module CSS files, do not manually add browser prefixes like `-webkit-`, `-moz-`, `-ms-`, or `-o-`. These are automatically added during post-processing (e.g., by autoprefixer). Write only the standard CSS properties without vendor prefixes.

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/conn"
+	"dekart/src/server/errtype"
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
 	"fmt"
@@ -14,12 +15,48 @@ import (
 	"os"
 	"time"
 
+	"github.com/dustin/go-humanize"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/lib/pq"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+// parseFileSizeLimit parses file size strings with units using go-humanize library
+// Supports various formats like "32MB", "100KB", "1GB", "50000000" (bytes)
+// Returns size in bytes
+func parseFileSizeLimit(sizeStr string) (int64, error) {
+	if sizeStr == "" {
+		return 0, fmt.Errorf("empty size string")
+	}
+
+	size, err := humanize.ParseBytes(sizeStr)
+	if err != nil {
+		return 0, fmt.Errorf("invalid size format: %s (expected format: '32MB', '100KB', '1GB', or bytes)", sizeStr)
+	}
+
+	return int64(size), nil
+}
+
+// getMaxFileUploadSize reads DEKART_MAX_FILE_UPLOAD_SIZE env var and returns size in bytes
+// Defaults to 32MB (32000000 bytes) if not set or invalid
+func getMaxFileUploadSize() int64 {
+	const defaultSize = 32 * 1000 * 1000 // 32MB (decimal)
+	sizeStr := os.Getenv("DEKART_MAX_FILE_UPLOAD_SIZE")
+
+	if sizeStr == "" {
+		return defaultSize
+	}
+
+	size, err := parseFileSizeLimit(sizeStr)
+	if err != nil {
+		log.Fatal().Err(err).Str("DEKART_MAX_FILE_UPLOAD_SIZE", sizeStr).Msg("Invalid DEKART_MAX_FILE_UPLOAD_SIZE")
+	}
+
+	return size
+}
 
 func (s Server) getFileReports(ctx context.Context, fileId string) (*string, error) {
 	fileRows, err := s.db.QueryContext(ctx,
@@ -57,21 +94,10 @@ func (s Server) setUploadError(reportID string, fileSourceID string, err error) 
 		fileSourceID,
 	)
 	if err != nil {
-		log.Err(err).Msg("setUploadError failed")
+		errtype.LogError(err, "setUploadError failed")
 		return
 	}
 	s.reportStreams.Ping(reportID)
-}
-
-func getFileExtension(mimeType string) string {
-	switch mimeType {
-	case "text/csv":
-		return "csv"
-	case "application/geo+json":
-		return "geojson"
-	default:
-		return ""
-	}
 }
 
 func (s Server) moveFileToStorage(reqConCtx context.Context, fileSourceID string, fileExtension string, file multipart.File, report *proto.Report, bucketName string) {
@@ -90,14 +116,14 @@ func (s Server) moveFileToStorage(reqConCtx context.Context, fileSourceID string
 	}
 	_, err := io.Copy(storageWriter, file)
 	if err != nil {
-		log.Err(err).Msg("error copying file to storage")
+		errtype.LogError(err, "error copying file to storage")
 		s.setUploadError(report.Id, fileSourceID, err)
 		return
 	}
 
 	err = storageWriter.Close()
 	if err != nil {
-		log.Err(err).Msg("error closing storage writer")
+		errtype.LogError(err, "error closing storage writer")
 		s.setUploadError(report.Id, fileSourceID, err)
 		return
 	}
@@ -106,7 +132,7 @@ func (s Server) moveFileToStorage(reqConCtx context.Context, fileSourceID string
 		fileSourceID,
 	)
 	if err != nil {
-		log.Err(err).Msg("update file status failed")
+		errtype.LogError(err, "update file status failed")
 		s.setUploadError(report.Id, fileSourceID, err)
 		return
 	}
@@ -129,7 +155,7 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 	reportId, err := s.getFileReports(ctx, fileId)
 
 	if err != nil {
-		log.Err(err).Msg("getFileReports failed")
+		errtype.LogError(err, "getFileReports failed")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
@@ -142,7 +168,7 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 
 	report, err := s.getReport(ctx, *reportId)
 	if err != nil {
-		log.Err(err).Msg("getReport failed")
+		errtype.LogError(err, "getReport failed")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -157,14 +183,14 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 	connection, err := s.getConnectionFromFileID(ctx, fileId)
 
 	if err != nil {
-		log.Err(err).Msg("getConnectionFromFileID failed")
+		errtype.LogError(err, "getConnectionFromFileID failed")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	if connection == nil {
 		err = fmt.Errorf("connection not found")
-		log.Error().Err(err).Msg("connection not found")
+		errtype.LogError(err, "connection not found")
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
@@ -180,13 +206,26 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 
 	file, handler, err := r.FormFile("file")
 	if err != nil {
-		log.Err(err).Msg("FormFile failed")
+		errtype.LogError(err, "FormFile failed")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	// Check file size limit
+	maxSize := getMaxFileUploadSize()
+	if handler.Size > maxSize {
+		err = fmt.Errorf("file size (%s) exceeds maximum allowed size of %s",
+			humanize.Bytes(uint64(handler.Size)),
+			humanize.Bytes(uint64(maxSize)))
+		log.Warn().Err(err).Int64("fileSize", handler.Size).Int64("maxSize", maxSize).Msg("file size exceeds limit")
+		http.Error(w, err.Error(), http.StatusRequestEntityTooLarge)
+		file.Close()
+		return
+	}
+
 	mimeType := handler.Header.Get("Content-Type")
 
-	fileExtension := getFileExtension(mimeType)
+	fileExtension := getFileExtensionFromMime(mimeType)
 
 	if fileExtension == "" {
 		err = fmt.Errorf("unsupported file type")
@@ -205,7 +244,7 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 		fileId,
 	)
 	if err != nil {
-		log.Err(err).Msg("update files failed")
+		errtype.LogError(err, "update files failed")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		file.Close()
 		return
@@ -221,11 +260,21 @@ func (s Server) CreateFile(ctx context.Context, req *proto.CreateFileRequest) (*
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-
+	// Validate datasetId is not empty and is a valid UUID
+	_, err := uuid.Parse(req.DatasetId)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Str("datasetId", req.DatasetId).
+			Str("author_email", claims.Email).
+			Str("connection_id", req.ConnectionId).
+			Msg("CreateFile called with invalid datasetId format")
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid datasetId format: %v", err))
+	}
 	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
-		log.Err(err).Msg("getReportID failed")
+		errtype.LogError(err, "getReportID failed")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -242,7 +291,7 @@ func (s Server) CreateFile(ctx context.Context, req *proto.CreateFileRequest) (*
 		id,
 	)
 	if err != nil {
-		log.Err(err).Msg("insert into files failed")
+		errtype.LogError(err, "insert into files failed")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -259,7 +308,7 @@ func (s Server) CreateFile(ctx context.Context, req *proto.CreateFileRequest) (*
 
 	affectedRows, err := result.RowsAffected()
 	if err != nil {
-		log.Err(err).Msg("RowsAffected failed when creating file")
+		errtype.LogError(err, "RowsAffected failed when creating file")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -297,7 +346,7 @@ func (s Server) getFiles(ctx context.Context, datasets []*proto.Dataset) ([]*pro
 			pq.Array(fileIds),
 		)
 		if err != nil {
-			log.Error().Err(err).Msg("select from files failed")
+			errtype.LogError(err, "select from files failed")
 			return nil, err
 		}
 		defer fileRows.Close()
@@ -319,7 +368,7 @@ func (s Server) getFiles(ctx context.Context, datasets []*proto.Dataset) ([]*pro
 				&createdAt,
 				&updatedAt,
 			); err != nil {
-				log.Error().Err(err).Msg("scan file list failed")
+				errtype.LogError(err, "scan file list failed")
 				return nil, err
 			}
 			file.SourceId = fileSourceID.String

@@ -31,22 +31,22 @@ describe('archive and unarchive report', () => {
 
     // Archive the report (force click since button is only visible on hover)
     // Find the row containing the report name, then find the archive button in that row
-    cy.contains('tr', reportName).should('be.visible')
-    cy.contains('tr', reportName).find('button#dekart-archive-report').click({ force: true })
+    cy.contains('.dekart-map-card', reportName).should('be.visible')
+    cy.contains('.dekart-map-card', reportName).find('button#dekart-archive-report').click({ force: true })
 
     // Switch to archived view
     cy.get('#dekart-archived-switch').click()
 
     // Verify report appears in archived list
-    cy.get('td').contains(reportName).should('be.visible')
+    cy.get('.dekart-map-card').contains(reportName).should('be.visible')
 
     // Restore the report (force click since button is only visible on hover)
-    cy.contains('tr', reportName).find('button#dekart-restore-report').click({ force: true })
+    cy.contains('.dekart-map-card', reportName).find('button#dekart-restore-report').click({ force: true })
 
     // Wait for switch to automatically turn off (happens when last archived report is restored)
     cy.get('#dekart-archived-switch').should('not.have.class', 'ant-switch-checked')
 
     // Verify report is back in the main list
-    cy.get('td').contains(reportName).should('be.visible')
+    cy.get('.dekart-map-card').contains(reportName).should('be.visible')
   })
 })

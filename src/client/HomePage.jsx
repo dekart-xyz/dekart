@@ -1,12 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
+import { Helmet } from 'react-helmet'
 import { Header } from './Header'
 import styles from './HomePage.module.css'
 import Button from 'antd/es/button'
 import Radio from 'antd/es/radio'
 import Result from 'antd/es/result'
 import Table from 'antd/es/table'
+import Input from 'antd/es/input'
 import { useDispatch, useSelector } from 'react-redux'
-import { PlusOutlined, FileSearchOutlined, UsergroupAddOutlined, ApiTwoTone, LockOutlined, TeamOutlined, GlobalOutlined } from '@ant-design/icons'
+import { PlusOutlined, FileSearchOutlined, UsergroupAddOutlined, ApiTwoTone, LockOutlined, TeamOutlined, GlobalOutlined, EditOutlined, SearchOutlined, EyeInvisibleOutlined } from '@ant-design/icons'
 import DataDocumentationLink from './DataDocumentationLink'
 import Switch from 'antd/es/switch'
 import { archiveReport, subscribeReports, unsubscribeReports, createReport } from './actions/report'
@@ -19,8 +21,11 @@ import Onboarding from './Onboarding'
 import { DatasourceIcon } from './Datasource'
 import { track } from './lib/tracking'
 import { If } from './lib/helperElements'
+import { useMapPreview } from './lib/useMapPreview'
+import { getRelativeTime } from './lib/relativeTime'
 import BigQueryConnectionTypeSelectorModal from './BigQueryConnectionTypeSelectorModal'
 import { Loading } from './Loading'
+import classnames from 'classnames'
 
 function ArchiveReportButton ({ report }) {
   const dispatch = useDispatch()
@@ -29,41 +34,32 @@ function ArchiveReportButton ({ report }) {
   return (
     <Button
       id={report.archived ? 'dekart-restore-report' : 'dekart-archive-report'}
-      className={styles.deleteButton}
-      type='text'
+      className={styles.mapActionButton}
+      type='default'
+      size='small'
+      icon={!report.archived ? <EyeInvisibleOutlined /> : null}
       disabled={disabled || disableArchivePublic}
-      title={disableArchivePublic ? 'Cannot archive public report. Unpublish it first.' : ''}
-      onClick={() => {
+      title={disableArchivePublic ? 'Cannot archive public report. Unpublish it first.' : (report.archived ? 'Restore' : 'Archive')}
+      onClick={(e) => {
+        e.stopPropagation()
         dispatch(archiveReport(report.id, !report.archived))
         setDisabled(true)
       }}
-    >{report.archived ? 'Restore' : 'Archive'}
+    >
+      {report.archived ? 'Restore' : undefined}
     </Button>
   )
 }
 
 const columns = [
   {
-    dataIndex: 'icon',
-    render: (t, report) => {
-      if (report.isPlayground || report.isPublic) {
-        return <GlobalOutlined title='This report accessible outside of workspace' />
-      }
-      if (report.discoverable || report.hasDirectAccess) {
-        return <TeamOutlined title='This report is discoverable by others users' />
-      }
-      return <LockOutlined title='This is visible only to you' />
-    },
+    dataIndex: 'connectionIcon',
+    render: (t, connection) => <DatasourceIcon type={connection.connectionType} />,
     className: styles.iconColumn
   },
   {
-    dataIndex: 'title',
-    render: (t, report) => <a href={`/reports/${report.id}`}>{report.title}</a>,
-    className: styles.titleColumn
-  },
-  {
-    dataIndex: 'archivedTitle',
-    render: (t, report) => report.title,
+    dataIndex: 'connectionName',
+    render: (t, connection) => <OpenConnectionButton connection={connection} />,
     className: styles.titleColumn
   },
   {
@@ -76,21 +72,6 @@ const columns = [
       >{item.authorEmail}
       </div>),
     className: styles.authorColumn
-  },
-  {
-    dataIndex: 'delete',
-    render: (t, report) => <ArchiveReportButton report={report} />,
-    className: styles.deleteColumn
-  },
-  {
-    dataIndex: 'connectionName',
-    render: (t, connection) => <OpenConnectionButton connection={connection} />,
-    className: styles.titleColumn
-  },
-  {
-    dataIndex: 'connectionIcon',
-    render: (t, connection) => <DatasourceIcon type={connection.connectionType} />,
-    className: styles.iconColumn
   },
   {
     dataIndex: 'setDefault',
@@ -112,6 +93,7 @@ function SetDefault ({ connection }) {
         type='text'
         className={styles.deleteButton}
         onClick={() => {
+          track('SetDefaultConnection', { connectionId: connection.id })
           dispatch(setDefaultConnection(connection.id))
         }}
       >Set default
@@ -126,31 +108,12 @@ function OpenConnectionButton ({ connection }) {
     <Button
       type='link'
       onClick={() => {
+        track('OpenConnectionSettings', { connectionId: connection.id, connectionType: connection.connectionType })
         dispatch(editConnection(connection.id, connection.connectionType, Boolean(connection.bigqueryKey)))
       }}
     >{connection.connectionName}
     </Button>
   )
-}
-
-function filterColumns (filter) {
-  return filter.map(f => columns.find(c => c.dataIndex === f))
-}
-
-function getColumns (reportFilter, archived, authEnabled) {
-  if (reportFilter === 'my') {
-    if (archived) {
-      return filterColumns(['archivedTitle', 'delete'])
-    }
-    if (authEnabled) {
-      return filterColumns(['icon', 'title', 'delete'])
-    }
-    return filterColumns(['title', 'delete'])
-  } else if (reportFilter === 'connections') {
-    return filterColumns(['connectionIcon', 'connectionName', 'author', 'setDefault'])
-  } else {
-    return filterColumns(['icon', 'title', 'author'])
-  }
 }
 
 function FirstReportOnboarding () {
@@ -166,7 +129,15 @@ function FirstReportOnboarding () {
         subTitle='Everything is ready to create you first map.'
         extra={(
           <>
-            <Button icon={<PlusOutlined />} disabled={isViewer} type='primary' id='dekart-create-report' onClick={() => dispatch(createReport())}>Create map</Button>
+            <Button
+              icon={<PlusOutlined />} disabled={isViewer} type='primary' id='dekart-create-report' onClick={
+                () => {
+                  track('CreateMap')
+                  dispatch(createReport())
+                }
+              }
+            >Create map
+            </Button>
             <If condition={isPlayground && !isSelfHosted}><div className={styles.stepBySetLink}><a target='_blank' href='https://dekart.xyz/docs/about/playground/#quick-start' rel='noreferrer'>Check step-by-step guide</a></div></If>
           </>
         )}
@@ -187,6 +158,7 @@ function ConnectionTypeSelectorBottom () {
       <div className={styles.connectionSelectorBack}>
         <Button
           type='ghost' onClick={() => {
+            track('ReturnFromConnectionSelector')
             if (newScreen) {
               dispatch(newConnectionScreen(false))
             } else {
@@ -202,7 +174,7 @@ function ConnectionTypeSelectorBottom () {
     return (
       <div className={styles.notSure}>
         <p>or</p>
-        <Button ghost type='primary' href='https://dekart.xyz/self-hosted/?ref=ConnectionTypeSelector' target='_blank'>Get Started with Self-Hosting</Button>
+        <Button ghost type='primary' href='https://dekart.xyz/self-hosted/?ref=ConnectionTypeSelector' target='_blank' onClick={() => track('GetStartedWithSelfHosting')}>Get Started with Self-Hosting</Button>
       </div>
     )
   }
@@ -323,7 +295,10 @@ function ReportsHeader (
                 disabled={!isAdmin}
                 type='primary'
                 title={isAdmin ? 'Create new connection' : 'Only admin can create new connection'}
-                onClick={() => { dispatch(newConnectionScreen(true)) }}
+                onClick={() => {
+                  track('NewConnectionButton')
+                  dispatch(newConnectionScreen(true))
+                }}
               >New Connection
               </Button>
               )
@@ -339,7 +314,13 @@ function ReportsHeader (
                       )
                     : null
                 }
-                <Button id='dekart-create-report' type='primary' disabled={isViewer} onClick={() => dispatch(createReport())}>New Map</Button>
+                <Button
+                  id='dekart-create-report' type='primary' disabled={isViewer} onClick={() => {
+                    track('NewMap')
+                    dispatch(createReport())
+                  }}
+                >New Map
+                </Button>
               </>
               )
         }
@@ -349,8 +330,174 @@ function ReportsHeader (
   )
 }
 
+function getPrivacyStatus (report) {
+  if (report.isPlayground || report.isPublic) {
+    return { label: 'Public', icon: <GlobalOutlined />, className: styles.public }
+  }
+  if (report.discoverable || report.hasDirectAccess) {
+    return { label: 'Shared', icon: <TeamOutlined />, className: styles.shared }
+  }
+  return { label: 'Private', icon: <LockOutlined />, className: styles.private }
+}
+
+function PreviewConnectionIcons ({ report }) {
+  const connectionTypes = report.connectionTypesList
+  if (connectionTypes.length === 0) return null
+  return (
+    <div className={styles.previewConnectionIcons}>
+      {connectionTypes.map((connectionType, index) => (
+        <span key={index} className={styles.previewConnectionIcon}>
+          <DatasourceIcon type={connectionType} />
+        </span>
+      ))}
+    </div>
+  )
+}
+
+function filterDataSource (dataSource, searchQuery, reportFilter) {
+  if (!searchQuery.trim()) {
+    return dataSource
+  }
+  const query = searchQuery.toLowerCase()
+  return dataSource.filter(item => {
+    if (reportFilter === 'connections') {
+      return item.connectionName?.toLowerCase().includes(query) ||
+             item.authorEmail?.toLowerCase().includes(query)
+    }
+    return item.title?.toLowerCase().includes(query) ||
+           item.authorEmail?.toLowerCase().includes(query)
+  })
+}
+
+function MapCard ({ report, reportFilter, archived, authEnabled }) {
+  const history = useHistory()
+  const privacy = getPrivacyStatus(report)
+  const modifiedDate = new Date(report.updatedAt * 1000)
+  const cardRef = useRef(null)
+  const [isVisible, setIsVisible] = useState(false)
+
+  useEffect(() => {
+    const card = cardRef.current
+    if (!card) return
+
+    const observer = new window.IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsVisible(true)
+            // Once visible, we can disconnect the observer
+            observer.disconnect()
+          }
+        })
+      },
+      {
+        rootMargin: '50px' // Start loading 50px before the card is visible
+      }
+    )
+
+    observer.observe(card)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [])
+
+  const { previewUrl, previewLoading, previewError, setPreviewLoading, setPreviewError } = useMapPreview(report, isVisible)
+
+  const handleEdit = (e) => {
+    e.stopPropagation()
+    track('EditMap', { reportId: report.id })
+    history.push(`/reports/${report.id}/source`)
+  }
+
+  const handleCardClick = () => {
+    if (report.archived) {
+      return
+    }
+    track('ViewMap', { reportId: report.id })
+    history.push(`/reports/${report.id}`)
+  }
+
+  return (
+    <div ref={cardRef} className={classnames(styles.mapCard, 'dekart-map-card', { [styles.mapCardArchived]: report.archived })} onClick={handleCardClick}>
+      <div className={styles.mapPreview}>
+        <div className={classnames(styles.privacyBadge, styles.privacyBadgeOverlay, privacy.className)}>
+          {privacy.icon}
+          {privacy.label === 'Public' && <span>{privacy.label}</span>}
+        </div>
+        <PreviewConnectionIcons report={report} />
+        <img
+          src={previewUrl}
+          alt={report.title}
+          className={classnames(styles.previewImage, { [styles.previewImageHidden]: previewLoading || previewError })}
+          onLoad={() => {
+            setPreviewLoading(false)
+            setPreviewError(false)
+          }}
+          onError={(e) => {
+            console.warn('Map preview failed to load:', previewUrl, e)
+            setPreviewError(true)
+            setPreviewLoading(false)
+          }}
+        />
+        {(previewLoading || previewError) && (
+          <div className={styles.previewPlaceholder}>
+            <FileSearchOutlined />
+          </div>
+        )}
+      </div>
+      <div className={styles.mapCardContent}>
+        <h3
+          className={classnames(styles.mapTitle, { [styles.mapTitleUntitled]: !report.title || report.title === 'Untitled' })}
+          title={(!report.title || report.title === 'Untitled') ? 'Click to rename this map' : undefined}
+        >
+          {report.title || 'Untitled'}
+        </h3>
+        <div className={styles.mapMeta}>
+          <div className={styles.mapMetaContent}>
+            <div className={styles.mapMetaLeft}>
+              <div className={styles.mapMetaRow}>
+                <span
+                  className={styles.mapUpdatedDate}
+                  title={`${modifiedDate.toLocaleString()} (${modifiedDate.toUTCString()})`}
+                >
+                  Updated {getRelativeTime(modifiedDate)}
+                </span>
+              </div>
+              {report.authorEmail && (
+                <div className={styles.mapMetaRow}>
+                  <span className={styles.mapAuthorInline}>
+                    {report.authorEmail}
+                  </span>
+                </div>
+              )}
+            </div>
+            {/* Action buttons - right side, shown on hover */}
+            <div className={styles.mapActions}>
+              {report.canWrite && !report.archived && (
+                <Button
+                  type='default'
+                  size='small'
+                  icon={<EditOutlined />}
+                  onClick={handleEdit}
+                  className={styles.mapActionButton}
+                  title='Edit'
+                />
+              )}
+              {reportFilter === 'my' && (
+                <ArchiveReportButton report={report} />
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function Reports ({ createReportButton, reportFilter }) {
   const [archived, setArchived] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const reportsList = useSelector(state => state.reportsList)
   const { loaded: envLoaded, authEnabled } = useSelector(state => state.env)
   const connectionList = useSelector(state => state.connection.list.filter(c => !isSystemConnectionID(c.id)))
@@ -363,6 +510,23 @@ function Reports ({ createReportButton, reportFilter }) {
       setArchived(false)
     }
   }, [reportsList, setArchived])
+
+  // Calculate dataSource - must be before useMemo
+  let dataSource = []
+  if (reportFilter === 'my') {
+    dataSource = archived ? reportsList.archived : reportsList.my
+  } else if (reportFilter === 'connections') {
+    dataSource = connectionList
+  } else {
+    dataSource = reportsList.discoverable
+  }
+
+  // Filter by search query - must be called before any early returns
+  const filteredDataSource = useMemo(() => {
+    return filterDataSource(dataSource, searchQuery, reportFilter)
+  }, [dataSource, searchQuery, reportFilter])
+
+  // Early returns after all hooks
   if (!envLoaded) {
     return null
   }
@@ -378,14 +542,32 @@ function Reports ({ createReportButton, reportFilter }) {
       <div className={styles.reports}><FirstReportOnboarding createReportButton={createReportButton} /></div>
     )
   } else {
-    let dataSource = []
-    if (reportFilter === 'my') {
-      dataSource = archived ? reportsList.archived : reportsList.my
-    } else if (reportFilter === 'connections') {
-      dataSource = connectionList
-    } else {
-      dataSource = reportsList.discoverable
+    // For connections, still use table view
+    if (reportFilter === 'connections') {
+      return (
+        <div className={styles.reports}>
+          <ReportsHeader
+            reportFilter={reportFilter}
+            archived={archived}
+            setArchived={setArchived}
+          />
+          {filteredDataSource.length
+            ? (
+              <Table
+                dataSource={filteredDataSource}
+                columns={columns}
+                showHeader={false}
+                rowClassName={styles.reportsRow}
+                pagination={false}
+                rowKey='id'
+                className={styles.reportsTable}
+              />
+              )
+            : null}
+        </div>
+      )
     }
+
     return (
       <div className={styles.reports}>
         <ReportsHeader
@@ -393,20 +575,39 @@ function Reports ({ createReportButton, reportFilter }) {
           archived={archived}
           setArchived={setArchived}
         />
-        {dataSource.length
+        <div className={styles.searchBar}>
+          <Input
+            placeholder='Search maps...'
+            prefix={<SearchOutlined />}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            allowClear
+            className={styles.searchInput}
+          />
+        </div>
+        {filteredDataSource.length
           ? (
-            <Table
-              dataSource={dataSource}
-              columns={getColumns(reportFilter, archived, authEnabled)}
-              showHeader={false}
-              rowClassName={styles.reportsRow}
-              pagination={false}
-              rowKey='id'
-            />
+            <div className={styles.mapsGrid}>
+              {filteredDataSource.map(report => (
+                <MapCard
+                  key={report.id}
+                  report={report}
+                  reportFilter={reportFilter}
+                  archived={archived}
+                  authEnabled={authEnabled}
+                />
+              ))}
+            </div>
             )
-          : reportFilter === 'discoverable'
-            ? (<OnboardingDiscoverableReports />)
-            : (<OnboardingMyReports />)}
+          : searchQuery.trim()
+            ? (
+              <div className={styles.noResults}>
+                No results found
+              </div>
+              )
+            : reportFilter === 'discoverable'
+              ? (<OnboardingDiscoverableReports />)
+              : (<OnboardingMyReports />)}
       </div>
     )
   }
@@ -442,6 +643,18 @@ function OnboardingDiscoverableReports () {
   )
 }
 
+function getPageTitle (reportFilter) {
+  switch (reportFilter) {
+    case 'connections':
+      return 'Connections'
+    case 'discoverable':
+      return 'Shared Maps'
+    case 'my':
+    default:
+      return 'My Maps'
+  }
+}
+
 export default function HomePage ({ reportFilter }) {
   const reportsList = useSelector(state => state.reportsList)
   const isPlayground = useSelector(state => state.user.isPlayground)
@@ -457,8 +670,12 @@ export default function HomePage ({ reportFilter }) {
       dispatch(unsubscribeReports())
     }
   }, [dispatch])
+
   return (
     <div className={styles.homePage}>
+      <Helmet>
+        <title>{getPageTitle(reportFilter)} — Dekart</title>
+      </Helmet>
       <Header />
       <div className={styles.body}>
         {

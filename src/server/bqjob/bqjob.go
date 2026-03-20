@@ -44,7 +44,12 @@ func (job *Job) close(storageWriter io.WriteCloser, csvWriter *csv.Writer) {
 		if errtype.ContextCancelledRe.MatchString(err.Error()) {
 			return
 		}
-		job.Logger.Err(err).Msg("storageWriter.Close failed")
+		// Check if this is a GCS permission error (403 Forbidden)
+		if apiError, ok := err.(*googleapi.Error); ok && apiError.Code == 403 {
+			job.Logger.Warn().Err(err).Msg("storageWriter.Close failed")
+		} else {
+			job.Logger.Err(err).Msg("storageWriter.Close failed")
+		}
 		job.CancelWithError(err)
 		return
 	}

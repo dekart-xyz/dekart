@@ -1,0 +1,21 @@
+.mapControlButton {
+    box-shadow: 0 6px 12px 0 rgba(0, 0, 0, 0.16);
+    height: 32px;
+    width: 32px;
+    padding: 0;
+    border-radius: 0;
+    background-color: #29323C;
+    color: #6A7485;
+    border: 0;
+    transition-delay: 0s;
+    transition-duration: 0.4s;
+    transition-property: all;
+    transition-timing-function: ease;
+}
+
+.mapControlButton:hover {
+    background-color: #3A4552;
+    color: #FFFFFF;
+    border: 0;
+}
+

@@ -1,0 +1,58 @@
+{
+  "realm": "dekart",
+  "enabled": true,
+  "displayName": "Dekart Test Realm",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "clients": [
+    {
+      "clientId": "oauth2-proxy",
+      "name": "oauth2-proxy",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "oauth2-proxy-secret",
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:4180/oauth2/callback"
+      ],
+      "webOrigins": [
+        "http://localhost:4180"
+      ],
+      "protocolMappers": [
+        {
+          "name": "audience-oauth2-proxy",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "oauth2-proxy",
+            "id.token.claim": "true",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "test@example.com",
+      "firstName": "Test",
+      "lastName": "User",
+      "email": "test@example.com",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "test12345",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

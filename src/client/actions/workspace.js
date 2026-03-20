@@ -1,7 +1,10 @@
-import { CreateWorkspaceRequest, CreateSubscriptionRequest, GetInvitesRequest, GetWorkspaceRequest, GetStripePortalSessionRequest, ListUsersRequest, RespondToInviteRequest, UpdateWorkspaceRequest, UpdateWorkspaceUserRequest } from 'dekart-proto/dekart_pb'
+import { CreateWorkspaceRequest, CreateSubscriptionRequest, GetInvitesRequest, GetWorkspaceRequest, GetStripePortalSessionRequest, ListUsersRequest, RespondToInviteRequest, UpdateWorkspaceRequest, UpdateWorkspaceUserRequest, PlanType } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { grpcCall } from './grpc'
-import { success } from './message'
+import { success, trialSuccess } from './message'
+import { hideUpgradeModal } from './upgradeModal'
+import { updateSessionStorage } from './sessionStorage'
+import { updateLocalStorage } from './localStorage'
 
 export function redirectToCustomerPortal () {
   return (dispatch) => {
@@ -23,6 +26,15 @@ export function respondToInvite (inviteId, accept) {
     dispatch(grpcCall(Dekart.RespondToInvite, request, () => {
       window.location.href = '/'
     }))
+  }
+}
+
+export function switchWorkspace (workspaceId, sourceURL = '/') {
+  return (dispatch) => {
+    dispatch({ type: switchWorkspace.name })
+    dispatch(updateSessionStorage('preferredWorkspaceId', workspaceId))
+    dispatch(updateLocalStorage('preferredWorkspaceId', workspaceId))
+    window.location.href = sourceURL
   }
 }
 
@@ -78,6 +90,9 @@ export function createSubscription (plantType) {
     dispatch(grpcCall(Dekart.CreateSubscription, request, (res) => {
       if (res.redirectUrl) {
         window.location.href = res.redirectUrl
+      } else if (plantType === PlanType.TYPE_TRIAL) {
+        dispatch(hideUpgradeModal())
+        dispatch(trialSuccess())
       } else {
         success('Subscription created')
       }

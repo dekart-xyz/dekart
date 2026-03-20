@@ -38,7 +38,7 @@ privileges:
 references:
   - MAPBOX_EAI:
       label: "Mapbox API"
-      description: "Dekart uses Mapbox API to render maps."
+      description: "Dekart uses Mapbox only to load basemap tiles; no customer data is ever sent to Mapbox, and all connections to Mapbox are made directly from the user's browser."
       privileges: [USAGE]
       object_type: EXTERNAL ACCESS INTEGRATION
       register_callback: v1.register_single_callback

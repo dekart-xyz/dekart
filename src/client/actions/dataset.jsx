@@ -2,12 +2,12 @@ import { CreateDatasetRequest, RemoveDatasetRequest, UpdateDatasetConnectionRequ
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { setError, success, info, warn } from './message'
-import { addDataToMap, toggleSidePanel, reorderLayer, removeDataset as removeDatasetFromKepler, loadFiles } from '@kepler.gl/actions'
+import { addDataToMap, toggleSidePanel, replaceDataInMap, loadFiles } from '@kepler.gl/actions'
 import { get } from '../lib/api'
 import getDatasetName from '../lib/getDatasetName'
 import { runQuery } from './query'
-import { KeplerGlSchema } from '@kepler.gl/schemas'
 import wasmInit from 'parquet-wasm'
+import { mimeFromExtension } from '../lib/mime'
 
 // Custom error to mark empty result cases for downstream handling
 class EmptyResultError extends Error {
@@ -76,7 +76,7 @@ export function removeDataset (datasetId, silent = false) {
         dispatch(setError(new Error('Cannot remove last dataset')))
         return
       }
-      dispatch(setActiveDataset(datasetsLeft.id))
+      dispatch(setActiveDataset(datasetsLeft[0].id))
     }
     dispatch({ type: removeDataset.name, datasetId })
 
@@ -106,7 +106,7 @@ export function downloadingProgress (dataset, loaded) {
 export function processDownloadError (err, dataset, label) {
   return function (dispatch, getState) {
     dispatch({ type: processDownloadError.name, dataset })
-    if (err instanceof EmptyResultError || err.message.includes('CSV is empty')) {
+    if (err instanceof EmptyResultError || err.message.includes('CSV is empty') || err.message.includes('Empty result') || err.status === 204) {
       dispatch(warn(<><i>{label}</i> Result is empty</>))
     } else if (err.status === 410 && dataset.queryId) { // gone from dw query temporary storage
       const { canRun, queryText } = getState().queryStatus[dataset.queryId]
@@ -117,7 +117,7 @@ export function processDownloadError (err, dataset, label) {
       // don't need to check if user can run query (report.CanWrite || report.Discoverable)
       // because report cannot be opened if it's not discoverable
       // so if user can open report, they can run query
-      dispatch(info(<><i>{label}</i> result expired, re-running</>))
+      dispatch(info(<><i>{label}</i> result expired, re-running</>, 'query-result-expired'))
       dispatch(runQuery(dataset.queryId, queryText))
     } else if (err.name === 'AbortError') {
       dispatch(setError(new Error('Download cancelled by user')))
@@ -154,12 +154,22 @@ async function processLoadFilesQueue (dispatch, getState) {
     const { file, resolve, reject, totalRows } = getState().dataset.loadFilesQueue.queue[0]
 
     try {
+      // Check if result is empty before calling loadFiles
+      // This prevents kepler.gl from trying to parse an empty file
+      if (file.size === 0) {
+        reject(new EmptyResultError('Empty result'))
+        // Remove the processed item from queue
+        dispatch(removeFromLoadFilesQueue())
+        continue
+      }
+
       const result = await new Promise((_resolve, _reject) => {
         try {
           dispatch(loadFiles([file], (r) => {
             const datasetData = r[0]?.data
             if (!datasetData) {
-              if (totalRows === 0) {
+              // totalRows may be undefined for wherobots queries
+              if (totalRows !== undefined && totalRows === 0) {
                 _reject(new EmptyResultError('Empty result'))
               } else {
                 _reject(new Error('Error loading dataset'))
@@ -188,7 +198,11 @@ async function processLoadFilesQueue (dispatch, getState) {
 export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
   return async function (dispatch, getState) {
     // must be before async so dataset is not added twice
-    dispatch({ type: addDatasetToMap.name, dataset })
+    const { lastAddedQueryParamsHash } = getState().dataset
+    const queryParamsHash = getState().queryParams.hash
+    const { dataset: { list: datasets }, files, queries, queryJobs } = getState()
+    const queryJob = queryJobs.find(j => j.queryId === dataset.queryId && j.queryParamsHash === queryParamsHash)
+    dispatch({ type: addDatasetToMap.name, dataset, queryParamsHash, queryJob })
     const reportId = getState().report?.id
     if (!isWasmInitialized) {
       isWasmInitialized = true
@@ -199,8 +213,6 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
         return
       }
     }
-    const { dataset: { list: datasets }, files, queries, keplerGl, queryJobs } = getState()
-    const queryJob = queryJobs.find(j => j.queryId === dataset.queryId)
     const label = getDatasetName(dataset, queries, files)
     let data
     try {
@@ -208,7 +220,7 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
       const file = new File(
         [blob],
         label,
-        { type: extension === 'csv' ? 'text/csv' : extension === 'json' ? 'application/json' : '' })
+        { type: mimeFromExtension(extension) })
 
       // Add to queue and wait for sequential processing
       // Kepler loadFiles should not be called before all previous loadFiles are finished
@@ -223,7 +235,7 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
 
     // check if dataset was already added to kepler
     const addedDatasets = getState().keplerGl.kepler?.visState.datasets || {}
-    const prevDataset = prevDatasetsList.find(d => d.id in addedDatasets)
+    const prevDataset = prevDatasetsList.find(d => d.queryId === dataset.queryId && d.id in addedDatasets)
     const i = datasets.findIndex(d => d.id === dataset.id)
     if (i < 0) {
       dispatch(finishAddingDatasetToMap(dataset))
@@ -232,57 +244,27 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
     try {
       if (prevDataset) {
         dispatch(keplerDatasetStartUpdating())
-        const prevLabel = getDatasetName(prevDataset, queries, files)
-
-        // remember layer order, because kepler will reshuffle layers after adding dataset
-        const layerOrder = [].concat(getState().keplerGl.kepler.visState.layerOrder)
-        const layersAr = getState().keplerGl.kepler.visState.layers.map(layer => layer.id)
-        const layerIdOrder = layerOrder.map(id => layersAr[id])
-        const config = KeplerGlSchema.getConfigToSave(keplerGl.kepler)
-
-        // filter for specific dataset
-        config.config.visState.layers = config.config.visState.layers.filter(
-          layer => layer.config.dataId === dataset.id
-        )
-        config.config.visState.filters = config.config.visState.filters.filter(
-          f => f.dataId.includes(dataset.id)
-        )
-
-        // update layer labels
-        if (prevDataset?.name !== dataset.name) {
-          config.config.visState.layers = config.config.visState.layers.map(layer => {
-            if (layer.config.label === prevLabel) {
-              layer.config.label = label
-            }
-            return layer
-          })
+        const prevDataId = prevDataset.id
+        const { reportStatus } = getState()
+        const updateOptions = { keepExistingConfig: true, autoCreateLayers: false }
+        // In view mode, prevent auto-centering/zooming
+        if (!reportStatus.edit && queryJob && queryJob.queryParamsHash === lastAddedQueryParamsHash[dataset.queryId]) {
+          updateOptions.centerMap = false
         }
-
-        dispatch(removeDatasetFromKepler(dataset.id))
-
-        // add dataset with previous config
-        dispatch(addDataToMap({
-          datasets: {
+        dispatch(replaceDataInMap({
+          datasetToReplaceId: prevDataId,
+          datasetToUse: {
             info: {
               label,
               id: dataset.id
             },
             data
           },
-          options: { keepExistingConfig: true },
-          config // https://github.com/keplergl/kepler.gl/issues/176#issuecomment-410326304
+          options: updateOptions
         }))
-
-        // restore layer order
-        const newLayersAr = getState().keplerGl.kepler.visState.layers.map(layer => layer.id)
-        if (newLayersAr.length === layerIdOrder.length) {
-          const newOrder = layerIdOrder.map(id => newLayersAr.indexOf(id)).filter(i => i >= 0)
-          if (newOrder.length === layerIdOrder.length) {
-            dispatch(reorderLayer(newOrder))
-          }
-        }
         dispatch(keplerDatasetFinishUpdating())
       } else {
+        dispatch(keplerDatasetStartUpdating())
         dispatch(addDataToMap({
           datasets: {
             info: {
@@ -292,6 +274,7 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
             data
           }
         }))
+        dispatch(keplerDatasetFinishUpdating())
       }
     } catch (err) {
       dispatch(processDownloadError(err, dataset, label))

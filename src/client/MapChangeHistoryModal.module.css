@@ -1,0 +1,190 @@
+.modal {
+  /* Modal styles */
+}
+
+.modalTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.titleIcon {
+  font-size: 18px;
+}
+
+.content {
+  padding: 24px;
+}
+
+.summary {
+  margin-bottom: 16px;
+}
+
+.totalChanges {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.historyContainer {
+  max-height: 600px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Custom scrollbar */
+.historyContainer::-webkit-scrollbar {
+  width: 8px;
+}
+
+.historyContainer::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.historyContainer::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.historyContainer::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.dayCollapse {
+  background: transparent;
+}
+
+.dayPanel {
+  margin-bottom: 0;
+  border-top: 1px solid #f0f0f0;
+}
+
+.dayPanel:first-child {
+  border-top: none;
+}
+
+.dayPanelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding-right: 8px;
+}
+
+.dayPanelLabel {
+  font-weight: 600;
+  font-size: 15px;
+  color: #262626;
+}
+
+.dayPanelCount {
+  font-size: 13px;
+  color: #8c8c8c;
+  font-weight: normal;
+}
+
+.daySection {
+  padding: 8px 0;
+}
+
+.hourCollapse {
+  background: transparent;
+}
+
+.hourPanel {
+  margin-bottom: 4px;
+}
+
+.hourHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 8px;
+}
+
+.hourIcon {
+  color: #1890ff;
+  font-size: 14px;
+}
+
+.hourLabel {
+  font-weight: 500;
+  font-size: 14px;
+  color: #262626;
+}
+
+.hourChangeCount {
+  margin-left: auto;
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.changesList {
+  padding: 8px 0;
+}
+
+.changeItem {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+}
+
+.changeItem.currentVersion {
+  background-color: #e6f7ff;
+  border-left: 3px solid #1890ff;
+  padding-left: 13px;
+}
+
+.changeTime {
+  min-width: 80px;
+  font-size: 13px;
+  color: #8c8c8c;
+  font-weight: 500;
+}
+
+.changeContent {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.changeTypeBadge {
+  flex-shrink: 0;
+}
+
+.typeTag {
+  margin: 0;
+  font-size: 12px;
+}
+
+.changeUser {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #262626;
+}
+
+.userIcon {
+  color: #1890ff;
+  font-size: 12px;
+}
+
+.restoreButton {
+  flex-shrink: 0;
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 24px;
+}
+
+.modalFooterSpacer {
+  flex: 1;
+}
+

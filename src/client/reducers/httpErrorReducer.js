@@ -14,7 +14,8 @@ export default function httpError (state = {}, action) {
         return {
           status: action.status,
           message: action.message,
-          doNotAuthenticate: false
+          doNotAuthenticate: false,
+          sourceURL: action.sourceURL
         }
       }
     }

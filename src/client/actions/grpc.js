@@ -7,25 +7,34 @@ import { UNKNOWN_EMAIL } from '../lib/constants'
 const { VITE_API_HOST } = import.meta.env
 const host = VITE_API_HOST || ''
 
+function buildGrpcHeaders (token, user) {
+  const { isPlayground, claimEmailCookie, loginHint, preferredWorkspaceId } = user
+  const headers = new window.Headers()
+  if (token) {
+    headers.append('Authorization', `Bearer ${token.access_token}`)
+  }
+  if (isPlayground) {
+    headers.append('X-Dekart-Playground', 'true')
+  }
+  if (claimEmailCookie) {
+    headers.append('X-Dekart-Claim-Email', claimEmailCookie)
+  }
+  if (getReportIdFromUrl()) {
+    headers.append('X-Dekart-Report-Id', getReportIdFromUrl())
+  }
+  if (loginHint && loginHint !== UNKNOWN_EMAIL) {
+    headers.append('X-Dekart-Logged-In', 'true')
+  }
+  if (preferredWorkspaceId) {
+    headers.append('X-Dekart-Workspace-Id', preferredWorkspaceId)
+  }
+  return headers
+}
+
 export function grpcCall (method, request, resolve = () => {}, reject = (err) => err, maxRetries = 0) {
   return async function (dispatch, getState) {
-    const { token, user: { isPlayground, claimEmailCookie, loginHint } } = getState()
-    const headers = new window.Headers()
-    if (token) {
-      headers.append('Authorization', `Bearer ${token.access_token}`)
-    }
-    if (isPlayground) {
-      headers.append('X-Dekart-Playground', 'true')
-    }
-    if (claimEmailCookie) {
-      headers.append('X-Dekart-Claim-Email', claimEmailCookie)
-    }
-    if (getReportIdFromUrl()) {
-      headers.append('X-Dekart-Report-Id', getReportIdFromUrl())
-    }
-    if (loginHint && loginHint !== UNKNOWN_EMAIL) {
-      headers.append('X-Dekart-Logged-In', 'true')
-    }
+    const { token, user } = getState()
+    const headers = buildGrpcHeaders(token, user)
 
     let attempts = 0
 
@@ -100,23 +109,8 @@ class GrpcError extends Error {
 
 export function grpcStream (endpoint, request, cb) {
   return (dispatch, getState) => {
-    const { token, user: { isPlayground, claimEmailCookie, loginHint } } = getState()
-    const headers = new window.Headers()
-    if (token) {
-      headers.append('Authorization', `Bearer ${token.access_token}`)
-    }
-    if (isPlayground) {
-      headers.append('X-Dekart-Playground', 'true')
-    }
-    if (claimEmailCookie) {
-      headers.append('X-Dekart-Claim-Email', claimEmailCookie)
-    }
-    if (getReportIdFromUrl()) {
-      headers.append('X-Dekart-Report-Id', getReportIdFromUrl())
-    }
-    if (loginHint && loginHint !== UNKNOWN_EMAIL) {
-      headers.append('X-Dekart-Logged-In', 'true')
-    }
+    const { token, user } = getState()
+    const headers = buildGrpcHeaders(token, user)
     const onMessage = (message) => {
       const err = cb(message, null)
       if (err) {

@@ -1,0 +1,8 @@
+.toggleFullscreen {
+    position: relative;
+}
+
+.toggleFullscreenButton {
+    transform: rotate(-90deg);
+}
+

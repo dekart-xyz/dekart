@@ -20,6 +20,7 @@ type Job struct {
 	job.BasicJob
 	postgresDB    *sql.DB
 	storageObject storage.StorageObject
+	isReplayMode  bool
 }
 
 type Store struct {
@@ -29,6 +30,10 @@ type Store struct {
 
 func NewStore() *Store {
 	dbConnStr := os.Getenv("DEKART_POSTGRES_DATASOURCE_CONNECTION")
+	if dbConnStr == "" {
+		// Backward-compatible fallback for old env name.
+		dbConnStr = os.Getenv("DEKART_POSTGRES_DATA_CONNECTION")
+	}
 	db, err := sql.Open("postgres", dbConnStr)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect to postgres")
@@ -57,67 +62,87 @@ func (s *Store) Create(reportID string, queryID string, queryText string, userCt
 }
 
 func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connection) error {
-	j.Status() <- int32(proto.QueryJob_JOB_STATUS_RUNNING)
 	j.storageObject = storageObject
-
-	rows, err := j.postgresDB.QueryContext(j.GetCtx(), j.QueryText)
-	if err != nil {
-		j.Logger.Error().Err(err).Str("queryText", j.QueryText).Msg("Error executing query")
-		j.CancelWithError(err)
-		return err
-	}
-	defer rows.Close()
-
-	csvRows := make(chan []string, 10_000)
-
-	go j.write(csvRows)
-
-	columnTypes, err := rows.ColumnTypes()
-	if err != nil {
-		j.Logger.Error().Err(err).Msg("Error getting column types")
-		j.CancelWithError(err)
-		return err
-	}
-
-	firstRow := true
-	for rows.Next() {
-		if firstRow {
-			firstRow = false
-			j.Status() <- int32(proto.QueryJob_JOB_STATUS_READING_RESULTS)
-			columnNames := make([]string, len(columnTypes))
-			for i, columnType := range columnTypes {
-				columnNames[i] = columnType.Name()
-			}
-			csvRows <- columnNames
-		}
-
-		csvRow := make([]string, len(columnTypes))
-		values := make([]interface{}, len(columnTypes))
-		for i := range columnTypes {
-			values[i] = new(sql.NullString)
-		}
-
-		err = rows.Scan(values...)
+	_, j.isReplayMode = j.storageObject.(storage.PGStorageObject)
+	go func() {
+		j.Status() <- int32(proto.QueryJob_JOB_STATUS_RUNNING)
+		rows, err := j.postgresDB.QueryContext(j.GetCtx(), j.QueryText)
 		if err != nil {
-			j.Logger.Error().Err(err).Msg("Error scanning rows")
-			j.Logger.Warn().Err(err).Msg("Error scanning row, continuing with next")
-			continue
+			j.Logger.Warn().Err(err).Str("queryText", j.QueryText).Msg("Error querying postgres")
+			j.CancelWithError(err)
+			return
+		}
+		defer rows.Close()
+
+		if j.isReplayMode {
+			jobID := j.GetID()
+			j.Lock()
+			j.DWJobID = &jobID
+			j.ResultReady = true
+			j.ResultSize = 0
+			j.Unlock()
+			j.Status() <- int32(proto.QueryJob_JOB_STATUS_DONE)
+			j.Cancel()
+			return
 		}
 
-		for i := range columnTypes {
-			value := values[i]
-			switch x := value.(type) {
-			case *sql.NullString:
-				csvRow[i] = x.String
-			default:
-				return fmt.Errorf("incorrect type of data: %T", x)
+		csvRows := make(chan []string, 10_000)
+		defer close(csvRows)
+
+		go j.write(csvRows)
+
+		columnTypes, err := rows.ColumnTypes()
+		if err != nil {
+			j.Logger.Error().Err(err).Msg("Error getting column types")
+			j.CancelWithError(err)
+			return
+		}
+
+		firstRow := true
+		for rows.Next() {
+			if firstRow {
+				firstRow = false
+				j.Status() <- int32(proto.QueryJob_JOB_STATUS_READING_RESULTS)
+				columnNames := make([]string, len(columnTypes))
+				for i, columnType := range columnTypes {
+					columnNames[i] = columnType.Name()
+				}
+				csvRows <- columnNames
 			}
-		}
-		csvRows <- csvRow
-	}
 
-	close(csvRows)
-	j.Status() <- int32(proto.QueryJob_JOB_STATUS_DONE)
+			csvRow := make([]string, len(columnTypes))
+			values := make([]interface{}, len(columnTypes))
+			for i := range columnTypes {
+				values[i] = new(sql.NullString)
+			}
+
+			err = rows.Scan(values...)
+			if err != nil {
+				j.Logger.Error().Err(err).Msg("Error scanning row")
+				j.CancelWithError(err)
+				return
+			}
+
+			for i := range columnTypes {
+				value := values[i]
+				switch x := value.(type) {
+				case *sql.NullString:
+					csvRow[i] = x.String
+				default:
+					err = fmt.Errorf("incorrect type of data: %T", x)
+					j.Logger.Error().Err(err).Msg("Unexpected postgres value type")
+					j.CancelWithError(err)
+					return
+				}
+			}
+			csvRows <- csvRow
+		}
+		if err = rows.Err(); err != nil {
+			j.Logger.Error().Err(err).Msg("Error iterating postgres rows")
+			j.CancelWithError(err)
+			return
+		}
+	}()
 	return nil
 }
 

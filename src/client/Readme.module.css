@@ -17,7 +17,7 @@
     z-index: 10;
     right: 10px;
     margin-top: 10px;
-    overflow: scroll;
+    overflow: visible
 }
 
 .preview {

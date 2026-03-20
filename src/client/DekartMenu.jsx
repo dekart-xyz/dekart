@@ -2,38 +2,13 @@ import Menu from 'antd/es/menu'
 import styles from './DekartMenu.module.css'
 import { useDispatch, useSelector } from 'react-redux'
 import { getUrlRef } from './lib/ref'
-import { MenuOutlined, MessageOutlined, GlobalOutlined, LockOutlined } from '@ant-design/icons'
+import { MenuOutlined } from '@ant-design/icons'
 import { Link } from 'react-router-dom/cjs/react-router-dom'
 import { createReport } from './actions/report'
 import Tooltip from 'antd/es/tooltip'
+import { track } from './lib/tracking'
 
 const popupOffset = [-10, 0]
-
-function WorkspaceIndicator () {
-  const workspaceName = useSelector(state => state.workspace?.name)
-
-  const isPlayground = useSelector(state => state.user.isPlayground)
-  const workspaceId = useSelector(state => state.user.stream?.workspaceId)
-  if (!isPlayground && !workspaceId) {
-    return null
-  }
-
-  if (workspaceId) {
-    return (
-      <Menu.Item className={styles.workspaceIndicator} disabled key='workspaces'>
-        <LockOutlined /> {workspaceName} Workspace
-      </Menu.Item>
-    )
-  }
-
-  if (isPlayground) {
-    return (
-      <Menu.Item className={styles.workspaceIndicator} disabled key='workspaces'>
-        <GlobalOutlined /> Playground Workspace
-      </Menu.Item>
-    )
-  }
-}
 
 export default function DekartMenu () {
   const env = useSelector(state => state.env)
@@ -42,6 +17,7 @@ export default function DekartMenu () {
   const dispatch = useDispatch()
   const { authEnabled } = env
   const isPlayground = useSelector(state => state.user.isPlayground)
+  const isSnowpark = useSelector(state => state.env.isSnowpark)
   const isViewer = useSelector(state => state.user.isViewer)
   const ref = getUrlRef(env, usage)
   return (
@@ -55,40 +31,66 @@ export default function DekartMenu () {
           {authEnabled
             ? (
               <>
-                <WorkspaceIndicator />
-                <Menu.Item key='my'>
+                <Menu.Item key='my' onClick={() => track('NavigateToMyMaps')}>
                   <Link to='/'>My Maps</Link>
                 </Menu.Item>
-                <Menu.Item key='shared' disabled={isPlayground}>
+                <Menu.Item key='shared' disabled={isPlayground} onClick={() => track('NavigateToSharedMaps')}>
                   <Link to='/shared'>Shared Maps</Link>
                 </Menu.Item>
               </>
               )
             : (
-              <Menu.Item key='reports'>
+              <Menu.Item key='reports' onClick={() => track('NavigateToMaps')}>
                 <Link to='/'>Maps</Link>
               </Menu.Item>
               )}
-          {userDefinedConnection ? (<Menu.Item key='connections'><Link to='/connections'>Connections</Link></Menu.Item>) : null}
-          <Menu.Item key='create' disabled={isViewer} onClick={() => dispatch(createReport())}>New Map</Menu.Item>
+          {userDefinedConnection
+            ? (
+              <Menu.Item key='connections' onClick={() => track('NavigateToConnections')}>
+                <Link to='/connections'>Connections</Link>
+              </Menu.Item>
+              )
+            : null}
+          <Menu.Item
+            key='create'
+            disabled={isViewer}
+            onClick={() => {
+              track('CreateNewMap')
+              dispatch(createReport())
+            }}
+          >
+            New Map
+          </Menu.Item>
+          <Menu.Divider />
+          {isSnowpark && (
+            <Menu.Item key='snowflake-kepler-gl-examples' onClick={() => track('ClickedSnowflakeKeplerGlExamples')}>
+              <a target='_blank' rel='noopener noreferrer' href={'https://dekart.xyz/docs/snowflake-snowpark/about/?ref=' + ref}>Configure Access</a>
+            </Menu.Item>
+          )}
+          {!isSnowpark && (
+            <Menu.Item key='gpt' onClick={() => track('ClickedOvertureMapsGPT')}>
+              <a target='_blank' rel='noopener noreferrer' href='https://chatgpt.com/g/g-onSLtzQQB-overture-maps-gpt'>Overture Maps GPT</a>
+            </Menu.Item>
+          )}
+          <Menu.Item key='examples' onClick={() => track('ClickedMapExamples')}>
+            <a
+              target='_blank' rel='noopener noreferrer' href={
+              isSnowpark ? 'https://dekart.xyz/docs/about/snowflake-kepler-gl-examples/?ref=' + ref : 'https://dekart.xyz/docs/about/kepler-gl-map-examples?ref=' + ref
+            }
+            >Map Examples
+            </a>
+          </Menu.Item>
+          <Menu.Item key='slack' onClick={() => track('ClickedAskInSlack')}>
+            <a target='_blank' rel='noopener noreferrer' href='https://slack.dekart.xyz'>Slack Support</a>
+          </Menu.Item>
         </Menu.SubMenu>
-        <Menu.SubMenu popupClassName={styles.subMenu} popupOffset={popupOffset} title={<MessageOutlined />} key='community' active='yes'>
-          <Menu.Item key='gpt'>
-            <a target='_blank' rel='noopener noreferrer' href='https://chatgpt.com/g/g-onSLtzQQB-overture-maps-gpt'>Overture Maps GPT</a>
-          </Menu.Item>
-          <Menu.Item key='examples'>
-            <a target='_blank' rel='noopener noreferrer' href={'https://dekart.xyz/docs/about/kepler-gl-map-examples?ref=' + ref}>Map Examples</a>
-          </Menu.Item>
-          <Menu.Item key='slack'>
-            <a target='_blank' rel='noopener noreferrer' href='https://slack.dekart.xyz'>Ask in Slack</a>
-          </Menu.Item>
-          <Menu.Item key='issues'>
-            <a target='_blank' rel='noopener noreferrer' href={'https://github.com/dekart-xyz/dekart/issues?ref=' + ref}>Report Issue</a>
-          </Menu.Item>
-        </Menu.SubMenu>
-        <Menu.Item key='contribute'>
-          <Tooltip color='#328EB2' title={<>Loving Dekart?<br />Help community find it.<br />Give us ⭐️ on GitHub!</>}><a target='_blank' rel='noopener noreferrer' href='https://github.com/dekart-xyz/dekart'>🩵</a></Tooltip>
-        </Menu.Item>
+        {
+          !isSnowpark && (
+            <Menu.Item key='contribute' onClick={() => track('ClickedGitHubStar')}>
+              <Tooltip color='#328EB2' title={<>Loving Dekart?<br />Help community find it.<br />Give us ⭐️ on GitHub!</>}><a target='_blank' rel='noopener noreferrer' href='https://github.com/dekart-xyz/dekart'>🩵</a></Tooltip>
+            </Menu.Item>
+          )
+        }
       </Menu>
     </div>
   )

@@ -1,0 +1,11 @@
+---
+alwaysApply: true
+---
+
+Never handle both protobuf objects and plain objects. Pick one representation and use it consistently.
+
+If a proto schema defines a property, it's always defined. Don't check if it exists or is set.
+- ❌ Bad: `if proto.Message != nil { ... }` when `Message` is defined in the schema
+- ✅ Good: Access directly: `proto.Message.Field`
+
+Only check for optional fields, oneof fields, or empty repeated fields (when length matters).

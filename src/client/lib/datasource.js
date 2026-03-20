@@ -68,6 +68,20 @@ WHERE
         style: 'athena',
         usageStatsId: 1
       }
+    case ConnectionType.CONNECTION_TYPE_POSTGRES:
+    case 'PG':
+    case 'POSTGRES':
+      return {
+        name: 'Postgres',
+        style: 'postgres',
+        usageStatsId: 5,
+        sampleQuery: `-- Generate 100 random latitude and longitude points
+SELECT
+    ROUND((random() * 180 - 90)::numeric, 6) AS latitude,
+    ROUND((random() * 360 - 180)::numeric, 6) AS longitude
+FROM
+    generate_series(1, 100);`
+      }
     case 'WHEROBOTS':
     case ConnectionType.CONNECTION_TYPE_WHEROBOTS:
       return {

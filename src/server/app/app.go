@@ -92,7 +92,8 @@ func configureGRPC(dekartServer *dekart.Server) *grpcweb.WrappedGrpcServer {
 
 func setOriginHeader(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", getAllowedOrigin(r.Header.Get("Origin")))
-	w.Header().Set("Access-Control-Allow-Headers", "Authorization, X-Dekart-Playground, X-Dekart-Claim-Email, X-Dekart-Report-Id, X-Dekart-Logged-In")
+	w.Header().Set("Access-Control-Allow-Headers", "Authorization, X-Dekart-Playground, X-Dekart-Claim-Email, X-Dekart-Report-Id, X-Dekart-Logged-In, X-Dekart-Workspace-Id")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
 }
 
 func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *mux.Router {
@@ -146,10 +147,19 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		w.WriteHeader(http.StatusOK)
 	}).Methods("GET")
 
+	// Serve map preview
+	router.HandleFunc("/map-preview/{report}.png", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeader(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.ServeMapPreview(w, r)
+	}).Methods("GET", "OPTIONS")
+
 	// Serve static files
 	staticPath := os.Getenv("DEKART_STATIC_FILES")
 	if staticPath != "" {
-		staticFilesHandler := NewStaticFilesHandler(staticPath)
+		staticFilesHandler := NewStaticFilesHandler(staticPath, dekartServer)
 
 		router.HandleFunc("/", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/shared", staticFilesHandler.ServeIndex)
@@ -158,6 +168,8 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		router.HandleFunc("/reports/{id}/edit", staticFilesHandler.ServeIndex) // deprecated
 		router.HandleFunc("/reports/{id}/source", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace", staticFilesHandler.ServeIndex)
+		router.HandleFunc("/workspace/plan", staticFilesHandler.ServeIndex)
+		router.HandleFunc("/workspace/members", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace/invite/{id}", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/playground", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/grant-scopes", staticFilesHandler.ServeIndex)
@@ -179,12 +191,16 @@ func Configure(dekartServer *dekart.Server, db *sql.DB) *http.Server {
 		RequireIAP:              os.Getenv("DEKART_REQUIRE_IAP") == "1",
 		RequireSnowflakeContext: os.Getenv("DEKART_REQUIRE_SNOWFLAKE_CONTEXT") == "1",
 		RequireAmazonOIDC:       os.Getenv("DEKART_REQUIRE_AMAZON_OIDC") == "1",
+		RequireOIDC:             os.Getenv("DEKART_REQUIRE_OIDC") == "1",
 		RequireGoogleOAuth:      os.Getenv("DEKART_REQUIRE_GOOGLE_OAUTH") == "1",
 		Region:                  os.Getenv("AWS_REGION"),
 		DevClaimsEmail:          os.Getenv("DEKART_DEV_CLAIMS_EMAIL"),
 		DevRefreshToken:         os.Getenv("DEKART_DEV_REFRESH_TOKEN"),
 		GoogleOAuthClientId:     os.Getenv("DEKART_GOOGLE_OAUTH_CLIENT_ID"),
 		GoogleOAuthSecret:       os.Getenv("DEKART_GOOGLE_OAUTH_SECRET"),
+		OIDCJWKSURL:             os.Getenv("DEKART_OIDC_JWKS_URL"),
+		OIDCIssuer:              os.Getenv("DEKART_OIDC_ISSUER"),
+		OIDCAudience:            os.Getenv("DEKART_OIDC_AUDIENCE"),
 	}, db)
 
 	grpcServer := configureGRPC(dekartServer)

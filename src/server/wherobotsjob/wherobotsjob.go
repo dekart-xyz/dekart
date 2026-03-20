@@ -76,8 +76,9 @@ func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connect
 			j.CancelWithError(err)
 			return
 		}
-		if isGoogleCloudStorage {
+		if isGoogleCloudStorage && resultURI != "" {
 			// now we need also to copy the result to the storageObject
+			// Skip if resultURI is empty (empty result)
 			j.Status() <- int32(proto.QueryJob_JOB_STATUS_READING_RESULTS)
 			sourceObj := storage.NewPresignedS3Object(resultURI)
 			err := sourceObj.CopyTo(j.GetCtx(), storageObject.GetWriter(j.GetCtx()))

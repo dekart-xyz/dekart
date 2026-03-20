@@ -1,8 +1,8 @@
-import { showUpgradeModal, hideUpgradeModal } from '../actions/upgradeModal'
+import { showUpgradeModal, hideUpgradeModal, UpgradeModalType } from '../actions/upgradeModal'
 
 const defaultUpgradeModal = {
   visible: false,
-  modalType: 'publish'
+  modalType: UpgradeModalType.PUBLISH
 }
 
 export function upgradeModal (state = defaultUpgradeModal, action) {
