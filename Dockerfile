@@ -3,12 +3,16 @@
 FROM node:18 AS nodedeps
 WORKDIR /source
 COPY package.json package-lock.json .npmrc ./
-COPY proto proto
 ENV CI=true
-RUN --mount=type=cache,target=/root/.npm npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci --ignore-scripts
+COPY proto proto
+RUN npm run proto-copy-to-node
 COPY public public
 COPY src/client src/client
-COPY index.html src/index.js src/setupTests.js vitest.config.js vite.config.js ./
+COPY index.html .
+COPY src/index.js src/index.js
+COPY src/setupTests.js src/setupTests.js
+COPY vitest.config.js vite.config.js ./
 
 FROM nodedeps AS nodebuilder
 ENV NODE_OPTIONS="--max-old-space-size=4096"
