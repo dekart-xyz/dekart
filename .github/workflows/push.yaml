@@ -6,11 +6,7 @@ on:
 
 
 jobs:
-  flavour:
-    uses: ./.github/workflows/flavour.yaml
-
   changes:
-    needs: [flavour]
     if: startsWith(github.head_ref, 'release') != true
     uses: ./.github/workflows/changes.yaml
     permissions:
@@ -27,10 +23,10 @@ jobs:
     uses: ./.github/workflows/go_test.yaml
     secrets: inherit
   build_e2e:
-    needs: [flavour, changes]
+    needs: [changes]
     uses: ./.github/workflows/build.yaml
     with:
-      target:    ${{ needs.flavour.outputs.target }}
+      target: premium
       build_app: false
       build_e2e: true
     permissions:
@@ -38,17 +34,16 @@ jobs:
       packages: write
     secrets: inherit
   e2e_tests:
-    needs: [build_e2e, flavour]
+    needs: [build_e2e]
     uses: ./.github/workflows/e2e.yaml
     with:
-      target: ${{ needs.flavour.outputs.target }}
+      target: premium
     permissions:
       contents: read
       packages: write
     secrets: inherit
   build_cloud:
-    needs: [flavour, changes, build_e2e]
-    if: needs.flavour.outputs.is_premium == 'true'
+    needs: [changes, build_e2e]
     uses: ./.github/workflows/build.yaml
     with:
       target: cloud
@@ -59,7 +54,6 @@ jobs:
       packages: write
     secrets: inherit
   create_pulumi_pr:
-    if: needs.flavour.outputs.is_premium == 'true'
     needs: [e2e_tests, go_tests, node_tests, build_cloud]
     uses: ./.github/workflows/create-pulumi-pr.yaml
     with:

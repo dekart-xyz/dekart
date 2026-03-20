@@ -3,7 +3,7 @@ name: e2e_tests
 on:
   workflow_call:
     inputs:
-      # optional override from flavour.yaml
+      # explicit image target for pull + test lane selection
       target:
         type: string          # cloud | premium | oss
         required: true
@@ -26,7 +26,7 @@ jobs:
 
     env:
       # registry prefix + login target
-      REG_PREFIX: ${{format('ghcr.io/{0}', github.repository)}}
+      REG_PREFIX: ghcr.io/dekart-xyz/dekart-premium
       LOGIN_REG:  ghcr
       GOOGLE_CRED_SEC: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
       MAPBOX_TOKEN_SEC: ${{ secrets.DEKART_MAPBOX_TOKEN }}
@@ -52,8 +52,8 @@ jobs:
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.PREMIUM_GHCR_USERNAME }}
+          password: ${{ secrets.PREMIUM_GHCR_TOKEN }}
 
 
       - uses: docker/setup-qemu-action@v2
@@ -164,7 +164,7 @@ jobs:
       MAPBOX_TOKEN_SEC:        ${{ secrets.DEKART_MAPBOX_TOKEN }}
 
       # registry prefix + login target
-      REG_PREFIX: ${{ inputs.target == 'premium' && format('ghcr.io/{0}', github.repository) || 'dekartxyz' }}
+      REG_PREFIX: ${{ inputs.target == 'premium' && 'ghcr.io/dekart-xyz/dekart-premium' || 'dekartxyz' }}
       LOGIN_REG:  ${{ inputs.target == 'premium' && 'ghcr' || 'dh' }}
     strategy:
       fail-fast: false
@@ -258,8 +258,8 @@ jobs:
         if: env.LOGIN_REG == 'ghcr'
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.PREMIUM_GHCR_USERNAME }}
+          password: ${{ secrets.PREMIUM_GHCR_TOKEN }}
 
       - uses: docker/login-action@v3
         if: env.LOGIN_REG == 'dh'

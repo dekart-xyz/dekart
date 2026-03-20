@@ -130,7 +130,7 @@ Exit criteria:
 ## Decisions Captured
 
 1. **Premium registry canonical path**
-  - Keep premium images at `ghcr.io/<owner>/dekart-premium/dekart`.
+  - Keep premium images at `ghcr.io/<owner>/dekart-premium/dekart` ( ghcr.io/dekart-xyz/dekart-premium/dekart)
 
 2. **Premium push credentials from OSS**
   - Add dedicated OSS secrets for premium GHCR push:
