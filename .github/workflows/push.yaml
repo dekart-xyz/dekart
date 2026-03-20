@@ -2,7 +2,7 @@ name: Push to main
 
 on:
   push:
-    branches: [main]
+    branches: [main, oss-merge-premium-2026-03]
 
 
 jobs:
