@@ -70,7 +70,7 @@ ENTRYPOINT /bin/sh -c /dekart/server & cypress run --spec ${TEST_SPEC}
 
 FROM ubuntu:22.04
 WORKDIR /dekart
-RUN apt-get clean && apt-get update --allow-releaseinfo-change && apt-get upgrade -y && apt-get install -y --no-install-recommends \
+RUN apt-get clean && apt-get update --allow-releaseinfo-change && apt-get install -y --no-install-recommends \
     gcc \
     ca-certificates \
     && apt-get -y autoremove && apt-get -y autoclean \
