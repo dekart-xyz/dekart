@@ -22811,7 +22811,9 @@ proto.PlanType = {
   TYPE_GROW: 3,
   TYPE_MAX: 4,
   TYPE_SELF_HOSTED: 5,
-  TYPE_TRIAL: 6
+  TYPE_TRIAL: 6,
+  TYPE_COMMUNITY: 7,
+  TYPE_PREMIUM: 8
 };
 
 /**

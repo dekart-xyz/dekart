@@ -60,6 +60,7 @@ func (s Server) getSubscription(ctx context.Context, workspaceId string) (*proto
 		log.Err(err).Send()
 		return nil, err
 	}
+	planType = user.ReclassifyLegacySelfHostedPlan(planType)
 
 	// If latest plan is TRIAL, use preselected latestTrialEndsAt and bypass Stripe
 	if planType == proto.PlanType_TYPE_TRIAL {

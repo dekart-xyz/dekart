@@ -346,8 +346,10 @@ enum PlanType {
     TYPE_TEAM = 2;
     TYPE_GROW = 3;
     TYPE_MAX = 4;
-    TYPE_SELF_HOSTED = 5;
+    TYPE_SELF_HOSTED = 5; // self-hosted instance, deprecated
     TYPE_TRIAL = 6;
+    TYPE_COMMUNITY = 7; // oss self-hosted instance
+    TYPE_PREMIUM = 8; // premium self-hosted instance
 }
 
 message CreateSubscriptionRequest {

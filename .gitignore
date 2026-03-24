@@ -50,3 +50,4 @@ testtmp*
 
 .env.*
 data
+keys/license-private.pem

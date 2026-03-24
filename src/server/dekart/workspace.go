@@ -111,7 +111,7 @@ func (s Server) getUserWorkspaces(ctx context.Context, email string) ([]*proto.W
 			errtype.LogError(err, "Error scanning user workspaces row")
 			return nil, err
 		}
-		w.PlanType = proto.PlanType(planType)
+		w.PlanType = user.ReclassifyLegacySelfHostedPlan(proto.PlanType(planType))
 		workspaces = append(workspaces, &w)
 	}
 

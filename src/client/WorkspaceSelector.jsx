@@ -14,22 +14,27 @@ import { switchWorkspace } from './actions/workspace'
 export default function WorkspaceSelector () {
   const userStream = useSelector(state => state.user.stream)
   const isPlayground = useSelector(state => state.user.isPlayground)
+  const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
   const env = useSelector(state => state.env)
   const [isManageHovered, setIsManageHovered] = useState(false)
   const history = useHistory()
   const dispatch = useDispatch()
 
-  if (!userStream || !env.loaded || isPlayground) {
+  if (!userStream || !env.loaded || (isPlayground && !isDefaultWorkspace)) {
     return null
   }
-  const currentWorkspaceId = userStream.workspaceId
-  if (!currentWorkspaceId) {
+  const workspaces = userStream.userWorkspacesList || []
+  const currentWorkspaceId = userStream.workspaceId || workspaces[0]?.id
+  if (!currentWorkspaceId || workspaces.length === 0) {
     return null
   }
-  const workspaces = userStream.userWorkspacesList
+  const manageDisabled = !env.authEnabled
 
   const handleChange = (value) => {
     if (value === 'manage') {
+      if (manageDisabled) {
+        return
+      }
       history.push('/workspace')
       return
     }
@@ -55,7 +60,10 @@ export default function WorkspaceSelector () {
             {menu}
             <Divider style={{ margin: '4px 0' }} />
             <div
-              className={styles.manageOption}
+              className={classNames(
+                styles.manageOption,
+                { [styles.manageOptionDisabled]: manageDisabled }
+              )}
               onClick={() => handleChange('manage')}
               onMouseEnter={() => setIsManageHovered(true)}
               onMouseLeave={() => setIsManageHovered(false)}

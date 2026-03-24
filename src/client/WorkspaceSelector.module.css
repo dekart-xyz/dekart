@@ -51,6 +51,15 @@
   background-color: rgba(0, 0, 0, 0.04);
 }
 
+.manageOptionDisabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.manageOptionDisabled:hover {
+  background-color: transparent;
+}
+
 .option {
   display: flex;
   align-items: center;

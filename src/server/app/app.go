@@ -45,6 +45,40 @@ func (m ResponseWriter) WriteHeader(statusCode int) {
 
 var allowedOrigin string = os.Getenv("DEKART_CORS_ORIGIN")
 
+func isSSOConfigured() bool {
+	return len(enabledSSOEnvVars()) > 0
+}
+
+func enabledSSOEnvVars() []string {
+	enabled := make([]string, 0, 4)
+	if os.Getenv("DEKART_REQUIRE_OIDC") == "1" {
+		enabled = append(enabled, "DEKART_REQUIRE_OIDC")
+	}
+	if os.Getenv("DEKART_REQUIRE_GOOGLE_OAUTH") == "1" {
+		enabled = append(enabled, "DEKART_REQUIRE_GOOGLE_OAUTH")
+	}
+	if os.Getenv("DEKART_REQUIRE_IAP") == "1" {
+		enabled = append(enabled, "DEKART_REQUIRE_IAP")
+	}
+	if os.Getenv("DEKART_REQUIRE_AMAZON_OIDC") == "1" {
+		enabled = append(enabled, "DEKART_REQUIRE_AMAZON_OIDC")
+	}
+	return enabled
+}
+
+func validateLicenseForSSO() {
+	enabledVars := enabledSSOEnvVars()
+	if len(enabledVars) == 0 {
+		return
+	}
+	if strings.TrimSpace(os.Getenv("DEKART_LICENSE_KEY")) == "" {
+		log.Fatal().Msg(
+			"DEKART_LICENSE_KEY is required when enabling: " + strings.Join(enabledVars, ", ") + ". " +
+				"Set DEKART_LICENSE_KEY to continue, or disable these env vars to run in community mode.",
+		)
+	}
+}
+
 func getAllowedOrigin(origin string) string {
 	if matchOrigin(origin) {
 		return origin
@@ -186,6 +220,8 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 
 // Configure HTTP server with http and grpc
 func Configure(dekartServer *dekart.Server, db *sql.DB) *http.Server {
+	validateLicenseForSSO()
+
 	claimsCheck := user.NewClaimsCheck(user.ClaimsCheckConfig{
 		Audience:                os.Getenv("DEKART_IAP_JWT_AUD"),
 		RequireIAP:              os.Getenv("DEKART_REQUIRE_IAP") == "1",

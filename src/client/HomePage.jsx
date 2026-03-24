@@ -26,6 +26,7 @@ import { getRelativeTime } from './lib/relativeTime'
 import BigQueryConnectionTypeSelectorModal from './BigQueryConnectionTypeSelectorModal'
 import { Loading } from './Loading'
 import classnames from 'classnames'
+import { UNKNOWN_EMAIL } from './lib/constants'
 
 function ArchiveReportButton ({ report }) {
   const dispatch = useDispatch()
@@ -284,7 +285,21 @@ function ReportsHeader (
 
             )
           : (
-            <div className={styles.reportsHeaderTitle}>{reportFilter === 'connections' ? 'Connection' : 'Maps'}</div>
+            <Radio.Group
+              value={reportFilter === 'discoverable' ? 'discoverable' : 'my'}
+              onChange={(e) => {
+                switch (e.target.value) {
+                  case 'my':
+                    history.push('/')
+                    break
+                  default:
+                  // do nothing
+                }
+              }}
+            >
+              <Radio.Button value='my'>Maps</Radio.Button>
+              <Radio.Button value='discoverable' disabled>Shared Maps</Radio.Button>
+            </Radio.Group>
             )
       }
       <div className={styles.rightCornerAction}>
@@ -331,7 +346,7 @@ function ReportsHeader (
 }
 
 function getPrivacyStatus (report) {
-  if (report.isPlayground || report.isPublic) {
+  if (report.isPublic) {
     return { label: 'Public', icon: <GlobalOutlined />, className: styles.public }
   }
   if (report.discoverable || report.hasDirectAccess) {
@@ -464,7 +479,7 @@ function MapCard ({ report, reportFilter, archived, authEnabled }) {
                   Updated {getRelativeTime(modifiedDate)}
                 </span>
               </div>
-              {report.authorEmail && (
+              {report.authorEmail && report.authorEmail !== UNKNOWN_EMAIL && (
                 <div className={styles.mapMetaRow}>
                   <span className={styles.mapAuthorInline}>
                     {report.authorEmail}

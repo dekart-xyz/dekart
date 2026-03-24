@@ -7,18 +7,23 @@ import { Link } from 'react-router-dom/cjs/react-router-dom'
 import { createReport } from './actions/report'
 import Tooltip from 'antd/es/tooltip'
 import { track } from './lib/tracking'
+import { ConnectionType } from 'dekart-proto/dekart_pb'
 
 const popupOffset = [-10, 0]
 
 export default function DekartMenu () {
   const env = useSelector(state => state.env)
   const usage = useSelector(state => state.usage)
+  const connections = useSelector(state => state.connection.list)
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const dispatch = useDispatch()
   const { authEnabled } = env
   const isPlayground = useSelector(state => state.user.isPlayground)
   const isSnowpark = useSelector(state => state.env.isSnowpark)
   const isViewer = useSelector(state => state.user.isViewer)
+  const isBigQueryDatasource = env.variables.DATASOURCE === 'BQ'
+  const hasBigQueryConnection = connections.some(connection => connection.connectionType === ConnectionType.CONNECTION_TYPE_BIGQUERY)
+  const showBigQueryOvertureSkill = isBigQueryDatasource || hasBigQueryConnection
   const ref = getUrlRef(env, usage)
   return (
     <div className={styles.dekartMenu}>
@@ -40,9 +45,14 @@ export default function DekartMenu () {
               </>
               )
             : (
-              <Menu.Item key='reports' onClick={() => track('NavigateToMaps')}>
-                <Link to='/'>Maps</Link>
-              </Menu.Item>
+              <>
+                <Menu.Item key='reports' onClick={() => track('NavigateToMaps')}>
+                  <Link to='/'>Maps</Link>
+                </Menu.Item>
+                <Menu.Item key='shared-disabled' disabled>
+                  <span>Shared Maps</span>
+                </Menu.Item>
+              </>
               )}
           {userDefinedConnection
             ? (
@@ -67,9 +77,9 @@ export default function DekartMenu () {
               <a target='_blank' rel='noopener noreferrer' href={'https://dekart.xyz/docs/snowflake-snowpark/about/?ref=' + ref}>Configure Access</a>
             </Menu.Item>
           )}
-          {!isSnowpark && (
-            <Menu.Item key='gpt' onClick={() => track('ClickedOvertureMapsGPT')}>
-              <a target='_blank' rel='noopener noreferrer' href='https://chatgpt.com/g/g-onSLtzQQB-overture-maps-gpt'>Overture Maps GPT</a>
+          {!isSnowpark && showBigQueryOvertureSkill && (
+            <Menu.Item key='bigquery-overture-skill' onClick={() => track('ClickedBigQueryOvertureSkill')}>
+              <a target='_blank' rel='noopener noreferrer' href='https://github.com/dekart-xyz/bigquery-overture-skill'>Claude Skill</a>
             </Menu.Item>
           )}
           <Menu.Item key='examples' onClick={() => track('ClickedMapExamples')}>

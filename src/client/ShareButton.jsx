@@ -43,9 +43,10 @@ function CopyLinkButton ({ ghost }) {
 
 function PublishSwitchDescription () {
   const { isPublic, isPlayground } = useSelector(state => state.report)
+  const isSelfHosted = useSelector(state => state.user.isSelfHosted)
   switch (true) {
     case isPlayground:
-      return <>Playground maps are always public.</>
+      return <>{isSelfHosted ? 'Public link sharing settings are managed at workspace level.' : 'Playground maps are always public.'}</>
     case isPublic:
       return <>This map is public. Anyone with the link can view.</>
     default:
@@ -53,7 +54,7 @@ function PublishSwitchDescription () {
   }
 }
 
-function PublishSwitch () {
+function PublishSwitch ({ disabled = false }) {
   const { isPublic, id, isPlayground, canWrite } = useSelector(state => state.report)
   const [switchState, setSwitchState] = useState(isPublic || isPlayground)
   const dispatch = useDispatch()
@@ -64,8 +65,7 @@ function PublishSwitch () {
     setSwitchState(isPublic || isPlayground)
   }, [isPublic, isPlayground])
   if (
-    !canWrite || // show for authors and editors
-    isPlayground // don't show for playground reports as can't change
+    !canWrite // show for authors and editors
   ) {
     return null
   }
@@ -73,6 +73,7 @@ function PublishSwitch () {
     <Switch
       checked={switchState}
       id='dekart-publish-report'
+      disabled={disabled}
       onChange={(checked) => {
         track('PublishReportChanged')
         setSwitchState(checked)
@@ -83,7 +84,7 @@ function PublishSwitch () {
   )
 }
 
-function TrackViewersSwitch () {
+function TrackViewersSwitch ({ disabled }) {
   const { trackViewers, id, canWrite } = useSelector(state => state.report)
   const [switchState, setSwitchState] = useState(trackViewers)
   const dispatch = useDispatch()
@@ -100,6 +101,7 @@ function TrackViewersSwitch () {
     <Switch
       checked={switchState}
       id='dekart-track-viewers'
+      disabled={disabled}
       onChange={(checked) => {
         track('TrackViewersChanged')
         setSwitchState(checked)
@@ -112,8 +114,9 @@ function TrackViewersSwitch () {
 
 function ViewAnalytics () {
   const { canWrite, isPlayground, trackViewers } = useSelector(state => state.report)
+  const authEnabled = useSelector(state => state.env.authEnabled)
   const dispatch = useDispatch()
-  const disabled = !trackViewers
+  const disabled = !trackViewers || !authEnabled
   if (
     !canWrite || // show for authors and editors
     isPlayground // show for public reports
@@ -137,6 +140,7 @@ function ViewAnalytics () {
 function DirectAccess () {
   const { canWrite, isSharable, isPublic } = useSelector(state => state.report)
   const isSnowpark = useSelector(state => state.env.isSnowpark)
+  const isSelfHosted = useSelector(state => state.user.isSelfHosted)
   const reportDirectAccessEmails = useSelector(state => state.reportDirectAccessEmails)
   const [emails, setEmails] = useState(reportDirectAccessEmails)
   const inputRef = useRef(null)
@@ -147,9 +151,20 @@ function DirectAccess () {
   const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
   const isFreemium = useSelector(state => state.user.isFreemium)
   const hasAllFeatures = useSelector(state => state.user.hasAllFeatures)
-  if (!canWrite || !isSharable || isPublic || isDefaultWorkspace || isSnowpark) {
+  if (!canWrite || isSelfHosted) {
     return null
   }
+  const disabledReason =
+    !isSharable
+      ? 'Direct email sharing is unavailable for this map configuration.'
+      : isPublic
+        ? 'Turn off public sharing to invite specific users by email.'
+        : isDefaultWorkspace
+          ? 'Direct email sharing is unavailable in the default workspace.'
+          : isSnowpark
+            ? 'Direct email sharing is unavailable in Snowpark mode.'
+            : ''
+  const disabled = Boolean(disabledReason) || loading
 
   return (
     <>
@@ -169,7 +184,7 @@ function DirectAccess () {
           placeholder='Enter email addresses'
           value={reportDirectAccessEmails}
           loading={loading}
-          disabled={loading}
+          disabled={disabled}
           onChange={(emails) => {
             if (isFreemium) {
               dispatch(showUpgradeModal(UpgradeModalType.DIRECT_ACCESS))
@@ -202,6 +217,8 @@ function TrackViewersDescription () {
 function TrackViewers () {
   const { canWrite } = useSelector(state => state.report)
   const isSnowpark = useSelector(state => state.env.isSnowpark)
+  const authEnabled = useSelector(state => state.env.authEnabled)
+  const disabled = !authEnabled
   if (isSnowpark) {
     return null
   }
@@ -218,7 +235,7 @@ function TrackViewers () {
         <ViewAnalytics />
       </div>
       <div className={styles.boolStatusControl}>
-        <TrackViewersSwitch />
+        <TrackViewersSwitch disabled={disabled} />
       </div>
     </div>
   )
@@ -227,9 +244,7 @@ function TrackViewers () {
 function PublicPermissions () {
   const { isPublic, isPlayground, canWrite } = useSelector(state => state.report)
   const isSelfHosted = useSelector(state => state.user.isSelfHosted)
-
   if (isSelfHosted) {
-    // do not show feature for self-hosted users yet
     return null
   }
   if (
@@ -238,6 +253,8 @@ function PublicPermissions () {
   ) {
     return null
   }
+  const disabledReason = isSelfHosted ? 'Public link sharing settings are unavailable in self-hosted mode.' : ''
+  const disabled = Boolean(disabledReason) || isPlayground
   return (
     <div className={styles.boolStatus}>
       <div className={styles.boolStatusIcon}><GlobalOutlined /></div>
@@ -246,13 +263,15 @@ function PublicPermissions () {
         <div className={styles.statusLabelDescription}><PublishSwitchDescription /></div>
       </div>
       <div className={styles.boolStatusControl}>
-        <PublishSwitch />
+        <PublishSwitch disabled={disabled} />
       </div>
     </div>
   )
 }
 function AllowExportData () {
   const { allowExport, canWrite, id } = useSelector(state => state.report)
+  const authEnabled = useSelector(state => state.env.authEnabled)
+  const disabled = !authEnabled
   const [switchState, setSwitchState] = useState(allowExport)
   const dispatch = useDispatch()
   if (
@@ -272,6 +291,7 @@ function AllowExportData () {
       <div className={styles.boolStatusControl}>
         <Switch
           checked={allowExport}
+          disabled={disabled}
           onChange={(checked) => {
             setSwitchState(checked)
             dispatch(allowExportDatasets(id, checked))
@@ -285,9 +305,10 @@ function AllowExportData () {
 
 function WorkspacePermissionsDescription () {
   const { isPlayground, discoverable, allowEdit, isPublic, hasDirectAccess } = useSelector(state => state.report)
+  const isSelfHosted = useSelector(state => state.user.isSelfHosted)
   switch (true) {
     case isPlayground:
-      return <>Workspace permissions are disabled in Playground Mode</>
+      return <>{isSelfHosted ? 'Everyone with access to this workspace can view and edit this map.' : 'Workspace permissions are disabled in Playground Mode'}</>
     case allowEdit:
       return <>Everyone with access to this workspace can view and edit this map</>
     case discoverable:
@@ -345,26 +366,25 @@ function reportPropsFromPermissionValue (value) {
   }
 }
 
-function WorkspacePermissionsSelect () {
+function WorkspacePermissionsSelect ({ disabled = false }) {
   const { isPublic, id, isPlayground, isAuthor, allowEdit, discoverable } = useSelector(state => state.report)
   const dispatch = useDispatch()
-  const value = permissionValueFromReportProps({ discoverable, allowEdit })
+  const value = isPlayground
+    ? workspacePermissions.EDIT
+    : permissionValueFromReportProps({ discoverable, allowEdit })
   const [selectValue, setSelectValue] = useState(value)
 
   useEffect(() => {
     setSelectValue(value)
   }, [value])
 
-  if (isPlayground) {
-    return <Button href='/workspace' onClick={() => track('ManageWorkspaceFromShareModal')}>Manage workspace</Button>
-  }
-  const disabled = !isAuthor
+  const selectDisabled = disabled || !isAuthor || isPlayground
   return (
     <Select
       defaultValue={value}
       id='dekart-workspace-permissions-select'
       value={selectValue}
-      disabled={disabled}
+      disabled={selectDisabled}
       className={styles.workspaceStatusSelect}
       loading={selectValue !== value}
       onChange={(newValue) => {
@@ -383,15 +403,16 @@ function WorkspacePermissionsSelect () {
 function WorkspacePermissions () {
   const { canWrite, discoverable, isSharable } = useSelector(state => state.report)
   const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
-  if (isDefaultWorkspace) {
-    return null
-  }
   if (!canWrite && !discoverable) { // show only for discoverable workspace reports
     return null
   }
-  if (!isSharable) {
-    return null
+  let disabledReason = ''
+  if (isDefaultWorkspace) {
+    disabledReason = 'Workspace-level sharing is unavailable in the default workspace.'
+  } else if (!isSharable) {
+    disabledReason = 'Workspace-level sharing is unavailable for this map configuration.'
   }
+  const disabled = Boolean(disabledReason)
   return (
     <>
       <div className={styles.workspaceStatus}>
@@ -401,7 +422,7 @@ function WorkspacePermissions () {
           <div className={styles.statusLabelDescription}><WorkspacePermissionsDescription /></div>
         </div>
         <div className={styles.workspaceStatusControl}>
-          <WorkspacePermissionsSelect />
+          <WorkspacePermissionsSelect disabled={disabled} />
         </div>
       </div>
     </>
@@ -445,6 +466,24 @@ function NonShareableWarning () {
   )
 }
 
+function AuthDisabledWarning () {
+  const authEnabled = useSelector(state => state.env.authEnabled)
+  if (authEnabled) {
+    return null
+  }
+  return (
+    <div className={classNames(styles.workspaceStatus, styles.nonSharableWarning)}>
+      <div className={styles.workspaceStatusIcon}><WarningOutlined /></div>
+      <div className={styles.workspaceStatusLabel}>
+        <div className={styles.statusLabelTitle}>SSO is disabled</div>
+        <div className={styles.statusLabelDescription}>
+          Authentication is disabled, so sharing controls are shown as read-only.
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ModalContent () {
   const env = useSelector(state => state.env)
   const { loaded: envLoaded } = env
@@ -456,6 +495,7 @@ function ModalContent () {
   return (
     <>
       <NonShareableWarning />
+      <AuthDisabledWarning />
       <PublicPermissions />
       <TrackViewers />
       <DirectAccess />

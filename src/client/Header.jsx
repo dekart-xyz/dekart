@@ -15,6 +15,7 @@ import { switchPlayground } from './actions/user'
 import localStorageReset from './actions/localStorage'
 import { GlobalOutlined, LockOutlined } from '@ant-design/icons'
 import { track } from './lib/tracking'
+import { UNKNOWN_EMAIL } from './lib/constants'
 
 function getSignature (email) {
   if (!email) {
@@ -34,17 +35,54 @@ function User ({ buttonDivider }) {
   const userStream = useSelector(state => state.user.stream)
   const { authEnabled } = useSelector(state => state.env)
   const isPlayground = useSelector(state => state.user.isPlayground)
+  const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
   const isSnowpark = useSelector(state => state.env.isSnowpark)
   const dispatch = useDispatch()
-  if (!userStream || !authEnabled) {
+  if (!userStream) {
     return null
+  }
+  if (!authEnabled) {
+    const displayEmail = userStream.email === UNKNOWN_EMAIL ? 'Anonymous' : userStream.email
+    const disabledItems = [{
+      label: displayEmail,
+      disabled: true
+    }]
+    if (isPlayground && !isSnowpark && !isDefaultWorkspace) {
+      disabledItems.push({
+        label: 'Switch to workspace',
+        disabled: true
+      })
+    }
+    disabledItems.push(
+      {
+        label: 'Switch account',
+        disabled: true
+      },
+      {
+        label: 'Sign out',
+        disabled: true
+      }
+    )
+    return (
+      <div className={classNames(
+        styles.user,
+        { [styles.buttonDivider]: buttonDivider }
+      )}
+      >
+        <Dropdown
+          overlayClassName={styles.userDropdown} menu={{ items: disabledItems }}
+        >
+          <Avatar id='dekart-avatar'>{getSignature(userStream.email)}</Avatar>
+        </Dropdown>
+      </div>
+    )
   }
   const items = [{
     label: userStream && userStream.email,
     disabled: true
   }]
 
-  if (isPlayground && !isSnowpark) {
+  if (isPlayground && !isSnowpark && !isDefaultWorkspace) {
     items.push({
       label: 'Switch to workspace',
       onClick: () => {

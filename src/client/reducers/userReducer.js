@@ -5,6 +5,13 @@ import { sessionStorageInit } from '../actions/sessionStorage'
 import { setRedirectState } from '../actions/redirect'
 import { PlanType, UserRole } from 'dekart-proto/dekart_pb'
 
+function isSelfHostedPlan (planType) {
+  return [
+    PlanType.TYPE_COMMUNITY,
+    PlanType.TYPE_PREMIUM
+  ].includes(planType)
+}
+
 function claimEmailCookie (state = null, action) {
   switch (action.type) {
     case setClaimEmailCookie.name:
@@ -96,7 +103,7 @@ function isDefaultWorkspace (state = false, action) {
 function isSelfHosted (state = null, action) {
   switch (action.type) {
     case userStreamUpdate.name:
-      return action.userStream.planType === PlanType.TYPE_SELF_HOSTED || action.userStream.isDefaultWorkspace
+      return isSelfHostedPlan(action.userStream.planType) || action.userStream.isDefaultWorkspace
     default:
       return state
   }
@@ -175,7 +182,8 @@ function hasAllFeatures (state = null, action) {
         PlanType.TYPE_TEAM,
         PlanType.TYPE_GROW,
         PlanType.TYPE_MAX,
-        PlanType.TYPE_SELF_HOSTED,
+        PlanType.TYPE_COMMUNITY,
+        PlanType.TYPE_PREMIUM,
         PlanType.TYPE_TRIAL
       ].includes(action.userStream.planType)
     default:

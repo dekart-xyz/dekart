@@ -255,6 +255,7 @@ function getMembersSubTitle (addedUsersCount, planType) {
 
 export function Workspace ({ nextStep, setNextStep, stepId }) {
   const userStream = useSelector(state => state.user.stream)
+  const isSelfHosted = useSelector(state => state.user.isSelfHosted)
   const addedUsersCount = useSelector(state => state.workspace.addedUsersCount)
   const workspaceId = userStream?.workspaceId
   const planType = userStream?.planType
@@ -288,7 +289,7 @@ export function Workspace ({ nextStep, setNextStep, stepId }) {
                 <Radio.Button value='workspace'>
                   <AppstoreTwoTone /> Workspace
                 </Radio.Button>
-                {userStream.planType !== PlanType.TYPE_SELF_HOSTED
+                {!isSelfHosted
                   ? (
                     <Radio.Button value='plan' disabled={!userStream.workspaceId}>
                       <CreditCardOutlined /> Plan
@@ -311,7 +312,7 @@ export function Workspace ({ nextStep, setNextStep, stepId }) {
         step === 'workspace'
           ? <WorkspaceTab nextStep={nextStep} setNextStep={setNextStep} />
           : step === 'plan'
-            ? (userStream.planType !== PlanType.TYPE_SELF_HOSTED ? <SubscriptionTab /> : <MembersTab />)
+            ? (!isSelfHosted ? <SubscriptionTab /> : <MembersTab />)
             : <MembersTab />
       }
     </div>
