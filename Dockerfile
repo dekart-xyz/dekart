@@ -63,6 +63,8 @@ COPY --from=nodebuilder /source/build build
 COPY --from=gobuilder /source/server .
 COPY migrations migrations
 COPY sqlite sqlite
+RUN mkdir -p keys
+COPY keys/license-public.pem keys/license-public.pem
 COPY cypress cypress
 COPY cypress.config.js .
 COPY package.json .
@@ -80,6 +82,8 @@ COPY --from=nodebuilder /source/build build
 COPY --from=gobuilder /source/server .
 COPY migrations migrations
 COPY sqlite sqlite
+RUN mkdir -p keys
+COPY keys/license-public.pem keys/license-public.pem
 
 # Create a user and group
 ARG USERNAME=appuser

@@ -11,6 +11,7 @@ node_modules
 .env
 .env.*
 !.env.example
+keys/license-private.pem
 
 # Local docs and notes not needed for runtime image
 docs

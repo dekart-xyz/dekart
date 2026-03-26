@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/dekart"
+	"dekart/src/server/license"
 	"dekart/src/server/user"
 	"net/http"
 	"os"
@@ -67,14 +68,26 @@ func enabledSSOEnvVars() []string {
 }
 
 func validateLicenseForSSO() {
+	licenseKey := strings.TrimSpace(os.Getenv("DEKART_LICENSE_KEY"))
+	if licenseKey != "" {
+		info, err := license.ValidateToken(licenseKey)
+		if err != nil {
+			log.Fatal().Err(err).Msg("DEKART_LICENSE_KEY is invalid")
+		}
+		if info.ExpiresAt != nil {
+			log.Info().Str("license_holder", info.Email).Time("license_expires_at", *info.ExpiresAt).Msg("Validated DEKART_LICENSE_KEY")
+		} else {
+			log.Info().Str("license_holder", info.Email).Msg("Validated perpetual DEKART_LICENSE_KEY")
+		}
+	}
+
 	enabledVars := enabledSSOEnvVars()
 	if len(enabledVars) == 0 {
 		return
 	}
-	if strings.TrimSpace(os.Getenv("DEKART_LICENSE_KEY")) == "" {
+	if licenseKey == "" {
 		log.Fatal().Msg(
-			"DEKART_LICENSE_KEY is required when enabling: " + strings.Join(enabledVars, ", ") + ". " +
-				"Set DEKART_LICENSE_KEY to continue, or disable these env vars to run in community mode.",
+			"DEKART_LICENSE_KEY is required to enable SSO. Get your free key at https://mailchi.mp/dekart/upgrade-to-sso",
 		)
 	}
 }
