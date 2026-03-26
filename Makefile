@@ -1,4 +1,4 @@
-.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down up-and-down-oidc sqlite proto-copy-to-node proto-stub server runner-install runner-register runner-start runner-stop runner-status runner-service-install runner-service-start runner-service-stop runner-service-status github-runner
+.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down up-and-down-oidc sqlite proto-copy-to-node proto-stub server runner-install runner-register runner-start runner-stop runner-status runner-service-install runner-service-start runner-service-stop runner-service-status github-runner license-keygen license-issue
 
 # load .env
 # https://lithic.tech/blog/2020-05/makefile-dot-env
@@ -172,6 +172,42 @@ patch: version
 
 test:
 	go test -v -count=1 ./src/server/**/
+
+# License key helpers (offline JWT license keys).
+#
+# Generates an RSA keypair used to sign license tokens:
+# - Private key MUST be kept secret (never commit).
+# - Public key can be embedded in the binary for verification.
+# Prefer existing ./keys directory if present, otherwise default to ./license-keys.
+LICENSE_KEYS_DIR ?= $(if $(wildcard ./keys),./keys,./license-keys)
+LICENSE_PRIVATE_KEY ?= $(LICENSE_KEYS_DIR)/license-private.pem
+LICENSE_PUBLIC_KEY ?= $(LICENSE_KEYS_DIR)/license-public.pem
+
+license-keygen:
+	@set -e; \
+	mkdir -p "$(LICENSE_KEYS_DIR)"; \
+	if [ -f "$(LICENSE_PRIVATE_KEY)" ] || [ -f "$(LICENSE_PUBLIC_KEY)" ]; then \
+		echo "Refusing to overwrite existing key(s)."; \
+		echo "Delete them manually if you really want to re-generate:"; \
+		echo "  rm -f \"$(LICENSE_PRIVATE_KEY)\" \"$(LICENSE_PUBLIC_KEY)\""; \
+		exit 1; \
+	fi; \
+	openssl genrsa -out "$(LICENSE_PRIVATE_KEY)" 2048; \
+	openssl rsa -in "$(LICENSE_PRIVATE_KEY)" -pubout -out "$(LICENSE_PUBLIC_KEY)"; \
+	echo "Generated:"; \
+	echo "  $(LICENSE_PRIVATE_KEY) (KEEP SECRET; do not commit)"; \
+	echo "  $(LICENSE_PUBLIC_KEY) (public; can be embedded/committed)"
+
+# Issue a license token (prints DEKART_LICENSE_KEY=...).
+# Usage:
+#   make license-issue EMAIL=me@company.com
+#   make license-issue EMAIL=me@company.com DAYS=14
+EMAIL ?=
+DAYS ?= 0
+license-issue:
+	@test -n "$(EMAIL)" || (echo "EMAIL is required. Example: make license-issue EMAIL=me@company.com"; exit 1)
+	@test -f "$(LICENSE_PRIVATE_KEY)" || (echo "Missing private key: $(LICENSE_PRIVATE_KEY). Run: make license-keygen"; exit 1)
+	@go run ./scripts/license-issue.go --email "$(EMAIL)" --private-key "$(LICENSE_PRIVATE_KEY)" $(if $(filter-out 0,$(DAYS)),--days "$(DAYS)",)
 
 # GitHub self-hosted runner helpers (local laptop runner).
 # Usage:
