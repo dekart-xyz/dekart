@@ -202,12 +202,17 @@ license-keygen:
 # Usage:
 #   make license-issue EMAIL=me@company.com
 #   make license-issue EMAIL=me@company.com DAYS=14
+#   make license-issue EMAIL=me@company.com EXPIRE_FROM_NOW_SECONDS=3600
+#   make license-issue EMAIL=me@company.com EXPIRE_FROM_NOW_SECONDS=-3600
 EMAIL ?=
 DAYS ?= 0
+EXPIRE_FROM_NOW_SECONDS ?=
 license-issue:
 	@test -n "$(EMAIL)" || (echo "EMAIL is required. Example: make license-issue EMAIL=me@company.com"; exit 1)
 	@test -f "$(LICENSE_PRIVATE_KEY)" || (echo "Missing private key: $(LICENSE_PRIVATE_KEY). Run: make license-keygen"; exit 1)
-	@go run ./scripts/license-issue.go --email "$(EMAIL)" --private-key "$(LICENSE_PRIVATE_KEY)" $(if $(filter-out 0,$(DAYS)),--days "$(DAYS)",)
+	@go run ./scripts/license-issue.go --email "$(EMAIL)" --private-key "$(LICENSE_PRIVATE_KEY)" \
+		$(if $(filter-out 0,$(DAYS)),--days "$(DAYS)",) \
+		$(if $(strip $(EXPIRE_FROM_NOW_SECONDS)),--expire-from-now-seconds "$(EXPIRE_FROM_NOW_SECONDS)",)
 
 # GitHub self-hosted runner helpers (local laptop runner).
 # Usage:

@@ -11,9 +11,10 @@ import (
 
 func main() {
 	var (
-		email          = flag.String("email", "", "license holder email (required)")
-		privateKeyPath = flag.String("private-key", "", "path to RSA private key PEM (required)")
-		days           = flag.Int("days", 0, "trial duration in days; omit for perpetual")
+		email                = flag.String("email", "", "license holder email (required)")
+		privateKeyPath       = flag.String("private-key", "", "path to RSA private key PEM (required)")
+		days                 = flag.Int("days", 0, "trial duration in days; omit for perpetual")
+		expireFromNowSeconds = flag.Int("expire-from-now-seconds", 0, "explicit expiry offset from now in seconds; can be positive or negative")
 	)
 	flag.Parse()
 
@@ -26,6 +27,9 @@ func main() {
 	if *days < 0 {
 		fatalf("--days must be >= 0")
 	}
+	if *days > 0 && *expireFromNowSeconds != 0 {
+		fatalf("--days and --expire-from-now-seconds are mutually exclusive")
+	}
 
 	privateKeyPEM, err := os.ReadFile(*privateKeyPath)
 	if err != nil {
@@ -37,7 +41,16 @@ func main() {
 		Email:    *email,
 		IssuedAt: now,
 	}
-	if *days > 0 {
+	if *expireFromNowSeconds != 0 {
+		expiresAt := now.Add(time.Duration(*expireFromNowSeconds) * time.Second)
+		issuedAt := now
+		// For already-expired keys, keep iat < exp so IssueToken validation still passes.
+		if !expiresAt.After(now) {
+			issuedAt = expiresAt.Add(-1 * time.Second)
+		}
+		request.IssuedAt = issuedAt
+		request.ExpiresAt = &expiresAt
+	} else if *days > 0 {
 		expiresAt := now.Add(time.Duration(*days) * 24 * time.Hour)
 		request.ExpiresAt = &expiresAt
 	}
