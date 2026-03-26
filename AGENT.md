@@ -4,6 +4,28 @@
 
 Fast instructions for agents working on this repo, especially for Cypress E2E runs.
 
+## Elegant Software Standard (Mandatory)
+
+All coding work in this repo must follow an elegant-software approach:
+
+- Solve the real problem in the simplest correct way.
+- Prefer clarity over cleverness.
+- Keep code and UX aligned with the real domain model.
+- Avoid unnecessary abstractions, options, and moving parts.
+- Keep architecture modular and consistent so change is easy.
+- Keep user flows low-friction and obvious.
+
+Decision heuristic:
+
+- Pick the simplest solution that fully works and cannot be simplified further without breaking correctness.
+
+Self-check before finalizing:
+
+- Is anything in this change unnecessary for current scope?
+- Can another engineer trace behavior quickly?
+- Does structure match the domain?
+- Can this be extended without major refactor?
+
 ## Cypress Quick Start
 
 Run from repo root:
