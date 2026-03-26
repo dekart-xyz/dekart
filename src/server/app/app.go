@@ -72,7 +72,7 @@ func validateLicenseForSSO() {
 	if licenseKey != "" {
 		info, err := license.ValidateToken(licenseKey)
 		if err != nil {
-			log.Fatal().Err(err).Msg("DEKART_LICENSE_KEY is invalid")
+			log.Fatal().Err(err).Msg("DEKART_LICENSE_KEY is invalid. Get a valid key at https://mailchi.mp/dekart/upgrade-to-sso")
 		}
 		if info.ExpiresAt != nil {
 			log.Info().Str("license_holder", info.Email).Time("license_expires_at", *info.ExpiresAt).Msg("Validated DEKART_LICENSE_KEY")
