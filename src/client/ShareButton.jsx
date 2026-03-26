@@ -475,9 +475,9 @@ function AuthDisabledWarning () {
     <div className={classNames(styles.workspaceStatus, styles.nonSharableWarning)}>
       <div className={styles.workspaceStatusIcon}><WarningOutlined /></div>
       <div className={styles.workspaceStatusLabel}>
-        <div className={styles.statusLabelTitle}>SSO is disabled</div>
+        <div className={styles.statusLabelTitle}>You are not logged in</div>
         <div className={styles.statusLabelDescription}>
-          Authentication is disabled, so sharing controls are shown as read-only.
+          Sharing controls are shown as read-only because you are not logged in.
         </div>
       </div>
     </div>
@@ -507,6 +507,7 @@ function ModalContent () {
 
 export default function ShareButton () {
   const [modalOpen, setModalOpen] = useState(false)
+  const authEnabled = useSelector(state => state.env.authEnabled)
   const workspaceId = useSelector(state => state.user.stream?.workspaceId)
   const { isPublic, isPlayground, discoverable, canWrite } = useSelector(state => state.report)
   const isSnowpark = useSelector(state => state.env.isSnowpark)
@@ -526,6 +527,9 @@ export default function ShareButton () {
   } else if (discoverable || hasDirectAccess) {
     icon = <TeamOutlined />
   }
+  if (!authEnabled) {
+    return null
+  }
   if (!canWrite) {
     return <CopyLinkButton ghost />
   }
@@ -533,7 +537,8 @@ export default function ShareButton () {
     <>
       <Button
         icon={icon}
-        type='primary'
+        ghost={!authEnabled}
+        type={authEnabled ? 'primary' : 'default'}
         id='dekart-share-report'
         title='Map sharing options'
         onClick={() => {

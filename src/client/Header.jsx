@@ -1,3 +1,4 @@
+import React, { useState } from 'react'
 import styles from './Header.module.css'
 import { useDispatch, useSelector } from 'react-redux'
 import DekartMenu from './DekartMenu'
@@ -16,6 +17,7 @@ import localStorageReset from './actions/localStorage'
 import { GlobalOutlined, LockOutlined } from '@ant-design/icons'
 import { track } from './lib/tracking'
 import { UNKNOWN_EMAIL } from './lib/constants'
+import SSOLoginModal from './SSOLoginModal'
 
 function getSignature (email) {
   if (!email) {
@@ -38,11 +40,14 @@ function User ({ buttonDivider }) {
   const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
   const isSnowpark = useSelector(state => state.env.isSnowpark)
   const dispatch = useDispatch()
+  const [showSSOModal, setShowSSOModal] = useState(false)
+
   if (!userStream) {
     return null
   }
   if (!authEnabled) {
     const displayEmail = userStream.email === UNKNOWN_EMAIL ? 'Anonymous' : userStream.email
+    const isAnonymous = userStream.email === UNKNOWN_EMAIL
     const disabledItems = [{
       label: displayEmail,
       disabled: true
@@ -64,17 +69,29 @@ function User ({ buttonDivider }) {
       }
     )
     return (
-      <div className={classNames(
-        styles.user,
-        { [styles.buttonDivider]: buttonDivider }
-      )}
-      >
-        <Dropdown
-          overlayClassName={styles.userDropdown} menu={{ items: disabledItems }}
+      <>
+        <div className={classNames(
+          styles.user,
+          { [styles.buttonDivider]: buttonDivider }
+        )}
         >
-          <Avatar id='dekart-avatar'>{getSignature(userStream.email)}</Avatar>
-        </Dropdown>
-      </div>
+          {isAnonymous
+            ? (
+              <Button id='dekart-login-button' type='primary' onClick={() => setShowSSOModal(true)}>Login</Button>
+              )
+            : (
+              <Dropdown
+                overlayClassName={styles.userDropdown} menu={{ items: disabledItems }}
+              >
+                <Avatar id='dekart-avatar'>{getSignature(userStream.email)}</Avatar>
+              </Dropdown>
+              )}
+        </div>
+        <SSOLoginModal
+          visible={showSSOModal}
+          onClose={() => setShowSSOModal(false)}
+        />
+      </>
     )
   }
   const items = [{

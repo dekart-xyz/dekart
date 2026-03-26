@@ -1,0 +1,42 @@
+.modalContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: 8px;
+}
+
+.iconWrap {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f5ff;
+  margin-bottom: 16px;
+}
+
+.icon {
+  font-size: 26px;
+  color: #1677ff;
+}
+
+.heading {
+  margin-bottom: 10px !important;
+}
+
+.body {
+  margin-bottom: 18px;
+  max-width: 440px;
+}
+
+.primaryButton {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.secondary {
+  display: block;
+}
+
