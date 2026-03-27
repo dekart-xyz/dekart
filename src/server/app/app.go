@@ -177,6 +177,9 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		}
 		dekartServer.UploadFile(w, r)
 	}).Methods("POST", "OPTIONS")
+	api.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
+		handleVersionCheck(dekartServer, w, r)
+	}).Methods("GET", "OPTIONS")
 
 	if claimsCheck.RequireGoogleOAuth {
 		api.HandleFunc("/authenticate", func(w http.ResponseWriter, r *http.Request) {

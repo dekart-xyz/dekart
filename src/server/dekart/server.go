@@ -143,6 +143,18 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 				Type:  proto.GetEnvResponse_Variable_TYPE_REQUIRE_OIDC,
 				Value: defaultString(os.Getenv("DEKART_REQUIRE_OIDC"), ""),
 			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_UX_DISABLE_VERSION_CHECK,
+				Value: defaultString(os.Getenv("DEKART_UX_DISABLE_VERSION_CHECK"), ""),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_VERSION_CHECK_URL,
+				Value: defaultString(os.Getenv("DEKART_VERSION_CHECK_URL"), ""),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_VERSION_CHECK_FORCE_CURRENT_VERSION,
+				Value: defaultString(os.Getenv("DEKART_VERSION_CHECK_FORCE_CURRENT_VERSION"), ""),
+			},
 		}
 	} else {
 		// authenticated user
@@ -259,6 +271,14 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_UX_DISABLE_VERSION_CHECK,
 				Value: defaultString(os.Getenv("DEKART_UX_DISABLE_VERSION_CHECK"), ""),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_VERSION_CHECK_URL,
+				Value: defaultString(os.Getenv("DEKART_VERSION_CHECK_URL"), ""),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_VERSION_CHECK_FORCE_CURRENT_VERSION,
+				Value: defaultString(os.Getenv("DEKART_VERSION_CHECK_FORCE_CURRENT_VERSION"), ""),
 			},
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_ALLOW_WORKSPACE_CREATION,

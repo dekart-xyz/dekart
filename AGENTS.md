@@ -1,8 +1,4 @@
-# Agent Runbook
-
-## Purpose
-
-Fast instructions for agents working on this repo, especially for Cypress E2E runs.
+# Agent Rules
 
 ## Elegant Software Standard (Mandatory)
 
@@ -24,7 +20,17 @@ Self-check before finalizing:
 - Is anything in this change unnecessary for current scope?
 - Can another engineer trace behavior quickly?
 - Does structure match the domain?
-- Can this be extended without major refactor?
+
+## Consistency Rules (Mandatory)
+
+- Follow existing project conventions before introducing new patterns.
+- Prefer established libraries for standard concerns over custom implementations.
+- Do not use debug-level logging in production code paths.
+- Keep test structure consistent with neighboring tests in the same folder.
+- Match existing UI patterns and placement
+- Validate behavior end-to-end in the real runtime path before finalizing.
+
+# Runbook
 
 ## Cypress Quick Start
 
@@ -52,13 +58,4 @@ Why: this environment exports `ELECTRON_RUN_AS_NODE=1` by default, which prevent
 2. Re-run with env override:
    - `ELECTRON_RUN_AS_NODE= npx cypress run --spec "<spec-path>"`
 
-Typical failure symptom when env override is missing:
 
-- `Cypress.app/.../Cypress: bad option: --no-sandbox`
-
-## Regression Spec Added
-
-- Repro spec for layer order bug:
-  - `cypress/e2e/snowflake-s3/layerOrderRerunRegression.cy.js`
-- Current expected behavior (before bug fix):
-  - spec fails with layer index mismatch assertion after Query 2 rerun.

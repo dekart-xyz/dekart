@@ -1917,6 +1917,8 @@ export namespace GetEnvResponse {
       TYPE_IS_SNOWPARK: 27;
       TYPE_STORE_MAP_PREVIEW: 28;
       TYPE_REQUIRE_OIDC: 29;
+      TYPE_VERSION_CHECK_URL: 30;
+      TYPE_VERSION_CHECK_FORCE_CURRENT_VERSION: 31;
     }
 
     export const Type: TypeMap;

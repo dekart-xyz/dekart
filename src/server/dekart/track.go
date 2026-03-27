@@ -5,7 +5,10 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/errtype"
 	"dekart/src/server/user"
+	"encoding/json"
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 )
@@ -61,4 +64,47 @@ func (s Server) TrackEvent(ctx context.Context, req *proto.TrackEventRequest) (*
 	}
 
 	return &proto.TrackEventResponse{}, nil
+}
+
+const versionCheckEventName = "VersionCheck"
+
+// TrackVersionCheck stores anonymous version check pings for cloud analytics.
+func (s Server) TrackVersionCheck(ctx context.Context, appDomain, currentVersion, latestVersion, outcome string) {
+	if os.Getenv("DEKART_CLOUD") == "" {
+		return
+	}
+
+	domain := strings.TrimSpace(strings.ToLower(appDomain))
+	if domain == "" {
+		return
+	}
+
+	email := domain
+	if len(email) > 255 {
+		email = email[:255]
+	}
+
+	eventData := map[string]string{
+		"app_domain":      domain,
+		"current_version": strings.TrimSpace(currentVersion),
+		"latest_version":  strings.TrimSpace(latestVersion),
+		"outcome":         strings.TrimSpace(outcome),
+	}
+	eventDataJSON, err := json.Marshal(eventData)
+	if err != nil {
+		log.Warn().Err(err).Str("app_domain", domain).Msg("Failed to marshal version check tracking payload")
+		return
+	}
+
+	_, err = s.db.ExecContext(
+		ctx,
+		`INSERT INTO track_events (email, event_name, event_data_json)
+		VALUES ($1, $2, $3)`,
+		email,
+		versionCheckEventName,
+		string(eventDataJSON),
+	)
+	if err != nil {
+		errtype.LogError(err, fmt.Sprintf("Failed to store %s event", versionCheckEventName))
+	}
 }

@@ -191,6 +191,12 @@ jobs:
               -e DEKART_DATASOURCE=BQ \
               -e DEKART_ALLOW_FILE_UPLOAD=1 \
 
+          - id: version-banner
+            spec: cypress/e2e/version/spec.cy.js
+            extra_env: |
+              -e DEKART_VERSION_CHECK_URL=http://localhost:3000/api/v1/version \
+              -e DEKART_VERSION_CHECK_FORCE_CURRENT_VERSION=0.0.0 \
+
           - id: athena
             spec: cypress/e2e/athena
             extra_env: |

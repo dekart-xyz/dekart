@@ -1,32 +1,38 @@
-import { setError } from './message'
-// import { version } from '../../../package.json'
-import semver from 'semver'
+import { version as packageVersion } from '../../../package.json'
 
-const version = process.env.VERSION || '0.0.0'
+const defaultVersionCheckURL = 'https://cloud.dekart.xyz/api/v1/version'
 
-export function testVersion () {
+function getVersionCheckURL (variables = {}) {
+  return (variables.VERSION_CHECK_URL || defaultVersionCheckURL).trim()
+}
+
+function getCurrentVersion (variables = {}) {
+  const forced = (variables.VERSION_CHECK_FORCE_CURRENT_VERSION || '').trim()
+  if (forced) {
+    return forced
+  }
+  return packageVersion || '0.0.0'
+}
+
+export function testVersion (variables) {
   return async (dispatch) => {
     dispatch({ type: testVersion.name })
     try {
-      const res = await window.fetch('https://api.github.com/repos/dekart-xyz/dekart/releases')
-      if (!res.ok) {
-        throw new Error(`Fetching releases: ${res.statusMessage}`)
+      const url = new URL(getVersionCheckURL(variables))
+      url.searchParams.set('app_domain', window.location.host || '')
+      url.searchParams.set('current_version', getCurrentVersion(variables))
+
+      const res = await window.fetch(url.toString())
+      if (!res.ok || res.status === 204) {
+        return
       }
-      const releases = await res.json()
-      const validReleases = releases.filter(({ draft, prerelease }) => !draft && !prerelease).filter(({ tag_name: tagName }) => {
-        if (tagName.match(/^v/)) {
-          const releaseVersion = tagName.slice(1)
-          if (semver.valid(releaseVersion) && semver.gt(releaseVersion, version)) {
-            return true
-          }
-        }
-        return false
-      })
-      if (validReleases.length) {
-        dispatch(newRelease(releases[0]))
+
+      const release = await res.json()
+      if (release && release.tag_name) {
+        dispatch(newRelease(release))
       }
     } catch (err) {
-      dispatch(setError(err))
+      // Silent failure: version-check is best effort only.
     }
   }
 }

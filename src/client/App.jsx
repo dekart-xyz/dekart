@@ -26,6 +26,7 @@ import { loadSessionStorage } from './actions/sessionStorage'
 import { Loading } from './Loading'
 import UpgradeModal from './UpgradeModal'
 import WorkspaceReadOnlyBanner from './WorkspaceReadOnlyBanner'
+import NewVersion from './NewVersion'
 import styles from './App.module.css'
 import { hideUpgradeModal } from './actions/upgradeModal'
 import { WorkspaceSelectorLight } from './WorkspaceSelector'
@@ -331,6 +332,7 @@ export default function App () {
           visible={upgradeModalVisible}
           onClose={() => dispatch(hideUpgradeModal())}
         />
+        <NewVersion />
         <WorkspaceReadOnlyBanner />
       </div>
     </Router>
