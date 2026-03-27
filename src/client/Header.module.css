@@ -7,7 +7,7 @@
 }
 
 .middle {
-    --header-side-width: 400px;
+    --header-side-width: 350px;
     position: absolute;
     left: var(--header-side-width);
     width: calc(100% - 2 * var(--header-side-width));
@@ -23,10 +23,12 @@
 }
 
 .left {
-    width: 250px;
+    min-width: 180px;
     display: flex;
     flex-direction: row;
     align-items: center;
+    flex: 0 0 auto;
+    gap: 0px;
 }
 
 .workspace {
@@ -69,6 +71,8 @@
 .header {
     padding: 5px 10px 5px 0px;
     background: linear-gradient(180deg, #2B323B 70%, #25272F 100%);
+    position: relative;
+    z-index: 1000;
 }
 
 .buttonDivider {
@@ -124,4 +128,10 @@ a.dekartLink {
     background-size: contain;
     background-image: url('./dekart-title.svg');
     background-repeat: no-repeat;
+}
+
+@media (max-width: 768px) {
+    .dekartLinkHolder {
+        display: none;
+    }
 }

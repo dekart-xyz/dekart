@@ -1,0 +1,4 @@
+{{ .InviterEmail }} invited you to join the workspace {{ .WorkspaceName }} on Dekart as {{ roleLabel .Role }}.
+Accept the invitation: {{ .InviteURL }}
+If you were not expecting this invitation, you can safely ignore this email.
+

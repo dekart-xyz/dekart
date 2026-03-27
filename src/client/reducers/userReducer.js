@@ -5,6 +5,13 @@ import { sessionStorageInit } from '../actions/sessionStorage'
 import { setRedirectState } from '../actions/redirect'
 import { PlanType, UserRole } from 'dekart-proto/dekart_pb'
 
+function isSelfHostedPlan (planType) {
+  return [
+    PlanType.TYPE_COMMUNITY,
+    PlanType.TYPE_PREMIUM
+  ].includes(planType)
+}
+
 function claimEmailCookie (state = null, action) {
   switch (action.type) {
     case setClaimEmailCookie.name:
@@ -62,6 +69,17 @@ function sensitiveScopesNeeded (state = false, action) {
   }
 }
 
+function preferredWorkspaceId (state = '', action) {
+  switch (action.type) {
+    case localStorageInit.name:
+      return action.current.preferredWorkspaceId || state
+    case sessionStorageInit.name:
+      return action.current.preferredWorkspaceId || state
+    default:
+      return state
+  }
+}
+
 function loginHint (state = null, action) {
   switch (action.type) {
     case localStorageInit.name:
@@ -85,7 +103,7 @@ function isDefaultWorkspace (state = false, action) {
 function isSelfHosted (state = null, action) {
   switch (action.type) {
     case userStreamUpdate.name:
-      return action.userStream.planType === PlanType.TYPE_SELF_HOSTED || action.userStream.isDefaultWorkspace
+      return isSelfHostedPlan(action.userStream.planType) || action.userStream.isDefaultWorkspace
     default:
       return state
   }
@@ -139,6 +157,40 @@ function isAdmin (state = false, action) {
   }
 }
 
+function isFreemium (state = null, action) {
+  switch (action.type) {
+    case userStreamUpdate.name:
+      return action.userStream.planType === PlanType.TYPE_PERSONAL
+    default:
+      return state
+  }
+}
+
+function isTrial (state = null, action) {
+  switch (action.type) {
+    case userStreamUpdate.name:
+      return action.userStream.planType === PlanType.TYPE_TRIAL
+    default:
+      return state
+  }
+}
+
+function hasAllFeatures (state = null, action) {
+  switch (action.type) {
+    case userStreamUpdate.name:
+      return [
+        PlanType.TYPE_TEAM,
+        PlanType.TYPE_GROW,
+        PlanType.TYPE_MAX,
+        PlanType.TYPE_COMMUNITY,
+        PlanType.TYPE_PREMIUM,
+        PlanType.TYPE_TRIAL
+      ].includes(action.userStream.planType)
+    default:
+      return state
+  }
+}
+
 export default combineReducers({
   stream,
   sensitiveScopesGrantedOnce,
@@ -152,5 +204,9 @@ export default combineReducers({
   isAdmin,
   isSelfHosted,
   claimEmailCookie,
-  isAnonymous
+  isAnonymous,
+  isFreemium,
+  hasAllFeatures,
+  isTrial,
+  preferredWorkspaceId
 })

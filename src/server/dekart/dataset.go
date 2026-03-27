@@ -12,7 +12,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,14 +23,7 @@ import (
 
 // getContentTypeFromExtension returns the appropriate content type based on file extension
 func getContentTypeFromExtension(extension string) string {
-	switch strings.ToLower(extension) {
-	case "geojson":
-		return "application/geo+json"
-	case "parquet":
-		return "application/octet-stream"
-	default:
-		return "text/csv"
-	}
+	return getContentTypeFromExtensionCentral(extension)
 }
 
 func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Dataset, error) {
@@ -54,7 +46,8 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 		reportID,
 	)
 	if err != nil {
-		log.Fatal().Err(err).Str("reportID", reportID).Msg("select from queries failed")
+		errtype.LogError(err, "select from datasets failed")
+		return nil, err
 	}
 	defer datasetRows.Close()
 	for datasetRows.Next() {
@@ -77,7 +70,7 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 			&connectionID,
 			&connectionType,
 		); err != nil {
-			log.Err(err).Msg("Error scanning dataset results")
+			errtype.LogError(err, "Error scanning dataset results")
 			return nil, err
 		}
 		dataset.CreatedAt = createdAt.Unix()
@@ -155,7 +148,7 @@ func (s Server) UpdateDatasetName(ctx context.Context, req *proto.UpdateDatasetN
 	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
-		log.Err(err).Msg("Error getting report id")
+		errtype.LogError(err, "Error getting report id")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -174,7 +167,7 @@ func (s Server) UpdateDatasetName(ctx context.Context, req *proto.UpdateDatasetN
 		req.DatasetId,
 	)
 	if err != nil {
-		log.Err(err).Msg("Error updating dataset name")
+		errtype.LogError(err, "Error updating dataset name")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -193,7 +186,7 @@ func (s Server) updateDatasetConnection(ctx context.Context, datasetID string, c
 		datasetID,
 	)
 	if err != nil {
-		log.Err(err).Msg("Error updating dataset connection")
+		errtype.LogError(err, "Error updating dataset connection")
 		return err
 	}
 	return nil
@@ -208,7 +201,7 @@ func (s Server) UpdateDatasetConnection(ctx context.Context, req *proto.UpdateDa
 	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
-		log.Err(err).Msg("Error getting report id")
+		errtype.LogError(err, "Error getting report id")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -221,7 +214,7 @@ func (s Server) UpdateDatasetConnection(ctx context.Context, req *proto.UpdateDa
 	err = s.updateDatasetConnection(ctx, req.DatasetId, req.ConnectionId)
 
 	if err != nil {
-		log.Err(err).Msg("Error updating dataset connection")
+		errtype.LogError(err, "Error updating dataset connection")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -237,13 +230,13 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 	}
 	_, err := uuid.Parse(req.DatasetId)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
-		log.Err(err).Msg("Error getting report id")
+		errtype.LogError(err, "Error getting report id")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -260,7 +253,7 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 		req.DatasetId,
 	)
 	if err != nil {
-		log.Err(err).Msg("Error deleting dataset")
+		errtype.LogError(err, "Error deleting dataset")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -270,7 +263,7 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 		req.DatasetId,
 	)
 	if err != nil {
-		log.Err(err).Msg("Error deleting legacy query")
+		errtype.LogError(err, "Error deleting legacy query")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -279,36 +272,44 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 	return &proto.RemoveDatasetResponse{}, nil
 }
 
-func (s Server) insertDataset(ctx context.Context, reportID string) (res sql.Result, err error) {
+func (s Server) insertDataset(ctx context.Context, reportID string) (sql.Result, error) {
 	id := newUUID()
 	claims := user.GetClaims(ctx)
+	var res sql.Result
+	var err error
 	if checkWorkspace(ctx).IsPlayground {
-		return s.db.ExecContext(ctx,
+		res, err = s.db.ExecContext(ctx,
 			`insert into datasets (id, report_id)
 			select
 				$1 as id,
 				id as report_id
 			from reports
-			where id=$2 and not archived and author_email=$3 or allow_edit and is_playground=true limit 1
+			where id=$2 and not archived and (author_email=$3 or allow_edit) and is_playground=true limit 1
 			`,
 			id,
 			reportID,
 			claims.Email,
 		)
+	} else {
+		res, err = s.db.ExecContext(ctx,
+			`insert into datasets (id, report_id)
+			select
+				$1 as id,
+				id as report_id
+			from reports
+			where id=$2 and not archived and (author_email=$3 or allow_edit) and workspace_id=$4 limit 1
+			`,
+			id,
+			reportID,
+			claims.Email,
+			checkWorkspace(ctx).ID,
+		)
 	}
-	return s.db.ExecContext(ctx,
-		`insert into datasets (id, report_id)
-		select
-			$1 as id,
-			id as report_id
-		from reports
-		where id=$2 and not archived and (author_email=$3 or allow_edit) and workspace_id=$4 limit 1
-		`,
-		id,
-		reportID,
-		claims.Email,
-		checkWorkspace(ctx).ID,
-	)
+	if err != nil {
+		errtype.LogError(err, "Error inserting dataset")
+		return nil, err
+	}
+	return res, err
 }
 
 func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetRequest) (*proto.CreateDatasetResponse, error) {
@@ -319,20 +320,20 @@ func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetReque
 	result, err := s.insertDataset(ctx, req.ReportId)
 
 	if err != nil {
-		log.Err(err).Msg("Error inserting dataset")
+		errtype.LogError(err, "Error inserting dataset")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	affectedRows, err := result.RowsAffected()
 	if err != nil {
-		log.Err(err).Msg("Error getting affected rows")
+		errtype.LogError(err, "Error getting affected rows")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if affectedRows == 0 {
 		err := fmt.Errorf("report=%s, author_email=%s not found", req.ReportId, claims.Email)
 		log.Warn().Err(err).Msg("Report not found")
-		return nil, status.Errorf(codes.NotFound, err.Error())
+		return nil, status.Error(codes.NotFound, err.Error())
 	}
 	s.reportStreams.Ping(req.ReportId)
 	s.userStreams.PingAll() // because dataset count is now part of connection info
@@ -345,6 +346,10 @@ func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetReque
 func storageError(w http.ResponseWriter, err error) {
 	if _, ok := err.(*errtype.Expired); ok {
 		http.Error(w, "expired", http.StatusGone)
+		return
+	}
+	if _, ok := err.(*errtype.EmptyResult); ok {
+		http.Error(w, "Empty result", http.StatusNoContent)
 		return
 	}
 	HttpError(w, err)
@@ -370,26 +375,6 @@ func (s Server) getResultURI(ctx context.Context, resultID string) (string, erro
 	return "", nil
 }
 
-func (s Server) getDWJobIDFromResultID(ctx context.Context, resultID string) (string, error) {
-	var jobID sql.NullString
-	rows, err := s.db.QueryContext(ctx,
-		`select dw_job_id from query_jobs where job_result_id=$1`,
-		resultID,
-	)
-	if err != nil {
-		return "", err
-	}
-	defer rows.Close()
-	if rows.Next() {
-		err := rows.Scan(&jobID)
-		if err != nil {
-			return "", err
-		}
-		return jobID.String, nil
-	}
-	return "", nil
-}
-
 // since reading is using connection no auth is needed here
 func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -410,7 +395,7 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	reportID, err := s.getReportID(ctx, vars["dataset"], false)
 
 	if err != nil {
-		log.Err(err).Msg("Error getting report id")
+		errtype.LogError(err, "Error getting report id")
 		HttpError(w, err)
 		return
 	}
@@ -425,7 +410,7 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	report, err := s.getReport(ctx, *reportID)
 
 	if err != nil {
-		log.Err(err).Msg("Error getting report")
+		errtype.LogError(err, "Error getting report")
 		HttpError(w, err)
 		return
 	}
@@ -464,45 +449,110 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	defConCtx := conn.GetCtx(ctx, &proto.Connection{Id: conn.SystemConnectionID})
 	dwJobID, err := s.getDWJobIDFromResultID(ctx, vars["source"])
 	if err != nil {
-		log.Error().Err(err).Msg("Error getting dw job id")
+		errtype.LogError(err, "Error getting dw job id")
 		HttpError(w, err)
 		return
 	}
 
 	resultURI, err := s.getResultURI(ctx, vars["source"])
 	if err != nil {
-		log.Error().Err(err).Msg("Error getting result URI")
+		errtype.LogError(err, "Error getting result URI")
 		HttpError(w, err)
 		return
 	}
 
-	var obj storage.StorageObject
+	if resultURI == "" && connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_WHEROBOTS {
+		storageError(w, &errtype.EmptyResult{})
+		return
+	}
 
+	var obj storage.StorageObject
 	useCtx := conCtx
+	var jobIsRecent bool
+	retrievalBranch := ""
+	// Keep both names in logs: connection bucket may differ from the actual object bucket
+	// (for public reports we read from public storage bucket).
+	connectionBucketName := bucketName
+	isExpectedExpiredResultURI := func(err error) bool {
+		_, ok := err.(*errtype.Expired)
+		return ok && retrievalBranch == "result_uri_presigned_s3"
+	}
+	logDatasetSourceError := func(err error, msg string) {
+		event := log.Error()
+		// Presigned result URLs are intentionally short-lived; once they expire the
+		// correct user-facing behavior is 410 Gone, not an incident-grade error log.
+		if isExpectedExpiredResultURI(err) {
+			event = log.Warn()
+		}
+		event.
+			Err(err).
+			Str("dataset", vars["dataset"]).
+			Str("source", vars["source"]).
+			Str("extension", vars["extension"]).
+			Str("connectionBucketName", connectionBucketName).
+			Str("objectBucketName", bucketName).
+			Str("connectionID", connection.Id).
+			Str("dwJobID", dwJobID).
+			Bool("hasResultURI", resultURI != "").
+			Str("retrievalBranch", retrievalBranch).
+			Msg(msg)
+	}
 
 	if report.IsPublic {
 		// public report, load from public storage bucket
 		publicStorage := storage.NewPublicStorage()
+		bucketName = publicStorage.GetDefaultBucketName()
 		obj = publicStorage.GetObject(defConCtx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
 		useCtx = defConCtx // public storage does not require connection
+		retrievalBranch = "public_storage"
 	} else if resultURI != "" {
 		obj = storage.NewPresignedS3Storage().GetObject(conCtx, "", resultURI)
+		retrievalBranch = "result_uri_presigned_s3"
 	} else if dwJobID != "" {
 		// temp data warehouse table is used as source
+		if os.Getenv("DEKART_STORAGE") == "PG" {
+			// PG replay mode can always re-execute the query, so dw_job_id is not treated as expirable.
+			jobIsRecent = true
+		} else {
+			expired, recent, err := s.checkJobExpiration(ctx, vars["source"])
+			jobIsRecent = recent
+			if err != nil {
+				logDatasetSourceError(err, "ServeDatasetSource: checkJobExpiration failed")
+				errtype.LogError(err, "Error checking job expiration")
+				storageError(w, err)
+				return
+			}
+			if expired {
+				// Job is definitely too old, return expired immediately
+				storageError(w, &errtype.Expired{})
+				return
+			}
+		}
 		obj = s.storage.GetObject(conCtx, bucketName, dwJobID)
+		retrievalBranch = "dw_job_id_storage"
 	} else {
 		// file stored on the bucket is used as source
 		obj = s.storage.GetObject(conCtx, bucketName, fmt.Sprintf("%s.%s", vars["source"], vars["extension"]))
+		retrievalBranch = "source_extension_storage"
 	}
 
 	created, err := obj.GetCreatedAt(useCtx)
 	if err != nil {
+		logDatasetSourceError(err, "ServeDatasetSource: GetCreatedAt failed")
+		// For DW jobs, determine if error should be treated as expiration
+		if dwJobID != "" && !jobIsRecent {
+			// Job is not recent, treat error as expiration
+			storageError(w, &errtype.Expired{})
+			return
+		}
+		// Job is recent or not a DW job, propagate the actual error
 		storageError(w, err)
 		return
 	}
 
 	objectReader, err := obj.GetReader(useCtx)
 	if err != nil {
+		logDatasetSourceError(err, "ServeDatasetSource: GetReader failed")
 		storageError(w, err)
 		return
 	}

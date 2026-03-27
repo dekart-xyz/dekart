@@ -3,7 +3,7 @@ name: e2e_tests
 on:
   workflow_call:
     inputs:
-      # optional override from flavour.yaml
+      # explicit image target for pull + test lane selection
       target:
         type: string          # cloud | premium | oss
         required: true
@@ -26,9 +26,11 @@ jobs:
 
     env:
       # registry prefix + login target
-      REG_PREFIX: ${{format('ghcr.io/{0}', github.repository)}}
+      REG_PREFIX: ghcr.io/dekart-xyz/dekart-premium
       LOGIN_REG:  ghcr
       GOOGLE_CRED_SEC: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+      MAPBOX_TOKEN_SEC: ${{ secrets.DEKART_MAPBOX_TOKEN }}
+      DEKART_LICENSE_KEY_SEC: ${{ secrets.DEKART_LICENSE_KEY }}
 
 
     services:
@@ -51,8 +53,8 @@ jobs:
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.PREMIUM_GHCR_USERNAME }}
+          password: ${{ secrets.PREMIUM_GHCR_TOKEN }}
 
 
       - uses: docker/setup-qemu-action@v2
@@ -101,6 +103,8 @@ jobs:
             -e DEKART_ALLOW_WORKSPACE_CREATION=1 \
             -e DEKART_UX_DISABLE_VERSION_CHECK=1 \
             -e DEKART_DEV_NO_DATASET_CACHE=1 \
+            -e DEKART_MAPBOX_TOKEN=$MAPBOX_TOKEN_SEC \
+            -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
             -e DEKART_CLOUD=1 \
             -e TEST_SPEC=cypress/e2e/cloud/cloudBasicFlowStart.cy.js \
             -e CYPRESS_CI=1 \
@@ -132,6 +136,8 @@ jobs:
             -e DEKART_ALLOW_WORKSPACE_CREATION=1 \
             -e DEKART_UX_DISABLE_VERSION_CHECK=1 \
             -e DEKART_DEV_NO_DATASET_CACHE=1 \
+            -e DEKART_MAPBOX_TOKEN=$MAPBOX_TOKEN_SEC \
+            -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
             -e DEKART_CLOUD=1 \
             -e TEST_SPEC=cypress/e2e/cloud/cloudBasicFlowEnd.cy.js \
             -e CYPRESS_CI=1 \
@@ -158,9 +164,11 @@ jobs:
       SNOW_ID_SEC:             ${{ secrets.SNOWFLAKE_ACCOUNT_ID }}
       SNOW_USER_SEC:           ${{ secrets.SNOWFLAKE_USER }}
       SNOW_PASS_SEC:           ${{ secrets.SNOWFLAKE_PASSWORD }}
+      MAPBOX_TOKEN_SEC:        ${{ secrets.DEKART_MAPBOX_TOKEN }}
+      DEKART_LICENSE_KEY_SEC:  ${{ secrets.DEKART_LICENSE_KEY }}
 
       # registry prefix + login target
-      REG_PREFIX: ${{ inputs.target == 'premium' && format('ghcr.io/{0}', github.repository) || 'dekartxyz' }}
+      REG_PREFIX: ${{ inputs.target == 'premium' && 'ghcr.io/dekart-xyz/dekart-premium' || 'dekartxyz' }}
       LOGIN_REG:  ${{ inputs.target == 'premium' && 'ghcr' || 'dh' }}
     strategy:
       fail-fast: false
@@ -169,6 +177,7 @@ jobs:
           - id: google-oauth
             spec: cypress/e2e/google-oauth
             extra_env: |
+              -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
               -e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
               -e DEKART_GOOGLE_OAUTH_CLIENT_ID=$GOOGLE_OAUTH_ID_SEC \
               -e DEKART_GOOGLE_OAUTH_SECRET=$GOOGLE_OAUTH_SECRET_SEC \
@@ -187,6 +196,18 @@ jobs:
               -e DEKART_DATASOURCE=BQ \
               -e DEKART_ALLOW_FILE_UPLOAD=1 \
 
+          - id: version-banner
+            spec: cypress/e2e/version/spec.cy.js
+            target: oss
+            extra_env: |
+              -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
+              -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
+              -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
+              -e DEKART_STORAGE=GCS \
+              -e DEKART_DATASOURCE=BQ \
+              -e DEKART_VERSION_CHECK_URL=http://localhost:3000/api/v1/version \
+              -e DEKART_VERSION_CHECK_FORCE_CURRENT_VERSION=0.0.0 \
+
           - id: athena
             spec: cypress/e2e/athena
             extra_env: |
@@ -203,6 +224,7 @@ jobs:
           - id: snowflake-s3
             spec: cypress/e2e/snowflake-s3
             extra_env: |
+              -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
               -e DEKART_STORAGE=S3 \
               -e DEKART_DATASOURCE=SNOWFLAKE \
               -e DEKART_CLOUD_STORAGE_BUCKET=$S3_BUCKET_SEC \
@@ -254,8 +276,8 @@ jobs:
         if: env.LOGIN_REG == 'ghcr'
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.PREMIUM_GHCR_USERNAME }}
+          password: ${{ secrets.PREMIUM_GHCR_TOKEN }}
 
       - uses: docker/login-action@v3
         if: env.LOGIN_REG == 'dh'
@@ -264,6 +286,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Pre-pull test image (retry)
+        if: ${{ !matrix.target || matrix.target == inputs.target }}
         run: |
           image="${REG_PREFIX}/dekart:${IMAGE_CACHE_KEY}"
           for attempt in 1 2 3 4 5; do
@@ -282,6 +305,7 @@ jobs:
 
       # ----------------------------- run tests -------------------------------
       - name: Run ${{ matrix.id }} suite
+        if: ${{ !matrix.target || matrix.target == inputs.target }}
         run: |
           docker run -i --network host \
             -v /tmp/cypress/videos:/dekart/cypress/videos \
@@ -293,6 +317,7 @@ jobs:
             -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
             -e DEKART_POSTGRES_HOST=localhost \
             -e DEKART_CORS_ORIGIN=http://localhost:3000 \
+            -e DEKART_MAPBOX_TOKEN=$MAPBOX_TOKEN_SEC \
             -e TEST_SPEC=${{ matrix.spec }} \
             -e CYPRESS_CI=1 \
             ${{ matrix.extra_env }} \

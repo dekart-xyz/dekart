@@ -6,6 +6,7 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/conn"
 	"dekart/src/server/job"
+	"dekart/src/server/notifications"
 	"dekart/src/server/report"
 	"dekart/src/server/secrets"
 	"dekart/src/server/storage"
@@ -16,6 +17,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
@@ -28,6 +30,7 @@ type Server struct {
 	reportStreams *report.Streams
 	userStreams   *user.Streams
 	storage       storage.Storage
+	notifications notifications.Service
 	proto.UnimplementedDekartServer
 	jobs job.Store
 }
@@ -43,6 +46,7 @@ func NewServer(db *sql.DB, storageBucket storage.Storage, jobs job.Store) *Serve
 		userStreams:   user.NewStreams(),
 		storage:       storageBucket,
 		jobs:          jobs,
+		notifications: notifications.NewFromEnv(),
 	}
 	if IsSqlite() {
 		go server.startBackups()
@@ -135,6 +139,22 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 				Type:  proto.GetEnvResponse_Variable_TYPE_REQUIRE_GOOGLE_OAUTH,
 				Value: defaultString(os.Getenv("DEKART_REQUIRE_GOOGLE_OAUTH"), ""),
 			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_REQUIRE_OIDC,
+				Value: defaultString(os.Getenv("DEKART_REQUIRE_OIDC"), ""),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_UX_DISABLE_VERSION_CHECK,
+				Value: defaultString(os.Getenv("DEKART_UX_DISABLE_VERSION_CHECK"), ""),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_VERSION_CHECK_URL,
+				Value: defaultString(os.Getenv("DEKART_VERSION_CHECK_URL"), ""),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_VERSION_CHECK_FORCE_CURRENT_VERSION,
+				Value: defaultString(os.Getenv("DEKART_VERSION_CHECK_FORCE_CURRENT_VERSION"), ""),
+			},
 		}
 	} else {
 		// authenticated user
@@ -160,6 +180,11 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 		var secretsEnabled string
 		if os.Getenv("DEKART_DATA_ENCRYPTION_KEY") != "" {
 			secretsEnabled = "1"
+		}
+
+		var storeMapPreview string
+		if os.Getenv("DEKART_CLOUD_STORAGE_BUCKET") != "" {
+			storeMapPreview = "1"
 		}
 
 		variables = []*proto.GetEnvResponse_Variable{
@@ -216,6 +241,10 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 				Value: defaultString(os.Getenv("DEKART_REQUIRE_GOOGLE_OAUTH"), ""),
 			},
 			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_REQUIRE_OIDC,
+				Value: defaultString(os.Getenv("DEKART_REQUIRE_OIDC"), ""),
+			},
+			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_BIGQUERY_PROJECT_ID,
 				Value: defaultString(os.Getenv("DEKART_BIGQUERY_PROJECT_ID"), ""),
 			},
@@ -244,6 +273,14 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 				Value: defaultString(os.Getenv("DEKART_UX_DISABLE_VERSION_CHECK"), ""),
 			},
 			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_VERSION_CHECK_URL,
+				Value: defaultString(os.Getenv("DEKART_VERSION_CHECK_URL"), ""),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_VERSION_CHECK_FORCE_CURRENT_VERSION,
+				Value: defaultString(os.Getenv("DEKART_VERSION_CHECK_FORCE_CURRENT_VERSION"), ""),
+			},
+			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_ALLOW_WORKSPACE_CREATION,
 				Value: allowWorkspaceCreation,
 			},
@@ -263,11 +300,24 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 				Type:  proto.GetEnvResponse_Variable_TYPE_DEKART_CLOUD,
 				Value: defaultString(os.Getenv("DEKART_CLOUD"), ""),
 			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_MAX_FILE_UPLOAD_SIZE,
+				Value: fmt.Sprintf("%d", getMaxFileUploadSize()),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_IS_SNOWPARK,
+				Value: defaultString(os.Getenv("DEKART_REQUIRE_SNOWFLAKE_CONTEXT"), ""),
+			},
+			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_STORE_MAP_PREVIEW,
+				Value: storeMapPreview,
+			},
 		}
 
 	}
 	return &proto.GetEnvResponse{
-		Variables: variables,
+		Variables:  variables,
+		ServerTime: time.Now().Unix(),
 	}, nil
 }
 

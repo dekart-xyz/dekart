@@ -27,6 +27,7 @@ type WorkspaceInfo struct {
 	IsPlayground       bool
 	IsDefaultWorkspace bool // Default workspace for the instance, similar to playground
 	UserRole           proto.UserRole
+	Expired            bool
 }
 
 func SetWorkspaceCtx(ctx context.Context, workspace WorkspaceInfo) context.Context {
@@ -43,7 +44,7 @@ func CheckWorkspaceCtx(ctx context.Context) WorkspaceInfo {
 
 // CanCreateWorkspace checks if users can create workspace
 func CanCreateWorkspace() bool {
-	if GetDefaultSubscription() != proto.PlanType_TYPE_SELF_HOSTED {
+	if !IsSelfHostedPlan(GetDefaultSubscription()) {
 		return true // for cloud users always create workspace
 	}
 	if os.Getenv("DEKART_ALLOW_WORKSPACE_CREATION") != "" {

@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import { Helmet } from 'react-helmet'
 import {
   BrowserRouter as Router,
   Switch,
@@ -20,11 +21,15 @@ import WorkspacePage from './WorkspacePage'
 import GrantScopesPage from './GrantScopesPage'
 import { loadLocalStorage } from './actions/localStorage'
 import { useHistory, useLocation } from 'react-router-dom/cjs/react-router-dom'
-import { Button } from 'antd'
+import Button from 'antd/es/button'
 import { loadSessionStorage } from './actions/sessionStorage'
 import { Loading } from './Loading'
 import UpgradeModal from './UpgradeModal'
+import WorkspaceReadOnlyBanner from './WorkspaceReadOnlyBanner'
+import NewVersion from './NewVersion'
+import styles from './App.module.css'
 import { hideUpgradeModal } from './actions/upgradeModal'
+import { WorkspaceSelectorLight } from './WorkspaceSelector'
 
 // RedirectState reads states passed in the URL from the server
 function RedirectState () {
@@ -60,6 +65,7 @@ function useIsReportUrl () {
 function AppRedirect () {
   const httpError = useSelector(state => state.httpError)
   const { status, doNotAuthenticate } = httpError
+  const { googleOAuthEnabled } = useSelector(state => state.env)
   const { newReportId } = useSelector(state => state.reportStatus)
   const userStream = useSelector(state => state.user.stream)
   const isPlayground = useSelector(state => state.user.isPlayground)
@@ -75,8 +81,8 @@ function AppRedirect () {
 
   useEffect(() => {
     if (
-      (status === 401 && doNotAuthenticate === false) ||
-      (isAnonymous && !isReportUrl) // login anonymous users for any other page than report page
+      (googleOAuthEnabled && status === 401 && doNotAuthenticate === false) ||
+      (googleOAuthEnabled && isAnonymous && !isReportUrl) // login anonymous users for any other page than report page
     ) {
       const state = new AuthState()
       state.setUiUrl(window.location.href)
@@ -84,9 +90,9 @@ function AppRedirect () {
       state.setSensitiveScope(sensitiveScopesGranted || sensitiveScopesGrantedOnce) // if user has granted sensitive scopes on this device request token with sensitive scopes
       dispatch(authRedirect(state))
     }
-  }, [status, doNotAuthenticate, dispatch, sensitiveScopesGrantedOnce, sensitiveScopesGranted, isAnonymous, isReportUrl])
+  }, [status, doNotAuthenticate, dispatch, sensitiveScopesGrantedOnce, sensitiveScopesGranted, isAnonymous, isReportUrl, googleOAuthEnabled])
 
-  if (status === 401 && doNotAuthenticate === false) {
+  if (googleOAuthEnabled && status === 401 && doNotAuthenticate === false) {
     // redirect to authentication endpoint from useEffect above
     return null
   }
@@ -94,7 +100,6 @@ function AppRedirect () {
   if (httpError.status) {
     return <Redirect to={`/${httpError.status}`} push />
   }
-
   if (
     userStream &&
     !userStream.planType &&
@@ -148,44 +153,67 @@ function NotFoundPage () {
   const userStream = useSelector(state => state.user.stream)
   const workspaceId = userStream?.workspaceId
   const history = useHistory()
+  const workspaces = userStream?.userWorkspacesList
+  const sourceURL = useSelector(state => state.httpError.sourceURL)
   return (
-    <Result
-      icon={<QuestionOutlined />} title='404' subTitle={
-        <>
-          <p>Page not found</p>
-          {(userStream && !workspaceId) // stream is loaded and user is not in workspace
-            ? (
-              <div>
-                <p>To access private maps join workspace.</p>
-                <Button onClick={() => dispatch(switchPlayground(false, '/workspace'))}>Join workspace</Button>
-              </div>
-              )
-            : (
-              <>
+    <>
+      <Helmet>
+        <title>404 - Page Not Found — Dekart</title>
+      </Helmet>
+      <Result
+        icon={<QuestionOutlined />} title='404' subTitle={(
+          <>
+            <p>Page not found</p>
+            {(userStream && !workspaceId) // stream is loaded and user is not in workspace
+              ? (
                 <div>
-                  <Button onClick={() => history.push('/')}>Back to workspace</Button>
+                  <p>To access private maps join workspace.</p>
+                  <Button onClick={() => dispatch(switchPlayground(false, '/workspace'))}>Join workspace</Button>
                 </div>
-              </>
-              )}
-        </>
-      }
-    />
+                )
+              : (
+                <>{workspaces
+                  ? (
+                      (workspaces.length > 1)
+                        ? (
+                          <>
+                            <WorkspaceSelectorLight sourceURL={sourceURL} />
+                          </>
+                          )
+                        : (
+                          <div>
+                            <Button onClick={() => history.push('/')}>Back to workspace</Button>
+                          </div>
+                          )
+                    )
+                  : null}
+                </>
+                )}
+          </>
+        )}
+      />
+    </>
   )
 }
 
 function ErrorPage ({ icon, title, subTitle }) {
   const history = useHistory()
   return (
-    <Result
-      icon={icon} title={title} subTitle={
-        <>
-          <p>{subTitle}</p>
-          <div>
-            <Button onClick={() => history.push('/')}>Back to workspace</Button>
-          </div>
-        </>
-      }
-    />
+    <>
+      <Helmet>
+        <title>{title} — Dekart</title>
+      </Helmet>
+      <Result
+        icon={icon} title={title} subTitle={(
+          <>
+            <p>{subTitle}</p>
+            <div>
+              <Button onClick={() => history.push('/')}>Back to workspace</Button>
+            </div>
+          </>
+          )}
+      />
+    </>
   )
 }
 
@@ -202,8 +230,8 @@ export default function App () {
   const upgradeModalVisible = useSelector(state => state.upgradeModal.visible)
 
   useEffect(() => {
-    dispatch(loadSessionStorage())
     dispatch(loadLocalStorage())
+    dispatch(loadSessionStorage())
     dispatch(setClaimEmailCookie())
   }, [dispatch])
 
@@ -240,61 +268,73 @@ export default function App () {
   }
   return (
     <Router>
-      <PageHistory visitedPages={visitedPages} />
-      <RedirectState />
-      <Switch>
-        <Route exact path='/playground'>
-          <SwitchToPlayground />
-        </Route>
-        <Route exact path='/'>
-          <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
-          <HomePage reportFilter='my' />
-        </Route>
-        <Route exact path='/grant-scopes'>
-          <GrantScopesPage visitedPages={visitedPages} />
-        </Route>
-        <Route exact path='/shared'>
-          <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
-          <HomePage reportFilter='discoverable' />
-        </Route>
-        <Route exact path='/connections'>
-          <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
-          {userDefinedConnection ? <HomePage reportFilter='connections' /> : <Redirect to='/' />}
-        </Route>
-        <Route path='/reports/:id/edit'>
-          <RedirectToSource />
-        </Route>
-        <Route path='/reports/:id/source'>
-          <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
-          <ReportPage edit />
-        </Route>
-        <Route path='/reports/:id'>
-          <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
-          <ReportPage />
-        </Route>
-        <Route path='/workspace/invite/:inviteId'>
-          <WorkspacePage userInvite />
-        </Route>
-        <Route path='/workspace'>
-          <WorkspacePage />
-        </Route>
-        <Route path='/400'>
-          <ErrorPage icon={<WarningOutlined />} title='400' subTitle='Bad Request' />
-        </Route>
-        <Route path='/403'>
-          <ErrorPage icon={<WarningOutlined />} title='403' subTitle={errorMessage || 'Forbidden'} />
-        </Route>
-        <Route path='/401'>
-          <ErrorPage icon={<WarningOutlined />} title='401' subTitle={errorMessage || 'Unauthorized'} />
-        </Route>
-        <Route path='*'>
-          <NotFoundPage />
-        </Route>
-      </Switch>
-      <UpgradeModal
-        visible={upgradeModalVisible}
-        onClose={() => dispatch(hideUpgradeModal())}
-      />
+      <div className={styles.appWithBanner}>
+        <PageHistory visitedPages={visitedPages} />
+        <RedirectState />
+        <div className={styles.main}>
+          <Switch>
+            <Route exact path='/playground'>
+              <SwitchToPlayground />
+            </Route>
+            <Route exact path='/'>
+              <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
+              <HomePage reportFilter='my' />
+            </Route>
+            <Route exact path='/grant-scopes'>
+              <GrantScopesPage visitedPages={visitedPages} />
+            </Route>
+            <Route exact path='/shared'>
+              <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
+              <HomePage reportFilter='discoverable' />
+            </Route>
+            <Route exact path='/connections'>
+              <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
+              {userDefinedConnection ? <HomePage reportFilter='connections' /> : <Redirect to='/' />}
+            </Route>
+            <Route path='/reports/:id/edit'>
+              <RedirectToSource />
+            </Route>
+            <Route path='/reports/:id/source'>
+              <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
+              <ReportPage edit />
+            </Route>
+            <Route path='/reports/:id'>
+              <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
+              <ReportPage />
+            </Route>
+            <Route path='/workspace/invite/:inviteId'>
+              <WorkspacePage userInvite />
+            </Route>
+            <Route exact path='/workspace/plan'>
+              <WorkspacePage step='plan' />
+            </Route>
+            <Route exact path='/workspace/members'>
+              <WorkspacePage step='members' />
+            </Route>
+            <Route path='/workspace'>
+              <WorkspacePage step='workspace' />
+            </Route>
+            <Route path='/400'>
+              <ErrorPage icon={<WarningOutlined />} title='400' subTitle='Bad Request' />
+            </Route>
+            <Route path='/403'>
+              <ErrorPage icon={<WarningOutlined />} title='403' subTitle={errorMessage || 'Forbidden'} />
+            </Route>
+            <Route path='/401'>
+              <ErrorPage icon={<WarningOutlined />} title='401' subTitle={errorMessage || 'Unauthorized'} />
+            </Route>
+            <Route path='*'>
+              <NotFoundPage />
+            </Route>
+          </Switch>
+        </div>
+        <UpgradeModal
+          visible={upgradeModalVisible}
+          onClose={() => dispatch(hideUpgradeModal())}
+        />
+        <NewVersion />
+        <WorkspaceReadOnlyBanner />
+      </div>
     </Router>
   )
 }

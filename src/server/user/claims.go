@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"database/sql"
 	pb "dekart/src/proto"
+	"dekart/src/server/errtype"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -33,16 +34,17 @@ type Claims struct {
 	SensitiveScopesGranted bool
 }
 
-// ContextKey type
-type ContextKey string
+// ContextKeyType type
+type ContextKeyType string
 
-const contextKey ContextKey = "userDetails"
+const ContextKey ContextKeyType = "userDetails"
 
 // ClaimsCheckConfig config for ClaimsCheck
 type ClaimsCheckConfig struct {
 	Audience                string
 	RequireIAP              bool
 	RequireAmazonOIDC       bool
+	RequireOIDC             bool
 	RequireGoogleOAuth      bool
 	RequireSnowflakeContext bool
 	GoogleOAuthClientId     string
@@ -50,24 +52,33 @@ type ClaimsCheckConfig struct {
 	DevClaimsEmail          string
 	DevRefreshToken         string
 	Region                  string
+	OIDCJWKSURL             string
+	OIDCIssuer              string
+	OIDCAudience            string
 }
 
 // ClaimsCheck factory to add user claims to context
 type ClaimsCheck struct {
 	ClaimsCheckConfig
 	publicKeys *sync.Map
+	oidcJWT    *oidcJWTVerifier
 	db         *sql.DB
 }
 
 var b2i = map[bool]int{false: 0, true: 1}
 
 func validateConfig(c ClaimsCheckConfig) {
-	if b2i[c.RequireIAP]+b2i[c.RequireAmazonOIDC]+b2i[c.RequireGoogleOAuth]+b2i[c.RequireSnowflakeContext] > 1 {
-		log.Fatal().Msg("DEKART_REQUIRE_IAP and DEKART_REQUIRE_AMAZON_OIDC and DEKART_REQUIRE_GOOGLE_OAUTH are mutually exclusive")
+	if b2i[c.RequireIAP]+b2i[c.RequireAmazonOIDC]+b2i[c.RequireOIDC]+b2i[c.RequireGoogleOAuth]+b2i[c.RequireSnowflakeContext] > 1 {
+		log.Fatal().Msg("DEKART_REQUIRE_IAP, DEKART_REQUIRE_AMAZON_OIDC, DEKART_REQUIRE_OIDC, DEKART_REQUIRE_GOOGLE_OAUTH and DEKART_REQUIRE_SNOWFLAKE_CONTEXT are mutually exclusive")
 	}
 	switch {
 	case c.RequireSnowflakeContext:
 		log.Info().Msgf("Dekart configured to require Snowflake context")
+	case c.RequireOIDC:
+		log.Info().Msgf("Dekart configured to require OIDC JWT header auth")
+		if c.OIDCJWKSURL == "" {
+			log.Fatal().Msgf("DEKART_OIDC_JWKS_URL is required for OIDC JWT header auth")
+		}
 	case c.RequireIAP:
 		log.Info().Msgf("Dekart configured to require IAP")
 	case c.RequireAmazonOIDC:
@@ -101,9 +112,14 @@ func validateConfig(c ClaimsCheckConfig) {
 
 func NewClaimsCheck(c ClaimsCheckConfig, db *sql.DB) ClaimsCheck {
 	validateConfig(c)
+	var oidcJWT *oidcJWTVerifier
+	if c.RequireOIDC {
+		oidcJWT = newOIDCJWTVerifier(c)
+	}
 	return ClaimsCheck{
 		c,
 		&sync.Map{},
+		oidcJWT,
 		db,
 	}
 }
@@ -147,7 +163,7 @@ func copyClaims(sourceCtx, destCtx context.Context) context.Context {
 	if claims == nil {
 		return destCtx
 	}
-	return context.WithValue(destCtx, contextKey, claims)
+	return context.WithValue(destCtx, ContextKey, claims)
 }
 
 // CopyUserContext from one context to another
@@ -187,6 +203,8 @@ func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 		claims = c.validateJWTFromAppEngine(ctx, r.Header.Get("X-Goog-IAP-JWT-Assertion"))
 	} else if c.RequireAmazonOIDC {
 		claims = c.validateJWTFromAmazonOIDC(ctx, r.Header.Get("x-amzn-oidc-data"))
+	} else if c.RequireOIDC {
+		claims = c.validateJWTFromOIDCHeader(r)
 	} else if c.RequireGoogleOAuth {
 		reportID := r.Header.Get("X-Dekart-Report-Id")
 		loggedIn := r.Header.Get("X-Dekart-Logged-In")
@@ -205,7 +223,7 @@ func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 			Email: UnknownEmail,
 		}
 	}
-	userCtx := context.WithValue(ctx, contextKey, claims)
+	userCtx := context.WithValue(ctx, ContextKey, claims)
 	return userCtx
 }
 
@@ -240,7 +258,7 @@ func (c ClaimsCheck) isPublicReportRequest(ctx context.Context, reportID string)
 	// check if report is public and tracking is disabled
 	res, err := c.db.QueryContext(ctx, "SELECT is_public, track_viewers FROM reports WHERE id = $1", reportID)
 	if err != nil {
-		log.Error().Err(err).Msg("Error checking if report is public")
+		errtype.LogError(err, "Error checking if report is public")
 		return false
 	}
 	// Ensure rows are closed to avoid leaking connections
@@ -251,7 +269,7 @@ func (c ClaimsCheck) isPublicReportRequest(ctx context.Context, reportID string)
 	if res.Next() {
 		err = res.Scan(&isPublic, &trackViewers)
 		if err != nil {
-			log.Error().Err(err).Msg("Error scanning report")
+			errtype.LogError(err, "Error scanning report")
 			return false
 		}
 	}
@@ -312,7 +330,7 @@ func (c ClaimsCheck) getTokenInfo(ctx context.Context, token *oauth2.Token) (*go
 	client := auth.Client(ctx, token)
 	service, err := googleOAuth.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
-		log.Error().Err(err).Msg("Error creating Google OAuth service")
+		errtype.LogError(err, "Error creating Google OAuth service")
 		return nil, err
 	}
 	tokenInfo, err := service.Tokeninfo().AccessToken(token.AccessToken).Do()
@@ -341,13 +359,22 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 	var auth = c.getAuthConfig(state)
 	token, err := auth.Exchange(ctx, code)
 	if err != nil {
-		log.Error().Err(err).Msg("Error exchanging code for token")
+		errorStr := err.Error()
+		errorType := "other"
+		if strings.Contains(errorStr, "invalid_grant") {
+			errorType = "invalid_grant"
+		}
+		log.Err(err).
+			Str("errorType", errorType).
+			Bool("hasCode", code != "").
+			Bool("redirectUrlEmpty", auth.RedirectURL == "").
+			Msg("OAuth token exchange failed (sanitized)")
 		redirectState.Error = "Error exchanging code for token"
 		return redirectState
 	}
 	tokenInfo, err := c.getTokenInfo(ctx, token)
 	if err != nil {
-		log.Error().Err(err).Msg("Error getting token info")
+		errtype.LogError(err, "Error getting token info")
 		redirectState.Error = "Error getting token info"
 		return redirectState
 	}
@@ -370,7 +397,7 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 			tokenInfo.Scope,
 		)
 		if err != nil {
-			log.Error().Err(err).Msg("Error updating user sensitive scope")
+			errtype.LogError(err, "Error updating user sensitive scope")
 			redirectState.Error = "Error updating user sensitive scope"
 			return redirectState
 		}
@@ -383,7 +410,7 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 			tokenInfo.Scope,
 		)
 		if err != nil {
-			log.Error().Err(err).Msg("Error updating user")
+			errtype.LogError(err, "Error updating user")
 			redirectState.Error = "Error updating user"
 			return redirectState
 		}
@@ -414,14 +441,14 @@ func (c ClaimsCheck) requestDevToken(state *pb.AuthState, r *http.Request) *pb.R
 	// Get a new token
 	token, err := tokenSource.Token()
 	if err != nil {
-		log.Error().Err(err).Msg("Error exchanging code for token")
+		errtype.LogError(err, "Error exchanging code for token")
 		redirectState.Error = "Error exchanging code for token"
 		return redirectState
 	}
 
 	tokenInfo, err := c.getTokenInfo(ctx, token)
 	if err != nil {
-		log.Error().Err(err).Msg("Error getting token info")
+		errtype.LogError(err, "Error getting token info")
 		redirectState.Error = "Error getting token info"
 		return redirectState
 	}
@@ -451,20 +478,20 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 	stateBase64 := r.URL.Query().Get("state")
 	stateBin, err := base64.StdEncoding.DecodeString(stateBase64)
 	if err != nil {
-		log.Error().Err(err).Msg("Error decoding state")
+		log.Warn().Err(err).Msg("Error decoding state")
 		http.Error(w, "Error decoding state", http.StatusBadRequest)
 		return
 	}
 	var state pb.AuthState
 	err = proto.Unmarshal(stateBin, &state)
 	if err != nil {
-		log.Error().Err(err).Msg("Error unmarshalling state")
+		log.Warn().Err(err).Msg("Error unmarshalling state")
 		http.Error(w, "Error unmarshalling state", http.StatusBadRequest)
 		return
 	}
 	uiURL, err := url.Parse(state.UiUrl)
 	if err != nil {
-		log.Error().Err(err).Msg("Error parsing ui url")
+		log.Warn().Err(err).Msg("Error parsing ui url")
 		http.Error(w, "Error parsing ui url", http.StatusBadRequest)
 		return
 	}
@@ -513,7 +540,7 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 	case pb.AuthState_ACTION_REVOKE:
 		response, err := http.PostForm(tokenRevokeURL, url.Values{"token": {state.AccessTokenToRevoke}})
 		if err != nil {
-			log.Error().Err(err).Msg("Error revoking token")
+			errtype.LogError(err, "Error revoking token")
 			http.Error(w, "Error revoking token", http.StatusBadRequest)
 			return
 		}
@@ -521,14 +548,14 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, uiURL.String(), http.StatusFound)
 		return
 	default:
-		log.Error().Msgf("Unknown action: %v", state.Action)
+		log.Warn().Msgf("Unknown action: %v", state.Action)
 		http.Error(w, "Unknown action", http.StatusBadRequest)
 	}
 }
 
 // GetClaims from the context
 func GetClaims(ctx context.Context) *Claims {
-	value, isExist := ctx.Value(contextKey).(*Claims)
+	value, isExist := ctx.Value(ContextKey).(*Claims)
 	if isExist {
 		return value
 	}
@@ -561,7 +588,7 @@ func (c ClaimsCheck) getPublicKeyFromAmazon(token *jwt.Token) (interface{}, erro
 		}
 		publicKey, err = jwt.ParseECPublicKeyFromPEM(pem)
 		if err != nil {
-			log.Error().Err(err).Msg("error parsing public key")
+			errtype.LogError(err, "error parsing public key")
 			return nil, err
 		} else {
 			c.publicKeys.Store(kid, publicKey)

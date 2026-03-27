@@ -3,6 +3,218 @@
 
 import * as jspb from "google-protobuf";
 
+export class SaveMapPreviewRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  getMapPreviewDataUri(): string;
+  setMapPreviewDataUri(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): SaveMapPreviewRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: SaveMapPreviewRequest): SaveMapPreviewRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: SaveMapPreviewRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): SaveMapPreviewRequest;
+  static deserializeBinaryFromReader(message: SaveMapPreviewRequest, reader: jspb.BinaryReader): SaveMapPreviewRequest;
+}
+
+export namespace SaveMapPreviewRequest {
+  export type AsObject = {
+    reportId: string,
+    mapPreviewDataUri: string,
+  }
+}
+
+export class SaveMapPreviewResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): SaveMapPreviewResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: SaveMapPreviewResponse): SaveMapPreviewResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: SaveMapPreviewResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): SaveMapPreviewResponse;
+  static deserializeBinaryFromReader(message: SaveMapPreviewResponse, reader: jspb.BinaryReader): SaveMapPreviewResponse;
+}
+
+export namespace SaveMapPreviewResponse {
+  export type AsObject = {
+  }
+}
+
+export class RestoreReportSnapshotRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  getVersionId(): string;
+  setVersionId(value: string): void;
+
+  getDatasetSnapshotId(): string;
+  setDatasetSnapshotId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): RestoreReportSnapshotRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: RestoreReportSnapshotRequest): RestoreReportSnapshotRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: RestoreReportSnapshotRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RestoreReportSnapshotRequest;
+  static deserializeBinaryFromReader(message: RestoreReportSnapshotRequest, reader: jspb.BinaryReader): RestoreReportSnapshotRequest;
+}
+
+export namespace RestoreReportSnapshotRequest {
+  export type AsObject = {
+    reportId: string,
+    versionId: string,
+    datasetSnapshotId: string,
+  }
+}
+
+export class RestoreReportSnapshotResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): RestoreReportSnapshotResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: RestoreReportSnapshotResponse): RestoreReportSnapshotResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: RestoreReportSnapshotResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RestoreReportSnapshotResponse;
+  static deserializeBinaryFromReader(message: RestoreReportSnapshotResponse, reader: jspb.BinaryReader): RestoreReportSnapshotResponse;
+}
+
+export namespace RestoreReportSnapshotResponse {
+  export type AsObject = {
+  }
+}
+
+export class GetSnapshotsRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetSnapshotsRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: GetSnapshotsRequest): GetSnapshotsRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetSnapshotsRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetSnapshotsRequest;
+  static deserializeBinaryFromReader(message: GetSnapshotsRequest, reader: jspb.BinaryReader): GetSnapshotsRequest;
+}
+
+export namespace GetSnapshotsRequest {
+  export type AsObject = {
+    reportId: string,
+  }
+}
+
+export class ReportSnapshot extends jspb.Message {
+  getVersionId(): string;
+  setVersionId(value: string): void;
+
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  getAuthorEmail(): string;
+  setAuthorEmail(value: string): void;
+
+  getCreatedAt(): string;
+  setCreatedAt(value: string): void;
+
+  getTriggerType(): ReportSnapshot.TriggerTypeMap[keyof ReportSnapshot.TriggerTypeMap];
+  setTriggerType(value: ReportSnapshot.TriggerTypeMap[keyof ReportSnapshot.TriggerTypeMap]): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): ReportSnapshot.AsObject;
+  static toObject(includeInstance: boolean, msg: ReportSnapshot): ReportSnapshot.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: ReportSnapshot, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): ReportSnapshot;
+  static deserializeBinaryFromReader(message: ReportSnapshot, reader: jspb.BinaryReader): ReportSnapshot;
+}
+
+export namespace ReportSnapshot {
+  export type AsObject = {
+    versionId: string,
+    reportId: string,
+    authorEmail: string,
+    createdAt: string,
+    triggerType: ReportSnapshot.TriggerTypeMap[keyof ReportSnapshot.TriggerTypeMap],
+  }
+
+  export interface TriggerTypeMap {
+    TRIGGER_TYPE_UNSPECIFIED: 0;
+    TRIGGER_TYPE_QUERY_CHANGE: 1;
+    TRIGGER_TYPE_REPORT_CHANGE: 2;
+    TRIGGER_TYPE_SNAPSHOT_RESTORE: 3;
+    TRIGGER_TYPE_DATASET_CHANGE: 4;
+  }
+
+  export const TriggerType: TriggerTypeMap;
+}
+
+export class GetSnapshotsResponse extends jspb.Message {
+  clearReportSnapshotsList(): void;
+  getReportSnapshotsList(): Array<ReportSnapshot>;
+  setReportSnapshotsList(value: Array<ReportSnapshot>): void;
+  addReportSnapshots(value?: ReportSnapshot, index?: number): ReportSnapshot;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetSnapshotsResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: GetSnapshotsResponse): GetSnapshotsResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetSnapshotsResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetSnapshotsResponse;
+  static deserializeBinaryFromReader(message: GetSnapshotsResponse, reader: jspb.BinaryReader): GetSnapshotsResponse;
+}
+
+export namespace GetSnapshotsResponse {
+  export type AsObject = {
+    reportSnapshotsList: Array<ReportSnapshot.AsObject>,
+  }
+}
+
+export class TrackEventRequest extends jspb.Message {
+  getEventName(): string;
+  setEventName(value: string): void;
+
+  getEventDataJson(): string;
+  setEventDataJson(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): TrackEventRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: TrackEventRequest): TrackEventRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: TrackEventRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): TrackEventRequest;
+  static deserializeBinaryFromReader(message: TrackEventRequest, reader: jspb.BinaryReader): TrackEventRequest;
+}
+
+export namespace TrackEventRequest {
+  export type AsObject = {
+    eventName: string,
+    eventDataJson: string,
+  }
+}
+
+export class TrackEventResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): TrackEventResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: TrackEventResponse): TrackEventResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: TrackEventResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): TrackEventResponse;
+  static deserializeBinaryFromReader(message: TrackEventResponse, reader: jspb.BinaryReader): TrackEventResponse;
+}
+
+export namespace TrackEventResponse {
+  export type AsObject = {
+  }
+}
+
 export class SetTrackViewersRequest extends jspb.Message {
   getReportId(): string;
   setReportId(value: string): void;
@@ -86,6 +298,46 @@ export class GetWherobotsConnectionHintResponse extends jspb.Message {
 export namespace GetWherobotsConnectionHintResponse {
   export type AsObject = {
     hintJson: string,
+  }
+}
+
+export class SetAutoRefreshIntervalSecondsRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  getAutoRefreshIntervalSeconds(): number;
+  setAutoRefreshIntervalSeconds(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): SetAutoRefreshIntervalSecondsRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: SetAutoRefreshIntervalSecondsRequest): SetAutoRefreshIntervalSecondsRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: SetAutoRefreshIntervalSecondsRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): SetAutoRefreshIntervalSecondsRequest;
+  static deserializeBinaryFromReader(message: SetAutoRefreshIntervalSecondsRequest, reader: jspb.BinaryReader): SetAutoRefreshIntervalSecondsRequest;
+}
+
+export namespace SetAutoRefreshIntervalSecondsRequest {
+  export type AsObject = {
+    reportId: string,
+    autoRefreshIntervalSeconds: number,
+  }
+}
+
+export class SetAutoRefreshIntervalSecondsResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): SetAutoRefreshIntervalSecondsResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: SetAutoRefreshIntervalSecondsResponse): SetAutoRefreshIntervalSecondsResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: SetAutoRefreshIntervalSecondsResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): SetAutoRefreshIntervalSecondsResponse;
+  static deserializeBinaryFromReader(message: SetAutoRefreshIntervalSecondsResponse, reader: jspb.BinaryReader): SetAutoRefreshIntervalSecondsResponse;
+}
+
+export namespace SetAutoRefreshIntervalSecondsResponse {
+  export type AsObject = {
   }
 }
 
@@ -875,6 +1127,12 @@ export class Workspace extends jspb.Message {
   getName(): string;
   setName(value: string): void;
 
+  getRole(): UserRoleMap[keyof UserRoleMap];
+  setRole(value: UserRoleMap[keyof UserRoleMap]): void;
+
+  getPlanType(): PlanTypeMap[keyof PlanTypeMap];
+  setPlanType(value: PlanTypeMap[keyof PlanTypeMap]): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Workspace.AsObject;
   static toObject(includeInstance: boolean, msg: Workspace): Workspace.AsObject;
@@ -889,6 +1147,8 @@ export namespace Workspace {
   export type AsObject = {
     id: string,
     name: string,
+    role: UserRoleMap[keyof UserRoleMap],
+    planType: PlanTypeMap[keyof PlanTypeMap],
   }
 }
 
@@ -914,6 +1174,9 @@ export class Subscription extends jspb.Message {
   getItemId(): string;
   setItemId(value: string): void;
 
+  getExpired(): boolean;
+  setExpired(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Subscription.AsObject;
   static toObject(includeInstance: boolean, msg: Subscription): Subscription.AsObject;
@@ -933,6 +1196,7 @@ export namespace Subscription {
     stripeCustomerEmail: string,
     cancelAt: number,
     itemId: string,
+    expired: boolean,
   }
 }
 
@@ -1070,6 +1334,11 @@ export class GetUserStreamResponse extends jspb.Message {
   getIsDefaultWorkspace(): boolean;
   setIsDefaultWorkspace(value: boolean): void;
 
+  clearUserWorkspacesList(): void;
+  getUserWorkspacesList(): Array<Workspace>;
+  setUserWorkspacesList(value: Array<Workspace>): void;
+  addUserWorkspaces(value?: Workspace, index?: number): Workspace;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetUserStreamResponse.AsObject;
   static toObject(includeInstance: boolean, msg: GetUserStreamResponse): GetUserStreamResponse.AsObject;
@@ -1091,6 +1360,7 @@ export namespace GetUserStreamResponse {
     role: UserRoleMap[keyof UserRoleMap],
     isPlayground: boolean,
     isDefaultWorkspace: boolean,
+    userWorkspacesList: Array<Workspace.AsObject>,
   }
 }
 
@@ -1574,6 +1844,9 @@ export class GetEnvResponse extends jspb.Message {
   setVariablesList(value: Array<GetEnvResponse.Variable>): void;
   addVariables(value?: GetEnvResponse.Variable, index?: number): GetEnvResponse.Variable;
 
+  getServerTime(): number;
+  setServerTime(value: number): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetEnvResponse.AsObject;
   static toObject(includeInstance: boolean, msg: GetEnvResponse): GetEnvResponse.AsObject;
@@ -1587,6 +1860,7 @@ export class GetEnvResponse extends jspb.Message {
 export namespace GetEnvResponse {
   export type AsObject = {
     variablesList: Array<GetEnvResponse.Variable.AsObject>,
+    serverTime: number,
   }
 
   export class Variable extends jspb.Message {
@@ -1639,6 +1913,12 @@ export namespace GetEnvResponse {
       TYPE_SECRETS_ENABLED: 23;
       TYPE_CLOUD_UX_CONFIG_JSON: 24;
       TYPE_DEKART_CLOUD: 25;
+      TYPE_MAX_FILE_UPLOAD_SIZE: 26;
+      TYPE_IS_SNOWPARK: 27;
+      TYPE_STORE_MAP_PREVIEW: 28;
+      TYPE_REQUIRE_OIDC: 29;
+      TYPE_VERSION_CHECK_URL: 30;
+      TYPE_VERSION_CHECK_FORCE_CURRENT_VERSION: 31;
     }
 
     export const Type: TypeMap;
@@ -1929,6 +2209,23 @@ export class Report extends jspb.Message {
   getTrackViewers(): boolean;
   setTrackViewers(value: boolean): void;
 
+  getCanRefresh(): boolean;
+  setCanRefresh(value: boolean): void;
+
+  getAutoRefreshIntervalSeconds(): number;
+  setAutoRefreshIntervalSeconds(value: number): void;
+
+  getVersionId(): string;
+  setVersionId(value: string): void;
+
+  getHasMapPreview(): boolean;
+  setHasMapPreview(value: boolean): void;
+
+  clearConnectionTypesList(): void;
+  getConnectionTypesList(): Array<ConnectionTypeMap[keyof ConnectionTypeMap]>;
+  setConnectionTypesList(value: Array<ConnectionTypeMap[keyof ConnectionTypeMap]>): void;
+  addConnectionTypes(value: ConnectionTypeMap[keyof ConnectionTypeMap], index?: number): ConnectionTypeMap[keyof ConnectionTypeMap];
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Report.AsObject;
   static toObject(includeInstance: boolean, msg: Report): Report.AsObject;
@@ -1961,6 +2258,11 @@ export namespace Report {
     readme?: Readme.AsObject,
     hasDirectAccess: boolean,
     trackViewers: boolean,
+    canRefresh: boolean,
+    autoRefreshIntervalSeconds: number,
+    versionId: string,
+    hasMapPreview: boolean,
+    connectionTypesList: Array<ConnectionTypeMap[keyof ConnectionTypeMap]>,
   }
 }
 
@@ -2759,6 +3061,9 @@ export interface PlanTypeMap {
   TYPE_GROW: 3;
   TYPE_MAX: 4;
   TYPE_SELF_HOSTED: 5;
+  TYPE_TRIAL: 6;
+  TYPE_COMMUNITY: 7;
+  TYPE_PREMIUM: 8;
 }
 
 export const PlanType: PlanTypeMap;

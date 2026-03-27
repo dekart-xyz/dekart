@@ -6,6 +6,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useState, useEffect } from 'react'
 import getDatasetName from './lib/getDatasetName'
 import { closeDatasetSettingsModal, removeDataset, updateDatasetName } from './actions/dataset'
+import { track } from './lib/tracking'
 
 function ModalFooter ({ saving, setSaving, name, datasetId }) {
   const dispatch = useDispatch()
@@ -18,6 +19,7 @@ function ModalFooter ({ saving, setSaving, name, datasetId }) {
         disabled={saving || isViewer}
         id='dekart-save-dataset-name-button'
         onClick={() => {
+          track('SaveDatasetName', { datasetId })
           setSaving(true)
           dispatch(updateDatasetName(datasetId, name))
         }}
@@ -27,13 +29,17 @@ function ModalFooter ({ saving, setSaving, name, datasetId }) {
       <Button
         danger
         onClick={() => {
+          track('DeleteDatasetClicked', { datasetId })
           dispatch(closeDatasetSettingsModal())
           Modal.confirm({
             title: 'Remove dataset from map?',
             okText: 'Yes',
             okType: 'danger',
             cancelText: 'No',
-            onOk: () => dispatch(removeDataset(datasetId))
+            onOk: () => {
+              track('DeleteDatasetConfirmed', { datasetId })
+              dispatch(removeDataset(datasetId))
+            }
           })
         }}
         disabled={numDatasets < 2 || saving}

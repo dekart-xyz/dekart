@@ -29,13 +29,12 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 
 	report, err := s.getReport(ctx, reportID)
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve report")
-		return status.Errorf(codes.Internal, err.Error())
+		return GRPCError("Cannot retrieve report", err)
 	}
 	if report == nil {
 		err := fmt.Errorf("report %s not found", reportID)
 		log.Warn().Err(err).Send()
-		return status.Errorf(codes.NotFound, err.Error())
+		return status.Error(codes.NotFound, err.Error())
 	}
 
 	// update report_analytics only when tracking is enabled
@@ -49,39 +48,33 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 			claims.Email,
 		)
 		if err != nil {
-			log.Err(err).Send()
-			return status.Errorf(codes.Internal, err.Error())
+			return GRPCError("Cannot insert report analytics", err)
 		}
 	}
 
 	datasets, err := s.getDatasets(ctx, reportID)
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve datasets")
-		return status.Errorf(codes.Internal, err.Error())
+		return GRPCError("Cannot retrieve datasets", err)
 	}
 
 	queries, err := s.getQueries(ctx, datasets)
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve queries")
-		return status.Errorf(codes.Internal, err.Error())
+		return GRPCError("Cannot retrieve queries", err)
 	}
 
 	files, err := s.getFiles(ctx, datasets)
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve queries")
-		return status.Errorf(codes.Internal, err.Error())
+		return GRPCError("Cannot retrieve files", err)
 	}
 
 	queryJobs, err := s.getDatasetsQueryJobs(ctx, datasets)
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve query jobs")
-		return status.Errorf(codes.Internal, err.Error())
+		return GRPCError("Cannot retrieve query jobs", err)
 	}
 
 	directAccessEmails, err := s.getDirectAccessEmails(ctx, reportID)
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve direct access emails")
-		return status.Errorf(codes.Internal, err.Error())
+		return GRPCError("Cannot retrieve direct access emails", err)
 	}
 
 	res := proto.ReportStreamResponse{
@@ -155,7 +148,7 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 
 	_, err := uuid.Parse(req.Report.Id)
 	if err != nil {
-		return status.Errorf(codes.InvalidArgument, err.Error())
+		return status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	streamID, err := uuid.NewRandom()
@@ -187,19 +180,19 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 	if checkWorkspace(ctx).ID == "" {
 		reportRows, err = s.db.QueryContext(ctx,
 			`select
-				id,
-				case when title is null then 'Untitled' else title end as title,
-				archived,
-				(author_email = $1) or allow_edit as can_write,
-				author_email = $1 as is_author,
-				author_email,
-				discoverable,
-				allow_edit,
-				updated_at,
-				created_at,
-				is_public,
-				track_viewers,
-				is_playground,
+				r.id,
+				case when r.title is null then 'Untitled' else r.title end as title,
+				r.archived,
+				(r.author_email = $1) or r.allow_edit as can_write,
+				r.author_email = $1 as is_author,
+				r.author_email,
+				r.discoverable,
+				r.allow_edit,
+				r.updated_at,
+				r.created_at,
+				r.is_public,
+				r.track_viewers,
+				r.is_playground,
 				exists (
 					select 1
 					from (
@@ -209,10 +202,14 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 						where report_id = r.id
 					) t
 					where rn = 1 and status != 2
-				) as has_direct_access
+				) as has_direct_access,
+				r.version_id,
+				r.map_config,
+				case when mp.report_id is not null then true else false end as has_map_preview
 			from reports as r
-			where author_email=$1 and is_playground=true
-			order by updated_at desc`,
+			left join map_previews as mp on r.id = mp.report_id
+			where r.author_email=$1 and r.is_playground=true
+			order by r.updated_at desc`,
 			claims.Email,
 		)
 	} else {
@@ -240,8 +237,12 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 						where report_id = r.id
 					) t
 					where rn = 1 and status != 2
-				) as has_direct_access
+				) as has_direct_access,
+				r.version_id,
+				r.map_config,
+				case when mp.report_id is not null then true else false end as has_map_preview
 			from reports as r
+			left join map_previews as mp on r.id = mp.report_id
 			where (r.author_email=$1 or (r.discoverable=true and r.archived=false) or r.allow_edit=true) and r.workspace_id=$2
 			order by r.updated_at desc`,
 			claims.Email,
@@ -249,20 +250,18 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 		)
 	}
 	if err != nil {
-		log.Err(err).Send()
-		return status.Errorf(codes.Internal, err.Error())
+		return GRPCError("Cannot query report list", err)
 	}
-	defer reportRows.Close()
-	res := proto.ReportListResponse{
-		Reports: make([]*proto.Report, 0),
-		StreamOptions: &proto.StreamOptions{
-			Sequence: sequence,
-		},
-	}
+	defer reportRows.Close() // Ensure cleanup even on early return
+
+	// Process report rows first and collect them
+	reports := make([]*proto.Report, 0)
 	for reportRows.Next() {
 		report := proto.Report{}
 		createdAt := time.Time{}
 		updatedAt := time.Time{}
+		var versionID sql.NullString
+		var mapConfig sql.NullString
 		err = reportRows.Scan(
 			&report.Id,
 			&report.Title,
@@ -278,14 +277,76 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			&report.TrackViewers,
 			&report.IsPlayground,
 			&report.HasDirectAccess,
+			&versionID,
+			&mapConfig,
+			&report.HasMapPreview,
 		)
 		if err != nil {
-			log.Err(err).Send()
-			return status.Errorf(codes.Internal, err.Error())
+			return GRPCError("Cannot scan report row", err)
 		}
 		report.CreatedAt = createdAt.Unix()
 		report.UpdatedAt = updatedAt.Unix()
-		res.Reports = append(res.Reports, &report)
+		report.VersionId = versionID.String
+		report.MapConfig = mapConfig.String
+
+		reports = append(reports, &report)
+	}
+	reportRows.Close() // Close reportRows before querying connectionTypeRows
+
+	// Query connection types using the same WHERE conditions as reports
+	var connectionTypeRows *sql.Rows
+	var connectionTypesMap map[string]map[int32]bool
+	if checkWorkspace(ctx).ID == "" {
+		connectionTypeRows, err = s.db.QueryContext(ctx,
+			`select distinct d.report_id, c.connection_type
+			from datasets as d
+			left join connections as c on d.connection_id = c.id
+			inner join reports as r on d.report_id = r.id
+			where r.author_email=$1 and r.is_playground=true and c.connection_type is not null`,
+			claims.Email,
+		)
+	} else {
+		connectionTypeRows, err = s.db.QueryContext(ctx,
+			`select distinct d.report_id, c.connection_type
+			from datasets as d
+			left join connections as c on d.connection_id = c.id
+			inner join reports as r on d.report_id = r.id
+			where (r.author_email=$1 or (r.discoverable=true and r.archived=false) or r.allow_edit=true) and r.workspace_id=$2 and c.connection_type is not null`,
+			claims.Email,
+			checkWorkspace(ctx).ID,
+		)
+	}
+	if err == nil {
+		defer connectionTypeRows.Close()
+		connectionTypesMap = make(map[string]map[int32]bool)
+		for connectionTypeRows.Next() {
+			var reportID string
+			var connectionType sql.NullInt32
+			if err := connectionTypeRows.Scan(&reportID, &connectionType); err == nil && connectionType.Valid {
+				if connectionTypesMap[reportID] == nil {
+					connectionTypesMap[reportID] = make(map[int32]bool)
+				}
+				connectionTypesMap[reportID][connectionType.Int32] = true
+			}
+		}
+	}
+
+	// Assign connection types to reports
+	if connectionTypesMap != nil {
+		for _, report := range reports {
+			if connectionTypes, exists := connectionTypesMap[report.Id]; exists {
+				for ct := range connectionTypes {
+					report.ConnectionTypes = append(report.ConnectionTypes, proto.ConnectionType(ct))
+				}
+			}
+		}
+	}
+
+	res := proto.ReportListResponse{
+		Reports: reports,
+		StreamOptions: &proto.StreamOptions{
+			Sequence: sequence,
+		},
 	}
 	err = srv.Send(&res)
 	if err != nil {
@@ -294,7 +355,7 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			return nil // Client disconnected gracefully
 		}
 		log.Err(err).Send()
-		return status.Errorf(codes.Internal, err.Error())
+		return status.Error(codes.Internal, err.Error())
 	}
 	return nil
 }
@@ -316,8 +377,12 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 
 	workspaceUpdate, err := s.getWorkspaceUpdate(ctx)
 	if err != nil {
-		log.Err(err).Send()
-		return status.Errorf(codes.Internal, err.Error())
+		return GRPCError("Cannot get workspace update", err)
+	}
+
+	userWorkspaces, err := s.getUserWorkspaces(ctx, claims.Email)
+	if err != nil {
+		return GRPCError("Cannot get user workspaces", err)
 	}
 
 	response := proto.GetUserStreamResponse{
@@ -332,6 +397,7 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 		Role:               checkWorkspace(ctx).UserRole,
 		IsPlayground:       checkWorkspace(ctx).IsPlayground,
 		IsDefaultWorkspace: checkWorkspace(ctx).IsDefaultWorkspace,
+		UserWorkspaces:     userWorkspaces,
 	}
 
 	err = srv.Send(&response)
@@ -341,7 +407,7 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 			return nil // Client disconnected gracefully
 		}
 		log.Err(err).Send()
-		return status.Errorf(codes.Internal, err.Error())
+		return status.Error(codes.Internal, err.Error())
 	}
 	return nil
 }

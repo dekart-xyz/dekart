@@ -4,9 +4,13 @@ import (
 	"context"
 	"dekart/src/proto"
 	"dekart/src/server/conn"
+	"dekart/src/server/errtype"
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
 	"fmt"
+	"net/url"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,14 +26,14 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 	userCtx := user.CopyUserContext(reqCtx, ctx)
 	datasets, err := s.getDatasets(userCtx, reportID)
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve datasets")
+		errtype.LogError(err, "Cannot retrieve datasets")
 		return
 	}
 
 	// handling queryJobs
 	queryJobs, err := s.getDatasetsQueryJobs(userCtx, datasets)
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve query jobs")
+		errtype.LogError(err, "Cannot retrieve query jobs")
 		return
 	}
 
@@ -41,7 +45,7 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 			connection, err := s.getConnectionFromQueryID(userCtx, queryJob.QueryId)
 			conCtx := conn.GetCtx(userCtx, connection)
 			if err != nil {
-				log.Err(err).Msg("Cannot retrieve connection while publishing report")
+				errtype.LogError(err, "Cannot retrieve connection while publishing report")
 				return
 			}
 			if connection == nil {
@@ -51,12 +55,12 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 			userBucketName := s.getBucketNameFromConnection(connection)
 			dwJobID, err := s.getDWJobIDFromResultID(userCtx, queryJob.JobResultId)
 			if err != nil {
-				log.Err(err).Msg("Cannot retrieve job id")
+				errtype.LogError(err, "Cannot retrieve job id")
 				return
 			}
 			resultURI, err := s.getResultURI(userCtx, queryJob.JobResultId)
 			if err != nil {
-				log.Error().Err(err).Msg("Error getting result URI")
+				errtype.LogError(err, "Error getting result URI")
 				return
 			}
 
@@ -83,7 +87,7 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 						dstObj := s.storage.GetObject(conCtx, userBucketName, fmt.Sprintf("%s.csv", queryJob.JobResultId))
 						err = srcObj.CopyTo(defConnCtx, dstObj.GetWriter(conCtx))
 						if err != nil {
-							log.Err(err).Msg("Cannot copy query result to user storage")
+							errtype.LogError(err, "Cannot copy query result to user storage")
 							return
 						}
 					}
@@ -98,7 +102,7 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 	files, err := s.getFiles(userCtx, datasets)
 
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve files")
+		errtype.LogError(err, "Cannot retrieve files")
 		return
 	}
 
@@ -106,7 +110,7 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 		if file.SourceId != "" {
 			connection, err := s.getConnectionFromFileID(userCtx, file.Id)
 			if err != nil {
-				log.Err(err).Msg("Cannot retrieve connection from file while publishing report")
+				errtype.LogError(err, "Cannot retrieve connection from file while publishing report")
 				return
 			}
 			if connection == nil {
@@ -117,11 +121,11 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 			publicStorage := storage.NewPublicStorage()
 			if connection.CloudStorageBucket != publicStorage.GetDefaultBucketName() {
 				// delete only of they are on the different buckets
-				srcObj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", file.SourceId, getFileExtension(file.MimeType)))
-				dstObj := s.storage.GetObject(conCtx, s.getBucketNameFromConnection(connection), fmt.Sprintf("%s.%s", file.SourceId, getFileExtension(file.MimeType)))
+				srcObj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", file.SourceId, getFileExtensionFromMime(file.MimeType)))
+				dstObj := s.storage.GetObject(conCtx, s.getBucketNameFromConnection(connection), fmt.Sprintf("%s.%s", file.SourceId, getFileExtensionFromMime(file.MimeType)))
 				err = srcObj.CopyTo(conCtx, dstObj.GetWriter(conCtx))
 				if err != nil {
-					log.Err(err).Msg("Cannot copy file to public storage")
+					errtype.LogError(err, "Cannot copy file to public storage")
 					return
 				}
 				objectsToDelete = append(objectsToDelete, srcObj)
@@ -136,7 +140,7 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 		reportID,
 	)
 	if err != nil {
-		log.Err(err).Msg("Cannot update report while unpublishing report")
+		errtype.LogError(err, "Cannot update report while unpublishing report")
 		return
 	}
 	s.reportStreams.Ping(reportID)
@@ -151,12 +155,14 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 			from datasets d
 			join reports r on r.id = d.report_id
 			where r.is_public = true and (
-				d.query_id in (select id from queries where job_result_id = $1)
+				-- job_result_id is tracked in query_jobs; using queries.job_result_id can undercount
+				-- and accidentally delete a source still referenced by another public report.
+				d.query_id in (select query_id from query_jobs where job_result_id = $1)
 				or d.file_id in (select id from files where file_source_id = $1)
 			)`, sourceID).Scan(&count)
 
 		if err != nil {
-			log.Err(err).Msg("Cannot query number of public reports with this sourceID")
+			errtype.LogError(err, "Cannot query number of public reports with this sourceID")
 			return
 		}
 		if count > 0 { // sourceID is used in other public reports, do not delete
@@ -164,10 +170,108 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 		}
 		err = obj.Delete(defConnCtx)
 		if err != nil {
-			log.Err(err).Msg("Cannot delete object from public storage")
+			errtype.LogError(err, "Cannot delete object from public storage")
 			return
 		}
 	}
+}
+
+func (s Server) checkExpiredQueryResult(ctx context.Context, reportID string) (bool, error) {
+	datasets, err := s.getDatasets(ctx, reportID)
+	if err != nil {
+		return false, fmt.Errorf("cannot retrieve datasets: %w", err)
+	}
+
+	queryJobs, err := s.getDatasetsQueryJobs(ctx, datasets)
+	if err != nil {
+		return false, fmt.Errorf("cannot retrieve query jobs: %w", err)
+	}
+
+	for _, queryJob := range queryJobs {
+		if queryJob.JobResultId == "" {
+			continue
+		}
+
+		dwJobID, err := s.getDWJobIDFromResultID(ctx, queryJob.JobResultId)
+		if err != nil {
+			return false, fmt.Errorf("cannot retrieve job id: %w", err)
+		}
+
+		resultURI, err := s.getResultURI(ctx, queryJob.JobResultId)
+		if err != nil {
+			return false, fmt.Errorf("error getting result URI: %w", err)
+		}
+
+		if dwJobID != "" {
+			// if dwJobID use checkJobExpiration
+			expired, _, err := s.checkJobExpiration(ctx, queryJob.JobResultId)
+			if err != nil {
+				return false, fmt.Errorf("error checking job expiration: %w", err)
+			}
+			if expired {
+				return true, nil
+			}
+		} else if resultURI != "" {
+			// if resultURI parse presigned url and check expiration
+			expired, err := s.checkPresignedURLExpiration(resultURI, time.Time{})
+			if err != nil {
+				return false, fmt.Errorf("error checking presigned URL expiration: %w", err)
+			}
+			if expired {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
+}
+
+// checkPresignedURLExpiration parses a presigned S3 URL and checks if it has expired
+// If now is zero time, it uses time.Now() for the current time check
+func (s Server) checkPresignedURLExpiration(resultURI string, now time.Time) (bool, error) {
+	parsedURL, err := url.Parse(resultURI)
+	if err != nil {
+		return false, fmt.Errorf("failed to parse presigned URL: %w", err)
+	}
+
+	queryParams := parsedURL.Query()
+
+	// Get X-Amz-Date (timestamp when URL was signed)
+	amzDateStr := queryParams.Get("X-Amz-Date")
+	if amzDateStr == "" {
+		log.Error().Str("resultURI", resultURI).Msg("No X-Amz-Date in presigned URL")
+		return true, nil
+	}
+
+	// Parse X-Amz-Date (format: YYYYMMDDTHHMMSSZ)
+	amzDate, err := time.Parse("20060102T150405Z", amzDateStr)
+	if err != nil {
+		return true, err
+	}
+
+	// Get X-Amz-Expires (seconds until expiration)
+	amzExpiresStr := queryParams.Get("X-Amz-Expires")
+	if amzExpiresStr == "" {
+		log.Error().Str("resultURI", resultURI).Msg("No X-Amz-Expires in presigned URL")
+		return true, nil
+	}
+
+	amzExpires, err := strconv.ParseInt(amzExpiresStr, 10, 64)
+	if err != nil {
+		return true, err
+	}
+
+	// Calculate expiration time
+	expirationTime := amzDate.Add(time.Duration(amzExpires) * time.Second)
+
+	// Use provided time or current time
+	currentTime := now
+	if currentTime.IsZero() {
+		currentTime = time.Now()
+	}
+
+	// Check if expired
+	return currentTime.After(expirationTime), nil
 }
 
 func (s Server) publishReport(reqCtx context.Context, reportID string) {
@@ -177,14 +281,14 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 	userCtx := user.CopyUserContext(reqCtx, ctx)
 	datasets, err := s.getDatasets(userCtx, reportID)
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve datasets")
+		errtype.LogError(err, "Cannot retrieve datasets")
 		return
 	}
 
 	// handling queryJobs
 	queryJobs, err := s.getDatasetsQueryJobs(userCtx, datasets)
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve queries")
+		errtype.LogError(err, "Cannot retrieve queries")
 		return
 	}
 
@@ -194,7 +298,7 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 			connection, err := s.getConnectionFromQueryID(userCtx, queryJob.QueryId)
 			conCtx := conn.GetCtx(userCtx, connection)
 			if err != nil {
-				log.Err(err).Msg("Cannot retrieve connection while publishing report")
+				errtype.LogError(err, "Cannot retrieve connection while publishing report")
 				return
 			}
 			if connection == nil {
@@ -206,13 +310,13 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 			dwJobID, err := s.getDWJobIDFromResultID(userCtx, queryJob.JobResultId)
 
 			if err != nil {
-				log.Err(err).Msg("Cannot retrieve job id")
+				errtype.LogError(err, "Cannot retrieve job id")
 				return
 			}
 
 			resultURI, err := s.getResultURI(userCtx, queryJob.JobResultId)
 			if err != nil {
-				log.Error().Err(err).Msg("Error getting result URI")
+				errtype.LogError(err, "Error getting result URI")
 				return
 			}
 
@@ -245,7 +349,7 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 	files, err := s.getFiles(userCtx, datasets)
 
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve files")
+		errtype.LogError(err, "Cannot retrieve files")
 		return
 	}
 
@@ -253,7 +357,7 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 		if file.SourceId != "" {
 			connection, err := s.getConnectionFromFileID(userCtx, file.Id)
 			if err != nil {
-				log.Err(err).Msg("Cannot retrieve connection from file while publishing report")
+				errtype.LogError(err, "Cannot retrieve connection from file while publishing report")
 				return
 			}
 			if connection == nil {
@@ -262,8 +366,8 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 			}
 			conCtx := conn.GetCtx(userCtx, connection)
 			publicStorage := storage.NewPublicStorage()
-			dstObj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", file.SourceId, getFileExtension(file.MimeType)))
-			srcObj := s.storage.GetObject(conCtx, s.getBucketNameFromConnection(connection), fmt.Sprintf("%s.%s", file.SourceId, getFileExtension(file.MimeType)))
+			dstObj := publicStorage.GetObject(ctx, publicStorage.GetDefaultBucketName(), fmt.Sprintf("%s.%s", file.SourceId, getFileExtensionFromMime(file.MimeType)))
+			srcObj := s.storage.GetObject(conCtx, s.getBucketNameFromConnection(connection), fmt.Sprintf("%s.%s", file.SourceId, getFileExtensionFromMime(file.MimeType)))
 			err = srcObj.CopyTo(conCtx, dstObj.GetWriter(conCtx))
 			if err != nil {
 				log.Err(err).Msg("Cannot copy file to public storage")
@@ -277,7 +381,7 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 		reportID,
 	)
 	if err != nil {
-		log.Err(err).Msg("Cannot update report while publishing report")
+		errtype.LogError(err, "Cannot update report while publishing report")
 		return
 	}
 
@@ -293,12 +397,12 @@ func (s Server) PublishReport(ctx context.Context, req *proto.PublishReportReque
 	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	report, err := s.getReport(ctx, req.ReportId)
 	if err != nil {
-		log.Err(err).Msg("Cannot retrieve report")
-		return nil, status.Errorf(codes.Internal, err.Error())
+		errtype.LogError(err, "Cannot retrieve report")
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if report == nil {
 		err := status.Errorf(codes.NotFound, "report %s not found", req.ReportId)
@@ -308,11 +412,14 @@ func (s Server) PublishReport(ctx context.Context, req *proto.PublishReportReque
 	if !report.CanWrite {
 		err := status.Errorf(codes.PermissionDenied, "no permission to publish report %s", req.ReportId)
 		log.Warn().Err(err).Msg("No permission to publish report")
-		return nil, status.Errorf(codes.PermissionDenied, err.Error())
+		return nil, status.Error(codes.PermissionDenied, err.Error())
 	}
 
 	// Check if user is trying to publish and if they have a freemium plan
 	if req.Publish {
+		if os.Getenv("DEKART_STORAGE") == "PG" {
+			return nil, status.Error(codes.InvalidArgument, "public publishing is not supported for DEKART_STORAGE=PG yet")
+		}
 		workspaceInfo := user.CheckWorkspaceCtx(ctx)
 
 		// Check if user has freemium plan (TYPE_PERSONAL) and limit to 1 public map
@@ -324,8 +431,8 @@ func (s Server) PublishReport(ctx context.Context, req *proto.PublishReportReque
 				workspaceInfo.ID,
 			).Scan(&publicReportsCount)
 			if err != nil {
-				log.Err(err).Msg("Cannot count public reports")
-				return nil, status.Errorf(codes.Internal, err.Error())
+				errtype.LogError(err, "Cannot count public reports")
+				return nil, status.Error(codes.Internal, err.Error())
 			}
 
 			// If user already has 1 public report and this report is not already public, block publishing
@@ -336,6 +443,14 @@ func (s Server) PublishReport(ctx context.Context, req *proto.PublishReportReque
 			}
 		}
 
+		// Check if query results are expired
+		expired, err := s.checkExpiredQueryResult(ctx, req.ReportId)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		if expired {
+			return nil, status.Error(codes.Aborted, "Query results are expired before publishing. Please refresh the page.")
+		}
 		go s.publishReport(ctx, req.ReportId)
 	} else {
 		go s.unpublishReport(ctx, req.ReportId)

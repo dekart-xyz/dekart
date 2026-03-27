@@ -114,7 +114,7 @@ function listLoaded (state = false, action) {
 function userDefined (state = true, action) {
   switch (action.type) {
     case setEnv.name: {
-      return Boolean(action.variables.USER_DEFINED_CONNECTION)
+      return action.variables.USER_DEFINED_CONNECTION === '1'
     }
     default:
       return state

@@ -9,47 +9,50 @@ permissions:
   packages: write
 
 jobs:
-
-  flavour:
-    uses: ./.github/workflows/flavour.yaml      # → target + is_* booleans
-
   node_tests:
-    needs: [flavour]
     uses: ./.github/workflows/node_test.yaml
     secrets: inherit
 
   go_tests:
-    needs: [flavour]
     uses: ./.github/workflows/go_test.yaml
     secrets: inherit
 
   build_e2e:
-    needs: [flavour, node_tests, go_tests]
+    needs: [node_tests, go_tests]
     uses: ./.github/workflows/build.yaml
     permissions:
       contents: read
       packages: write
     with:
-      target:    ${{ needs.flavour.outputs.target }}
+      target: premium
       build_app: false
       build_e2e: true
     secrets: inherit
 
   e2e_tests:
-    needs: [flavour, node_tests, go_tests, build_e2e]
+    needs: [node_tests, go_tests, build_e2e]
     uses: ./.github/workflows/e2e.yaml
     permissions:
       contents: read
       packages: write
     with:
-      target: ${{ needs.flavour.outputs.target }}
+      target: premium
     secrets: inherit
 
-  build_app_release:
-    needs: [flavour, node_tests, go_tests, e2e_tests]
+  build_app_release_oss:
+    needs: [node_tests, go_tests, e2e_tests]
     uses: ./.github/workflows/build.yaml
     with:
-      target:    ${{ needs.flavour.outputs.target }}
+      target: oss
+      build_app: true
+      build_e2e: false
+    secrets: inherit
+
+  build_app_release_premium:
+    needs: [node_tests, go_tests, e2e_tests]
+    uses: ./.github/workflows/build.yaml
+    with:
+      target: premium
       build_app: true
       build_e2e: false
     secrets: inherit

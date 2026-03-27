@@ -1,18 +1,20 @@
 import { KeplerGlSchema } from '@kepler.gl/schemas'
-import { removeDataset } from '@kepler.gl/actions'
+import { cleanupExportImage, removeDataset, setExportImageSetting, startExportingImage } from '@kepler.gl/actions'
 
 import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
 import { success } from './message'
-import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType, SetTrackViewersRequest } from 'dekart-proto/dekart_pb'
+import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType, SetTrackViewersRequest, SetAutoRefreshIntervalSecondsRequest, RestoreReportSnapshotRequest, SaveMapPreviewRequest } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
-import { createQuery, downloadQuerySource } from './query'
+import { createQuery, downloadQuerySource, runQuery } from './query'
 import { downloadDataset } from './dataset'
 import { shouldAddQuery } from '../lib/shouldAddQuery'
 import { shouldUpdateDataset } from '../lib/shouldUpdateDataset'
 import { needSensitiveScopes } from './user'
 import { getQueryParamsObjArr } from '../lib/queryParams'
 import { receiveReportUpdateMapConfig } from '../lib/mapConfig'
+import { extensionFromMime } from '../lib/mime'
 import { showUpgradeModal } from './upgradeModal'
+import { track } from '../lib/tracking'
 
 export function closeReport () {
   return (dispatch) => {
@@ -107,8 +109,97 @@ function shouldDownloadQueryText (query, prevQueriesList, queriesList) {
   return false
 }
 
-export function setReportChanged (changed) {
-  return { type: setReportChanged.name, changed }
+export function setLastMapConfigChanged () {
+  return { type: setLastMapConfigChanged.name }
+}
+
+function isQueryJobOutOfDate (reportStreamResponse, getState, queryJob) {
+  const { report } = reportStreamResponse
+  const { env } = getState()
+
+  if (!queryJob) {
+    return false
+  }
+
+  // If auto-refresh is not enabled, report is not outdated
+  const autoRefreshIntervalSeconds = report?.autoRefreshIntervalSeconds || 0
+  if (autoRefreshIntervalSeconds <= 0) {
+    return false
+  }
+
+  // If we don't have server time info, we can't accurately determine if it's outdated
+  if (!env.serverTime || !env.receivedTime) {
+    return false
+  }
+
+  // Calculate current server time accounting for clock skew
+  const currentClientTime = Math.floor(Date.now() / 1000)
+  const timeSinceReceived = currentClientTime - env.receivedTime
+  const currentServerTime = env.serverTime + timeSinceReceived
+
+  // Calculate elapsed time since last update
+  const elapsedTime = currentServerTime - queryJob.updatedAt
+
+  // Report is outdated if elapsed time exceeds the auto-refresh interval
+  return elapsedTime >= autoRefreshIntervalSeconds
+}
+
+export function scheduleQueryJobRefresh (reportStreamResponse) {
+  return (dispatch, getState) => {
+    const { report } = reportStreamResponse
+    const autoRefreshIntervalSeconds = report?.autoRefreshIntervalSeconds || 0
+
+    // Only schedule if auto-refresh is enabled
+    if (autoRefreshIntervalSeconds <= 0) {
+      return
+    }
+
+    // Schedule the refresh timeout
+    const timeoutId = setTimeout(() => {
+      const state = getState()
+      const { queries, dataset: { list: datasetsList }, queryJobs, queryParams, report: currentReport, reportStatus: { edit } } = state
+
+      // Only proceed if auto-refresh is still enabled
+      if (!currentReport || (currentReport.autoRefreshIntervalSeconds || 0) <= 0 || !currentReport.canRefresh) {
+        return
+      }
+
+      // Create a fresh reportStreamResponse-like object with current state for isQueryJobOutOfDate
+      const currentReportStreamResponse = {
+        report: currentReport,
+        queryJobsList: queryJobs
+      }
+
+      // Check each dataset with a query and rerun if needed
+      datasetsList.forEach((dataset) => {
+        if (dataset.queryId) {
+          const query = queries.find(q => q.id === dataset.queryId)
+          if (!query) return
+
+          const queryJob = queryJobs.find(job => job.queryId === query.id && job.queryParamsHash === queryParams.hash)
+          if (!queryJob) return
+
+          const { canRun, queryText } = state.queryStatus[dataset.queryId] || {}
+          if (!edit && canRun && isQueryJobOutOfDate(currentReportStreamResponse, getState, queryJob)) {
+            dispatch(runQuery(dataset.queryId, queryText))
+          }
+        }
+      })
+
+      // Schedule the next refresh with current state
+      dispatch(scheduleQueryJobRefresh(currentReportStreamResponse))
+    }, autoRefreshIntervalSeconds * 1000)
+
+    // Store the timeout ID in Redux
+    dispatch({
+      type: setQueryJobRefreshTimeout.name,
+      timeoutId
+    })
+  }
+}
+
+export function setQueryJobRefreshTimeout (timeoutId) {
+  return { type: setQueryJobRefreshTimeout.name, timeoutId }
 }
 
 export function reportUpdate (reportStreamResponse) {
@@ -148,20 +239,9 @@ export function reportUpdate (reportStreamResponse) {
     }
 
     if (!mapConfigUpdated) { // new map config reset data anyway
-      prevQueriesList.forEach(query => {
-        if (!queriesList.find(q => q.id === query.id)) {
-          const dataset = prevDatasetsList.find(d => d.queryId === query.id)
-          if (dataset) {
-            dispatch(removeDataset(dataset.id))
-          }
-        }
-      })
-      prevFileList.forEach(file => {
-        if (!filesList.find(f => f.id === file.id)) {
-          const dataset = prevDatasetsList.find(d => d.fileId === file.id)
-          if (dataset) {
-            dispatch(removeDataset(dataset.id))
-          }
+      prevDatasetsList.forEach(dataset => {
+        if (!datasetsList.find(d => d.id === dataset.id)) {
+          dispatch(removeDataset(dataset.id))
         }
       })
     }
@@ -179,7 +259,13 @@ export function reportUpdate (reportStreamResponse) {
       if (dataset.queryId) {
         const query = queriesList.find(q => q.id === dataset.queryId)
         const queryJob = queryJobsList.find(job => job.queryId === query.id && job.queryParamsHash === queryParams.hash)
-        if (shouldAddQuery(queryJob, prevQueryJobsList, mapConfigUpdated) || shouldUpdateDataset(dataset, prevDatasetsList)) {
+        const { canRun, queryText } = getState().queryStatus[dataset.queryId]
+        const { edit } = getState().reportStatus
+        const lastAddedQueryQueryJob = getState().dataset.lastAddedQueryQueryJob[dataset.queryId]
+        const doNotRefreshWhenEdit = edit && lastAddedQueryQueryJob && queryJob && lastAddedQueryQueryJob.id === queryJob.id
+        if (report.canRefresh && canRun && isQueryJobOutOfDate(reportStreamResponse, getState, queryJob) && !doNotRefreshWhenEdit) {
+          dispatch(runQuery(dataset.queryId, queryText))
+        } else if (shouldAddQuery(queryJob, prevQueryJobsList, mapConfigUpdated) || shouldUpdateDataset(dataset, prevDatasetsList)) {
           if (dataset.connectionType === ConnectionType.CONNECTION_TYPE_WHEROBOTS) {
             extension = 'parquet'
           }
@@ -193,9 +279,8 @@ export function reportUpdate (reportStreamResponse) {
       } else if (dataset.fileId) {
         const file = filesList.find(f => f.id === dataset.fileId)
         if (shouldAddFile(file, prevFileList, filesList, mapConfigUpdated) || shouldUpdateDataset(dataset, prevDatasetsList)) {
-          if (file.mimeType === 'application/geo+json') {
-            extension = 'geojson'
-          }
+          // Determine extension from MIME using centralized helper
+          extension = extensionFromMime(file.mimeType) || extension
           dispatch(downloadDataset(
             dataset,
             file.sourceId,
@@ -208,6 +293,9 @@ export function reportUpdate (reportStreamResponse) {
         dispatch(createQuery(dataset.id))
       }
     })
+
+    // Schedule query job refresh if auto-refresh is enabled
+    dispatch(scheduleQueryJobRefresh(reportStreamResponse))
   }
 }
 
@@ -351,7 +439,57 @@ export function setTrackViewers (reportId, trackViewers) {
   }
 }
 
-export function saveMap (onSaveComplete = () => {}) {
+export function setAutoRefreshIntervalSeconds (reportId, autoRefreshIntervalSeconds) {
+  return async (dispatch) => {
+    dispatch({ type: setAutoRefreshIntervalSeconds.name, autoRefreshIntervalSeconds })
+    const req = new SetAutoRefreshIntervalSecondsRequest()
+    req.setReportId(reportId)
+    req.setAutoRefreshIntervalSeconds(autoRefreshIntervalSeconds)
+    dispatch(grpcCall(Dekart.SetAutoRefreshIntervalSeconds, req))
+  }
+}
+
+export function saveMapPreview (dataUri) {
+  return (dispatch, getState) => {
+    dispatch({ type: saveMapPreview.name })
+    dispatch(cleanupExportImage())
+    const req = new SaveMapPreviewRequest()
+    const { report: { id: reportId } } = getState()
+    req.setReportId(reportId)
+    req.setMapPreviewDataUri(dataUri)
+    dispatch(grpcCall(Dekart.SaveMapPreview, req, () => {
+    }, err => {
+      track('saveMapPreviewFailed', { message: err.message })
+    }))
+  }
+}
+
+export function exportMapPreview () {
+  return (dispatch, getState) => {
+    const { exporting, firstExport } = getState().mapPreview
+    const hasMapPreview = getState().report.hasMapPreview
+    const { env } = getState()
+    const { STORE_MAP_PREVIEW } = env.variables
+    if (!STORE_MAP_PREVIEW || exporting) {
+      return
+    }
+    const timeoutId = setTimeout(() => {
+      dispatch(setExportImageSetting({
+        mapW: 640 / 2,
+        mapH: 360 / 2
+      }))
+      dispatch(startExportingImage({
+        ratio: 'SCREEN',
+        resolution: 'ONE_X',
+        legend: false,
+        center: false
+      }))
+    }, !hasMapPreview && firstExport ? 0 : 5000)
+    dispatch({ type: exportMapPreview.name, timeoutId })
+  }
+}
+
+export function saveMap (mapViewChanged = false) {
   return async (dispatch, getState) => {
     dispatch({ type: saveMap.name })
     const { keplerGl, report, reportStatus, queryStatus, queryParams, readme } = getState()
@@ -379,9 +517,34 @@ export function saveMap (onSaveComplete = () => {}) {
     request.setTitle(reportStatus.title)
     request.setQueryList(queries)
     request.setQueryParamsList(getQueryParamsObjArr(queryParams.list))
-    dispatch(grpcCall(Dekart.UpdateReport, request, (res) => {
-      onSaveComplete()
-      dispatch(savedReport(lastSaved, res.updatedAt))
+    // TODO Promise all
+    const res = await new Promise(resolve => {
+      dispatch(grpcCall(Dekart.UpdateReport, request, resolve))
+    })
+    if (mapViewChanged) {
+      dispatch(exportMapPreview())
+    }
+    dispatch(savedReport(lastSaved, res.updatedAt))
+  }
+}
+
+export function restoreReportSnapshotSuccess (versionId) {
+  return { type: restoreReportSnapshotSuccess.name, versionId }
+}
+
+export function restoreReportSnapshot (versionId) {
+  return async (dispatch, getState) => {
+    dispatch({ type: restoreReportSnapshot.name, versionId })
+    const reportId = getState().report?.id
+    if (!reportId || !versionId) {
+      return
+    }
+    const req = new RestoreReportSnapshotRequest()
+    req.setReportId(reportId)
+    req.setVersionId(versionId)
+    dispatch(grpcCall(Dekart.RestoreReportSnapshot, req, () => {
+      dispatch(success('Snapshot restored'))
+      dispatch(restoreReportSnapshotSuccess(versionId))
     }))
   }
 }

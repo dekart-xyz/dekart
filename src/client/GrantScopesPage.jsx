@@ -1,4 +1,5 @@
 import { Header } from './Header'
+import { Helmet } from 'react-helmet'
 import styles from './GrantScopesPage.module.css'
 import Result from 'antd/es/result'
 import Button from 'antd/es/button'
@@ -42,6 +43,9 @@ export default function GrantScopesPage ({ visitedPages }) {
 
   return (
     <div className={styles.grantScopesPage}>
+      <Helmet>
+        <title>Grant Access to Google Cloud — Dekart</title>
+      </Helmet>
       <Header />
       <div className={styles.body}>
         <Result

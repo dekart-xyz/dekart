@@ -1,6 +1,8 @@
+import React, { useState } from 'react'
 import styles from './Header.module.css'
 import { useDispatch, useSelector } from 'react-redux'
 import DekartMenu from './DekartMenu'
+import WorkspaceSelector from './WorkspaceSelector'
 import { getUrlRef } from './lib/ref'
 import Avatar from 'antd/es/avatar'
 import Dropdown from 'antd/es/dropdown'
@@ -13,6 +15,9 @@ import Tooltip from 'antd/es/tooltip'
 import { switchPlayground } from './actions/user'
 import localStorageReset from './actions/localStorage'
 import { GlobalOutlined, LockOutlined } from '@ant-design/icons'
+import { track } from './lib/tracking'
+import { UNKNOWN_EMAIL } from './lib/constants'
+import SSOLoginModal from './SSOLoginModal'
 
 function getSignature (email) {
   if (!email) {
@@ -32,26 +37,73 @@ function User ({ buttonDivider }) {
   const userStream = useSelector(state => state.user.stream)
   const { authEnabled } = useSelector(state => state.env)
   const isPlayground = useSelector(state => state.user.isPlayground)
+  const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
+  const isSnowpark = useSelector(state => state.env.isSnowpark)
   const dispatch = useDispatch()
-  if (!userStream || !authEnabled) {
+  const [showSSOModal, setShowSSOModal] = useState(false)
+
+  if (!userStream) {
     return null
+  }
+  if (!authEnabled) {
+    const displayEmail = userStream.email === UNKNOWN_EMAIL ? 'Anonymous' : userStream.email
+    const isAnonymous = userStream.email === UNKNOWN_EMAIL
+    const disabledItems = [{
+      label: displayEmail,
+      disabled: true
+    }]
+    if (isPlayground && !isSnowpark && !isDefaultWorkspace) {
+      disabledItems.push({
+        label: 'Switch to workspace',
+        disabled: true
+      })
+    }
+    disabledItems.push(
+      {
+        label: 'Switch account',
+        disabled: true
+      },
+      {
+        label: 'Sign out',
+        disabled: true
+      }
+    )
+    return (
+      <>
+        <div className={classNames(
+          styles.user,
+          { [styles.buttonDivider]: buttonDivider }
+        )}
+        >
+          {isAnonymous
+            ? (
+              <Button id='dekart-login-button' type='primary' onClick={() => setShowSSOModal(true)}>Login</Button>
+              )
+            : (
+              <Dropdown
+                overlayClassName={styles.userDropdown} menu={{ items: disabledItems }}
+              >
+                <Avatar id='dekart-avatar'>{getSignature(userStream.email)}</Avatar>
+              </Dropdown>
+              )}
+        </div>
+        <SSOLoginModal
+          visible={showSSOModal}
+          onClose={() => setShowSSOModal(false)}
+        />
+      </>
+    )
   }
   const items = [{
     label: userStream && userStream.email,
     disabled: true
   }]
 
-  if (!isPlayground) {
-    items.push({
-      label: 'Manage workspace',
-      onClick: () => {
-        history.push('/workspace')
-      }
-    })
-  } else {
+  if (isPlayground && !isSnowpark && !isDefaultWorkspace) {
     items.push({
       label: 'Switch to workspace',
       onClick: () => {
+        track('SwitchToWorkspace')
         history.push('/workspace')
       }
     })
@@ -61,6 +113,7 @@ function User ({ buttonDivider }) {
     items.push({
       label: 'Switch account',
       onClick: () => {
+        track('SwitchAccount')
         dispatch(localStorageReset())
         const state = new AuthState()
         state.setUiUrl(window.location.href)
@@ -72,6 +125,7 @@ function User ({ buttonDivider }) {
     items.push({
       label: 'Sign out',
       onClick: () => {
+        track('SignOut')
         dispatch(localStorageReset())
         const state = new AuthState()
         state.setUiUrl(window.location.href)
@@ -106,7 +160,19 @@ export function Workspace () {
   }
   return (
     <div className={styles.workspace}>
-      <Tooltip title={<>You are in private workspace.<br />Click to manage workspace access.</>}><Button type='link' size='small' onClick={() => history.push('/workspace')} className={styles.workspaceButton}><LockOutlined />{workspaceName}</Button></Tooltip>
+      <Tooltip title={<>You are in private workspace.<br />Click to manage workspace access.</>}>
+        <Button
+          type='link'
+          size='small'
+          onClick={() => {
+            track('WorkspaceButtonClicked')
+            history.push('/workspace')
+          }}
+          className={styles.workspaceButton}
+        >
+          <LockOutlined />{workspaceName}
+        </Button>
+      </Tooltip>
     </div>
   )
 }
@@ -127,7 +193,10 @@ export function PlaygroundMode () {
           <div className={styles.playgroundTooltip}>
             <div>Public playground mode is enabled. Your queries are public. Only public datasets are accessible.</div>
             <Button
-              size='small' type='link' onClick={() => dispatch(switchPlayground(false))}
+              size='small' type='link' onClick={() => {
+                track('SwitchToPrivateWorkspace')
+                dispatch(switchPlayground(false))
+              }}
             >Switch to private workspace
             </Button>
           </div>
@@ -152,6 +221,7 @@ export function Header ({ buttons, title, queryParams }) {
       <div className={styles.top}>
         <div className={styles.left}>
           <DekartMenu />
+          <WorkspaceSelector />
         </div>
         <div className={styles.middle}>
           {title ? (<div className={styles.titleWrap}><div className={styles.title}>{title}</div></div>) : (<div className={styles.dekartLinkHolder}><a target='_blank' rel='noopener noreferrer' className={styles.dekartLink} href={homePage}><span className={styles.dekartTitle} /></a></div>)}

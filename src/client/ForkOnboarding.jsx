@@ -11,6 +11,7 @@ import { updateSessionStorage } from './actions/sessionStorage'
 import { ForkOutlined } from '@ant-design/icons'
 import { track } from './lib/tracking'
 import { ConnectionType } from 'dekart-proto/dekart_pb'
+import { isSystemConnectionID } from './actions/connection'
 
 export function useRequireOnboarding () {
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
@@ -41,7 +42,7 @@ export function useRequireOnboarding () {
   }
   const connectionTypes = connections.reduce((acc, connection) => {
     const connectionType = connection.connectionType
-    if (!acc.includes(connectionType)) {
+    if (!acc.includes(connectionType) && !isSystemConnectionID(connection.id)) {
       return acc.concat(connectionType)
     }
     return acc
@@ -90,16 +91,16 @@ export function ForkOnboarding ({ requireOnboarding: { requireWorkspace, missing
             dispatch(updateSessionStorage('redirectWhenSaveConnection', { reportId, edit }))
             track('ForkOnboardingStart')
           }}
-        >Fork This Map
+        >Duplicate Map
         </Button>
       </Tooltip>
       <Modal
         width={600}
         open={visible}
-        title='Fork This Map'
+        title='Duplicate Map'
         onCancel={() => setVisible(false)}
         footer={<div className={styles.modalFooter}>{button}</div>}
-      ><p className={styles.description}>Create your own copy of this map by setting up a workspace, connecting your data, and forking it to use with your own queries.</p>
+      ><p className={styles.description}>Create your own copy of this map by setting up a workspace, connecting your data, and duplicating it to use with your own queries.</p>
         <Steps
           size='small'
           current={current}
@@ -112,7 +113,7 @@ export function ForkOnboarding ({ requireOnboarding: { requireWorkspace, missing
             title: `Connect ${name}`,
             description: '15 seconds'
           }))).concat({
-            title: 'Fork Map',
+            title: 'Duplicate Map',
             description: '5 seconds'
           })}
         />

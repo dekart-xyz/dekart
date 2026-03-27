@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/dekart"
+	"dekart/src/server/license"
 	"dekart/src/server/user"
 	"net/http"
 	"os"
@@ -44,6 +45,52 @@ func (m ResponseWriter) WriteHeader(statusCode int) {
 }
 
 var allowedOrigin string = os.Getenv("DEKART_CORS_ORIGIN")
+
+func isSSOConfigured() bool {
+	return len(enabledSSOEnvVars()) > 0
+}
+
+func enabledSSOEnvVars() []string {
+	enabled := make([]string, 0, 4)
+	if os.Getenv("DEKART_REQUIRE_OIDC") == "1" {
+		enabled = append(enabled, "DEKART_REQUIRE_OIDC")
+	}
+	if os.Getenv("DEKART_REQUIRE_GOOGLE_OAUTH") == "1" {
+		enabled = append(enabled, "DEKART_REQUIRE_GOOGLE_OAUTH")
+	}
+	if os.Getenv("DEKART_REQUIRE_IAP") == "1" {
+		enabled = append(enabled, "DEKART_REQUIRE_IAP")
+	}
+	if os.Getenv("DEKART_REQUIRE_AMAZON_OIDC") == "1" {
+		enabled = append(enabled, "DEKART_REQUIRE_AMAZON_OIDC")
+	}
+	return enabled
+}
+
+func validateLicenseForSSO() {
+	licenseKey := strings.TrimSpace(os.Getenv("DEKART_LICENSE_KEY"))
+	if licenseKey != "" {
+		info, err := license.ValidateToken(licenseKey)
+		if err != nil {
+			log.Fatal().Err(err).Msg("DEKART_LICENSE_KEY is invalid. Get a valid key at https://mailchi.mp/dekart/upgrade-to-sso")
+		}
+		if info.ExpiresAt != nil {
+			log.Info().Str("license_holder", info.Email).Time("license_expires_at", *info.ExpiresAt).Msg("Validated DEKART_LICENSE_KEY")
+		} else {
+			log.Info().Str("license_holder", info.Email).Msg("Validated perpetual DEKART_LICENSE_KEY")
+		}
+	}
+
+	enabledVars := enabledSSOEnvVars()
+	if len(enabledVars) == 0 {
+		return
+	}
+	if licenseKey == "" {
+		log.Fatal().Msg(
+			"DEKART_LICENSE_KEY is required to enable SSO. Get your free key at https://mailchi.mp/dekart/upgrade-to-sso",
+		)
+	}
+}
 
 func getAllowedOrigin(origin string) string {
 	if matchOrigin(origin) {
@@ -92,7 +139,8 @@ func configureGRPC(dekartServer *dekart.Server) *grpcweb.WrappedGrpcServer {
 
 func setOriginHeader(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", getAllowedOrigin(r.Header.Get("Origin")))
-	w.Header().Set("Access-Control-Allow-Headers", "Authorization, X-Dekart-Playground, X-Dekart-Claim-Email, X-Dekart-Report-Id, X-Dekart-Logged-In")
+	w.Header().Set("Access-Control-Allow-Headers", "Authorization, X-Dekart-Playground, X-Dekart-Claim-Email, X-Dekart-Report-Id, X-Dekart-Logged-In, X-Dekart-Workspace-Id")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
 }
 
 func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *mux.Router {
@@ -129,6 +177,9 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		}
 		dekartServer.UploadFile(w, r)
 	}).Methods("POST", "OPTIONS")
+	api.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
+		handleVersionCheck(dekartServer, w, r)
+	}).Methods("GET", "OPTIONS")
 
 	if claimsCheck.RequireGoogleOAuth {
 		api.HandleFunc("/authenticate", func(w http.ResponseWriter, r *http.Request) {
@@ -146,10 +197,19 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		w.WriteHeader(http.StatusOK)
 	}).Methods("GET")
 
+	// Serve map preview
+	router.HandleFunc("/map-preview/{report}.png", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeader(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.ServeMapPreview(w, r)
+	}).Methods("GET", "OPTIONS")
+
 	// Serve static files
 	staticPath := os.Getenv("DEKART_STATIC_FILES")
 	if staticPath != "" {
-		staticFilesHandler := NewStaticFilesHandler(staticPath)
+		staticFilesHandler := NewStaticFilesHandler(staticPath, dekartServer)
 
 		router.HandleFunc("/", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/shared", staticFilesHandler.ServeIndex)
@@ -158,6 +218,8 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		router.HandleFunc("/reports/{id}/edit", staticFilesHandler.ServeIndex) // deprecated
 		router.HandleFunc("/reports/{id}/source", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace", staticFilesHandler.ServeIndex)
+		router.HandleFunc("/workspace/plan", staticFilesHandler.ServeIndex)
+		router.HandleFunc("/workspace/members", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace/invite/{id}", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/playground", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/grant-scopes", staticFilesHandler.ServeIndex)
@@ -174,17 +236,23 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 
 // Configure HTTP server with http and grpc
 func Configure(dekartServer *dekart.Server, db *sql.DB) *http.Server {
+	validateLicenseForSSO()
+
 	claimsCheck := user.NewClaimsCheck(user.ClaimsCheckConfig{
 		Audience:                os.Getenv("DEKART_IAP_JWT_AUD"),
 		RequireIAP:              os.Getenv("DEKART_REQUIRE_IAP") == "1",
 		RequireSnowflakeContext: os.Getenv("DEKART_REQUIRE_SNOWFLAKE_CONTEXT") == "1",
 		RequireAmazonOIDC:       os.Getenv("DEKART_REQUIRE_AMAZON_OIDC") == "1",
+		RequireOIDC:             os.Getenv("DEKART_REQUIRE_OIDC") == "1",
 		RequireGoogleOAuth:      os.Getenv("DEKART_REQUIRE_GOOGLE_OAUTH") == "1",
 		Region:                  os.Getenv("AWS_REGION"),
 		DevClaimsEmail:          os.Getenv("DEKART_DEV_CLAIMS_EMAIL"),
 		DevRefreshToken:         os.Getenv("DEKART_DEV_REFRESH_TOKEN"),
 		GoogleOAuthClientId:     os.Getenv("DEKART_GOOGLE_OAUTH_CLIENT_ID"),
 		GoogleOAuthSecret:       os.Getenv("DEKART_GOOGLE_OAUTH_SECRET"),
+		OIDCJWKSURL:             os.Getenv("DEKART_OIDC_JWKS_URL"),
+		OIDCIssuer:              os.Getenv("DEKART_OIDC_ISSUER"),
+		OIDCAudience:            os.Getenv("DEKART_OIDC_AUDIENCE"),
 	}, db)
 
 	grpcServer := configureGRPC(dekartServer)

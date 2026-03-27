@@ -59,6 +59,18 @@ func configureLogger() {
 	snowflakeutils.ConfigureSnowflakeLogger(&log.Logger)
 }
 
+func validateStorageConfig() {
+	if os.Getenv("DEKART_STORAGE") != "PG" {
+		return
+	}
+	if os.Getenv("DEKART_ALLOW_FILE_UPLOAD") != "" {
+		log.Fatal().Msg("DEKART_ALLOW_FILE_UPLOAD must be empty when DEKART_STORAGE=PG")
+	}
+	if os.Getenv("DEKART_CLOUD_STORAGE_BUCKET") != "" {
+		log.Fatal().Msg("DEKART_CLOUD_STORAGE_BUCKET must be empty when DEKART_STORAGE=PG")
+	}
+}
+
 func configureDb() *sql.DB {
 	sqlitePath, sqliteOk := os.LookupEnv("DEKART_SQLITE_DB_PATH")
 	if sqliteOk {
@@ -156,7 +168,7 @@ func applyMigrations(db *sql.DB) {
 	}
 }
 
-func configureBucket() storage.Storage {
+func configureBucket(db *sql.DB) storage.Storage {
 	var bucket storage.Storage
 	switch os.Getenv("DEKART_STORAGE") {
 	case "S3":
@@ -168,6 +180,9 @@ func configureBucket() storage.Storage {
 	case "SNOWFLAKE":
 		log.Info().Msg("Using SNOWFLAKE query result cache")
 		bucket = storage.NewSnowflakeStorage()
+	case "PG":
+		log.Info().Msg("Using Postgres query replay storage")
+		bucket = storage.NewPGStorage(db)
 	case "USER":
 		log.Info().Msg("Using USER defined storage backend, based on connection dialog")
 		bucket = storage.NewUserStorage()
@@ -225,6 +240,7 @@ func waitForInterrupt() chan os.Signal {
 
 func main() {
 	configureLogger()
+	validateStorageConfig()
 
 	secrets.Init()
 
@@ -233,7 +249,7 @@ func main() {
 
 	applyMigrations(db)
 
-	bucket := configureBucket()
+	bucket := configureBucket(db)
 	jobStore := configureJobStore(bucket)
 
 	dekartServer := dekart.NewServer(db, bucket, jobStore)

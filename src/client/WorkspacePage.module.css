@@ -90,6 +90,13 @@
     margin-bottom: 30px;
     max-width: 800px;
     width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.radioCentered {
+    display: flex;
+    justify-content: center;
 }
 
 :global(.ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled)) .joinRadioItem {

@@ -1,4 +1,4 @@
-.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down sqlite proto-copy-to-node proto-stub
+.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down up-and-down-oidc sqlite proto-copy-to-node proto-stub server runner-install runner-register runner-start runner-stop runner-status runner-service-install runner-service-start runner-service-stop runner-service-status github-runner license-keygen license-issue
 
 # load .env
 # https://lithic.tech/blog/2020-05/makefile-dot-env
@@ -7,6 +7,12 @@ ifneq (,$(wildcard ./.env))
 endif
 
 UNAME := $(shell uname -m)
+RUNNER_DIR ?= $(HOME)/actions-runner
+RUNNER_URL ?= https://github.com/dekart-xyz/dekart
+RUNNER_LABELS ?= self-hosted,laptop-build
+RUNNER_NAME ?= $(shell hostname)-dekart-laptop
+GITHUB_RUNNER_TOKEN ?= $(RUNNER_TOKEN)
+RUNNER_VERSION ?= 2.328.0
 
 proto-clean:
 	rm -rf ./src/proto/*.go
@@ -65,7 +71,6 @@ snowpark-run: snowpark-build
 	-e DEKART_SNOWFLAKE_ACCOUNT_ID=${DEKART_SNOWFLAKE_ACCOUNT_ID} \
 	-e DEKART_SNOWFLAKE_USER=${DEKART_SNOWFLAKE_USER} \
 	-e DEKART_SNOWFLAKE_PASSWORD=${DEKART_SNOWFLAKE_PASSWORD} \
-	-e DEKART_CORS_ORIGIN=null \
 	-e DEKART_LOG_DEBUG=1 \
 	-e DEKART_CORS_ORIGIN=null \
 	-e DEKART_STREAM_TIMEOUT=10 \
@@ -114,6 +119,8 @@ docker: # build docker for local use
 
 up-and-down:
 	docker compose  --env-file .env --profile local up; docker compose --env-file .env --profile local down --volumes
+up-and-down-oidc:
+	docker compose --env-file .env.oidc --profile oidc up db adminer keycloak oauth2-proxy; docker compose --env-file .env.oidc --profile oidc down --volumes
 cloud:
 	docker compose  --env-file .env.cloud --profile cloud up; docker compose --profile cloud down --volumes
 up:
@@ -136,13 +143,16 @@ define run_server
 	go run ./src/server/main.go
 endef
 
-# Pattern rule to match any target starting with ".env."
-server-%:
-	$(call run_server,.env.$*)
-
-# Rule for the default .env file
+# Rule for the default .env file or custom env file passed as argument
+# Usage: make server           -> uses .env
+#        make server .env.cloud -> uses .env.cloud
 server:
-	$(call run_server,.env)
+	$(call run_server,$(or $(filter-out server,$(MAKECMDGOALS)),.env))
+
+# Dummy target to prevent Make from trying to build .env files as targets
+# This pattern rule makes .env* targets as no-ops that are always "up to date"
+.env%:
+	@:
 
 npm:
 	npm i --legacy-peer-deps
@@ -162,3 +172,118 @@ patch: version
 
 test:
 	go test -v -count=1 ./src/server/**/
+
+# License key helpers (offline JWT license keys).
+#
+# Generates an RSA keypair used to sign license tokens:
+# - Private key MUST be kept secret (never commit).
+# - Public key can be embedded in the binary for verification.
+# Prefer existing ./keys directory if present, otherwise default to ./license-keys.
+LICENSE_KEYS_DIR ?= $(if $(wildcard ./keys),./keys,./license-keys)
+LICENSE_PRIVATE_KEY ?= $(LICENSE_KEYS_DIR)/license-private.pem
+LICENSE_PUBLIC_KEY ?= $(LICENSE_KEYS_DIR)/license-public.pem
+
+license-keygen:
+	@set -e; \
+	mkdir -p "$(LICENSE_KEYS_DIR)"; \
+	if [ -f "$(LICENSE_PRIVATE_KEY)" ] || [ -f "$(LICENSE_PUBLIC_KEY)" ]; then \
+		echo "Refusing to overwrite existing key(s)."; \
+		echo "Delete them manually if you really want to re-generate:"; \
+		echo "  rm -f \"$(LICENSE_PRIVATE_KEY)\" \"$(LICENSE_PUBLIC_KEY)\""; \
+		exit 1; \
+	fi; \
+	openssl genrsa -out "$(LICENSE_PRIVATE_KEY)" 2048; \
+	openssl rsa -in "$(LICENSE_PRIVATE_KEY)" -pubout -out "$(LICENSE_PUBLIC_KEY)"; \
+	echo "Generated:"; \
+	echo "  $(LICENSE_PRIVATE_KEY) (KEEP SECRET; do not commit)"; \
+	echo "  $(LICENSE_PUBLIC_KEY) (public; can be embedded/committed)"
+
+# Issue a license token (prints DEKART_LICENSE_KEY=...).
+# Usage:
+#   make license-issue EMAIL=me@company.com
+#   make license-issue EMAIL=me@company.com DAYS=14
+#   make license-issue EMAIL=me@company.com EXPIRE_FROM_NOW_SECONDS=3600
+#   make license-issue EMAIL=me@company.com EXPIRE_FROM_NOW_SECONDS=-3600
+EMAIL ?=
+DAYS ?= 0
+EXPIRE_FROM_NOW_SECONDS ?=
+license-issue:
+	@test -n "$(EMAIL)" || (echo "EMAIL is required. Example: make license-issue EMAIL=me@company.com"; exit 1)
+	@test -f "$(LICENSE_PRIVATE_KEY)" || (echo "Missing private key: $(LICENSE_PRIVATE_KEY). Run: make license-keygen"; exit 1)
+	@go run ./scripts/license-issue.go --email "$(EMAIL)" --private-key "$(LICENSE_PRIVATE_KEY)" \
+		$(if $(filter-out 0,$(DAYS)),--days "$(DAYS)",) \
+		$(if $(strip $(EXPIRE_FROM_NOW_SECONDS)),--expire-from-now-seconds "$(EXPIRE_FROM_NOW_SECONDS)",)
+
+# GitHub self-hosted runner helpers (local laptop runner).
+# Usage:
+#   make runner-register             # installs runner if needed, then registers
+#   make runner-start
+#   make runner-service-install
+#   make runner-service-start
+runner-install:
+	@if [ -x "$(RUNNER_DIR)/config.sh" ]; then \
+		echo "Runner already installed at $(RUNNER_DIR)"; \
+		exit 0; \
+	fi
+	@set -e; \
+	OS=$$(uname -s); \
+	ARCH=$$(uname -m); \
+	case "$$OS" in \
+		Darwin) OS_TAG="osx" ;; \
+		Linux) OS_TAG="linux" ;; \
+		*) echo "Unsupported OS: $$OS"; exit 1 ;; \
+	esac; \
+	case "$$ARCH" in \
+		x86_64|amd64) ARCH_TAG="x64" ;; \
+		arm64|aarch64) ARCH_TAG="arm64" ;; \
+		*) echo "Unsupported architecture: $$ARCH"; exit 1 ;; \
+	esac; \
+	PKG="actions-runner-$${OS_TAG}-$${ARCH_TAG}-$(RUNNER_VERSION).tar.gz"; \
+	URL="https://github.com/actions/runner/releases/download/v$(RUNNER_VERSION)/$$PKG"; \
+	echo "Installing GitHub runner $(RUNNER_VERSION) from $$URL"; \
+	mkdir -p "$(RUNNER_DIR)"; \
+	cd "$(RUNNER_DIR)"; \
+	curl -fL "$$URL" -o "$$PKG"; \
+	tar xzf "$$PKG"; \
+	rm -f "$$PKG"; \
+	test -x "$(RUNNER_DIR)/config.sh" || (echo "Runner install failed"; exit 1); \
+	echo "Runner installed in $(RUNNER_DIR)"
+
+runner-register: runner-install
+	@test -n "$(GITHUB_RUNNER_TOKEN)" || (echo "GITHUB_RUNNER_TOKEN (or RUNNER_TOKEN) is required. Add it to .env or pass on command line."; exit 1)
+	@cd "$(RUNNER_DIR)" && ./config.sh \
+		--url "$(RUNNER_URL)" \
+		--token "$(GITHUB_RUNNER_TOKEN)" \
+		--labels "$(RUNNER_LABELS)" \
+		--name "$(RUNNER_NAME)" \
+		--unattended \
+		--replace
+
+runner-start:
+	@test -x "$(RUNNER_DIR)/run.sh" || (echo "Missing $(RUNNER_DIR)/run.sh. Install and register runner first."; exit 1)
+	cd "$(RUNNER_DIR)" && ./run.sh
+
+runner-stop:
+	@pkill -f "$(RUNNER_DIR)/bin/Runner.Listener" || true
+
+runner-status:
+	@pgrep -af "$(RUNNER_DIR)/bin/Runner.Listener" || echo "Runner is not running."
+
+runner-service-install:
+	@test -x "$(RUNNER_DIR)/svc.sh" || (echo "Missing $(RUNNER_DIR)/svc.sh. Install actions runner first."; exit 1)
+	cd "$(RUNNER_DIR)" && sudo ./svc.sh install
+
+runner-service-start:
+	@test -x "$(RUNNER_DIR)/svc.sh" || (echo "Missing $(RUNNER_DIR)/svc.sh. Install actions runner first."; exit 1)
+	cd "$(RUNNER_DIR)" && sudo ./svc.sh start
+
+runner-service-stop:
+	@test -x "$(RUNNER_DIR)/svc.sh" || (echo "Missing $(RUNNER_DIR)/svc.sh. Install actions runner first."; exit 1)
+	cd "$(RUNNER_DIR)" && sudo ./svc.sh stop
+
+runner-service-status:
+	@test -x "$(RUNNER_DIR)/svc.sh" || (echo "Missing $(RUNNER_DIR)/svc.sh. Install actions runner first."; exit 1)
+	cd "$(RUNNER_DIR)" && sudo ./svc.sh status
+
+# Simplified foreground runner command (keeps terminal open with live logs).
+github-runner: runner-start

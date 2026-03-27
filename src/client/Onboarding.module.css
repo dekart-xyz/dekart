@@ -1,11 +1,20 @@
 .onboarding {
     display: flex;
     flex-direction: row;
+    align-items: flex-start;
     width: 100%;
-    margin-top: 20px;
+    margin-top: 12px;
+    padding: 16px 20px;
     background-color: white;
-    padding: 20px;
     border: 1px solid #F0F0F0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+    gap: 16px;
+}
+
+.onboardingIconWrapper {
+    display: flex;
+    align-items: flex-start;
 }
 
 .onboardingIcon {
@@ -13,20 +22,38 @@
     color: white;
     background-color: #349DFE;
     border-radius: 50%;
-    width: 70px;
-    height: 70px;
+    width: 56px;
+    height: 56px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-right: 20px;
+}
+
+.onboardingContent {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-width: 720px;
 }
 
 .onboardingSteps {
     opacity: 0.7;
+    margin: 0;
 }
 
 .onboardingTitle {
     font-size: 24px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
+}
+
+@media (max-width: 768px) {
+    .onboarding {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .onboardingIconWrapper {
+        margin-bottom: 12px;
+    }
 }
 
