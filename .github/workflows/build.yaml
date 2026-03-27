@@ -59,16 +59,19 @@ jobs:
               echo "REG=europe-west3-docker.pkg.dev/dekart-cloud/dekart"  >>"$GITHUB_OUTPUT"
               echo "LOGIN=gar"  >>"$GITHUB_ENV"
               echo "UX_DISABLE_VERSION_CHECK=1" >>"$GITHUB_ENV"
+              echo "LICENSE_KEY_BUILD_ARG=DEKART_LICENSE_KEY=${{ secrets.DEKART_LICENSE_KEY }}" >>"$GITHUB_ENV"
               ;;
             premium)
               echo "REG=ghcr.io/dekart-xyz/dekart-premium" >>"$GITHUB_OUTPUT"
               echo "LOGIN=ghcr" >>"$GITHUB_ENV"
               echo "UX_DISABLE_VERSION_CHECK=1" >>"$GITHUB_ENV"
+              echo "LICENSE_KEY_BUILD_ARG=DEKART_LICENSE_KEY=${{ secrets.DEKART_LICENSE_KEY }}" >>"$GITHUB_ENV"
               ;;
             oss)
               echo "REG=dekartxyz" >>"$GITHUB_OUTPUT"
               echo "LOGIN=dh"   >>"$GITHUB_ENV"
               echo "UX_DISABLE_VERSION_CHECK=" >>"$GITHUB_ENV"
+              echo "LICENSE_KEY_BUILD_ARG=" >>"$GITHUB_ENV"
               ;;
             *)  echo "::error::Unknown target '${{ inputs.target }}'"; exit 1 ;;
           esac
@@ -130,6 +133,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
             DEKART_UX_DISABLE_VERSION_CHECK=${{ env.UX_DISABLE_VERSION_CHECK }}
+            ${{ env.LICENSE_KEY_BUILD_ARG }}
 
       - name: Build & push E2E image
         if: inputs.build_e2e
