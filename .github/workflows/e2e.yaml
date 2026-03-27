@@ -198,7 +198,13 @@ jobs:
 
           - id: version-banner
             spec: cypress/e2e/version/spec.cy.js
+            target: oss
             extra_env: |
+              -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
+              -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
+              -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
+              -e DEKART_STORAGE=GCS \
+              -e DEKART_DATASOURCE=BQ \
               -e DEKART_VERSION_CHECK_URL=http://localhost:3000/api/v1/version \
               -e DEKART_VERSION_CHECK_FORCE_CURRENT_VERSION=0.0.0 \
 
@@ -280,6 +286,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Pre-pull test image (retry)
+        if: ${{ !matrix.target || matrix.target == inputs.target }}
         run: |
           image="${REG_PREFIX}/dekart:${IMAGE_CACHE_KEY}"
           for attempt in 1 2 3 4 5; do
@@ -298,6 +305,7 @@ jobs:
 
       # ----------------------------- run tests -------------------------------
       - name: Run ${{ matrix.id }} suite
+        if: ${{ !matrix.target || matrix.target == inputs.target }}
         run: |
           docker run -i --network host \
             -v /tmp/cypress/videos:/dekart/cypress/videos \
