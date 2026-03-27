@@ -42,6 +42,15 @@ jobs:
           driver: docker-container
           use: true
           keep-state: true
+          cleanup: false
+
+      - name: Verify persistent Buildx builder
+        run: |
+          docker buildx inspect dekart-laptop-builder --bootstrap
+          docker buildx inspect dekart-laptop-builder | grep -E 'Driver:[[:space:]]+docker-container'
+          docker buildx ls | grep -E '^dekart-laptop-builder'
+          docker volume inspect buildx_buildkit_dekart-laptop-builder0_state >/dev/null
+          docker ps --format '{{.Names}}' | grep -E '^buildx_buildkit_dekart-laptop-builder0$'
 
       - id: registry
         run: |
@@ -114,6 +123,7 @@ jobs:
         if: inputs.build_app
         uses: docker/build-push-action@v6
         with:
+          builder: dekart-laptop-builder
           context: .
           platforms: linux/amd64
           push: true
@@ -123,8 +133,11 @@ jobs:
 
       - name: Build & push E2E image
         if: inputs.build_e2e
+        env:
+          BUILDKIT_PROGRESS: plain
         uses: docker/build-push-action@v6
         with:
+          builder: dekart-laptop-builder
           context: .
           target: e2etest
           platforms: linux/amd64
@@ -132,3 +145,15 @@ jobs:
           tags: ${{ steps.collect.outputs.e2e_tags }}
           build-args: |
             DEKART_UX_DISABLE_VERSION_CHECK=${{ env.UX_DISABLE_VERSION_CHECK }}
+
+      - name: Cache diagnostics (major layers)
+        if: inputs.build_e2e
+        run: |
+          DU="$(docker buildx du --builder dekart-laptop-builder --verbose || true)"
+          npm_cached=no
+          go_mod_cached=no
+          go_build_cached=no
+          if printf '%s\n' "$DU" | grep -A4 'Description:.*npm ci --ignore-scripts' | grep -Eq 'Last used:[[:space:]]+([0-9]+[[:space:]]+(second|seconds|minute|minutes)[[:space:]]+ago|just now)'; then npm_cached=yes; fi
+          if printf '%s\n' "$DU" | grep -A4 'Description:.*go mod download -x' | grep -Eq 'Last used:[[:space:]]+([0-9]+[[:space:]]+(second|seconds|minute|minutes)[[:space:]]+ago|just now)'; then go_mod_cached=yes; fi
+          if printf '%s\n' "$DU" | grep -A4 'Description:.*CGO_ENABLED=1 go build ./src/server' | grep -Eq 'Last used:[[:space:]]+([0-9]+[[:space:]]+(second|seconds|minute|minutes)[[:space:]]+ago|just now)'; then go_build_cached=yes; fi
+          echo "CACHE_DIAG npm_ci_cached_recent=${npm_cached} go_mod_cached_recent=${go_mod_cached} go_build_cached_recent=${go_build_cached}"
