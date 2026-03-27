@@ -30,6 +30,7 @@ jobs:
       LOGIN_REG:  ghcr
       GOOGLE_CRED_SEC: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
       MAPBOX_TOKEN_SEC: ${{ secrets.DEKART_MAPBOX_TOKEN }}
+      DEKART_LICENSE_KEY_SEC: ${{ secrets.DEKART_LICENSE_KEY }}
 
 
     services:
@@ -103,6 +104,7 @@ jobs:
             -e DEKART_UX_DISABLE_VERSION_CHECK=1 \
             -e DEKART_DEV_NO_DATASET_CACHE=1 \
             -e DEKART_MAPBOX_TOKEN=$MAPBOX_TOKEN_SEC \
+            -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
             -e DEKART_CLOUD=1 \
             -e TEST_SPEC=cypress/e2e/cloud/cloudBasicFlowStart.cy.js \
             -e CYPRESS_CI=1 \
@@ -135,6 +137,7 @@ jobs:
             -e DEKART_UX_DISABLE_VERSION_CHECK=1 \
             -e DEKART_DEV_NO_DATASET_CACHE=1 \
             -e DEKART_MAPBOX_TOKEN=$MAPBOX_TOKEN_SEC \
+            -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
             -e DEKART_CLOUD=1 \
             -e TEST_SPEC=cypress/e2e/cloud/cloudBasicFlowEnd.cy.js \
             -e CYPRESS_CI=1 \
@@ -162,6 +165,7 @@ jobs:
       SNOW_USER_SEC:           ${{ secrets.SNOWFLAKE_USER }}
       SNOW_PASS_SEC:           ${{ secrets.SNOWFLAKE_PASSWORD }}
       MAPBOX_TOKEN_SEC:        ${{ secrets.DEKART_MAPBOX_TOKEN }}
+      DEKART_LICENSE_KEY_SEC:  ${{ secrets.DEKART_LICENSE_KEY }}
 
       # registry prefix + login target
       REG_PREFIX: ${{ inputs.target == 'premium' && 'ghcr.io/dekart-xyz/dekart-premium' || 'dekartxyz' }}
@@ -173,6 +177,7 @@ jobs:
           - id: google-oauth
             spec: cypress/e2e/google-oauth
             extra_env: |
+              -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
               -e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
               -e DEKART_GOOGLE_OAUTH_CLIENT_ID=$GOOGLE_OAUTH_ID_SEC \
               -e DEKART_GOOGLE_OAUTH_SECRET=$GOOGLE_OAUTH_SECRET_SEC \
@@ -213,6 +218,7 @@ jobs:
           - id: snowflake-s3
             spec: cypress/e2e/snowflake-s3
             extra_env: |
+              -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
               -e DEKART_STORAGE=S3 \
               -e DEKART_DATASOURCE=SNOWFLAKE \
               -e DEKART_CLOUD_STORAGE_BUCKET=$S3_BUCKET_SEC \
