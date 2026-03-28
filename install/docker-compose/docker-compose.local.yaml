@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: "dekart"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "dekart"
+
+  adminer:
+    image: adminer
+    restart: unless-stopped
+    ports:
+      - "8081:8080"

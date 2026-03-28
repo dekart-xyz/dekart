@@ -48,8 +48,11 @@ Dekart is single Docker container that can be deployed to any cloud provider or 
 ### Deployment Guides:
 
 - [Run with Docker](https://dekart.xyz/docs/self-hosting/docker/?ref=github)
-- [Deploy to AWS/ECS (Terraform)](https://mailchi.mp/team/request-self-hosting-documentation)
-- [Deploy to Google App Engine](https://mailchi.mp/team/request-self-hosting-documentation) with Google IAP.
+- [Run with Docker Compose profiles](https://dekart.xyz/docs/self-hosting/docker-compose/?ref=github)
+- [Docker Compose examples by setup](install/docker-compose/README.md)
+- [Deploy to AWS/ECS (Terraform)](https://dekart.xyz/docs/self-hosting/aws-ecs-terraform/?ref=github)
+- [Deploy to Google App Engine](https://dekart.xyz/docs/self-hosting/app-engine/?ref=github)
+- [Enable SSO for self-hosted instance](https://dekart.xyz/docs/self-hosting/enable-sso-open-source-instance/?ref=github)
 
 ## Support
 

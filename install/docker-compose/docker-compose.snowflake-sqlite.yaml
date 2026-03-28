@@ -1,0 +1,20 @@
+services:
+  dekart-snowflake-sqlite:
+    image: dekartxyz/dekart:latest
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/dekart/data
+    environment:
+      DEKART_MAPBOX_TOKEN: "your-mapbox-token"
+      DEKART_CORS_ORIGIN: "http://localhost:3000"
+      DEKART_STORAGE: "SNOWFLAKE"
+      DEKART_DATASOURCE: "SNOWFLAKE"
+      DEKART_SNOWFLAKE_ACCOUNT_ID: "your-snowflake-account-id"
+      DEKART_SNOWFLAKE_USER: "your-snowflake-user"
+      DEKART_SNOWFLAKE_PASSWORD: "your-snowflake-password"
+      DEKART_SQLITE_DB_PATH: "./data/dekart.db"
+      DEKART_BACKUP_FREQUENCY_MIN: "5"
+      DEKART_MAX_BACKUPS_AGE_DAYS: "7"
+      DEKART_DEV_CLAIMS_EMAIL: "you@example.com"
