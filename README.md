@@ -1,6 +1,6 @@
 <div align="center">
   <h1 align="center">Dekart</h1>
-  <h3>Create Kepler.gl maps with SQL <div>for BigQuery, Snowflake, Wherobots</div></h3>
+  <h3>Create Kepler.gl maps with SQL <div>for BigQuery, Snowflake, Postgres</div></h3>
   <div><code>🤖 🛑 Every line in this repo is reviewed by a human</code></div>
 </div>
 
@@ -30,6 +30,7 @@ Self-hosted alternative to CARTO & Foursquare Studio for your data warehouse.
 
 * [BigQuery](https://dekart.xyz/docs/about/overture-maps-examples/)
 * [Snowflake](https://dekart.xyz/docs/about/snowflake-kepler-gl-examples/)
+* [Postgres](https://dekart.xyz/docs/self-hosting/keycloak-reverse-proxy/)
 * [Wherobots](https://dekart.xyz/docs/usage/wherobots-sql-tutorial/)
 
 
