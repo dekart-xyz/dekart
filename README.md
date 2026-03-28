@@ -1,7 +1,7 @@
 <div align="center">
   <h1 align="center">Dekart</h1>
-  <h3>Create Kepler.gl maps with SQL</h3>
-  <div>for BigQuery, Snowflake, Wherobots</div>
+  <h3>Create Kepler.gl maps with SQL <div>for BigQuery, Snowflake, Wherobots</div></h3>
+  <div><code>🤖 🛑 Every line in this repo is reviewed by a human</code></div>
 </div>
 
 <br/>
