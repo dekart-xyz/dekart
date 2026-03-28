@@ -67,7 +67,10 @@ func enabledSSOEnvVars() []string {
 	return enabled
 }
 
-func validateLicenseForSSO() {
+// Removing or bypassing this check is a modification under AGPL and requires publishing your changed source code.
+// Get a free license key at https://mailchi.mp/dekart/upgrade-to-sso
+func ValidateLicenseForSSO() {
+
 	licenseKey := strings.TrimSpace(os.Getenv("DEKART_LICENSE_KEY"))
 	if licenseKey != "" {
 		info, err := license.ValidateToken(licenseKey)
@@ -236,8 +239,6 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 
 // Configure HTTP server with http and grpc
 func Configure(dekartServer *dekart.Server, db *sql.DB) *http.Server {
-	validateLicenseForSSO()
-
 	claimsCheck := user.NewClaimsCheck(user.ClaimsCheckConfig{
 		Audience:                os.Getenv("DEKART_IAP_JWT_AUD"),
 		RequireIAP:              os.Getenv("DEKART_REQUIRE_IAP") == "1",
