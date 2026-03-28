@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: "dekart"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "dekart"
+
+  dekart-snowflake-s3:
+    image: dekartxyz/dekart:latest
+    restart: unless-stopped
+    depends_on:
+      - db
+    ports:
+      - "8080:8080"
+    environment:
+      DEKART_POSTGRES_DB: "dekart"
+      DEKART_POSTGRES_USER: "postgres"
+      DEKART_POSTGRES_PASSWORD: "dekart"
+      DEKART_POSTGRES_PORT: "5432"
+      DEKART_POSTGRES_HOST: "db"
+      DEKART_MAPBOX_TOKEN: "your-mapbox-token"
+      DEKART_CORS_ORIGIN: "http://localhost:3000"
+      DEKART_ALLOW_FILE_UPLOAD: "1"
+      DEKART_STORAGE: "S3"
+      DEKART_DATASOURCE: "SNOWFLAKE"
+      DEKART_CLOUD_STORAGE_BUCKET: "your-s3-bucket"
+      AWS_REGION: "us-east-1"
+      AWS_ACCESS_KEY_ID: "your-aws-access-key-id"
+      AWS_SECRET_ACCESS_KEY: "your-aws-secret-access-key"
+      DEKART_SNOWFLAKE_ACCOUNT_ID: "your-snowflake-account-id"
+      DEKART_SNOWFLAKE_USER: "your-snowflake-user"
+      DEKART_SNOWFLAKE_PASSWORD: "your-snowflake-password"
+      DEKART_REQUIRE_AMAZON_OIDC: "0"
+      DEKART_LICENSE_KEY: "your-license-key-if-sso-enabled"

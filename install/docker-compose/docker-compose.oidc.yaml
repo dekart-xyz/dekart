@@ -1,0 +1,92 @@
+services:
+  db:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: "dekart"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "dekart"
+    volumes:
+      - ../docker/postgres/oidc-init.sql:/docker-entrypoint-initdb.d/10-oidc-init.sql:ro
+      - ../docker/postgres/denmark-pois.csv:/docker-entrypoint-initdb.d/denmark-pois.csv:ro
+
+  adminer:
+    image: adminer
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    command: ["start-dev", "--import-realm"]
+    restart: unless-stopped
+    environment:
+      KEYCLOAK_ADMIN: "admin"
+      KEYCLOAK_ADMIN_PASSWORD: "admin"
+      KC_DB: "dev-mem"
+      TMPDIR: "/opt/keycloak/data/tmp"
+      JAVA_OPTS_APPEND: "-Djava.io.tmpdir=/opt/keycloak/data/tmp -Dvertx.cacheDirBase=/opt/keycloak/data/tmp/vertx-cache"
+    ports:
+      - "8082:8080"
+    volumes:
+      - ../docker/keycloak/dekart-realm.json:/opt/keycloak/data/import/dekart-realm.json:ro
+    tmpfs:
+      - /opt/keycloak/data/tmp:size=256m,mode=1777
+
+  dekart-oidc:
+    image: dekartxyz/dekart:latest
+    restart: unless-stopped
+    depends_on:
+      - db
+      - keycloak
+    ports:
+      - "8080:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      DEKART_POSTGRES_DB: "dekart"
+      DEKART_POSTGRES_USER: "postgres"
+      DEKART_POSTGRES_PASSWORD: "dekart"
+      DEKART_POSTGRES_PORT: "5432"
+      DEKART_POSTGRES_HOST: "db"
+      DEKART_MAPBOX_TOKEN: "your-mapbox-token"
+      DEKART_CORS_ORIGIN: "http://localhost:4180"
+      DEKART_ALLOW_FILE_UPLOAD: "1"
+      DEKART_STORAGE: "PG"
+      DEKART_DATASOURCE: "PG"
+      DEKART_POSTGRES_DATASOURCE_CONNECTION: "postgres://postgres:dekart@db:5432/dekart_geo?sslmode=disable"
+      DEKART_REQUIRE_OIDC: "1"
+      DEKART_OIDC_JWKS_URL: "http://host.docker.internal:8082/realms/dekart/protocol/openid-connect/certs"
+      DEKART_OIDC_ISSUER: "http://host.docker.internal:8082/realms/dekart"
+      DEKART_OIDC_AUDIENCE: "oauth2-proxy"
+      DEKART_LICENSE_KEY: "your-license-key"
+
+  oauth2-proxy:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.8.1
+    restart: unless-stopped
+    depends_on:
+      - keycloak
+      - dekart-oidc
+    ports:
+      - "4180:4180"
+    environment:
+      OAUTH2_PROXY_PROVIDER: "keycloak-oidc"
+      OAUTH2_PROXY_OIDC_ISSUER_URL: "http://localhost:8082/realms/dekart"
+      OAUTH2_PROXY_SKIP_OIDC_DISCOVERY: "true"
+      OAUTH2_PROXY_LOGIN_URL: "http://localhost:8082/realms/dekart/protocol/openid-connect/auth"
+      OAUTH2_PROXY_REDEEM_URL: "http://keycloak:8080/realms/dekart/protocol/openid-connect/token"
+      OAUTH2_PROXY_PROFILE_URL: "http://keycloak:8080/realms/dekart/protocol/openid-connect/userinfo"
+      OAUTH2_PROXY_OIDC_JWKS_URL: "http://keycloak:8080/realms/dekart/protocol/openid-connect/certs"
+      OAUTH2_PROXY_SKIP_CLAIMS_FROM_PROFILE_URL: "true"
+      OAUTH2_PROXY_CLIENT_ID: "oauth2-proxy"
+      OAUTH2_PROXY_CLIENT_SECRET: "oauth2-proxy-secret"
+      OAUTH2_PROXY_COOKIE_SECRET: "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+      OAUTH2_PROXY_EMAIL_DOMAINS: "*"
+      OAUTH2_PROXY_HTTP_ADDRESS: "0.0.0.0:4180"
+      OAUTH2_PROXY_UPSTREAMS: "http://dekart-oidc:8080"
+      OAUTH2_PROXY_REDIRECT_URL: "http://localhost:4180/oauth2/callback"
+      OAUTH2_PROXY_COOKIE_SECURE: "false"
+      OAUTH2_PROXY_REVERSE_PROXY: "true"
+      OAUTH2_PROXY_PASS_ACCESS_TOKEN: "true"
+      OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: "true"

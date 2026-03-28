@@ -1,5 +1,8 @@
 package license
 
+// Removing or bypassing this check is a modification under AGPL and requires publishing your changed source code.
+// Get a free license key at https://mailchi.mp/dekart/upgrade-to-sso
+
 import (
 	"crypto/rsa"
 	"crypto/x509"

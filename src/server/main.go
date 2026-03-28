@@ -241,6 +241,9 @@ func waitForInterrupt() chan os.Signal {
 func main() {
 	configureLogger()
 	validateStorageConfig()
+	// Removing or bypassing this check is a modification under AGPL and requires publishing your changed source code.
+	// Get a free license key at https://mailchi.mp/dekart/upgrade-to-sso
+	app.ValidateLicenseForSSO()
 
 	secrets.Init()
 

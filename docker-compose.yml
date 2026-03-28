@@ -76,7 +76,7 @@ services:
       OAUTH2_PROXY_PASS_ACCESS_TOKEN: "true"
       OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: "true"
 
-  dekart-oss-oidc:
+  dekart-oidc:
     image: "${DOCKER_COMPOSE_IMAGE}"
     platform: linux/amd64
     restart: always
@@ -141,7 +141,7 @@ services:
       DEKART_UX_DISABLE_VERSION_CHECK: "1"
       DEKART_CLOUD: "1"
   # docker compose --env-file .env.googleoauth --profile googleoauth up
-  dekart-oss-googleoauth:
+  dekart-googleoauth:
     image: "${DOCKER_COMPOSE_IMAGE}"
     platform: linux/amd64
     restart: always
@@ -163,8 +163,39 @@ services:
       DEKART_STORAGE: "${DEKART_STORAGE}"
       DEKART_DATASOURCE: "${DEKART_DATASOURCE}"
 
+  # docker compose --env-file .env.bigquery --profile dekart-bigquery up
+  dekart-bigquery:
+    image: "${DOCKER_COMPOSE_IMAGE}"
+    platform: linux/amd64
+    restart: always
+    ports:
+      - 8080:8080
+    profiles:
+      - dekart-bigquery
+    volumes:
+      - "${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS}"
+    environment:
+      DEKART_POSTGRES_DB: "${DEKART_POSTGRES_DB}"
+      DEKART_POSTGRES_USER: "${DEKART_POSTGRES_USER}"
+      DEKART_POSTGRES_PASSWORD: "${DEKART_POSTGRES_PASSWORD}"
+      DEKART_POSTGRES_PORT: "5432"
+      DEKART_POSTGRES_HOST: "host.docker.internal"
+      DEKART_CLOUD_STORAGE_BUCKET: "${DEKART_CLOUD_STORAGE_BUCKET}"
+      DEKART_BIGQUERY_PROJECT_ID: "${DEKART_BIGQUERY_PROJECT_ID}"
+      DEKART_BIGQUERY_MAX_BYTES_BILLED: "${DEKART_BIGQUERY_MAX_BYTES_BILLED}"
+      DEKART_MAPBOX_TOKEN: "${DEKART_MAPBOX_TOKEN}"
+      GOOGLE_APPLICATION_CREDENTIALS: "${GOOGLE_APPLICATION_CREDENTIALS}"
+      DEKART_CORS_ORIGIN: "${DEKART_CORS_ORIGIN}"
+      DEKART_LOG_DEBUG: "${DEKART_LOG_DEBUG}"
+      DEKART_LOG_PRETTY: "${DEKART_LOG_PRETTY}"
+      DEKART_PORT: "${DEKART_PORT}"
+      DEKART_STATIC_FILES: "${DEKART_STATIC_FILES}"
+      DEKART_ALLOW_FILE_UPLOAD: "${DEKART_ALLOW_FILE_UPLOAD}"
+      DEKART_STORAGE: "${DEKART_STORAGE}"
+      DEKART_DATASOURCE: "${DEKART_DATASOURCE}"
+
   # docker compose --env-file .env.snowflake-s3 --profile snowflake-s3 up
-  dekart-oss-snowflake-s3:
+  dekart-snowflake-s3:
     image: "${DOCKER_COMPOSE_IMAGE}"
     platform: linux/amd64
     restart: always
@@ -193,7 +224,7 @@ services:
       DEKART_REQUIRE_AMAZON_OIDC: "${DEKART_REQUIRE_AMAZON_OIDC}"
 
   # docker compose --env-file .env.snowflake-sqlite --profile snowflake-sqlite up
-  dekart-oss-snowflake-sqlite:
+  dekart-snowflake-sqlite:
     image: "${DOCKER_COMPOSE_IMAGE}"
     platform: linux/amd64
     restart: always
