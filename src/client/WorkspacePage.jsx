@@ -334,6 +334,7 @@ function WelcomeScreen ({ setNextStep }) {
       extra={(
         <>
           <Button
+            id='dekart-create-workspace'
             type='primary' key='1' disabled={invites.length > 0} onClick={() => {
               track('CreateWorkspace')
               setNextStep('workspace')

@@ -2,35 +2,21 @@
 
 describe('cloud basic flow', () => {
   it('with info token', () => {
+    // create workspace
     cy.visit('/')
-    cy.get('body', { timeout: 20000 }).should(($body) => {
-      const hasCreateWorkspace = [...$body.find('button')].some((button) => button.innerText.includes('Create Workspace'))
-      const hasCreateReport = $body.find('button#dekart-create-report').length > 0
-      expect(hasCreateWorkspace || hasCreateReport).to.equal(true)
-    })
-    cy.get('body').then(($body) => {
-      const hasCreateWorkspace = [...$body.find('button')].some((button) => button.innerText.includes('Create Workspace'))
-      if (hasCreateWorkspace) {
-        cy.contains('button', 'Create Workspace').click()
-        cy.get('input#name').type(`test-${Math.floor(Math.random() * 1000000)}`)
-        cy.get('button:contains("Create")').click()
-      }
-    })
+    cy.get('button#dekart-create-workspace').click()
+    cy.get('input#name').type('test')
+    cy.get('button:contains("Create")').click()
 
     // create new report
-    cy.visit('/')
-    cy.get('button#dekart-create-report', { timeout: 20000 }).click()
+    cy.get('button#dekart-create-report').click()
     cy.get('button:contains("Upload File")').click()
     cy.get('input[type="file"]').selectFile('cypress/fixtures/sample.csv', { force: true })
     cy.get('button:contains("Upload")').click()
     cy.get('div:contains("8,276 rows")', { timeout: 20000 }).should('be.visible')
 
     cy.get('button#dekart-share-report').click()
-    cy.get('button#dekart-publish-report').then(($button) => {
-      if (!$button.hasClass('ant-switch-checked')) {
-        cy.wrap($button).click()
-      }
-    })
+    cy.get('button#dekart-publish-report').click()
     cy.get('button#dekart-publish-report')
       .should('have.class', 'ant-switch-checked')
       .and('not.have.class', 'ant-switch-loading')
@@ -58,22 +44,7 @@ describe('cloud basic flow', () => {
 
   it('anonymous public report login uses auth redirect', () => {
     cy.visit('/')
-    cy.get('body', { timeout: 20000 }).should(($body) => {
-      const hasCreateWorkspace = [...$body.find('button')].some((button) => button.innerText.includes('Create Workspace'))
-      const hasCreateReport = $body.find('button#dekart-create-report').length > 0
-      expect(hasCreateWorkspace || hasCreateReport).to.equal(true)
-    })
-    cy.get('body').then(($body) => {
-      const hasCreateWorkspace = [...$body.find('button')].some((button) => button.innerText.includes('Create Workspace'))
-      if (hasCreateWorkspace) {
-        cy.contains('button', 'Create Workspace').click()
-        cy.get('input#name').type(`test-login-regression-${Math.floor(Math.random() * 1000000)}`)
-        cy.get('button:contains("Create")').click()
-      }
-    })
-
-    cy.visit('/')
-    cy.get('button#dekart-create-report', { timeout: 20000 }).click()
+    cy.get('button#dekart-create-report').click()
     cy.get('button:contains("Upload File")').click()
     cy.get('input[type="file"]').selectFile('cypress/fixtures/sample.csv', { force: true })
     cy.get('button:contains("Upload")').click()
