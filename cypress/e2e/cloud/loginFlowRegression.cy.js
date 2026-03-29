@@ -2,14 +2,25 @@
 
 describe('cloud login flow regression', () => {
   it('uses auth redirect for anonymous public report login', () => {
-    // create workspace
+    // create workspace only if account has none yet
     cy.visit('/')
-    cy.get('button:contains("Create Workspace")', { timeout: 20000 }).click()
-    cy.get('input#name').type(`test-login-regression-${Math.floor(Math.random() * 1000000)}`)
-    cy.get('button:contains("Create")').click()
+    cy.get('body', { timeout: 20000 }).should(($body) => {
+      const hasCreateWorkspace = [...$body.find('button')].some((button) => button.innerText.includes('Create Workspace'))
+      const hasCreateReport = $body.find('button#dekart-create-report').length > 0
+      expect(hasCreateWorkspace || hasCreateReport).to.equal(true)
+    })
+    cy.get('body').then(($body) => {
+      const hasCreateWorkspace = [...$body.find('button')].some((button) => button.innerText.includes('Create Workspace'))
+      if (hasCreateWorkspace) {
+        cy.contains('button', 'Create Workspace').click()
+        cy.get('input#name').type(`test-login-regression-${Math.floor(Math.random() * 1000000)}`)
+        cy.get('button:contains("Create")').click()
+      }
+    })
 
     // create new report from uploaded file
-    cy.get('button#dekart-create-report', { timeout: 10000 }).click()
+    cy.visit('/')
+    cy.get('button#dekart-create-report', { timeout: 20000 }).click()
     cy.get('button:contains("Upload File")').click()
     cy.get('input[type="file"]').selectFile('cypress/fixtures/sample.csv', { force: true })
     cy.get('button:contains("Upload")').click()
