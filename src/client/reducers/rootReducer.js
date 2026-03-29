@@ -75,7 +75,7 @@ function usage (state = defaultUsage, action) {
   }
 }
 
-const defaultEnv = { loaded: false, variables: {}, authEnabled: null, authType: 'UNSPECIFIED', serverTime: null, receivedTime: null }
+const defaultEnv = { loaded: false, variables: {}, authEnabled: null, authConfigured: false, authType: 'UNSPECIFIED', serverTime: null, receivedTime: null }
 function env (state = defaultEnv, action) {
   switch (action.type) {
     case setRedirectState.name:
@@ -83,20 +83,32 @@ function env (state = defaultEnv, action) {
         ...state,
         loaded: false // reset when user auth details like token change
       }
-    case setEnv.name:
+    case setEnv.name: {
+      const googleOAuthEnabled = action.variables.REQUIRE_GOOGLE_OAUTH === '1'
+      const oidcEnabled = action.variables.REQUIRE_OIDC === '1'
+      const isSnowpark = action.variables.IS_SNOWPARK === '1'
+      const authConfigured = (
+        googleOAuthEnabled ||
+        oidcEnabled ||
+        action.variables.REQUIRE_IAP === '1' ||
+        action.variables.REQUIRE_AMAZON_OIDC === '1' ||
+        isSnowpark
+      )
       return {
         loaded: true,
         variables: action.variables,
         authEnabled: action.variables.AUTH_ENABLED === '1',
-        googleOAuthEnabled: action.variables.REQUIRE_GOOGLE_OAUTH === '1',
-        oidcEnabled: action.variables.REQUIRE_OIDC === '1',
+        authConfigured,
+        googleOAuthEnabled,
+        oidcEnabled,
         secretsEnabled: action.variables.SECRETS_ENABLED === '1',
         uxConfig: JSON.parse(action.variables.CLOUD_UX_CONFIG_JSON || '{}'),
         isCloud: action.variables.DEKART_CLOUD === '1',
-        isSnowpark: action.variables.IS_SNOWPARK === '1',
+        isSnowpark,
         serverTime: action.serverTime,
         receivedTime: Math.floor(Date.now() / 1000)
       }
+    }
     default:
       return state
   }

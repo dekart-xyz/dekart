@@ -25,6 +25,7 @@ Self-check before finalizing:
 
 - Follow existing project conventions before introducing new patterns.
 - Prefer established libraries for standard concerns over custom implementations.
+- Use canonical state, not ad-hoc component logic: before deriving behavior in components, check reducers/actions/selectors for an existing field and reuse it; if missing, add it once in the state layer (reducer/selector) and consume that everywhere.
 - Do not use debug-level logging in production code paths.
 - Keep test structure consistent with neighboring tests in the same folder.
 - Match existing UI patterns and placement
@@ -71,5 +72,4 @@ Why: this environment exports `ELECTRON_RUN_AS_NODE=1` by default, which prevent
    - `npx cypress install`
 2. Re-run with env override:
    - `ELECTRON_RUN_AS_NODE= npx cypress run --spec "<spec-path>"`
-
 

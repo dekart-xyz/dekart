@@ -76,7 +76,7 @@ jobs:
             sleep $((attempt * 10))
           done
 
-      - name: E2E part 1
+      - name: E2E part 1 (start + login regression)
         run: |
           docker run -i \
             --network="host" \
@@ -99,7 +99,7 @@ jobs:
             -e DEKART_GOOGLE_OAUTH_SECRET=${{ secrets.GOOGLE_OAUTH_SECRET }} \
             -e DEKART_DEV_REFRESH_TOKEN=${{ secrets.DEV_REFRESH_TOKEN_INFO }} \
             -e DEKART_DATA_ENCRYPTION_KEY=projects/910252011719/secrets/dekart-dev-user-data-encoding-key/versions/latest \
-          	-e DEKART_CORS_ORIGIN=http://localhost:3000 \
+            -e DEKART_CORS_ORIGIN=http://localhost:3000 \
             -e DEKART_ALLOW_WORKSPACE_CREATION=1 \
             -e DEKART_UX_DISABLE_VERSION_CHECK=1 \
             -e DEKART_DEV_NO_DATASET_CACHE=1 \
