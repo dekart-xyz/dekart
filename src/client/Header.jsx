@@ -35,10 +35,10 @@ function User ({ buttonDivider }) {
   const token = useSelector(state => state.token)
   const history = useHistory()
   const userStream = useSelector(state => state.user.stream)
-  const { authEnabled } = useSelector(state => state.env)
+  const env = useSelector(state => state.env)
+  const { authEnabled, authConfigured, isSnowpark } = env
   const isPlayground = useSelector(state => state.user.isPlayground)
   const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
-  const isSnowpark = useSelector(state => state.env.isSnowpark)
   const dispatch = useDispatch()
   const [showSSOModal, setShowSSOModal] = useState(false)
 
@@ -68,6 +68,18 @@ function User ({ buttonDivider }) {
         disabled: true
       }
     )
+    const handleLoginClick = () => {
+      if (!authConfigured) {
+        setShowSSOModal(true)
+        return
+      }
+      const state = new AuthState()
+      state.setUiUrl(window.location.href)
+      state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
+      dispatch(authRedirect(state))
+    }
+    const loginButtonText = env.isCloud ? 'Login with Google' : 'Login'
+
     return (
       <>
         <div className={classNames(
@@ -77,7 +89,7 @@ function User ({ buttonDivider }) {
         >
           {isAnonymous
             ? (
-              <Button id='dekart-login-button' type='primary' onClick={() => setShowSSOModal(true)}>Login</Button>
+              <Button id='dekart-login-button' type='primary' onClick={handleLoginClick}>{loginButtonText}</Button>
               )
             : (
               <Dropdown

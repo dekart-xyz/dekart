@@ -194,29 +194,34 @@ function useRequireWorkspace () {
 
 function WorkspaceOnboarding () {
   const history = useHistory()
+  const isAnonymous = useSelector(state => state.user.isAnonymous)
   useEffect(() => {
     track('WorkspaceOnboarding')
   }, [])
   return (
     <div className={styles.reportHeaderButtons}>
-      <Button
-        type='text' icon={<InfoCircleOutlined />}
-        href='https://dekart.xyz/?ref=about-maps-button'
-        target='_blank'
-        title='About Dekart Maps'
-        onClick={() => {
-          track('AboutDekartMaps')
-        }}
-      >About Dekart Maps
-      </Button>
-      <Button
-        icon={<PlusOutlined />}
-        type='primary' onClick={() => {
-          track('WorkspaceOnboardingCreateMap')
-          history.push('/workspace')
-        }}
-      >Create Map
-      </Button>
+      <div className={styles.hideOnMobile}>
+        <Button
+          type='text' icon={<InfoCircleOutlined />}
+          href='https://dekart.xyz/?ref=about-maps-button'
+          target='_blank'
+          title='About this map'
+          onClick={() => {
+            track('AboutDekartMaps')
+          }}
+        >About this map
+        </Button>
+      </div>
+      {!isAnonymous && (
+        <Button
+          icon={<PlusOutlined />}
+          type='primary' onClick={() => {
+            track('WorkspaceOnboardingCreateMap')
+            history.push('/workspace')
+          }}
+        >Create Map
+        </Button>
+      )}
     </div>
   )
 }
