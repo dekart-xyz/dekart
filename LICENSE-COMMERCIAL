@@ -1,11 +1,19 @@
-Dekart On-Premise Premium License
+Dekart Commercial License
 
-This software is licensed under the **Dekart On-Premise Premium License**.
+The code in this repository is licensed under the GNU Affero General Public License
+Version 3 (AGPLv3). See the LICENSE file.
 
-The license grants permission to modify, distribute, sublicense, and resell the software, subject to certain restrictions.
+If you have purchased Dekart Premium and have access to the private repository
+(https://github.com/dekart-xyz/dekart-premium), your use of the Dekart Premium
+distribution is governed by the Dekart Commercial License Terms, not the AGPL.
+The license key is a technical measure and does not by itself grant a commercial license.
 
-For the full terms of the license, please refer to the official Dekart Premium License Terms available at:
+Upon cancellation, you retain a perpetual commercial license to the last version
+released during your active subscription. Any subsequent version is available
+only under the AGPLv3.
 
-https://dekart.xyz/legal/dekart-premium-terms
+Full commercial terms: https://dekart.xyz/legal/dekart-premium-terms
 
-© 2024 Dekart XYZ UG. All rights reserved.
+Questions: support@dekart.xyz
+
+(c) 2026 Dekart XYZ UG. All rights reserved.
