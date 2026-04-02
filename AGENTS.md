@@ -26,50 +26,15 @@ Self-check before finalizing:
 - Follow existing project conventions before introducing new patterns.
 - Prefer established libraries for standard concerns over custom implementations.
 - Use canonical state, not ad-hoc component logic: before deriving behavior in components, check reducers/actions/selectors for an existing field and reuse it; if missing, add it once in the state layer (reducer/selector) and consume that everywhere.
+- When extending a function that is already over 50 lines, refactor to keep functions under 50 lines using the smallest elegant extraction needed; preserve existing behavior and avoid broad rewrites.
+- Add a short purpose description for each new function.
+- For each non-trivial business-logic block (especially complex conditions), add a very short `why` comment.
 - Do not use debug-level logging in production code paths.
 - Keep test structure consistent with neighboring tests in the same folder.
 - Match existing UI patterns and placement
 - Validate behavior end-to-end in the real runtime path before finalizing.
 
-## Release Notes Skill (Mandatory when writing release notes)
+## Skills (Mandatory)
 
-When asked to produce release notes, follow this structure and filtering:
-
-- Use `docs/release-notes-0-21-0.md` as the formatting template and section style baseline.
-- Present items in this exact order:
-  1. User-facing features first.
-  2. Changes important for admins/operators second.
-  3. User-facing bug fixes third.
-  4. Upgrade instructions last.
-- Skip chore/internal-only changes that do not affect users or admins (for example CI/workflow-only changes).
-- Keep language outcome-focused (what changed for users/admins), not implementation-heavy.
-- Include only changes in the requested version/tag diff range.
-
-# Runbook
-
-## Cypress Quick Start
-
-Run from repo root:
-
-```bash
-ELECTRON_RUN_AS_NODE= npx cypress run --spec "cypress/e2e/snowflake-s3/layerOrderRerunRegression.cy.js"
-```
-
-Why: this environment exports `ELECTRON_RUN_AS_NODE=1` by default, which prevents Cypress from starting. Prefixing with `ELECTRON_RUN_AS_NODE=` unsets it for the command.
-
-## Common Cypress Commands
-
-- Run one spec:
-  - `ELECTRON_RUN_AS_NODE= npx cypress run --spec "cypress/e2e/snowflake-s3/layerOrderRerunRegression.cy.js"`
-- Run all Snowflake S3 specs:
-  - `ELECTRON_RUN_AS_NODE= npx cypress run --spec "cypress/e2e/snowflake-s3/*.cy.js"`
-- Open interactive Cypress app:
-  - `ELECTRON_RUN_AS_NODE= npx cypress open`
-
-## If Cypress Fails To Start
-
-1. Install Cypress binary:
-   - `npx cypress install`
-2. Re-run with env override:
-   - `ELECTRON_RUN_AS_NODE= npx cypress run --spec "<spec-path>"`
-
+- For release notes tasks, use [skills/release-notes/SKILL.md](/Users/vladi/dev/dekart/skills/release-notes/SKILL.md).
+- For Cypress execution in this repo, use [skills/cypress-quick-start/SKILL.md](/Users/vladi/dev/dekart/skills/cypress-quick-start/SKILL.md).

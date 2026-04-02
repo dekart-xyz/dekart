@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import AceEditor from 'react-ace'
 import { AutoSizer } from 'react-virtualized'
 import Button from 'antd/es/button'
@@ -15,6 +15,8 @@ import { SendOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircle
 import { Duration } from 'luxon'
 import DataDocumentationLink from './DataDocumentationLink'
 import { cancelJob, queryChanged, runQuery } from './actions/query'
+import { setActiveDataset } from './actions/dataset'
+import { showReadmeTab } from './actions/readme'
 import Tooltip from 'antd/es/tooltip'
 import { getDatasourceMeta } from './lib/datasource'
 import { copyErrorToClipboard } from './actions/clipboard'
@@ -67,17 +69,132 @@ function StatusActions ({ queryJob }) {
   )
 }
 
-function QueryEditor ({ queryId, queryText, onChange, canWrite }) {
+// Parse editor-local tab shortcut: Ctrl+Shift+[1..9] -> 0-based tab index.
+function getEditorTabShortcutIndex (event) {
+  const hasRequiredModifiers = event.ctrlKey && event.shiftKey && !event.metaKey && !event.altKey
+  if (!hasRequiredModifiers) {
+    return null
+  }
+  const match = event.code && event.code.match(/^Digit([1-9])$/)
+  if (!match) {
+    return null
+  }
+  return Number(match[1]) - 1
+}
+
+// Build tab keys in the same order as report tabs.
+function getShortcutTabKeys (reportReadme, datasets) {
+  const keys = []
+  if (reportReadme) {
+    keys.push('readme')
+  }
+  return keys.concat(datasets.map(dataset => dataset.id))
+}
+
+// Switch tab from editor shortcut using Redux actions only.
+function switchTabFromEditorShortcut ({ tabIndex, reportReadme, datasets, dispatch }) {
+  const tabKeys = getShortcutTabKeys(reportReadme, datasets)
+  const tabKey = tabKeys[tabIndex]
+  if (!tabKey) {
+    return
+  }
+  if (tabKey === 'readme') {
+    dispatch(showReadmeTab())
+    return
+  }
+  dispatch(setActiveDataset(tabKey))
+}
+
+// Intercept shortcuts before Ace keybindings, so behavior is deterministic.
+function registerQueryEditorKeyboardInterceptors ({ editor, getCanExecute, executeQuery, switchTab }) {
+  editor.container.addEventListener('keydown', (event) => {
+    const tabIndex = getEditorTabShortcutIndex(event)
+    if (tabIndex !== null) {
+      event.preventDefault()
+      event.stopPropagation()
+      switchTab(tabIndex)
+      return
+    }
+
+    const isRunShortcut = (event.metaKey || event.ctrlKey) && event.key === 'Enter'
+    if (!isRunShortcut) {
+      return
+    }
+    event.preventDefault()
+    event.stopPropagation()
+    if (!getCanExecute()) {
+      return
+    }
+    executeQuery()
+  }, true)
+}
+
+// Focus Ace editor input when query tab becomes active.
+function focusAceEditor (editor) {
+  if (!editor || typeof editor.focus !== 'function') {
+    return
+  }
+  setTimeout(() => {
+    editor.focus()
+  }, 0)
+}
+
+function QueryEditor ({ queryId, queryText, onChange, canWrite, canExecute, onExecute }) {
   const dataset = useSelector(state => state.dataset.list.find(q => q.queryId === queryId))
+  const datasets = useSelector(state => state.dataset.list)
   const connection = useSelector(state => state.connection.list.find(c => c.id === dataset?.connectionId))
+  const reportReadme = useSelector(state => state.report.readme)
   const connectionType = useConnectionType(connection?.id)
   const completer = getDatasourceMeta(connectionType)?.completer
+  const dispatch = useDispatch()
+  const datasetsRef = useRef(datasets)
+  const reportReadmeRef = useRef(reportReadme)
+  const canExecuteRef = useRef(canExecute)
+  const onExecuteRef = useRef(onExecute)
+  const editorRef = useRef(null)
+
+  useEffect(() => {
+    datasetsRef.current = datasets
+  }, [datasets])
+
+  useEffect(() => {
+    reportReadmeRef.current = reportReadme
+  }, [reportReadme])
+
+  useEffect(() => {
+    canExecuteRef.current = canExecute
+  }, [canExecute])
+
+  useEffect(() => {
+    onExecuteRef.current = onExecute
+  }, [onExecute])
+
   useEffect(() => {
     if (completer) {
       const langTools = window.ace.require('ace/ext/language_tools')
       langTools.addCompleter(completer)
     }
   }, [completer])
+
+  const onEditorLoad = useCallback((editor) => {
+    editorRef.current = editor
+    registerQueryEditorKeyboardInterceptors({
+      editor,
+      getCanExecute: () => canExecuteRef.current,
+      executeQuery: () => onExecuteRef.current(),
+      switchTab: (tabIndex) => switchTabFromEditorShortcut({
+        tabIndex,
+        reportReadme: reportReadmeRef.current,
+        datasets: datasetsRef.current,
+        dispatch
+      })
+    })
+    focusAceEditor(editor)
+  }, [dispatch])
+
+  useEffect(() => {
+    focusAceEditor(editorRef.current)
+  }, [queryId])
 
   return (
     <div className={styles.editor}>
@@ -91,6 +208,7 @@ function QueryEditor ({ queryId, queryText, onChange, canWrite }) {
             name={'AceEditor' + queryId}
             keyboardHandler='vscode'
             onChange={onChange}
+            onLoad={onEditorLoad}
             value={queryText}
             readOnly={!canWrite}
             editorProps={{ $blockScrolling: true }}
@@ -294,6 +412,12 @@ export default function Query ({ query }) {
   const { canWrite } = useSelector(state => state.report)
   const edit = useSelector(state => state.reportStatus.edit)
   const dispatch = useDispatch()
+  const canExecute = canWrite && edit && canRun && queryText
+  const executeQuery = useCallback(() => {
+    track('QueryExecute', { queryId: query.id })
+    dispatch(runQuery(query.id, queryText))
+  }, [dispatch, query.id, queryText])
+
   return (
     <div key={query.id} className={styles.query}>
       <QueryEditor
@@ -301,19 +425,20 @@ export default function Query ({ query }) {
         queryText={queryText}
         onChange={value => dispatch(queryChanged(query.id, value))}
         canWrite={canWrite && edit}
+        canExecute={canExecute}
+        onExecute={executeQuery}
       />
       <QueryStatus query={query}>
         {
           canWrite && edit
             ? (
               <Button
+                id='dekart-query-execute-button'
                 size='large'
-                disabled={!canRun || !queryText}
+                disabled={!canExecute}
                 icon={<SendOutlined />}
-                onClick={() => {
-                  track('QueryExecute', { queryId: query.id })
-                  dispatch(runQuery(query.id, queryText))
-                }}
+                title='Execute query (Cmd/Ctrl+Enter)'
+                onClick={executeQuery}
               >Execute
               </Button>
               )
