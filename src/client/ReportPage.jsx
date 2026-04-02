@@ -37,6 +37,14 @@ import { getDefaultMapStyles } from '@kepler.gl/reducers'
 import { getApplicationConfig } from '@kepler.gl/utils'
 import UserPositionOverlay from './UserPositionOverlay'
 
+// Build keyboard hint text for tab tooltips.
+function getTabShortcutLabel (tabIndex) {
+  if (tabIndex < 0 || tabIndex > 8) {
+    return null
+  }
+  return `In editor: Ctrl+Shift+${tabIndex + 1}`
+}
+
 function TabIcon ({ job }) {
   let iconColor = 'transparent'
   if (job.jobError) {
@@ -128,11 +136,12 @@ function QueryTooltip ({ job, dataset }) {
   )
 }
 
-function getTabPane (dataset, queries, files, status, queryJobs, closable, lastDataset) {
+function getTabPane (dataset, queries, files, status, queryJobs, closable, lastDataset, tabIndex) {
   let changed = false
   const title = getDatasetName(dataset, queries, files)
   let tabIcon = null
   let tooltip = null
+  const shortcutLabel = getTabShortcutLabel(tabIndex)
   if (dataset.queryId) {
     const job = queryJobs.find(j => j.queryId === dataset.queryId)
     if (job) {
@@ -148,7 +157,18 @@ function getTabPane (dataset, queries, files, status, queryJobs, closable, lastD
   }
   return (
     <Tabs.TabPane
-      tab={<Tooltip placement='bottom' title={tooltip}>{tabIcon}{tabTitle}</Tooltip>}
+      tab={
+        <Tooltip
+          placement='bottom'
+          title={
+            <span className={styles.queryTooltip}>
+              {shortcutLabel ? <span>{shortcutLabel}</span> : null}
+              {tooltip}
+            </span>
+          }
+        >{tabIcon}{tabTitle}
+        </Tooltip>
+      }
       key={dataset.id}
       closable={Boolean((closable && !lastDataset) || closeIcon)}
       closeIcon={closeIcon}
@@ -176,13 +196,16 @@ function DatasetSection ({ reportId }) {
   const disableSQL = !report.allowExport && !report.canWrite
 
   if (report.readme) {
+    const readmeShortcut = getTabShortcutLabel(0)
     readmeTab.push(
       <Tabs.TabPane
         className={styles.addTabPane}
         tab={
-          <>
-            <ReadOutlined /> Readme
-          </>
+          <Tooltip placement='bottom' title={readmeShortcut ? <span>{readmeShortcut}</span> : null}>
+            <>
+              <ReadOutlined /> Readme
+            </>
+          </Tooltip>
         }
         key='readme'
         closable={canWrite && edit}
@@ -233,7 +256,16 @@ function DatasetSection ({ reportId }) {
                   hideAdd={!(canWrite && edit)}
                   onEdit={getOnTabEditHandler(dispatch, reportId, datasets)}
                 >
-                  {readmeTab.concat(datasets.map((dataset) => getTabPane(dataset, queries, files, queryStatus, queryJobs, closable, lastDataset)))}
+                  {readmeTab.concat(datasets.map((dataset, index) => getTabPane(
+                    dataset,
+                    queries,
+                    files,
+                    queryStatus,
+                    queryJobs,
+                    closable,
+                    lastDataset,
+                    index + (report.readme ? 1 : 0)
+                  )))}
                 </Tabs>
               </div>
               {showReadme ? <Readme readme={report.readme} /> : <Dataset dataset={activeDataset} />}
