@@ -20,7 +20,7 @@ describe('cloud basic flow', () => {
     cy.get('input#connectionName').type(randomConnectionName)
     cy.get('input#bigqueryProjectId').clear() // prevent autofill
     cy.get('input#bigqueryProjectId').type('dekart-dev')
-    // cy.get('input#cloudStorageBucket').type('dekart-dev')
+    cy.get('input#cloudStorageBucket').type('dekart-dev')
     cy.get('button:contains("Test Connection")').click()
     cy.get('button#saveConnection').should('be.enabled')
     cy.get('button#saveConnection').click()
