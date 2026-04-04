@@ -447,7 +447,7 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 
 	//TODO: pass whole connection?
 	defConCtx := conn.GetCtx(ctx, &proto.Connection{Id: conn.SystemConnectionID})
-	dwJobID, err := s.getDWJobIDFromResultID(ctx, vars["source"])
+	dwJobID, dwJobLocation, err := s.getDWJobInfoFromResultID(ctx, vars["source"])
 	if err != nil {
 		errtype.LogError(err, "Error getting dw job id")
 		HttpError(w, err)
@@ -493,6 +493,7 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 			Str("objectBucketName", bucketName).
 			Str("connectionID", connection.Id).
 			Str("dwJobID", dwJobID).
+			Str("dwJobLocation", dwJobLocation).
 			Bool("hasResultURI", resultURI != "").
 			Str("retrievalBranch", retrievalBranch).
 			Msg(msg)
@@ -528,7 +529,13 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		obj = s.storage.GetObject(conCtx, bucketName, dwJobID)
+		// For DEKART_STORAGE=USER + BigQuery temp results, pass location metadata so
+		// bqstorage can use JobFromIDLocation and avoid false 404s for regional jobs.
+		storageMeta := bucketName
+		if os.Getenv("DEKART_STORAGE") == "USER" {
+			storageMeta = dwJobLocation
+		}
+		obj = s.storage.GetObject(conCtx, storageMeta, dwJobID)
 		retrievalBranch = "dw_job_id_storage"
 	} else {
 		// file stored on the bucket is used as source
@@ -538,13 +545,12 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 
 	created, err := obj.GetCreatedAt(useCtx)
 	if err != nil {
-		logDatasetSourceError(err, "ServeDatasetSource: GetCreatedAt failed")
 		// For DW jobs, determine if error should be treated as expiration
 		if dwJobID != "" && !jobIsRecent {
-			// Job is not recent, treat error as expiration
 			storageError(w, &errtype.Expired{})
 			return
 		}
+		logDatasetSourceError(err, "ServeDatasetSource: GetCreatedAt failed")
 		// Job is recent or not a DW job, propagate the actual error
 		storageError(w, err)
 		return

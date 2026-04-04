@@ -13,12 +13,14 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/api/googleapi"
 )
 
 // BigQueryStorageObject implements StorageObject interface for BigQuery temp results tables
 type BigQueryStorageObject struct {
-	JobID      string
-	Connection *proto.Connection
+	JobID       string
+	JobLocation string
+	Connection  *proto.Connection
 }
 
 func (s BigQueryStorageObject) GetWriter(ctx context.Context) io.WriteCloser {
@@ -39,12 +41,26 @@ func (s BigQueryStorageObject) getClient(ctx context.Context) (*bigquery.Client,
 	return client, nil
 }
 
-func (s BigQueryStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, error) {
+func (s BigQueryStorageObject) getJobByID(ctx context.Context) (*bigquery.Job, error) {
 	client, err := s.getClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-	jobFromJobId, err := client.JobFromID(ctx, s.JobID)
+	if s.JobLocation != "" {
+		jobFromJobID, err := client.JobFromIDLocation(ctx, s.JobID, s.JobLocation)
+		if err == nil {
+			return jobFromJobID, nil
+		}
+		// Backward-compatible fallback for legacy rows or location mismatch.
+		if apiErr, ok := err.(*googleapi.Error); !ok || apiErr.Code != 404 {
+			return nil, err
+		}
+	}
+	return client.JobFromID(ctx, s.JobID)
+}
+
+func (s BigQueryStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, error) {
+	jobFromJobId, err := s.getJobByID(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -58,11 +74,7 @@ func (s BigQueryStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, er
 
 func (s BigQueryStorageObject) GetReader(ctx context.Context) (io.ReadCloser, error) {
 	connCtx := conn.GetCtx(ctx, s.Connection)
-	client, err := s.getClient(ctx)
-	if err != nil {
-		return nil, err
-	}
-	jobFromJobId, err := client.JobFromID(connCtx, s.JobID)
+	jobFromJobId, err := s.getJobByID(connCtx)
 	if err != nil {
 		// Return the error as-is. The caller will decide if it's an expiration or permission issue
 		// based on the job age from the database

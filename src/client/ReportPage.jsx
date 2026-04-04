@@ -227,7 +227,7 @@ function DatasetSection ({ reportId }) {
     datasets = []
   }
 
-  if (activeDataset || showReadme) {
+  if (activeDataset?.id || showReadme) {
     return (
       <>
         <Resizable

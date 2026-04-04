@@ -110,9 +110,7 @@ function active (state = null, action) {
       if (datasetsList.length > prevDatasetsList.length) {
         return datasetsList.slice(-1)[0]
       }
-      return {
-        ...(datasetsList.find(d => d.id === state.id) || datasetsList[0])
-      }
+      return datasetsList.find(d => d.id === state.id) || datasetsList[0] || null
     default:
       return state
   }

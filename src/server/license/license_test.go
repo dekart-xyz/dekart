@@ -36,7 +36,7 @@ func TestIssueToken_Trial(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	now := time.Unix(1774060800, 0).UTC()
+	now := time.Now().UTC()
 	exp := now.Add(14 * 24 * time.Hour)
 
 	tokenString, err := IssueToken(encodePrivateKeyPEM(t, privateKey), IssueRequest{
