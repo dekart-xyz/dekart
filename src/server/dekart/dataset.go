@@ -538,13 +538,12 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 
 	created, err := obj.GetCreatedAt(useCtx)
 	if err != nil {
-		logDatasetSourceError(err, "ServeDatasetSource: GetCreatedAt failed")
 		// For DW jobs, determine if error should be treated as expiration
 		if dwJobID != "" && !jobIsRecent {
-			// Job is not recent, treat error as expiration
 			storageError(w, &errtype.Expired{})
 			return
 		}
+		logDatasetSourceError(err, "ServeDatasetSource: GetCreatedAt failed")
 		// Job is recent or not a DW job, propagate the actual error
 		storageError(w, err)
 		return
