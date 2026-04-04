@@ -28,10 +28,11 @@ type Job interface {
 	GetID() string
 	GetReportID() string
 	GetQueryID() string
-	GetResultID() *string  // same as GetID(); nil means no result yet
-	IsResultReady() bool   // true if result is ready
-	GetDWJobID() *string   // DW job ID, nil if not applicable or not yet known
-	GetResultURI() *string // URI of the result, nil if not applicable or not yet known
+	GetResultID() *string      // same as GetID(); nil means no result yet
+	IsResultReady() bool       // true if result is ready
+	GetDWJobID() *string       // DW job ID, nil if not applicable or not yet known
+	GetDWJobLocation() *string // DW job location, nil if not applicable or unknown
+	GetResultURI() *string     // URI of the result, nil if not applicable or not yet known
 	GetTotalRows() int64
 	GetProcessedBytes() int64
 	GetResultSize() int64
@@ -56,6 +57,7 @@ type BasicJob struct {
 	TotalRows      int64
 	ResultReady    bool
 	DWJobID        *string
+	DWJobLocation  *string
 	ResultURI      *string // URI of the result, nil if not applicable or not yet known
 	ProcessedBytes int64
 	ResultSize     int64
@@ -112,6 +114,12 @@ func (j *BasicJob) GetDWJobID() *string {
 	j.Lock()
 	defer j.Unlock()
 	return j.DWJobID
+}
+
+func (j *BasicJob) GetDWJobLocation() *string {
+	j.Lock()
+	defer j.Unlock()
+	return j.DWJobLocation
 }
 
 func (j *BasicJob) Cancel() {

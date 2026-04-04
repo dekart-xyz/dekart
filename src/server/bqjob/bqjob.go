@@ -178,7 +178,11 @@ func (job *Job) wait() {
 		// result will stay in BigQuery temp result table and will be read from there
 		job.Lock()
 		bqJobID := job.bigqueryJob.ID()
+		bqJobLocation := job.bigqueryJob.Location()
 		job.DWJobID = &bqJobID // identify result storage
+		if bqJobLocation != "" {
+			job.DWJobLocation = &bqJobLocation
+		}
 		job.ResultReady = true
 		job.Unlock()
 		job.Status() <- int32(proto.QueryJob_JOB_STATUS_READING_RESULTS)

@@ -34,16 +34,18 @@ func (s Server) updateJobStatus(job job.Job, jobStatus chan int32, paramHash str
 						job_status,
 						query_params_hash,
 						dw_job_id,
+						dw_job_location,
 						job_result_id,
 						job_error,
 						query_text
 					)
-					values ($1, $2, $3, $4, $5, $6, $7, $8)`,
+					values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 					job.GetQueryID(),
 					job.GetID(),
 					status,
 					paramHash,
 					job.GetDWJobID(),
+					job.GetDWJobLocation(),
 					job.GetResultID(),
 					job.Err(),
 					queryText,
@@ -59,9 +61,10 @@ func (s Server) updateJobStatus(job job.Job, jobStatus chan int32, paramHash str
 						bytes_processed = $5,
 						result_size = $6,
 						dw_job_id = $7,
-						result_uri = $8,
+						dw_job_location = $8,
+						result_uri = $9,
 						updated_at=CURRENT_TIMESTAMP
-					where id = $9`,
+					where id = $10`,
 					status,
 					job.Err(),
 					job.GetResultID(),
@@ -69,6 +72,7 @@ func (s Server) updateJobStatus(job job.Job, jobStatus chan int32, paramHash str
 					job.GetProcessedBytes(),
 					job.GetResultSize(),
 					job.GetDWJobID(),
+					job.GetDWJobLocation(),
 					job.GetResultURI(),
 					job.GetID(),
 				)
@@ -337,23 +341,29 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 }
 
 func (s Server) getDWJobIDFromResultID(ctx context.Context, resultID string) (string, error) {
-	var jobID sql.NullString
+	jobID, _, err := s.getDWJobInfoFromResultID(ctx, resultID)
+	return jobID, err
+}
+
+func (s Server) getDWJobInfoFromResultID(ctx context.Context, resultID string) (jobID string, jobLocation string, err error) {
+	var dbJobID sql.NullString
+	var dbJobLocation sql.NullString
 	rows, err := s.db.QueryContext(ctx,
-		`select dw_job_id from query_jobs where job_result_id=$1`,
+		`select dw_job_id, dw_job_location from query_jobs where job_result_id=$1`,
 		resultID,
 	)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	defer rows.Close()
 	if rows.Next() {
-		err := rows.Scan(&jobID)
+		err := rows.Scan(&dbJobID, &dbJobLocation)
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
-		return jobID.String, nil
+		return dbJobID.String, dbJobLocation.String, nil
 	}
-	return "", nil
+	return "", "", nil
 }
 
 func (s Server) getJobTimestampsFromResultID(ctx context.Context, resultID string) (createdAt *time.Time, updatedAt *time.Time, err error) {
