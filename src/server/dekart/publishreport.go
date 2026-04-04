@@ -307,7 +307,7 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 			}
 			userBucketName := s.getBucketNameFromConnection(connection)
 
-			dwJobID, err := s.getDWJobIDFromResultID(userCtx, queryJob.JobResultId)
+			dwJobID, dwJobLocation, err := s.getDWJobInfoFromResultID(userCtx, queryJob.JobResultId)
 
 			if err != nil {
 				errtype.LogError(err, "Cannot retrieve job id")
@@ -330,7 +330,11 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 			if resultURI != "" {
 				srcObj = storage.NewPresignedS3Storage().GetObject(conCtx, "", resultURI)
 			} else if dwJobID != "" { // query result is in temporary storage
-				srcObj = s.storage.GetObject(conCtx, "", dwJobID)
+				storageMeta := userBucketName
+				if os.Getenv("DEKART_STORAGE") == "USER" {
+					storageMeta = dwJobLocation
+				}
+				srcObj = s.storage.GetObject(conCtx, storageMeta, dwJobID)
 			} else { // query result is in user storage bucket
 				srcObj = s.storage.GetObject(conCtx, userBucketName, fmt.Sprintf("%s.csv", queryJob.JobResultId))
 			}
@@ -339,6 +343,7 @@ func (s Server) publishReport(reqCtx context.Context, reportID string) {
 				log.Err(err).
 					Str("resultURI", resultURI).
 					Str("dwJobID", dwJobID).
+					Str("dwJobLocation", dwJobLocation).
 					Msg("Cannot copy query result to public storage")
 				return
 			}
