@@ -1,9 +1,0 @@
----
-alwaysApply: false
----
-Avoid creating named functions (or anonymous functions assigned to named constant) inside react component render. Instead, create named functions using the `function` keyword in the component file.
-
-When appropriate, move reusable functions to `src/client/lib`.
-When appropriate use react hooks or new react components.
-
-Keeping anonymouse functions which are not assigned to constants in react render is ok.

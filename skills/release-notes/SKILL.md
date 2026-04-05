@@ -1,3 +1,8 @@
+---
+name: release-notes
+description: Use this skill when asked to write versioned release notes and you need repo-specific structure, ordering, and scope filtering.
+---
+
 # Release Notes Skill
 
 ## Trigger
