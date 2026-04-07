@@ -7,6 +7,7 @@ ifneq (,$(wildcard ./.env))
 endif
 
 UNAME := $(shell uname -m)
+DOCKER_TTY := $(shell if [ -t 0 ] && [ -t 1 ]; then echo -it; fi)
 RUNNER_DIR ?= $(HOME)/actions-runner
 RUNNER_URL ?= https://github.com/dekart-xyz/dekart
 RUNNER_LABELS ?= self-hosted,laptop-build
@@ -31,9 +32,9 @@ proto-build: proto-clean  #to run inside docker
 
 proto-docker: # build docker container for building protos
 ifeq ($(UNAME),arm64)
-	docker build -t dekart-proto -f ./proto/Dockerfile --build-arg PLATFORM=aarch_64 .
+	docker buildx build --load -t dekart-proto -f ./proto/Dockerfile --build-arg PLATFORM=aarch_64 .
 else
-	docker build -t dekart-proto -f ./proto/Dockerfile .
+	docker buildx build --load -t dekart-proto -f ./proto/Dockerfile .
 endif
 
 proto-copy-to-node:
@@ -45,7 +46,7 @@ proto-copy-to-node:
 proto: proto-stub proto-copy-to-node
 
 proto-stub: proto-docker # build proto stubs
-	docker run -it --rm \
+	docker run $(DOCKER_TTY) --rm \
 		-v $$(pwd):/home/root/dekart \
 		dekart-proto \
 		make proto-build

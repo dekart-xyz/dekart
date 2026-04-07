@@ -1,4 +1,4 @@
-FROM golang:1.20
+FROM golang:1.24.2
 
 ENV GOPATH=/home/root/go/
 ENV PATH="${GOPATH}/bin:${PATH}"
@@ -25,9 +25,9 @@ RUN curl -sSL \
     "https://github.com/bufbuild/buf/releases/download/v0.33.0/buf-$(uname -s)-$(uname -m)" -o "/usr/local/bin/buf"
 RUN chmod +x "/usr/local/bin/buf"
 
-# Install protoc plugins
-RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+# Install protoc plugins (pinned for reproducible proto builds)
+RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.35.1
+RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
 
 # Install protobuf JavaScript library using npm
 RUN mkdir -p /home/root/protobuf-js

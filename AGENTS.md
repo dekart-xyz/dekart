@@ -18,6 +18,10 @@ Decision heuristic: pick the simplest solution that fully works and cannot be si
 - Never edit generated files manually. Regenerate with `make proto`.
 - Never force-push. Never drop or destructively alter migrations without explicit approval.
 - When extending a function over 50 lines, refactor to keep functions under 50 lines using the smallest extraction needed.
+– When extending existing go file, make sure to keep files under 300 lines limit, and split into multiple files if needed.
+– Any endpoint with business must be implemented in the server/dekart (dekart server) as method of dekartServer, and wired in app.go. Don't cretare new services.
+– Domain logic when possibble should be implemented in the server/<domainname> package, and wired in server/dekart when necessary.
+– Use GRPC by default for clinet to server communication.
 
 ## Style Rules
 
