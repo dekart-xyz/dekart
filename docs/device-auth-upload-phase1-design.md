@@ -13,9 +13,9 @@ This must work for Dekart Cloud and self-hosted, including SSH/headless CLI usag
 
 Phase 1 includes:
 
-- `POST /api/v1/cli/device` (device registration)
-- `GET /cli/authorize?device_id=...` (browser authorization page)
-- `POST /api/v1/cli/token` (token polling)
+- `POST /api/v1/device` (device registration)
+- `GET /device/authorize?device_id=...` (browser authorization page)
+- `POST /api/v1/device/token` (token polling)
 
 ## Decisions
 
@@ -30,34 +30,34 @@ Dekart is gRPC/proto-first, so CLI HTTP endpoints should land as thin adapters a
 
 ### Contract strategy
 
-- define CLI auth request/response models in `proto/dekart.proto`
-- keep browser page `/cli/authorize` outside proto (UI flow, not RPC payload)
+- define device auth request/response models in `proto/dekart.proto`
+- keep browser page `/device/authorize` outside proto (UI flow, not RPC payload)
 - keep JSON HTTP payloads aligned with proto messages using `protojson`
 
 ### Service boundary
 
-- add a dedicated server service for CLI auth lifecycle (for example `src/server/cli/device_auth.go`)
+- add a dedicated server service for device auth lifecycle (for example `src/server/deviceauth/deviceauth.go`)
 - service methods should return proto message types
 - HTTP handlers in `src/server/app` should only parse input, call service, and encode output
 
 ### Handler strategy
 
 - keep explicit `api.HandleFunc` registrations in `src/server/app/app.go`
-- move handler implementations to a separate file (for example `src/server/app/cli.go`) to keep `app.go` focused on wiring
+- move handler implementations to a separate file (for example `src/server/app/deviceauth.go`) to keep `app.go` focused on wiring
 - do not duplicate auth/workspace logic in handlers; reuse existing context pipeline
 
 ### Reuse existing context flow
 
-- `/cli/authorize` should use the same request context path:
+- `/device/authorize` should use the same request context path:
   - `claimsCheck.GetContext(r)`
   - `dekartServer.SetWorkspaceContext(...)`
 - authorization succeeds only when claims are resolved and workspace context has a valid workspace id
 
 ### Token component
 
-- add a dedicated CLI JWT signer/verifier component (for example `src/server/license/cli_jwt.go` or `src/server/cli/token.go`)
-- use same signing infrastructure family as license keys, but separate token semantics
-- required claims: `iss`, `aud=dekart-cli`, `email`, `workspace_id`, `exp`
+- add a dedicated device auth JWT signer/verifier component in `src/server/deviceauth/token.go`
+- use separate keypair and env vars from license JWT keys
+- required claims: `iss`, `aud=dekart-device-auth`, `email`, `workspace_id`, `exp`
 - recommended claims: `iat`, `jti`
 
 ## User Flow
@@ -69,18 +69,18 @@ Waiting... Done.
 Authenticated as vladi@dekart.xyz
 ```
 
-1. CLI calls `POST /api/v1/cli/device`.
+1. CLI calls `POST /api/v1/device`.
 2. Server returns `device_id`, `auth_url`, `expires_in`.
-3. CLI opens browser to `/cli/authorize?device_id=...`.
+3. CLI opens browser to `/device/authorize?device_id=...`.
 4. User logs in via normal Dekart auth.
 5. If user is new, normal signup flow creates account and workspace.
 6. User sees: "Device authorized. You can close this tab."
-7. CLI polls `POST /api/v1/cli/token` with `device_id`.
+7. CLI polls `POST /api/v1/device/token` with `device_id`.
 8. Server returns JWT when authorized.
 
 ## API Design
 
-### `POST /api/v1/cli/device`
+### `POST /api/v1/device`
 
 Create a short-lived device auth session.
 
@@ -95,7 +95,7 @@ Response:
 ```json
 {
   "device_id": "dev_3f2c...",
-  "auth_url": "https://<host>/cli/authorize?device_id=dev_3f2c...",
+  "auth_url": "https://<host>/device/authorize?device_id=dev_3f2c...",
   "expires_in": 600,
   "interval": 3
 }
@@ -111,7 +111,7 @@ Errors:
 
 - `500` device session creation failed
 
-### `GET /cli/authorize?device_id=...`
+### `GET /device/authorize?device_id=...`
 
 Authorize device in browser session.
 
@@ -129,7 +129,7 @@ Errors/pages:
 - invalid or expired device
 - authenticated but workspace unavailable
 
-### `POST /api/v1/cli/token`
+### `POST /api/v1/device/token`
 
 Poll for authorization result.
 
@@ -212,7 +212,7 @@ Default token TTL:
 
 ## Persistence
 
-Add table: `cli_device_sessions`
+Add table: `device_auth_sessions`
 
 Fields:
 
@@ -233,25 +233,25 @@ Optional table for token revocation/audit:
 
 In `src/server/app/app.go` under `/api/v1/`:
 
-- `api.HandleFunc("/cli/device", ...)` methods `POST`, `OPTIONS`
-- `api.HandleFunc("/cli/token", ...)` methods `POST`, `OPTIONS`
+- `api.HandleFunc("/device", ...)` methods `POST`, `OPTIONS`
+- `api.HandleFunc("/device/token", ...)` methods `POST`, `OPTIONS`
 
 In static routes:
 
-- `router.HandleFunc("/cli/authorize", staticFilesHandler.ServeIndex)`
+- `router.HandleFunc("/device/authorize", staticFilesHandler.ServeIndex)`
 
 ## File Layout Proposal
 
 - `proto/dekart.proto`
-  - add CLI auth message types and status enum
-- `src/server/cli/device_auth.go`
+  - add device auth message types and status enum
+- `src/server/deviceauth/deviceauth.go`
   - device session lifecycle business logic
-- `src/server/cli/device_store.go`
-  - persistence for `cli_device_sessions`
-- `src/server/cli/token.go`
+- `src/server/deviceauth/device_store.go`
+  - persistence for `device_auth_sessions`
+- `src/server/deviceauth/token.go`
   - CLI JWT issue/validate helpers
-- `src/server/app/cli.go`
-  - HTTP adapter handlers for `/api/v1/cli/device` and `/api/v1/cli/token`
+- `src/server/app/deviceauth.go`
+  - HTTP adapter handlers for `/api/v1/device` and `/api/v1/device/token`
 - `src/server/app/app.go`
   - only route registration (`api.HandleFunc`)
 
@@ -268,10 +268,10 @@ In static routes:
 
 Track:
 
-- `CliDeviceStart`
-- `CliDeviceAuthorized`
-- `CliDeviceTokenIssued`
-- `CliDeviceExpired`
+- `DeviceAuthStart`
+- `DeviceAuthAuthorized`
+- `DeviceAuthTokenIssued`
+- `DeviceAuthExpired`
 
 Common fields:
 
@@ -296,7 +296,7 @@ Common fields:
 ### E2E smoke
 
 - `giskill dekart init` against localhost instance
-- browser auth at `/cli/authorize`
+- browser auth at `/device/authorize`
 - CLI receives JWT and stores it locally
 
 ## Deferred to Phase 2
@@ -307,4 +307,4 @@ Common fields:
 ## Open Questions
 
 - Keep `device_id` only, or add private `device_secret` in polling payload for extra hardening?
-- Should CLI JWT TTL be configurable (`DEKART_CLI_TOKEN_TTL_HOURS`)?
+- Should device auth JWT TTL be configurable (`DEKART_DEVICE_AUTH_TOKEN_TTL_HOURS`)?

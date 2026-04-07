@@ -59,6 +59,7 @@ const (
 	Dekart_SetDefaultConnection_FullMethodName          = "/Dekart/SetDefaultConnection"
 	Dekart_GetWherobotsConnectionHint_FullMethodName    = "/Dekart/GetWherobotsConnectionHint"
 	Dekart_RespondToInvite_FullMethodName               = "/Dekart/RespondToInvite"
+	Dekart_AuthorizeDevice_FullMethodName               = "/Dekart/AuthorizeDevice"
 	Dekart_CreateSubscription_FullMethodName            = "/Dekart/CreateSubscription"
 	Dekart_GetStripePortalSession_FullMethodName        = "/Dekart/GetStripePortalSession"
 	Dekart_CreateWorkspace_FullMethodName               = "/Dekart/CreateWorkspace"
@@ -120,6 +121,7 @@ type DekartClient interface {
 	GetWherobotsConnectionHint(ctx context.Context, in *GetWherobotsConnectionHintRequest, opts ...grpc.CallOption) (*GetWherobotsConnectionHintResponse, error)
 	// user
 	RespondToInvite(ctx context.Context, in *RespondToInviteRequest, opts ...grpc.CallOption) (*RespondToInviteResponse, error)
+	AuthorizeDevice(ctx context.Context, in *AuthorizeDeviceRequest, opts ...grpc.CallOption) (*AuthorizeDeviceResponse, error)
 	// subscriptions
 	CreateSubscription(ctx context.Context, in *CreateSubscriptionRequest, opts ...grpc.CallOption) (*CreateSubscriptionResponse, error)
 	GetStripePortalSession(ctx context.Context, in *GetStripePortalSessionRequest, opts ...grpc.CallOption) (*GetStripePortalSessionResponse, error)
@@ -565,6 +567,16 @@ func (c *dekartClient) RespondToInvite(ctx context.Context, in *RespondToInviteR
 	return out, nil
 }
 
+func (c *dekartClient) AuthorizeDevice(ctx context.Context, in *AuthorizeDeviceRequest, opts ...grpc.CallOption) (*AuthorizeDeviceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AuthorizeDeviceResponse)
+	err := c.cc.Invoke(ctx, Dekart_AuthorizeDevice_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *dekartClient) CreateSubscription(ctx context.Context, in *CreateSubscriptionRequest, opts ...grpc.CallOption) (*CreateSubscriptionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateSubscriptionResponse)
@@ -678,6 +690,7 @@ type DekartServer interface {
 	GetWherobotsConnectionHint(context.Context, *GetWherobotsConnectionHintRequest) (*GetWherobotsConnectionHintResponse, error)
 	// user
 	RespondToInvite(context.Context, *RespondToInviteRequest) (*RespondToInviteResponse, error)
+	AuthorizeDevice(context.Context, *AuthorizeDeviceRequest) (*AuthorizeDeviceResponse, error)
 	// subscriptions
 	CreateSubscription(context.Context, *CreateSubscriptionRequest) (*CreateSubscriptionResponse, error)
 	GetStripePortalSession(context.Context, *GetStripePortalSessionRequest) (*GetStripePortalSessionResponse, error)
@@ -815,6 +828,9 @@ func (UnimplementedDekartServer) GetWherobotsConnectionHint(context.Context, *Ge
 }
 func (UnimplementedDekartServer) RespondToInvite(context.Context, *RespondToInviteRequest) (*RespondToInviteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RespondToInvite not implemented")
+}
+func (UnimplementedDekartServer) AuthorizeDevice(context.Context, *AuthorizeDeviceRequest) (*AuthorizeDeviceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AuthorizeDevice not implemented")
 }
 func (UnimplementedDekartServer) CreateSubscription(context.Context, *CreateSubscriptionRequest) (*CreateSubscriptionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateSubscription not implemented")
@@ -1554,6 +1570,24 @@ func _Dekart_RespondToInvite_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Dekart_AuthorizeDevice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthorizeDeviceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).AuthorizeDevice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_AuthorizeDevice_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).AuthorizeDevice(ctx, req.(*AuthorizeDeviceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Dekart_CreateSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateSubscriptionRequest)
 	if err := dec(in); err != nil {
@@ -1816,6 +1850,10 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RespondToInvite",
 			Handler:    _Dekart_RespondToInvite_Handler,
+		},
+		{
+			MethodName: "AuthorizeDevice",
+			Handler:    _Dekart_AuthorizeDevice_Handler,
 		},
 		{
 			MethodName: "CreateSubscription",

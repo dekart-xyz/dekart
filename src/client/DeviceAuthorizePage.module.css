@@ -1,0 +1,32 @@
+.deviceAuthorizePage {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  background-color: #F7F7F7;
+  display: flex;
+  flex-direction: column;
+}
+
+.body {
+  padding: 20px;
+  display: flex;
+  flex: 1;
+  overflow: scroll;
+  align-items: center;
+  flex-direction: column;
+}
+
+.body :global(.ant-result) {
+  max-width: 560px;
+}
+
+.deviceId {
+  margin-top: 8px;
+  color: var(--text-color-secondary);
+  font-size: 12px;
+}
+
+.error {
+  margin-top: 8px;
+  color: var(--error-color);
+}

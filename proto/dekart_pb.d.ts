@@ -2006,6 +2006,158 @@ export namespace AuthState {
   export const Action: ActionMap;
 }
 
+export class DeviceStartRequest extends jspb.Message {
+  getDeviceName(): string;
+  setDeviceName(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): DeviceStartRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: DeviceStartRequest): DeviceStartRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: DeviceStartRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): DeviceStartRequest;
+  static deserializeBinaryFromReader(message: DeviceStartRequest, reader: jspb.BinaryReader): DeviceStartRequest;
+}
+
+export namespace DeviceStartRequest {
+  export type AsObject = {
+    deviceName: string,
+  }
+}
+
+export class DeviceStartResponse extends jspb.Message {
+  getDeviceId(): string;
+  setDeviceId(value: string): void;
+
+  getAuthUrl(): string;
+  setAuthUrl(value: string): void;
+
+  getExpiresIn(): number;
+  setExpiresIn(value: number): void;
+
+  getInterval(): number;
+  setInterval(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): DeviceStartResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: DeviceStartResponse): DeviceStartResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: DeviceStartResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): DeviceStartResponse;
+  static deserializeBinaryFromReader(message: DeviceStartResponse, reader: jspb.BinaryReader): DeviceStartResponse;
+}
+
+export namespace DeviceStartResponse {
+  export type AsObject = {
+    deviceId: string,
+    authUrl: string,
+    expiresIn: number,
+    interval: number,
+  }
+}
+
+export class DeviceTokenRequest extends jspb.Message {
+  getDeviceId(): string;
+  setDeviceId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): DeviceTokenRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: DeviceTokenRequest): DeviceTokenRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: DeviceTokenRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): DeviceTokenRequest;
+  static deserializeBinaryFromReader(message: DeviceTokenRequest, reader: jspb.BinaryReader): DeviceTokenRequest;
+}
+
+export namespace DeviceTokenRequest {
+  export type AsObject = {
+    deviceId: string,
+  }
+}
+
+export class DeviceTokenResponse extends jspb.Message {
+  getStatus(): string;
+  setStatus(value: string): void;
+
+  getToken(): string;
+  setToken(value: string): void;
+
+  getError(): string;
+  setError(value: string): void;
+
+  getExpiresIn(): number;
+  setExpiresIn(value: number): void;
+
+  getEmail(): string;
+  setEmail(value: string): void;
+
+  getWorkspaceId(): string;
+  setWorkspaceId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): DeviceTokenResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: DeviceTokenResponse): DeviceTokenResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: DeviceTokenResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): DeviceTokenResponse;
+  static deserializeBinaryFromReader(message: DeviceTokenResponse, reader: jspb.BinaryReader): DeviceTokenResponse;
+}
+
+export namespace DeviceTokenResponse {
+  export type AsObject = {
+    status: string,
+    token: string,
+    error: string,
+    expiresIn: number,
+    email: string,
+    workspaceId: string,
+  }
+}
+
+export class AuthorizeDeviceRequest extends jspb.Message {
+  getDeviceId(): string;
+  setDeviceId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): AuthorizeDeviceRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: AuthorizeDeviceRequest): AuthorizeDeviceRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: AuthorizeDeviceRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): AuthorizeDeviceRequest;
+  static deserializeBinaryFromReader(message: AuthorizeDeviceRequest, reader: jspb.BinaryReader): AuthorizeDeviceRequest;
+}
+
+export namespace AuthorizeDeviceRequest {
+  export type AsObject = {
+    deviceId: string,
+  }
+}
+
+export class AuthorizeDeviceResponse extends jspb.Message {
+  getStatus(): string;
+  setStatus(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): AuthorizeDeviceResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: AuthorizeDeviceResponse): AuthorizeDeviceResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: AuthorizeDeviceResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): AuthorizeDeviceResponse;
+  static deserializeBinaryFromReader(message: AuthorizeDeviceResponse, reader: jspb.BinaryReader): AuthorizeDeviceResponse;
+}
+
+export namespace AuthorizeDeviceResponse {
+  export type AsObject = {
+    status: string,
+  }
+}
+
 export class ArchiveReportRequest extends jspb.Message {
   getReportId(): string;
   setReportId(value: string): void;

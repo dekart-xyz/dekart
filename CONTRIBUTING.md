@@ -21,6 +21,34 @@
 3. Click Authorize APIs
 4. Use refresh token to as `DEKART_DEV_REFRESH_TOKEN`
 
+## Device auth JWT keypair
+
+Device auth uses its own JWT keypair and must not reuse license signing keys.
+
+1. Generate private/public keypair in `keys/`:
+
+```bash
+openssl genrsa -out keys/device-auth-private.pem 2048
+openssl rsa -in keys/device-auth-private.pem -pubout -out keys/device-auth-public.pem
+chmod 600 keys/device-auth-private.pem
+chmod 644 keys/device-auth-public.pem
+```
+
+2. Base64-encode both PEM files into one-line strings:
+
+```bash
+DEVICE_AUTH_PRIVATE_KEY_B64=$(base64 < keys/device-auth-private.pem | tr -d '\n')
+DEVICE_AUTH_PUBLIC_KEY_B64=$(base64 < keys/device-auth-public.pem | tr -d '\n')
+```
+
+3. Configure env vars (for example in `.env.cloud`):
+
+```bash
+DEKART_DEVICE_AUTH_PRIVATE_KEY=$DEVICE_AUTH_PRIVATE_KEY_B64
+DEKART_DEVICE_AUTH_PUBLIC_KEY=$DEVICE_AUTH_PUBLIC_KEY_B64
+DEKART_DEVICE_AUTH_TOKEN_TTL_HOURS=720
+```
+
 ## Running prev version via docker-compose
 
 ```
@@ -39,4 +67,3 @@ ffmpeg -i input.mp4 -an \
                    [s1][p]paletteuse=dither=sierra2_4a" \
   -loop 0 output.gif
 ```
-

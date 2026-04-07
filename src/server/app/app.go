@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/dekart"
-	"dekart/src/server/license"
 	"dekart/src/server/user"
 	"net/http"
 	"os"
@@ -45,55 +44,6 @@ func (m ResponseWriter) WriteHeader(statusCode int) {
 }
 
 var allowedOrigin string = os.Getenv("DEKART_CORS_ORIGIN")
-
-func isSSOConfigured() bool {
-	return len(enabledSSOEnvVars()) > 0
-}
-
-func enabledSSOEnvVars() []string {
-	enabled := make([]string, 0, 4)
-	if os.Getenv("DEKART_REQUIRE_OIDC") == "1" {
-		enabled = append(enabled, "DEKART_REQUIRE_OIDC")
-	}
-	if os.Getenv("DEKART_REQUIRE_GOOGLE_OAUTH") == "1" {
-		enabled = append(enabled, "DEKART_REQUIRE_GOOGLE_OAUTH")
-	}
-	if os.Getenv("DEKART_REQUIRE_IAP") == "1" {
-		enabled = append(enabled, "DEKART_REQUIRE_IAP")
-	}
-	if os.Getenv("DEKART_REQUIRE_AMAZON_OIDC") == "1" {
-		enabled = append(enabled, "DEKART_REQUIRE_AMAZON_OIDC")
-	}
-	return enabled
-}
-
-// Removing or bypassing this check is a modification under AGPL and requires publishing your changed source code.
-// Get a free license key at https://mailchi.mp/dekart/upgrade-to-sso
-func ValidateLicenseForSSO() {
-
-	licenseKey := strings.TrimSpace(os.Getenv("DEKART_LICENSE_KEY"))
-	if licenseKey != "" {
-		info, err := license.ValidateToken(licenseKey)
-		if err != nil {
-			log.Fatal().Err(err).Msg("DEKART_LICENSE_KEY is invalid. Get a valid key at https://mailchi.mp/dekart/upgrade-to-sso")
-		}
-		if info.ExpiresAt != nil {
-			log.Info().Str("license_holder", info.Email).Time("license_expires_at", *info.ExpiresAt).Msg("Validated DEKART_LICENSE_KEY")
-		} else {
-			log.Info().Str("license_holder", info.Email).Msg("Validated perpetual DEKART_LICENSE_KEY")
-		}
-	}
-
-	enabledVars := enabledSSOEnvVars()
-	if len(enabledVars) == 0 {
-		return
-	}
-	if licenseKey == "" {
-		log.Fatal().Msg(
-			"DEKART_LICENSE_KEY is required to enable SSO. Get your free key at https://mailchi.mp/dekart/upgrade-to-sso",
-		)
-	}
-}
 
 func getAllowedOrigin(origin string) string {
 	if matchOrigin(origin) {
@@ -183,6 +133,20 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 	api.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
 		handleVersionCheck(dekartServer, w, r)
 	}).Methods("GET", "OPTIONS")
+	api.HandleFunc("/device", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeaderIfExists(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.HandleDeviceStart(w, r)
+	}).Methods("POST", "OPTIONS")
+	api.HandleFunc("/device/token", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeaderIfExists(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.HandleDeviceToken(w, r)
+	}).Methods("POST", "OPTIONS")
 
 	if claimsCheck.RequireGoogleOAuth {
 		api.HandleFunc("/authenticate", func(w http.ResponseWriter, r *http.Request) {
@@ -208,7 +172,6 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		}
 		dekartServer.ServeMapPreview(w, r)
 	}).Methods("GET", "OPTIONS")
-
 	// Serve static files
 	staticPath := os.Getenv("DEKART_STATIC_FILES")
 	if staticPath != "" {
@@ -224,6 +187,7 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		router.HandleFunc("/workspace/plan", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace/members", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace/invite/{id}", staticFilesHandler.ServeIndex)
+		router.HandleFunc("/device/authorize", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/playground", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/grant-scopes", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/400", func(w http.ResponseWriter, r *http.Request) {
@@ -277,4 +241,12 @@ func Configure(dekartServer *dekart.Server, db *sql.DB) *http.Server {
 		WriteTimeout: 60 * time.Second,
 		ReadTimeout:  60 * time.Second,
 	}
+}
+
+// setOriginHeaderIfExists avoids CORS-origin warnings for clients that do not send Origin header.
+func setOriginHeaderIfExists(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Origin") == "" {
+		return
+	}
+	setOriginHeader(w, r)
 }

@@ -5,6 +5,7 @@ import { success, trialSuccess } from './message'
 import { hideUpgradeModal } from './upgradeModal'
 import { updateSessionStorage } from './sessionStorage'
 import { updateLocalStorage } from './localStorage'
+import { consumePendingAuthorizePath } from '../lib/deviceAuth'
 
 export function redirectToCustomerPortal () {
   return (dispatch) => {
@@ -44,7 +45,9 @@ export function createWorkspace (name) {
     const request = new CreateWorkspaceRequest()
     request.setWorkspaceName(name)
     dispatch(grpcCall(Dekart.CreateWorkspace, request, () => {
-      window.location.href = '/'
+      const nextPath = consumePendingAuthorizePath()
+      // why: resume explicit device authorization right after onboarding when started from CLI flow.
+      window.location.href = nextPath || '/'
     }))
   }
 }

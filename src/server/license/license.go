@@ -4,9 +4,7 @@ package license
 // Get a free license key at https://mailchi.mp/dekart/upgrade-to-sso
 
 import (
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
+	"dekart/src/server/jwtkeys"
 	"errors"
 	"fmt"
 	"os"
@@ -55,7 +53,7 @@ func IssueToken(privateKeyPEM []byte, request IssueRequest) (string, error) {
 	if err := request.validate(); err != nil {
 		return "", err
 	}
-	privateKey, err := ParseRSAPrivateKeyFromPEM(privateKeyPEM)
+	privateKey, err := jwtkeys.ParseRSAPrivateKeyFromPEM(privateKeyPEM)
 	if err != nil {
 		return "", err
 	}
@@ -71,28 +69,6 @@ func IssueToken(privateKeyPEM []byte, request IssueRequest) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	return token.SignedString(privateKey)
-}
-
-// ParseRSAPrivateKeyFromPEM parses RSA private keys in PKCS#1 or PKCS#8 format.
-func ParseRSAPrivateKeyFromPEM(data []byte) (*rsa.PrivateKey, error) {
-	block, _ := pem.Decode(data)
-	if block == nil {
-		return nil, errors.New("invalid PEM block")
-	}
-
-	if privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes); err == nil {
-		return privateKey, nil
-	}
-
-	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-	if err != nil {
-		return nil, fmt.Errorf("parse private key: %w", err)
-	}
-	privateKey, ok := key.(*rsa.PrivateKey)
-	if !ok {
-		return nil, errors.New("private key is not RSA")
-	}
-	return privateKey, nil
 }
 
 // ValidateToken validates a DEKART_LICENSE_KEY token using public key from filesystem.
@@ -111,9 +87,9 @@ func ValidateTokenWithPublicKey(tokenString string, publicKeyPEM []byte) (TokenI
 		return TokenInfo{}, errors.New("license key is empty")
 	}
 
-	publicKey, err := jwt.ParseRSAPublicKeyFromPEM(publicKeyPEM)
+	publicKey, err := jwtkeys.ParseRSAPublicKeyFromPEM(publicKeyPEM)
 	if err != nil {
-		return TokenInfo{}, fmt.Errorf("parse public key: %w", err)
+		return TokenInfo{}, err
 	}
 
 	token, err := jwt.Parse(key, func(t *jwt.Token) (interface{}, error) {

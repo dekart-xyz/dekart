@@ -61,6 +61,7 @@ service Dekart {
 
     //user
     rpc RespondToInvite(RespondToInviteRequest) returns (RespondToInviteResponse) {}
+    rpc AuthorizeDevice(AuthorizeDeviceRequest) returns (AuthorizeDeviceResponse) {}
 
     //subscriptions
     rpc CreateSubscription(CreateSubscriptionRequest) returns (CreateSubscriptionResponse) {}
@@ -554,6 +555,45 @@ message AuthState   {
     bool switch_account = 5; // if true, user will be requested to switch account
     bool sensitive_scope = 6; // if true, user will be requested to grant sensitive scope
     string login_hint = 7; // login hint for Google OAuth
+}
+
+// DeviceStartRequest creates a short-lived device authorization session.
+// Empty by design: caller identity is resolved during browser authorization, not at start.
+message DeviceStartRequest {
+    string device_name = 1; // Human-readable device label from CLI (for example "Vladis MacBook").
+}
+
+// DeviceStartResponse returns auth URL and polling metadata for device auth flow.
+message DeviceStartResponse {
+    string device_id = 1; // Opaque session id used by browser authorization and token polling.
+    string auth_url = 2; // Absolute URL the user opens in browser to authorize this device session.
+    int64 expires_in = 3; // Device-session TTL in seconds from response time.
+    int64 interval = 4; // Recommended polling interval in seconds for /api/v1/device/token.
+}
+
+// DeviceTokenRequest polls authorization status by device id.
+message DeviceTokenRequest {
+    string device_id = 1; // Device session id returned by DeviceStartResponse.device_id.
+}
+
+// DeviceTokenResponse returns pending/expired/authorized state and token details when available.
+message DeviceTokenResponse {
+    string status = 1; // Session state: "pending", "expired", or "authorized".
+    string token = 2; // Dekart JWT for API access, present only when status="authorized".
+    string error = 3; // Machine-readable error code, for example "authorization_pending" or "expired".
+    int64 expires_in = 4; // JWT TTL in seconds when authorized, otherwise 0.
+    string email = 5; // Authorized user email, present only when status="authorized".
+    string workspace_id = 6; // Authorized workspace id, present only when status="authorized".
+}
+
+// AuthorizeDeviceRequest confirms pending device authorization for the current browser user.
+message AuthorizeDeviceRequest {
+    string device_id = 1; // Device session id to authorize for current user/workspace context.
+}
+
+// AuthorizeDeviceResponse acknowledges that authorization state was updated.
+message AuthorizeDeviceResponse {
+    string status = 1; // "authorized" when successful.
 }
 
 message ArchiveReportRequest {

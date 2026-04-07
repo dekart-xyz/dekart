@@ -364,6 +364,15 @@ type DekartRespondToInvite = {
   readonly responseType: typeof dekart_pb.RespondToInviteResponse;
 };
 
+type DekartAuthorizeDevice = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof dekart_pb.AuthorizeDeviceRequest;
+  readonly responseType: typeof dekart_pb.AuthorizeDeviceResponse;
+};
+
 type DekartCreateSubscription = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -460,6 +469,7 @@ export class Dekart {
   static readonly SetDefaultConnection: DekartSetDefaultConnection;
   static readonly GetWherobotsConnectionHint: DekartGetWherobotsConnectionHint;
   static readonly RespondToInvite: DekartRespondToInvite;
+  static readonly AuthorizeDevice: DekartAuthorizeDevice;
   static readonly CreateSubscription: DekartCreateSubscription;
   static readonly GetStripePortalSession: DekartGetStripePortalSession;
   static readonly CreateWorkspace: DekartCreateWorkspace;
@@ -835,6 +845,15 @@ export class DekartClient {
   respondToInvite(
     requestMessage: dekart_pb.RespondToInviteRequest,
     callback: (error: ServiceError|null, responseMessage: dekart_pb.RespondToInviteResponse|null) => void
+  ): UnaryResponse;
+  authorizeDevice(
+    requestMessage: dekart_pb.AuthorizeDeviceRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.AuthorizeDeviceResponse|null) => void
+  ): UnaryResponse;
+  authorizeDevice(
+    requestMessage: dekart_pb.AuthorizeDeviceRequest,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.AuthorizeDeviceResponse|null) => void
   ): UnaryResponse;
   createSubscription(
     requestMessage: dekart_pb.CreateSubscriptionRequest,

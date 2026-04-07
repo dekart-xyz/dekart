@@ -30,6 +30,7 @@ import NewVersion from './NewVersion'
 import styles from './App.module.css'
 import { hideUpgradeModal } from './actions/upgradeModal'
 import { WorkspaceSelectorLight } from './WorkspaceSelector'
+import DeviceAuthorizePage from './DeviceAuthorizePage'
 
 // RedirectState reads states passed in the URL from the server
 function RedirectState () {
@@ -273,6 +274,9 @@ export default function App () {
         <RedirectState />
         <div className={styles.main}>
           <Switch>
+            <Route exact path='/device/authorize'>
+              <DeviceAuthorizePage />
+            </Route>
             <Route exact path='/playground'>
               <SwitchToPlayground />
             </Route>
@@ -284,22 +288,22 @@ export default function App () {
               <GrantScopesPage visitedPages={visitedPages} />
             </Route>
             <Route exact path='/shared'>
-              <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
+              <AppRedirect />
               <HomePage reportFilter='discoverable' />
             </Route>
             <Route exact path='/connections'>
-              <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
+              <AppRedirect />
               {userDefinedConnection ? <HomePage reportFilter='connections' /> : <Redirect to='/' />}
             </Route>
             <Route path='/reports/:id/edit'>
               <RedirectToSource />
             </Route>
             <Route path='/reports/:id/source'>
-              <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
+              <AppRedirect />
               <ReportPage edit />
             </Route>
             <Route path='/reports/:id'>
-              <AppRedirect /> {/* AppRedirect ensures users are redirected to the workspace if there are payment issues, preventing access to restricted features. */}
+              <AppRedirect />
               <ReportPage />
             </Route>
             <Route path='/workspace/invite/:inviteId'>

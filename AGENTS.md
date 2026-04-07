@@ -2,12 +2,9 @@
 
 ## Elegant Software Standard
 
-- Solve the real problem in the simplest correct way.
-- Prefer clarity over cleverness.
-- Keep code and UX aligned with the real domain model.
-- Avoid unnecessary abstractions, options, and moving parts.
-- Keep architecture modular and consistent so change is easy.
-- Keep user flows low-friction and obvious.
+- Solve problem in the simplest correct way with minimal code added.
+- Avoid unnecessary new abstractions, options, and moving parts.
+– Before completing task check if solution can be simplified. And if so, simplify it before reporting as done.
 
 Decision heuristic: pick the simplest solution that fully works and cannot be simplified further without breaking correctness.
 
@@ -17,20 +14,20 @@ Decision heuristic: pick the simplest solution that fully works and cannot be si
 - Use canonical state, not ad-hoc component logic: check reducers/actions/selectors for an existing field before deriving behavior in components. If missing, add it once in the state layer.
 - Never edit generated files manually. Regenerate with `make proto`.
 - Never force-push. Never drop or destructively alter migrations without explicit approval.
-- When extending a function over 50 lines, refactor to keep functions under 50 lines using the smallest extraction needed.
-– When extending existing go file, make sure to keep files under 300 lines limit, and split into multiple files if needed.
 – Any endpoint with business must be implemented in the server/dekart (dekart server) as method of dekartServer, and wired in app.go. Don't cretare new services.
-– Domain logic when possibble should be implemented in the server/<domainname> package, and wired in server/dekart when necessary.
+– Domain logic when possibble should be implemented in the server/<domainname> package, and wired in server/dekart or server/app when necessary.
 – Use GRPC by default for clinet to server communication.
+- Add a short purpose description for each new function.
+- Do not use debug-level logging in production code paths.
+- use ant.d components for UI when possible, and match existing UI patterns and placement.
 
 ## Style Rules
 
+- When extending a function over 50 lines, refactor to keep functions under 50 lines using the smallest extraction needed.
+– When extending existing go file, make sure to keep files under 300 lines limit, and split into multiple files if needed.
 - Prefer established libraries for standard concerns over custom implementations.
-- Add a short purpose description for each new function.
 - For non-trivial business-logic blocks (especially complex conditions), add a very short `why` comment.
-- Do not use debug-level logging in production code paths.
 - Keep test structure consistent with neighboring tests in the same folder.
-- Match existing UI patterns and placement.
 
 ## Skill Failure Recovery
 
