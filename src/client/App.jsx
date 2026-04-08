@@ -55,7 +55,7 @@ function RedirectState () {
     url.search = params.toString()
     return <Redirect to={`${url.pathname}${url.search}`} /> // apparently receives only pathname and search
   }
-  return <AppRedirect />
+  return null
 }
 
 function useIsReportUrl () {
@@ -63,7 +63,8 @@ function useIsReportUrl () {
   return location.pathname.startsWith('/reports/')
 }
 
-function AppRedirect () {
+function AppRedirect ({ allowWorkspaceRedirect = true }) {
+  const location = useLocation()
   const httpError = useSelector(state => state.httpError)
   const { status, doNotAuthenticate } = httpError
   const { googleOAuthEnabled } = useSelector(state => state.env)
@@ -79,6 +80,7 @@ function AppRedirect () {
   const dispatch = useDispatch()
   const isAnonymous = useSelector(state => state.user.isAnonymous)
   const isReportUrl = useIsReportUrl()
+  const isWorkspaceUrl = location.pathname.startsWith('/workspace')
 
   useEffect(() => {
     if (
@@ -102,8 +104,10 @@ function AppRedirect () {
     return <Redirect to={`/${httpError.status}`} push />
   }
   if (
+    allowWorkspaceRedirect &&
     userStream &&
     !userStream.planType &&
+    !isWorkspaceUrl &&
     !isPlayground &&
     !(reportWillOpen && !report) && // report is being loaded
     !(report?.isPlayground) && // playground report
@@ -275,6 +279,7 @@ export default function App () {
         <div className={styles.main}>
           <Switch>
             <Route exact path='/device/authorize'>
+              <AppRedirect allowWorkspaceRedirect={false} />
               <DeviceAuthorizePage />
             </Route>
             <Route exact path='/playground'>
@@ -307,15 +312,27 @@ export default function App () {
               <ReportPage />
             </Route>
             <Route path='/workspace/invite/:inviteId'>
+              <AppRedirect />
               <WorkspacePage userInvite />
             </Route>
             <Route exact path='/workspace/plan'>
+              <AppRedirect />
               <WorkspacePage step='plan' />
             </Route>
             <Route exact path='/workspace/members'>
+              <AppRedirect />
               <WorkspacePage step='members' />
             </Route>
+            <Route exact path='/workspace/create'>
+              <AppRedirect />
+              <WorkspacePage step='workspace' onboarding='create' />
+            </Route>
+            <Route exact path='/workspace/join'>
+              <AppRedirect />
+              <WorkspacePage step='workspace' onboarding='join' />
+            </Route>
             <Route path='/workspace'>
+              <AppRedirect />
               <WorkspacePage step='workspace' />
             </Route>
             <Route path='/400'>

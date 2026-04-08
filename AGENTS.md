@@ -26,7 +26,7 @@ Decision heuristic: pick the simplest solution that fully works and cannot be si
 - When extending a function over 50 lines, refactor to keep functions under 50 lines using the smallest extraction needed.
 – When extending existing go file, make sure to keep files under 300 lines limit, and split into multiple files if needed.
 - Prefer established libraries for standard concerns over custom implementations.
-- For non-trivial business-logic blocks (especially complex conditions), add a very short `why` comment.
+- For non-trivial business-logic blocks (especially complex conditions), add a very short `[why]` comment.
 - Keep test structure consistent with neighboring tests in the same folder.
 
 ## Skill Failure Recovery

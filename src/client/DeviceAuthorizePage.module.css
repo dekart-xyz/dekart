@@ -14,10 +14,33 @@
   overflow: scroll;
   align-items: center;
   flex-direction: column;
+  padding-top: 30px;
 }
 
 .body :global(.ant-result) {
-  max-width: 560px;
+  max-width: 720px;
+}
+
+.rocketIcon {
+  background-image: url('./rocket.svg');
+  display: inline-block;
+  width: 64px;
+  height: 64px;
+}
+
+.notSure {
+  border-top: 1px solid rgb(217, 217, 217);
+  padding-top: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin-top: 40px;
+}
+
+.notSureItems {
+  text-align: left;
+  margin-bottom: 40px;
 }
 
 .deviceId {

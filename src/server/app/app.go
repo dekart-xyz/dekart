@@ -184,6 +184,8 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		router.HandleFunc("/reports/{id}/edit", staticFilesHandler.ServeIndex) // deprecated
 		router.HandleFunc("/reports/{id}/source", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace", staticFilesHandler.ServeIndex)
+		router.HandleFunc("/workspace/create", staticFilesHandler.ServeIndex)
+		router.HandleFunc("/workspace/join", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace/plan", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace/members", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace/invite/{id}", staticFilesHandler.ServeIndex)

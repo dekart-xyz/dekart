@@ -1,14 +1,14 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet'
 import Result from 'antd/es/result'
 import Button from 'antd/es/button'
-import { AuthState } from 'dekart-proto/dekart_pb'
 import { useDispatch, useSelector } from 'react-redux'
 import { useHistory, useLocation } from 'react-router-dom'
-import { authRedirect } from './actions/redirect'
 import { authorizeDevice } from './actions/deviceAuth'
-import { consumePendingDeviceAuthorization, rememberPendingDeviceAuthorization } from './lib/deviceAuth'
+import { updateSessionStorage } from './actions/sessionStorage'
+import { pendingDeviceAuthorizationKey } from './lib/deviceAuth'
 import { Header } from './Header'
+import { Loading } from './Loading'
 import styles from './DeviceAuthorizePage.module.css'
 
 const pageState = {
@@ -21,18 +21,6 @@ const pageState = {
     status: 'success',
     title: 'Device authorized',
     subtitle: 'You can close this tab and return to your terminal.'
-  },
-  login: {
-    status: 'info',
-    title: 'Login required',
-    subtitle: 'Sign in to continue authorizing this device.',
-    actionLabel: 'Login with Google'
-  },
-  workspace: {
-    status: 'warning',
-    title: 'Workspace required',
-    subtitle: 'Create or join a workspace first, then authorize this device.',
-    actionLabel: 'Open workspace setup'
   },
   approve: {
     status: 'info',
@@ -76,28 +64,68 @@ function DeviceAuthorizeLayout ({ title, children }) {
   )
 }
 
+// WorkspaceRequiredPanel mirrors workspace onboarding visual hierarchy for device flow.
+function WorkspaceRequiredPanel ({ onCreate, onJoin }) {
+  return (
+    <Result
+      status='success'
+      icon={<span className={styles.rocketIcon} />}
+      title='Finish setup for CLI access'
+      subTitle='To complete giskill login, create or join a workspace first.'
+      extra={(
+        <>
+          <Button id='dekart-device-create-workspace' type='primary' onClick={onCreate}>
+            Create Workspace
+          </Button>
+          <Button id='dekart-device-join-workspace' onClick={onJoin}>
+            Join Existing Workspace
+          </Button>
+          <div className={styles.notSure}>
+            <div className={styles.notSureItems}>
+              <div>→ Step 1: create or join a workspace</div>
+              <div>→ Step 2: return to this page</div>
+              <div>→ Step 3: click Authorize to finish</div>
+            </div>
+          </div>
+        </>
+      )}
+    />
+  )
+}
+
 export default function DeviceAuthorizePage () {
   const dispatch = useDispatch()
   const history = useHistory()
   const location = useLocation()
-  const deviceID = useMemo(() => readDeviceID(location.search), [location.search])
+  const queryDeviceID = useMemo(() => readDeviceID(location.search), [location.search])
+  const pendingDeviceID = useSelector(state => state.sessionStorage.current?.[pendingDeviceAuthorizationKey] || '')
+  const deviceID = queryDeviceID || pendingDeviceID
+  const envLoaded = useSelector(state => state.env.loaded)
   const googleOAuthEnabled = useSelector(state => state.env.googleOAuthEnabled)
+  const userStream = useSelector(state => state.user.stream)
   const isAnonymous = useSelector(state => state.user.isAnonymous)
-  const workspaceID = useSelector(state => state.user.stream?.workspaceId || '')
+  const workspaceID = userStream?.workspaceId || ''
   const [authorized, setAuthorized] = useState(false)
   const [authorizing, setAuthorizing] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
-  const login = () => {
-    const state = new AuthState()
-    state.setUiUrl(window.location.href)
-    state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
-    dispatch(authRedirect(state))
-  }
+  useEffect(() => {
+    if (!deviceID) {
+      return
+    }
+    if (pendingDeviceID !== deviceID) {
+      dispatch(updateSessionStorage(pendingDeviceAuthorizationKey, deviceID))
+    }
+    if (queryDeviceID) {
+      // keep device id out of browser history after initial capture from CLI deep-link.
+      history.replace('/device/authorize')
+    }
+  }, [deviceID, pendingDeviceID, dispatch, queryDeviceID, history])
 
-  const openWorkspace = () => {
-    rememberPendingDeviceAuthorization(deviceID)
-    history.push('/workspace')
+  // openWorkspaceStep keeps pending device id while routing directly into workspace onboarding step.
+  const openWorkspaceStep = (step) => {
+    dispatch(updateSessionStorage(pendingDeviceAuthorizationKey, deviceID))
+    history.push(`/workspace/${step}`)
   }
 
   const authorize = async () => {
@@ -105,21 +133,13 @@ export default function DeviceAuthorizePage () {
     setErrorMessage('')
     try {
       await dispatch(authorizeDevice(deviceID))
-      consumePendingDeviceAuthorization()
+      dispatch(updateSessionStorage(pendingDeviceAuthorizationKey, ''))
       setAuthorized(true)
     } catch (err) {
       setErrorMessage(getErrorMessage(err))
     } finally {
       setAuthorizing(false)
     }
-  }
-
-  if (!deviceID) {
-    return (
-      <DeviceAuthorizeLayout title='Invalid device request — Dekart'>
-        <Result status={pageState.invalid.status} title={pageState.invalid.title} subTitle={pageState.invalid.subtitle} />
-      </DeviceAuthorizeLayout>
-    )
   }
 
   if (authorized) {
@@ -130,15 +150,26 @@ export default function DeviceAuthorizePage () {
     )
   }
 
+  if (!deviceID) {
+    return (
+      <DeviceAuthorizeLayout title='Invalid device request — Dekart'>
+        <Result status={pageState.invalid.status} title={pageState.invalid.title} subTitle={pageState.invalid.subtitle} />
+      </DeviceAuthorizeLayout>
+    )
+  }
+
+  if (!envLoaded || !userStream) {
+    return (
+      <DeviceAuthorizeLayout title='Authorize device — Dekart'>
+        <Loading />
+      </DeviceAuthorizeLayout>
+    )
+  }
+
   if (isAnonymous && googleOAuthEnabled) {
     return (
-      <DeviceAuthorizeLayout title='Login required — Dekart'>
-        <Result
-          status={pageState.login.status}
-          title={pageState.login.title}
-          subTitle={pageState.login.subtitle}
-          extra={<Button type='primary' onClick={login}>{pageState.login.actionLabel}</Button>}
-        />
+      <DeviceAuthorizeLayout title='Authorize device — Dekart'>
+        <Loading />
       </DeviceAuthorizeLayout>
     )
   }
@@ -146,11 +177,9 @@ export default function DeviceAuthorizePage () {
   if (!workspaceID) {
     return (
       <DeviceAuthorizeLayout title='Workspace required — Dekart'>
-        <Result
-          status={pageState.workspace.status}
-          title={pageState.workspace.title}
-          subTitle={pageState.workspace.subtitle}
-          extra={<Button type='primary' onClick={openWorkspace}>{pageState.workspace.actionLabel}</Button>}
+        <WorkspaceRequiredPanel
+          onCreate={() => openWorkspaceStep('create')}
+          onJoin={() => openWorkspaceStep('join')}
         />
       </DeviceAuthorizeLayout>
     )

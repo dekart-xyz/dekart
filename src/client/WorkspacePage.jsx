@@ -375,10 +375,11 @@ function getWorkspacePageTitle (step) {
   return 'Workspace'
 }
 
-export default function WorkspacePage ({ step }) {
+export default function WorkspacePage ({ step, onboarding }) {
   const userStream = useSelector(state => state.user.stream)
   const workspaceId = userStream?.workspaceId
-  const [nextStep, setNextStep] = useState(null)
+  const initialNextStep = onboarding === 'join' ? 'invites' : onboarding === 'create' ? 'workspace' : null
+  const [nextStep, setNextStep] = useState(initialNextStep)
   const isPlayground = useSelector(state => state.user.isPlayground)
   const isAnonymous = useSelector(state => state.user.isAnonymous)
   const dispatch = useDispatch()
@@ -387,6 +388,18 @@ export default function WorkspacePage ({ step }) {
       dispatch(switchPlayground(false, '/workspace'))
     }
   }, [isPlayground, dispatch])
+
+  useEffect(() => {
+    if (workspaceId) {
+      return
+    }
+    if (onboarding === 'join') {
+      setNextStep('invites')
+    } else if (onboarding === 'create') {
+      setNextStep('workspace')
+    }
+  }, [workspaceId, onboarding])
+
   if (isPlayground) {
     return null
   }
