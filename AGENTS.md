@@ -20,6 +20,7 @@ Decision heuristic: pick the simplest solution that fully works and cannot be si
 - Add a short purpose description for each new function.
 - Do not use debug-level logging in production code paths.
 - use ant.d components for UI when possible, and match existing UI patterns and placement.
+– No snake case in go file names except proto and test files. Use short all-lowercase file naes.
 
 ## Style Rules
 

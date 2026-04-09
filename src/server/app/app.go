@@ -123,13 +123,34 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		dekartServer.ServeQuerySource(w, r)
 	}).Methods("GET", "OPTIONS")
 
-	api.HandleFunc("/file/{id}.csv", func(w http.ResponseWriter, r *http.Request) {
+	api.HandleFunc("/file/{id}/upload-sessions", func(w http.ResponseWriter, r *http.Request) {
 		setOriginHeader(w, r)
 		if r.Method == http.MethodOptions {
 			return
 		}
-		dekartServer.UploadFile(w, r)
+		dekartServer.HandleStartFileUploadSession(w, r)
 	}).Methods("POST", "OPTIONS")
+	api.HandleFunc("/file/{id}/upload-sessions/{session_id}/parts/{part_number}", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeader(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.HandleGetFileUploadPart(w, r)
+	}).Methods("POST", "OPTIONS")
+	api.HandleFunc("/file/{id}/upload-sessions/{session_id}/complete", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeader(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.HandleCompleteFileUploadSession(w, r)
+	}).Methods("POST", "OPTIONS")
+	api.HandleFunc("/file/{id}/upload-sessions/{session_id}", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeader(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.HandleAbortFileUploadSession(w, r)
+	}).Methods("DELETE", "OPTIONS")
 	api.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
 		handleVersionCheck(dekartServer, w, r)
 	}).Methods("GET", "OPTIONS")

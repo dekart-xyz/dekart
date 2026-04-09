@@ -41,9 +41,9 @@ func parseFileSizeLimit(sizeStr string) (int64, error) {
 }
 
 // getMaxFileUploadSize reads DEKART_MAX_FILE_UPLOAD_SIZE env var and returns size in bytes
-// Defaults to 32MB (32000000 bytes) if not set or invalid
+// Defaults to 150MB (150000000 bytes) if not set or invalid
 func getMaxFileUploadSize() int64 {
-	const defaultSize = 32 * 1000 * 1000 // 32MB (decimal)
+	const defaultSize = 150 * 1000 * 1000 // 150MB (decimal)
 	sizeStr := os.Getenv("DEKART_MAX_FILE_UPLOAD_SIZE")
 
 	if sizeStr == "" {

@@ -55,3 +55,60 @@ func (s *UserStorage) CanSaveQuery(ctx context.Context, bucketName string) bool 
 	connection := conn.FromCtx(ctx)
 	return connection.CloudStorageBucket != "" || bucketName != ""
 }
+
+// StartUploadSession delegates upload session start to active user storage backend.
+func (s *UserStorage) StartUploadSession(ctx context.Context, input StartUploadSessionInput) (*StartUploadSessionOutput, error) {
+	storage, err := s.uploadSessionStorageForConnection(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return storage.StartUploadSession(ctx, input)
+}
+
+// GetUploadPart delegates part target request to active user storage backend.
+func (s *UserStorage) GetUploadPart(ctx context.Context, input GetUploadPartInput) (*GetUploadPartOutput, error) {
+	storage, err := s.uploadSessionStorageForConnection(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return storage.GetUploadPart(ctx, input)
+}
+
+// CompleteUploadSession delegates upload completion to active user storage backend.
+func (s *UserStorage) CompleteUploadSession(ctx context.Context, input CompleteUploadSessionInput) (*CompleteUploadSessionOutput, error) {
+	storage, err := s.uploadSessionStorageForConnection(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return storage.CompleteUploadSession(ctx, input)
+}
+
+// AbortUploadSession delegates upload abort to active user storage backend.
+func (s *UserStorage) AbortUploadSession(ctx context.Context, input AbortUploadSessionInput) error {
+	storage, err := s.uploadSessionStorageForConnection(ctx)
+	if err != nil {
+		return err
+	}
+	return storage.AbortUploadSession(ctx, input)
+}
+
+func (s *UserStorage) uploadSessionStorageForConnection(ctx context.Context) (Storage, error) {
+	connection := conn.FromCtx(ctx)
+	if connection == nil {
+		return nil, errUploadSessionNotSupported("user-storage")
+	}
+	if connection.CloudStorageBucket == "" {
+		return nil, errUploadSessionNotSupported("user-storage")
+	}
+
+	useUserToken := true
+	if conn.IsSystemConnectionID(connection.Id) && os.Getenv("DEKART_CLOUD") != "" {
+		// in cloud mode, we use app token for default connection, not user token
+		useUserToken = false
+	}
+	return GoogleCloudStorage{
+		defaultBucketName: connection.CloudStorageBucket,
+		logger:            log.With().Str("DEKART_CLOUD_STORAGE_BUCKET", connection.CloudStorageBucket).Logger(),
+		useUserToken:      useUserToken,
+	}, nil
+}
