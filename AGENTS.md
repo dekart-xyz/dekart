@@ -19,6 +19,7 @@ Decision heuristic: pick the simplest solution that fully works and cannot be si
 – Use GRPC by default for clinet to server communication.
 - Add a short purpose description for each new function.
 - Do not use debug-level logging in production code paths.
+– No spam info logging. Log onle essentials for Dekart admin.
 - use ant.d components for UI when possible, and match existing UI patterns and placement.
 – No snake case in go file names except proto and test files. Use short all-lowercase file naes.
 
