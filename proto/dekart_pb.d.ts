@@ -2938,6 +2938,244 @@ export namespace CreateFileResponse {
   }
 }
 
+export class UploadHeader extends jspb.Message {
+  getKey(): string;
+  setKey(value: string): void;
+
+  getValue(): string;
+  setValue(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): UploadHeader.AsObject;
+  static toObject(includeInstance: boolean, msg: UploadHeader): UploadHeader.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: UploadHeader, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): UploadHeader;
+  static deserializeBinaryFromReader(message: UploadHeader, reader: jspb.BinaryReader): UploadHeader;
+}
+
+export namespace UploadHeader {
+  export type AsObject = {
+    key: string,
+    value: string,
+  }
+}
+
+export class CreateFileUploadSessionRequest extends jspb.Message {
+  getName(): string;
+  setName(value: string): void;
+
+  getMimeType(): string;
+  setMimeType(value: string): void;
+
+  getTotalSize(): number;
+  setTotalSize(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CreateFileUploadSessionRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: CreateFileUploadSessionRequest): CreateFileUploadSessionRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CreateFileUploadSessionRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CreateFileUploadSessionRequest;
+  static deserializeBinaryFromReader(message: CreateFileUploadSessionRequest, reader: jspb.BinaryReader): CreateFileUploadSessionRequest;
+}
+
+export namespace CreateFileUploadSessionRequest {
+  export type AsObject = {
+    name: string,
+    mimeType: string,
+    totalSize: number,
+  }
+}
+
+export class CreateFileUploadSessionResponse extends jspb.Message {
+  getUploadSessionId(): string;
+  setUploadSessionId(value: string): void;
+
+  getMaxPartSize(): number;
+  setMaxPartSize(value: number): void;
+
+  getUploadPartEndpoint(): string;
+  setUploadPartEndpoint(value: string): void;
+
+  clearRequiredHeadersList(): void;
+  getRequiredHeadersList(): Array<UploadHeader>;
+  setRequiredHeadersList(value: Array<UploadHeader>): void;
+  addRequiredHeaders(value?: UploadHeader, index?: number): UploadHeader;
+
+  getExpiresIn(): number;
+  setExpiresIn(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CreateFileUploadSessionResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: CreateFileUploadSessionResponse): CreateFileUploadSessionResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CreateFileUploadSessionResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CreateFileUploadSessionResponse;
+  static deserializeBinaryFromReader(message: CreateFileUploadSessionResponse, reader: jspb.BinaryReader): CreateFileUploadSessionResponse;
+}
+
+export namespace CreateFileUploadSessionResponse {
+  export type AsObject = {
+    uploadSessionId: string,
+    maxPartSize: number,
+    uploadPartEndpoint: string,
+    requiredHeadersList: Array<UploadHeader.AsObject>,
+    expiresIn: number,
+  }
+}
+
+export class GetFileUploadPartResponse extends jspb.Message {
+  getPartNumber(): number;
+  setPartNumber(value: number): void;
+
+  getTargetUrl(): string;
+  setTargetUrl(value: string): void;
+
+  getHttpMethod(): string;
+  setHttpMethod(value: string): void;
+
+  clearRequiredHeadersList(): void;
+  getRequiredHeadersList(): Array<UploadHeader>;
+  setRequiredHeadersList(value: Array<UploadHeader>): void;
+  addRequiredHeaders(value?: UploadHeader, index?: number): UploadHeader;
+
+  getPartSize(): number;
+  setPartSize(value: number): void;
+
+  getExpiresIn(): number;
+  setExpiresIn(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetFileUploadPartResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: GetFileUploadPartResponse): GetFileUploadPartResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetFileUploadPartResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetFileUploadPartResponse;
+  static deserializeBinaryFromReader(message: GetFileUploadPartResponse, reader: jspb.BinaryReader): GetFileUploadPartResponse;
+}
+
+export namespace GetFileUploadPartResponse {
+  export type AsObject = {
+    partNumber: number,
+    targetUrl: string,
+    httpMethod: string,
+    requiredHeadersList: Array<UploadHeader.AsObject>,
+    partSize: number,
+    expiresIn: number,
+  }
+}
+
+export class FileUploadPartManifestItem extends jspb.Message {
+  getPartNumber(): number;
+  setPartNumber(value: number): void;
+
+  getEtag(): string;
+  setEtag(value: string): void;
+
+  getSize(): number;
+  setSize(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): FileUploadPartManifestItem.AsObject;
+  static toObject(includeInstance: boolean, msg: FileUploadPartManifestItem): FileUploadPartManifestItem.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: FileUploadPartManifestItem, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): FileUploadPartManifestItem;
+  static deserializeBinaryFromReader(message: FileUploadPartManifestItem, reader: jspb.BinaryReader): FileUploadPartManifestItem;
+}
+
+export namespace FileUploadPartManifestItem {
+  export type AsObject = {
+    partNumber: number,
+    etag: string,
+    size: number,
+  }
+}
+
+export class CompleteFileUploadSessionRequest extends jspb.Message {
+  clearPartsList(): void;
+  getPartsList(): Array<FileUploadPartManifestItem>;
+  setPartsList(value: Array<FileUploadPartManifestItem>): void;
+  addParts(value?: FileUploadPartManifestItem, index?: number): FileUploadPartManifestItem;
+
+  getTotalSize(): number;
+  setTotalSize(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CompleteFileUploadSessionRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: CompleteFileUploadSessionRequest): CompleteFileUploadSessionRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CompleteFileUploadSessionRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CompleteFileUploadSessionRequest;
+  static deserializeBinaryFromReader(message: CompleteFileUploadSessionRequest, reader: jspb.BinaryReader): CompleteFileUploadSessionRequest;
+}
+
+export namespace CompleteFileUploadSessionRequest {
+  export type AsObject = {
+    partsList: Array<FileUploadPartManifestItem.AsObject>,
+    totalSize: number,
+  }
+}
+
+export class CompleteFileUploadSessionResponse extends jspb.Message {
+  getStatus(): string;
+  setStatus(value: string): void;
+
+  getFileId(): string;
+  setFileId(value: string): void;
+
+  getSourceId(): string;
+  setSourceId(value: string): void;
+
+  getSize(): number;
+  setSize(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CompleteFileUploadSessionResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: CompleteFileUploadSessionResponse): CompleteFileUploadSessionResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CompleteFileUploadSessionResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CompleteFileUploadSessionResponse;
+  static deserializeBinaryFromReader(message: CompleteFileUploadSessionResponse, reader: jspb.BinaryReader): CompleteFileUploadSessionResponse;
+}
+
+export namespace CompleteFileUploadSessionResponse {
+  export type AsObject = {
+    status: string,
+    fileId: string,
+    sourceId: string,
+    size: number,
+  }
+}
+
+export class AbortFileUploadSessionResponse extends jspb.Message {
+  getStatus(): string;
+  setStatus(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): AbortFileUploadSessionResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: AbortFileUploadSessionResponse): AbortFileUploadSessionResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: AbortFileUploadSessionResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): AbortFileUploadSessionResponse;
+  static deserializeBinaryFromReader(message: AbortFileUploadSessionResponse, reader: jspb.BinaryReader): AbortFileUploadSessionResponse;
+}
+
+export namespace AbortFileUploadSessionResponse {
+  export type AsObject = {
+    status: string,
+  }
+}
+
 export class CreateQueryRequest extends jspb.Message {
   getDatasetId(): string;
   setDatasetId(value: string): void;

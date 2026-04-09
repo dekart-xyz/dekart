@@ -777,6 +777,64 @@ message CreateFileResponse {
     string file_id = 1;
 }
 
+// UploadHeader represents a single required HTTP header for direct-to-storage upload calls.
+message UploadHeader {
+    string key = 1; // HTTP header name.
+    string value = 2; // HTTP header value.
+}
+
+// CreateFileUploadSessionRequest starts a direct-to-storage upload session for an existing file id.
+message CreateFileUploadSessionRequest {
+    string name = 1; // Original filename displayed in UI and stored in file metadata.
+    string mime_type = 2; // Declared content type used for validation and object metadata.
+    int64 total_size = 3; // Total file size in bytes, validated against upload limits.
+}
+
+// CreateFileUploadSessionResponse returns upload session metadata and part-upload contract.
+message CreateFileUploadSessionResponse {
+    string upload_session_id = 1; // Opaque upload session id used by parts/complete/abort endpoints.
+    int64 max_part_size = 2; // Strict per-request upper bound in bytes; client must never exceed this size.
+    string upload_part_endpoint = 3; // Relative endpoint template for requesting a specific chunk target.
+    repeated UploadHeader required_headers = 4; // Headers client must send to provider upload target.
+    int64 expires_in = 5; // Session time-to-live in seconds from response time.
+}
+
+// GetFileUploadPartResponse returns a provider upload target for one part number.
+message GetFileUploadPartResponse {
+    int64 part_number = 1; // 1-based chunk number for this upload target.
+    string target_url = 2; // Signed/resumable provider URL where the chunk bytes must be uploaded.
+    string http_method = 3; // HTTP method for upload target request (usually PUT).
+    repeated UploadHeader required_headers = 4; // Headers required for this part upload call.
+    int64 part_size = 5; // Expected chunk size in bytes for this part; must be <= CreateFileUploadSessionResponse.max_part_size.
+    int64 expires_in = 6; // Target URL TTL in seconds from response time.
+}
+
+// FileUploadPartManifestItem is proof of one uploaded part for complete request validation.
+message FileUploadPartManifestItem {
+    int64 part_number = 1; // 1-based chunk number included in completion manifest.
+    string etag = 2; // Provider ETag when available (used by S3 multipart complete).
+    int64 size = 3; // Uploaded chunk size in bytes for integrity validation.
+}
+
+// CompleteFileUploadSessionRequest finalizes upload session and promotes object as file source.
+message CompleteFileUploadSessionRequest {
+    repeated FileUploadPartManifestItem parts = 1; // Ordered part manifest used for provider finalize.
+    int64 total_size = 2; // Final expected object size in bytes.
+}
+
+// CompleteFileUploadSessionResponse returns final file upload state after successful completion.
+message CompleteFileUploadSessionResponse {
+    string status = 1; // Final status string, expected "completed" when successful.
+    string file_id = 2; // Dekart file id associated with this upload session.
+    string source_id = 3; // Provider object/source id persisted for the file.
+    int64 size = 4; // Final stored object size in bytes.
+}
+
+// AbortFileUploadSessionResponse acknowledges upload-session abortion.
+message AbortFileUploadSessionResponse {
+    string status = 1; // Final status string, expected "aborted" when successful.
+}
+
 message CreateQueryRequest {
     string dataset_id = 1;
     string connection_id = 2;

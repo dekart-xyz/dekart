@@ -86,19 +86,16 @@ All endpoints remain under Dekart auth.
   - `upload_session_id`
   - normalized upload plan (provider-agnostic), for example:
     - `mode` (`chunked`)
-    - `part_size`
-    - `ordering_mode` (`strict_sequential`)
+    - `max_part_size` (strict upper bound, must be respected by client)
     - `upload_part_endpoint` (Dekart endpoint to request per-part upload target)
     - `required_headers` per part/chunk
-    - whether final manifest is required
-  - optional server debug info (provider type) can be returned for logs, but client logic must not branch on provider type
 
 2. `POST /api/v1/file/{id}/upload-sessions/{session_id}/parts/{part_number}`
 - returns upload target for the specific part/chunk:
   - target URL
   - HTTP method
   - required headers
-  - part/chunk size expectations
+  - `part_size` expected for this chunk (`part_size <= max_part_size`)
 - sequencing contract:
   - server validates `part_number` equals expected next part
   - if out of order, return `409 Conflict` with `expected_part_number`
@@ -190,7 +187,7 @@ Client never needs to know provider internals.
 - On complete:
   - accept normalized manifest with `{part_number, etag}`
   - call `CompleteMultipartUpload`
-  - optionally `HeadObject` verify final size/content-type
+  - `HeadObject` verify final size/content-type
 - On abort:
   - call `AbortMultipartUpload`
   - mark session `aborted`
@@ -249,9 +246,8 @@ Client never needs to know provider internals.
 - Backend handles provider mapping internally:
   - S3 `UploadId` + ETag manifest
   - GCS resumable session + chunk ranges
-- Response always uses the same ordering contract:
-  - `ordering_mode=strict_sequential`
-  - out-of-order requests are rejected with `409`
+- Upload ordering is strict sequential for all providers.
+- Out-of-order part requests are rejected with `409`.
 
 ## Session store (phase 1)
 
@@ -303,7 +299,6 @@ Phase 3
 - signed URLs must be short-lived and scoped to single object/session
 - verify final size and mime against declared metadata
 - enforce max file size on session creation
-- enforce checksum (per-part or final hash) where provider allows
 - session TTL + periodic cleanup job for stale uploads
 
 ## Nice-to-have after core delivery
