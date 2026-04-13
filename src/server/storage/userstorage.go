@@ -65,13 +65,13 @@ func (s *UserStorage) StartUploadSession(ctx context.Context, input StartUploadS
 	return storage.StartUploadSession(ctx, input)
 }
 
-// GetUploadPart delegates part target request to active user storage backend.
-func (s *UserStorage) GetUploadPart(ctx context.Context, input GetUploadPartInput) (*GetUploadPartOutput, error) {
+// UploadPart delegates chunk upload to active user storage backend.
+func (s *UserStorage) UploadPart(ctx context.Context, input UploadPartInput) (*UploadPartOutput, error) {
 	storage, err := s.uploadSessionStorageForConnection(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return storage.GetUploadPart(ctx, input)
+	return storage.UploadPart(ctx, input)
 }
 
 // CompleteUploadSession delegates upload completion to active user storage backend.

@@ -26,7 +26,7 @@ Today we enforce `DEKART_MAX_FILE_UPLOAD_SIZE` (default 32 MB) and reject above 
 
 ## Recommended solution
 
-Use a Dekart-managed **Upload Session API** with provider-native multipart/resumable upload under the hood.
+Use a Dekart-managed **Upload Session API** with chunk uploads sent to Dekart server (not browser direct-to-cloud).
 
 ## Decisions made so far
 
@@ -34,8 +34,8 @@ Use a Dekart-managed **Upload Session API** with provider-native multipart/resum
 - We will use Dekart Upload Session API (control plane), not Tus, for fastest delivery with current architecture.
 
 2. Provider mapping
-- S3-compatible storage: S3 Multipart Upload.
-- GCS-compatible storage: GCS Resumable Upload.
+- S3-compatible storage: multipart objects staged by Dekart server, finalized by backend.
+- GCS-compatible storage: chunk objects staged by Dekart server, finalized by backend compose.
 
 3. Session persistence for phase 1
 - `upload_session_id` state is stored in-memory inside Dekart process.
@@ -50,7 +50,7 @@ Use a Dekart-managed **Upload Session API** with provider-native multipart/resum
 - Upload session endpoints will be JSON HTTP, not gRPC.
 - Why:
   - browser and agent upload clients naturally work with HTTP upload semantics
-  - session payloads include provider-specific upload targets (presigned URLs, resumable session URLs, part manifests)
+  - session payloads include chunk metadata and completion manifest
   - existing file upload path is already HTTP (`/api/v1/file/{id}.csv`)
 - gRPC remains the default for existing app data RPCs, but upload session control plane is HTTP JSON by design.
 - Implementation note:
@@ -61,7 +61,7 @@ Key design goals:
 
 - one upload protocol for web + agent
 - provider-agnostic client behavior
-- no long file payload through Dekart app server
+- chunk payloads are bounded and always pass through Dekart app server
 - keep existing file authorization model and `files` lifecycle
 
 ### Why this is the most elegant fit for Dekart
@@ -90,18 +90,13 @@ All endpoints remain under Dekart auth.
     - `upload_part_endpoint` (Dekart endpoint to request per-part upload target)
     - `required_headers` per part/chunk
 
-2. `POST /api/v1/file/{id}/upload-sessions/{session_id}/parts/{part_number}`
-- returns upload target for the specific part/chunk:
-  - target URL
-  - HTTP method
-  - required headers
-  - `part_size` expected for this chunk (`part_size <= max_part_size`)
-- sequencing contract:
-  - server validates `part_number` equals expected next part
-  - if out of order, return `409 Conflict` with `expected_part_number`
-- why:
-  - avoids pre-signing thousands of URLs up front
-  - keeps signed URLs short-lived
+2. `PUT /api/v1/file/{id}/upload-sessions/{session_id}/parts/{part_number}?part_size={bytes}`
+- request body is raw chunk bytes (`application/octet-stream`)
+- server validates `part_size <= max_part_size` and stores chunk in storage backend
+- returns part manifest item:
+  - `part_number`
+  - `etag` (when backend provides it)
+  - `size`
 
 3. `POST /api/v1/file/{id}/upload-sessions/{session_id}/complete`
 - accepts proof/manifest:
@@ -122,7 +117,7 @@ All endpoints remain under Dekart auth.
 - keep `CreateFile` flow as-is
 - replace single XHR upload with session flow:
   - create session
-  - upload parts/chunks with retry + backoff using normalized upload plan
+  - upload parts/chunks to Dekart `/parts/{part_number}` with retry + backoff
   - call complete
 - chunk size default:
   - 8-16 MB
@@ -140,7 +135,7 @@ All endpoints remain under Dekart auth.
 Add upload-session adapter methods near storage domain (provider-specific implementations):
 
 - `StartUploadSession(...)`
-- `UploadPart(...)` or signed part generation
+- `UploadPart(...)`
 - `CompleteUpload(...)`
 - `AbortUpload(...)`
 
@@ -176,52 +171,40 @@ Client never needs to know provider internals.
 ### S3-compatible backend flow
 
 - On session start:
-  - call `CreateMultipartUpload`
-  - store `upload_id` in upload session state
+  - initialize session metadata and parts prefix/object key
 - On `parts/{part_number}`:
-  - validate requested `part_number` matches session `next_part_number`
-  - if mismatch, return `409 Conflict` + `expected_part_number`
-  - generate presigned `UploadPart` URL for (`bucket`, `key`, `upload_id`, `part_number`)
-  - return required headers and expected part size bounds
-  - update session `next_part_number` only after part upload is confirmed
+  - accept chunk bytes through Dekart HTTP endpoint
+  - persist chunk to provider bucket as part object
+  - return manifest item (`part_number`, `etag`, `size`)
 - On complete:
-  - accept normalized manifest with `{part_number, etag}`
-  - call `CompleteMultipartUpload`
-  - `HeadObject` verify final size/content-type
+  - compose/finalize part objects into final object
+  - verify final size/content-type
 - On abort:
-  - call `AbortMultipartUpload`
-  - mark session `aborted`
+  - delete staged part objects and mark session aborted
 
 ### GCS-compatible backend flow
 
 - On session start:
-  - create GCS resumable upload session (session URL)
-  - store resumable session reference in upload session state
+  - initialize session metadata and parts prefix/object key
 - On `parts/{part_number}`:
-  - validate requested `part_number` matches session `next_part_number`
-  - if mismatch, return `409 Conflict` + `expected_part_number`
-  - return upload target and `Content-Range`/chunk instructions for that part
-  - for GCS this maps to sequential resumable chunks (single resumable session)
-  - update session `next_part_number` only after chunk is confirmed uploaded
+  - accept chunk bytes through Dekart HTTP endpoint
+  - persist chunk to provider bucket as part object
+  - return manifest item (`part_number`, `etag`, `size`)
 - On complete:
-  - issue final resumable request for last chunk (if needed)
+  - compose part objects into final object
   - verify final object exists and expected size/content-type
   - finalize Dekart file record
 - On abort:
-  - mark session aborted in Dekart and stop issuing further part targets
-  - if provider abort primitive is unavailable, rely on object lifecycle cleanup for orphaned partial uploads
+  - delete staged part objects and mark session aborted
 
 ### Provider state kept in Dekart session (internal only)
 
 - shared fields:
   - `session_id`, `file_id`, `status`, `expires_at`
   - declared `size`, `mime_type`, `name`
-- S3-specific:
-  - `bucket`, `key`, `upload_id`
-  - received part manifest (`part_number`, `etag`)
-- GCS-specific:
-  - `bucket`, `object`
-  - resumable session reference and uploaded byte offset
+- S3/GCS-specific:
+  - `bucket`, `object`, `parts_prefix`
+  - received part manifest (`part_number`, `etag`, `size`)
 
 ### Completion semantics
 
@@ -240,14 +223,11 @@ Client never needs to know provider internals.
 
 - Client always does:
   - create session
-  - request per-part target
-  - upload part
+  - upload part to Dekart
   - complete
 - Backend handles provider mapping internally:
-  - S3 `UploadId` + ETag manifest
-  - GCS resumable session + chunk ranges
-- Upload ordering is strict sequential for all providers.
-- Out-of-order part requests are rejected with `409`.
+  - provider-specific part object writes
+  - provider-specific compose/finalize
 
 ## Session store (phase 1)
 
@@ -296,7 +276,6 @@ Phase 3
 
 ## Security and reliability rules
 
-- signed URLs must be short-lived and scoped to single object/session
 - verify final size and mime against declared metadata
 - enforce max file size on session creation
 - session TTL + periodic cleanup job for stale uploads
@@ -307,3 +286,121 @@ Phase 3
 - upload concurrency tuning
 - progress persisted across tab reload
 - server-side antivirus hook for enterprise tier
+
+## Frontend implementation plan (v1)
+
+This section is the implementation checklist for migrating client upload from single `POST /api/v1/file/{id}.csv` to upload sessions.
+
+### Scope
+
+- Keep `CreateFile` gRPC flow unchanged.
+- Replace file bytes upload path with new HTTP upload-session endpoints.
+- Keep UX simple: one in-flight part upload per file/session.
+- No resume across refresh in v1.
+
+### Files to update
+
+`src/client/actions/file.js`
+- Replace old `uploadFile` XHR multipart logic with orchestrated upload-session flow.
+- Add control-plane helper calls for:
+  - `createFileUploadSession(fileId, fileInfo, token)`
+  - `uploadPartViaDekart(fileId, uploadSessionId, partNumber, partSize, blob, token)`
+  - `completeFileUploadSession(fileId, uploadSessionId, manifest, totalSize, token)`
+  - `abortFileUploadSession(fileId, uploadSessionId, token)`
+- Keep `createFile(datasetId, connectionId)` unchanged.
+- Keep tracking events and add part/session events for reliability debugging.
+
+`src/client/reducers/fileUploadReducer.js` (new)
+- Move `fileUploadStatus` reducer out of `rootReducer.js` into dedicated module.
+- Replace current `fileUploadStatus` shape (`readyState/status`) with session-state model:
+  - `phase`: `idle|starting|uploading|completing|done|error|aborted`
+  - `loaded`, `total`, `partNumber`, `partsTotal`
+  - `uploadSessionId`
+  - `error`
+- Handle new upload actions (start/progress/phase/error/complete/reset).
+
+`src/client/reducers/rootReducer.js`
+- Remove inline `fileUploadStatus` reducer implementation.
+- Import `fileUploadStatus` from `./fileUploadReducer` and wire it in `combineReducers`.
+
+`src/client/File.jsx`
+- Read new `fileUploadStatus` fields and render phase-based text.
+- Show progress from `loaded/total` only (not XHR `readyState`).
+- Keep size validation before start.
+- On `Upload` click, call new session-based `uploadFile(file.id, fileToUpload)`.
+
+`src/client/lib/api.js`
+- Reuse existing host/token handling pattern.
+- Add JSON helper for authenticated POST/DELETE to `/api/v1/*`:
+  - `post(endpoint, body, token)`
+  - `del(endpoint, token)`
+- Keep existing `get()` behavior unchanged.
+
+`src/client/lib/fileUpload.js` (new)
+- New orchestrator module with non-UI logic:
+  - `buildUploadParts(fileSize, maxPartSize)` -> deterministic part plan.
+  - `sliceFilePart(file, offset, size)` -> `Blob`.
+  - `uploadPartViaDekart(fileId, uploadSessionId, partNumber, partSize, blob, token)` -> uploads chunk to Dekart and returns manifest item.
+  - `runFileUploadSession({ fileId, file, token, dispatch })` -> end-to-end flow (start -> parts -> complete).
+- Include bounded retry/backoff for transient errors on:
+  - part upload to Dekart
+  - `completeFileUploadSession`
+
+### Functions and action contract
+
+`src/client/actions/file.js`
+- Add actions:
+  - `uploadFileStart(fileId, file)`
+  - `uploadFilePhase(fileId, phase, payload = {})`
+  - `uploadFileProgress(fileId, loaded, total, partNumber, partsTotal)`
+  - `uploadFileError(fileId, error)`
+  - `uploadFileDone(fileId, result)`
+  - `uploadFileReset(fileId)`
+- Keep exported thunk name `uploadFile(fileId, file)` so callers do not change.
+
+`src/client/lib/fileUpload.js`
+- Add:
+  - `runFileUploadSession(...)` as the only orchestration entrypoint used by `uploadFile` thunk.
+- Internal helper functions should stay pure where possible for unit testing.
+
+### Error handling and UX rules
+
+- If start fails: phase -> `error`, preserve message from server when available.
+- If part upload fails repeatedly: call abort endpoint best-effort, then phase -> `error`.
+- If complete fails with retriable error: retry with backoff, then fail to `error`.
+- User retry action should start a fresh session (no resume in v1).
+
+### Telemetry changes
+
+- Keep existing:
+  - `FileUploadStarted`
+  - `FileUploadCompleted`
+  - `FileUploadFailed`
+- Add:
+  - `FileUploadSessionStarted`
+  - `FileUploadPartUploaded`
+  - `FileUploadSessionCompleted`
+  - `FileUploadSessionAborted`
+- Include `fileId`, `uploadSessionId`, `partNumber`, `partSize`, and `status` where applicable.
+
+### Tests to add
+
+`src/client/lib/fileUpload.test.js` (new)
+- `buildUploadParts` boundaries:
+  - exact multiple of part size
+  - last partial part
+  - max-part-size enforcement
+- retry logic for transient part failures
+- manifest generation correctness (`part_number`, `etag`, `size`)
+
+`src/client/actions/file.test.js` (new)
+- thunk dispatch order for happy path and error path
+- reducer state transitions for all upload phases (via `fileUploadReducer`)
+
+### Rollout sequence
+
+1. Add `fileUpload.js` + API JSON helpers.
+2. Switch `uploadFile` thunk to session flow behind existing button.
+3. Migrate reducer/state model and update `File.jsx` status rendering.
+4. Remove old `POST /file/{id}.csv` client call.
+5. Add tests and verify on `.env.bigquery` with file sizes above old single-request limit.

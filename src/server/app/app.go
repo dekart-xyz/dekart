@@ -53,6 +53,9 @@ func getAllowedOrigin(origin string) string {
 }
 
 func matchOrigin(origin string) bool {
+	if origin == "" {
+		return true
+	}
 	if allowedOrigin == "" || allowedOrigin == "*" {
 		log.Warn().Msg("DEKART_CORS_ORIGIN is empty or *")
 		return true
@@ -91,8 +94,17 @@ func configureGRPC(dekartServer *dekart.Server) *grpcweb.WrappedGrpcServer {
 }
 
 func setOriginHeader(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", getAllowedOrigin(r.Header.Get("Origin")))
-	w.Header().Set("Access-Control-Allow-Headers", "Authorization, X-Dekart-Playground, X-Dekart-Claim-Email, X-Dekart-Report-Id, X-Dekart-Logged-In, X-Dekart-Workspace-Id")
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return
+	}
+	w.Header().Add("Vary", "Origin")
+	w.Header().Add("Vary", "Access-Control-Request-Method")
+	w.Header().Add("Vary", "Access-Control-Request-Headers")
+	w.Header().Set("Access-Control-Allow-Origin", getAllowedOrigin(origin))
+	w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Dekart-Playground, X-Dekart-Claim-Email, X-Dekart-Report-Id, X-Dekart-Logged-In, X-Dekart-Workspace-Id")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+	w.Header().Set("Access-Control-Max-Age", "600")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 }
 
@@ -135,8 +147,8 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		if r.Method == http.MethodOptions {
 			return
 		}
-		dekartServer.HandleGetFileUploadPart(w, r)
-	}).Methods("POST", "OPTIONS")
+		dekartServer.HandleUploadFilePart(w, r)
+	}).Methods("PUT", "OPTIONS")
 	api.HandleFunc("/file/{id}/upload-sessions/{session_id}/complete", func(w http.ResponseWriter, r *http.Request) {
 		setOriginHeader(w, r)
 		if r.Method == http.MethodOptions {

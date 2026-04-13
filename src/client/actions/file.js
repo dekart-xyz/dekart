@@ -2,64 +2,89 @@ import { CreateFileRequest } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { track } from '../lib/tracking'
+import { inferMimeFromName } from '../lib/mime'
+import { runFileUploadSession } from '../lib/fileUpload'
 
-export function uploadFileProgress (fileId, loaded, total) {
+export function uploadFileStart (fileId, file) {
+  return {
+    type: uploadFileStart.name,
+    fileId,
+    file
+  }
+}
+
+export function uploadFilePhase (fileId, phase, payload = {}) {
+  return {
+    type: uploadFilePhase.name,
+    fileId,
+    phase,
+    payload
+  }
+}
+
+export function uploadFileProgress (fileId, loaded, total, partNumber, partsTotal) {
   return {
     type: uploadFileProgress.name,
     fileId,
     loaded,
-    total
+    total,
+    partNumber,
+    partsTotal
   }
 }
 
-export function uploadFileStateChange (fileId, readyState, status) {
+export function uploadFileError (fileId, error) {
   return {
-    type: uploadFileStateChange.name,
+    type: uploadFileError.name,
     fileId,
-    readyState,
-    status
+    error
+  }
+}
+
+export function uploadFileDone (fileId, result) {
+  return {
+    type: uploadFileDone.name,
+    fileId,
+    result
+  }
+}
+
+export function uploadFileReset (fileId) {
+  return {
+    type: uploadFileReset.name,
+    fileId
   }
 }
 
 export function uploadFile (fileId, file) {
   return async (dispatch, getState) => {
-    dispatch({ type: uploadFile.name, fileId, file })
+    dispatch(uploadFileStart(fileId, file))
+    dispatch(uploadFilePhase(fileId, 'starting'))
     track('FileUploadStarted', { fileId, fileSize: file.size })
-
-    const formData = new window.FormData()
-    formData.append('file', file)
-
-    const { VITE_API_HOST } = import.meta.env
-    const host = VITE_API_HOST || ''
-    const url = `${host}/api/v1/file/${fileId}.csv`
-
     const { token } = getState()
-
-    const request = new window.XMLHttpRequest()
-
-    request.upload.addEventListener('progress', (event) => {
-      dispatch(uploadFileProgress(fileId, event.loaded, event.total))
-    })
-    request.addEventListener('readystatechange', (event) => {
-      dispatch(uploadFileStateChange(fileId, request.readyState, request.status))
-      if (request.readyState === 4) {
-        if (request.status === 200) {
-          track('FileUploadCompleted', { fileId })
-        } else if (request.status !== 0) {
-          track('FileUploadFailed', { fileId, status: request.status }) // System error - HTTP status
-        }
-      }
-    })
-
-    request.open('POST', url)
-
-    if (token) {
-      request.setRequestHeader('Authorization', `Bearer ${token.access_token}`)
+    const normalizedFile = file.type
+      ? file
+      : new window.File([file], file.name, {
+        type: inferMimeFromName(file.name) || 'application/octet-stream'
+      })
+    try {
+      await runFileUploadSession({
+        fileId,
+        file: normalizedFile,
+        token,
+        dispatch,
+        actions: {
+          uploadFilePhase,
+          uploadFileProgress,
+          uploadFileDone
+        },
+        track
+      })
+      track('FileUploadCompleted', { fileId })
+    } catch (error) {
+      dispatch(uploadFileError(fileId, error?.message || 'Upload failed'))
+      track('FileUploadFailed', { fileId, message: error?.message || 'Upload failed' })
     }
-
-    request.timeout = 3600 * 1000 // 1 hour
-    request.multipart = true
-    request.send(formData)
   }
 }
 

@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"io"
 	"time"
 )
 
@@ -28,22 +29,20 @@ type StartUploadSessionOutput struct {
 	ExpiresAt         time.Time
 }
 
-// GetUploadPartInput requests upload target metadata for the next part number.
-type GetUploadPartInput struct {
+// UploadPartInput contains one chunk payload to persist for an upload session.
+type UploadPartInput struct {
 	BucketName        string
 	ObjectName        string
 	ProviderSessionID string
 	PartNumber        int64
 	PartSize          int64
+	Body              io.Reader
 }
 
-// GetUploadPartOutput returns upload target metadata for one part.
-type GetUploadPartOutput struct {
-	TargetURL       string
-	HTTPMethod      string
-	RequiredHeaders []UploadHeader
-	PartSize        int64
-	ExpiresAt       time.Time
+// UploadPartOutput returns provider metadata for one persisted part.
+type UploadPartOutput struct {
+	ETag string
+	Size int64
 }
 
 // CompleteUploadPart contains provider completion metadata for one uploaded part.
@@ -94,8 +93,8 @@ func (s UnsupportedUploadSessionStorage) StartUploadSession(_ context.Context, _
 	return nil, errUploadSessionNotSupported(s.Backend)
 }
 
-// GetUploadPart returns unsupported error for backends without upload-session support.
-func (s UnsupportedUploadSessionStorage) GetUploadPart(_ context.Context, _ GetUploadPartInput) (*GetUploadPartOutput, error) {
+// UploadPart returns unsupported error for backends without upload-session support.
+func (s UnsupportedUploadSessionStorage) UploadPart(_ context.Context, _ UploadPartInput) (*UploadPartOutput, error) {
 	return nil, errUploadSessionNotSupported(s.Backend)
 }
 

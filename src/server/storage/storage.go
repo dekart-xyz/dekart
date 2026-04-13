@@ -33,7 +33,7 @@ type Storage interface {
 	GetObject(context.Context, string, string) StorageObject
 	CanSaveQuery(context.Context, string) bool
 	StartUploadSession(context.Context, StartUploadSessionInput) (*StartUploadSessionOutput, error)
-	GetUploadPart(context.Context, GetUploadPartInput) (*GetUploadPartOutput, error)
+	UploadPart(context.Context, UploadPartInput) (*UploadPartOutput, error)
 	CompleteUploadSession(context.Context, CompleteUploadSessionInput) (*CompleteUploadSessionOutput, error)
 	AbortUploadSession(context.Context, AbortUploadSessionInput) error
 }

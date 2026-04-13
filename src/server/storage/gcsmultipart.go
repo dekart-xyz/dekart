@@ -4,11 +4,8 @@ import (
 	"context"
 	"dekart/src/server/bqutils"
 	"dekart/src/server/conn"
-	"encoding/base64"
 	"fmt"
-	"net/http"
-	"os"
-	"strings"
+	"io"
 	"time"
 
 	gcsstorage "cloud.google.com/go/storage"
@@ -17,8 +14,7 @@ import (
 )
 
 const (
-	defaultGCSSessionTTL   = time.Hour
-	defaultGCSSignedURLTTL = 15 * time.Minute
+	defaultGCSSessionTTL = time.Hour
 )
 
 type gcsMultipartSession struct {
@@ -45,10 +41,7 @@ func (s GoogleCloudStorage) StartUploadSession(_ context.Context, input StartUpl
 		TotalSize:   input.TotalSize,
 		ExpiresUnix: expiresAt.Unix(),
 	}
-	sessionID, err := encodeGCSSession(session)
-	if err != nil {
-		return nil, err
-	}
+	sessionID := createGCSSession(session)
 
 	return &StartUploadSessionOutput{
 		ProviderSessionID: sessionID,
@@ -60,8 +53,8 @@ func (s GoogleCloudStorage) StartUploadSession(_ context.Context, input StartUpl
 	}, nil
 }
 
-func (s GoogleCloudStorage) GetUploadPart(_ context.Context, input GetUploadPartInput) (*GetUploadPartOutput, error) {
-	session, err := decodeAndValidateGCSSession(input.ProviderSessionID, input.BucketName, input.ObjectName)
+func (s GoogleCloudStorage) UploadPart(ctx context.Context, input UploadPartInput) (*UploadPartOutput, error) {
+	session, err := loadAndValidateGCSSession(input.ProviderSessionID, input.BucketName, input.ObjectName)
 	if err != nil {
 		return nil, err
 	}
@@ -71,32 +64,46 @@ func (s GoogleCloudStorage) GetUploadPart(_ context.Context, input GetUploadPart
 	if input.PartSize <= 0 {
 		return nil, fmt.Errorf("part_size must be positive")
 	}
-
+	if input.Body == nil {
+		return nil, fmt.Errorf("part body is required")
+	}
 	expiresAt := time.Unix(session.ExpiresUnix, 0)
-	signedURLExpiry := time.Now().Add(defaultGCSSignedURLTTL)
-	if signedURLExpiry.After(expiresAt) {
-		signedURLExpiry = expiresAt
+	if time.Now().UTC().After(expiresAt) {
+		return nil, fmt.Errorf("upload session expired")
 	}
 
-	targetObject := partObjectName(session.PartsPrefix, input.PartNumber)
-	targetURL, err := signGCSPutURL(input.BucketName, targetObject, signedURLExpiry)
+	client, err := s.getStorageClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	return &GetUploadPartOutput{
-		TargetURL:  targetURL,
-		HTTPMethod: http.MethodPut,
-		RequiredHeaders: []UploadHeader{
-			{Key: "Content-Type", Value: "application/octet-stream"},
-		},
-		PartSize:  input.PartSize,
-		ExpiresAt: signedURLExpiry,
+	bucket := client.Bucket(input.BucketName)
+	targetObject := partObjectName(session.PartsPrefix, input.PartNumber)
+	writer := bucket.Object(targetObject).NewWriter(ctx)
+	writer.ContentType = "application/octet-stream"
+	written, copyErr := io.Copy(writer, io.LimitReader(input.Body, input.PartSize+1))
+	if copyErr != nil {
+		_ = writer.Close()
+		return nil, copyErr
+	}
+	if closeErr := writer.Close(); closeErr != nil {
+		return nil, closeErr
+	}
+	if written != input.PartSize {
+		_ = bucket.Object(targetObject).Delete(ctx)
+		return nil, fmt.Errorf("part size mismatch: expected %d, got %d", input.PartSize, written)
+	}
+	attrs, err := bucket.Object(targetObject).Attrs(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &UploadPartOutput{
+		ETag: attrs.Etag,
+		Size: written,
 	}, nil
 }
 
 func (s GoogleCloudStorage) CompleteUploadSession(ctx context.Context, input CompleteUploadSessionInput) (*CompleteUploadSessionOutput, error) {
-	session, err := decodeAndValidateGCSSession(input.ProviderSessionID, input.BucketName, input.ObjectName)
+	session, err := loadAndValidateGCSSession(input.ProviderSessionID, input.BucketName, input.ObjectName)
 	if err != nil {
 		return nil, err
 	}
@@ -158,10 +165,11 @@ func (s GoogleCloudStorage) CompleteUploadSession(ctx context.Context, input Com
 }
 
 func (s GoogleCloudStorage) AbortUploadSession(ctx context.Context, input AbortUploadSessionInput) error {
-	session, err := decodeAndValidateGCSSession(input.ProviderSessionID, input.BucketName, input.ObjectName)
+	session, err := loadAndValidateGCSSession(input.ProviderSessionID, input.BucketName, input.ObjectName)
 	if err != nil {
 		return err
 	}
+	defer deleteGCSSession(input.ProviderSessionID)
 	client, err := s.getStorageClient(ctx)
 	if err != nil {
 		return err
@@ -184,41 +192,6 @@ func (s GoogleCloudStorage) AbortUploadSession(ctx context.Context, input AbortU
 
 func (s GoogleCloudStorage) getStorageClient(ctx context.Context) (*gcsstorage.Client, error) {
 	return bqutils.GetStorageClient(ctx, conn.FromCtx(ctx), !s.useUserToken)
-}
-
-func decodeGCSSigningPrivateKey() ([]byte, error) {
-	key := strings.TrimSpace(os.Getenv("DEKART_GCS_SIGNING_PRIVATE_KEY"))
-	if key == "" {
-		return nil, fmt.Errorf("DEKART_GCS_SIGNING_PRIVATE_KEY is required for GCS multipart signed URLs")
-	}
-	if strings.Contains(key, "BEGIN PRIVATE KEY") {
-		return []byte(key), nil
-	}
-	decoded, err := base64.StdEncoding.DecodeString(key)
-	if err != nil {
-		return nil, fmt.Errorf("DEKART_GCS_SIGNING_PRIVATE_KEY must be PEM text or base64 PEM")
-	}
-	return decoded, nil
-}
-
-func signGCSPutURL(bucketName, objectName string, expiresAt time.Time) (string, error) {
-	accessID := strings.TrimSpace(os.Getenv("DEKART_GCS_SIGNING_ACCESS_ID"))
-	if accessID == "" {
-		return "", fmt.Errorf("DEKART_GCS_SIGNING_ACCESS_ID is required for GCS multipart signed URLs")
-	}
-	privateKey, err := decodeGCSSigningPrivateKey()
-	if err != nil {
-		return "", err
-	}
-
-	return gcsstorage.SignedURL(bucketName, objectName, &gcsstorage.SignedURLOptions{
-		GoogleAccessID: accessID,
-		PrivateKey:     privateKey,
-		Method:         http.MethodPut,
-		Expires:        expiresAt,
-		Headers:        []string{"content-type:application/octet-stream"},
-		Scheme:         gcsstorage.SigningSchemeV4,
-	})
 }
 
 func composeGCSObjects(ctx context.Context, bucket *gcsstorage.BucketHandle, sources []string, destination string, partsPrefix string) ([]string, error) {

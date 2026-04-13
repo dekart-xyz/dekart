@@ -22,6 +22,7 @@ Decision heuristic: pick the simplest solution that fully works and cannot be si
 – No spam info logging. Log onle essentials for Dekart admin.
 - use ant.d components for UI when possible, and match existing UI patterns and placement.
 – No snake case in go file names except proto and test files. Use short all-lowercase file naes.
+- Frontend naming: use `camelCase` for frontend file names, and `PascalCase` for React component files. Match existing patterns in the same folder.
 
 ## Style Rules
 

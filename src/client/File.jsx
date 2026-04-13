@@ -5,7 +5,7 @@ import Button from 'antd/es/button'
 import { useState, useEffect } from 'react'
 import prettyBites from 'pretty-bytes'
 import { useSelector, useDispatch } from 'react-redux'
-import { uploadFile } from './actions/file'
+import { uploadFile, uploadFileReset } from './actions/file'
 import { extensionFromMime, inferMimeFromName } from './lib/mime'
 import { track } from './lib/tracking'
 
@@ -46,6 +46,17 @@ function getStorageName (env) {
   return storageName
 }
 
+// resolveFileSize picks first finite non-negative value and normalizes protojson int64 strings to number.
+function resolveFileSize (...values) {
+  for (const value of values) {
+    const size = Number(value)
+    if (Number.isFinite(size) && size >= 0) {
+      return size
+    }
+  }
+  return 0
+}
+
 function FileStatus ({ file, fileToUpload, fileUploadStatus, fileSizeError, children }) {
   const env = useSelector(state => state.env)
 
@@ -66,6 +77,8 @@ function FileStatus ({ file, fileToUpload, fileUploadStatus, fileSizeError, chil
   if (!env.loaded) {
     return null
   }
+  const uploadPhase = fileUploadStatus?.phase
+  const uploadCompleted = fileUploadStatus?.phase === 'done'
   let message = ''
   let icon = null
   let style = styles.info
@@ -80,7 +93,15 @@ function FileStatus ({ file, fileToUpload, fileUploadStatus, fileSizeError, chil
     // file uploaded by user
     if (file.fileStatus === 2) {
       // file in temporary storage
-      if (file.uploadError) {
+      if (uploadPhase === 'error') {
+        icon = <ExclamationCircleTwoTone className={styles.icon} twoToneColor='#f5222d' />
+        message = <span>Error uploading file: <span className={styles.errorStatus}>{fileUploadStatus.error || 'Upload failed'}</span></span>
+        style = styles.error
+      } else if (uploadCompleted) {
+        icon = <CheckCircleTwoTone className={styles.icon} twoToneColor='#52c41a' />
+        message = <span>Ready <span className={styles.processed}>({prettyBites(resolveFileSize(fileUploadStatus.result?.size, file.size, fileToUpload?.size))})</span></span>
+        style = styles.success
+      } else if (file.uploadError) {
         icon = <ExclamationCircleTwoTone className={styles.icon} twoToneColor='#f5222d' />
         message = <span>Error uploading file: <span className={styles.errorStatus}>{file.uploadError}</span></span>
         style = styles.error
@@ -97,20 +118,21 @@ function FileStatus ({ file, fileToUpload, fileUploadStatus, fileSizeError, chil
   } else if (fileToUpload) {
     // file to upload selected by user
     if (fileUploadStatus) {
-      // file upload in progress
-      if (fileUploadStatus.readyState === 4) {
-        // file upload finished
-        if (fileUploadStatus.status === 200) {
-          message = `Moving file to ${getStorageName(env)}...`
-          icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
-        } else {
-          icon = <ExclamationCircleTwoTone className={styles.icon} twoToneColor='#f5222d' />
-          message = <span>Error uploading file: <span className={styles.errorStatus}>(status={fileUploadStatus.status})</span></span>
-          style = styles.error
-        }
-      } else {
+      if (fileUploadStatus.phase === 'uploading' || fileUploadStatus.phase === 'completing' || fileUploadStatus.phase === 'starting') {
         icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
-        message = `Uploading ${prettyBites(fileUploadStatus.loaded)} of ${prettyBites(fileUploadStatus.total)}`
+        if (fileUploadStatus.phase === 'completing') {
+          message = `Moving file to ${getStorageName(env)}...`
+        } else {
+          message = `Uploading ${prettyBites(fileUploadStatus.loaded)} of ${prettyBites(fileUploadStatus.total)}`
+        }
+      } else if (fileUploadStatus.phase === 'error') {
+        icon = <ExclamationCircleTwoTone className={styles.icon} twoToneColor='#f5222d' />
+        message = <span>Error uploading file: <span className={styles.errorStatus}>{fileUploadStatus.error || 'Upload failed'}</span></span>
+        style = styles.error
+      } else if (fileUploadStatus.phase === 'done') {
+        icon = <CheckCircleTwoTone className={styles.icon} twoToneColor='#52c41a' />
+        message = <span>Ready <span className={styles.processed}>({prettyBites(resolveFileSize(fileUploadStatus.result?.size, fileToUpload?.size))})</span></span>
+        style = styles.success
       }
     } else {
       message = `${prettyBites(fileToUpload.size)} to be uploaded`
@@ -148,7 +170,7 @@ export default function File ({ file }) {
   // Get max file upload size from environment (in bytes)
   const maxFileSize = parseInt(env.variables.MAX_FILE_UPLOAD_SIZE || '32000000', 10)
 
-  const uploadButtonDisabled = !fileToUpload || fileUploadStatus || !(canWrite && edit) || fileSizeError !== null
+  const uploadButtonDisabled = !fileToUpload || file.fileStatus === 2 || (fileUploadStatus && ['starting', 'uploading', 'completing', 'done'].includes(fileUploadStatus.phase)) || !(canWrite && edit) || fileSizeError !== null
   let fileInfo = null
   if (file.fileStatus > 1) {
     fileInfo = {
@@ -178,19 +200,20 @@ export default function File ({ file }) {
                 disabled={!(canWrite && edit)}
                 accept='.csv,.geojson,.parquet'
                 fileList={[]}
-                beforeUpload={(file) => {
+                beforeUpload={(selectedFile) => {
                   track('FileSelected', {
-                    fileSize: file.size,
-                    fileType: file.type || inferMimeFromName(file.name)
+                    fileSize: selectedFile.size,
+                    fileType: selectedFile.type || inferMimeFromName(selectedFile.name)
                   })
                   // Validate file size
-                  if (file.size > maxFileSize) {
-                    setFileSizeError(`File size (${prettyBites(file.size)}) exceeds maximum allowed size of ${prettyBites(maxFileSize)}`)
-                    setFileToUpload(file)
+                  if (selectedFile.size > maxFileSize) {
+                    setFileSizeError(`File size (${prettyBites(selectedFile.size)}) exceeds maximum allowed size of ${prettyBites(maxFileSize)}`)
+                    setFileToUpload(selectedFile)
                   } else {
                     setFileSizeError(null)
-                    setFileToUpload(file)
+                    setFileToUpload(selectedFile)
                   }
+                  dispatch(uploadFileReset(file.id))
                   return false
                 }}
               >

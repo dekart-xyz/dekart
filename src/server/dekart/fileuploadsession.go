@@ -89,8 +89,8 @@ func (s Server) HandleStartFileUploadSession(w http.ResponseWriter, r *http.Requ
 	s.reportStreams.Ping(ctxData.reportID)
 }
 
-// HandleGetFileUploadPart returns upload target metadata for one file upload part.
-func (s Server) HandleGetFileUploadPart(w http.ResponseWriter, r *http.Request) {
+// HandleUploadFilePart stores one upload chunk through Dekart server and returns part manifest metadata.
+func (s Server) HandleUploadFilePart(w http.ResponseWriter, r *http.Request) {
 	if !isFileUploadEnabled() {
 		w.WriteHeader(http.StatusForbidden)
 		return
@@ -112,6 +112,10 @@ func (s Server) HandleGetFileUploadPart(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "part_size exceeds max_part_size", http.StatusBadRequest)
 		return
 	}
+	if r.ContentLength > 0 && r.ContentLength != partSize {
+		http.Error(w, "content-length does not match part_size", http.StatusBadRequest)
+		return
+	}
 
 	ctxData, err := s.requireFileUploadSessionContext(r.Context(), fileID)
 	if err != nil {
@@ -124,29 +128,27 @@ func (s Server) HandleGetFileUploadPart(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	partOutput, err := s.storage.GetUploadPart(
+	partOutput, err := s.storage.UploadPart(
 		conn.GetCtx(r.Context(), ctxData.connection),
-		storage.GetUploadPartInput{
+		storage.UploadPartInput{
 			BucketName:        ctxData.bucketName,
 			ObjectName:        objectName,
 			ProviderSessionID: sessionID,
 			PartNumber:        partNumber,
 			PartSize:          partSize,
+			Body:              r.Body,
 		},
 	)
 	if err != nil {
-		log.Error().Err(err).Str("file_id", fileID).Int64("part_number", partNumber).Msg("get upload part failed")
-		http.Error(w, "failed to get upload target", http.StatusBadRequest)
+		log.Error().Err(err).Str("file_id", fileID).Int64("part_number", partNumber).Msg("upload part failed")
+		http.Error(w, "failed to upload part", http.StatusBadRequest)
 		return
 	}
 
-	writeProtoJSON(w, http.StatusOK, &proto.GetFileUploadPartResponse{
-		PartNumber:      partNumber,
-		TargetUrl:       partOutput.TargetURL,
-		HttpMethod:      partOutput.HTTPMethod,
-		RequiredHeaders: convertUploadHeadersToProto(partOutput.RequiredHeaders),
-		PartSize:        partOutput.PartSize,
-		ExpiresIn:       maxInt64(0, int64(partOutput.ExpiresAt.Sub(nowUTC()).Seconds())),
+	writeProtoJSON(w, http.StatusOK, &proto.FileUploadPartManifestItem{
+		PartNumber: partNumber,
+		Etag:       partOutput.ETag,
+		Size:       partOutput.Size,
 	})
 }
 
@@ -247,7 +249,8 @@ func (s Server) HandleCompleteFileUploadSession(w http.ResponseWriter, r *http.R
 			ProviderSessionID: sessionID,
 		},
 	); err != nil {
-		log.Warn().Err(err).Str("file_id", fileID).Msg("failed to cleanup multipart chunk objects after completion")
+		// why: cleanup is best-effort after durable DB state is committed.
+		log.Warn().Err(err).Str("file_id", fileID).Msg("failed to cleanup upload session after completion")
 	}
 	writeProtoJSON(w, http.StatusOK, &proto.CompleteFileUploadSessionResponse{
 		Status:   "completed",
