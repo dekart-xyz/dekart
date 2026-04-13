@@ -43,6 +43,9 @@ npm-debug.log*
 # cypress
 cypress/videos
 cypress/screenshots
+cypress/fixtures/POI25Mb.csv
+cypress/fixtures/POI67Mb.csv
+cypress/fixtures/*.large.csv
 
 # IDE
 .idea
