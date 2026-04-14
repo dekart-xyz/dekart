@@ -323,6 +323,10 @@ export default function App () {
               <AppRedirect />
               <WorkspacePage step='members' />
             </Route>
+            <Route exact path='/workspace/tokens'>
+              <AppRedirect />
+              <WorkspacePage step='tokens' />
+            </Route>
             <Route exact path='/workspace/create'>
               <AppRedirect />
               <WorkspacePage step='workspace' onboarding='create' />

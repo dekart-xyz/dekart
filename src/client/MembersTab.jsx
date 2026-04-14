@@ -5,13 +5,15 @@ import { updateWorkspaceUser } from './actions/workspace'
 import { PlanType, UpdateWorkspaceUserRequest, UserRole } from 'dekart-proto/dekart_pb'
 import Input from 'antd/es/input'
 import Button from 'antd/es/button'
-import Table from 'antd/es/table'
 import Tag from 'antd/es/tag'
 import { copyUrlToClipboard } from './actions/clipboard'
 import { CopyOutlined } from '@ant-design/icons'
 import Select from 'antd/es/select'
 import { track } from './lib/tracking'
 import { showUpgradeModal, UpgradeModalType } from './actions/upgradeModal'
+import Typography from 'antd/es/typography'
+
+const { Text } = Typography
 
 function getRoleTitle (role, planType) {
   const roleLabels = {
@@ -115,54 +117,36 @@ export default function MembersTab () {
         </Button>
       </div>
       <div className={styles.userTable}>
-        <Table
-          showHeader={false}
-          pagination={false}
-          loading={!users.length}
-          dataSource={users.filter(u => u.status !== 3)}
-          rowClassName={styles.userListRow}
-          rowKey='email'
-          columns={[
-            {
-              title: 'Email',
-              dataIndex: 'email',
-              key: 'email',
-              className: styles.emailColumn
-            },
-            // copy invite link
-            {
-              title: 'Invite',
-              dataIndex: 'status',
-              key: 'invite',
-              render: (status, u) => (
-                status === 1
+        <div className={styles.membersList}>
+          {users.filter(u => u.status !== 3).map((u) => (
+            <div key={u.email} className={styles.memberItem}>
+              <div className={styles.memberNameColumn}>
+                <Text strong className={styles.memberName}>{u.email}</Text>
+              </div>
+              <div className={styles.memberStatusColumn}>
+                <Tag className={styles.statusTag}>{['Unknown', 'Pending', 'Active', 'Removed', 'Rejected'][u.status]}</Tag>
+              </div>
+              <div className={styles.memberCopyColumn}>
+                {u.status === 1
                   ? (
                     <Button
                       icon={<CopyOutlined />}
                       className={styles.inviteButton}
                       title='Copy invite link'
-                      type='text' onClick={() => {
+                      type='text'
+                      onClick={() => {
                         track('CopyInviteLink', { inviteId: u.inviteId })
                         dispatch(copyUrlToClipboard(window.location.toString() + '/invite/' + u.inviteId, 'Invite link copied to clipboard'))
                       }}
-                    />
+                    >
+                      Copy invite link
+                    </Button>
                     )
-                  : null
-              )
-            },
-            {
-              title: 'Status',
-              dataIndex: 'status',
-              key: 'status',
-              render: (status) => <Tag>{['Unknown', 'Pending', 'Active', 'Removed', 'Rejected'][status]}</Tag>
-            },
-            {
-              title: 'Role',
-              dataIndex: 'role',
-              key: 'role',
-              render: (role, u) => (
+                  : null}
+              </div>
+              <div className={styles.memberRoleColumn}>
                 <Select
-                  defaultValue={role}
+                  defaultValue={u.role}
                   style={{ width: 220 }}
                   disabled={u.email === userStream.email || !canManageUsers}
                   onChange={(value) => {
@@ -182,21 +166,15 @@ export default function MembersTab () {
                       value: UserRole.ROLE_VIEWER,
                       label: getRoleTitle(UserRole.ROLE_VIEWER, planType)
                     }
-
                   ]}
                 />
-              )
-            },
-            {
-              title: 'Active',
-              dataIndex: 'active',
-              className: styles.removeButtonColumn,
-              render: (a, u) => (
+              </div>
+              <div className={styles.memberActions}>
                 <RemoveButton email={u.email} />
-              )
-            }
-          ]}
-        />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
     </div>
@@ -205,19 +183,39 @@ export default function MembersTab () {
 
 function RemoveButton ({ email }) {
   const [removing, setRemoving] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const dispatch = useDispatch()
   const userStream = useSelector(state => state.user.stream)
   const isAdmin = useSelector(state => state.user.isAdmin)
+  const disabled = email === userStream.email || !isAdmin || removing
+
+  if (confirming) {
+    return (
+      <Button
+        danger
+        type='text'
+        disabled={disabled}
+        loading={removing}
+        title={email === userStream.email ? 'You cannot remove yourself' : undefined}
+        className={styles.removeButton}
+        onClick={() => {
+          track('RemoveUserFromWorkspace', { email })
+          setRemoving(true)
+          dispatch(updateWorkspaceUser(email, UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_REMOVE))
+        }}
+      >Confirm
+      </Button>
+    )
+  }
+
   return (
     <Button
-      disabled={email === userStream.email || !isAdmin || removing}
+      disabled={disabled}
       loading={removing}
       title={email === userStream.email ? 'You cannot remove yourself' : undefined}
       className={styles.removeButton}
       type='text' onClick={() => {
-        track('RemoveUserFromWorkspace', { email })
-        setRemoving(true)
-        dispatch(updateWorkspaceUser(email, UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_REMOVE))
+        setConfirming(true)
       }}
     >Remove
     </Button>

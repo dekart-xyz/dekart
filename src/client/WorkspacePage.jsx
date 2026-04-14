@@ -2,7 +2,7 @@ import { Header } from './Header'
 import { Helmet } from 'react-helmet'
 import styles from './WorkspacePage.module.css'
 import Card from 'antd/es/card'
-import { TeamOutlined, CreditCardOutlined, AppstoreTwoTone } from '@ant-design/icons'
+import { TeamOutlined, CreditCardOutlined, AppstoreTwoTone, KeyOutlined } from '@ant-design/icons'
 import Title from 'antd/es/typography/Title'
 import Button from 'antd/es/button'
 import { useEffect, useState } from 'react'
@@ -23,6 +23,7 @@ import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 import { track } from './lib/tracking'
 import Select from 'antd/es/select'
 import { Loading } from './Loading'
+import DeviceTokensTab from './DeviceTokensTab'
 
 function Invites () {
   const workspace = useSelector(state => state.workspace)
@@ -280,6 +281,8 @@ export function Workspace ({ nextStep, setNextStep, stepId }) {
                     history.push('/workspace/plan')
                   } else if (v === 'members') {
                     history.push('/workspace/members')
+                  } else if (v === 'tokens') {
+                    history.push('/workspace/tokens')
                   } else {
                     history.push('/workspace')
                   }
@@ -302,6 +305,9 @@ export function Workspace ({ nextStep, setNextStep, stepId }) {
                     <TeamOutlined /> Members {getMembersSubTitle(addedUsersCount, planType)}
                   </Badge>
                 </Radio.Button>
+                <Radio.Button value='tokens'>
+                  <KeyOutlined /> Tokens
+                </Radio.Button>
               </Radio.Group>
             </div>
             )
@@ -313,7 +319,9 @@ export function Workspace ({ nextStep, setNextStep, stepId }) {
           ? <WorkspaceTab nextStep={nextStep} setNextStep={setNextStep} />
           : step === 'plan'
             ? (!isSelfHosted ? <SubscriptionTab /> : <MembersTab />)
-            : <MembersTab />
+            : step === 'members'
+              ? <MembersTab />
+              : <DeviceTokensTab />
       }
     </div>
   )
@@ -371,6 +379,9 @@ function getWorkspacePageTitle (step) {
   }
   if (step === 'members') {
     return 'Workspace Members'
+  }
+  if (step === 'tokens') {
+    return 'Workspace Tokens'
   }
   return 'Workspace'
 }
