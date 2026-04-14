@@ -100,6 +100,7 @@ func (s Server) AuthorizeDevice(ctx context.Context, req *proto.AuthorizeDeviceR
 		// why: pending sessions can expire between initial state check and update attempt.
 		return nil, status.Error(codes.FailedPrecondition, "device session expired")
 	}
+	s.userStreams.Ping([]string{claims.Email})
 
 	return &proto.AuthorizeDeviceResponse{Status: "authorized"}, nil
 }
@@ -145,6 +146,7 @@ func (s Server) RevokeDeviceToken(ctx context.Context, req *proto.RevokeDeviceTo
 	if !revoked {
 		return nil, status.Error(codes.NotFound, "device token not found")
 	}
+	s.userStreams.Ping([]string{claims.Email})
 	return &proto.RevokeDeviceTokenResponse{}, nil
 }
 

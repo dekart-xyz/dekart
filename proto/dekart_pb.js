@@ -11610,7 +11610,8 @@ proto.GetUserStreamResponse.toObject = function(includeInstance, msg) {
     isPlayground: jspb.Message.getBooleanFieldWithDefault(msg, 8, false),
     isDefaultWorkspace: jspb.Message.getBooleanFieldWithDefault(msg, 9, false),
     userWorkspacesList: jspb.Message.toObjectList(msg.getUserWorkspacesList(),
-    proto.Workspace.toObject, includeInstance)
+    proto.Workspace.toObject, includeInstance),
+    tokenUpdate: jspb.Message.getFieldWithDefault(msg, 11, 0)
   };
 
   if (includeInstance) {
@@ -11688,6 +11689,10 @@ proto.GetUserStreamResponse.deserializeBinaryFromReader = function(msg, reader) 
       var value = new proto.Workspace;
       reader.readMessage(value,proto.Workspace.deserializeBinaryFromReader);
       msg.addUserWorkspaces(value);
+      break;
+    case 11:
+      var value = /** @type {number} */ (reader.readInt64());
+      msg.setTokenUpdate(value);
       break;
     default:
       reader.skipField();
@@ -11788,6 +11793,13 @@ proto.GetUserStreamResponse.serializeBinaryToWriter = function(message, writer) 
       10,
       f,
       proto.Workspace.serializeBinaryToWriter
+    );
+  }
+  f = message.getTokenUpdate();
+  if (f !== 0) {
+    writer.writeInt64(
+      11,
+      f
     );
   }
 };
@@ -12009,6 +12021,24 @@ proto.GetUserStreamResponse.prototype.addUserWorkspaces = function(opt_value, op
  */
 proto.GetUserStreamResponse.prototype.clearUserWorkspacesList = function() {
   return this.setUserWorkspacesList([]);
+};
+
+
+/**
+ * optional int64 token_update = 11;
+ * @return {number}
+ */
+proto.GetUserStreamResponse.prototype.getTokenUpdate = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 11, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.GetUserStreamResponse} returns this
+ */
+proto.GetUserStreamResponse.prototype.setTokenUpdate = function(value) {
+  return jspb.Message.setProto3IntField(this, 11, value);
 };
 
 

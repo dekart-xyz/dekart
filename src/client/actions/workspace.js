@@ -1,4 +1,17 @@
-import { CreateWorkspaceRequest, CreateSubscriptionRequest, GetInvitesRequest, GetWorkspaceRequest, GetStripePortalSessionRequest, ListUsersRequest, RespondToInviteRequest, UpdateWorkspaceRequest, UpdateWorkspaceUserRequest, PlanType } from 'dekart-proto/dekart_pb'
+import {
+  CreateWorkspaceRequest,
+  CreateSubscriptionRequest,
+  GetInvitesRequest,
+  GetWorkspaceRequest,
+  GetStripePortalSessionRequest,
+  ListDeviceTokensRequest,
+  ListUsersRequest,
+  RespondToInviteRequest,
+  RevokeDeviceTokenRequest,
+  UpdateWorkspaceRequest,
+  UpdateWorkspaceUserRequest,
+  PlanType
+} from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { success, trialSuccess } from './message'
@@ -163,6 +176,34 @@ export function usersListUpdate (usersList) {
   return {
     type: usersListUpdate.name,
     usersList
+  }
+}
+
+export function deviceTokensUpdate (tokensList) {
+  return {
+    type: deviceTokensUpdate.name,
+    tokensList: tokensList || []
+  }
+}
+
+export function getDeviceTokens () {
+  return (dispatch) => {
+    dispatch({ type: getDeviceTokens.name })
+    const request = new ListDeviceTokensRequest()
+    dispatch(grpcCall(Dekart.ListDeviceTokens, request, (response) => {
+      dispatch(deviceTokensUpdate(response.tokensList))
+    }))
+  }
+}
+
+export function revokeDeviceToken (tokenId) {
+  return (dispatch) => {
+    dispatch({ type: revokeDeviceToken.name, tokenId })
+    const request = new RevokeDeviceTokenRequest()
+    request.setTokenId(tokenId)
+    dispatch(grpcCall(Dekart.RevokeDeviceToken, request, () => {
+      success('Token revoked')
+    }))
   }
 }
 

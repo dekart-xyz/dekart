@@ -19,6 +19,36 @@ type WorkspaceDeviceToken struct {
 	CreatedAt    int64
 }
 
+// GetTokenUpdate returns unix timestamp marker for token list refresh decisions.
+func GetTokenUpdate(ctx context.Context, db *sql.DB, workspaceID string, email string, isSqlite bool) (int64, error) {
+	if workspaceID == "" || email == "" {
+		return 0, nil
+	}
+	query := `SELECT MAX(created_at) FROM device_auth_log WHERE workspace_id = $1 AND email = $2`
+	if isSqlite {
+		var updatedAtStr sql.NullString
+		if err := db.QueryRowContext(ctx, query, workspaceID, email).Scan(&updatedAtStr); err != nil {
+			return 0, err
+		}
+		if !updatedAtStr.Valid {
+			return 0, nil
+		}
+		parsed, err := time.ParseInLocation("2006-01-02 15:04:05", updatedAtStr.String, time.UTC)
+		if err != nil {
+			return 0, err
+		}
+		return parsed.Unix(), nil
+	}
+	var updatedAtTime sql.NullTime
+	if err := db.QueryRowContext(ctx, query, workspaceID, email).Scan(&updatedAtTime); err != nil {
+		return 0, err
+	}
+	if !updatedAtTime.Valid {
+		return 0, nil
+	}
+	return updatedAtTime.Time.Unix(), nil
+}
+
 // ListWorkspaceTokens returns active device tokens for one user in one workspace.
 func ListWorkspaceTokens(ctx context.Context, db *sql.DB, workspaceID string, email string) ([]WorkspaceDeviceToken, error) {
 	rows, err := db.QueryContext(

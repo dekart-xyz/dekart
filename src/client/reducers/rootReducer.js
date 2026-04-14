@@ -23,6 +23,7 @@ import analytics from './analyticsReducer'
 import snapshots from './snapshotsReducer'
 import { upgradeModal } from './upgradeModalReducer'
 import fileUploadStatus from './fileUploadReducer'
+import deviceTokens from './deviceTokensReducer'
 import { mapPreview, report, reportDirectAccessEmails, reportsList, reportStatus } from './reportReducer'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
@@ -140,6 +141,7 @@ export default combineReducers({
   stream,
   user,
   workspace,
+  deviceTokens,
   dataset,
   storage,
   queries,

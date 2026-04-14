@@ -1339,6 +1339,9 @@ export class GetUserStreamResponse extends jspb.Message {
   setUserWorkspacesList(value: Array<Workspace>): void;
   addUserWorkspaces(value?: Workspace, index?: number): Workspace;
 
+  getTokenUpdate(): number;
+  setTokenUpdate(value: number): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetUserStreamResponse.AsObject;
   static toObject(includeInstance: boolean, msg: GetUserStreamResponse): GetUserStreamResponse.AsObject;
@@ -1361,6 +1364,7 @@ export namespace GetUserStreamResponse {
     isPlayground: boolean,
     isDefaultWorkspace: boolean,
     userWorkspacesList: Array<Workspace.AsObject>,
+    tokenUpdate: number,
   }
 }
 

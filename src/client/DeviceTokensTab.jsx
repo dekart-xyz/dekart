@@ -1,35 +1,14 @@
 import { useMemo, useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import Card from 'antd/es/card'
 import Button from 'antd/es/button'
 import Empty from 'antd/es/empty'
 import Typography from 'antd/es/typography'
 import styles from './DeviceTokensTab.module.css'
+import { revokeDeviceToken } from './actions/workspace'
 
 const { Text } = Typography
 const gisSkillRepoURL = 'https://github.com/dekart-xyz/gis-skill'
-
-function buildMockDevices () {
-  return [
-    {
-      id: 'dev_1',
-      name: 'Vladi MacBook Pro',
-      activeSince: '2026-04-07',
-      tokenPreview: 'dtk_live_7f3a...91c2'
-    },
-    {
-      id: 'dev_2',
-      name: 'CI Runner (GitHub Actions)',
-      activeSince: '2026-04-10',
-      tokenPreview: 'dtk_live_1a9d...6b8f'
-    },
-    {
-      id: 'dev_3',
-      name: 'Local Linux VM',
-      activeSince: '2026-04-12',
-      tokenPreview: 'dtk_live_43ce...02ad'
-    }
-  ]
-}
 
 function AgentLink () {
   return (
@@ -41,14 +20,16 @@ function AgentLink () {
   )
 }
 
-// DeviceTokensTab renders mocked workspace device tokens and local revoke interactions.
+// DeviceTokensTab renders workspace device tokens and revoke interactions.
 export default function DeviceTokensTab () {
-  const [devices, setDevices] = useState(buildMockDevices())
+  const dispatch = useDispatch()
+  const devices = useSelector(state => state.deviceTokens.list)
+  const loading = useSelector(state => state.deviceTokens.loading)
   const [confirmingId, setConfirmingId] = useState('')
 
   const isEmpty = useMemo(() => devices.length === 0, [devices.length])
 
-  if (isEmpty) {
+  if (!loading && isEmpty) {
     return (
       <div className={styles.container}>
         <Card className={styles.wrapper}>
@@ -61,12 +42,12 @@ export default function DeviceTokensTab () {
 
   return (
     <div className={styles.container}>
-      <Card className={styles.wrapper}>
+      <Card className={styles.wrapper} loading={loading}>
         <div className={styles.list}>
           {devices.map((device) => (
             <div key={device.id} className={styles.item}>
               <div className={styles.nameColumn}>
-                <Text strong className={styles.deviceName}>{device.name}</Text>
+                <Text strong className={styles.deviceName}>{device.deviceName}</Text>
               </div>
               <div className={styles.detailsColumn}>
                 <div className={styles.metaItem}>
@@ -75,7 +56,7 @@ export default function DeviceTokensTab () {
                 </div>
                 <div className={styles.metaItem}>
                   <Text type='secondary'>Since</Text>
-                  <Text>{device.activeSince}</Text>
+                  <Text>{formatUnixDate(device.createdAt)}</Text>
                 </div>
               </div>
               <div className={styles.actions}>
@@ -86,8 +67,7 @@ export default function DeviceTokensTab () {
                       type='text'
                       className={styles.removeButton}
                       onClick={() => {
-                        // why: prototype keeps revoke behavior local-only until backend is connected.
-                        setDevices((current) => current.filter((entry) => entry.id !== device.id))
+                        dispatch(revokeDeviceToken(device.id))
                         setConfirmingId('')
                       }}
                     >
@@ -111,4 +91,12 @@ export default function DeviceTokensTab () {
       <AgentLink />
     </div>
   )
+}
+
+// formatUnixDate converts unix timestamp seconds to YYYY-MM-DD for compact table display.
+function formatUnixDate (seconds) {
+  if (!seconds) {
+    return '—'
+  }
+  return new Date(seconds * 1000).toISOString().slice(0, 10)
 }

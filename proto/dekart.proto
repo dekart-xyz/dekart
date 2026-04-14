@@ -385,6 +385,7 @@ message GetUserStreamResponse {
     bool is_playground = 8;
     bool is_default_workspace = 9;
     repeated Workspace user_workspaces = 10;
+    int64 token_update = 11; // used to trigger token UI refresh
 }
 
 message TestConnectionRequest {
@@ -707,7 +708,7 @@ message QueryJob {
         JOB_STATUS_UNSPECIFIED = 0;
         JOB_STATUS_PENDING = 1;
         JOB_STATUS_RUNNING = 2;
-        JOB_STATUS_DONE_LEGACY = 3;  // legacy for backwards compatibility
+        JOB_STATUS_DONE_LEGACY = 3; // legacy for backwards compatibility
         JOB_STATUS_READING_RESULTS = 4; // job is done processing results
         JOB_STATUS_DONE = 5;
     }
