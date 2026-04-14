@@ -62,6 +62,8 @@ service Dekart {
     //user
     rpc RespondToInvite(RespondToInviteRequest) returns (RespondToInviteResponse) {}
     rpc AuthorizeDevice(AuthorizeDeviceRequest) returns (AuthorizeDeviceResponse) {}
+    rpc ListDeviceTokens(ListDeviceTokensRequest) returns (ListDeviceTokensResponse) {}
+    rpc RevokeDeviceToken(RevokeDeviceTokenRequest) returns (RevokeDeviceTokenResponse) {}
 
     //subscriptions
     rpc CreateSubscription(CreateSubscriptionRequest) returns (CreateSubscriptionResponse) {}
@@ -594,6 +596,32 @@ message AuthorizeDeviceRequest {
 // AuthorizeDeviceResponse acknowledges that authorization state was updated.
 message AuthorizeDeviceResponse {
     string status = 1; // "authorized" when successful.
+}
+
+// DeviceToken describes a workspace-scoped CLI token entry.
+message DeviceToken {
+    string id = 1; // Stable token id for revoke action.
+    string device_name = 2; // Human-readable device label from CLI.
+    string token_preview = 3; // Masked token preview; never a full raw token.
+    int64 created_at = 4; // Creation time in unix seconds.
+}
+
+// ListDeviceTokensRequest lists active device tokens for current workspace.
+message ListDeviceTokensRequest {
+}
+
+// ListDeviceTokensResponse returns active workspace tokens visible to current user.
+message ListDeviceTokensResponse {
+    repeated DeviceToken tokens = 1;
+}
+
+// RevokeDeviceTokenRequest revokes one token in current workspace.
+message RevokeDeviceTokenRequest {
+    string token_id = 1; // Token id returned by ListDeviceTokensResponse.
+}
+
+// RevokeDeviceTokenResponse acknowledges revoke operation.
+message RevokeDeviceTokenResponse {
 }
 
 message ArchiveReportRequest {

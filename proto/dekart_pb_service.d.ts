@@ -373,6 +373,24 @@ type DekartAuthorizeDevice = {
   readonly responseType: typeof dekart_pb.AuthorizeDeviceResponse;
 };
 
+type DekartListDeviceTokens = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof dekart_pb.ListDeviceTokensRequest;
+  readonly responseType: typeof dekart_pb.ListDeviceTokensResponse;
+};
+
+type DekartRevokeDeviceToken = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof dekart_pb.RevokeDeviceTokenRequest;
+  readonly responseType: typeof dekart_pb.RevokeDeviceTokenResponse;
+};
+
 type DekartCreateSubscription = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -470,6 +488,8 @@ export class Dekart {
   static readonly GetWherobotsConnectionHint: DekartGetWherobotsConnectionHint;
   static readonly RespondToInvite: DekartRespondToInvite;
   static readonly AuthorizeDevice: DekartAuthorizeDevice;
+  static readonly ListDeviceTokens: DekartListDeviceTokens;
+  static readonly RevokeDeviceToken: DekartRevokeDeviceToken;
   static readonly CreateSubscription: DekartCreateSubscription;
   static readonly GetStripePortalSession: DekartGetStripePortalSession;
   static readonly CreateWorkspace: DekartCreateWorkspace;
@@ -854,6 +874,24 @@ export class DekartClient {
   authorizeDevice(
     requestMessage: dekart_pb.AuthorizeDeviceRequest,
     callback: (error: ServiceError|null, responseMessage: dekart_pb.AuthorizeDeviceResponse|null) => void
+  ): UnaryResponse;
+  listDeviceTokens(
+    requestMessage: dekart_pb.ListDeviceTokensRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.ListDeviceTokensResponse|null) => void
+  ): UnaryResponse;
+  listDeviceTokens(
+    requestMessage: dekart_pb.ListDeviceTokensRequest,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.ListDeviceTokensResponse|null) => void
+  ): UnaryResponse;
+  revokeDeviceToken(
+    requestMessage: dekart_pb.RevokeDeviceTokenRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.RevokeDeviceTokenResponse|null) => void
+  ): UnaryResponse;
+  revokeDeviceToken(
+    requestMessage: dekart_pb.RevokeDeviceTokenRequest,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.RevokeDeviceTokenResponse|null) => void
   ): UnaryResponse;
   createSubscription(
     requestMessage: dekart_pb.CreateSubscriptionRequest,

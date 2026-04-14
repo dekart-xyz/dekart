@@ -2158,6 +2158,112 @@ export namespace AuthorizeDeviceResponse {
   }
 }
 
+export class DeviceToken extends jspb.Message {
+  getId(): string;
+  setId(value: string): void;
+
+  getDeviceName(): string;
+  setDeviceName(value: string): void;
+
+  getTokenPreview(): string;
+  setTokenPreview(value: string): void;
+
+  getCreatedAt(): number;
+  setCreatedAt(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): DeviceToken.AsObject;
+  static toObject(includeInstance: boolean, msg: DeviceToken): DeviceToken.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: DeviceToken, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): DeviceToken;
+  static deserializeBinaryFromReader(message: DeviceToken, reader: jspb.BinaryReader): DeviceToken;
+}
+
+export namespace DeviceToken {
+  export type AsObject = {
+    id: string,
+    deviceName: string,
+    tokenPreview: string,
+    createdAt: number,
+  }
+}
+
+export class ListDeviceTokensRequest extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): ListDeviceTokensRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: ListDeviceTokensRequest): ListDeviceTokensRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: ListDeviceTokensRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): ListDeviceTokensRequest;
+  static deserializeBinaryFromReader(message: ListDeviceTokensRequest, reader: jspb.BinaryReader): ListDeviceTokensRequest;
+}
+
+export namespace ListDeviceTokensRequest {
+  export type AsObject = {
+  }
+}
+
+export class ListDeviceTokensResponse extends jspb.Message {
+  clearTokensList(): void;
+  getTokensList(): Array<DeviceToken>;
+  setTokensList(value: Array<DeviceToken>): void;
+  addTokens(value?: DeviceToken, index?: number): DeviceToken;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): ListDeviceTokensResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: ListDeviceTokensResponse): ListDeviceTokensResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: ListDeviceTokensResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): ListDeviceTokensResponse;
+  static deserializeBinaryFromReader(message: ListDeviceTokensResponse, reader: jspb.BinaryReader): ListDeviceTokensResponse;
+}
+
+export namespace ListDeviceTokensResponse {
+  export type AsObject = {
+    tokensList: Array<DeviceToken.AsObject>,
+  }
+}
+
+export class RevokeDeviceTokenRequest extends jspb.Message {
+  getTokenId(): string;
+  setTokenId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): RevokeDeviceTokenRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: RevokeDeviceTokenRequest): RevokeDeviceTokenRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: RevokeDeviceTokenRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RevokeDeviceTokenRequest;
+  static deserializeBinaryFromReader(message: RevokeDeviceTokenRequest, reader: jspb.BinaryReader): RevokeDeviceTokenRequest;
+}
+
+export namespace RevokeDeviceTokenRequest {
+  export type AsObject = {
+    tokenId: string,
+  }
+}
+
+export class RevokeDeviceTokenResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): RevokeDeviceTokenResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: RevokeDeviceTokenResponse): RevokeDeviceTokenResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: RevokeDeviceTokenResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RevokeDeviceTokenResponse;
+  static deserializeBinaryFromReader(message: RevokeDeviceTokenResponse, reader: jspb.BinaryReader): RevokeDeviceTokenResponse;
+}
+
+export namespace RevokeDeviceTokenResponse {
+  export type AsObject = {
+  }
+}
+
 export class ArchiveReportRequest extends jspb.Message {
   getReportId(): string;
   setReportId(value: string): void;
