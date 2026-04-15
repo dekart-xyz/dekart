@@ -306,7 +306,11 @@ func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 				Email: UnknownEmail,
 			}
 		} else {
-			claims = c.validateAuthToken(ctx, r.Header.Get("Authorization"))
+			var tokenWorkspaceScope string
+			claims, tokenWorkspaceScope = c.validateGoogleOrDeviceAuthToken(ctx, r.Header.Get("Authorization"))
+			if tokenWorkspaceScope != "" {
+				ctx = SetTokenWorkspaceScopeCtx(ctx, tokenWorkspaceScope)
+			}
 		}
 	} else if c.RequireSnowflakeContext {
 		claims = c.getSnowflakeContext(r.Header.Get("Sf-Context-Current-User"))

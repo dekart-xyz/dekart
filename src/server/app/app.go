@@ -126,6 +126,13 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		}
 		dekartServer.ServeReportAnalytics(w, r)
 	}).Methods("GET", "OPTIONS")
+	api.HandleFunc("/reports", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeader(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.HandleCreateReport(w, r)
+	}).Methods("POST", "OPTIONS")
 
 	api.HandleFunc("/query-source/{query}/{source}.sql", func(w http.ResponseWriter, r *http.Request) {
 		setOriginHeader(w, r)
