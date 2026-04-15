@@ -13,14 +13,17 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	"golang.org/x/sync/singleflight"
 	"google.golang.org/api/idtoken"
 	googleOAuth "google.golang.org/api/oauth2/v2"
 	"google.golang.org/api/option"
@@ -64,6 +67,95 @@ type ClaimsCheck struct {
 	oidcJWT    *oidcJWTVerifier
 	db         *sql.DB
 }
+
+const oauthCodeExchangeCacheTTL = 5 * time.Minute
+
+type oauthCodeExchangeCacheEntry struct {
+	redirectState *pb.RedirectState
+	expiresAt     time.Time
+}
+
+type oauthCodeExchangeCache struct {
+	mu      sync.Mutex
+	ttl     time.Duration
+	entries map[string]oauthCodeExchangeCacheEntry
+}
+
+func newOAuthCodeExchangeCache(ttl time.Duration) *oauthCodeExchangeCache {
+	return &oauthCodeExchangeCache{
+		ttl:     ttl,
+		entries: map[string]oauthCodeExchangeCacheEntry{},
+	}
+}
+
+func copyRedirectState(state *pb.RedirectState) *pb.RedirectState {
+	if state == nil {
+		return nil
+	}
+	cloned, ok := proto.Clone(state).(*pb.RedirectState)
+	if !ok {
+		return &pb.RedirectState{
+			TokenJson:              state.TokenJson,
+			Error:                  state.Error,
+			SensitiveScopesGranted: state.SensitiveScopesGranted,
+		}
+	}
+	return cloned
+}
+
+func (c *oauthCodeExchangeCache) purgeExpired(now time.Time) {
+	for key, entry := range c.entries {
+		if now.After(entry.expiresAt) {
+			delete(c.entries, key)
+		}
+	}
+}
+
+func (c *oauthCodeExchangeCache) get(key string) (*pb.RedirectState, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	now := time.Now()
+	c.purgeExpired(now)
+	entry, exists := c.entries[key]
+	if !exists {
+		return nil, false
+	}
+	return copyRedirectState(entry.redirectState), true
+}
+
+func (c *oauthCodeExchangeCache) set(key string, state *pb.RedirectState) {
+	if state == nil {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	now := time.Now()
+	c.purgeExpired(now)
+	c.entries[key] = oauthCodeExchangeCacheEntry{
+		redirectState: copyRedirectState(state),
+		expiresAt:     now.Add(c.ttl),
+	}
+}
+
+func oauthCodeExchangeKey(code string, state *pb.AuthState) string {
+	if state == nil {
+		return code
+	}
+	parts := []string{
+		code,
+		state.AuthUrl,
+		state.UiUrl,
+		state.LoginHint,
+		strconv.FormatBool(state.SensitiveScope),
+		strconv.FormatBool(state.SwitchAccount),
+	}
+	return strings.Join(parts, "|")
+}
+
+var oauthExchangeGroup singleflight.Group
+var oauthExchangeCache = newOAuthCodeExchangeCache(oauthCodeExchangeCacheTTL)
 
 var b2i = map[bool]int{false: 0, true: 1}
 
@@ -525,7 +617,33 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 		if c.DevRefreshToken != "" {
 			redirectState = c.requestDevToken(&state, r)
 		} else {
-			redirectState = c.requestToken(&state, r)
+			code := r.URL.Query().Get("code")
+			cacheKey := oauthCodeExchangeKey(code, &state)
+			if code != "" {
+				if cachedState, ok := oauthExchangeCache.get(cacheKey); ok {
+					redirectState = cachedState
+				}
+			}
+			if redirectState == nil {
+				result, _, _ := oauthExchangeGroup.Do(cacheKey, func() (interface{}, error) {
+					if code != "" {
+						if cachedState, ok := oauthExchangeCache.get(cacheKey); ok {
+							return cachedState, nil
+						}
+					}
+					stateFromExchange := c.requestToken(&state, r)
+					if code != "" && stateFromExchange != nil && stateFromExchange.Error == "" {
+						oauthExchangeCache.set(cacheKey, stateFromExchange)
+					}
+					return stateFromExchange, nil
+				})
+				redirectState, _ = result.(*pb.RedirectState)
+			}
+		}
+		if redirectState == nil {
+			redirectState = &pb.RedirectState{
+				Error: "Error exchanging code for token",
+			}
 		}
 		redirectStateBin, err := proto.Marshal(redirectState)
 		if err != nil {

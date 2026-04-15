@@ -19,9 +19,15 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type PresignedS3Storage struct{}
+type PresignedS3Storage struct {
+	UnsupportedUploadSessionStorage
+}
 
-func NewPresignedS3Storage() Storage { return PresignedS3Storage{} }
+func NewPresignedS3Storage() Storage {
+	return PresignedS3Storage{
+		UnsupportedUploadSessionStorage: NewUnsupportedUploadSessionStorage("presigned-s3"),
+	}
+}
 
 func (s PresignedS3Storage) CanSaveQuery(context.Context, string) bool { return false }
 

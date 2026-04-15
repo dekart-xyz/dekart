@@ -15,6 +15,7 @@ import (
 )
 
 type PGStorage struct {
+	UnsupportedUploadSessionStorage
 	metadataDB        *sql.DB
 	dataSourceConnStr string
 }
@@ -35,8 +36,9 @@ func NewPGStorage(metadataDB *sql.DB) *PGStorage {
 		log.Fatal().Msg("DEKART_POSTGRES_DATASOURCE_CONNECTION is required for DEKART_STORAGE=PG")
 	}
 	return &PGStorage{
-		metadataDB:        metadataDB,
-		dataSourceConnStr: dataSourceConnStr,
+		UnsupportedUploadSessionStorage: NewUnsupportedUploadSessionStorage("postgres-replay"),
+		metadataDB:                      metadataDB,
+		dataSourceConnStr:               dataSourceConnStr,
 	}
 }
 

@@ -6,7 +6,6 @@ import { numRunningQueries, queries, queryJobs, queryParams, queryStatus } from 
 import { setUsage } from '../actions/usage'
 import { setEnv } from '../actions/env'
 import { newRelease } from '../actions/version'
-import { uploadFile, uploadFileProgress, uploadFileStateChange } from '../actions/file'
 import keplerGlReducer from '@kepler.gl/reducers'
 import stream from './streamReducer'
 import token from './tokenReducer'
@@ -23,6 +22,7 @@ import readme from './readmeReducer'
 import analytics from './analyticsReducer'
 import snapshots from './snapshotsReducer'
 import { upgradeModal } from './upgradeModalReducer'
+import fileUploadStatus from './fileUploadReducer'
 import { mapPreview, report, reportDirectAccessEmails, reportsList, reportStatus } from './reportReducer'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
@@ -118,40 +118,6 @@ function release (state = null, action) {
   switch (action.type) {
     case newRelease.name:
       return action.release
-    default:
-      return state
-  }
-}
-
-function fileUploadStatus (state = {}, action) {
-  switch (action.type) {
-    case uploadFile.name:
-      return {
-        ...state,
-        [action.fileId]: {
-          readyState: 0,
-          loaded: 0,
-          total: action.file.size,
-          status: 0
-        }
-      }
-    case uploadFileStateChange.name:
-      return {
-        ...state,
-        [action.fileId]: {
-          ...state[action.fileId],
-          readyState: action.readyState,
-          status: action.status
-        }
-      }
-    case uploadFileProgress.name:
-      return {
-        ...state,
-        [action.fileId]: {
-          ...state[action.fileId],
-          loaded: action.loaded
-        }
-      }
     default:
       return state
   }

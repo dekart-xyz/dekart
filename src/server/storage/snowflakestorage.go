@@ -16,11 +16,14 @@ import (
 )
 
 type SnowflakeStorage struct {
+	UnsupportedUploadSessionStorage
 	// logger zerolog.Logger
 }
 
 func NewSnowflakeStorage() *SnowflakeStorage {
-	return &SnowflakeStorage{}
+	return &SnowflakeStorage{
+		UnsupportedUploadSessionStorage: NewUnsupportedUploadSessionStorage("snowflake-replay"),
+	}
 }
 
 func (s *SnowflakeStorage) CanSaveQuery(context.Context, string) bool {

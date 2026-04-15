@@ -3,11 +3,6 @@ package storage
 import (
 	"context"
 	"crypto/tls"
-	"dekart/src/proto"
-	"dekart/src/server/bqutils"
-	"dekart/src/server/conn"
-	"dekart/src/server/errtype"
-	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -15,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"cloud.google.com/go/storage"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -23,7 +17,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/api/iterator"
 )
 
 type StorageObject interface {
@@ -39,6 +32,10 @@ type StorageObject interface {
 type Storage interface {
 	GetObject(context.Context, string, string) StorageObject
 	CanSaveQuery(context.Context, string) bool
+	StartUploadSession(context.Context, StartUploadSessionInput) (*StartUploadSessionOutput, error)
+	UploadPart(context.Context, UploadPartInput) (*UploadPartOutput, error)
+	CompleteUploadSession(context.Context, CompleteUploadSessionInput) (*CompleteUploadSessionOutput, error)
+	AbortUploadSession(context.Context, AbortUploadSessionInput) error
 }
 
 func GetBucketName(userBucketName string) string {
@@ -56,225 +53,8 @@ func GetDefaultBucketName() string {
 	return os.Getenv("DEKART_CLOUD_STORAGE_BUCKET")
 }
 
-// GoogleCloudStorage implements Storage interface for Google Cloud Storage
-type GoogleCloudStorage struct {
-	defaultBucketName string
-	logger            zerolog.Logger
-	useUserToken      bool // if false ignore user token in ctx and use default service account
-}
-
-// CanSaveQuery returns true if the storage can save SQL query text
-func (s GoogleCloudStorage) CanSaveQuery(_ context.Context, bucketName string) bool {
-	return bucketName != ""
-}
-
-func (s GoogleCloudStorage) GetDefaultBucketName() string {
-	return s.defaultBucketName
-}
-
-func NewGoogleCloudStorage() *GoogleCloudStorage {
-	defaultBucketName := os.Getenv("DEKART_CLOUD_STORAGE_BUCKET")
-	if defaultBucketName == "" {
-		log.Info().Msg("DEKART_CLOUD_STORAGE_BUCKET is not set, using user provided bucket")
-	}
-	return &GoogleCloudStorage{
-		defaultBucketName,
-		log.With().Str("DEKART_CLOUD_STORAGE_BUCKET", defaultBucketName).Logger(),
-		true,
-	}
-}
-
-// NewPublicStorage used to access public storage bucket with application account
-func NewPublicStorage() *GoogleCloudStorage {
-	defaultBucketName := os.Getenv("DEKART_CLOUD_PUBLIC_STORAGE_BUCKET")
-	if defaultBucketName == "" {
-		defaultBucketName = os.Getenv("DEKART_CLOUD_STORAGE_BUCKET")
-	}
-	if defaultBucketName == "" {
-		log.Fatal().Msg("DEKART_CLOUD_PUBLIC_STORAGE_BUCKET and DEKART_CLOUD_STORAGE_BUCKET are not set")
-	}
-	return &GoogleCloudStorage{
-		defaultBucketName,
-		log.With().Str("defaultBucketName", defaultBucketName).Logger(),
-		false,
-	}
-}
-
-func TestConnection(ctx context.Context, connection *proto.Connection) (*proto.TestConnectionResponse, error) {
-	client, err := bqutils.GetStorageClient(ctx, connection, false)
-	if err != nil {
-		return &proto.TestConnectionResponse{
-			Success: false,
-			Error:   err.Error(),
-		}, nil
-	}
-	bucket := client.Bucket(connection.CloudStorageBucket)
-
-	// Try to list the objects in the bucket
-	it := bucket.Objects(ctx, nil)
-	_, err = it.Next()
-	if err != nil {
-		if err == iterator.Done {
-			// The bucket is empty, but we have the necessary permission
-			return &proto.TestConnectionResponse{
-				Success: true,
-			}, nil
-		}
-		// We got an error, so we don't have the necessary permission
-		return &proto.TestConnectionResponse{
-			Success: false,
-			Error:   err.Error(),
-		}, nil
-	}
-
-	return &proto.TestConnectionResponse{
-		Success: true,
-	}, nil
-}
-
-type GetObjectConfig struct {
-	bucketName string
-}
-
-type GetObjectOption interface {
-	apply(*GetObjectConfig)
-}
-
-type BucketNameOption struct {
-	BucketName string
-}
-
-func (o BucketNameOption) apply(options *GetObjectConfig) {
-	options.bucketName = o.BucketName
-}
-
-func (s GoogleCloudStorage) GetObject(_ context.Context, bucketName, object string) StorageObject {
-	if bucketName == "" {
-		log.Warn().Msg("bucketName is not set")
-	}
-	return GoogleCloudStorageObject{
-		bucketName,
-		object,
-		s.logger.With().Str("GoogleCloudStorageObject", object).Logger(),
-		s.useUserToken,
-	}
-}
-
-// GoogleCloudStorageObject implements StorageObject interface for Google Cloud Storage
-type GoogleCloudStorageObject struct {
-	bucketName   string
-	object       string
-	logger       zerolog.Logger
-	useUserToken bool // if false ignore user token in ctx and use default service account
-}
-
-func (o GoogleCloudStorageObject) CopyFromS3(ctx context.Context, source string) error {
-	log.Fatal().Msg("method not implemented")
-	return nil
-}
-
-func (o GoogleCloudStorageObject) CopyTo(ctx context.Context, writer io.WriteCloser) error {
-	reader, err := o.GetReader(ctx)
-	if err != nil {
-		errtype.LogError(err, "Error getting reader while copying to Google Cloud Storage")
-		return err
-	}
-	_, err = io.Copy(writer, reader)
-	if err != nil {
-		errtype.LogError(err, "Error while copying to Google Cloud Storage")
-		return err
-	}
-	err = writer.Close()
-	if err != nil {
-		errtype.LogError(err, "Error closing writer while copying to Google Cloud Storage")
-		return err
-	}
-	return nil
-}
-
-func (o GoogleCloudStorageObject) Delete(ctx context.Context) error {
-	obj, err := o.getObject(ctx)
-	if err != nil {
-		return err
-	}
-	err = obj.Delete(ctx)
-	if err != nil {
-		o.logger.Error().Err(err).Msg("error deleting object")
-		return err
-	}
-	return nil
-}
-
-func (o GoogleCloudStorageObject) getObject(ctx context.Context) (*storage.ObjectHandle, error) {
-	client, err := bqutils.GetStorageClient(ctx, conn.FromCtx(ctx), !o.useUserToken)
-	if err != nil {
-		errtype.LogError(err, "error getting storage client")
-		return nil, err
-	}
-	bucket := client.Bucket(o.bucketName)
-	return bucket.Object(o.object), nil
-}
-
-func (o GoogleCloudStorageObject) GetWriter(ctx context.Context) io.WriteCloser {
-	obj, err := o.getObject(ctx)
-	if err != nil {
-		return errorWriteCloser{err: err}
-	}
-	writer := obj.NewWriter(ctx)
-	writer.ChunkSize = 0
-	return writer
-}
-
-func (o GoogleCloudStorageObject) GetReader(ctx context.Context) (io.ReadCloser, error) {
-	obj, err := o.getObject(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return obj.NewReader(ctx)
-}
-
-func (o GoogleCloudStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, error) {
-	obj, err := o.getObject(ctx)
-	if err != nil {
-		return nil, err
-	}
-	attrs, err := obj.Attrs(ctx)
-	if err != nil {
-		o.logger.Error().Stack().Err(err).Msg("error getting attributes")
-		return nil, err
-	}
-	return &attrs.Created, nil
-}
-
-func (o GoogleCloudStorageObject) GetSize(ctx context.Context) (*int64, error) {
-	obj, err := o.getObject(ctx)
-	if err != nil {
-		return nil, err
-	}
-	attrs, err := obj.Attrs(ctx)
-	if err != nil {
-		o.logger.Error().Err(err).Msg("error getting attributes")
-		return nil, err
-	}
-	return &attrs.Size, nil
-}
-
-type errorWriteCloser struct {
-	err error
-}
-
-func (w errorWriteCloser) Write(_ []byte) (int, error) {
-	return 0, w.err
-}
-
-func (w errorWriteCloser) Close() error {
-	if w.err != nil {
-		return w.err
-	}
-	return errors.New("storage writer initialization failed")
-}
-
 type S3Storage struct {
+	UnsupportedUploadSessionStorage
 	bucketName string
 	client     *s3.S3
 	uploader   *s3manager.Uploader
@@ -314,10 +94,11 @@ func NewS3Storage() Storage {
 	ses := session.Must(session.NewSession(conf))
 	s3client := s3.New(ses)
 	return S3Storage{
-		client:     s3client,
-		bucketName: bucketName,
-		uploader:   s3manager.NewUploaderWithClient(s3client),
-		logger:     log.With().Str("DEKART_CLOUD_STORAGE_BUCKET", bucketName).Logger(),
+		UnsupportedUploadSessionStorage: NewUnsupportedUploadSessionStorage("s3"),
+		client:                          s3client,
+		bucketName:                      bucketName,
+		uploader:                        s3manager.NewUploaderWithClient(s3client),
+		logger:                          log.With().Str("DEKART_CLOUD_STORAGE_BUCKET", bucketName).Logger(),
 	}
 }
 

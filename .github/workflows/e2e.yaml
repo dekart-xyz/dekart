@@ -50,6 +50,12 @@ jobs:
     steps:
       # credentials file for any variant that may need it
       - run: echo "$GOOGLE_CRED_SEC" > "$GOOGLE_APPLICATION_CREDENTIALS"
+
+      - name: Download Cypress multipart fixture
+        run: |
+          mkdir -p /tmp/cypress/fixtures
+          gcloud auth activate-service-account --key-file="$GOOGLE_APPLICATION_CREDENTIALS"
+          gcloud storage cp gs://dekart-dev-ci-fixtures/cypress/POI25Mb.csv /tmp/cypress/fixtures/POI25Mb.csv --project=dekart-dev
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -81,6 +87,7 @@ jobs:
           docker run -i \
             --network="host" \
             -v $(pwd)/${GOOGLE_APPLICATION_CREDENTIALS}:/dekart/${GOOGLE_APPLICATION_CREDENTIALS} \
+            -v /tmp/cypress/fixtures/POI25Mb.csv:/dekart/cypress/fixtures/POI25Mb.csv \
             -v /tmp/cypress/videos:/dekart/cypress/videos/ \
             -v /tmp/cypress/screenshots:/dekart/cypress/screenshots/ \
             -e DEKART_LOG_DEBUG=1 \
@@ -114,6 +121,7 @@ jobs:
           docker run -i \
             --network="host" \
             -v $(pwd)/${GOOGLE_APPLICATION_CREDENTIALS}:/dekart/${GOOGLE_APPLICATION_CREDENTIALS} \
+            -v /tmp/cypress/fixtures/POI25Mb.csv:/dekart/cypress/fixtures/POI25Mb.csv \
             -v /tmp/cypress/videos:/dekart/cypress/videos/ \
             -v /tmp/cypress/screenshots:/dekart/cypress/screenshots/ \
             -e DEKART_LOG_DEBUG=1 \
@@ -268,6 +276,12 @@ jobs:
       # credentials file for any variant that may need it
       - run: echo "$GOOGLE_CRED_SEC" > "$GOOGLE_APPLICATION_CREDENTIALS"
 
+      - name: Download Cypress multipart fixture
+        run: |
+          mkdir -p /tmp/cypress/fixtures
+          gcloud auth activate-service-account --key-file="$GOOGLE_APPLICATION_CREDENTIALS"
+          gcloud storage cp gs://dekart-dev-ci-fixtures/cypress/POI25Mb.csv /tmp/cypress/fixtures/POI25Mb.csv --project=dekart-dev
+
       - uses: docker/setup-qemu-action@v2
       - uses: docker/setup-buildx-action@v2
 
@@ -310,6 +324,7 @@ jobs:
           docker run -i --network host \
             -v /tmp/cypress/videos:/dekart/cypress/videos \
             -v /tmp/cypress/screenshots:/dekart/cypress/screenshots \
+            -v /tmp/cypress/fixtures/POI25Mb.csv:/dekart/cypress/fixtures/POI25Mb.csv \
             -v $(pwd)/$GOOGLE_APPLICATION_CREDENTIALS:/dekart/$GOOGLE_APPLICATION_CREDENTIALS \
             -e DEKART_LOG_DEBUG=1 \
             -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \

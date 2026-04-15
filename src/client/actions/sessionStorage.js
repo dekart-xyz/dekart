@@ -4,7 +4,8 @@ const initialState = {
   isPlayground: false,
   lastOpenedDialog: null, // connection dialog state
   redirectWhenSaveConnection: null, // { reportId, edit }
-  preferredWorkspaceId: ''
+  preferredWorkspaceId: '',
+  pendingDeviceAuthorization: ''
 }
 
 let current = initialState

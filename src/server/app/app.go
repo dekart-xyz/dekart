@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/dekart"
-	"dekart/src/server/license"
 	"dekart/src/server/user"
 	"net/http"
 	"os"
@@ -46,55 +45,6 @@ func (m ResponseWriter) WriteHeader(statusCode int) {
 
 var allowedOrigin string = os.Getenv("DEKART_CORS_ORIGIN")
 
-func isSSOConfigured() bool {
-	return len(enabledSSOEnvVars()) > 0
-}
-
-func enabledSSOEnvVars() []string {
-	enabled := make([]string, 0, 4)
-	if os.Getenv("DEKART_REQUIRE_OIDC") == "1" {
-		enabled = append(enabled, "DEKART_REQUIRE_OIDC")
-	}
-	if os.Getenv("DEKART_REQUIRE_GOOGLE_OAUTH") == "1" {
-		enabled = append(enabled, "DEKART_REQUIRE_GOOGLE_OAUTH")
-	}
-	if os.Getenv("DEKART_REQUIRE_IAP") == "1" {
-		enabled = append(enabled, "DEKART_REQUIRE_IAP")
-	}
-	if os.Getenv("DEKART_REQUIRE_AMAZON_OIDC") == "1" {
-		enabled = append(enabled, "DEKART_REQUIRE_AMAZON_OIDC")
-	}
-	return enabled
-}
-
-// Removing or bypassing this check is a modification under AGPL and requires publishing your changed source code.
-// Get a free license key at https://mailchi.mp/dekart/upgrade-to-sso
-func ValidateLicenseForSSO() {
-
-	licenseKey := strings.TrimSpace(os.Getenv("DEKART_LICENSE_KEY"))
-	if licenseKey != "" {
-		info, err := license.ValidateToken(licenseKey)
-		if err != nil {
-			log.Fatal().Err(err).Msg("DEKART_LICENSE_KEY is invalid. Get a valid key at https://mailchi.mp/dekart/upgrade-to-sso")
-		}
-		if info.ExpiresAt != nil {
-			log.Info().Str("license_holder", info.Email).Time("license_expires_at", *info.ExpiresAt).Msg("Validated DEKART_LICENSE_KEY")
-		} else {
-			log.Info().Str("license_holder", info.Email).Msg("Validated perpetual DEKART_LICENSE_KEY")
-		}
-	}
-
-	enabledVars := enabledSSOEnvVars()
-	if len(enabledVars) == 0 {
-		return
-	}
-	if licenseKey == "" {
-		log.Fatal().Msg(
-			"DEKART_LICENSE_KEY is required to enable SSO. Get your free key at https://mailchi.mp/dekart/upgrade-to-sso",
-		)
-	}
-}
-
 func getAllowedOrigin(origin string) string {
 	if matchOrigin(origin) {
 		return origin
@@ -103,6 +53,9 @@ func getAllowedOrigin(origin string) string {
 }
 
 func matchOrigin(origin string) bool {
+	if origin == "" {
+		return true
+	}
 	if allowedOrigin == "" || allowedOrigin == "*" {
 		log.Warn().Msg("DEKART_CORS_ORIGIN is empty or *")
 		return true
@@ -141,8 +94,17 @@ func configureGRPC(dekartServer *dekart.Server) *grpcweb.WrappedGrpcServer {
 }
 
 func setOriginHeader(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", getAllowedOrigin(r.Header.Get("Origin")))
-	w.Header().Set("Access-Control-Allow-Headers", "Authorization, X-Dekart-Playground, X-Dekart-Claim-Email, X-Dekart-Report-Id, X-Dekart-Logged-In, X-Dekart-Workspace-Id")
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return
+	}
+	w.Header().Add("Vary", "Origin")
+	w.Header().Add("Vary", "Access-Control-Request-Method")
+	w.Header().Add("Vary", "Access-Control-Request-Headers")
+	w.Header().Set("Access-Control-Allow-Origin", getAllowedOrigin(origin))
+	w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Dekart-Playground, X-Dekart-Claim-Email, X-Dekart-Report-Id, X-Dekart-Logged-In, X-Dekart-Workspace-Id")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+	w.Header().Set("Access-Control-Max-Age", "600")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 }
 
@@ -173,16 +135,51 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		dekartServer.ServeQuerySource(w, r)
 	}).Methods("GET", "OPTIONS")
 
-	api.HandleFunc("/file/{id}.csv", func(w http.ResponseWriter, r *http.Request) {
+	api.HandleFunc("/file/{id}/upload-sessions", func(w http.ResponseWriter, r *http.Request) {
 		setOriginHeader(w, r)
 		if r.Method == http.MethodOptions {
 			return
 		}
-		dekartServer.UploadFile(w, r)
+		dekartServer.HandleStartFileUploadSession(w, r)
 	}).Methods("POST", "OPTIONS")
+	api.HandleFunc("/file/{id}/upload-sessions/{session_id}/parts/{part_number}", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeader(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.HandleUploadFilePart(w, r)
+	}).Methods("PUT", "OPTIONS")
+	api.HandleFunc("/file/{id}/upload-sessions/{session_id}/complete", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeader(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.HandleCompleteFileUploadSession(w, r)
+	}).Methods("POST", "OPTIONS")
+	api.HandleFunc("/file/{id}/upload-sessions/{session_id}", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeader(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.HandleAbortFileUploadSession(w, r)
+	}).Methods("DELETE", "OPTIONS")
 	api.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
 		handleVersionCheck(dekartServer, w, r)
 	}).Methods("GET", "OPTIONS")
+	api.HandleFunc("/device", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeaderIfExists(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.HandleDeviceStart(w, r)
+	}).Methods("POST", "OPTIONS")
+	api.HandleFunc("/device/token", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeaderIfExists(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.HandleDeviceToken(w, r)
+	}).Methods("POST", "OPTIONS")
 
 	if claimsCheck.RequireGoogleOAuth {
 		api.HandleFunc("/authenticate", func(w http.ResponseWriter, r *http.Request) {
@@ -208,7 +205,6 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		}
 		dekartServer.ServeMapPreview(w, r)
 	}).Methods("GET", "OPTIONS")
-
 	// Serve static files
 	staticPath := os.Getenv("DEKART_STATIC_FILES")
 	if staticPath != "" {
@@ -221,9 +217,12 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		router.HandleFunc("/reports/{id}/edit", staticFilesHandler.ServeIndex) // deprecated
 		router.HandleFunc("/reports/{id}/source", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace", staticFilesHandler.ServeIndex)
+		router.HandleFunc("/workspace/create", staticFilesHandler.ServeIndex)
+		router.HandleFunc("/workspace/join", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace/plan", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace/members", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace/invite/{id}", staticFilesHandler.ServeIndex)
+		router.HandleFunc("/device/authorize", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/playground", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/grant-scopes", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/400", func(w http.ResponseWriter, r *http.Request) {
@@ -277,4 +276,12 @@ func Configure(dekartServer *dekart.Server, db *sql.DB) *http.Server {
 		WriteTimeout: 60 * time.Second,
 		ReadTimeout:  60 * time.Second,
 	}
+}
+
+// setOriginHeaderIfExists avoids CORS-origin warnings for clients that do not send Origin header.
+func setOriginHeaderIfExists(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Origin") == "" {
+		return
+	}
+	setOriginHeader(w, r)
 }

@@ -370,6 +370,15 @@ Dekart.RespondToInvite = {
   responseType: dekart_pb.RespondToInviteResponse
 };
 
+Dekart.AuthorizeDevice = {
+  methodName: "AuthorizeDevice",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: dekart_pb.AuthorizeDeviceRequest,
+  responseType: dekart_pb.AuthorizeDeviceResponse
+};
+
 Dekart.CreateSubscription = {
   methodName: "CreateSubscription",
   service: Dekart,
@@ -1669,6 +1678,37 @@ DekartClient.prototype.respondToInvite = function respondToInvite(requestMessage
     callback = arguments[1];
   }
   var client = grpc.unary(Dekart.RespondToInvite, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.authorizeDevice = function authorizeDevice(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.AuthorizeDevice, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
