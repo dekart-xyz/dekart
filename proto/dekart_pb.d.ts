@@ -2989,6 +2989,9 @@ export namespace CreateDatasetRequest {
 }
 
 export class CreateDatasetResponse extends jspb.Message {
+  getId(): string;
+  setId(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CreateDatasetResponse.AsObject;
   static toObject(includeInstance: boolean, msg: CreateDatasetResponse): CreateDatasetResponse.AsObject;
@@ -3001,6 +3004,7 @@ export class CreateDatasetResponse extends jspb.Message {
 
 export namespace CreateDatasetResponse {
   export type AsObject = {
+    id: string,
   }
 }
 
@@ -3082,6 +3086,9 @@ export class CreateFileUploadSessionRequest extends jspb.Message {
   getTotalSize(): number;
   setTotalSize(value: number): void;
 
+  getFileId(): string;
+  setFileId(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CreateFileUploadSessionRequest.AsObject;
   static toObject(includeInstance: boolean, msg: CreateFileUploadSessionRequest): CreateFileUploadSessionRequest.AsObject;
@@ -3097,6 +3104,7 @@ export namespace CreateFileUploadSessionRequest {
     name: string,
     mimeType: string,
     totalSize: number,
+    fileId: string,
   }
 }
 
@@ -3217,6 +3225,12 @@ export class CompleteFileUploadSessionRequest extends jspb.Message {
   getTotalSize(): number;
   setTotalSize(value: number): void;
 
+  getFileId(): string;
+  setFileId(value: string): void;
+
+  getUploadSessionId(): string;
+  setUploadSessionId(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CompleteFileUploadSessionRequest.AsObject;
   static toObject(includeInstance: boolean, msg: CompleteFileUploadSessionRequest): CompleteFileUploadSessionRequest.AsObject;
@@ -3231,6 +3245,8 @@ export namespace CompleteFileUploadSessionRequest {
   export type AsObject = {
     partsList: Array<FileUploadPartManifestItem.AsObject>,
     totalSize: number,
+    fileId: string,
+    uploadSessionId: string,
   }
 }
 
@@ -3263,6 +3279,30 @@ export namespace CompleteFileUploadSessionResponse {
     fileId: string,
     sourceId: string,
     size: number,
+  }
+}
+
+export class AbortFileUploadSessionRequest extends jspb.Message {
+  getFileId(): string;
+  setFileId(value: string): void;
+
+  getUploadSessionId(): string;
+  setUploadSessionId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): AbortFileUploadSessionRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: AbortFileUploadSessionRequest): AbortFileUploadSessionRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: AbortFileUploadSessionRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): AbortFileUploadSessionRequest;
+  static deserializeBinaryFromReader(message: AbortFileUploadSessionRequest, reader: jspb.BinaryReader): AbortFileUploadSessionRequest;
+}
+
+export namespace AbortFileUploadSessionRequest {
+  export type AsObject = {
+    fileId: string,
+    uploadSessionId: string,
   }
 }
 

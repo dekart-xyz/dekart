@@ -272,7 +272,7 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 	return &proto.RemoveDatasetResponse{}, nil
 }
 
-func (s Server) insertDataset(ctx context.Context, reportID string) (sql.Result, error) {
+func (s Server) insertDataset(ctx context.Context, reportID string) (string, sql.Result, error) {
 	id := newUUID()
 	claims := user.GetClaims(ctx)
 	var res sql.Result
@@ -307,9 +307,9 @@ func (s Server) insertDataset(ctx context.Context, reportID string) (sql.Result,
 	}
 	if err != nil {
 		errtype.LogError(err, "Error inserting dataset")
-		return nil, err
+		return "", nil, err
 	}
-	return res, err
+	return id, res, err
 }
 
 func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetRequest) (*proto.CreateDatasetResponse, error) {
@@ -317,7 +317,7 @@ func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetReque
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	result, err := s.insertDataset(ctx, req.ReportId)
+	datasetID, result, err := s.insertDataset(ctx, req.ReportId)
 
 	if err != nil {
 		errtype.LogError(err, "Error inserting dataset")
@@ -337,7 +337,7 @@ func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetReque
 	}
 	s.reportStreams.Ping(req.ReportId)
 	s.userStreams.PingAll() // because dataset count is now part of connection info
-	res := &proto.CreateDatasetResponse{}
+	res := &proto.CreateDatasetResponse{Id: datasetID}
 
 	return res, nil
 }

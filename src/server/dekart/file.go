@@ -312,13 +312,35 @@ func (s Server) CreateFile(ctx context.Context, req *proto.CreateFileRequest) (*
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
+	fileID := id
 	if affectedRows == 0 {
 		log.Warn().Str("report", *reportID).Str("dataset", req.DatasetId).Msg("dataset file was already created")
+		fileID, err = s.getDatasetFileID(ctx, req.DatasetId)
+		if err != nil {
+			errtype.LogError(err, "get existing dataset file id failed")
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		_, deleteErr := s.db.ExecContext(ctx, `delete from files where id=$1`, id)
+		if deleteErr != nil {
+			log.Warn().Err(deleteErr).Str("file_id", id).Msg("failed to cleanup orphan file record")
+		}
 	}
 
 	s.reportStreams.Ping(*reportID)
 
-	return &proto.CreateFileResponse{}, nil
+	return &proto.CreateFileResponse{FileId: fileID}, nil
+}
+
+// getDatasetFileID returns linked file id from dataset row.
+func (s Server) getDatasetFileID(ctx context.Context, datasetID string) (string, error) {
+	var fileID sql.NullString
+	if err := s.db.QueryRowContext(ctx, `select file_id from datasets where id=$1`, datasetID).Scan(&fileID); err != nil {
+		return "", err
+	}
+	if !fileID.Valid || fileID.String == "" {
+		return "", fmt.Errorf("dataset file_id is empty")
+	}
+	return fileID.String, nil
 }
 
 func (s Server) getFiles(ctx context.Context, datasets []*proto.Dataset) ([]*proto.File, error) {

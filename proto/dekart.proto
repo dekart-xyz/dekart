@@ -795,6 +795,7 @@ message CreateDatasetRequest {
 }
 
 message CreateDatasetResponse {
+    string id = 1;
 }
 
 message CreateFileRequest {
@@ -817,6 +818,7 @@ message CreateFileUploadSessionRequest {
     string name = 1; // Original filename displayed in UI and stored in file metadata.
     string mime_type = 2; // Declared content type used for validation and object metadata.
     int64 total_size = 3; // Total file size in bytes, validated against upload limits.
+    string file_id = 4; // Dekart file id; required by MCP transport, ignored by path-based upload endpoint.
 }
 
 // CreateFileUploadSessionResponse returns upload session metadata and part-upload contract.
@@ -849,6 +851,8 @@ message FileUploadPartManifestItem {
 message CompleteFileUploadSessionRequest {
     repeated FileUploadPartManifestItem parts = 1; // Ordered part manifest used for provider finalize.
     int64 total_size = 2; // Final expected object size in bytes.
+    string file_id = 3; // Dekart file id; required by MCP transport, ignored by path-based upload endpoint.
+    string upload_session_id = 4; // Provider upload session id; required by MCP transport, ignored by path-based upload endpoint.
 }
 
 // CompleteFileUploadSessionResponse returns final file upload state after successful completion.
@@ -857,6 +861,12 @@ message CompleteFileUploadSessionResponse {
     string file_id = 2; // Dekart file id associated with this upload session.
     string source_id = 3; // Provider object/source id persisted for the file.
     int64 size = 4; // Final stored object size in bytes.
+}
+
+// AbortFileUploadSessionRequest aborts upload session for one file/session pair.
+message AbortFileUploadSessionRequest {
+    string file_id = 1; // Dekart file id associated with the upload session.
+    string upload_session_id = 2; // Provider upload session id returned by start endpoint.
 }
 
 // AbortFileUploadSessionResponse acknowledges upload-session abortion.

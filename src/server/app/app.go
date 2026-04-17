@@ -133,6 +133,34 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		}
 		dekartServer.HandleCreateReport(w, r)
 	}).Methods("POST", "OPTIONS")
+	api.HandleFunc("/datasets", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeader(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.HandleCreateDataset(w, r)
+	}).Methods("POST", "OPTIONS")
+	api.HandleFunc("/files", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeader(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.HandleCreateFile(w, r)
+	}).Methods("POST", "OPTIONS")
+	api.HandleFunc("/mcp/tools", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeader(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.HandleMCPTools(w, r)
+	}).Methods("GET", "OPTIONS")
+	api.HandleFunc("/mcp/call", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeader(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.HandleMCPCall(w, r)
+	}).Methods("POST", "OPTIONS")
 
 	api.HandleFunc("/query-source/{query}/{source}.sql", func(w http.ResponseWriter, r *http.Request) {
 		setOriginHeader(w, r)
