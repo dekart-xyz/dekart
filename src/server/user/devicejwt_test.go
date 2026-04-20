@@ -39,8 +39,8 @@ func TestGetContextAcceptsDeviceToken(t *testing.T) {
 	if claims.Email != "user@example.com" {
 		t.Fatalf("unexpected email: %s", claims.Email)
 	}
-	if GetTokenWorkspaceScopeCtx(ctx) != "workspace-1" {
-		t.Fatalf("unexpected token workspace scope: %s", GetTokenWorkspaceScopeCtx(ctx))
+	if claims.WorkspaceID != "workspace-1" {
+		t.Fatalf("unexpected workspace scope in claims: %s", claims.WorkspaceID)
 	}
 }
 
@@ -55,7 +55,7 @@ func TestValidateDeviceAuthTokenRequiresWorkspaceClaim(t *testing.T) {
 		GoogleOAuthSecret:   "test-secret",
 	}, nil)
 
-	claims, _ := claimsCheck.validateDeviceAuthToken(context.Background(), "Bearer "+token)
+	claims := claimsCheck.validateDeviceAuthToken(context.Background(), "Bearer "+token)
 	if claims != nil {
 		t.Fatal("expected device token without workspace_id to be rejected")
 	}

@@ -50,11 +50,12 @@ export function reportWillOpen (reportId) {
   return { type: reportWillOpen.name, reportId }
 }
 
-export function openReport (reportId) {
+export function openReport (reportId, snapshot = false) {
   return (dispatch, getState) => {
     const user = getState().user
     dispatch({
-      type: openReport.name
+      type: openReport.name,
+      snapshotMode: Boolean(snapshot)
     })
     dispatch(getReportStream(
       reportId,

@@ -19,6 +19,7 @@ service Dekart {
     rpc GetSnapshots(GetSnapshotsRequest) returns (GetSnapshotsResponse) {}
     rpc RestoreReportSnapshot(RestoreReportSnapshotRequest) returns (RestoreReportSnapshotResponse) {}
     rpc SaveMapPreview(SaveMapPreviewRequest) returns (SaveMapPreviewResponse) {}
+    rpc CreateReportSnapshot(CreateReportSnapshotRequest) returns (CreateReportSnapshotResponse) {}
 
     // datasets
     rpc CreateDataset(CreateDatasetRequest) returns (CreateDatasetResponse) {}
@@ -82,6 +83,16 @@ message SaveMapPreviewRequest {
 }
 
 message SaveMapPreviewResponse {
+}
+
+message CreateReportSnapshotRequest {
+    string report_id = 1; // Existing report id visible to caller.
+}
+
+message CreateReportSnapshotResponse {
+    string snapshot_url = 1; // Signed short-lived URL for one screenshot render request.
+    int64 expires_in = 2; // URL lifetime in seconds from response time.
+    string snapshot_render_url = 3; // Absolute URL of the snapshot render frontend.
 }
 
 message RestoreReportSnapshotRequest {

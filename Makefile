@@ -1,4 +1,4 @@
-.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down up-and-down-oidc sqlite proto-copy-to-node proto-stub server runner-install runner-register runner-start runner-stop runner-status runner-service-install runner-service-start runner-service-stop runner-service-status github-runner license-keygen license-issue
+.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down up-and-down-oidc sqlite proto-copy-to-node proto-stub server dev-ports-release runner-install runner-register runner-start runner-stop runner-status runner-service-install runner-service-start runner-service-stop runner-service-status github-runner license-keygen license-issue
 
 # load .env
 # https://lithic.tech/blog/2020-05/makefile-dot-env
@@ -119,7 +119,8 @@ docker: # build docker for local use
 	docker buildx build --tag ${DEKART_DOCKER_DEV_TAG} -o type=image --platform=linux/amd64 -f ./Dockerfile .
 
 up-and-down:
-	docker compose  --env-file .env --profile local up; docker compose --env-file .env --profile local down --volumes
+	docker compose --env-file .env --profile local up db adminer browserless; \
+	docker compose --env-file .env --profile local down --volumes
 up-and-down-oidc:
 	docker compose --env-file .env.oidc --profile oidc up db adminer keycloak oauth2-proxy; docker compose --env-file .env.oidc --profile oidc down --volumes
 cloud:
@@ -129,6 +130,16 @@ up:
 
 down:
 	docker compose --env-file .env --profile local down --volumes
+
+dev-ports-release:
+	@echo "Releasing local dev ports 8080 and 3000..."
+	@pids="$$(lsof -tiTCP:8080,3000 -sTCP:LISTEN)"; \
+	if [ -n "$$pids" ]; then \
+		kill -9 $$pids; \
+		echo "Force-stopped listeners: $$pids"; \
+	else \
+		echo "No listeners on 8080 or 3000"; \
+	fi
 
 cloudsql:
 	docker compose  --env-file .env --profile cloudsql up

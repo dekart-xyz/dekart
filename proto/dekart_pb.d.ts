@@ -43,6 +43,54 @@ export namespace SaveMapPreviewResponse {
   }
 }
 
+export class CreateReportSnapshotRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CreateReportSnapshotRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: CreateReportSnapshotRequest): CreateReportSnapshotRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CreateReportSnapshotRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CreateReportSnapshotRequest;
+  static deserializeBinaryFromReader(message: CreateReportSnapshotRequest, reader: jspb.BinaryReader): CreateReportSnapshotRequest;
+}
+
+export namespace CreateReportSnapshotRequest {
+  export type AsObject = {
+    reportId: string,
+  }
+}
+
+export class CreateReportSnapshotResponse extends jspb.Message {
+  getSnapshotUrl(): string;
+  setSnapshotUrl(value: string): void;
+
+  getExpiresIn(): number;
+  setExpiresIn(value: number): void;
+
+  getSnapshotRenderUrl(): string;
+  setSnapshotRenderUrl(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CreateReportSnapshotResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: CreateReportSnapshotResponse): CreateReportSnapshotResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CreateReportSnapshotResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CreateReportSnapshotResponse;
+  static deserializeBinaryFromReader(message: CreateReportSnapshotResponse, reader: jspb.BinaryReader): CreateReportSnapshotResponse;
+}
+
+export namespace CreateReportSnapshotResponse {
+  export type AsObject = {
+    snapshotUrl: string,
+    expiresIn: number,
+    snapshotRenderUrl: string,
+  }
+}
+
 export class RestoreReportSnapshotRequest extends jspb.Message {
   getReportId(): string;
   setReportId(value: string): void;

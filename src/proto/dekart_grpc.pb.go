@@ -34,6 +34,7 @@ const (
 	Dekart_GetSnapshots_FullMethodName                  = "/Dekart/GetSnapshots"
 	Dekart_RestoreReportSnapshot_FullMethodName         = "/Dekart/RestoreReportSnapshot"
 	Dekart_SaveMapPreview_FullMethodName                = "/Dekart/SaveMapPreview"
+	Dekart_CreateReportSnapshot_FullMethodName          = "/Dekart/CreateReportSnapshot"
 	Dekart_CreateDataset_FullMethodName                 = "/Dekart/CreateDataset"
 	Dekart_RemoveDataset_FullMethodName                 = "/Dekart/RemoveDataset"
 	Dekart_UpdateDatasetName_FullMethodName             = "/Dekart/UpdateDatasetName"
@@ -90,6 +91,7 @@ type DekartClient interface {
 	GetSnapshots(ctx context.Context, in *GetSnapshotsRequest, opts ...grpc.CallOption) (*GetSnapshotsResponse, error)
 	RestoreReportSnapshot(ctx context.Context, in *RestoreReportSnapshotRequest, opts ...grpc.CallOption) (*RestoreReportSnapshotResponse, error)
 	SaveMapPreview(ctx context.Context, in *SaveMapPreviewRequest, opts ...grpc.CallOption) (*SaveMapPreviewResponse, error)
+	CreateReportSnapshot(ctx context.Context, in *CreateReportSnapshotRequest, opts ...grpc.CallOption) (*CreateReportSnapshotResponse, error)
 	// datasets
 	CreateDataset(ctx context.Context, in *CreateDatasetRequest, opts ...grpc.CallOption) (*CreateDatasetResponse, error)
 	RemoveDataset(ctx context.Context, in *RemoveDatasetRequest, opts ...grpc.CallOption) (*RemoveDatasetResponse, error)
@@ -288,6 +290,16 @@ func (c *dekartClient) SaveMapPreview(ctx context.Context, in *SaveMapPreviewReq
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SaveMapPreviewResponse)
 	err := c.cc.Invoke(ctx, Dekart_SaveMapPreview_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) CreateReportSnapshot(ctx context.Context, in *CreateReportSnapshotRequest, opts ...grpc.CallOption) (*CreateReportSnapshotResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateReportSnapshotResponse)
+	err := c.cc.Invoke(ctx, Dekart_CreateReportSnapshot_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -681,6 +693,7 @@ type DekartServer interface {
 	GetSnapshots(context.Context, *GetSnapshotsRequest) (*GetSnapshotsResponse, error)
 	RestoreReportSnapshot(context.Context, *RestoreReportSnapshotRequest) (*RestoreReportSnapshotResponse, error)
 	SaveMapPreview(context.Context, *SaveMapPreviewRequest) (*SaveMapPreviewResponse, error)
+	CreateReportSnapshot(context.Context, *CreateReportSnapshotRequest) (*CreateReportSnapshotResponse, error)
 	// datasets
 	CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error)
 	RemoveDataset(context.Context, *RemoveDatasetRequest) (*RemoveDatasetResponse, error)
@@ -779,6 +792,9 @@ func (UnimplementedDekartServer) RestoreReportSnapshot(context.Context, *Restore
 }
 func (UnimplementedDekartServer) SaveMapPreview(context.Context, *SaveMapPreviewRequest) (*SaveMapPreviewResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SaveMapPreview not implemented")
+}
+func (UnimplementedDekartServer) CreateReportSnapshot(context.Context, *CreateReportSnapshotRequest) (*CreateReportSnapshotResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateReportSnapshot not implemented")
 }
 func (UnimplementedDekartServer) CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateDataset not implemented")
@@ -1169,6 +1185,24 @@ func _Dekart_SaveMapPreview_Handler(srv interface{}, ctx context.Context, dec fu
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DekartServer).SaveMapPreview(ctx, req.(*SaveMapPreviewRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_CreateReportSnapshot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateReportSnapshotRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).CreateReportSnapshot(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_CreateReportSnapshot_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).CreateReportSnapshot(ctx, req.(*CreateReportSnapshotRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1830,6 +1864,10 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SaveMapPreview",
 			Handler:    _Dekart_SaveMapPreview_Handler,
+		},
+		{
+			MethodName: "CreateReportSnapshot",
+			Handler:    _Dekart_CreateReportSnapshot_Handler,
 		},
 		{
 			MethodName: "CreateDataset",

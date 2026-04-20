@@ -56,6 +56,12 @@ func matchOrigin(origin string) bool {
 	if origin == "" {
 		return true
 	}
+	if strings.TrimSpace(origin) == strings.TrimSpace(os.Getenv("DEKART_APP_URL")) {
+		return true
+	}
+	if strings.TrimSpace(origin) == strings.TrimSpace(os.Getenv("DEKART_SNAPSHOT_RENDER_BASE_URL")) {
+		return true
+	}
 	if allowedOrigin == "" || allowedOrigin == "*" {
 		log.Warn().Msg("DEKART_CORS_ORIGIN is empty or *")
 		return true
@@ -161,6 +167,13 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		}
 		dekartServer.HandleMCPCall(w, r)
 	}).Methods("POST", "OPTIONS")
+	router.HandleFunc("/snapshot/report/{token}.png", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeader(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.HandleSnapshotReport(w, r)
+	}).Methods("GET", "OPTIONS")
 
 	api.HandleFunc("/query-source/{query}/{source}.sql", func(w http.ResponseWriter, r *http.Request) {
 		setOriginHeader(w, r)
@@ -251,6 +264,7 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		router.HandleFunc("/reports/{id}", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/reports/{id}/edit", staticFilesHandler.ServeIndex) // deprecated
 		router.HandleFunc("/reports/{id}/source", staticFilesHandler.ServeIndex)
+		router.HandleFunc("/reports/{id}/snapshot", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace/create", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace/join", staticFilesHandler.ServeIndex)

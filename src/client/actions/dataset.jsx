@@ -304,6 +304,7 @@ export function downloadDataset (dataset, sourceId, extension, prevDatasetsList)
     const loginHint = getState().user?.loginHint
     dispatch({ type: downloadDataset.name, dataset, controller })
     const { token, user: { claimEmailCookie } } = getState()
+    const snapshotMode = getState().reportStatus.snapshotMode
     try {
       const res = await get(
         `/dataset-source/${dataset.id}/${sourceId}.${extension}`,
@@ -314,6 +315,11 @@ export function downloadDataset (dataset, sourceId, extension, prevDatasetsList)
         reportId,
         loginHint
       )
+      if (snapshotMode) {
+        // why: snapshot rendering is headless and should avoid UI-driven add-to-map loops.
+        dispatch(addDatasetToMap(dataset, prevDatasetsList, res, extension))
+        return
+      }
       dispatch(finishDownloading(dataset, prevDatasetsList, res, extension, label))
     } catch (err) {
       dispatch(processDownloadError(err, dataset, label))

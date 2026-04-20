@@ -18,29 +18,32 @@ const (
 	deviceAuthAudience     = "dekart-device-auth"
 )
 
-// validateGoogleOrDeviceAuthToken deterministically routes bearer tokens to device or Google validation.
-func (c ClaimsCheck) validateGoogleOrDeviceAuthToken(ctx context.Context, header string) (*Claims, string) {
+// validateGoogleOrDeviceAuthToken deterministically routes bearer tokens to snapshot, device, or Google validation.
+func (c ClaimsCheck) validateGoogleOrDeviceAuthToken(ctx context.Context, header string) *Claims {
 	tokenString, ok := normalizeBearerToken(header)
 	if !ok {
-		return nil, ""
+		return nil
+	}
+	if claims := validateSnapshotToken(tokenString); claims != nil {
+		return claims
 	}
 	if shouldValidateAsDeviceToken(tokenString) {
 		// why: device-shaped JWT must never fallback to Google auth validation.
 		return c.validateDeviceAuthToken(ctx, "Bearer "+tokenString)
 	}
-	return c.validateAuthToken(ctx, header), ""
+	return c.validateAuthToken(ctx, header)
 }
 
 // validateDeviceAuthToken validates signed workspace-scoped device token and returns claims when active.
-func (c ClaimsCheck) validateDeviceAuthToken(ctx context.Context, header string) (*Claims, string) {
+func (c ClaimsCheck) validateDeviceAuthToken(ctx context.Context, header string) *Claims {
 	_ = ctx
 	tokenString, ok := normalizeBearerToken(header)
 	if !ok || !looksLikeJWT(tokenString) {
-		return nil, ""
+		return nil
 	}
 	publicKey, err := readDeviceAuthPublicKey()
 	if err != nil {
-		return nil, ""
+		return nil
 	}
 
 	parsedToken, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
@@ -51,26 +54,28 @@ func (c ClaimsCheck) validateDeviceAuthToken(ctx context.Context, header string)
 	})
 	if err != nil || !parsedToken.Valid {
 		log.Warn().Err(err).Msg("Device auth token verification failed")
-		return nil, ""
+		return nil
 	}
 
 	claimsMap, ok := parsedToken.Claims.(jwt.MapClaims)
 	if !ok {
-		return nil, ""
+		return nil
 	}
 	if !claimsMap.VerifyIssuer(deviceAuthIssuer, true) || !claimsMap.VerifyAudience(deviceAuthAudience, true) {
-		return nil, ""
+		return nil
 	}
 
 	email, _ := claimsMap["email"].(string)
 	workspaceID, _ := claimsMap["workspace_id"].(string)
 	if email == "" || workspaceID == "" {
-		return nil, ""
+		return nil
 	}
 
 	return &Claims{
-		Email: email,
-	}, workspaceID
+		Email:       email,
+		DeviceToken: tokenString,
+		WorkspaceID: workspaceID,
+	}
 }
 
 // readDeviceAuthPublicKey parses base64-encoded PEM public key from env.

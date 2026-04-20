@@ -11,7 +11,6 @@ import (
 type workspaceInfoKeyType string
 
 const workspaceInfoKey workspaceInfoKeyType = "workspaceInfo"
-const tokenWorkspaceScopeKey workspaceInfoKeyType = "tokenWorkspaceScope"
 
 // CopyWorkspace copies workspace from sourceCtx to destCtx
 func copyWorkspace(sourceCtx, destCtx context.Context) context.Context {
@@ -41,20 +40,6 @@ func CheckWorkspaceCtx(ctx context.Context) WorkspaceInfo {
 		log.Error().Msgf("workspaceInfo not found in context")
 	}
 	return workspaceInfo
-}
-
-// SetTokenWorkspaceScopeCtx stores workspace scope extracted from auth token.
-func SetTokenWorkspaceScopeCtx(ctx context.Context, workspaceID string) context.Context {
-	return context.WithValue(ctx, tokenWorkspaceScopeKey, workspaceID)
-}
-
-// GetTokenWorkspaceScopeCtx returns token workspace scope if present in context.
-func GetTokenWorkspaceScopeCtx(ctx context.Context) string {
-	workspaceID, ok := ctx.Value(tokenWorkspaceScopeKey).(string)
-	if !ok {
-		return ""
-	}
-	return workspaceID
 }
 
 // CanCreateWorkspace checks if users can create workspace

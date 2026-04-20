@@ -87,7 +87,8 @@ const defaultReportStatus = {
   savedReportVersion: 0,
   fullscreen: null,
   autoRefreshIntervalSeconds: 0,
-  queryJobRefreshTimeoutId: null
+  queryJobRefreshTimeoutId: null,
+  snapshotMode: false
 }
 export function reportStatus (state = defaultReportStatus, action) {
   switch (action.type) {
@@ -170,7 +171,8 @@ export function reportStatus (state = defaultReportStatus, action) {
         ...defaultReportStatus,
         opened: true,
         willOpen: true,
-        edit: state.edit
+        edit: state.edit,
+        snapshotMode: Boolean(action.snapshotMode)
       }
     }
     case toggleReportEdit.name: {

@@ -1,4 +1,5 @@
 import { UNKNOWN_EMAIL } from './constants'
+import { getReportIdFromUrl } from './getReportIdFromUrl'
 
 export class ApiError extends Error {
   constructor (url, status, errorDetails, method = 'GET') {
@@ -54,7 +55,6 @@ export function get (endpoint, token = null, signal = null, onProgress = null, c
     if (loginHint && loginHint !== UNKNOWN_EMAIL) {
       xhr.setRequestHeader('X-Dekart-Logged-In', 'true')
     }
-
     xhr.responseType = 'arraybuffer'
 
     xhr.onload = () => {
@@ -131,6 +131,10 @@ async function requestJSON (method, endpoint, token = null, body = undefined) {
   if (token) {
     headers.Authorization = `Bearer ${token.access_token}`
   }
+  const reportId = getReportIdFromUrl()
+  if (reportId) {
+    headers['X-Dekart-Report-Id'] = reportId
+  }
   const response = await window.fetch(url, {
     method,
     headers,
@@ -160,6 +164,10 @@ async function requestRaw (method, endpoint, token = null, body = undefined, con
   }
   if (token) {
     headers.Authorization = `Bearer ${token.access_token}`
+  }
+  const reportId = getReportIdFromUrl()
+  if (reportId) {
+    headers['X-Dekart-Report-Id'] = reportId
   }
   const response = await window.fetch(url, {
     method,

@@ -31,6 +31,7 @@ import styles from './App.module.css'
 import { hideUpgradeModal } from './actions/upgradeModal'
 import { WorkspaceSelectorLight } from './WorkspaceSelector'
 import DeviceAuthorizePage from './DeviceAuthorizePage'
+import { setSnapshotToken } from './actions/token'
 
 // RedirectState reads states passed in the URL from the server
 function RedirectState () {
@@ -61,6 +62,10 @@ function RedirectState () {
 function useIsReportUrl () {
   const location = useLocation()
   return location.pathname.startsWith('/reports/')
+}
+
+function isSnapshotRoute (pathname) {
+  return /^\/reports\/[a-f0-9-]+\/snapshot$/.test(pathname)
 }
 
 function AppRedirect ({ allowWorkspaceRedirect = true }) {
@@ -153,6 +158,25 @@ function SwitchToPlayground () {
   return null
 }
 
+function SnapshotRouteState () {
+  const location = useLocation()
+  const dispatch = useDispatch()
+  const isSnapshotPath = isSnapshotRoute(location.pathname)
+
+  useEffect(() => {
+    if (!isSnapshotPath) {
+      return
+    }
+    const snapshotToken = new URLSearchParams(location.search).get('snapshot_token') || ''
+    if (!snapshotToken) {
+      return
+    }
+    dispatch(setSnapshotToken({ access_token: snapshotToken }))
+  }, [dispatch, isSnapshotPath, location.search])
+
+  return null
+}
+
 function NotFoundPage () {
   const dispatch = useDispatch()
   const userStream = useSelector(state => state.user.stream)
@@ -232,6 +256,7 @@ export default function App () {
   const visitedPages = React.useRef(['/'])
   const storageLoaded = useSelector(state => state.storage.loaded)
   const page401 = window.location.pathname.startsWith('/401')
+  const isSnapshotPath = isSnapshotRoute(window.location.pathname)
   const upgradeModalVisible = useSelector(state => state.upgradeModal.visible)
 
   useEffect(() => {
@@ -251,7 +276,7 @@ export default function App () {
   const loadData = storageLoaded && env.loaded && status !== 401
 
   useEffect(() => {
-    if (!loadData) {
+    if (!loadData || isSnapshotPath) {
       return
     }
     // prevent open stream twice on first render
@@ -264,10 +289,10 @@ export default function App () {
       clearTimeout(t)
       dispatch(unsubscribeUserStream())
     }
-  }, [dispatch, loadData])
+  }, [dispatch, loadData, isSnapshotPath])
 
   // do not render until storage is loaded and environment is loaded
-  const startRender = loadData || page401 || status === 401
+  const startRender = isSnapshotPath || loadData || page401 || status === 401
   if (!startRender) {
     return <Loading />
   }
@@ -306,6 +331,10 @@ export default function App () {
             <Route path='/reports/:id/source'>
               <AppRedirect />
               <ReportPage edit />
+            </Route>
+            <Route path='/reports/:id/snapshot'>
+              <SnapshotRouteState />
+              <ReportPage snapshot />
             </Route>
             <Route path='/reports/:id'>
               <AppRedirect />

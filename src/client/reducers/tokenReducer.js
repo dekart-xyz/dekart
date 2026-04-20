@@ -1,4 +1,5 @@
 import { setRedirectState } from '../actions/redirect'
+import { setSnapshotToken } from '../actions/token'
 
 export default function token (state = null, action) {
   switch (action.type) {
@@ -9,6 +10,8 @@ export default function token (state = null, action) {
       }
       return state
     }
+    case setSnapshotToken.name:
+      return action.token
     default:
       return state
   }

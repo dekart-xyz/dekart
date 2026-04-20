@@ -34,7 +34,11 @@ import (
 type Claims struct {
 	Email                  string
 	AccessToken            string
+	DeviceToken            string
+	SnapshotToken          string
 	SensitiveScopesGranted bool
+	WorkspaceID            string
+	ReportID               string
 }
 
 // ContextKeyType type
@@ -282,6 +286,7 @@ func GetTokenSource(ctx context.Context) oauth2.TokenSource {
 func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 	ctx := r.Context()
 	var claims *Claims
+	reportID := strings.TrimSpace(r.Header.Get("X-Dekart-Report-Id"))
 
 	if c.DevClaimsEmail != "" {
 		email := r.Header.Get("X-Dekart-Claim-Email")
@@ -298,18 +303,18 @@ func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 	} else if c.RequireOIDC {
 		claims = c.validateJWTFromOIDCHeader(r)
 	} else if c.RequireGoogleOAuth {
-		reportID := r.Header.Get("X-Dekart-Report-Id")
-		loggedIn := r.Header.Get("X-Dekart-Logged-In")
+		authHeader := r.Header.Get("Authorization")
+		loggedIn := strings.TrimSpace(r.Header.Get("X-Dekart-Logged-In"))
 		isPublicReportRequest := c.isPublicReportRequest(ctx, reportID)
-		if loggedIn != "true" && isPublicReportRequest {
+		if loggedIn != "true" && isPublicReportRequest && strings.TrimSpace(authHeader) == "" {
 			claims = &Claims{
 				Email: UnknownEmail,
 			}
 		} else {
-			var tokenWorkspaceScope string
-			claims, tokenWorkspaceScope = c.validateGoogleOrDeviceAuthToken(ctx, r.Header.Get("Authorization"))
-			if tokenWorkspaceScope != "" {
-				ctx = SetTokenWorkspaceScopeCtx(ctx, tokenWorkspaceScope)
+			claims = c.validateGoogleOrDeviceAuthToken(ctx, authHeader)
+			// why: snapshot token is report-scoped and must not be reused for other report IDs.
+			if claims != nil && claims.SnapshotToken != "" && reportID != "" && claims.ReportID != reportID {
+				claims = nil
 			}
 		}
 	} else if c.RequireSnowflakeContext {

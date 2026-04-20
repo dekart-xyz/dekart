@@ -6,6 +6,7 @@ import (
 	device "dekart/src/server/deviceauth"
 	"dekart/src/server/mcp"
 	"dekart/src/server/mcpschema"
+	"dekart/src/server/reportsnapshot"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -115,6 +116,8 @@ func (s *Server) callMCPTool(ctx context.Context, request *mcpCallRequest) (json
 		return s.callRemoveDatasetTool(ctx, request.Arguments)
 	case "create_file":
 		return s.callCreateFileTool(ctx, request.Arguments)
+	case "create_report_snapshot":
+		return s.callCreateReportSnapshotTool(ctx, request.Arguments)
 	case "start_file_upload_session":
 		return s.callStartFileUploadSessionTool(ctx, request.Arguments)
 	case "complete_file_upload_session":
@@ -168,6 +171,19 @@ func (s *Server) callCreateFileTool(ctx context.Context, raw json.RawMessage) (j
 		return nil, err
 	}
 	response, err := s.CreateFile(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	return mcp.MarshalProtoJSON(response)
+}
+
+// callCreateReportSnapshotTool calls snapshot RPC and returns protojson response payload.
+func (s *Server) callCreateReportSnapshotTool(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
+	request := &proto.CreateReportSnapshotRequest{}
+	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
+		return nil, err
+	}
+	response, err := s.CreateReportSnapshot(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -244,6 +260,13 @@ func mcpToolDefinitions() []mcpTool {
 			Description: "Create file metadata entry for a dataset.",
 			InputSchema: mcpschema.ForProto(&proto.CreateFileRequest{}, []string{"dataset_id"}),
 		},
+	}
+	if reportsnapshot.IsEnabled() {
+		tools = append(tools, mcpTool{
+			Name:        "create_report_snapshot",
+			Description: "Create one short-lived URL for report snapshot rendering.",
+			InputSchema: mcpschema.ForProto(&proto.CreateReportSnapshotRequest{}, []string{"report_id"}),
+		})
 	}
 	return append(tools, mcpUploadToolDefinitions()...)
 }
