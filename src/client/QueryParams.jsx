@@ -105,11 +105,11 @@ export default function QueryParams () {
 
   const applyButtonDisabledReason = (
     reportChanged
-      ? 'Save report changes before applying query parameters'
+      ? 'Save map changes before applying query parameters'
       : numRunningQueries > 0
         ? 'Wait for running queries to finish'
         : !canRefresh
-            ? 'Report is read-only'
+            ? 'Map is read-only'
             : tempDisabled
               ? 'Applying query parameters...'
               : ''
