@@ -79,3 +79,30 @@ func TestCallMCPTool_UnknownTool(t *testing.T) {
 	assert.Error(t, err)
 	assert.True(t, strings.Contains(err.Error(), "unknown tool"))
 }
+
+func TestMCPToolDefinitions_AgentGuidanceFieldsPresent(t *testing.T) {
+	tools := mcpToolDefinitions()
+	assert.NotEmpty(t, tools)
+	for _, tool := range tools {
+		assert.NotEmpty(t, tool.WhenToUse, "tool %s missing when_to_use", tool.Name)
+		assert.NotEmpty(t, tool.WhenNotToUse, "tool %s missing when_not_to_use", tool.Name)
+		assert.NotEmpty(t, tool.SideEffects, "tool %s missing side_effects", tool.Name)
+		assert.NotNil(t, tool.ExampleInput, "tool %s missing example_input", tool.Name)
+		assert.NotEmpty(t, tool.NextTools, "tool %s missing next_tools", tool.Name)
+	}
+}
+
+func TestMCPToolDefinitions_MapConfigToolHasKeplerReference(t *testing.T) {
+	tools := mcpToolDefinitions()
+	var mapConfigTool *mcpTool
+	for i := range tools {
+		if tools[i].Name == "update_report_map_config" {
+			mapConfigTool = &tools[i]
+			break
+		}
+	}
+	if assert.NotNil(t, mapConfigTool) {
+		assert.NotEmpty(t, mapConfigTool.ReferenceDocs)
+		assert.Contains(t, strings.Join(mapConfigTool.ReferenceDocs, " "), "docs.kepler.gl")
+	}
+}

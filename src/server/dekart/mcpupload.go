@@ -97,19 +97,49 @@ func (s *Server) callUploadHandlerJSON(ctx context.Context, method string, vars 
 func mcpUploadToolDefinitions() []mcpTool {
 	return []mcpTool{
 		{
-			Name:        "start_file_upload_session",
-			Description: "Start multipart upload session for a file. Upload part bytes with plain HTTP PUT to returned upload_part_endpoint; then call complete.",
-			InputSchema: mcpschema.ForProto(&proto.CreateFileUploadSessionRequest{}, []string{"file_id", "name", "mime_type", "total_size"}),
+			Name:         "start_file_upload_session",
+			Description:  "Start multipart upload session for a file. Upload part bytes with plain HTTP PUT to returned upload_part_endpoint; then call complete.",
+			InputSchema:  mcpschema.ForProto(&proto.CreateFileUploadSessionRequest{}, []string{"file_id", "name", "mime_type", "total_size"}),
+			WhenToUse:    "Use immediately after create_file to begin multipart upload flow.",
+			WhenNotToUse: "Do not use when you already have a completed upload_session_id and part manifest.",
+			SideEffects:  []string{"write", "external_call"},
+			ExampleInput: map[string]any{
+				"file_id":    "00000000-0000-0000-0000-000000000000",
+				"name":       "dataset.csv",
+				"mime_type":  "text/csv",
+				"total_size": 1024,
+			},
+			NextTools: []string{"complete_file_upload_session", "abort_file_upload_session"},
 		},
 		{
-			Name:        "complete_file_upload_session",
-			Description: "Complete multipart upload session and finalize file.",
-			InputSchema: mcpschema.ForProto(&proto.CompleteFileUploadSessionRequest{}, []string{"file_id", "upload_session_id", "parts", "total_size"}),
+			Name:         "complete_file_upload_session",
+			Description:  "Complete multipart upload session and finalize file.",
+			InputSchema:  mcpschema.ForProto(&proto.CompleteFileUploadSessionRequest{}, []string{"file_id", "upload_session_id", "parts", "total_size"}),
+			WhenToUse:    "Use after all parts are uploaded to finalize and persist file metadata.",
+			WhenNotToUse: "Do not use before uploading all required parts.",
+			SideEffects:  []string{"write", "external_call"},
+			ExampleInput: map[string]any{
+				"file_id":           "00000000-0000-0000-0000-000000000000",
+				"upload_session_id": "00000000-0000-0000-0000-000000000000",
+				"parts": []map[string]any{
+					{"part_number": 1, "etag": "etag-1", "size": 1024},
+				},
+				"total_size": 1024,
+			},
+			NextTools: []string{"update_report_map_config", "create_report_snapshot"},
 		},
 		{
-			Name:        "abort_file_upload_session",
-			Description: "Abort multipart upload session for a file.",
-			InputSchema: mcpschema.ForProto(&proto.AbortFileUploadSessionRequest{}, []string{"file_id", "upload_session_id"}),
+			Name:         "abort_file_upload_session",
+			Description:  "Abort multipart upload session for a file.",
+			InputSchema:  mcpschema.ForProto(&proto.AbortFileUploadSessionRequest{}, []string{"file_id", "upload_session_id"}),
+			WhenToUse:    "Use when multipart upload fails or should be canceled to release session resources.",
+			WhenNotToUse: "Do not use after successful completion of upload session.",
+			SideEffects:  []string{"delete", "external_call"},
+			ExampleInput: map[string]any{
+				"file_id":           "00000000-0000-0000-0000-000000000000",
+				"upload_session_id": "00000000-0000-0000-0000-000000000000",
+			},
+			NextTools: []string{"start_file_upload_session", "complete_file_upload_session"},
 		},
 	}
 }

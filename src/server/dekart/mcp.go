@@ -22,9 +22,15 @@ import (
 )
 
 type mcpTool struct {
-	Name        string         `json:"name"`
-	Description string         `json:"description"`
-	InputSchema map[string]any `json:"inputSchema"`
+	Name          string         `json:"name"`
+	Description   string         `json:"description"`
+	InputSchema   map[string]any `json:"inputSchema"`
+	WhenToUse     string         `json:"when_to_use,omitempty"`
+	WhenNotToUse  string         `json:"when_not_to_use,omitempty"`
+	SideEffects   []string       `json:"side_effects,omitempty"`
+	ExampleInput  map[string]any `json:"example_input,omitempty"`
+	NextTools     []string       `json:"next_tools,omitempty"`
+	ReferenceDocs []string       `json:"reference_docs,omitempty"`
 }
 
 type mcpToolsResponse struct {
@@ -402,46 +408,103 @@ func buildMCPCreateReportResult(reportID string) map[string]any {
 func mcpToolDefinitions() []mcpTool {
 	tools := []mcpTool{
 		{
-			Name:        "create_report",
-			Description: "Create a new report in current workspace context.",
-			InputSchema: mcpschema.Object(nil, map[string]any{}),
+			Name:         "create_report",
+			Description:  "Create a new report in current workspace context.",
+			InputSchema:  mcpschema.Object(nil, map[string]any{}),
+			WhenToUse:    "Use at the start of a new map workflow when no report exists yet.",
+			WhenNotToUse: "Do not use when you already have a target report_id and only need to edit it.",
+			SideEffects:  []string{"write"},
+			ExampleInput: map[string]any{},
+			NextTools:    []string{"create_dataset", "update_report_title", "create_report_snapshot"},
 		},
 		{
-			Name:        "create_dataset",
-			Description: "Add one dataset to existing report.",
-			InputSchema: mcpschema.ForProto(&proto.CreateDatasetRequest{}, []string{"report_id"}),
+			Name:         "create_dataset",
+			Description:  "Add one dataset to existing report.",
+			InputSchema:  mcpschema.ForProto(&proto.CreateDatasetRequest{}, []string{"report_id"}),
+			WhenToUse:    "Use after create_report (or on an existing report) to create a dataset slot.",
+			WhenNotToUse: "Do not use when you want to rename or remove an existing dataset.",
+			SideEffects:  []string{"write"},
+			ExampleInput: map[string]any{
+				"report_id": "00000000-0000-0000-0000-000000000000",
+			},
+			NextTools: []string{"create_file", "update_dataset_name", "remove_dataset"},
 		},
 		{
-			Name:        "remove_dataset",
-			Description: "Remove one dataset by dataset_id.",
-			InputSchema: mcpschema.ForProto(&proto.RemoveDatasetRequest{}, []string{"dataset_id"}),
+			Name:         "remove_dataset",
+			Description:  "Remove one dataset by dataset_id.",
+			InputSchema:  mcpschema.ForProto(&proto.RemoveDatasetRequest{}, []string{"dataset_id"}),
+			WhenToUse:    "Use to delete a dataset that should no longer appear in a report.",
+			WhenNotToUse: "Do not use for temporary hide/visibility changes in map config.",
+			SideEffects:  []string{"delete"},
+			ExampleInput: map[string]any{
+				"dataset_id": "00000000-0000-0000-0000-000000000000",
+			},
+			NextTools: []string{"create_dataset", "update_report_map_config"},
 		},
 		{
-			Name:        "create_file",
-			Description: "Create file metadata entry for a dataset.",
-			InputSchema: mcpschema.ForProto(&proto.CreateFileRequest{}, []string{"dataset_id"}),
+			Name:         "create_file",
+			Description:  "Create file metadata entry for a dataset.",
+			InputSchema:  mcpschema.ForProto(&proto.CreateFileRequest{}, []string{"dataset_id"}),
+			WhenToUse:    "Use before multipart upload to allocate a file_id under a dataset.",
+			WhenNotToUse: "Do not use if you only need to rename dataset/report metadata.",
+			SideEffects:  []string{"write"},
+			ExampleInput: map[string]any{
+				"dataset_id": "00000000-0000-0000-0000-000000000000",
+			},
+			NextTools: []string{"start_file_upload_session", "complete_file_upload_session"},
 		},
 		{
-			Name:        "update_report_title",
-			Description: "Update report title by report_id.",
-			InputSchema: mcpschema.ForProto(&proto.UpdateReportTitleRequest{}, []string{"report_id", "title"}),
+			Name:         "update_report_title",
+			Description:  "Update report title by report_id.",
+			InputSchema:  mcpschema.ForProto(&proto.UpdateReportTitleRequest{}, []string{"report_id", "title"}),
+			WhenToUse:    "Use to rename a report without changing map configuration.",
+			WhenNotToUse: "Do not use to update layers, styles, filters, or dataset mappings.",
+			SideEffects:  []string{"write"},
+			ExampleInput: map[string]any{
+				"report_id": "00000000-0000-0000-0000-000000000000",
+				"title":     "My Updated Report Title",
+			},
+			NextTools: []string{"update_report_map_config", "create_report_snapshot"},
 		},
 		{
-			Name:        "update_report_map_config",
-			Description: "Update report map config by report_id.",
-			InputSchema: mcpschema.ForProto(&proto.UpdateReportMapConfigRequest{}, []string{"report_id", "map_config"}),
+			Name:         "update_report_map_config",
+			Description:  "Update report map config by report_id.",
+			InputSchema:  mcpschema.ForProto(&proto.UpdateReportMapConfigRequest{}, []string{"report_id", "map_config"}),
+			WhenToUse:    "Use to apply Kepler.gl map configuration changes (layers, filters, map style, map state).",
+			WhenNotToUse: "Do not use when only report title or dataset name should change.",
+			SideEffects:  []string{"write"},
+			ExampleInput: map[string]any{
+				"report_id":  "00000000-0000-0000-0000-000000000000",
+				"map_config": "{\"version\":\"v1\",\"config\":{\"visState\":{\"layers\":[]},\"mapState\":{},\"mapStyle\":{}}}",
+			},
+			NextTools: []string{"create_report_snapshot", "update_report_title"},
 		},
 		{
-			Name:        "update_dataset_name",
-			Description: "Update dataset name by dataset_id.",
-			InputSchema: mcpschema.ForProto(&proto.UpdateDatasetNameRequest{}, []string{"dataset_id", "name"}),
+			Name:         "update_dataset_name",
+			Description:  "Update dataset name by dataset_id.",
+			InputSchema:  mcpschema.ForProto(&proto.UpdateDatasetNameRequest{}, []string{"dataset_id", "name"}),
+			WhenToUse:    "Use to rename a dataset label shown in the map UI.",
+			WhenNotToUse: "Do not use to change dataset content or file bytes.",
+			SideEffects:  []string{"write"},
+			ExampleInput: map[string]any{
+				"dataset_id": "00000000-0000-0000-0000-000000000000",
+				"name":       "Renamed Dataset",
+			},
+			NextTools: []string{"create_file", "update_report_map_config"},
 		},
 	}
 	if reportsnapshot.IsEnabled() {
 		tools = append(tools, mcpTool{
-			Name:        "create_report_snapshot",
-			Description: "Create one short-lived URL for report snapshot rendering.",
-			InputSchema: mcpschema.ForProto(&proto.CreateReportSnapshotRequest{}, []string{"report_id"}),
+			Name:         "create_report_snapshot",
+			Description:  "Create one short-lived URL for report snapshot rendering.",
+			InputSchema:  mcpschema.ForProto(&proto.CreateReportSnapshotRequest{}, []string{"report_id"}),
+			WhenToUse:    "Use after map updates when you need a rendered PNG snapshot URL for verification or sharing.",
+			WhenNotToUse: "Do not use for mutating report or dataset data.",
+			SideEffects:  []string{"read"},
+			ExampleInput: map[string]any{
+				"report_id": "00000000-0000-0000-0000-000000000000",
+			},
+			NextTools: []string{"update_report_map_config", "update_report_title"},
 		})
 	}
 	return append(tools, mcpUploadToolDefinitions()...)
