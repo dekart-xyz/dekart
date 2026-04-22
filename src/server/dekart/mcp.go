@@ -127,6 +127,8 @@ func (s *Server) callMCPTool(ctx context.Context, request *mcpCallRequest) (json
 		return s.callRemoveDatasetTool(ctx, request.Arguments)
 	case "create_file":
 		return s.callCreateFileTool(ctx, request.Arguments)
+	case "replace_file":
+		return s.callReplaceFileTool(ctx, request.Arguments)
 	case "update_report_title":
 		return s.callUpdateReportTitleTool(ctx, request.Arguments)
 	case "update_report_map_config":
@@ -188,6 +190,19 @@ func (s *Server) callCreateFileTool(ctx context.Context, raw json.RawMessage) (j
 		return nil, err
 	}
 	response, err := s.CreateFile(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	return mcp.MarshalProtoJSON(response)
+}
+
+// callReplaceFileTool creates a new file and rebinds dataset to it.
+func (s *Server) callReplaceFileTool(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
+	request := &proto.ReplaceFileRequest{}
+	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
+		return nil, err
+	}
+	response, err := s.ReplaceFile(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -451,7 +466,19 @@ func mcpToolDefinitions() []mcpTool {
 			ExampleInput: map[string]any{
 				"dataset_id": "00000000-0000-0000-0000-000000000000",
 			},
-			NextTools: []string{"start_file_upload_session", "complete_file_upload_session"},
+			NextTools: []string{"start_file_upload_session", "complete_file_upload_session", "replace_file"},
+		},
+		{
+			Name:         "replace_file",
+			Description:  "Create a new file and rebind dataset to it, keeping old file metadata unchanged.",
+			InputSchema:  mcpschema.ForProto(&proto.ReplaceFileRequest{}, []string{"dataset_id"}),
+			WhenToUse:    "Use when dataset already has a file and you want to replace it with a new upload.",
+			WhenNotToUse: "Do not use when creating the first file for a dataset; use create_file instead.",
+			SideEffects:  []string{"write"},
+			ExampleInput: map[string]any{
+				"dataset_id": "00000000-0000-0000-0000-000000000000",
+			},
+			NextTools: []string{"start_file_upload_session", "complete_file_upload_session", "create_report_snapshot"},
 		},
 		{
 			Name:         "update_report_title",
@@ -478,6 +505,9 @@ func mcpToolDefinitions() []mcpTool {
 				"map_config": "{\"version\":\"v1\",\"config\":{\"visState\":{\"layers\":[]},\"mapState\":{},\"mapStyle\":{}}}",
 			},
 			NextTools: []string{"create_report_snapshot", "update_report_title"},
+			ReferenceDocs: []string{
+				"https://docs.kepler.gl/docs/api-reference/advanced-usages/saving-loading-w-schema",
+			},
 		},
 		{
 			Name:         "update_dataset_name",

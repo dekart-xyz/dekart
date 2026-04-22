@@ -71,6 +71,10 @@ func TestMCPToolDefinitions_ContainsUpdateTools(t *testing.T) {
 	assert.True(t, ok)
 	assert.Contains(t, datasetTool.InputSchema["required"], "dataset_id")
 	assert.Contains(t, datasetTool.InputSchema["required"], "name")
+
+	datasetFileTool, ok := names["replace_file"]
+	assert.True(t, ok)
+	assert.Contains(t, datasetFileTool.InputSchema["required"], "dataset_id")
 }
 
 func TestCallMCPTool_UnknownTool(t *testing.T) {

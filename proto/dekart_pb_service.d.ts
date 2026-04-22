@@ -193,6 +193,15 @@ type DekartCreateFile = {
   readonly responseType: typeof dekart_pb.CreateFileResponse;
 };
 
+type DekartReplaceFile = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof dekart_pb.ReplaceFileRequest;
+  readonly responseType: typeof dekart_pb.ReplaceFileResponse;
+};
+
 type DekartCreateQuery = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -477,6 +486,7 @@ export class Dekart {
   static readonly UpdateDatasetName: DekartUpdateDatasetName;
   static readonly UpdateDatasetConnection: DekartUpdateDatasetConnection;
   static readonly CreateFile: DekartCreateFile;
+  static readonly ReplaceFile: DekartReplaceFile;
   static readonly CreateQuery: DekartCreateQuery;
   static readonly RunQuery: DekartRunQuery;
   static readonly RunAllQueries: DekartRunAllQueries;
@@ -728,6 +738,15 @@ export class DekartClient {
   createFile(
     requestMessage: dekart_pb.CreateFileRequest,
     callback: (error: ServiceError|null, responseMessage: dekart_pb.CreateFileResponse|null) => void
+  ): UnaryResponse;
+  replaceFile(
+    requestMessage: dekart_pb.ReplaceFileRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.ReplaceFileResponse|null) => void
+  ): UnaryResponse;
+  replaceFile(
+    requestMessage: dekart_pb.ReplaceFileRequest,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.ReplaceFileResponse|null) => void
   ): UnaryResponse;
   createQuery(
     requestMessage: dekart_pb.CreateQueryRequest,

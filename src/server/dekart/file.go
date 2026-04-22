@@ -331,6 +331,64 @@ func (s Server) CreateFile(ctx context.Context, req *proto.CreateFileRequest) (*
 	return &proto.CreateFileResponse{FileId: fileID}, nil
 }
 
+// ReplaceFile creates a new file entry and rebinds dataset to it, keeping old file untouched.
+func (s Server) ReplaceFile(ctx context.Context, req *proto.ReplaceFileRequest) (*proto.ReplaceFileResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	if _, err := uuid.Parse(req.DatasetId); err != nil {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid datasetId format: %v", err))
+	}
+
+	reportID, err := s.getReportID(ctx, req.DatasetId, true)
+	if err != nil {
+		errtype.LogError(err, "getReportID failed")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if reportID == nil {
+		err := fmt.Errorf("dataset not found or permission not granted")
+		log.Warn().Err(err).Msg("dataset not found or permission not granted")
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+
+	newFileID := newUUID()
+	_, err = s.db.ExecContext(ctx, `insert into files (id) values ($1)`, newFileID)
+	if err != nil {
+		errtype.LogError(err, "insert into files failed")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	result, err := s.db.ExecContext(ctx,
+		`update datasets
+		set file_id=$1, connection_id=$2, updated_at=CURRENT_TIMESTAMP
+		where id=$3`,
+		newFileID,
+		conn.ConnectionIDToNullString(req.ConnectionId),
+		req.DatasetId,
+	)
+	if err != nil {
+		log.Err(err).Str("connectionId", req.ConnectionId).Msg("update datasets failed when replacing file")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	affectedRows, err := result.RowsAffected()
+	if err != nil {
+		errtype.LogError(err, "RowsAffected failed when replacing file")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if affectedRows == 0 {
+		_, deleteErr := s.db.ExecContext(ctx, `delete from files where id=$1`, newFileID)
+		if deleteErr != nil {
+			log.Warn().Err(deleteErr).Str("file_id", newFileID).Msg("failed to cleanup orphan file record")
+		}
+		return nil, status.Error(codes.NotFound, "dataset not found")
+	}
+
+	s.reportStreams.Ping(*reportID)
+
+	return &proto.ReplaceFileResponse{FileId: newFileID}, nil
+}
+
 // getDatasetFileID returns linked file id from dataset row.
 func (s Server) getDatasetFileID(ctx context.Context, datasetID string) (string, error) {
 	var fileID sql.NullString

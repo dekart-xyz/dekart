@@ -29,6 +29,7 @@ service Dekart {
 
     // files
     rpc CreateFile(CreateFileRequest) returns (CreateFileResponse) {}
+    rpc ReplaceFile(ReplaceFileRequest) returns (ReplaceFileResponse) {}
 
     // queries
     rpc CreateQuery(CreateQueryRequest) returns (CreateQueryResponse) {}
@@ -835,6 +836,15 @@ message CreateFileRequest {
 }
 
 message CreateFileResponse {
+    string file_id = 1;
+}
+
+message ReplaceFileRequest {
+    string dataset_id = 1;
+    string connection_id = 2;
+}
+
+message ReplaceFileResponse {
     string file_id = 1;
 }
 

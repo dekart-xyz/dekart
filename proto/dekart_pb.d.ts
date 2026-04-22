@@ -3188,6 +3188,50 @@ export namespace CreateFileResponse {
   }
 }
 
+export class ReplaceFileRequest extends jspb.Message {
+  getDatasetId(): string;
+  setDatasetId(value: string): void;
+
+  getConnectionId(): string;
+  setConnectionId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): ReplaceFileRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: ReplaceFileRequest): ReplaceFileRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: ReplaceFileRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): ReplaceFileRequest;
+  static deserializeBinaryFromReader(message: ReplaceFileRequest, reader: jspb.BinaryReader): ReplaceFileRequest;
+}
+
+export namespace ReplaceFileRequest {
+  export type AsObject = {
+    datasetId: string,
+    connectionId: string,
+  }
+}
+
+export class ReplaceFileResponse extends jspb.Message {
+  getFileId(): string;
+  setFileId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): ReplaceFileResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: ReplaceFileResponse): ReplaceFileResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: ReplaceFileResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): ReplaceFileResponse;
+  static deserializeBinaryFromReader(message: ReplaceFileResponse, reader: jspb.BinaryReader): ReplaceFileResponse;
+}
+
+export namespace ReplaceFileResponse {
+  export type AsObject = {
+    fileId: string,
+  }
+}
+
 export class UploadHeader extends jspb.Message {
   getKey(): string;
   setKey(value: string): void;

@@ -40,6 +40,7 @@ const (
 	Dekart_UpdateDatasetName_FullMethodName             = "/Dekart/UpdateDatasetName"
 	Dekart_UpdateDatasetConnection_FullMethodName       = "/Dekart/UpdateDatasetConnection"
 	Dekart_CreateFile_FullMethodName                    = "/Dekart/CreateFile"
+	Dekart_ReplaceFile_FullMethodName                   = "/Dekart/ReplaceFile"
 	Dekart_CreateQuery_FullMethodName                   = "/Dekart/CreateQuery"
 	Dekart_RunQuery_FullMethodName                      = "/Dekart/RunQuery"
 	Dekart_RunAllQueries_FullMethodName                 = "/Dekart/RunAllQueries"
@@ -99,6 +100,7 @@ type DekartClient interface {
 	UpdateDatasetConnection(ctx context.Context, in *UpdateDatasetConnectionRequest, opts ...grpc.CallOption) (*UpdateDatasetConnectionResponse, error)
 	// files
 	CreateFile(ctx context.Context, in *CreateFileRequest, opts ...grpc.CallOption) (*CreateFileResponse, error)
+	ReplaceFile(ctx context.Context, in *ReplaceFileRequest, opts ...grpc.CallOption) (*ReplaceFileResponse, error)
 	// queries
 	CreateQuery(ctx context.Context, in *CreateQueryRequest, opts ...grpc.CallOption) (*CreateQueryResponse, error)
 	RunQuery(ctx context.Context, in *RunQueryRequest, opts ...grpc.CallOption) (*RunQueryResponse, error)
@@ -350,6 +352,16 @@ func (c *dekartClient) CreateFile(ctx context.Context, in *CreateFileRequest, op
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateFileResponse)
 	err := c.cc.Invoke(ctx, Dekart_CreateFile_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) ReplaceFile(ctx context.Context, in *ReplaceFileRequest, opts ...grpc.CallOption) (*ReplaceFileResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReplaceFileResponse)
+	err := c.cc.Invoke(ctx, Dekart_ReplaceFile_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -701,6 +713,7 @@ type DekartServer interface {
 	UpdateDatasetConnection(context.Context, *UpdateDatasetConnectionRequest) (*UpdateDatasetConnectionResponse, error)
 	// files
 	CreateFile(context.Context, *CreateFileRequest) (*CreateFileResponse, error)
+	ReplaceFile(context.Context, *ReplaceFileRequest) (*ReplaceFileResponse, error)
 	// queries
 	CreateQuery(context.Context, *CreateQueryRequest) (*CreateQueryResponse, error)
 	RunQuery(context.Context, *RunQueryRequest) (*RunQueryResponse, error)
@@ -810,6 +823,9 @@ func (UnimplementedDekartServer) UpdateDatasetConnection(context.Context, *Updat
 }
 func (UnimplementedDekartServer) CreateFile(context.Context, *CreateFileRequest) (*CreateFileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateFile not implemented")
+}
+func (UnimplementedDekartServer) ReplaceFile(context.Context, *ReplaceFileRequest) (*ReplaceFileResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReplaceFile not implemented")
 }
 func (UnimplementedDekartServer) CreateQuery(context.Context, *CreateQueryRequest) (*CreateQueryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateQuery not implemented")
@@ -1293,6 +1309,24 @@ func _Dekart_CreateFile_Handler(srv interface{}, ctx context.Context, dec func(i
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DekartServer).CreateFile(ctx, req.(*CreateFileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_ReplaceFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReplaceFileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).ReplaceFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_ReplaceFile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).ReplaceFile(ctx, req.(*ReplaceFileRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1888,6 +1922,10 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateFile",
 			Handler:    _Dekart_CreateFile_Handler,
+		},
+		{
+			MethodName: "ReplaceFile",
+			Handler:    _Dekart_ReplaceFile_Handler,
 		},
 		{
 			MethodName: "CreateQuery",
