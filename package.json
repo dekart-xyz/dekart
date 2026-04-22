@@ -42,6 +42,7 @@
     "web-vitals": "^0.2.4"
   },
   "scripts": {
+    "prestart": "sh -c 'pids=$(lsof -tiTCP:3000 -sTCP:LISTEN); if [ -n \"$pids\" ]; then kill -9 $pids && echo \"Force-stopped listeners on 3000: $pids\"; else echo \"No listeners on 3000\"; fi'",
     "start": "vite dev",
     "build": "vite build",
     "preview": "vite preview",

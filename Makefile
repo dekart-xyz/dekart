@@ -149,7 +149,15 @@ sqlite:
 
 
 define run_server
-	@set -a; \
+	@echo "Releasing local dev port 8080..."; \
+	pids="$$(lsof -tiTCP:8080 -sTCP:LISTEN)"; \
+	if [ -n "$$pids" ]; then \
+		kill -9 $$pids; \
+		echo "Force-stopped listeners: $$pids"; \
+	else \
+		echo "No listeners on 8080"; \
+	fi; \
+	set -a; \
 	. $(1); \
 	set +a; \
 	go run ./src/server/main.go
