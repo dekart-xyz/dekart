@@ -6,10 +6,12 @@ import (
 	device "dekart/src/server/deviceauth"
 	"dekart/src/server/reportsnapshot"
 	"dekart/src/server/user"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,8 +23,19 @@ import (
 
 const defaultSnapshotWidth = 1600
 const defaultSnapshotHeight = 900
-const defaultSnapshotTimeoutSeconds = 240
+const defaultSnapshotTimeoutSeconds = 60
+const maxSnapshotTimeoutSeconds = 60
 const defaultSnapshotDeviceScale = 1.0
+
+func getSnapshotTimeoutSeconds() int32 {
+	if timeoutSeconds, err := strconv.Atoi(strings.TrimSpace(os.Getenv("DEKART_SNAPSHOT_TIMEOUT_SECONDS"))); err == nil && timeoutSeconds > 0 {
+		if timeoutSeconds > maxSnapshotTimeoutSeconds {
+			timeoutSeconds = maxSnapshotTimeoutSeconds
+		}
+		return int32(timeoutSeconds)
+	}
+	return defaultSnapshotTimeoutSeconds
+}
 
 // CreateReportSnapshot returns a short-lived snapshot URL for one report snapshot render.
 func (s *Server) CreateReportSnapshot(ctx context.Context, req *proto.CreateReportSnapshotRequest) (*proto.CreateReportSnapshotResponse, error) {
@@ -72,6 +85,7 @@ func (s *Server) HandleSnapshotReport(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
+	timeoutSeconds := getSnapshotTimeoutSeconds()
 	targetURL := buildSnapshotRenderURL(r, token, snapshotClaims.ReportID)
 	err = reportsnapshot.StreamImage(
 		authorizedCtx,
@@ -80,14 +94,29 @@ func (s *Server) HandleSnapshotReport(w http.ResponseWriter, r *http.Request) {
 		defaultSnapshotWidth,
 		defaultSnapshotHeight,
 		defaultSnapshotDeviceScale,
-		defaultSnapshotTimeoutSeconds,
+		timeoutSeconds,
 		w,
 	)
 	if err != nil {
 		log.Error().Err(err).Str("reportId", snapshotClaims.ReportID).Msg("Snapshot capture failed")
-		http.Error(w, "snapshot render failed", http.StatusBadGateway)
+		statusCode, message := classifySnapshotError(err, timeoutSeconds)
+		http.Error(w, message, statusCode)
 		return
 	}
+}
+
+func classifySnapshotError(err error, timeoutSeconds int32) (int, string) {
+	message := strings.ToLower(err.Error())
+	if errors.Is(err, context.DeadlineExceeded) ||
+		strings.Contains(message, "timed out") ||
+		strings.Contains(message, "waiting failed") ||
+		strings.Contains(message, "context deadline exceeded") {
+		return http.StatusGatewayTimeout, fmt.Sprintf(
+			"snapshot timeout (%ds limit): data is too large or rendering is too slow",
+			timeoutSeconds,
+		)
+	}
+	return http.StatusBadGateway, "snapshot render failed"
 }
 
 // validateSnapshotRequest validates required report snapshot request fields.
