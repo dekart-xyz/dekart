@@ -22,6 +22,7 @@ Goal: contributions should blend into the existing codebase and minimize maintai
 - Add a short purpose comment for each new non-trivial function.
 - Do not use debug logging in production paths. Keep logs high-signal for admins.
 - Never force-push.
+- Reuse existing contract types in the touched module (proto/shared schema) before adding local ad-hoc request structs; if you must diverge, add a one-line reason.
 
 ## Skill Usage
 

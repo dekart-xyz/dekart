@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const defaultTTL = 3 * time.Minute
+const defaultTTL = 5 * time.Minute
 
 var state = newTokenState()
 

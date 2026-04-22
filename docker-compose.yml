@@ -107,6 +107,7 @@ services:
       - "host.docker.internal:host-gateway"
     environment:
       TOKEN: "${DEKART_BROWSERLESS_TOKEN:-local-browserless-token}"
+      TIMEOUT: "${DEKART_BROWSERLESS_TIMEOUT_MS:-240000}"
     ports:
       - 3001:3000
 

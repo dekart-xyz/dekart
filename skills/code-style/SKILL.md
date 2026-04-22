@@ -19,6 +19,7 @@ Policy/architecture guardrails are defined in `AGENTS.md`. This skill is the sou
 - Return typed gRPC status errors from endpoint business logic.
 - Keep auth/workspace gating explicit near method start (`user.GetClaims`, workspace checks).
 - Add short rationale comments before non-trivial conditional business logic.
+- In integration/transport glue, prefer decoding into existing contract types already used by nearby handlers (proto/shared schema) instead of introducing new local arg structs.
 
 ## CSS
 

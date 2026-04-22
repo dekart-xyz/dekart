@@ -21,7 +21,7 @@ import (
 
 const defaultSnapshotWidth = 1600
 const defaultSnapshotHeight = 900
-const defaultSnapshotTimeoutSeconds = 120
+const defaultSnapshotTimeoutSeconds = 240
 const defaultSnapshotDeviceScale = 1.0
 
 // CreateReportSnapshot returns a short-lived snapshot URL for one report snapshot render.

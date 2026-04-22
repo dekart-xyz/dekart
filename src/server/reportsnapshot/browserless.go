@@ -54,15 +54,12 @@ func StreamImage(ctx context.Context, targetURL string, snapshotToken string, wi
 	request.Viewport.Height = height
 	request.Viewport.DeviceScaleFactor = deviceScaleFactor
 	request.WaitForFunction.Fn = snapshotReadyFunction(snapshotToken)
-	request.WaitForFunction.Timeout = timeoutMillis(timeoutSeconds)
+	request.WaitForFunction.Timeout = timeoutSeconds * 1000
 	payload, err := json.Marshal(request)
 	if err != nil {
 		return err
 	}
-	deadline := 30 * time.Second
-	if timeoutSeconds > 0 {
-		deadline = time.Duration(timeoutSeconds) * time.Second
-	}
+	deadline := time.Duration(timeoutSeconds) * time.Second
 	callCtx, cancel := context.WithTimeout(ctx, deadline)
 	defer cancel()
 	httpRequest, err := http.NewRequestWithContext(callCtx, http.MethodPost, browserlessURL, bytes.NewReader(payload))
@@ -91,14 +88,6 @@ func StreamImage(ctx context.Context, targetURL string, snapshotToken string, wi
 // snapshotReadyFunction returns Browserless wait expression for token-scoped snapshot readiness.
 func snapshotReadyFunction(snapshotToken string) string {
 	return fmt.Sprintf("window.__dekartSnapshotReadyToken === '%s'", snapshotToken)
-}
-
-// timeoutMillis converts capture timeout seconds to milliseconds for Browserless wait options.
-func timeoutMillis(timeoutSeconds int32) int32 {
-	if timeoutSeconds <= 0 {
-		return 30000
-	}
-	return timeoutSeconds * 1000
 }
 
 // resolveBrowserlessURL returns configured Browserless endpoint or sane local default.

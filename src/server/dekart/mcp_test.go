@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -47,4 +48,34 @@ func TestCallUploadHandlerJSON_UsesStatusTextWhenBodyEmpty(t *testing.T) {
 	assert.True(t, errors.As(err, &httpErr))
 	assert.Equal(t, http.StatusUnauthorized, httpErr.statusCode)
 	assert.Equal(t, http.StatusText(http.StatusUnauthorized), httpErr.message)
+}
+
+func TestMCPToolDefinitions_ContainsUpdateTools(t *testing.T) {
+	tools := mcpToolDefinitions()
+	names := make(map[string]mcpTool, len(tools))
+	for _, tool := range tools {
+		names[tool.Name] = tool
+	}
+
+	titleTool, ok := names["update_report_title"]
+	assert.True(t, ok)
+	assert.Contains(t, titleTool.InputSchema["required"], "report_id")
+	assert.Contains(t, titleTool.InputSchema["required"], "title")
+
+	mapConfigTool, ok := names["update_report_map_config"]
+	assert.True(t, ok)
+	assert.Contains(t, mapConfigTool.InputSchema["required"], "report_id")
+	assert.Contains(t, mapConfigTool.InputSchema["required"], "map_config")
+
+	datasetTool, ok := names["update_dataset_name"]
+	assert.True(t, ok)
+	assert.Contains(t, datasetTool.InputSchema["required"], "dataset_id")
+	assert.Contains(t, datasetTool.InputSchema["required"], "name")
+}
+
+func TestCallMCPTool_UnknownTool(t *testing.T) {
+	server := &Server{}
+	_, err := server.callMCPTool(context.Background(), &mcpCallRequest{Name: "unknown_tool"})
+	assert.Error(t, err)
+	assert.True(t, strings.Contains(err.Error(), "unknown tool"))
 }

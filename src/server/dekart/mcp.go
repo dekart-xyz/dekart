@@ -2,17 +2,22 @@ package dekart
 
 import (
 	"context"
+	"database/sql"
 	"dekart/src/proto"
 	device "dekart/src/server/deviceauth"
 	"dekart/src/server/mcp"
 	"dekart/src/server/mcpschema"
 	"dekart/src/server/reportsnapshot"
+	"dekart/src/server/user"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
+	"github.com/google/uuid"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
@@ -116,6 +121,12 @@ func (s *Server) callMCPTool(ctx context.Context, request *mcpCallRequest) (json
 		return s.callRemoveDatasetTool(ctx, request.Arguments)
 	case "create_file":
 		return s.callCreateFileTool(ctx, request.Arguments)
+	case "update_report_title":
+		return s.callUpdateReportTitleTool(ctx, request.Arguments)
+	case "update_report_map_config":
+		return s.callUpdateReportMapConfigTool(ctx, request.Arguments)
+	case "update_dataset_name":
+		return s.callUpdateDatasetNameTool(ctx, request.Arguments)
 	case "create_report_snapshot":
 		return s.callCreateReportSnapshotTool(ctx, request.Arguments)
 	case "start_file_upload_session":
@@ -171,6 +182,156 @@ func (s *Server) callCreateFileTool(ctx context.Context, raw json.RawMessage) (j
 		return nil, err
 	}
 	response, err := s.CreateFile(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	return mcp.MarshalProtoJSON(response)
+}
+
+// callUpdateReportTitleTool updates report title while keeping existing map config and params.
+func (s *Server) callUpdateReportTitleTool(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
+	request := &proto.UpdateReportTitleRequest{}
+	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
+		return nil, err
+	}
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	workspaceInfo := checkWorkspace(ctx)
+	if workspaceInfo.Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	}
+	if _, err := uuid.Parse(request.ReportId); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	updatedAt := time.Now()
+	newVersionID := newUUID()
+	var (
+		result sql.Result
+		err    error
+	)
+	if workspaceInfo.IsPlayground {
+		result, err = s.db.ExecContext(ctx,
+			`update
+			reports
+		set title=$1, updated_at=$2, version_id=$3
+		where id=$4 and author_email=$5 and is_playground=true`,
+			request.Title,
+			updatedAt,
+			newVersionID,
+			request.ReportId,
+			claims.Email,
+		)
+	} else {
+		result, err = s.db.ExecContext(ctx,
+			`update
+			reports
+		set title=$1, updated_at=$2, version_id=$3
+		where id=$4 and (author_email=$5 or allow_edit) and workspace_id=$6`,
+			request.Title,
+			updatedAt,
+			newVersionID,
+			request.ReportId,
+			claims.Email,
+			workspaceInfo.ID,
+		)
+	}
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	affectedRows, err := result.RowsAffected()
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if affectedRows == 0 {
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("report not found id:%s", request.ReportId))
+	}
+	if err := s.createReportSnapshotWithVersionID(ctx, newVersionID, request.ReportId, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	s.reportStreams.Ping(request.ReportId)
+	return mcp.MarshalProtoJSON(&proto.UpdateReportTitleResponse{UpdatedAt: updatedAt.Unix()})
+}
+
+// callUpdateReportMapConfigTool updates report map config while keeping existing title and params.
+func (s *Server) callUpdateReportMapConfigTool(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
+	request := &proto.UpdateReportMapConfigRequest{}
+	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
+		return nil, err
+	}
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	workspaceInfo := checkWorkspace(ctx)
+	if workspaceInfo.Expired {
+		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	}
+	if _, err := uuid.Parse(request.ReportId); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	if len(request.MapConfig) > MaxMapConfigSize {
+		return nil, status.Errorf(codes.InvalidArgument,
+			"Map configuration is too large (%d bytes). Maximum allowed size is %d bytes. Please simplify your map configuration.",
+			len(request.MapConfig), MaxMapConfigSize)
+	}
+	updatedAt := time.Now()
+	newVersionID := newUUID()
+	var (
+		result sql.Result
+		err    error
+	)
+	if workspaceInfo.IsPlayground {
+		result, err = s.db.ExecContext(ctx,
+			`update
+			reports
+		set map_config=$1, updated_at=$2, version_id=$3
+		where id=$4 and author_email=$5 and is_playground=true`,
+			request.MapConfig,
+			updatedAt,
+			newVersionID,
+			request.ReportId,
+			claims.Email,
+		)
+	} else {
+		result, err = s.db.ExecContext(ctx,
+			`update
+			reports
+		set map_config=$1, updated_at=$2, version_id=$3
+		where id=$4 and (author_email=$5 or allow_edit) and workspace_id=$6`,
+			request.MapConfig,
+			updatedAt,
+			newVersionID,
+			request.ReportId,
+			claims.Email,
+			workspaceInfo.ID,
+		)
+	}
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	affectedRows, err := result.RowsAffected()
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if affectedRows == 0 {
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("report not found id:%s", request.ReportId))
+	}
+	if err := s.createReportSnapshotWithVersionID(ctx, newVersionID, request.ReportId, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	s.reportStreams.Ping(request.ReportId)
+	return mcp.MarshalProtoJSON(&proto.UpdateReportMapConfigResponse{UpdatedAt: updatedAt.Unix()})
+}
+
+// callUpdateDatasetNameTool updates one dataset name by dataset_id.
+func (s *Server) callUpdateDatasetNameTool(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
+	request := &proto.UpdateDatasetNameRequest{}
+	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
+		return nil, err
+	}
+	response, err := s.UpdateDatasetName(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -259,6 +420,21 @@ func mcpToolDefinitions() []mcpTool {
 			Name:        "create_file",
 			Description: "Create file metadata entry for a dataset.",
 			InputSchema: mcpschema.ForProto(&proto.CreateFileRequest{}, []string{"dataset_id"}),
+		},
+		{
+			Name:        "update_report_title",
+			Description: "Update report title by report_id.",
+			InputSchema: mcpschema.ForProto(&proto.UpdateReportTitleRequest{}, []string{"report_id", "title"}),
+		},
+		{
+			Name:        "update_report_map_config",
+			Description: "Update report map config by report_id.",
+			InputSchema: mcpschema.ForProto(&proto.UpdateReportMapConfigRequest{}, []string{"report_id", "map_config"}),
+		},
+		{
+			Name:        "update_dataset_name",
+			Description: "Update dataset name by dataset_id.",
+			InputSchema: mcpschema.ForProto(&proto.UpdateDatasetNameRequest{}, []string{"dataset_id", "name"}),
 		},
 	}
 	if reportsnapshot.IsEnabled() {

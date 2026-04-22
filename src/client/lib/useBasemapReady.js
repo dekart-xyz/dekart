@@ -5,8 +5,7 @@ function isBasemapReady (map) {
   if (!map) {
     return false
   }
-  // `loaded()` is more stable than `areTilesLoaded()` for WebGL snapshot readiness.
-  return Boolean(map.isStyleLoaded() && map.loaded())
+  return Boolean(map.isStyleLoaded() && map.areTilesLoaded())
 }
 
 // useBasemapReady tracks map readiness for snapshot rendering flow.

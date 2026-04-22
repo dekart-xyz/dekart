@@ -775,6 +775,26 @@ message UpdateReportResponse {
     int64 updated_at = 1;
 }
 
+// MCP-specific payload for renaming report title without sending full report update body.
+message UpdateReportTitleRequest {
+    string report_id = 1;
+    string title = 2;
+}
+
+message UpdateReportTitleResponse {
+    int64 updated_at = 1;
+}
+
+// MCP-specific payload for updating map config without sending full report update body.
+message UpdateReportMapConfigRequest {
+    string report_id = 1;
+    string map_config = 2;
+}
+
+message UpdateReportMapConfigResponse {
+    int64 updated_at = 1;
+}
+
 message RunQueryRequest {
     string query_id = 1;
     string query_text = 2;

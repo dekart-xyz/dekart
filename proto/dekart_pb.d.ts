@@ -2886,6 +2886,94 @@ export namespace UpdateReportResponse {
   }
 }
 
+export class UpdateReportTitleRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  getTitle(): string;
+  setTitle(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): UpdateReportTitleRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: UpdateReportTitleRequest): UpdateReportTitleRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: UpdateReportTitleRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): UpdateReportTitleRequest;
+  static deserializeBinaryFromReader(message: UpdateReportTitleRequest, reader: jspb.BinaryReader): UpdateReportTitleRequest;
+}
+
+export namespace UpdateReportTitleRequest {
+  export type AsObject = {
+    reportId: string,
+    title: string,
+  }
+}
+
+export class UpdateReportTitleResponse extends jspb.Message {
+  getUpdatedAt(): number;
+  setUpdatedAt(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): UpdateReportTitleResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: UpdateReportTitleResponse): UpdateReportTitleResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: UpdateReportTitleResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): UpdateReportTitleResponse;
+  static deserializeBinaryFromReader(message: UpdateReportTitleResponse, reader: jspb.BinaryReader): UpdateReportTitleResponse;
+}
+
+export namespace UpdateReportTitleResponse {
+  export type AsObject = {
+    updatedAt: number,
+  }
+}
+
+export class UpdateReportMapConfigRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  getMapConfig(): string;
+  setMapConfig(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): UpdateReportMapConfigRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: UpdateReportMapConfigRequest): UpdateReportMapConfigRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: UpdateReportMapConfigRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): UpdateReportMapConfigRequest;
+  static deserializeBinaryFromReader(message: UpdateReportMapConfigRequest, reader: jspb.BinaryReader): UpdateReportMapConfigRequest;
+}
+
+export namespace UpdateReportMapConfigRequest {
+  export type AsObject = {
+    reportId: string,
+    mapConfig: string,
+  }
+}
+
+export class UpdateReportMapConfigResponse extends jspb.Message {
+  getUpdatedAt(): number;
+  setUpdatedAt(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): UpdateReportMapConfigResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: UpdateReportMapConfigResponse): UpdateReportMapConfigResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: UpdateReportMapConfigResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): UpdateReportMapConfigResponse;
+  static deserializeBinaryFromReader(message: UpdateReportMapConfigResponse, reader: jspb.BinaryReader): UpdateReportMapConfigResponse;
+}
+
+export namespace UpdateReportMapConfigResponse {
+  export type AsObject = {
+    updatedAt: number,
+  }
+}
+
 export class RunQueryRequest extends jspb.Message {
   getQueryId(): string;
   setQueryId(value: string): void;
