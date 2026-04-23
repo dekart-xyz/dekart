@@ -9,6 +9,7 @@ import (
 	"dekart/src/server/conn"
 	"dekart/src/server/errtype"
 	"dekart/src/server/notifications"
+	reportpkg "dekart/src/server/report"
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
 	"encoding/base64"
@@ -283,6 +284,7 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 		errtype.LogError(err, "Cannot create report snapshot")
 		return nil, err
 	}
+	s.reportStreams.Ping(reportpkg.All)
 	res := &proto.CreateReportResponse{
 		Report: &proto.Report{
 			Id: id,

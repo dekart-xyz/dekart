@@ -59,7 +59,7 @@ func (s *Server) CreateReportSnapshot(ctx context.Context, req *proto.CreateRepo
 	return &proto.CreateReportSnapshotResponse{
 		SnapshotUrl:       buildSnapshotImageURL(token),
 		ExpiresIn:         int64(expiresAt.Sub(time.Now().UTC()).Seconds()),
-		SnapshotRenderUrl: buildSnapshotRenderURL(nil, token, req.GetReportId()),
+		SnapshotRenderUrl: buildSnapshotRenderURLForResponse(token, req.GetReportId()),
 	}, nil
 }
 
@@ -86,7 +86,7 @@ func (s *Server) HandleSnapshotReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	timeoutSeconds := getSnapshotTimeoutSeconds()
-	targetURL := buildSnapshotRenderURL(r, token, snapshotClaims.ReportID)
+	targetURL := buildSnapshotRenderURLForBrowserless(r, token, snapshotClaims.ReportID)
 	err = reportsnapshot.StreamImage(
 		authorizedCtx,
 		targetURL,
@@ -159,14 +159,33 @@ func buildSnapshotImageURL(token string) string {
 	return fmt.Sprintf("%s%s", strings.TrimRight(baseURL, "/"), path)
 }
 
-// buildSnapshotRenderURL returns frontend render URL consumed by Browserless renderer.
-func buildSnapshotRenderURL(r *http.Request, token string, reportID string) string {
-	baseURL := urlFromEnv("DEKART_SNAPSHOT_RENDER_BASE_URL")
+// buildSnapshotRenderURLForBrowserless returns frontend render URL used by Browserless renderer.
+func buildSnapshotRenderURLForBrowserless(r *http.Request, token string, reportID string) string {
+	baseURL := urlFromEnv("DEKART_SNAPSHOT_RENDER_BASE_URL_DEV")
 	if baseURL == "" {
 		baseURL = strings.TrimSpace(device.RequestBaseURL(r))
 	}
 	if baseURL == "" {
 		baseURL = urlFromEnv("DEKART_APP_URL")
+	}
+	return fmt.Sprintf(
+		"%s/reports/%s/snapshot?snapshot_token=%s",
+		baseURL,
+		url.PathEscape(reportID),
+		url.QueryEscape(token),
+	)
+}
+
+// buildSnapshotRenderURLForResponse returns snapshot render URL shown to API/MCP clients.
+// This intentionally uses DEKART_APP_URL (public app URL), not dev Browserless override.
+func buildSnapshotRenderURLForResponse(token string, reportID string) string {
+	baseURL := urlFromEnv("DEKART_APP_URL")
+	if baseURL == "" {
+		return fmt.Sprintf(
+			"/reports/%s/snapshot?snapshot_token=%s",
+			url.PathEscape(reportID),
+			url.QueryEscape(token),
+		)
 	}
 	return fmt.Sprintf(
 		"%s/reports/%s/snapshot?snapshot_token=%s",

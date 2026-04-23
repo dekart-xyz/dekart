@@ -7,6 +7,7 @@ import (
 	"dekart/src/server/user"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -39,11 +40,19 @@ func (s Server) AddReadme(ctx context.Context, req *proto.AddReadmeRequest) (*pr
 		return nil, status.Error(codes.PermissionDenied, "cannot write to report")
 	}
 
+	updatedAt := time.Now()
+	newVersionID := newUUID()
+
 	_, err = s.db.ExecContext(ctx,
-		`update reports set readme = $1 where id = $2`,
-		req.Markdown, req.ReportId)
+		`update reports set readme = $1, updated_at = $2, version_id = $3 where id = $4`,
+		req.Markdown, updatedAt, newVersionID, req.ReportId)
 	if err != nil {
 		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	err = s.createReportSnapshotWithVersionID(ctx, newVersionID, req.ReportId, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE)
+	if err != nil {
+		errtype.LogError(err, "Cannot create report snapshot for readme update")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if strings.TrimSpace(req.FromDatasetId) != "" {
@@ -84,11 +93,19 @@ func (s Server) RemoveReadme(ctx context.Context, req *proto.RemoveReadmeRequest
 		return nil, status.Error(codes.PermissionDenied, "cannot write to report")
 	}
 
+	updatedAt := time.Now()
+	newVersionID := newUUID()
+
 	_, err = s.db.ExecContext(ctx,
-		`update reports set readme = null where id = $1`,
-		req.ReportId)
+		`update reports set readme = null, updated_at = $1, version_id = $2 where id = $3`,
+		updatedAt, newVersionID, req.ReportId)
 	if err != nil {
 		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	err = s.createReportSnapshotWithVersionID(ctx, newVersionID, req.ReportId, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE)
+	if err != nil {
+		errtype.LogError(err, "Cannot create report snapshot for readme removal")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	s.reportStreams.Ping(req.ReportId)

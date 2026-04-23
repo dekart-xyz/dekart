@@ -158,7 +158,7 @@ services:
       DEKART_CLOUD: "1"
       DEKART_BROWSERLESS_URL: "http://browserless:3000/screenshot"
       DEKART_BROWSERLESS_TOKEN: "${DEKART_BROWSERLESS_TOKEN:-local-browserless-token}"
-      DEKART_SNAPSHOT_RENDER_BASE_URL: "${DEKART_SNAPSHOT_RENDER_BASE_URL}"
+      DEKART_SNAPSHOT_RENDER_BASE_URL_DEV: "${DEKART_SNAPSHOT_RENDER_BASE_URL_DEV}"
   # docker compose --env-file .env.googleoauth --profile googleoauth up
   dekart-googleoauth:
     image: "${DOCKER_COMPOSE_IMAGE}"

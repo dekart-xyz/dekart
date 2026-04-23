@@ -75,7 +75,7 @@ func matchOrigin(origin string) bool {
 	if strings.TrimSpace(origin) == strings.TrimSpace(os.Getenv("DEKART_APP_URL")) {
 		return true
 	}
-	if strings.TrimSpace(origin) == strings.TrimSpace(os.Getenv("DEKART_SNAPSHOT_RENDER_BASE_URL")) {
+	if strings.TrimSpace(origin) == strings.TrimSpace(os.Getenv("DEKART_SNAPSHOT_RENDER_BASE_URL_DEV")) {
 		return true
 	}
 	if allowedOrigin == "" || allowedOrigin == "*" {

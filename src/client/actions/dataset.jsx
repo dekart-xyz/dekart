@@ -235,7 +235,7 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
 
     // check if dataset was already added to kepler
     const addedDatasets = getState().keplerGl.kepler?.visState.datasets || {}
-    const prevDataset = prevDatasetsList.find(d => d.queryId === dataset.queryId && d.id in addedDatasets)
+    const prevDataset = prevDatasetsList.find(d => d.id === dataset.id && d.id in addedDatasets)
     const i = datasets.findIndex(d => d.id === dataset.id)
     if (i < 0) {
       dispatch(finishAddingDatasetToMap(dataset))

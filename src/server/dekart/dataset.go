@@ -161,7 +161,8 @@ func (s Server) UpdateDatasetName(ctx context.Context, req *proto.UpdateDatasetN
 	_, err = s.db.ExecContext(ctx,
 		`update
 			datasets set
-			name = $1
+			name = $1,
+			updated_at = CURRENT_TIMESTAMP
 			where id=$2`,
 		req.Name,
 		req.DatasetId,
