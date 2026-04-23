@@ -75,6 +75,24 @@ func TestMCPToolDefinitions_ContainsUpdateTools(t *testing.T) {
 	datasetFileTool, ok := names["replace_file"]
 	assert.True(t, ok)
 	assert.Contains(t, datasetFileTool.InputSchema["required"], "dataset_id")
+
+	addReadmeTool, ok := names["add_report_readme"]
+	assert.True(t, ok)
+	assert.Contains(t, addReadmeTool.InputSchema["required"], "report_id")
+	assert.Contains(t, addReadmeTool.InputSchema["required"], "markdown")
+
+	updateReadmeTool, ok := names["update_report_readme"]
+	assert.True(t, ok)
+	assert.Contains(t, updateReadmeTool.InputSchema["required"], "report_id")
+	assert.Contains(t, updateReadmeTool.InputSchema["required"], "markdown")
+
+	removeReadmeTool, ok := names["remove_report_readme"]
+	assert.True(t, ok)
+	assert.Contains(t, removeReadmeTool.InputSchema["required"], "report_id")
+
+	reportPropsTool, ok := names["get_report_properties"]
+	assert.True(t, ok)
+	assert.Contains(t, reportPropsTool.InputSchema["required"], "report_id")
 }
 
 func TestCallMCPTool_UnknownTool(t *testing.T) {

@@ -6,6 +6,7 @@ import (
 	"dekart/src/server/errtype"
 	"dekart/src/server/user"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -45,12 +46,14 @@ func (s Server) AddReadme(ctx context.Context, req *proto.AddReadmeRequest) (*pr
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	_, err = s.db.ExecContext(ctx,
-		`delete from datasets where id=$1`,
-		req.FromDatasetId,
-	)
-	if err != nil {
-		errtype.LogError(err, "Error deleting dataset")
+	if strings.TrimSpace(req.FromDatasetId) != "" {
+		_, err = s.db.ExecContext(ctx,
+			`delete from datasets where id=$1`,
+			req.FromDatasetId,
+		)
+		if err != nil {
+			errtype.LogError(err, "Error deleting dataset")
+		}
 	}
 	s.reportStreams.Ping(req.ReportId)
 	return &proto.AddReadmeResponse{}, nil

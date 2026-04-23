@@ -796,6 +796,25 @@ message UpdateReportMapConfigResponse {
     int64 updated_at = 1;
 }
 
+// MCP-specific payload for replacing report readme markdown.
+message UpdateReportReadmeRequest {
+    string report_id = 1;
+    string markdown = 2;
+}
+
+message UpdateReportReadmeResponse {
+}
+
+// MCP-specific payload for fetching report metadata used by agent workflows.
+message GetReportPropertiesRequest {
+    string report_id = 1;
+}
+
+message GetReportPropertiesResponse {
+    Report report = 1;
+    repeated Dataset datasets = 2;
+}
+
 message RunQueryRequest {
     string query_id = 1;
     string query_text = 2;

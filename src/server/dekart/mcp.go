@@ -133,8 +133,16 @@ func (s *Server) callMCPTool(ctx context.Context, request *mcpCallRequest) (json
 		return s.callUpdateReportTitleTool(ctx, request.Arguments)
 	case "update_report_map_config":
 		return s.callUpdateReportMapConfigTool(ctx, request.Arguments)
+	case "add_report_readme":
+		return s.callAddReportReadmeTool(ctx, request.Arguments)
+	case "update_report_readme":
+		return s.callUpdateReportReadmeTool(ctx, request.Arguments)
+	case "remove_report_readme":
+		return s.callRemoveReportReadmeTool(ctx, request.Arguments)
 	case "update_dataset_name":
 		return s.callUpdateDatasetNameTool(ctx, request.Arguments)
+	case "get_report_properties":
+		return s.callGetReportPropertiesTool(ctx, request.Arguments)
 	case "create_report_snapshot":
 		return s.callCreateReportSnapshotTool(ctx, request.Arguments)
 	case "start_file_upload_session":
@@ -346,6 +354,49 @@ func (s *Server) callUpdateReportMapConfigTool(ctx context.Context, raw json.Raw
 	return mcp.MarshalProtoJSON(&proto.UpdateReportMapConfigResponse{UpdatedAt: updatedAt.Unix()})
 }
 
+// callAddReportReadmeTool adds readme markdown and optionally removes source dataset.
+func (s *Server) callAddReportReadmeTool(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
+	request := &proto.AddReadmeRequest{}
+	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
+		return nil, err
+	}
+	response, err := s.AddReadme(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	return mcp.MarshalProtoJSON(response)
+}
+
+// callUpdateReportReadmeTool replaces report readme markdown without dataset removal.
+func (s *Server) callUpdateReportReadmeTool(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
+	request := &proto.UpdateReportReadmeRequest{}
+	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
+		return nil, err
+	}
+	_, err := s.AddReadme(ctx, &proto.AddReadmeRequest{
+		ReportId:      request.ReportId,
+		Markdown:      request.Markdown,
+		FromDatasetId: "",
+	})
+	if err != nil {
+		return nil, err
+	}
+	return mcp.MarshalProtoJSON(&proto.UpdateReportReadmeResponse{})
+}
+
+// callRemoveReportReadmeTool removes readme from a report by report_id.
+func (s *Server) callRemoveReportReadmeTool(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
+	request := &proto.RemoveReadmeRequest{}
+	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
+		return nil, err
+	}
+	response, err := s.RemoveReadme(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	return mcp.MarshalProtoJSON(response)
+}
+
 // callUpdateDatasetNameTool updates one dataset name by dataset_id.
 func (s *Server) callUpdateDatasetNameTool(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
 	request := &proto.UpdateDatasetNameRequest{}
@@ -357,6 +408,32 @@ func (s *Server) callUpdateDatasetNameTool(ctx context.Context, raw json.RawMess
 		return nil, err
 	}
 	return mcp.MarshalProtoJSON(response)
+}
+
+// callGetReportPropertiesTool returns report metadata and datasets for one report_id.
+func (s *Server) callGetReportPropertiesTool(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
+	request := &proto.GetReportPropertiesRequest{}
+	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
+		return nil, err
+	}
+	if _, err := uuid.Parse(request.ReportId); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	report, err := s.getReport(ctx, request.ReportId)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("report not found id:%s", request.ReportId))
+	}
+	datasets, err := s.getDatasets(ctx, request.ReportId)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	return mcp.MarshalProtoJSON(&proto.GetReportPropertiesResponse{
+		Report:   report,
+		Datasets: datasets,
+	})
 }
 
 // callCreateReportSnapshotTool calls snapshot RPC and returns protojson response payload.
@@ -510,6 +587,44 @@ func mcpToolDefinitions() []mcpTool {
 			},
 		},
 		{
+			Name:         "add_report_readme",
+			Description:  "Add report readme markdown; optionally remove source dataset after conversion.",
+			InputSchema:  mcpschema.ForProto(&proto.AddReadmeRequest{}, []string{"report_id", "markdown"}),
+			WhenToUse:    "Use to create a readme on reports that currently have no readme content.",
+			WhenNotToUse: "Do not use when only report title/map config should change.",
+			SideEffects:  []string{"write"},
+			ExampleInput: map[string]any{
+				"report_id": "00000000-0000-0000-0000-000000000000",
+				"markdown":  "# Report notes",
+			},
+			NextTools: []string{"update_report_readme", "remove_report_readme", "get_report_properties"},
+		},
+		{
+			Name:         "update_report_readme",
+			Description:  "Replace report readme markdown by report_id.",
+			InputSchema:  mcpschema.ForProto(&proto.UpdateReportReadmeRequest{}, []string{"report_id", "markdown"}),
+			WhenToUse:    "Use to edit existing readme content without touching datasets.",
+			WhenNotToUse: "Do not use to rename reports or change map styling.",
+			SideEffects:  []string{"write"},
+			ExampleInput: map[string]any{
+				"report_id": "00000000-0000-0000-0000-000000000000",
+				"markdown":  "Updated report notes",
+			},
+			NextTools: []string{"get_report_properties", "remove_report_readme", "create_report_snapshot"},
+		},
+		{
+			Name:         "remove_report_readme",
+			Description:  "Remove readme markdown from a report.",
+			InputSchema:  mcpschema.ForProto(&proto.RemoveReadmeRequest{}, []string{"report_id"}),
+			WhenToUse:    "Use when report readme should be cleared.",
+			WhenNotToUse: "Do not use to remove datasets or report files.",
+			SideEffects:  []string{"write"},
+			ExampleInput: map[string]any{
+				"report_id": "00000000-0000-0000-0000-000000000000",
+			},
+			NextTools: []string{"add_report_readme", "get_report_properties"},
+		},
+		{
 			Name:         "update_dataset_name",
 			Description:  "Update dataset name by dataset_id.",
 			InputSchema:  mcpschema.ForProto(&proto.UpdateDatasetNameRequest{}, []string{"dataset_id", "name"}),
@@ -521,6 +636,18 @@ func mcpToolDefinitions() []mcpTool {
 				"name":       "Renamed Dataset",
 			},
 			NextTools: []string{"create_file", "update_report_map_config"},
+		},
+		{
+			Name:         "get_report_properties",
+			Description:  "Read report properties (title, map_config, readme, datasets) by report_id.",
+			InputSchema:  mcpschema.ForProto(&proto.GetReportPropertiesRequest{}, []string{"report_id"}),
+			WhenToUse:    "Use before mutating report state to fetch current report and dataset context.",
+			WhenNotToUse: "Do not use when you only need to create a new report.",
+			SideEffects:  []string{"read"},
+			ExampleInput: map[string]any{
+				"report_id": "00000000-0000-0000-0000-000000000000",
+			},
+			NextTools: []string{"update_report_title", "update_report_map_config", "update_report_readme"},
 		},
 	}
 	if reportsnapshot.IsEnabled() {

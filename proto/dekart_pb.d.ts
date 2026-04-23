@@ -2974,6 +2974,94 @@ export namespace UpdateReportMapConfigResponse {
   }
 }
 
+export class UpdateReportReadmeRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  getMarkdown(): string;
+  setMarkdown(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): UpdateReportReadmeRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: UpdateReportReadmeRequest): UpdateReportReadmeRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: UpdateReportReadmeRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): UpdateReportReadmeRequest;
+  static deserializeBinaryFromReader(message: UpdateReportReadmeRequest, reader: jspb.BinaryReader): UpdateReportReadmeRequest;
+}
+
+export namespace UpdateReportReadmeRequest {
+  export type AsObject = {
+    reportId: string,
+    markdown: string,
+  }
+}
+
+export class UpdateReportReadmeResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): UpdateReportReadmeResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: UpdateReportReadmeResponse): UpdateReportReadmeResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: UpdateReportReadmeResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): UpdateReportReadmeResponse;
+  static deserializeBinaryFromReader(message: UpdateReportReadmeResponse, reader: jspb.BinaryReader): UpdateReportReadmeResponse;
+}
+
+export namespace UpdateReportReadmeResponse {
+  export type AsObject = {
+  }
+}
+
+export class GetReportPropertiesRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetReportPropertiesRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: GetReportPropertiesRequest): GetReportPropertiesRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetReportPropertiesRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetReportPropertiesRequest;
+  static deserializeBinaryFromReader(message: GetReportPropertiesRequest, reader: jspb.BinaryReader): GetReportPropertiesRequest;
+}
+
+export namespace GetReportPropertiesRequest {
+  export type AsObject = {
+    reportId: string,
+  }
+}
+
+export class GetReportPropertiesResponse extends jspb.Message {
+  hasReport(): boolean;
+  clearReport(): void;
+  getReport(): Report | undefined;
+  setReport(value?: Report): void;
+
+  clearDatasetsList(): void;
+  getDatasetsList(): Array<Dataset>;
+  setDatasetsList(value: Array<Dataset>): void;
+  addDatasets(value?: Dataset, index?: number): Dataset;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetReportPropertiesResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: GetReportPropertiesResponse): GetReportPropertiesResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetReportPropertiesResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetReportPropertiesResponse;
+  static deserializeBinaryFromReader(message: GetReportPropertiesResponse, reader: jspb.BinaryReader): GetReportPropertiesResponse;
+}
+
+export namespace GetReportPropertiesResponse {
+  export type AsObject = {
+    report?: Report.AsObject,
+    datasetsList: Array<Dataset.AsObject>,
+  }
+}
+
 export class RunQueryRequest extends jspb.Message {
   getQueryId(): string;
   setQueryId(value: string): void;
