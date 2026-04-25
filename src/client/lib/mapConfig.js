@@ -7,6 +7,10 @@ import { deepCompare } from './deepCompare'
 
 // This function is used to compare the current map config with the new map config
 export function shouldUpdateMapConfig (oldMapConfigIn, newMapConfigIn) {
+  if (!oldMapConfigIn && newMapConfigIn) {
+    // when server config is empty but kepler has a config, we should update
+    return true
+  }
   if (newMapConfigIn.config.visState.layers.length > 0) {
     const newMapConfig = structuredClone(newMapConfigIn)
     newMapConfig.config.mapState.latitude = 0
@@ -51,9 +55,9 @@ function checkMapConfig (kepler, mapConfigInputStr, dispatch, datasets) {
     clearTimeout(checkMapConfigTimer)
   }
   checkMapConfigTimer = setTimeout(() => {
-    if (kepler && mapConfigInputStr && datasets) {
+    if (kepler && datasets) {
       const configToSaveObj = KeplerGlSchema.getConfigToSave(kepler)
-      const currentConfig = JSON.parse(mapConfigInputStr)
+      const currentConfig = mapConfigInputStr ? JSON.parse(mapConfigInputStr) : null
       if (shouldUpdateMapConfig(currentConfig, configToSaveObj)) {
         dispatch(setLastMapConfigChanged())
       }

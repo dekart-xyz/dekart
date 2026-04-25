@@ -1,0 +1,1319 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "inmemory://kepler_map_config_v1.schema.json",
+  "title": "Kepler Map Config v1 (Dekart MCP)",
+  "description": "Subset of Kepler.gl v1 map config validated by Dekart MCP before persisting report map_config. Use report dataset_id values as layer dataId references.",
+  "type": "object",
+  "required": [
+    "version",
+    "config"
+  ],
+  "properties": {
+    "version": {
+      "description": "Kepler config version. Dekart currently accepts only v1.",
+      "const": "v1"
+    },
+    "config": {
+      "description": "Root Kepler config object containing visState, mapState, and mapStyle.",
+      "type": "object",
+      "properties": {
+        "visState": {
+          "description": "Visualization state: layers, filters, interactions, and effects.",
+          "$ref": "#/definitions/visState"
+        },
+        "mapState": {
+          "description": "Viewport/camera state (center, zoom, pitch, bearing).",
+          "$ref": "#/definitions/mapState"
+        },
+        "mapStyle": {
+          "description": "Basemap style and visible basemap layer groups.",
+          "$ref": "#/definitions/mapStyle"
+        }
+      },
+      "required": [
+        "visState"
+      ],
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true,
+  "definitions": {
+    "nonEmptyString": {
+      "description": "Non-empty string value.",
+      "type": "string",
+      "minLength": 1
+    },
+    "columnValue": {
+      "description": "Column name used in layer column bindings.",
+      "type": "string",
+      "minLength": 1
+    },
+    "scaleType": {
+      "description": "Supported Kepler scale type for visual channels.",
+      "type": "string",
+      "enum": [
+        "ordinal",
+        "quantile",
+        "quantize",
+        "linear",
+        "sqrt",
+        "log",
+        "threshold",
+        "custom",
+        "customOrdinal",
+        "point"
+      ]
+    },
+    "layerType": {
+      "description": "Supported Kepler layer type.",
+      "type": "string",
+      "enum": [
+        "point",
+        "arc",
+        "line",
+        "grid",
+        "hexagon",
+        "geojson",
+        "cluster",
+        "icon",
+        "heatmap",
+        "hexagonId",
+        "3D",
+        "trip",
+        "s2",
+        "vectorTile",
+        "rasterTile",
+        "wms"
+      ]
+    },
+    "rgbColor": {
+      "description": "RGB or RGBA color array where each channel is 0..255.",
+      "type": "array",
+      "items": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 255
+      },
+      "minItems": 3,
+      "maxItems": 4
+    },
+    "boolMap": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "boolean"
+      }
+    },
+    "colorRange": {
+      "description": "Color palette descriptor for categorical or numeric ramps.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "colors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "colors"
+      ],
+      "additionalProperties": true
+    },
+    "fieldRef": {
+      "description": "Visual channel field reference. Null disables field-based mapping.",
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "type": {
+              "type": "string",
+              "minLength": 1
+            },
+            "format": {
+              "type": "string"
+            },
+            "analyzerType": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "type"
+          ],
+          "additionalProperties": true
+        }
+      ]
+    },
+    "visualChannels": {
+      "description": "Field/scale bindings for visual channels (color, size, stroke, etc.).",
+      "type": "object",
+      "properties": {
+        "colorField": {
+          "$ref": "#/definitions/fieldRef"
+        },
+        "colorScale": {
+          "$ref": "#/definitions/scaleType"
+        },
+        "strokeColorField": {
+          "$ref": "#/definitions/fieldRef"
+        },
+        "strokeColorScale": {
+          "$ref": "#/definitions/scaleType"
+        },
+        "sizeField": {
+          "$ref": "#/definitions/fieldRef"
+        },
+        "sizeScale": {
+          "$ref": "#/definitions/scaleType"
+        },
+        "heightField": {
+          "$ref": "#/definitions/fieldRef"
+        },
+        "heightScale": {
+          "$ref": "#/definitions/scaleType"
+        },
+        "radiusField": {
+          "$ref": "#/definitions/fieldRef"
+        },
+        "radiusScale": {
+          "$ref": "#/definitions/scaleType"
+        },
+        "weightField": {
+          "$ref": "#/definitions/fieldRef"
+        },
+        "weightScale": {
+          "$ref": "#/definitions/scaleType"
+        },
+        "coverageField": {
+          "$ref": "#/definitions/fieldRef"
+        },
+        "coverageScale": {
+          "$ref": "#/definitions/scaleType"
+        }
+      },
+      "additionalProperties": false
+    },
+    "layerConfigBase": {
+      "description": "Common layer config. dataId must match an existing report dataset_id.",
+      "type": "object",
+      "required": [
+        "dataId"
+      ],
+      "properties": {
+        "dataId": {
+          "description": "Dataset identifier in report context (dataset.id), not file_id.",
+          "$ref": "#/definitions/nonEmptyString"
+        },
+        "label": {
+          "type": "string"
+        },
+        "isVisible": {
+          "type": "boolean"
+        },
+        "hidden": {
+          "type": "boolean"
+        },
+        "columnMode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "columns": {
+          "description": "Layer-specific source column bindings (depends on layer type and columnMode).",
+          "type": "object"
+        },
+        "color": {
+          "$ref": "#/definitions/rgbColor"
+        },
+        "highlightColor": {
+          "$ref": "#/definitions/rgbColor"
+        },
+        "visConfig": {
+          "type": "object",
+          "properties": {
+            "opacity": {
+              "type": "number"
+            },
+            "colorRange": {
+              "$ref": "#/definitions/colorRange"
+            },
+            "strokeColorRange": {
+              "$ref": "#/definitions/colorRange"
+            }
+          },
+          "additionalProperties": true
+        },
+        "textLabel": {
+          "type": "array"
+        }
+      },
+      "additionalProperties": false
+    },
+    "layer": {
+      "description": "Any supported Kepler layer definition.",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/pointLayer"
+        },
+        {
+          "$ref": "#/definitions/arcLayer"
+        },
+        {
+          "$ref": "#/definitions/lineLayer"
+        },
+        {
+          "$ref": "#/definitions/geojsonLayer"
+        },
+        {
+          "$ref": "#/definitions/tripLayer"
+        },
+        {
+          "$ref": "#/definitions/heatmapLayer"
+        },
+        {
+          "$ref": "#/definitions/iconLayer"
+        },
+        {
+          "$ref": "#/definitions/aggregationLayer"
+        },
+        {
+          "$ref": "#/definitions/hexagonIdLayer"
+        },
+        {
+          "$ref": "#/definitions/s2Layer"
+        },
+        {
+          "$ref": "#/definitions/tileLayer"
+        }
+      ]
+    },
+    "layerBase": {
+      "description": "Common required keys for all layer definitions.",
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "config"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/nonEmptyString"
+        },
+        "type": {
+          "$ref": "#/definitions/layerType"
+        },
+        "config": {
+          "$ref": "#/definitions/layerConfigBase"
+        },
+        "visualChannels": {
+          "$ref": "#/definitions/visualChannels"
+        }
+      },
+      "additionalProperties": false
+    },
+    "pointColumnsPoints": {
+      "type": "object",
+      "required": [
+        "lat",
+        "lng"
+      ],
+      "properties": {
+        "lat": {
+          "$ref": "#/definitions/columnValue"
+        },
+        "lng": {
+          "$ref": "#/definitions/columnValue"
+        }
+      },
+      "additionalProperties": true
+    },
+    "pointColumnsGeoJSON": {
+      "type": "object",
+      "required": [
+        "geojson"
+      ],
+      "properties": {
+        "geojson": {
+          "$ref": "#/definitions/columnValue"
+        }
+      },
+      "additionalProperties": true
+    },
+    "pointColumnsGeoarrow": {
+      "type": "object",
+      "required": [
+        "geoarrow"
+      ],
+      "properties": {
+        "geoarrow": {
+          "$ref": "#/definitions/columnValue"
+        }
+      },
+      "additionalProperties": true
+    },
+    "pointLayer": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/layerBase"
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "point"
+            },
+            "config": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/layerConfigBase"
+                },
+                {
+                  "properties": {
+                    "columnMode": {
+                      "enum": [
+                        "points",
+                        "geojson",
+                        "geoarrow"
+                      ]
+                    },
+                    "columns": {
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "columns"
+                  ]
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "columnMode": {
+                        "const": "geojson"
+                      }
+                    },
+                    "required": [
+                      "columnMode"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "columns": {
+                        "$ref": "#/definitions/pointColumnsGeoJSON"
+                      }
+                    }
+                  },
+                  "else": {
+                    "if": {
+                      "properties": {
+                        "columnMode": {
+                          "const": "geoarrow"
+                        }
+                      },
+                      "required": [
+                        "columnMode"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "columns": {
+                          "$ref": "#/definitions/pointColumnsGeoarrow"
+                        }
+                      }
+                    },
+                    "else": {
+                      "properties": {
+                        "columns": {
+                          "$ref": "#/definitions/pointColumnsPoints"
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "arcLineColumnsPoints": {
+      "type": "object",
+      "required": [
+        "lat0",
+        "lng0",
+        "lat1",
+        "lng1"
+      ],
+      "properties": {
+        "lat0": {
+          "$ref": "#/definitions/columnValue"
+        },
+        "lng0": {
+          "$ref": "#/definitions/columnValue"
+        },
+        "lat1": {
+          "$ref": "#/definitions/columnValue"
+        },
+        "lng1": {
+          "$ref": "#/definitions/columnValue"
+        }
+      },
+      "additionalProperties": true
+    },
+    "arcLineColumnsNeighbors": {
+      "type": "object",
+      "required": [
+        "lat",
+        "lng",
+        "neighbors"
+      ],
+      "properties": {
+        "lat": {
+          "$ref": "#/definitions/columnValue"
+        },
+        "lng": {
+          "$ref": "#/definitions/columnValue"
+        },
+        "neighbors": {
+          "$ref": "#/definitions/columnValue"
+        }
+      },
+      "additionalProperties": true
+    },
+    "arcLineColumnsGeoarrow": {
+      "type": "object",
+      "required": [
+        "geoarrow0",
+        "geoarrow1"
+      ],
+      "properties": {
+        "geoarrow0": {
+          "$ref": "#/definitions/columnValue"
+        },
+        "geoarrow1": {
+          "$ref": "#/definitions/columnValue"
+        }
+      },
+      "additionalProperties": true
+    },
+    "arcLayer": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/layerBase"
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "arc"
+            },
+            "config": {
+              "$ref": "#/definitions/arcLineModeConfig"
+            }
+          }
+        }
+      ]
+    },
+    "lineLayer": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/layerBase"
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "line"
+            },
+            "config": {
+              "$ref": "#/definitions/arcLineModeConfig"
+            }
+          }
+        }
+      ]
+    },
+    "arcLineModeConfig": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/layerConfigBase"
+        },
+        {
+          "properties": {
+            "columnMode": {
+              "enum": [
+                "points",
+                "neighbors",
+                "geoarrow"
+              ]
+            },
+            "columns": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "columns"
+          ]
+        },
+        {
+          "if": {
+            "properties": {
+              "columnMode": {
+                "const": "neighbors"
+              }
+            },
+            "required": [
+              "columnMode"
+            ]
+          },
+          "then": {
+            "properties": {
+              "columns": {
+                "$ref": "#/definitions/arcLineColumnsNeighbors"
+              }
+            }
+          },
+          "else": {
+            "if": {
+              "properties": {
+                "columnMode": {
+                  "const": "geoarrow"
+                }
+              },
+              "required": [
+                "columnMode"
+              ]
+            },
+            "then": {
+              "properties": {
+                "columns": {
+                  "$ref": "#/definitions/arcLineColumnsGeoarrow"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "columns": {
+                  "$ref": "#/definitions/arcLineColumnsPoints"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "geojsonColumnsGeojson": {
+      "type": "object",
+      "required": [
+        "geojson"
+      ],
+      "properties": {
+        "geojson": {
+          "$ref": "#/definitions/columnValue"
+        }
+      },
+      "additionalProperties": true
+    },
+    "geojsonColumnsTable": {
+      "type": "object",
+      "required": [
+        "id",
+        "lat",
+        "lng"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/columnValue"
+        },
+        "lat": {
+          "$ref": "#/definitions/columnValue"
+        },
+        "lng": {
+          "$ref": "#/definitions/columnValue"
+        }
+      },
+      "additionalProperties": true
+    },
+    "geojsonLayer": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/layerBase"
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "geojson"
+            },
+            "config": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/layerConfigBase"
+                },
+                {
+                  "properties": {
+                    "columnMode": {
+                      "enum": [
+                        "geojson",
+                        "table"
+                      ]
+                    },
+                    "columns": {
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "columns"
+                  ]
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "columnMode": {
+                        "const": "table"
+                      }
+                    },
+                    "required": [
+                      "columnMode"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "columns": {
+                        "$ref": "#/definitions/geojsonColumnsTable"
+                      }
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "columns": {
+                        "$ref": "#/definitions/geojsonColumnsGeojson"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "tripColumnsGeojson": {
+      "type": "object",
+      "required": [
+        "geojson"
+      ],
+      "properties": {
+        "geojson": {
+          "$ref": "#/definitions/columnValue"
+        }
+      },
+      "additionalProperties": true
+    },
+    "tripColumnsTable": {
+      "type": "object",
+      "required": [
+        "id",
+        "lat",
+        "lng",
+        "timestamp"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/columnValue"
+        },
+        "lat": {
+          "$ref": "#/definitions/columnValue"
+        },
+        "lng": {
+          "$ref": "#/definitions/columnValue"
+        },
+        "timestamp": {
+          "$ref": "#/definitions/columnValue"
+        }
+      },
+      "additionalProperties": true
+    },
+    "tripLayer": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/layerBase"
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "trip"
+            },
+            "config": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/layerConfigBase"
+                },
+                {
+                  "properties": {
+                    "columnMode": {
+                      "enum": [
+                        "geojson",
+                        "table"
+                      ]
+                    },
+                    "columns": {
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "columns"
+                  ]
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "columnMode": {
+                        "const": "table"
+                      }
+                    },
+                    "required": [
+                      "columnMode"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "columns": {
+                        "$ref": "#/definitions/tripColumnsTable"
+                      }
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "columns": {
+                        "$ref": "#/definitions/tripColumnsGeojson"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "heatmapColumnsPoints": {
+      "type": "object",
+      "required": [
+        "lat",
+        "lng"
+      ],
+      "properties": {
+        "lat": {
+          "$ref": "#/definitions/columnValue"
+        },
+        "lng": {
+          "$ref": "#/definitions/columnValue"
+        }
+      },
+      "additionalProperties": true
+    },
+    "heatmapColumnsGeoarrow": {
+      "type": "object",
+      "required": [
+        "geoarrow"
+      ],
+      "properties": {
+        "geoarrow": {
+          "$ref": "#/definitions/columnValue"
+        }
+      },
+      "additionalProperties": true
+    },
+    "heatmapLayer": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/layerBase"
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "heatmap"
+            },
+            "config": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/layerConfigBase"
+                },
+                {
+                  "properties": {
+                    "columnMode": {
+                      "enum": [
+                        "points",
+                        "geoarrow"
+                      ]
+                    },
+                    "columns": {
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "columns"
+                  ]
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "columnMode": {
+                        "const": "geoarrow"
+                      }
+                    },
+                    "required": [
+                      "columnMode"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "columns": {
+                        "$ref": "#/definitions/heatmapColumnsGeoarrow"
+                      }
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "columns": {
+                        "$ref": "#/definitions/heatmapColumnsPoints"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "iconLayer": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/layerBase"
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "icon"
+            },
+            "config": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/layerConfigBase"
+                },
+                {
+                  "properties": {
+                    "columns": {
+                      "type": "object",
+                      "required": [
+                        "lat",
+                        "lng",
+                        "icon"
+                      ],
+                      "properties": {
+                        "lat": {
+                          "$ref": "#/definitions/columnValue"
+                        },
+                        "lng": {
+                          "$ref": "#/definitions/columnValue"
+                        },
+                        "icon": {
+                          "$ref": "#/definitions/columnValue"
+                        }
+                      },
+                      "additionalProperties": true
+                    }
+                  },
+                  "required": [
+                    "columns"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "aggregationLayer": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/layerBase"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "grid",
+                "hexagon",
+                "cluster",
+                "3D"
+              ]
+            },
+            "config": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/layerConfigBase"
+                },
+                {
+                  "properties": {
+                    "columns": {
+                      "type": "object",
+                      "required": [
+                        "lat",
+                        "lng"
+                      ],
+                      "properties": {
+                        "lat": {
+                          "$ref": "#/definitions/columnValue"
+                        },
+                        "lng": {
+                          "$ref": "#/definitions/columnValue"
+                        }
+                      },
+                      "additionalProperties": true
+                    }
+                  },
+                  "required": [
+                    "columns"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "hexagonIdLayer": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/layerBase"
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "hexagonId"
+            },
+            "config": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/layerConfigBase"
+                },
+                {
+                  "properties": {
+                    "columns": {
+                      "type": "object",
+                      "required": [
+                        "hex_id"
+                      ],
+                      "properties": {
+                        "hex_id": {
+                          "$ref": "#/definitions/columnValue"
+                        }
+                      },
+                      "additionalProperties": true
+                    }
+                  },
+                  "required": [
+                    "columns"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "s2Layer": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/layerBase"
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "s2"
+            },
+            "config": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/layerConfigBase"
+                },
+                {
+                  "properties": {
+                    "columns": {
+                      "type": "object",
+                      "required": [
+                        "token"
+                      ],
+                      "properties": {
+                        "token": {
+                          "$ref": "#/definitions/columnValue"
+                        }
+                      },
+                      "additionalProperties": true
+                    }
+                  },
+                  "required": [
+                    "columns"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "tileLayer": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/layerBase"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "vectorTile",
+                "rasterTile",
+                "wms"
+              ]
+            },
+            "config": {
+              "$ref": "#/definitions/layerConfigBase"
+            }
+          }
+        }
+      ]
+    },
+    "filter": {
+      "description": "Kepler filter definition bound to one or more dataset_id values.",
+      "type": "object",
+      "required": [
+        "id",
+        "dataId",
+        "name",
+        "type",
+        "value"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/nonEmptyString"
+        },
+        "dataId": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/nonEmptyString"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/nonEmptyString"
+              },
+              "minItems": 1
+            }
+          ]
+        },
+        "name": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/nonEmptyString"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/nonEmptyString"
+              }
+            }
+          ]
+        },
+        "type": {
+          "description": "Filter type. Null appears in some legacy configs and is tolerated for backward compatibility.",
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": [
+                "range",
+                "select",
+                "input",
+                "timeRange",
+                "multiSelect",
+                "polygon"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "view": {
+          "type": "string",
+          "enum": [
+            "side",
+            "enlarged",
+            "minified"
+          ]
+        },
+        "speed": {
+          "type": "number"
+        },
+        "layerId": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/nonEmptyString"
+              }
+            }
+          ]
+        },
+        "value": {}
+      },
+      "additionalProperties": true
+    },
+    "tooltipFields": {
+      "description": "Tooltip field map keyed by dataset_id.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "array"
+      }
+    },
+    "visState": {
+      "description": "Visualization state: list of layers and filters plus interaction settings.",
+      "type": "object",
+      "properties": {
+        "layers": {
+          "description": "Ordered Kepler layer definitions.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/layer"
+          }
+        },
+        "filters": {
+          "description": "Kepler filter definitions applied to datasets.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/filter"
+          }
+        },
+        "interactionConfig": {
+          "description": "Interaction options such as tooltip behavior.",
+          "type": "object",
+          "properties": {
+            "tooltip": {
+              "description": "Tooltip visibility and dataset field mappings.",
+              "type": "object",
+              "properties": {
+                "fields": {
+                  "description": "Tooltip field map keyed by dataset_id.",
+                  "$ref": "#/definitions/tooltipFields"
+                },
+                "fieldsToShow": {
+                  "description": "Kepler tooltip field map keyed by dataset_id.",
+                  "$ref": "#/definitions/tooltipFields"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        },
+        "layerBlending": {
+          "description": "Blend mode between data layers.",
+          "type": "string",
+          "enum": [
+            "additive",
+            "normal",
+            "subtractive"
+          ]
+        },
+        "overlayBlending": {
+          "description": "Blend mode between map overlay and basemap.",
+          "type": "string",
+          "enum": [
+            "normal",
+            "screen",
+            "darken"
+          ]
+        },
+        "splitMaps": {
+          "type": "array"
+        },
+        "animationConfig": {
+          "type": "object"
+        },
+        "editor": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
+    },
+    "mapState": {
+      "description": "Map viewport state including center and zoom.",
+      "type": "object",
+      "properties": {
+        "bearing": {
+          "type": "number"
+        },
+        "dragRotate": {
+          "type": "boolean"
+        },
+        "latitude": {
+          "type": "number"
+        },
+        "longitude": {
+          "type": "number"
+        },
+        "pitch": {
+          "type": "number"
+        },
+        "zoom": {
+          "type": "number"
+        },
+        "isSplit": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "mapStyle": {
+      "description": "Basemap style settings and visible base layer groups.",
+      "type": "object",
+      "properties": {
+        "styleType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "topLayerGroups": {
+          "$ref": "#/definitions/boolMap"
+        },
+        "visibleLayerGroups": {
+          "$ref": "#/definitions/boolMap"
+        },
+        "threeDBuildingColor": {
+          "$ref": "#/definitions/rgbColor"
+        },
+        "backgroundColor": {
+          "$ref": "#/definitions/rgbColor"
+        },
+        "mapStyles": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

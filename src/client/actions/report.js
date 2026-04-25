@@ -2,7 +2,7 @@ import { KeplerGlSchema } from '@kepler.gl/schemas'
 import { cleanupExportImage, removeDataset, setExportImageSetting, startExportingImage } from '@kepler.gl/actions'
 
 import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
-import { success } from './message'
+import { showMapConfigConflictMessage, success } from './message'
 import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType, SetTrackViewersRequest, SetAutoRefreshIntervalSecondsRequest, RestoreReportSnapshotRequest, SaveMapPreviewRequest } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { createQuery, downloadQuerySource, runQuery } from './query'
@@ -231,10 +231,19 @@ export function reportUpdate (reportStreamResponse) {
       directAccessEmailsList
     })
     let mapConfigUpdated = false
+    const hasUnsavedUserChanges = lastSaved < lastChanged
+    const hasRemoteMapConflict = (
+      report.mapConfig &&
+      report.updatedAt > savedReportVersion && // ignore when updated version same as last saved to prevent maps reloads
+      hasUnsavedUserChanges
+    )
+    if (hasRemoteMapConflict) {
+      dispatch(showMapConfigConflictMessage())
+    }
     if (
       report.mapConfig &&
       report.updatedAt > savedReportVersion && // ignore when updated version same as last saved to prevent maps reloads
-      lastSaved >= lastChanged // ignore overwriting unsaved changes
+      !hasUnsavedUserChanges // ignore overwriting unsaved user changes
     ) {
       mapConfigUpdated = receiveReportUpdateMapConfig(report, dispatch, getState)
     }

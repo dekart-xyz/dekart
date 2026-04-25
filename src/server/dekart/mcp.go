@@ -22,15 +22,16 @@ import (
 )
 
 type mcpTool struct {
-	Name          string         `json:"name"`
-	Description   string         `json:"description"`
-	InputSchema   map[string]any `json:"inputSchema"`
-	WhenToUse     string         `json:"when_to_use,omitempty"`
-	WhenNotToUse  string         `json:"when_not_to_use,omitempty"`
-	SideEffects   []string       `json:"side_effects,omitempty"`
-	ExampleInput  map[string]any `json:"example_input,omitempty"`
-	NextTools     []string       `json:"next_tools,omitempty"`
-	ReferenceDocs []string       `json:"reference_docs,omitempty"`
+	Name           string         `json:"name"`
+	Description    string         `json:"description"`
+	InputSchema    map[string]any `json:"inputSchema"`
+	RequiredFields []string       `json:"required_fields"`
+	WhenToUse      string         `json:"when_to_use,omitempty"`
+	WhenNotToUse   string         `json:"when_not_to_use,omitempty"`
+	SideEffects    []string       `json:"side_effects,omitempty"`
+	ExampleInput   map[string]any `json:"example_input"`
+	NextTools      []string       `json:"next_tools,omitempty"`
+	ReferenceDocs  []string       `json:"reference_docs,omitempty"`
 }
 
 type mcpToolsResponse struct {
@@ -44,6 +45,11 @@ type mcpCallRequest struct {
 
 type mcpCallResponse struct {
 	Result any `json:"result"`
+}
+
+type mcpValidationErrorResponse struct {
+	Error  string                     `json:"error"`
+	Issues []mapConfigValidationIssue `json:"issues"`
 }
 
 // HandleCreateReport wraps CreateReport RPC with protojson HTTP endpoint.
@@ -133,6 +139,8 @@ func (s *Server) callMCPTool(ctx context.Context, request *mcpCallRequest) (json
 		return s.callUpdateReportTitleTool(ctx, request.Arguments)
 	case "update_report_map_config":
 		return s.callUpdateReportMapConfigTool(ctx, request.Arguments)
+	case "get_map_config_schema":
+		return s.callGetMapConfigSchemaTool()
 	case "add_report_readme":
 		return s.callAddReportReadmeTool(ctx, request.Arguments)
 	case "update_report_readme":
@@ -154,6 +162,21 @@ func (s *Server) callMCPTool(ctx context.Context, request *mcpCallRequest) (json
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", request.Name)
 	}
+}
+
+// callGetMapConfigSchemaTool returns the JSON schema used for map config validation.
+func (s *Server) callGetMapConfigSchemaTool() (json.RawMessage, error) {
+	_ = s
+	var schema map[string]any
+	if err := json.Unmarshal([]byte(keplerMapConfigSchemaJSON), &schema); err != nil {
+		return nil, status.Error(codes.Internal, "failed to load map config schema")
+	}
+	return mcp.MarshalJSON(map[string]any{
+		"schema_id":      schema["$id"],
+		"schema_version": schema["$schema"],
+		"title":          schema["title"],
+		"schema":         schema,
+	})
 }
 
 // callCreateReportTool creates a new report and returns CreateReportResponse JSON.
@@ -304,6 +327,10 @@ func (s *Server) callUpdateReportMapConfigTool(ctx context.Context, raw json.Raw
 		return nil, status.Errorf(codes.InvalidArgument,
 			"Map configuration is too large (%d bytes). Maximum allowed size is %d bytes. Please simplify your map configuration.",
 			len(request.MapConfig), MaxMapConfigSize)
+	}
+	// Validate Kepler map config schema and dataset bindings before persisting.
+	if err := s.validateReportMapConfig(ctx, request.ReportId, request.MapConfig); err != nil {
+		return nil, err
 	}
 	updatedAt := time.Now()
 	newVersionID := newUUID()
@@ -468,6 +495,14 @@ func writeJSON(w http.ResponseWriter, statusCode int, payload any) {
 
 // writeMCPCallError maps tool call errors to HTTP responses for MCP clients.
 func writeMCPCallError(w http.ResponseWriter, err error) {
+	var validationErr *mapConfigValidationError
+	if errors.As(err, &validationErr) {
+		writeJSON(w, http.StatusBadRequest, mcpValidationErrorResponse{
+			Error:  "map_config_validation_failed",
+			Issues: validationErr.Issues,
+		})
+		return
+	}
 	var httpErr *mcpHTTPError
 	if errors.As(err, &httpErr) {
 		http.Error(w, httpErr.message, httpErr.statusCode)
@@ -494,6 +529,28 @@ func buildMCPCreateReportResult(reportID string) map[string]any {
 		result["report_url"] = fmt.Sprintf("%s%s", frontendBaseURL, reportPath)
 	}
 	return result
+}
+
+// normalizeMCPTool enforces strict schema, required_fields, and minimal example_input.
+func normalizeMCPTool(tool mcpTool) mcpTool {
+	normalizedSchema, required := mcpschema.NormalizeInputSchema(tool.InputSchema)
+	tool.InputSchema = normalizedSchema
+	tool.RequiredFields = required
+	properties, _ := normalizedSchema["properties"].(map[string]any)
+	tool.ExampleInput = mcpschema.MinimalExampleInput(required, properties, tool.ExampleInput)
+	if tool.ExampleInput == nil {
+		tool.ExampleInput = map[string]any{}
+	}
+	return tool
+}
+
+// normalizeMCPTools normalizes discoverability metadata for all MCP tools.
+func normalizeMCPTools(tools []mcpTool) []mcpTool {
+	normalized := make([]mcpTool, 0, len(tools))
+	for _, tool := range tools {
+		normalized = append(normalized, normalizeMCPTool(tool))
+	}
+	return normalized
 }
 
 // mcpToolDefinitions returns the current MCP tools and their input schemas.
@@ -574,7 +631,7 @@ func mcpToolDefinitions() []mcpTool {
 			Name:         "update_report_map_config",
 			Description:  "Update report map config by report_id.",
 			InputSchema:  mcpschema.ForProto(&proto.UpdateReportMapConfigRequest{}, []string{"report_id", "map_config"}),
-			WhenToUse:    "Use to apply Kepler.gl map configuration changes (layers, filters, map style, map state).",
+			WhenToUse:    "Use to apply Kepler.gl map configuration changes (layers, filters, map style, map state). Before calling, agent should preflight map_config semantics: each layer dataId exists, required layer columns exist, and visual-channel field names exist in dataset schema. In visState.layers[*].config.dataId, use report dataset_id values (kepler data ids), not file_id or tab labels.",
 			WhenNotToUse: "Do not use when only report title or dataset name should change.",
 			SideEffects:  []string{"write"},
 			ExampleInput: map[string]any{
@@ -582,6 +639,19 @@ func mcpToolDefinitions() []mcpTool {
 				"map_config": "{\"version\":\"v1\",\"config\":{\"visState\":{\"layers\":[]},\"mapState\":{},\"mapStyle\":{}}}",
 			},
 			NextTools: []string{"create_report_snapshot", "update_report_title"},
+			ReferenceDocs: []string{
+				"https://docs.kepler.gl/docs/api-reference/advanced-usages/saving-loading-w-schema",
+			},
+		},
+		{
+			Name:         "get_map_config_schema",
+			Description:  "Return the Kepler v1 map_config JSON schema used by MCP validation.",
+			InputSchema:  mcpschema.Object(nil, map[string]any{}),
+			WhenToUse:    "Use before building or editing map_config to discover required fields, allowed enums, and layer-specific constraints.",
+			WhenNotToUse: "Do not use for mutating report or dataset data.",
+			SideEffects:  []string{"read"},
+			ExampleInput: map[string]any{},
+			NextTools:    []string{"get_report_properties", "update_report_map_config"},
 			ReferenceDocs: []string{
 				"https://docs.kepler.gl/docs/api-reference/advanced-usages/saving-loading-w-schema",
 			},
@@ -664,5 +734,5 @@ func mcpToolDefinitions() []mcpTool {
 			NextTools: []string{"update_report_map_config", "update_report_title"},
 		})
 	}
-	return append(tools, mcpUploadToolDefinitions()...)
+	return normalizeMCPTools(append(tools, mcpUploadToolDefinitions()...))
 }

@@ -1,0 +1,23 @@
+.closeButton {
+  color: #8c8c8c !important;
+  position: relative;
+  left: 10px;
+}
+
+.closeButton:hover,
+.closeButton:focus,
+.closeButton:active {
+  background: transparent !important;
+  color: #000000 !important;
+}
+
+.closeButton :global(.anticon),
+.closeButton :global(.anticon svg) {
+  color: inherit !important;
+  fill: currentColor;
+  transition: color 0.2s ease;
+}
+
+.reloadButton {
+  margin-left: 5px;
+}

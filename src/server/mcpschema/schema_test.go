@@ -173,3 +173,53 @@ func TestForProtoWellKnownTypes(t *testing.T) {
 		t.Fatalf("value.bool_value type mismatch: got=%v", valueProps["bool_value"])
 	}
 }
+
+func TestNormalizeInputSchema(t *testing.T) {
+	schema, required := NormalizeInputSchema(map[string]any{
+		"properties": map[string]any{
+			"report_id": String(),
+			"markdown":  String(),
+		},
+		"required": []any{"report_id", "markdown", "report_id"},
+	})
+
+	if schema["type"] != "object" {
+		t.Fatalf("schema.type mismatch: got=%v", schema["type"])
+	}
+	if schema["additionalProperties"] != false {
+		t.Fatalf("schema.additionalProperties mismatch: got=%v", schema["additionalProperties"])
+	}
+	if !reflect.DeepEqual(required, []string{"report_id", "markdown"}) {
+		t.Fatalf("required mismatch: got=%v", required)
+	}
+	if !reflect.DeepEqual(schema["required"], []string{"report_id", "markdown"}) {
+		t.Fatalf("schema.required mismatch: got=%v", schema["required"])
+	}
+}
+
+func TestMinimalExampleInput(t *testing.T) {
+	required := []string{"report_id", "markdown", "total_size", "parts"}
+	properties := map[string]any{
+		"report_id": String(),
+		"markdown":  String(),
+		"total_size": map[string]any{
+			"type": "integer",
+		},
+		"parts": map[string]any{
+			"type": "array",
+		},
+	}
+	existing := map[string]any{
+		"markdown": "Updated report notes",
+	}
+	got := MinimalExampleInput(required, properties, existing)
+	want := map[string]any{
+		"report_id":  "00000000-0000-0000-0000-000000000000",
+		"markdown":   "Updated report notes",
+		"total_size": 0,
+		"parts":      []any{},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("minimal example mismatch: got=%v want=%v", got, want)
+	}
+}
