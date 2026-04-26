@@ -99,7 +99,6 @@ services:
   # docker compose --env-file .env.cloud --profile cloud up
   browserless:
     image: ghcr.io/browserless/chromium:latest
-    platform: linux/amd64
     profiles:
       - cloud
     restart: always
