@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestWriteMCPCallError_HTTPErrorPreservesStatus(t *testing.T) {
@@ -19,6 +21,15 @@ func TestWriteMCPCallError_HTTPErrorPreservesStatus(t *testing.T) {
 
 	assert.Equal(t, http.StatusRequestEntityTooLarge, recorder.Code)
 	assert.Equal(t, "file too large\n", recorder.Body.String())
+}
+
+func TestWriteMCPCallError_GrpcInvalidArgumentMapsTo400(t *testing.T) {
+	recorder := httptest.NewRecorder()
+
+	writeMCPCallError(recorder, status.Error(codes.InvalidArgument, "invalid report_id format"))
+
+	assert.Equal(t, http.StatusBadRequest, recorder.Code)
+	assert.Equal(t, "invalid report_id format\n", recorder.Body.String())
 }
 
 func TestWriteMCPCallError_MapConfigValidationErrorStructured(t *testing.T) {
