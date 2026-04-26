@@ -90,6 +90,21 @@ const defaultReportStatus = {
   queryJobRefreshTimeoutId: null,
   snapshotMode: false
 }
+
+// false until user opens Kepler panel
+// prevents false "unsaved changes"
+export function hasOpenedKeplerPanel (state = false, action) {
+  switch (action.type) {
+    case openReport.name:
+    case closeReport.name:
+      return false
+    case KeplerActionTypes.TOGGLE_SIDE_PANEL:
+      // Once user opens any Kepler side panel, start tracking config changes.
+      return state || Boolean(action.payload)
+    default:
+      return state
+  }
+}
 export function reportStatus (state = defaultReportStatus, action) {
   switch (action.type) {
     case updateQueryParamsFromQueries.name:

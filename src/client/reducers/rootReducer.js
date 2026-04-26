@@ -24,7 +24,7 @@ import snapshots from './snapshotsReducer'
 import { upgradeModal } from './upgradeModalReducer'
 import fileUploadStatus from './fileUploadReducer'
 import deviceTokens from './deviceTokensReducer'
-import { mapPreview, report, reportDirectAccessEmails, reportsList, reportStatus } from './reportReducer'
+import { hasOpenedKeplerPanel, mapPreview, report, reportDirectAccessEmails, reportsList, reportStatus } from './reportReducer'
 
 const customKeplerGlReducer = keplerGlReducer.initialState({
   uiState: {
@@ -155,5 +155,6 @@ export default combineReducers({
   snapshots,
   upgradeModal,
   location,
-  mapPreview
+  mapPreview,
+  hasOpenedKeplerPanel
 })

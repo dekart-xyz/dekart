@@ -215,7 +215,8 @@ export function reportUpdate (reportStreamResponse) {
       user,
       queryJobs: prevQueryJobsList,
       queryParams: { hash },
-      reportStatus: { lastChanged, lastSaved, savedReportVersion }
+      reportStatus: { lastChanged, lastSaved, savedReportVersion },
+      hasOpenedKeplerPanel
     } = getState()
 
     dispatch({
@@ -231,7 +232,10 @@ export function reportUpdate (reportStreamResponse) {
       directAccessEmailsList
     })
     let mapConfigUpdated = false
-    const hasUnsavedUserChanges = lastSaved < lastChanged
+    // user could change map config locally, then we just wnt to show map update message
+    // but config could also change when Kepler applied deafults
+    // we ignore changes if user never opned pannel
+    const hasUnsavedUserChanges = lastSaved < lastChanged && hasOpenedKeplerPanel
     const hasRemoteMapConflict = (
       report.mapConfig &&
       report.updatedAt > savedReportVersion && // ignore when updated version same as last saved to prevent maps reloads
