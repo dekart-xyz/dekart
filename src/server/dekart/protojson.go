@@ -3,6 +3,8 @@ package dekart
 import (
 	"errors"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	gproto "google.golang.org/protobuf/proto"
 	"io"
@@ -38,4 +40,30 @@ func readProtoJSON(r *http.Request, payload gproto.Message) error {
 		return err
 	}
 	return nil
+}
+
+// writeGrpcErrorAsHTTP converts gRPC status errors into HTTP responses for protojson endpoints.
+func writeGrpcErrorAsHTTP(w http.ResponseWriter, err error, operation string) {
+	grpcStatus, ok := status.FromError(err)
+	if !ok {
+		log.Error().Err(err).Msg(operation + " failed")
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	switch grpcStatus.Code() {
+	case codes.InvalidArgument:
+		http.Error(w, grpcStatus.Message(), http.StatusBadRequest)
+	case codes.Unauthenticated:
+		http.Error(w, grpcStatus.Message(), http.StatusUnauthorized)
+	case codes.PermissionDenied:
+		http.Error(w, grpcStatus.Message(), http.StatusForbidden)
+	case codes.NotFound:
+		http.Error(w, grpcStatus.Message(), http.StatusNotFound)
+	case codes.FailedPrecondition:
+		http.Error(w, grpcStatus.Message(), http.StatusPreconditionFailed)
+	default:
+		log.Error().Err(err).Msg(operation + " failed")
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+	}
 }

@@ -3,6 +3,7 @@ import styles from './QueryParams.module.css'
 import Input from 'antd/es/input'
 import { MoreOutlined, DoubleRightOutlined } from '@ant-design/icons'
 import Button from 'antd/es/button'
+import Tooltip from 'antd/es/tooltip'
 import { useDispatch, useSelector } from 'react-redux'
 import Modal from 'antd/es/modal'
 import { useEffect, useState } from 'react'
@@ -102,6 +103,18 @@ export default function QueryParams () {
     tempDisabled // apply button was clicked
   )
 
+  const applyButtonDisabledReason = (
+    reportChanged
+      ? 'Save map changes before applying query parameters'
+      : numRunningQueries > 0
+        ? 'Wait for running queries to finish'
+        : !canRefresh
+            ? 'Map is read-only'
+            : tempDisabled
+              ? 'Applying query parameters...'
+              : ''
+  )
+
   useEffect(() => {
     // reset tempDisabled when queries start running
     setTempDisabled(false)
@@ -145,14 +158,18 @@ export default function QueryParams () {
             )
           })}
           <Form.Item>
-            <Button
-              type='primary'
-              ghost
-              title='Apply query parameters'
-              icon={<DoubleRightOutlined />}
-              htmlType='submit'
-              disabled={applyButtonDisabled}
-            />
+            <Tooltip title={applyButtonDisabled ? applyButtonDisabledReason : ''}>
+              <span>
+                <Button
+                  type='primary'
+                  ghost
+                  title='Apply query parameters'
+                  icon={<DoubleRightOutlined />}
+                  htmlType='submit'
+                  disabled={applyButtonDisabled}
+                />
+              </span>
+            </Tooltip>
           </Form.Item>
         </Form>
         <Modal

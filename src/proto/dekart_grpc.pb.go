@@ -34,11 +34,13 @@ const (
 	Dekart_GetSnapshots_FullMethodName                  = "/Dekart/GetSnapshots"
 	Dekart_RestoreReportSnapshot_FullMethodName         = "/Dekart/RestoreReportSnapshot"
 	Dekart_SaveMapPreview_FullMethodName                = "/Dekart/SaveMapPreview"
+	Dekart_CreateReportSnapshot_FullMethodName          = "/Dekart/CreateReportSnapshot"
 	Dekart_CreateDataset_FullMethodName                 = "/Dekart/CreateDataset"
 	Dekart_RemoveDataset_FullMethodName                 = "/Dekart/RemoveDataset"
 	Dekart_UpdateDatasetName_FullMethodName             = "/Dekart/UpdateDatasetName"
 	Dekart_UpdateDatasetConnection_FullMethodName       = "/Dekart/UpdateDatasetConnection"
 	Dekart_CreateFile_FullMethodName                    = "/Dekart/CreateFile"
+	Dekart_ReplaceFile_FullMethodName                   = "/Dekart/ReplaceFile"
 	Dekart_CreateQuery_FullMethodName                   = "/Dekart/CreateQuery"
 	Dekart_RunQuery_FullMethodName                      = "/Dekart/RunQuery"
 	Dekart_RunAllQueries_FullMethodName                 = "/Dekart/RunAllQueries"
@@ -60,6 +62,8 @@ const (
 	Dekart_GetWherobotsConnectionHint_FullMethodName    = "/Dekart/GetWherobotsConnectionHint"
 	Dekart_RespondToInvite_FullMethodName               = "/Dekart/RespondToInvite"
 	Dekart_AuthorizeDevice_FullMethodName               = "/Dekart/AuthorizeDevice"
+	Dekart_ListDeviceTokens_FullMethodName              = "/Dekart/ListDeviceTokens"
+	Dekart_RevokeDeviceToken_FullMethodName             = "/Dekart/RevokeDeviceToken"
 	Dekart_CreateSubscription_FullMethodName            = "/Dekart/CreateSubscription"
 	Dekart_GetStripePortalSession_FullMethodName        = "/Dekart/GetStripePortalSession"
 	Dekart_CreateWorkspace_FullMethodName               = "/Dekart/CreateWorkspace"
@@ -88,6 +92,7 @@ type DekartClient interface {
 	GetSnapshots(ctx context.Context, in *GetSnapshotsRequest, opts ...grpc.CallOption) (*GetSnapshotsResponse, error)
 	RestoreReportSnapshot(ctx context.Context, in *RestoreReportSnapshotRequest, opts ...grpc.CallOption) (*RestoreReportSnapshotResponse, error)
 	SaveMapPreview(ctx context.Context, in *SaveMapPreviewRequest, opts ...grpc.CallOption) (*SaveMapPreviewResponse, error)
+	CreateReportSnapshot(ctx context.Context, in *CreateReportSnapshotRequest, opts ...grpc.CallOption) (*CreateReportSnapshotResponse, error)
 	// datasets
 	CreateDataset(ctx context.Context, in *CreateDatasetRequest, opts ...grpc.CallOption) (*CreateDatasetResponse, error)
 	RemoveDataset(ctx context.Context, in *RemoveDatasetRequest, opts ...grpc.CallOption) (*RemoveDatasetResponse, error)
@@ -95,6 +100,7 @@ type DekartClient interface {
 	UpdateDatasetConnection(ctx context.Context, in *UpdateDatasetConnectionRequest, opts ...grpc.CallOption) (*UpdateDatasetConnectionResponse, error)
 	// files
 	CreateFile(ctx context.Context, in *CreateFileRequest, opts ...grpc.CallOption) (*CreateFileResponse, error)
+	ReplaceFile(ctx context.Context, in *ReplaceFileRequest, opts ...grpc.CallOption) (*ReplaceFileResponse, error)
 	// queries
 	CreateQuery(ctx context.Context, in *CreateQueryRequest, opts ...grpc.CallOption) (*CreateQueryResponse, error)
 	RunQuery(ctx context.Context, in *RunQueryRequest, opts ...grpc.CallOption) (*RunQueryResponse, error)
@@ -122,6 +128,8 @@ type DekartClient interface {
 	// user
 	RespondToInvite(ctx context.Context, in *RespondToInviteRequest, opts ...grpc.CallOption) (*RespondToInviteResponse, error)
 	AuthorizeDevice(ctx context.Context, in *AuthorizeDeviceRequest, opts ...grpc.CallOption) (*AuthorizeDeviceResponse, error)
+	ListDeviceTokens(ctx context.Context, in *ListDeviceTokensRequest, opts ...grpc.CallOption) (*ListDeviceTokensResponse, error)
+	RevokeDeviceToken(ctx context.Context, in *RevokeDeviceTokenRequest, opts ...grpc.CallOption) (*RevokeDeviceTokenResponse, error)
 	// subscriptions
 	CreateSubscription(ctx context.Context, in *CreateSubscriptionRequest, opts ...grpc.CallOption) (*CreateSubscriptionResponse, error)
 	GetStripePortalSession(ctx context.Context, in *GetStripePortalSessionRequest, opts ...grpc.CallOption) (*GetStripePortalSessionResponse, error)
@@ -290,6 +298,16 @@ func (c *dekartClient) SaveMapPreview(ctx context.Context, in *SaveMapPreviewReq
 	return out, nil
 }
 
+func (c *dekartClient) CreateReportSnapshot(ctx context.Context, in *CreateReportSnapshotRequest, opts ...grpc.CallOption) (*CreateReportSnapshotResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateReportSnapshotResponse)
+	err := c.cc.Invoke(ctx, Dekart_CreateReportSnapshot_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *dekartClient) CreateDataset(ctx context.Context, in *CreateDatasetRequest, opts ...grpc.CallOption) (*CreateDatasetResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateDatasetResponse)
@@ -334,6 +352,16 @@ func (c *dekartClient) CreateFile(ctx context.Context, in *CreateFileRequest, op
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateFileResponse)
 	err := c.cc.Invoke(ctx, Dekart_CreateFile_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) ReplaceFile(ctx context.Context, in *ReplaceFileRequest, opts ...grpc.CallOption) (*ReplaceFileResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReplaceFileResponse)
+	err := c.cc.Invoke(ctx, Dekart_ReplaceFile_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -577,6 +605,26 @@ func (c *dekartClient) AuthorizeDevice(ctx context.Context, in *AuthorizeDeviceR
 	return out, nil
 }
 
+func (c *dekartClient) ListDeviceTokens(ctx context.Context, in *ListDeviceTokensRequest, opts ...grpc.CallOption) (*ListDeviceTokensResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListDeviceTokensResponse)
+	err := c.cc.Invoke(ctx, Dekart_ListDeviceTokens_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) RevokeDeviceToken(ctx context.Context, in *RevokeDeviceTokenRequest, opts ...grpc.CallOption) (*RevokeDeviceTokenResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RevokeDeviceTokenResponse)
+	err := c.cc.Invoke(ctx, Dekart_RevokeDeviceToken_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *dekartClient) CreateSubscription(ctx context.Context, in *CreateSubscriptionRequest, opts ...grpc.CallOption) (*CreateSubscriptionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateSubscriptionResponse)
@@ -657,6 +705,7 @@ type DekartServer interface {
 	GetSnapshots(context.Context, *GetSnapshotsRequest) (*GetSnapshotsResponse, error)
 	RestoreReportSnapshot(context.Context, *RestoreReportSnapshotRequest) (*RestoreReportSnapshotResponse, error)
 	SaveMapPreview(context.Context, *SaveMapPreviewRequest) (*SaveMapPreviewResponse, error)
+	CreateReportSnapshot(context.Context, *CreateReportSnapshotRequest) (*CreateReportSnapshotResponse, error)
 	// datasets
 	CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error)
 	RemoveDataset(context.Context, *RemoveDatasetRequest) (*RemoveDatasetResponse, error)
@@ -664,6 +713,7 @@ type DekartServer interface {
 	UpdateDatasetConnection(context.Context, *UpdateDatasetConnectionRequest) (*UpdateDatasetConnectionResponse, error)
 	// files
 	CreateFile(context.Context, *CreateFileRequest) (*CreateFileResponse, error)
+	ReplaceFile(context.Context, *ReplaceFileRequest) (*ReplaceFileResponse, error)
 	// queries
 	CreateQuery(context.Context, *CreateQueryRequest) (*CreateQueryResponse, error)
 	RunQuery(context.Context, *RunQueryRequest) (*RunQueryResponse, error)
@@ -691,6 +741,8 @@ type DekartServer interface {
 	// user
 	RespondToInvite(context.Context, *RespondToInviteRequest) (*RespondToInviteResponse, error)
 	AuthorizeDevice(context.Context, *AuthorizeDeviceRequest) (*AuthorizeDeviceResponse, error)
+	ListDeviceTokens(context.Context, *ListDeviceTokensRequest) (*ListDeviceTokensResponse, error)
+	RevokeDeviceToken(context.Context, *RevokeDeviceTokenRequest) (*RevokeDeviceTokenResponse, error)
 	// subscriptions
 	CreateSubscription(context.Context, *CreateSubscriptionRequest) (*CreateSubscriptionResponse, error)
 	GetStripePortalSession(context.Context, *GetStripePortalSessionRequest) (*GetStripePortalSessionResponse, error)
@@ -754,6 +806,9 @@ func (UnimplementedDekartServer) RestoreReportSnapshot(context.Context, *Restore
 func (UnimplementedDekartServer) SaveMapPreview(context.Context, *SaveMapPreviewRequest) (*SaveMapPreviewResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SaveMapPreview not implemented")
 }
+func (UnimplementedDekartServer) CreateReportSnapshot(context.Context, *CreateReportSnapshotRequest) (*CreateReportSnapshotResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateReportSnapshot not implemented")
+}
 func (UnimplementedDekartServer) CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateDataset not implemented")
 }
@@ -768,6 +823,9 @@ func (UnimplementedDekartServer) UpdateDatasetConnection(context.Context, *Updat
 }
 func (UnimplementedDekartServer) CreateFile(context.Context, *CreateFileRequest) (*CreateFileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateFile not implemented")
+}
+func (UnimplementedDekartServer) ReplaceFile(context.Context, *ReplaceFileRequest) (*ReplaceFileResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReplaceFile not implemented")
 }
 func (UnimplementedDekartServer) CreateQuery(context.Context, *CreateQueryRequest) (*CreateQueryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateQuery not implemented")
@@ -831,6 +889,12 @@ func (UnimplementedDekartServer) RespondToInvite(context.Context, *RespondToInvi
 }
 func (UnimplementedDekartServer) AuthorizeDevice(context.Context, *AuthorizeDeviceRequest) (*AuthorizeDeviceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AuthorizeDevice not implemented")
+}
+func (UnimplementedDekartServer) ListDeviceTokens(context.Context, *ListDeviceTokensRequest) (*ListDeviceTokensResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListDeviceTokens not implemented")
+}
+func (UnimplementedDekartServer) RevokeDeviceToken(context.Context, *RevokeDeviceTokenRequest) (*RevokeDeviceTokenResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RevokeDeviceToken not implemented")
 }
 func (UnimplementedDekartServer) CreateSubscription(context.Context, *CreateSubscriptionRequest) (*CreateSubscriptionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateSubscription not implemented")
@@ -1141,6 +1205,24 @@ func _Dekart_SaveMapPreview_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Dekart_CreateReportSnapshot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateReportSnapshotRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).CreateReportSnapshot(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_CreateReportSnapshot_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).CreateReportSnapshot(ctx, req.(*CreateReportSnapshotRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Dekart_CreateDataset_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateDatasetRequest)
 	if err := dec(in); err != nil {
@@ -1227,6 +1309,24 @@ func _Dekart_CreateFile_Handler(srv interface{}, ctx context.Context, dec func(i
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DekartServer).CreateFile(ctx, req.(*CreateFileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_ReplaceFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReplaceFileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).ReplaceFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_ReplaceFile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).ReplaceFile(ctx, req.(*ReplaceFileRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1588,6 +1688,42 @@ func _Dekart_AuthorizeDevice_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Dekart_ListDeviceTokens_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListDeviceTokensRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).ListDeviceTokens(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_ListDeviceTokens_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).ListDeviceTokens(ctx, req.(*ListDeviceTokensRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_RevokeDeviceToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeDeviceTokenRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).RevokeDeviceToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_RevokeDeviceToken_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).RevokeDeviceToken(ctx, req.(*RevokeDeviceTokenRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Dekart_CreateSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateSubscriptionRequest)
 	if err := dec(in); err != nil {
@@ -1764,6 +1900,10 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Dekart_SaveMapPreview_Handler,
 		},
 		{
+			MethodName: "CreateReportSnapshot",
+			Handler:    _Dekart_CreateReportSnapshot_Handler,
+		},
+		{
 			MethodName: "CreateDataset",
 			Handler:    _Dekart_CreateDataset_Handler,
 		},
@@ -1782,6 +1922,10 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateFile",
 			Handler:    _Dekart_CreateFile_Handler,
+		},
+		{
+			MethodName: "ReplaceFile",
+			Handler:    _Dekart_ReplaceFile_Handler,
 		},
 		{
 			MethodName: "CreateQuery",
@@ -1854,6 +1998,14 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AuthorizeDevice",
 			Handler:    _Dekart_AuthorizeDevice_Handler,
+		},
+		{
+			MethodName: "ListDeviceTokens",
+			Handler:    _Dekart_ListDeviceTokens_Handler,
+		},
+		{
+			MethodName: "RevokeDeviceToken",
+			Handler:    _Dekart_RevokeDeviceToken_Handler,
 		},
 		{
 			MethodName: "CreateSubscription",

@@ -119,7 +119,8 @@ docker: # build docker for local use
 	docker buildx build --tag ${DEKART_DOCKER_DEV_TAG} -o type=image --platform=linux/amd64 -f ./Dockerfile .
 
 up-and-down:
-	docker compose  --env-file .env --profile local up; docker compose --env-file .env --profile local down --volumes
+	docker compose --env-file .env --profile local up db adminer browserless; \
+	docker compose --env-file .env --profile local down --volumes
 up-and-down-oidc:
 	docker compose --env-file .env.oidc --profile oidc up db adminer keycloak oauth2-proxy; docker compose --env-file .env.oidc --profile oidc down --volumes
 cloud:
@@ -138,7 +139,15 @@ sqlite:
 
 
 define run_server
-	@set -a; \
+	@echo "Releasing local dev port 8080..."; \
+	pids="$$(lsof -tiTCP:8080 -sTCP:LISTEN)"; \
+	if [ -n "$$pids" ]; then \
+		kill -9 $$pids; \
+		echo "Force-stopped listeners: $$pids"; \
+	else \
+		echo "No listeners on 8080"; \
+	fi; \
+	set -a; \
 	. $(1); \
 	set +a; \
 	go run ./src/server/main.go

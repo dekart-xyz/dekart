@@ -59,7 +59,7 @@ export default function BigQueryConnectionTypeSelectorModal ({ open, onClose }) 
           <p>
             Connect to BigQuery with using Service Account Key in JSON format.
           </p>
-          <p>Key will encrypted and stored in Dekart backend.</p>
+          <p>Key will be encrypted and stored in Dekart backend.</p>
 
           <p>
             <Button

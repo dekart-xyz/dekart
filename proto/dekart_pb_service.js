@@ -145,6 +145,15 @@ Dekart.SaveMapPreview = {
   responseType: dekart_pb.SaveMapPreviewResponse
 };
 
+Dekart.CreateReportSnapshot = {
+  methodName: "CreateReportSnapshot",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: dekart_pb.CreateReportSnapshotRequest,
+  responseType: dekart_pb.CreateReportSnapshotResponse
+};
+
 Dekart.CreateDataset = {
   methodName: "CreateDataset",
   service: Dekart,
@@ -188,6 +197,15 @@ Dekart.CreateFile = {
   responseStream: false,
   requestType: dekart_pb.CreateFileRequest,
   responseType: dekart_pb.CreateFileResponse
+};
+
+Dekart.ReplaceFile = {
+  methodName: "ReplaceFile",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: dekart_pb.ReplaceFileRequest,
+  responseType: dekart_pb.ReplaceFileResponse
 };
 
 Dekart.CreateQuery = {
@@ -377,6 +395,24 @@ Dekart.AuthorizeDevice = {
   responseStream: false,
   requestType: dekart_pb.AuthorizeDeviceRequest,
   responseType: dekart_pb.AuthorizeDeviceResponse
+};
+
+Dekart.ListDeviceTokens = {
+  methodName: "ListDeviceTokens",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: dekart_pb.ListDeviceTokensRequest,
+  responseType: dekart_pb.ListDeviceTokensResponse
+};
+
+Dekart.RevokeDeviceToken = {
+  methodName: "RevokeDeviceToken",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: dekart_pb.RevokeDeviceTokenRequest,
+  responseType: dekart_pb.RevokeDeviceTokenResponse
 };
 
 Dekart.CreateSubscription = {
@@ -905,6 +941,37 @@ DekartClient.prototype.saveMapPreview = function saveMapPreview(requestMessage, 
   };
 };
 
+DekartClient.prototype.createReportSnapshot = function createReportSnapshot(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.CreateReportSnapshot, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
 DekartClient.prototype.createDataset = function createDataset(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
@@ -1034,6 +1101,37 @@ DekartClient.prototype.createFile = function createFile(requestMessage, metadata
     callback = arguments[1];
   }
   var client = grpc.unary(Dekart.CreateFile, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.replaceFile = function replaceFile(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.ReplaceFile, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
@@ -1709,6 +1807,68 @@ DekartClient.prototype.authorizeDevice = function authorizeDevice(requestMessage
     callback = arguments[1];
   }
   var client = grpc.unary(Dekart.AuthorizeDevice, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.listDeviceTokens = function listDeviceTokens(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.ListDeviceTokens, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.revokeDeviceToken = function revokeDeviceToken(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.RevokeDeviceToken, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,

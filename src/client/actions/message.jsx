@@ -1,10 +1,12 @@
 import message from 'antd/es/message'
 import PermanentError from '../PermanentError'
 import StreamError from '../StreamError'
+import MapConfigConflictMessage from '../MapConfigConflictMessage'
 import { track } from '../lib/tracking'
 
 const style = {}
 const STREAM_ERROR_KEY = 'stream-error'
+const MAP_CONFIG_CONFLICT_KEY = 'map-config-conflict'
 
 message.config({ top: 40 })
 
@@ -54,6 +56,21 @@ export function info (content, key = undefined) {
     style
   })
   return { type: info.name }
+}
+
+export function showMapConfigConflictMessage () {
+  message.info({
+    key: MAP_CONFIG_CONFLICT_KEY,
+    duration: 0,
+    style,
+    content: (
+      <MapConfigConflictMessage
+        onReload={() => window.location.reload()}
+        onDismiss={() => message.destroy(MAP_CONFIG_CONFLICT_KEY)}
+      />
+    )
+  })
+  return { type: showMapConfigConflictMessage.name }
 }
 
 export function setError (err, transitive = true) {

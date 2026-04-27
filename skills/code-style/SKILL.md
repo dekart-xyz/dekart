@@ -1,13 +1,25 @@
 ---
 name: code-style
-description: Use this skill when implementing or refactoring frontend/backend code in this repo and you need project-specific style rules for CSS modules, React render patterns, redundant checks, and protobuf usage.
+description: Use this skill when implementing/refactoring frontend/backend code and you need Dekart-specific conventions for naming, code organization, architecture boundaries, and style consistency.
 ---
 
 # Code Style Skill
 
 ## Trigger
 
-Use when editing code where style and pattern consistency matter (especially `src/client` and Go protobuf paths). Do not load for unrelated tasks like release notes, issue triage, or operational runbooks.
+Use when editing code where consistency with existing Dekart patterns matters (especially `src/client`, `src/server/dekart`, and `src/server/*` domain packages). Do not load for non-code tasks.
+
+Policy/architecture guardrails are defined in `AGENTS.md`. This skill is the source of truth for implementation conventions.
+
+## Backend Conventions
+
+- Go file names are short lowercase, no snake case except `_test.go`.
+- Keep `context.Context` as first function argument for server/domain methods.
+- Use `HandleX` names for HTTP wrappers that bridge transport -> existing server method.
+- Return typed gRPC status errors from endpoint business logic.
+- Keep auth/workspace gating explicit near method start (`user.GetClaims`, workspace checks).
+- Add short rationale comments before non-trivial conditional business logic.
+- In integration/transport glue, prefer decoding into existing contract types already used by nearby handlers (proto/shared schema) instead of introducing new local arg structs.
 
 ## CSS
 
@@ -15,11 +27,15 @@ Use when editing code where style and pattern consistency matter (especially `sr
 - Use the `classnames` library to combine CSS classes dynamically in JSX, not manual string concatenation.
 - Do not manually add browser prefixes (`-webkit-`, `-moz-`, `-ms-`, `-o-`). Autoprefixer handles this.
 
-## React
+## Frontend Conventions
 
-- Do not create named functions (or anonymous functions assigned to constants) inside component render. Instead, define named functions with the `function` keyword in the component file.
-- When appropriate, move reusable functions to `src/client/lib` or use hooks/new components.
-- Anonymous functions not assigned to constants in render are OK.
+- Component files use `PascalCase.jsx`; component styles use matching `PascalCase.module.css`.
+- Non-component frontend files use `camelCase.js` (actions, reducers, lib hooks/utils).
+- Keep shared application state in Redux.
+- Keep side effects/network calls in actions/thunks, not reducers.
+- Keep reducers pure and action-driven.
+- Keep reusable non-UI logic in `src/client/lib`.
+- Prefer Ant Design components for UI by default.
 
 ## Redundant Checks
 
@@ -40,3 +56,8 @@ Keep checks for: user input, environment variables, runtime variations, cross-pl
   - Bad: `if proto.Message != nil { ... }` when `Message` is in the schema.
   - Good: `proto.Message.Field` directly.
 - Only check optional fields, oneof fields, or empty repeated fields (when length matters).
+
+## Change Shape Guidance
+
+- Prefer small, surgical edits over broad refactors unless refactor is required for correctness.
+- Keep patterns consistent with neighboring code in the same folder.

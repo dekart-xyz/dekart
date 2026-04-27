@@ -166,7 +166,7 @@ function ConnectionTypeSelectorBottom () {
               history.push('/')
             }
           }}
-        >Return back
+        >Back
         </Button>
       </div>
     )
@@ -231,8 +231,8 @@ function CreateConnection () {
       <Result
         status='success'
         icon={<ApiTwoTone />}
-        title='Ready to connect!'
-        subTitle={<>Select your data source to start building your map.</>}
+        title='Connect your warehouse.'
+        subTitle={<>We run queries there; nothing is copied to Dekart.</>}
         extra={<ConnectionTypeSelector />}
       />
     </>

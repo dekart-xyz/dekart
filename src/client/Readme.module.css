@@ -25,6 +25,8 @@
   font-size: 14px;
   line-height: 1.6;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .preview h1 {
@@ -119,4 +121,13 @@
   margin: 24px 0;
   background-color: #e1e4e8;
   border: 0;
+}
+
+.previewSpacer {
+  /* Safari workaround: keep a flexible invisible tail so short markdown
+     behaves like long content in AutoSizer-based preview rendering. */
+  flex: 1 1 auto;
+  min-height: 0;
+  visibility: hidden;
+  pointer-events: none;
 }

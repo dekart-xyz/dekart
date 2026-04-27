@@ -1,6 +1,8 @@
 /* eslint-disable no-undef */
 import copy from '../../fixtures/copy.json'
 
+const POINT_LAYER_TYPE_SELECTOR = '.layer__title__type:contains("point")'
+
 describe('update dataset', () => {
   it('should persist kepler config when updating dataset', () => {
     // create report
@@ -21,7 +23,7 @@ describe('update dataset', () => {
     cy.get(`span:contains("${copy.ready}")`, { timeout: 20000 }).should('be.visible')
 
     // two layers in kepler
-    cy.get('input[value="point"]:visible', { timeout: 20000 }).should('have.length', 2)
+    cy.get(POINT_LAYER_TYPE_SELECTOR, { timeout: 20000 }).should('have.length', 2)
 
     // update second query
     cy.get('textarea:first').clear({ force: true })
@@ -34,6 +36,6 @@ describe('update dataset', () => {
     // kepler config preserved
     cy.get('div:contains("3 rows")', { timeout: 20000 }).should('be.visible')
     cy.get('div:contains("1 rows")').should('be.visible')
-    cy.get('input[value="point"]:visible').should('have.length', 2)
+    cy.get(POINT_LAYER_TYPE_SELECTOR).should('have.length', 2)
   })
 })

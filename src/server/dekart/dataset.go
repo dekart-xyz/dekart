@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -161,7 +162,8 @@ func (s Server) UpdateDatasetName(ctx context.Context, req *proto.UpdateDatasetN
 	_, err = s.db.ExecContext(ctx,
 		`update
 			datasets set
-			name = $1
+			name = $1,
+			updated_at = CURRENT_TIMESTAMP
 			where id=$2`,
 		req.Name,
 		req.DatasetId,
@@ -272,7 +274,7 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 	return &proto.RemoveDatasetResponse{}, nil
 }
 
-func (s Server) insertDataset(ctx context.Context, reportID string) (sql.Result, error) {
+func (s Server) insertDataset(ctx context.Context, reportID string) (string, sql.Result, error) {
 	id := newUUID()
 	claims := user.GetClaims(ctx)
 	var res sql.Result
@@ -307,9 +309,9 @@ func (s Server) insertDataset(ctx context.Context, reportID string) (sql.Result,
 	}
 	if err != nil {
 		errtype.LogError(err, "Error inserting dataset")
-		return nil, err
+		return "", nil, err
 	}
-	return res, err
+	return id, res, err
 }
 
 func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetRequest) (*proto.CreateDatasetResponse, error) {
@@ -317,7 +319,22 @@ func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetReque
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	result, err := s.insertDataset(ctx, req.ReportId)
+	reportID := strings.TrimSpace(req.GetReportId())
+	if reportID == "" {
+		log.Warn().
+			Str("author_email", claims.Email).
+			Msg("CreateDataset called without report_id")
+		return nil, status.Error(codes.InvalidArgument, "report_id is required")
+	}
+	if _, err := uuid.Parse(reportID); err != nil {
+		log.Warn().
+			Err(err).
+			Str("report_id", reportID).
+			Str("author_email", claims.Email).
+			Msg("CreateDataset called with invalid report_id format")
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid report_id format: %v", err))
+	}
+	datasetID, result, err := s.insertDataset(ctx, reportID)
 
 	if err != nil {
 		errtype.LogError(err, "Error inserting dataset")
@@ -331,13 +348,13 @@ func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetReque
 	}
 
 	if affectedRows == 0 {
-		err := fmt.Errorf("report=%s, author_email=%s not found", req.ReportId, claims.Email)
+		err := fmt.Errorf("report=%s, author_email=%s not found", reportID, claims.Email)
 		log.Warn().Err(err).Msg("Report not found")
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
-	s.reportStreams.Ping(req.ReportId)
+	s.reportStreams.Ping(reportID)
 	s.userStreams.PingAll() // because dataset count is now part of connection info
-	res := &proto.CreateDatasetResponse{}
+	res := &proto.CreateDatasetResponse{Id: datasetID}
 
 	return res, nil
 }

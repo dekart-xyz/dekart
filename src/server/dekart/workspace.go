@@ -482,7 +482,10 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 	} else if checkWorkspace(ctx).ID != "" {
 		preferredWorkspaceId = checkWorkspace(ctx).ID
 	}
-
+	if claims.WorkspaceID != "" {
+		// why: device/snapshot tokens are workspace-scoped and must drive workspace selection.
+		preferredWorkspaceId = claims.WorkspaceID
+	}
 	var workspaceId string
 	var planType proto.PlanType
 	var expired bool
@@ -492,7 +495,7 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 	var userRole proto.UserRole = proto.UserRole_ROLE_UNSPECIFIED
 	for _, workspace := range workspaces {
 		// if preferred workspace is not set or is not found, use the first workspace
-		if preferredWorkspaceId == workspace.Id || workspaceId == "" {
+		if preferredWorkspaceId == workspace.Id || (workspaceId == "" && claims.WorkspaceID == "") {
 			userRole = workspace.Role
 			workspaceId = workspace.Id
 			name = workspace.Name
@@ -500,6 +503,10 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 		if preferredWorkspaceId == workspace.Id {
 			break
 		}
+	}
+	if workspaceId == "" && claims.WorkspaceID != "" {
+		// why: token-scoped auth (device/snapshot) must keep workspace routing bound to token scope.
+		workspaceId = claims.WorkspaceID
 	}
 	if workspaceId != "" {
 		subscription, err := s.getSubscription(ctx, workspaceId)

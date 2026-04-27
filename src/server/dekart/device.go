@@ -100,8 +100,54 @@ func (s Server) AuthorizeDevice(ctx context.Context, req *proto.AuthorizeDeviceR
 		// why: pending sessions can expire between initial state check and update attempt.
 		return nil, status.Error(codes.FailedPrecondition, "device session expired")
 	}
+	s.userStreams.Ping([]string{claims.Email})
 
 	return &proto.AuthorizeDeviceResponse{Status: "authorized"}, nil
+}
+
+// ListDeviceTokens returns active workspace device tokens for settings UI.
+func (s Server) ListDeviceTokens(ctx context.Context, req *proto.ListDeviceTokensRequest) (*proto.ListDeviceTokensResponse, error) {
+	claims, workspaceID, err := requireDeviceAuthorizeContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	tokens, err := device.ListWorkspaceTokens(ctx, s.db, workspaceID, claims.Email)
+	if err != nil {
+		log.Error().Err(err).Str("workspace_id", workspaceID).Msg("Failed to list device tokens")
+		return nil, status.Error(codes.Internal, "failed to list device tokens")
+	}
+	result := make([]*proto.DeviceToken, 0, len(tokens))
+	for _, token := range tokens {
+		result = append(result, &proto.DeviceToken{
+			Id:           token.ID,
+			DeviceName:   token.DeviceName,
+			TokenPreview: token.TokenPreview,
+			CreatedAt:    token.CreatedAt,
+		})
+	}
+	return &proto.ListDeviceTokensResponse{Tokens: result}, nil
+}
+
+// RevokeDeviceToken revokes one workspace device token by id.
+func (s Server) RevokeDeviceToken(ctx context.Context, req *proto.RevokeDeviceTokenRequest) (*proto.RevokeDeviceTokenResponse, error) {
+	tokenID := strings.TrimSpace(req.GetTokenId())
+	if tokenID == "" {
+		return nil, status.Error(codes.InvalidArgument, "token_id is required")
+	}
+	claims, workspaceID, err := requireDeviceAuthorizeContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	revoked, err := device.RevokeWorkspaceToken(ctx, s.db, workspaceID, claims.Email, tokenID)
+	if err != nil {
+		log.Error().Err(err).Str("workspace_id", workspaceID).Str("token_id", tokenID).Msg("Failed to revoke device token")
+		return nil, status.Error(codes.Internal, "failed to revoke device token")
+	}
+	if !revoked {
+		return nil, status.Error(codes.NotFound, "device token not found")
+	}
+	s.userStreams.Ping([]string{claims.Email})
+	return &proto.RevokeDeviceTokenResponse{}, nil
 }
 
 // normalizeDeviceName keeps stored device labels small and safe for logs/UI.

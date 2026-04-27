@@ -1,0 +1,69 @@
+.container {
+  width: 100%;
+  max-width: 980px;
+}
+
+.wrapper {
+  width: 100%;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(320px, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 14px 18px;
+  background: #fff;
+}
+
+.deviceName {
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.detailsColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.4;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.removeButton {
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.agentLink {
+  margin-top: 12px;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .item {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .actions {
+    justify-content: flex-start;
+  }
+}

@@ -139,6 +139,15 @@ type DekartSaveMapPreview = {
   readonly responseType: typeof dekart_pb.SaveMapPreviewResponse;
 };
 
+type DekartCreateReportSnapshot = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof dekart_pb.CreateReportSnapshotRequest;
+  readonly responseType: typeof dekart_pb.CreateReportSnapshotResponse;
+};
+
 type DekartCreateDataset = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -182,6 +191,15 @@ type DekartCreateFile = {
   readonly responseStream: false;
   readonly requestType: typeof dekart_pb.CreateFileRequest;
   readonly responseType: typeof dekart_pb.CreateFileResponse;
+};
+
+type DekartReplaceFile = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof dekart_pb.ReplaceFileRequest;
+  readonly responseType: typeof dekart_pb.ReplaceFileResponse;
 };
 
 type DekartCreateQuery = {
@@ -373,6 +391,24 @@ type DekartAuthorizeDevice = {
   readonly responseType: typeof dekart_pb.AuthorizeDeviceResponse;
 };
 
+type DekartListDeviceTokens = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof dekart_pb.ListDeviceTokensRequest;
+  readonly responseType: typeof dekart_pb.ListDeviceTokensResponse;
+};
+
+type DekartRevokeDeviceToken = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof dekart_pb.RevokeDeviceTokenRequest;
+  readonly responseType: typeof dekart_pb.RevokeDeviceTokenResponse;
+};
+
 type DekartCreateSubscription = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -444,11 +480,13 @@ export class Dekart {
   static readonly GetSnapshots: DekartGetSnapshots;
   static readonly RestoreReportSnapshot: DekartRestoreReportSnapshot;
   static readonly SaveMapPreview: DekartSaveMapPreview;
+  static readonly CreateReportSnapshot: DekartCreateReportSnapshot;
   static readonly CreateDataset: DekartCreateDataset;
   static readonly RemoveDataset: DekartRemoveDataset;
   static readonly UpdateDatasetName: DekartUpdateDatasetName;
   static readonly UpdateDatasetConnection: DekartUpdateDatasetConnection;
   static readonly CreateFile: DekartCreateFile;
+  static readonly ReplaceFile: DekartReplaceFile;
   static readonly CreateQuery: DekartCreateQuery;
   static readonly RunQuery: DekartRunQuery;
   static readonly RunAllQueries: DekartRunAllQueries;
@@ -470,6 +508,8 @@ export class Dekart {
   static readonly GetWherobotsConnectionHint: DekartGetWherobotsConnectionHint;
   static readonly RespondToInvite: DekartRespondToInvite;
   static readonly AuthorizeDevice: DekartAuthorizeDevice;
+  static readonly ListDeviceTokens: DekartListDeviceTokens;
+  static readonly RevokeDeviceToken: DekartRevokeDeviceToken;
   static readonly CreateSubscription: DekartCreateSubscription;
   static readonly GetStripePortalSession: DekartGetStripePortalSession;
   static readonly CreateWorkspace: DekartCreateWorkspace;
@@ -645,6 +685,15 @@ export class DekartClient {
     requestMessage: dekart_pb.SaveMapPreviewRequest,
     callback: (error: ServiceError|null, responseMessage: dekart_pb.SaveMapPreviewResponse|null) => void
   ): UnaryResponse;
+  createReportSnapshot(
+    requestMessage: dekart_pb.CreateReportSnapshotRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.CreateReportSnapshotResponse|null) => void
+  ): UnaryResponse;
+  createReportSnapshot(
+    requestMessage: dekart_pb.CreateReportSnapshotRequest,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.CreateReportSnapshotResponse|null) => void
+  ): UnaryResponse;
   createDataset(
     requestMessage: dekart_pb.CreateDatasetRequest,
     metadata: grpc.Metadata,
@@ -689,6 +738,15 @@ export class DekartClient {
   createFile(
     requestMessage: dekart_pb.CreateFileRequest,
     callback: (error: ServiceError|null, responseMessage: dekart_pb.CreateFileResponse|null) => void
+  ): UnaryResponse;
+  replaceFile(
+    requestMessage: dekart_pb.ReplaceFileRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.ReplaceFileResponse|null) => void
+  ): UnaryResponse;
+  replaceFile(
+    requestMessage: dekart_pb.ReplaceFileRequest,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.ReplaceFileResponse|null) => void
   ): UnaryResponse;
   createQuery(
     requestMessage: dekart_pb.CreateQueryRequest,
@@ -854,6 +912,24 @@ export class DekartClient {
   authorizeDevice(
     requestMessage: dekart_pb.AuthorizeDeviceRequest,
     callback: (error: ServiceError|null, responseMessage: dekart_pb.AuthorizeDeviceResponse|null) => void
+  ): UnaryResponse;
+  listDeviceTokens(
+    requestMessage: dekart_pb.ListDeviceTokensRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.ListDeviceTokensResponse|null) => void
+  ): UnaryResponse;
+  listDeviceTokens(
+    requestMessage: dekart_pb.ListDeviceTokensRequest,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.ListDeviceTokensResponse|null) => void
+  ): UnaryResponse;
+  revokeDeviceToken(
+    requestMessage: dekart_pb.RevokeDeviceTokenRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.RevokeDeviceTokenResponse|null) => void
+  ): UnaryResponse;
+  revokeDeviceToken(
+    requestMessage: dekart_pb.RevokeDeviceTokenRequest,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.RevokeDeviceTokenResponse|null) => void
   ): UnaryResponse;
   createSubscription(
     requestMessage: dekart_pb.CreateSubscriptionRequest,

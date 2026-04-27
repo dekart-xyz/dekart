@@ -45,6 +45,16 @@ export default function Readme ({ readme }) {
                 }
             }
               ><Markdown>{markdown}</Markdown>
+                {/* Safari + react-virtualized AutoSizer workaround:
+                    a flex spacer below markdown makes short readmes paint immediately. */}
+                <div
+                  className={styles.previewSpacer} style={
+                {
+                  width: `${width}px`,
+                  height: `${height}px`
+                }
+            } aria-hidden='true'
+                />
               </div>
               )
             : <AceEditor

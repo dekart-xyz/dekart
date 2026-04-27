@@ -97,6 +97,19 @@ services:
       DEKART_OIDC_ISSUER: "http://keycloak:8080/realms/dekart"
       DEKART_CORS_ORIGIN: "http://localhost:4180"
   # docker compose --env-file .env.cloud --profile cloud up
+  browserless:
+    image: ghcr.io/browserless/chromium:latest
+    profiles:
+      - cloud
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      TOKEN: "${DEKART_BROWSERLESS_TOKEN:-local-browserless-token}"
+      TIMEOUT: "${DEKART_BROWSERLESS_TIMEOUT_MS:-240000}"
+    ports:
+      - 3001:3000
+
   dekart-cloud:
     image: "${DOCKER_COMPOSE_IMAGE}"
     platform: linux/amd64
@@ -105,6 +118,8 @@ services:
       - 8080:8080
     profiles:
       - cloud
+    depends_on:
+      - browserless
     volumes:
       - "${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS}"
     environment:
@@ -140,6 +155,9 @@ services:
       DEKART_ALLOW_WORKSPACE_CREATION: "1"
       DEKART_UX_DISABLE_VERSION_CHECK: "1"
       DEKART_CLOUD: "1"
+      DEKART_BROWSERLESS_URL: "http://browserless:3000/screenshot"
+      DEKART_BROWSERLESS_TOKEN: "${DEKART_BROWSERLESS_TOKEN:-local-browserless-token}"
+      DEKART_SNAPSHOT_RENDER_BASE_URL_DEV: "${DEKART_SNAPSHOT_RENDER_BASE_URL_DEV}"
   # docker compose --env-file .env.googleoauth --profile googleoauth up
   dekart-googleoauth:
     image: "${DOCKER_COMPOSE_IMAGE}"

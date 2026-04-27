@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -45,6 +46,21 @@ func (m ResponseWriter) WriteHeader(statusCode int) {
 
 var allowedOrigin string = os.Getenv("DEKART_CORS_ORIGIN")
 
+// Keep a small response buffer above snapshot/browserless timeout (60s)
+// so backend can send a proper error payload instead of socket write timeout.
+const defaultHTTPWriteTimeoutSeconds = 65
+const maxHTTPWriteTimeoutSeconds = 65
+
+func getHTTPWriteTimeout() time.Duration {
+	if writeTimeoutInt, err := strconv.Atoi(strings.TrimSpace(os.Getenv("DEKART_HTTP_WRITE_TIMEOUT_SECONDS"))); err == nil && writeTimeoutInt > 0 {
+		if writeTimeoutInt > maxHTTPWriteTimeoutSeconds {
+			writeTimeoutInt = maxHTTPWriteTimeoutSeconds
+		}
+		return time.Duration(writeTimeoutInt) * time.Second
+	}
+	return time.Duration(defaultHTTPWriteTimeoutSeconds) * time.Second
+}
+
 func getAllowedOrigin(origin string) string {
 	if matchOrigin(origin) {
 		return origin
@@ -54,6 +70,12 @@ func getAllowedOrigin(origin string) string {
 
 func matchOrigin(origin string) bool {
 	if origin == "" {
+		return true
+	}
+	if strings.TrimSpace(origin) == strings.TrimSpace(os.Getenv("DEKART_APP_URL")) {
+		return true
+	}
+	if strings.TrimSpace(origin) == strings.TrimSpace(os.Getenv("DEKART_SNAPSHOT_RENDER_BASE_URL_DEV")) {
 		return true
 	}
 	if allowedOrigin == "" || allowedOrigin == "*" {
@@ -125,6 +147,48 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 			return
 		}
 		dekartServer.ServeReportAnalytics(w, r)
+	}).Methods("GET", "OPTIONS")
+	api.HandleFunc("/reports", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeader(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.HandleCreateReport(w, r)
+	}).Methods("POST", "OPTIONS")
+	api.HandleFunc("/datasets", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeader(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.HandleCreateDataset(w, r)
+	}).Methods("POST", "OPTIONS")
+	api.HandleFunc("/files", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeader(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.HandleCreateFile(w, r)
+	}).Methods("POST", "OPTIONS")
+	api.HandleFunc("/mcp/tools", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeader(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.HandleMCPTools(w, r)
+	}).Methods("GET", "OPTIONS")
+	api.HandleFunc("/mcp/call", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeader(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.HandleMCPCall(w, r)
+	}).Methods("POST", "OPTIONS")
+	router.HandleFunc("/snapshot/report/{token}.png", func(w http.ResponseWriter, r *http.Request) {
+		setOriginHeader(w, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+		dekartServer.HandleSnapshotReport(w, r)
 	}).Methods("GET", "OPTIONS")
 
 	api.HandleFunc("/query-source/{query}/{source}.sql", func(w http.ResponseWriter, r *http.Request) {
@@ -216,11 +280,13 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		router.HandleFunc("/reports/{id}", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/reports/{id}/edit", staticFilesHandler.ServeIndex) // deprecated
 		router.HandleFunc("/reports/{id}/source", staticFilesHandler.ServeIndex)
+		router.HandleFunc("/reports/{id}/snapshot", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace/create", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace/join", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace/plan", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace/members", staticFilesHandler.ServeIndex)
+		router.HandleFunc("/workspace/tokens", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace/invite/{id}", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/device/authorize", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/playground", staticFilesHandler.ServeIndex)
@@ -273,7 +339,7 @@ func Configure(dekartServer *dekart.Server, db *sql.DB) *http.Server {
 			}
 		}),
 		Addr:         ":" + port,
-		WriteTimeout: 60 * time.Second,
+		WriteTimeout: getHTTPWriteTimeout(),
 		ReadTimeout:  60 * time.Second,
 	}
 }

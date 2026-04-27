@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	device "dekart/src/server/deviceauth"
 	"dekart/src/server/errtype"
 	"dekart/src/server/report"
 	"dekart/src/server/user"
@@ -379,6 +380,10 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 	if err != nil {
 		return GRPCError("Cannot get workspace update", err)
 	}
+	tokenUpdate, err := device.GetTokenUpdate(ctx, s.db, checkWorkspace(ctx).ID, claims.Email, IsSqlite())
+	if err != nil {
+		return GRPCError("Cannot get token update", err)
+	}
 
 	userWorkspaces, err := s.getUserWorkspaces(ctx, claims.Email)
 	if err != nil {
@@ -392,6 +397,7 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 		ConnectionUpdate:   connectionUpdate,
 		Email:              claims.Email,
 		WorkspaceUpdate:    workspaceUpdate,
+		TokenUpdate:        tokenUpdate,
 		WorkspaceId:        checkWorkspace(ctx).ID,
 		PlanType:           checkWorkspace(ctx).PlanType,
 		Role:               checkWorkspace(ctx).UserRole,

@@ -1,9 +1,11 @@
 .inviteUsers {
     margin-bottom: 20px;
-    padding: 10px;
+    padding: 10px 0;
     display: flex;
     justify-content: space-between;
     flex-direction: row;
+    gap: 10px;
+    align-items: center;
 }
 
 .inviteUsersInput {
@@ -15,29 +17,96 @@
 }
 
 .teamTab {
-    min-width: 700px;
+    width: 100%;
+    max-width: 980px;
     flex: 1;
     align-items: center;
     flex-direction: column;
 }
 
-.removeButtonColumn {
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-    width: 300px;
-    text-align: right;
-
+.userTable {
+    width: 100%;
+    background: #fff;
+    border: 1px solid #f0f0f0;
+    border-radius: 2px;
+    padding: 24px;
 }
 
-.emailColumn {
-    width: 100%;
+.membersList {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.memberItem {
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) auto minmax(170px, auto) minmax(220px, auto) auto;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    padding: 14px 18px;
+    background: #fff;
+}
+
+.memberNameColumn {
+    display: flex;
+    align-items: center;
+}
+
+.memberName {
+    font-size: 16px;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.memberStatusColumn {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.memberCopyColumn {
+    display: flex;
+    align-items: center;
+    min-height: 22px;
+}
+
+.memberRoleColumn {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.memberActions {
+    display: flex;
+    justify-content: flex-end;
+    flex-shrink: 0;
+    align-self: center;
 }
 
 .inviteButton {
     color: #888;
+    padding-left: 0;
+}
 
+.statusTag {
+    margin: 0;
 }
 
 .invitesTabName + span {
     margin-left: 5px;
+}
+
+.removeButton {
+    color: rgba(0, 0, 0, 0.65);
+}
+
+@media (max-width: 900px) {
+    .memberItem {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .memberActions {
+        justify-content: flex-start;
+    }
 }

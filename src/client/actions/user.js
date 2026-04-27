@@ -4,7 +4,7 @@ import { getConnectionsList } from './connection'
 import { grpcStream, grpcStreamCancel } from './grpc'
 import { updateLocalStorage } from './localStorage'
 import { updateSessionStorage } from './sessionStorage'
-import { getWorkspace } from './workspace'
+import { getDeviceTokens, getWorkspace } from './workspace'
 import { UNKNOWN_EMAIL } from '../lib/constants'
 
 export function setClaimEmailCookie () {
@@ -31,7 +31,8 @@ export function subscribeUserStream () {
     const request = new GetUserStreamRequest()
     const prevRes = {
       connectionUpdate: -1,
-      workspaceUpdate: -1
+      workspaceUpdate: -1,
+      tokenUpdate: -1
     }
     dispatch(grpcStream(Dekart.GetUserStream, request, (message, err) => {
       if (message) {
@@ -40,6 +41,10 @@ export function subscribeUserStream () {
         if (prevRes.workspaceUpdate !== message.workspaceUpdate) {
           prevRes.workspaceUpdate = message.workspaceUpdate
           dispatch(getWorkspace())
+        }
+        if (message.workspaceId && message.email !== UNKNOWN_EMAIL && prevRes.tokenUpdate !== message.tokenUpdate) {
+          prevRes.tokenUpdate = message.tokenUpdate
+          dispatch(getDeviceTokens())
         }
         if (message.planType > 0 || message.isDefaultWorkspace) {
           // update only when subscription is active to avoid 404 errors

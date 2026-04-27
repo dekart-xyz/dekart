@@ -36,6 +36,8 @@ import { track } from './lib/tracking'
 import { getDefaultMapStyles } from '@kepler.gl/reducers'
 import { getApplicationConfig } from '@kepler.gl/utils'
 import UserPositionOverlay from './UserPositionOverlay'
+import { useBasemapReady } from './lib/useBasemapReady'
+import { useSnapshotReady } from './lib/useSnapshotReady'
 
 // Build keyboard hint text for tab tooltips.
 function getTabShortcutLabel (tabIndex) {
@@ -368,12 +370,19 @@ class CatchKeplerError extends Component {
   }
 }
 
-function Kepler () {
+// buildMapboxStaticIconURL returns map style thumbnail URL for Mapbox style picker.
+function buildMapboxStaticIconURL (styleURL, token) {
+  const path = styleURL.replace('mapbox://styles/', '')
+  return `https://api.mapbox.com/styles/v1/${path}/static/0,0,1/160x120?access_token=${token}&logo=false&attribution=false`
+}
+
+function Kepler ({ snapshot, onSnapshotBasemapReadyChange }) {
   const env = useSelector(state => state.env)
   const report = useSelector(state => state.report)
   const isSnowpark = useSelector(state => state.env.isSnowpark)
   const dispatch = useDispatch()
   const [mapboxRef, setMapboxRef] = useState(null)
+  useBasemapReady(snapshot, mapboxRef, onSnapshotBasemapReadyChange)
 
   // Filter out MapLibre styles (dark-matter, positron, voyager) only when isSnowpark is true
   // Keep only Mapbox styles and no-basemap option
@@ -396,23 +405,18 @@ function Kepler () {
 
     // Replace icons with Mapbox Static Images so previews are served from Mapbox
     const token = env.variables.MAPBOX_TOKEN
-    const toStaticIcon = (styleUrl) => {
-      // styleUrl is like 'mapbox://styles/{user}/{styleId}'
-      const path = styleUrl.replace('mapbox://styles/', '')
-      return `https://api.mapbox.com/styles/v1/${path}/static/0,0,1/160x120?access_token=${token}&logo=false&attribution=false`
-    }
-
     return mapboxOnly.map(style => ({
       ...style,
-      icon: toStaticIcon(style.url)
+      icon: buildMapboxStaticIconURL(style.url, token)
     }))
   }, [isSnowpark, env])
 
-  if (!env.loaded) {
+  if (!env.loaded && !snapshot) {
     return (
       <div className={styles.keplerBlock} />
     )
   }
+
   const hideInteraction = !report.allowExport && !report.canWrite
   return (
     <div className={classnames(
@@ -421,10 +425,14 @@ function Kepler () {
         [styles.hideInteraction]: hideInteraction
       })}
     >
-      <div className={styles.mapControlButtons}>
-        <ToggleFullscreenButton />
-        <ShowMyLocationButton />
-      </div>
+      {!snapshot
+        ? (
+          <div className={styles.mapControlButtons}>
+            <ToggleFullscreenButton />
+            <ShowMyLocationButton />
+          </div>
+          )
+        : null}
       <AutoSizer>
         {({ height, width }) => (
           <CatchKeplerError onError={(err) => dispatch(setError(err))}>
@@ -435,13 +443,7 @@ function Kepler () {
               height={height}
               mapStyles={mapStylesWithoutMapLibre}
               mapStylesReplaceDefault={isSnowpark || undefined}
-              getMapboxRef={(mapbox) => {
-                if (mapbox) {
-                  setMapboxRef(mapbox)
-                } else {
-                  setMapboxRef(null)
-                }
-              }}
+              getMapboxRef={setMapboxRef}
             />
             {mapboxRef && <UserPositionOverlay map={mapboxRef} />}
           </CatchKeplerError>
@@ -451,14 +453,15 @@ function Kepler () {
   )
 }
 
-export default function ReportPage ({ edit }) {
+export default function ReportPage ({ edit, snapshot }) {
   const { id } = useParams()
 
   const report = useSelector(state => state.report)
-  const envLoaded = useSelector(state => state.env.loaded)
   const files = useSelector(state => state.files || [])
   const queries = useSelector(state => state.queries || [])
   const fullscreen = useSelector(state => state.reportStatus.fullscreen)
+  const [snapshotBasemapReady, setSnapshotBasemapReady] = useState(false)
+  const { reportDepsReady } = useSnapshotReady(snapshot, id, snapshotBasemapReady)
   const updatedAt = [].concat(files, queries).reduce((updatedAt, item) => {
     if (item.updatedAt > updatedAt) {
       return item.updatedAt
@@ -471,14 +474,14 @@ export default function ReportPage ({ edit }) {
 
   // Track report page views
   useEffect(() => {
-    if (id && envLoaded) {
-      track('ReportPageViewed', { reportId: id, edit })
+    if (id && reportDepsReady) {
+      track('ReportPageViewed', { reportId: id, edit, snapshot })
     }
-  }, [id, envLoaded, edit])
+  }, [id, reportDepsReady, edit, snapshot])
 
   useEffect(() => {
     // make sure kepler loaded before firing kepler actions
-    if (!envLoaded) {
+    if (!reportDepsReady) {
       return
     }
 
@@ -486,17 +489,17 @@ export default function ReportPage ({ edit }) {
 
     // prevent open stream twice on first render
     const t = setTimeout(() => {
-      dispatch(openReport(id))
+      dispatch(openReport(id, snapshot))
     }, 0)
     return () => {
       clearTimeout(t)
       dispatch(closeReport())
     }
-  }, [id, dispatch, envLoaded])
+  }, [id, dispatch, reportDepsReady, snapshot])
 
   useEffect(() => {
-    dispatch(toggleReportEdit(edit))
-  }, [id, edit, dispatch])
+    dispatch(toggleReportEdit(snapshot ? false : edit))
+  }, [id, edit, snapshot, dispatch])
 
   useCheckMapConfig()
 
@@ -508,30 +511,39 @@ export default function ReportPage ({ edit }) {
   const pageTitle = edit ? `${reportTitle} - Edit` : reportTitle
 
   return (
-    <div className={styles.report}>
+    <div className={classnames(styles.report, { [styles.snapshot]: snapshot })}>
       <Helmet>
         <title>{pageTitle} — Dekart</title>
       </Helmet>
-      <Downloading />
-      <Header
-        title={(<Title />)}
-        queryParams={(<QueryParams />)}
-        buttons={(<ReportHeaderButtons
-          edit={edit}
-                  />)}
-      />
-      <div className={styles.body}>
+      {!snapshot ? <Downloading /> : null}
+      {!snapshot
+        ? (
+          <Header
+            title={(<Title />)}
+            queryParams={(<QueryParams />)}
+            buttons={<ReportHeaderButtons edit={edit} />}
+          />
+          )
+        : null}
+      <div className={classnames(styles.body, { [styles.snapshotBody]: snapshot })}>
         <div className={styles.keplerFlexWrapper}>
           <div className={styles.keplerFlex}>
-            <Kepler />
-            <div className={styles.meta}>
-              {updatedAt ? <span className={styles.lastUpdated} title={`${updatedAtDate.toISOString()}`}>{updatedAtDate.toLocaleString()}</span> : null}
-              {updatedAt && report.authorEmail !== UNKNOWN_EMAIL ? <span className={styles.dot}> | </span> : null}
-              {report.authorEmail !== UNKNOWN_EMAIL ? <span className={styles.author} title='Map author'>{report.authorEmail}</span> : null}
-            </div>
+            <Kepler
+              snapshot={snapshot}
+              onSnapshotBasemapReadyChange={setSnapshotBasemapReady}
+            />
+            {!snapshot
+              ? (
+                <div className={styles.meta}>
+                  {updatedAt ? <span className={styles.lastUpdated} title={`${updatedAtDate.toISOString()}`}>{updatedAtDate.toLocaleString()}</span> : null}
+                  {updatedAt && report.authorEmail !== UNKNOWN_EMAIL ? <span className={styles.dot}> | </span> : null}
+                  {report.authorEmail !== UNKNOWN_EMAIL ? <span className={styles.author} title='Map author'>{report.authorEmail}</span> : null}
+                </div>
+                )
+              : null}
           </div>
         </div>
-        {!fullscreen ? <DatasetSection reportId={id} /> : null}
+        {!snapshot && !fullscreen ? <DatasetSection reportId={id} /> : null}
       </div>
     </div>
   )
