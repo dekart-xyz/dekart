@@ -121,6 +121,8 @@ export function processDownloadError (err, dataset, label) {
       dispatch(runQuery(dataset.queryId, queryText))
     } else if (err.name === 'AbortError') {
       dispatch(setError(new Error('Download cancelled by user')))
+    } else if (err.status === 0) {
+      dispatch(setError(new Error('Network error when downloading dataset'), false))
     } else {
       dispatch(setError(err))
     }

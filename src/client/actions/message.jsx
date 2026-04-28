@@ -83,6 +83,7 @@ export function setError (err, transitive = true) {
         message: err.message // System error
       })
       message.error({
+        key: err.message,
         content: err.message,
         style
       })
@@ -91,6 +92,7 @@ export function setError (err, transitive = true) {
         message: err.message // System error
       })
       message.error({
+        key: err.message,
         content: (<PermanentError message={err.message} />),
         duration: 10000,
         style
