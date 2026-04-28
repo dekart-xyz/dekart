@@ -137,6 +137,9 @@ function CreateWorkspaceForm () {
           if (values.source) {
             track('CreateWorkspaceFormSource' + values.source)
           }
+          if (values.source === 'Other' && values.sourceOther) {
+            track('CreateWorkspaceFormSourceOther', { sourceOther: values.sourceOther })
+          }
           setDisabled(true)
           dispatch(createWorkspace(values.name))
         }}
@@ -144,18 +147,35 @@ function CreateWorkspaceForm () {
         <Form.Item label='Workspace Name' name='name' rules={[{ required: true, message: 'Workspace name is required' }]}>
           <Input placeholder='Workspace name' />
         </Form.Item>
-        <Form.Item label='Where did you first hear about Dekart?' extra='Optional, helps us improve' name='source' rules={[{ required: false }]}>
+        <Form.Item label='Where did you first hear about Dekart?' name='source' rules={[{ required: true, message: 'Please select a source' }]}>
           <Select
             placeholder='Select a source'
             options={[
-              { value: 'LinkedIn', label: 'LinkedIn' },
               { value: 'GoogleSearch', label: 'Google Search' },
-              { value: 'GoogleAds', label: 'Google Ads' },
-              { value: 'Reddit', label: 'Reddit' },
-              { value: 'GitHub', label: 'GitHub' },
+              { value: 'Linked', label: 'LinkedIn Post' },
+              { value: 'LinkedInDM', label: 'LinkedIn DM' },
+              { value: 'ChatGPT', label: 'ChatGPT / AI Assistant' },
+              { value: 'ClaudeSkill', label: 'Claude/Codex Skill' },
+              { value: 'Referral', label: 'Referral / Friend' },
               { value: 'Other', label: 'Other' }
             ]}
           />
+        </Form.Item>
+        <Form.Item noStyle shouldUpdate={(prev, cur) => prev.source !== cur.source}>
+          {({ getFieldValue }) => getFieldValue('source') === 'Other'
+            ? (
+              <Form.Item
+                label='Please specify'
+                name='sourceOther'
+                rules={[
+                  { required: true, message: 'Please enter source details' },
+                  { max: 120, message: 'Please keep it under 120 characters' }
+                ]}
+              >
+                <Input placeholder='How did you hear about Dekart?' />
+              </Form.Item>
+              )
+            : null}
         </Form.Item>
         <Form.Item>
           <Button type='primary' htmlType='submit'>
