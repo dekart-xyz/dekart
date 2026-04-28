@@ -6,6 +6,8 @@ describe('cloud basic flow', () => {
     cy.visit('/')
     cy.get('button#dekart-create-workspace').click()
     cy.get('input#name').type('test')
+    cy.get('#source').click()
+    cy.get('.ant-select-item-option').contains('Google Search').click()
     cy.get('button:contains("Create")').click()
 
     // create new report
