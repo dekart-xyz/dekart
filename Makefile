@@ -119,8 +119,12 @@ docker: # build docker for local use
 	docker buildx build --tag ${DEKART_DOCKER_DEV_TAG} -o type=image --platform=linux/amd64 -f ./Dockerfile .
 
 up-and-down:
-	docker compose --env-file .env --profile local up db adminer browserless; \
-	docker compose --env-file .env --profile local down --volumes
+	@set -e; \
+	cleanup() { docker compose --env-file .env --profile local down --volumes --remove-orphans; }; \
+	docker compose --env-file .env --profile local up db adminer & pid=$$!; \
+	trap 'kill $$pid 2>/dev/null || true; cleanup; exit 0' INT TERM; \
+	wait $$pid || true; \
+	cleanup
 up-and-down-oidc:
 	docker compose --env-file .env.oidc --profile oidc up db adminer keycloak oauth2-proxy; docker compose --env-file .env.oidc --profile oidc down --volumes
 cloud:
