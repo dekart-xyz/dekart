@@ -972,6 +972,9 @@ message CreateReportRequest {
 
 message CreateReportResponse {
     Report report = 1;
+    bool report_limit_reached = 2; // true if report creation was blocked due to freemium plan limit
+    int64 number_of_same_company_workspaces = 3; // number of workspaces of the same company
+    repeated string same_company_workspace_owners = 4; // emails of workspace owners of the same company workspaces
 }
 
 message QueryParam {

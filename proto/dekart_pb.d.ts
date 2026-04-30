@@ -3788,6 +3788,17 @@ export class CreateReportResponse extends jspb.Message {
   getReport(): Report | undefined;
   setReport(value?: Report): void;
 
+  getReportLimitReached(): boolean;
+  setReportLimitReached(value: boolean): void;
+
+  getNumberOfSameCompanyWorkspaces(): number;
+  setNumberOfSameCompanyWorkspaces(value: number): void;
+
+  clearSameCompanyWorkspaceOwnersList(): void;
+  getSameCompanyWorkspaceOwnersList(): Array<string>;
+  setSameCompanyWorkspaceOwnersList(value: Array<string>): void;
+  addSameCompanyWorkspaceOwners(value: string, index?: number): string;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CreateReportResponse.AsObject;
   static toObject(includeInstance: boolean, msg: CreateReportResponse): CreateReportResponse.AsObject;
@@ -3801,6 +3812,9 @@ export class CreateReportResponse extends jspb.Message {
 export namespace CreateReportResponse {
   export type AsObject = {
     report?: Report.AsObject,
+    reportLimitReached: boolean,
+    numberOfSameCompanyWorkspaces: number,
+    sameCompanyWorkspaceOwnersList: Array<string>,
   }
 }
 

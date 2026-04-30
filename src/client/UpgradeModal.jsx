@@ -11,6 +11,13 @@ import { UpgradeModalType } from './actions/upgradeModal'
 import { PlanType } from 'dekart-proto/dekart_pb'
 import styles from './UpgradeModal.module.css'
 
+function CreateReportLimitMainTitle () {
+  const numberOfSameCompanyWorkspaces = useSelector(state => state.upgradeModal.numberOfSameCompanyWorkspaces)
+  return (
+    <>{`Your company already has ${numberOfSameCompanyWorkspaces} workspaces`}</>
+  )
+}
+
 const COPY_BY_MODAL_TYPE = {
   [UpgradeModalType.PUBLISH]: {
     mainTitle: 'Go beyond your first shared map!',
@@ -27,10 +34,14 @@ const COPY_BY_MODAL_TYPE = {
   [UpgradeModalType.INVITE]: {
     mainTitle: 'Invite teammates to collaborate',
     description: 'Add editors and viewers to build maps together without limits.'
+  },
+  [UpgradeModalType.CREATE_REPORT_LIMIT]: {
+    mainTitle: <CreateReportLimitMainTitle />,
+    description: 'Start trial to create more maps'
   }
 }
 
-const UpgradeModal = ({ visible, onClose }) => {
+export default function UpgradeModal ({ visible, onClose }) {
   const isSelfHosted = useSelector(state => state.user.isSelfHosted)
   const dispatch = useDispatch()
   const modalType = useSelector(state => state.upgradeModal.modalType)
@@ -123,5 +134,3 @@ const UpgradeModal = ({ visible, onClose }) => {
     </Modal>
   )
 }
-
-export default UpgradeModal
