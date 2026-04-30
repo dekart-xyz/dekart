@@ -255,9 +255,19 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 	if workspaceInfo.UserRole == proto.UserRole_ROLE_VIEWER {
 		return nil, status.Error(codes.PermissionDenied, "Only admins and editors can create reports")
 	}
+	allowed, companyWorkspaceCount, owners, err := s.checkCreateReportGate(ctx, claims.Email, workspaceInfo)
+	if err != nil {
+		return nil, err
+	}
+	if !allowed {
+		return &proto.CreateReportResponse{
+			ReportLimitReached:            true,
+			NumberOfSameCompanyWorkspaces: int64(companyWorkspaceCount),
+			SameCompanyWorkspaceOwners:    owners,
+		}, nil
+	}
 	id := newUUID()
 	versionID := newUUID()
-	var err error
 	if workspaceInfo.IsPlayground {
 		_, err = s.db.ExecContext(ctx,
 			"INSERT INTO reports (id, author_email, is_playground, version_id) VALUES ($1, $2, true, $3)",

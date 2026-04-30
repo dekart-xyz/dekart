@@ -13,7 +13,7 @@ import { needSensitiveScopes } from './user'
 import { getQueryParamsObjArr } from '../lib/queryParams'
 import { receiveReportUpdateMapConfig } from '../lib/mapConfig'
 import { extensionFromMime } from '../lib/mime'
-import { showUpgradeModal } from './upgradeModal'
+import { showUpgradeModal, UpgradeModalType } from './upgradeModal'
 import { track } from '../lib/tracking'
 
 export function closeReport () {
@@ -409,6 +409,13 @@ export function createReport () {
   return async (dispatch) => {
     const request = new CreateReportRequest()
     dispatch(grpcCall(Dekart.CreateReport, request, (res) => {
+      if (res.reportLimitReached) {
+        dispatch(showUpgradeModal(UpgradeModalType.CREATE_REPORT_LIMIT, {
+          numberOfSameCompanyWorkspaces: res.numberOfSameCompanyWorkspaces,
+          sameCompanyWorkspaceOwners: res.sameCompanyWorkspaceOwners || []
+        }))
+        return
+      }
       const { report } = res
       dispatch(newReport(report.id))
       dispatch(success('New Map Created'))

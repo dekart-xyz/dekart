@@ -185,6 +185,9 @@ func (s *Server) callCreateReportTool(ctx context.Context) (json.RawMessage, err
 	if err != nil {
 		return nil, err
 	}
+	if response.GetReportLimitReached() {
+		return mcp.MarshalProtoJSON(response)
+	}
 	return mcp.MarshalJSON(buildMCPCreateReportResult(response.GetReport().GetId()))
 }
 

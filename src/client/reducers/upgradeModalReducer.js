@@ -2,7 +2,9 @@ import { showUpgradeModal, hideUpgradeModal, UpgradeModalType } from '../actions
 
 const defaultUpgradeModal = {
   visible: false,
-  modalType: UpgradeModalType.PUBLISH
+  modalType: UpgradeModalType.PUBLISH,
+  numberOfSameCompanyWorkspaces: 0,
+  sameCompanyWorkspaceOwners: []
 }
 
 export function upgradeModal (state = defaultUpgradeModal, action) {
@@ -11,12 +13,16 @@ export function upgradeModal (state = defaultUpgradeModal, action) {
       return {
         ...state,
         visible: true,
-        modalType: action.modalType
+        modalType: action.modalType,
+        numberOfSameCompanyWorkspaces: action.payload?.numberOfSameCompanyWorkspaces || 0,
+        sameCompanyWorkspaceOwners: action.payload?.sameCompanyWorkspaceOwners || []
       }
     case hideUpgradeModal.name:
       return {
         ...state,
-        visible: false
+        visible: false,
+        numberOfSameCompanyWorkspaces: 0,
+        sameCompanyWorkspaceOwners: []
       }
     default:
       return state
