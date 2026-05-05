@@ -8,7 +8,7 @@ import styles from './DeviceTokensTab.module.css'
 import { revokeDeviceToken } from './actions/workspace'
 
 const { Text } = Typography
-const gisSkillRepoURL = 'https://github.com/dekart-xyz/gis-skill'
+const gisSkillRepoURL = 'https://github.com/dekart-xyz/geosql'
 
 function AgentLink () {
   return (

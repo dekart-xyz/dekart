@@ -78,8 +78,8 @@ export default function DekartMenu () {
             </Menu.Item>
           )}
           {!isSnowpark && showBigQueryOvertureSkill && (
-            <Menu.Item key='bigquery-overture-skill' onClick={() => track('ClickedBigQueryOvertureSkill')}>
-              <a target='_blank' rel='noopener noreferrer' href='https://github.com/dekart-xyz/bigquery-overture-skill'>Claude Skill</a>
+            <Menu.Item key='bigquery-overture-skill' onClick={() => track('ClickedClaudeSkill')}>
+              <a target='_blank' rel='noopener noreferrer' href='https://github.com/dekart-xyz/geosql'>Claude Skill</a>
             </Menu.Item>
           )}
           <Menu.Item key='examples' onClick={() => track('ClickedMapExamples')}>
