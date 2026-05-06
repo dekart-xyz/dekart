@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/netip"
 	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
 )
 
@@ -114,6 +116,57 @@ func handleVersionCheck(dekartServer *dekart.Server, w http.ResponseWriter, r *h
 	outcome = "update_available"
 	if err := json.NewEncoder(w).Encode(release); err != nil {
 		log.Warn().Err(err).Str("app_domain", appDomain).Msg("Failed to encode version response")
+		outcome = "encode_error"
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+// getSourceIP extracts best-effort source IP from proxy headers or remote address.
+func getSourceIP(r *http.Request) string {
+	forwardedFor := strings.TrimSpace(r.Header.Get("X-Forwarded-For"))
+	if forwardedFor != "" {
+		first := strings.TrimSpace(strings.Split(forwardedFor, ",")[0])
+		if first != "" {
+			return first
+		}
+	}
+	if appEngineIP := strings.TrimSpace(r.Header.Get("X-Appengine-User-Ip")); appEngineIP != "" {
+		return appEngineIP
+	}
+	if realIP := strings.TrimSpace(r.Header.Get("X-Real-Ip")); realIP != "" {
+		return realIP
+	}
+	remote := strings.TrimSpace(r.RemoteAddr)
+	if remote == "" {
+		return ""
+	}
+	if addr, err := netip.ParseAddrPort(remote); err == nil {
+		return addr.Addr().String()
+	}
+	if addr, err := netip.ParseAddr(remote); err == nil {
+		return addr.String()
+	}
+	return remote
+}
+
+func handleCLIVersionCheck(dekartServer *dekart.Server, w http.ResponseWriter, r *http.Request) {
+	setVersionCheckHeaders(w)
+	if r.Method == http.MethodOptions {
+		return
+	}
+	cliName := strings.TrimSpace(mux.Vars(r)["cli_name"])
+	outcome := "ok"
+	defer func() {
+		if dekartServer != nil {
+			dekartServer.TrackCLIVersionCheck(r.Context(), cliName, getSourceIP(r), strings.TrimSpace(r.UserAgent()), outcome)
+		}
+	}()
+	if cliName == "" {
+		outcome = "invalid_cli_name"
+		http.Error(w, "cli_name is required", http.StatusBadRequest)
+		return
+	}
+	if err := json.NewEncoder(w).Encode(map[string]bool{"ok": true}); err != nil {
 		outcome = "encode_error"
 		w.WriteHeader(http.StatusNoContent)
 	}

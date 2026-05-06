@@ -230,6 +230,9 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 	api.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
 		handleVersionCheck(dekartServer, w, r)
 	}).Methods("GET", "OPTIONS")
+	api.HandleFunc("/version/{cli_name}", func(w http.ResponseWriter, r *http.Request) {
+		handleCLIVersionCheck(dekartServer, w, r)
+	}).Methods("GET", "OPTIONS")
 	api.HandleFunc("/device", func(w http.ResponseWriter, r *http.Request) {
 		setOriginHeaderIfExists(w, r)
 		if r.Method == http.MethodOptions {
