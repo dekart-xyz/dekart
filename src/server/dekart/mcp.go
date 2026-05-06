@@ -125,6 +125,10 @@ func (s *Server) HandleMCPCall(w http.ResponseWriter, r *http.Request) {
 // callMCPTool dispatches one named MCP tool to existing RPC/upload handlers.
 func (s *Server) callMCPTool(ctx context.Context, request *mcpCallRequest) (json.RawMessage, error) {
 	switch request.Name {
+	case "list_connections":
+		return s.callListConnectionsTool(ctx)
+	case "create_connection":
+		return s.callCreateConnectionTool(ctx, request.Arguments)
 	case "create_report":
 		return s.callCreateReportTool(ctx)
 	case "create_dataset":
@@ -162,6 +166,47 @@ func (s *Server) callMCPTool(ctx context.Context, request *mcpCallRequest) (json
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", request.Name)
 	}
+}
+
+// sanitizeConnectionForMCP strips secrets from connection payloads returned by MCP tools.
+func sanitizeConnectionForMCP(connection *proto.Connection) *proto.Connection {
+	if connection == nil {
+		return nil
+	}
+	sanitized := *connection
+	sanitized.SnowflakePassword = nil
+	sanitized.SnowflakeKey = nil
+	sanitized.BigqueryKey = nil
+	sanitized.WherobotsKey = nil
+	return &sanitized
+}
+
+// callListConnectionsTool returns workspace connection list with secrets removed.
+func (s *Server) callListConnectionsTool(ctx context.Context) (json.RawMessage, error) {
+	response, err := s.GetConnectionList(ctx, &proto.GetConnectionListRequest{})
+	if err != nil {
+		return nil, err
+	}
+	sanitized := make([]*proto.Connection, 0, len(response.GetConnections()))
+	for _, connection := range response.GetConnections() {
+		sanitized = append(sanitized, sanitizeConnectionForMCP(connection))
+	}
+	return mcp.MarshalProtoJSON(&proto.GetConnectionListResponse{
+		Connections: sanitized,
+	})
+}
+
+// callCreateConnectionTool creates one connection from proto-shaped connection payload.
+func (s *Server) callCreateConnectionTool(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
+	request := &proto.CreateConnectionRequest{}
+	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
+		return nil, err
+	}
+	response, err := s.CreateConnection(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	return mcp.MarshalProtoJSON(response)
 }
 
 // callGetMapConfigSchemaTool returns the JSON schema used for map config validation.
@@ -559,6 +604,32 @@ func normalizeMCPTools(tools []mcpTool) []mcpTool {
 // mcpToolDefinitions returns the current MCP tools and their input schemas.
 func mcpToolDefinitions() []mcpTool {
 	tools := []mcpTool{
+		{
+			Name:         "list_connections",
+			Description:  "List available workspace and system connections visible to caller. Secret fields are never returned.",
+			InputSchema:  mcpschema.Object(nil, map[string]any{}),
+			WhenToUse:    "Use before creating datasets or queries to discover available connection ids/types/names.",
+			WhenNotToUse: "Do not use when you already have a valid connection_id and need to perform writes.",
+			SideEffects:  []string{"read"},
+			ExampleInput: map[string]any{},
+			NextTools:    []string{"create_connection", "create_dataset"},
+		},
+		{
+			Name:         "create_connection",
+			Description:  "Create a new workspace connection. Payload follows CreateConnectionRequest proto with one connection object.",
+			InputSchema:  mcpschema.ForProto(&proto.CreateConnectionRequest{}, []string{"connection"}),
+			WhenToUse:    "Use when user has no suitable connection yet. For BigQuery set connection.connection_type=CONNECTION_TYPE_BIGQUERY and provide connection_name plus bigquery_project_id.",
+			WhenNotToUse: "Do not use to edit existing connections; use update_connection endpoint/RPC flow instead.",
+			SideEffects:  []string{"write"},
+			ExampleInput: map[string]any{
+				"connection": map[string]any{
+					"connection_name":     "My BigQuery",
+					"connection_type":     "CONNECTION_TYPE_BIGQUERY",
+					"bigquery_project_id": "my-gcp-project",
+				},
+			},
+			NextTools: []string{"list_connections", "create_dataset"},
+		},
 		{
 			Name:         "create_report",
 			Description:  "Create a new report in current workspace context.",
