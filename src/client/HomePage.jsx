@@ -8,22 +8,22 @@ import Result from 'antd/es/result'
 import Table from 'antd/es/table'
 import Input from 'antd/es/input'
 import { useDispatch, useSelector } from 'react-redux'
-import { PlusOutlined, FileSearchOutlined, UsergroupAddOutlined, ApiTwoTone, LockOutlined, TeamOutlined, GlobalOutlined, EditOutlined, SearchOutlined, EyeInvisibleOutlined } from '@ant-design/icons'
+import { PlusOutlined, FileSearchOutlined, UsergroupAddOutlined, LockOutlined, TeamOutlined, GlobalOutlined, EditOutlined, SearchOutlined, EyeInvisibleOutlined } from '@ant-design/icons'
 import DataDocumentationLink from './DataDocumentationLink'
 import Switch from 'antd/es/switch'
 import { archiveReport, subscribeReports, unsubscribeReports, createReport } from './actions/report'
-import { editConnection, isSystemConnectionID, newConnection, newConnectionScreen, setDefaultConnection } from './actions/connection'
+import { editConnection, isSystemConnectionID, newConnectionScreen, setDefaultConnection } from './actions/connection'
 import ConnectionModal from './ConnectionModal'
 import Tooltip from 'antd/es/tooltip'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
-import { ConnectionType, PlanType } from 'dekart-proto/dekart_pb'
+import { PlanType } from 'dekart-proto/dekart_pb'
 import Onboarding from './Onboarding'
 import { DatasourceIcon } from './Datasource'
 import { track } from './lib/tracking'
 import { If } from './lib/helperElements'
 import { useMapPreview } from './lib/useMapPreview'
 import { getRelativeTime } from './lib/relativeTime'
-import BigQueryConnectionTypeSelectorModal from './BigQueryConnectionTypeSelectorModal'
+import CreateConnection from './CreateConnection'
 import { Loading } from './Loading'
 import classnames from 'classnames'
 import { UNKNOWN_EMAIL } from './lib/constants'
@@ -144,97 +144,6 @@ function FirstReportOnboarding () {
         )}
       />
       <DataDocumentationLink />
-    </>
-  )
-}
-
-function ConnectionTypeSelectorBottom () {
-  const dispatch = useDispatch()
-  const planType = useSelector(state => state.user.stream.planType)
-  const showCancel = useSelector(state => state.connection.list).length > 0
-  const newScreen = useSelector(state => state.connection.screen)
-  const history = useHistory()
-  if (showCancel) {
-    return (
-      <div className={styles.connectionSelectorBack}>
-        <Button
-          type='ghost' onClick={() => {
-            track('ReturnFromConnectionSelector')
-            if (newScreen) {
-              dispatch(newConnectionScreen(false))
-            } else {
-              history.push('/')
-            }
-          }}
-        >Back
-        </Button>
-      </div>
-    )
-  }
-  if (planType === PlanType.TYPE_PERSONAL) {
-    return (
-      <div className={styles.notSure}>
-        <p>or</p>
-        <Button ghost type='primary' href='https://dekart.xyz/self-hosted/?ref=ConnectionTypeSelector' target='_blank' onClick={() => track('GetStartedWithSelfHosting')}>Get Started with Self-Hosting</Button>
-      </div>
-    )
-  }
-  return null
-}
-
-// selects between Google Cloud and Snowflake
-function ConnectionTypeSelector () {
-  const dispatch = useDispatch()
-  const [bigqueryModalOpen, setBigqueryModalOpen] = useState(false)
-  const secretsEnabled = useSelector(state => state.env.secretsEnabled)
-  useEffect(() => {
-    track('ConnectionTypeSelector')
-  }, [])
-  return (
-    <>
-      <div className={styles.connectionTypeSelector}>
-        <BigQueryConnectionTypeSelectorModal open={bigqueryModalOpen} onClose={() => setBigqueryModalOpen(false)} />
-        <Button
-          icon={<DatasourceIcon type={ConnectionType.CONNECTION_TYPE_BIGQUERY} />} size='large' onClick={() => {
-            track('ConnectionTypeSelectorBigQuery')
-            setBigqueryModalOpen(true)
-          }}
-        >BigQuery
-        </Button>
-        <Button
-          disabled={!secretsEnabled}
-          title={secretsEnabled ? '' : 'Feature is disabled. Contact your administrator to enable it.'}
-          icon={<DatasourceIcon type={ConnectionType.CONNECTION_TYPE_SNOWFLAKE} />} size='large' onClick={() => {
-            track('ConnectionTypeSelectorSnowflake')
-            dispatch(newConnection(ConnectionType.CONNECTION_TYPE_SNOWFLAKE))
-          }}
-        >Snowflake
-        </Button>
-        <Button
-          disabled={!secretsEnabled}
-          title={secretsEnabled ? '' : 'Feature is disabled. Contact your administrator to enable it.'}
-          icon={<DatasourceIcon type={ConnectionType.CONNECTION_TYPE_WHEROBOTS} />} size='large' onClick={() => {
-            track('ConnectionTypeSelectorWherobots')
-            dispatch(newConnection(ConnectionType.CONNECTION_TYPE_WHEROBOTS))
-          }}
-        >Wherobots
-        </Button>
-      </div>
-      <ConnectionTypeSelectorBottom />
-    </>
-  )
-}
-
-function CreateConnection () {
-  return (
-    <>
-      <Result
-        status='success'
-        icon={<ApiTwoTone />}
-        title='Connect your warehouse.'
-        subTitle={<>We run queries there; nothing is copied to Dekart.</>}
-        extra={<ConnectionTypeSelector />}
-      />
     </>
   )
 }
