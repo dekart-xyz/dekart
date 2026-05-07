@@ -1,21 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSelector } from 'react-redux'
-
-// Default San Francisco center coordinates
-const DEFAULT_MAP_STATE = {
-  longitude: -122.4194,
-  latitude: 37.7749,
-  zoom: 10
-}
-
-function parseMapState (mapConfigStr) {
-  try {
-    const mapConfig = JSON.parse(mapConfigStr)
-    return mapConfig?.config?.mapState
-  } catch {
-    return null
-  }
-}
+import { DEFAULT_MAP_STATE, parseMapState } from './mapPreviewState'
 
 function buildMapboxUrl (longitude, latitude, zoom, token) {
   return `https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/${longitude},${latitude},${zoom}/320x240?access_token=${token}`

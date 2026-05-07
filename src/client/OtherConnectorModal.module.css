@@ -1,0 +1,32 @@
+.body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.subtitle {
+    color: #6f6f6f;
+    margin: 0;
+}
+
+.hint {
+    color: #8c8c8c;
+    margin: 0;
+    font-size: 13px;
+}
+
+.customInput {
+    margin-top: 12px;
+}
+
+.actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.bookCallBtn {
+    padding: 0;
+}

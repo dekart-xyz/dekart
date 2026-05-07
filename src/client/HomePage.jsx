@@ -5,25 +5,24 @@ import styles from './HomePage.module.css'
 import Button from 'antd/es/button'
 import Radio from 'antd/es/radio'
 import Result from 'antd/es/result'
-import Table from 'antd/es/table'
 import Input from 'antd/es/input'
 import { useDispatch, useSelector } from 'react-redux'
-import { PlusOutlined, FileSearchOutlined, UsergroupAddOutlined, ApiTwoTone, LockOutlined, TeamOutlined, GlobalOutlined, EditOutlined, SearchOutlined, EyeInvisibleOutlined } from '@ant-design/icons'
+import { PlusOutlined, FileSearchOutlined, UsergroupAddOutlined, LockOutlined, TeamOutlined, GlobalOutlined, SearchOutlined, CheckOutlined, EditOutlined } from '@ant-design/icons'
 import DataDocumentationLink from './DataDocumentationLink'
 import Switch from 'antd/es/switch'
 import { archiveReport, subscribeReports, unsubscribeReports, createReport } from './actions/report'
-import { editConnection, isSystemConnectionID, newConnection, newConnectionScreen, setDefaultConnection } from './actions/connection'
+import { editConnection, isSystemConnectionID, newConnectionScreen, setDefaultConnection } from './actions/connection'
 import ConnectionModal from './ConnectionModal'
-import Tooltip from 'antd/es/tooltip'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
-import { ConnectionType, PlanType } from 'dekart-proto/dekart_pb'
+import { PlanType } from 'dekart-proto/dekart_pb'
 import Onboarding from './Onboarding'
 import { DatasourceIcon } from './Datasource'
 import { track } from './lib/tracking'
 import { If } from './lib/helperElements'
 import { useMapPreview } from './lib/useMapPreview'
 import { getRelativeTime } from './lib/relativeTime'
-import BigQueryConnectionTypeSelectorModal from './BigQueryConnectionTypeSelectorModal'
+import { getMapCenterCoordinates } from './lib/mapPreviewState'
+import CreateConnection from './CreateConnection'
 import { Loading } from './Loading'
 import classnames from 'classnames'
 import { UNKNOWN_EMAIL } from './lib/constants'
@@ -35,10 +34,11 @@ function ArchiveReportButton ({ report }) {
   return (
     <Button
       id={report.archived ? 'dekart-restore-report' : 'dekart-archive-report'}
-      className={styles.mapActionButton}
-      type='default'
+      className={classnames(styles.connectionCardSetDefaultButton, {
+        [styles.connectionCardSetDefaultButtonDisabled]: disableArchivePublic
+      })}
+      type='text'
       size='small'
-      icon={!report.archived ? <EyeInvisibleOutlined /> : null}
       disabled={disabled || disableArchivePublic}
       title={disableArchivePublic ? 'Cannot archive public report. Unpublish it first.' : (report.archived ? 'Restore' : 'Archive')}
       onClick={(e) => {
@@ -47,73 +47,67 @@ function ArchiveReportButton ({ report }) {
         setDisabled(true)
       }}
     >
-      {report.archived ? 'Restore' : undefined}
+      {report.archived ? 'Restore' : 'Archive'}
     </Button>
   )
 }
 
-const columns = [
-  {
-    dataIndex: 'connectionIcon',
-    render: (t, connection) => <DatasourceIcon type={connection.connectionType} />,
-    className: styles.iconColumn
-  },
-  {
-    dataIndex: 'connectionName',
-    render: (t, connection) => <OpenConnectionButton connection={connection} />,
-    className: styles.titleColumn
-  },
-  {
-    dataIndex: 'author', // used for reports and connections
-    render: (t, item) => (
-      <div
-        title={
-          `Created by ${item.authorEmail} at ${new Date(item.createdAt * 1000).toLocaleString()}, last updated at ${new Date(item.updatedAt * 1000).toLocaleString()}`
-        } className={styles.author}
-      >{item.authorEmail}
-      </div>),
-    className: styles.authorColumn
-  },
-  {
-    dataIndex: 'setDefault',
-    render: (t, connection) => <SetDefault connection={connection} />,
-    className: styles.deleteColumn
-  }
-]
-
-function SetDefault ({ connection }) {
+function ConnectionCard ({ connection }) {
   const dispatch = useDispatch()
-  if (connection.isDefault) {
-    return (
-      <Tooltip title='Default connection is used for storing map metadata. Users required to have access to default bucket to view the report.'>Default</Tooltip>
-    )
+  const updatedDate = new Date(connection.updatedAt * 1000)
+  const openConnection = () => {
+    track('OpenConnectionSettings', { connectionId: connection.id, connectionType: connection.connectionType })
+    dispatch(editConnection(connection.id, connection.connectionType, Boolean(connection.bigqueryKey)))
   }
-  return (
-    <Tooltip title='Default connection is used for storing map metadata. Users required to have access to default bucket to view the report.'>
-      <Button
-        type='text'
-        className={styles.deleteButton}
-        onClick={() => {
-          track('SetDefaultConnection', { connectionId: connection.id })
-          dispatch(setDefaultConnection(connection.id))
-        }}
-      >Set default
-      </Button>
-    </Tooltip>
-  )
-}
 
-function OpenConnectionButton ({ connection }) {
-  const dispatch = useDispatch()
   return (
-    <Button
-      type='link'
-      onClick={() => {
-        track('OpenConnectionSettings', { connectionId: connection.id, connectionType: connection.connectionType })
-        dispatch(editConnection(connection.id, connection.connectionType, Boolean(connection.bigqueryKey)))
-      }}
-    >{connection.connectionName}
-    </Button>
+    <div className={styles.connectionCard} onClick={openConnection}>
+      <div className={styles.connectionCardHeader}>
+        <div className={styles.connectionCardIcon}>
+          <DatasourceIcon type={connection.connectionType} />
+        </div>
+      </div>
+      <div className={styles.connectionCardTitle}>{connection.connectionName}</div>
+      <div className={styles.connectionCardMetaGrid}>
+        <div className={styles.connectionCardMetaLabel}>Owner</div>
+        <div className={styles.connectionCardMetaValue}>{connection.authorEmail}</div>
+        <div className={styles.connectionCardMetaLabel}>Updated</div>
+        <div className={styles.connectionCardMetaValue}>{getRelativeTime(updatedDate)}</div>
+      </div>
+      <div className={styles.connectionCardDivider} />
+      <div className={styles.connectionCardFooter}>
+        <div className={styles.connectionCardDefaultStatus}>
+          {connection.isDefault
+            ? (
+              <>
+                <CheckOutlined />
+                <span>Used by default</span>
+              </>
+              )
+            : (
+              <Button
+                type='text'
+                className={styles.connectionCardSetDefaultButton}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  track('SetDefaultConnection', { connectionId: connection.id })
+                  dispatch(setDefaultConnection(connection.id))
+                }}
+              >Set default
+              </Button>
+              )}
+        </div>
+        <Button
+          size='small'
+          icon={<EditOutlined />}
+          onClick={(event) => {
+            event.stopPropagation()
+            openConnection()
+          }}
+        >Edit
+        </Button>
+      </div>
+    </div>
   )
 }
 
@@ -144,97 +138,6 @@ function FirstReportOnboarding () {
         )}
       />
       <DataDocumentationLink />
-    </>
-  )
-}
-
-function ConnectionTypeSelectorBottom () {
-  const dispatch = useDispatch()
-  const planType = useSelector(state => state.user.stream.planType)
-  const showCancel = useSelector(state => state.connection.list).length > 0
-  const newScreen = useSelector(state => state.connection.screen)
-  const history = useHistory()
-  if (showCancel) {
-    return (
-      <div className={styles.connectionSelectorBack}>
-        <Button
-          type='ghost' onClick={() => {
-            track('ReturnFromConnectionSelector')
-            if (newScreen) {
-              dispatch(newConnectionScreen(false))
-            } else {
-              history.push('/')
-            }
-          }}
-        >Back
-        </Button>
-      </div>
-    )
-  }
-  if (planType === PlanType.TYPE_PERSONAL) {
-    return (
-      <div className={styles.notSure}>
-        <p>or</p>
-        <Button ghost type='primary' href='https://dekart.xyz/self-hosted/?ref=ConnectionTypeSelector' target='_blank' onClick={() => track('GetStartedWithSelfHosting')}>Get Started with Self-Hosting</Button>
-      </div>
-    )
-  }
-  return null
-}
-
-// selects between Google Cloud and Snowflake
-function ConnectionTypeSelector () {
-  const dispatch = useDispatch()
-  const [bigqueryModalOpen, setBigqueryModalOpen] = useState(false)
-  const secretsEnabled = useSelector(state => state.env.secretsEnabled)
-  useEffect(() => {
-    track('ConnectionTypeSelector')
-  }, [])
-  return (
-    <>
-      <div className={styles.connectionTypeSelector}>
-        <BigQueryConnectionTypeSelectorModal open={bigqueryModalOpen} onClose={() => setBigqueryModalOpen(false)} />
-        <Button
-          icon={<DatasourceIcon type={ConnectionType.CONNECTION_TYPE_BIGQUERY} />} size='large' onClick={() => {
-            track('ConnectionTypeSelectorBigQuery')
-            setBigqueryModalOpen(true)
-          }}
-        >BigQuery
-        </Button>
-        <Button
-          disabled={!secretsEnabled}
-          title={secretsEnabled ? '' : 'Feature is disabled. Contact your administrator to enable it.'}
-          icon={<DatasourceIcon type={ConnectionType.CONNECTION_TYPE_SNOWFLAKE} />} size='large' onClick={() => {
-            track('ConnectionTypeSelectorSnowflake')
-            dispatch(newConnection(ConnectionType.CONNECTION_TYPE_SNOWFLAKE))
-          }}
-        >Snowflake
-        </Button>
-        <Button
-          disabled={!secretsEnabled}
-          title={secretsEnabled ? '' : 'Feature is disabled. Contact your administrator to enable it.'}
-          icon={<DatasourceIcon type={ConnectionType.CONNECTION_TYPE_WHEROBOTS} />} size='large' onClick={() => {
-            track('ConnectionTypeSelectorWherobots')
-            dispatch(newConnection(ConnectionType.CONNECTION_TYPE_WHEROBOTS))
-          }}
-        >Wherobots
-        </Button>
-      </div>
-      <ConnectionTypeSelectorBottom />
-    </>
-  )
-}
-
-function CreateConnection () {
-  return (
-    <>
-      <Result
-        status='success'
-        icon={<ApiTwoTone />}
-        title='Connect your warehouse.'
-        subTitle={<>We run queries there; nothing is copied to Dekart.</>}
-        extra={<ConnectionTypeSelector />}
-      />
     </>
   )
 }
@@ -418,6 +321,7 @@ function MapCard ({ report, reportFilter, archived, authEnabled }) {
   }, [])
 
   const { previewUrl, previewLoading, previewError, setPreviewLoading, setPreviewError } = useMapPreview(report, isVisible)
+  const centerCoordinates = getMapCenterCoordinates(report.mapConfig)
 
   const handleEdit = (e) => {
     e.stopPropagation()
@@ -438,9 +342,12 @@ function MapCard ({ report, reportFilter, archived, authEnabled }) {
       <div className={styles.mapPreview}>
         <div className={classnames(styles.privacyBadge, styles.privacyBadgeOverlay, privacy.className)}>
           {privacy.icon}
-          {privacy.label === 'Public' && <span>{privacy.label}</span>}
+          <span>{privacy.label}</span>
         </div>
         <PreviewConnectionIcons report={report} />
+        <div className={styles.previewCenterCoordinates}>
+          {`${centerCoordinates.latitude.toFixed(2)}, ${centerCoordinates.longitude.toFixed(2)}`}
+        </div>
         <img
           src={previewUrl}
           alt={report.title}
@@ -469,27 +376,24 @@ function MapCard ({ report, reportFilter, archived, authEnabled }) {
           {report.title || 'Untitled'}
         </h3>
         <div className={styles.mapMeta}>
-          <div className={styles.mapMetaContent}>
-            <div className={styles.mapMetaLeft}>
-              <div className={styles.mapMetaRow}>
-                <span
-                  className={styles.mapUpdatedDate}
-                  title={`${modifiedDate.toLocaleString()} (${modifiedDate.toUTCString()})`}
-                >
-                  Updated {getRelativeTime(modifiedDate)}
-                </span>
-              </div>
-              {report.authorEmail && report.authorEmail !== UNKNOWN_EMAIL && (
-                <div className={styles.mapMetaRow}>
-                  <span className={styles.mapAuthorInline}>
-                    {report.authorEmail}
-                  </span>
-                </div>
-              )}
+          <div className={styles.mapMetaGrid}>
+            <div className={styles.mapMetaLabel}>Owner</div>
+            <div className={styles.mapMetaValue}>
+              {(report.authorEmail && report.authorEmail !== UNKNOWN_EMAIL) ? report.authorEmail : 'Unknown'}
             </div>
-            {/* Action buttons - right side, shown on hover */}
-            <div className={styles.mapActions}>
-              {report.canWrite && !report.archived && (
+            <div className={styles.mapMetaLabel}>Updated</div>
+            <div
+              className={styles.mapMetaValue}
+              title={`${modifiedDate.toLocaleString()} (${modifiedDate.toUTCString()})`}
+            >
+              {getRelativeTime(modifiedDate)}
+            </div>
+          </div>
+          <div className={styles.mapCardDivider} />
+          <div className={styles.mapFooterActions}>
+            {reportFilter === 'my' ? <ArchiveReportButton report={report} /> : <span />}
+            {report.canWrite && !report.archived
+              ? (
                 <Button
                   type='default'
                   size='small'
@@ -497,12 +401,10 @@ function MapCard ({ report, reportFilter, archived, authEnabled }) {
                   onClick={handleEdit}
                   className={styles.mapActionButton}
                   title='Edit'
-                />
-              )}
-              {reportFilter === 'my' && (
-                <ArchiveReportButton report={report} />
-              )}
-            </div>
+                >Edit
+                </Button>
+                )
+              : null}
           </div>
         </div>
       </div>
@@ -568,15 +470,11 @@ function Reports ({ createReportButton, reportFilter }) {
           />
           {filteredDataSource.length
             ? (
-              <Table
-                dataSource={filteredDataSource}
-                columns={columns}
-                showHeader={false}
-                rowClassName={styles.reportsRow}
-                pagination={false}
-                rowKey='id'
-                className={styles.reportsTable}
-              />
+              <div className={styles.connectionCardsGrid}>
+                {filteredDataSource.map(connection => (
+                  <ConnectionCard key={connection.id} connection={connection} />
+                ))}
+              </div>
               )
             : null}
         </div>

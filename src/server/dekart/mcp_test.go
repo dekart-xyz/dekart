@@ -2,6 +2,7 @@ package dekart
 
 import (
 	"context"
+	"dekart/src/proto"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -136,6 +137,14 @@ func TestMCPToolDefinitions_ContainsUpdateTools(t *testing.T) {
 	mapConfigSchemaTool, ok := names["get_map_config_schema"]
 	assert.True(t, ok)
 	assert.Equal(t, []string{}, mapConfigSchemaTool.InputSchema["required"])
+
+	listConnectionsTool, ok := names["list_connections"]
+	assert.True(t, ok)
+	assert.Equal(t, []string{}, listConnectionsTool.InputSchema["required"])
+
+	createConnectionTool, ok := names["create_connection"]
+	assert.True(t, ok)
+	assert.Contains(t, createConnectionTool.InputSchema["required"], "connection")
 }
 
 func TestCallMCPTool_UnknownTool(t *testing.T) {
@@ -210,4 +219,26 @@ func TestMCPToolDefinitions_StrictSchemaAndRequiredFields(t *testing.T) {
 		assert.Equal(t, "Updated report notes", updateReadmeTool.ExampleInput["markdown"])
 		assert.Equal(t, "00000000-0000-0000-0000-000000000000", updateReadmeTool.ExampleInput["report_id"])
 	}
+}
+
+func TestSanitizeConnectionForMCP_StripsSecrets(t *testing.T) {
+	connection := &proto.Connection{
+		Id:                 "conn-1",
+		ConnectionName:     "test",
+		SnowflakePassword:  &proto.Secret{ServerEncrypted: "secret"},
+		SnowflakeKey:       &proto.Secret{ServerEncrypted: "secret"},
+		BigqueryKey:        &proto.Secret{ServerEncrypted: "secret"},
+		WherobotsKey:       &proto.Secret{ServerEncrypted: "secret"},
+		BigqueryProjectId:  "project",
+		ConnectionType:     proto.ConnectionType_CONNECTION_TYPE_BIGQUERY,
+		CloudStorageBucket: "bucket",
+	}
+
+	sanitized := sanitizeConnectionForMCP(connection)
+	assert.Equal(t, "conn-1", sanitized.Id)
+	assert.Equal(t, "test", sanitized.ConnectionName)
+	assert.Nil(t, sanitized.SnowflakePassword)
+	assert.Nil(t, sanitized.SnowflakeKey)
+	assert.Nil(t, sanitized.BigqueryKey)
+	assert.Nil(t, sanitized.WherobotsKey)
 }

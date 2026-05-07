@@ -48,3 +48,28 @@ func TestTrackVersionCheckSkipsWithoutCloudFlag(t *testing.T) {
 		t.Fatalf("ExpectationsWereMet: %v", err)
 	}
 }
+
+func TestTrackCLIVersionCheckStoresEvent(t *testing.T) {
+	t.Setenv("DEKART_CLOUD", "1")
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock.New: %v", err)
+	}
+	defer db.Close()
+
+	s := Server{db: db}
+	mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO track_events (email, event_name, event_data_json)
+		VALUES ($1, $2, $3)`)).
+		WithArgs(
+			"cli:dekart-cli",
+			cliVersionCheckEventName,
+			`{"cli_name":"dekart-cli","outcome":"ok","source_ip":"203.0.113.8","user_agent":"dekart-cli/1.0.0"}`,
+		).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	s.TrackCLIVersionCheck(context.Background(), "Dekart-CLI", "203.0.113.8", "dekart-cli/1.0.0", "ok")
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("ExpectationsWereMet: %v", err)
+	}
+}

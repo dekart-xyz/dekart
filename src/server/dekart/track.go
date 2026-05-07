@@ -67,32 +67,25 @@ func (s Server) TrackEvent(ctx context.Context, req *proto.TrackEventRequest) (*
 }
 
 const versionCheckEventName = "VersionCheck"
+const cliVersionCheckEventName = "CLIVersionCheck"
 
-// TrackVersionCheck stores anonymous version check pings for cloud analytics.
-func (s Server) TrackVersionCheck(ctx context.Context, appDomain, currentVersion, latestVersion, outcome string) {
+// trackAnonymousEvent stores one anonymous analytics event in track_events for cloud mode.
+func (s Server) trackAnonymousEvent(ctx context.Context, identity, eventName string, payload map[string]string) {
 	if os.Getenv("DEKART_CLOUD") == "" {
 		return
 	}
-
-	domain := strings.TrimSpace(strings.ToLower(appDomain))
-	if domain == "" {
+	if strings.TrimSpace(identity) == "" || strings.TrimSpace(eventName) == "" {
 		return
 	}
 
-	email := domain
+	email := strings.TrimSpace(identity)
 	if len(email) > 255 {
 		email = email[:255]
 	}
 
-	eventData := map[string]string{
-		"app_domain":      domain,
-		"current_version": strings.TrimSpace(currentVersion),
-		"latest_version":  strings.TrimSpace(latestVersion),
-		"outcome":         strings.TrimSpace(outcome),
-	}
-	eventDataJSON, err := json.Marshal(eventData)
+	eventDataJSON, err := json.Marshal(payload)
 	if err != nil {
-		log.Warn().Err(err).Str("app_domain", domain).Msg("Failed to marshal version check tracking payload")
+		log.Warn().Err(err).Str("event_name", eventName).Msg("Failed to marshal anonymous tracking payload")
 		return
 	}
 
@@ -101,10 +94,58 @@ func (s Server) TrackVersionCheck(ctx context.Context, appDomain, currentVersion
 		`INSERT INTO track_events (email, event_name, event_data_json)
 		VALUES ($1, $2, $3)`,
 		email,
-		versionCheckEventName,
+		eventName,
 		string(eventDataJSON),
 	)
 	if err != nil {
-		errtype.LogError(err, fmt.Sprintf("Failed to store %s event", versionCheckEventName))
+		errtype.LogError(err, fmt.Sprintf("Failed to store %s event", eventName))
 	}
+}
+
+// TrackVersionCheck stores anonymous version check pings for cloud analytics.
+func (s Server) TrackVersionCheck(ctx context.Context, appDomain, currentVersion, latestVersion, outcome string) {
+	domain := strings.TrimSpace(strings.ToLower(appDomain))
+	if domain == "" {
+		return
+	}
+
+	eventData := map[string]string{
+		"app_domain":      domain,
+		"current_version": strings.TrimSpace(currentVersion),
+		"latest_version":  strings.TrimSpace(latestVersion),
+		"outcome":         strings.TrimSpace(outcome),
+	}
+	s.trackAnonymousEvent(ctx, domain, versionCheckEventName, eventData)
+}
+
+// TrackCLIVersionCheck stores anonymous CLI version check pings for cloud analytics.
+func (s Server) TrackCLIVersionCheck(ctx context.Context, cliName, sourceIP, userAgent, outcome string) {
+	name := strings.TrimSpace(strings.ToLower(cliName))
+	if name == "" {
+		return
+	}
+	if len(name) > 128 {
+		name = name[:128]
+	}
+	ip := strings.TrimSpace(sourceIP)
+	if len(ip) > 128 {
+		ip = ip[:128]
+	}
+	ua := strings.TrimSpace(userAgent)
+	if len(ua) > 512 {
+		ua = ua[:512]
+	}
+
+	email := "cli:" + name
+	if len(email) > 255 {
+		email = email[:255]
+	}
+
+	eventData := map[string]string{
+		"cli_name":   name,
+		"source_ip":  ip,
+		"user_agent": ua,
+		"outcome":    strings.TrimSpace(outcome),
+	}
+	s.trackAnonymousEvent(ctx, email, cliVersionCheckEventName, eventData)
 }
