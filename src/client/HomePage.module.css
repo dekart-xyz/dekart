@@ -306,6 +306,163 @@
     width: 100%;
 }
 
+.connectionCard {
+    background: white;
+    border: 1px solid #F0F0F0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    padding: 20px;
+    min-height: 206px;
+}
+
+.connectionCard:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.connectionCardsGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    width: 100%;
+}
+
+.connectionCardHeader {
+    width: 100%;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.connectionCardIcon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: #F1F2F4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.connectionCardIcon :global(.datasourceIcon) {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+    transform: none;
+}
+
+.connectionCardTitle {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: #262626;
+}
+
+.connectionCardMeta {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #595959;
+    white-space: normal;
+    line-height: 1.4;
+}
+
+.connectionCardMetaGrid {
+    width: 100%;
+    margin-top: 8px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    row-gap: 8px;
+    column-gap: 12px;
+}
+
+.connectionCardMetaLabel {
+    font-size: 13px;
+    color: #8C8C8C;
+}
+
+.connectionCardMetaValue {
+    font-size: 13px;
+    color: #434343;
+    text-align: right;
+}
+
+.connectionCardDivider {
+    width: 100%;
+    height: 1px;
+    background: #F0F0F0;
+    margin-top: 14px;
+}
+
+.connectionCardFooter {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: auto;
+    padding-top: 12px;
+}
+
+.connectionCardDefaultStatus {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #595959;
+}
+
+.connectionCardDefaultStatus :global(.anticon) {
+    color: #1677FF;
+    font-size: 14px;
+}
+
+.connectionCardSetDefaultButton {
+    color: #1677FF !important;
+    font-size: 14px;
+    padding: 0 !important;
+    height: auto !important;
+}
+
+.connectionCardSetDefaultButton:hover {
+    color: #4096FF !important;
+}
+
+.connectionCardSetDefaultButtonDisabled,
+.connectionCardSetDefaultButtonDisabled:hover {
+    color: #BFBFBF !important;
+    opacity: 0.75;
+    cursor: not-allowed !important;
+}
+
+@media (max-width: 1400px) {
+    .connectionCardsGrid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 1100px) {
+    .connectionCardsGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .connectionCardsGrid {
+        grid-template-columns: 1fr;
+    }
+    .connectionCard {
+        min-height: 180px;
+    }
+    .connectionCardsSection {
+        justify-content: stretch;
+    }
+}
+
 @media (max-width: 1400px) {
     .mapsGrid {
         grid-template-columns: repeat(3, 1fr);
@@ -359,8 +516,11 @@
     gap: 6px;
     font-size: 12px;
     font-weight: 500;
-    padding: 4px 8px;
-    border-radius: 4px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background-color: rgba(24, 28, 36, 0.78);
+    color: #F5F5F5;
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .privacyBadgeOverlay {
@@ -375,29 +535,27 @@
 }
 
 .privacyBadge.public {
-    background-color: rgba(230, 247, 255, 0.9);
-    color: #1890FF;
+    background-color: rgba(24, 28, 36, 0.78);
+    color: #F5F5F5;
 }
 
 .privacyBadge.shared {
-    background-color: transparent;
-    color: white;
-    padding: 4px 8px;
+    background-color: rgba(24, 28, 36, 0.78);
+    color: #F5F5F5;
 }
 
 .privacyBadge.shared :global(.anticon) {
-    color: white;
+    color: #F5F5F5;
     font-size: 16px;
 }
 
 .privacyBadge.private {
-    background-color: transparent;
-    color: white;
-    padding: 4px 8px;
+    background-color: rgba(24, 28, 36, 0.78);
+    color: #F5F5F5;
 }
 
 .privacyBadge.private :global(.anticon) {
-    color: white;
+    color: #F5F5F5;
     font-size: 16px;
 }
 
@@ -407,7 +565,7 @@
 
 .mapPreview {
     width: 100%;
-    height: 150px;
+    height: 196px;
     background-color: #FAFAFA;
     display: flex;
     align-items: center;
@@ -512,10 +670,23 @@
     fill: white;
 }
 
+.previewCenterCoordinates {
+    position: absolute;
+    right: 16px;
+    bottom: 14px;
+    z-index: 4;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 11.5px;
+    line-height: 1;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    letter-spacing: 0.5px;
+    pointer-events: none;
+}
+
 
 @media (max-width: 768px) {
     .mapPreview {
-        height: 120px;
+        height: 150px;
     }
 
     .archivedSwitch {
@@ -549,11 +720,11 @@
 }
 
 .mapTitle {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 600;
     margin: 0 0 12px 0;
     color: #262626;
-    line-height: 1.4;
+    line-height: 1.35;
 }
 
 .mapTitleUntitled {
@@ -566,59 +737,48 @@
 .mapMeta {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     font-size: 13px;
     color: #595959;
+    margin-top: auto;
 }
 
-.mapMetaContent {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+.mapMetaGrid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    row-gap: 6px;
+    column-gap: 12px;
 }
 
-.mapMetaLeft {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+.mapMetaLabel {
+    font-size: 13px;
+    color: #8C8C8C;
 }
 
-.mapActions {
-    position: absolute;
-    bottom: 16px;
-    right: 16px;
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    pointer-events: none;
-    z-index: 10;
-}
-
-.mapCard:hover .mapActions {
-    opacity: 1;
-    pointer-events: all;
+.mapMetaValue {
+    font-size: 13px;
+    color: #434343;
+    text-align: right;
 }
 
 .mapActionButton {
-    pointer-events: all;
+    height: auto;
 }
 
-.mapMetaRow {
+.mapCardDivider {
+    width: 100%;
+    height: 1px;
+    background: #F0F0F0;
+    margin-top: 6px;
+}
+
+.mapFooterActions {
+    width: 100%;
     display: flex;
     align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.mapUpdatedDate {
-    font-weight: 500;
-    color: #595959;
-}
-
-.mapAuthorInline {
-    color: #8C8C8C;
+    justify-content: space-between;
+    padding-top: 10px;
 }
 
 .mapSharedStatus {
