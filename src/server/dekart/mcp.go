@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/conn"
 	device "dekart/src/server/deviceauth"
 	"dekart/src/server/mcp"
 	"dekart/src/server/mcpschema"
@@ -13,10 +14,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	gproto "google.golang.org/protobuf/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -173,12 +176,44 @@ func sanitizeConnectionForMCP(connection *proto.Connection) *proto.Connection {
 	if connection == nil {
 		return nil
 	}
-	sanitized := *connection
+	// Clone protobuf message to avoid copying internal mutex state by value.
+	sanitized := gproto.Clone(connection).(*proto.Connection)
 	sanitized.SnowflakePassword = nil
 	sanitized.SnowflakeKey = nil
 	sanitized.BigqueryKey = nil
 	sanitized.WherobotsKey = nil
-	return &sanitized
+	return sanitized
+}
+
+// isBigQueryPassthroughConnectionExcludedForMCP returns true when connection
+// should be excluded from MCP run-queries scope as BigQuery passthrough.
+func isBigQueryPassthroughConnectionExcludedForMCP(connection *proto.Connection) bool {
+	if connection == nil {
+		return false
+	}
+	if connection.ConnectionType != proto.ConnectionType_CONNECTION_TYPE_BIGQUERY {
+		return false
+	}
+	return connection.BigqueryKey == nil
+}
+
+// filterConnectionsForMCPRunQueriesScope keeps only MCP-supported connections for
+// initial run-queries rollout. This does not alter global gRPC connection listing.
+func filterConnectionsForMCPRunQueriesScope(connections []*proto.Connection) []*proto.Connection {
+	filtered := make([]*proto.Connection, 0, len(connections))
+	for _, connection := range connections {
+		if connection == nil {
+			continue
+		}
+		if os.Getenv("DEKART_CLOUD") != "" && connection.GetId() == conn.SystemConnectionID {
+			continue
+		}
+		if isBigQueryPassthroughConnectionExcludedForMCP(connection) {
+			continue
+		}
+		filtered = append(filtered, connection)
+	}
+	return filtered
 }
 
 // callListConnectionsTool returns workspace connection list with secrets removed.
@@ -187,8 +222,9 @@ func (s *Server) callListConnectionsTool(ctx context.Context) (json.RawMessage, 
 	if err != nil {
 		return nil, err
 	}
-	sanitized := make([]*proto.Connection, 0, len(response.GetConnections()))
-	for _, connection := range response.GetConnections() {
+	filtered := filterConnectionsForMCPRunQueriesScope(response.GetConnections())
+	sanitized := make([]*proto.Connection, 0, len(filtered))
+	for _, connection := range filtered {
 		sanitized = append(sanitized, sanitizeConnectionForMCP(connection))
 	}
 	return mcp.MarshalProtoJSON(&proto.GetConnectionListResponse{
