@@ -185,6 +185,16 @@ func sanitizeConnectionForMCP(connection *proto.Connection) *proto.Connection {
 	return sanitized
 }
 
+// sanitizeCreateConnectionResponseForMCP strips secret fields before returning create_connection payload.
+func sanitizeCreateConnectionResponseForMCP(response *proto.CreateConnectionResponse) *proto.CreateConnectionResponse {
+	if response == nil {
+		return nil
+	}
+	return &proto.CreateConnectionResponse{
+		Connection: sanitizeConnectionForMCP(response.GetConnection()),
+	}
+}
+
 // isBigQueryPassthroughConnectionExcludedForMCP returns true when connection
 // should be excluded from MCP run-queries scope as BigQuery passthrough.
 func isBigQueryPassthroughConnectionExcludedForMCP(connection *proto.Connection) bool {
@@ -205,7 +215,12 @@ func filterConnectionsForMCPRunQueriesScope(connections []*proto.Connection) []*
 		if connection == nil {
 			continue
 		}
-		if os.Getenv("DEKART_CLOUD") != "" && connection.GetId() == conn.SystemConnectionID {
+		if connection.GetId() == conn.SystemConnectionID {
+			if os.Getenv("DEKART_CLOUD") != "" {
+				continue
+			}
+			// Keep system default connection visible for self-hosted deployments.
+			filtered = append(filtered, connection)
 			continue
 		}
 		if isBigQueryPassthroughConnectionExcludedForMCP(connection) {
@@ -242,7 +257,7 @@ func (s *Server) callCreateConnectionTool(ctx context.Context, raw json.RawMessa
 	if err != nil {
 		return nil, err
 	}
-	return mcp.MarshalProtoJSON(response)
+	return mcp.MarshalProtoJSON(sanitizeCreateConnectionResponseForMCP(response))
 }
 
 // callGetMapConfigSchemaTool returns the JSON schema used for map config validation.

@@ -242,3 +242,25 @@ func TestSanitizeConnectionForMCP_StripsSecrets(t *testing.T) {
 	assert.Nil(t, sanitized.BigqueryKey)
 	assert.Nil(t, sanitized.WherobotsKey)
 }
+
+func TestSanitizeCreateConnectionResponseForMCP_StripsSecrets(t *testing.T) {
+	response := &proto.CreateConnectionResponse{
+		Connection: &proto.Connection{
+			Id:                "conn-1",
+			ConnectionName:    "test",
+			SnowflakePassword: &proto.Secret{ServerEncrypted: "secret"},
+			SnowflakeKey:      &proto.Secret{ServerEncrypted: "secret"},
+			BigqueryKey:       &proto.Secret{ServerEncrypted: "secret"},
+			WherobotsKey:      &proto.Secret{ServerEncrypted: "secret"},
+		},
+	}
+
+	sanitized := sanitizeCreateConnectionResponseForMCP(response)
+	if assert.NotNil(t, sanitized) && assert.NotNil(t, sanitized.Connection) {
+		assert.Equal(t, "conn-1", sanitized.Connection.Id)
+		assert.Nil(t, sanitized.Connection.SnowflakePassword)
+		assert.Nil(t, sanitized.Connection.SnowflakeKey)
+		assert.Nil(t, sanitized.Connection.BigqueryKey)
+		assert.Nil(t, sanitized.Connection.WherobotsKey)
+	}
+}

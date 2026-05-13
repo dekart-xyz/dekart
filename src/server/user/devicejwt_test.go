@@ -5,6 +5,9 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"database/sql"
+	deviceauth "dekart/src/server/deviceauth"
+	"dekart/src/server/jwtkeys"
 	"encoding/base64"
 	"encoding/pem"
 	"net/http"
@@ -12,6 +15,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func TestGetContextAcceptsDeviceToken(t *testing.T) {
@@ -58,6 +62,61 @@ func TestValidateDeviceAuthTokenRequiresWorkspaceClaim(t *testing.T) {
 	claims := claimsCheck.validateDeviceAuthToken(context.Background(), "Bearer "+token)
 	if claims != nil {
 		t.Fatal("expected device token without workspace_id to be rejected")
+	}
+}
+
+func TestGetContextAcceptsDeviceTokenWithBootstrapFallback(t *testing.T) {
+	t.Setenv(deviceAuthPublicKeyEnv, "")
+	t.Setenv("DEKART_DEVICE_AUTH_PRIVATE_KEY", "")
+
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	defer db.Close()
+
+	_, err = db.Exec(`
+		create table instance_keys (
+			id text primary key,
+			key_name text not null unique,
+			private_key_pem text not null,
+			public_key_pem text not null,
+			created_at datetime not null default current_timestamp
+		);
+	`)
+	if err != nil {
+		t.Fatalf("create schema: %v", err)
+	}
+
+	_, err = jwtkeys.EnsureBootstrapKeyInMemory(context.Background(), db)
+	if err != nil {
+		t.Fatalf("EnsureBootstrapKeyInMemory: %v", err)
+	}
+	issuer := deviceauth.NewJWTIssuer()
+	token, _, err := issuer.Issue("user@example.com", "workspace-1")
+	if err != nil {
+		t.Fatalf("Issue: %v", err)
+	}
+
+	claimsCheck := NewClaimsCheck(ClaimsCheckConfig{
+		RequireGoogleOAuth:  true,
+		GoogleOAuthClientId: "test-client",
+		GoogleOAuthSecret:   "test-secret",
+	}, db)
+
+	req, err := http.NewRequest(http.MethodPost, "/api/v1/reports", nil)
+	if err != nil {
+		t.Fatalf("NewRequest: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	ctx := claimsCheck.GetContext(req)
+	claims := GetClaims(ctx)
+	if claims == nil {
+		t.Fatal("expected device claims")
+	}
+	if claims.Email != "user@example.com" || claims.WorkspaceID != "workspace-1" {
+		t.Fatalf("unexpected claims: %#v", claims)
 	}
 }
 

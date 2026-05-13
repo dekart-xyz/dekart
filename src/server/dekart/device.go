@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	"dekart/src/proto"
@@ -162,11 +163,19 @@ func normalizeDeviceName(raw string) string {
 // requireDeviceAuthorizeContext validates authenticated actor and workspace for device authorization.
 func requireDeviceAuthorizeContext(ctx context.Context) (*user.Claims, string, error) {
 	claims := user.GetClaims(ctx)
-	if claims == nil || claims.Email == user.UnknownEmail {
+	if claims == nil {
+		return nil, "", status.Error(codes.Unauthenticated, "login required")
+	}
+	if claims.Email == user.UnknownEmail && os.Getenv("DEKART_CLOUD") != "" {
 		return nil, "", status.Error(codes.Unauthenticated, "login required")
 	}
 	workspace := user.CheckWorkspaceCtx(ctx)
 	if workspace.ID == "" {
+		if workspace.IsDefaultWorkspace || (workspace.IsPlayground && os.Getenv("DEKART_CLOUD") == "") {
+			// Self-hosted default workspace may be represented without explicit id in context.
+			// Device auth calls can carry playground header in self-hosted mode.
+			return claims, user.GetDefaultWorkspaceID(), nil
+		}
 		return nil, "", status.Error(codes.FailedPrecondition, "workspace required")
 	}
 	return claims, workspace.ID, nil

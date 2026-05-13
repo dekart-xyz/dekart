@@ -31,6 +31,23 @@ type JWTIssuer struct {
 	initErr       error
 }
 
+// NewJWTIssuer creates issuer with explicit env keypair first, then bootstrap in-memory fallback.
+func NewJWTIssuer() *JWTIssuer {
+	fromEnv := NewJWTIssuerFromEnv()
+	if fromEnv.initErr == nil {
+		return fromEnv
+	}
+	privateKeyPEM, publicKeyPEM, err := jwtkeys.GetBootstrapKeyPairFromMemory()
+	if err != nil {
+		return &JWTIssuer{ttl: readTokenTTL(), initErr: err}
+	}
+	return &JWTIssuer{
+		privateKeyPEM: privateKeyPEM,
+		publicKeyPEM:  publicKeyPEM,
+		ttl:           readTokenTTL(),
+	}
+}
+
 // NewJWTIssuerFromEnv creates issuer with runtime-configurable base64-encoded key material and TTL.
 func NewJWTIssuerFromEnv() *JWTIssuer {
 	privateKeyPEM, err := decodeRequiredBase64PEM(deviceAuthPrivateKeyEnv)

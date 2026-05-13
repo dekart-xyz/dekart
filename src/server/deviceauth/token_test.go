@@ -1,9 +1,12 @@
 package deviceauth
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"database/sql"
+	"dekart/src/server/jwtkeys"
 	"encoding/base64"
 	"encoding/pem"
 	"strings"
@@ -11,6 +14,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func TestJWTIssuerIssueIncludesRequiredClaims(t *testing.T) {
@@ -149,5 +153,47 @@ func TestNewJWTIssuerFromEnvLoadsBase64PEM(t *testing.T) {
 	}
 	if issuer.ttl != 24*time.Hour {
 		t.Fatalf("unexpected ttl: %s", issuer.ttl)
+	}
+}
+
+func TestNewJWTIssuer_UsesBootstrapFallbackWhenEnvMissing(t *testing.T) {
+	t.Setenv(deviceAuthPrivateKeyEnv, "")
+	t.Setenv(deviceAuthPublicKeyEnv, "")
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	defer db.Close()
+
+	_, err = db.Exec(`
+		create table instance_keys (
+			id text primary key,
+			key_name text not null unique,
+			private_key_pem text not null,
+			public_key_pem text not null,
+			created_at datetime not null default current_timestamp
+		);
+	`)
+	if err != nil {
+		t.Fatalf("create schema: %v", err)
+	}
+
+	_, err = jwtkeys.EnsureBootstrapKeyInMemory(context.Background(), db)
+	if err != nil {
+		t.Fatalf("EnsureBootstrapKeyInMemory: %v", err)
+	}
+	issuer := NewJWTIssuer()
+	if issuer.initErr != nil {
+		t.Fatalf("unexpected init error: %v", issuer.initErr)
+	}
+	if len(issuer.privateKeyPEM) == 0 || len(issuer.publicKeyPEM) == 0 {
+		t.Fatal("expected keypair from bootstrap fallback")
+	}
+	token, _, err := issuer.Issue("user@example.com", "workspace-1")
+	if err != nil {
+		t.Fatalf("Issue: %v", err)
+	}
+	if token == "" {
+		t.Fatal("expected signed token")
 	}
 }

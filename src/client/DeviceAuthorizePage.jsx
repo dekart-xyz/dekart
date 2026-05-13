@@ -104,7 +104,9 @@ export default function DeviceAuthorizePage () {
   const googleOAuthEnabled = useSelector(state => state.env.googleOAuthEnabled)
   const userStream = useSelector(state => state.user.stream)
   const isAnonymous = useSelector(state => state.user.isAnonymous)
+  const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
   const workspaceID = userStream?.workspaceId || ''
+  const hasWorkspaceContext = workspaceID || isDefaultWorkspace
   const [authorized, setAuthorized] = useState(false)
   const [authorizing, setAuthorizing] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -174,7 +176,7 @@ export default function DeviceAuthorizePage () {
     )
   }
 
-  if (!workspaceID) {
+  if (!hasWorkspaceContext) {
     return (
       <DeviceAuthorizeLayout title='Workspace required — Dekart'>
         <WorkspaceRequiredPanel
