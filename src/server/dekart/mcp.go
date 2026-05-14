@@ -19,9 +19,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	gproto "google.golang.org/protobuf/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	gproto "google.golang.org/protobuf/proto"
 )
 
 type mcpTool struct {
@@ -136,6 +136,8 @@ func (s *Server) callMCPTool(ctx context.Context, request *mcpCallRequest) (json
 		return s.callCreateReportTool(ctx)
 	case "create_dataset":
 		return s.callCreateDatasetTool(ctx, request.Arguments)
+	case "create_query":
+		return s.callCreateQueryTool(ctx, request.Arguments)
 	case "remove_dataset":
 		return s.callRemoveDatasetTool(ctx, request.Arguments)
 	case "create_file":
@@ -294,6 +296,19 @@ func (s *Server) callCreateDatasetTool(ctx context.Context, raw json.RawMessage)
 		return nil, err
 	}
 	response, err := s.CreateDataset(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	return mcp.MarshalProtoJSON(response)
+}
+
+// callCreateQueryTool creates one query for dataset_id and connection_id.
+func (s *Server) callCreateQueryTool(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
+	request := &proto.CreateQueryRequest{}
+	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
+		return nil, err
+	}
+	response, err := s.CreateQuery(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -702,6 +717,16 @@ func mcpToolDefinitions() []mcpTool {
 				"report_id": "00000000-0000-0000-0000-000000000000",
 			},
 			NextTools: []string{"create_file", "update_dataset_name", "remove_dataset"},
+		},
+		{
+			Name:         "create_query",
+			Description:  "Create query metadata for one dataset and bind it to a connection.",
+			InputSchema:  mcpschema.ForProto(&proto.CreateQueryRequest{}, []string{"dataset_id", "connection_id"}),
+			WhenToUse:    "Use after dataset creation when the dataset should run SQL against a selected connection.",
+			WhenNotToUse: "Do not use for file-based datasets or when query already exists and only query text needs update.",
+			SideEffects:  []string{"write"},
+			ExampleInput: map[string]any{"dataset_id": "00000000-0000-0000-0000-000000000000", "connection_id": "00000000-0000-0000-0000-000000000000"},
+			NextTools:    []string{"create_report_snapshot"},
 		},
 		{
 			Name:         "remove_dataset",

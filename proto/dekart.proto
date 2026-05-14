@@ -940,7 +940,9 @@ message CreateQueryRequest {
 }
 
 message CreateQueryResponse {
-    Query query = 1;
+    reserved 1;
+    string dataset_id = 2;
+    string query_id = 3;
 }
 
 message ReportStreamRequest {

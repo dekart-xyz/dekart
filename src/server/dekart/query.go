@@ -86,6 +86,11 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	if affectedRows == 0 {
 		// race condition, another user created the query first
 		log.Warn().Str("reportID", *reportID).Str("dataset", req.DatasetId).Msg("dataset query was already created")
+		err = s.db.QueryRowContext(ctx, `select query_id from datasets where id=$1`, req.DatasetId).Scan(&queryID)
+		if err != nil {
+			errtype.LogError(err, "Error selecting existing dataset query")
+			return nil, status.Error(codes.Internal, err.Error())
+		}
 	} else {
 		// Create snapshot
 		err = s.createReportSnapshot(ctx, *reportID, proto.ReportSnapshot_TRIGGER_TYPE_QUERY_CHANGE)
@@ -97,7 +102,10 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 
 	s.reportStreams.Ping(*reportID)
 
-	return &proto.CreateQueryResponse{}, nil
+	return &proto.CreateQueryResponse{
+		DatasetId: req.DatasetId,
+		QueryId:   queryID,
+	}, nil
 }
 
 func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesRequest) (*proto.RunAllQueriesResponse, error) {

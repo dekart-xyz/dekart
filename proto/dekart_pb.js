@@ -27458,7 +27458,8 @@ proto.CreateQueryResponse.prototype.toObject = function(opt_includeInstance) {
  */
 proto.CreateQueryResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
-    query: (f = msg.getQuery()) && proto.Query.toObject(includeInstance, f)
+    datasetId: jspb.Message.getFieldWithDefault(msg, 2, ""),
+    queryId: jspb.Message.getFieldWithDefault(msg, 3, "")
   };
 
   if (includeInstance) {
@@ -27495,10 +27496,13 @@ proto.CreateQueryResponse.deserializeBinaryFromReader = function(msg, reader) {
     }
     var field = reader.getFieldNumber();
     switch (field) {
-    case 1:
-      var value = new proto.Query;
-      reader.readMessage(value,proto.Query.deserializeBinaryFromReader);
-      msg.setQuery(value);
+    case 2:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setDatasetId(value);
+      break;
+    case 3:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setQueryId(value);
       break;
     default:
       reader.skipField();
@@ -27529,51 +27533,56 @@ proto.CreateQueryResponse.prototype.serializeBinary = function() {
  */
 proto.CreateQueryResponse.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
-  f = message.getQuery();
-  if (f != null) {
-    writer.writeMessage(
-      1,
-      f,
-      proto.Query.serializeBinaryToWriter
+  f = message.getDatasetId();
+  if (f.length > 0) {
+    writer.writeString(
+      2,
+      f
+    );
+  }
+  f = message.getQueryId();
+  if (f.length > 0) {
+    writer.writeString(
+      3,
+      f
     );
   }
 };
 
 
 /**
- * optional Query query = 1;
- * @return {?proto.Query}
+ * optional string dataset_id = 2;
+ * @return {string}
  */
-proto.CreateQueryResponse.prototype.getQuery = function() {
-  return /** @type{?proto.Query} */ (
-    jspb.Message.getWrapperField(this, proto.Query, 1));
+proto.CreateQueryResponse.prototype.getDatasetId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 2, ""));
 };
 
 
 /**
- * @param {?proto.Query|undefined} value
- * @return {!proto.CreateQueryResponse} returns this
-*/
-proto.CreateQueryResponse.prototype.setQuery = function(value) {
-  return jspb.Message.setWrapperField(this, 1, value);
-};
-
-
-/**
- * Clears the message field making it undefined.
+ * @param {string} value
  * @return {!proto.CreateQueryResponse} returns this
  */
-proto.CreateQueryResponse.prototype.clearQuery = function() {
-  return this.setQuery(undefined);
+proto.CreateQueryResponse.prototype.setDatasetId = function(value) {
+  return jspb.Message.setProto3StringField(this, 2, value);
 };
 
 
 /**
- * Returns whether this field is set.
- * @return {boolean}
+ * optional string query_id = 3;
+ * @return {string}
  */
-proto.CreateQueryResponse.prototype.hasQuery = function() {
-  return jspb.Message.getField(this, 1) != null;
+proto.CreateQueryResponse.prototype.getQueryId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 3, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.CreateQueryResponse} returns this
+ */
+proto.CreateQueryResponse.prototype.setQueryId = function(value) {
+  return jspb.Message.setProto3StringField(this, 3, value);
 };
 
 

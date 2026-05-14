@@ -145,6 +145,11 @@ func TestMCPToolDefinitions_ContainsUpdateTools(t *testing.T) {
 	createConnectionTool, ok := names["create_connection"]
 	assert.True(t, ok)
 	assert.Contains(t, createConnectionTool.InputSchema["required"], "connection")
+
+	createQueryTool, ok := names["create_query"]
+	assert.True(t, ok)
+	assert.Contains(t, createQueryTool.InputSchema["required"], "dataset_id")
+	assert.Contains(t, createQueryTool.InputSchema["required"], "connection_id")
 }
 
 func TestCallMCPTool_UnknownTool(t *testing.T) {
@@ -163,6 +168,29 @@ func TestCallMCPTool_GetMapConfigSchema(t *testing.T) {
 	assert.Equal(t, "inmemory://kepler_map_config_v1.schema.json", result["schema_id"])
 	_, hasSchema := result["schema"]
 	assert.True(t, hasSchema)
+}
+
+func TestCallMCPTool_CreateQuery_DispatchesToHandler(t *testing.T) {
+	server := &Server{}
+	payload, err := server.callMCPTool(context.Background(), &mcpCallRequest{
+		Name:      "create_query",
+		Arguments: json.RawMessage(`{"dataset_id":"d1","connection_id":"c1"}`),
+	})
+	assert.Nil(t, payload)
+	st, ok := status.FromError(err)
+	assert.True(t, ok)
+	assert.Equal(t, codes.Unauthenticated, st.Code())
+}
+
+func TestCallMCPTool_CreateQuery_InvalidArguments(t *testing.T) {
+	server := &Server{}
+	payload, err := server.callMCPTool(context.Background(), &mcpCallRequest{
+		Name:      "create_query",
+		Arguments: json.RawMessage(`{"dataset_id":123,"connection_id":"c1"}`),
+	})
+	assert.Nil(t, payload)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "datasetId")
 }
 
 func TestMCPToolDefinitions_AgentGuidanceFieldsPresent(t *testing.T) {
