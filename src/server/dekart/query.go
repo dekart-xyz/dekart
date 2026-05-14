@@ -305,6 +305,74 @@ func injectQueryParams(queryText string, params []*proto.QueryParam, valuesUrlEn
 	return queryText, valuesHash, nil
 }
 
+// updateQueryTextIfChanged stores query text and snapshots report when text differs.
+func (s Server) updateQueryTextIfChanged(ctx context.Context, queryID string, q *query.QueryDetails, queryText string) (bool, error) {
+	if queryText == q.QueryText {
+		return false, nil
+	}
+	err := s.storeQuerySync(ctx, queryID, queryText, q.PrevQuerySourceId)
+	if err != nil {
+		if _, ok := err.(*queryWasNotUpdated); ok {
+			log.Warn().Str("queryId", queryID).Msg("Query was not updated")
+			return false, status.Error(codes.Canceled, err.Error())
+		}
+		log.Error().Err(err).Send()
+		return false, status.Error(codes.Internal, err.Error())
+	}
+	err = s.createReportSnapshot(ctx, q.ReportID, proto.ReportSnapshot_TRIGGER_TYPE_QUERY_CHANGE)
+	if err != nil {
+		errtype.LogError(err, "Error creating report snapshot")
+		return false, status.Error(codes.Internal, err.Error())
+	}
+	s.reportStreams.Ping(q.ReportID)
+	return true, nil
+}
+
+// UpdateQuery updates query text and creates snapshot without executing the query.
+func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) (*proto.UpdateQueryResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+
+	q, err := query.GetQueryDetails(ctx, s.db, req.QueryId)
+	if err != nil {
+		errtype.LogError(err, "database operation failed")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if q.ReportID == "" {
+		err := fmt.Errorf("query not found id:%s", req.QueryId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+
+	report, err := s.getReport(ctx, q.ReportID)
+	if err != nil {
+		errtype.LogError(err, "database operation failed")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", q.ReportID)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if !report.CanWrite {
+		err := fmt.Errorf("permission denied")
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.PermissionDenied, err.Error())
+	}
+
+	updated, err := s.updateQueryTextIfChanged(ctx, req.QueryId, q, req.QueryText)
+	if err != nil {
+		return nil, err
+	}
+
+	return &proto.UpdateQueryResponse{
+		QueryId: req.QueryId,
+		Updated: updated,
+	}, nil
+}
+
 // RunQuery job against database
 func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*proto.RunQueryResponse, error) {
 	claims := user.GetClaims(ctx)
@@ -353,20 +421,9 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	queryText := q.QueryText
 	if report.CanWrite && req.QueryText != q.QueryText { // update query text if it was changed by user if user has write permission
 		queryText = req.QueryText
-		err = s.storeQuerySync(ctx, queryID, req.QueryText, q.PrevQuerySourceId)
+		_, err = s.updateQueryTextIfChanged(ctx, queryID, q, req.QueryText)
 		if err != nil {
-			if _, ok := err.(*queryWasNotUpdated); ok { // query was not updated, it was changed by another user
-				log.Warn().Str("queryId", req.QueryId).Msg("Query was not updated")
-				return nil, status.Error(codes.Canceled, err.Error())
-			} else {
-				log.Error().Err(err).Send()
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-		}
-		err = s.createReportSnapshot(ctx, q.ReportID, proto.ReportSnapshot_TRIGGER_TYPE_QUERY_CHANGE)
-		if err != nil {
-			errtype.LogError(err, "Error creating report snapshot")
-			return nil, status.Error(codes.Internal, err.Error())
+			return nil, err
 		}
 	}
 

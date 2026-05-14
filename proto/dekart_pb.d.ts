@@ -3112,6 +3112,54 @@ export namespace RunQueryResponse {
   }
 }
 
+export class UpdateQueryRequest extends jspb.Message {
+  getQueryId(): string;
+  setQueryId(value: string): void;
+
+  getQueryText(): string;
+  setQueryText(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): UpdateQueryRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: UpdateQueryRequest): UpdateQueryRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: UpdateQueryRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): UpdateQueryRequest;
+  static deserializeBinaryFromReader(message: UpdateQueryRequest, reader: jspb.BinaryReader): UpdateQueryRequest;
+}
+
+export namespace UpdateQueryRequest {
+  export type AsObject = {
+    queryId: string,
+    queryText: string,
+  }
+}
+
+export class UpdateQueryResponse extends jspb.Message {
+  getQueryId(): string;
+  setQueryId(value: string): void;
+
+  getUpdated(): boolean;
+  setUpdated(value: boolean): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): UpdateQueryResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: UpdateQueryResponse): UpdateQueryResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: UpdateQueryResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): UpdateQueryResponse;
+  static deserializeBinaryFromReader(message: UpdateQueryResponse, reader: jspb.BinaryReader): UpdateQueryResponse;
+}
+
+export namespace UpdateQueryResponse {
+  export type AsObject = {
+    queryId: string,
+    updated: boolean,
+  }
+}
+
 export class UpdateDatasetNameRequest extends jspb.Message {
   getDatasetId(): string;
   setDatasetId(value: string): void;

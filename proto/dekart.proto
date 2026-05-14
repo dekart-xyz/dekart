@@ -33,6 +33,7 @@ service Dekart {
 
     // queries
     rpc CreateQuery(CreateQueryRequest) returns (CreateQueryResponse) {}
+    rpc UpdateQuery(UpdateQueryRequest) returns (UpdateQueryResponse) {}
     rpc RunQuery(RunQueryRequest) returns (RunQueryResponse) {}
     rpc RunAllQueries(RunAllQueriesRequest) returns (RunAllQueriesResponse) {}
 
@@ -823,6 +824,16 @@ message RunQueryRequest {
 }
 
 message RunQueryResponse {
+}
+
+message UpdateQueryRequest {
+    string query_id = 1;
+    string query_text = 2;
+}
+
+message UpdateQueryResponse {
+    string query_id = 1;
+    bool updated = 2;
 }
 
 message UpdateDatasetNameRequest {

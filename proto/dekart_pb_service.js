@@ -217,6 +217,15 @@ Dekart.CreateQuery = {
   responseType: dekart_pb.CreateQueryResponse
 };
 
+Dekart.UpdateQuery = {
+  methodName: "UpdateQuery",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: dekart_pb.UpdateQueryRequest,
+  responseType: dekart_pb.UpdateQueryResponse
+};
+
 Dekart.RunQuery = {
   methodName: "RunQuery",
   service: Dekart,
@@ -1163,6 +1172,37 @@ DekartClient.prototype.createQuery = function createQuery(requestMessage, metada
     callback = arguments[1];
   }
   var client = grpc.unary(Dekart.CreateQuery, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.updateQuery = function updateQuery(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.UpdateQuery, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,

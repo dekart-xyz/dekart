@@ -42,6 +42,7 @@ const (
 	Dekart_CreateFile_FullMethodName                    = "/Dekart/CreateFile"
 	Dekart_ReplaceFile_FullMethodName                   = "/Dekart/ReplaceFile"
 	Dekart_CreateQuery_FullMethodName                   = "/Dekart/CreateQuery"
+	Dekart_UpdateQuery_FullMethodName                   = "/Dekart/UpdateQuery"
 	Dekart_RunQuery_FullMethodName                      = "/Dekart/RunQuery"
 	Dekart_RunAllQueries_FullMethodName                 = "/Dekart/RunAllQueries"
 	Dekart_CancelJob_FullMethodName                     = "/Dekart/CancelJob"
@@ -103,6 +104,7 @@ type DekartClient interface {
 	ReplaceFile(ctx context.Context, in *ReplaceFileRequest, opts ...grpc.CallOption) (*ReplaceFileResponse, error)
 	// queries
 	CreateQuery(ctx context.Context, in *CreateQueryRequest, opts ...grpc.CallOption) (*CreateQueryResponse, error)
+	UpdateQuery(ctx context.Context, in *UpdateQueryRequest, opts ...grpc.CallOption) (*UpdateQueryResponse, error)
 	RunQuery(ctx context.Context, in *RunQueryRequest, opts ...grpc.CallOption) (*RunQueryResponse, error)
 	RunAllQueries(ctx context.Context, in *RunAllQueriesRequest, opts ...grpc.CallOption) (*RunAllQueriesResponse, error)
 	// jobs
@@ -372,6 +374,16 @@ func (c *dekartClient) CreateQuery(ctx context.Context, in *CreateQueryRequest, 
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateQueryResponse)
 	err := c.cc.Invoke(ctx, Dekart_CreateQuery_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) UpdateQuery(ctx context.Context, in *UpdateQueryRequest, opts ...grpc.CallOption) (*UpdateQueryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateQueryResponse)
+	err := c.cc.Invoke(ctx, Dekart_UpdateQuery_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -716,6 +728,7 @@ type DekartServer interface {
 	ReplaceFile(context.Context, *ReplaceFileRequest) (*ReplaceFileResponse, error)
 	// queries
 	CreateQuery(context.Context, *CreateQueryRequest) (*CreateQueryResponse, error)
+	UpdateQuery(context.Context, *UpdateQueryRequest) (*UpdateQueryResponse, error)
 	RunQuery(context.Context, *RunQueryRequest) (*RunQueryResponse, error)
 	RunAllQueries(context.Context, *RunAllQueriesRequest) (*RunAllQueriesResponse, error)
 	// jobs
@@ -829,6 +842,9 @@ func (UnimplementedDekartServer) ReplaceFile(context.Context, *ReplaceFileReques
 }
 func (UnimplementedDekartServer) CreateQuery(context.Context, *CreateQueryRequest) (*CreateQueryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateQuery not implemented")
+}
+func (UnimplementedDekartServer) UpdateQuery(context.Context, *UpdateQueryRequest) (*UpdateQueryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateQuery not implemented")
 }
 func (UnimplementedDekartServer) RunQuery(context.Context, *RunQueryRequest) (*RunQueryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RunQuery not implemented")
@@ -1345,6 +1361,24 @@ func _Dekart_CreateQuery_Handler(srv interface{}, ctx context.Context, dec func(
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DekartServer).CreateQuery(ctx, req.(*CreateQueryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_UpdateQuery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateQueryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).UpdateQuery(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_UpdateQuery_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).UpdateQuery(ctx, req.(*UpdateQueryRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1930,6 +1964,10 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateQuery",
 			Handler:    _Dekart_CreateQuery_Handler,
+		},
+		{
+			MethodName: "UpdateQuery",
+			Handler:    _Dekart_UpdateQuery_Handler,
 		},
 		{
 			MethodName: "RunQuery",

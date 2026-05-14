@@ -211,6 +211,15 @@ type DekartCreateQuery = {
   readonly responseType: typeof dekart_pb.CreateQueryResponse;
 };
 
+type DekartUpdateQuery = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof dekart_pb.UpdateQueryRequest;
+  readonly responseType: typeof dekart_pb.UpdateQueryResponse;
+};
+
 type DekartRunQuery = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -488,6 +497,7 @@ export class Dekart {
   static readonly CreateFile: DekartCreateFile;
   static readonly ReplaceFile: DekartReplaceFile;
   static readonly CreateQuery: DekartCreateQuery;
+  static readonly UpdateQuery: DekartUpdateQuery;
   static readonly RunQuery: DekartRunQuery;
   static readonly RunAllQueries: DekartRunAllQueries;
   static readonly CancelJob: DekartCancelJob;
@@ -756,6 +766,15 @@ export class DekartClient {
   createQuery(
     requestMessage: dekart_pb.CreateQueryRequest,
     callback: (error: ServiceError|null, responseMessage: dekart_pb.CreateQueryResponse|null) => void
+  ): UnaryResponse;
+  updateQuery(
+    requestMessage: dekart_pb.UpdateQueryRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.UpdateQueryResponse|null) => void
+  ): UnaryResponse;
+  updateQuery(
+    requestMessage: dekart_pb.UpdateQueryRequest,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.UpdateQueryResponse|null) => void
   ): UnaryResponse;
   runQuery(
     requestMessage: dekart_pb.RunQueryRequest,

@@ -138,6 +138,8 @@ func (s *Server) callMCPTool(ctx context.Context, request *mcpCallRequest) (json
 		return s.callCreateDatasetTool(ctx, request.Arguments)
 	case "create_query":
 		return s.callCreateQueryTool(ctx, request.Arguments)
+	case "update_query":
+		return s.callUpdateQueryTool(ctx, request.Arguments)
 	case "remove_dataset":
 		return s.callRemoveDatasetTool(ctx, request.Arguments)
 	case "create_file":
@@ -309,6 +311,19 @@ func (s *Server) callCreateQueryTool(ctx context.Context, raw json.RawMessage) (
 		return nil, err
 	}
 	response, err := s.CreateQuery(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	return mcp.MarshalProtoJSON(response)
+}
+
+// callUpdateQueryTool updates query text without executing query jobs.
+func (s *Server) callUpdateQueryTool(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
+	request := &proto.UpdateQueryRequest{}
+	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
+		return nil, err
+	}
+	response, err := s.UpdateQuery(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -726,6 +741,16 @@ func mcpToolDefinitions() []mcpTool {
 			WhenNotToUse: "Do not use for file-based datasets or when query already exists and only query text needs update.",
 			SideEffects:  []string{"write"},
 			ExampleInput: map[string]any{"dataset_id": "00000000-0000-0000-0000-000000000000", "connection_id": "00000000-0000-0000-0000-000000000000"},
+			NextTools:    []string{"create_report_snapshot"},
+		},
+		{
+			Name:         "update_query",
+			Description:  "Update query text for an existing query_id without executing query jobs.",
+			InputSchema:  mcpschema.ForProto(&proto.UpdateQueryRequest{}, []string{"query_id", "query_text"}),
+			WhenToUse:    "Use when SQL text must be changed for an existing query without triggering execution.",
+			WhenNotToUse: "Do not use to run queries; use run_query workflow for execution.",
+			SideEffects:  []string{"write"},
+			ExampleInput: map[string]any{"query_id": "00000000-0000-0000-0000-000000000000", "query_text": "select 1"},
 			NextTools:    []string{"create_report_snapshot"},
 		},
 		{
