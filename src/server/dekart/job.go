@@ -108,6 +108,7 @@ func (s Server) getQueryJob(ctx context.Context, jobID string) (*proto.QueryJob,
 			query_jobs.created_at,
 			EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - query_jobs.created_at))::bigint * 1000 as job_duration
 			, COALESCE(connections.connection_type, 0) as connection_type
+			, COALESCE(datasets.id::text, '') as dataset_id
 		from query_jobs
 		left join datasets on datasets.query_id = query_jobs.query_id
 		left join connections on connections.id = datasets.connection_id
@@ -239,7 +240,8 @@ func (s Server) getDatasetsQueryJobs(ctx context.Context, datasets []*proto.Data
 					query_jobs.updated_at,
 					query_jobs.created_at,
 					(STRFTIME('%s', 'now') - STRFTIME('%s', query_jobs.created_at)) * 1000 as job_duration,
-					COALESCE(connections.connection_type, 0) as connection_type
+					COALESCE(connections.connection_type, 0) as connection_type,
+					COALESCE(datasets.id, '') as dataset_id
 				FROM query_jobs
 				LEFT JOIN datasets ON datasets.query_id = query_jobs.query_id
 				LEFT JOIN connections ON connections.id = datasets.connection_id
@@ -264,7 +266,8 @@ func (s Server) getDatasetsQueryJobs(ctx context.Context, datasets []*proto.Data
 				query_jobs.updated_at,
 				query_jobs.created_at,
 				EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - query_jobs.created_at))::bigint * 1000 as job_duration,
-				COALESCE(connections.connection_type, 0) as connection_type
+				COALESCE(connections.connection_type, 0) as connection_type,
+				COALESCE(datasets.id::text, '') as dataset_id
 			from query_jobs
 			left join datasets on datasets.query_id = query_jobs.query_id
 			left join connections on connections.id = datasets.connection_id
@@ -289,6 +292,7 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 	for rows.Next() {
 		job := &proto.QueryJob{}
 		var connectionType int32
+		var datasetID sql.NullString
 		var jobResultId sql.NullString
 		var dwJobId sql.NullString
 		if IsSqlite() {
@@ -308,6 +312,7 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 				&createdAtStr,
 				&job.JobDuration,
 				&connectionType,
+				&datasetID,
 			)
 			if err != nil {
 				return nil, fmt.Errorf("scan failed in rowsToQueryJobs error=%q", err)
@@ -340,6 +345,7 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 				&createdAt,
 				&job.JobDuration,
 				&connectionType,
+				&datasetID,
 			)
 			if err != nil {
 				return nil, fmt.Errorf("scan failed in rowsToQueryJobs error=%q", err)
@@ -349,6 +355,7 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 		}
 		job.DwJobId = dwJobId.String
 		job.JobResultId = jobResultId.String
+		job.DatasetId = datasetID.String
 		job.ResultExtension = resultExtensionByConnectionType(proto.ConnectionType(connectionType))
 		jobs = append(jobs, job)
 	}

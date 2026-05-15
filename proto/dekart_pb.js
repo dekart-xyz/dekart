@@ -21203,7 +21203,8 @@ proto.QueryJob.toObject = function(includeInstance, msg) {
     jobStatus: jspb.Message.getFieldWithDefault(msg, 12, 0),
     dwJobId: jspb.Message.getFieldWithDefault(msg, 13, ""),
     queryParamsHash: jspb.Message.getFieldWithDefault(msg, 14, ""),
-    resultExtension: jspb.Message.getFieldWithDefault(msg, 15, "")
+    resultExtension: jspb.Message.getFieldWithDefault(msg, 15, ""),
+    datasetId: jspb.Message.getFieldWithDefault(msg, 16, "")
   };
 
   if (includeInstance) {
@@ -21299,6 +21300,10 @@ proto.QueryJob.deserializeBinaryFromReader = function(msg, reader) {
     case 15:
       var value = /** @type {string} */ (reader.readString());
       msg.setResultExtension(value);
+      break;
+    case 16:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setDatasetId(value);
       break;
     default:
       reader.skipField();
@@ -21431,6 +21436,13 @@ proto.QueryJob.serializeBinaryToWriter = function(message, writer) {
   if (f.length > 0) {
     writer.writeString(
       15,
+      f
+    );
+  }
+  f = message.getDatasetId();
+  if (f.length > 0) {
+    writer.writeString(
+      16,
       f
     );
   }
@@ -21716,6 +21728,24 @@ proto.QueryJob.prototype.getResultExtension = function() {
  */
 proto.QueryJob.prototype.setResultExtension = function(value) {
   return jspb.Message.setProto3StringField(this, 15, value);
+};
+
+
+/**
+ * optional string dataset_id = 16;
+ * @return {string}
+ */
+proto.QueryJob.prototype.getDatasetId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 16, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.QueryJob} returns this
+ */
+proto.QueryJob.prototype.setDatasetId = function(value) {
+  return jspb.Message.setProto3StringField(this, 16, value);
 };
 
 

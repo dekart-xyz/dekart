@@ -739,6 +739,7 @@ message QueryJob {
     string query_params_hash = 14;
 
     string result_extension = 15; // csv | parquet
+    string dataset_id = 16;
 }
 
 message Query {
