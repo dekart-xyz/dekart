@@ -23981,7 +23981,7 @@ proto.RunQueryResponse.prototype.toObject = function(opt_includeInstance) {
  */
 proto.RunQueryResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
-
+    queryJob: (f = msg.getQueryJob()) && proto.QueryJob.toObject(includeInstance, f)
   };
 
   if (includeInstance) {
@@ -24018,6 +24018,11 @@ proto.RunQueryResponse.deserializeBinaryFromReader = function(msg, reader) {
     }
     var field = reader.getFieldNumber();
     switch (field) {
+    case 1:
+      var value = new proto.QueryJob;
+      reader.readMessage(value,proto.QueryJob.deserializeBinaryFromReader);
+      msg.setQueryJob(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -24047,6 +24052,51 @@ proto.RunQueryResponse.prototype.serializeBinary = function() {
  */
 proto.RunQueryResponse.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
+  f = message.getQueryJob();
+  if (f != null) {
+    writer.writeMessage(
+      1,
+      f,
+      proto.QueryJob.serializeBinaryToWriter
+    );
+  }
+};
+
+
+/**
+ * optional QueryJob query_job = 1;
+ * @return {?proto.QueryJob}
+ */
+proto.RunQueryResponse.prototype.getQueryJob = function() {
+  return /** @type{?proto.QueryJob} */ (
+    jspb.Message.getWrapperField(this, proto.QueryJob, 1));
+};
+
+
+/**
+ * @param {?proto.QueryJob|undefined} value
+ * @return {!proto.RunQueryResponse} returns this
+*/
+proto.RunQueryResponse.prototype.setQueryJob = function(value) {
+  return jspb.Message.setWrapperField(this, 1, value);
+};
+
+
+/**
+ * Clears the message field making it undefined.
+ * @return {!proto.RunQueryResponse} returns this
+ */
+proto.RunQueryResponse.prototype.clearQueryJob = function() {
+  return this.setQueryJob(undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.RunQueryResponse.prototype.hasQueryJob = function() {
+  return jspb.Message.getField(this, 1) != null;
 };
 
 

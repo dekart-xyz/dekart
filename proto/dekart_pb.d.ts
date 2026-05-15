@@ -3097,6 +3097,11 @@ export namespace RunQueryRequest {
 }
 
 export class RunQueryResponse extends jspb.Message {
+  hasQueryJob(): boolean;
+  clearQueryJob(): void;
+  getQueryJob(): QueryJob | undefined;
+  setQueryJob(value?: QueryJob): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): RunQueryResponse.AsObject;
   static toObject(includeInstance: boolean, msg: RunQueryResponse): RunQueryResponse.AsObject;
@@ -3109,6 +3114,7 @@ export class RunQueryResponse extends jspb.Message {
 
 export namespace RunQueryResponse {
   export type AsObject = {
+    queryJob?: QueryJob.AsObject,
   }
 }
 

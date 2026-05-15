@@ -155,6 +155,10 @@ func TestMCPToolDefinitions_ContainsUpdateTools(t *testing.T) {
 	assert.True(t, ok)
 	assert.Contains(t, updateQueryTool.InputSchema["required"], "query_id")
 	assert.Contains(t, updateQueryTool.InputSchema["required"], "query_text")
+
+	runQueryTool, ok := names["run_query"]
+	assert.True(t, ok)
+	assert.Contains(t, runQueryTool.InputSchema["required"], "query_id")
 }
 
 func TestCallMCPTool_UnknownTool(t *testing.T) {
@@ -215,6 +219,29 @@ func TestCallMCPTool_UpdateQuery_InvalidArguments(t *testing.T) {
 	payload, err := server.callMCPTool(context.Background(), &mcpCallRequest{
 		Name:      "update_query",
 		Arguments: json.RawMessage(`{"query_id":123,"query_text":"select 1"}`),
+	})
+	assert.Nil(t, payload)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "queryId")
+}
+
+func TestCallMCPTool_RunQuery_DispatchesToHandler(t *testing.T) {
+	server := &Server{}
+	payload, err := server.callMCPTool(context.Background(), &mcpCallRequest{
+		Name:      "run_query",
+		Arguments: json.RawMessage(`{"query_id":"q1"}`),
+	})
+	assert.Nil(t, payload)
+	st, ok := status.FromError(err)
+	assert.True(t, ok)
+	assert.Equal(t, codes.Unauthenticated, st.Code())
+}
+
+func TestCallMCPTool_RunQuery_InvalidArguments(t *testing.T) {
+	server := &Server{}
+	payload, err := server.callMCPTool(context.Background(), &mcpCallRequest{
+		Name:      "run_query",
+		Arguments: json.RawMessage(`{"query_id":123}`),
 	})
 	assert.Nil(t, payload)
 	assert.Error(t, err)

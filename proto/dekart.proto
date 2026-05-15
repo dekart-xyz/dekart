@@ -824,6 +824,7 @@ message RunQueryRequest {
 }
 
 message RunQueryResponse {
+    QueryJob query_job = 1;
 }
 
 message UpdateQueryRequest {

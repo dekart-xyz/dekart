@@ -141,6 +141,8 @@ func (s *Server) callMCPTool(ctx context.Context, request *mcpCallRequest) (json
 		return s.callCreateQueryTool(ctx, request.Arguments)
 	case "update_query":
 		return s.callUpdateQueryTool(ctx, request.Arguments)
+	case "run_query":
+		return s.callRunQueryTool(ctx, request.Arguments)
 	case "remove_dataset":
 		return s.callRemoveDatasetTool(ctx, request.Arguments)
 	case "create_file":
@@ -369,6 +371,19 @@ func (s *Server) callUpdateQueryTool(ctx context.Context, raw json.RawMessage) (
 	}
 	if dryRun != nil {
 		response.DryRun = dryRun
+	}
+	return mcp.MarshalProtoJSON(response)
+}
+
+// callRunQueryTool starts query execution and returns immediately without waiting for completion.
+func (s *Server) callRunQueryTool(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
+	request := &proto.RunQueryRequest{}
+	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
+		return nil, err
+	}
+	response, err := s.RunQuery(ctx, request)
+	if err != nil {
+		return nil, err
 	}
 	return mcp.MarshalProtoJSON(response)
 }
@@ -794,6 +809,16 @@ func mcpToolDefinitions() []mcpTool {
 			WhenNotToUse: "Do not use to run queries; use run_query workflow for execution.",
 			SideEffects:  []string{"write"},
 			ExampleInput: map[string]any{"query_id": "00000000-0000-0000-0000-000000000000", "query_text": "select 1"},
+			NextTools:    []string{"create_report_snapshot"},
+		},
+		{
+			Name:         "run_query",
+			Description:  "Start query execution for query_id and return immediately without waiting for completion.",
+			InputSchema:  mcpschema.ForProto(&proto.RunQueryRequest{}, []string{"query_id"}),
+			WhenToUse:    "Use after query text is ready and execution should begin asynchronously.",
+			WhenNotToUse: "Do not use when only SQL text should be edited without running; use update_query instead.",
+			SideEffects:  []string{"write"},
+			ExampleInput: map[string]any{"query_id": "00000000-0000-0000-0000-000000000000"},
 			NextTools:    []string{"create_report_snapshot"},
 		},
 		{

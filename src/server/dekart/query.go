@@ -210,10 +210,10 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 				}
 				queries[i].queryText = queryText
 			}
-			err = s.runQuery(ctx, queries[i])
-			res <- err
-		}(i)
-	}
+				_, err = s.runQuery(ctx, queries[i])
+				res <- err
+			}(i)
+		}
 
 	for range queries {
 		err := <-res
@@ -240,12 +240,12 @@ type runQueryOptions struct {
 	queryParamsHash string
 }
 
-func (s Server) runQuery(ctx context.Context, o runQueryOptions) error {
+func (s Server) runQuery(ctx context.Context, o runQueryOptions) (*proto.QueryJob, error) {
 	connCtx := conn.GetCtx(ctx, o.connection)
 	job, jobStatus, err := s.jobs.Create(o.reportID, o.queryID, o.queryText, connCtx)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create job")
-		return err
+		return nil, err
 	}
 	var obj storage.StorageObject
 	if o.isPublic {
@@ -264,9 +264,24 @@ func (s Server) runQuery(ctx context.Context, o runQueryOptions) error {
 	job.Status() <- int32(proto.QueryJob_JOB_STATUS_PENDING)
 	err = job.Run(obj, o.connection)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return &proto.QueryJob{
+		Id:                  job.GetID(),
+		QueryId:             job.GetQueryID(),
+		QueryText:           o.queryText,
+		JobStatus:           proto.QueryJob_JOB_STATUS_PENDING,
+		DwJobId:             stringOrEmpty(job.GetDWJobID()),
+		JobResultId:         stringOrEmpty(job.GetResultID()),
+		QueryParamsHash:     o.queryParamsHash,
+	}, nil
+}
+
+func stringOrEmpty(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
 }
 
 // injectQueryParams replaces query parameters with values, returns new query text and values hash
@@ -476,7 +491,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	}
 	queryID := req.QueryId
 	queryText := q.QueryText
-	if report.CanWrite && req.QueryText != q.QueryText { // update query text if it was changed by user if user has write permission
+	if report.CanWrite && req.QueryText != "" && req.QueryText != q.QueryText { // only apply explicit non-empty override from caller
 		queryText = req.QueryText
 		_, err = s.updateQueryTextIfChanged(ctx, queryID, q, req.QueryText)
 		if err != nil {
@@ -491,7 +506,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	err = s.runQuery(ctx, runQueryOptions{
+	queryJob, err := s.runQuery(ctx, runQueryOptions{
 		reportID:        q.ReportID,
 		queryID:         queryID,
 		queryText:       queryText,
@@ -516,6 +531,8 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	res := &proto.RunQueryResponse{}
+	res := &proto.RunQueryResponse{
+		QueryJob: queryJob,
+	}
 	return res, nil
 }
