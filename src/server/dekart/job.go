@@ -94,22 +94,25 @@ func (s Server) updateJobStatus(job job.Job, jobStatus chan int32, paramHash str
 func (s Server) getQueryJob(ctx context.Context, jobID string) (*proto.QueryJob, error) {
 	rows, err := s.db.QueryContext(ctx,
 		`select
-			id,
-			query_id,
-			job_status,
-			job_result_id,
-			job_error,
-			total_rows,
-			bytes_processed,
-			result_size,
-			query_params_hash,
-			dw_job_id,
-			updated_at,
-			created_at,
-			EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - created_at))::bigint * 1000 as job_duration
+			query_jobs.id,
+			query_jobs.query_id,
+			query_jobs.job_status,
+			query_jobs.job_result_id,
+			query_jobs.job_error,
+			query_jobs.total_rows,
+			query_jobs.bytes_processed,
+			query_jobs.result_size,
+			query_jobs.query_params_hash,
+			query_jobs.dw_job_id,
+			query_jobs.updated_at,
+			query_jobs.created_at,
+			EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - query_jobs.created_at))::bigint * 1000 as job_duration
+			, COALESCE(connections.connection_type, 0) as connection_type
 		from query_jobs
-		where id = $1
-		order by created_at desc
+		left join datasets on datasets.query_id = query_jobs.query_id
+		left join connections on connections.id = datasets.connection_id
+		where query_jobs.id = $1
+		order by query_jobs.created_at desc
 		limit 1`,
 		jobID,
 	)
@@ -223,42 +226,50 @@ func (s Server) getDatasetsQueryJobs(ctx context.Context, datasets []*proto.Data
 		if IsSqlite() {
 			queryRows, err = s.db.QueryContext(ctx,
 				`SELECT
-					id,
-					query_id,
-					job_status,
-					job_result_id,
-					job_error,
-					total_rows,
-					bytes_processed,
-					result_size,
-					query_params_hash,
-					dw_job_id,
-					updated_at,
-					created_at,
-					(STRFTIME('%s', 'now') - STRFTIME('%s', created_at)) * 1000 as job_duration
+					query_jobs.id,
+					query_jobs.query_id,
+					query_jobs.job_status,
+					query_jobs.job_result_id,
+					query_jobs.job_error,
+					query_jobs.total_rows,
+					query_jobs.bytes_processed,
+					query_jobs.result_size,
+					query_jobs.query_params_hash,
+					query_jobs.dw_job_id,
+					query_jobs.updated_at,
+					query_jobs.created_at,
+					(STRFTIME('%s', 'now') - STRFTIME('%s', query_jobs.created_at)) * 1000 as job_duration,
+					COALESCE(connections.connection_type, 0) as connection_type
 				FROM query_jobs
-				WHERE query_id IN (`+queryIdsStr+`)
-				GROUP BY query_params_hash, query_id
-				HAVING created_at = MAX(created_at)
-				ORDER BY query_params_hash, query_id`,
+				LEFT JOIN datasets ON datasets.query_id = query_jobs.query_id
+				LEFT JOIN connections ON connections.id = datasets.connection_id
+				WHERE query_jobs.query_id IN (`+queryIdsStr+`)
+				GROUP BY query_jobs.query_params_hash, query_jobs.query_id
+				HAVING query_jobs.created_at = MAX(query_jobs.created_at)
+				ORDER BY query_jobs.query_params_hash, query_jobs.query_id`,
 			)
 		} else {
 			queryRows, err = s.db.QueryContext(ctx,
-				`select distinct on (query_params_hash, query_id)
-				id,
-				query_id,
-				job_status,
-				job_result_id,
-				job_error,
-				total_rows,
-				bytes_processed,
-				result_size,
-				query_params_hash,
-				dw_job_id,
-				updated_at,
-				created_at,
-				EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - created_at))::bigint * 1000 as job_duration
-			from query_jobs where query_id = ANY($1) order by query_params_hash, query_id, created_at desc`,
+				`select distinct on (query_jobs.query_params_hash, query_jobs.query_id)
+				query_jobs.id,
+				query_jobs.query_id,
+				query_jobs.job_status,
+				query_jobs.job_result_id,
+				query_jobs.job_error,
+				query_jobs.total_rows,
+				query_jobs.bytes_processed,
+				query_jobs.result_size,
+				query_jobs.query_params_hash,
+				query_jobs.dw_job_id,
+				query_jobs.updated_at,
+				query_jobs.created_at,
+				EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - query_jobs.created_at))::bigint * 1000 as job_duration,
+				COALESCE(connections.connection_type, 0) as connection_type
+			from query_jobs
+			left join datasets on datasets.query_id = query_jobs.query_id
+			left join connections on connections.id = datasets.connection_id
+			where query_jobs.query_id = ANY($1)
+			order by query_jobs.query_params_hash, query_jobs.query_id, query_jobs.created_at desc`,
 				pq.Array(queryIds),
 			)
 		}
@@ -277,6 +288,7 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 	var jobs []*proto.QueryJob
 	for rows.Next() {
 		job := &proto.QueryJob{}
+		var connectionType int32
 		var jobResultId sql.NullString
 		var dwJobId sql.NullString
 		if IsSqlite() {
@@ -295,6 +307,7 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 				&updatedAtStr, // SQLite timestamp string in this case
 				&createdAtStr,
 				&job.JobDuration,
+				&connectionType,
 			)
 			if err != nil {
 				return nil, fmt.Errorf("scan failed in rowsToQueryJobs error=%q", err)
@@ -326,6 +339,7 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 				&updatedAt,
 				&createdAt,
 				&job.JobDuration,
+				&connectionType,
 			)
 			if err != nil {
 				return nil, fmt.Errorf("scan failed in rowsToQueryJobs error=%q", err)
@@ -335,9 +349,17 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 		}
 		job.DwJobId = dwJobId.String
 		job.JobResultId = jobResultId.String
+		job.ResultExtension = resultExtensionByConnectionType(proto.ConnectionType(connectionType))
 		jobs = append(jobs, job)
 	}
 	return jobs, nil
+}
+
+func resultExtensionByConnectionType(connectionType proto.ConnectionType) string {
+	if connectionType == proto.ConnectionType_CONNECTION_TYPE_WHEROBOTS {
+		return "parquet"
+	}
+	return "csv"
 }
 
 func (s Server) getDWJobIDFromResultID(ctx context.Context, resultID string) (string, error) {

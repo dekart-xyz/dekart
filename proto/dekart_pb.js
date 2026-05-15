@@ -21202,7 +21202,8 @@ proto.QueryJob.toObject = function(includeInstance, msg) {
     updatedAt: jspb.Message.getFieldWithDefault(msg, 11, 0),
     jobStatus: jspb.Message.getFieldWithDefault(msg, 12, 0),
     dwJobId: jspb.Message.getFieldWithDefault(msg, 13, ""),
-    queryParamsHash: jspb.Message.getFieldWithDefault(msg, 14, "")
+    queryParamsHash: jspb.Message.getFieldWithDefault(msg, 14, ""),
+    resultExtension: jspb.Message.getFieldWithDefault(msg, 15, "")
   };
 
   if (includeInstance) {
@@ -21294,6 +21295,10 @@ proto.QueryJob.deserializeBinaryFromReader = function(msg, reader) {
     case 14:
       var value = /** @type {string} */ (reader.readString());
       msg.setQueryParamsHash(value);
+      break;
+    case 15:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setResultExtension(value);
       break;
     default:
       reader.skipField();
@@ -21419,6 +21424,13 @@ proto.QueryJob.serializeBinaryToWriter = function(message, writer) {
   if (f.length > 0) {
     writer.writeString(
       14,
+      f
+    );
+  }
+  f = message.getResultExtension();
+  if (f.length > 0) {
+    writer.writeString(
+      15,
       f
     );
   }
@@ -21686,6 +21698,24 @@ proto.QueryJob.prototype.getQueryParamsHash = function() {
  */
 proto.QueryJob.prototype.setQueryParamsHash = function(value) {
   return jspb.Message.setProto3StringField(this, 14, value);
+};
+
+
+/**
+ * optional string result_extension = 15;
+ * @return {string}
+ */
+proto.QueryJob.prototype.getResultExtension = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 15, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.QueryJob} returns this
+ */
+proto.QueryJob.prototype.setResultExtension = function(value) {
+  return jspb.Message.setProto3StringField(this, 15, value);
 };
 
 

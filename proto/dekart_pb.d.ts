@@ -2713,6 +2713,9 @@ export class QueryJob extends jspb.Message {
   getQueryParamsHash(): string;
   setQueryParamsHash(value: string): void;
 
+  getResultExtension(): string;
+  setResultExtension(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): QueryJob.AsObject;
   static toObject(includeInstance: boolean, msg: QueryJob): QueryJob.AsObject;
@@ -2739,6 +2742,7 @@ export namespace QueryJob {
     jobStatus: QueryJob.JobStatusMap[keyof QueryJob.JobStatusMap],
     dwJobId: string,
     queryParamsHash: string,
+    resultExtension: string,
   }
 
   export interface JobStatusMap {
