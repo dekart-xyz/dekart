@@ -834,6 +834,14 @@ message UpdateQueryRequest {
 message UpdateQueryResponse {
     string query_id = 1;
     bool updated = 2;
+    QueryDryRunResult dry_run = 3;
+}
+
+message QueryDryRunResult {
+    bool supported = 1;
+    bool valid = 2;
+    string message = 3;
+    int64 estimated_bytes_processed = 4;
 }
 
 message UpdateDatasetNameRequest {

@@ -3143,6 +3143,11 @@ export class UpdateQueryResponse extends jspb.Message {
   getUpdated(): boolean;
   setUpdated(value: boolean): void;
 
+  hasDryRun(): boolean;
+  clearDryRun(): void;
+  getDryRun(): QueryDryRunResult | undefined;
+  setDryRun(value?: QueryDryRunResult): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): UpdateQueryResponse.AsObject;
   static toObject(includeInstance: boolean, msg: UpdateQueryResponse): UpdateQueryResponse.AsObject;
@@ -3157,6 +3162,39 @@ export namespace UpdateQueryResponse {
   export type AsObject = {
     queryId: string,
     updated: boolean,
+    dryRun?: QueryDryRunResult.AsObject,
+  }
+}
+
+export class QueryDryRunResult extends jspb.Message {
+  getSupported(): boolean;
+  setSupported(value: boolean): void;
+
+  getValid(): boolean;
+  setValid(value: boolean): void;
+
+  getMessage(): string;
+  setMessage(value: string): void;
+
+  getEstimatedBytesProcessed(): number;
+  setEstimatedBytesProcessed(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): QueryDryRunResult.AsObject;
+  static toObject(includeInstance: boolean, msg: QueryDryRunResult): QueryDryRunResult.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: QueryDryRunResult, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): QueryDryRunResult;
+  static deserializeBinaryFromReader(message: QueryDryRunResult, reader: jspb.BinaryReader): QueryDryRunResult;
+}
+
+export namespace QueryDryRunResult {
+  export type AsObject = {
+    supported: boolean,
+    valid: boolean,
+    message: string,
+    estimatedBytesProcessed: number,
   }
 }
 

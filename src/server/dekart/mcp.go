@@ -8,6 +8,7 @@ import (
 	device "dekart/src/server/deviceauth"
 	"dekart/src/server/mcp"
 	"dekart/src/server/mcpschema"
+	"dekart/src/server/query"
 	"dekart/src/server/reportsnapshot"
 	"dekart/src/server/user"
 	"encoding/json"
@@ -323,9 +324,51 @@ func (s *Server) callUpdateQueryTool(ctx context.Context, raw json.RawMessage) (
 	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
 		return nil, err
 	}
+	if user.GetClaims(ctx) == nil {
+		return nil, Unauthenticated
+	}
+	queryDetails, err := query.GetQueryDetails(ctx, s.db, request.GetQueryId())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if queryDetails.ReportID == "" {
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("query not found id:%s", request.GetQueryId()))
+	}
+
+	// Enforce write permission before any dry-run call to avoid leaking validation behavior.
+	report, err := s.getReport(ctx, queryDetails.ReportID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("report not found id:%s", queryDetails.ReportID))
+	}
+	if !report.CanWrite {
+		return nil, status.Error(codes.PermissionDenied, "permission denied")
+	}
+
+	var dryRun *proto.QueryDryRunResult
+	connection, err := s.getConnection(ctx, queryDetails.ConnectionID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	// In USER/self-hosted modes, system/default may resolve to nil connection.
+	// Skip dry-run in that case and allow UpdateQuery to proceed.
+	if connection != nil {
+		dryRun, err = s.dryRunQuery(ctx, connection, request.GetQueryText())
+		if err != nil {
+			return nil, err
+		}
+		if dryRun.GetSupported() && !dryRun.GetValid() {
+			return nil, status.Error(codes.InvalidArgument, dryRun.GetMessage())
+		}
+	}
 	response, err := s.UpdateQuery(ctx, request)
 	if err != nil {
 		return nil, err
+	}
+	if dryRun != nil {
+		response.DryRun = dryRun
 	}
 	return mcp.MarshalProtoJSON(response)
 }

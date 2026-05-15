@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/md5"
 	"database/sql"
+	"dekart/src/server/bqutils"
 	"fmt"
 	"net/url"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
 
+	"cloud.google.com/go/bigquery"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -46,7 +48,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	// Create initial query record with empty text
+	// Create initial query record with empty text.
 	queryID := newUUID()
 	_, err = s.db.ExecContext(ctx,
 		`insert into queries (id, query_text) values ($1, '')`,
@@ -303,6 +305,61 @@ func injectQueryParams(queryText string, params []*proto.QueryParam, valuesUrlEn
 	}
 
 	return queryText, valuesHash, nil
+}
+
+// dryRunQuery validates SQL synchronously for supported engines (BigQuery for now).
+func (s Server) dryRunQuery(ctx context.Context, connection *proto.Connection, queryText string) (*proto.QueryDryRunResult, error) {
+	if connection == nil {
+		return nil, status.Error(codes.InvalidArgument, "connection is nil")
+	}
+	if connection.ConnectionType != proto.ConnectionType_CONNECTION_TYPE_BIGQUERY {
+		return &proto.QueryDryRunResult{
+			Supported: false,
+			Valid:     false,
+			Message:   "dry run not supported",
+		}, nil
+	}
+	if connection.BigqueryKey == nil && !conn.IsSystemConnectionID(connection.GetId()) {
+		return &proto.QueryDryRunResult{
+			Supported: false,
+			Valid:     false,
+			Message:   "dry run not supported for BigQuery passthrough auth",
+		}, nil
+	}
+	if strings.TrimSpace(queryText) == "" {
+		return &proto.QueryDryRunResult{
+			Supported: true,
+			Valid:     true,
+			Message:   "query text is empty",
+		}, nil
+	}
+	client, err := bqutils.GetClient(ctx, connection)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer client.Close()
+	query := client.Query(queryText)
+	query.DryRun = true
+	job, err := query.Run(ctx)
+	if err != nil {
+		return &proto.QueryDryRunResult{
+			Supported: true,
+			Valid:     false,
+			Message:   err.Error(),
+		}, nil
+	}
+	stats, ok := job.LastStatus().Statistics.Details.(*bigquery.QueryStatistics)
+	if !ok || stats == nil {
+		return &proto.QueryDryRunResult{
+			Supported: true,
+			Valid:     true,
+		}, nil
+	}
+	return &proto.QueryDryRunResult{
+		Supported:               true,
+		Valid:                   true,
+		EstimatedBytesProcessed: int64(stats.TotalBytesProcessed),
+	}, nil
 }
 
 // updateQueryTextIfChanged stores query text and snapshots report when text differs.
