@@ -822,6 +822,7 @@ message GetReportPropertiesRequest {
 message GetReportPropertiesResponse {
     Report report = 1;
     repeated Dataset datasets = 2;
+    repeated Query queries = 3;
 }
 
 message RunQueryRequest {

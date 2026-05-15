@@ -682,9 +682,14 @@ func (s *Server) callGetReportPropertiesTool(ctx context.Context, raw json.RawMe
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+	queries, err := s.getQueries(ctx, datasets)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 	return mcp.MarshalProtoJSON(&proto.GetReportPropertiesResponse{
 		Report:   report,
 		Datasets: datasets,
+		Queries:  queries,
 	})
 }
 
@@ -1000,7 +1005,7 @@ func mcpToolDefinitions() []mcpTool {
 		},
 		{
 			Name:         "get_report_properties",
-			Description:  "Read report properties (title, map_config, readme, datasets) by report_id.",
+			Description:  "Read report properties (title, map_config, readme), datasets, and queries by report_id.",
 			InputSchema:  mcpschema.ForProto(&proto.GetReportPropertiesRequest{}, []string{"report_id"}),
 			WhenToUse:    "Use before mutating report state to fetch current report and dataset context.",
 			WhenNotToUse: "Do not use when you only need to create a new report.",

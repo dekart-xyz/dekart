@@ -3087,6 +3087,11 @@ export class GetReportPropertiesResponse extends jspb.Message {
   setDatasetsList(value: Array<Dataset>): void;
   addDatasets(value?: Dataset, index?: number): Dataset;
 
+  clearQueriesList(): void;
+  getQueriesList(): Array<Query>;
+  setQueriesList(value: Array<Query>): void;
+  addQueries(value?: Query, index?: number): Query;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetReportPropertiesResponse.AsObject;
   static toObject(includeInstance: boolean, msg: GetReportPropertiesResponse): GetReportPropertiesResponse.AsObject;
@@ -3101,6 +3106,7 @@ export namespace GetReportPropertiesResponse {
   export type AsObject = {
     report?: Report.AsObject,
     datasetsList: Array<Dataset.AsObject>,
+    queriesList: Array<Query.AsObject>,
   }
 }
 

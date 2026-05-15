@@ -23819,7 +23819,7 @@ proto.GetReportPropertiesRequest.prototype.setReportId = function(value) {
  * @private {!Array<number>}
  * @const
  */
-proto.GetReportPropertiesResponse.repeatedFields_ = [2];
+proto.GetReportPropertiesResponse.repeatedFields_ = [2,3];
 
 
 
@@ -23854,7 +23854,9 @@ proto.GetReportPropertiesResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
     report: (f = msg.getReport()) && proto.Report.toObject(includeInstance, f),
     datasetsList: jspb.Message.toObjectList(msg.getDatasetsList(),
-    proto.Dataset.toObject, includeInstance)
+    proto.Dataset.toObject, includeInstance),
+    queriesList: jspb.Message.toObjectList(msg.getQueriesList(),
+    proto.Query.toObject, includeInstance)
   };
 
   if (includeInstance) {
@@ -23901,6 +23903,11 @@ proto.GetReportPropertiesResponse.deserializeBinaryFromReader = function(msg, re
       reader.readMessage(value,proto.Dataset.deserializeBinaryFromReader);
       msg.addDatasets(value);
       break;
+    case 3:
+      var value = new proto.Query;
+      reader.readMessage(value,proto.Query.deserializeBinaryFromReader);
+      msg.addQueries(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -23944,6 +23951,14 @@ proto.GetReportPropertiesResponse.serializeBinaryToWriter = function(message, wr
       2,
       f,
       proto.Dataset.serializeBinaryToWriter
+    );
+  }
+  f = message.getQueriesList();
+  if (f.length > 0) {
+    writer.writeRepeatedMessage(
+      3,
+      f,
+      proto.Query.serializeBinaryToWriter
     );
   }
 };
@@ -24021,6 +24036,44 @@ proto.GetReportPropertiesResponse.prototype.addDatasets = function(opt_value, op
  */
 proto.GetReportPropertiesResponse.prototype.clearDatasetsList = function() {
   return this.setDatasetsList([]);
+};
+
+
+/**
+ * repeated Query queries = 3;
+ * @return {!Array<!proto.Query>}
+ */
+proto.GetReportPropertiesResponse.prototype.getQueriesList = function() {
+  return /** @type{!Array<!proto.Query>} */ (
+    jspb.Message.getRepeatedWrapperField(this, proto.Query, 3));
+};
+
+
+/**
+ * @param {!Array<!proto.Query>} value
+ * @return {!proto.GetReportPropertiesResponse} returns this
+*/
+proto.GetReportPropertiesResponse.prototype.setQueriesList = function(value) {
+  return jspb.Message.setRepeatedWrapperField(this, 3, value);
+};
+
+
+/**
+ * @param {!proto.Query=} opt_value
+ * @param {number=} opt_index
+ * @return {!proto.Query}
+ */
+proto.GetReportPropertiesResponse.prototype.addQueries = function(opt_value, opt_index) {
+  return jspb.Message.addToRepeatedWrapperField(this, 3, opt_value, proto.Query, opt_index);
+};
+
+
+/**
+ * Clears the list making it empty but non-null.
+ * @return {!proto.GetReportPropertiesResponse} returns this
+ */
+proto.GetReportPropertiesResponse.prototype.clearQueriesList = function() {
+  return this.setQueriesList([]);
 };
 
 
