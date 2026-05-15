@@ -210,6 +210,14 @@ message CancelJobRequest {
 message CancelJobResponse {
 }
 
+message CheckJobStatusRequest {
+    string job_id = 1;
+}
+
+message CheckJobStatusResponse {
+    QueryJob query_job = 1;
+}
+
 message PublishReportRequest {
     string report_id = 1;
     bool publish = 2;

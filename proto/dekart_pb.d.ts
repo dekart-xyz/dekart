@@ -629,6 +629,48 @@ export namespace CancelJobResponse {
   }
 }
 
+export class CheckJobStatusRequest extends jspb.Message {
+  getJobId(): string;
+  setJobId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CheckJobStatusRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: CheckJobStatusRequest): CheckJobStatusRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CheckJobStatusRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CheckJobStatusRequest;
+  static deserializeBinaryFromReader(message: CheckJobStatusRequest, reader: jspb.BinaryReader): CheckJobStatusRequest;
+}
+
+export namespace CheckJobStatusRequest {
+  export type AsObject = {
+    jobId: string,
+  }
+}
+
+export class CheckJobStatusResponse extends jspb.Message {
+  hasQueryJob(): boolean;
+  clearQueryJob(): void;
+  getQueryJob(): QueryJob | undefined;
+  setQueryJob(value?: QueryJob): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CheckJobStatusResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: CheckJobStatusResponse): CheckJobStatusResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CheckJobStatusResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CheckJobStatusResponse;
+  static deserializeBinaryFromReader(message: CheckJobStatusResponse, reader: jspb.BinaryReader): CheckJobStatusResponse;
+}
+
+export namespace CheckJobStatusResponse {
+  export type AsObject = {
+    queryJob?: QueryJob.AsObject,
+  }
+}
+
 export class PublishReportRequest extends jspb.Message {
   getReportId(): string;
   setReportId(value: string): void;

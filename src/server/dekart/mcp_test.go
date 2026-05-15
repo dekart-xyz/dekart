@@ -156,6 +156,10 @@ func TestMCPToolDefinitions_ContainsUpdateTools(t *testing.T) {
 	assert.Contains(t, updateQueryTool.InputSchema["required"], "query_id")
 	assert.Contains(t, updateQueryTool.InputSchema["required"], "query_text")
 
+	checkJobStatusTool, ok := names["check_job_status"]
+	assert.True(t, ok)
+	assert.Contains(t, checkJobStatusTool.InputSchema["required"], "job_id")
+
 	runQueryTool, ok := names["run_query"]
 	assert.True(t, ok)
 	assert.Contains(t, runQueryTool.InputSchema["required"], "query_id")
@@ -223,6 +227,29 @@ func TestCallMCPTool_UpdateQuery_InvalidArguments(t *testing.T) {
 	assert.Nil(t, payload)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "queryId")
+}
+
+func TestCallMCPTool_CheckJobStatus_DispatchesToHandler(t *testing.T) {
+	server := &Server{}
+	payload, err := server.callMCPTool(context.Background(), &mcpCallRequest{
+		Name:      "check_job_status",
+		Arguments: json.RawMessage(`{"job_id":"j1"}`),
+	})
+	assert.Nil(t, payload)
+	st, ok := status.FromError(err)
+	assert.True(t, ok)
+	assert.Equal(t, codes.Unauthenticated, st.Code())
+}
+
+func TestCallMCPTool_CheckJobStatus_InvalidArguments(t *testing.T) {
+	server := &Server{}
+	payload, err := server.callMCPTool(context.Background(), &mcpCallRequest{
+		Name:      "check_job_status",
+		Arguments: json.RawMessage(`{"job_id":123}`),
+	})
+	assert.Nil(t, payload)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "jobId")
 }
 
 func TestCallMCPTool_RunQuery_DispatchesToHandler(t *testing.T) {

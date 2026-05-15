@@ -143,6 +143,8 @@ func (s *Server) callMCPTool(ctx context.Context, request *mcpCallRequest) (json
 		return s.callUpdateQueryTool(ctx, request.Arguments)
 	case "run_query":
 		return s.callRunQueryTool(ctx, request.Arguments)
+	case "check_job_status":
+		return s.callCheckJobStatusTool(ctx, request.Arguments)
 	case "remove_dataset":
 		return s.callRemoveDatasetTool(ctx, request.Arguments)
 	case "create_file":
@@ -386,6 +388,42 @@ func (s *Server) callRunQueryTool(ctx context.Context, raw json.RawMessage) (jso
 		return nil, err
 	}
 	return mcp.MarshalProtoJSON(response)
+}
+
+// callCheckJobStatusTool returns current status for one job_id.
+func (s *Server) callCheckJobStatusTool(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
+	request := &proto.CheckJobStatusRequest{}
+	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
+		return nil, err
+	}
+	if user.GetClaims(ctx) == nil {
+		return nil, Unauthenticated
+	}
+	if strings.TrimSpace(request.GetJobId()) == "" {
+		return nil, status.Error(codes.InvalidArgument, "job_id is required")
+	}
+	job, err := s.getQueryJob(ctx, request.GetJobId())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if job == nil {
+		return nil, status.Error(codes.NotFound, "Job not found")
+	}
+	reportID, err := s.getReportIDFromJobID(ctx, request.GetJobId())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if reportID == "" {
+		return nil, status.Error(codes.NotFound, "No report found for job")
+	}
+	report, err := s.getReport(ctx, reportID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		return nil, status.Error(codes.NotFound, "Report not found")
+	}
+	return mcp.MarshalProtoJSON(&proto.CheckJobStatusResponse{QueryJob: job})
 }
 
 // callRemoveDatasetTool removes one dataset by dataset_id.
@@ -819,7 +857,17 @@ func mcpToolDefinitions() []mcpTool {
 			WhenNotToUse: "Do not use when only SQL text should be edited without running; use update_query instead.",
 			SideEffects:  []string{"write"},
 			ExampleInput: map[string]any{"query_id": "00000000-0000-0000-0000-000000000000"},
-			NextTools:    []string{"create_report_snapshot"},
+			NextTools:    []string{"check_job_status", "create_report_snapshot"},
+		},
+		{
+			Name:         "check_job_status",
+			Description:  "Check current status for one query job by job_id.",
+			InputSchema:  mcpschema.ForProto(&proto.CheckJobStatusRequest{}, []string{"job_id"}),
+			WhenToUse:    "Use to poll execution progress after run_query.",
+			WhenNotToUse: "Do not use before job_id is known.",
+			SideEffects:  []string{"read"},
+			ExampleInput: map[string]any{"job_id": "00000000-0000-0000-0000-000000000000"},
+			NextTools:    []string{"check_job_status"},
 		},
 		{
 			Name:         "remove_dataset",
