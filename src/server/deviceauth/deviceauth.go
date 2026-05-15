@@ -169,7 +169,7 @@ func GetSessionState(ctx context.Context, db *sql.DB, deviceID string) (SessionS
 
 // PollToken returns authorization state and JWT when session is authorized.
 func PollToken(ctx context.Context, db *sql.DB, deviceID string) (PollTokenResult, error) {
-	return pollToken(ctx, db, NewJWTIssuerFromEnv(), deviceID)
+	return pollToken(ctx, db, NewJWTIssuer(), deviceID)
 }
 
 // pollToken returns polling result using provided token issuer.

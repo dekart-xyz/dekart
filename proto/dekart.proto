@@ -33,6 +33,7 @@ service Dekart {
 
     // queries
     rpc CreateQuery(CreateQueryRequest) returns (CreateQueryResponse) {}
+    rpc UpdateQuery(UpdateQueryRequest) returns (UpdateQueryResponse) {}
     rpc RunQuery(RunQueryRequest) returns (RunQueryResponse) {}
     rpc RunAllQueries(RunAllQueriesRequest) returns (RunAllQueriesResponse) {}
 
@@ -207,6 +208,14 @@ message CancelJobRequest {
 }
 
 message CancelJobResponse {
+}
+
+message CheckJobStatusRequest {
+    string job_id = 1;
+}
+
+message CheckJobStatusResponse {
+    QueryJob query_job = 1;
 }
 
 message PublishReportRequest {
@@ -728,6 +737,9 @@ message QueryJob {
     JobStatus job_status = 12;
     string dw_job_id = 13;
     string query_params_hash = 14;
+
+    string result_extension = 15; // csv | parquet
+    string dataset_id = 16;
 }
 
 message Query {
@@ -813,6 +825,7 @@ message GetReportPropertiesRequest {
 message GetReportPropertiesResponse {
     Report report = 1;
     repeated Dataset datasets = 2;
+    repeated Query queries = 3;
 }
 
 message RunQueryRequest {
@@ -823,6 +836,25 @@ message RunQueryRequest {
 }
 
 message RunQueryResponse {
+    QueryJob query_job = 1;
+}
+
+message UpdateQueryRequest {
+    string query_id = 1;
+    string query_text = 2;
+}
+
+message UpdateQueryResponse {
+    string query_id = 1;
+    bool updated = 2;
+    QueryDryRunResult dry_run = 3;
+}
+
+message QueryDryRunResult {
+    bool supported = 1;
+    bool valid = 2;
+    string message = 3;
+    int64 estimated_bytes_processed = 4;
 }
 
 message UpdateDatasetNameRequest {
@@ -940,7 +972,9 @@ message CreateQueryRequest {
 }
 
 message CreateQueryResponse {
-    Query query = 1;
+    reserved 1;
+    string dataset_id = 2;
+    string query_id = 3;
 }
 
 message ReportStreamRequest {

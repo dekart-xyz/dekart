@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/md5"
 	"database/sql"
+	"dekart/src/server/bqutils"
 	"fmt"
 	"net/url"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
 
+	"cloud.google.com/go/bigquery"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -46,7 +48,7 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	// Create initial query record with empty text
+	// Create initial query record with empty text.
 	queryID := newUUID()
 	_, err = s.db.ExecContext(ctx,
 		`insert into queries (id, query_text) values ($1, '')`,
@@ -86,6 +88,11 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	if affectedRows == 0 {
 		// race condition, another user created the query first
 		log.Warn().Str("reportID", *reportID).Str("dataset", req.DatasetId).Msg("dataset query was already created")
+		err = s.db.QueryRowContext(ctx, `select query_id from datasets where id=$1`, req.DatasetId).Scan(&queryID)
+		if err != nil {
+			errtype.LogError(err, "Error selecting existing dataset query")
+			return nil, status.Error(codes.Internal, err.Error())
+		}
 	} else {
 		// Create snapshot
 		err = s.createReportSnapshot(ctx, *reportID, proto.ReportSnapshot_TRIGGER_TYPE_QUERY_CHANGE)
@@ -97,7 +104,10 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 
 	s.reportStreams.Ping(*reportID)
 
-	return &proto.CreateQueryResponse{}, nil
+	return &proto.CreateQueryResponse{
+		DatasetId: req.DatasetId,
+		QueryId:   queryID,
+	}, nil
 }
 
 func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesRequest) (*proto.RunAllQueriesResponse, error) {
@@ -200,10 +210,10 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 				}
 				queries[i].queryText = queryText
 			}
-			err = s.runQuery(ctx, queries[i])
-			res <- err
-		}(i)
-	}
+				_, err = s.runQuery(ctx, queries[i])
+				res <- err
+			}(i)
+		}
 
 	for range queries {
 		err := <-res
@@ -230,12 +240,12 @@ type runQueryOptions struct {
 	queryParamsHash string
 }
 
-func (s Server) runQuery(ctx context.Context, o runQueryOptions) error {
+func (s Server) runQuery(ctx context.Context, o runQueryOptions) (*proto.QueryJob, error) {
 	connCtx := conn.GetCtx(ctx, o.connection)
 	job, jobStatus, err := s.jobs.Create(o.reportID, o.queryID, o.queryText, connCtx)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create job")
-		return err
+		return nil, err
 	}
 	var obj storage.StorageObject
 	if o.isPublic {
@@ -254,9 +264,24 @@ func (s Server) runQuery(ctx context.Context, o runQueryOptions) error {
 	job.Status() <- int32(proto.QueryJob_JOB_STATUS_PENDING)
 	err = job.Run(obj, o.connection)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return &proto.QueryJob{
+		Id:                  job.GetID(),
+		QueryId:             job.GetQueryID(),
+		QueryText:           o.queryText,
+		JobStatus:           proto.QueryJob_JOB_STATUS_PENDING,
+		DwJobId:             stringOrEmpty(job.GetDWJobID()),
+		JobResultId:         stringOrEmpty(job.GetResultID()),
+		QueryParamsHash:     o.queryParamsHash,
+	}, nil
+}
+
+func stringOrEmpty(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
 }
 
 // injectQueryParams replaces query parameters with values, returns new query text and values hash
@@ -295,6 +320,129 @@ func injectQueryParams(queryText string, params []*proto.QueryParam, valuesUrlEn
 	}
 
 	return queryText, valuesHash, nil
+}
+
+// dryRunQuery validates SQL synchronously for supported engines (BigQuery for now).
+func (s Server) dryRunQuery(ctx context.Context, connection *proto.Connection, queryText string) (*proto.QueryDryRunResult, error) {
+	if connection == nil {
+		return nil, status.Error(codes.InvalidArgument, "connection is nil")
+	}
+	if connection.ConnectionType != proto.ConnectionType_CONNECTION_TYPE_BIGQUERY {
+		return &proto.QueryDryRunResult{
+			Supported: false,
+			Valid:     false,
+			Message:   "dry run not supported",
+		}, nil
+	}
+	if connection.BigqueryKey == nil && !conn.IsSystemConnectionID(connection.GetId()) {
+		return &proto.QueryDryRunResult{
+			Supported: false,
+			Valid:     false,
+			Message:   "dry run not supported for BigQuery passthrough auth",
+		}, nil
+	}
+	if strings.TrimSpace(queryText) == "" {
+		return &proto.QueryDryRunResult{
+			Supported: true,
+			Valid:     true,
+			Message:   "query text is empty",
+		}, nil
+	}
+	client, err := bqutils.GetClient(ctx, connection)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer client.Close()
+	query := client.Query(queryText)
+	query.DryRun = true
+	job, err := query.Run(ctx)
+	if err != nil {
+		return &proto.QueryDryRunResult{
+			Supported: true,
+			Valid:     false,
+			Message:   err.Error(),
+		}, nil
+	}
+	stats, ok := job.LastStatus().Statistics.Details.(*bigquery.QueryStatistics)
+	if !ok || stats == nil {
+		return &proto.QueryDryRunResult{
+			Supported: true,
+			Valid:     true,
+		}, nil
+	}
+	return &proto.QueryDryRunResult{
+		Supported:               true,
+		Valid:                   true,
+		EstimatedBytesProcessed: int64(stats.TotalBytesProcessed),
+	}, nil
+}
+
+// updateQueryTextIfChanged stores query text and snapshots report when text differs.
+func (s Server) updateQueryTextIfChanged(ctx context.Context, queryID string, q *query.QueryDetails, queryText string) (bool, error) {
+	if queryText == q.QueryText {
+		return false, nil
+	}
+	err := s.storeQuerySync(ctx, queryID, queryText, q.PrevQuerySourceId)
+	if err != nil {
+		if _, ok := err.(*queryWasNotUpdated); ok {
+			log.Warn().Str("queryId", queryID).Msg("Query was not updated")
+			return false, status.Error(codes.Canceled, err.Error())
+		}
+		log.Error().Err(err).Send()
+		return false, status.Error(codes.Internal, err.Error())
+	}
+	err = s.createReportSnapshot(ctx, q.ReportID, proto.ReportSnapshot_TRIGGER_TYPE_QUERY_CHANGE)
+	if err != nil {
+		errtype.LogError(err, "Error creating report snapshot")
+		return false, status.Error(codes.Internal, err.Error())
+	}
+	s.reportStreams.Ping(q.ReportID)
+	return true, nil
+}
+
+// UpdateQuery updates query text and creates snapshot without executing the query.
+func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) (*proto.UpdateQueryResponse, error) {
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+
+	q, err := query.GetQueryDetails(ctx, s.db, req.QueryId)
+	if err != nil {
+		errtype.LogError(err, "database operation failed")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if q.ReportID == "" {
+		err := fmt.Errorf("query not found id:%s", req.QueryId)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+
+	report, err := s.getReport(ctx, q.ReportID)
+	if err != nil {
+		errtype.LogError(err, "database operation failed")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		err := fmt.Errorf("report not found id:%s", q.ReportID)
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if !report.CanWrite {
+		err := fmt.Errorf("permission denied")
+		log.Warn().Err(err).Send()
+		return nil, status.Error(codes.PermissionDenied, err.Error())
+	}
+
+	updated, err := s.updateQueryTextIfChanged(ctx, req.QueryId, q, req.QueryText)
+	if err != nil {
+		return nil, err
+	}
+
+	return &proto.UpdateQueryResponse{
+		QueryId: req.QueryId,
+		Updated: updated,
+	}, nil
 }
 
 // RunQuery job against database
@@ -343,22 +491,11 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	}
 	queryID := req.QueryId
 	queryText := q.QueryText
-	if report.CanWrite && req.QueryText != q.QueryText { // update query text if it was changed by user if user has write permission
+	if report.CanWrite && req.QueryText != "" && req.QueryText != q.QueryText { // only apply explicit non-empty override from caller
 		queryText = req.QueryText
-		err = s.storeQuerySync(ctx, queryID, req.QueryText, q.PrevQuerySourceId)
+		_, err = s.updateQueryTextIfChanged(ctx, queryID, q, req.QueryText)
 		if err != nil {
-			if _, ok := err.(*queryWasNotUpdated); ok { // query was not updated, it was changed by another user
-				log.Warn().Str("queryId", req.QueryId).Msg("Query was not updated")
-				return nil, status.Error(codes.Canceled, err.Error())
-			} else {
-				log.Error().Err(err).Send()
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-		}
-		err = s.createReportSnapshot(ctx, q.ReportID, proto.ReportSnapshot_TRIGGER_TYPE_QUERY_CHANGE)
-		if err != nil {
-			errtype.LogError(err, "Error creating report snapshot")
-			return nil, status.Error(codes.Internal, err.Error())
+			return nil, err
 		}
 	}
 
@@ -369,7 +506,7 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	err = s.runQuery(ctx, runQueryOptions{
+	queryJob, err := s.runQuery(ctx, runQueryOptions{
 		reportID:        q.ReportID,
 		queryID:         queryID,
 		queryText:       queryText,
@@ -394,6 +531,8 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	res := &proto.RunQueryResponse{}
+	res := &proto.RunQueryResponse{
+		QueryJob: queryJob,
+	}
 	return res, nil
 }

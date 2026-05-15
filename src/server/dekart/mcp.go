@@ -4,21 +4,25 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/conn"
 	device "dekart/src/server/deviceauth"
 	"dekart/src/server/mcp"
 	"dekart/src/server/mcpschema"
+	"dekart/src/server/query"
 	"dekart/src/server/reportsnapshot"
 	"dekart/src/server/user"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	gproto "google.golang.org/protobuf/proto"
 )
 
 type mcpTool struct {
@@ -133,6 +137,14 @@ func (s *Server) callMCPTool(ctx context.Context, request *mcpCallRequest) (json
 		return s.callCreateReportTool(ctx)
 	case "create_dataset":
 		return s.callCreateDatasetTool(ctx, request.Arguments)
+	case "create_query":
+		return s.callCreateQueryTool(ctx, request.Arguments)
+	case "update_query":
+		return s.callUpdateQueryTool(ctx, request.Arguments)
+	case "run_query":
+		return s.callRunQueryTool(ctx, request.Arguments)
+	case "check_job_status":
+		return s.callCheckJobStatusTool(ctx, request.Arguments)
 	case "remove_dataset":
 		return s.callRemoveDatasetTool(ctx, request.Arguments)
 	case "create_file":
@@ -173,12 +185,59 @@ func sanitizeConnectionForMCP(connection *proto.Connection) *proto.Connection {
 	if connection == nil {
 		return nil
 	}
-	sanitized := *connection
+	// Clone protobuf message to avoid copying internal mutex state by value.
+	sanitized := gproto.Clone(connection).(*proto.Connection)
 	sanitized.SnowflakePassword = nil
 	sanitized.SnowflakeKey = nil
 	sanitized.BigqueryKey = nil
 	sanitized.WherobotsKey = nil
-	return &sanitized
+	return sanitized
+}
+
+// sanitizeCreateConnectionResponseForMCP strips secret fields before returning create_connection payload.
+func sanitizeCreateConnectionResponseForMCP(response *proto.CreateConnectionResponse) *proto.CreateConnectionResponse {
+	if response == nil {
+		return nil
+	}
+	return &proto.CreateConnectionResponse{
+		Connection: sanitizeConnectionForMCP(response.GetConnection()),
+	}
+}
+
+// isBigQueryPassthroughConnectionExcludedForMCP returns true when connection
+// should be excluded from MCP run-queries scope as BigQuery passthrough.
+func isBigQueryPassthroughConnectionExcludedForMCP(connection *proto.Connection) bool {
+	if connection == nil {
+		return false
+	}
+	if connection.ConnectionType != proto.ConnectionType_CONNECTION_TYPE_BIGQUERY {
+		return false
+	}
+	return connection.BigqueryKey == nil
+}
+
+// filterConnectionsForMCPRunQueriesScope keeps only MCP-supported connections for
+// initial run-queries rollout. This does not alter global gRPC connection listing.
+func filterConnectionsForMCPRunQueriesScope(connections []*proto.Connection) []*proto.Connection {
+	filtered := make([]*proto.Connection, 0, len(connections))
+	for _, connection := range connections {
+		if connection == nil {
+			continue
+		}
+		if connection.GetId() == conn.SystemConnectionID {
+			if os.Getenv("DEKART_CLOUD") != "" {
+				continue
+			}
+			// Keep system default connection visible for self-hosted deployments.
+			filtered = append(filtered, connection)
+			continue
+		}
+		if isBigQueryPassthroughConnectionExcludedForMCP(connection) {
+			continue
+		}
+		filtered = append(filtered, connection)
+	}
+	return filtered
 }
 
 // callListConnectionsTool returns workspace connection list with secrets removed.
@@ -187,8 +246,9 @@ func (s *Server) callListConnectionsTool(ctx context.Context) (json.RawMessage, 
 	if err != nil {
 		return nil, err
 	}
-	sanitized := make([]*proto.Connection, 0, len(response.GetConnections()))
-	for _, connection := range response.GetConnections() {
+	filtered := filterConnectionsForMCPRunQueriesScope(response.GetConnections())
+	sanitized := make([]*proto.Connection, 0, len(filtered))
+	for _, connection := range filtered {
 		sanitized = append(sanitized, sanitizeConnectionForMCP(connection))
 	}
 	return mcp.MarshalProtoJSON(&proto.GetConnectionListResponse{
@@ -206,7 +266,7 @@ func (s *Server) callCreateConnectionTool(ctx context.Context, raw json.RawMessa
 	if err != nil {
 		return nil, err
 	}
-	return mcp.MarshalProtoJSON(response)
+	return mcp.MarshalProtoJSON(sanitizeCreateConnectionResponseForMCP(response))
 }
 
 // callGetMapConfigSchemaTool returns the JSON schema used for map config validation.
@@ -247,6 +307,123 @@ func (s *Server) callCreateDatasetTool(ctx context.Context, raw json.RawMessage)
 		return nil, err
 	}
 	return mcp.MarshalProtoJSON(response)
+}
+
+// callCreateQueryTool creates one query for dataset_id and connection_id.
+func (s *Server) callCreateQueryTool(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
+	request := &proto.CreateQueryRequest{}
+	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
+		return nil, err
+	}
+	response, err := s.CreateQuery(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	return mcp.MarshalProtoJSON(response)
+}
+
+// callUpdateQueryTool updates query text without executing query jobs.
+func (s *Server) callUpdateQueryTool(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
+	request := &proto.UpdateQueryRequest{}
+	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
+		return nil, err
+	}
+	if user.GetClaims(ctx) == nil {
+		return nil, Unauthenticated
+	}
+	queryDetails, err := query.GetQueryDetails(ctx, s.db, request.GetQueryId())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if queryDetails.ReportID == "" {
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("query not found id:%s", request.GetQueryId()))
+	}
+
+	// Enforce write permission before any dry-run call to avoid leaking validation behavior.
+	report, err := s.getReport(ctx, queryDetails.ReportID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("report not found id:%s", queryDetails.ReportID))
+	}
+	if !report.CanWrite {
+		return nil, status.Error(codes.PermissionDenied, "permission denied")
+	}
+
+	var dryRun *proto.QueryDryRunResult
+	connection, err := s.getConnection(ctx, queryDetails.ConnectionID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	// In USER/self-hosted modes, system/default may resolve to nil connection.
+	// Skip dry-run in that case and allow UpdateQuery to proceed.
+	if connection != nil {
+		dryRun, err = s.dryRunQuery(ctx, connection, request.GetQueryText())
+		if err != nil {
+			return nil, err
+		}
+		if dryRun.GetSupported() && !dryRun.GetValid() {
+			return nil, status.Error(codes.InvalidArgument, dryRun.GetMessage())
+		}
+	}
+	response, err := s.UpdateQuery(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	if dryRun != nil {
+		response.DryRun = dryRun
+	}
+	return mcp.MarshalProtoJSON(response)
+}
+
+// callRunQueryTool starts query execution and returns immediately without waiting for completion.
+func (s *Server) callRunQueryTool(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
+	request := &proto.RunQueryRequest{}
+	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
+		return nil, err
+	}
+	response, err := s.RunQuery(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	return mcp.MarshalProtoJSON(response)
+}
+
+// callCheckJobStatusTool returns current status for one job_id.
+func (s *Server) callCheckJobStatusTool(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
+	request := &proto.CheckJobStatusRequest{}
+	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
+		return nil, err
+	}
+	if user.GetClaims(ctx) == nil {
+		return nil, Unauthenticated
+	}
+	if strings.TrimSpace(request.GetJobId()) == "" {
+		return nil, status.Error(codes.InvalidArgument, "job_id is required")
+	}
+	job, err := s.getQueryJob(ctx, request.GetJobId())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if job == nil {
+		return nil, status.Error(codes.NotFound, "Job not found")
+	}
+	reportID, err := s.getReportIDFromJobID(ctx, request.GetJobId())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if reportID == "" {
+		return nil, status.Error(codes.NotFound, "No report found for job")
+	}
+	report, err := s.getReport(ctx, reportID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		return nil, status.Error(codes.NotFound, "Report not found")
+	}
+	return mcp.MarshalProtoJSON(&proto.CheckJobStatusResponse{QueryJob: job})
 }
 
 // callRemoveDatasetTool removes one dataset by dataset_id.
@@ -505,9 +682,14 @@ func (s *Server) callGetReportPropertiesTool(ctx context.Context, raw json.RawMe
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+	queries, err := s.getQueries(ctx, datasets)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 	return mcp.MarshalProtoJSON(&proto.GetReportPropertiesResponse{
 		Report:   report,
 		Datasets: datasets,
+		Queries:  queries,
 	})
 }
 
@@ -653,6 +835,46 @@ func mcpToolDefinitions() []mcpTool {
 			NextTools: []string{"create_file", "update_dataset_name", "remove_dataset"},
 		},
 		{
+			Name:         "create_query",
+			Description:  "Create query metadata for one dataset and bind it to a connection.",
+			InputSchema:  mcpschema.ForProto(&proto.CreateQueryRequest{}, []string{"dataset_id", "connection_id"}),
+			WhenToUse:    "Use after dataset creation when the dataset should run SQL against a selected connection.",
+			WhenNotToUse: "Do not use for file-based datasets or when query already exists and only query text needs update.",
+			SideEffects:  []string{"write"},
+			ExampleInput: map[string]any{"dataset_id": "00000000-0000-0000-0000-000000000000", "connection_id": "00000000-0000-0000-0000-000000000000"},
+			NextTools:    []string{"create_report_snapshot"},
+		},
+		{
+			Name:         "update_query",
+			Description:  "Update query text for an existing query_id without executing query jobs.",
+			InputSchema:  mcpschema.ForProto(&proto.UpdateQueryRequest{}, []string{"query_id", "query_text"}),
+			WhenToUse:    "Use when SQL text must be changed for an existing query without triggering execution.",
+			WhenNotToUse: "Do not use to run queries; use run_query workflow for execution.",
+			SideEffects:  []string{"write"},
+			ExampleInput: map[string]any{"query_id": "00000000-0000-0000-0000-000000000000", "query_text": "select 1"},
+			NextTools:    []string{"create_report_snapshot"},
+		},
+		{
+			Name:         "run_query",
+			Description:  "Start query execution for query_id and return immediately without waiting for completion.",
+			InputSchema:  mcpschema.ForProto(&proto.RunQueryRequest{}, []string{"query_id"}),
+			WhenToUse:    "Use after query text is ready and execution should begin asynchronously.",
+			WhenNotToUse: "Do not use when only SQL text should be edited without running; use update_query instead.",
+			SideEffects:  []string{"write"},
+			ExampleInput: map[string]any{"query_id": "00000000-0000-0000-0000-000000000000"},
+			NextTools:    []string{"check_job_status", "create_report_snapshot"},
+		},
+		{
+			Name:         "check_job_status",
+			Description:  "Check current status for one query job by job_id.",
+			InputSchema:  mcpschema.ForProto(&proto.CheckJobStatusRequest{}, []string{"job_id"}),
+			WhenToUse:    "Use to poll execution progress after run_query.",
+			WhenNotToUse: "Do not use before job_id is known.",
+			SideEffects:  []string{"read"},
+			ExampleInput: map[string]any{"job_id": "00000000-0000-0000-0000-000000000000"},
+			NextTools:    []string{"check_job_status"},
+		},
+		{
 			Name:         "remove_dataset",
 			Description:  "Remove one dataset by dataset_id.",
 			InputSchema:  mcpschema.ForProto(&proto.RemoveDatasetRequest{}, []string{"dataset_id"}),
@@ -783,7 +1005,7 @@ func mcpToolDefinitions() []mcpTool {
 		},
 		{
 			Name:         "get_report_properties",
-			Description:  "Read report properties (title, map_config, readme, datasets) by report_id.",
+			Description:  "Read report properties (title, map_config, readme), datasets, and queries by report_id.",
 			InputSchema:  mcpschema.ForProto(&proto.GetReportPropertiesRequest{}, []string{"report_id"}),
 			WhenToUse:    "Use before mutating report state to fetch current report and dataset context.",
 			WhenNotToUse: "Do not use when you only need to create a new report.",

@@ -81,17 +81,21 @@ func (c ClaimsCheck) validateDeviceAuthToken(ctx context.Context, header string)
 // readDeviceAuthPublicKey parses base64-encoded PEM public key from env.
 func readDeviceAuthPublicKey() (interface{}, error) {
 	raw := strings.TrimSpace(os.Getenv(deviceAuthPublicKeyEnv))
-	if raw == "" {
-		return nil, fmt.Errorf("device auth public key is empty")
+	if raw != "" {
+		raw = strings.ReplaceAll(raw, "\n", "")
+		raw = strings.ReplaceAll(raw, "\r", "")
+		raw = strings.ReplaceAll(raw, " ", "")
+		pemBytes, err := base64.StdEncoding.DecodeString(raw)
+		if err != nil {
+			return nil, err
+		}
+		return jwtkeys.ParseRSAPublicKeyFromPEM(pemBytes)
 	}
-	raw = strings.ReplaceAll(raw, "\n", "")
-	raw = strings.ReplaceAll(raw, "\r", "")
-	raw = strings.ReplaceAll(raw, " ", "")
-	pemBytes, err := base64.StdEncoding.DecodeString(raw)
+	_, publicKeyPEM, err := jwtkeys.GetBootstrapKeyPairFromMemory()
 	if err != nil {
 		return nil, err
 	}
-	return jwtkeys.ParseRSAPublicKeyFromPEM(pemBytes)
+	return jwtkeys.ParseRSAPublicKeyFromPEM(publicKeyPEM)
 }
 
 // looksLikeJWT checks compact JWT token shape and avoids unnecessary device-token parsing work.

@@ -19,6 +19,7 @@ import (
 	"dekart/src/server/dekart"
 	"dekart/src/server/errtype"
 	"dekart/src/server/job"
+	"dekart/src/server/jwtkeys"
 	"dekart/src/server/pgjob"
 	"dekart/src/server/secrets"
 	"dekart/src/server/snowflakejob"
@@ -245,12 +246,12 @@ func main() {
 	// Get a free license key at https://mailchi.mp/dekart/upgrade-to-sso
 	app.ValidateLicenseForSSO()
 
-	secrets.Init()
-
 	db := configureDb()
 	defer db.Close()
 
 	applyMigrations(db)
+	jwtkeys.MustInitBootstrapKey(db)
+	secrets.Init()
 
 	bucket := configureBucket(db)
 	jobStore := configureJobStore(bucket)

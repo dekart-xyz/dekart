@@ -629,6 +629,48 @@ export namespace CancelJobResponse {
   }
 }
 
+export class CheckJobStatusRequest extends jspb.Message {
+  getJobId(): string;
+  setJobId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CheckJobStatusRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: CheckJobStatusRequest): CheckJobStatusRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CheckJobStatusRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CheckJobStatusRequest;
+  static deserializeBinaryFromReader(message: CheckJobStatusRequest, reader: jspb.BinaryReader): CheckJobStatusRequest;
+}
+
+export namespace CheckJobStatusRequest {
+  export type AsObject = {
+    jobId: string,
+  }
+}
+
+export class CheckJobStatusResponse extends jspb.Message {
+  hasQueryJob(): boolean;
+  clearQueryJob(): void;
+  getQueryJob(): QueryJob | undefined;
+  setQueryJob(value?: QueryJob): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CheckJobStatusResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: CheckJobStatusResponse): CheckJobStatusResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CheckJobStatusResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CheckJobStatusResponse;
+  static deserializeBinaryFromReader(message: CheckJobStatusResponse, reader: jspb.BinaryReader): CheckJobStatusResponse;
+}
+
+export namespace CheckJobStatusResponse {
+  export type AsObject = {
+    queryJob?: QueryJob.AsObject,
+  }
+}
+
 export class PublishReportRequest extends jspb.Message {
   getReportId(): string;
   setReportId(value: string): void;
@@ -2671,6 +2713,12 @@ export class QueryJob extends jspb.Message {
   getQueryParamsHash(): string;
   setQueryParamsHash(value: string): void;
 
+  getResultExtension(): string;
+  setResultExtension(value: string): void;
+
+  getDatasetId(): string;
+  setDatasetId(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): QueryJob.AsObject;
   static toObject(includeInstance: boolean, msg: QueryJob): QueryJob.AsObject;
@@ -2697,6 +2745,8 @@ export namespace QueryJob {
     jobStatus: QueryJob.JobStatusMap[keyof QueryJob.JobStatusMap],
     dwJobId: string,
     queryParamsHash: string,
+    resultExtension: string,
+    datasetId: string,
   }
 
   export interface JobStatusMap {
@@ -3045,6 +3095,11 @@ export class GetReportPropertiesResponse extends jspb.Message {
   setDatasetsList(value: Array<Dataset>): void;
   addDatasets(value?: Dataset, index?: number): Dataset;
 
+  clearQueriesList(): void;
+  getQueriesList(): Array<Query>;
+  setQueriesList(value: Array<Query>): void;
+  addQueries(value?: Query, index?: number): Query;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetReportPropertiesResponse.AsObject;
   static toObject(includeInstance: boolean, msg: GetReportPropertiesResponse): GetReportPropertiesResponse.AsObject;
@@ -3059,6 +3114,7 @@ export namespace GetReportPropertiesResponse {
   export type AsObject = {
     report?: Report.AsObject,
     datasetsList: Array<Dataset.AsObject>,
+    queriesList: Array<Query.AsObject>,
   }
 }
 
@@ -3097,6 +3153,11 @@ export namespace RunQueryRequest {
 }
 
 export class RunQueryResponse extends jspb.Message {
+  hasQueryJob(): boolean;
+  clearQueryJob(): void;
+  getQueryJob(): QueryJob | undefined;
+  setQueryJob(value?: QueryJob): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): RunQueryResponse.AsObject;
   static toObject(includeInstance: boolean, msg: RunQueryResponse): RunQueryResponse.AsObject;
@@ -3109,6 +3170,93 @@ export class RunQueryResponse extends jspb.Message {
 
 export namespace RunQueryResponse {
   export type AsObject = {
+    queryJob?: QueryJob.AsObject,
+  }
+}
+
+export class UpdateQueryRequest extends jspb.Message {
+  getQueryId(): string;
+  setQueryId(value: string): void;
+
+  getQueryText(): string;
+  setQueryText(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): UpdateQueryRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: UpdateQueryRequest): UpdateQueryRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: UpdateQueryRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): UpdateQueryRequest;
+  static deserializeBinaryFromReader(message: UpdateQueryRequest, reader: jspb.BinaryReader): UpdateQueryRequest;
+}
+
+export namespace UpdateQueryRequest {
+  export type AsObject = {
+    queryId: string,
+    queryText: string,
+  }
+}
+
+export class UpdateQueryResponse extends jspb.Message {
+  getQueryId(): string;
+  setQueryId(value: string): void;
+
+  getUpdated(): boolean;
+  setUpdated(value: boolean): void;
+
+  hasDryRun(): boolean;
+  clearDryRun(): void;
+  getDryRun(): QueryDryRunResult | undefined;
+  setDryRun(value?: QueryDryRunResult): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): UpdateQueryResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: UpdateQueryResponse): UpdateQueryResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: UpdateQueryResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): UpdateQueryResponse;
+  static deserializeBinaryFromReader(message: UpdateQueryResponse, reader: jspb.BinaryReader): UpdateQueryResponse;
+}
+
+export namespace UpdateQueryResponse {
+  export type AsObject = {
+    queryId: string,
+    updated: boolean,
+    dryRun?: QueryDryRunResult.AsObject,
+  }
+}
+
+export class QueryDryRunResult extends jspb.Message {
+  getSupported(): boolean;
+  setSupported(value: boolean): void;
+
+  getValid(): boolean;
+  setValid(value: boolean): void;
+
+  getMessage(): string;
+  setMessage(value: string): void;
+
+  getEstimatedBytesProcessed(): number;
+  setEstimatedBytesProcessed(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): QueryDryRunResult.AsObject;
+  static toObject(includeInstance: boolean, msg: QueryDryRunResult): QueryDryRunResult.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: QueryDryRunResult, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): QueryDryRunResult;
+  static deserializeBinaryFromReader(message: QueryDryRunResult, reader: jspb.BinaryReader): QueryDryRunResult;
+}
+
+export namespace QueryDryRunResult {
+  export type AsObject = {
+    supported: boolean,
+    valid: boolean,
+    message: string,
+    estimatedBytesProcessed: number,
   }
 }
 
@@ -3619,10 +3767,11 @@ export namespace CreateQueryRequest {
 }
 
 export class CreateQueryResponse extends jspb.Message {
-  hasQuery(): boolean;
-  clearQuery(): void;
-  getQuery(): Query | undefined;
-  setQuery(value?: Query): void;
+  getDatasetId(): string;
+  setDatasetId(value: string): void;
+
+  getQueryId(): string;
+  setQueryId(value: string): void;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CreateQueryResponse.AsObject;
@@ -3636,7 +3785,8 @@ export class CreateQueryResponse extends jspb.Message {
 
 export namespace CreateQueryResponse {
   export type AsObject = {
-    query?: Query.AsObject,
+    datasetId: string,
+    queryId: string,
   }
 }
 

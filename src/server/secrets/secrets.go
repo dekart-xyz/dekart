@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"dekart/src/proto"
+	"dekart/src/server/jwtkeys"
 	"dekart/src/server/user"
 	"encoding/base64"
 	"fmt"
@@ -36,6 +37,14 @@ func Init() {
 		if err != nil {
 			log.Fatal().Err(err).Msg("Cannot decode data encryption key")
 		}
+	} else {
+		// Fallback: derive symmetric encryption key from persistent bootstrap root key.
+		bootstrapPrivateKey, _, err := jwtkeys.GetBootstrapKeyPairFromMemory()
+		if err != nil {
+			log.Fatal().Err(err).Msg("Cannot initialize bootstrap root key for secrets fallback")
+		}
+		keyHash := sha256.Sum256(bootstrapPrivateKey)
+		dataEncryptionKey = keyHash[:]
 	}
 	generateClientKeys()
 }

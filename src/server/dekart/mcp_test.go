@@ -145,6 +145,24 @@ func TestMCPToolDefinitions_ContainsUpdateTools(t *testing.T) {
 	createConnectionTool, ok := names["create_connection"]
 	assert.True(t, ok)
 	assert.Contains(t, createConnectionTool.InputSchema["required"], "connection")
+
+	createQueryTool, ok := names["create_query"]
+	assert.True(t, ok)
+	assert.Contains(t, createQueryTool.InputSchema["required"], "dataset_id")
+	assert.Contains(t, createQueryTool.InputSchema["required"], "connection_id")
+
+	updateQueryTool, ok := names["update_query"]
+	assert.True(t, ok)
+	assert.Contains(t, updateQueryTool.InputSchema["required"], "query_id")
+	assert.Contains(t, updateQueryTool.InputSchema["required"], "query_text")
+
+	checkJobStatusTool, ok := names["check_job_status"]
+	assert.True(t, ok)
+	assert.Contains(t, checkJobStatusTool.InputSchema["required"], "job_id")
+
+	runQueryTool, ok := names["run_query"]
+	assert.True(t, ok)
+	assert.Contains(t, runQueryTool.InputSchema["required"], "query_id")
 }
 
 func TestCallMCPTool_UnknownTool(t *testing.T) {
@@ -163,6 +181,98 @@ func TestCallMCPTool_GetMapConfigSchema(t *testing.T) {
 	assert.Equal(t, "inmemory://kepler_map_config_v1.schema.json", result["schema_id"])
 	_, hasSchema := result["schema"]
 	assert.True(t, hasSchema)
+}
+
+func TestCallMCPTool_CreateQuery_DispatchesToHandler(t *testing.T) {
+	server := &Server{}
+	payload, err := server.callMCPTool(context.Background(), &mcpCallRequest{
+		Name:      "create_query",
+		Arguments: json.RawMessage(`{"dataset_id":"d1","connection_id":"c1"}`),
+	})
+	assert.Nil(t, payload)
+	st, ok := status.FromError(err)
+	assert.True(t, ok)
+	assert.Equal(t, codes.Unauthenticated, st.Code())
+}
+
+func TestCallMCPTool_CreateQuery_InvalidArguments(t *testing.T) {
+	server := &Server{}
+	payload, err := server.callMCPTool(context.Background(), &mcpCallRequest{
+		Name:      "create_query",
+		Arguments: json.RawMessage(`{"dataset_id":123,"connection_id":"c1"}`),
+	})
+	assert.Nil(t, payload)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "datasetId")
+}
+
+func TestCallMCPTool_UpdateQuery_DispatchesToHandler(t *testing.T) {
+	server := &Server{}
+	payload, err := server.callMCPTool(context.Background(), &mcpCallRequest{
+		Name:      "update_query",
+		Arguments: json.RawMessage(`{"query_id":"q1","query_text":"select 1"}`),
+	})
+	assert.Nil(t, payload)
+	st, ok := status.FromError(err)
+	assert.True(t, ok)
+	assert.Equal(t, codes.Unauthenticated, st.Code())
+}
+
+func TestCallMCPTool_UpdateQuery_InvalidArguments(t *testing.T) {
+	server := &Server{}
+	payload, err := server.callMCPTool(context.Background(), &mcpCallRequest{
+		Name:      "update_query",
+		Arguments: json.RawMessage(`{"query_id":123,"query_text":"select 1"}`),
+	})
+	assert.Nil(t, payload)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "queryId")
+}
+
+func TestCallMCPTool_CheckJobStatus_DispatchesToHandler(t *testing.T) {
+	server := &Server{}
+	payload, err := server.callMCPTool(context.Background(), &mcpCallRequest{
+		Name:      "check_job_status",
+		Arguments: json.RawMessage(`{"job_id":"j1"}`),
+	})
+	assert.Nil(t, payload)
+	st, ok := status.FromError(err)
+	assert.True(t, ok)
+	assert.Equal(t, codes.Unauthenticated, st.Code())
+}
+
+func TestCallMCPTool_CheckJobStatus_InvalidArguments(t *testing.T) {
+	server := &Server{}
+	payload, err := server.callMCPTool(context.Background(), &mcpCallRequest{
+		Name:      "check_job_status",
+		Arguments: json.RawMessage(`{"job_id":123}`),
+	})
+	assert.Nil(t, payload)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "jobId")
+}
+
+func TestCallMCPTool_RunQuery_DispatchesToHandler(t *testing.T) {
+	server := &Server{}
+	payload, err := server.callMCPTool(context.Background(), &mcpCallRequest{
+		Name:      "run_query",
+		Arguments: json.RawMessage(`{"query_id":"q1"}`),
+	})
+	assert.Nil(t, payload)
+	st, ok := status.FromError(err)
+	assert.True(t, ok)
+	assert.Equal(t, codes.Unauthenticated, st.Code())
+}
+
+func TestCallMCPTool_RunQuery_InvalidArguments(t *testing.T) {
+	server := &Server{}
+	payload, err := server.callMCPTool(context.Background(), &mcpCallRequest{
+		Name:      "run_query",
+		Arguments: json.RawMessage(`{"query_id":123}`),
+	})
+	assert.Nil(t, payload)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "queryId")
 }
 
 func TestMCPToolDefinitions_AgentGuidanceFieldsPresent(t *testing.T) {
@@ -241,4 +351,26 @@ func TestSanitizeConnectionForMCP_StripsSecrets(t *testing.T) {
 	assert.Nil(t, sanitized.SnowflakeKey)
 	assert.Nil(t, sanitized.BigqueryKey)
 	assert.Nil(t, sanitized.WherobotsKey)
+}
+
+func TestSanitizeCreateConnectionResponseForMCP_StripsSecrets(t *testing.T) {
+	response := &proto.CreateConnectionResponse{
+		Connection: &proto.Connection{
+			Id:                "conn-1",
+			ConnectionName:    "test",
+			SnowflakePassword: &proto.Secret{ServerEncrypted: "secret"},
+			SnowflakeKey:      &proto.Secret{ServerEncrypted: "secret"},
+			BigqueryKey:       &proto.Secret{ServerEncrypted: "secret"},
+			WherobotsKey:      &proto.Secret{ServerEncrypted: "secret"},
+		},
+	}
+
+	sanitized := sanitizeCreateConnectionResponseForMCP(response)
+	if assert.NotNil(t, sanitized) && assert.NotNil(t, sanitized.Connection) {
+		assert.Equal(t, "conn-1", sanitized.Connection.Id)
+		assert.Nil(t, sanitized.Connection.SnowflakePassword)
+		assert.Nil(t, sanitized.Connection.SnowflakeKey)
+		assert.Nil(t, sanitized.Connection.BigqueryKey)
+		assert.Nil(t, sanitized.Connection.WherobotsKey)
+	}
 }
