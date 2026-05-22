@@ -86,6 +86,11 @@ func (s Server) GetGcpProjectList(ctx context.Context, req *proto.GetGcpProjectL
 	}
 	tokenSource := user.GetTokenSource(ctx)
 	if tokenSource == nil {
+		// In self-hosted auth-disabled mode, Google OAuth token is intentionally absent.
+		// Return empty projects instead of 401 to avoid breaking unrelated connection flows.
+		if claims.Email == user.UnknownEmail && os.Getenv("DEKART_CLOUD") == "" {
+			return &proto.GetGcpProjectListResponse{Projects: []string{}}, nil
+		}
 		log.Warn().Msg("GetGcpProjectList called without token source")
 		return nil, Unauthenticated
 	}
@@ -177,11 +182,6 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 			allowWorkspaceCreation = "1"
 		}
 
-		var secretsEnabled string
-		if os.Getenv("DEKART_DATA_ENCRYPTION_KEY") != "" {
-			secretsEnabled = "1"
-		}
-
 		var storeMapPreview string
 		if os.Getenv("DEKART_CLOUD_STORAGE_BUCKET") != "" {
 			storeMapPreview = "1"
@@ -218,11 +218,11 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 			},
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_DATASOURCE,
-				Value: defaultString(os.Getenv("DEKART_DATASOURCE"), "BQ"),
+				Value: defaultString(os.Getenv("DEKART_DATASOURCE"), "USER"),
 			},
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_STORAGE,
-				Value: defaultString(os.Getenv("DEKART_STORAGE"), "GCS"),
+				Value: defaultString(os.Getenv("DEKART_STORAGE"), "USER"),
 			},
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_REQUIRE_IAP,
@@ -287,10 +287,6 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_WORKSPACE_DEFAULT_ROLE,
 				Value: user.GetWorkspaceDefaultRole().String(),
-			},
-			{
-				Type:  proto.GetEnvResponse_Variable_TYPE_SECRETS_ENABLED,
-				Value: secretsEnabled,
 			},
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_CLOUD_UX_CONFIG_JSON,

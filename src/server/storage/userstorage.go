@@ -5,7 +5,9 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/bqstorage"
 	"dekart/src/server/conn"
+	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -44,6 +46,9 @@ func (s *UserStorage) GetObject(ctx context.Context, storageMeta string, object 
 			useUserToken,
 		}
 	}
+	if connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_LOCAL {
+		return NewLocalFSStorageObject(GetLocalFilesRoot(), filepath.Base(object))
+	}
 	return bqstorage.BigQueryStorageObject{
 		JobID:       parts[0],
 		JobLocation: storageMeta,
@@ -54,6 +59,10 @@ func (s *UserStorage) GetObject(ctx context.Context, storageMeta string, object 
 func (s *UserStorage) CanSaveQuery(ctx context.Context, bucketName string) bool {
 	connection := conn.FromCtx(ctx)
 	return connection.CloudStorageBucket != "" || bucketName != ""
+}
+
+func (s *UserStorage) ListObjectsByPrefix(_ context.Context, _ string, _ string) ([]ObjectInfo, error) {
+	return nil, fmt.Errorf("list objects flow is not supported for storage backend %q", "user-storage")
 }
 
 // StartUploadSession delegates upload session start to active user storage backend.
@@ -96,6 +105,9 @@ func (s *UserStorage) uploadSessionStorageForConnection(ctx context.Context) (St
 	connection := conn.FromCtx(ctx)
 	if connection == nil {
 		return nil, errUploadSessionNotSupported("user-storage")
+	}
+	if connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_LOCAL {
+		return NewLocalFSStorage(GetLocalFilesRoot()), nil
 	}
 	if connection.CloudStorageBucket == "" {
 		return nil, errUploadSessionNotSupported("user-storage")

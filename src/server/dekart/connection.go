@@ -7,6 +7,7 @@ import (
 	"dekart/src/server/conn"
 	"dekart/src/server/errtype"
 	"dekart/src/server/secrets"
+	"dekart/src/server/snowflakeutils"
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
 	"fmt"
@@ -27,6 +28,11 @@ func (s Server) TestConnection(ctx context.Context, req *proto.TestConnectionReq
 	con := req.Connection
 	if con == nil {
 		return nil, status.Error(codes.InvalidArgument, "connection is required")
+	}
+	if con.Id == "" {
+		// Unsaved connections in TestConnection should be treated as user-defined,
+		// not as system/default env-backed connections.
+		con.Id = "test-connection"
 	}
 
 	err := conn.ValidateReqConnection(con)
@@ -132,13 +138,22 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 		switch os.Getenv("DEKART_DATASOURCE") {
 		case "USER":
 			if os.Getenv("DEKART_CLOUD") != "" {
+				// Cloud mode keeps historical behavior: USER datasource proxies through a
+				// system BigQuery connection and uses the default bucket for object storage.
 				con.CloudStorageBucket = storage.GetDefaultBucketName()
 				con.BigqueryProjectId = os.Getenv("DEKART_BIGQUERY_PROJECT_ID")
 				con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_BIGQUERY
 				con.CanStoreFiles = os.Getenv("DEKART_ALLOW_FILE_UPLOAD") != ""
 				return &con, nil
 			}
-			return nil, nil
+			// Self-hosted USER mode now returns a synthetic default connection instead
+			// of nil so UI/API flows can work with "no-config" local uploads.
+			con.ConnectionName = "Local Files"
+			con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_LOCAL
+			// Upload capability is still explicitly gated by env to preserve existing
+			// opt-in behavior for deployments that do not want file uploads enabled.
+			con.CanStoreFiles = os.Getenv("DEKART_ALLOW_FILE_UPLOAD") != ""
+			return &con, nil
 		case "SNOWFLAKE":
 			con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_SNOWFLAKE
 			con.ConnectionName = "Snowflake"
@@ -162,6 +177,8 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 		default:
 			log.Fatal().Str("DEKART_STORAGE", os.Getenv("DEKART_STORAGE")).Msg("Unknown storage backend")
 		}
+		// Non-USER system connections require both upload flag and bucket-backed
+		// object storage. Local USER mode is handled in the branch above.
 		if os.Getenv("DEKART_ALLOW_FILE_UPLOAD") != "" && con.CloudStorageBucket != "" {
 			con.CanStoreFiles = true
 		}
@@ -450,6 +467,15 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 	var res sql.Result
 
 	if req.Connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_SNOWFLAKE {
+		if req.Connection.SnowflakeKey != nil {
+			privateKey := secrets.SecretToString(req.Connection.SnowflakeKey, claims)
+			if privateKey == "" {
+				return nil, status.Error(codes.InvalidArgument, "snowflake_key is required")
+			}
+			if _, err := snowflakeutils.ParsePrivateKey(privateKey); err != nil {
+				return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid snowflake_key: %v", err))
+			}
+		}
 		res, err = s.db.ExecContext(ctx,
 			`update connections set
 				connection_name=$1,
@@ -652,8 +678,10 @@ func (s Server) GetConnectionList(ctx context.Context, req *proto.GetConnectionL
 		connections = append(connections, userConnections...)
 	}
 
-	if os.Getenv("DEKART_CLOUD") != "" || os.Getenv("DEKART_DATASOURCE") != "USER" {
-		// append system connection
+	if os.Getenv("DEKART_DATASOURCE") != "USER" || isFileUploadEnabled() || os.Getenv("DEKART_CLOUD") != "" {
+		// Keep system connection visible for non-USER datasources, cloud USER mode,
+		// and local USER mode when uploads are enabled; Dataset upload flow relies on
+		// a default connection with canStoreFiles=true being present in this list.
 		systemConnection, err := s.getConnection(ctx, conn.SystemConnectionID)
 		if err != nil {
 			errtype.LogError(err, "getConnection failed for system connection")
@@ -742,6 +770,15 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 	err := conn.ValidateReqConnection(req.Connection)
 	if err != nil {
 		return nil, err
+	}
+	if req.Connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_SNOWFLAKE {
+		privateKey := secrets.SecretToString(req.Connection.SnowflakeKey, claims)
+		if privateKey == "" {
+			return nil, status.Error(codes.InvalidArgument, "snowflake_key is required")
+		}
+		if _, err := snowflakeutils.ParsePrivateKey(privateKey); err != nil {
+			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid snowflake_key: %v", err))
+		}
 	}
 
 	id := newUUID()

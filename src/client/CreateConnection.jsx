@@ -53,7 +53,6 @@ function ConnectionTypeSelector () {
   const dispatch = useDispatch()
   const [bigqueryModalOpen, setBigqueryModalOpen] = useState(false)
   const [otherModalOpen, setOtherModalOpen] = useState(false)
-  const secretsEnabled = useSelector(state => state.env.secretsEnabled)
   const isCloud = useSelector(state => state.env.isCloud)
   const connectionCards = [
     {
@@ -69,8 +68,6 @@ function ConnectionTypeSelector () {
       key: 'snowflake',
       title: 'Snowflake',
       icon: <DatasourceIcon type={ConnectionType.CONNECTION_TYPE_SNOWFLAKE} />,
-      disabled: !secretsEnabled,
-      disabledTitle: 'Feature is disabled. Contact your administrator to enable it.',
       handleClick: () => {
         track('ConnectionTypeSelectorSnowflake')
         dispatch(newConnection(ConnectionType.CONNECTION_TYPE_SNOWFLAKE))
@@ -80,8 +77,6 @@ function ConnectionTypeSelector () {
       key: 'wherobots',
       title: 'Wherobots',
       icon: <DatasourceIcon type={ConnectionType.CONNECTION_TYPE_WHEROBOTS} />,
-      disabled: !secretsEnabled,
-      disabledTitle: 'Feature is disabled. Contact your administrator to enable it.',
       handleClick: () => {
         track('ConnectionTypeSelectorWherobots')
         dispatch(newConnection(ConnectionType.CONNECTION_TYPE_WHEROBOTS))

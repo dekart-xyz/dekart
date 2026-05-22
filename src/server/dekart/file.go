@@ -13,6 +13,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -411,20 +412,47 @@ func (s Server) getFiles(ctx context.Context, datasets []*proto.Dataset) ([]*pro
 	}
 
 	if len(fileIds) > 0 {
-		fileRows, err := s.db.QueryContext(ctx,
-			`select
-				id,
-				name,
-				size,
-				mime_type,
-				file_status,
-				file_source_id,
-				upload_error,
-				created_at,
-				updated_at
-			from files where id = ANY($1) order by created_at asc`,
-			pq.Array(fileIds),
+		var (
+			fileRows *sql.Rows
+			err      error
 		)
+		if IsSqlite() {
+			placeholders := make([]string, len(fileIds))
+			args := make([]interface{}, len(fileIds))
+			for i, id := range fileIds {
+				placeholders[i] = "?"
+				args[i] = id
+			}
+			fileRows, err = s.db.QueryContext(ctx,
+				`select
+					id,
+					name,
+					size,
+					mime_type,
+					file_status,
+					file_source_id,
+					upload_error,
+					created_at,
+					updated_at
+				from files where id IN (`+strings.Join(placeholders, ",")+`) order by created_at asc`,
+				args...,
+			)
+		} else {
+			fileRows, err = s.db.QueryContext(ctx,
+				`select
+					id,
+					name,
+					size,
+					mime_type,
+					file_status,
+					file_source_id,
+					upload_error,
+					created_at,
+					updated_at
+				from files where id = ANY($1) order by created_at asc`,
+				pq.Array(fileIds),
+			)
+		}
 		if err != nil {
 			errtype.LogError(err, "select from files failed")
 			return nil, err

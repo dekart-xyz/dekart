@@ -169,6 +169,20 @@
     margin-top: 15px;
 }
 
+.firstSetupActions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+}
+
+.rocketIcon {
+    background-image: url('./rocket.svg');
+    display: inline-block;
+    width: 64px;
+    height: 64px;
+}
+
 .connectionTypeSelector {
     display: grid;
     grid-template-columns: repeat(4, 231px);

@@ -451,22 +451,18 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 		return ctx
 	}
 
-	// check if the request is from playground
-	isPlayground := false
-	if r != nil {
-		isPlayground = r.Header.Get("X-Dekart-Playground") == "true"
-	}
-	if isPlayground {
-		ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{
-			IsPlayground: true,
-		})
-		return ctx
-	}
 	if claims.Email == user.UnknownEmail && os.Getenv("DEKART_CLOUD") == "" {
-		// For backward compatibility, we switch to playground mode if the user is not authenticated
+		// Self-hosted auth-disabled mode always uses default workspace context.
+		// Playground mode is intentionally disabled.
 		ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{
-			IsPlayground:       true, // TODO: just use default workspace
+			ID:                 user.GetDefaultWorkspaceID(),
+			PlanType:           user.GetDefaultSubscription(),
+			Name:               "Default",
+			IsPlayground:       false,
 			IsDefaultWorkspace: true,
+			// In auth-disabled self-hosted mode, treat anonymous local user as admin so
+			// connection/report management remains writable by default.
+			UserRole: proto.UserRole_ROLE_ADMIN,
 		})
 		return ctx
 	}

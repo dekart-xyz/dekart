@@ -23,6 +23,9 @@ var dekartStorage = os.Getenv("DEKART_STORAGE")
 var dekartRequireGoogleOAuth = os.Getenv("DEKART_REQUIRE_GOOGLE_OAUTH")
 
 func IsUserDefined() bool {
+	if dekartDataSource == "USER" {
+		return true
+	}
 	return (dekartBigQueryProjectID == "" && dekartDataSource == "BQ") ||
 		(dekartCloudStorageBucket == "" && dekartDataSource != "SNOWFLAKE") ||
 		dekartRequireGoogleOAuth == "1" // use user defined connection when require google oauth to reduce the number of possible configurations

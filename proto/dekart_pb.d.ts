@@ -4048,6 +4048,7 @@ export interface ConnectionTypeMap {
   CONNECTION_TYPE_ATHENA: 4;
   CONNECTION_TYPE_POSTGRES: 5;
   CONNECTION_TYPE_CLICKHOUSE: 6;
+  CONNECTION_TYPE_LOCAL: 7;
 }
 
 export const ConnectionType: ConnectionTypeMap;
