@@ -101,5 +101,22 @@ func ValidateReqConnection(con *proto.Connection) error {
 		}
 
 	}
+	if con.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_POSTGRES {
+		if con.PostgresHost == "" {
+			return status.Error(codes.InvalidArgument, "postgres_host is required")
+		}
+		if con.PostgresUsername == "" {
+			return status.Error(codes.InvalidArgument, "postgres_username is required")
+		}
+		if con.PostgresPassword == nil && (con.Id == "" || con.Id == "test-connection") {
+			return status.Error(codes.InvalidArgument, "postgres_password is required")
+		}
+		if con.PostgresDatabase == "" {
+			return status.Error(codes.InvalidArgument, "postgres_database is required")
+		}
+		if con.PostgresPort <= 0 {
+			return status.Error(codes.InvalidArgument, "postgres_port is required")
+		}
+	}
 	return nil
 }

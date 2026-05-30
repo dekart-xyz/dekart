@@ -14237,7 +14237,12 @@ proto.Connection.toObject = function(includeInstance, msg) {
     wherobotsHost: jspb.Message.getFieldWithDefault(msg, 18, ""),
     wherobotsKey: (f = msg.getWherobotsKey()) && proto.Secret.toObject(includeInstance, f),
     wherobotsRuntime: jspb.Message.getFieldWithDefault(msg, 20, ""),
-    wherobotsRegion: jspb.Message.getFieldWithDefault(msg, 21, "")
+    wherobotsRegion: jspb.Message.getFieldWithDefault(msg, 21, ""),
+    postgresHost: jspb.Message.getFieldWithDefault(msg, 22, ""),
+    postgresUsername: jspb.Message.getFieldWithDefault(msg, 23, ""),
+    postgresPassword: (f = msg.getPostgresPassword()) && proto.Secret.toObject(includeInstance, f),
+    postgresDatabase: jspb.Message.getFieldWithDefault(msg, 25, ""),
+    postgresPort: jspb.Message.getFieldWithDefault(msg, 26, 0)
   };
 
   if (includeInstance) {
@@ -14361,6 +14366,27 @@ proto.Connection.deserializeBinaryFromReader = function(msg, reader) {
     case 21:
       var value = /** @type {string} */ (reader.readString());
       msg.setWherobotsRegion(value);
+      break;
+    case 22:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setPostgresHost(value);
+      break;
+    case 23:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setPostgresUsername(value);
+      break;
+    case 24:
+      var value = new proto.Secret;
+      reader.readMessage(value,proto.Secret.deserializeBinaryFromReader);
+      msg.setPostgresPassword(value);
+      break;
+    case 25:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setPostgresDatabase(value);
+      break;
+    case 26:
+      var value = /** @type {number} */ (reader.readInt32());
+      msg.setPostgresPort(value);
       break;
     default:
       reader.skipField();
@@ -14539,6 +14565,42 @@ proto.Connection.serializeBinaryToWriter = function(message, writer) {
   if (f.length > 0) {
     writer.writeString(
       21,
+      f
+    );
+  }
+  f = message.getPostgresHost();
+  if (f.length > 0) {
+    writer.writeString(
+      22,
+      f
+    );
+  }
+  f = message.getPostgresUsername();
+  if (f.length > 0) {
+    writer.writeString(
+      23,
+      f
+    );
+  }
+  f = message.getPostgresPassword();
+  if (f != null) {
+    writer.writeMessage(
+      24,
+      f,
+      proto.Secret.serializeBinaryToWriter
+    );
+  }
+  f = message.getPostgresDatabase();
+  if (f.length > 0) {
+    writer.writeString(
+      25,
+      f
+    );
+  }
+  f = message.getPostgresPort();
+  if (f !== 0) {
+    writer.writeInt32(
+      26,
       f
     );
   }
@@ -14996,6 +15058,115 @@ proto.Connection.prototype.getWherobotsRegion = function() {
  */
 proto.Connection.prototype.setWherobotsRegion = function(value) {
   return jspb.Message.setProto3StringField(this, 21, value);
+};
+
+
+/**
+ * optional string postgres_host = 22;
+ * @return {string}
+ */
+proto.Connection.prototype.getPostgresHost = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 22, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.Connection} returns this
+ */
+proto.Connection.prototype.setPostgresHost = function(value) {
+  return jspb.Message.setProto3StringField(this, 22, value);
+};
+
+
+/**
+ * optional string postgres_username = 23;
+ * @return {string}
+ */
+proto.Connection.prototype.getPostgresUsername = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 23, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.Connection} returns this
+ */
+proto.Connection.prototype.setPostgresUsername = function(value) {
+  return jspb.Message.setProto3StringField(this, 23, value);
+};
+
+
+/**
+ * optional Secret postgres_password = 24;
+ * @return {?proto.Secret}
+ */
+proto.Connection.prototype.getPostgresPassword = function() {
+  return /** @type{?proto.Secret} */ (
+    jspb.Message.getWrapperField(this, proto.Secret, 24));
+};
+
+
+/**
+ * @param {?proto.Secret|undefined} value
+ * @return {!proto.Connection} returns this
+*/
+proto.Connection.prototype.setPostgresPassword = function(value) {
+  return jspb.Message.setWrapperField(this, 24, value);
+};
+
+
+/**
+ * Clears the message field making it undefined.
+ * @return {!proto.Connection} returns this
+ */
+proto.Connection.prototype.clearPostgresPassword = function() {
+  return this.setPostgresPassword(undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.Connection.prototype.hasPostgresPassword = function() {
+  return jspb.Message.getField(this, 24) != null;
+};
+
+
+/**
+ * optional string postgres_database = 25;
+ * @return {string}
+ */
+proto.Connection.prototype.getPostgresDatabase = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 25, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.Connection} returns this
+ */
+proto.Connection.prototype.setPostgresDatabase = function(value) {
+  return jspb.Message.setProto3StringField(this, 25, value);
+};
+
+
+/**
+ * optional int32 postgres_port = 26;
+ * @return {number}
+ */
+proto.Connection.prototype.getPostgresPort = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 26, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.Connection} returns this
+ */
+proto.Connection.prototype.setPostgresPort = function(value) {
+  return jspb.Message.setProto3IntField(this, 26, value);
 };
 
 

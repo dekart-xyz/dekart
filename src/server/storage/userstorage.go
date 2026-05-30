@@ -36,6 +36,11 @@ func (s *UserStorage) GetObject(ctx context.Context, storageMeta string, object 
 	if connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_WHEROBOTS {
 		return NewPresignedS3Object(object)
 	}
+	// Postgres fallback for USER storage: keep local files only when no bucket is configured.
+	// If CloudStorageBucket is set (for example, pg-s3/pg-gcs setups), use bucket storage below.
+	if connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_POSTGRES && connection.CloudStorageBucket == "" {
+		return NewLocalFSStorageObject(GetLocalFilesRoot(), filepath.Base(object))
+	}
 
 	if connection.CloudStorageBucket != "" {
 		bucketName := connection.CloudStorageBucket

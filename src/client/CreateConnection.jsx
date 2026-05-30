@@ -83,6 +83,17 @@ function ConnectionTypeSelector () {
       }
     }
   ]
+  if (!isCloud) {
+    connectionCards.push({
+      key: 'postgres',
+      title: 'Postgres',
+      icon: <DatasourceIcon type={ConnectionType.CONNECTION_TYPE_POSTGRES} />,
+      handleClick: () => {
+        track('ConnectionTypeSelectorPostgres')
+        dispatch(newConnection(ConnectionType.CONNECTION_TYPE_POSTGRES))
+      }
+    })
+  }
   if (isCloud) {
     connectionCards.push({
       key: 'other',

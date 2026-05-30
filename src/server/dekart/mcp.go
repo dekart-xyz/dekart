@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	gproto "google.golang.org/protobuf/proto"
@@ -187,11 +188,27 @@ func sanitizeConnectionForMCP(connection *proto.Connection) *proto.Connection {
 	}
 	// Clone protobuf message to avoid copying internal mutex state by value.
 	sanitized := gproto.Clone(connection).(*proto.Connection)
-	sanitized.SnowflakePassword = nil
-	sanitized.SnowflakeKey = nil
-	sanitized.BigqueryKey = nil
-	sanitized.WherobotsKey = nil
+	clearSecretFields(sanitized)
 	return sanitized
+}
+
+func clearSecretFields(message gproto.Message) {
+	if message == nil {
+		return
+	}
+	protoMessage := message.ProtoReflect()
+	fields := protoMessage.Descriptor().Fields()
+	secretFullName := (&proto.Secret{}).ProtoReflect().Descriptor().FullName()
+	for i := 0; i < fields.Len(); i++ {
+		field := fields.Get(i)
+		if field.Kind() != protoreflect.MessageKind {
+			continue
+		}
+		if field.Message() == nil || field.Message().FullName() != secretFullName {
+			continue
+		}
+		protoMessage.Clear(field)
+	}
 }
 
 // sanitizeCreateConnectionResponseForMCP strips secret fields before returning create_connection payload.

@@ -258,6 +258,31 @@ jobs:
               -e DEKART_REQUIRE_SNOWFLAKE_CONTEXT=1 \
               -e DEKART_DEV_CLAIMS_EMAIL=bilonenko.v2@gmail.com \
 
+          - id: local-user-postgres
+            spec: cypress/e2e/local/userDefinedConnectionHappyPath.cy.js
+            extra_env: |
+              -e DEKART_STORAGE=USER \
+              -e DEKART_DATASOURCE=USER \
+              -e DEKART_ALLOW_FILE_UPLOAD=1 \
+
+          - id: local-mcp-postgres
+            spec: cypress/e2e/local/mcpPgHappyPath.cy.js
+            extra_env: |
+              -e DEKART_STORAGE=USER \
+              -e DEKART_DATASOURCE=USER \
+              -e DEKART_ALLOW_FILE_UPLOAD=1 \
+
+          - id: pg-s3-postgres
+            spec: cypress/e2e/pg-s3/happyPath.cy.js
+            extra_env: |
+              -e DEKART_STORAGE=S3 \
+              -e DEKART_DATASOURCE=PG \
+              -e DEKART_CLOUD_STORAGE_BUCKET=$S3_BUCKET_SEC \
+              -e DEKART_POSTGRES_DATASOURCE_CONNECTION=postgres://$DEKART_POSTGRES_USER:$DEKART_POSTGRES_PASSWORD@localhost:5432/dekart_geo?sslmode=disable \
+              -e AWS_REGION=$AWS_REGION \
+              -e AWS_ACCESS_KEY_ID=$AWS_KEY_SEC \
+              -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_SEC \
+
     services:
       postgres:
         image: postgres
@@ -281,6 +306,35 @@ jobs:
           mkdir -p /tmp/cypress/fixtures
           gcloud auth activate-service-account --key-file="$GOOGLE_APPLICATION_CREDENTIALS"
           gcloud storage cp gs://dekart-dev-ci-fixtures/cypress/POI25Mb.csv /tmp/cypress/fixtures/POI25Mb.csv --project=dekart-dev
+
+      - name: Seed PostgreSQL test data (dekart_geo.sample.geospatial_points)
+        run: |
+          docker run --rm --network host -e PGPASSWORD="$DEKART_POSTGRES_PASSWORD" postgres:15 \
+            psql -h localhost -U "$DEKART_POSTGRES_USER" -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+          SELECT 'CREATE DATABASE dekart_geo'
+          WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'dekart_geo')\gexec
+          SQL
+          docker run --rm --network host -e PGPASSWORD="$DEKART_POSTGRES_PASSWORD" postgres:15 \
+            psql -h localhost -U "$DEKART_POSTGRES_USER" -d dekart_geo -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE SCHEMA IF NOT EXISTS sample;
+          CREATE TABLE IF NOT EXISTS sample.geospatial_points (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            category TEXT NOT NULL,
+            longitude DOUBLE PRECISION NOT NULL,
+            latitude DOUBLE PRECISION NOT NULL,
+            geom_wkt TEXT NOT NULL
+          );
+          TRUNCATE TABLE sample.geospatial_points;
+          INSERT INTO sample.geospatial_points (name, category, longitude, latitude, geom_wkt)
+          SELECT
+            'poi_' || gs::text,
+            CASE WHEN gs % 3 = 0 THEN 'food' WHEN gs % 3 = 1 THEN 'park' ELSE 'shop' END,
+            12.45 + (gs::double precision * 0.01),
+            55.60 + (gs::double precision * 0.005),
+            'POINT(' || (12.45 + (gs::double precision * 0.01))::text || ' ' || (55.60 + (gs::double precision * 0.005))::text || ')'
+          FROM generate_series(1, 150) AS gs;
+          SQL
 
       - uses: docker/setup-qemu-action@v2
       - uses: docker/setup-buildx-action@v2

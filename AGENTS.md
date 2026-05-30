@@ -23,6 +23,8 @@ Goal: contributions should blend into the existing codebase and minimize maintai
 - Do not use debug logging in production paths. Keep logs high-signal for admins.
 - Never force-push.
 - Reuse existing contract types in the touched module (proto/shared schema) before adding local ad-hoc request structs; if you must diverge, add a one-line reason.
+- Keep Cypress `cypress/e2e/<folder>` aligned with env config name used to run it (for example, `.env.local` -> `cypress/e2e/local`, `.env.pg-s3` -> `cypress/e2e/pg-s3`).
+- After changing behavior, remove obsolete flags/params/branches that are no longer needed (no leftover transitional wiring).
 
 ## Skill Usage
 

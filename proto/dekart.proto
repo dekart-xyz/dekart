@@ -475,6 +475,11 @@ message Connection {
     Secret wherobots_key = 19;
     string wherobots_runtime = 20;
     string wherobots_region = 21;
+    string postgres_host = 22;
+    string postgres_username = 23;
+    Secret postgres_password = 24;
+    string postgres_database = 25;
+    int32 postgres_port = 26;
 }
 
 message Secret {

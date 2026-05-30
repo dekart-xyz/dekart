@@ -1700,6 +1700,23 @@ export class Connection extends jspb.Message {
   getWherobotsRegion(): string;
   setWherobotsRegion(value: string): void;
 
+  getPostgresHost(): string;
+  setPostgresHost(value: string): void;
+
+  getPostgresUsername(): string;
+  setPostgresUsername(value: string): void;
+
+  hasPostgresPassword(): boolean;
+  clearPostgresPassword(): void;
+  getPostgresPassword(): Secret | undefined;
+  setPostgresPassword(value?: Secret): void;
+
+  getPostgresDatabase(): string;
+  setPostgresDatabase(value: string): void;
+
+  getPostgresPort(): number;
+  setPostgresPort(value: number): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Connection.AsObject;
   static toObject(includeInstance: boolean, msg: Connection): Connection.AsObject;
@@ -1733,6 +1750,11 @@ export namespace Connection {
     wherobotsKey?: Secret.AsObject,
     wherobotsRuntime: string,
     wherobotsRegion: string,
+    postgresHost: string,
+    postgresUsername: string,
+    postgresPassword?: Secret.AsObject,
+    postgresDatabase: string,
+    postgresPort: number,
   }
 }
 
