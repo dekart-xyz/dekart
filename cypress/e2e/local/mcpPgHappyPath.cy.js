@@ -3,29 +3,9 @@
 describe('local MCP postgres happy path with device auth', () => {
   it('configures postgres in UX, authorizes device, executes MCP flow, and verifies map data in UI', () => {
     const appUrl = Cypress.env('DEKART_E2E_BASE_URL') || 'http://localhost:3000'
-    const configuredApiBase = Cypress.env('DEKART_API_BASE_URL')
+    const isCI = String(Cypress.env('CI') ?? '').toLowerCase() === 'true' || String(Cypress.env('CYPRESS_CI') ?? '') === '1'
+    const apiBase = isCI ? `${appUrl}/api/v1` : 'http://localhost:8080/api/v1'
     const connName = `Postgres MCP Local ${Date.now()}`
-    const apiCandidates = configuredApiBase
-      ? [configuredApiBase]
-      : [`${appUrl}/api/v1`, 'http://localhost:8080/api/v1']
-
-    const resolveApiBaseAndStartDevice = (index = 0) => {
-      if (index >= apiCandidates.length) {
-        throw new Error(`no reachable API base from candidates: ${apiCandidates.join(', ')}`)
-      }
-      const candidate = apiCandidates[index]
-      return cy.request({
-        method: 'POST',
-        url: `${candidate}/device`,
-        body: { device_name: 'cypress-local-mcp' },
-        failOnStatusCode: false
-      }).then((response) => {
-        if (response.status === 200) {
-          return { apiBase: candidate, startResp: response }
-        }
-        return resolveApiBaseAndStartDevice(index + 1)
-      })
-    }
 
     const setInputValue = (selector, value) => {
       cy.get(selector).then(($input) => {
@@ -136,8 +116,8 @@ describe('local MCP postgres happy path with device auth', () => {
     cy.get('button#saveConnection', { timeout: 60000 }).should('be.enabled').click()
     cy.wait('@createConnection')
 
-    resolveApiBaseAndStartDevice().then(({ apiBase, startResp }) => {
-      // 2) Device auth flow to obtain MCP bearer token.
+    // 2) Device auth flow to obtain MCP bearer token.
+    cy.request('POST', `${apiBase}/device`, { device_name: 'cypress-local-mcp' }).then((startResp) => {
       expect(startResp.status).to.eq(200)
       const deviceId = startResp.body.device_id
       const authUrl = startResp.body.auth_url
