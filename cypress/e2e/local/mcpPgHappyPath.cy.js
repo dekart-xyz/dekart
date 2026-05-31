@@ -83,13 +83,23 @@ describe('local MCP postgres happy path with device auth', () => {
 
     // 1) Configure local Postgres connection in UX.
     cy.visit(`${appUrl}/connections`)
-    cy.get('body', { timeout: 20000 }).then(($body) => {
+    cy.get('body', { timeout: 20000 }).should(($body) => {
+      const ready = $body.find('#dekart-connection-type-card-postgres').length > 0 ||
+        $body.find('#dekart-new-connection-connections').length > 0 ||
+        $body.find('#dekart-new-connection-onboarding').length > 0
+      expect(ready, 'connection entry point should be visible').to.eq(true)
+    }).then(($body) => {
       const onSelectorScreen = $body.find('#dekart-connection-type-card-postgres').length > 0
       if (onSelectorScreen) {
         cy.get('#dekart-connection-type-card-postgres', { timeout: 20000 }).click({ force: true })
         return
       }
-      cy.get('#dekart-new-connection-connections', { timeout: 20000 }).click({ force: true })
+      const onConnectionsPage = $body.find('#dekart-new-connection-connections').length > 0
+      if (onConnectionsPage) {
+        cy.get('#dekart-new-connection-connections', { timeout: 20000 }).click({ force: true })
+      } else {
+        cy.get('#dekart-new-connection-onboarding', { timeout: 20000 }).click({ force: true })
+      }
       cy.get('#dekart-connection-type-card-postgres', { timeout: 20000 }).click({ force: true })
     })
 
