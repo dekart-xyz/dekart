@@ -21,16 +21,20 @@ describe('postgres user-defined connection happy path', () => {
 
     cy.visit('http://localhost:3000/connections')
 
-    cy.get('body', { timeout: 20000 }).then(($body) => {
-      // If onboarding is shown, click Postgres card directly from it.
-      if ($body.text().includes('Connect your warehouse.')) {
-        cy.contains('div', 'Postgres', { timeout: 20000 }).click()
+    cy.get('body', { timeout: 20000 }).should(($body) => {
+      const text = $body.text()
+      expect(text, 'connections page should render expected actions').to.match(/Postgres|New Connection|New connection/)
+    }).then(($body) => {
+      if ($body.find('button:contains("New Connection"), button:contains("New connection")').length > 0) {
+        cy.contains('button', /New Connection|New connection/, { timeout: 20000 }).click({ force: true })
+        cy.contains('Postgres', { timeout: 20000 }).closest('button').click({ force: true })
         return
       }
-
-      cy.contains('button', /New Connection|New connection/, { timeout: 20000 }).click({ force: true })
+      if ($body.text().includes('Postgres')) {
+        cy.contains('Postgres', { timeout: 20000 }).closest('button').click({ force: true })
+        return
+      }
     })
-    cy.contains('div', 'Postgres', { timeout: 20000 }).click()
 
     cy.get('div.ant-modal-title', { timeout: 20000 }).should('contain', 'Postgres')
     setInputValue('input#connectionName', connName)
@@ -51,10 +55,11 @@ describe('postgres user-defined connection happy path', () => {
 
     cy.visit('http://localhost:3000/')
     cy.get('button#dekart-create-report', { timeout: 20000 }).click()
-    cy.contains(connName, { timeout: 60000 }).click()
+    cy.contains('button', connName, { timeout: 60000 }).click({ force: true })
     cy.get('textarea', { timeout: 20000 }).type(copy.simple_pg_query, { force: true })
     cy.get(`button:contains("${copy.execute}")`).click()
     cy.wait('@runQuery', { timeout: 120000 }).its('response.statusCode').should('eq', 200)
     cy.get(`span:contains("${copy.ready}")`, { timeout: 120000 }).should('be.visible')
+    cy.get('div:contains("1 rows")', { timeout: 120000 }).should('be.visible')
   })
 })

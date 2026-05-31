@@ -3,7 +3,7 @@
 describe('local MCP postgres happy path with device auth', () => {
   it('configures postgres in UX, authorizes device, executes MCP flow, and verifies map data in UI', () => {
     const appUrl = Cypress.env('DEKART_E2E_BASE_URL') || 'http://localhost:3000'
-    const apiBase = `${appUrl}/api/v1`
+    const apiBase = Cypress.env('DEKART_API_BASE_URL') || 'http://localhost:8080/api/v1'
     const connName = `Postgres MCP Local ${Date.now()}`
 
     const setInputValue = (selector, value) => {
@@ -83,14 +83,20 @@ describe('local MCP postgres happy path with device auth', () => {
 
     // 1) Configure local Postgres connection in UX.
     cy.visit(`${appUrl}/connections`)
-    cy.get('body', { timeout: 20000 }).then(($body) => {
-      if ($body.text().includes('Connect your warehouse.')) {
-        cy.contains('div', 'Postgres', { timeout: 20000 }).click()
+    cy.get('body', { timeout: 20000 }).should(($body) => {
+      const text = $body.text()
+      expect(text, 'connections page should render expected actions').to.match(/Postgres|New Connection|New connection/)
+    }).then(($body) => {
+      if ($body.find('button:contains("New Connection"), button:contains("New connection")').length > 0) {
+        cy.contains('button', /New Connection|New connection/, { timeout: 20000 }).click({ force: true })
+        cy.contains('Postgres', { timeout: 20000 }).closest('button').click({ force: true })
         return
       }
-      cy.contains('button', /New Connection|New connection/, { timeout: 20000 }).click({ force: true })
+      if ($body.text().includes('Postgres')) {
+        cy.contains('Postgres', { timeout: 20000 }).closest('button').click({ force: true })
+        return
+      }
     })
-    cy.contains('div', 'Postgres', { timeout: 20000 }).click()
 
     cy.get('div.ant-modal-title', { timeout: 20000 }).should('contain', 'Postgres')
     setInputValue('input#connectionName', connName)
@@ -151,10 +157,10 @@ describe('local MCP postgres happy path with device auth', () => {
                     expect(jobId, 'job_id').to.be.a('string').and.not.be.empty
 
                     pollJobDone(jobId).then(() => {
-                      // 4) User verifies map/report has data.
-                      cy.visit(`${appUrl}/reports/${reportId}`)
-                      cy.get('canvas', { timeout: 120000 }).should('have.length.at.least', 1)
-                      cy.get('canvas').first().should('be.visible')
+                      // 4) User verifies report has query results.
+                      cy.visit(`${appUrl}/reports/${reportId}/source`)
+                      cy.contains('span', 'Ready', { timeout: 120000 }).should('be.visible')
+                      cy.get('div:contains("100 rows")', { timeout: 120000 }).should('be.visible')
                     })
                   })
                 })

@@ -309,13 +309,15 @@ jobs:
 
       - name: Seed PostgreSQL test data (dekart_geo.sample.geospatial_points)
         run: |
-          docker run --rm --network host -e PGPASSWORD="$DEKART_POSTGRES_PASSWORD" postgres:15 \
-            psql -h localhost -U "$DEKART_POSTGRES_USER" -d postgres -v ON_ERROR_STOP=1 <<'SQL'
-          SELECT 'CREATE DATABASE dekart_geo'
-          WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'dekart_geo')\gexec
-          SQL
-          docker run --rm --network host -e PGPASSWORD="$DEKART_POSTGRES_PASSWORD" postgres:15 \
-            psql -h localhost -U "$DEKART_POSTGRES_USER" -d dekart_geo -v ON_ERROR_STOP=1 <<'SQL'
+          set -euo pipefail
+          pg_cid="$(docker ps --filter ancestor=postgres --format '{{.ID}}' | head -n 1)"
+          test -n "$pg_cid"
+          docker exec -e PGPASSWORD="$DEKART_POSTGRES_PASSWORD" "$pg_cid" \
+            psql -U "$DEKART_POSTGRES_USER" -d postgres -v ON_ERROR_STOP=1 -c "SELECT 1 FROM pg_database WHERE datname='dekart_geo'" | grep -q 1 \
+            || docker exec -e PGPASSWORD="$DEKART_POSTGRES_PASSWORD" "$pg_cid" \
+              psql -U "$DEKART_POSTGRES_USER" -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE dekart_geo"
+          docker exec -i -e PGPASSWORD="$DEKART_POSTGRES_PASSWORD" "$pg_cid" \
+            psql -U "$DEKART_POSTGRES_USER" -d dekart_geo -v ON_ERROR_STOP=1 <<'SQL'
           CREATE SCHEMA IF NOT EXISTS sample;
           CREATE TABLE IF NOT EXISTS sample.geospatial_points (
             id SERIAL PRIMARY KEY,
