@@ -158,6 +158,7 @@ function FirstSetupOnboarding () {
       extra={(
         <div className={styles.firstSetupActions}>
           <Button
+            id='dekart-new-connection-onboarding'
             type='primary'
             disabled={!isAdmin}
             title={isAdmin ? 'Create new connection' : 'Only admin can create new connection'}
@@ -248,6 +249,7 @@ function ReportsHeader (
           reportFilter === 'connections'
             ? (
               <Button
+                id='dekart-new-connection-connections'
                 disabled={!isAdmin}
                 type='primary'
                 title={isAdmin ? 'Create new connection' : 'Only admin can create new connection'}

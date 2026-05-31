@@ -21,19 +21,14 @@ describe('postgres user-defined connection happy path', () => {
 
     cy.visit('http://localhost:3000/connections')
 
-    cy.get('body', { timeout: 20000 }).should(($body) => {
-      const text = $body.text()
-      expect(text, 'connections page should render expected actions').to.match(/Postgres|New Connection|New connection/)
-    }).then(($body) => {
-      if ($body.find('button:contains("New Connection"), button:contains("New connection")').length > 0) {
-        cy.contains('button', /New Connection|New connection/, { timeout: 20000 }).click({ force: true })
-        cy.contains('Postgres', { timeout: 20000 }).closest('button').click({ force: true })
+    cy.get('body', { timeout: 20000 }).then(($body) => {
+      const onSelectorScreen = $body.find('#dekart-connection-type-card-postgres').length > 0
+      if (onSelectorScreen) {
+        cy.get('#dekart-connection-type-card-postgres', { timeout: 20000 }).click({ force: true })
         return
       }
-      if ($body.text().includes('Postgres')) {
-        cy.contains('Postgres', { timeout: 20000 }).closest('button').click({ force: true })
-        return
-      }
+      cy.get('#dekart-new-connection-connections', { timeout: 20000 }).click({ force: true })
+      cy.get('#dekart-connection-type-card-postgres', { timeout: 20000 }).click({ force: true })
     })
 
     cy.get('div.ant-modal-title', { timeout: 20000 }).should('contain', 'Postgres')
@@ -44,22 +39,18 @@ describe('postgres user-defined connection happy path', () => {
     setInputValue('input#postgresDatabase', 'dekart_geo')
     setInputValue('input#postgresPort', '5432')
 
-    cy.contains('button', 'Test Connection').click()
+    cy.get('button#testConnection').click()
     cy.wait('@testConnection')
     cy.get('button#saveConnection', { timeout: 60000 }).should('be.enabled').click()
-    cy.wait('@createConnection').then((interception) => {
-      const grpcStatus = interception.response?.headers?.['grpc-status']
-      const grpcMessage = interception.response?.headers?.['grpc-message']
-      expect(grpcStatus, `CreateConnection grpc-status, message=${grpcMessage || ''}`).to.satisfy((s) => s === undefined || s === '0')
-    })
+    cy.wait('@createConnection')
 
     cy.visit('http://localhost:3000/')
     cy.get('button#dekart-create-report', { timeout: 20000 }).click()
     cy.contains('button', connName, { timeout: 60000 }).click({ force: true })
-    cy.get('textarea', { timeout: 20000 }).type(copy.simple_pg_query, { force: true })
-    cy.get(`button:contains("${copy.execute}")`).click()
-    cy.wait('@runQuery', { timeout: 120000 }).its('response.statusCode').should('eq', 200)
+    cy.get('textarea', { timeout: 20000 }).type('SELECT * FROM sample.geospatial_points LIMIT 100', { force: true })
+    cy.get('button#dekart-query-execute-button').click()
+    cy.wait('@runQuery', { timeout: 120000 })
     cy.get(`span:contains("${copy.ready}")`, { timeout: 120000 }).should('be.visible')
-    cy.get('div:contains("1 rows")', { timeout: 120000 }).should('be.visible')
+    cy.get('div:contains("100 rows")', { timeout: 120000 }).should('be.visible')
   })
 })

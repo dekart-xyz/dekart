@@ -117,6 +117,7 @@ function ConnectionTypeSelector () {
         <OtherConnectorModal open={otherModalOpen} onClose={() => setOtherModalOpen(false)} />
         {connectionCards.map(card => (
           <button
+            id={`dekart-connection-type-card-${card.key}`}
             key={card.key}
             type='button'
             className={styles.connectionTypeCard}

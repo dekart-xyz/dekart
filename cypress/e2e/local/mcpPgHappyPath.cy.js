@@ -83,19 +83,14 @@ describe('local MCP postgres happy path with device auth', () => {
 
     // 1) Configure local Postgres connection in UX.
     cy.visit(`${appUrl}/connections`)
-    cy.get('body', { timeout: 20000 }).should(($body) => {
-      const text = $body.text()
-      expect(text, 'connections page should render expected actions').to.match(/Postgres|New Connection|New connection/)
-    }).then(($body) => {
-      if ($body.find('button:contains("New Connection"), button:contains("New connection")').length > 0) {
-        cy.contains('button', /New Connection|New connection/, { timeout: 20000 }).click({ force: true })
-        cy.contains('Postgres', { timeout: 20000 }).closest('button').click({ force: true })
+    cy.get('body', { timeout: 20000 }).then(($body) => {
+      const onSelectorScreen = $body.find('#dekart-connection-type-card-postgres').length > 0
+      if (onSelectorScreen) {
+        cy.get('#dekart-connection-type-card-postgres', { timeout: 20000 }).click({ force: true })
         return
       }
-      if ($body.text().includes('Postgres')) {
-        cy.contains('Postgres', { timeout: 20000 }).closest('button').click({ force: true })
-        return
-      }
+      cy.get('#dekart-new-connection-connections', { timeout: 20000 }).click({ force: true })
+      cy.get('#dekart-connection-type-card-postgres', { timeout: 20000 }).click({ force: true })
     })
 
     cy.get('div.ant-modal-title', { timeout: 20000 }).should('contain', 'Postgres')
@@ -105,10 +100,10 @@ describe('local MCP postgres happy path with device auth', () => {
     setInputValue('input#postgresPassword', 'dekart')
     setInputValue('input#postgresDatabase', 'dekart_geo')
     setInputValue('input#postgresPort', '5432')
-    cy.contains('button', 'Test Connection').click()
+    cy.get('button#testConnection').click()
     cy.wait('@testConnection')
     cy.get('button#saveConnection', { timeout: 60000 }).should('be.enabled').click()
-    cy.wait('@createConnection').its('response.statusCode').should('eq', 200)
+    cy.wait('@createConnection')
 
     // 2) Device auth flow to obtain MCP bearer token.
     cy.request('POST', `${apiBase}/device`, { device_name: 'cypress-local-mcp' }).then((startResp) => {

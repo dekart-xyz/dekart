@@ -35,6 +35,7 @@ function Footer ({ form, saveWithoutTest = false, testDisabled = false }) {
   return (
     <div className={styles.modalFooter}>
       <Button
+        id='testConnection'
         type='primary' disabled={testing || tested || testDisabled} loading={testing} onClick={() => {
           track('TestConnection')
           dispatch(testConnection(connectionType, form.getFieldsValue()))
