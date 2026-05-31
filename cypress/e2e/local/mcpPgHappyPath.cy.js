@@ -3,8 +3,29 @@
 describe('local MCP postgres happy path with device auth', () => {
   it('configures postgres in UX, authorizes device, executes MCP flow, and verifies map data in UI', () => {
     const appUrl = Cypress.env('DEKART_E2E_BASE_URL') || 'http://localhost:3000'
-    const apiBase = Cypress.env('DEKART_API_BASE_URL') || 'http://localhost:8080/api/v1'
+    const configuredApiBase = Cypress.env('DEKART_API_BASE_URL')
     const connName = `Postgres MCP Local ${Date.now()}`
+    const apiCandidates = configuredApiBase
+      ? [configuredApiBase]
+      : [`${appUrl}/api/v1`, 'http://localhost:8080/api/v1']
+
+    const resolveApiBaseAndStartDevice = (index = 0) => {
+      if (index >= apiCandidates.length) {
+        throw new Error(`no reachable API base from candidates: ${apiCandidates.join(', ')}`)
+      }
+      const candidate = apiCandidates[index]
+      return cy.request({
+        method: 'POST',
+        url: `${candidate}/device`,
+        body: { device_name: 'cypress-local-mcp' },
+        failOnStatusCode: false
+      }).then((response) => {
+        if (response.status === 200) {
+          return { apiBase: candidate, startResp: response }
+        }
+        return resolveApiBaseAndStartDevice(index + 1)
+      })
+    }
 
     const setInputValue = (selector, value) => {
       cy.get(selector).then(($input) => {
@@ -24,7 +45,7 @@ describe('local MCP postgres happy path with device auth', () => {
       return ''
     }
 
-    const mcpCall = (name, args = {}) => cy.request({
+    const mcpCall = (apiBase, name, args = {}) => cy.request({
       method: 'POST',
       url: `${apiBase}/mcp/call`,
       body: { name, arguments: args },
@@ -35,7 +56,7 @@ describe('local MCP postgres happy path with device auth', () => {
       return response.body.result
     })
 
-    const pollJobDone = (jobId, retries = 30) => {
+    const pollJobDone = (apiBase, jobId, retries = 30) => {
       return cy.request({
         method: 'POST',
         url: `${apiBase}/mcp/call`,
@@ -47,7 +68,7 @@ describe('local MCP postgres happy path with device auth', () => {
             throw new Error(`check_job_status failed with status=${response.status}`)
           }
           cy.wait(1000)
-          return pollJobDone(jobId, retries - 1)
+          return pollJobDone(apiBase, jobId, retries - 1)
         }
         const result = response.body.result
         const job = result.query_job || result.queryJob || result
@@ -74,7 +95,7 @@ describe('local MCP postgres happy path with device auth', () => {
           throw new Error(`query job timeout; last status=${status}`)
         }
         cy.wait(1000)
-        return pollJobDone(jobId, retries - 1)
+        return pollJobDone(apiBase, jobId, retries - 1)
       })
     }
 
@@ -115,8 +136,8 @@ describe('local MCP postgres happy path with device auth', () => {
     cy.get('button#saveConnection', { timeout: 60000 }).should('be.enabled').click()
     cy.wait('@createConnection')
 
-    // 2) Device auth flow to obtain MCP bearer token.
-    cy.request('POST', `${apiBase}/device`, { device_name: 'cypress-local-mcp' }).then((startResp) => {
+    resolveApiBaseAndStartDevice().then(({ apiBase, startResp }) => {
+      // 2) Device auth flow to obtain MCP bearer token.
       expect(startResp.status).to.eq(200)
       const deviceId = startResp.body.device_id
       const authUrl = startResp.body.auth_url
@@ -132,36 +153,36 @@ describe('local MCP postgres happy path with device auth', () => {
         expect(tokenResp.body.status, 'device token status').to.be.oneOf(['pending', 'authorized'])
 
         // 3) MCP flow: list connections -> create report -> create dataset -> create query -> update query -> run query.
-        mcpCall('list_connections').then((listResult) => {
+        mcpCall(apiBase, 'list_connections').then((listResult) => {
           const connections = listResult.connections || listResult
           expect(connections, 'connections').to.be.an('array').and.not.be.empty
           const match = connections.find((c) => c.connection_name === connName || c.connectionName === connName)
           expect(match, `connection "${connName}" should exist`).to.exist
           const connectionId = match.id
 
-          mcpCall('create_report', {}).then((reportResult) => {
+          mcpCall(apiBase, 'create_report', {}).then((reportResult) => {
             const reportId = readId(reportResult, ['report_id', 'reportId', 'id']) ||
               readId(reportResult?.report, ['id'])
             expect(reportId, 'report_id').to.be.a('string').and.not.be.empty
 
-            mcpCall('create_dataset', { report_id: reportId }).then((datasetResult) => {
+            mcpCall(apiBase, 'create_dataset', { report_id: reportId }).then((datasetResult) => {
               const datasetId = readId(datasetResult, ['dataset_id', 'datasetId', 'id']) ||
                 readId(datasetResult?.dataset, ['id'])
               expect(datasetId, 'dataset_id').to.be.a('string').and.not.be.empty
 
-              mcpCall('create_query', { dataset_id: datasetId, connection_id: connectionId }).then((queryResult) => {
+              mcpCall(apiBase, 'create_query', { dataset_id: datasetId, connection_id: connectionId }).then((queryResult) => {
                 const queryId = readId(queryResult, ['query_id', 'queryId']) ||
                   readId(queryResult?.query, ['id'])
                 expect(queryId, 'query_id').to.be.a('string').and.not.be.empty
 
                 const sql = 'SELECT * FROM sample.geospatial_points LIMIT 100'
-                mcpCall('update_query', { query_id: queryId, query_text: sql }).then(() => {
-                  mcpCall('run_query', { query_id: queryId }).then((runResult) => {
+                mcpCall(apiBase, 'update_query', { query_id: queryId, query_text: sql }).then(() => {
+                  mcpCall(apiBase, 'run_query', { query_id: queryId }).then((runResult) => {
                     const queryJob = runResult.query_job || runResult.queryJob
                     const jobId = queryJob?.id
                     expect(jobId, 'job_id').to.be.a('string').and.not.be.empty
 
-                    pollJobDone(jobId).then(() => {
+                    pollJobDone(apiBase, jobId).then(() => {
                       // 4) User verifies report has query results.
                       cy.visit(`${appUrl}/reports/${reportId}/source`)
                       cy.contains('span', 'Ready', { timeout: 120000 }).should('be.visible')
