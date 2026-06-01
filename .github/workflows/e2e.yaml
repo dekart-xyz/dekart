@@ -194,8 +194,28 @@ jobs:
               -e DEKART_DATASOURCE=USER \
               -e DEKART_ALLOW_FILE_UPLOAD=1 \
 
-          - id: bigquery
-            spec: cypress/e2e/bq
+          - id: bigquery-core
+            spec: cypress/e2e/bq/archive.cy.js,cypress/e2e/bq/basicFlow.cy.js
+            extra_env: |
+              -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
+              -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
+              -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
+              -e DEKART_STORAGE=GCS \
+              -e DEKART_DATASOURCE=BQ \
+              -e DEKART_ALLOW_FILE_UPLOAD=1 \
+
+          - id: bigquery-ops
+            spec: cypress/e2e/bq/cancelQuery.cy.js,cypress/e2e/bq/scripts.cy.js,cypress/e2e/bq/fileUploadMultipart.cy.js,cypress/e2e/bq/noSSOSmoke.cy.js
+            extra_env: |
+              -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
+              -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
+              -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
+              -e DEKART_STORAGE=GCS \
+              -e DEKART_DATASOURCE=BQ \
+              -e DEKART_ALLOW_FILE_UPLOAD=1 \
+
+          - id: bigquery-update-dataset
+            spec: cypress/e2e/bq/updateDataset.cy.js
             extra_env: |
               -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
               -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
@@ -229,8 +249,42 @@ jobs:
               -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_SEC \
               -e DEKART_ALLOW_FILE_UPLOAD=1 \
 
-          - id: snowflake-s3
-            spec: cypress/e2e/snowflake-s3
+          - id: snowflake-s3-core
+            spec: cypress/e2e/snowflake-s3/spec.cy.js,cypress/e2e/snowflake-s3/happyPath.cy.js
+            extra_env: |
+              -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
+              -e DEKART_STORAGE=S3 \
+              -e DEKART_DATASOURCE=SNOWFLAKE \
+              -e DEKART_CLOUD_STORAGE_BUCKET=$S3_BUCKET_SEC \
+              -e AWS_REGION=$AWS_REGION \
+              -e AWS_ACCESS_KEY_ID=$AWS_KEY_SEC \
+              -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_SEC \
+              -e DEKART_SNOWFLAKE_ACCOUNT_ID=$SNOW_ID_SEC \
+              -e DEKART_SNOWFLAKE_USER=$SNOW_USER_SEC \
+              -e DEKART_SNOWFLAKE_PASSWORD=$SNOW_PASS_SEC \
+              -e DEKART_REQUIRE_AMAZON_OIDC=1 \
+              -e DEKART_DEV_CLAIMS_EMAIL=test@gmail.com \
+              -e DEKART_ALLOW_FILE_UPLOAD=1 \
+
+          - id: snowflake-s3-ops
+            spec: cypress/e2e/snowflake-s3/cancelQuery.cy.js,cypress/e2e/snowflake-s3/emptyResult.cy.js,cypress/e2e/snowflake-s3/fork.cy.js
+            extra_env: |
+              -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
+              -e DEKART_STORAGE=S3 \
+              -e DEKART_DATASOURCE=SNOWFLAKE \
+              -e DEKART_CLOUD_STORAGE_BUCKET=$S3_BUCKET_SEC \
+              -e AWS_REGION=$AWS_REGION \
+              -e AWS_ACCESS_KEY_ID=$AWS_KEY_SEC \
+              -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_SEC \
+              -e DEKART_SNOWFLAKE_ACCOUNT_ID=$SNOW_ID_SEC \
+              -e DEKART_SNOWFLAKE_USER=$SNOW_USER_SEC \
+              -e DEKART_SNOWFLAKE_PASSWORD=$SNOW_PASS_SEC \
+              -e DEKART_REQUIRE_AMAZON_OIDC=1 \
+              -e DEKART_DEV_CLAIMS_EMAIL=test@gmail.com \
+              -e DEKART_ALLOW_FILE_UPLOAD=1 \
+
+          - id: snowflake-s3-layer-order
+            spec: cypress/e2e/snowflake-s3/layerOrderRerunRegression.cy.js
             extra_env: |
               -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
               -e DEKART_STORAGE=S3 \
