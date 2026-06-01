@@ -3,7 +3,8 @@
 describe('local MCP postgres happy path with device auth', () => {
   it('configures postgres in UX, authorizes device, executes MCP flow, and verifies map data in UI', () => {
     const appUrl = Cypress.env('DEKART_E2E_BASE_URL') || 'http://localhost:3000'
-    const isCI = String(Cypress.env('CI') ?? '').toLowerCase() === 'true' || String(Cypress.env('CYPRESS_CI') ?? '') === '1'
+    const ciValue = String(Cypress.env('CI') ?? '').toLowerCase()
+    const isCI = ciValue === 'true' || ciValue === '1' || String(Cypress.env('CYPRESS_CI') ?? '') === '1'
     const apiBase = isCI ? `${appUrl}/api/v1` : 'http://localhost:8080/api/v1'
     const connName = `Postgres MCP Local ${Date.now()}`
 
