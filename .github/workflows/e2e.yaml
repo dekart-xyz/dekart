@@ -265,6 +265,7 @@ jobs:
               -e DEKART_DATASOURCE=BQ \
               -e DEKART_VERSION_CHECK_URL=http://localhost:3000/api/v1/version \
               -e DEKART_VERSION_CHECK_FORCE_CURRENT_VERSION=0.0.0 \
+              -e DEKART_ALLOW_FILE_UPLOAD=0 \
 
           - id: athena
             spec: cypress/e2e/athena
@@ -362,16 +363,13 @@ jobs:
               -e DEKART_SQLITE_DB_PATH=./dekart.db \
               -e DEKART_REQUIRE_SNOWFLAKE_CONTEXT=1 \
               -e DEKART_DEV_CLAIMS_EMAIL=bilonenko.v2@gmail.com \
+              -e DEKART_ALLOW_FILE_UPLOAD=0 \
 
           - id: local-user-postgres
             spec: cypress/e2e/local/userDefinedConnectionHappyPath.cy.js
-            extra_env: |
-              -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
 
           - id: local-mcp-postgres
             spec: cypress/e2e/local/mcpPgHappyPath.cy.js
-            extra_env: |
-              -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
 
           - id: local-default-workspace
             spec: cypress/e2e/local/defaultWorkspaceManagement.cy.js
@@ -392,6 +390,7 @@ jobs:
               -e AWS_REGION=$AWS_REGION \
               -e AWS_ACCESS_KEY_ID=$AWS_KEY_SEC \
               -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_SEC \
+              -e DEKART_ALLOW_FILE_UPLOAD=0 \
 
     services:
       postgres:

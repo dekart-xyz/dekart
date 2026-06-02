@@ -15,6 +15,7 @@ services:
       DEKART_SNOWFLAKE_USER: "your-snowflake-user"
       DEKART_SNOWFLAKE_PASSWORD: "your-snowflake-password"
       DEKART_SQLITE_DB_PATH: "./data/dekart.db"
+      DEKART_ALLOW_FILE_UPLOAD: "0"
       DEKART_BACKUP_FREQUENCY_MIN: "5"
       DEKART_MAX_BACKUPS_AGE_DAYS: "7"
       DEKART_DEV_CLAIMS_EMAIL: "you@example.com"

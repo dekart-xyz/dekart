@@ -210,7 +210,7 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 			},
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_ALLOW_FILE_UPLOAD,
-				Value: os.Getenv("DEKART_ALLOW_FILE_UPLOAD"),
+				Value: FileUploadEnvValue(),
 			},
 			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_DATASOURCE,

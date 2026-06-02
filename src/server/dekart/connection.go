@@ -149,7 +149,7 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 				con.CloudStorageBucket = storage.GetDefaultBucketName()
 				con.BigqueryProjectId = os.Getenv("DEKART_BIGQUERY_PROJECT_ID")
 				con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_BIGQUERY
-				con.CanStoreFiles = os.Getenv("DEKART_ALLOW_FILE_UPLOAD") != ""
+				con.CanStoreFiles = IsFileUploadEnabled()
 				return &con, nil
 			}
 			// Self-hosted USER mode now returns a synthetic default connection instead
@@ -158,7 +158,7 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 			con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_LOCAL
 			// Upload capability is still explicitly gated by env to preserve existing
 			// opt-in behavior for deployments that do not want file uploads enabled.
-			con.CanStoreFiles = os.Getenv("DEKART_ALLOW_FILE_UPLOAD") != ""
+			con.CanStoreFiles = IsFileUploadEnabled()
 			return &con, nil
 		case "SNOWFLAKE":
 			con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_SNOWFLAKE
@@ -185,7 +185,7 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 		}
 		// Non-USER system connections require both upload flag and bucket-backed
 		// object storage. Local USER mode is handled in the branch above.
-		if os.Getenv("DEKART_ALLOW_FILE_UPLOAD") != "" && con.CloudStorageBucket != "" {
+		if IsFileUploadEnabled() && con.CloudStorageBucket != "" {
 			con.CanStoreFiles = true
 		}
 
@@ -768,7 +768,7 @@ func (s Server) GetConnectionList(ctx context.Context, req *proto.GetConnectionL
 		connections = append(connections, userConnections...)
 	}
 
-	if os.Getenv("DEKART_DATASOURCE") != "USER" || isFileUploadEnabled() || os.Getenv("DEKART_CLOUD") != "" {
+	if os.Getenv("DEKART_DATASOURCE") != "USER" || IsFileUploadEnabled() || os.Getenv("DEKART_CLOUD") != "" {
 		// Keep system connection visible for non-USER datasources, cloud USER mode,
 		// and local USER mode when uploads are enabled; Dataset upload flow relies on
 		// a default connection with canStoreFiles=true being present in this list.

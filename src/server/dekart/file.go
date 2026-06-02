@@ -141,7 +141,7 @@ func (s Server) moveFileToStorage(reqConCtx context.Context, fileSourceID string
 }
 
 func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
-	if len(os.Getenv("DEKART_ALLOW_FILE_UPLOAD")) == 0 {
+	if !IsFileUploadEnabled() {
 		log.Warn().Msg("file upload is disabled, set DEKART_ALLOW_FILE_UPLOAD to enable")
 		w.WriteHeader(http.StatusForbidden)
 		return

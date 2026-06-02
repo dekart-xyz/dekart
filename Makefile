@@ -60,7 +60,7 @@ gotest:
 e2e: bq athena snowflake
 
 snowpark-build:
-	docker buildx build --platform linux/amd64 --tag ${SNOWPARK_IMAGE_NAME} -f ./Dockerfile . --load
+	docker buildx build --platform linux/amd64 --tag ${SNOWPARK_IMAGE_NAME} --build-arg DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} -f ./Dockerfile . --load
 
 snowpark-run: snowpark-build
 	docker run -it --rm \
