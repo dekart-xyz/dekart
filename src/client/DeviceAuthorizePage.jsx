@@ -7,6 +7,8 @@ import { useHistory, useLocation } from 'react-router-dom'
 import { authorizeDevice } from './actions/deviceAuth'
 import { updateSessionStorage } from './actions/sessionStorage'
 import { pendingDeviceAuthorizationKey } from './lib/deviceAuth'
+import { ConnectionType } from 'dekart-proto/dekart_pb'
+import { track } from './lib/tracking'
 import { Header } from './Header'
 import { Loading } from './Loading'
 import styles from './DeviceAuthorizePage.module.css'
@@ -20,7 +22,7 @@ const pageState = {
   authorized: {
     status: 'success',
     title: 'Device authorized',
-    subtitle: 'You can close this tab and return to your terminal.'
+    subtitle: 'Your CLI now has access.'
   },
   approve: {
     status: 'info',
@@ -104,12 +106,15 @@ export default function DeviceAuthorizePage () {
   const googleOAuthEnabled = useSelector(state => state.env.googleOAuthEnabled)
   const userStream = useSelector(state => state.user.stream)
   const isAnonymous = useSelector(state => state.user.isAnonymous)
+  const isAdmin = useSelector(state => state.user.isAdmin)
   const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
   const workspaceID = userStream?.workspaceId || ''
   const hasWorkspaceContext = workspaceID || isDefaultWorkspace
   const [authorized, setAuthorized] = useState(false)
   const [authorizing, setAuthorizing] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const connectionListLoaded = useSelector(state => state.connection.listLoaded)
+  const sqlConnectionList = useSelector(state => state.connection.list.filter(c => c.connectionType !== ConnectionType.CONNECTION_TYPE_LOCAL))
 
   useEffect(() => {
     if (!deviceID) {
@@ -147,7 +152,39 @@ export default function DeviceAuthorizePage () {
   if (authorized) {
     return (
       <DeviceAuthorizeLayout title='Device authorized — Dekart'>
-        <Result status={pageState.authorized.status} title={pageState.authorized.title} subTitle={pageState.authorized.subtitle} />
+        <Result
+          status={pageState.authorized.status}
+          title={pageState.authorized.title}
+          subTitle={pageState.authorized.subtitle}
+          extra={(
+            <>
+              {connectionListLoaded && sqlConnectionList.length === 0 && (
+                <Button
+                  type='primary'
+                  disabled={!isAdmin}
+                  title={isAdmin ? 'Connect database' : 'Only admin can create new connection'}
+                  onClick={() => {
+                    track('DeviceAuthorizedCreateConnection')
+                    history.push('/connections')
+                  }}
+                >
+                  Connect database
+                </Button>
+              )}
+              <Button
+                onClick={() => {
+                  track('DeviceAuthorizedManageTokens')
+                  history.push('/workspace/tokens')
+                }}
+              >
+                Manage tokens
+              </Button>
+              <div className={styles.installSkillLink}>
+                <a href='https://github.com/dekart-xyz/geosql#install-claudecodex' target='_blank' rel='noreferrer'>Install Claude skill</a>
+              </div>
+            </>
+          )}
+        />
       </DeviceAuthorizeLayout>
     )
   }

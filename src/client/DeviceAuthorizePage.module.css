@@ -53,3 +53,8 @@
   margin-top: 8px;
   color: var(--error-color);
 }
+
+.installSkillLink {
+  margin-top: 14px;
+  font-size: 14px;
+}

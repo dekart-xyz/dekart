@@ -13,5 +13,5 @@ Use when starting local development, debugging server/frontend issues, or settin
 
 - `make up-and-down` runs local Postgres.
 - `make server .env.cloud` runs backend with the selected env file.
-- `npm start` runs Vite dev server on `http://localhost:3000`.
+- `make client` stops any existing listener on port 3000 and runs `npm start` for Vite on `http://localhost:3000`.
 - `make proto` regenerates proto stubs. After running, restart backend and frontend.

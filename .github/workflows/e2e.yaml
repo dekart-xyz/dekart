@@ -374,6 +374,9 @@ jobs:
           - id: local-default-workspace
             spec: cypress/e2e/local/defaultWorkspaceManagement.cy.js
 
+          - id: local-bigquery-service-account-retest
+            spec: cypress/e2e/local/bigQueryServiceAccountNameRetest.cy.js
+
           - id: pg-s3-postgres
             spec: cypress/e2e/pg-s3/happyPath.cy.js
             extra_env: |

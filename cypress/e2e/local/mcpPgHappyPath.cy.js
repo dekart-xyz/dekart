@@ -128,6 +128,8 @@ describe('local MCP postgres happy path with device auth', () => {
       cy.visit(authUrl)
       cy.contains('button', 'Authorize', { timeout: 20000 }).click()
       cy.contains('Device authorized', { timeout: 20000 }).should('be.visible')
+      cy.contains('Your CLI now has access.').should('be.visible')
+      cy.contains('button', 'Manage tokens').should('be.visible')
 
       cy.request('POST', `${apiBase}/device/token`, { device_id: deviceId }).then((tokenResp) => {
         expect(tokenResp.status).to.eq(200)
