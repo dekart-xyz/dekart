@@ -92,7 +92,7 @@ message CreateReportSnapshotRequest {
 }
 
 message CreateReportSnapshotResponse {
-    string snapshot_url = 1; // Signed short-lived URL for one screenshot render request.
+    string snapshot_url = 1; // Signed short-lived PNG URL. Empty when Browserless capture is not configured.
     int64 expires_in = 2; // URL lifetime in seconds from response time.
     string snapshot_render_url = 3; // Absolute URL of the snapshot render frontend.
 }
@@ -449,6 +449,7 @@ enum ConnectionType {
     CONNECTION_TYPE_ATHENA = 4;
     CONNECTION_TYPE_POSTGRES = 5;
     CONNECTION_TYPE_CLICKHOUSE = 6;
+    CONNECTION_TYPE_LOCAL = 7;
 
 }
 
@@ -474,6 +475,11 @@ message Connection {
     Secret wherobots_key = 19;
     string wherobots_runtime = 20;
     string wherobots_region = 21;
+    string postgres_host = 22;
+    string postgres_username = 23;
+    Secret postgres_password = 24;
+    string postgres_database = 25;
+    int32 postgres_port = 26;
 }
 
 message Secret {

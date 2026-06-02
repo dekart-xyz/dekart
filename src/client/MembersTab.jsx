@@ -12,6 +12,7 @@ import Select from 'antd/es/select'
 import { track } from './lib/tracking'
 import { showUpgradeModal, UpgradeModalType } from './actions/upgradeModal'
 import Typography from 'antd/es/typography'
+import { UNKNOWN_EMAIL } from './lib/constants'
 
 const { Text } = Typography
 
@@ -42,7 +43,8 @@ export default function MembersTab () {
   const [inviteRole, setInviteRole] = useState(UserRole.ROLE_VIEWER)
   const isAdmin = useSelector(state => state.user.isAdmin)
   const expired = useSelector(state => state.workspace.expired)
-  const canManageUsers = isAdmin && !expired
+  const hasAuthenticatedUser = Boolean(userStream?.email && userStream.email !== UNKNOWN_EMAIL)
+  const canManageUsers = isAdmin && !expired && hasAuthenticatedUser
   const isFreemium = useSelector(state => state.user.isFreemium)
   const addUserCb = useCallback(() => {
     if (isFreemium) {
@@ -74,48 +76,52 @@ export default function MembersTab () {
 
   return (
     <div className={styles.teamTab}>
-      <div className={styles.inviteUsers}>
-        <Input
-          className={styles.inviteUsersInput}
-          name='email'
-          type='email'
-          autoComplete='email'
-          aria-label='Email'
-          pattern='^[a-zA-Z0-9._%+\-@]*$'
-          placeholder='Email' value={email} onChange={(e) => setEmail(e.target.value)}
-          onPressEnter={addUserCb}
-        />
-        <Select
-          style={{ width: 220 }}
-          name='role'
-          value={inviteRole}
-          onChange={(value) => {
-            setInviteRole(value)
-          }}
-          options={[
-            {
-              value: UserRole.ROLE_ADMIN,
-              label: getRoleTitle(UserRole.ROLE_ADMIN, planType)
-            },
-            {
-              value: UserRole.ROLE_EDITOR,
-              label: getRoleTitle(UserRole.ROLE_EDITOR, planType)
-            },
-            {
-              value: UserRole.ROLE_VIEWER,
-              label: getRoleTitle(UserRole.ROLE_VIEWER, planType)
-            }
+      {hasAuthenticatedUser
+        ? (
+          <div className={styles.inviteUsers}>
+            <Input
+              className={styles.inviteUsersInput}
+              name='email'
+              type='email'
+              autoComplete='email'
+              aria-label='Email'
+              pattern='^[a-zA-Z0-9._%+\-@]*$'
+              placeholder='Email' value={email} onChange={(e) => setEmail(e.target.value)}
+              onPressEnter={addUserCb}
+            />
+            <Select
+              style={{ width: 220 }}
+              name='role'
+              value={inviteRole}
+              onChange={(value) => {
+                setInviteRole(value)
+              }}
+              options={[
+                {
+                  value: UserRole.ROLE_ADMIN,
+                  label: getRoleTitle(UserRole.ROLE_ADMIN, planType)
+                },
+                {
+                  value: UserRole.ROLE_EDITOR,
+                  label: getRoleTitle(UserRole.ROLE_EDITOR, planType)
+                },
+                {
+                  value: UserRole.ROLE_VIEWER,
+                  label: getRoleTitle(UserRole.ROLE_VIEWER, planType)
+                }
 
-          ]}
-        />
-        <Button
-          disabled={inviteDisabled}
-          className={styles.inviteUsersButton} type='primary' onClick={() => {
-            addUserCb()
-          }}
-        >Invite user
-        </Button>
-      </div>
+              ]}
+            />
+            <Button
+              disabled={inviteDisabled}
+              className={styles.inviteUsersButton} type='primary' onClick={() => {
+                addUserCb()
+              }}
+            >Invite user
+            </Button>
+          </div>
+          )
+        : null}
       <div className={styles.userTable}>
         <div className={styles.membersList}>
           {users.filter(u => u.status !== 3).map((u) => (
@@ -127,7 +133,7 @@ export default function MembersTab () {
                 <Tag className={styles.statusTag}>{['Unknown', 'Pending', 'Active', 'Removed', 'Rejected'][u.status]}</Tag>
               </div>
               <div className={styles.memberCopyColumn}>
-                {u.status === 1
+                {u.status === 1 && canManageUsers
                   ? (
                     <Button
                       icon={<CopyOutlined />}
@@ -145,32 +151,36 @@ export default function MembersTab () {
                   : null}
               </div>
               <div className={styles.memberRoleColumn}>
-                <Select
-                  defaultValue={u.role}
-                  style={{ width: 220 }}
-                  disabled={u.email === userStream.email || !canManageUsers}
-                  onChange={(value) => {
-                    track('ChangeUserRole', { email: u.email, newRole: value })
-                    dispatch(updateWorkspaceUser(u.email, UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_UPDATE, value))
-                  }}
-                  options={[
-                    {
-                      value: UserRole.ROLE_ADMIN,
-                      label: getRoleTitle(UserRole.ROLE_ADMIN, planType)
-                    },
-                    {
-                      value: UserRole.ROLE_EDITOR,
-                      label: getRoleTitle(UserRole.ROLE_EDITOR, planType)
-                    },
-                    {
-                      value: UserRole.ROLE_VIEWER,
-                      label: getRoleTitle(UserRole.ROLE_VIEWER, planType)
-                    }
-                  ]}
-                />
+                {hasAuthenticatedUser
+                  ? (
+                    <Select
+                      defaultValue={u.role}
+                      style={{ width: 220 }}
+                      disabled={u.email === userStream.email || !canManageUsers}
+                      onChange={(value) => {
+                        track('ChangeUserRole', { email: u.email, newRole: value })
+                        dispatch(updateWorkspaceUser(u.email, UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_UPDATE, value))
+                      }}
+                      options={[
+                        {
+                          value: UserRole.ROLE_ADMIN,
+                          label: getRoleTitle(UserRole.ROLE_ADMIN, planType)
+                        },
+                        {
+                          value: UserRole.ROLE_EDITOR,
+                          label: getRoleTitle(UserRole.ROLE_EDITOR, planType)
+                        },
+                        {
+                          value: UserRole.ROLE_VIEWER,
+                          label: getRoleTitle(UserRole.ROLE_VIEWER, planType)
+                        }
+                      ]}
+                    />
+                    )
+                  : <Text>{getRoleTitle(u.role, planType)}</Text>}
               </div>
               <div className={styles.memberActions}>
-                <RemoveButton email={u.email} />
+                {hasAuthenticatedUser ? <RemoveButton email={u.email} /> : null}
               </div>
             </div>
           ))}
@@ -187,7 +197,9 @@ function RemoveButton ({ email }) {
   const dispatch = useDispatch()
   const userStream = useSelector(state => state.user.stream)
   const isAdmin = useSelector(state => state.user.isAdmin)
-  const disabled = email === userStream.email || !isAdmin || removing
+  const expired = useSelector(state => state.workspace.expired)
+  const canManageUsers = isAdmin && !expired && Boolean(userStream?.email && userStream.email !== UNKNOWN_EMAIL)
+  const disabled = email === userStream?.email || !canManageUsers || removing
 
   if (confirming) {
     return (

@@ -29,8 +29,14 @@ type StorageObject interface {
 	Delete(ctx context.Context) error
 }
 
+type ObjectInfo struct {
+	Name      string
+	UpdatedAt time.Time
+}
+
 type Storage interface {
 	GetObject(context.Context, string, string) StorageObject
+	ListObjectsByPrefix(context.Context, string, string) ([]ObjectInfo, error)
 	CanSaveQuery(context.Context, string) bool
 	StartUploadSession(context.Context, StartUploadSessionInput) (*StartUploadSessionOutput, error)
 	UploadPart(context.Context, UploadPartInput) (*UploadPartOutput, error)
@@ -51,6 +57,14 @@ func GetBucketName(userBucketName string) string {
 
 func GetDefaultBucketName() string {
 	return os.Getenv("DEKART_CLOUD_STORAGE_BUCKET")
+}
+
+func GetLocalFilesRoot() string {
+	root := strings.TrimSpace(os.Getenv("DEKART_LOCAL_FILES_ROOT"))
+	if root == "" {
+		return "/dekart/data/files"
+	}
+	return root
 }
 
 type S3Storage struct {
@@ -116,6 +130,29 @@ func (s S3Storage) GetObject(_ context.Context, string, name string) StorageObje
 		name,
 		s.logger.With().Str("name", name).Logger(),
 	}
+}
+
+func (s S3Storage) ListObjectsByPrefix(ctx context.Context, bucket, prefix string) ([]ObjectInfo, error) {
+	objects := make([]ObjectInfo, 0)
+	err := s.client.ListObjectsV2PagesWithContext(ctx, &s3.ListObjectsV2Input{
+		Bucket: aws.String(bucket),
+		Prefix: aws.String(prefix),
+	}, func(page *s3.ListObjectsV2Output, _ bool) bool {
+		for _, obj := range page.Contents {
+			if obj == nil || obj.Key == nil || obj.LastModified == nil {
+				continue
+			}
+			objects = append(objects, ObjectInfo{
+				Name:      *obj.Key,
+				UpdatedAt: obj.LastModified.UTC(),
+			})
+		}
+		return true
+	})
+	if err != nil {
+		return nil, err
+	}
+	return objects, nil
 }
 
 func (o S3StorageObject) GetWriter(ctx context.Context) io.WriteCloser {
@@ -202,7 +239,14 @@ func (s S3StorageObject) CopyTo(ctx context.Context, writer io.WriteCloser) erro
 }
 
 func (s S3StorageObject) Delete(ctx context.Context) error {
-	log.Fatal().Msg("not implemented")
+	_, err := s.client.DeleteObjectWithContext(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(s.bucketName),
+		Key:    aws.String(s.name),
+	})
+	if err != nil {
+		s.logger.Error().Err(err).Msg("error deleting object")
+		return err
+	}
 	return nil
 }
 

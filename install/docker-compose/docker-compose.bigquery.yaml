@@ -23,6 +23,8 @@ services:
       DEKART_POSTGRES_PASSWORD: "dekart"
       DEKART_POSTGRES_PORT: "5432"
       DEKART_POSTGRES_HOST: "db"
+      # Get a key at https://mailchi.mp/dekart/upgrade-to-sso
+      DEKART_LICENSE_KEY: "your-license-key"
       DEKART_CLOUD_STORAGE_BUCKET: "your-gcs-bucket"
       DEKART_BIGQUERY_PROJECT_ID: "your-gcp-project-id"
       DEKART_BIGQUERY_MAX_BYTES_BILLED: "53687091200"
