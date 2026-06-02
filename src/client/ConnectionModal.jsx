@@ -15,6 +15,10 @@ import { DatasourceIcon } from './Datasource'
 import { track } from './lib/tracking'
 import TextArea from 'antd/es/input/TextArea'
 
+function connectionTestFieldsChanged (changedValues, fields) {
+  return fields.some(field => Object.prototype.hasOwnProperty.call(changedValues, field))
+}
+
 function Footer ({ form, saveWithoutTest = false, testDisabled = false }) {
   const { dialog, test } = useSelector(state => state.connection)
   const { tested, testing, error: testError, success: testSuccess } = test
@@ -105,7 +109,9 @@ function WherobotsConnectionModal ({ form }) {
           form={form}
           disabled={loading}
           layout='vertical' onValuesChange={(changedValues, allValues) => {
-            dispatch(connectionChanged())
+            if (connectionTestFieldsChanged(changedValues, ['connectionName', 'wherobotsHost', 'wherobotsKey', 'wherobotsRuntime', 'wherobotsRegion'])) {
+              dispatch(connectionChanged())
+            }
             if (changedValues.wherobotsHost || changedValues.wherobotsKey) {
               dispatch(getWherobotsConnectionHint(allValues.wherobotsHost, allValues.wherobotsKey))
             }
@@ -189,7 +195,9 @@ function SnowflakeConnectionModal ({ form }) {
                 snowflakeAccountId: snowflakeAccountId.replace('.', '-')
               })
             }
-            dispatch(connectionChanged())
+            if (connectionTestFieldsChanged(changedValues, ['connectionName', 'snowflakeAccountId', 'snowflakeUsername', 'snowflakeKey', 'snowflakeWarehouse'])) {
+              dispatch(connectionChanged())
+            }
           }}
         >
           {datasetUsed ? <div className={styles.datasetsCountAlert}><Alert message={<>This connection is used in {connection.datasetCount} dataset{connection.datasetCount > 1 ? 's' : ''}.</>} description='Changing may cause map errors' type='warning' /></div> : null}
@@ -258,8 +266,10 @@ function PostgresConnectionModal ({ form }) {
           form={form}
           disabled={loading}
           layout='vertical'
-          onValuesChange={() => {
-            dispatch(connectionChanged())
+          onValuesChange={(changedValues) => {
+            if (connectionTestFieldsChanged(changedValues, ['connectionName', 'postgresHost', 'postgresUsername', 'postgresPassword', 'postgresDatabase', 'postgresPort'])) {
+              dispatch(connectionChanged())
+            }
           }}
         >
           {datasetUsed ? <div className={styles.datasetsCountAlert}><Alert message={<>This connection is used in {connection.datasetCount} dataset{connection.datasetCount > 1 ? 's' : ''}.</>} description='Changing may cause map errors' type='warning' /></div> : null}
@@ -315,7 +325,7 @@ function BigQueryServiceAccountConnectionModal ({ form }) {
 
   useEffect(() => {
     const bigqueryProjectId = form.getFieldValue('bigqueryProjectId')
-    if (projects && projects.length === 1 && !bigqueryProjectId) {
+    if (projects && projects.length === 1 && !bigqueryProjectId && !form.isFieldTouched('bigqueryProjectId')) {
       form.setFieldsValue({ bigqueryProjectId: projects[0] })
     }
   }, [projects, form])
@@ -332,7 +342,9 @@ function BigQueryServiceAccountConnectionModal ({ form }) {
           form={form}
           disabled={loading}
           layout='vertical' onValuesChange={(changedValues, allValues) => {
-            dispatch(connectionChanged())
+            if (connectionTestFieldsChanged(changedValues, ['connectionName', 'bigqueryProjectId', 'cloudStorageBucket', 'newBigqueryKey'])) {
+              dispatch(connectionChanged())
+            }
             if (changedValues.bigqueryProjectId && !allValues.connectionName) {
               form.setFieldsValue({ connectionName: changedValues.bigqueryProjectId })
             }
@@ -408,7 +420,7 @@ function BigQueryConnectionModal ({ form }) {
   const bigqueryProjectId = form.getFieldValue('bigqueryProjectId')
 
   useEffect(() => {
-    if (projects && projects.length === 1 && !bigqueryProjectId) {
+    if (projects && projects.length === 1 && !bigqueryProjectId && !form.isFieldTouched('bigqueryProjectId')) {
       form.setFieldsValue({ bigqueryProjectId: projects[0] })
       track('AutoFillBigQueryProjectId')
     }
@@ -435,7 +447,9 @@ function BigQueryConnectionModal ({ form }) {
           form={form}
           disabled={loading}
           layout='vertical' onValuesChange={(changedValues, allValues) => {
-            dispatch(connectionChanged())
+            if (connectionTestFieldsChanged(changedValues, ['connectionName', 'bigqueryProjectId', 'cloudStorageBucket'])) {
+              dispatch(connectionChanged())
+            }
           }}
         >
           {nameChangeOnly ? <div className={styles.datasetsCountAlert}><Alert message={<>This connection is used in {connection.datasetCount} dataset{connection.datasetCount > 1 ? 's' : ''}.</>} description='Only the name can be changed.' type='warning' /></div> : null}
