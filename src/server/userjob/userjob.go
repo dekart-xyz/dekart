@@ -6,7 +6,6 @@ import (
 	"dekart/src/server/bqjob"
 	"dekart/src/server/conn"
 	"dekart/src/server/job"
-	"dekart/src/server/pgjob"
 	"dekart/src/server/snowflakejob"
 	"dekart/src/server/wherobotsjob"
 )
@@ -27,9 +26,6 @@ func (s *Store) TestConnection(ctx context.Context, req *proto.TestConnectionReq
 	if req.Connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_WHEROBOTS {
 		return wherobotsjob.TestConnection(ctx, req)
 	}
-	if req.Connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_POSTGRES {
-		return pgjob.TestConnection(ctx, req)
-	}
 
 	return bqjob.TestConnection(ctx, req)
 }
@@ -42,8 +38,6 @@ func (s *Store) Create(reportID string, queryID string, queryText string, connCt
 		job, err = snowflakejob.Create(reportID, queryID, queryText, connCtx)
 	} else if connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_WHEROBOTS {
 		job, err = wherobotsjob.Create(reportID, queryID, queryText, connCtx)
-	} else if connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_POSTGRES {
-		job, err = pgjob.Create(reportID, queryID, queryText, connCtx)
 	} else {
 		job, err = bqjob.Create(reportID, queryID, queryText, connCtx)
 	}

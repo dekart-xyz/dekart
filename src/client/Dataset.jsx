@@ -13,7 +13,6 @@ import { updateSessionStorage } from './actions/sessionStorage'
 import { getDatasourceMeta } from './lib/datasource'
 import { track } from './lib/tracking'
 import { isSystemConnectionID } from './actions/connection'
-import { ConnectionType } from 'dekart-proto/dekart_pb'
 
 function DatasetSelectorButton ({ icon, title, subtitle, onClick, id, disable, disabledNote }) {
   return (
@@ -43,17 +42,8 @@ function DatasetSelector ({ dataset }) {
   const { ALLOW_FILE_UPLOAD, DEKART_CLOUD } = env.variables
   const connectionList = useSelector(state => state.connection.list)
 
-  // LOCAL is upload-only and should not be shown as SQL datasource option.
-  // In Dekart Cloud we also hide system/default connection to avoid free BigQuery path.
-  const filteredConnectionList = connectionList.filter((c) => {
-    if (c.connectionType === ConnectionType.CONNECTION_TYPE_LOCAL) {
-      return false
-    }
-    if (DEKART_CLOUD && isSystemConnectionID(c.id)) {
-      return false
-    }
-    return true
-  })
+  // filter out default connection in Dekart Cloud, so user cannot use BigQuery free
+  const filteredConnectionList = DEKART_CLOUD ? connectionList.filter(c => !isSystemConnectionID(c.id)) : connectionList
   const history = useHistory()
   const report = useSelector(state => state.report)
   const isAdmin = useSelector(state => state.user.isAdmin)

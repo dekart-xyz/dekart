@@ -47,18 +47,18 @@ func TestPollTokenAuthorizedIssuesTokenAndConsumesSession(t *testing.T) {
 		)
 	mock.ExpectBegin()
 	mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO device_auth_log (id, device_id, device_name, status, email, workspace_id, expires_at)
-		 SELECT $1, device_id, device_name, $2, email, workspace_id, expires_at
+		 SELECT $2, device_id, device_name, $3, email, workspace_id, expires_at
 		 FROM device_auth_log
 		 WHERE id = (
 		   SELECT id
 		   FROM device_auth_log
-		   WHERE device_id = $3
+		   WHERE device_id = $1
 		   ORDER BY created_at DESC
 		   LIMIT 1
 		 )
 		   AND status = $4
 		 RETURNING COALESCE(email, ''), COALESCE(workspace_id, '')`)).
-		WithArgs(sqlmock.AnyArg(), SessionStatusConsumed, deviceID, SessionStatusAuthorized).
+		WithArgs(deviceID, sqlmock.AnyArg(), SessionStatusConsumed, SessionStatusAuthorized).
 		WillReturnRows(sqlmock.NewRows([]string{"email", "workspace_id"}).AddRow("user@example.com", "workspace-1"))
 	mock.ExpectCommit()
 
@@ -113,18 +113,18 @@ func TestPollTokenAuthorizedAlreadyConsumedReturnsExpired(t *testing.T) {
 		)
 	mock.ExpectBegin()
 	mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO device_auth_log (id, device_id, device_name, status, email, workspace_id, expires_at)
-		 SELECT $1, device_id, device_name, $2, email, workspace_id, expires_at
+		 SELECT $2, device_id, device_name, $3, email, workspace_id, expires_at
 		 FROM device_auth_log
 		 WHERE id = (
 		   SELECT id
 		   FROM device_auth_log
-		   WHERE device_id = $3
+		   WHERE device_id = $1
 		   ORDER BY created_at DESC
 		   LIMIT 1
 		 )
 		   AND status = $4
 		 RETURNING COALESCE(email, ''), COALESCE(workspace_id, '')`)).
-		WithArgs(sqlmock.AnyArg(), SessionStatusConsumed, deviceID, SessionStatusAuthorized).
+		WithArgs(deviceID, sqlmock.AnyArg(), SessionStatusConsumed, SessionStatusAuthorized).
 		WillReturnRows(sqlmock.NewRows([]string{"email", "workspace_id"}))
 	mock.ExpectRollback()
 
@@ -169,17 +169,17 @@ func TestPollTokenPendingExpiredMarksSessionExpired(t *testing.T) {
 				AddRow(SessionStatusPending, now.Add(-2*time.Minute), "", "", "test-device"),
 		)
 	mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO device_auth_log (id, device_id, device_name, status, email, workspace_id, expires_at)
-		 SELECT $1, device_id, device_name, $2, email, workspace_id, expires_at
+		 SELECT $2, device_id, device_name, $3, email, workspace_id, expires_at
 		 FROM device_auth_log
 		 WHERE id = (
 		   SELECT id
 		   FROM device_auth_log
-		   WHERE device_id = $3
+		   WHERE device_id = $1
 		   ORDER BY created_at DESC
 		   LIMIT 1
 		 )
 		   AND status = $4`)).
-		WithArgs(sqlmock.AnyArg(), SessionStatusExpired, deviceID, SessionStatusPending).
+		WithArgs(deviceID, sqlmock.AnyArg(), SessionStatusExpired, SessionStatusPending).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	result, err := pollToken(context.Background(), db, issuer, deviceID)
@@ -206,18 +206,18 @@ func TestAuthorizeDeviceSessionTracksEventInCloudMode(t *testing.T) {
 	defer db.Close()
 
 	mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO device_auth_log (id, device_id, device_name, status, email, workspace_id, expires_at)
-		 SELECT $1, device_id, device_name, $2, $3, $4, expires_at
+		 SELECT $2, device_id, device_name, $3, $4, $5, expires_at
 		 FROM device_auth_log
 		 WHERE id = (
 		   SELECT id
 		   FROM device_auth_log
-		   WHERE device_id = $5
+		   WHERE device_id = $1
 		   ORDER BY created_at DESC
 		   LIMIT 1
 		 )
 		   AND status = $6
 		   AND expires_at > CURRENT_TIMESTAMP`)).
-		WithArgs(sqlmock.AnyArg(), SessionStatusAuthorized, "user@example.com", "workspace-1", "dev-track", SessionStatusPending).
+		WithArgs("dev-track", sqlmock.AnyArg(), SessionStatusAuthorized, "user@example.com", "workspace-1", SessionStatusPending).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO track_events (email, event_name, event_data_json)
 		VALUES ($1, $2, $3)`)).

@@ -27,9 +27,6 @@ variable "dekart_rds_username" {
   default     = "dekart"
   description = "RDS db username"
 }
-variable "dekart_license_key" {
-  description = "Dekart license key required for the Postgres metadata backend. Get one at https://mailchi.mp/dekart/upgrade-to-sso"
-}
 
 # cognito
 variable "user_pool_arn" {

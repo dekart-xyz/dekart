@@ -3,10 +3,6 @@ import copy from '../../fixtures/copy.json'
 
 describe('cancelling query', () => {
   it('should cancels query', () => {
-    cy.intercept('POST', '**/Dekart/RunQuery', (req) => {
-      return Cypress.Promise.delay(1500).then(() => req.continue())
-    })
-
     cy.visit('/')
     cy.get('button#dekart-create-report').click()
     cy.get('button:contains("Run SQL")').click()

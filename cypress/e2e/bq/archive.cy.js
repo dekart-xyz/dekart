@@ -15,8 +15,9 @@ describe('archive and unarchive report', () => {
     cy.get('input#dekart-report-title-input').should('be.visible')
     cy.get('input#dekart-report-title-input').clear()
     cy.get('input#dekart-report-title-input').type(reportName)
-    cy.get('input#dekart-report-title-input').should('have.value', reportName)
     cy.get('input#dekart-report-title-input').type('{enter}')
+
+    cy.get('span').contains(reportName).should('be.visible')
     cy.wait(1000)
 
     // Run a simple query to make the report valid

@@ -9,6 +9,7 @@ import (
 	"dekart/src/server/mcp"
 	"dekart/src/server/mcpschema"
 	"dekart/src/server/query"
+	"dekart/src/server/reportsnapshot"
 	"dekart/src/server/user"
 	"encoding/json"
 	"errors"
@@ -22,7 +23,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	gproto "google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type mcpTool struct {
@@ -187,27 +187,11 @@ func sanitizeConnectionForMCP(connection *proto.Connection) *proto.Connection {
 	}
 	// Clone protobuf message to avoid copying internal mutex state by value.
 	sanitized := gproto.Clone(connection).(*proto.Connection)
-	clearSecretFields(sanitized)
+	sanitized.SnowflakePassword = nil
+	sanitized.SnowflakeKey = nil
+	sanitized.BigqueryKey = nil
+	sanitized.WherobotsKey = nil
 	return sanitized
-}
-
-func clearSecretFields(message gproto.Message) {
-	if message == nil {
-		return
-	}
-	protoMessage := message.ProtoReflect()
-	fields := protoMessage.Descriptor().Fields()
-	secretFullName := (&proto.Secret{}).ProtoReflect().Descriptor().FullName()
-	for i := 0; i < fields.Len(); i++ {
-		field := fields.Get(i)
-		if field.Kind() != protoreflect.MessageKind {
-			continue
-		}
-		if field.Message() == nil || field.Message().FullName() != secretFullName {
-			continue
-		}
-		protoMessage.Clear(field)
-	}
 }
 
 // sanitizeCreateConnectionResponseForMCP strips secret fields before returning create_connection payload.
@@ -1032,17 +1016,19 @@ func mcpToolDefinitions() []mcpTool {
 			NextTools: []string{"update_report_title", "update_report_map_config", "update_report_readme"},
 		},
 	}
-	tools = append(tools, mcpTool{
-		Name:         "create_report_snapshot",
-		Description:  "Create a short-lived report snapshot render URL. Prefer local render using snapshot_render_url. snapshot_url png may not be available for large reports.",
-		InputSchema:  mcpschema.ForProto(&proto.CreateReportSnapshotRequest{}, []string{"report_id"}),
-		WhenToUse:    "Use after map updates when you need a render URL, or a PNG snapshot URL when available.",
-		WhenNotToUse: "Do not use for mutating report or dataset data.",
-		SideEffects:  []string{"read"},
-		ExampleInput: map[string]any{
-			"report_id": "00000000-0000-0000-0000-000000000000",
-		},
-		NextTools: []string{"update_report_map_config", "update_report_title"},
-	})
+	if reportsnapshot.IsEnabled() {
+		tools = append(tools, mcpTool{
+			Name:         "create_report_snapshot",
+			Description:  "Create one short-lived URL for report snapshot rendering.",
+			InputSchema:  mcpschema.ForProto(&proto.CreateReportSnapshotRequest{}, []string{"report_id"}),
+			WhenToUse:    "Use after map updates when you need a rendered PNG snapshot URL for verification or sharing.",
+			WhenNotToUse: "Do not use for mutating report or dataset data.",
+			SideEffects:  []string{"read"},
+			ExampleInput: map[string]any{
+				"report_id": "00000000-0000-0000-0000-000000000000",
+			},
+			NextTools: []string{"update_report_map_config", "update_report_title"},
+		})
+	}
 	return normalizeMCPTools(append(tools, mcpUploadToolDefinitions()...))
 }

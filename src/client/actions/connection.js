@@ -141,9 +141,6 @@ export function getConnectionsList () {
       if (connection.snowflakeKey?.length > 0) {
         connection.snowflakeKey = '*'.repeat(connection.snowflakeKey.length)
       }
-      if (connection.postgresPassword?.length > 0) {
-        connection.postgresPassword = '*'.repeat(connection.postgresPassword.length)
-      }
     })
     dispatch(connectionListUpdate(res.connectionsList))
   }
@@ -184,15 +181,6 @@ export function saveConnection (id, connectionType, connectionProps) {
         const secret = new Secret()
         secret.setClientEncrypted(await encryptPassword(connectionProps.wherobotsKey, getState().env.variables.AES_KEY, getState().env.variables.AES_IV))
         connection.setWherobotsKey(secret)
-      } else if (connectionType === ConnectionType.CONNECTION_TYPE_POSTGRES) {
-        connection.setConnectionName(connectionProps.connectionName || 'Postgres')
-        connection.setPostgresHost(connectionProps.postgresHost)
-        connection.setPostgresUsername(connectionProps.postgresUsername)
-        connection.setPostgresDatabase(connectionProps.postgresDatabase)
-        connection.setPostgresPort(Number(connectionProps.postgresPort))
-        const secret = new Secret()
-        secret.setClientEncrypted(await encryptPassword(connectionProps.postgresPassword, getState().env.variables.AES_KEY, getState().env.variables.AES_IV))
-        connection.setPostgresPassword(secret)
       } else if (connectionProps.newBigqueryKey) { // bigquery service account key
         const { connectionName, cloudStorageBucket, newBigqueryKey } = connectionProps
         connection.setConnectionName(connectionName || 'BigQuery')
@@ -239,17 +227,6 @@ export function saveConnection (id, connectionType, connectionProps) {
           const { env: { variables: { AES_IV, AES_KEY } } } = getState()
           secret.setClientEncrypted(await encryptPassword(connectionProps.newBigqueryKey, AES_KEY, AES_IV))
           connection.setBigqueryKey(secret)
-        }
-      } else if (connectionType === ConnectionType.CONNECTION_TYPE_POSTGRES) {
-        connection.setConnectionName(connectionProps.connectionName)
-        connection.setPostgresHost(connectionProps.postgresHost)
-        connection.setPostgresUsername(connectionProps.postgresUsername)
-        connection.setPostgresDatabase(connectionProps.postgresDatabase)
-        connection.setPostgresPort(Number(connectionProps.postgresPort))
-        if (prevConnection?.postgresPassword !== connectionProps.postgresPassword) {
-          const secret = new Secret()
-          secret.setClientEncrypted(await encryptPassword(connectionProps.postgresPassword, getState().env.variables.AES_KEY, getState().env.variables.AES_IV))
-          connection.setPostgresPassword(secret)
         }
       } else {
         connection.setConnectionName(connectionProps.connectionName)
@@ -378,16 +355,6 @@ export function testConnection (connectionType, values) {
       const secret = new Secret()
       secret.setClientEncrypted(await encryptPassword(wherobotsKey, AES_KEY, AES_IV))
       connection.setWherobotsKey(secret)
-    } else if (connectionType === ConnectionType.CONNECTION_TYPE_POSTGRES) {
-      const { connectionName, postgresHost, postgresUsername, postgresPassword, postgresDatabase, postgresPort } = values
-      connection.setConnectionName(connectionName)
-      connection.setPostgresHost(postgresHost)
-      connection.setPostgresUsername(postgresUsername)
-      connection.setPostgresDatabase(postgresDatabase)
-      connection.setPostgresPort(Number(postgresPort))
-      const secret = new Secret()
-      secret.setClientEncrypted(await encryptPassword(postgresPassword, AES_KEY, AES_IV))
-      connection.setPostgresPassword(secret)
     } else if (values.newBigqueryKey) { // bigquery service account key
       const { connectionName, cloudStorageBucket, newBigqueryKey } = values
       connection.setConnectionName(connectionName)

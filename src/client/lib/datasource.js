@@ -99,11 +99,6 @@ WHERE
     AND LOWER(name) = 'starbucks'
 LIMIT 1000;`
       }
-    case ConnectionType.CONNECTION_TYPE_LOCAL:
-      return {
-        name: 'Local Files',
-        usageStatsId: 5
-      }
     default:
       return {
         name: 'Unknown',
