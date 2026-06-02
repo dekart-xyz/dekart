@@ -9,12 +9,15 @@ import (
 	"dekart/src/server/user"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+var defaultWorkspaceEnsureMu sync.Mutex
 
 func (s Server) getUserWorkspaces(ctx context.Context, email string) ([]*proto.Workspace, error) {
 	rows, err := s.db.QueryContext(ctx, `
@@ -123,6 +126,10 @@ func (s Server) getUserWorkspaces(ctx context.Context, email string) ([]*proto.W
 	if len(workspaces) == 0 && !user.CanCreateWorkspace() {
 		// if user cannot create workspace, we should add the default workspace
 		workspaceID := user.GetDefaultWorkspaceID()
+		if err := s.ensureDefaultWorkspace(ctx, email); err != nil {
+			log.Err(err).Send()
+			return nil, err
+		}
 		_, err = s.db.ExecContext(ctx, `
 		INSERT INTO workspace_log (workspace_id, email, status, authored_by, id, role)
 		VALUES ($1, $2, 1, $2, $3, $4)
@@ -131,15 +138,36 @@ func (s Server) getUserWorkspaces(ctx context.Context, email string) ([]*proto.W
 			log.Err(err).Send()
 			return nil, err
 		}
-		err = s.createDefaultSubscription(ctx, workspaceID, email)
-		if err != nil {
-			log.Err(err).Send()
-			return nil, err
-		}
 		return s.getUserWorkspaces(ctx, email)
 	}
 
 	return workspaces, nil
+}
+
+// ensureDefaultWorkspace makes the fixed self-hosted workspace available before adding members.
+func (s Server) ensureDefaultWorkspace(ctx context.Context, email string) error {
+	defaultWorkspaceEnsureMu.Lock()
+	defer defaultWorkspaceEnsureMu.Unlock()
+
+	workspaceID := user.GetDefaultWorkspaceID()
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO workspaces (id, name, is_default)
+		VALUES ($1, 'Default', true)
+		ON CONFLICT (id) DO NOTHING
+	`, workspaceID)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(ctx, `
+		INSERT INTO subscription_log (workspace_id, plan_type, authored_by)
+		SELECT $1, $2, $3
+		WHERE NOT EXISTS (
+			SELECT 1
+			FROM subscription_log
+			WHERE workspace_id = $1
+		)
+	`, workspaceID, user.GetDefaultSubscription(), email)
+	return err
 }
 
 func (s Server) getWorkspaceUpdate(ctx context.Context) (int64, error) {
@@ -191,6 +219,9 @@ func (s Server) CreateWorkspace(ctx context.Context, req *proto.CreateWorkspaceR
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	if !user.CanCreateWorkspace() {
+		return nil, status.Error(codes.PermissionDenied, "Workspace creation is disabled")
+	}
 	workspaceID := newUUID()
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO workspaces (id, name)
@@ -233,14 +264,18 @@ func (s Server) UpdateWorkspace(ctx context.Context, req *proto.UpdateWorkspaceR
 	if workspaceInfo.UserRole != proto.UserRole_ROLE_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Only admins can update workspace")
 	}
-	_, err := s.db.ExecContext(ctx, `
+	result, err := s.db.ExecContext(ctx, `
 		UPDATE workspaces
-		SET name = $2, updated_at = CURRENT_TIMESTAMP
-		WHERE id = $1
-	`, workspaceInfo.ID, req.WorkspaceName)
+		SET name = $1, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $2
+	`, req.WorkspaceName, workspaceInfo.ID)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
 	s.userStreams.PingAll()
 	return &proto.UpdateWorkspaceResponse{}, nil
@@ -426,15 +461,14 @@ func (s Server) getUserWorkspace(ctx context.Context, email string) (*proto.Work
 	}
 	if !user.CanCreateWorkspace() { // if user cannot create workspace, we should add the default workspace
 		workspaceID := user.GetDefaultWorkspaceID()
+		if err := s.ensureDefaultWorkspace(ctx, email); err != nil {
+			log.Err(err).Send()
+			return nil, nil, err
+		}
 		_, err = s.db.ExecContext(ctx, `
 		INSERT INTO workspace_log (workspace_id, email, status, authored_by, id, role)
 		VALUES ($1, $2, 1, $2, $3, $4)
 	`, workspaceID, email, newUUID(), user.GetUserDefaultRole(email))
-		if err != nil {
-			log.Err(err).Send()
-			return nil, nil, err
-		}
-		err = s.createDefaultSubscription(ctx, workspaceID, email)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, nil, err
@@ -451,20 +485,16 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 		return ctx
 	}
 
-	if claims.Email == user.UnknownEmail && os.Getenv("DEKART_CLOUD") == "" {
-		// Self-hosted auth-disabled mode always uses default workspace context.
-		// Playground mode is intentionally disabled.
-		ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{
+	if claims.Email == user.UnknownEmail && os.Getenv("DEKART_CLOUD") == "" && s.db == nil {
+		// In tests without a database, preserve the auth-disabled self-hosted fallback.
+		return user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{
 			ID:                 user.GetDefaultWorkspaceID(),
 			PlanType:           user.GetDefaultSubscription(),
 			Name:               "Default",
 			IsPlayground:       false,
 			IsDefaultWorkspace: true,
-			// In auth-disabled self-hosted mode, treat anonymous local user as admin so
-			// connection/report management remains writable by default.
-			UserRole: proto.UserRole_ROLE_ADMIN,
+			UserRole:           proto.UserRole_ROLE_ADMIN,
 		})
-		return ctx
 	}
 
 	workspaces, err := s.getUserWorkspaces(ctx, claims.Email)
@@ -520,17 +550,46 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 			return ctx
 		}
 	}
+	isDefaultWorkspace, err := s.isDefaultWorkspace(ctx, workspaceId)
+	if err != nil {
+		log.Err(err).Send()
+		return ctx
+	}
 
 	ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{
-		ID:              workspaceId,
-		PlanType:        planType,
-		Name:            name,
-		AddedUsersCount: addedUsersCount,
-		BilledUsers:     billedUsers,
-		UserRole:        userRole,
-		Expired:         expired,
+		ID:                 workspaceId,
+		PlanType:           planType,
+		Name:               name,
+		AddedUsersCount:    addedUsersCount,
+		BilledUsers:        billedUsers,
+		IsDefaultWorkspace: isDefaultWorkspace,
+		UserRole:           userRole,
+		Expired:            expired,
 	})
 	return ctx
+}
+
+// isDefaultWorkspace reads persisted default-workspace state with the fixed ID as compatibility fallback.
+func (s Server) isDefaultWorkspace(ctx context.Context, workspaceID string) (bool, error) {
+	if workspaceID == "" {
+		return false, nil
+	}
+	if workspaceID == user.GetDefaultWorkspaceID() {
+		return true, nil
+	}
+	var isDefault bool
+	err := s.db.QueryRowContext(ctx, `
+		SELECT is_default
+		FROM workspaces
+		WHERE id = $1
+	`, workspaceID).Scan(&isDefault)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return isDefault, nil
 }
 
 func checkWorkspace(ctx context.Context) user.WorkspaceInfo {
@@ -597,6 +656,9 @@ func (s Server) UpdateWorkspaceUser(ctx context.Context, req *proto.UpdateWorksp
 	}
 	if claims.Email == req.Email {
 		return nil, status.Error(codes.InvalidArgument, "Cannot remove yourself")
+	}
+	if claims.Email == user.UnknownEmail && req.UserUpdateType != proto.UpdateWorkspaceUserRequest_USER_UPDATE_TYPE_UNSPECIFIED {
+		return nil, status.Error(codes.PermissionDenied, "Anonymous users cannot update workspace members")
 	}
 	if req.UserUpdateType == proto.UpdateWorkspaceUserRequest_USER_UPDATE_TYPE_ADD {
 		if workspaceInfo.PlanType == proto.PlanType_TYPE_UNSPECIFIED {

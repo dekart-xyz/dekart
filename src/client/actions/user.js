@@ -42,7 +42,8 @@ export function subscribeUserStream () {
           prevRes.workspaceUpdate = message.workspaceUpdate
           dispatch(getWorkspace())
         }
-        if (message.workspaceId && message.email !== UNKNOWN_EMAIL && prevRes.tokenUpdate !== message.tokenUpdate) {
+        // Auth-disabled self-hosted mode uses UNKNOWN_EMAIL, but still has workspace-scoped device tokens.
+        if (message.workspaceId && prevRes.tokenUpdate !== message.tokenUpdate) {
           prevRes.tokenUpdate = message.tokenUpdate
           dispatch(getDeviceTokens())
         }

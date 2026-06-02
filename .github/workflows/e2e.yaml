@@ -320,7 +320,7 @@ jobs:
               -e DEKART_ALLOW_FILE_UPLOAD=1 \
 
           - id: local-mcp-postgres
-            spec: cypress/e2e/local/mcpPgHappyPath.cy.js
+            spec: cypress/e2e/local/mcpPgHappyPath.cy.js,cypress/e2e/local/defaultWorkspaceManagement.cy.js
             extra_env: |
               -e DEKART_STORAGE=USER \
               -e DEKART_DATASOURCE=USER \
