@@ -402,7 +402,6 @@ function WorkspacePermissionsSelect ({ disabled = false }) {
 }
 function WorkspacePermissions () {
   const { canWrite, discoverable, isSharable } = useSelector(state => state.report)
-  const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
   if (!canWrite && !discoverable) { // show only for discoverable workspace reports
     return null
   }
