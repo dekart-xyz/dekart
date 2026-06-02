@@ -8,7 +8,7 @@ import (
 func clearMetadataEnv(t *testing.T) {
 	t.Helper()
 	keys := append([]string{}, postgresMetadataEnvVars...)
-	keys = append(keys, "DEKART_SQLITE_DB_PATH", "DEKART_POSTGRES_DATASOURCE_CONNECTION", "DEKART_DATASOURCE")
+	keys = append(keys, "DEKART_SQLITE_DB_PATH", "DEKART_DISABLE_SQLITE_BACKUPS", "DEKART_POSTGRES_DATASOURCE_CONNECTION", "DEKART_DATASOURCE")
 	for _, key := range keys {
 		key := key
 		value, ok := os.LookupEnv(key)
@@ -92,5 +92,14 @@ func TestSQLiteBackupDisabledWhenPostgresMetadataEnvWins(t *testing.T) {
 
 	if isSQLiteEnabled() {
 		t.Fatalf("expected SQLite backup to be disabled")
+	}
+}
+
+func TestSQLiteBackupsCanBeExplicitlyDisabled(t *testing.T) {
+	clearMetadataEnv(t)
+	os.Setenv("DEKART_DISABLE_SQLITE_BACKUPS", "1")
+
+	if !sqliteBackupsDisabled() {
+		t.Fatalf("expected SQLite backups to be disabled")
 	}
 }

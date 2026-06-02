@@ -315,17 +315,12 @@ jobs:
 
           - id: local-user-postgres
             spec: cypress/e2e/local/userDefinedConnectionHappyPath.cy.js
-            extra_env: |
-              -e DEKART_STORAGE=USER \
-              -e DEKART_DATASOURCE=USER \
-              -e DEKART_ALLOW_FILE_UPLOAD=1 \
 
           - id: local-mcp-postgres
-            spec: cypress/e2e/local/mcpPgHappyPath.cy.js,cypress/e2e/local/defaultWorkspaceManagement.cy.js
-            extra_env: |
-              -e DEKART_STORAGE=USER \
-              -e DEKART_DATASOURCE=USER \
-              -e DEKART_ALLOW_FILE_UPLOAD=1 \
+            spec: cypress/e2e/local/mcpPgHappyPath.cy.js
+
+          - id: local-default-workspace
+            spec: cypress/e2e/local/defaultWorkspaceManagement.cy.js
 
           - id: pg-s3-postgres
             spec: cypress/e2e/pg-s3/happyPath.cy.js

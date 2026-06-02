@@ -166,7 +166,7 @@ function FirstSetupOnboarding () {
           >New connection
           </Button>
           <Button
-            id='dekart-create-report'
+            id='dekart-use-file-upload'
             disabled={isViewer || !allowFileUpload}
             title={isViewer ? 'Viewers cannot create maps' : fileUploadDisabledNote}
             onClick={() => {
@@ -457,7 +457,8 @@ function Reports ({ createReportButton, reportFilter }) {
   const [searchQuery, setSearchQuery] = useState('')
   const reportsList = useSelector(state => state.reportsList)
   const { loaded: envLoaded, authEnabled, isCloud, isSnowpark } = useSelector(state => state.env)
-  const connectionList = useSelector(state => state.connection.list.filter(c => !isSystemConnectionID(c.id)))
+  const allConnectionList = useSelector(state => state.connection.list)
+  const connectionList = allConnectionList.filter(c => !isSystemConnectionID(c.id))
   // TODO: show default SQL connection in the list
   // const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const newConnectionScreen = useSelector(state => state.connection.screen)
@@ -499,7 +500,7 @@ function Reports ({ createReportButton, reportFilter }) {
     !isCloud &&
     !isSnowpark &&
     noMapsYet &&
-    connectionList.length === 0
+    allConnectionList.length === 0
   if (noMapsYet) {
     return (
       <div className={styles.reports}>

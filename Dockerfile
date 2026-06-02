@@ -58,11 +58,16 @@ RUN rm -f /etc/apt/sources.list.d/google-chrome.list \
 RUN update-ca-certificates
 ENV DEKART_PORT=3000
 ENV DEKART_STATIC_FILES=./build
+ENV DEKART_SQLITE_DB_PATH=/dekart/data/dekart.db
+ENV DEKART_STORAGE=USER
+ENV DEKART_DATASOURCE=USER
+ENV DEKART_ALLOW_FILE_UPLOAD=1
 # ENV DEBUG=cypress:snapshot:error
 COPY --from=nodebuilder /source/build build
 COPY --from=gobuilder /source/server .
 COPY migrations migrations
 COPY sqlite sqlite
+RUN mkdir -p /dekart/data/files
 RUN mkdir -p keys
 COPY keys/license-public.pem keys/license-public.pem
 COPY cypress cypress

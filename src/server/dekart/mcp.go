@@ -1034,7 +1034,7 @@ func mcpToolDefinitions() []mcpTool {
 	}
 	tools = append(tools, mcpTool{
 		Name:         "create_report_snapshot",
-		Description:  "Create a short-lived report snapshot render URL. Prefer local redner using snapshot_render_url. snapshot_url png may not be available for large reports.",
+		Description:  "Create a short-lived report snapshot render URL. Prefer local render using snapshot_render_url. snapshot_url png may not be available for large reports.",
 		InputSchema:  mcpschema.ForProto(&proto.CreateReportSnapshotRequest{}, []string{"report_id"}),
 		WhenToUse:    "Use after map updates when you need a render URL, or a PNG snapshot URL when available.",
 		WhenNotToUse: "Do not use for mutating report or dataset data.",

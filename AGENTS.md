@@ -7,6 +7,7 @@ Goal: contributions should blend into the existing codebase and minimize maintai
 - Make the smallest correct change that solves the task.
 - Prefer existing patterns in the touched folder over introducing new patterns.
 - Avoid speculative hardening. Add extra guards only for real, observed failure modes.
+– Each line in this repo is reviewed by a human whoauthored original code. This is slow and expensive process. Avoid adding complexity that requires extra review cycles without a clear observed need.
 
 ## Architecture Rules (mandatory)
 

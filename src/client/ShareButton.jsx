@@ -407,9 +407,7 @@ function WorkspacePermissions () {
     return null
   }
   let disabledReason = ''
-  if (isDefaultWorkspace) {
-    disabledReason = 'Workspace-level sharing is unavailable in the default workspace.'
-  } else if (!isSharable) {
+  if (!isSharable) {
     disabledReason = 'Workspace-level sharing is unavailable for this map configuration.'
   }
   const disabled = Boolean(disabledReason)

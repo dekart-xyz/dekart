@@ -168,7 +168,7 @@ func TestMCPToolDefinitions_ContainsUpdateTools(t *testing.T) {
 	snapshotTool, ok := names["create_report_snapshot"]
 	assert.True(t, ok)
 	assert.Contains(t, snapshotTool.InputSchema["required"], "report_id")
-	assert.Contains(t, snapshotTool.Description, "PNG snapshot URL is returned only when Browserless capture is configured")
+	assert.Contains(t, snapshotTool.Description, "Prefer local render using snapshot_render_url")
 }
 
 func TestCallMCPTool_UnknownTool(t *testing.T) {
