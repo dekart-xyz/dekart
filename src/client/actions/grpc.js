@@ -8,13 +8,10 @@ const { VITE_API_HOST } = import.meta.env
 const host = VITE_API_HOST || ''
 
 function buildGrpcHeaders (token, user) {
-  const { isPlayground, claimEmailCookie, loginHint, preferredWorkspaceId } = user
+  const { claimEmailCookie, loginHint, preferredWorkspaceId } = user
   const headers = new window.Headers()
   if (token) {
     headers.append('Authorization', `Bearer ${token.access_token}`)
-  }
-  if (isPlayground) {
-    headers.append('X-Dekart-Playground', 'true')
   }
   if (claimEmailCookie) {
     headers.append('X-Dekart-Claim-Email', claimEmailCookie)

@@ -133,6 +133,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
             DEKART_UX_DISABLE_VERSION_CHECK=${{ env.UX_DISABLE_VERSION_CHECK }}
+            DEKART_MAPBOX_TOKEN=${{ secrets.DEKART_MAPBOX_TOKEN }}
             ${{ env.LICENSE_KEY_BUILD_ARG }}
 
       - name: Build & push E2E image
@@ -149,6 +150,7 @@ jobs:
           tags: ${{ steps.collect.outputs.e2e_tags }}
           build-args: |
             DEKART_UX_DISABLE_VERSION_CHECK=${{ env.UX_DISABLE_VERSION_CHECK }}
+            DEKART_MAPBOX_TOKEN=${{ secrets.DEKART_MAPBOX_TOKEN }}
 
       - name: Cache diagnostics (major layers)
         if: inputs.build_e2e

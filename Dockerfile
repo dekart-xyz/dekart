@@ -58,11 +58,16 @@ RUN rm -f /etc/apt/sources.list.d/google-chrome.list \
 RUN update-ca-certificates
 ENV DEKART_PORT=3000
 ENV DEKART_STATIC_FILES=./build
+ENV DEKART_SQLITE_DB_PATH=/dekart/data/dekart.db
+ENV DEKART_STORAGE=USER
+ENV DEKART_DATASOURCE=USER
+ENV DEKART_ALLOW_FILE_UPLOAD=1
 # ENV DEBUG=cypress:snapshot:error
 COPY --from=nodebuilder /source/build build
 COPY --from=gobuilder /source/server .
 COPY migrations migrations
 COPY sqlite sqlite
+RUN mkdir -p /dekart/data/files
 RUN mkdir -p keys
 COPY keys/license-public.pem keys/license-public.pem
 COPY cypress cypress
@@ -96,10 +101,20 @@ RUN groupadd -g $USER_GID $USERNAME \
 # Set environment variables
 ENV DEKART_PORT=8080
 ENV DEKART_STATIC_FILES=./build
+ENV DEKART_SQLITE_DB_PATH=/dekart/data/dekart.db
+ENV DEKART_STORAGE=USER
+ENV DEKART_DATASOURCE=USER
+ENV DEKART_ALLOW_FILE_UPLOAD=1
+ENV DEKART_LOCAL_FILES_ROOT=/dekart/data/files
+ARG DEKART_MAPBOX_TOKEN
+ENV DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN}
 ARG DEKART_UX_DISABLE_VERSION_CHECK
 ARG DEKART_LICENSE_KEY
 ENV DEKART_UX_DISABLE_VERSION_CHECK=${DEKART_UX_DISABLE_VERSION_CHECK}
 ENV DEKART_LICENSE_KEY=${DEKART_LICENSE_KEY}
+
+# Create local storage root used by zero-config uploads.
+RUN mkdir -p /dekart/data/files
 
 # Change ownership of the working directory to the new user
 RUN chown -R $USERNAME:$USERNAME /dekart

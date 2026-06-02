@@ -102,7 +102,6 @@ function env (state = defaultEnv, action) {
         authConfigured,
         googleOAuthEnabled,
         oidcEnabled,
-        secretsEnabled: action.variables.SECRETS_ENABLED === '1',
         uxConfig: JSON.parse(action.variables.CLOUD_UX_CONFIG_JSON || '{}'),
         isCloud: action.variables.DEKART_CLOUD === '1',
         isSnowpark,

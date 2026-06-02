@@ -92,8 +92,30 @@ func (s Server) updateJobStatus(job job.Job, jobStatus chan int32, paramHash str
 }
 
 func (s Server) getQueryJob(ctx context.Context, jobID string) (*proto.QueryJob, error) {
-	rows, err := s.db.QueryContext(ctx,
-		`select
+	query := `select
+		query_jobs.id,
+		query_jobs.query_id,
+		query_jobs.job_status,
+		query_jobs.job_result_id,
+		query_jobs.job_error,
+		query_jobs.total_rows,
+		query_jobs.bytes_processed,
+		query_jobs.result_size,
+		query_jobs.query_params_hash,
+		query_jobs.dw_job_id,
+		query_jobs.updated_at,
+		query_jobs.created_at,
+		EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - query_jobs.created_at))::bigint * 1000 as job_duration
+		, COALESCE(connections.connection_type, 0) as connection_type
+		, COALESCE(datasets.id::text, '') as dataset_id
+	from query_jobs
+	left join datasets on datasets.query_id = query_jobs.query_id
+	left join connections on connections.id = datasets.connection_id
+	where query_jobs.id = $1
+	order by query_jobs.created_at desc
+	limit 1`
+	if IsSqlite() {
+		query = `select
 			query_jobs.id,
 			query_jobs.query_id,
 			query_jobs.job_status,
@@ -106,17 +128,17 @@ func (s Server) getQueryJob(ctx context.Context, jobID string) (*proto.QueryJob,
 			query_jobs.dw_job_id,
 			query_jobs.updated_at,
 			query_jobs.created_at,
-			EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - query_jobs.created_at))::bigint * 1000 as job_duration
-			, COALESCE(connections.connection_type, 0) as connection_type
-			, COALESCE(datasets.id::text, '') as dataset_id
+			(STRFTIME('%s', 'now') - STRFTIME('%s', query_jobs.created_at)) * 1000 as job_duration,
+			COALESCE(connections.connection_type, 0) as connection_type,
+			COALESCE(datasets.id, '') as dataset_id
 		from query_jobs
 		left join datasets on datasets.query_id = query_jobs.query_id
 		left join connections on connections.id = datasets.connection_id
 		where query_jobs.id = $1
 		order by query_jobs.created_at desc
-		limit 1`,
-		jobID,
-	)
+		limit 1`
+	}
+	rows, err := s.db.QueryContext(ctx, query, jobID)
 	if err != nil {
 		return nil, err
 	}

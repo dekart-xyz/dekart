@@ -16,8 +16,8 @@ import (
 
 const defaultBrowserlessURL = "https://production-sfo.browserless.io/screenshot"
 
-// IsEnabled returns true when snapshot feature has required Browserless auth token configured.
-func IsEnabled() bool {
+// IsCaptureEnabled returns true when Browserless PNG capture has required auth configured.
+func IsCaptureEnabled() bool {
 	return strings.TrimSpace(os.Getenv("DEKART_BROWSERLESS_TOKEN")) != ""
 }
 
@@ -39,7 +39,7 @@ type screenshotRequest struct {
 
 // StreamImage requests a screenshot from Browserless and streams response bytes to HTTP response writer.
 func StreamImage(ctx context.Context, targetURL string, snapshotToken string, width, height int32, deviceScaleFactor float64, timeoutSeconds int32, w http.ResponseWriter) error {
-	if !IsEnabled() {
+	if !IsCaptureEnabled() {
 		return fmt.Errorf("snapshot feature is disabled: DEKART_BROWSERLESS_TOKEN is not configured")
 	}
 	browserlessURL, err := resolveBrowserlessURL()

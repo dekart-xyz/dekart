@@ -112,22 +112,22 @@ func AuthorizeDeviceSession(ctx context.Context, db *sql.DB, deviceID string, em
 	result, err := db.ExecContext(
 		ctx,
 		`INSERT INTO device_auth_log (id, device_id, device_name, status, email, workspace_id, expires_at)
-		 SELECT $2, device_id, device_name, $3, $4, $5, expires_at
+		 SELECT $1, device_id, device_name, $2, $3, $4, expires_at
 		 FROM device_auth_log
 		 WHERE id = (
 		   SELECT id
 		   FROM device_auth_log
-		   WHERE device_id = $1
+		   WHERE device_id = $5
 		   ORDER BY created_at DESC
 		   LIMIT 1
 		 )
 		   AND status = $6
 		   AND expires_at > CURRENT_TIMESTAMP`,
-		deviceID,
 		logID,
 		SessionStatusAuthorized,
 		email,
 		workspaceID,
+		deviceID,
 		SessionStatusPending,
 	)
 	if err != nil {
@@ -203,19 +203,19 @@ func expireSession(ctx context.Context, db *sql.DB, deviceID string) (bool, erro
 	result, err := db.ExecContext(
 		ctx,
 		`INSERT INTO device_auth_log (id, device_id, device_name, status, email, workspace_id, expires_at)
-		 SELECT $2, device_id, device_name, $3, email, workspace_id, expires_at
+		 SELECT $1, device_id, device_name, $2, email, workspace_id, expires_at
 		 FROM device_auth_log
 		 WHERE id = (
 		   SELECT id
 		   FROM device_auth_log
-		   WHERE device_id = $1
+		   WHERE device_id = $3
 		   ORDER BY created_at DESC
 		   LIMIT 1
 		 )
 		   AND status = $4`,
-		deviceID,
 		logID,
 		SessionStatusExpired,
+		deviceID,
 		SessionStatusPending,
 	)
 	if err != nil {
@@ -245,20 +245,20 @@ func consumeAuthorizedSessionTx(ctx context.Context, tx *sql.Tx, deviceID string
 	row := tx.QueryRowContext(
 		ctx,
 		`INSERT INTO device_auth_log (id, device_id, device_name, status, email, workspace_id, expires_at)
-		 SELECT $2, device_id, device_name, $3, email, workspace_id, expires_at
+		 SELECT $1, device_id, device_name, $2, email, workspace_id, expires_at
 		 FROM device_auth_log
 		 WHERE id = (
 		   SELECT id
 		   FROM device_auth_log
-		   WHERE device_id = $1
+		   WHERE device_id = $3
 		   ORDER BY created_at DESC
 		   LIMIT 1
 		 )
 		   AND status = $4
 		 RETURNING COALESCE(email, ''), COALESCE(workspace_id, '')`,
-		deviceID,
 		logID,
 		SessionStatusConsumed,
+		deviceID,
 		SessionStatusAuthorized,
 	)
 	var consumed consumedSession

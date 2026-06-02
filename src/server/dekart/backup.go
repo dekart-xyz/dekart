@@ -1,11 +1,13 @@
 package dekart
 
 import (
-	"database/sql"
-	"dekart/src/server/snowflakeutils"
+	"context"
+	"dekart/src/server/storage"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -14,25 +16,104 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var stage = os.Getenv("DEKART_SNOWFLAKE_STAGE")
-var backupFrequencyStr = os.Getenv("DEKART_BACKUP_FREQUENCY_MIN")
-var dbFilePath = os.Getenv("DEKART_SQLITE_DB_PATH")
+type sqliteBackupTarget string
+
+const (
+	backupTargetDisabled       sqliteBackupTarget = "disabled"
+	backupTargetSnowflakeStage sqliteBackupTarget = "snowflake_stage"
+	backupTargetObjectStorage  sqliteBackupTarget = "object_storage"
+	defaultBackupFrequencyMin                     = 5
+	defaultMaxBackupsAgeDays                      = 7
+)
+
+func getBackupTarget() sqliteBackupTarget {
+	bucket := strings.TrimSpace(os.Getenv("DEKART_CLOUD_STORAGE_BUCKET"))
+	storageBackend := strings.ToUpper(strings.TrimSpace(os.Getenv("DEKART_STORAGE")))
+	if bucket != "" && (storageBackend == "S3" || storageBackend == "GCS") {
+		return backupTargetObjectStorage
+	}
+	if strings.TrimSpace(os.Getenv("DEKART_SNOWFLAKE_STAGE")) != "" {
+		return backupTargetSnowflakeStage
+	}
+	return backupTargetDisabled
+}
+
+func sqliteBackupObjectPrefix() string {
+	return "sqlite-backups/"
+}
+
+func sqliteBackupObjectName(ts time.Time) string {
+	dbFileName := filepath.Base(os.Getenv("DEKART_SQLITE_DB_PATH"))
+	return sqliteBackupObjectPrefix() + fmt.Sprintf("%s_%s.backup", dbFileName, ts.UTC().Format("20060102_150405"))
+}
+
+func parseBackupTimestamp(name string) (time.Time, bool) {
+	base := filepath.Base(name)
+	if !strings.HasSuffix(base, ".backup") {
+		return time.Time{}, false
+	}
+	parts := strings.Split(strings.TrimSuffix(base, ".backup"), "_")
+	if len(parts) < 3 {
+		return time.Time{}, false
+	}
+	ts := parts[len(parts)-2] + "_" + parts[len(parts)-1]
+	t, err := time.ParseInLocation("20060102_150405", ts, time.UTC)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return t, true
+}
+
+func backupFrequencyMin() int {
+	backupFrequencyStr := strings.TrimSpace(os.Getenv("DEKART_BACKUP_FREQUENCY_MIN"))
+	backupFrequency, err := strconv.Atoi(backupFrequencyStr)
+	if err != nil || backupFrequency <= 0 {
+		return defaultBackupFrequencyMin
+	}
+	return backupFrequency
+}
+
+func maxBackupsAgeDays() int {
+	maxAgeStr := strings.TrimSpace(os.Getenv("DEKART_MAX_BACKUPS_AGE_DAYS"))
+	maxAgeDays, err := strconv.Atoi(maxAgeStr)
+	if err != nil || maxAgeDays <= 0 {
+		return defaultMaxBackupsAgeDays
+	}
+	return maxAgeDays
+}
+
+func sqliteDBFilePath() string {
+	return strings.TrimSpace(os.Getenv("DEKART_SQLITE_DB_PATH"))
+}
+
+func isSQLiteEnabled() bool {
+	return IsSqlite() && sqliteDBFilePath() != ""
+}
+
+func storageBackendName() string {
+	return strings.ToUpper(strings.TrimSpace(os.Getenv("DEKART_STORAGE")))
+}
 
 func (s Server) startBackups() {
-	if stage == "" {
-		log.Warn().Msg("DEKART_SNOWFLAKE_STAGE environment variable is not set")
+	if !isSQLiteEnabled() {
+		return
+	}
+	target := getBackupTarget()
+	if target == backupTargetDisabled {
+		log.Warn().Msg("SQLite backup target disabled (no bucket/stage configured)")
 		return
 	}
 
-	// Get the backup frequency from the environment variable, default to 5 minutes
-	backupFrequency, err := strconv.Atoi(backupFrequencyStr)
-	if err != nil || backupFrequency <= 0 {
-		backupFrequency = 5 // default to 5 minutes
+	if target == backupTargetObjectStorage {
+		log.Info().Str("mode", string(target)).Str("storage", strings.ToLower(storageBackendName())).Msg("SQLite backup target configured")
+	} else {
+		log.Info().Str("mode", string(target)).Str("stage", os.Getenv("DEKART_SNOWFLAKE_STAGE")).Msg("SQLite backup target configured")
 	}
 
-	log.Info().Int("frequency_min", backupFrequency).Msg("Starting backups")
+	frequency := backupFrequencyMin()
+	log.Info().Int("frequency_min", frequency).Msg("Starting SQLite backups")
 
-	ticker := time.NewTicker(time.Duration(backupFrequency) * time.Minute)
+	ticker := time.NewTicker(time.Duration(frequency) * time.Minute)
 	defer ticker.Stop()
 
 	for range ticker.C {
@@ -41,13 +122,16 @@ func (s Server) startBackups() {
 }
 
 func RestoreDbFile() {
-	// Check if the stage is set
-	if stage == "" {
-		log.Warn().Msg("DEKART_SNOWFLAKE_STAGE environment variable is not set")
+	if !isSQLiteEnabled() {
+		return
+	}
+	target := getBackupTarget()
+	if target == backupTargetDisabled {
 		return
 	}
 
-	// Check if the database file already exists
+	dbFilePath := sqliteDBFilePath()
+
 	if _, err := os.Stat(dbFilePath); err == nil {
 		log.Info().Str("db_file_path", dbFilePath).Msg("Database file already exists, skipping restore")
 		return
@@ -55,70 +139,13 @@ func RestoreDbFile() {
 		log.Fatal().Err(err).Msg("Failed to check if database file exists")
 	}
 
-	// Download the latest backup from the stage
-	connector := snowflakeutils.GetConnector(nil)
-	db := sql.OpenDB(connector)
-	defer db.Close()
-	listCommand := fmt.Sprintf(`LIST @%s pattern = '.*backup'`, stage)
-	rows, err := db.Query(listCommand)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to list files in Snowflake stage")
-	}
-	defer rows.Close()
-
-	// Find the latest backup
-	var latestBackup string
-	var latestBackupTime time.Time
-	for rows.Next() {
-		var fileName string
-		var size int64
-		var lastModified string
-		var md5 string
-		if err := rows.Scan(&fileName, &size, &md5, &lastModified); err != nil {
-			log.Error().Err(err).Msg("Failed to scan row")
-			continue
-		}
-
-		// Extract the timestamp from the file name
-		// Assuming the file name format is something like "backup_20060102_150405.backup"
-		timestampStr := fileName[len(fileName)-22 : len(fileName)-7]
-		fileTime, err := time.ParseInLocation("20060102_150405", timestampStr, time.UTC)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to parse timestamp from file name")
-			continue
-		}
-
-		if fileTime.After(latestBackupTime) {
-			fileNameParts := strings.Split(fileName, "/")
-			latestBackup = fileNameParts[len(fileNameParts)-1]
-			latestBackupTime = fileTime
-		}
-	}
-
-	if latestBackup == "" {
-		log.Warn().Msg("No backup found in Snowflake stage")
+	st, location, ok := newBackupStorage(target)
+	if !ok {
+		log.Warn().Msg("SQLite restore skipped: backup storage is not configured")
 		return
 	}
 
-	// Extract directory from dbFilePath
-	dbDir := filepath.Dir(dbFilePath)
-
-	// Download the latest backup to the directory
-	getCommand := fmt.Sprintf(`GET @%s/%s file://%s`, stage, latestBackup, dbDir)
-	_, err = db.Exec(getCommand)
-	if err != nil {
-		log.Error().Err(err).Str("stage", stage).Str("getCommand", getCommand).Str("latestBackup", latestBackup).Msg("Failed to download backup from Snowflake stage")
-		return
-	}
-
-	// Move the downloaded file to dbFilePath
-	downloadedFilePath := filepath.Join(dbDir, filepath.Base(latestBackup))
-	err = os.Rename(downloadedFilePath, dbFilePath)
-	if err != nil {
-		log.Fatal().Err(err).Str("downloadedFilePath", downloadedFilePath).Str("dbFilePath", dbFilePath).Msg("Failed to move downloaded file to dbFilePath")
-	} else {
-		log.Info().Str("backup_path", latestBackup).Str("db_file_path", dbFilePath).Msg("Database file restored successfully")
-	}
+	restoreFromStorage(dbFilePath, st, location)
 }
 
 // BackupLock struct with a mutex and a boolean flag
@@ -130,118 +157,185 @@ type BackupLock struct {
 var bl BackupLock = BackupLock{}
 
 func (s Server) CreateBackup(deleteOld bool) {
-	if stage == "" {
-		log.Warn().Msg("DEKART_SNOWFLAKE_STAGE environment variable is not set")
+	if !isSQLiteEnabled() {
+		return
+	}
+	target := getBackupTarget()
+	if target == backupTargetDisabled {
+		log.Warn().Msg("SQLite backup skipped: no backup target configured")
 		return
 	}
 
-	log.Info().Msg("Creating backup of SQLite database")
+	dbFilePath := sqliteDBFilePath()
 
-	// Lock the mutex
 	bl.mutex.Lock()
-
-	// Check if the function is already running
 	if bl.isRunning {
-		// Unlock the mutex and return immediately
 		bl.mutex.Unlock()
 		log.Info().Msg("Backup function is already running, skipping this invocation")
 		return
 	}
-
-	// Set the flag to indicate the function is running
 	bl.isRunning = true
-
-	// Unlock the mutex before starting the backup logic
 	bl.mutex.Unlock()
 
 	defer func() {
-		// Reset the flag and unlock the mutex at the end of the function
 		bl.mutex.Lock()
 		bl.isRunning = false
 		bl.mutex.Unlock()
 	}()
 
-	// Construct the backup path with the timestamp
-	timestamp := time.Now().UTC().Format("20060102_150405")
-	backupPath := fmt.Sprintf("%s_%s.backup", dbFilePath, timestamp)
-
-	_, err := s.db.Exec(
-		`VACUUM INTO $1`,
-		backupPath,
-	)
-	if err != nil {
+	ts := time.Now().UTC()
+	backupPath := fmt.Sprintf("%s_%s.backup", dbFilePath, ts.Format("20060102_150405"))
+	if _, err := s.db.Exec(`VACUUM INTO $1`, backupPath); err != nil {
 		log.Fatal().Err(err).Msg("Failed to create backup")
 	}
-	connector := snowflakeutils.GetConnector(nil)
-	db := sql.OpenDB(connector)
-	defer db.Close()
-	putCommand := fmt.Sprintf(`PUT 'file://%s' @%s auto_compress=false`, backupPath, stage)
-	_, err = db.Exec(putCommand)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to upload backup to Snowflake stage")
-		return
-	} else {
-		log.Info().Str("backup_path", backupPath).Str("stage", stage).Msg("Backup uploaded to Snowflake stage successfully")
+
+	switch target {
+	case backupTargetObjectStorage:
+		uploadBackupToStorage(backupPath, ts, deleteOld, target)
+	case backupTargetSnowflakeStage:
+		uploadBackupToStorage(backupPath, ts, deleteOld, target)
 	}
 
-	// Delete the backup file from the local filesystem
-	err = os.Remove(backupPath)
-	if err != nil {
-		log.Error().Err(err).Str("backup_path", backupPath).Msg("Failed to delete backup file from local filesystem")
-	}
-
-	if deleteOld {
-		deleteOldBackups(db, stage)
+	if err := os.Remove(backupPath); err != nil {
+		log.Error().Err(err).Str("backup_path", backupPath).Msg("Failed to delete local backup file")
 	}
 }
 
-func deleteOldBackups(db *sql.DB, stage string) {
-	listCommand := fmt.Sprintf(`LIST @%s pattern = '.*backup'`, stage)
-	rows, err := db.Query(listCommand)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to list files in Snowflake stage")
+func uploadBackupToStorage(backupPath string, ts time.Time, deleteOld bool, target sqliteBackupTarget) {
+	ctx := context.Background()
+	st, location, ok := newBackupStorage(target)
+	if !ok {
+		log.Warn().Msg("SQLite backup upload skipped: backup storage is not configured")
 		return
 	}
-	defer rows.Close()
 
-	maxAgeStr := os.Getenv("DEKART_MAX_BACKUPS_AGE_DAYS")
-	maxAgeDays, err := strconv.Atoi(maxAgeStr)
-	if err != nil || maxAgeDays <= 0 {
-		maxAgeDays = 7 // default to 7 days
+	objectName := sqliteBackupObjectName(ts)
+	if err := uploadBackupFile(ctx, st, location, objectName, backupPath); err != nil {
+		log.Error().Err(err).Str("location", location).Str("object", objectName).Msg("Failed to upload backup")
+		return
 	}
-	maxAge := time.Now().Add(-time.Duration(maxAgeDays) * 24 * time.Hour)
+	log.Info().Str("backup_path", backupPath).Str("location", location).Str("object", objectName).Msg("Backup uploaded successfully")
 
-	for rows.Next() {
-		var fileName string
-		var size int64
-		var lastModified string
-		var md5 string
-		if err := rows.Scan(&fileName, &size, &md5, &lastModified); err != nil {
-			log.Error().Err(err).Msg("Failed to scan row")
+	if deleteOld {
+		pruneOldBackups(ctx, st, location)
+	}
+}
+
+func pruneOldBackups(ctx context.Context, st storage.Storage, location string) {
+	objects, err := st.ListObjectsByPrefix(ctx, location, sqliteBackupObjectPrefix())
+	if err != nil {
+		log.Error().Err(err).Str("location", location).Msg("Failed to list backup objects for prune")
+		return
+	}
+	maxAge := time.Now().Add(-time.Duration(maxBackupsAgeDays()) * 24 * time.Hour)
+	for _, obj := range objects {
+		backupTS, ok := parseBackupTimestamp(obj.Name)
+		if !ok {
 			continue
 		}
-
-		// Extract the actual file name from the full path
-		fileNameParts := strings.Split(fileName, "/")
-		actualFileName := fileNameParts[len(fileNameParts)-1]
-
-		// Extract the timestamp from the actual file name
-		timestampStr := actualFileName[len(actualFileName)-22 : len(actualFileName)-7]
-		fileTime, err := time.ParseInLocation("20060102_150405", timestampStr, time.UTC)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to parse timestamp from file name")
-			continue
-		}
-
-		if fileTime.Before(maxAge) {
-			log.Info().Str("file_name", actualFileName).Time("max_age", maxAge).Msg("Old backup found in Snowflake stage")
-			removeCommand := fmt.Sprintf(`REMOVE @%s/%s`, stage, fileName)
-			_, err := db.Exec(removeCommand)
-			if err != nil {
-				log.Fatal().Err(err).Msg("Failed to remove old backup from Snowflake stage")
+		if backupTS.Before(maxAge) {
+			if err := st.GetObject(ctx, location, obj.Name).Delete(ctx); err != nil {
+				log.Error().Err(err).Str("location", location).Str("object", obj.Name).Msg("Failed to delete old backup object")
 			} else {
-				log.Info().Str("file_name", fileName).Msg("Old backup removed from Snowflake stage")
+				log.Info().Str("location", location).Str("object", obj.Name).Msg("Old backup object deleted")
 			}
 		}
 	}
+}
+
+func restoreFromStorage(dbFilePath string, st storage.Storage, location string) {
+	ctx := context.Background()
+	objects, err := st.ListObjectsByPrefix(ctx, location, sqliteBackupObjectPrefix())
+	if err != nil {
+		log.Error().Err(err).Str("location", location).Msg("Failed to list backup objects")
+		return
+	}
+	if len(objects) == 0 {
+		log.Warn().Str("location", location).Str("prefix", sqliteBackupObjectPrefix()).Msg("No SQLite backup found")
+		return
+	}
+
+	// Prefer backup-name timestamps for deterministic restore ordering across storages.
+	// Fall back to UpdatedAt only when one or both names are not parseable.
+	sort.Slice(objects, func(i, j int) bool {
+		its, iok := parseBackupTimestamp(objects[i].Name)
+		jts, jok := parseBackupTimestamp(objects[j].Name)
+		if iok && jok {
+			return its.After(jts)
+		}
+		if iok != jok {
+			return iok
+		}
+		return objects[i].UpdatedAt.After(objects[j].UpdatedAt)
+	})
+	latest := objects[0]
+
+	dbDir := filepath.Dir(dbFilePath)
+	tempPath := filepath.Join(dbDir, ".restore_tmp_"+filepath.Base(latest.Name))
+	if err := downloadBackupObjectToFile(ctx, st, location, latest.Name, tempPath); err != nil {
+		log.Error().Err(err).Str("location", location).Str("object", latest.Name).Msg("Failed to download SQLite backup")
+		return
+	}
+	if err := os.Rename(tempPath, dbFilePath); err != nil {
+		_ = os.Remove(tempPath)
+		log.Fatal().Err(err).Str("temp_path", tempPath).Str("db_file_path", dbFilePath).Msg("Failed to move downloaded backup into SQLite path")
+	}
+	log.Info().Str("location", location).Str("object", latest.Name).Str("db_file_path", dbFilePath).Msg("Database file restored successfully")
+}
+
+func newBackupStorage(target sqliteBackupTarget) (storage.Storage, string, bool) {
+	switch target {
+	case backupTargetObjectStorage:
+		if storageBackendName() == "GCS" {
+			bucket := storage.GetDefaultBucketName()
+			if bucket == "" {
+				return nil, "", false
+			}
+			return storage.NewPublicStorage(), bucket, true
+		}
+		bucket := storage.GetDefaultBucketName()
+		if bucket == "" {
+			return nil, "", false
+		}
+		return storage.NewS3Storage(), bucket, true
+	case backupTargetSnowflakeStage:
+		stage := strings.TrimSpace(os.Getenv("DEKART_SNOWFLAKE_STAGE"))
+		if stage == "" {
+			return nil, "", false
+		}
+		return storage.NewSnowflakeStageStorage(), stage, true
+	default:
+		return nil, "", false
+	}
+}
+
+func uploadBackupFile(ctx context.Context, st storage.Storage, location, objectName, localPath string) error {
+	f, err := os.Open(localPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	w := st.GetObject(ctx, location, objectName).GetWriter(ctx)
+	if _, err := io.Copy(w, f); err != nil {
+		_ = w.Close()
+		return err
+	}
+	return w.Close()
+}
+
+func downloadBackupObjectToFile(ctx context.Context, st storage.Storage, location, objectName, localPath string) error {
+	r, err := st.GetObject(ctx, location, objectName).GetReader(ctx)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+	out, err := os.Create(localPath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	if _, err := io.Copy(out, r); err != nil {
+		return err
+	}
+	return out.Sync()
 }
