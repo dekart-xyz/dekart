@@ -197,6 +197,7 @@ jobs:
           - id: bigquery-core
             spec: cypress/e2e/bq/archive.cy.js,cypress/e2e/bq/basicFlow.cy.js
             extra_env: |
+              -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
               -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
               -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
               -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
@@ -437,10 +438,6 @@ jobs:
             -v /tmp/cypress/fixtures/POI25Mb.csv:/dekart/cypress/fixtures/POI25Mb.csv \
             -v $(pwd)/$GOOGLE_APPLICATION_CREDENTIALS:/dekart/$GOOGLE_APPLICATION_CREDENTIALS \
             -e DEKART_LOG_DEBUG=1 \
-            -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
-            -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
-            -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
-            -e DEKART_POSTGRES_HOST=localhost \
             -e DEKART_CORS_ORIGIN=http://localhost:3000 \
             -e DEKART_MAPBOX_TOKEN=$MAPBOX_TOKEN_SEC \
             -e TEST_SPEC=${{ matrix.spec }} \

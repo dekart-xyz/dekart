@@ -3,12 +3,13 @@
 ## Goal
 
 Require a valid `DEKART_LICENSE_KEY` when Dekart uses Postgres as its metadata backend.
+Users can get a license key from the [Dekart license key form](https://mailchi.mp/dekart/upgrade-to-sso).
 
 Community/no-key deployments must continue to work with SQLite metadata, and users must still be able to use Postgres/PostGIS as a datasource connector.
 
 ## Product Rule
 
-- Postgres metadata backend: requires a valid Dekart license key.
+- Postgres metadata backend: requires a valid Dekart license key from the [Dekart license key form](https://mailchi.mp/dekart/upgrade-to-sso).
 - SQLite metadata backend: allowed without a license key.
 - Postgres/PostGIS connector: allowed without a license key when Dekart metadata is SQLite.
 - SSO/auth license behavior stays unchanged: SSO still requires a valid license key.
@@ -19,11 +20,24 @@ Dekart currently selects SQLite metadata when `DEKART_SQLITE_DB_PATH` exists in 
 
 If `DEKART_SQLITE_DB_PATH` is absent, Dekart uses Postgres metadata through `DEKART_POSTGRES_URL` or `DEKART_POSTGRES_*`.
 
+This signal should change.
+
+New metadata backend selection:
+
+- If `DEKART_POSTGRES_URL` is present, use Postgres metadata.
+- If any metadata connection field from `DEKART_POSTGRES_*` is present, use Postgres metadata.
+- Postgres metadata env wins over `DEKART_SQLITE_DB_PATH` when both are present.
+- If no Postgres metadata env is present, use SQLite metadata through `DEKART_SQLITE_DB_PATH`.
+- SQLite remains the community/no-key metadata backend.
+
+Use an allowlist for metadata Postgres env names. Do not treat connector/cache env names such as `DEKART_POSTGRES_DATASOURCE_CONNECTION` as metadata backend selection.
+
 Keep this exact predicate consistent across:
 
 - `configureDb`
 - `applyMigrations`
 - startup license validation
+- SQLite backup/restore decisions
 
 Do not infer metadata backend from `DEKART_DATASOURCE`, `DEKART_STORAGE`, or connector settings.
 
@@ -31,20 +45,49 @@ Do not infer metadata backend from `DEKART_DATASOURCE`, `DEKART_STORAGE`, or con
 
 ### 1. Add Shared Metadata Backend Helper
 
-In `src/server/main.go`, add a small helper used by database setup, migrations, and license validation.
+In `src/server/main.go`, add a small shared backend selector used by database setup, migrations, and license validation.
 
 Suggested shape:
 
 ```go
-func usesSQLiteMetadata() bool {
-	_, ok := os.LookupEnv("DEKART_SQLITE_DB_PATH")
-	return ok
+type metadataBackend string
+
+const (
+	metadataBackendPostgres metadataBackend = "postgres"
+	metadataBackendSQLite   metadataBackend = "sqlite"
+)
+
+func selectedMetadataBackend() metadataBackend {
+	if hasPostgresMetadataEnv() {
+		return metadataBackendPostgres
+	}
+	return metadataBackendSQLite
+}
+
+func hasPostgresMetadataEnv() bool {
+	for _, key := range []string{
+		"DEKART_POSTGRES_URL",
+		"DEKART_POSTGRES_USER",
+		"DEKART_POSTGRES_PASSWORD",
+		"DEKART_POSTGRES_HOST",
+		"DEKART_POSTGRES_PORT",
+		"DEKART_POSTGRES_DB",
+	} {
+		if _, ok := os.LookupEnv(key); ok {
+			return true
+		}
+	}
+	return false
 }
 ```
 
-Use this helper instead of duplicating `os.LookupEnv("DEKART_SQLITE_DB_PATH")`.
+Use this helper instead of duplicating env checks.
 
-This preserves current behavior, including the edge case where the variable is present but empty.
+This intentionally changes precedence: Postgres metadata env wins over `DEKART_SQLITE_DB_PATH`.
+
+`DEKART_SQLITE_DB_PATH` is still used as the SQLite database path when SQLite metadata is selected. If SQLite metadata is selected and the path is absent, use the existing default behavior or fail clearly according to the current code path.
+
+Update `src/server/dekart/server.go` so SQLite backup behavior follows the same selector. Backups should not run merely because `DEKART_SQLITE_DB_PATH` is non-empty when Postgres metadata env is also present.
 
 ### 2. Refactor Startup License Validation
 
@@ -80,9 +123,9 @@ In `src/server/main.go`, call the startup license guard before `configureDb()`.
 Suggested flow:
 
 ```go
-sqliteMetadata := usesSQLiteMetadata()
+metadataBackend := selectedMetadataBackend()
 app.RequireValidStartupLicense(app.StartupLicenseConfig{
-	RequireForPostgresMetadata: !sqliteMetadata,
+	RequireForPostgresMetadata: metadataBackend == metadataBackendPostgres,
 })
 
 db := configureDb()
@@ -102,6 +145,7 @@ Do not add license checks to:
 - `DEKART_POSTGRES_DATASOURCE_CONNECTION`
 
 Those are datasource/cache paths, not metadata backend selection.
+Keep connector-only env names out of `hasPostgresMetadataEnv()`.
 
 ## Test Plan
 
@@ -113,14 +157,24 @@ Cover:
 
 - SQLite metadata, no key: allowed.
 - Postgres metadata, no key: blocked.
+- Postgres metadata env plus `DEKART_SQLITE_DB_PATH`, no key: blocked.
+- Postgres metadata env plus `DEKART_SQLITE_DB_PATH`, valid key: uses Postgres metadata.
 - SQLite metadata, invalid key: blocked.
 - Postgres metadata, valid key: allowed.
 - SSO enabled, no key: blocked.
-- SQLite metadata plus Postgres datasource-related env/config: allowed without key.
+- SQLite metadata plus Postgres datasource-related env/config, such as `DEKART_POSTGRES_DATASOURCE_CONNECTION` or `DEKART_DATASOURCE=PG`: allowed without key.
 
 Use a fake `TokenValidator` in tests so the app tests do not depend on filesystem keys.
 
 Keep existing `src/server/license/license_test.go` as the cryptographic token validation coverage.
+
+Add focused tests for the metadata selector in `src/server/main_test.go` or another main-package test file:
+
+- no Postgres metadata env selects SQLite
+- `DEKART_POSTGRES_URL` selects Postgres
+- one structured `DEKART_POSTGRES_*` metadata field selects Postgres
+- Postgres metadata env wins when `DEKART_SQLITE_DB_PATH` is also present
+- datasource-only Postgres env names do not select Postgres metadata
 
 ### CI / E2E Tests
 
@@ -141,18 +195,23 @@ Create the local files directory in the e2e image if needed.
 Then update `.github/workflows/e2e.yaml`:
 
 - Lanes intended to prove no-key OSS/community behavior should rely on SQLite metadata.
-- Local Postgres connector lanes should run without `DEKART_LICENSE_KEY` and keep SQLite metadata, proving Postgres connectors still work in Community mode.
-- Lanes intentionally testing Postgres metadata should start the server with `DEKART_SQLITE_DB_PATH` absent and pass `DEKART_LICENSE_KEY`.
+- Local Postgres connector lanes should run without `DEKART_LICENSE_KEY` and keep SQLite metadata, proving Postgres connectors still work in Community mode. These lanes must avoid metadata `DEKART_POSTGRES_*` env names unless they intentionally test licensed Postgres metadata.
+- Lanes intentionally testing Postgres metadata should pass metadata `DEKART_POSTGRES_*` or `DEKART_POSTGRES_URL` env and pass `DEKART_LICENSE_KEY`.
 
-Because `os.LookupEnv("DEKART_SQLITE_DB_PATH")` treats an empty-but-present variable as SQLite metadata, do not use `-e DEKART_SQLITE_DB_PATH=` to select Postgres metadata.
+With the new selector, do not rely on unsetting `DEKART_SQLITE_DB_PATH` to choose Postgres metadata. Postgres metadata is selected by the presence of `DEKART_POSTGRES_URL` or metadata `DEKART_POSTGRES_*` connection fields.
 
 Example for intentional Postgres metadata lanes:
 
 ```sh
-env -u DEKART_SQLITE_DB_PATH /dekart/server
+-e DEKART_POSTGRES_HOST=postgres \
+-e DEKART_POSTGRES_PORT=5432 \
+-e DEKART_POSTGRES_DB=dekart \
+-e DEKART_POSTGRES_USER=dekart \
+-e DEKART_POSTGRES_PASSWORD=dekart \
+-e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
 ```
 
-When the e2e stage defaults to SQLite metadata, use a small entrypoint/script wrapper for Postgres metadata lanes that unsets `DEKART_SQLITE_DB_PATH` before launching the server, while still passing `DEKART_LICENSE_KEY`.
+After this plan change, unsetting `DEKART_SQLITE_DB_PATH` is not required for backend selection.
 
 Example for no-key Postgres connector lanes:
 

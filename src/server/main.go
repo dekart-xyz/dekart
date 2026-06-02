@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -72,10 +73,35 @@ func validateStorageConfig() {
 	}
 }
 
+func defaultEnvString(value string, defaultValue string) string {
+	if value == "" {
+		return defaultValue
+	}
+	return value
+}
+
+func postgresMetadataURL() string {
+	url, ok := os.LookupEnv("DEKART_POSTGRES_URL")
+	if ok {
+		return url
+	}
+	return fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		defaultEnvString(os.Getenv("DEKART_POSTGRES_USER"), "dekart"),
+		os.Getenv("DEKART_POSTGRES_PASSWORD"),
+		defaultEnvString(os.Getenv("DEKART_POSTGRES_HOST"), "localhost"),
+		defaultEnvString(os.Getenv("DEKART_POSTGRES_PORT"), "5432"),
+		defaultEnvString(os.Getenv("DEKART_POSTGRES_DB"), "dekart"),
+	)
+}
+
 func configureDb() *sql.DB {
-	sqlitePath, sqliteOk := os.LookupEnv("DEKART_SQLITE_DB_PATH")
-	if sqliteOk {
+	if dekart.SelectedMetadataBackend() == dekart.MetadataBackendSQLite {
 		// Use SQLite
+		sqlitePath, sqliteOk := os.LookupEnv("DEKART_SQLITE_DB_PATH")
+		if !sqliteOk || strings.TrimSpace(sqlitePath) == "" {
+			log.Fatal().Msg("DEKART_SQLITE_DB_PATH is required when Postgres metadata env is not configured")
+		}
 		log.Info().Msg("Using SQLite database")
 		log.Info().Msg("Restoring SQLite database from backup")
 		dekart.RestoreDbFile()
@@ -87,18 +113,7 @@ func configureDb() *sql.DB {
 	}
 
 	log.Info().Msg("Using Postgres database")
-	url, ok := os.LookupEnv("DEKART_POSTGRES_URL")
-	if !ok {
-		url = fmt.Sprintf(
-			"postgres://%s:%s@%s:%s/%s?sslmode=disable",
-			os.Getenv("DEKART_POSTGRES_USER"),
-			os.Getenv("DEKART_POSTGRES_PASSWORD"),
-			os.Getenv("DEKART_POSTGRES_HOST"),
-			os.Getenv("DEKART_POSTGRES_PORT"),
-			os.Getenv("DEKART_POSTGRES_DB"),
-		)
-	}
-	db, err := sql.Open("postgres", url)
+	db, err := sql.Open("postgres", postgresMetadataURL())
 	if err != nil {
 		log.Fatal().Err(err).Msg("sql.Open failed")
 	}
@@ -109,8 +124,7 @@ func configureDb() *sql.DB {
 }
 
 func applyMigrations(db *sql.DB) {
-	_, sqliteOk := os.LookupEnv("DEKART_SQLITE_DB_PATH")
-	if sqliteOk {
+	if dekart.SelectedMetadataBackend() == dekart.MetadataBackendSQLite {
 		// Use SQLite migration driver
 		driver, err := sqlite3.WithInstance(db, &sqlite3.Config{})
 		if err != nil {
@@ -244,7 +258,9 @@ func main() {
 	validateStorageConfig()
 	// Removing or bypassing this check is a modification under AGPL and requires publishing your changed source code.
 	// Get a free license key at https://mailchi.mp/dekart/upgrade-to-sso
-	app.ValidateLicenseForSSO()
+	app.RequireValidStartupLicense(app.StartupLicenseConfig{
+		RequireForPostgresMetadata: dekart.SelectedMetadataBackend() == dekart.MetadataBackendPostgres,
+	})
 
 	db := configureDb()
 	defer db.Close()

@@ -87,7 +87,7 @@ func sqliteDBFilePath() string {
 }
 
 func isSQLiteEnabled() bool {
-	return sqliteDBFilePath() != ""
+	return IsSqlite() && sqliteDBFilePath() != ""
 }
 
 func storageBackendName() string {

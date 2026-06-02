@@ -55,10 +55,6 @@ func NewServer(db *sql.DB, storageBucket storage.Storage, jobs job.Store) *Serve
 
 }
 
-func IsSqlite() bool {
-	return os.Getenv("DEKART_SQLITE_DB_PATH") != ""
-}
-
 // Shutdown cancels all jobs
 func (s Server) Shutdown(ctx context.Context) {
 	s.jobs.CancelAll(ctx)
