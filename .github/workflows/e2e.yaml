@@ -240,6 +240,7 @@ jobs:
           - id: athena
             spec: cypress/e2e/athena
             extra_env: |
+              -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
               -e DEKART_STORAGE=S3 \
               -e DEKART_DATASOURCE=ATHENA \
               -e DEKART_CLOUD_STORAGE_BUCKET=$S3_BUCKET_SEC \
