@@ -402,11 +402,14 @@ function WorkspacePermissionsSelect ({ disabled = false }) {
 }
 function WorkspacePermissions () {
   const { canWrite, discoverable, isSharable } = useSelector(state => state.report)
+  const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
   if (!canWrite && !discoverable) { // show only for discoverable workspace reports
     return null
   }
   let disabledReason = ''
-  if (!isSharable) {
+  if (isDefaultWorkspace) {
+    disabledReason = 'Workspace-level sharing is unavailable in the default workspace.'
+  } else if (!isSharable) {
     disabledReason = 'Workspace-level sharing is unavailable for this map configuration.'
   }
   const disabled = Boolean(disabledReason)

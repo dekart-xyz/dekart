@@ -28,8 +28,13 @@ export default function WorkspaceSelector () {
   if (!currentWorkspaceId || workspaces.length === 0) {
     return null
   }
+  const manageDisabled = !env.authEnabled
+
   const handleChange = (value) => {
     if (value === 'manage') {
+      if (manageDisabled) {
+        return
+      }
       history.push('/workspace')
       return
     }
@@ -55,7 +60,10 @@ export default function WorkspaceSelector () {
             {menu}
             <Divider style={{ margin: '4px 0' }} />
             <div
-              className={styles.manageOption}
+              className={classNames(
+                styles.manageOption,
+                { [styles.manageOptionDisabled]: manageDisabled }
+              )}
               onClick={() => handleChange('manage')}
               onMouseEnter={() => setIsManageHovered(true)}
               onMouseLeave={() => setIsManageHovered(false)}

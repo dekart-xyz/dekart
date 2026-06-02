@@ -139,21 +139,8 @@ func handleFileUploadSessionError(w http.ResponseWriter, err error) {
 	http.Error(w, err.Error(), http.StatusBadRequest)
 }
 
-// IsFileUploadEnabled reports whether file upload is enabled in environment.
-func IsFileUploadEnabled() bool {
-	switch strings.ToLower(strings.TrimSpace(os.Getenv("DEKART_ALLOW_FILE_UPLOAD"))) {
-	case "", "0", "false":
-		return false
-	}
-	return true
-}
-
-// FileUploadEnvValue normalizes the file upload flag for the frontend env API.
-func FileUploadEnvValue() string {
-	if IsFileUploadEnabled() {
-		return "1"
-	}
-	return ""
+func isFileUploadEnabled() bool {
+	return os.Getenv("DEKART_ALLOW_FILE_UPLOAD") != ""
 }
 
 func nowUTC() time.Time {

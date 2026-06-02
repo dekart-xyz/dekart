@@ -29,5 +29,4 @@ services:
       DEKART_REQUIRE_GOOGLE_OAUTH: "1"
       DEKART_GOOGLE_OAUTH_CLIENT_ID: "your-google-oauth-client-id"
       DEKART_GOOGLE_OAUTH_SECRET: "your-google-oauth-client-secret"
-      # Get a key at https://mailchi.mp/dekart/upgrade-to-sso
       DEKART_LICENSE_KEY: "your-license-key"

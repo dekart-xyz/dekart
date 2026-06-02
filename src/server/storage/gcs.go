@@ -102,32 +102,6 @@ func (s GoogleCloudStorage) GetObject(_ context.Context, bucketName, object stri
 	}
 }
 
-func (s GoogleCloudStorage) ListObjectsByPrefix(ctx context.Context, bucket, prefix string) ([]ObjectInfo, error) {
-	client, err := s.getStorageClient(ctx)
-	if err != nil {
-		return nil, err
-	}
-	it := client.Bucket(bucket).Objects(ctx, &gcsstorage.Query{Prefix: prefix})
-	objects := make([]ObjectInfo, 0)
-	for {
-		attrs, err := it.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		if attrs == nil {
-			continue
-		}
-		objects = append(objects, ObjectInfo{
-			Name:      attrs.Name,
-			UpdatedAt: attrs.Updated.UTC(),
-		})
-	}
-	return objects, nil
-}
-
 // GoogleCloudStorageObject implements StorageObject for Google Cloud Storage.
 type GoogleCloudStorageObject struct {
 	bucketName   string

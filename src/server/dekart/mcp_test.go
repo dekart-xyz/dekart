@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 func TestWriteMCPCallError_HTTPErrorPreservesStatus(t *testing.T) {
@@ -164,11 +163,6 @@ func TestMCPToolDefinitions_ContainsUpdateTools(t *testing.T) {
 	runQueryTool, ok := names["run_query"]
 	assert.True(t, ok)
 	assert.Contains(t, runQueryTool.InputSchema["required"], "query_id")
-
-	snapshotTool, ok := names["create_report_snapshot"]
-	assert.True(t, ok)
-	assert.Contains(t, snapshotTool.InputSchema["required"], "report_id")
-	assert.Contains(t, snapshotTool.Description, "Prefer local render using snapshot_render_url")
 }
 
 func TestCallMCPTool_UnknownTool(t *testing.T) {
@@ -345,7 +339,6 @@ func TestSanitizeConnectionForMCP_StripsSecrets(t *testing.T) {
 		SnowflakeKey:       &proto.Secret{ServerEncrypted: "secret"},
 		BigqueryKey:        &proto.Secret{ServerEncrypted: "secret"},
 		WherobotsKey:       &proto.Secret{ServerEncrypted: "secret"},
-		PostgresPassword:   &proto.Secret{ServerEncrypted: "secret"},
 		BigqueryProjectId:  "project",
 		ConnectionType:     proto.ConnectionType_CONNECTION_TYPE_BIGQUERY,
 		CloudStorageBucket: "bucket",
@@ -354,7 +347,10 @@ func TestSanitizeConnectionForMCP_StripsSecrets(t *testing.T) {
 	sanitized := sanitizeConnectionForMCP(connection)
 	assert.Equal(t, "conn-1", sanitized.Id)
 	assert.Equal(t, "test", sanitized.ConnectionName)
-	assertAllSecretFieldsCleared(t, sanitized)
+	assert.Nil(t, sanitized.SnowflakePassword)
+	assert.Nil(t, sanitized.SnowflakeKey)
+	assert.Nil(t, sanitized.BigqueryKey)
+	assert.Nil(t, sanitized.WherobotsKey)
 }
 
 func TestSanitizeCreateConnectionResponseForMCP_StripsSecrets(t *testing.T) {
@@ -366,30 +362,15 @@ func TestSanitizeCreateConnectionResponseForMCP_StripsSecrets(t *testing.T) {
 			SnowflakeKey:      &proto.Secret{ServerEncrypted: "secret"},
 			BigqueryKey:       &proto.Secret{ServerEncrypted: "secret"},
 			WherobotsKey:      &proto.Secret{ServerEncrypted: "secret"},
-			PostgresPassword:  &proto.Secret{ServerEncrypted: "secret"},
 		},
 	}
 
 	sanitized := sanitizeCreateConnectionResponseForMCP(response)
 	if assert.NotNil(t, sanitized) && assert.NotNil(t, sanitized.Connection) {
 		assert.Equal(t, "conn-1", sanitized.Connection.Id)
-		assertAllSecretFieldsCleared(t, sanitized.Connection)
-	}
-}
-
-func assertAllSecretFieldsCleared(t *testing.T, connection *proto.Connection) {
-	t.Helper()
-	message := connection.ProtoReflect()
-	fields := message.Descriptor().Fields()
-	secretFullName := (&proto.Secret{}).ProtoReflect().Descriptor().FullName()
-	for i := 0; i < fields.Len(); i++ {
-		field := fields.Get(i)
-		if field.Kind() != protoreflect.MessageKind {
-			continue
-		}
-		if field.Message() == nil || field.Message().FullName() != secretFullName {
-			continue
-		}
-		assert.False(t, message.Has(field), "secret field %s must be cleared", field.Name())
+		assert.Nil(t, sanitized.Connection.SnowflakePassword)
+		assert.Nil(t, sanitized.Connection.SnowflakeKey)
+		assert.Nil(t, sanitized.Connection.BigqueryKey)
+		assert.Nil(t, sanitized.Connection.WherobotsKey)
 	}
 }

@@ -107,8 +107,3 @@ func (s UnsupportedUploadSessionStorage) CompleteUploadSession(_ context.Context
 func (s UnsupportedUploadSessionStorage) AbortUploadSession(_ context.Context, _ AbortUploadSessionInput) error {
 	return errUploadSessionNotSupported(s.Backend)
 }
-
-// ListObjectsByPrefix returns unsupported error for backends without object listing support.
-func (s UnsupportedUploadSessionStorage) ListObjectsByPrefix(_ context.Context, _ string, _ string) ([]ObjectInfo, error) {
-	return nil, fmt.Errorf("list objects flow is not supported for storage backend %q", s.Backend)
-}

@@ -17,8 +17,6 @@ env_variables:
   DEKART_POSTGRES_PORT: "5432"
   # see https://cloud.google.com/sql/docs/mysql/connect-app-engine-flexible
   DEKART_POSTGRES_HOST: "172.17.0.1"
-  # Get a key at https://mailchi.mp/dekart/upgrade-to-sso
-  DEKART_LICENSE_KEY: "$DEKART_LICENSE_KEY"
   DEKART_CLOUD_STORAGE_BUCKET: "$BUCKET"
   DEKART_BIGQUERY_PROJECT_ID: "$PROJECT_ID"
   DEKART_BIGQUERY_MAX_BYTES_BILLED: "53687091200"

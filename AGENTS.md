@@ -7,7 +7,6 @@ Goal: contributions should blend into the existing codebase and minimize maintai
 - Make the smallest correct change that solves the task.
 - Prefer existing patterns in the touched folder over introducing new patterns.
 - Avoid speculative hardening. Add extra guards only for real, observed failure modes.
-– Each line in this repo is reviewed by a human whoauthored original code. This is slow and expensive process. Avoid adding complexity that requires extra review cycles without a clear observed need.
 
 ## Architecture Rules (mandatory)
 
@@ -24,10 +23,6 @@ Goal: contributions should blend into the existing codebase and minimize maintai
 - Do not use debug logging in production paths. Keep logs high-signal for admins.
 - Never force-push.
 - Reuse existing contract types in the touched module (proto/shared schema) before adding local ad-hoc request structs; if you must diverge, add a one-line reason.
-- Keep Cypress `cypress/e2e/<folder>` aligned with env config name used to run it (for example, `.env.local` -> `cypress/e2e/local`, `.env.pg-s3` -> `cypress/e2e/pg-s3`).
-- For E2E tests, group specs by runtime configuration; split only long-running configurations into multiple parallel lanes.
-- After changing behavior, remove obsolete flags/params/branches that are no longer needed (no leftover transitional wiring).
-- Do not introduce new environment variables in code/workflows without an explicit plan or direct user approval.
 
 ## Skill Usage
 

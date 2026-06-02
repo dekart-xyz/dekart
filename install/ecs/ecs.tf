@@ -50,10 +50,6 @@ resource "aws_ecs_task_definition" "dekart" {
              "value": "${aws_secretsmanager_secret_version.dekart_rds.secret_string}"
           },
           {
-             "name": "DEKART_LICENSE_KEY",
-             "value": "${var.dekart_license_key}"
-          },
-          {
              "name": "DEKART_STORAGE",
              "value": "S3"
           },
@@ -131,5 +127,6 @@ resource "aws_ecs_service" "dekart" {
     container_port   = 8080
   }
 }
+
 
 

@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -65,43 +64,18 @@ func validateStorageConfig() {
 	if os.Getenv("DEKART_STORAGE") != "PG" {
 		return
 	}
-	if dekart.IsFileUploadEnabled() {
-		log.Fatal().Msg("DEKART_ALLOW_FILE_UPLOAD must be disabled when DEKART_STORAGE=PG")
+	if os.Getenv("DEKART_ALLOW_FILE_UPLOAD") != "" {
+		log.Fatal().Msg("DEKART_ALLOW_FILE_UPLOAD must be empty when DEKART_STORAGE=PG")
 	}
 	if os.Getenv("DEKART_CLOUD_STORAGE_BUCKET") != "" {
 		log.Fatal().Msg("DEKART_CLOUD_STORAGE_BUCKET must be empty when DEKART_STORAGE=PG")
 	}
 }
 
-func defaultEnvString(value string, defaultValue string) string {
-	if value == "" {
-		return defaultValue
-	}
-	return value
-}
-
-func postgresMetadataURL() string {
-	url, ok := os.LookupEnv("DEKART_POSTGRES_URL")
-	if ok {
-		return url
-	}
-	return fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		defaultEnvString(os.Getenv("DEKART_POSTGRES_USER"), "dekart"),
-		os.Getenv("DEKART_POSTGRES_PASSWORD"),
-		defaultEnvString(os.Getenv("DEKART_POSTGRES_HOST"), "localhost"),
-		defaultEnvString(os.Getenv("DEKART_POSTGRES_PORT"), "5432"),
-		defaultEnvString(os.Getenv("DEKART_POSTGRES_DB"), "dekart"),
-	)
-}
-
 func configureDb() *sql.DB {
-	if dekart.SelectedMetadataBackend() == dekart.MetadataBackendSQLite {
+	sqlitePath, sqliteOk := os.LookupEnv("DEKART_SQLITE_DB_PATH")
+	if sqliteOk {
 		// Use SQLite
-		sqlitePath, sqliteOk := os.LookupEnv("DEKART_SQLITE_DB_PATH")
-		if !sqliteOk || strings.TrimSpace(sqlitePath) == "" {
-			log.Fatal().Msg("DEKART_SQLITE_DB_PATH is required when Postgres metadata env is not configured")
-		}
 		log.Info().Msg("Using SQLite database")
 		log.Info().Msg("Restoring SQLite database from backup")
 		dekart.RestoreDbFile()
@@ -113,7 +87,18 @@ func configureDb() *sql.DB {
 	}
 
 	log.Info().Msg("Using Postgres database")
-	db, err := sql.Open("postgres", postgresMetadataURL())
+	url, ok := os.LookupEnv("DEKART_POSTGRES_URL")
+	if !ok {
+		url = fmt.Sprintf(
+			"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+			os.Getenv("DEKART_POSTGRES_USER"),
+			os.Getenv("DEKART_POSTGRES_PASSWORD"),
+			os.Getenv("DEKART_POSTGRES_HOST"),
+			os.Getenv("DEKART_POSTGRES_PORT"),
+			os.Getenv("DEKART_POSTGRES_DB"),
+		)
+	}
+	db, err := sql.Open("postgres", url)
 	if err != nil {
 		log.Fatal().Err(err).Msg("sql.Open failed")
 	}
@@ -124,7 +109,8 @@ func configureDb() *sql.DB {
 }
 
 func applyMigrations(db *sql.DB) {
-	if dekart.SelectedMetadataBackend() == dekart.MetadataBackendSQLite {
+	_, sqliteOk := os.LookupEnv("DEKART_SQLITE_DB_PATH")
+	if sqliteOk {
 		// Use SQLite migration driver
 		driver, err := sqlite3.WithInstance(db, &sqlite3.Config{})
 		if err != nil {
@@ -258,9 +244,7 @@ func main() {
 	validateStorageConfig()
 	// Removing or bypassing this check is a modification under AGPL and requires publishing your changed source code.
 	// Get a free license key at https://mailchi.mp/dekart/upgrade-to-sso
-	app.RequireValidStartupLicense(app.StartupLicenseConfig{
-		RequireForPostgresMetadata: dekart.SelectedMetadataBackend() == dekart.MetadataBackendPostgres,
-	})
+	app.ValidateLicenseForSSO()
 
 	db := configureDb()
 	defer db.Close()

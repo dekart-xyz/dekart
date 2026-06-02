@@ -142,45 +142,6 @@ function FirstReportOnboarding () {
   )
 }
 
-function FirstSetupOnboarding () {
-  const dispatch = useDispatch()
-  const history = useHistory()
-  const isAdmin = useSelector(state => state.user.isAdmin)
-  const isViewer = useSelector(state => state.user.isViewer)
-  const allowFileUpload = useSelector(state => state.env.variables.ALLOW_FILE_UPLOAD)
-  const fileUploadDisabledNote = allowFileUpload ? '' : 'File upload is disabled in configuration'
-
-  return (
-    <Result
-      icon={<span className={styles.rocketIcon} />}
-      title='Ready to connect'
-      subTitle='Create your database connection or start by uploading a file.'
-      extra={(
-        <div className={styles.firstSetupActions}>
-          <Button
-            id='dekart-new-connection-onboarding'
-            type='primary'
-            disabled={!isAdmin}
-            title={isAdmin ? 'Create new connection' : 'Only admin can create new connection'}
-            onClick={() => history.push('/connections')}
-          >New connection
-          </Button>
-          <Button
-            id='dekart-use-file-upload'
-            disabled={isViewer || !allowFileUpload}
-            title={isViewer ? 'Viewers cannot create maps' : fileUploadDisabledNote}
-            onClick={() => {
-              track('CreateMap')
-              dispatch(createReport())
-            }}
-          >Use file upload
-          </Button>
-        </div>
-      )}
-    />
-  )
-}
-
 function ReportsHeader (
   { reportFilter, archived, setArchived }
 ) {
@@ -249,7 +210,6 @@ function ReportsHeader (
           reportFilter === 'connections'
             ? (
               <Button
-                id='dekart-new-connection-connections'
                 disabled={!isAdmin}
                 type='primary'
                 title={isAdmin ? 'Create new connection' : 'Only admin can create new connection'}
@@ -456,9 +416,8 @@ function Reports ({ createReportButton, reportFilter }) {
   const [archived, setArchived] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const reportsList = useSelector(state => state.reportsList)
-  const { loaded: envLoaded, authEnabled, isCloud, isSnowpark } = useSelector(state => state.env)
-  const allConnectionList = useSelector(state => state.connection.list)
-  const connectionList = allConnectionList.filter(c => !isSystemConnectionID(c.id))
+  const { loaded: envLoaded, authEnabled } = useSelector(state => state.env)
+  const connectionList = useSelector(state => state.connection.list.filter(c => !isSystemConnectionID(c.id)))
   // TODO: show default SQL connection in the list
   // const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const newConnectionScreen = useSelector(state => state.connection.screen)
@@ -495,17 +454,9 @@ function Reports ({ createReportButton, reportFilter }) {
       </div>
     )
   }
-  const noMapsYet = reportsList.my.length === 0 && reportsList.discoverable.length === 0 && reportsList.archived.length === 0
-  const isFirstLaunchSelfHosted = reportFilter === 'my' &&
-    !isCloud &&
-    !isSnowpark &&
-    noMapsYet &&
-    allConnectionList.length === 0
-  if (noMapsYet) {
+  if (reportsList.my.length === 0 && reportsList.discoverable.length === 0 && reportsList.archived.length === 0) {
     return (
-      <div className={styles.reports}>
-        {isFirstLaunchSelfHosted ? <FirstSetupOnboarding /> : <FirstReportOnboarding createReportButton={createReportButton} />}
-      </div>
+      <div className={styles.reports}><FirstReportOnboarding createReportButton={createReportButton} /></div>
     )
   } else {
     // For connections, still use table view

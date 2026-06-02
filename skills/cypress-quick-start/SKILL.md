@@ -31,4 +31,3 @@ This environment often has `ELECTRON_RUN_AS_NODE=1` set globally. If not overrid
 
 - Base URL configured in `cypress.config.js` (`http://localhost:3000`).
 - Layer-order regression spec: `cypress/e2e/snowflake-s3/layerOrderRerunRegression.cy.js`
-- Prefer local server instanced (make server ...) for running local tests.

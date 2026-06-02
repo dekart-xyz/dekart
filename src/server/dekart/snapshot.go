@@ -37,11 +37,14 @@ func getSnapshotTimeoutSeconds() int32 {
 	return defaultSnapshotTimeoutSeconds
 }
 
-// CreateReportSnapshot returns short-lived snapshot render URLs for one report.
+// CreateReportSnapshot returns a short-lived snapshot URL for one report snapshot render.
 func (s *Server) CreateReportSnapshot(ctx context.Context, req *proto.CreateReportSnapshotRequest) (*proto.CreateReportSnapshotResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
+	}
+	if !reportsnapshot.IsEnabled() {
+		return nil, status.Error(codes.FailedPrecondition, "snapshot feature is disabled")
 	}
 	if err := validateSnapshotRequest(req); err != nil {
 		return nil, err
@@ -53,12 +56,8 @@ func (s *Server) CreateReportSnapshot(ctx context.Context, req *proto.CreateRepo
 	if err != nil {
 		return nil, status.Error(codes.Internal, "cannot issue snapshot token")
 	}
-	snapshotURL := ""
-	if reportsnapshot.IsCaptureEnabled() {
-		snapshotURL = buildSnapshotImageURL(token)
-	}
 	return &proto.CreateReportSnapshotResponse{
-		SnapshotUrl:       snapshotURL,
+		SnapshotUrl:       buildSnapshotImageURL(token),
 		ExpiresIn:         int64(expiresAt.Sub(time.Now().UTC()).Seconds()),
 		SnapshotRenderUrl: buildSnapshotRenderURLForResponse(token, req.GetReportId()),
 	}, nil
@@ -66,7 +65,7 @@ func (s *Server) CreateReportSnapshot(ctx context.Context, req *proto.CreateRepo
 
 // HandleSnapshotReport validates short-lived token, captures screenshot via Browserless, and streams image bytes.
 func (s *Server) HandleSnapshotReport(w http.ResponseWriter, r *http.Request) {
-	if !reportsnapshot.IsCaptureEnabled() {
+	if !reportsnapshot.IsEnabled() {
 		http.Error(w, "snapshot feature is disabled", http.StatusNotFound)
 		return
 	}

@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"database/sql"
 	"dekart/src/proto"
-	"dekart/src/server/conn"
 	"dekart/src/server/secrets"
 	"encoding/base64"
 	"encoding/csv"
@@ -31,36 +30,37 @@ func readSnowparkToken() string {
 }
 
 func ParsePrivateKey(base64Key string) (*rsa.PrivateKey, error) {
+	// Decode the base64-encoded private key
 	decodedKey, err := base64.StdEncoding.DecodeString(base64Key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode base64 private key: %w", err)
 	}
 
+	// Parse the private key
 	privateKey, err := x509.ParsePKCS8PrivateKey(decodedKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse PKCS8 private key: %w", err)
 	}
 
+	// Assert the type to *rsa.PrivateKey
 	rsaKey, ok := privateKey.(*rsa.PrivateKey)
 	if !ok {
 		return nil, fmt.Errorf("not an RSA private key")
 	}
+
 	return rsaKey, nil
 }
 
-func getConfig(connection *proto.Connection) sf.Config {
-	// Use request/db provided credentials for any explicit Snowflake connection payload,
-	// including unsaved connections used by TestConnection (id can be empty there).
-	// Only true synthetic/system connections should resolve creds from env.
-	if connection != nil && (!conn.IsSystemConnectionID(connection.Id)) {
-		password := secrets.SecretToString(connection.SnowflakePassword, nil)
-		privateKey := secrets.SecretToString(connection.SnowflakeKey, nil)
+func getConfig(conn *proto.Connection) sf.Config {
+	if conn != nil && !conn.IsDefault { // for default connection we use environment variables
+		password := secrets.SecretToString(conn.SnowflakePassword, nil)
+		privateKey := secrets.SecretToString(conn.SnowflakeKey, nil)
 		if password != "" && privateKey == "" {
 			// legacy support for password
 			return sf.Config{
-				Account:   connection.SnowflakeAccountId,
-				User:      connection.SnowflakeUsername,
-				Warehouse: connection.SnowflakeWarehouse,
+				Account:   conn.SnowflakeAccountId,
+				User:      conn.SnowflakeUsername,
+				Warehouse: conn.SnowflakeWarehouse,
 				Password:  password,
 				Params:    map[string]*string{},
 			}
@@ -71,8 +71,8 @@ func getConfig(connection *proto.Connection) sf.Config {
 			return sf.Config{}
 		}
 		return sf.Config{
-			Account:       connection.SnowflakeAccountId,
-			User:          connection.SnowflakeUsername,
+			Account:       conn.SnowflakeAccountId,
+			User:          conn.SnowflakeUsername,
 			Authenticator: sf.AuthTypeJwt,
 			PrivateKey:    pk,
 			Params:        map[string]*string{},
@@ -86,7 +86,7 @@ func getConfig(connection *proto.Connection) sf.Config {
 	if privateKey != "" {
 		pk, err := ParsePrivateKey(privateKey)
 		if err != nil {
-			log.Error().Err(err).Msg("failed to parse private key")
+			log.Fatal().Err(err).Msg("failed to parse private key")
 			return sf.Config{}
 		}
 		return sf.Config{
@@ -121,13 +121,13 @@ func getConfig(connection *proto.Connection) sf.Config {
 			InsecureMode:  true,
 		}
 	}
-	log.Error().Msg("No snowflake credentials found")
+	log.Fatal().Msg("No snowflake credentials found")
 	return sf.Config{}
 }
 
 // GetConnector returns a snowflake connector
-func GetConnector(connection *proto.Connection) sf.Connector {
-	config := getConfig(connection)
+func GetConnector(conn *proto.Connection) sf.Connector {
+	config := getConfig(conn)
 	driver := sf.SnowflakeDriver{}
 	return sf.NewConnector(driver, config)
 }

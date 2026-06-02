@@ -7,14 +7,10 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"time"
 
 	"dekart/src/proto"
-	"dekart/src/server/conn"
 	"dekart/src/server/job"
-	"dekart/src/server/secrets"
 	"dekart/src/server/storage"
-	"dekart/src/server/user"
 
 	_ "github.com/lib/pq" // postgres driver
 	"github.com/rs/zerolog/log"
@@ -29,66 +25,26 @@ type Job struct {
 
 type Store struct {
 	job.BasicStore
+	postgresDB *sql.DB
 }
 
 func NewStore() *Store {
-	return &Store{}
-}
-
-// buildDSNFromConnection creates postgres DSN from connection payload.
-func buildDSNFromConnection(connection *proto.Connection, claims *user.Claims) (string, error) {
-	envDSN := os.Getenv("DEKART_POSTGRES_DATASOURCE_CONNECTION")
-	if envDSN == "" {
+	dbConnStr := os.Getenv("DEKART_POSTGRES_DATASOURCE_CONNECTION")
+	if dbConnStr == "" {
 		// Backward-compatible fallback for old env name.
-		envDSN = os.Getenv("DEKART_POSTGRES_DATA_CONNECTION")
+		dbConnStr = os.Getenv("DEKART_POSTGRES_DATA_CONNECTION")
 	}
-	if os.Getenv("DEKART_DATASOURCE") == "PG" && envDSN != "" {
-		return envDSN, nil
+	db, err := sql.Open("postgres", dbConnStr)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to connect to postgres")
 	}
-	if conn.IsSystemConnectionID(connection.GetId()) && envDSN != "" {
-		return envDSN, nil
+
+	return &Store{
+		postgresDB: db,
 	}
-	password := secrets.SecretToString(connection.PostgresPassword, claims)
-	if password == "" {
-		// Legacy/system-style Postgres connections can omit per-connection credentials
-		// and use process-level DSN instead.
-		if envDSN != "" &&
-			(connection.PostgresHost == "" ||
-				connection.PostgresUsername == "" ||
-				connection.PostgresDatabase == "" ||
-				connection.PostgresPort <= 0) {
-			return envDSN, nil
-		}
-		return "", fmt.Errorf("postgres_password is required")
-	}
-	return fmt.Sprintf(
-		"host=%s port=%d user=%s dbname=%s password=%s sslmode=disable",
-		connection.PostgresHost,
-		connection.PostgresPort,
-		connection.PostgresUsername,
-		connection.PostgresDatabase,
-		password,
-	), nil
 }
 
-// Create creates a postgres job for report query execution.
-func Create(reportID string, queryID string, queryText string, userCtx context.Context) (job.Job, error) {
-	connection := conn.FromCtx(userCtx)
-	if connection == nil {
-		return nil, fmt.Errorf("connection is required")
-	}
-	claims := user.GetClaims(userCtx)
-	if claims == nil {
-		return nil, fmt.Errorf("claims are required")
-	}
-	dsn, err := buildDSNFromConnection(connection, claims)
-	if err != nil {
-		return nil, err
-	}
-	db, err := sql.Open("postgres", dsn)
-	if err != nil {
-		return nil, err
-	}
+func (s *Store) Create(reportID string, queryID string, queryText string, userCtx context.Context) (job.Job, chan int32, error) {
 	j := &Job{
 		BasicJob: job.BasicJob{
 			ReportID:  reportID,
@@ -96,77 +52,19 @@ func Create(reportID string, queryID string, queryText string, userCtx context.C
 			QueryText: queryText,
 			Logger:    log.With().Str("reportID", reportID).Str("queryID", queryID).Logger(),
 		},
-		postgresDB: db,
+		postgresDB: s.postgresDB,
 	}
-	j.Init(userCtx)
-	return j, nil
-}
 
-func (s *Store) Create(reportID string, queryID string, queryText string, userCtx context.Context) (job.Job, chan int32, error) {
-	j, err := Create(reportID, queryID, queryText, userCtx)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to create postgres job")
-		return nil, nil, err
-	}
+	j.Init(userCtx)
 	s.StoreJob(j)
 	go s.RemoveJobWhenDone(j)
 	return j, j.Status(), nil
-}
-
-// TestConnection verifies that postgres credentials are valid.
-func TestConnection(ctx context.Context, req *proto.TestConnectionRequest) (*proto.TestConnectionResponse, error) {
-	claims := user.GetClaims(ctx)
-	if claims == nil {
-		return &proto.TestConnectionResponse{
-			Success: false,
-			Error:   "claims are required",
-		}, nil
-	}
-	if req == nil || req.Connection == nil {
-		return &proto.TestConnectionResponse{
-			Success: false,
-			Error:   "connection is required",
-		}, nil
-	}
-	dsn, err := buildDSNFromConnection(req.Connection, claims)
-	if err != nil {
-		return &proto.TestConnectionResponse{
-			Success: false,
-			Error:   err.Error(),
-		}, nil
-	}
-	db, err := sql.Open("postgres", dsn)
-	if err != nil {
-		return &proto.TestConnectionResponse{
-			Success: false,
-			Error:   err.Error(),
-		}, nil
-	}
-	defer db.Close()
-	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	if err := db.PingContext(pingCtx); err != nil {
-		return &proto.TestConnectionResponse{
-			Success: false,
-			Error:   err.Error(),
-		}, nil
-	}
-	return &proto.TestConnectionResponse{
-		Success: true,
-	}, nil
 }
 
 func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connection) error {
 	j.storageObject = storageObject
 	_, j.isReplayMode = j.storageObject.(storage.PGStorageObject)
 	go func() {
-		defer func() {
-			if j.postgresDB != nil {
-				if err := j.postgresDB.Close(); err != nil {
-					j.Logger.Warn().Err(err).Msg("failed to close postgres connection")
-				}
-			}
-		}()
 		j.Status() <- int32(proto.QueryJob_JOB_STATUS_RUNNING)
 		rows, err := j.postgresDB.QueryContext(j.GetCtx(), j.QueryText)
 		if err != nil {
