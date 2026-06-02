@@ -897,7 +897,7 @@ type CreateReportSnapshotResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	SnapshotUrl       string `protobuf:"bytes,1,opt,name=snapshot_url,json=snapshotUrl,proto3" json:"snapshot_url,omitempty"`                     // Signed short-lived URL for one screenshot render request.
+	SnapshotUrl       string `protobuf:"bytes,1,opt,name=snapshot_url,json=snapshotUrl,proto3" json:"snapshot_url,omitempty"`                     // Signed short-lived PNG URL. Empty when Browserless capture is not configured.
 	ExpiresIn         int64  `protobuf:"varint,2,opt,name=expires_in,json=expiresIn,proto3" json:"expires_in,omitempty"`                          // URL lifetime in seconds from response time.
 	SnapshotRenderUrl string `protobuf:"bytes,3,opt,name=snapshot_render_url,json=snapshotRenderUrl,proto3" json:"snapshot_render_url,omitempty"` // Absolute URL of the snapshot render frontend.
 }
