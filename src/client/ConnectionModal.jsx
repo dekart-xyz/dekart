@@ -15,7 +15,11 @@ import { DatasourceIcon } from './Datasource'
 import { track } from './lib/tracking'
 import TextArea from 'antd/es/input/TextArea'
 
-function Footer ({ form, testDisabled }) {
+function connectionTestFieldsChanged (changedValues, fields) {
+  return fields.some(field => Object.prototype.hasOwnProperty.call(changedValues, field))
+}
+
+function Footer ({ form, saveWithoutTest = false, testDisabled = false }) {
   const { dialog, test } = useSelector(state => state.connection)
   const { tested, testing, error: testError, success: testSuccess } = test
   const { id, loading, connectionType } = dialog
@@ -35,6 +39,7 @@ function Footer ({ form, testDisabled }) {
   return (
     <div className={styles.modalFooter}>
       <Button
+        id='testConnection'
         type='primary' disabled={testing || tested || testDisabled} loading={testing} onClick={() => {
           track('TestConnection')
           dispatch(testConnection(connectionType, form.getFieldsValue()))
@@ -50,7 +55,7 @@ function Footer ({ form, testDisabled }) {
       <div className={styles.spacer} />
       <Button
         id='saveConnection'
-        type={tested && testSuccess ? 'primary' : 'default'} disabled={((!tested || loading) && !testDisabled) || !isAdmin} onClick={() => {
+        type={tested && testSuccess ? 'primary' : 'default'} disabled={((!tested || loading) && !saveWithoutTest) || !isAdmin} onClick={() => {
           track('SaveConnection')
           dispatch(saveConnection(id, connectionType, form.getFieldsValue()))
           form.resetFields()
@@ -59,6 +64,7 @@ function Footer ({ form, testDisabled }) {
         Save
       </Button>
       <Button
+        className={styles.archiveButton}
         disabled={!id || !isAdmin}
         onClick={() => {
           track('ArchiveConnection', { connectionId: id })
@@ -96,14 +102,16 @@ function WherobotsConnectionModal ({ form }) {
       open
       title={<><DatasourceIcon type={ConnectionType.CONNECTION_TYPE_WHEROBOTS} /> Wherobots</>}
       onCancel={() => dispatch(closeConnectionDialog())}
-      footer={<Footer form={form} testDisabled={false} />}
+      footer={<Footer form={form} saveWithoutTest={!apiKeyChanged} testDisabled={!apiKeyChanged} />}
     >
       <div className={styles.modalBody}>
         <Form
           form={form}
           disabled={loading}
           layout='vertical' onValuesChange={(changedValues, allValues) => {
-            dispatch(connectionChanged())
+            if (connectionTestFieldsChanged(changedValues, ['connectionName', 'wherobotsHost', 'wherobotsKey', 'wherobotsRuntime', 'wherobotsRegion'])) {
+              dispatch(connectionChanged())
+            }
             if (changedValues.wherobotsHost || changedValues.wherobotsKey) {
               dispatch(getWherobotsConnectionHint(allValues.wherobotsHost, allValues.wherobotsKey))
             }
@@ -174,7 +182,7 @@ function SnowflakeConnectionModal ({ form }) {
       open
       title={<><DatasourceIcon type={ConnectionType.CONNECTION_TYPE_SNOWFLAKE} /> Snowflake</>}
       onCancel={() => dispatch(closeConnectionDialog())}
-      footer={<Footer form={form} testDisabled={!keyChanged} />}
+      footer={<Footer form={form} saveWithoutTest={!keyChanged} testDisabled={!keyChanged} />}
     >
       <div className={styles.modalBody}>
         <Form
@@ -187,7 +195,9 @@ function SnowflakeConnectionModal ({ form }) {
                 snowflakeAccountId: snowflakeAccountId.replace('.', '-')
               })
             }
-            dispatch(connectionChanged())
+            if (connectionTestFieldsChanged(changedValues, ['connectionName', 'snowflakeAccountId', 'snowflakeUsername', 'snowflakeKey', 'snowflakeWarehouse'])) {
+              dispatch(connectionChanged())
+            }
           }}
         >
           {datasetUsed ? <div className={styles.datasetsCountAlert}><Alert message={<>This connection is used in {connection.datasetCount} dataset{connection.datasetCount > 1 ? 's' : ''}.</>} description='Changing may cause map errors' type='warning' /></div> : null}
@@ -225,6 +235,80 @@ function SnowflakeConnectionModal ({ form }) {
     </Modal>
   )
 }
+
+function PostgresConnectionModal ({ form }) {
+  const { dialog } = useSelector(state => state.connection)
+  const { id, loading } = dialog
+  const dispatch = useDispatch()
+  const connection = useSelector(state => state.connection.list.find(s => s.id === id))
+  const datasetUsed = connection?.datasetCount > 0
+  const passwordChanged = !connection || form.getFieldValue('postgresPassword') !== connection?.postgresPassword
+
+  useEffect(() => {
+    if (!connection) {
+      form.resetFields()
+      form.setFieldsValue({
+        connectionName: 'Postgres',
+        postgresPort: 5432
+      })
+    }
+  }, [connection, form])
+
+  return (
+    <Modal
+      open
+      title={<><DatasourceIcon type={ConnectionType.CONNECTION_TYPE_POSTGRES} /> Postgres</>}
+      onCancel={() => dispatch(closeConnectionDialog())}
+      footer={<Footer form={form} saveWithoutTest={!passwordChanged} testDisabled={!passwordChanged} />}
+    >
+      <div className={styles.modalBody}>
+        <Form
+          form={form}
+          disabled={loading}
+          layout='vertical'
+          onValuesChange={(changedValues) => {
+            if (connectionTestFieldsChanged(changedValues, ['connectionName', 'postgresHost', 'postgresUsername', 'postgresPassword', 'postgresDatabase', 'postgresPort'])) {
+              dispatch(connectionChanged())
+            }
+          }}
+        >
+          {datasetUsed ? <div className={styles.datasetsCountAlert}><Alert message={<>This connection is used in {connection.datasetCount} dataset{connection.datasetCount > 1 ? 's' : ''}.</>} description='Changing may cause map errors' type='warning' /></div> : null}
+          <Form.Item required label='Connection Name' name='connectionName'>
+            <Input placeholder='Postgres' />
+          </Form.Item>
+          <Form.Item required label='Server' name='postgresHost' extra='DNS name or IP address for your PostgreSQL server.'>
+            <Input placeholder='db.example.com' />
+          </Form.Item>
+          <Form.Item required label='Username' name='postgresUsername' extra='Name of the user account.'>
+            <Input placeholder='postgres' />
+          </Form.Item>
+          <Form.Item required label='Password' name='postgresPassword' extra='Password for the user account.'>
+            <Input.Password
+              placeholder='••••••••'
+              visibilityToggle={passwordChanged}
+              onFocus={() => {
+                if (!passwordChanged) {
+                  form.setFieldsValue({ postgresPassword: '' })
+                }
+              }}
+              onBlur={() => {
+                if (form.getFieldValue('postgresPassword') === '') {
+                  form.setFieldsValue({ postgresPassword: connection?.postgresPassword })
+                }
+              }}
+            />
+          </Form.Item>
+          <Form.Item required label='Database' name='postgresDatabase' extra='Database your connection will use.'>
+            <Input placeholder='postgres' />
+          </Form.Item>
+          <Form.Item required label='Port' name='postgresPort' extra='TCP port where your server is listening for connections.'>
+            <Input type='number' placeholder='5432' />
+          </Form.Item>
+        </Form>
+      </div>
+    </Modal>
+  )
+}
 function BigQueryServiceAccountConnectionModal ({ form }) {
   const { dialog, projects } = useSelector(state => state.connection)
   const { id, loading } = dialog
@@ -241,7 +325,7 @@ function BigQueryServiceAccountConnectionModal ({ form }) {
 
   useEffect(() => {
     const bigqueryProjectId = form.getFieldValue('bigqueryProjectId')
-    if (projects && projects.length === 1 && !bigqueryProjectId) {
+    if (projects && projects.length === 1 && !bigqueryProjectId && !form.isFieldTouched('bigqueryProjectId')) {
       form.setFieldsValue({ bigqueryProjectId: projects[0] })
     }
   }, [projects, form])
@@ -251,14 +335,14 @@ function BigQueryServiceAccountConnectionModal ({ form }) {
       open
       title={<><DatasourceIcon type={ConnectionType.CONNECTION_TYPE_BIGQUERY} /> BigQuery Service Account</>}
       onCancel={() => dispatch(closeConnectionDialog())}
-      footer={<Footer form={form} testDisabled={!form.getFieldValue('newBigqueryKey')} />}
+      footer={<Footer form={form} saveWithoutTest={!form.getFieldValue('newBigqueryKey')} testDisabled={!form.getFieldValue('newBigqueryKey')} />}
     >
       <div className={styles.modalBody}>
         <Form
           form={form}
           disabled={loading}
           layout='vertical' onValuesChange={(changedValues, allValues) => {
-            if (changedValues.bigqueryProjectId || changedValues.cloudStorageBucket || changedValues.newBigqueryKey) {
+            if (connectionTestFieldsChanged(changedValues, ['connectionName', 'bigqueryProjectId', 'cloudStorageBucket', 'newBigqueryKey'])) {
               dispatch(connectionChanged())
             }
             if (changedValues.bigqueryProjectId && !allValues.connectionName) {
@@ -336,7 +420,7 @@ function BigQueryConnectionModal ({ form }) {
   const bigqueryProjectId = form.getFieldValue('bigqueryProjectId')
 
   useEffect(() => {
-    if (projects && projects.length === 1 && !bigqueryProjectId) {
+    if (projects && projects.length === 1 && !bigqueryProjectId && !form.isFieldTouched('bigqueryProjectId')) {
       form.setFieldsValue({ bigqueryProjectId: projects[0] })
       track('AutoFillBigQueryProjectId')
     }
@@ -356,14 +440,14 @@ function BigQueryConnectionModal ({ form }) {
       open
       title={<><DatasourceIcon type={ConnectionType.CONNECTION_TYPE_BIGQUERY} /> BigQuery</>}
       onCancel={() => dispatch(closeConnectionDialog())}
-      footer={<Footer form={form} testDisabled={nameChangeOnly} />}
+      footer={<Footer form={form} saveWithoutTest={nameChangeOnly} />}
     >
       <div className={styles.modalBody}>
         <Form
           form={form}
           disabled={loading}
           layout='vertical' onValuesChange={(changedValues, allValues) => {
-            if (changedValues.bigqueryProjectId || changedValues.cloudStorageBucket) {
+            if (connectionTestFieldsChanged(changedValues, ['connectionName', 'bigqueryProjectId', 'cloudStorageBucket'])) {
               dispatch(connectionChanged())
             }
           }}
@@ -423,6 +507,8 @@ export default function ConnectionModal () {
     return <BigQueryServiceAccountConnectionModal form={form} />
   }
   switch (connectionType) {
+    case ConnectionType.CONNECTION_TYPE_POSTGRES:
+      return <PostgresConnectionModal form={form} />
     case ConnectionType.CONNECTION_TYPE_SNOWFLAKE:
       return <SnowflakeConnectionModal form={form} />
     case ConnectionType.CONNECTION_TYPE_WHEROBOTS:

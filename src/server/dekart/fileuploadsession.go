@@ -17,7 +17,7 @@ const defaultMaxUploadPartSize = 24 * 1000 * 1000 // 24 MB
 
 // HandleStartFileUploadSession creates upload session and reserves file metadata for direct multipart upload.
 func (s Server) HandleStartFileUploadSession(w http.ResponseWriter, r *http.Request) {
-	if !isFileUploadEnabled() {
+	if !IsFileUploadEnabled() {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -91,7 +91,7 @@ func (s Server) HandleStartFileUploadSession(w http.ResponseWriter, r *http.Requ
 
 // HandleUploadFilePart stores one upload chunk through Dekart server and returns part manifest metadata.
 func (s Server) HandleUploadFilePart(w http.ResponseWriter, r *http.Request) {
-	if !isFileUploadEnabled() {
+	if !IsFileUploadEnabled() {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -154,7 +154,7 @@ func (s Server) HandleUploadFilePart(w http.ResponseWriter, r *http.Request) {
 
 // HandleCompleteFileUploadSession finalizes provider upload and marks file as stored.
 func (s Server) HandleCompleteFileUploadSession(w http.ResponseWriter, r *http.Request) {
-	if !isFileUploadEnabled() {
+	if !IsFileUploadEnabled() {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -263,7 +263,7 @@ func (s Server) HandleCompleteFileUploadSession(w http.ResponseWriter, r *http.R
 
 // HandleAbortFileUploadSession aborts provider upload state for file upload session.
 func (s Server) HandleAbortFileUploadSession(w http.ResponseWriter, r *http.Request) {
-	if !isFileUploadEnabled() {
+	if !IsFileUploadEnabled() {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}

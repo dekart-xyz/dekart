@@ -14,6 +14,7 @@ env:
   DEKART_POSTGRES_PASSWORD: dekart
   DEKART_POSTGRES_USER:     postgres
   DEKART_POSTGRES_DB:       dekart
+  DEKART_POSTGRES_PORT:     5432
 
   GOOGLE_APPLICATION_CREDENTIALS: GOOGLE_APPLICATION_CREDENTIALS.json
   AWS_REGION: us-east-1
@@ -186,6 +187,11 @@ jobs:
             spec: cypress/e2e/google-oauth
             extra_env: |
               -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
+              -e DEKART_POSTGRES_HOST=localhost \
+              -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
+              -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
+              -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
+              -e DEKART_POSTGRES_DB=$DEKART_POSTGRES_DB \
               -e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
               -e DEKART_GOOGLE_OAUTH_CLIENT_ID=$GOOGLE_OAUTH_ID_SEC \
               -e DEKART_GOOGLE_OAUTH_SECRET=$GOOGLE_OAUTH_SECRET_SEC \
@@ -194,9 +200,47 @@ jobs:
               -e DEKART_DATASOURCE=USER \
               -e DEKART_ALLOW_FILE_UPLOAD=1 \
 
-          - id: bigquery
-            spec: cypress/e2e/bq
+          - id: bigquery-core
+            spec: cypress/e2e/bq/archive.cy.js,cypress/e2e/bq/basicFlow.cy.js
             extra_env: |
+              -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
+              -e DEKART_POSTGRES_HOST=localhost \
+              -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
+              -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
+              -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
+              -e DEKART_POSTGRES_DB=$DEKART_POSTGRES_DB \
+              -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
+              -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
+              -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
+              -e DEKART_STORAGE=GCS \
+              -e DEKART_DATASOURCE=BQ \
+              -e DEKART_ALLOW_FILE_UPLOAD=1 \
+
+          - id: bigquery-ops
+            spec: cypress/e2e/bq/cancelQuery.cy.js,cypress/e2e/bq/scripts.cy.js,cypress/e2e/bq/fileUploadMultipart.cy.js,cypress/e2e/bq/noSSOSmoke.cy.js
+            extra_env: |
+              -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
+              -e DEKART_POSTGRES_HOST=localhost \
+              -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
+              -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
+              -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
+              -e DEKART_POSTGRES_DB=$DEKART_POSTGRES_DB \
+              -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
+              -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
+              -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
+              -e DEKART_STORAGE=GCS \
+              -e DEKART_DATASOURCE=BQ \
+              -e DEKART_ALLOW_FILE_UPLOAD=1 \
+
+          - id: bigquery-update-dataset
+            spec: cypress/e2e/bq/updateDataset.cy.js
+            extra_env: |
+              -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
+              -e DEKART_POSTGRES_HOST=localhost \
+              -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
+              -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
+              -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
+              -e DEKART_POSTGRES_DB=$DEKART_POSTGRES_DB \
               -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
               -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
               -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
@@ -208,6 +252,12 @@ jobs:
             spec: cypress/e2e/version/spec.cy.js
             target: oss
             extra_env: |
+              -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
+              -e DEKART_POSTGRES_HOST=localhost \
+              -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
+              -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
+              -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
+              -e DEKART_POSTGRES_DB=$DEKART_POSTGRES_DB \
               -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
               -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
               -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
@@ -215,10 +265,17 @@ jobs:
               -e DEKART_DATASOURCE=BQ \
               -e DEKART_VERSION_CHECK_URL=http://localhost:3000/api/v1/version \
               -e DEKART_VERSION_CHECK_FORCE_CURRENT_VERSION=0.0.0 \
+              -e DEKART_ALLOW_FILE_UPLOAD=0 \
 
           - id: athena
             spec: cypress/e2e/athena
             extra_env: |
+              -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
+              -e DEKART_POSTGRES_HOST=localhost \
+              -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
+              -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
+              -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
+              -e DEKART_POSTGRES_DB=$DEKART_POSTGRES_DB \
               -e DEKART_STORAGE=S3 \
               -e DEKART_DATASOURCE=ATHENA \
               -e DEKART_CLOUD_STORAGE_BUCKET=$S3_BUCKET_SEC \
@@ -229,10 +286,59 @@ jobs:
               -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_SEC \
               -e DEKART_ALLOW_FILE_UPLOAD=1 \
 
-          - id: snowflake-s3
-            spec: cypress/e2e/snowflake-s3
+          - id: snowflake-s3-core
+            spec: cypress/e2e/snowflake-s3/spec.cy.js,cypress/e2e/snowflake-s3/happyPath.cy.js
             extra_env: |
               -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
+              -e DEKART_POSTGRES_HOST=localhost \
+              -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
+              -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
+              -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
+              -e DEKART_POSTGRES_DB=$DEKART_POSTGRES_DB \
+              -e DEKART_STORAGE=S3 \
+              -e DEKART_DATASOURCE=SNOWFLAKE \
+              -e DEKART_CLOUD_STORAGE_BUCKET=$S3_BUCKET_SEC \
+              -e AWS_REGION=$AWS_REGION \
+              -e AWS_ACCESS_KEY_ID=$AWS_KEY_SEC \
+              -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_SEC \
+              -e DEKART_SNOWFLAKE_ACCOUNT_ID=$SNOW_ID_SEC \
+              -e DEKART_SNOWFLAKE_USER=$SNOW_USER_SEC \
+              -e DEKART_SNOWFLAKE_PASSWORD=$SNOW_PASS_SEC \
+              -e DEKART_REQUIRE_AMAZON_OIDC=1 \
+              -e DEKART_DEV_CLAIMS_EMAIL=test@gmail.com \
+              -e DEKART_ALLOW_FILE_UPLOAD=1 \
+
+          - id: snowflake-s3-ops
+            spec: cypress/e2e/snowflake-s3/cancelQuery.cy.js,cypress/e2e/snowflake-s3/emptyResult.cy.js,cypress/e2e/snowflake-s3/fork.cy.js
+            extra_env: |
+              -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
+              -e DEKART_POSTGRES_HOST=localhost \
+              -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
+              -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
+              -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
+              -e DEKART_POSTGRES_DB=$DEKART_POSTGRES_DB \
+              -e DEKART_STORAGE=S3 \
+              -e DEKART_DATASOURCE=SNOWFLAKE \
+              -e DEKART_CLOUD_STORAGE_BUCKET=$S3_BUCKET_SEC \
+              -e AWS_REGION=$AWS_REGION \
+              -e AWS_ACCESS_KEY_ID=$AWS_KEY_SEC \
+              -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_SEC \
+              -e DEKART_SNOWFLAKE_ACCOUNT_ID=$SNOW_ID_SEC \
+              -e DEKART_SNOWFLAKE_USER=$SNOW_USER_SEC \
+              -e DEKART_SNOWFLAKE_PASSWORD=$SNOW_PASS_SEC \
+              -e DEKART_REQUIRE_AMAZON_OIDC=1 \
+              -e DEKART_DEV_CLAIMS_EMAIL=test@gmail.com \
+              -e DEKART_ALLOW_FILE_UPLOAD=1 \
+
+          - id: snowflake-s3-layer-order
+            spec: cypress/e2e/snowflake-s3/layerOrderRerunRegression.cy.js
+            extra_env: |
+              -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
+              -e DEKART_POSTGRES_HOST=localhost \
+              -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
+              -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
+              -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
+              -e DEKART_POSTGRES_DB=$DEKART_POSTGRES_DB \
               -e DEKART_STORAGE=S3 \
               -e DEKART_DATASOURCE=SNOWFLAKE \
               -e DEKART_CLOUD_STORAGE_BUCKET=$S3_BUCKET_SEC \
@@ -257,6 +363,37 @@ jobs:
               -e DEKART_SQLITE_DB_PATH=./dekart.db \
               -e DEKART_REQUIRE_SNOWFLAKE_CONTEXT=1 \
               -e DEKART_DEV_CLAIMS_EMAIL=bilonenko.v2@gmail.com \
+              -e DEKART_ALLOW_FILE_UPLOAD=0 \
+
+          - id: local-user-postgres
+            spec: cypress/e2e/local/userDefinedConnectionHappyPath.cy.js
+
+          - id: local-mcp-postgres
+            spec: cypress/e2e/local/mcpPgHappyPath.cy.js
+
+          - id: local-default-workspace
+            spec: cypress/e2e/local/defaultWorkspaceManagement.cy.js
+
+          - id: local-bigquery-service-account-retest
+            spec: cypress/e2e/local/bigQueryServiceAccountNameRetest.cy.js
+
+          - id: pg-s3-postgres
+            spec: cypress/e2e/pg-s3/happyPath.cy.js
+            extra_env: |
+              -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
+              -e DEKART_POSTGRES_HOST=localhost \
+              -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
+              -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
+              -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
+              -e DEKART_POSTGRES_DB=$DEKART_POSTGRES_DB \
+              -e DEKART_STORAGE=S3 \
+              -e DEKART_DATASOURCE=PG \
+              -e DEKART_CLOUD_STORAGE_BUCKET=$S3_BUCKET_SEC \
+              -e DEKART_POSTGRES_DATASOURCE_CONNECTION=postgres://$DEKART_POSTGRES_USER:$DEKART_POSTGRES_PASSWORD@localhost:5432/dekart_geo?sslmode=disable \
+              -e AWS_REGION=$AWS_REGION \
+              -e AWS_ACCESS_KEY_ID=$AWS_KEY_SEC \
+              -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_SEC \
+              -e DEKART_ALLOW_FILE_UPLOAD=0 \
 
     services:
       postgres:
@@ -281,6 +418,37 @@ jobs:
           mkdir -p /tmp/cypress/fixtures
           gcloud auth activate-service-account --key-file="$GOOGLE_APPLICATION_CREDENTIALS"
           gcloud storage cp gs://dekart-dev-ci-fixtures/cypress/POI25Mb.csv /tmp/cypress/fixtures/POI25Mb.csv --project=dekart-dev
+
+      - name: Seed PostgreSQL test data (dekart_geo.sample.geospatial_points)
+        run: |
+          set -euo pipefail
+          pg_cid="$(docker ps --filter ancestor=postgres --format '{{.ID}}' | head -n 1)"
+          test -n "$pg_cid"
+          docker exec -e PGPASSWORD="$DEKART_POSTGRES_PASSWORD" "$pg_cid" \
+            psql -U "$DEKART_POSTGRES_USER" -d postgres -v ON_ERROR_STOP=1 -c "SELECT 1 FROM pg_database WHERE datname='dekart_geo'" | grep -q 1 \
+            || docker exec -e PGPASSWORD="$DEKART_POSTGRES_PASSWORD" "$pg_cid" \
+              psql -U "$DEKART_POSTGRES_USER" -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE dekart_geo"
+          docker exec -i -e PGPASSWORD="$DEKART_POSTGRES_PASSWORD" "$pg_cid" \
+            psql -U "$DEKART_POSTGRES_USER" -d dekart_geo -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE SCHEMA IF NOT EXISTS sample;
+          CREATE TABLE IF NOT EXISTS sample.geospatial_points (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            category TEXT NOT NULL,
+            longitude DOUBLE PRECISION NOT NULL,
+            latitude DOUBLE PRECISION NOT NULL,
+            geom_wkt TEXT NOT NULL
+          );
+          TRUNCATE TABLE sample.geospatial_points;
+          INSERT INTO sample.geospatial_points (name, category, longitude, latitude, geom_wkt)
+          SELECT
+            'poi_' || gs::text,
+            CASE WHEN gs % 3 = 0 THEN 'food' WHEN gs % 3 = 1 THEN 'park' ELSE 'shop' END,
+            12.45 + (gs::double precision * 0.01),
+            55.60 + (gs::double precision * 0.005),
+            'POINT(' || (12.45 + (gs::double precision * 0.01))::text || ' ' || (55.60 + (gs::double precision * 0.005))::text || ')'
+          FROM generate_series(1, 150) AS gs;
+          SQL
 
       - uses: docker/setup-qemu-action@v2
       - uses: docker/setup-buildx-action@v2
@@ -327,10 +495,6 @@ jobs:
             -v /tmp/cypress/fixtures/POI25Mb.csv:/dekart/cypress/fixtures/POI25Mb.csv \
             -v $(pwd)/$GOOGLE_APPLICATION_CREDENTIALS:/dekart/$GOOGLE_APPLICATION_CREDENTIALS \
             -e DEKART_LOG_DEBUG=1 \
-            -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
-            -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
-            -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
-            -e DEKART_POSTGRES_HOST=localhost \
             -e DEKART_CORS_ORIGIN=http://localhost:3000 \
             -e DEKART_MAPBOX_TOKEN=$MAPBOX_TOKEN_SEC \
             -e TEST_SPEC=${{ matrix.spec }} \

@@ -7,7 +7,6 @@ on:
 
 jobs:
   changes:
-    if: startsWith(github.head_ref, 'release') != true
     uses: ./.github/workflows/changes.yaml
     permissions:
       pull-requests: read
@@ -62,4 +61,3 @@ jobs:
       contents: write
       pull-requests: write
     secrets: inherit
-

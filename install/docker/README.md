@@ -28,7 +28,8 @@ Create beautiful data-driven maps and share them with your team:
 ## Requirements
 
 * Google Cloud Storage or AWS S3 bucket for storing cache
-* PostgreSQL or similar (Cloud SQL, Amazon RDS, etc)
+* PostgreSQL or similar (Cloud SQL, Amazon RDS, etc) when using Postgres metadata
+* Dekart license key when using Postgres metadata. Get one from the [Dekart license key form](https://mailchi.mp/dekart/upgrade-to-sso).
 * Mapbox Token
 
 ## Running docker
@@ -45,6 +46,7 @@ docker run \
   -e DEKART_POSTGRES_PASSWORD=${DEKART_POSTGRES_PASSWORD} \
   -e DEKART_POSTGRES_PORT=${DEKART_POSTGRES_PORT} \
   -e DEKART_POSTGRES_HOST=host.docker.internal \
+  -e DEKART_LICENSE_KEY=${DEKART_LICENSE_KEY} \
   -e DEKART_STORAGE=S3 \
   -e DEKART_DATASOURCE=ATHENA \
   -e DEKART_CLOUD_STORAGE_BUCKET=${DEKART_CLOUD_STORAGE_BUCKET} \
@@ -68,6 +70,7 @@ docker run \
   -e DEKART_POSTGRES_PASSWORD=${DEKART_POSTGRES_PASSWORD} \
   -e DEKART_POSTGRES_PORT=${DEKART_POSTGRES_PORT} \
   -e DEKART_POSTGRES_HOST=${DEKART_POSTGRES_HOST} \
+  -e DEKART_LICENSE_KEY=${DEKART_LICENSE_KEY} \
   -e DEKART_STORAGE=GCS \
   -e DEKART_DATASOURCE=BQ \
   -e DEKART_CLOUD_STORAGE_BUCKET=${DEKART_CLOUD_STORAGE_BUCKET} \
@@ -90,6 +93,7 @@ docker run -it --rm \
   -e DEKART_POSTGRES_PASSWORD=${DEKART_POSTGRES_PASSWORD} \
   -e DEKART_POSTGRES_PORT=${DEKART_POSTGRES_PORT} \
   -e DEKART_POSTGRES_HOST=host.docker.internal \
+  -e DEKART_LICENSE_KEY=${DEKART_LICENSE_KEY} \
   -e DEKART_STORAGE=S3 \
   -e DEKART_DATASOURCE=SNOWFLAKE \
   -e DEKART_SNOWFLAKE_ACCOUNT_ID=${DEKART_SNOWFLAKE_ACCOUNT_ID} \
@@ -103,4 +107,3 @@ docker run -it --rm \
 ```
 
 [Documentation](https://dekart.xyz/docs/?ref=dokerhub)
-

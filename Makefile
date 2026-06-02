@@ -60,7 +60,7 @@ gotest:
 e2e: bq athena snowflake
 
 snowpark-build:
-	docker buildx build --platform linux/amd64 --tag ${SNOWPARK_IMAGE_NAME} -f ./Dockerfile . --load
+	docker buildx build --platform linux/amd64 --tag ${SNOWPARK_IMAGE_NAME} --build-arg DEKART_MAPBOX_TOKEN=${DEKART_MAPBOX_TOKEN} -f ./Dockerfile . --load
 
 snowpark-run: snowpark-build
 	docker run -it --rm \
@@ -162,6 +162,17 @@ endef
 #        make server .env.cloud -> uses .env.cloud
 server:
 	$(call run_server,$(or $(filter-out server,$(MAKECMDGOALS)),.env))
+
+client:
+	@echo "Releasing local dev port 3000..."; \
+	pids="$$(lsof -tiTCP:3000 -sTCP:LISTEN)"; \
+	if [ -n "$$pids" ]; then \
+		kill -9 $$pids; \
+		echo "Force-stopped listeners: $$pids"; \
+	else \
+		echo "No listeners on 3000"; \
+	fi; \
+	npm start
 
 # Dummy target to prevent Make from trying to build .env files as targets
 # This pattern rule makes .env* targets as no-ops that are always "up to date"

@@ -10,6 +10,7 @@ Use this page to pick the closest baseline, then adjust values in the linked com
 
 Use this when you only need a local metadata database and DB UI for development or debugging.
 This setup does not start Dekart itself. It is useful when you run Dekart from your IDE/terminal and want a local Postgres backend plus Adminer to inspect tables and migration state.
+Dekart requires `DEKART_LICENSE_KEY` when it is configured to use Postgres for metadata. Get one from the [Dekart license key form](https://mailchi.mp/dekart/upgrade-to-sso).
 
 Compose file:
 [docker-compose.local.yaml](docker-compose.local.yaml)
@@ -18,7 +19,7 @@ Compose file:
 
 Use this for self-hosted Dekart with BigQuery as the query engine and GCS as result cache storage.
 Recommended for GCP-first teams that already manage service accounts and bucket permissions.
-You need a BigQuery project, a GCS bucket, and a mounted service-account JSON file.
+You need a BigQuery project, a GCS bucket, a mounted service-account JSON file, and a Dekart license key for the Postgres metadata backend in this compose file. Get one from the [Dekart license key form](https://mailchi.mp/dekart/upgrade-to-sso).
 
 Compose file:
 [docker-compose.bigquery.yaml](docker-compose.bigquery.yaml)
@@ -27,7 +28,7 @@ Compose file:
 
 Use this when users authenticate with Google OAuth directly in Dekart (no external reverse proxy).
 Best for smaller teams that want simple sign-in with Google Workspace identities.
-Requires a valid Dekart license key and Google OAuth client credentials.
+Requires a valid Dekart license key and Google OAuth client credentials. Get a key from the [Dekart license key form](https://mailchi.mp/dekart/upgrade-to-sso).
 
 Compose file:
 [docker-compose.googleoauth.yaml](docker-compose.googleoauth.yaml)
@@ -36,7 +37,7 @@ Compose file:
 
 Use this for Snowflake as the query engine with AWS S3 as result cache storage.
 This is the typical production-style Snowflake setup when you want durable cache in AWS and Postgres metadata.
-Requires Snowflake credentials and AWS S3 access keys.
+Requires Snowflake credentials, AWS S3 access keys, and a Dekart license key for the Postgres metadata backend in this compose file. Get one from the [Dekart license key form](https://mailchi.mp/dekart/upgrade-to-sso).
 
 Compose file:
 [docker-compose.snowflake-s3.yaml](docker-compose.snowflake-s3.yaml)
@@ -44,7 +45,7 @@ Compose file:
 ## Snowflake with SQLite backups
 
 Use this for local Snowflake testing where Dekart metadata is stored in SQLite in a local mounted volume.
-Good for quick experiments and demos without running a separate Postgres container.
+Good for quick experiments and demos without running a separate Postgres container or a Dekart license key.
 Not recommended for multi-user production deployments.
 
 Compose file:
@@ -55,7 +56,7 @@ Compose file:
 Use this when authentication is handled by an OIDC reverse proxy and Dekart validates forwarded JWT headers.
 This stack includes Keycloak and oauth2-proxy for local end-to-end SSO testing.
 Recommended when your production auth model is proxy-based OIDC/IAP/ALB-style integration.
-Requires a valid Dekart license key.
+Requires a valid Dekart license key from the [Dekart license key form](https://mailchi.mp/dekart/upgrade-to-sso).
 
 Compose file:
 [docker-compose.oidc.yaml](docker-compose.oidc.yaml)

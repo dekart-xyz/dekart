@@ -60,6 +60,7 @@ services:
       DEKART_OIDC_JWKS_URL: "http://host.docker.internal:8082/realms/dekart/protocol/openid-connect/certs"
       DEKART_OIDC_ISSUER: "http://host.docker.internal:8082/realms/dekart"
       DEKART_OIDC_AUDIENCE: "oauth2-proxy"
+      # Get a key at https://mailchi.mp/dekart/upgrade-to-sso
       DEKART_LICENSE_KEY: "your-license-key"
 
   oauth2-proxy:

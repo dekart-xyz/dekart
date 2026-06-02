@@ -7,6 +7,7 @@ import (
 	"dekart/src/server/conn"
 	"dekart/src/server/errtype"
 	"dekart/src/server/secrets"
+	"dekart/src/server/snowflakeutils"
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
 	"fmt"
@@ -28,12 +29,23 @@ func (s Server) TestConnection(ctx context.Context, req *proto.TestConnectionReq
 	if con == nil {
 		return nil, status.Error(codes.InvalidArgument, "connection is required")
 	}
+	if con.Id == "" {
+		// Unsaved connections in TestConnection should be treated as user-defined,
+		// not as system/default env-backed connections.
+		con.Id = "test-connection"
+	}
 
 	err := conn.ValidateReqConnection(con)
 	if err != nil {
 		return &proto.TestConnectionResponse{
 			Success: false,
 			Error:   err.Error(),
+		}, nil
+	}
+	if os.Getenv("DEKART_CLOUD") != "" && con.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_POSTGRES {
+		return &proto.TestConnectionResponse{
+			Success: false,
+			Error:   "postgres user-defined connection is disabled in cloud",
 		}, nil
 	}
 
@@ -132,13 +144,22 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 		switch os.Getenv("DEKART_DATASOURCE") {
 		case "USER":
 			if os.Getenv("DEKART_CLOUD") != "" {
+				// Cloud mode keeps historical behavior: USER datasource proxies through a
+				// system BigQuery connection and uses the default bucket for object storage.
 				con.CloudStorageBucket = storage.GetDefaultBucketName()
 				con.BigqueryProjectId = os.Getenv("DEKART_BIGQUERY_PROJECT_ID")
 				con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_BIGQUERY
-				con.CanStoreFiles = os.Getenv("DEKART_ALLOW_FILE_UPLOAD") != ""
+				con.CanStoreFiles = IsFileUploadEnabled()
 				return &con, nil
 			}
-			return nil, nil
+			// Self-hosted USER mode now returns a synthetic default connection instead
+			// of nil so UI/API flows can work with "no-config" local uploads.
+			con.ConnectionName = "Local Files"
+			con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_LOCAL
+			// Upload capability is still explicitly gated by env to preserve existing
+			// opt-in behavior for deployments that do not want file uploads enabled.
+			con.CanStoreFiles = IsFileUploadEnabled()
+			return &con, nil
 		case "SNOWFLAKE":
 			con.ConnectionType = proto.ConnectionType_CONNECTION_TYPE_SNOWFLAKE
 			con.ConnectionName = "Snowflake"
@@ -162,7 +183,9 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 		default:
 			log.Fatal().Str("DEKART_STORAGE", os.Getenv("DEKART_STORAGE")).Msg("Unknown storage backend")
 		}
-		if os.Getenv("DEKART_ALLOW_FILE_UPLOAD") != "" && con.CloudStorageBucket != "" {
+		// Non-USER system connections require both upload flag and bucket-backed
+		// object storage. Local USER mode is handled in the branch above.
+		if IsFileUploadEnabled() && con.CloudStorageBucket != "" {
 			con.CanStoreFiles = true
 		}
 
@@ -186,7 +209,12 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 			wherobots_host,
 			wherobots_key_encrypted,
 			wherobots_region,
-			wherobots_runtime
+			wherobots_runtime,
+			postgres_host,
+			postgres_username,
+			postgres_password_encrypted,
+			postgres_database,
+			postgres_port
 		from connections where id=$1 limit 1`,
 		connectionID,
 	)
@@ -208,6 +236,11 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 		whererobotsHost := sql.NullString{}
 		whererobotsRegion := sql.NullString{}
 		whererobotsRuntime := sql.NullString{}
+		postgresHost := sql.NullString{}
+		postgresUsername := sql.NullString{}
+		postgresPassword := sql.NullString{}
+		postgresDatabase := sql.NullString{}
+		postgresPort := sql.NullInt32{}
 		bigqueryKey := sql.NullString{}
 		snowflakeAccountID := sql.NullString{}
 		snowflakeWarehouse := sql.NullString{}
@@ -228,6 +261,11 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 			&whererobotsKeyEncrypted,
 			&whererobotsRegion,
 			&whererobotsRuntime,
+			&postgresHost,
+			&postgresUsername,
+			&postgresPassword,
+			&postgresDatabase,
+			&postgresPort,
 		)
 		connection.Id = ID.String
 		connection.BigqueryProjectId = bigqueryProjectId.String
@@ -239,6 +277,10 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 		connection.WherobotsHost = whererobotsHost.String
 		connection.WherobotsRegion = whererobotsRegion.String
 		connection.WherobotsRuntime = whererobotsRuntime.String
+		connection.PostgresHost = postgresHost.String
+		connection.PostgresUsername = postgresUsername.String
+		connection.PostgresDatabase = postgresDatabase.String
+		connection.PostgresPort = postgresPort.Int32
 		if snowflakePassword.String != "" {
 			connection.SnowflakePassword = &proto.Secret{
 				ServerEncrypted: snowflakePassword.String,
@@ -257,6 +299,11 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 		if whererobotsKeyEncrypted.String != "" {
 			connection.WherobotsKey = &proto.Secret{
 				ServerEncrypted: whererobotsKeyEncrypted.String,
+			}
+		}
+		if postgresPassword.String != "" {
+			connection.PostgresPassword = &proto.Secret{
+				ServerEncrypted: postgresPassword.String,
 			}
 		}
 		if connection.CloudStorageBucket != "" {
@@ -298,7 +345,12 @@ func (s Server) getUserConnections(ctx context.Context) ([]*proto.Connection, er
 			wherobots_host,
 			wherobots_key_encrypted,
 			wherobots_region,
-			wherobots_runtime
+			wherobots_runtime,
+			postgres_host,
+			postgres_username,
+			postgres_password_encrypted,
+			postgres_database,
+			postgres_port
 		from connections where archived=false and workspace_id=$1 order by created_at desc`,
 		checkWorkspace(ctx).ID,
 	)
@@ -325,6 +377,11 @@ func (s Server) getUserConnections(ctx context.Context) ([]*proto.Connection, er
 		wherobotsKeyEncrypted := sql.NullString{}
 		wherobotsRegion := sql.NullString{}
 		wherobotsRuntime := sql.NullString{}
+		postgresHost := sql.NullString{}
+		postgresUsername := sql.NullString{}
+		postgresPassword := sql.NullString{}
+		postgresDatabase := sql.NullString{}
+		postgresPort := sql.NullInt32{}
 		bigqueryKey := sql.NullString{}
 		snowflakeWarehouse := sql.NullString{}
 		isDefault := false
@@ -351,6 +408,11 @@ func (s Server) getUserConnections(ctx context.Context) ([]*proto.Connection, er
 			&wherobotsKeyEncrypted,
 			&wherobotsRegion,
 			&wherobotsRuntime,
+			&postgresHost,
+			&postgresUsername,
+			&postgresPassword,
+			&postgresDatabase,
+			&postgresPort,
 		)
 		if err != nil {
 			errtype.LogError(err, "scan failed")
@@ -382,6 +444,11 @@ func (s Server) getUserConnections(ctx context.Context) ([]*proto.Connection, er
 		connection.WherobotsRegion = wherobotsRegion.String
 		connection.WherobotsRuntime = wherobotsRuntime.String
 		connection.WherobotsKey = secrets.EncryptedToClient(wherobotsKeyEncrypted.String)
+		connection.PostgresHost = postgresHost.String
+		connection.PostgresUsername = postgresUsername.String
+		connection.PostgresPassword = secrets.EncryptedToClient(postgresPassword.String)
+		connection.PostgresDatabase = postgresDatabase.String
+		connection.PostgresPort = postgresPort.Int32
 		if connection.CloudStorageBucket != "" {
 			connection.CanStoreFiles = true
 		}
@@ -439,7 +506,20 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 
 	err := conn.ValidateReqConnection(req.Connection)
 	if err != nil {
+		log.Warn().
+			Err(err).
+			Str("connection_name", req.Connection.ConnectionName).
+			Int32("connection_type", int32(req.Connection.ConnectionType)).
+			Str("postgres_host", req.Connection.PostgresHost).
+			Str("postgres_username", req.Connection.PostgresUsername).
+			Str("postgres_database", req.Connection.PostgresDatabase).
+			Int32("postgres_port", req.Connection.PostgresPort).
+			Bool("has_postgres_password", req.Connection.PostgresPassword != nil).
+			Msg("CreateConnection validation failed")
 		return nil, err
+	}
+	if os.Getenv("DEKART_CLOUD") != "" && req.Connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_POSTGRES {
+		return nil, status.Error(codes.PermissionDenied, "postgres user-defined connection is disabled in cloud")
 	}
 
 	_, err = uuid.Parse(req.Connection.Id)
@@ -450,6 +530,15 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 	var res sql.Result
 
 	if req.Connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_SNOWFLAKE {
+		if req.Connection.SnowflakeKey != nil {
+			privateKey := secrets.SecretToString(req.Connection.SnowflakeKey, claims)
+			if privateKey == "" {
+				return nil, status.Error(codes.InvalidArgument, "snowflake_key is required")
+			}
+			if _, err := snowflakeutils.ParsePrivateKey(privateKey); err != nil {
+				return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid snowflake_key: %v", err))
+			}
+		}
 		res, err = s.db.ExecContext(ctx,
 			`update connections set
 				connection_name=$1,
@@ -497,6 +586,33 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 				wherobots_key_encrypted=$1
 			where id=$2`,
 				wherobotsKey,
+				req.Connection.Id,
+			)
+		}
+	} else if req.Connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_POSTGRES {
+		res, err = s.db.ExecContext(ctx,
+			`update connections set
+			connection_name=$1,
+			postgres_host=$2,
+			postgres_username=$3,
+			postgres_database=$4,
+			postgres_port=$5,
+			updated_at=CURRENT_TIMESTAMP
+		where id=$6`,
+			req.Connection.ConnectionName,
+			req.Connection.PostgresHost,
+			req.Connection.PostgresUsername,
+			req.Connection.PostgresDatabase,
+			req.Connection.PostgresPort,
+			req.Connection.Id,
+		)
+		postgresPassword := secrets.SecretToServerEncrypted(req.Connection.PostgresPassword, claims)
+		if postgresPassword != "" && err == nil {
+			res, err = s.db.ExecContext(ctx,
+				`update connections set
+				postgres_password_encrypted=$1
+			where id=$2`,
+				postgresPassword,
 				req.Connection.Id,
 			)
 		}
@@ -652,8 +768,10 @@ func (s Server) GetConnectionList(ctx context.Context, req *proto.GetConnectionL
 		connections = append(connections, userConnections...)
 	}
 
-	if os.Getenv("DEKART_CLOUD") != "" || os.Getenv("DEKART_DATASOURCE") != "USER" {
-		// append system connection
+	if os.Getenv("DEKART_DATASOURCE") != "USER" || IsFileUploadEnabled() || os.Getenv("DEKART_CLOUD") != "" {
+		// Keep system connection visible for non-USER datasources, cloud USER mode,
+		// and local USER mode when uploads are enabled; Dataset upload flow relies on
+		// a default connection with canStoreFiles=true being present in this list.
 		systemConnection, err := s.getConnection(ctx, conn.SystemConnectionID)
 		if err != nil {
 			errtype.LogError(err, "getConnection failed for system connection")
@@ -743,6 +861,18 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 	if err != nil {
 		return nil, err
 	}
+	if os.Getenv("DEKART_CLOUD") != "" && req.Connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_POSTGRES {
+		return nil, status.Error(codes.PermissionDenied, "postgres user-defined connection is disabled in cloud")
+	}
+	if req.Connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_SNOWFLAKE {
+		privateKey := secrets.SecretToString(req.Connection.SnowflakeKey, claims)
+		if privateKey == "" {
+			return nil, status.Error(codes.InvalidArgument, "snowflake_key is required")
+		}
+		if _, err := snowflakeutils.ParsePrivateKey(privateKey); err != nil {
+			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid snowflake_key: %v", err))
+		}
+	}
 
 	id := newUUID()
 
@@ -764,8 +894,13 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 			wherobots_host,
 			wherobots_key_encrypted,
 			wherobots_region,
-			wherobots_runtime
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+			wherobots_runtime,
+			postgres_host,
+			postgres_username,
+			postgres_password_encrypted,
+			postgres_database,
+			postgres_port
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)`,
 		id,
 		req.Connection.ConnectionName,
 		req.Connection.BigqueryProjectId,
@@ -783,6 +918,11 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 		secrets.SecretToServerEncrypted(req.Connection.WherobotsKey, claims),
 		req.Connection.WherobotsRegion,
 		req.Connection.WherobotsRuntime,
+		req.Connection.PostgresHost,
+		req.Connection.PostgresUsername,
+		secrets.SecretToServerEncrypted(req.Connection.PostgresPassword, claims),
+		req.Connection.PostgresDatabase,
+		req.Connection.PostgresPort,
 	)
 	if err != nil {
 		errtype.LogError(err, "insert into connections failed")

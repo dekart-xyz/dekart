@@ -21,6 +21,8 @@ services:
       DEKART_POSTGRES_PASSWORD: "dekart"
       DEKART_POSTGRES_PORT: "5432"
       DEKART_POSTGRES_HOST: "db"
+      # Get a key at https://mailchi.mp/dekart/upgrade-to-sso
+      DEKART_LICENSE_KEY: "your-license-key"
       DEKART_MAPBOX_TOKEN: "your-mapbox-token"
       DEKART_CORS_ORIGIN: "http://localhost:3000"
       DEKART_ALLOW_FILE_UPLOAD: "1"
@@ -34,4 +36,3 @@ services:
       DEKART_SNOWFLAKE_USER: "your-snowflake-user"
       DEKART_SNOWFLAKE_PASSWORD: "your-snowflake-password"
       DEKART_REQUIRE_AMAZON_OIDC: "0"
-      DEKART_LICENSE_KEY: "your-license-key-if-sso-enabled"
