@@ -23,6 +23,8 @@ Goal: contributions should blend into the existing codebase and minimize maintai
 - Add a short purpose comment for each new non-trivial function.
 - Do not use debug logging in production paths. Keep logs high-signal for admins.
 - Never force-push.
+- Do not stage changes unless the user explicitly asks to stage, commit, or push.
+- Commit and push changes only when the user explicitly asks to commit or push.
 - Reuse existing contract types in the touched module (proto/shared schema) before adding local ad-hoc request structs; if you must diverge, add a one-line reason.
 - Keep Cypress `cypress/e2e/<folder>` aligned with env config name used to run it (for example, `.env.local` -> `cypress/e2e/local`, `.env.pg-s3` -> `cypress/e2e/pg-s3`).
 - For E2E tests, group specs by runtime configuration; split only long-running configurations into multiple parallel lanes.
@@ -35,6 +37,7 @@ Goal: contributions should blend into the existing codebase and minimize maintai
 - Check `skills/README.md` first and use the matching skill before ad-hoc commands.
 - For implementation/refactor tasks, use `skills/code-style/SKILL.md`.
 - Before reporting code work complete, run `skills/verify-before-done/SKILL.md`.
+- For local frontend development, use `make client` so an existing Vite server on port 3000 is stopped before starting a fresh one.
 
 ## Skill Failure Recovery
 

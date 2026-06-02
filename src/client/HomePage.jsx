@@ -14,7 +14,7 @@ import { archiveReport, subscribeReports, unsubscribeReports, createReport } fro
 import { editConnection, isSystemConnectionID, newConnectionScreen, setDefaultConnection } from './actions/connection'
 import ConnectionModal from './ConnectionModal'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
-import { PlanType } from 'dekart-proto/dekart_pb'
+import { ConnectionType, PlanType } from 'dekart-proto/dekart_pb'
 import Onboarding from './Onboarding'
 import { DatasourceIcon } from './Datasource'
 import { track } from './lib/tracking'
@@ -115,7 +115,10 @@ function FirstReportOnboarding () {
   const isPlayground = useSelector(state => state.user.isPlayground)
   const dispatch = useDispatch()
   const isViewer = useSelector(state => state.user.isViewer)
+  const isAdmin = useSelector(state => state.user.isAdmin)
   const isSelfHosted = useSelector(state => state.user.isSelfHosted)
+  const history = useHistory()
+  const sqlConnectionList = useSelector(state => state.connection.list.filter(c => c.connectionType !== ConnectionType.CONNECTION_TYPE_LOCAL))
   return (
     <>
       <Result
@@ -133,6 +136,21 @@ function FirstReportOnboarding () {
               }
             >Create map
             </Button>
+            {sqlConnectionList.length === 0 && (
+              <Button
+                disabled={!isAdmin || isViewer}
+                title={isAdmin ? 'Connect database' : 'Only admin can create new connection'}
+                onClick={() => {
+                  track('ConnectDatabaseFromFirstReportOnboarding')
+                  history.push('/connections')
+                }}
+              >
+                Connect database
+              </Button>
+            )}
+            <div className={styles.stepBySetLink}>
+              <a href='https://github.com/dekart-xyz/geosql#install-claudecodex' target='_blank' rel='noreferrer'>Install Claude skill</a>
+            </div>
             <If condition={isPlayground && !isSelfHosted}><div className={styles.stepBySetLink}><a target='_blank' href='https://dekart.xyz/docs/about/playground/#quick-start' rel='noreferrer'>Check step-by-step guide</a></div></If>
           </>
         )}

@@ -332,9 +332,7 @@ function BigQueryServiceAccountConnectionModal ({ form }) {
           form={form}
           disabled={loading}
           layout='vertical' onValuesChange={(changedValues, allValues) => {
-            if (changedValues.bigqueryProjectId || changedValues.cloudStorageBucket || changedValues.newBigqueryKey) {
-              dispatch(connectionChanged())
-            }
+            dispatch(connectionChanged())
             if (changedValues.bigqueryProjectId && !allValues.connectionName) {
               form.setFieldsValue({ connectionName: changedValues.bigqueryProjectId })
             }
@@ -437,9 +435,7 @@ function BigQueryConnectionModal ({ form }) {
           form={form}
           disabled={loading}
           layout='vertical' onValuesChange={(changedValues, allValues) => {
-            if (changedValues.bigqueryProjectId || changedValues.cloudStorageBucket) {
-              dispatch(connectionChanged())
-            }
+            dispatch(connectionChanged())
           }}
         >
           {nameChangeOnly ? <div className={styles.datasetsCountAlert}><Alert message={<>This connection is used in {connection.datasetCount} dataset{connection.datasetCount > 1 ? 's' : ''}.</>} description='Only the name can be changed.' type='warning' /></div> : null}

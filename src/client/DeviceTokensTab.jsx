@@ -14,7 +14,7 @@ function AgentLink () {
   return (
     <div className={styles.agentLink}>
       <a href={gisSkillRepoURL} target='_blank' rel='noreferrer'>
-        Connect AI Agent to Dekart
+        Install Claude skill to run agentic GIS queries.
       </a>
     </div>
   )
