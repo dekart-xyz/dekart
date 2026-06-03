@@ -76,6 +76,11 @@ File upload is now enabled by default (`DEKART_ALLOW_FILE_UPLOAD=1` in the Docke
 
 Postgres replay storage does not support file upload, so when `DEKART_STORAGE=PG` Dekart now disables file upload automatically and logs a warning at startup. You no longer need to set `DEKART_ALLOW_FILE_UPLOAD=0` yourself.
 
+### Mapbox token is now optional
+
+Maps render on a free MapLibre/Carto base map style by default, so you can create a map without a Mapbox token.
+Set `DEKART_MAPBOX_TOKEN` only if you want Mapbox base map styles and static map thumbnail previews.
+
 ## ⚙️ Changes Important for Admins
 
 ### Self-hosted workspace management
