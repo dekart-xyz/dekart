@@ -7,6 +7,8 @@ Goal: contributions should blend into the existing codebase and minimize maintai
 - Make the smallest correct change that solves the task.
 - Prefer existing patterns in the touched folder over introducing new patterns.
 - Avoid speculative hardening. Add extra guards only for real, observed failure modes.
+- Never add unit tests merely to increase coverage. Add them for test-driven development of behavior that is hard to reproduce through UX tests, regression coverage for user-discovered bugs when a unit test is easier than an E2E test, or libraries with defined stable interfaces. For test-driven development, write the failing test before implementation and confirm it passes after implementation.
+- Unit tests must protect meaningful behavior. Do not write tests that duplicate the implementation logic or assert trivial copied text such as MCP descriptions.
 – Each line in this repo is reviewed by a human whoauthored original code. This is slow and expensive process. Avoid adding complexity that requires extra review cycles without a clear observed need.
 
 ## Architecture Rules (mandatory)

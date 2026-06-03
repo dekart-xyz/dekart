@@ -9,7 +9,7 @@ Rule ownership:
 ## Available Skills
 
 - `code-style` (`skills/code-style/SKILL.md`)
-  - Use for implementation/refactor work to follow Dekart architecture, naming, and style conventions.
+  - Use for implementation/refactor work to follow Dekart architecture, naming, style, and unit-test implementation conventions.
 - `verify-before-done` (`skills/verify-before-done/SKILL.md`)
   - Mandatory before reporting code changes complete.
 - `dev-runtime` (`skills/dev-runtime/SKILL.md`)

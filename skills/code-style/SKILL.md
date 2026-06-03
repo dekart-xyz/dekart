@@ -61,3 +61,9 @@ Keep checks for: user input, environment variables, runtime variations, cross-pl
 
 - Prefer small, surgical edits over broad refactors unless refactor is required for correctness.
 - Keep patterns consistent with neighboring code in the same folder.
+
+## Unit Test Guidance
+
+- Follow the unit-test policy in `AGENTS.md` before adding or changing unit-test coverage.
+- Assert meaningful behavior and a clear failure mode through the public or stable interface.
+- Keep tests independent from the implementation logic so the same mistake is not copied into both.

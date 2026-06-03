@@ -16,4 +16,5 @@ Use before reporting a code change as complete.
 3. `npm run lint` passes for affected frontend code.
 4. No generated files were edited manually.
 5. When asked, behavior validated in the real runtime path (not just unit tests).
-6. Nothing in the change is unnecessary for the current scope.
+6. Any changed unit-test coverage protects meaningful behavior under the unit-test policy in `AGENTS.md`; it is not coverage-only, an implementation duplicate, or a trivial copied-text assertion.
+7. Nothing in the change is unnecessary for the current scope.
