@@ -68,6 +68,10 @@ func defaultString(s, def string) string {
 	return s
 }
 
+func canStoreMapPreview() bool {
+	return os.Getenv("DEKART_CLOUD_STORAGE_BUCKET") != "" && os.Getenv("DEKART_STORAGE") != "PG"
+}
+
 type ProjectList struct {
 	Projects []struct {
 		Id string `json:"id"`
@@ -179,7 +183,7 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 		}
 
 		var storeMapPreview string
-		if os.Getenv("DEKART_CLOUD_STORAGE_BUCKET") != "" {
+		if canStoreMapPreview() {
 			storeMapPreview = "1"
 		}
 

@@ -128,7 +128,7 @@ jobs:
         with:
           builder: dekart-laptop-builder
           context: .
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |

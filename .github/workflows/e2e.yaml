@@ -36,7 +36,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15
+        image: public.ecr.aws/docker/library/postgres:15
         env:
           POSTGRES_PASSWORD: ${{ env.DEKART_POSTGRES_PASSWORD }}
           POSTGRES_USER:     ${{ env.DEKART_POSTGRES_USER }}
@@ -354,6 +354,7 @@ jobs:
 
           - id: snowflake-sqlite
             spec: cypress/e2e/snowflake
+            skip_postgres: true
             extra_env: |
               -e DEKART_STORAGE=SNOWFLAKE \
               -e DEKART_DATASOURCE=SNOWFLAKE \
@@ -373,9 +374,11 @@ jobs:
 
           - id: local-default-workspace
             spec: cypress/e2e/local/defaultWorkspaceManagement.cy.js
+            skip_postgres: true
 
           - id: local-bigquery-service-account-retest
             spec: cypress/e2e/local/bigQueryServiceAccountNameRetest.cy.js
+            skip_postgres: true
 
           - id: pg-s3-postgres
             spec: cypress/e2e/pg-s3/happyPath.cy.js
@@ -397,7 +400,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres
+        image: ${{ (!matrix.target || matrix.target == inputs.target) && !matrix.skip_postgres && 'public.ecr.aws/docker/library/postgres:15' || '' }}
         env:
           POSTGRES_PASSWORD: ${{ env.DEKART_POSTGRES_PASSWORD }}
           POSTGRES_USER:     ${{ env.DEKART_POSTGRES_USER }}
@@ -420,9 +423,10 @@ jobs:
           gcloud storage cp gs://dekart-dev-ci-fixtures/cypress/POI25Mb.csv /tmp/cypress/fixtures/POI25Mb.csv --project=dekart-dev
 
       - name: Seed PostgreSQL test data (dekart_geo.sample.geospatial_points)
+        if: ${{ (!matrix.target || matrix.target == inputs.target) && !matrix.skip_postgres }}
         run: |
           set -euo pipefail
-          pg_cid="$(docker ps --filter ancestor=postgres --format '{{.ID}}' | head -n 1)"
+          pg_cid="${{ job.services.postgres.id }}"
           test -n "$pg_cid"
           docker exec -e PGPASSWORD="$DEKART_POSTGRES_PASSWORD" "$pg_cid" \
             psql -U "$DEKART_POSTGRES_USER" -d postgres -v ON_ERROR_STOP=1 -c "SELECT 1 FROM pg_database WHERE datname='dekart_geo'" | grep -q 1 \
