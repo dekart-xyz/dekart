@@ -1616,8 +1616,8 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 
 // SaveMapPreview saves or updates the map preview for a report
 func (s Server) SaveMapPreview(ctx context.Context, req *proto.SaveMapPreviewRequest) (*proto.SaveMapPreviewResponse, error) {
-	if os.Getenv("DEKART_CLOUD_STORAGE_BUCKET") == "" {
-		log.Warn().Msg("DEKART_CLOUD_STORAGE_BUCKET is not set, cannot save map preview")
+	if !canStoreMapPreview() {
+		log.Warn().Msg("map preview storage is not enabled")
 		return nil, status.Error(codes.PermissionDenied, "map preview storage is not enabled")
 	}
 	claims := user.GetClaims(ctx)
@@ -1733,6 +1733,10 @@ func (s Server) ServeMapPreview(w http.ResponseWriter, r *http.Request) {
 	}
 	if report == nil {
 		http.Error(w, "report not found", http.StatusNotFound)
+		return
+	}
+	if !canStoreMapPreview() {
+		s.serveDefaultMapPreview(w, r)
 		return
 	}
 

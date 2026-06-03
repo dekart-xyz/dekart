@@ -29,7 +29,7 @@ const (
 func getBackupTarget() sqliteBackupTarget {
 	bucket := strings.TrimSpace(os.Getenv("DEKART_CLOUD_STORAGE_BUCKET"))
 	storageBackend := strings.ToUpper(strings.TrimSpace(os.Getenv("DEKART_STORAGE")))
-	if bucket != "" && (storageBackend == "S3" || storageBackend == "GCS") {
+	if bucket != "" && (storageBackend == "S3" || storageBackend == "GCS" || storageBackend == "PG") {
 		return backupTargetObjectStorage
 	}
 	if strings.TrimSpace(os.Getenv("DEKART_SNOWFLAKE_STAGE")) != "" {

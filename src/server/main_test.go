@@ -31,12 +31,15 @@ func clearPostgresMetadataURLEnv(t *testing.T) {
 func TestValidateStorageConfigDisablesFileUploadForPG(t *testing.T) {
 	t.Setenv("DEKART_STORAGE", "PG")
 	t.Setenv("DEKART_ALLOW_FILE_UPLOAD", "1")
-	t.Setenv("DEKART_CLOUD_STORAGE_BUCKET", "")
+	t.Setenv("DEKART_CLOUD_STORAGE_BUCKET", "sqlite-backups")
 
 	validateStorageConfig()
 
 	if got := os.Getenv("DEKART_ALLOW_FILE_UPLOAD"); got != "0" {
 		t.Fatalf("expected file upload to be disabled, got %q", got)
+	}
+	if got := os.Getenv("DEKART_CLOUD_STORAGE_BUCKET"); got != "sqlite-backups" {
+		t.Fatalf("expected backup bucket to remain configured, got %q", got)
 	}
 }
 

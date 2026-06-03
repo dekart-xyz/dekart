@@ -89,6 +89,8 @@ func TestSQLiteBackupDisabledWhenPostgresMetadataEnvWins(t *testing.T) {
 	clearMetadataEnv(t)
 	os.Setenv("DEKART_SQLITE_DB_PATH", "./dekart.db")
 	os.Setenv("DEKART_POSTGRES_HOST", "localhost")
+	os.Setenv("DEKART_STORAGE", "PG")
+	os.Setenv("DEKART_CLOUD_STORAGE_BUCKET", "sqlite-backups")
 
 	if isSQLiteEnabled() {
 		t.Fatalf("expected SQLite backup to be disabled")
