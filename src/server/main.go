@@ -66,7 +66,8 @@ func validateStorageConfig() {
 		return
 	}
 	if dekart.IsFileUploadEnabled() {
-		log.Fatal().Msg("DEKART_ALLOW_FILE_UPLOAD must be disabled when DEKART_STORAGE=PG")
+		log.Warn().Msg("file upload is not supported with DEKART_STORAGE=PG, disabling file upload")
+		os.Setenv("DEKART_ALLOW_FILE_UPLOAD", "0")
 	}
 	if os.Getenv("DEKART_CLOUD_STORAGE_BUCKET") != "" {
 		log.Fatal().Msg("DEKART_CLOUD_STORAGE_BUCKET must be empty when DEKART_STORAGE=PG")
