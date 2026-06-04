@@ -9,6 +9,19 @@ permissions:
   packages: write
 
 jobs:
+  release_meta:
+    runs-on: ubuntu-latest
+    outputs:
+      publish_latest: ${{ steps.release.outputs.publish_latest }}
+    steps:
+      - id: release
+        run: |
+          if [[ "$GITHUB_REF_NAME" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "publish_latest=true" >>"$GITHUB_OUTPUT"
+          else
+            echo "publish_latest=false" >>"$GITHUB_OUTPUT"
+          fi
+
   node_tests:
     uses: ./.github/workflows/node_test.yaml
     secrets: inherit
@@ -40,12 +53,13 @@ jobs:
     secrets: inherit
 
   build_app_release_oss:
-    needs: [node_tests, go_tests, e2e_tests]
+    needs: [release_meta, node_tests, go_tests, e2e_tests]
     uses: ./.github/workflows/build.yaml
     with:
       target: oss
       build_app: true
       build_e2e: false
+      publish_latest: ${{ needs.release_meta.outputs.publish_latest == 'true' }}
     secrets: inherit
 
   build_app_release_premium:
