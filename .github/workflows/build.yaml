@@ -9,6 +9,7 @@ on:
     inputs:
       build_app: { type: boolean, default: false }
       build_e2e: { type: boolean, default: false }
+      publish_latest: { type: boolean, default: false }
       build_runner_labels:
         type: string
         default: '["self-hosted","laptop-build"]'
@@ -111,6 +112,7 @@ jobs:
             type=sha,format=short,prefix=sha-
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ inputs.publish_latest }}
           flavor: latest=false # never add “latest” automatically
 
       - id: collect
