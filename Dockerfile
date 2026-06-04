@@ -34,6 +34,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     go mod download -x
 COPY src/proto src/proto
 COPY src/server src/server
+COPY sqlite sqlite
 
 FROM godeps AS gobuilder
 RUN --mount=type=cache,target=/go/pkg/mod \
