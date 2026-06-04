@@ -38,17 +38,8 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 		return status.Error(codes.NotFound, err.Error())
 	}
 
-	// update report_analytics only when tracking is enabled
 	if report.TrackViewers {
-		_, err = s.db.ExecContext(ctx,
-			`insert into report_analytics (report_id, email)
-			values ($1, $2)
-			on conflict (report_id, email) do update set updated_at = CURRENT_TIMESTAMP,
-			num_views = report_analytics.num_views + 1`,
-			reportID,
-			claims.Email,
-		)
-		if err != nil {
+		if err := s.trackReportVisit(ctx, reportID, claims.Email); err != nil {
 			return GRPCError("Cannot insert report analytics", err)
 		}
 	}
@@ -115,6 +106,39 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 	}
 	return nil
 
+}
+
+// trackReportVisit records the immutable visit event and updates the existing aggregate counter together.
+func (s Server) trackReportVisit(ctx context.Context, reportID string, email string) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.ExecContext(ctx,
+		`insert into report_visit_events (report_id, email)
+		values ($1, $2)`,
+		reportID,
+		email,
+	)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.ExecContext(ctx,
+		`insert into report_analytics (report_id, email)
+		values ($1, $2)
+		on conflict (report_id, email) do update set updated_at = CURRENT_TIMESTAMP,
+		num_views = report_analytics.num_views + 1`,
+		reportID,
+		email,
+	)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 const defaultStreamTimeout = 30 * time.Second
