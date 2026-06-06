@@ -1,6 +1,6 @@
 <div align="center">
   <h1 align="center">Dekart</h1>
-  <h3>Create Kepler.gl maps with SQL <div>for BigQuery, Snowflake, Postgres</div></h3>
+  <h3>Backend for Kepler.gl with SQL connectors and MCP</h3>
   <div><code>🤖 🛑 Every line in this repo is reviewed by a human</code></div>
 </div>
 
@@ -8,15 +8,9 @@
 
 <div align="center">Self-hosted alternative to <b>CARTO</b>, <b>Felt</b> and <b>Aino</b> geospatial platforms.</div>
 
-## Features
-
-* Connect to Postgres, BigQuery, Snowflake, and more
-* Create live maps with SQL or with Claude and Codex agents
-* Shareable map links
-* Manage data access & sharing
 
 <br/>
-<p align="center"><a href="https://dekart.xyz/?ref=github-pic"><img alt="Self-hosted alternative to CARTO & Foursquare Studio for your data warehouse." src=".github/images/github-screencast.gif"></a></p>
+<p align="center"><a href="https://dekart.xyz/?ref=github-pic"><img alt="Self-hosted alternative to CARTO & Foursquare Studio for your data warehouse." src=".github/images/geosql-dekart-sql-map-queries-demo.gif"></a></p>
 <div align="center">
   <a href="https://cloud.dekart.xyz/?ref=github-try-live-demo"><img alt="Live Demo" src="https://img.shields.io/badge/Live%20Demo-blue?style=for-the-badge"></a>
 </div>
@@ -27,7 +21,9 @@
 docker run -p 8080:8080 dekartxyz/dekart
 ```
 
-Optional agentic setup:
+[Deployment Options](https://dekart.xyz/docs/self-hosting/docker/?ref=github)
+
+### Optional agentic setup with Claude/Codex
 
 ```sh
 pip install geosql && geosql       # install Claude/Codex skill
@@ -36,18 +32,26 @@ pip install dekart-cli && dekart init  # install Dekart CLI
 
 Then ask Claude or Codex to build a map from your data.
 
-## Live Map Examples
+## Map Examples
 
 [BigQuery](https://dekart.xyz/docs/about/overture-maps-examples/)
 | [Snowflake](https://dekart.xyz/docs/about/snowflake-kepler-gl-examples/)
 | [Wherobots](https://dekart.xyz/docs/usage/wherobots-sql-tutorial/)
 
 
+## Features
+
+* Connect to Postgres, BigQuery, Snowflake, Wherobots, and more
+* Create live maps with Claude and Codex agents
+* Improve agent accuracy 4x with maps
+* Share private maps with links
+* SSO: Google OAuth, Keycloak, AWS Cognito, Google IAP
+
 ## How it works
 
 Dekart is a self-hosted backend for Kepler.gl, built with Golang and React. It connects to your data warehouse and exposes MCP, enabling agents to create maps and improve accuracy on geospatial tasks.
 
-## Deployment Options
+## Documentation
 
 Dekart is a single Docker container that can be deployed to any cloud provider or on-premises server. By default it uses built-in SQLite for metadata and local file storage, so it can run with zero configuration. For production deployments, you can configure S3/GCS backups or a Postgres metadata backend.
 
