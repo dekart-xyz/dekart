@@ -1,14 +1,17 @@
 import Button from 'antd/es/button'
 import Modal from 'antd/es/modal/Modal'
+import Tooltip from 'antd/es/tooltip'
 import styles from './BigQueryConnectionTypeSelectorModal.module.css'
 import { newConnection } from './actions/connection'
 import { ConnectionType } from 'dekart-proto/dekart_pb'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { useEffect } from 'react'
 import { track } from './lib/tracking'
 
 export default function BigQueryConnectionTypeSelectorModal ({ open, onClose }) {
   const dispatch = useDispatch()
+  const googleOAuthEnabled = useSelector(state => state.env.googleOAuthEnabled)
+  const googleOAuthDisabledTitle = googleOAuthEnabled ? '' : 'Google OAuth is not configured for this Dekart instance'
   useEffect(() => {
     if (open) {
       track('OpenBigQueryConnectionTypeSelectorModal')
@@ -36,15 +39,20 @@ export default function BigQueryConnectionTypeSelectorModal ({ open, onClose }) 
           </p>
 
           <p>
-            <Button
-              type='primary'
-              onClick={() => {
-                onClose()
-                dispatch(newConnection(ConnectionType.CONNECTION_TYPE_BIGQUERY))
-                track('ConnectWithGoogle')
-              }}
-            >Connect with Google
-            </Button>
+            <Tooltip title={googleOAuthDisabledTitle}>
+              <span>
+                <Button
+                  type='primary'
+                  disabled={!googleOAuthEnabled}
+                  onClick={() => {
+                    onClose()
+                    dispatch(newConnection(ConnectionType.CONNECTION_TYPE_BIGQUERY))
+                    track('ConnectWithGoogle')
+                  }}
+                >Connect with Google
+                </Button>
+              </span>
+            </Tooltip>
           </p>
           <p>
             → <a href='https://dekart.xyz/docs/usage/choose-bigquery-connection-method/#which-permissions-are-required' target='_blank' rel='noreferrer'>Which permissions required?</a>
