@@ -28,7 +28,6 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-
 	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
@@ -40,6 +39,9 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		err := fmt.Errorf("dataset not found or permission not granted")
 		log.Warn().Err(err).Str("dataset_id", req.DatasetId).Msg("Dataset not found")
 		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if err := s.requireReportWorkspaceWrite(ctx, *reportID); err != nil {
+		return nil, err
 	}
 
 	err = s.updateDatasetConnection(ctx, req.DatasetId, req.ConnectionId)
@@ -124,6 +126,9 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 		err := fmt.Errorf("report not found id:%s", req.ReportId)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if err := s.requireReportWorkspaceWrite(ctx, req.ReportId); err != nil {
+		return nil, err
 	}
 	if !report.CanRefresh {
 		err := fmt.Errorf("user cannot refresh report")
@@ -406,7 +411,6 @@ func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) 
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-
 	q, err := query.GetQueryDetails(ctx, s.db, req.QueryId)
 	if err != nil {
 		errtype.LogError(err, "database operation failed")
@@ -427,6 +431,9 @@ func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) 
 		err := fmt.Errorf("report not found id:%s", q.ReportID)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if err := s.requireReportWorkspaceWrite(ctx, q.ReportID); err != nil {
+		return nil, err
 	}
 	if !report.CanWrite {
 		err := fmt.Errorf("permission denied")
@@ -451,7 +458,6 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-
 	q, err := query.GetQueryDetails(ctx, s.db, req.QueryId)
 	if err != nil {
 		errtype.LogError(err, "database operation failed")
@@ -475,6 +481,9 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		err := fmt.Errorf("report not found id:%s", q.ReportID)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if err := s.requireReportWorkspaceWrite(ctx, q.ReportID); err != nil {
+		return nil, err
 	}
 
 	if !report.CanRefresh {

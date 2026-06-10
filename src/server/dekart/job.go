@@ -177,8 +177,8 @@ func (s Server) CancelJob(ctx context.Context, req *proto.CancelJobRequest) (*pr
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	if checkWorkspace(ctx).Expired {
-		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	if err := requireWorkspaceWrite(ctx); err != nil {
+		return nil, err
 	}
 	if checkWorkspace(ctx).UserRole == proto.UserRole_ROLE_VIEWER {
 		return nil, status.Error(codes.PermissionDenied, "Only editors can cancel queries")

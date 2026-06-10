@@ -39,8 +39,10 @@ function ForkButton ({ primary }) {
   const workspaceId = userStream?.workspaceId
   const { allowExport, canWrite } = useSelector(state => state.report)
   const isViewer = useSelector(state => state.user.isViewer)
+  const readOnly = useSelector(state => state.workspace.readOnly)
 
-  const disabled = isViewer || (!allowExport && !canWrite)
+  const disabled = isViewer || readOnly || (!allowExport && !canWrite)
+  const disabledTitle = readOnly ? 'Workspace is read-only' : 'Forking maps is disabled for viewers'
 
   const history = useHistory()
 
@@ -66,6 +68,7 @@ function ForkButton ({ primary }) {
         icon={<ForkOutlined />}
         id='dekart-fork-button'
         disabled={disabled}
+        title={disabled ? disabledTitle : 'Duplicate Map'}
         onClick={onClick}
       >Duplicate Map
       </Button>
@@ -78,13 +81,14 @@ function ForkButton ({ primary }) {
       disabled={disabled}
       onClick={onClick}
       id='dekart-fork-button'
-      title={disabled ? 'Forking maps is disabled for viewers' : 'Duplicate Map'}
+      title={disabled ? disabledTitle : 'Duplicate Map'}
     />
   )
 }
 
 function RefreshButton ({ showAutoRefreshSettings = false }) {
   const { canRefresh } = useSelector(state => state.report)
+  const readOnly = useSelector(state => state.workspace.readOnly)
   const numRunningQueries = useSelector(state => state.numRunningQueries)
   const numQueries = useSelector(state => state.queries.length)
   const dispatch = useDispatch()
@@ -97,7 +101,7 @@ function RefreshButton ({ showAutoRefreshSettings = false }) {
   }
 
   const handleRefresh = () => {
-    if (numRunningQueries) {
+    if (numRunningQueries || readOnly) {
       return
     }
     track('RefreshAllQueries')
@@ -110,7 +114,7 @@ function RefreshButton ({ showAutoRefreshSettings = false }) {
       key: 'refresh',
       id: 'dekart-refresh-now-button',
       icon: numRunningQueries ? <LoadingOutlined /> : <ReloadOutlined />,
-      disabled: numRunningQueries,
+      disabled: numRunningQueries || readOnly,
       onClick: handleRefresh
     },
     {
@@ -122,7 +126,7 @@ function RefreshButton ({ showAutoRefreshSettings = false }) {
         : 'Auto Refresh Settings',
       key: 'auto-refresh',
       icon: <ClockCircleOutlined />,
-      disabled: !canWrite,
+      disabled: !canWrite || readOnly,
       onClick: () => setAutoRefreshModalVisible(true)
     }
   ]
@@ -137,8 +141,9 @@ function RefreshButton ({ showAutoRefreshSettings = false }) {
         <Button
           id='dekart-refresh-button'
           type='text'
+          disabled={readOnly}
           icon={numRunningQueries ? <LoadingOutlined /> : autoRefreshIntervalSeconds > 0 ? <span className={classNames({ [styles.shimmerIcon]: !edit })}><ClockCircleOutlined /></span> : <ReloadOutlined />}
-          title={autoRefreshIntervalSeconds > 0 ? 'Refresh (Auto-refresh enabled)' : 'Refresh'}
+          title={readOnly ? 'Workspace is read-only' : autoRefreshIntervalSeconds > 0 ? 'Refresh (Auto-refresh enabled)' : 'Refresh'}
         />
       </Dropdown>
       <AutoRefreshSettingsModal
@@ -161,20 +166,21 @@ function useMapViewChanged () {
 
 function useAutoSave () {
   const { canWrite } = useSelector(state => state.report)
+  const readOnly = useSelector(state => state.workspace.readOnly)
   const dispatch = useDispatch()
   const { saving, online } = useSelector(state => state.reportStatus)
   const reportChanged = useReportChanged()
   const mapViewChanged = useMapViewChanged()
   const { exporting, dataUri } = useSelector(state => state.mapPreview)
   useEffect(() => {
-    if (dataUri && !exporting) {
+    if (dataUri && !exporting && !readOnly) {
       dispatch(saveMapPreview(dataUri))
     }
-  }, [dataUri, exporting, dispatch])
+  }, [dataUri, exporting, readOnly, dispatch])
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      if (reportChanged && canWrite && !saving && online) {
+      if (reportChanged && canWrite && !readOnly && !saving && online) {
         dispatch(saveMap(mapViewChanged))
       }
     }, 1000)
@@ -182,7 +188,7 @@ function useAutoSave () {
     return () => {
       clearTimeout(handler)
     }
-  }, [canWrite, saving, online, dispatch, mapViewChanged, reportChanged])
+  }, [canWrite, readOnly, saving, online, dispatch, mapViewChanged, reportChanged])
 }
 
 function useRequireWorkspace () {
@@ -230,6 +236,7 @@ function EditModeButtons () {
   const dispatch = useDispatch()
   const { canWrite } = useSelector(state => state.report)
   const { saving } = useSelector(state => state.reportStatus)
+  const readOnly = useSelector(state => state.workspace.readOnly)
   const changed = useReportChanged()
   const forkOnboarding = useRequireOnboarding()
   useAutoSave()
@@ -244,11 +251,11 @@ function EditModeButtons () {
             <ForkButton />
             <Button
               id='dekart-save-button'
-              title={saving ? 'Saving...' : 'Save this map'}
+              title={readOnly ? 'Workspace is read-only' : saving ? 'Saving...' : 'Save this map'}
               type='text'
               ghost
               icon={saving || changed ? <CloudSyncOutlined /> : <CloudOutlined />}
-              disabled={saving}
+              disabled={saving || readOnly}
               onClick={() => {
                 track('SaveMap')
                 dispatch(saveMap())

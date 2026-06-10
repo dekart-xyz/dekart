@@ -256,8 +256,9 @@ func main() {
 	validateStorageConfig()
 	// Removing or bypassing this check is a modification under AGPL and requires publishing your changed source code.
 	// Get a free license key at https://mailchi.mp/dekart/upgrade-to-sso
-	app.RequireValidStartupLicense(app.StartupLicenseConfig{
+	licenseState := app.RequireValidStartupLicense(app.StartupLicenseConfig{
 		RequireForPostgresMetadata: dekart.SelectedMetadataBackend() == dekart.MetadataBackendPostgres,
+		AllowExpiredKeyStartup:     os.Getenv("DEKART_DEV_ALLOW_EXPIRED_LICENSE_KEY_STARTUP") == "1",
 	})
 
 	db := configureDb()
@@ -270,7 +271,10 @@ func main() {
 	bucket := configureBucket(db)
 	jobStore := configureJobStore(bucket)
 
-	dekartServer := dekart.NewServer(db, bucket, jobStore)
+	dekartServer := dekart.NewServerWithRuntimeLicense(db, bucket, jobStore, dekart.RuntimeLicenseState{
+		Required:  licenseState.Required,
+		ExpiresAt: licenseState.ExpiresAt,
+	})
 	httpServer := app.Configure(dekartServer, db)
 
 	go startHttpServer(httpServer)

@@ -6,20 +6,25 @@ import styles from './WorkspaceReadOnlyBanner.module.css'
 import { useSelector } from 'react-redux'
 import { useLocation, useHistory } from 'react-router-dom'
 import { track } from './lib/tracking'
+import { GetWorkspaceResponse } from 'dekart-proto/dekart_pb'
 
 export default function WorkspaceReadOnlyBanner () {
-  const expired = useSelector(state => state.workspace.expired)
+  const readOnly = useSelector(state => state.workspace.readOnly)
+  const readOnlyReason = useSelector(state => state.workspace.readOnlyReason)
   const isTrial = useSelector(state => state.user.isTrial)
   const location = useLocation()
   const history = useHistory()
 
-  if (!expired || location.pathname === '/workspace/plan') {
+  if (!readOnly || location.pathname === '/workspace/plan') {
     return null
   }
-  const headline = isTrial
-    ? 'Workspace is read-only — your trial has ended.'
-    : 'Workspace is read-only — no active subscription.'
-  const ctaLabel = isTrial ? 'Upgrade Now' : 'Manage Subscription'
+  const licenseExpired = readOnlyReason === GetWorkspaceResponse.ReadOnlyReason.READ_ONLY_REASON_LICENSE_KEY_EXPIRED
+  const headline = licenseExpired
+    ? 'License key expired'
+    : isTrial
+      ? 'Workspace is read-only — your trial has ended.'
+      : 'Workspace is read-only — no active subscription.'
+  const ctaLabel = licenseExpired ? 'Extend Key' : isTrial ? 'Upgrade Now' : 'Manage Subscription'
 
   return (
     <div className={styles.banner} role='status'>
@@ -33,9 +38,12 @@ export default function WorkspaceReadOnlyBanner () {
         <Button
           type='default'
           ghost
+          {...(licenseExpired ? { href: 'https://calendly.com/vladi-dekart/30min', target: '_blank' } : {})}
           onClick={() => {
-            track('WorkspaceReadOnlyBannerClick', { isTrial, ctaLabel })
-            history.push('/workspace/plan')
+            track('WorkspaceReadOnlyBannerClick', { isTrial, ctaLabel, readOnlyReason })
+            if (!licenseExpired) {
+              history.push('/workspace/plan')
+            }
           }}
         >
           {ctaLabel}

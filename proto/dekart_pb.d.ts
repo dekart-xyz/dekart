@@ -848,6 +848,12 @@ export class GetWorkspaceResponse extends jspb.Message {
   getAddedUsersCount(): number;
   setAddedUsersCount(value: number): void;
 
+  getReadOnly(): boolean;
+  setReadOnly(value: boolean): void;
+
+  getReadOnlyReason(): GetWorkspaceResponse.ReadOnlyReasonMap[keyof GetWorkspaceResponse.ReadOnlyReasonMap];
+  setReadOnlyReason(value: GetWorkspaceResponse.ReadOnlyReasonMap[keyof GetWorkspaceResponse.ReadOnlyReasonMap]): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetWorkspaceResponse.AsObject;
   static toObject(includeInstance: boolean, msg: GetWorkspaceResponse): GetWorkspaceResponse.AsObject;
@@ -865,7 +871,17 @@ export namespace GetWorkspaceResponse {
     usersList: Array<User.AsObject>,
     invitesList: Array<WorkspaceInvite.AsObject>,
     addedUsersCount: number,
+    readOnly: boolean,
+    readOnlyReason: GetWorkspaceResponse.ReadOnlyReasonMap[keyof GetWorkspaceResponse.ReadOnlyReasonMap],
   }
+
+  export interface ReadOnlyReasonMap {
+    READ_ONLY_REASON_UNSPECIFIED: 0;
+    READ_ONLY_REASON_SUBSCRIPTION_EXPIRED: 1;
+    READ_ONLY_REASON_LICENSE_KEY_EXPIRED: 2;
+  }
+
+  export const ReadOnlyReason: ReadOnlyReasonMap;
 }
 
 export class CreateWorkspaceRequest extends jspb.Message {

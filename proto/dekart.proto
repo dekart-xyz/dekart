@@ -254,11 +254,18 @@ message GetWorkspaceRequest {
 }
 
 message GetWorkspaceResponse {
+    enum ReadOnlyReason {
+        READ_ONLY_REASON_UNSPECIFIED = 0;
+        READ_ONLY_REASON_SUBSCRIPTION_EXPIRED = 1;
+        READ_ONLY_REASON_LICENSE_KEY_EXPIRED = 2;
+    }
     Workspace Workspace = 1;
     Subscription subscription = 2;
     repeated User users = 3;
     repeated WorkspaceInvite invites = 4;
     int64 added_users_count = 5; // to not duplicate count logic in UI
+    bool read_only = 6;
+    ReadOnlyReason read_only_reason = 7;
 }
 
 message CreateWorkspaceRequest {

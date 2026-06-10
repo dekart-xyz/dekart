@@ -1,4 +1,4 @@
-.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down up-and-down-oidc sqlite proto-copy-to-node proto-stub server runner-install runner-register runner-start runner-stop runner-status runner-service-install runner-service-start runner-service-stop runner-service-status github-runner license-keygen license-issue
+.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down up-and-down-oidc sqlite expire-local-trials proto-copy-to-node proto-stub server runner-install runner-register runner-start runner-stop runner-status runner-service-install runner-service-start runner-service-stop runner-service-status github-runner license-keygen license-issue
 
 # load .env
 # https://lithic.tech/blog/2020-05/makefile-dot-env
@@ -14,6 +14,12 @@ RUNNER_LABELS ?= self-hosted,laptop-build
 RUNNER_NAME ?= $(shell hostname)-dekart-laptop
 GITHUB_RUNNER_TOKEN ?= $(RUNNER_TOKEN)
 RUNNER_VERSION ?= 2.328.0
+PSQL ?= psql
+LOCAL_DEV_POSTGRES_HOST ?= $(or $(DEKART_POSTGRES_HOST),localhost)
+LOCAL_DEV_POSTGRES_PORT ?= $(or $(DEKART_POSTGRES_PORT),5432)
+LOCAL_DEV_POSTGRES_USER ?= $(or $(DEKART_POSTGRES_USER),postgres)
+LOCAL_DEV_POSTGRES_PASSWORD ?= $(DEKART_POSTGRES_PASSWORD)
+LOCAL_DEV_POSTGRES_DB ?= $(or $(DEKART_POSTGRES_DB),dekart)
 
 proto-clean:
 	rm -rf ./src/proto/*.go
@@ -140,6 +146,16 @@ cloudsql:
 
 sqlite:
 	docker-compose  --env-file .env --profile sqlite up
+
+expire-local-trials:
+	@case "$(LOCAL_DEV_POSTGRES_HOST)" in localhost|127.0.0.1|"") ;; *) echo "Refusing to expire trials on non-local Postgres host: $(LOCAL_DEV_POSTGRES_HOST)"; exit 1 ;; esac
+	@PGPASSWORD="$(LOCAL_DEV_POSTGRES_PASSWORD)" "$(PSQL)" \
+		-h "$(LOCAL_DEV_POSTGRES_HOST)" \
+		-p "$(LOCAL_DEV_POSTGRES_PORT)" \
+		-U "$(LOCAL_DEV_POSTGRES_USER)" \
+		-d "$(LOCAL_DEV_POSTGRES_DB)" \
+		-v ON_ERROR_STOP=1 \
+		-Atc "WITH updated AS (UPDATE subscription_log SET trial_ends_at = NOW() - INTERVAL '1 minute' WHERE plan_type = 6 RETURNING 1) SELECT count(*) || ' trial subscription rows expired' FROM updated;"
 
 
 define run_server

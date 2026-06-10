@@ -145,7 +145,6 @@ func (s Server) UpdateDatasetName(ctx context.Context, req *proto.UpdateDatasetN
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-
 	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
@@ -157,6 +156,9 @@ func (s Server) UpdateDatasetName(ctx context.Context, req *proto.UpdateDatasetN
 		err := fmt.Errorf("dataset not found id:%s", req.DatasetId)
 		log.Warn().Err(err).Msg("Dataset not found")
 		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if err := s.requireReportWorkspaceWrite(ctx, *reportID); err != nil {
+		return nil, err
 	}
 
 	_, err = s.db.ExecContext(ctx,
@@ -199,7 +201,6 @@ func (s Server) UpdateDatasetConnection(ctx context.Context, req *proto.UpdateDa
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-
 	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
@@ -211,6 +212,9 @@ func (s Server) UpdateDatasetConnection(ctx context.Context, req *proto.UpdateDa
 		err := fmt.Errorf("dataset not found id:%s", req.DatasetId)
 		log.Warn().Err(err).Msg("Dataset not found")
 		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if err := s.requireReportWorkspaceWrite(ctx, *reportID); err != nil {
+		return nil, err
 	}
 
 	err = s.updateDatasetConnection(ctx, req.DatasetId, req.ConnectionId)
@@ -246,6 +250,9 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 		err := fmt.Errorf("dataset not found id:%s", req.DatasetId)
 		log.Warn().Err(err).Msg("Dataset not found")
 		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if err := s.requireReportWorkspaceWrite(ctx, *reportID); err != nil {
+		return nil, err
 	}
 
 	// s.jobs.Cancel(req.QueryId)
@@ -333,6 +340,9 @@ func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetReque
 			Str("author_email", claims.Email).
 			Msg("CreateDataset called with invalid report_id format")
 		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid report_id format: %v", err))
+	}
+	if err := s.requireReportWorkspaceWrite(ctx, reportID); err != nil {
+		return nil, err
 	}
 	datasetID, result, err := s.insertDataset(ctx, reportID)
 

@@ -180,6 +180,10 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
+	if err := s.requireReportWorkspaceWrite(ctx, *reportId); err != nil {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
 
 	connection, err := s.getConnectionFromFileID(ctx, fileId)
 
@@ -284,6 +288,9 @@ func (s Server) CreateFile(ctx context.Context, req *proto.CreateFileRequest) (*
 		log.Warn().Err(err).Msg("dataset not found or permission not granted")
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
+	if err := s.requireReportWorkspaceWrite(ctx, *reportID); err != nil {
+		return nil, err
+	}
 
 	id := newUUID()
 
@@ -351,6 +358,9 @@ func (s Server) ReplaceFile(ctx context.Context, req *proto.ReplaceFileRequest) 
 		err := fmt.Errorf("dataset not found or permission not granted")
 		log.Warn().Err(err).Msg("dataset not found or permission not granted")
 		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if err := s.requireReportWorkspaceWrite(ctx, *reportID); err != nil {
+		return nil, err
 	}
 
 	newFileID := newUUID()

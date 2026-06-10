@@ -8,7 +8,7 @@ import Plans from './Plans'
 import { Loading } from './Loading'
 
 function TrialBanner () {
-  const expired = useSelector(state => state.workspace.expired)
+  const expired = useSelector(state => state.workspace.subscription?.expired)
   const isTrial = useSelector(state => state.user.isTrial)
   if (!expired) {
     return null

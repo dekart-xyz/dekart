@@ -471,8 +471,8 @@ func (s Server) SetDefaultConnection(ctx context.Context, req *proto.SetDefaultC
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	if checkWorkspace(ctx).Expired {
-		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	if err := requireWorkspaceWrite(ctx); err != nil {
+		return nil, err
 	}
 	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "only admins can edit connections")
@@ -497,8 +497,8 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	if checkWorkspace(ctx).Expired {
-		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	if err := requireWorkspaceWrite(ctx); err != nil {
+		return nil, err
 	}
 	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "only admins can edit connections")
@@ -699,8 +699,8 @@ func (s Server) ArchiveConnection(ctx context.Context, req *proto.ArchiveConnect
 		return nil, Unauthenticated
 	}
 	workspaceInfo := checkWorkspace(ctx)
-	if workspaceInfo.Expired {
-		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	if err := requireWorkspaceWrite(ctx); err != nil {
+		return nil, err
 	}
 	if workspaceInfo.UserRole != proto.UserRole_ROLE_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "only admins can edit connections")
@@ -851,8 +851,8 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 	if workspaceInfo.ID == "" {
 		return nil, status.Error(codes.NotFound, "workspace not found")
 	}
-	if workspaceInfo.Expired {
-		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	if err := requireWorkspaceWrite(ctx); err != nil {
+		return nil, err
 	}
 	if workspaceInfo.UserRole != proto.UserRole_ROLE_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "only admins can create connections")

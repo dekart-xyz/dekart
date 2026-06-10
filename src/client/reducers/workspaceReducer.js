@@ -7,7 +7,8 @@ export default function workspace (state = {
   users: [],
   invites: [],
   addedUsersCount: NaN,
-  expired: null
+  readOnly: null,
+  readOnlyReason: null
 }, action) {
   switch (action.type) {
     case workspaceUpdate.name:
@@ -18,7 +19,8 @@ export default function workspace (state = {
         users: action.usersList || [],
         invites: action.invitesList || [],
         addedUsersCount: action.addedUsersCount,
-        expired: action.subscription ? action.subscription.expired : false
+        readOnly: action.readOnly,
+        readOnlyReason: action.readOnlyReason
       }
     default:
       return state

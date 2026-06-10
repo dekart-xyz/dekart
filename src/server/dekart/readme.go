@@ -20,6 +20,9 @@ func (s Server) AddReadme(ctx context.Context, req *proto.AddReadmeRequest) (*pr
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	if err := requireWorkspaceWrite(ctx); err != nil {
+		return nil, err
+	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -72,6 +75,9 @@ func (s Server) RemoveReadme(ctx context.Context, req *proto.RemoveReadmeRequest
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
+	}
+	if err := requireWorkspaceWrite(ctx); err != nil {
+		return nil, err
 	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {

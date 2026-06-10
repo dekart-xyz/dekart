@@ -17,7 +17,7 @@ func (s Server) checkCreateReportGate(ctx context.Context, claimsEmail string, w
 	if workspaceInfo.IsPlayground || workspaceInfo.IsDefaultWorkspace {
 		return true, 0, nil, nil
 	}
-	if workspaceInfo.PlanType != proto.PlanType_TYPE_PERSONAL && !workspaceInfo.Expired {
+	if workspaceInfo.PlanType != proto.PlanType_TYPE_PERSONAL && !workspaceInfo.ReadOnly {
 		return true, 0, nil, nil
 	}
 	companyDomain, err := user.CompanyDomainFromEmail(claimsEmail)

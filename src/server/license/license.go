@@ -80,8 +80,21 @@ func ValidateToken(tokenString string) (TokenInfo, error) {
 	return ValidateTokenWithPublicKey(tokenString, publicKeyPEM)
 }
 
+// ValidateTokenAllowExpired validates a license token while preserving expired claim data.
+func ValidateTokenAllowExpired(tokenString string) (TokenInfo, error) {
+	publicKeyPEM, err := os.ReadFile(defaultPublicKeyPath)
+	if err != nil {
+		return TokenInfo{}, fmt.Errorf("read license public key from %s: %w", defaultPublicKeyPath, err)
+	}
+	return validateTokenWithPublicKey(tokenString, publicKeyPEM, true)
+}
+
 // ValidateTokenWithPublicKey validates a DEKART_LICENSE_KEY token using a provided public key.
 func ValidateTokenWithPublicKey(tokenString string, publicKeyPEM []byte) (TokenInfo, error) {
+	return validateTokenWithPublicKey(tokenString, publicKeyPEM, false)
+}
+
+func validateTokenWithPublicKey(tokenString string, publicKeyPEM []byte, allowExpired bool) (TokenInfo, error) {
 	key := strings.TrimSpace(tokenString)
 	if key == "" {
 		return TokenInfo{}, errors.New("license key is empty")
@@ -99,12 +112,26 @@ func ValidateTokenWithPublicKey(tokenString string, publicKeyPEM []byte) (TokenI
 		return publicKey, nil
 	})
 	if err != nil {
+		var validationErr *jwt.ValidationError
+		if allowExpired && errors.As(err, &validationErr) && validationErr.Errors == jwt.ValidationErrorExpired {
+			parser := jwt.Parser{SkipClaimsValidation: true}
+			token, err = parser.Parse(key, func(t *jwt.Token) (interface{}, error) {
+				if t.Method != jwt.SigningMethodRS256 {
+					return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+				}
+				return publicKey, nil
+			})
+			if err == nil {
+				goto parseClaims
+			}
+		}
 		return TokenInfo{}, fmt.Errorf("invalid license key: %w", err)
 	}
 	if !token.Valid {
 		return TokenInfo{}, errors.New("invalid license key")
 	}
 
+parseClaims:
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
 		return TokenInfo{}, errors.New("invalid license key claims")

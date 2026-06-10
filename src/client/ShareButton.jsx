@@ -139,6 +139,7 @@ function ViewAnalytics () {
 
 function DirectAccess () {
   const { canWrite, isSharable, isPublic } = useSelector(state => state.report)
+  const readOnly = useSelector(state => state.workspace.readOnly)
   const isSnowpark = useSelector(state => state.env.isSnowpark)
   const isSelfHosted = useSelector(state => state.user.isSelfHosted)
   const reportDirectAccessEmails = useSelector(state => state.reportDirectAccessEmails)
@@ -154,16 +155,18 @@ function DirectAccess () {
   if (!canWrite || isSelfHosted) {
     return null
   }
-  const disabledReason =
-    !isSharable
-      ? 'Direct email sharing is unavailable for this map configuration.'
-      : isPublic
-        ? 'Turn off public sharing to invite specific users by email.'
-        : isDefaultWorkspace
-          ? 'Direct email sharing is unavailable in the default workspace.'
-          : isSnowpark
-            ? 'Direct email sharing is unavailable in Snowpark mode.'
-            : ''
+  let disabledReason = ''
+  if (readOnly) {
+    disabledReason = 'Workspace is read-only.'
+  } else if (!isSharable) {
+    disabledReason = 'Direct email sharing is unavailable for this map configuration.'
+  } else if (isPublic) {
+    disabledReason = 'Turn off public sharing to invite specific users by email.'
+  } else if (isDefaultWorkspace) {
+    disabledReason = 'Direct email sharing is unavailable in the default workspace.'
+  } else if (isSnowpark) {
+    disabledReason = 'Direct email sharing is unavailable in Snowpark mode.'
+  }
   const disabled = Boolean(disabledReason) || loading
 
   return (
@@ -218,7 +221,8 @@ function TrackViewers () {
   const { canWrite } = useSelector(state => state.report)
   const isSnowpark = useSelector(state => state.env.isSnowpark)
   const authEnabled = useSelector(state => state.env.authEnabled)
-  const disabled = !authEnabled
+  const readOnly = useSelector(state => state.workspace.readOnly)
+  const disabled = !authEnabled || readOnly
   if (isSnowpark) {
     return null
   }
@@ -244,6 +248,7 @@ function TrackViewers () {
 function PublicPermissions () {
   const { isPublic, isPlayground, canWrite } = useSelector(state => state.report)
   const isSelfHosted = useSelector(state => state.user.isSelfHosted)
+  const readOnly = useSelector(state => state.workspace.readOnly)
   if (isSelfHosted) {
     return null
   }
@@ -253,7 +258,7 @@ function PublicPermissions () {
   ) {
     return null
   }
-  const disabledReason = isSelfHosted ? 'Public link sharing settings are unavailable in self-hosted mode.' : ''
+  const disabledReason = readOnly ? 'Workspace is read-only.' : isSelfHosted ? 'Public link sharing settings are unavailable in self-hosted mode.' : ''
   const disabled = Boolean(disabledReason) || isPlayground
   return (
     <div className={styles.boolStatus}>
@@ -271,7 +276,8 @@ function PublicPermissions () {
 function AllowExportData () {
   const { allowExport, canWrite, id } = useSelector(state => state.report)
   const authEnabled = useSelector(state => state.env.authEnabled)
-  const disabled = !authEnabled
+  const readOnly = useSelector(state => state.workspace.readOnly)
+  const disabled = !authEnabled || readOnly
   const [switchState, setSwitchState] = useState(allowExport)
   const dispatch = useDispatch()
   if (
@@ -402,11 +408,14 @@ function WorkspacePermissionsSelect ({ disabled = false }) {
 }
 function WorkspacePermissions () {
   const { canWrite, discoverable, isSharable } = useSelector(state => state.report)
+  const readOnly = useSelector(state => state.workspace.readOnly)
   if (!canWrite && !discoverable) { // show only for discoverable workspace reports
     return null
   }
   let disabledReason = ''
-  if (!isSharable) {
+  if (readOnly) {
+    disabledReason = 'Workspace is read-only.'
+  } else if (!isSharable) {
     disabledReason = 'Workspace-level sharing is unavailable for this map configuration.'
   }
   const disabled = Boolean(disabledReason)
@@ -510,6 +519,7 @@ export default function ShareButton () {
   const isSnowpark = useSelector(state => state.env.isSnowpark)
   const analyticsModalOpen = useSelector(state => state.analytics.modalOpen)
   const hasDirectAccess = useSelector(state => state.report.hasDirectAccess)
+  const readOnly = useSelector(state => state.workspace.readOnly)
   useEffect(() => {
     if (analyticsModalOpen) {
       setModalOpen(false)
@@ -552,7 +562,7 @@ export default function ShareButton () {
         bodyStyle={{ padding: '0px' }}
         footer={
           <div className={styles.modalFooter}>
-            {workspaceId && !isSnowpark ? <Button icon='+ ' type='primary' href='/workspace/members' onClick={() => track('AddUsersToWorkspaceFromShareModal')}>Add users to workspace</Button> : null}
+            {workspaceId && !isSnowpark ? <Button icon='+ ' type='primary' href='/workspace/members' disabled={readOnly} title={readOnly ? 'Workspace is read-only' : undefined} onClick={() => track('AddUsersToWorkspaceFromShareModal')}>Add users to workspace</Button> : null}
             <div className={styles.modalFooterSpacer} />
             <CopyLinkButton />
             <Button

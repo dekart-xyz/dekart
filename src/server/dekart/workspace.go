@@ -219,8 +219,14 @@ func (s Server) CreateWorkspace(ctx context.Context, req *proto.CreateWorkspaceR
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	if err := s.requireRuntimeLicenseWrite(); err != nil {
+		return nil, err
+	}
 	if !user.CanCreateWorkspace() {
 		return nil, status.Error(codes.PermissionDenied, "Workspace creation is disabled")
+	}
+	if err := requireWorkspaceWrite(ctx); err != nil {
+		return nil, err
 	}
 	workspaceID := newUUID()
 	_, err := s.db.ExecContext(ctx, `
@@ -258,8 +264,8 @@ func (s Server) UpdateWorkspace(ctx context.Context, req *proto.UpdateWorkspaceR
 	if workspaceInfo.ID == "" {
 		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
-	if workspaceInfo.Expired {
-		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	if err := requireWorkspaceWrite(ctx); err != nil {
+		return nil, err
 	}
 	if workspaceInfo.UserRole != proto.UserRole_ROLE_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Only admins can update workspace")
@@ -514,7 +520,8 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 	}
 	var workspaceId string
 	var planType proto.PlanType
-	var expired bool
+	var readOnly bool
+	var readOnlyReason proto.GetWorkspaceResponse_ReadOnlyReason
 	var name string
 	var addedUsersCount int64 = 0
 	var billedUsers int64 = 0
@@ -542,7 +549,14 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 		}
 		if subscription != nil {
 			planType = subscription.PlanType
-			expired = subscription.Expired
+			if subscription.Expired {
+				readOnly = true
+				readOnlyReason = proto.GetWorkspaceResponse_READ_ONLY_REASON_SUBSCRIPTION_EXPIRED
+			}
+		}
+		if s.runtimeLicenseReadOnly() {
+			readOnly = true
+			readOnlyReason = proto.GetWorkspaceResponse_READ_ONLY_REASON_LICENSE_KEY_EXPIRED
 		}
 		addedUsersCount, billedUsers, err = s.countActiveWorkspaceUsers(ctx, workspaceId)
 		if err != nil {
@@ -564,7 +578,8 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 		BilledUsers:        billedUsers,
 		IsDefaultWorkspace: isDefaultWorkspace,
 		UserRole:           userRole,
-		Expired:            expired,
+		ReadOnly:           readOnly,
+		ReadOnlyReason:     readOnlyReason,
 	})
 	return ctx
 }
@@ -632,6 +647,8 @@ func (s Server) GetWorkspace(ctx context.Context, req *proto.GetWorkspaceRequest
 		Users:           users,
 		Invites:         invites,
 		AddedUsersCount: workspaceInfo.AddedUsersCount,
+		ReadOnly:        workspaceInfo.ReadOnly,
+		ReadOnlyReason:  workspaceInfo.ReadOnlyReason,
 	}, nil
 }
 
@@ -644,8 +661,8 @@ func (s Server) UpdateWorkspaceUser(ctx context.Context, req *proto.UpdateWorksp
 	if workspaceInfo.ID == "" {
 		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
-	if workspaceInfo.Expired {
-		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	if err := requireWorkspaceWrite(ctx); err != nil {
+		return nil, err
 	}
 	if workspaceInfo.UserRole != proto.UserRole_ROLE_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Only admin can update users")
@@ -756,7 +773,34 @@ func (s Server) RespondToInvite(ctx context.Context, req *proto.RespondToInviteR
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	_, err := s.db.ExecContext(ctx, `
+	if err := s.requireRuntimeLicenseWrite(); err != nil {
+		return nil, err
+	}
+	var workspaceID string
+	err := s.db.QueryRowContext(ctx, `
+		SELECT workspace_id
+		FROM workspace_log
+		WHERE id = $1
+	`, req.InviteId).Scan(&workspaceID)
+	if err == sql.ErrNoRows {
+		return nil, status.Error(codes.NotFound, "Invite not found")
+	}
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	subscription, err := s.getSubscription(ctx, workspaceID)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if subscription != nil && subscription.Expired {
+		return nil, workspaceReadOnlyError(user.WorkspaceInfo{
+			ReadOnly:       true,
+			ReadOnlyReason: proto.GetWorkspaceResponse_READ_ONLY_REASON_SUBSCRIPTION_EXPIRED,
+		})
+	}
+	_, err = s.db.ExecContext(ctx, `
 		INSERT INTO confirmation_log (workspace_log_id, accepted, authored_by)
 		VALUES ($1, $2, $3)
 	`, req.InviteId, req.Accept, claims.Email)

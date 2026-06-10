@@ -21,6 +21,7 @@ export default function DekartMenu () {
   const isPlayground = useSelector(state => state.user.isPlayground)
   const isSnowpark = useSelector(state => state.env.isSnowpark)
   const isViewer = useSelector(state => state.user.isViewer)
+  const readOnly = useSelector(state => state.workspace.readOnly)
   const isBigQueryDatasource = env.variables.DATASOURCE === 'BQ'
   const hasBigQueryConnection = connections.some(connection => connection.connectionType === ConnectionType.CONNECTION_TYPE_BIGQUERY)
   const showBigQueryOvertureSkill = isBigQueryDatasource || hasBigQueryConnection
@@ -63,7 +64,7 @@ export default function DekartMenu () {
             : null}
           <Menu.Item
             key='create'
-            disabled={isViewer}
+            disabled={isViewer || readOnly}
             onClick={() => {
               track('CreateNewMap')
               dispatch(createReport())

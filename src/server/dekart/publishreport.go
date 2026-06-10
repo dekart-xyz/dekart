@@ -414,6 +414,9 @@ func (s Server) PublishReport(ctx context.Context, req *proto.PublishReportReque
 		log.Warn().Err(err).Msg("Report not found while publishing report")
 		return nil, err
 	}
+	if err := s.requireReportWorkspaceWrite(ctx, req.ReportId); err != nil {
+		return nil, err
+	}
 	if !report.CanWrite {
 		err := status.Errorf(codes.PermissionDenied, "no permission to publish report %s", req.ReportId)
 		log.Warn().Err(err).Msg("No permission to publish report")

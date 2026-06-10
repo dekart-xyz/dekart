@@ -128,6 +128,11 @@ func (s *Server) HandleMCPCall(w http.ResponseWriter, r *http.Request) {
 
 // callMCPTool dispatches one named MCP tool to existing RPC/upload handlers.
 func (s *Server) callMCPTool(ctx context.Context, request *mcpCallRequest) (json.RawMessage, error) {
+	if isMCPWriteTool(request.Name) {
+		if err := requireWorkspaceWrite(ctx); err != nil {
+			return nil, err
+		}
+	}
 	switch request.Name {
 	case "list_connections":
 		return s.callListConnectionsTool(ctx)
@@ -177,6 +182,33 @@ func (s *Server) callMCPTool(ctx context.Context, request *mcpCallRequest) (json
 		return s.callAbortFileUploadSessionTool(ctx, request.Arguments)
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", request.Name)
+	}
+}
+
+func isMCPWriteTool(name string) bool {
+	switch name {
+	case "create_connection",
+		"create_report",
+		"create_dataset",
+		"create_query",
+		"update_query",
+		"run_query",
+		"remove_dataset",
+		"create_file",
+		"replace_file",
+		"update_report_title",
+		"update_report_map_config",
+		"add_report_readme",
+		"update_report_readme",
+		"remove_report_readme",
+		"update_dataset_name",
+		"create_report_snapshot",
+		"start_file_upload_session",
+		"complete_file_upload_session",
+		"abort_file_upload_session":
+		return true
+	default:
+		return false
 	}
 }
 
@@ -363,6 +395,9 @@ func (s *Server) callUpdateQueryTool(ctx context.Context, raw json.RawMessage) (
 	if report == nil {
 		return nil, status.Error(codes.NotFound, fmt.Sprintf("report not found id:%s", queryDetails.ReportID))
 	}
+	if err := s.requireReportWorkspaceWrite(ctx, queryDetails.ReportID); err != nil {
+		return nil, err
+	}
 	if !report.CanWrite {
 		return nil, status.Error(codes.PermissionDenied, "permission denied")
 	}
@@ -492,8 +527,8 @@ func (s *Server) callUpdateReportTitleTool(ctx context.Context, raw json.RawMess
 		return nil, Unauthenticated
 	}
 	workspaceInfo := checkWorkspace(ctx)
-	if workspaceInfo.Expired {
-		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	if err := requireWorkspaceWrite(ctx); err != nil {
+		return nil, err
 	}
 	if _, err := uuid.Parse(request.ReportId); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -558,8 +593,8 @@ func (s *Server) callUpdateReportMapConfigTool(ctx context.Context, raw json.Raw
 		return nil, Unauthenticated
 	}
 	workspaceInfo := checkWorkspace(ctx)
-	if workspaceInfo.Expired {
-		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	if err := requireWorkspaceWrite(ctx); err != nil {
+		return nil, err
 	}
 	if _, err := uuid.Parse(request.ReportId); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())

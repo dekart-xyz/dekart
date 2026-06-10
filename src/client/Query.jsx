@@ -410,9 +410,11 @@ function SampleQuery ({ queryId }) {
 export default function Query ({ query }) {
   const { canRun, queryText } = useSelector(state => state.queryStatus[query.id])
   const { canWrite } = useSelector(state => state.report)
+  const readOnly = useSelector(state => state.workspace.readOnly)
   const edit = useSelector(state => state.reportStatus.edit)
   const dispatch = useDispatch()
-  const canExecute = canWrite && edit && canRun && queryText
+  const canMutate = canWrite && edit && !readOnly
+  const canExecute = canMutate && canRun && queryText
   const executeQuery = useCallback(() => {
     track('QueryExecute', { queryId: query.id })
     dispatch(runQuery(query.id, queryText))
@@ -424,7 +426,7 @@ export default function Query ({ query }) {
         queryId={query.id}
         queryText={queryText}
         onChange={value => dispatch(queryChanged(query.id, value))}
-        canWrite={canWrite && edit}
+        canWrite={canMutate}
         canExecute={canExecute}
         onExecute={executeQuery}
       />
@@ -437,7 +439,7 @@ export default function Query ({ query }) {
                 size='large'
                 disabled={!canExecute}
                 icon={<SendOutlined />}
-                title='Execute query (Cmd/Ctrl+Enter)'
+                title={readOnly ? 'Workspace is read-only' : 'Execute query (Cmd/Ctrl+Enter)'}
                 onClick={executeQuery}
               >Execute
               </Button>
