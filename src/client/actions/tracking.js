@@ -12,8 +12,11 @@ export function trackEventToServer (eventName, eventDataProps) {
     request.setEventName(eventName)
     request.setEventDataJson(JSON.stringify(eventDataProps))
 
-    // Fire and forget - we don't care about the response or errors
-    // This is silently handled by the grpcCall function
-    dispatch(grpcCall(Dekart.TrackEvent, request))
+    return new Promise((resolve, reject) => {
+      dispatch(grpcCall(Dekart.TrackEvent, request, resolve, (err) => {
+        reject(err)
+        return null
+      }))
+    })
   }
 }

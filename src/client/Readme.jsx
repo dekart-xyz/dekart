@@ -16,6 +16,7 @@ import 'ace-builds/src-noconflict/ext-emmet'
 
 export default function Readme ({ readme }) {
   const { canWrite } = useSelector(state => state.report)
+  const readOnly = useSelector(state => state.workspace.readOnly)
   const { edit } = useSelector(state => state.reportStatus)
   const showPreview = useSelector(state => state.readme.showPreview)
   const markdown = useSelector(state => state.readme.markdown)
@@ -30,7 +31,7 @@ export default function Readme ({ readme }) {
             track('ToggleReadmePreview', { showPreview: !showPreview })
             dispatch(setPreview(!showPreview))
           }}
-        >{showPreview ? (canWrite && edit ? 'Edit' : 'Markdown') : (canWrite && edit ? 'Preview' : 'View')}
+        >{showPreview ? (canWrite && edit && !readOnly ? 'Edit' : 'Markdown') : (canWrite && edit && !readOnly ? 'Preview' : 'View')}
         </Button>
       </div>
       <AutoSizer>
@@ -67,14 +68,14 @@ export default function Readme ({ readme }) {
                 onChange={v => dispatch(setReadmeValue(v))}
                 value={markdown}
                 enableSnippets={false}
-                readOnly={!(canWrite && edit)}
+                readOnly={!(canWrite && edit && !readOnly)}
                 editorProps={{ $blockScrolling: true }}
                 setOptions={{
                   enableBasicAutocompletion: true,
                   enableLiveAutocompletion: true,
                   enableSnippets: true,
-                  highlightActiveLine: canWrite,
-                  highlightGutterLine: canWrite
+                  highlightActiveLine: canWrite && !readOnly,
+                  highlightGutterLine: canWrite && !readOnly
                 }}
               />
         )}

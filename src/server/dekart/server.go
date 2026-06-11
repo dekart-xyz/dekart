@@ -32,14 +32,25 @@ type Server struct {
 	storage       storage.Storage
 	notifications notifications.Service
 	proto.UnimplementedDekartServer
-	jobs job.Store
+	jobs         job.Store
+	licenseState RuntimeLicenseState
 }
 
 // Unauthenticated error returned when no user claims in context
 var Unauthenticated error = status.Error(codes.Unauthenticated, "UNAUTHENTICATED")
 
+type RuntimeLicenseState struct {
+	Required  bool
+	ExpiresAt *time.Time
+}
+
 // NewServer returns new Dekart Server
 func NewServer(db *sql.DB, storageBucket storage.Storage, jobs job.Store) *Server {
+	return NewServerWithRuntimeLicense(db, storageBucket, jobs, RuntimeLicenseState{})
+}
+
+// NewServerWithRuntimeLicense returns a Dekart server with runtime license state.
+func NewServerWithRuntimeLicense(db *sql.DB, storageBucket storage.Storage, jobs job.Store, licenseState RuntimeLicenseState) *Server {
 	server := Server{
 		db:            db,
 		reportStreams: report.NewStreams(),
@@ -47,12 +58,85 @@ func NewServer(db *sql.DB, storageBucket storage.Storage, jobs job.Store) *Serve
 		storage:       storageBucket,
 		jobs:          jobs,
 		notifications: notifications.NewFromEnv(),
+		licenseState:  licenseState,
 	}
 	if IsSqlite() {
 		go server.startBackups()
 	}
 	return &server
 
+}
+
+func (s Server) runtimeLicenseReadOnly() bool {
+	if !s.licenseState.Required || s.licenseState.ExpiresAt == nil {
+		return false
+	}
+	return !time.Now().Before(*s.licenseState.ExpiresAt)
+}
+
+func workspaceReadOnlyError(workspaceInfo user.WorkspaceInfo) error {
+	if workspaceInfo.ReadOnlyReason == proto.GetWorkspaceResponse_READ_ONLY_REASON_LICENSE_KEY_EXPIRED {
+		return status.Error(codes.PermissionDenied, "license key expired; update DEKART_LICENSE_KEY to edit this workspace")
+	}
+	return status.Error(codes.PermissionDenied, "workspace is read-only")
+}
+
+func requireWorkspaceWrite(ctx context.Context) error {
+	workspaceInfo := checkWorkspace(ctx)
+	if workspaceInfo.ReadOnly {
+		return workspaceReadOnlyError(workspaceInfo)
+	}
+	return nil
+}
+
+func (s Server) requireWorkspaceIDWrite(ctx context.Context, workspaceID string) error {
+	if err := s.requireRuntimeLicenseWrite(); err != nil {
+		return err
+	}
+	subscription, err := s.getSubscription(ctx, workspaceID)
+	if err != nil {
+		return status.Error(codes.Internal, err.Error())
+	}
+	if subscription != nil && subscription.Expired {
+		return workspaceReadOnlyError(user.WorkspaceInfo{
+			ReadOnly:       true,
+			ReadOnlyReason: proto.GetWorkspaceResponse_READ_ONLY_REASON_SUBSCRIPTION_EXPIRED,
+		})
+	}
+	return nil
+}
+
+func (s Server) requireReportWorkspaceWrite(ctx context.Context, reportID string) error {
+	var workspaceID sql.NullString
+	var isPlayground bool
+	err := s.db.QueryRowContext(ctx, `
+		SELECT workspace_id, is_playground
+		FROM reports
+		WHERE id = $1
+	`, reportID).Scan(&workspaceID, &isPlayground)
+	if err == sql.ErrNoRows {
+		return status.Error(codes.NotFound, "report not found")
+	}
+	if err != nil {
+		return status.Error(codes.Internal, err.Error())
+	}
+	if isPlayground {
+		return s.requireRuntimeLicenseWrite()
+	}
+	if !workspaceID.Valid {
+		return status.Error(codes.Internal, "report workspace is empty")
+	}
+	return s.requireWorkspaceIDWrite(ctx, workspaceID.String)
+}
+
+func (s Server) requireRuntimeLicenseWrite() error {
+	if s.runtimeLicenseReadOnly() {
+		return workspaceReadOnlyError(user.WorkspaceInfo{
+			ReadOnly:       true,
+			ReadOnlyReason: proto.GetWorkspaceResponse_READ_ONLY_REASON_LICENSE_KEY_EXPIRED,
+		})
+	}
+	return nil
 }
 
 // Shutdown cancels all jobs

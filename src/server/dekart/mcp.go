@@ -9,6 +9,7 @@ import (
 	"dekart/src/server/mcp"
 	"dekart/src/server/mcpschema"
 	"dekart/src/server/query"
+	"dekart/src/server/secrets"
 	"dekart/src/server/user"
 	"encoding/json"
 	"errors"
@@ -55,6 +56,13 @@ type mcpValidationErrorResponse struct {
 	Error  string                     `json:"error"`
 	Issues []mapConfigValidationIssue `json:"issues"`
 }
+
+type addReportReadmeMCPArgs struct {
+	ReportId string `json:"report_id"`
+	Markdown string `json:"markdown"`
+}
+
+const mcpBigQueryServiceAccountRequiredMessage = "BigQuery via MCP requires a service-account-backed connection"
 
 // HandleCreateReport wraps CreateReport RPC with protojson HTTP endpoint.
 func (s *Server) HandleCreateReport(w http.ResponseWriter, r *http.Request) {
@@ -128,6 +136,11 @@ func (s *Server) HandleMCPCall(w http.ResponseWriter, r *http.Request) {
 
 // callMCPTool dispatches one named MCP tool to existing RPC/upload handlers.
 func (s *Server) callMCPTool(ctx context.Context, request *mcpCallRequest) (json.RawMessage, error) {
+	if isMCPWriteTool(request.Name) {
+		if err := requireWorkspaceWrite(ctx); err != nil {
+			return nil, err
+		}
+	}
 	switch request.Name {
 	case "list_connections":
 		return s.callListConnectionsTool(ctx)
@@ -180,6 +193,33 @@ func (s *Server) callMCPTool(ctx context.Context, request *mcpCallRequest) (json
 	}
 }
 
+func isMCPWriteTool(name string) bool {
+	switch name {
+	case "create_connection",
+		"create_report",
+		"create_dataset",
+		"create_query",
+		"update_query",
+		"run_query",
+		"remove_dataset",
+		"create_file",
+		"replace_file",
+		"update_report_title",
+		"update_report_map_config",
+		"add_report_readme",
+		"update_report_readme",
+		"remove_report_readme",
+		"update_dataset_name",
+		"create_report_snapshot",
+		"start_file_upload_session",
+		"complete_file_upload_session",
+		"abort_file_upload_session":
+		return true
+	default:
+		return false
+	}
+}
+
 // sanitizeConnectionForMCP strips secrets from connection payloads returned by MCP tools.
 func sanitizeConnectionForMCP(connection *proto.Connection) *proto.Connection {
 	if connection == nil {
@@ -229,7 +269,40 @@ func isBigQueryPassthroughConnectionExcludedForMCP(connection *proto.Connection)
 	if connection.ConnectionType != proto.ConnectionType_CONNECTION_TYPE_BIGQUERY {
 		return false
 	}
+	if connection.GetId() == conn.SystemConnectionID && os.Getenv("DEKART_CLOUD") == "" {
+		return false
+	}
 	return connection.BigqueryKey == nil
+}
+
+func requireMCPBigQueryServiceAccount(ctx context.Context, connection *proto.Connection) error {
+	if isBigQueryPassthroughConnectionExcludedForMCP(connection) {
+		return status.Error(codes.FailedPrecondition, mcpBigQueryServiceAccountRequiredMessage)
+	}
+	if connection == nil || connection.ConnectionType != proto.ConnectionType_CONNECTION_TYPE_BIGQUERY {
+		return nil
+	}
+	if connection.BigqueryKey == nil {
+		return nil
+	}
+	if connection.BigqueryKey.ServerEncrypted != "" {
+		return nil
+	}
+	if secrets.SecretToString(connection.BigqueryKey, user.GetClaims(ctx)) == "" {
+		return status.Error(codes.FailedPrecondition, mcpBigQueryServiceAccountRequiredMessage)
+	}
+	return nil
+}
+
+func (s *Server) requireMCPCreateQueryConnection(ctx context.Context, request *proto.CreateQueryRequest) error {
+	connection, err := s.getConnection(ctx, request.GetConnectionId())
+	if err != nil {
+		return status.Error(codes.Internal, err.Error())
+	}
+	if connection == nil && !conn.IsSystemConnectionID(request.GetConnectionId()) {
+		return status.Error(codes.NotFound, "connection not found")
+	}
+	return requireMCPBigQueryServiceAccount(ctx, connection)
 }
 
 // filterConnectionsForMCPRunQueriesScope keeps only MCP-supported connections for
@@ -244,7 +317,10 @@ func filterConnectionsForMCPRunQueriesScope(connections []*proto.Connection) []*
 			if os.Getenv("DEKART_CLOUD") != "" {
 				continue
 			}
-			// Keep system default connection visible for self-hosted deployments.
+			if isBigQueryPassthroughConnectionExcludedForMCP(connection) {
+				continue
+			}
+			// Keep MCP-supported system default connections visible for self-hosted deployments.
 			filtered = append(filtered, connection)
 			continue
 		}
@@ -276,6 +352,9 @@ func (s *Server) callListConnectionsTool(ctx context.Context) (json.RawMessage, 
 func (s *Server) callCreateConnectionTool(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
 	request := &proto.CreateConnectionRequest{}
 	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
+		return nil, err
+	}
+	if err := requireMCPBigQueryServiceAccount(ctx, request.GetConnection()); err != nil {
 		return nil, err
 	}
 	response, err := s.CreateConnection(ctx, request)
@@ -331,7 +410,7 @@ func (s *Server) callCreateQueryTool(ctx context.Context, raw json.RawMessage) (
 	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
 		return nil, err
 	}
-	response, err := s.CreateQuery(ctx, request)
+	response, err := s.createQuery(ctx, request, s.requireMCPCreateQueryConnection)
 	if err != nil {
 		return nil, err
 	}
@@ -344,53 +423,34 @@ func (s *Server) callUpdateQueryTool(ctx context.Context, raw json.RawMessage) (
 	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
 		return nil, err
 	}
-	if user.GetClaims(ctx) == nil {
-		return nil, Unauthenticated
-	}
-	queryDetails, err := query.GetQueryDetails(ctx, s.db, request.GetQueryId())
+	response, err := s.updateQuery(ctx, request, s.validateMCPUpdateQuery)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, err
 	}
-	if queryDetails.ReportID == "" {
-		return nil, status.Error(codes.NotFound, fmt.Sprintf("query not found id:%s", request.GetQueryId()))
-	}
+	return mcp.MarshalProtoJSON(response)
+}
 
-	// Enforce write permission before any dry-run call to avoid leaking validation behavior.
-	report, err := s.getReport(ctx, queryDetails.ReportID)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	if report == nil {
-		return nil, status.Error(codes.NotFound, fmt.Sprintf("report not found id:%s", queryDetails.ReportID))
-	}
-	if !report.CanWrite {
-		return nil, status.Error(codes.PermissionDenied, "permission denied")
-	}
-
-	var dryRun *proto.QueryDryRunResult
+func (s *Server) validateMCPUpdateQuery(ctx context.Context, request *proto.UpdateQueryRequest, queryDetails *query.QueryDetails) (*proto.QueryDryRunResult, error) {
 	connection, err := s.getConnection(ctx, queryDetails.ConnectionID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	// In USER/self-hosted modes, system/default may resolve to nil connection.
 	// Skip dry-run in that case and allow UpdateQuery to proceed.
-	if connection != nil {
-		dryRun, err = s.dryRunQuery(ctx, connection, request.GetQueryText())
-		if err != nil {
-			return nil, err
-		}
-		if dryRun.GetSupported() && !dryRun.GetValid() {
-			return nil, status.Error(codes.InvalidArgument, dryRun.GetMessage())
-		}
+	if connection == nil {
+		return nil, nil
 	}
-	response, err := s.UpdateQuery(ctx, request)
+	if err := requireMCPBigQueryServiceAccount(ctx, connection); err != nil {
+		return nil, err
+	}
+	dryRun, err := s.dryRunQuery(ctx, connection, request.GetQueryText())
 	if err != nil {
 		return nil, err
 	}
-	if dryRun != nil {
-		response.DryRun = dryRun
+	if dryRun.GetSupported() && !dryRun.GetValid() {
+		return nil, status.Error(codes.InvalidArgument, dryRun.GetMessage())
 	}
-	return mcp.MarshalProtoJSON(response)
+	return dryRun, nil
 }
 
 // callRunQueryTool starts query execution and returns immediately without waiting for completion.
@@ -399,7 +459,7 @@ func (s *Server) callRunQueryTool(ctx context.Context, raw json.RawMessage) (jso
 	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
 		return nil, err
 	}
-	response, err := s.RunQuery(ctx, request)
+	response, err := s.runQueryRequest(ctx, request, requireMCPBigQueryServiceAccount)
 	if err != nil {
 		return nil, err
 	}
@@ -492,8 +552,8 @@ func (s *Server) callUpdateReportTitleTool(ctx context.Context, raw json.RawMess
 		return nil, Unauthenticated
 	}
 	workspaceInfo := checkWorkspace(ctx)
-	if workspaceInfo.Expired {
-		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	if err := requireWorkspaceWrite(ctx); err != nil {
+		return nil, err
 	}
 	if _, err := uuid.Parse(request.ReportId); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -558,8 +618,8 @@ func (s *Server) callUpdateReportMapConfigTool(ctx context.Context, raw json.Raw
 		return nil, Unauthenticated
 	}
 	workspaceInfo := checkWorkspace(ctx)
-	if workspaceInfo.Expired {
-		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	if err := requireWorkspaceWrite(ctx); err != nil {
+		return nil, err
 	}
 	if _, err := uuid.Parse(request.ReportId); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -622,13 +682,17 @@ func (s *Server) callUpdateReportMapConfigTool(ctx context.Context, raw json.Raw
 	return mcp.MarshalProtoJSON(&proto.UpdateReportMapConfigResponse{UpdatedAt: updatedAt.Unix()})
 }
 
-// callAddReportReadmeTool adds readme markdown and optionally removes source dataset.
+// callAddReportReadmeTool adds readme markdown without exposing dataset deletion.
 func (s *Server) callAddReportReadmeTool(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
-	request := &proto.AddReadmeRequest{}
-	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
+	// MCP intentionally excludes from_dataset_id because dataset deletion must be explicit.
+	args := &addReportReadmeMCPArgs{}
+	if err := mcp.DecodeArgs(raw, args); err != nil {
 		return nil, err
 	}
-	response, err := s.AddReadme(ctx, request)
+	response, err := s.AddReadme(ctx, &proto.AddReadmeRequest{
+		ReportId: args.ReportId,
+		Markdown: args.Markdown,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -816,14 +880,16 @@ func mcpToolDefinitions() []mcpTool {
 			Name:         "create_connection",
 			Description:  "Create a new workspace connection. Payload follows CreateConnectionRequest proto with one connection object.",
 			InputSchema:  mcpschema.ForProto(&proto.CreateConnectionRequest{}, []string{"connection"}),
-			WhenToUse:    "Use when user has no suitable connection yet. For BigQuery set connection.connection_type=CONNECTION_TYPE_BIGQUERY and provide connection_name plus bigquery_project_id.",
-			WhenNotToUse: "Do not use to edit existing connections; use update_connection endpoint/RPC flow instead.",
+			WhenToUse:    "Use when user has no suitable connection yet. BigQuery via MCP requires a service-account-backed connection with connection.bigquery_key; project-only BigQuery passthrough is unsupported.",
+			WhenNotToUse: "Do not use to create project-only BigQuery passthrough connections or to edit existing connections; use update_connection endpoint/RPC flow instead.",
 			SideEffects:  []string{"write"},
 			ExampleInput: map[string]any{
 				"connection": map[string]any{
-					"connection_name":     "My BigQuery",
-					"connection_type":     "CONNECTION_TYPE_BIGQUERY",
-					"bigquery_project_id": "my-gcp-project",
+					"connection_name": "My BigQuery Service Account",
+					"connection_type": "CONNECTION_TYPE_BIGQUERY",
+					"bigquery_key": map[string]any{
+						"client_encrypted": "encrypted-service-account-json",
+					},
 				},
 			},
 			NextTools: []string{"list_connections", "create_dataset"},
@@ -969,11 +1035,14 @@ func mcpToolDefinitions() []mcpTool {
 			},
 		},
 		{
-			Name:         "add_report_readme",
-			Description:  "Add report readme markdown; optionally remove source dataset after conversion.",
-			InputSchema:  mcpschema.ForProto(&proto.AddReadmeRequest{}, []string{"report_id", "markdown"}),
+			Name:        "add_report_readme",
+			Description: "Add report readme markdown without changing report datasets.",
+			InputSchema: mcpschema.Object([]string{"report_id", "markdown"}, map[string]any{
+				"report_id": mcpschema.String(),
+				"markdown":  mcpschema.String(),
+			}),
 			WhenToUse:    "Use to create a readme on reports that currently have no readme content.",
-			WhenNotToUse: "Do not use when only report title/map config should change.",
+			WhenNotToUse: "Do not use when only report title/map config should change, or when a dataset should be removed; use remove_dataset explicitly for dataset deletion.",
 			SideEffects:  []string{"write"},
 			ExampleInput: map[string]any{
 				"report_id": "00000000-0000-0000-0000-000000000000",

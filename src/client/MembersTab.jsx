@@ -42,9 +42,9 @@ export default function MembersTab () {
   const [email, setEmail] = useState('')
   const [inviteRole, setInviteRole] = useState(UserRole.ROLE_VIEWER)
   const isAdmin = useSelector(state => state.user.isAdmin)
-  const expired = useSelector(state => state.workspace.expired)
+  const readOnly = useSelector(state => state.workspace.readOnly)
   const hasAuthenticatedUser = Boolean(userStream?.email && userStream.email !== UNKNOWN_EMAIL)
-  const canManageUsers = isAdmin && !expired && hasAuthenticatedUser
+  const canManageUsers = isAdmin && !readOnly && hasAuthenticatedUser
   const isFreemium = useSelector(state => state.user.isFreemium)
   const addUserCb = useCallback(() => {
     if (isFreemium) {
@@ -197,8 +197,8 @@ function RemoveButton ({ email }) {
   const dispatch = useDispatch()
   const userStream = useSelector(state => state.user.stream)
   const isAdmin = useSelector(state => state.user.isAdmin)
-  const expired = useSelector(state => state.workspace.expired)
-  const canManageUsers = isAdmin && !expired && Boolean(userStream?.email && userStream.email !== UNKNOWN_EMAIL)
+  const readOnly = useSelector(state => state.workspace.readOnly)
+  const canManageUsers = isAdmin && !readOnly && Boolean(userStream?.email && userStream.email !== UNKNOWN_EMAIL)
   const disabled = email === userStream?.email || !canManageUsers || removing
 
   if (confirming) {

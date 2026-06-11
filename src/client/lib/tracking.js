@@ -2,6 +2,7 @@
 import { LOCAL_STORAGE_KEY } from './constants'
 
 window.plausible = window.plausible || function () { (window.plausible.q = window.plausible.q || []).push(arguments) }
+const TRACKING_TIMEOUT_MS = 1000
 
 // Store reference to Redux store - will be set by setTrackingStore
 let reduxStore = null
@@ -16,43 +17,67 @@ export function setTrackEventToServer (fn) {
   trackEventToServerFn = fn
 }
 
-export function track (event, props = {}) {
-  if (window.plausible) {
-    setTimeout(async () => {
-      try {
-        // read loginHint here
-        const localStorageValue = window.localStorage.getItem(LOCAL_STORAGE_KEY)
-        let loginHint = null
-        let shortEmailIdValue = null
+export async function track (event, props = {}) {
+  let trackingProps = props
 
-        if (localStorageValue) {
-          try {
-            const parsed = JSON.parse(localStorageValue)
-            loginHint = parsed.loginHint
-            if (loginHint) {
-              shortEmailIdValue = await shortEmailId(loginHint)
-            }
-          } catch (parseError) {
-            console.warn('Failed to parse localStorage:', parseError)
-          }
-        }
+  try {
+    trackingProps = await getTrackingProps(props)
+  } catch (error) {
+    console.warn('Tracking error, falling back to basic tracking:', error)
+  }
 
-        const trackingProps = {
-          ...props,
-          ...(shortEmailIdValue && { seid: shortEmailIdValue })
-        }
-        window.plausible(event, { props: trackingProps })
+  trackPlausible(event, trackingProps)
+  await awaitInternalTracking(event, trackingProps)
+}
 
-        // For Dekart Cloud, also send to server
-        if (reduxStore && trackEventToServerFn) {
-          reduxStore.dispatch(trackEventToServerFn(event, trackingProps))
-        }
-      } catch (error) {
-        // Fallback: track with original props even if loginHint processing fails
-        console.warn('Tracking error, falling back to basic tracking:', error)
-        window.plausible(event, { props })
+async function getTrackingProps (props) {
+  const localStorageValue = window.localStorage.getItem(LOCAL_STORAGE_KEY)
+  let loginHint = null
+  let shortEmailIdValue = null
+
+  if (localStorageValue) {
+    try {
+      const parsed = JSON.parse(localStorageValue)
+      loginHint = parsed.loginHint
+      if (loginHint) {
+        shortEmailIdValue = await shortEmailId(loginHint)
       }
-    }, 0)
+    } catch (parseError) {
+      console.warn('Failed to parse localStorage:', parseError)
+    }
+  }
+
+  return {
+    ...props,
+    ...(shortEmailIdValue && { seid: shortEmailIdValue })
+  }
+}
+
+function trackPlausible (event, props) {
+  if (!window.plausible) {
+    return
+  }
+  setTimeout(() => {
+    try {
+      window.plausible(event, { props })
+    } catch (error) {
+      console.warn('Plausible tracking failed:', error)
+    }
+  }, 0)
+}
+
+async function awaitInternalTracking (event, props) {
+  if (!reduxStore || !trackEventToServerFn) {
+    return
+  }
+
+  const tracking = reduxStore.dispatch(trackEventToServerFn(event, props))
+  const timeout = new Promise(resolve => setTimeout(resolve, TRACKING_TIMEOUT_MS))
+
+  try {
+    await Promise.race([tracking, timeout])
+  } catch (error) {
+    console.warn('Internal tracking failed:', error)
   }
 }
 

@@ -22,13 +22,18 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type createQueryValidator func(context.Context, *proto.CreateQueryRequest) error
+
 // CreateQuery in dataset
 func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) (*proto.CreateQueryResponse, error) {
+	return s.createQuery(ctx, req, nil)
+}
+
+func (s Server) createQuery(ctx context.Context, req *proto.CreateQueryRequest, validate createQueryValidator) (*proto.CreateQueryResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-
 	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
 	if err != nil {
@@ -40,6 +45,14 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 		err := fmt.Errorf("dataset not found or permission not granted")
 		log.Warn().Err(err).Str("dataset_id", req.DatasetId).Msg("Dataset not found")
 		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if err := s.requireReportWorkspaceWrite(ctx, *reportID); err != nil {
+		return nil, err
+	}
+	if validate != nil {
+		if err := validate(ctx, req); err != nil {
+			return nil, err
+		}
 	}
 
 	err = s.updateDatasetConnection(ctx, req.DatasetId, req.ConnectionId)
@@ -125,6 +138,9 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
+	if err := s.requireReportWorkspaceWrite(ctx, req.ReportId); err != nil {
+		return nil, err
+	}
 	if !report.CanRefresh {
 		err := fmt.Errorf("user cannot refresh report")
 		log.Err(err).Send()
@@ -151,7 +167,7 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 	defer queriesRows.Close()
 
 	var queries []runQueryOptions
-	var querySourceIds []string
+	queriesFound := false
 
 	for queriesRows.Next() {
 		var queryID string
@@ -163,7 +179,7 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 			log.Err(err).Send()
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-		querySourceIds = append(querySourceIds, querySourceId)
+		queriesFound = true
 		connection, err := s.getConnection(ctx, connectionID.String)
 		if err != nil {
 			log.Err(err).Send()
@@ -171,11 +187,28 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 		}
 		bucketName := s.getBucketNameFromConnection(connection)
 
+		if queryText == "" && bucketName != "" && querySourceId != "" {
+			connCtx := conn.GetCtx(ctx, connection)
+			queryText, err = s.getQueryText(connCtx, querySourceId, bucketName)
+			if err != nil {
+				if isStorageObjectNotFound(err) {
+					log.Warn().Err(err).Str("query_id", queryID).Str("query_source_id", querySourceId).Msg("Skipping legacy query with missing source in RunAllQueries")
+					continue
+				}
+				log.Err(err).Msgf("Error getting query text for query %s", queryID)
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+		}
+
 		queryTextParsed, queryParamsHash, err := injectQueryParams(queryText, req.QueryParams, req.GetQueryParamsValues())
 
 		if err != nil {
 			log.Err(err).Send()
 			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		if queryTextParsed == "" {
+			log.Warn().Str("query_id", queryID).Str("query_source_id", querySourceId).Msg("Skipping empty query in RunAllQueries")
+			continue
 		}
 
 		queries = append(queries, runQueryOptions{
@@ -190,30 +223,22 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 	}
 
 	if len(queries) == 0 {
-		err := fmt.Errorf("queries not found report_id:%s", req.ReportId)
-		log.Warn().Err(err).Send()
-		return nil, status.Error(codes.NotFound, err.Error())
+		if !queriesFound {
+			err := fmt.Errorf("queries not found report_id:%s", req.ReportId)
+			log.Warn().Err(err).Send()
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+		return &proto.RunAllQueriesResponse{}, nil
 	}
 
 	res := make(chan error, len(queries))
 
 	for i := range queries {
 		go func(i int) {
-			if queries[i].queryText == "" && queries[i].userBucketName != "" {
-				// legacy queries stored in user storage
-				connCtx := conn.GetCtx(ctx, queries[i].connection)
-				queryText, err := s.getQueryText(connCtx, querySourceIds[i], queries[i].userBucketName)
-				if err != nil {
-					log.Err(err).Msgf("Error getting query text for query %s", queries[i].queryID)
-					res <- err
-					return
-				}
-				queries[i].queryText = queryText
-			}
-				_, err = s.runQuery(ctx, queries[i])
-				res <- err
-			}(i)
-		}
+			_, runErr := s.runQuery(ctx, queries[i])
+			res <- runErr
+		}(i)
+	}
 
 	for range queries {
 		err := <-res
@@ -267,13 +292,13 @@ func (s Server) runQuery(ctx context.Context, o runQueryOptions) (*proto.QueryJo
 		return nil, err
 	}
 	return &proto.QueryJob{
-		Id:                  job.GetID(),
-		QueryId:             job.GetQueryID(),
-		QueryText:           o.queryText,
-		JobStatus:           proto.QueryJob_JOB_STATUS_PENDING,
-		DwJobId:             stringOrEmpty(job.GetDWJobID()),
-		JobResultId:         stringOrEmpty(job.GetResultID()),
-		QueryParamsHash:     o.queryParamsHash,
+		Id:              job.GetID(),
+		QueryId:         job.GetQueryID(),
+		QueryText:       o.queryText,
+		JobStatus:       proto.QueryJob_JOB_STATUS_PENDING,
+		DwJobId:         stringOrEmpty(job.GetDWJobID()),
+		JobResultId:     stringOrEmpty(job.GetResultID()),
+		QueryParamsHash: o.queryParamsHash,
 	}, nil
 }
 
@@ -400,13 +425,18 @@ func (s Server) updateQueryTextIfChanged(ctx context.Context, queryID string, q 
 	return true, nil
 }
 
+type updateQueryValidator func(context.Context, *proto.UpdateQueryRequest, *query.QueryDetails) (*proto.QueryDryRunResult, error)
+
 // UpdateQuery updates query text and creates snapshot without executing the query.
 func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) (*proto.UpdateQueryResponse, error) {
+	return s.updateQuery(ctx, req, nil)
+}
+
+func (s Server) updateQuery(ctx context.Context, req *proto.UpdateQueryRequest, validate updateQueryValidator) (*proto.UpdateQueryResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-
 	q, err := query.GetQueryDetails(ctx, s.db, req.QueryId)
 	if err != nil {
 		errtype.LogError(err, "database operation failed")
@@ -427,6 +457,9 @@ func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) 
 		err := fmt.Errorf("report not found id:%s", q.ReportID)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if err := s.requireReportWorkspaceWrite(ctx, q.ReportID); err != nil {
+		return nil, err
 	}
 	if !report.CanWrite {
 		err := fmt.Errorf("permission denied")
@@ -434,24 +467,41 @@ func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) 
 		return nil, status.Error(codes.PermissionDenied, err.Error())
 	}
 
+	var dryRun *proto.QueryDryRunResult
+	if validate != nil {
+		dryRun, err = validate(ctx, req, q)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	updated, err := s.updateQueryTextIfChanged(ctx, req.QueryId, q, req.QueryText)
 	if err != nil {
 		return nil, err
 	}
 
-	return &proto.UpdateQueryResponse{
+	response := &proto.UpdateQueryResponse{
 		QueryId: req.QueryId,
 		Updated: updated,
-	}, nil
+	}
+	if dryRun != nil {
+		response.DryRun = dryRun
+	}
+	return response, nil
 }
+
+type runQueryConnectionValidator func(context.Context, *proto.Connection) error
 
 // RunQuery job against database
 func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*proto.RunQueryResponse, error) {
+	return s.runQueryRequest(ctx, req, nil)
+}
+
+func (s Server) runQueryRequest(ctx context.Context, req *proto.RunQueryRequest, validate runQueryConnectionValidator) (*proto.RunQueryResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-
 	q, err := query.GetQueryDetails(ctx, s.db, req.QueryId)
 	if err != nil {
 		errtype.LogError(err, "database operation failed")
@@ -475,6 +525,9 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 		err := fmt.Errorf("report not found id:%s", q.ReportID)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if err := s.requireReportWorkspaceWrite(ctx, q.ReportID); err != nil {
+		return nil, err
 	}
 
 	if !report.CanRefresh {
@@ -488,6 +541,11 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	if err != nil {
 		errtype.LogError(err, "database operation failed")
 		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if validate != nil {
+		if err := validate(ctx, connection); err != nil {
+			return nil, err
+		}
 	}
 	queryID := req.QueryId
 	queryText := q.QueryText

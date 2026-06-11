@@ -2,10 +2,11 @@ package dekart
 
 import (
 	"errors"
-	"dekart/src/server/errtype"
 	"fmt"
 	"net/http"
 	"runtime"
+
+	"dekart/src/server/errtype"
 
 	gcsstorage "cloud.google.com/go/storage"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -25,6 +26,21 @@ func GRPCError(msg string, err error) error {
 	}
 	log.Err(err).Msg(msg)
 	return status.Error(codes.Internal, err.Error())
+}
+
+func isStorageObjectNotFound(err error) bool {
+	if errors.Is(err, gcsstorage.ErrObjectNotExist) {
+		return true
+	}
+	var awsErr awserr.RequestFailure
+	if errors.As(err, &awsErr) && awsErr.StatusCode() == http.StatusNotFound {
+		return true
+	}
+	var googleErr *googleapi.Error
+	if errors.As(err, &googleErr) && googleErr.Code == http.StatusNotFound {
+		return true
+	}
+	return false
 }
 
 // HttpError writes error to http.ResponseWriter based on error type from service providers like Google API

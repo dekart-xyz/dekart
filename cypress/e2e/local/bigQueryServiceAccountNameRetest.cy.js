@@ -81,21 +81,14 @@ describe('bigquery connection name retest', () => {
     cy.get('button#testConnection').should('be.enabled')
   })
 
-  it('enables test connection again after editing the BigQuery connection name', () => {
+  it('disables Google OAuth connection when OAuth is not configured', () => {
     openBigQueryConnection()
 
-    cy.contains('button', 'Connect with Google', { timeout: 20000 }).click()
-    cy.get('div.ant-modal-title', { timeout: 20000 }).should('contain', 'BigQuery')
-
-    setInputValue('input#connectionName', 'BigQuery')
-    setInputValue('input#bigqueryProjectId', 'dekart-dev')
-
-    cy.get('button#testConnection').should('be.enabled').click()
-    cy.wait('@testConnection', { timeout: 60000 })
-    cy.get('.anticon-exclamation-circle, .anticon-check-circle', { timeout: 60000 }).should('be.visible')
-
-    setInputValue('input#connectionName', 'BigQuery Edited')
-
-    cy.get('button#testConnection').should('be.enabled')
+    cy.contains('button', 'Connect with Google', { timeout: 20000 })
+      .should('be.disabled')
+      .parent()
+      .trigger('mouseover')
+    cy.contains('.ant-tooltip-inner', 'Google OAuth is not configured for this Dekart instance', { timeout: 20000 }).should('be.visible')
+    cy.contains('button', 'Configure Service Account').should('be.enabled')
   })
 })

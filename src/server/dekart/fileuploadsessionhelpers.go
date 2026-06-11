@@ -41,6 +41,9 @@ func (s Server) requireFileUploadSessionContext(ctx context.Context, fileID stri
 	if report == nil || !report.CanWrite {
 		return nil, sql.ErrNoRows
 	}
+	if err := s.requireReportWorkspaceWrite(ctx, *reportID); err != nil {
+		return nil, err
+	}
 	connection, err := s.getConnectionFromFileID(ctx, fileID)
 	if err != nil {
 		return nil, err

@@ -56,6 +56,7 @@ function DatasetSelector ({ dataset }) {
   })
   const history = useHistory()
   const report = useSelector(state => state.report)
+  const readOnly = useSelector(state => state.workspace.readOnly)
   const isAdmin = useSelector(state => state.user.isAdmin)
   const fileUploadConnection = connectionList.find(c => c.isDefault && c.canStoreFiles)
 
@@ -82,8 +83,8 @@ function DatasetSelector ({ dataset }) {
       <div className={styles.datasetSelectorInner}>
         <DatasetSelectorButton
           icon={<InboxOutlined />}
-          disable={!(allowFileUpload && report.canWrite)}
-          disabledNote={disabledNote}
+          disable={!(allowFileUpload && report.canWrite) || readOnly}
+          disabledNote={readOnly ? 'Workspace is read-only' : disabledNote}
           title='Upload File'
           subtitle='Load files in CSV, GeoJSON, or Parquet formats'
           onClick={() => {
@@ -94,7 +95,8 @@ function DatasetSelector ({ dataset }) {
         {!report.readme && (
           <DatasetSelectorButton
             icon={<ReadOutlined />}
-            disable={!report.canWrite}
+            disable={!report.canWrite || readOnly}
+            disabledNote={readOnly ? 'Workspace is read-only' : undefined}
             title='Write README'
             subtitle='Add Markdown description to your map'
             onClick={() => {
@@ -107,7 +109,8 @@ function DatasetSelector ({ dataset }) {
         {filteredConnectionList.map((connection) => (
           <DatasetSelectorButton
             key={connection.id}
-            disable={!report.canWrite}
+            disable={!report.canWrite || readOnly}
+            disabledNote={readOnly ? 'Workspace is read-only' : undefined}
             icon={<DatasourceIcon type={connection.connectionType} />}
             title={`${connection.connectionName}`}
             subtitle={`Run SQL directly on ${getDatasourceMeta(connection.connectionType).name}`}
@@ -124,7 +127,8 @@ function DatasetSelector ({ dataset }) {
         {filteredConnectionList.length === 0 && (
           <DatasetSelectorButton
             icon={<ApiTwoTone />}
-            disable={!report.canWrite}
+            disable={!report.canWrite || readOnly}
+            disabledNote={readOnly ? 'Workspace is read-only' : undefined}
             id='dekart-add-connection'
             title='Add connection'
             subtitle='Connect BigQuery, Snowflake, Wherobots'
@@ -139,6 +143,8 @@ function DatasetSelector ({ dataset }) {
       {isAdmin && userDefinedConnection && filteredConnectionList.length > 0 && (
         <Button
           type='link'
+          disabled={readOnly}
+          title={readOnly ? 'Workspace is read-only' : undefined}
           onClick={() => {
             track('AddAndEditConnections')
             history.push('/connections')

@@ -20,6 +20,9 @@ func (s Server) AddReadme(ctx context.Context, req *proto.AddReadmeRequest) (*pr
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	if err := requireWorkspaceWrite(ctx); err != nil {
+		return nil, err
+	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -57,8 +60,9 @@ func (s Server) AddReadme(ctx context.Context, req *proto.AddReadmeRequest) (*pr
 	}
 	if strings.TrimSpace(req.FromDatasetId) != "" {
 		_, err = s.db.ExecContext(ctx,
-			`delete from datasets where id=$1`,
+			`delete from datasets where id=$1 and report_id=$2 and query_id is null and file_id is null`,
 			req.FromDatasetId,
+			req.ReportId,
 		)
 		if err != nil {
 			errtype.LogError(err, "Error deleting dataset")
@@ -72,6 +76,9 @@ func (s Server) RemoveReadme(ctx context.Context, req *proto.RemoveReadmeRequest
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
+	}
+	if err := requireWorkspaceWrite(ctx); err != nil {
+		return nil, err
 	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {

@@ -117,8 +117,10 @@ function FirstReportOnboarding () {
   const isViewer = useSelector(state => state.user.isViewer)
   const isAdmin = useSelector(state => state.user.isAdmin)
   const isSelfHosted = useSelector(state => state.user.isSelfHosted)
+  const readOnly = useSelector(state => state.workspace.readOnly)
   const history = useHistory()
   const sqlConnectionList = useSelector(state => state.connection.list.filter(c => c.connectionType !== ConnectionType.CONNECTION_TYPE_LOCAL))
+  const createDisabled = isViewer || readOnly
   return (
     <>
       <Result
@@ -128,7 +130,7 @@ function FirstReportOnboarding () {
         extra={(
           <>
             <Button
-              icon={<PlusOutlined />} disabled={isViewer} type='primary' id='dekart-create-report' onClick={
+              icon={<PlusOutlined />} disabled={createDisabled} title={readOnly ? 'Workspace is read-only' : undefined} type='primary' id='dekart-create-report' onClick={
                 () => {
                   track('CreateMap')
                   dispatch(createReport())
@@ -165,8 +167,10 @@ function FirstSetupOnboarding () {
   const history = useHistory()
   const isAdmin = useSelector(state => state.user.isAdmin)
   const isViewer = useSelector(state => state.user.isViewer)
+  const readOnly = useSelector(state => state.workspace.readOnly)
   const allowFileUpload = useSelector(state => state.env.variables.ALLOW_FILE_UPLOAD)
   const fileUploadDisabledNote = allowFileUpload ? '' : 'File upload is disabled in configuration'
+  const createDisabledTitle = readOnly ? 'Workspace is read-only' : fileUploadDisabledNote
 
   return (
     <Result
@@ -178,15 +182,15 @@ function FirstSetupOnboarding () {
           <Button
             id='dekart-new-connection-onboarding'
             type='primary'
-            disabled={!isAdmin}
-            title={isAdmin ? 'Create new connection' : 'Only admin can create new connection'}
+            disabled={!isAdmin || readOnly}
+            title={readOnly ? 'Workspace is read-only' : isAdmin ? 'Create new connection' : 'Only admin can create new connection'}
             onClick={() => history.push('/connections')}
           >New connection
           </Button>
           <Button
             id='dekart-use-file-upload'
-            disabled={isViewer || !allowFileUpload}
-            title={isViewer ? 'Viewers cannot create maps' : fileUploadDisabledNote}
+            disabled={isViewer || !allowFileUpload || readOnly}
+            title={isViewer ? 'Viewers cannot create maps' : createDisabledTitle}
             onClick={() => {
               track('CreateMap')
               dispatch(createReport())
@@ -208,6 +212,7 @@ function ReportsHeader (
   const dispatch = useDispatch()
   const history = useHistory()
   const { isAdmin, isViewer } = useSelector(state => state.user)
+  const readOnly = useSelector(state => state.workspace.readOnly)
 
   const userStream = useSelector(state => state.user.stream)
   if (!userStream) {
@@ -268,9 +273,9 @@ function ReportsHeader (
             ? (
               <Button
                 id='dekart-new-connection-connections'
-                disabled={!isAdmin}
+                disabled={!isAdmin || readOnly}
                 type='primary'
-                title={isAdmin ? 'Create new connection' : 'Only admin can create new connection'}
+                title={readOnly ? 'Workspace is read-only' : isAdmin ? 'Create new connection' : 'Only admin can create new connection'}
                 onClick={() => {
                   track('NewConnectionButton')
                   dispatch(newConnectionScreen(true))
@@ -291,7 +296,7 @@ function ReportsHeader (
                     : null
                 }
                 <Button
-                  id='dekart-create-report' type='primary' disabled={isViewer} onClick={() => {
+                  id='dekart-create-report' type='primary' disabled={isViewer || readOnly} title={readOnly ? 'Workspace is read-only' : undefined} onClick={() => {
                     track('NewMap')
                     dispatch(createReport())
                   }}

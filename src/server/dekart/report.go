@@ -152,11 +152,6 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 		}
 		report.CanWrite = report.IsAuthor || (report.AllowEdit && reportWorkspaceID.String == checkWorkspace(ctx).ID)
 
-		if checkWorkspace(ctx).Expired {
-			report.CanWrite = false
-			report.AllowEdit = false
-		}
-
 		if report.IsPlayground && !checkWorkspace(ctx).IsPlayground {
 			// report is playground but user is not in playground
 			report.AllowEdit = false
@@ -184,9 +179,6 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 			reportWorkspaceID.String == checkWorkspace(ctx).ID)
 
 		report.CanRefresh = reportWorkspaceID.String == checkWorkspace(ctx).ID
-		if checkWorkspace(ctx).Expired {
-			report.CanRefresh = false
-		}
 		report.CreatedAt = createdAt.Unix()
 		report.UpdatedAt = updatedAt.Unix()
 
@@ -249,8 +241,8 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 	if workspaceInfo.ID == "" && !workspaceInfo.IsPlayground {
 		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
-	if workspaceInfo.Expired {
-		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	if err := requireWorkspaceWrite(ctx); err != nil {
+		return nil, err
 	}
 	if workspaceInfo.UserRole == proto.UserRole_ROLE_VIEWER {
 		return nil, status.Error(codes.PermissionDenied, "Only admins and editors can create reports")
@@ -610,8 +602,8 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 	if workspaceID == "" && !isPlayground {
 		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
-	if workspaceInfo.Expired {
-		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	if err := requireWorkspaceWrite(ctx); err != nil {
+		return nil, err
 	}
 	if workspaceInfo.UserRole == proto.UserRole_ROLE_VIEWER {
 		return nil, status.Error(codes.PermissionDenied, "Only admins and editors can fork reports")
@@ -708,10 +700,6 @@ func (s Server) SetAutoRefreshIntervalSeconds(ctx context.Context, req *proto.Se
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	workspaceInfo := checkWorkspace(ctx)
-	if workspaceInfo.Expired {
-		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
-	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -725,6 +713,9 @@ func (s Server) SetAutoRefreshIntervalSeconds(ctx context.Context, req *proto.Se
 		err := fmt.Errorf("report not found id:%s", req.ReportId)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if err := s.requireReportWorkspaceWrite(ctx, req.ReportId); err != nil {
+		return nil, err
 	}
 	if !report.CanWrite {
 		err := fmt.Errorf("cannot set auto refresh interval seconds for report %s", req.ReportId)
@@ -757,9 +748,6 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 		return nil, Unauthenticated
 	}
 	workspaceInfo := checkWorkspace(ctx)
-	if workspaceInfo.Expired {
-		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
-	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -773,6 +761,9 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 		err := fmt.Errorf("report not found id:%s", req.ReportId)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if err := s.requireReportWorkspaceWrite(ctx, req.ReportId); err != nil {
+		return nil, err
 	}
 	if !report.CanWrite {
 		err := fmt.Errorf("cannot allow export for report %s", req.ReportId)
@@ -914,6 +905,9 @@ func (s Server) AllowExportDatasets(ctx context.Context, req *proto.AllowExportD
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
+	if err := s.requireReportWorkspaceWrite(ctx, req.ReportId); err != nil {
+		return nil, err
+	}
 	if !report.CanWrite {
 		err := fmt.Errorf("cannot allow export for report %s", req.ReportId)
 		log.Warn().Err(err).Send()
@@ -951,6 +945,9 @@ func (s Server) SetTrackViewers(ctx context.Context, req *proto.SetTrackViewersR
 		err := fmt.Errorf("report not found id:%s", req.ReportId)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if err := s.requireReportWorkspaceWrite(ctx, req.ReportId); err != nil {
+		return nil, err
 	}
 	if !report.CanWrite {
 		err := fmt.Errorf("cannot set track_viewers for report %s", req.ReportId)
@@ -993,6 +990,9 @@ func (s Server) SetDiscoverable(ctx context.Context, req *proto.SetDiscoverableR
 		err := fmt.Errorf("report not found id:%s", req.ReportId)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if err := s.requireReportWorkspaceWrite(ctx, req.ReportId); err != nil {
+		return nil, err
 	}
 	if !report.IsAuthor {
 		err := fmt.Errorf("cannot set discoverable for report %s", req.ReportId)
@@ -1050,6 +1050,9 @@ func (s Server) ArchiveReport(ctx context.Context, req *proto.ArchiveReportReque
 		err := fmt.Errorf("report not found id:%s", req.ReportId)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if err := s.requireReportWorkspaceWrite(ctx, req.ReportId); err != nil {
+		return nil, err
 	}
 	if !report.CanWrite {
 		err := fmt.Errorf("cannot archive report %s", req.ReportId)
@@ -1156,6 +1159,9 @@ func (s Server) AddReportDirectAccess(ctx context.Context, req *proto.AddReportD
 		err := fmt.Errorf("report not found id:%s", req.ReportId)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if err := s.requireReportWorkspaceWrite(ctx, req.ReportId); err != nil {
+		return nil, err
 	}
 	if !report.IsAuthor {
 		err := fmt.Errorf("cannot add direct access for report %s", req.ReportId)
@@ -1338,11 +1344,6 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 		return nil, Unauthenticated
 	}
 
-	workspaceInfo := checkWorkspace(ctx)
-	if workspaceInfo.Expired {
-		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
-	}
-
 	// Validate IDs
 	if _, err := uuid.Parse(req.ReportId); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -1361,6 +1362,9 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 		err := fmt.Errorf("report not found id:%s", req.ReportId)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if err := s.requireReportWorkspaceWrite(ctx, req.ReportId); err != nil {
+		return nil, err
 	}
 	if !report.CanWrite {
 		err := fmt.Errorf("cannot restore snapshot for report %s", req.ReportId)
@@ -1624,10 +1628,6 @@ func (s Server) SaveMapPreview(ctx context.Context, req *proto.SaveMapPreviewReq
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	workspaceInfo := checkWorkspace(ctx)
-	if workspaceInfo.Expired {
-		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
-	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -1641,6 +1641,9 @@ func (s Server) SaveMapPreview(ctx context.Context, req *proto.SaveMapPreviewReq
 		err := fmt.Errorf("report not found id:%s", req.ReportId)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if err := s.requireReportWorkspaceWrite(ctx, req.ReportId); err != nil {
+		return nil, err
 	}
 	if !report.CanWrite {
 		err := fmt.Errorf("cannot save map preview for report %s", req.ReportId)

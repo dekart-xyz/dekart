@@ -187,11 +187,13 @@ function DatasetSection ({ reportId }) {
   const report = useSelector(state => state.report)
   const queryStatus = useSelector(state => state.queryStatus)
   const { canWrite } = report
+  const readOnly = useSelector(state => state.workspace.readOnly)
   const edit = useSelector(state => state.reportStatus.edit)
   const dispatch = useDispatch()
   const readmeTab = []
   let showReadme = useSelector(state => state.readme.showTab)
-  const closable = Boolean(canWrite && edit && datasets.length > 1)
+  const canMutate = canWrite && edit && !readOnly
+  const closable = Boolean(canMutate && datasets.length > 1)
   const lastDataset = datasets.length === 1
 
   // disable SQL panels when export is disabled
@@ -210,7 +212,7 @@ function DatasetSection ({ reportId }) {
           </Tooltip>
         }
         key='readme'
-        closable={canWrite && edit}
+        closable={canMutate}
       />
     )
   }
@@ -242,7 +244,7 @@ function DatasetSection ({ reportId }) {
             <div className={styles.datasetSection}>
               <div className={styles.tabs} id='dekart-report-page-tabs'>
                 <Tabs
-                  type={canWrite ? 'editable-card' : 'card'}
+                  type={canWrite && !readOnly ? 'editable-card' : 'card'}
                   activeKey={showReadme ? 'readme' : activeDataset.id}
                   onChange={(tabId) => {
                     switch (tabId) {
@@ -255,7 +257,7 @@ function DatasetSection ({ reportId }) {
                         dispatch(setActiveDataset(tabId))
                     }
                   }}
-                  hideAdd={!(canWrite && edit)}
+                  hideAdd={!canMutate}
                   onEdit={getOnTabEditHandler(dispatch, reportId, datasets)}
                 >
                   {readmeTab.concat(datasets.map((dataset, index) => getTabPane(
@@ -285,6 +287,8 @@ function DatasetSection ({ reportId }) {
 function Title () {
   const reportStatus = useSelector(state => state.reportStatus)
   const { canWrite } = useSelector(state => state.report)
+  const readOnly = useSelector(state => state.workspace.readOnly)
+  const canMutate = canWrite && !readOnly
   const [edit, setEdit] = useState(false)
   const title = reportStatus.title || ''
   const [value, setValue] = useState(title)
@@ -294,7 +298,7 @@ function Title () {
       setValue(title || '')
     }
   }, [title, value, edit])
-  if (canWrite && reportStatus.edit && edit) {
+  if (canMutate && reportStatus.edit && edit) {
     return (
       <div className={styles.title}>
         <Input
@@ -316,7 +320,7 @@ function Title () {
           }}
           placeholder='Untitled'
           autoFocus
-          disabled={!(reportStatus.edit && canWrite)}
+          disabled={!(reportStatus.edit && canMutate)}
         />
       </div>
     )
@@ -327,18 +331,18 @@ function Title () {
           className={classnames(
             styles.titleText,
             {
-              [styles.titleTextEdit]: reportStatus.edit && canWrite
+              [styles.titleTextEdit]: reportStatus.edit && canMutate
             }
           )}
           onClick={() => {
-            if (reportStatus.edit) {
+            if (reportStatus.edit && canMutate) {
               track('ReportTitleEditClicked')
               setEdit(true)
             }
           }}
-          title='Click to edit map title'
+          title={readOnly ? 'Workspace is read-only' : 'Click to edit map title'}
         >{
-            reportStatus.edit && canWrite ? <EditOutlined className={styles.titleEditIcon} /> : null
+            reportStatus.edit && canMutate ? <EditOutlined className={styles.titleEditIcon} /> : null
           }{reportStatus.title}
         </span>
       </div>

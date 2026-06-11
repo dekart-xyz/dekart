@@ -78,14 +78,16 @@ export function updateWorkspace (name) {
   }
 }
 
-export function workspaceUpdate ({ workspace, subscription, usersList, invitesList, addedUsersCount }) {
+export function workspaceUpdate ({ workspace, subscription, usersList, invitesList, addedUsersCount, readOnly, readOnlyReason }) {
   return {
     type: workspaceUpdate.name,
     workspace,
     subscription,
     usersList,
     invitesList,
-    addedUsersCount
+    addedUsersCount,
+    readOnly,
+    readOnlyReason
   }
 }
 

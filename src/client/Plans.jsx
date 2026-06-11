@@ -139,14 +139,14 @@ export function Plan ({ title, children, planType, cancelAt, addedUsersCount, is
           >
             Upgrade
           </Button>
-          {!workspace?.expired && trialEndDate && (
+          {!workspace?.subscription?.expired && trialEndDate && (
             <div className={styles.cancelAt}>
               Trial ends at {(new Date(trialEndDate)).toLocaleDateString()}
             </div>
           )}
         </>
       )
-    } else if (userStream.planType === PlanType.TYPE_GROW && !workspace?.expired) {
+    } else if (userStream.planType === PlanType.TYPE_GROW && !workspace?.subscription?.expired) {
       // When already on Grow plan, show manage subscription
       actionButton = (
         <ManageSubscriptionButton
@@ -161,7 +161,7 @@ export function Plan ({ title, children, planType, cancelAt, addedUsersCount, is
         />
       )
     }
-  } else if (planType === userStream.planType && !workspace?.expired) {
+  } else if (planType === userStream.planType && !workspace?.subscription?.expired) {
     actionButton = (
       <ManageSubscriptionButton
         disabled={waitForRedirect || !isAdmin}

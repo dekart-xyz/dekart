@@ -20,6 +20,13 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+func validateNewBigQueryConnectionTarget(con *proto.Connection) error {
+	if con.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_BIGQUERY && con.BigqueryProjectId == "" && con.BigqueryKey == nil {
+		return status.Error(codes.InvalidArgument, "bigquery_project_id or bigquery_key is required")
+	}
+	return nil
+}
+
 func (s Server) TestConnection(ctx context.Context, req *proto.TestConnectionRequest) (*proto.TestConnectionResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
@@ -36,6 +43,13 @@ func (s Server) TestConnection(ctx context.Context, req *proto.TestConnectionReq
 	}
 
 	err := conn.ValidateReqConnection(con)
+	if err != nil {
+		return &proto.TestConnectionResponse{
+			Success: false,
+			Error:   err.Error(),
+		}, nil
+	}
+	err = validateNewBigQueryConnectionTarget(con)
 	if err != nil {
 		return &proto.TestConnectionResponse{
 			Success: false,
@@ -471,8 +485,8 @@ func (s Server) SetDefaultConnection(ctx context.Context, req *proto.SetDefaultC
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	if checkWorkspace(ctx).Expired {
-		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	if err := requireWorkspaceWrite(ctx); err != nil {
+		return nil, err
 	}
 	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "only admins can edit connections")
@@ -497,8 +511,8 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	if checkWorkspace(ctx).Expired {
-		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	if err := requireWorkspaceWrite(ctx); err != nil {
+		return nil, err
 	}
 	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "only admins can edit connections")
@@ -699,8 +713,8 @@ func (s Server) ArchiveConnection(ctx context.Context, req *proto.ArchiveConnect
 		return nil, Unauthenticated
 	}
 	workspaceInfo := checkWorkspace(ctx)
-	if workspaceInfo.Expired {
-		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	if err := requireWorkspaceWrite(ctx); err != nil {
+		return nil, err
 	}
 	if workspaceInfo.UserRole != proto.UserRole_ROLE_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "only admins can edit connections")
@@ -851,13 +865,17 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 	if workspaceInfo.ID == "" {
 		return nil, status.Error(codes.NotFound, "workspace not found")
 	}
-	if workspaceInfo.Expired {
-		return nil, status.Error(codes.PermissionDenied, "workspace is read-only")
+	if err := requireWorkspaceWrite(ctx); err != nil {
+		return nil, err
 	}
 	if workspaceInfo.UserRole != proto.UserRole_ROLE_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "only admins can create connections")
 	}
 	err := conn.ValidateReqConnection(req.Connection)
+	if err != nil {
+		return nil, err
+	}
+	err = validateNewBigQueryConnectionTarget(req.Connection)
 	if err != nil {
 		return nil, err
 	}
@@ -872,6 +890,10 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 		if _, err := snowflakeutils.ParsePrivateKey(privateKey); err != nil {
 			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid snowflake_key: %v", err))
 		}
+	}
+	bigqueryKeyEncrypted := secrets.SecretToServerEncrypted(req.Connection.BigqueryKey, claims)
+	if req.Connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_BIGQUERY && req.Connection.BigqueryKey != nil && bigqueryKeyEncrypted == "" {
+		return nil, status.Error(codes.InvalidArgument, "bigquery_key is invalid")
 	}
 
 	id := newUUID()
@@ -911,7 +933,7 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 		req.Connection.SnowflakeWarehouse,
 		secrets.SecretToServerEncrypted(req.Connection.SnowflakePassword, claims),
 		secrets.SecretToServerEncrypted(req.Connection.SnowflakeKey, claims),
-		secrets.SecretToServerEncrypted(req.Connection.BigqueryKey, claims),
+		bigqueryKeyEncrypted,
 		claims.Email,
 		workspaceInfo.ID,
 		req.Connection.WherobotsHost,

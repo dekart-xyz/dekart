@@ -94,6 +94,7 @@ goog.exportSymbol('proto.GetWherobotsConnectionHintRequest', null, global);
 goog.exportSymbol('proto.GetWherobotsConnectionHintResponse', null, global);
 goog.exportSymbol('proto.GetWorkspaceRequest', null, global);
 goog.exportSymbol('proto.GetWorkspaceResponse', null, global);
+goog.exportSymbol('proto.GetWorkspaceResponse.ReadOnlyReason', null, global);
 goog.exportSymbol('proto.ListDeviceTokensRequest', null, global);
 goog.exportSymbol('proto.ListDeviceTokensResponse', null, global);
 goog.exportSymbol('proto.PlanType', null, global);
@@ -8703,7 +8704,9 @@ proto.GetWorkspaceResponse.toObject = function(includeInstance, msg) {
     proto.User.toObject, includeInstance),
     invitesList: jspb.Message.toObjectList(msg.getInvitesList(),
     proto.WorkspaceInvite.toObject, includeInstance),
-    addedUsersCount: jspb.Message.getFieldWithDefault(msg, 5, 0)
+    addedUsersCount: jspb.Message.getFieldWithDefault(msg, 5, 0),
+    readOnly: jspb.Message.getBooleanFieldWithDefault(msg, 6, false),
+    readOnlyReason: jspb.Message.getFieldWithDefault(msg, 7, 0)
   };
 
   if (includeInstance) {
@@ -8763,6 +8766,14 @@ proto.GetWorkspaceResponse.deserializeBinaryFromReader = function(msg, reader) {
     case 5:
       var value = /** @type {number} */ (reader.readInt64());
       msg.setAddedUsersCount(value);
+      break;
+    case 6:
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setReadOnly(value);
+      break;
+    case 7:
+      var value = /** @type {!proto.GetWorkspaceResponse.ReadOnlyReason} */ (reader.readEnum());
+      msg.setReadOnlyReason(value);
       break;
     default:
       reader.skipField();
@@ -8832,8 +8843,31 @@ proto.GetWorkspaceResponse.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
+  f = message.getReadOnly();
+  if (f) {
+    writer.writeBool(
+      6,
+      f
+    );
+  }
+  f = message.getReadOnlyReason();
+  if (f !== 0.0) {
+    writer.writeEnum(
+      7,
+      f
+    );
+  }
 };
 
+
+/**
+ * @enum {number}
+ */
+proto.GetWorkspaceResponse.ReadOnlyReason = {
+  READ_ONLY_REASON_UNSPECIFIED: 0,
+  READ_ONLY_REASON_SUBSCRIPTION_EXPIRED: 1,
+  READ_ONLY_REASON_LICENSE_KEY_EXPIRED: 2
+};
 
 /**
  * optional Workspace Workspace = 1;
@@ -9000,6 +9034,42 @@ proto.GetWorkspaceResponse.prototype.getAddedUsersCount = function() {
  */
 proto.GetWorkspaceResponse.prototype.setAddedUsersCount = function(value) {
   return jspb.Message.setProto3IntField(this, 5, value);
+};
+
+
+/**
+ * optional bool read_only = 6;
+ * @return {boolean}
+ */
+proto.GetWorkspaceResponse.prototype.getReadOnly = function() {
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 6, false));
+};
+
+
+/**
+ * @param {boolean} value
+ * @return {!proto.GetWorkspaceResponse} returns this
+ */
+proto.GetWorkspaceResponse.prototype.setReadOnly = function(value) {
+  return jspb.Message.setProto3BooleanField(this, 6, value);
+};
+
+
+/**
+ * optional ReadOnlyReason read_only_reason = 7;
+ * @return {!proto.GetWorkspaceResponse.ReadOnlyReason}
+ */
+proto.GetWorkspaceResponse.prototype.getReadOnlyReason = function() {
+  return /** @type {!proto.GetWorkspaceResponse.ReadOnlyReason} */ (jspb.Message.getFieldWithDefault(this, 7, 0));
+};
+
+
+/**
+ * @param {!proto.GetWorkspaceResponse.ReadOnlyReason} value
+ * @return {!proto.GetWorkspaceResponse} returns this
+ */
+proto.GetWorkspaceResponse.prototype.setReadOnlyReason = function(value) {
+  return jspb.Message.setProto3EnumField(this, 7, value);
 };
 
 

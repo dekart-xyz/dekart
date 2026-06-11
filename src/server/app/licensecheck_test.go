@@ -41,7 +41,7 @@ func invalidTestLicense(string) (license.TokenInfo, error) {
 func TestValidateStartupLicenseAllowsSQLiteWithoutKey(t *testing.T) {
 	clearStartupLicenseEnv(t)
 
-	err := ValidateStartupLicense(StartupLicenseConfig{}, validTestLicense)
+	_, err := ValidateStartupLicense(StartupLicenseConfig{}, validTestLicense)
 
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -51,7 +51,7 @@ func TestValidateStartupLicenseAllowsSQLiteWithoutKey(t *testing.T) {
 func TestValidateStartupLicenseRequiresKeyForPostgresMetadata(t *testing.T) {
 	clearStartupLicenseEnv(t)
 
-	err := ValidateStartupLicense(StartupLicenseConfig{RequireForPostgresMetadata: true}, validTestLicense)
+	_, err := ValidateStartupLicense(StartupLicenseConfig{RequireForPostgresMetadata: true}, validTestLicense)
 
 	if err == nil || !strings.Contains(err.Error(), "Postgres metadata") {
 		t.Fatalf("expected Postgres metadata license error, got %v", err)
@@ -62,7 +62,7 @@ func TestValidateStartupLicenseRejectsInvalidKeyForSQLite(t *testing.T) {
 	clearStartupLicenseEnv(t)
 	os.Setenv("DEKART_LICENSE_KEY", "invalid")
 
-	err := ValidateStartupLicense(StartupLicenseConfig{}, invalidTestLicense)
+	_, err := ValidateStartupLicense(StartupLicenseConfig{}, invalidTestLicense)
 
 	if err == nil || !strings.Contains(err.Error(), "invalid") {
 		t.Fatalf("expected invalid license error, got %v", err)
@@ -73,7 +73,7 @@ func TestValidateStartupLicenseAllowsPostgresMetadataWithValidKey(t *testing.T) 
 	clearStartupLicenseEnv(t)
 	os.Setenv("DEKART_LICENSE_KEY", "valid")
 
-	err := ValidateStartupLicense(StartupLicenseConfig{RequireForPostgresMetadata: true}, validTestLicense)
+	_, err := ValidateStartupLicense(StartupLicenseConfig{RequireForPostgresMetadata: true}, validTestLicense)
 
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -84,7 +84,7 @@ func TestValidateStartupLicenseRequiresKeyForSSO(t *testing.T) {
 	clearStartupLicenseEnv(t)
 	os.Setenv("DEKART_REQUIRE_OIDC", "1")
 
-	err := ValidateStartupLicense(StartupLicenseConfig{}, validTestLicense)
+	_, err := ValidateStartupLicense(StartupLicenseConfig{}, validTestLicense)
 
 	if err == nil || !strings.Contains(err.Error(), "SSO") {
 		t.Fatalf("expected SSO license error, got %v", err)
