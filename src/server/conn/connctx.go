@@ -78,6 +78,11 @@ func ValidateReqConnection(con *proto.Connection) error {
 	if con.ConnectionName == "" {
 		return status.Error(codes.InvalidArgument, "connection_name is required")
 	}
+	if con.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_BIGQUERY {
+		if con.BigqueryKey != nil && con.BigqueryKey.ClientEncrypted == "" && con.BigqueryKey.ServerEncrypted == "" {
+			return status.Error(codes.InvalidArgument, "bigquery_key is empty")
+		}
+	}
 	if con.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_SNOWFLAKE {
 		if con.SnowflakeAccountId == "" {
 			return status.Error(codes.InvalidArgument, "snowflake_account_id is required")

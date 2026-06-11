@@ -27,9 +27,9 @@ func GetTableFromJob(job *bigquery.Job) (*bigquery.Table, error) {
 	return queryConfig.Dst, nil
 }
 
-func GetClient(ctx context.Context, conn *proto.Connection) (*bigquery.Client, error) {
+func GetProjectID(ctx context.Context, conn *proto.Connection) (string, option.ClientOption, error) {
 	if conn == nil {
-		return nil, fmt.Errorf("connection is nil")
+		return "", nil, fmt.Errorf("connection is nil")
 	}
 	tokenSource := user.GetTokenSource(ctx)
 	var secretOption option.ClientOption
@@ -41,18 +41,26 @@ func GetClient(ctx context.Context, conn *proto.Connection) (*bigquery.Client, e
 		//parse json from bigqueryKeyStr and extract project_id
 		var keyData map[string]interface{}
 		if err := json.Unmarshal([]byte(bigqueryKeyStr), &keyData); err != nil {
-			return nil, fmt.Errorf("failed to parse bigquery key: %v", err)
+			return "", nil, fmt.Errorf("failed to parse bigquery key: %v", err)
 		}
 		var ok bool
 		projectID, ok = keyData["project_id"].(string)
 		if !ok {
-			return nil, fmt.Errorf("project_id not found in bigquery key")
+			return "", nil, fmt.Errorf("project_id not found in bigquery key")
 		}
 		secretOption = option.WithCredentialsJSON([]byte(bigqueryKeyStr))
 	} else if tokenSource != nil {
 		secretOption = option.WithTokenSource(tokenSource)
 	} else {
 		secretOption = option.WithScopes(user.GetBigQueryAuthScopes()...)
+	}
+	return projectID, secretOption, nil
+}
+
+func GetClient(ctx context.Context, conn *proto.Connection) (*bigquery.Client, error) {
+	projectID, secretOption, err := GetProjectID(ctx, conn)
+	if err != nil {
+		return nil, err
 	}
 	return bigquery.NewClient(
 		ctx,

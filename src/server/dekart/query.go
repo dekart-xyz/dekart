@@ -22,8 +22,14 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type createQueryValidator func(context.Context, *proto.CreateQueryRequest) error
+
 // CreateQuery in dataset
 func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) (*proto.CreateQueryResponse, error) {
+	return s.createQuery(ctx, req, nil)
+}
+
+func (s Server) createQuery(ctx context.Context, req *proto.CreateQueryRequest, validate createQueryValidator) (*proto.CreateQueryResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
@@ -42,6 +48,11 @@ func (s Server) CreateQuery(ctx context.Context, req *proto.CreateQueryRequest) 
 	}
 	if err := s.requireReportWorkspaceWrite(ctx, *reportID); err != nil {
 		return nil, err
+	}
+	if validate != nil {
+		if err := validate(ctx, req); err != nil {
+			return nil, err
+		}
 	}
 
 	err = s.updateDatasetConnection(ctx, req.DatasetId, req.ConnectionId)
@@ -414,8 +425,14 @@ func (s Server) updateQueryTextIfChanged(ctx context.Context, queryID string, q 
 	return true, nil
 }
 
+type updateQueryValidator func(context.Context, *proto.UpdateQueryRequest, *query.QueryDetails) (*proto.QueryDryRunResult, error)
+
 // UpdateQuery updates query text and creates snapshot without executing the query.
 func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) (*proto.UpdateQueryResponse, error) {
+	return s.updateQuery(ctx, req, nil)
+}
+
+func (s Server) updateQuery(ctx context.Context, req *proto.UpdateQueryRequest, validate updateQueryValidator) (*proto.UpdateQueryResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
@@ -450,19 +467,37 @@ func (s Server) UpdateQuery(ctx context.Context, req *proto.UpdateQueryRequest) 
 		return nil, status.Error(codes.PermissionDenied, err.Error())
 	}
 
+	var dryRun *proto.QueryDryRunResult
+	if validate != nil {
+		dryRun, err = validate(ctx, req, q)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	updated, err := s.updateQueryTextIfChanged(ctx, req.QueryId, q, req.QueryText)
 	if err != nil {
 		return nil, err
 	}
 
-	return &proto.UpdateQueryResponse{
+	response := &proto.UpdateQueryResponse{
 		QueryId: req.QueryId,
 		Updated: updated,
-	}, nil
+	}
+	if dryRun != nil {
+		response.DryRun = dryRun
+	}
+	return response, nil
 }
+
+type runQueryConnectionValidator func(context.Context, *proto.Connection) error
 
 // RunQuery job against database
 func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*proto.RunQueryResponse, error) {
+	return s.runQueryRequest(ctx, req, nil)
+}
+
+func (s Server) runQueryRequest(ctx context.Context, req *proto.RunQueryRequest, validate runQueryConnectionValidator) (*proto.RunQueryResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
@@ -506,6 +541,11 @@ func (s Server) RunQuery(ctx context.Context, req *proto.RunQueryRequest) (*prot
 	if err != nil {
 		errtype.LogError(err, "database operation failed")
 		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if validate != nil {
+		if err := validate(ctx, connection); err != nil {
+			return nil, err
+		}
 	}
 	queryID := req.QueryId
 	queryText := q.QueryText

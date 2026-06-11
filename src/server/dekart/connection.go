@@ -20,6 +20,13 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+func validateNewBigQueryConnectionTarget(con *proto.Connection) error {
+	if con.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_BIGQUERY && con.BigqueryProjectId == "" && con.BigqueryKey == nil {
+		return status.Error(codes.InvalidArgument, "bigquery_project_id or bigquery_key is required")
+	}
+	return nil
+}
+
 func (s Server) TestConnection(ctx context.Context, req *proto.TestConnectionRequest) (*proto.TestConnectionResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
@@ -36,6 +43,13 @@ func (s Server) TestConnection(ctx context.Context, req *proto.TestConnectionReq
 	}
 
 	err := conn.ValidateReqConnection(con)
+	if err != nil {
+		return &proto.TestConnectionResponse{
+			Success: false,
+			Error:   err.Error(),
+		}, nil
+	}
+	err = validateNewBigQueryConnectionTarget(con)
 	if err != nil {
 		return &proto.TestConnectionResponse{
 			Success: false,
@@ -861,6 +875,10 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 	if err != nil {
 		return nil, err
 	}
+	err = validateNewBigQueryConnectionTarget(req.Connection)
+	if err != nil {
+		return nil, err
+	}
 	if os.Getenv("DEKART_CLOUD") != "" && req.Connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_POSTGRES {
 		return nil, status.Error(codes.PermissionDenied, "postgres user-defined connection is disabled in cloud")
 	}
@@ -872,6 +890,10 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 		if _, err := snowflakeutils.ParsePrivateKey(privateKey); err != nil {
 			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid snowflake_key: %v", err))
 		}
+	}
+	bigqueryKeyEncrypted := secrets.SecretToServerEncrypted(req.Connection.BigqueryKey, claims)
+	if req.Connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_BIGQUERY && req.Connection.BigqueryKey != nil && bigqueryKeyEncrypted == "" {
+		return nil, status.Error(codes.InvalidArgument, "bigquery_key is invalid")
 	}
 
 	id := newUUID()
@@ -911,7 +933,7 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 		req.Connection.SnowflakeWarehouse,
 		secrets.SecretToServerEncrypted(req.Connection.SnowflakePassword, claims),
 		secrets.SecretToServerEncrypted(req.Connection.SnowflakeKey, claims),
-		secrets.SecretToServerEncrypted(req.Connection.BigqueryKey, claims),
+		bigqueryKeyEncrypted,
 		claims.Email,
 		workspaceInfo.ID,
 		req.Connection.WherobotsHost,

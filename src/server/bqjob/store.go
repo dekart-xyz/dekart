@@ -80,6 +80,14 @@ func TestConnection(ctx context.Context, req *proto.TestConnectionRequest) (*pro
 			Error:   err.Error(),
 		}, nil
 	}
+	projectID, _, err := bqutils.GetProjectID(ctx, req.Connection)
+	if err != nil {
+		log.Warn().Err(err).Msg("bigquery project id lookup failed")
+		return &proto.TestConnectionResponse{
+			Success: false,
+			Error:   err.Error(),
+		}, nil
+	}
 	it := client.Datasets(ctx)
 	_, err = it.Next()
 	if err != nil {
@@ -103,7 +111,7 @@ func TestConnection(ctx context.Context, req *proto.TestConnectionRequest) (*pro
 	defer bqReadClient.Close()
 
 	createReadSessionRequest := &bqStoragePb.CreateReadSessionRequest{
-		Parent: "projects/" + req.Connection.BigqueryProjectId,
+		Parent: "projects/" + projectID,
 		ReadSession: &bqStoragePb.ReadSession{
 			Table:      "projects/bigquery-public-data/datasets/samples/tables/shakespeare", // well-known public dataset
 			DataFormat: bqStoragePb.DataFormat_AVRO,

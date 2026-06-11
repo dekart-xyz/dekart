@@ -3,6 +3,7 @@ package dekart
 import (
 	"context"
 	"dekart/src/proto"
+	"dekart/src/server/user"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -226,6 +227,53 @@ func TestCallMCPTool_CreateQuery_InvalidArguments(t *testing.T) {
 	assert.Contains(t, err.Error(), "datasetId")
 }
 
+func TestCallCreateConnectionTool_RejectsBigQueryWithoutServiceAccountBeforePersistence(t *testing.T) {
+	server := &Server{}
+	ctx := testUserContext("user@example.com")
+	ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{
+		ID:       "workspace-1",
+		PlanType: proto.PlanType_TYPE_COMMUNITY,
+		UserRole: proto.UserRole_ROLE_ADMIN,
+	})
+
+	payload, err := server.callCreateConnectionTool(ctx, json.RawMessage(`{
+		"connection": {
+			"connection_name": "MCP BigQuery",
+			"connection_type": "CONNECTION_TYPE_BIGQUERY",
+			"bigquery_project_id": "dekart-dev"
+		}
+	}`))
+
+	assert.Nil(t, payload)
+	assert.Error(t, err)
+	assert.Equal(t, codes.FailedPrecondition, status.Code(err))
+	assert.Equal(t, mcpBigQueryServiceAccountRequiredMessage, status.Convert(err).Message())
+}
+
+func TestCallCreateConnectionTool_RejectsBigQueryEmptyServiceAccountBeforePersistence(t *testing.T) {
+	server := &Server{}
+	ctx := testUserContext("user@example.com")
+	ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{
+		ID:       "workspace-1",
+		PlanType: proto.PlanType_TYPE_COMMUNITY,
+		UserRole: proto.UserRole_ROLE_ADMIN,
+	})
+
+	payload, err := server.callCreateConnectionTool(ctx, json.RawMessage(`{
+		"connection": {
+			"connection_name": "MCP BigQuery",
+			"connection_type": "CONNECTION_TYPE_BIGQUERY",
+			"bigquery_project_id": "dekart-dev",
+			"bigquery_key": {}
+		}
+	}`))
+
+	assert.Nil(t, payload)
+	assert.Error(t, err)
+	assert.Equal(t, codes.FailedPrecondition, status.Code(err))
+	assert.Equal(t, mcpBigQueryServiceAccountRequiredMessage, status.Convert(err).Message())
+}
+
 func TestCallMCPTool_UpdateQuery_DispatchesToHandler(t *testing.T) {
 	server := &Server{}
 	payload, err := server.callMCPTool(context.Background(), &mcpCallRequest{
@@ -293,6 +341,82 @@ func TestCallMCPTool_RunQuery_InvalidArguments(t *testing.T) {
 	assert.Nil(t, payload)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "queryId")
+}
+
+func TestRequireMCPBigQueryServiceAccount(t *testing.T) {
+	tests := []struct {
+		name       string
+		connection *proto.Connection
+		wantError  bool
+	}{
+		{
+			name: "rejects bigquery passthrough",
+			connection: &proto.Connection{
+				ConnectionType:    proto.ConnectionType_CONNECTION_TYPE_BIGQUERY,
+				BigqueryProjectId: "dekart-dev",
+			},
+			wantError: true,
+		},
+		{
+			name: "allows self-hosted system bigquery",
+			connection: &proto.Connection{
+				Id:                "00000000-0000-0000-0000-000000000000",
+				ConnectionType:    proto.ConnectionType_CONNECTION_TYPE_BIGQUERY,
+				BigqueryProjectId: "dekart-dev",
+			},
+		},
+		{
+			name: "allows bigquery service account",
+			connection: &proto.Connection{
+				ConnectionType: proto.ConnectionType_CONNECTION_TYPE_BIGQUERY,
+				BigqueryKey:    &proto.Secret{ServerEncrypted: "secret"},
+			},
+		},
+		{
+			name: "allows postgres",
+			connection: &proto.Connection{
+				ConnectionType: proto.ConnectionType_CONNECTION_TYPE_POSTGRES,
+			},
+		},
+		{
+			name: "allows nil",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := requireMCPBigQueryServiceAccount(context.Background(), tt.connection)
+			if tt.wantError {
+				assert.Error(t, err)
+				assert.Equal(t, codes.FailedPrecondition, status.Code(err))
+				assert.Equal(t, mcpBigQueryServiceAccountRequiredMessage, status.Convert(err).Message())
+				return
+			}
+			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestFilterConnectionsForMCPRunQueriesScope_KeepsSelfHostedSystemBigQuery(t *testing.T) {
+	t.Setenv("DEKART_CLOUD", "")
+	connections := filterConnectionsForMCPRunQueriesScope([]*proto.Connection{
+		{
+			Id:                "00000000-0000-0000-0000-000000000000",
+			ConnectionName:    "BigQuery",
+			ConnectionType:    proto.ConnectionType_CONNECTION_TYPE_BIGQUERY,
+			BigqueryProjectId: "dekart-dev",
+		},
+		{
+			Id:             "00000000-0000-0000-0000-000000000000",
+			ConnectionName: "Postgres",
+			ConnectionType: proto.ConnectionType_CONNECTION_TYPE_POSTGRES,
+		},
+	})
+
+	if assert.Len(t, connections, 2) {
+		assert.Equal(t, proto.ConnectionType_CONNECTION_TYPE_BIGQUERY, connections[0].ConnectionType)
+		assert.Equal(t, proto.ConnectionType_CONNECTION_TYPE_POSTGRES, connections[1].ConnectionType)
+	}
 }
 
 func TestMCPToolDefinitions_AgentGuidanceFieldsPresent(t *testing.T) {
