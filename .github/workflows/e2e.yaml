@@ -385,6 +385,10 @@ jobs:
             spec: cypress/e2e/local/bigQueryServiceAccountNameRetest.cy.js
             skip_postgres: true
 
+          - id: local-file-upload-readme-persistence
+            spec: cypress/e2e/local/fileUploadPersistenceMcp.cy.js
+            skip_postgres: true
+
           - id: pg-s3-postgres
             spec: cypress/e2e/pg-s3/happyPath.cy.js,cypress/e2e/pg-s3/runAllQueriesLegacyMissingSource.cy.js
             extra_env: |

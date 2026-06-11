@@ -121,6 +121,8 @@ func TestMCPToolDefinitions_ContainsUpdateTools(t *testing.T) {
 	assert.True(t, ok)
 	assert.Contains(t, addReadmeTool.InputSchema["required"], "report_id")
 	assert.Contains(t, addReadmeTool.InputSchema["required"], "markdown")
+	assert.NotContains(t, addReadmeTool.InputSchema["properties"], "from_dataset_id")
+	assert.Contains(t, addReadmeTool.Description, "without changing report datasets")
 
 	updateReadmeTool, ok := names["update_report_readme"]
 	assert.True(t, ok)
@@ -176,6 +178,18 @@ func TestCallMCPTool_UnknownTool(t *testing.T) {
 	_, err := server.callMCPTool(context.Background(), &mcpCallRequest{Name: "unknown_tool"})
 	assert.Error(t, err)
 	assert.True(t, strings.Contains(err.Error(), "unknown tool"))
+}
+
+func TestCallMCPTool_AddReportReadmeRejectsFromDatasetID(t *testing.T) {
+	server := &Server{}
+	_, err := server.callMCPTool(context.Background(), &mcpCallRequest{
+		Name:      "add_report_readme",
+		Arguments: json.RawMessage(`{"report_id":"00000000-0000-0000-0000-000000000000","markdown":"# Notes","from_dataset_id":"00000000-0000-0000-0000-000000000001"}`),
+	})
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unknown field")
+	assert.Contains(t, err.Error(), "from_dataset_id")
 }
 
 func TestCallMCPTool_GetMapConfigSchema(t *testing.T) {

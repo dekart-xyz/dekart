@@ -56,6 +56,11 @@ type mcpValidationErrorResponse struct {
 	Issues []mapConfigValidationIssue `json:"issues"`
 }
 
+type addReportReadmeMCPArgs struct {
+	ReportId string `json:"report_id"`
+	Markdown string `json:"markdown"`
+}
+
 // HandleCreateReport wraps CreateReport RPC with protojson HTTP endpoint.
 func (s *Server) HandleCreateReport(w http.ResponseWriter, r *http.Request) {
 	request := &proto.CreateReportRequest{}
@@ -657,13 +662,17 @@ func (s *Server) callUpdateReportMapConfigTool(ctx context.Context, raw json.Raw
 	return mcp.MarshalProtoJSON(&proto.UpdateReportMapConfigResponse{UpdatedAt: updatedAt.Unix()})
 }
 
-// callAddReportReadmeTool adds readme markdown and optionally removes source dataset.
+// callAddReportReadmeTool adds readme markdown without exposing dataset deletion.
 func (s *Server) callAddReportReadmeTool(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
-	request := &proto.AddReadmeRequest{}
-	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
+	// MCP intentionally excludes from_dataset_id because dataset deletion must be explicit.
+	args := &addReportReadmeMCPArgs{}
+	if err := mcp.DecodeArgs(raw, args); err != nil {
 		return nil, err
 	}
-	response, err := s.AddReadme(ctx, request)
+	response, err := s.AddReadme(ctx, &proto.AddReadmeRequest{
+		ReportId: args.ReportId,
+		Markdown: args.Markdown,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -1004,11 +1013,14 @@ func mcpToolDefinitions() []mcpTool {
 			},
 		},
 		{
-			Name:         "add_report_readme",
-			Description:  "Add report readme markdown; optionally remove source dataset after conversion.",
-			InputSchema:  mcpschema.ForProto(&proto.AddReadmeRequest{}, []string{"report_id", "markdown"}),
+			Name:        "add_report_readme",
+			Description: "Add report readme markdown without changing report datasets.",
+			InputSchema: mcpschema.Object([]string{"report_id", "markdown"}, map[string]any{
+				"report_id": mcpschema.String(),
+				"markdown":  mcpschema.String(),
+			}),
 			WhenToUse:    "Use to create a readme on reports that currently have no readme content.",
-			WhenNotToUse: "Do not use when only report title/map config should change.",
+			WhenNotToUse: "Do not use when only report title/map config should change, or when a dataset should be removed; use remove_dataset explicitly for dataset deletion.",
 			SideEffects:  []string{"write"},
 			ExampleInput: map[string]any{
 				"report_id": "00000000-0000-0000-0000-000000000000",
