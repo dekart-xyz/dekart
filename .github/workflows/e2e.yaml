@@ -386,7 +386,7 @@ jobs:
             skip_postgres: true
 
           - id: pg-s3-postgres
-            spec: cypress/e2e/pg-s3/happyPath.cy.js
+            spec: cypress/e2e/pg-s3/happyPath.cy.js,cypress/e2e/pg-s3/runAllQueriesLegacyMissingSource.cy.js
             extra_env: |
               -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
               -e DEKART_POSTGRES_HOST=localhost \

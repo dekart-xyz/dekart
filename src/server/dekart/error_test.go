@@ -2,6 +2,7 @@ package dekart
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -94,6 +95,18 @@ func TestHttpError_S3ObjectNotFound(t *testing.T) {
 	HttpError(recorder, err)
 	assert.Equal(t, http.StatusNotFound, recorder.Code)
 	assert.Equal(t, "NoSuchKey: object does not exist\n\tstatus code: 404, request id: req-123\n", recorder.Body.String())
+}
+
+func TestIsStorageObjectNotFound(t *testing.T) {
+	s3NotFound := awserr.NewRequestFailure(awserr.New("NoSuchKey", "object does not exist", nil), http.StatusNotFound, "req-123")
+	googleNotFound := &googleapi.Error{Code: http.StatusNotFound, Message: "not found"}
+
+	assert.True(t, isStorageObjectNotFound(gcsstorage.ErrObjectNotExist))
+	assert.True(t, isStorageObjectNotFound(fmt.Errorf("wrapped: %w", s3NotFound)))
+	assert.True(t, isStorageObjectNotFound(fmt.Errorf("wrapped: %w", googleNotFound)))
+	assert.False(t, isStorageObjectNotFound(awserr.NewRequestFailure(awserr.New("AccessDenied", "denied", nil), http.StatusForbidden, "req-123")))
+	assert.False(t, isStorageObjectNotFound(&googleapi.Error{Code: http.StatusForbidden, Message: "denied"}))
+	assert.False(t, isStorageObjectNotFound(errors.New("network timeout")))
 }
 
 // mockError implements the error interface for testing

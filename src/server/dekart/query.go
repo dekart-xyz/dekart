@@ -156,7 +156,7 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 	defer queriesRows.Close()
 
 	var queries []runQueryOptions
-	var querySourceIds []string
+	queriesFound := false
 
 	for queriesRows.Next() {
 		var queryID string
@@ -168,7 +168,7 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 			log.Err(err).Send()
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-		querySourceIds = append(querySourceIds, querySourceId)
+		queriesFound = true
 		connection, err := s.getConnection(ctx, connectionID.String)
 		if err != nil {
 			log.Err(err).Send()
@@ -176,11 +176,28 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 		}
 		bucketName := s.getBucketNameFromConnection(connection)
 
+		if queryText == "" && bucketName != "" && querySourceId != "" {
+			connCtx := conn.GetCtx(ctx, connection)
+			queryText, err = s.getQueryText(connCtx, querySourceId, bucketName)
+			if err != nil {
+				if isStorageObjectNotFound(err) {
+					log.Warn().Err(err).Str("query_id", queryID).Str("query_source_id", querySourceId).Msg("Skipping legacy query with missing source in RunAllQueries")
+					continue
+				}
+				log.Err(err).Msgf("Error getting query text for query %s", queryID)
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+		}
+
 		queryTextParsed, queryParamsHash, err := injectQueryParams(queryText, req.QueryParams, req.GetQueryParamsValues())
 
 		if err != nil {
 			log.Err(err).Send()
 			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		if queryTextParsed == "" {
+			log.Warn().Str("query_id", queryID).Str("query_source_id", querySourceId).Msg("Skipping empty query in RunAllQueries")
+			continue
 		}
 
 		queries = append(queries, runQueryOptions{
@@ -195,30 +212,22 @@ func (s Server) RunAllQueries(ctx context.Context, req *proto.RunAllQueriesReque
 	}
 
 	if len(queries) == 0 {
-		err := fmt.Errorf("queries not found report_id:%s", req.ReportId)
-		log.Warn().Err(err).Send()
-		return nil, status.Error(codes.NotFound, err.Error())
+		if !queriesFound {
+			err := fmt.Errorf("queries not found report_id:%s", req.ReportId)
+			log.Warn().Err(err).Send()
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+		return &proto.RunAllQueriesResponse{}, nil
 	}
 
 	res := make(chan error, len(queries))
 
 	for i := range queries {
 		go func(i int) {
-			if queries[i].queryText == "" && queries[i].userBucketName != "" {
-				// legacy queries stored in user storage
-				connCtx := conn.GetCtx(ctx, queries[i].connection)
-				queryText, err := s.getQueryText(connCtx, querySourceIds[i], queries[i].userBucketName)
-				if err != nil {
-					log.Err(err).Msgf("Error getting query text for query %s", queries[i].queryID)
-					res <- err
-					return
-				}
-				queries[i].queryText = queryText
-			}
-				_, err = s.runQuery(ctx, queries[i])
-				res <- err
-			}(i)
-		}
+			_, runErr := s.runQuery(ctx, queries[i])
+			res <- runErr
+		}(i)
+	}
 
 	for range queries {
 		err := <-res
@@ -272,13 +281,13 @@ func (s Server) runQuery(ctx context.Context, o runQueryOptions) (*proto.QueryJo
 		return nil, err
 	}
 	return &proto.QueryJob{
-		Id:                  job.GetID(),
-		QueryId:             job.GetQueryID(),
-		QueryText:           o.queryText,
-		JobStatus:           proto.QueryJob_JOB_STATUS_PENDING,
-		DwJobId:             stringOrEmpty(job.GetDWJobID()),
-		JobResultId:         stringOrEmpty(job.GetResultID()),
-		QueryParamsHash:     o.queryParamsHash,
+		Id:              job.GetID(),
+		QueryId:         job.GetQueryID(),
+		QueryText:       o.queryText,
+		JobStatus:       proto.QueryJob_JOB_STATUS_PENDING,
+		DwJobId:         stringOrEmpty(job.GetDWJobID()),
+		JobResultId:     stringOrEmpty(job.GetResultID()),
+		QueryParamsHash: o.queryParamsHash,
 	}, nil
 }
 
