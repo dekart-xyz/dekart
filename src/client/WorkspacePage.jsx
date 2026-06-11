@@ -133,15 +133,16 @@ function CreateWorkspaceForm () {
       <Form
         form={form}
         disabled={disabled}
-        layout='vertical' onFinish={(values) => {
-          track('CreateWorkspaceFormFinish')
+        layout='vertical' onFinish={async (values) => {
+          setDisabled(true)
+          const trackingCalls = [track('CreateWorkspaceFormFinish')]
           if (values.source) {
-            track('CreateWorkspaceFormSource' + values.source)
+            trackingCalls.push(track('CreateWorkspaceFormSource' + values.source))
           }
           if (values.source === 'Other' && values.sourceOther) {
-            track('CreateWorkspaceFormSourceOther', { sourceOther: values.sourceOther })
+            trackingCalls.push(track('CreateWorkspaceFormSourceOther', { sourceOther: values.sourceOther }))
           }
-          setDisabled(true)
+          await Promise.all(trackingCalls)
           dispatch(createWorkspace(values.name))
         }}
       >
@@ -164,6 +165,7 @@ function CreateWorkspaceForm () {
                     { value: 'LinkedInDM', label: 'LinkedIn DM' },
                     { value: 'ChatGPT', label: 'ChatGPT / AI Assistant' },
                     { value: 'ClaudeSkill', label: 'Claude/Codex Skill' },
+                    { value: 'MattForrest', label: 'Matt Forrest' },
                     { value: 'Referral', label: 'Referral / Friend' },
                     { value: 'Other', label: 'Other' }
                   ]}
