@@ -1,5 +1,4 @@
 /* eslint-disable no-undef */
-import { AuthState, RedirectState } from 'dekart-proto/dekart_pb'
 
 const appUrl = Cypress.env('DEKART_E2E_BASE_URL') || 'http://localhost:3000'
 const ciValue = String(Cypress.env('CI') ?? '').toLowerCase()
@@ -7,41 +6,28 @@ const isCI = ciValue === 'true' || ciValue === '1' || String(Cypress.env('CYPRES
 const apiBase = isCI ? `${appUrl}/api/v1` : 'http://localhost:8080/api/v1'
 const serviceAccountError = 'BigQuery via MCP requires a service-account-backed connection'
 
-const bytesToBase64 = (bytes) => {
-  let binary = ''
-  bytes.forEach((byte) => {
-    binary += String.fromCharCode(byte)
-  })
-  return btoa(binary)
-}
+const getDeviceToken = () => {
+  return cy.request('POST', `${apiBase}/device`, {
+    device_name: 'cypress-google-oauth-mcp'
+  }).then((startResp) => {
+    expect(startResp.status, 'device start status').to.eq(200)
+    const deviceId = startResp.body.device_id
+    const authUrl = startResp.body.auth_url
+    expect(deviceId, 'device_id').to.be.a('string')
+    expect(deviceId, 'device_id').not.to.eq('')
+    expect(authUrl, 'auth_url').to.be.a('string').and.include('/device/authorize')
 
-const base64ToBytes = (value) => {
-  return Uint8Array.from(atob(value), (char) => char.charCodeAt(0))
-}
+    cy.visit(authUrl)
+    cy.contains('button', 'Authorize', { timeout: 20000 }).click()
+    cy.contains('Device authorized', { timeout: 20000 }).should('be.visible')
 
-const getAccessToken = () => {
-  const state = new AuthState()
-  state.setAction(AuthState.Action.ACTION_REQUEST_CODE)
-  state.setUiUrl(appUrl)
-  state.setAuthUrl(`${apiBase}/authenticate`)
-  const stateBase64 = bytesToBase64(state.serializeBinary())
-
-  return cy.request({
-    url: `${apiBase}/authenticate?state=${encodeURIComponent(stateBase64)}`,
-    followRedirect: false,
-    failOnStatusCode: false
-  }).then((response) => {
-    expect(response.status, 'authenticate redirect status').to.eq(302)
-    const location = response.headers.location
-    expect(location, 'authenticate redirect location').to.be.a('string')
-    const redirectStateBase64 = new URL(location).searchParams.get('redirect_state')
-    expect(redirectStateBase64, 'redirect_state').to.be.a('string')
-    const redirectState = RedirectState.deserializeBinary(base64ToBytes(redirectStateBase64))
-    expect(redirectState.getError(), 'redirect error').to.eq('')
-    const token = JSON.parse(redirectState.getTokenJson())
-    expect(token.access_token, 'access_token').to.be.a('string')
-    expect(token.access_token, 'access_token').not.to.eq('')
-    return token.access_token
+    return cy.request('POST', `${apiBase}/device/token`, { device_id: deviceId }).then((tokenResp) => {
+      expect(tokenResp.status, 'device token status').to.eq(200)
+      expect(tokenResp.body.status, 'device token response status').to.eq('authorized')
+      expect(tokenResp.body.token, 'device token').to.be.a('string')
+      expect(tokenResp.body.token, 'device token').not.to.eq('')
+      return tokenResp.body.token
+    })
   })
 }
 
@@ -64,7 +50,7 @@ describe('google-oauth MCP BigQuery passthrough rejection', () => {
   it('rejects project-only BigQuery MCP create_connection', () => {
     const connectionName = `MCP BigQuery Passthrough Repro ${Date.now()}`
 
-    getAccessToken().then((token) => {
+    getDeviceToken().then((token) => {
       callMCP(token, 'create_connection', {
         connection: {
           connection_name: connectionName,

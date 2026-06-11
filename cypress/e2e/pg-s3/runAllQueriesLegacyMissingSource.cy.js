@@ -110,44 +110,26 @@ const createRunnableReport = () => {
   })
 }
 
-const createBucketBackedConnection = () => {
-  return callMCP('create_connection', {
-    connection: {
-      connection_name: `Missing Source Regression ${Date.now()}`,
-      connection_type: 'CONNECTION_TYPE_BIGQUERY',
-      bigquery_project_id: 'dekart-cloud',
-      cloud_storage_bucket: 'legacy-query-source-regression'
-    }
-  }).then((result) => {
-    const connectionId = result.connection?.id
-    expect(connectionId, 'connection_id').to.be.a('string')
-    expect(connectionId, 'connection_id').not.to.eq('')
-    return connectionId
-  })
-}
-
 const createLegacyMissingSourceQuery = (reportId) => {
-  return createBucketBackedConnection().then((connectionId) => {
-    return callMCP('create_dataset', { report_id: reportId }).then((dataset) => {
-      const datasetId = readId(dataset, ['dataset_id', 'datasetId', 'id'])
-      expect(datasetId, 'dataset_id').to.be.a('string')
-      expect(datasetId, 'dataset_id').not.to.eq('')
+  return callMCP('create_dataset', { report_id: reportId }).then((dataset) => {
+    const datasetId = readId(dataset, ['dataset_id', 'datasetId', 'id'])
+    expect(datasetId, 'dataset_id').to.be.a('string')
+    expect(datasetId, 'dataset_id').not.to.eq('')
 
-      return callMCP('create_query', {
-        dataset_id: datasetId,
-        connection_id: connectionId
-      }).then((query) => {
-        const queryId = readId(query, ['query_id', 'queryId']) || readId(query?.query, ['id'])
-        expect(queryId, 'query_id').to.be.a('string')
-        expect(queryId, 'query_id').not.to.eq('')
+    return callMCP('create_query', {
+      dataset_id: datasetId,
+      connection_id: ''
+    }).then((query) => {
+      const queryId = readId(query, ['query_id', 'queryId']) || readId(query?.query, ['id'])
+      expect(queryId, 'query_id').to.be.a('string')
+      expect(queryId, 'query_id').not.to.eq('')
 
-        return psql(`
-          UPDATE queries
-          -- query_source=2 is QUERY_SOURCE_STORAGE.
-          SET query_text = '', query_source = 2, query_source_id = ${sqlString(`missing-source-${Date.now()}`)}
-          WHERE id = ${sqlString(queryId)}
-        `).then(() => queryId)
-      })
+      return psql(`
+        UPDATE queries
+        -- query_source=2 is QUERY_SOURCE_STORAGE.
+        SET query_text = '', query_source = 2, query_source_id = ${sqlString(`missing-source-${Date.now()}`)}
+        WHERE id = ${sqlString(queryId)}
+      `).then(() => queryId)
     })
   })
 }

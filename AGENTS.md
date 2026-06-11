@@ -36,6 +36,7 @@ Goal: contributions should blend into the existing codebase and minimize maintai
 - Commit and push changes only when the user explicitly asks to commit or push.
 - Reuse existing contract types in the touched module (proto/shared schema) before adding local ad-hoc request structs; if you must diverge, add a one-line reason.
 - Keep Cypress `cypress/e2e/<folder>` aligned with env config name used to run it (for example, `.env.local` -> `cypress/e2e/local`, `.env.pg-s3` -> `cypress/e2e/pg-s3`).
+- MCP E2E tests must authenticate through the device flow (`POST /device`, browser authorization, then `POST /device/token`) and use the returned device token as the MCP bearer token. Do not call `/authenticate` directly or hand-roll OAuth/protobuf state helpers for MCP tests.
 - For E2E tests, group specs by runtime configuration; split only long-running configurations into multiple parallel lanes.
 - After changing behavior, remove obsolete flags/params/branches that are no longer needed (no leftover transitional wiring).
 - Do not introduce new environment variables in code/workflows without an explicit plan or direct user approval.
