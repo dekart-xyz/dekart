@@ -36,7 +36,10 @@ jobs:
 
     services:
       postgres:
-        image: public.ecr.aws/docker/library/postgres:15
+        image: postgres:15
+        credentials:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
         env:
           POSTGRES_PASSWORD: ${{ env.DEKART_POSTGRES_PASSWORD }}
           POSTGRES_USER:     ${{ env.DEKART_POSTGRES_USER }}
@@ -182,6 +185,7 @@ jobs:
       LOGIN_REG:  ${{ inputs.target == 'premium' && 'ghcr' || 'dh' }}
     strategy:
       fail-fast: false
+      max-parallel: 10
       matrix:
         include:
           - id: google-oauth
@@ -402,6 +406,7 @@ jobs:
           - id: pg-s3-postgres-expired-license-startup
             spec: cypress/e2e/pg-s3/licenseExpiredReadOnly.cy.js
             expired_license_startup: true
+            skip_postgres: true
             extra_env: |
               -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_EXP_SEC \
               -e DEKART_POSTGRES_HOST=localhost \
@@ -440,7 +445,10 @@ jobs:
 
     services:
       postgres:
-        image: ${{ (!matrix.target || matrix.target == inputs.target) && !matrix.skip_postgres && 'public.ecr.aws/docker/library/postgres:15' || '' }}
+        image: ${{ (!matrix.target || matrix.target == inputs.target) && !matrix.skip_postgres && 'postgres:15' || '' }}
+        credentials:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
         env:
           POSTGRES_PASSWORD: ${{ env.DEKART_POSTGRES_PASSWORD }}
           POSTGRES_USER:     ${{ env.DEKART_POSTGRES_USER }}
