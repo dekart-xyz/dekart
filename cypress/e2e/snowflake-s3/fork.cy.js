@@ -26,7 +26,12 @@ describe('fork', () => {
 
     // change user
     cy.setCookie('dekart-dev-claim-email', 'test2@gmail.com')
-    cy.reload()
+    cy.visit('/')
+    cy.get('span').contains('Shared Maps').click()
+    cy.contains('.dekart-map-card', 'Untitled', { timeout: 20000 }).as('sharedMapCard')
+    cy.get('@sharedMapCard').find('[data-testid="map-card-divider"]').should('not.exist')
+    cy.get('@sharedMapCard').find('[data-testid="map-card-footer-actions"]').should('not.exist')
+    cy.get('@sharedMapCard').click()
 
     // fork report
     cy.get('button#dekart-fork-button').click()

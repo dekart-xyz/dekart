@@ -385,6 +385,9 @@ function MapCard ({ report, reportFilter, archived, authEnabled }) {
 
   const { previewUrl, previewLoading, previewError, setPreviewLoading, setPreviewError } = useMapPreview(report, isVisible)
   const centerCoordinates = getMapCenterCoordinates(report.mapConfig)
+  const showArchiveAction = reportFilter === 'my'
+  const showEditAction = report.canWrite && !report.archived
+  const showFooterActions = showArchiveAction || showEditAction
 
   const handleEdit = (e) => {
     e.stopPropagation()
@@ -452,23 +455,29 @@ function MapCard ({ report, reportFilter, archived, authEnabled }) {
               {getRelativeTime(modifiedDate)}
             </div>
           </div>
-          <div className={styles.mapCardDivider} />
-          <div className={styles.mapFooterActions}>
-            {reportFilter === 'my' ? <ArchiveReportButton report={report} /> : <span />}
-            {report.canWrite && !report.archived
-              ? (
-                <Button
-                  type='default'
-                  size='small'
-                  icon={<EditOutlined />}
-                  onClick={handleEdit}
-                  className={styles.mapActionButton}
-                  title='Edit'
-                >Edit
-                </Button>
-                )
-              : null}
-          </div>
+          {showFooterActions
+            ? (
+              <>
+                <div className={styles.mapCardDivider} data-testid='map-card-divider' />
+                <div className={styles.mapFooterActions} data-testid='map-card-footer-actions'>
+                  {showArchiveAction ? <ArchiveReportButton report={report} /> : null}
+                  {showEditAction
+                    ? (
+                      <Button
+                        type='default'
+                        size='small'
+                        icon={<EditOutlined />}
+                        onClick={handleEdit}
+                        className={styles.mapActionButton}
+                        title='Edit'
+                      >Edit
+                      </Button>
+                      )
+                    : null}
+                </div>
+              </>
+              )
+            : null}
         </div>
       </div>
     </div>
