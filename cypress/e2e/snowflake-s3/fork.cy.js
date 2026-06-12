@@ -32,6 +32,9 @@ describe('fork', () => {
     cy.get('@sharedMapCard').find('[data-testid="map-card-divider"]').should('not.exist')
     cy.get('@sharedMapCard').find('[data-testid="map-card-footer-actions"]').should('not.exist')
     cy.get('@sharedMapCard').click()
+    cy.location('pathname').then((pathname) => {
+      cy.visit(`${pathname}/source`)
+    })
 
     // fork report
     cy.get('button#dekart-fork-button').click()
