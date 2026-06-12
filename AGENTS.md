@@ -8,15 +8,19 @@ Goal: contributions should blend into the existing codebase and minimize maintai
 - Prefer existing patterns in the touched folder over introducing new patterns.
 - Avoid speculative hardening. Add extra guards only for real, observed failure modes.
 - Each line in this repo is reviewed by a human who authored original code. This is a slow and expensive process. Avoid adding complexity that requires extra review cycles without a clear observed need.
-- Prefer test-driven development for bug fixes in backend or client code. For issues observable via UX, prefer Cypress E2E tests. If the issue is not reproducible via E2E tests, use unit tests.
 
-## Usage of unit tests
-
+## Testing Rules
 - Do not add tests merely to increase coverage.
 - Do not duplicate implementation logic in tests.
-- Use test-driven development for isolated Go packages and JS libraries. Test them as black boxes.
-- Use unit tests for bug fixes that cannot be reproduced in E2E UX tests.
-- When applicable, use real SQLite in tests and verify outcomes.
+– Prefer test driven development using cypress and unit tests.
+– For every component that has UX or state (db, memory), use cypress tests.
+- Only use unit tests for stateless no UX components with no side effects (like schema validator)
+– when a bug was spotted in production or QA the fix must start with a failing regression test for the exact bad
+tool input.
+- MCP E2E tests must authenticate through the device flow (`POST /device`, browser authorization, then `POST /device/token`) and use the returned device token as the MCP bearer token. Do not call `/authenticate` directly or hand-roll OAuth/protobuf state helpers for MCP tests.
+- For E2E tests, group specs by runtime configuration; split only long-running configurations into multiple parallel lanes.
+
+
 
 ## Architecture Rules (mandatory)
 
@@ -29,15 +33,13 @@ Goal: contributions should blend into the existing codebase and minimize maintai
 
 ## Cross-cutting Rules
 
-- Add a short purpose comment for each new non-trivial function.
+- Add a short purpose comment for each new non-trivial function and if statement
 - Do not use debug logging in production paths. Keep logs high-signal for admins.
 - Never force-push.
 - Do not stage changes unless the user explicitly asks to stage, commit, or push.
 - Commit and push changes only when the user explicitly asks to commit or push.
 - Reuse existing contract types in the touched module (proto/shared schema) before adding local ad-hoc request structs; if you must diverge, add a one-line reason.
 - Keep Cypress `cypress/e2e/<folder>` aligned with env config name used to run it (for example, `.env.local` -> `cypress/e2e/local`, `.env.pg-s3` -> `cypress/e2e/pg-s3`).
-- MCP E2E tests must authenticate through the device flow (`POST /device`, browser authorization, then `POST /device/token`) and use the returned device token as the MCP bearer token. Do not call `/authenticate` directly or hand-roll OAuth/protobuf state helpers for MCP tests.
-- For E2E tests, group specs by runtime configuration; split only long-running configurations into multiple parallel lanes.
 - After changing behavior, remove obsolete flags/params/branches that are no longer needed (no leftover transitional wiring).
 - Do not introduce new environment variables in code/workflows without an explicit plan or direct user approval.
 

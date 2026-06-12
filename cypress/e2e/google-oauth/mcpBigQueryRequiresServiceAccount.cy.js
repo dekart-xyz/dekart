@@ -46,6 +46,13 @@ const callMCP = (token, name, args = {}) => {
   })
 }
 
+const expectMCPError = (token, name, args, status, message) => {
+  return callMCP(token, name, args).then((response) => {
+    expect(response.status, `${name} http status`).to.eq(status)
+    expect(response.body, `${name} error`).to.eq(`${message}\n`)
+  })
+}
+
 describe('google-oauth MCP BigQuery passthrough rejection', () => {
   it('rejects project-only BigQuery MCP create_connection', () => {
     const connectionName = `MCP BigQuery Passthrough Repro ${Date.now()}`
@@ -61,6 +68,38 @@ describe('google-oauth MCP BigQuery passthrough rejection', () => {
         expect(response.status, 'create_connection http status').to.eq(412)
         expect(response.body, 'create_connection error').to.eq(`${serviceAccountError}\n`)
       })
+    })
+  })
+
+  it('rejects empty and malformed query IDs before database UUID comparison', () => {
+    getDeviceToken().then((token) => {
+      expectMCPError(token, 'create_query', {
+        dataset_id: '',
+        connection_id: 'default'
+      }, 400, 'dataset_id is required')
+
+      expectMCPError(token, 'create_query', {
+        dataset_id: 'not-a-uuid',
+        connection_id: 'default'
+      }, 400, 'invalid dataset_id format')
+
+      expectMCPError(token, 'update_query', {
+        query_id: '',
+        query_text: 'select 1'
+      }, 400, 'query_id is required')
+
+      expectMCPError(token, 'update_query', {
+        query_id: 'not-a-uuid',
+        query_text: 'select 1'
+      }, 400, 'invalid query_id format')
+
+      expectMCPError(token, 'run_query', {
+        query_id: ''
+      }, 400, 'query_id is required')
+
+      expectMCPError(token, 'run_query', {
+        query_id: 'not-a-uuid'
+      }, 400, 'invalid query_id format')
     })
   })
 })
