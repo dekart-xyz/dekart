@@ -17,6 +17,7 @@ import (
 	"dekart/src/server/user"
 
 	"cloud.google.com/go/bigquery"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -33,6 +34,9 @@ func (s Server) createQuery(ctx context.Context, req *proto.CreateQueryRequest, 
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
+	}
+	if err := validateUUIDField(req.GetDatasetId(), "dataset_id"); err != nil {
+		return nil, err
 	}
 	reportID, err := s.getReportID(ctx, req.DatasetId, true)
 
@@ -437,6 +441,9 @@ func (s Server) updateQuery(ctx context.Context, req *proto.UpdateQueryRequest, 
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	if err := validateUUIDField(req.GetQueryId(), "query_id"); err != nil {
+		return nil, err
+	}
 	q, err := query.GetQueryDetails(ctx, s.db, req.QueryId)
 	if err != nil {
 		errtype.LogError(err, "database operation failed")
@@ -501,6 +508,9 @@ func (s Server) runQueryRequest(ctx context.Context, req *proto.RunQueryRequest,
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return nil, Unauthenticated
+	}
+	if err := validateUUIDField(req.GetQueryId(), "query_id"); err != nil {
+		return nil, err
 	}
 	q, err := query.GetQueryDetails(ctx, s.db, req.QueryId)
 	if err != nil {
@@ -593,4 +603,14 @@ func (s Server) runQueryRequest(ctx context.Context, req *proto.RunQueryRequest,
 		QueryJob: queryJob,
 	}
 	return res, nil
+}
+
+func validateUUIDField(value, name string) error {
+	if strings.TrimSpace(value) == "" {
+		return status.Error(codes.InvalidArgument, fmt.Sprintf("%s is required", name))
+	}
+	if _, err := uuid.Parse(value); err != nil {
+		return status.Error(codes.InvalidArgument, fmt.Sprintf("invalid %s format", name))
+	}
+	return nil
 }
