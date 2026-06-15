@@ -50,7 +50,8 @@ tool input.
 - For implementation/refactor tasks, use `skills/code-style/SKILL.md`.
 - Before reporting code work complete, run `skills/verify-before-done/SKILL.md`.
 - For local frontend development, use `make client` so an existing Vite server on port 3000 is stopped before starting a fresh one.
-- For local E2E tests, run the backend with `make server <env-file>` and the frontend with `make client`; do not rebuild Docker images unless explicitly validating the container/CI image.
+- For local E2E tests, run the backend with `make server <env-file>` and the frontend with `make client` and dabase with `make up-and-down`; do not rebuild Docker images unless explicitly validating the container/CI image.
+– Start with fresh local database when needed via `make up-and-down` or `rm ./data/dekart.db` to avoid stale state issues.
 
 ## Skill Failure Recovery
 
