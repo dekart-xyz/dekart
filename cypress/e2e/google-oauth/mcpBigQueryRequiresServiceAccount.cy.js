@@ -17,6 +17,7 @@ const getDeviceToken = () => {
     expect(deviceId, 'device_id').not.to.eq('')
     expect(authUrl, 'auth_url').to.be.a('string').and.include('/device/authorize')
 
+    cy.setDevClaimsEmail('test@gmail.com')
     cy.visit(authUrl)
     cy.contains('button', 'Authorize', { timeout: 20000 }).click()
     cy.contains('Device authorized', { timeout: 20000 }).should('be.visible')

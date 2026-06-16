@@ -3,7 +3,9 @@ import copy from '../../fixtures/copy.json'
 
 describe('basic query flow', () => {
   it('should make simple bigquery query and get ready status', () => {
+    cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN')
     cy.visit('/')
+    cy.ensureTestWorkspace()
 
     // create new report
     cy.get('button#dekart-create-report').click()
@@ -13,6 +15,9 @@ describe('basic query flow', () => {
 
     // create connection
     cy.get('button:contains("BigQuery")').click()
+    cy.location('pathname').then((pathname) => {
+      cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN', pathname)
+    })
     cy.get('button:contains("Connect with Google")').click()
     const randomConnectionName = `test-${Math.floor(Math.random() * 1000000)}`
     cy.get('div.ant-modal-title').should('contain', 'BigQuery')
@@ -26,6 +31,11 @@ describe('basic query flow', () => {
     cy.get('button#saveConnection').click()
 
     // run query
+    cy.get('body').then(($body) => {
+      if ($body.find('button:contains("Run SQL")').length === 0) {
+        cy.contains('button', 'Edit').click()
+      }
+    })
     cy.get('button:contains("Run SQL")').click()
     cy.get('textarea').type(copy.simple_sql_query, { force: true })
     cy.get(`button:contains("${copy.execute}")`).click()
@@ -33,7 +43,9 @@ describe('basic query flow', () => {
     cy.get(`span:contains("${copy.downloading}")`).should('contain', 'kB') // size of result shown
   })
   it('Process empty results', () => {
+    cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN')
     cy.visit('/')
+    cy.ensureTestWorkspace()
     cy.get('button#dekart-create-report').click()
     cy.get('button:contains("Run SQL")').click()
     cy.get('textarea').type("SELECT latitude, longitude FROM `bigquery-public-data.chicago_crime.crime` WHERE primary_type = 'zzz' LIMIT 1000;", { force: true })
