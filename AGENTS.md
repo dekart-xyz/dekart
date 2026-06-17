@@ -27,6 +27,7 @@ tool input.
 - Proto is the source of truth for client/server contracts. Never edit generated proto files manually. Run `make proto`.
 - Use gRPC (`dekart.proto`) for internal client-server communication by default.
 - Use REST/MCP endpoints only for external API surfaces and large-payload flows.
+- Preserve command/query separation pattern. Client send GRPC command and receives versioned (updated_at) update. We should rely on simple determenistic reconsilation instead of duck typing and deep comparing current and received structures.
 - Business endpoint orchestration belongs in `src/server/dekart` methods on `Server` and is wired in `src/server/app/app.go`.
 - Reusable domain logic belongs in `src/server/<domain>` packages and is called from `server/dekart`.
 - Keep auth/workspace gates explicit at endpoint entry points (`user.GetClaims`, workspace checks).

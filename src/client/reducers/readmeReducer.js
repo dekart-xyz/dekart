@@ -36,6 +36,7 @@ function markdown (state = null, action) {
   switch (action.type) {
     case openReport.name:
     case closeReport.name:
+    case removeReadme.name:
       return null
     case setReadmeValue.name:
     case addReadme.name:
