@@ -406,19 +406,13 @@ export function allowExportDatasets (reportId, allowExport) {
   }
 }
 
-export function publishReport (reportId, publish, cancelPublish) {
+export function publishReport (reportId, publish) {
   return async (dispatch) => {
     dispatch({ type: publishReport.name })
     const req = new PublishReportRequest()
     req.setReportId(reportId)
     req.setPublish(publish)
-    dispatch(grpcCall(Dekart.PublishReport, req, (response) => {
-      // Handle response when publishing is blocked
-      if (response.publicMapsLimitReached) {
-        dispatch(showUpgradeModal())
-        cancelPublish()
-      }
-    }))
+    dispatch(grpcCall(Dekart.PublishReport, req))
   }
 }
 
@@ -428,6 +422,10 @@ export function forkReport (reportId) {
     const request = new ForkReportRequest()
     request.setReportId(reportId)
     dispatch(grpcCall(Dekart.ForkReport, request, (res) => {
+      if (res.reportLimitReached) {
+        dispatch(showUpgradeModal(UpgradeModalType.CREATE_REPORT_LIMIT))
+        return
+      }
       const { reportId } = res
       dispatch(newForkedReport(reportId))
       dispatch(success('Report Forked'))
@@ -440,10 +438,7 @@ export function createReport () {
     const request = new CreateReportRequest()
     dispatch(grpcCall(Dekart.CreateReport, request, (res) => {
       if (res.reportLimitReached) {
-        dispatch(showUpgradeModal(UpgradeModalType.CREATE_REPORT_LIMIT, {
-          numberOfSameCompanyWorkspaces: res.numberOfSameCompanyWorkspaces,
-          sameCompanyWorkspaceOwners: res.sameCompanyWorkspaceOwners || []
-        }))
+        dispatch(showUpgradeModal(UpgradeModalType.CREATE_REPORT_LIMIT))
         return
       }
       const { report } = res

@@ -10,7 +10,6 @@ import { useEffect, useRef, useState } from 'react'
 import { setError } from './actions/message'
 import Skeleton from 'antd/es/skeleton'
 import { track } from './lib/tracking'
-import { showUpgradeModal, UpgradeModalType } from './actions/upgradeModal'
 
 export default function AnalyticsModal () {
   const { modalOpen, data: analytics } = useSelector(state => state.analytics)
@@ -20,8 +19,6 @@ export default function AnalyticsModal () {
   const token = useSelector(state => state.token)
   const buttonRef = useRef(null)
   const [loading, setLoading] = useState(false)
-  const hasAllFeatures = useSelector(state => state.user.hasAllFeatures)
-  const isFreemium = useSelector(state => state.user.isFreemium)
 
   useEffect(() => {
     if (!userStream || !report.id || !modalOpen) {
@@ -31,7 +28,7 @@ export default function AnalyticsModal () {
   }, [report.id, userStream, dispatch, modalOpen])
 
   useEffect(() => {
-    if (!analytics || !userStream || !modalOpen || !hasAllFeatures) {
+    if (!analytics || !userStream || !modalOpen) {
       return
     }
     setLoading(true)
@@ -47,7 +44,7 @@ export default function AnalyticsModal () {
         dispatch(setError(err))
         setLoading(false)
       })
-  }, [modalOpen, analytics, userStream, dispatch, token, hasAllFeatures, report.id])
+  }, [modalOpen, analytics, userStream, dispatch, token, report.id])
 
   if (!userStream) {
     return null
@@ -79,11 +76,7 @@ export default function AnalyticsModal () {
               <div className={styles.downloadButton}>
                 <Button
                   loading={loading} type='primary' ref={buttonRef} href='#' disabled={loading} onClick={() => {
-                    if (isFreemium) {
-                      dispatch(showUpgradeModal(UpgradeModalType.ANALYTICS))
-                    } else {
-                      track('DownloadAnalyticsCSV', { reportId: report.id })
-                    }
+                    track('DownloadAnalyticsCSV', { reportId: report.id })
                   }}
                 >Download CSV
                 </Button>

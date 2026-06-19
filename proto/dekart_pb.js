@@ -3296,7 +3296,7 @@ if (goog.DEBUG && !COMPILED) {
  * @constructor
  */
 proto.CreateReportResponse = function(opt_data) {
-  jspb.Message.initialize(this, opt_data, 0, -1, proto.CreateReportResponse.repeatedFields_, null);
+  jspb.Message.initialize(this, opt_data, 0, -1, null, null);
 };
 goog.inherits(proto.CreateReportResponse, jspb.Message);
 if (goog.DEBUG && !COMPILED) {
@@ -7899,7 +7899,7 @@ proto.PublishReportResponse.prototype.toObject = function(opt_includeInstance) {
  */
 proto.PublishReportResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
-    publicMapsLimitReached: jspb.Message.getBooleanFieldWithDefault(msg, 1, false)
+
   };
 
   if (includeInstance) {
@@ -7936,10 +7936,6 @@ proto.PublishReportResponse.deserializeBinaryFromReader = function(msg, reader) 
     }
     var field = reader.getFieldNumber();
     switch (field) {
-    case 1:
-      var value = /** @type {boolean} */ (reader.readBool());
-      msg.setPublicMapsLimitReached(value);
-      break;
     default:
       reader.skipField();
       break;
@@ -7969,31 +7965,6 @@ proto.PublishReportResponse.prototype.serializeBinary = function() {
  */
 proto.PublishReportResponse.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
-  f = message.getPublicMapsLimitReached();
-  if (f) {
-    writer.writeBool(
-      1,
-      f
-    );
-  }
-};
-
-
-/**
- * optional bool public_maps_limit_reached = 1;
- * @return {boolean}
- */
-proto.PublishReportResponse.prototype.getPublicMapsLimitReached = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 1, false));
-};
-
-
-/**
- * @param {boolean} value
- * @return {!proto.PublishReportResponse} returns this
- */
-proto.PublishReportResponse.prototype.setPublicMapsLimitReached = function(value) {
-  return jspb.Message.setProto3BooleanField(this, 1, value);
 };
 
 
@@ -29806,7 +29777,8 @@ proto.ForkReportResponse.prototype.toObject = function(opt_includeInstance) {
  */
 proto.ForkReportResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
-    reportId: jspb.Message.getFieldWithDefault(msg, 1, "")
+    reportId: jspb.Message.getFieldWithDefault(msg, 1, ""),
+    reportLimitReached: jspb.Message.getBooleanFieldWithDefault(msg, 2, false)
   };
 
   if (includeInstance) {
@@ -29847,6 +29819,10 @@ proto.ForkReportResponse.deserializeBinaryFromReader = function(msg, reader) {
       var value = /** @type {string} */ (reader.readString());
       msg.setReportId(value);
       break;
+    case 2:
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setReportLimitReached(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -29883,6 +29859,13 @@ proto.ForkReportResponse.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
+  f = message.getReportLimitReached();
+  if (f) {
+    writer.writeBool(
+      2,
+      f
+    );
+  }
 };
 
 
@@ -29901,6 +29884,24 @@ proto.ForkReportResponse.prototype.getReportId = function() {
  */
 proto.ForkReportResponse.prototype.setReportId = function(value) {
   return jspb.Message.setProto3StringField(this, 1, value);
+};
+
+
+/**
+ * optional bool report_limit_reached = 2;
+ * @return {boolean}
+ */
+proto.ForkReportResponse.prototype.getReportLimitReached = function() {
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 2, false));
+};
+
+
+/**
+ * @param {boolean} value
+ * @return {!proto.ForkReportResponse} returns this
+ */
+proto.ForkReportResponse.prototype.setReportLimitReached = function(value) {
+  return jspb.Message.setProto3BooleanField(this, 2, value);
 };
 
 
@@ -30006,13 +30007,6 @@ proto.CreateReportRequest.serializeBinaryToWriter = function(message, writer) {
 
 
 
-/**
- * List of repeated fields within this message type.
- * @private {!Array<number>}
- * @const
- */
-proto.CreateReportResponse.repeatedFields_ = [4];
-
 
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
@@ -30045,9 +30039,7 @@ proto.CreateReportResponse.prototype.toObject = function(opt_includeInstance) {
 proto.CreateReportResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
     report: (f = msg.getReport()) && proto.Report.toObject(includeInstance, f),
-    reportLimitReached: jspb.Message.getBooleanFieldWithDefault(msg, 2, false),
-    numberOfSameCompanyWorkspaces: jspb.Message.getFieldWithDefault(msg, 3, 0),
-    sameCompanyWorkspaceOwnersList: (f = jspb.Message.getRepeatedField(msg, 4)) == null ? undefined : f
+    reportLimitReached: jspb.Message.getBooleanFieldWithDefault(msg, 2, false)
   };
 
   if (includeInstance) {
@@ -30093,14 +30085,6 @@ proto.CreateReportResponse.deserializeBinaryFromReader = function(msg, reader) {
       var value = /** @type {boolean} */ (reader.readBool());
       msg.setReportLimitReached(value);
       break;
-    case 3:
-      var value = /** @type {number} */ (reader.readInt64());
-      msg.setNumberOfSameCompanyWorkspaces(value);
-      break;
-    case 4:
-      var value = /** @type {string} */ (reader.readString());
-      msg.addSameCompanyWorkspaceOwners(value);
-      break;
     default:
       reader.skipField();
       break;
@@ -30142,20 +30126,6 @@ proto.CreateReportResponse.serializeBinaryToWriter = function(message, writer) {
   if (f) {
     writer.writeBool(
       2,
-      f
-    );
-  }
-  f = message.getNumberOfSameCompanyWorkspaces();
-  if (f !== 0) {
-    writer.writeInt64(
-      3,
-      f
-    );
-  }
-  f = message.getSameCompanyWorkspaceOwnersList();
-  if (f.length > 0) {
-    writer.writeRepeatedString(
-      4,
       f
     );
   }
@@ -30214,61 +30184,6 @@ proto.CreateReportResponse.prototype.getReportLimitReached = function() {
  */
 proto.CreateReportResponse.prototype.setReportLimitReached = function(value) {
   return jspb.Message.setProto3BooleanField(this, 2, value);
-};
-
-
-/**
- * optional int64 number_of_same_company_workspaces = 3;
- * @return {number}
- */
-proto.CreateReportResponse.prototype.getNumberOfSameCompanyWorkspaces = function() {
-  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 3, 0));
-};
-
-
-/**
- * @param {number} value
- * @return {!proto.CreateReportResponse} returns this
- */
-proto.CreateReportResponse.prototype.setNumberOfSameCompanyWorkspaces = function(value) {
-  return jspb.Message.setProto3IntField(this, 3, value);
-};
-
-
-/**
- * repeated string same_company_workspace_owners = 4;
- * @return {!Array<string>}
- */
-proto.CreateReportResponse.prototype.getSameCompanyWorkspaceOwnersList = function() {
-  return /** @type {!Array<string>} */ (jspb.Message.getRepeatedField(this, 4));
-};
-
-
-/**
- * @param {!Array<string>} value
- * @return {!proto.CreateReportResponse} returns this
- */
-proto.CreateReportResponse.prototype.setSameCompanyWorkspaceOwnersList = function(value) {
-  return jspb.Message.setField(this, 4, value || []);
-};
-
-
-/**
- * @param {string} value
- * @param {number=} opt_index
- * @return {!proto.CreateReportResponse} returns this
- */
-proto.CreateReportResponse.prototype.addSameCompanyWorkspaceOwners = function(value, opt_index) {
-  return jspb.Message.addToRepeatedField(this, 4, value, opt_index);
-};
-
-
-/**
- * Clears the list making it empty but non-null.
- * @return {!proto.CreateReportResponse} returns this
- */
-proto.CreateReportResponse.prototype.clearSameCompanyWorkspaceOwnersList = function() {
-  return this.setSameCompanyWorkspaceOwnersList([]);
 };
 
 

@@ -1,7 +1,7 @@
 import Button from 'antd/es/button'
 import Modal from 'antd/es/modal'
 import { BarChartOutlined, GlobalOutlined, LockOutlined, TeamOutlined, LinkOutlined, UserAddOutlined, DownloadOutlined, WarningOutlined } from '@ant-design/icons'
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import styles from './ShareButton.module.css'
 import { useDispatch, useSelector } from 'react-redux'
 import Switch from 'antd/es/switch'
@@ -13,7 +13,6 @@ import { track } from './lib/tracking'
 import AnalyticsModal from './AnalyticsModal'
 import classNames from 'classnames'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
-import { showUpgradeModal, UpgradeModalType } from './actions/upgradeModal'
 
 function CopyLinkButton ({ ghost }) {
   const dispatch = useDispatch()
@@ -58,9 +57,6 @@ function PublishSwitch ({ disabled = false }) {
   const { isPublic, id, isPlayground, canWrite } = useSelector(state => state.report)
   const [switchState, setSwitchState] = useState(isPublic || isPlayground)
   const dispatch = useDispatch()
-  const cancelPublish = useCallback(() => {
-    setSwitchState(false)
-  }, [])
   useEffect(() => {
     setSwitchState(isPublic || isPlayground)
   }, [isPublic, isPlayground])
@@ -77,7 +73,7 @@ function PublishSwitch ({ disabled = false }) {
       onChange={(checked) => {
         track('PublishReportChanged')
         setSwitchState(checked)
-        dispatch(publishReport(id, checked, cancelPublish))
+        dispatch(publishReport(id, checked))
       }}
       loading={isPlayground ? false : switchState !== isPublic}
     />
@@ -150,8 +146,6 @@ function DirectAccess () {
   const loading = reportDirectAccessEmails.join(',') !== emails.join(',') // check if emails are loaded
   const users = useSelector(state => state.workspace.users)
   const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
-  const isFreemium = useSelector(state => state.user.isFreemium)
-  const hasAllFeatures = useSelector(state => state.user.hasAllFeatures)
   if (!canWrite || isSelfHosted) {
     return null
   }
@@ -189,12 +183,8 @@ function DirectAccess () {
           loading={loading}
           disabled={disabled}
           onChange={(emails) => {
-            if (isFreemium) {
-              dispatch(showUpgradeModal(UpgradeModalType.DIRECT_ACCESS))
-            } else if (hasAllFeatures) {
-              setEmails(emails)
-              dispatch(addReportDirectAccess(reportId, emails))
-            }
+            setEmails(emails)
+            dispatch(addReportDirectAccess(reportId, emails))
           }}
           tokenSeparators={[',', ' ']}
           ref={inputRef}

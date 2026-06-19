@@ -386,7 +386,7 @@ func (s *Server) callCreateReportTool(ctx context.Context) (json.RawMessage, err
 		return nil, err
 	}
 	if response.GetReportLimitReached() {
-		return mcp.MarshalProtoJSON(response)
+		return mcp.MarshalJSON(buildMCPCreateReportLimitResult())
 	}
 	return mcp.MarshalJSON(buildMCPCreateReportResult(response.GetReport().GetId()))
 }
@@ -837,6 +837,21 @@ func buildMCPCreateReportResult(reportID string) map[string]any {
 	frontendBaseURL := device.RequestFrontendBaseURL(nil)
 	if frontendBaseURL != "" {
 		result["report_url"] = fmt.Sprintf("%s%s", frontendBaseURL, reportPath)
+	}
+	return result
+}
+
+// buildMCPCreateReportLimitResult tells agents to keep trial start user-initiated in the UI.
+func buildMCPCreateReportLimitResult() map[string]any {
+	result := map[string]any{
+		"report_limit_reached": true,
+		"reason":               "free_workspace_map_limit",
+		"map_limit":            freeWorkspaceMapLimit,
+		"instruction":          "Ask the user to open this link and start the trial in the Dekart UI. Do not start the trial via MCP.",
+	}
+	frontendBaseURL := device.RequestFrontendBaseURL(nil)
+	if frontendBaseURL != "" {
+		result["trial_url"] = fmt.Sprintf("%s/workspace/plan", frontendBaseURL)
 	}
 	return result
 }
