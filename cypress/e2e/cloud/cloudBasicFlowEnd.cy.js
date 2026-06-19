@@ -2,6 +2,10 @@
 import copy from '../../fixtures/copy.json'
 
 describe('cloud basic flow', () => {
+  before(() => {
+    cy.resetCloudTestDatabase()
+  })
+
   it('with private token', () => {
     cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN')
     cy.visit('/')

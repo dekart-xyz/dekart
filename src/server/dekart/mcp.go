@@ -63,6 +63,7 @@ type addReportReadmeMCPArgs struct {
 }
 
 const mcpBigQueryServiceAccountRequiredMessage = "BigQuery via MCP requires a service-account-backed connection"
+const mcpCreateReportLimitReachedEventName = "MCPCreateReportLimitReached"
 
 // HandleCreateReport wraps CreateReport RPC with protojson HTTP endpoint.
 func (s *Server) HandleCreateReport(w http.ResponseWriter, r *http.Request) {
@@ -386,9 +387,24 @@ func (s *Server) callCreateReportTool(ctx context.Context) (json.RawMessage, err
 		return nil, err
 	}
 	if response.GetReportLimitReached() {
+		s.trackMCPCreateReportLimitReached(ctx)
 		return mcp.MarshalJSON(buildMCPCreateReportLimitResult())
 	}
 	return mcp.MarshalJSON(buildMCPCreateReportResult(response.GetReport().GetId()))
+}
+
+// trackMCPCreateReportLimitReached records MCP attempts blocked by the free workspace map limit.
+func (s *Server) trackMCPCreateReportLimitReached(ctx context.Context) {
+	claims := user.GetClaims(ctx)
+	if claims == nil || claims.Email == user.UnknownEmail {
+		return
+	}
+	workspaceInfo := checkWorkspace(ctx)
+	s.trackAnonymousEvent(ctx, claims.Email, mcpCreateReportLimitReachedEventName, map[string]string{
+		"map_limit":    fmt.Sprintf("%d", freeWorkspaceMapLimit),
+		"reason":       "free_workspace_map_limit",
+		"workspace_id": workspaceInfo.ID,
+	})
 }
 
 // callCreateDatasetTool creates one dataset for report_id.
