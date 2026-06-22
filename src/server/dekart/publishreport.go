@@ -428,29 +428,6 @@ func (s Server) PublishReport(ctx context.Context, req *proto.PublishReportReque
 		if os.Getenv("DEKART_STORAGE") == "PG" {
 			return nil, status.Error(codes.InvalidArgument, "public publishing is not supported for DEKART_STORAGE=PG yet")
 		}
-		workspaceInfo := user.CheckWorkspaceCtx(ctx)
-
-		// Check if user has freemium plan (TYPE_PERSONAL) and limit to 1 public map
-		if workspaceInfo.PlanType == proto.PlanType_TYPE_PERSONAL {
-			// Count existing public reports for this workspace
-			var publicReportsCount int
-			err = s.db.QueryRowContext(ctx,
-				`SELECT COUNT(*) FROM reports WHERE workspace_id = $1 AND is_public = true AND NOT archived`,
-				workspaceInfo.ID,
-			).Scan(&publicReportsCount)
-			if err != nil {
-				errtype.LogError(err, "Cannot count public reports")
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-
-			// If user already has 1 public report and this report is not already public, block publishing
-			if publicReportsCount >= 1 && !report.IsPublic {
-				return &proto.PublishReportResponse{
-					PublicMapsLimitReached: true,
-				}, nil
-			}
-		}
-
 		// Check if query results are expired
 		expired, err := s.checkExpiredQueryResult(ctx, req.ReportId)
 		if err != nil {

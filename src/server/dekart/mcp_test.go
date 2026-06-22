@@ -8,9 +8,11 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -202,6 +204,57 @@ func TestCallMCPTool_GetMapConfigSchema(t *testing.T) {
 	assert.Equal(t, "inmemory://kepler_map_config_v1.schema.json", result["schema_id"])
 	_, hasSchema := result["schema"]
 	assert.True(t, hasSchema)
+}
+
+func TestCallCreateReportTool_TracksLimitReached(t *testing.T) {
+	t.Setenv("DEKART_CLOUD", "1")
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	server := &Server{db: db}
+	ctx := user.SetWorkspaceCtx(testUserContext("user@example.com"), user.WorkspaceInfo{
+		ID:       "workspace-1",
+		PlanType: proto.PlanType_TYPE_PERSONAL,
+		UserRole: proto.UserRole_ROLE_ADMIN,
+	})
+
+	mock.ExpectBegin()
+	mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT id
+			FROM workspaces
+			WHERE id = $1
+			FOR UPDATE
+		`)).
+		WithArgs("workspace-1").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("workspace-1"))
+	mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT COUNT(*)
+			FROM reports
+			WHERE workspace_id = $1
+			  AND archived = FALSE
+			  AND is_playground = FALSE
+		`)).
+		WithArgs("workspace-1").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(freeWorkspaceMapLimit))
+	mock.ExpectRollback()
+	mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO track_events (email, event_name, event_data_json)
+			VALUES ($1, $2, $3)`)).
+		WithArgs(
+			"user@example.com",
+			mcpCreateReportLimitReachedEventName,
+			`{"map_limit":"3","reason":"free_workspace_map_limit","workspace_id":"workspace-1"}`,
+		).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	payload, err := server.callCreateReportTool(ctx)
+
+	assert.NoError(t, err)
+	var result map[string]any
+	assert.NoError(t, json.Unmarshal(payload, &result))
+	assert.Equal(t, true, result["report_limit_reached"])
+	assert.Equal(t, "free_workspace_map_limit", result["reason"])
+	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
 func TestCallMCPTool_CreateQuery_DispatchesToHandler(t *testing.T) {

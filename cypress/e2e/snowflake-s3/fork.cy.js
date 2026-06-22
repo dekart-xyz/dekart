@@ -3,6 +3,7 @@ import copy from '../../fixtures/copy.json'
 
 describe('fork', () => {
   it('should have same viz style after fork', () => {
+    cy.setDevClaimsEmail('test@gmail.com')
     cy.visit('/')
     cy.get('button#dekart-create-report').click()
     cy.get('button:contains("Run SQL")').click()
@@ -25,7 +26,7 @@ describe('fork', () => {
     cy.get('button').contains('Done').click()
 
     // change user
-    cy.setCookie('dekart-dev-claim-email', 'test2@gmail.com')
+    cy.setDevClaimsEmail('test2@gmail.com')
     cy.visit('/')
     cy.get('span').contains('Shared Maps').click()
     cy.contains('.dekart-map-card', 'Untitled', { timeout: 20000 }).as('sharedMapCard')

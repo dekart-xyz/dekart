@@ -3,6 +3,7 @@ import copy from '../../fixtures/copy.json'
 
 describe('happy path', () => {
   it('should make simple snowflake query and get ready status', () => {
+    cy.setDevClaimsEmail('test@gmail.com')
     cy.visit('/')
     cy.get('button#dekart-create-report').click()
     cy.get('button:contains("Run SQL")').click()

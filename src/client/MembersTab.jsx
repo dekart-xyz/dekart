@@ -10,7 +10,6 @@ import { copyUrlToClipboard } from './actions/clipboard'
 import { CopyOutlined } from '@ant-design/icons'
 import Select from 'antd/es/select'
 import { track } from './lib/tracking'
-import { showUpgradeModal, UpgradeModalType } from './actions/upgradeModal'
 import Typography from 'antd/es/typography'
 import { UNKNOWN_EMAIL } from './lib/constants'
 
@@ -45,18 +44,13 @@ export default function MembersTab () {
   const readOnly = useSelector(state => state.workspace.readOnly)
   const hasAuthenticatedUser = Boolean(userStream?.email && userStream.email !== UNKNOWN_EMAIL)
   const canManageUsers = isAdmin && !readOnly && hasAuthenticatedUser
-  const isFreemium = useSelector(state => state.user.isFreemium)
   const addUserCb = useCallback(() => {
-    if (isFreemium) {
-      dispatch(showUpgradeModal(UpgradeModalType.INVITE))
-      return
-    }
     track('InviteUser')
     if (email && canManageUsers) {
       dispatch(updateWorkspaceUser(email, UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_ADD, inviteRole))
       setEmail('')
     }
-  }, [dispatch, email, canManageUsers, inviteRole, isFreemium])
+  }, [dispatch, email, canManageUsers, inviteRole])
   const usersLoaded = Boolean(users)
   useEffect(() => {
     if (usersLoaded) {

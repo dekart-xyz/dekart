@@ -3,6 +3,7 @@ import copy from '../../fixtures/copy.json'
 
 describe('run all queries', () => {
   it('should run all queries', () => {
+    cy.setDevClaimsEmail('bilonenko.v2@gmail.com')
     cy.visit('/')
     cy.get('button#dekart-create-report').click()
     cy.get('textarea').type('SELECT ROUND(uniform(-90::float, 90::float, random()), 6) AS lat, ROUND(uniform(-180::float, 180::float, random()), 6) AS lon FROM TABLE(GENERATOR(ROWCOUNT => 10000))', { force: true })

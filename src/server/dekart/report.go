@@ -14,6 +14,7 @@ import (
 	"dekart/src/server/user"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -247,28 +248,31 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 	if workspaceInfo.UserRole == proto.UserRole_ROLE_VIEWER {
 		return nil, status.Error(codes.PermissionDenied, "Only admins and editors can create reports")
 	}
-	allowed, companyWorkspaceCount, owners, err := s.checkCreateReportGate(ctx, claims.Email, workspaceInfo)
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	allowed, err := checkCreateReportGateTx(ctx, tx, workspaceInfo)
 	if err != nil {
 		return nil, err
 	}
 	if !allowed {
 		return &proto.CreateReportResponse{
-			ReportLimitReached:            true,
-			NumberOfSameCompanyWorkspaces: int64(companyWorkspaceCount),
-			SameCompanyWorkspaceOwners:    owners,
+			ReportLimitReached: true,
 		}, nil
 	}
 	id := newUUID()
 	versionID := newUUID()
 	if workspaceInfo.IsPlayground {
-		_, err = s.db.ExecContext(ctx,
+		_, err = tx.ExecContext(ctx,
 			"INSERT INTO reports (id, author_email, is_playground, version_id) VALUES ($1, $2, true, $3)",
 			id,
 			claims.Email,
 			versionID,
 		)
 	} else {
-		_, err = s.db.ExecContext(ctx,
+		_, err = tx.ExecContext(ctx,
 			"INSERT INTO reports (id, author_email, workspace_id, version_id) VALUES ($1, $2, $3, $4)",
 			id,
 			claims.Email,
@@ -278,6 +282,10 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 
 	}
 	if err != nil {
+		errtype.LogError(err, "database operation failed")
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
 		errtype.LogError(err, "database operation failed")
 		return nil, err
 	}
@@ -436,6 +444,13 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 		return err
 	}
 	defer tx.Rollback()
+	allowed, err := checkCreateReportGateTx(ctx, tx, checkWorkspace(ctx))
+	if err != nil {
+		return err
+	}
+	if !allowed {
+		return errReportLimitReached
+	}
 	newMapConfig, newDatasetIds := updateDatasetIds(report, datasets)
 	var paramsJSON []byte
 	if report.QueryParams != nil {
@@ -612,7 +627,6 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-
 	newReportID := newUUID()
 
 	report, err := s.getReport(ctx, req.ReportId)
@@ -684,6 +698,11 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 
 	err = s.commitReportWithDatasets(ctx, report, datasets, jobs)
 	if err != nil {
+		if errors.Is(err, errReportLimitReached) {
+			return &proto.ForkReportResponse{
+				ReportLimitReached: true,
+			}, nil
+		}
 		errtype.LogError(err, "database operation failed")
 		return nil, err
 	}

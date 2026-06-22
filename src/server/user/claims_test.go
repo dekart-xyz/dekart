@@ -76,7 +76,6 @@ func TestValidateJWTFromAmazonOIDC(t *testing.T) {
 			Audience:          "test-audience",
 			RequireIAP:        false,
 			RequireAmazonOIDC: true,
-			DevClaimsEmail:    "",
 			Region:            "us-east-1",
 		},
 		publicKeys: &sync.Map{},
@@ -98,4 +97,50 @@ func TestValidateJWTFromAmazonOIDC(t *testing.T) {
 
 	assert.NotNil(t, claims)
 	assert.Equal(t, "test@example.com", claims.Email)
+}
+
+func TestGetContextUsesDevClaimHeaderOnlyWhenEnabled(t *testing.T) {
+	claimsCheck := NewClaimsCheck(ClaimsCheckConfig{
+		DevClaims: true,
+	}, nil)
+	req, err := http.NewRequest("GET", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Dekart-Claim-Email", "dev@example.com")
+
+	claims := GetClaims(claimsCheck.GetContext(req))
+
+	assert.NotNil(t, claims)
+	assert.Equal(t, "dev@example.com", claims.Email)
+}
+
+func TestGetContextIgnoresDevClaimHeaderWhenDisabled(t *testing.T) {
+	claimsCheck := NewClaimsCheck(ClaimsCheckConfig{}, nil)
+	req, err := http.NewRequest("GET", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Dekart-Claim-Email", "dev@example.com")
+
+	claims := GetClaims(claimsCheck.GetContext(req))
+
+	assert.NotNil(t, claims)
+	assert.Equal(t, UnknownEmail, claims.Email)
+}
+
+func TestGetContextFallsThroughWhenDevClaimsEnabledWithoutHeader(t *testing.T) {
+	claimsCheck := NewClaimsCheck(ClaimsCheckConfig{
+		DevClaims:         true,
+		RequireAmazonOIDC: true,
+		Region:            "us-east-1",
+	}, nil)
+	req, err := http.NewRequest("GET", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	claims := GetClaims(claimsCheck.GetContext(req))
+
+	assert.Nil(t, claims)
 }

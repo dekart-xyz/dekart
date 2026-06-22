@@ -56,8 +56,7 @@ type ClaimsCheckConfig struct {
 	RequireSnowflakeContext bool
 	GoogleOAuthClientId     string
 	GoogleOAuthSecret       string
-	DevClaimsEmail          string
-	DevRefreshToken         string
+	DevClaims               bool
 	Region                  string
 	OIDCJWKSURL             string
 	OIDCIssuer              string
@@ -183,26 +182,19 @@ func validateConfig(c ClaimsCheckConfig) {
 			log.Fatal().Msgf("Dekart AWS_REGION is required for OIDC")
 		}
 	case c.RequireGoogleOAuth:
-		if c.DevClaimsEmail != "" {
-			log.Warn().Msgf("DEKART_DEV_CLAIMS_EMAIL is ignored when DEKART_REQUIRE_GOOGLE_OAUTH is set")
+		if c.GoogleOAuthClientId == "" {
+			log.Fatal().Msgf("Dekart DEKART_GOOGLE_OAUTH_CLIENT_ID is required for Google OAuth")
 		}
-		if c.DevRefreshToken == "" {
-			if c.GoogleOAuthClientId == "" {
-				log.Fatal().Msgf("Dekart DEKART_GOOGLE_OAUTH_CLIENT_ID is required for Google OAuth")
-			}
-			if c.GoogleOAuthSecret == "" {
-				log.Fatal().Msgf("Dekart DEKART_GOOGLE_OAUTH_SECRET is required for Google OAuth")
-			}
-		} else {
-			log.Warn().Msgf("Use DEKART_DEV_REFRESH_TOKEN only in development environment")
+		if c.GoogleOAuthSecret == "" {
+			log.Fatal().Msgf("Dekart DEKART_GOOGLE_OAUTH_SECRET is required for Google OAuth")
 		}
 		log.Info().Msgf("Dekart configured to require Google OAuth")
 	default:
 		log.Info().Msgf("All users can read/write all entities")
 	}
 
-	if c.DevClaimsEmail != "" {
-		log.Warn().Msgf("Use DEKART_DEV_CLAIMS_EMAIL only in development environment")
+	if c.DevClaims {
+		log.Warn().Msgf("Use DEKART_DEV_CLAIMS only in development environment")
 	}
 }
 
@@ -288,21 +280,21 @@ func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 	var claims *Claims
 	reportID := strings.TrimSpace(r.Header.Get("X-Dekart-Report-Id"))
 
-	if c.DevClaimsEmail != "" {
-		email := r.Header.Get("X-Dekart-Claim-Email")
-		if email == "" {
-			email = c.DevClaimsEmail
+	if c.DevClaims {
+		email := strings.TrimSpace(r.Header.Get("X-Dekart-Claim-Email"))
+		if email != "" {
+			claims = &Claims{
+				Email: email,
+			}
 		}
-		claims = &Claims{
-			Email: email,
-		}
-	} else if c.RequireIAP {
+	}
+	if claims == nil && c.RequireIAP {
 		claims = c.validateJWTFromAppEngine(ctx, r.Header.Get("X-Goog-IAP-JWT-Assertion"))
-	} else if c.RequireAmazonOIDC {
+	} else if claims == nil && c.RequireAmazonOIDC {
 		claims = c.validateJWTFromAmazonOIDC(ctx, r.Header.Get("x-amzn-oidc-data"))
-	} else if c.RequireOIDC {
+	} else if claims == nil && c.RequireOIDC {
 		claims = c.validateJWTFromOIDCHeader(r)
-	} else if c.RequireGoogleOAuth {
+	} else if claims == nil && c.RequireGoogleOAuth {
 		authHeader := r.Header.Get("Authorization")
 		loggedIn := strings.TrimSpace(r.Header.Get("X-Dekart-Logged-In"))
 		isPublicReportRequest := c.isPublicReportRequest(ctx, reportID)
@@ -317,9 +309,9 @@ func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 				claims = nil
 			}
 		}
-	} else if c.RequireSnowflakeContext {
+	} else if claims == nil && c.RequireSnowflakeContext {
 		claims = c.getSnowflakeContext(r.Header.Get("Sf-Context-Current-User"))
-	} else {
+	} else if claims == nil {
 		claims = &Claims{
 			Email: UnknownEmail,
 		}
@@ -378,11 +370,6 @@ func (c ClaimsCheck) isPublicReportRequest(ctx context.Context, reportID string)
 }
 
 func (c ClaimsCheck) getSnowflakeContext(user string) *Claims {
-	if c.DevClaimsEmail != "" {
-		return &Claims{
-			Email: c.DevClaimsEmail,
-		}
-	}
 	if user == "" {
 		return &Claims{
 			Email: UnknownEmail,
@@ -528,52 +515,6 @@ func (c ClaimsCheck) requestToken(state *pb.AuthState, r *http.Request) *pb.Redi
 
 const tokenRevokeURL = "https://oauth2.googleapis.com/revoke"
 
-// requestDevToken returns a token from DEKART_DEV_REFRESH_TOKEN
-func (c ClaimsCheck) requestDevToken(state *pb.AuthState, r *http.Request) *pb.RedirectState {
-	redirectState := &pb.RedirectState{}
-	ctx := r.Context()
-	auth := c.getAuthConfig(state)
-
-	// Create a token source
-	tokenSource := auth.TokenSource(ctx, &oauth2.Token{
-		RefreshToken: c.DevRefreshToken,
-	})
-
-	// Get a new token
-	token, err := tokenSource.Token()
-	if err != nil {
-		errtype.LogError(err, "Error exchanging code for token")
-		redirectState.Error = "Error exchanging code for token"
-		return redirectState
-	}
-
-	tokenInfo, err := c.getTokenInfo(ctx, token)
-	if err != nil {
-		errtype.LogError(err, "Error getting token info")
-		redirectState.Error = "Error getting token info"
-		return redirectState
-	}
-
-	// check if required scopes are granted by the user
-	missingScope := checkMissingScope(auth.Scopes, tokenInfo.Scope)
-	if missingScope != "" {
-		log.Warn().Str("missingScope", missingScope).Msg("Scope missing")
-		redirectState.Error = fmt.Sprintf("Scope %s missing", missingScope)
-		return redirectState
-	}
-
-	// update user sensitive scope requested to not show the scope onboarding again
-	missingSensitiveScope := checkMissingScope(sensitiveScope, tokenInfo.Scope)
-
-	tokenBin, err := json.Marshal(*token)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Error marshalling token")
-	}
-	redirectState.TokenJson = string(tokenBin)
-	redirectState.SensitiveScopesGranted = missingSensitiveScope == ""
-	return redirectState
-}
-
 // Authenticate redirects to Google OAuth
 func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 	stateBase64 := r.URL.Query().Get("state")
@@ -597,12 +538,6 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if c.DevRefreshToken != "" && state.Action == pb.AuthState_ACTION_REQUEST_CODE {
-		//skip request code from google
-		state.Action = pb.AuthState_ACTION_REQUEST_TOKEN
-		log.Info().Msg("Skip request code from google, use dev token")
-	}
-
 	switch state.Action {
 	case pb.AuthState_ACTION_REQUEST_CODE: // request code from google
 		state.Action = pb.AuthState_ACTION_REQUEST_TOKEN
@@ -623,31 +558,27 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, url, http.StatusFound)
 	case pb.AuthState_ACTION_REQUEST_TOKEN: // exchange code for token and redirect to ui
 		var redirectState *pb.RedirectState
-		if c.DevRefreshToken != "" {
-			redirectState = c.requestDevToken(&state, r)
-		} else {
-			code := r.URL.Query().Get("code")
-			cacheKey := oauthCodeExchangeKey(code, &state)
-			if code != "" {
-				if cachedState, ok := oauthExchangeCache.get(cacheKey); ok {
-					redirectState = cachedState
+		code := r.URL.Query().Get("code")
+		cacheKey := oauthCodeExchangeKey(code, &state)
+		if code != "" {
+			if cachedState, ok := oauthExchangeCache.get(cacheKey); ok {
+				redirectState = cachedState
+			}
+		}
+		if redirectState == nil {
+			result, _, _ := oauthExchangeGroup.Do(cacheKey, func() (interface{}, error) {
+				if code != "" {
+					if cachedState, ok := oauthExchangeCache.get(cacheKey); ok {
+						return cachedState, nil
+					}
 				}
-			}
-			if redirectState == nil {
-				result, _, _ := oauthExchangeGroup.Do(cacheKey, func() (interface{}, error) {
-					if code != "" {
-						if cachedState, ok := oauthExchangeCache.get(cacheKey); ok {
-							return cachedState, nil
-						}
-					}
-					stateFromExchange := c.requestToken(&state, r)
-					if code != "" && stateFromExchange != nil && stateFromExchange.Error == "" {
-						oauthExchangeCache.set(cacheKey, stateFromExchange)
-					}
-					return stateFromExchange, nil
-				})
-				redirectState, _ = result.(*pb.RedirectState)
-			}
+				stateFromExchange := c.requestToken(&state, r)
+				if code != "" && stateFromExchange != nil && stateFromExchange.Error == "" {
+					oauthExchangeCache.set(cacheKey, stateFromExchange)
+				}
+				return stateFromExchange, nil
+			})
+			redirectState, _ = result.(*pb.RedirectState)
 		}
 		if redirectState == nil {
 			redirectState = &pb.RedirectState{

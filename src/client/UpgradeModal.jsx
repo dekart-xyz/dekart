@@ -3,50 +3,20 @@ import Modal from 'antd/es/modal'
 import Title from 'antd/es/typography/Title'
 import Text from 'antd/es/typography/Text'
 import Button from 'antd/es/button'
-import { CrownOutlined, RocketOutlined, LockOutlined, CheckCircleOutlined } from '@ant-design/icons'
+import Link from 'antd/es/typography/Link'
+import { CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import { useSelector, useDispatch } from 'react-redux'
+import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 import { track } from './lib/tracking'
 import { createSubscription } from './actions/workspace'
-import { UpgradeModalType } from './actions/upgradeModal'
 import { PlanType } from 'dekart-proto/dekart_pb'
 import styles from './UpgradeModal.module.css'
-
-function CreateReportLimitMainTitle () {
-  const numberOfSameCompanyWorkspaces = useSelector(state => state.upgradeModal.numberOfSameCompanyWorkspaces)
-  return (
-    <>{`Your company already has ${numberOfSameCompanyWorkspaces} workspaces`}</>
-  )
-}
-
-const COPY_BY_MODAL_TYPE = {
-  [UpgradeModalType.PUBLISH]: {
-    mainTitle: 'Go beyond your first shared map!',
-    description: 'Share more maps, track your viewers, and collect leads.'
-  },
-  [UpgradeModalType.DIRECT_ACCESS]: {
-    mainTitle: 'Unlock direct access sharing',
-    description: 'Invite people by email and control exactly who sees your maps.'
-  },
-  [UpgradeModalType.ANALYTICS]: {
-    mainTitle: 'Unlock viewer analytics insights',
-    description: 'Track engagement, export CSVs, and capture leads from your reports.'
-  },
-  [UpgradeModalType.INVITE]: {
-    mainTitle: 'Invite teammates to collaborate',
-    description: 'Add editors and viewers to build maps together without limits.'
-  },
-  [UpgradeModalType.CREATE_REPORT_LIMIT]: {
-    mainTitle: <CreateReportLimitMainTitle />,
-    description: 'Start trial to create more maps'
-  }
-}
 
 export default function UpgradeModal ({ visible, onClose }) {
   const isSelfHosted = useSelector(state => state.user.isSelfHosted)
   const dispatch = useDispatch()
-  const modalType = useSelector(state => state.upgradeModal.modalType)
+  const history = useHistory()
   const [loading, setLoading] = useState(false)
-  const { mainTitle, description } = COPY_BY_MODAL_TYPE[modalType] || COPY_BY_MODAL_TYPE[UpgradeModalType.PUBLISH]
 
   // Don't show modal for self-hosted instances
   if (isSelfHosted) {
@@ -64,13 +34,20 @@ export default function UpgradeModal ({ visible, onClose }) {
     dispatch(createSubscription(PlanType.TYPE_TRIAL))
   }
 
+  // Send users who want to evaluate options to the full plans page.
+  const handleComparePlans = () => {
+    track('UpgradeModalComparePlans')
+    onClose()
+    history.push('/workspace/plan')
+  }
+
   return (
     <Modal
       title={
         <div className={styles.header}>
-          <CrownOutlined className={styles.crownIcon} />
+          <span className={styles.infinityIcon} />
           <Title level={3} className={styles.title}>
-            Start Your 14-Day Free Trial
+            Get Unlimited Maps
           </Title>
         </div>
       }
@@ -83,30 +60,33 @@ export default function UpgradeModal ({ visible, onClose }) {
       <div className={styles.content}>
         <div className={styles.limitMessage}>
           <Title level={2} className={styles.mainTitle}>
-            {mainTitle}
+            You&apos;ve reached 3 free maps
           </Title>
           <Title level={4} type='secondary' className={styles.description}>
-            {description}
+            Get unlimited maps for 14 days free
           </Title>
         </div>
 
         <div className={styles.featuresBox}>
           <div className={styles.featuresHeader}>
-            <LockOutlined className={styles.lockIcon} />
-            <Text strong className={styles.featuresTitle}>What you'll unlock instantly:</Text>
+            <Text strong className={styles.featuresTitle}>Here&apos;s what happens</Text>
           </div>
           <div className={styles.featuresList}>
             <div className={styles.feature}>
               <CheckCircleOutlined className={styles.checkIcon} />
-              <Text>Unlimited public & shared maps</Text>
+              <Text>No credit card required</Text>
             </div>
             <div className={styles.feature}>
               <CheckCircleOutlined className={styles.checkIcon} />
-              <Text>Team invites & role management</Text>
+              <Text>You&apos;re unblocked instantly to create maps</Text>
             </div>
             <div className={styles.feature}>
               <CheckCircleOutlined className={styles.checkIcon} />
-              <Text>Viewer analytics + lead capture</Text>
+              <Text>All maps you create will be available after trial ends</Text>
+            </div>
+            <div className={styles.feature}>
+              <ClockCircleOutlined className={styles.clockIcon} />
+              <Text>After 14 days, choose a plan to keep creating and editing maps</Text>
             </div>
           </div>
         </div>
@@ -114,21 +94,15 @@ export default function UpgradeModal ({ visible, onClose }) {
         <Button
           type='primary'
           size='large'
-          icon={<RocketOutlined />}
           className={styles.startTrialButton}
           loading={loading}
           onClick={handleStartTrial}
         >
-          Start Free Trial
+          Get unlimited maps
         </Button>
 
-        <div className={styles.disclaimers}>
-          <Text type='secondary' className={styles.disclaimerText}>
-            No commitment — 14 days full access, then choose to upgrade or stop.
-          </Text>
-          <Text type='secondary' className={styles.disclaimerText}>
-            No credit card required.
-          </Text>
+        <div className={styles.plansLink}>
+          <Link onClick={handleComparePlans}>Compare plans</Link>
         </div>
       </div>
     </Modal>

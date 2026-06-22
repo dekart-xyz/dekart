@@ -1,8 +1,9 @@
-/* global cy */
+/* eslint-disable no-undef */
 import copy from '../../fixtures/copy.json'
 
 describe('basic query flow', () => {
   it('should make simple snowflake query and get ready status', () => {
+    cy.setDevClaimsEmail('test@gmail.com')
     cy.visit('/')
     cy.get('button#dekart-create-report').click()
     cy.get('button:contains("Run SQL")').click()
@@ -16,6 +17,7 @@ describe('basic query flow', () => {
 
 describe('cancelling query', () => {
   it('should cancels query', () => {
+    cy.setDevClaimsEmail('test@gmail.com')
     cy.visit('/')
     cy.get('button#dekart-create-report').click()
     cy.get('button:contains("Run SQL")').click()

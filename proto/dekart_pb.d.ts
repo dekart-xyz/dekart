@@ -696,9 +696,6 @@ export namespace PublishReportRequest {
 }
 
 export class PublishReportResponse extends jspb.Message {
-  getPublicMapsLimitReached(): boolean;
-  setPublicMapsLimitReached(value: boolean): void;
-
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): PublishReportResponse.AsObject;
   static toObject(includeInstance: boolean, msg: PublishReportResponse): PublishReportResponse.AsObject;
@@ -711,7 +708,6 @@ export class PublishReportResponse extends jspb.Message {
 
 export namespace PublishReportResponse {
   export type AsObject = {
-    publicMapsLimitReached: boolean,
   }
 }
 
@@ -3938,6 +3934,9 @@ export class ForkReportResponse extends jspb.Message {
   getReportId(): string;
   setReportId(value: string): void;
 
+  getReportLimitReached(): boolean;
+  setReportLimitReached(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): ForkReportResponse.AsObject;
   static toObject(includeInstance: boolean, msg: ForkReportResponse): ForkReportResponse.AsObject;
@@ -3951,6 +3950,7 @@ export class ForkReportResponse extends jspb.Message {
 export namespace ForkReportResponse {
   export type AsObject = {
     reportId: string,
+    reportLimitReached: boolean,
   }
 }
 
@@ -3979,14 +3979,6 @@ export class CreateReportResponse extends jspb.Message {
   getReportLimitReached(): boolean;
   setReportLimitReached(value: boolean): void;
 
-  getNumberOfSameCompanyWorkspaces(): number;
-  setNumberOfSameCompanyWorkspaces(value: number): void;
-
-  clearSameCompanyWorkspaceOwnersList(): void;
-  getSameCompanyWorkspaceOwnersList(): Array<string>;
-  setSameCompanyWorkspaceOwnersList(value: Array<string>): void;
-  addSameCompanyWorkspaceOwners(value: string, index?: number): string;
-
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CreateReportResponse.AsObject;
   static toObject(includeInstance: boolean, msg: CreateReportResponse): CreateReportResponse.AsObject;
@@ -4001,8 +3993,6 @@ export namespace CreateReportResponse {
   export type AsObject = {
     report?: Report.AsObject,
     reportLimitReached: boolean,
-    numberOfSameCompanyWorkspaces: number,
-    sameCompanyWorkspaceOwnersList: Array<string>,
   }
 }
 

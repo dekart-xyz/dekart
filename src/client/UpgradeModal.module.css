@@ -15,9 +15,14 @@
   gap: 12px;
 }
 
-.crownIcon {
-  color: #faad14;
-  font-size: 24px;
+.infinityIcon {
+  background-image: url('./infinity.svg');
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center;
+  display: inline-block;
+  width: 26px;
+  height: 26px;
 }
 
 .title {
@@ -26,7 +31,7 @@
 }
 
 .content {
-  text-align: center;
+  text-align: left;
   padding: 8px 0;
 }
 
@@ -59,12 +64,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 16px;
-}
-
-.lockIcon {
-  color: #1890ff;
-  font-size: 16px;
+  margin-bottom: 12px;
 }
 
 .featuresTitle {
@@ -84,14 +84,20 @@
   gap: 12px;
 }
 
+.feature :global(.ant-typography) {
+  font-size: 15px;
+}
+
 .checkIcon {
   color: #1890ff;
   font-size: 16px;
+  flex-shrink: 0;
 }
 
-.feature :global(.ant-typography) {
-  color: #000;
-  font-size: 15px;
+.clockIcon {
+  color: #8c8c8c;
+  font-size: 16px;
+  flex-shrink: 0;
 }
 
 .startTrialButton {
@@ -99,16 +105,10 @@
   height: 48px;
   font-size: 16px;
   font-weight: 600;
-  margin-bottom: 16px;
 }
 
-.disclaimers {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.disclaimerText {
-  font-size: 13px;
-  line-height: 1.5;
+.plansLink {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 14px;
 }

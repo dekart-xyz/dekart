@@ -74,6 +74,8 @@ RUN mkdir -p keys
 COPY keys/license-public.pem keys/license-public.pem
 COPY cypress cypress
 COPY cypress.config.js .
+COPY --from=nodedeps /source/node_modules/dekart-proto node_modules/dekart-proto
+COPY --from=nodedeps /source/node_modules/google-protobuf node_modules/google-protobuf
 COPY package.json .
 ENTRYPOINT /bin/sh -c /dekart/server & cypress run --spec ${TEST_SPEC}
 

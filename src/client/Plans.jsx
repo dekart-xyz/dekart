@@ -209,22 +209,26 @@ export default function Plans () {
             name='Personal'
             selected={userStream.planType === PlanType.TYPE_PERSONAL}
             price='Free'
-            description='Single-person use'
+            description='3 maps included'
                  />}
           planType={PlanType.TYPE_PERSONAL}
           isCurrentPlan={userStream.planType === PlanType.TYPE_PERSONAL}
         >
           <div className={styles.feature}>
             <CheckCircleOutlined className={styles.checkIcon} />
-            <Text>Unlimited Private Maps</Text>
+            <Text>Unlimited database connectors</Text>
           </div>
           <div className={styles.feature}>
             <CheckCircleOutlined className={styles.checkIcon} />
-            <Text>Unlimited Connectors</Text>
+            <Text>Share maps with link or email</Text>
           </div>
           <div className={styles.feature}>
             <CheckCircleOutlined className={styles.checkIcon} />
-            <Text>1 Shared Map</Text>
+            <Text>See who viewed your maps</Text>
+          </div>
+          <div className={styles.feature}>
+            <CheckCircleOutlined className={styles.checkIcon} />
+            <Text>MCP for AI Agents</Text>
           </div>
         </Plan>
 
@@ -249,11 +253,11 @@ export default function Plans () {
             </div>
             <div className={styles.feature}>
               <CheckCircleOutlined className={styles.checkIcon} />
-              <Text>Unlimited Shared Maps</Text>
+              <Text>Unlimited Maps</Text>
             </div>
             <div className={styles.feature}>
               <CheckCircleOutlined className={styles.checkIcon} />
-              <Text>Unlimited Workspace Viewers</Text>
+              <Text>20 seats included</Text>
             </div>
           </Plan>
           )
@@ -264,7 +268,7 @@ export default function Plans () {
           name='Grow'
           price='$49/month'
           selected={userStream.planType === PlanType.TYPE_GROW || userStream.planType === PlanType.TYPE_TRIAL}
-          description='Per editor or admin'
+          description='Pay per editor'
                />}
         planType={PlanType.TYPE_GROW}
         cancelAt={workspace?.subscription?.cancelAt}
@@ -272,23 +276,15 @@ export default function Plans () {
       >
         <div className={styles.feature}>
           <CheckCircleOutlined className={styles.checkIcon} />
-          <Text>Includes all Free features</Text>
+          <Text>Everything in Free</Text>
         </div>
         <div className={styles.feature}>
           <CheckCircleOutlined className={styles.checkIcon} />
-          <Text>Unlimited Shared Maps</Text>
+          <Text>Unlimited maps, no 3-map cap</Text>
         </div>
         <div className={styles.feature}>
           <CheckCircleOutlined className={styles.checkIcon} />
-          <Text>Unlimited Workspace Viewers</Text>
-        </div>
-        <div className={styles.feature}>
-          <CheckCircleOutlined className={styles.checkIcon} />
-          <Text>Manage Team Roles</Text>
-        </div>
-        <div className={styles.feature}>
-          <CheckCircleOutlined className={styles.checkIcon} />
-          <Text>Capture Emails from Public Maps</Text>
+          <Text>Unlimited workspace viewers</Text>
         </div>
       </Plan>
       <Plan
@@ -305,15 +301,11 @@ export default function Plans () {
       >
         <div className={styles.feature}>
           <CheckCircleOutlined className={styles.checkIcon} />
-          <Text>Everything from Grow</Text>
+          <Text>Everything in Grow</Text>
         </div>
         <div className={styles.feature}>
           <CheckCircleOutlined className={styles.checkIcon} />
-          <Text>Unlimited Workspace Editors</Text>
-        </div>
-        <div className={styles.feature}>
-          <CheckCircleOutlined className={styles.checkIcon} />
-          <Text>Unlimited Workspace Admins</Text>
+          <Text>Unlimited editors</Text>
         </div>
       </Plan>
     </div>

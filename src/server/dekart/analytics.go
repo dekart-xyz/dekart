@@ -90,12 +90,6 @@ func (s Server) ServeReportAnalytics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	workspaceInfo := checkWorkspace(ctx)
-	if workspaceInfo.PlanType < proto.PlanType_TYPE_TEAM {
-		http.Error(w, "not allowed", http.StatusForbidden)
-		return
-	}
-
 	_, err := uuid.Parse(reportID)
 	if err != nil {
 		errtype.LogError(err, "invalid report id")

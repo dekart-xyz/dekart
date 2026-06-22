@@ -76,6 +76,7 @@ function duplicateFirstLayer () {
 
 describe('layer order regression on query re-run', () => {
   it('shows visible names and reproduces 1,2,3 -> 3,1,2', () => {
+    cy.setDevClaimsEmail('test@gmail.com')
     const query1Sql = 'SELECT ROUND(uniform(-90::float, 90::float, random()), 6) AS lat, ROUND(uniform(-180::float, 180::float, random()), 6) AS lon FROM TABLE(GENERATOR(ROWCOUNT => 111))'
     const query2InitialSql = 'SELECT ROUND(uniform(-90::float, 90::float, random()), 6) AS lat, ROUND(uniform(-180::float, 180::float, random()), 6) AS lon FROM TABLE(GENERATOR(ROWCOUNT => 222))'
     const query1UpdatedSql = 'SELECT ROUND(uniform(-90::float, 90::float, random()), 6) AS lat, ROUND(uniform(-180::float, 180::float, random()), 6) AS lon FROM TABLE(GENERATOR(ROWCOUNT => 333))'

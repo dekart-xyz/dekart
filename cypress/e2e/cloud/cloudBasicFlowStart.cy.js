@@ -1,7 +1,13 @@
 /* eslint-disable no-undef */
 
 describe('cloud basic flow', () => {
+  before(() => {
+    cy.resetCloudTestDatabase()
+  })
+
   it('with info token', () => {
+    cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN_INFO')
+
     // create workspace
     cy.visit('/')
     cy.get('button#dekart-create-workspace').click()
@@ -23,6 +29,9 @@ describe('cloud basic flow', () => {
       .should('have.class', 'ant-switch-checked')
       .and('not.have.class', 'ant-switch-loading')
 
+    cy.location('pathname').then((pathname) => {
+      cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN_INFO', pathname)
+    })
     cy.reload(true)
     cy.get('div:contains("8,276 rows")', { timeout: 20000 }).should('be.visible')
     cy.get('button#dekart-share-report').click()
@@ -30,9 +39,13 @@ describe('cloud basic flow', () => {
     cy.get('button#dekart-publish-report')
       .should('not.have.class', 'ant-switch-checked')
       .and('not.have.class', 'ant-switch-loading')
+    cy.location('pathname').then((pathname) => {
+      cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN_INFO', pathname)
+    })
     cy.reload(true)
     cy.get('div:contains("8,276 rows")', { timeout: 20000 }).should('be.visible')
 
+    cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN_INFO', '/')
     cy.visit('/')
     cy.get('button#dekart-create-report').click()
     // click #dekart-add-connection
@@ -40,11 +53,15 @@ describe('cloud basic flow', () => {
 
     // create connection
     cy.get('button:contains("BigQuery")').click()
+    cy.location('pathname').then((pathname) => {
+      cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN_INFO', pathname)
+    })
     cy.get('button:contains("Connect with Google")').click()
     cy.get('button:contains("Continue to Google")').should('be.visible')
   })
 
   it('anonymous public report login uses auth redirect', () => {
+    cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN_INFO')
     cy.visit('/')
     cy.get('button#dekart-create-report').click()
     cy.get('button:contains("Upload File")').click()
@@ -70,7 +87,9 @@ describe('cloud basic flow', () => {
     cy.contains('button', 'Create Map').should('not.exist')
     cy.contains('Login requires SSO').should('not.exist')
 
-    cy.intercept('GET', '**/api/v1/authenticate*').as('authenticate')
+    cy.location('pathname').then((pathname) => {
+      cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN_INFO', pathname)
+    })
     cy.get('#dekart-login-button').click()
     cy.wait('@authenticate')
   })

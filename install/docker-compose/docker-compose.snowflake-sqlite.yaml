@@ -18,4 +18,3 @@ services:
       DEKART_ALLOW_FILE_UPLOAD: "0"
       DEKART_BACKUP_FREQUENCY_MIN: "5"
       DEKART_MAX_BACKUPS_AGE_DAYS: "7"
-      DEKART_DEV_CLAIMS_EMAIL: "you@example.com"

@@ -99,6 +99,7 @@ jobs:
             -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
             -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
             -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
+            -e DEKART_POSTGRES_DB=$DEKART_POSTGRES_DB \
             -e DEKART_POSTGRES_HOST=localhost \
             -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
             -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
@@ -108,7 +109,7 @@ jobs:
             -e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
             -e DEKART_GOOGLE_OAUTH_CLIENT_ID=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }} \
             -e DEKART_GOOGLE_OAUTH_SECRET=${{ secrets.GOOGLE_OAUTH_SECRET }} \
-            -e DEKART_DEV_REFRESH_TOKEN=${{ secrets.DEV_REFRESH_TOKEN_INFO }} \
+            -e DEV_REFRESH_TOKEN_INFO=${{ secrets.DEV_REFRESH_TOKEN_INFO }} \
             -e DEKART_DATA_ENCRYPTION_KEY=projects/910252011719/secrets/dekart-dev-user-data-encoding-key/versions/latest \
             -e DEKART_CORS_ORIGIN=http://localhost:3000 \
             -e DEKART_ALLOW_WORKSPACE_CREATION=1 \
@@ -133,6 +134,7 @@ jobs:
             -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
             -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
             -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
+            -e DEKART_POSTGRES_DB=$DEKART_POSTGRES_DB \
             -e DEKART_POSTGRES_HOST=localhost \
             -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
             -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
@@ -142,7 +144,7 @@ jobs:
             -e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
             -e DEKART_GOOGLE_OAUTH_CLIENT_ID=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }} \
             -e DEKART_GOOGLE_OAUTH_SECRET=${{ secrets.GOOGLE_OAUTH_SECRET }} \
-            -e DEKART_DEV_REFRESH_TOKEN=${{ secrets.DEV_REFRESH_TOKEN }} \
+            -e DEV_REFRESH_TOKEN=${{ secrets.DEV_REFRESH_TOKEN }} \
             -e DEKART_DATA_ENCRYPTION_KEY=projects/910252011719/secrets/dekart-dev-user-data-encoding-key/versions/latest \
             -e DEKART_CORS_ORIGIN=http://localhost:3000 \
             -e DEKART_ALLOW_WORKSPACE_CREATION=1 \
@@ -200,7 +202,8 @@ jobs:
               -e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
               -e DEKART_GOOGLE_OAUTH_CLIENT_ID=$GOOGLE_OAUTH_ID_SEC \
               -e DEKART_GOOGLE_OAUTH_SECRET=$GOOGLE_OAUTH_SECRET_SEC \
-              -e DEKART_DEV_REFRESH_TOKEN=$DEV_REFRESH_TOKEN_SEC \
+              -e DEV_REFRESH_TOKEN=$DEV_REFRESH_TOKEN_SEC \
+              -e DEKART_DEV_CLAIMS=1 \
               -e DEKART_STORAGE=USER \
               -e DEKART_DATASOURCE=USER \
               -e DEKART_ALLOW_FILE_UPLOAD=1 \
@@ -310,7 +313,7 @@ jobs:
               -e DEKART_SNOWFLAKE_USER=$SNOW_USER_SEC \
               -e DEKART_SNOWFLAKE_PASSWORD=$SNOW_PASS_SEC \
               -e DEKART_REQUIRE_AMAZON_OIDC=1 \
-              -e DEKART_DEV_CLAIMS_EMAIL=test@gmail.com \
+              -e DEKART_DEV_CLAIMS=1 \
               -e DEKART_ALLOW_FILE_UPLOAD=1 \
 
           - id: snowflake-s3-ops
@@ -332,7 +335,7 @@ jobs:
               -e DEKART_SNOWFLAKE_USER=$SNOW_USER_SEC \
               -e DEKART_SNOWFLAKE_PASSWORD=$SNOW_PASS_SEC \
               -e DEKART_REQUIRE_AMAZON_OIDC=1 \
-              -e DEKART_DEV_CLAIMS_EMAIL=test@gmail.com \
+              -e DEKART_DEV_CLAIMS=1 \
               -e DEKART_ALLOW_FILE_UPLOAD=1 \
 
           - id: snowflake-s3-layer-order
@@ -354,7 +357,7 @@ jobs:
               -e DEKART_SNOWFLAKE_USER=$SNOW_USER_SEC \
               -e DEKART_SNOWFLAKE_PASSWORD=$SNOW_PASS_SEC \
               -e DEKART_REQUIRE_AMAZON_OIDC=1 \
-              -e DEKART_DEV_CLAIMS_EMAIL=test@gmail.com \
+              -e DEKART_DEV_CLAIMS=1 \
               -e DEKART_ALLOW_FILE_UPLOAD=1 \
 
           - id: snowflake-sqlite
@@ -368,7 +371,7 @@ jobs:
               -e DEKART_SNOWFLAKE_PASSWORD=$SNOW_PASS_SEC \
               -e DEKART_SQLITE_DB_PATH=./dekart.db \
               -e DEKART_REQUIRE_SNOWFLAKE_CONTEXT=1 \
-              -e DEKART_DEV_CLAIMS_EMAIL=bilonenko.v2@gmail.com \
+              -e DEKART_DEV_CLAIMS=1 \
               -e DEKART_ALLOW_FILE_UPLOAD=0 \
 
           - id: local-user-postgres

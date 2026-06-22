@@ -2,8 +2,14 @@
 import copy from '../../fixtures/copy.json'
 
 describe('cloud basic flow', () => {
+  before(() => {
+    cy.resetCloudTestDatabase()
+  })
+
   it('with private token', () => {
+    cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN')
     cy.visit('/')
+    cy.ensureTestWorkspace()
 
     // create new report
     cy.get('button#dekart-create-report').click()
@@ -13,6 +19,9 @@ describe('cloud basic flow', () => {
 
     // create connection
     cy.get('button:contains("BigQuery")').click()
+    cy.location('pathname').then((pathname) => {
+      cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN', pathname)
+    })
     cy.get('button:contains("Connect with Google")').click()
     const randomConnectionName = `test-${Math.floor(Math.random() * 1000000)}`
     cy.get('div.ant-modal-title').should('contain', 'BigQuery')
@@ -26,6 +35,11 @@ describe('cloud basic flow', () => {
     cy.get('button#saveConnection').click()
 
     // run query
+    cy.get('body').then(($body) => {
+      if ($body.find('button:contains("Run SQL")').length === 0) {
+        cy.contains('button', 'Edit').click()
+      }
+    })
     cy.get('button:contains("Run SQL")').click()
     cy.get('textarea').type(copy.simple_sql_query, { force: true })
     cy.get(`button:contains("${copy.execute}")`).click()

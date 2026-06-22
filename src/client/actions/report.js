@@ -15,6 +15,25 @@ import { receiveReportUpdateMapConfig } from '../lib/mapConfig'
 import { extensionFromMime } from '../lib/mime'
 import { showUpgradeModal, UpgradeModalType } from './upgradeModal'
 import { track } from '../lib/tracking'
+import { getReportIdFromUrl } from '../lib/getReportIdFromUrl'
+
+let reportSaveBarrier = null
+
+function startReportSaveBarrier (reportId) {
+  const barrier = { reportId }
+  barrier.promise = new Promise(resolve => {
+    barrier.resolve = resolve
+  })
+  reportSaveBarrier = barrier
+  return barrier
+}
+
+function resolveReportSaveBarrier (barrier) {
+  barrier.resolve()
+  if (reportSaveBarrier === barrier) {
+    reportSaveBarrier = null
+  }
+}
 
 export function closeReport () {
   return (dispatch) => {
@@ -206,6 +225,17 @@ export function setQueryJobRefreshTimeout (timeoutId) {
 export function reportUpdate (reportStreamResponse) {
   const { report, queriesList, datasetsList, filesList, queryJobsList, directAccessEmailsList } = reportStreamResponse
   return async (dispatch, getState) => {
+    // postpone report updates when saving
+    const barrier = reportSaveBarrier
+    if (barrier) {
+      await barrier.promise
+    }
+    const state = getState()
+    // make we are still on the same report
+    const activeReportId = state.report?.id || getReportIdFromUrl()
+    if (!activeReportId || report.id !== activeReportId) {
+      return
+    }
     const {
       queries: prevQueriesList,
       dataset: { list: prevDatasetsList },
@@ -215,9 +245,9 @@ export function reportUpdate (reportStreamResponse) {
       user,
       queryJobs: prevQueryJobsList,
       queryParams: { hash },
-      reportStatus: { lastChanged, lastSaved, savedReportVersion },
+      reportStatus: { lastSaved, savedReportVersion, lastMapConfigChanged },
       hasOpenedKeplerPanel
-    } = getState()
+    } = state
 
     dispatch({
       type: reportUpdate.name,
@@ -232,14 +262,14 @@ export function reportUpdate (reportStreamResponse) {
       directAccessEmailsList
     })
     let mapConfigUpdated = false
-    // user could change map config locally, then we just wnt to show map update message
+    // user could change map config locally, then we just want to show map update message
     // but config could also change when Kepler applied deafults
-    // we ignore changes if user never opned pannel
-    const hasUnsavedUserChanges = lastSaved < lastChanged && hasOpenedKeplerPanel
+    // we ignore changes if user never opened pannel
+    const hasUnsavedUserMapChanges = lastSaved < lastMapConfigChanged && hasOpenedKeplerPanel
     const hasRemoteMapConflict = (
       report.mapConfig &&
       report.updatedAt > savedReportVersion && // ignore when updated version same as last saved to prevent maps reloads
-      hasUnsavedUserChanges
+      hasUnsavedUserMapChanges
     )
     if (hasRemoteMapConflict) {
       dispatch(showMapConfigConflictMessage())
@@ -247,7 +277,7 @@ export function reportUpdate (reportStreamResponse) {
     if (
       report.mapConfig &&
       report.updatedAt > savedReportVersion && // ignore when updated version same as last saved to prevent maps reloads
-      !hasUnsavedUserChanges // ignore overwriting unsaved user changes
+      !hasUnsavedUserMapChanges // ignore overwriting unsaved user map changes
     ) {
       mapConfigUpdated = receiveReportUpdateMapConfig(report, dispatch, getState)
     }
@@ -376,19 +406,13 @@ export function allowExportDatasets (reportId, allowExport) {
   }
 }
 
-export function publishReport (reportId, publish, cancelPublish) {
+export function publishReport (reportId, publish) {
   return async (dispatch) => {
     dispatch({ type: publishReport.name })
     const req = new PublishReportRequest()
     req.setReportId(reportId)
     req.setPublish(publish)
-    dispatch(grpcCall(Dekart.PublishReport, req, (response) => {
-      // Handle response when publishing is blocked
-      if (response.publicMapsLimitReached) {
-        dispatch(showUpgradeModal())
-        cancelPublish()
-      }
-    }))
+    dispatch(grpcCall(Dekart.PublishReport, req))
   }
 }
 
@@ -398,6 +422,10 @@ export function forkReport (reportId) {
     const request = new ForkReportRequest()
     request.setReportId(reportId)
     dispatch(grpcCall(Dekart.ForkReport, request, (res) => {
+      if (res.reportLimitReached) {
+        dispatch(showUpgradeModal(UpgradeModalType.CREATE_REPORT_LIMIT))
+        return
+      }
       const { reportId } = res
       dispatch(newForkedReport(reportId))
       dispatch(success('Report Forked'))
@@ -410,10 +438,7 @@ export function createReport () {
     const request = new CreateReportRequest()
     dispatch(grpcCall(Dekart.CreateReport, request, (res) => {
       if (res.reportLimitReached) {
-        dispatch(showUpgradeModal(UpgradeModalType.CREATE_REPORT_LIMIT, {
-          numberOfSameCompanyWorkspaces: res.numberOfSameCompanyWorkspaces,
-          sameCompanyWorkspaceOwners: res.sameCompanyWorkspaceOwners || []
-        }))
+        dispatch(showUpgradeModal(UpgradeModalType.CREATE_REPORT_LIMIT))
         return
       }
       const { report } = res
@@ -432,6 +457,10 @@ export function reportTitleChange (title) {
 
 export function savedReport (lastSaved, savedReportVersion) {
   return { type: savedReport.name, lastSaved, savedReportVersion }
+}
+
+export function saveMapFailed () {
+  return { type: saveMapFailed.name }
 }
 
 export function toggleReportFullscreen () {
@@ -512,10 +541,12 @@ export function exportMapPreview () {
 
 export function saveMap (mapViewChanged = false) {
   return async (dispatch, getState) => {
-    dispatch({ type: saveMap.name })
     const { keplerGl, report, reportStatus, queryStatus, queryParams, readme } = getState()
     const lastSaved = reportStatus.lastChanged
     const configToSave = KeplerGlSchema.getConfigToSave(keplerGl.kepler)
+    const mapConfig = JSON.stringify(configToSave)
+    const barrier = startReportSaveBarrier(report.id)
+    dispatch({ type: saveMap.name })
     const request = new UpdateReportRequest()
     const queries = Object.keys(queryStatus).reduce((queries, id) => {
       const status = queryStatus[id]
@@ -534,18 +565,27 @@ export function saveMap (mapViewChanged = false) {
       request.setReadme(readmeProp)
     }
     request.setReportId(report.id)
-    request.setMapConfig(JSON.stringify(configToSave))
+    request.setMapConfig(mapConfig)
     request.setTitle(reportStatus.title)
     request.setQueryList(queries)
     request.setQueryParamsList(getQueryParamsObjArr(queryParams.list))
     // TODO Promise all
-    const res = await new Promise(resolve => {
-      dispatch(grpcCall(Dekart.UpdateReport, request, resolve))
-    })
-    if (mapViewChanged) {
-      dispatch(exportMapPreview())
+    try {
+      const res = await new Promise((resolve, reject) => {
+        dispatch(grpcCall(Dekart.UpdateReport, request, resolve, (err) => {
+          reject(err)
+          return err
+        }))
+      })
+      if (mapViewChanged) {
+        dispatch(exportMapPreview())
+      }
+      dispatch(savedReport(lastSaved, res.updatedAt))
+    } catch (err) {
+      dispatch(saveMapFailed())
+    } finally {
+      resolveReportSaveBarrier(barrier)
     }
-    dispatch(savedReport(lastSaved, res.updatedAt))
   }
 }
 

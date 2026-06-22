@@ -3,6 +3,7 @@ import copy from '../../fixtures/copy.json'
 
 describe('empty path', () => {
   it('should complete query returning empty result', () => {
+    cy.setDevClaimsEmail('test@gmail.com')
     cy.visit('/')
     cy.get('button#dekart-create-report').click()
     cy.get('button:contains("Run SQL")').click()

@@ -3,6 +3,7 @@ import copy from '../../fixtures/copy.json'
 
 describe('cancelling query', () => {
   it('should cancels query', () => {
+    cy.setDevClaimsEmail('test@gmail.com')
     cy.intercept('POST', '**/Dekart/RunQuery', (req) => {
       return Cypress.Promise.delay(1500).then(() => req.continue())
     })

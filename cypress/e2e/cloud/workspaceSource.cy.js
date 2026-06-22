@@ -1,24 +1,9 @@
 /* eslint-disable no-undef */
 
-const psql = (sql, options = {}) => {
-  const escaped = sql.replace(/"/g, '\\"')
-  return cy.exec(
-    'case "$DEKART_POSTGRES_HOST" in localhost|127.0.0.1|::1) ;; *) echo "Refusing to mutate non-local Postgres host: $DEKART_POSTGRES_HOST" >&2; exit 1;; esac; ' +
-    'PGPASSWORD="$DEKART_POSTGRES_PASSWORD" psql ' +
-      '-h "$DEKART_POSTGRES_HOST" ' +
-      '-p "$DEKART_POSTGRES_PORT" ' +
-      '-U "$DEKART_POSTGRES_USER" ' +
-      '-d "$DEKART_POSTGRES_DB" ' +
-      '-v ON_ERROR_STOP=1 ' +
-      '-Atc "' + escaped + '"',
-    options
-  )
-}
-
 const sqlString = (value) => `'${value.replace(/'/g, "''")}'`
 
 const waitForWorkspaceSourceSaved = (workspaceName, retries = 20) => {
-  psql(`
+  cy.psql(`
     SELECT COUNT(*)
     FROM workspaces w
     JOIN workspace_log wl ON wl.workspace_id = w.id
@@ -46,14 +31,15 @@ const waitForWorkspaceSourceSaved = (workspaceName, retries = 20) => {
 describe('cloud workspace source tracking', () => {
   it('saves the selected source on workspace submit', () => {
     const workspaceName = `source-test-${Date.now()}`
+    cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN', '/workspace/create')
 
-    psql(`
+    cy.psql(`
       INSERT INTO workspace_log (workspace_id, email, status, authored_by, id, role)
       SELECT DISTINCT workspace_id, email, 2, email, gen_random_uuid(), role
       FROM workspace_log
       WHERE workspace_id <> '00000000-0000-0000-0000-000000000000'
     `)
-    psql(`
+    cy.psql(`
       DELETE FROM track_events
       WHERE event_name = 'CreateWorkspaceFormSourceMattForrest'
     `)

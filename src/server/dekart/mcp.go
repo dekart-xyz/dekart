@@ -63,6 +63,7 @@ type addReportReadmeMCPArgs struct {
 }
 
 const mcpBigQueryServiceAccountRequiredMessage = "BigQuery via MCP requires a service-account-backed connection"
+const mcpCreateReportLimitReachedEventName = "MCPCreateReportLimitReached"
 
 // HandleCreateReport wraps CreateReport RPC with protojson HTTP endpoint.
 func (s *Server) HandleCreateReport(w http.ResponseWriter, r *http.Request) {
@@ -386,9 +387,24 @@ func (s *Server) callCreateReportTool(ctx context.Context) (json.RawMessage, err
 		return nil, err
 	}
 	if response.GetReportLimitReached() {
-		return mcp.MarshalProtoJSON(response)
+		s.trackMCPCreateReportLimitReached(ctx)
+		return mcp.MarshalJSON(buildMCPCreateReportLimitResult())
 	}
 	return mcp.MarshalJSON(buildMCPCreateReportResult(response.GetReport().GetId()))
+}
+
+// trackMCPCreateReportLimitReached records MCP attempts blocked by the free workspace map limit.
+func (s *Server) trackMCPCreateReportLimitReached(ctx context.Context) {
+	claims := user.GetClaims(ctx)
+	if claims == nil || claims.Email == user.UnknownEmail {
+		return
+	}
+	workspaceInfo := checkWorkspace(ctx)
+	s.trackAnonymousEvent(ctx, claims.Email, mcpCreateReportLimitReachedEventName, map[string]string{
+		"map_limit":    fmt.Sprintf("%d", freeWorkspaceMapLimit),
+		"reason":       "free_workspace_map_limit",
+		"workspace_id": workspaceInfo.ID,
+	})
 }
 
 // callCreateDatasetTool creates one dataset for report_id.
@@ -837,6 +853,21 @@ func buildMCPCreateReportResult(reportID string) map[string]any {
 	frontendBaseURL := device.RequestFrontendBaseURL(nil)
 	if frontendBaseURL != "" {
 		result["report_url"] = fmt.Sprintf("%s%s", frontendBaseURL, reportPath)
+	}
+	return result
+}
+
+// buildMCPCreateReportLimitResult tells agents to keep trial start user-initiated in the UI.
+func buildMCPCreateReportLimitResult() map[string]any {
+	result := map[string]any{
+		"report_limit_reached": true,
+		"reason":               "free_workspace_map_limit",
+		"map_limit":            freeWorkspaceMapLimit,
+		"instruction":          "Ask the user to open this link and start the trial in the Dekart UI. Do not start the trial via MCP.",
+	}
+	frontendBaseURL := device.RequestFrontendBaseURL(nil)
+	if frontendBaseURL != "" {
+		result["trial_url"] = fmt.Sprintf("%s/workspace/plan", frontendBaseURL)
 	}
 	return result
 }
