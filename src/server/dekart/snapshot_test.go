@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -103,6 +104,68 @@ func TestCreateReportSnapshot_ReturnsRenderURLWithoutBrowserlessCapture(t *testi
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestCreateReportSnapshot_AppendsValidViewportParamsToRenderURL(t *testing.T) {
+	t.Setenv("DEKART_BROWSERLESS_TOKEN", "")
+	t.Setenv("DEKART_APP_URL", "http://localhost:3000")
+	reportID := "00000000-0000-0000-0000-000000000021"
+	email := "user@example.com"
+
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+	expectSnapshotReportAccess(mock, reportID, email)
+
+	server := NewServer(db, nil, nil)
+	zoom := 12.0
+	lat := 52.52
+	lon := 13.405
+	response, err := server.CreateReportSnapshot(snapshotTestContext(email), &proto.CreateReportSnapshotRequest{
+		ReportId: reportID,
+		Zoom:     &zoom,
+		Lat:      &lat,
+		Lon:      &lon,
+	})
+
+	require.NoError(t, err)
+	renderURL, err := url.Parse(response.SnapshotRenderUrl)
+	require.NoError(t, err)
+	require.Equal(t, "12", renderURL.Query().Get("zoom"))
+	require.Equal(t, "52.52", renderURL.Query().Get("lat"))
+	require.Equal(t, "13.405", renderURL.Query().Get("lon"))
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestCreateReportSnapshot_IgnoresInvalidViewportParams(t *testing.T) {
+	t.Setenv("DEKART_BROWSERLESS_TOKEN", "")
+	t.Setenv("DEKART_APP_URL", "http://localhost:3000")
+	reportID := "00000000-0000-0000-0000-000000000022"
+	email := "user@example.com"
+
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+	expectSnapshotReportAccess(mock, reportID, email)
+
+	server := NewServer(db, nil, nil)
+	zoom := 25.0
+	lat := -91.0
+	lon := 181.0
+	response, err := server.CreateReportSnapshot(snapshotTestContext(email), &proto.CreateReportSnapshotRequest{
+		ReportId: reportID,
+		Zoom:     &zoom,
+		Lat:      &lat,
+		Lon:      &lon,
+	})
+
+	require.NoError(t, err)
+	renderURL, err := url.Parse(response.SnapshotRenderUrl)
+	require.NoError(t, err)
+	require.Empty(t, renderURL.Query().Get("zoom"))
+	require.Empty(t, renderURL.Query().Get("lat"))
+	require.Empty(t, renderURL.Query().Get("lon"))
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestCreateReportSnapshot_ReturnsImageURLWithBrowserlessCapture(t *testing.T) {
 	t.Setenv("DEKART_BROWSERLESS_TOKEN", "token")
 	t.Setenv("DEKART_APP_URL", "http://localhost:3000")
@@ -122,6 +185,55 @@ func TestCreateReportSnapshot_ReturnsImageURLWithBrowserlessCapture(t *testing.T
 	require.Contains(t, response.SnapshotRenderUrl, "/reports/"+reportID+"/snapshot?snapshot_token=")
 	require.Positive(t, response.ExpiresIn)
 	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestCreateReportSnapshot_AppendsViewportParamsToImageURLWithBrowserlessCapture(t *testing.T) {
+	t.Setenv("DEKART_BROWSERLESS_TOKEN", "token")
+	t.Setenv("DEKART_APP_URL", "http://localhost:3000")
+	reportID := "00000000-0000-0000-0000-000000000023"
+	email := "user@example.com"
+
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+	expectSnapshotReportAccess(mock, reportID, email)
+
+	server := NewServer(db, nil, nil)
+	zoom := 12.0
+	lat := 52.52
+	lon := 13.405
+	response, err := server.CreateReportSnapshot(snapshotTestContext(email), &proto.CreateReportSnapshotRequest{
+		ReportId: reportID,
+		Zoom:     &zoom,
+		Lat:      &lat,
+		Lon:      &lon,
+	})
+
+	require.NoError(t, err)
+	imageURL, err := url.Parse(response.SnapshotUrl)
+	require.NoError(t, err)
+	require.Equal(t, "12", imageURL.Query().Get("zoom"))
+	require.Equal(t, "52.52", imageURL.Query().Get("lat"))
+	require.Equal(t, "13.405", imageURL.Query().Get("lon"))
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestBuildSnapshotRenderURLForBrowserless_AppendsRequestViewportParams(t *testing.T) {
+	t.Setenv("DEKART_SNAPSHOT_RENDER_BASE_URL_DEV", "http://localhost:3000")
+	reportID := "00000000-0000-0000-0000-000000000024"
+	request := httptest.NewRequest(http.MethodGet, "/snapshot/report/token.png?zoom=12&lat=52.52&lon=13.405", nil)
+
+	renderURL, err := url.Parse(buildSnapshotRenderURLForBrowserless(
+		request,
+		"snapshot-token",
+		reportID,
+		snapshotViewportParamsFromQuery(request.URL.Query()),
+	))
+
+	require.NoError(t, err)
+	require.Equal(t, "12", renderURL.Query().Get("zoom"))
+	require.Equal(t, "52.52", renderURL.Query().Get("lat"))
+	require.Equal(t, "13.405", renderURL.Query().Get("lon"))
 }
 
 func TestCreateReportSnapshot_RequiresAuthAndReportAccess(t *testing.T) {

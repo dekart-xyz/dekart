@@ -89,6 +89,9 @@ message SaveMapPreviewResponse {
 
 message CreateReportSnapshotRequest {
     string report_id = 1; // Existing report id visible to caller.
+    optional double zoom = 2; // Optional initial snapshot zoom override.
+    optional double lat = 3; // Optional initial snapshot latitude override.
+    optional double lon = 4; // Optional initial snapshot longitude override.
 }
 
 message CreateReportSnapshotResponse {

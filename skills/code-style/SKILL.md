@@ -67,3 +67,7 @@ Keep checks for: user input, environment variables, runtime variations, cross-pl
 - Follow the unit-test policy in `AGENTS.md` before adding or changing unit-test coverage.
 - Assert meaningful behavior and a clear failure mode through the public or stable interface.
 - Keep tests independent from the implementation logic so the same mistake is not copied into both.
+
+## Readability Guidance
+- when edit function that already exceeds 50 lines, consider splitting it into smaller functions with clear names and purpose.
+- when edit file that already exceeds 300 lines, consider splitting it into smaller files with clear names and purpose.

@@ -3620,7 +3620,10 @@ proto.CreateReportSnapshotRequest.prototype.toObject = function(opt_includeInsta
  */
 proto.CreateReportSnapshotRequest.toObject = function(includeInstance, msg) {
   var f, obj = {
-    reportId: jspb.Message.getFieldWithDefault(msg, 1, "")
+    reportId: jspb.Message.getFieldWithDefault(msg, 1, ""),
+    zoom: jspb.Message.getFloatingPointFieldWithDefault(msg, 2, 0.0),
+    lat: jspb.Message.getFloatingPointFieldWithDefault(msg, 3, 0.0),
+    lon: jspb.Message.getFloatingPointFieldWithDefault(msg, 4, 0.0)
   };
 
   if (includeInstance) {
@@ -3661,6 +3664,18 @@ proto.CreateReportSnapshotRequest.deserializeBinaryFromReader = function(msg, re
       var value = /** @type {string} */ (reader.readString());
       msg.setReportId(value);
       break;
+    case 2:
+      var value = /** @type {number} */ (reader.readDouble());
+      msg.setZoom(value);
+      break;
+    case 3:
+      var value = /** @type {number} */ (reader.readDouble());
+      msg.setLat(value);
+      break;
+    case 4:
+      var value = /** @type {number} */ (reader.readDouble());
+      msg.setLon(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -3697,6 +3712,27 @@ proto.CreateReportSnapshotRequest.serializeBinaryToWriter = function(message, wr
       f
     );
   }
+  f = /** @type {number} */ (jspb.Message.getField(message, 2));
+  if (f != null) {
+    writer.writeDouble(
+      2,
+      f
+    );
+  }
+  f = /** @type {number} */ (jspb.Message.getField(message, 3));
+  if (f != null) {
+    writer.writeDouble(
+      3,
+      f
+    );
+  }
+  f = /** @type {number} */ (jspb.Message.getField(message, 4));
+  if (f != null) {
+    writer.writeDouble(
+      4,
+      f
+    );
+  }
 };
 
 
@@ -3715,6 +3751,114 @@ proto.CreateReportSnapshotRequest.prototype.getReportId = function() {
  */
 proto.CreateReportSnapshotRequest.prototype.setReportId = function(value) {
   return jspb.Message.setProto3StringField(this, 1, value);
+};
+
+
+/**
+ * optional double zoom = 2;
+ * @return {number}
+ */
+proto.CreateReportSnapshotRequest.prototype.getZoom = function() {
+  return /** @type {number} */ (jspb.Message.getFloatingPointFieldWithDefault(this, 2, 0.0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.CreateReportSnapshotRequest} returns this
+ */
+proto.CreateReportSnapshotRequest.prototype.setZoom = function(value) {
+  return jspb.Message.setField(this, 2, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.CreateReportSnapshotRequest} returns this
+ */
+proto.CreateReportSnapshotRequest.prototype.clearZoom = function() {
+  return jspb.Message.setField(this, 2, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.CreateReportSnapshotRequest.prototype.hasZoom = function() {
+  return jspb.Message.getField(this, 2) != null;
+};
+
+
+/**
+ * optional double lat = 3;
+ * @return {number}
+ */
+proto.CreateReportSnapshotRequest.prototype.getLat = function() {
+  return /** @type {number} */ (jspb.Message.getFloatingPointFieldWithDefault(this, 3, 0.0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.CreateReportSnapshotRequest} returns this
+ */
+proto.CreateReportSnapshotRequest.prototype.setLat = function(value) {
+  return jspb.Message.setField(this, 3, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.CreateReportSnapshotRequest} returns this
+ */
+proto.CreateReportSnapshotRequest.prototype.clearLat = function() {
+  return jspb.Message.setField(this, 3, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.CreateReportSnapshotRequest.prototype.hasLat = function() {
+  return jspb.Message.getField(this, 3) != null;
+};
+
+
+/**
+ * optional double lon = 4;
+ * @return {number}
+ */
+proto.CreateReportSnapshotRequest.prototype.getLon = function() {
+  return /** @type {number} */ (jspb.Message.getFloatingPointFieldWithDefault(this, 4, 0.0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.CreateReportSnapshotRequest} returns this
+ */
+proto.CreateReportSnapshotRequest.prototype.setLon = function(value) {
+  return jspb.Message.setField(this, 4, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.CreateReportSnapshotRequest} returns this
+ */
+proto.CreateReportSnapshotRequest.prototype.clearLon = function() {
+  return jspb.Message.setField(this, 4, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.CreateReportSnapshotRequest.prototype.hasLon = function() {
+  return jspb.Message.getField(this, 4) != null;
 };
 
 
