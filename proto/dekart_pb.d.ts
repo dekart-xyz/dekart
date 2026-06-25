@@ -47,6 +47,21 @@ export class CreateReportSnapshotRequest extends jspb.Message {
   getReportId(): string;
   setReportId(value: string): void;
 
+  hasZoom(): boolean;
+  clearZoom(): void;
+  getZoom(): number;
+  setZoom(value: number): void;
+
+  hasLat(): boolean;
+  clearLat(): void;
+  getLat(): number;
+  setLat(value: number): void;
+
+  hasLon(): boolean;
+  clearLon(): void;
+  getLon(): number;
+  setLon(value: number): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CreateReportSnapshotRequest.AsObject;
   static toObject(includeInstance: boolean, msg: CreateReportSnapshotRequest): CreateReportSnapshotRequest.AsObject;
@@ -60,6 +75,9 @@ export class CreateReportSnapshotRequest extends jspb.Message {
 export namespace CreateReportSnapshotRequest {
   export type AsObject = {
     reportId: string,
+    zoom: number,
+    lat: number,
+    lon: number,
   }
 }
 

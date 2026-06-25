@@ -38,6 +38,7 @@ import { getApplicationConfig } from '@kepler.gl/utils'
 import UserPositionOverlay from './UserPositionOverlay'
 import { useBasemapReady } from './lib/useBasemapReady'
 import { useSnapshotReady } from './lib/useSnapshotReady'
+import { useSnapshotViewportOverride } from './lib/snapshotViewportParams'
 
 // Build keyboard hint text for tab tooltips.
 function getTabShortcutLabel (tabIndex) {
@@ -465,7 +466,8 @@ export default function ReportPage ({ edit, snapshot }) {
   const queries = useSelector(state => state.queries || [])
   const fullscreen = useSelector(state => state.reportStatus.fullscreen)
   const [snapshotBasemapReady, setSnapshotBasemapReady] = useState(false)
-  const { reportDepsReady } = useSnapshotReady(snapshot, id, snapshotBasemapReady)
+  const snapshotViewportApplied = useSnapshotViewportOverride(snapshot, id, setSnapshotBasemapReady)
+  const { reportDepsReady } = useSnapshotReady(snapshot, id, snapshotBasemapReady && snapshotViewportApplied)
   const updatedAt = [].concat(files, queries).reduce((updatedAt, item) => {
     if (item.updatedAt > updatedAt) {
       return item.updatedAt

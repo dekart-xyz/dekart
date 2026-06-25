@@ -31,10 +31,10 @@ proto-clean:
 	rm -rf ./node_modules/dekart-proto
 
 proto-build: proto-clean  #to run inside docker
-	protoc --proto_path=./proto --js_out=import_style=commonjs,binary:./proto $$(find proto -type f -name "*.proto")
-	protoc --proto_path=./proto --ts_out=service=grpc-web:./proto $$(find proto -type f -name "*.proto")
-	protoc --go_out=./src $$(find proto -type f -name "*.proto")
-	protoc --go-grpc_out=./src $$(find proto -type f -name "*.proto")
+	protoc --experimental_allow_proto3_optional --proto_path=./proto --js_out=import_style=commonjs,binary:./proto $$(find proto -type f -name "*.proto")
+	protoc --experimental_allow_proto3_optional --proto_path=./proto --ts_out=service=grpc-web:./proto $$(find proto -type f -name "*.proto")
+	protoc --experimental_allow_proto3_optional --go_out=./src $$(find proto -type f -name "*.proto")
+	protoc --experimental_allow_proto3_optional --go-grpc_out=./src $$(find proto -type f -name "*.proto")
 
 proto-docker: # build docker container for building protos
 ifeq ($(UNAME),arm64)
