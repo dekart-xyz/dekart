@@ -424,6 +424,18 @@ func updateDatasetIds(report *proto.Report, datasets []*proto.Dataset) (newMapCo
 	return newMapConfig, newDatasetIds
 }
 
+// marshalReportQueryParams stores absent query params as the schema default.
+func marshalReportQueryParams(params []*proto.QueryParam) (string, error) {
+	if params == nil {
+		return "", nil
+	}
+	paramsJSON, err := json.Marshal(params)
+	if err != nil {
+		return "", err
+	}
+	return string(paramsJSON), nil
+}
+
 func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Report, datasets []*proto.Dataset, jobs []*proto.QueryJob) error {
 	claims := user.GetClaims(ctx)
 	// Validate map config size to prevent gRPC message size errors
@@ -452,14 +464,10 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 		return errReportLimitReached
 	}
 	newMapConfig, newDatasetIds := updateDatasetIds(report, datasets)
-	var paramsJSON []byte
-	if report.QueryParams != nil {
-		var err error
-		paramsJSON, err = json.Marshal(report.QueryParams)
-		if err != nil {
-			errtype.LogError(err, "database operation failed")
-			return err
-		}
+	paramsJSON, err := marshalReportQueryParams(report.QueryParams)
+	if err != nil {
+		errtype.LogError(err, "database operation failed")
+		return err
 	}
 
 	var readme sql.NullString
@@ -802,14 +810,10 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 			"Map configuration is too large (%d bytes). Maximum allowed size is %d bytes. Please simplify your map configuration.",
 			len(req.MapConfig), MaxMapConfigSize)
 	}
-	var paramsJSON []byte
-	if req.QueryParams != nil {
-		var err error
-		paramsJSON, err = json.Marshal(req.QueryParams)
-		if err != nil {
-			log.Err(err).Send()
-			return nil, status.Error(codes.InvalidArgument, err.Error())
-		}
+	paramsJSON, err := marshalReportQueryParams(req.QueryParams)
+	if err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	var readme sql.NullString
@@ -831,12 +835,12 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	if workspaceInfo.IsPlayground {
 		result, err = s.db.ExecContext(ctx,
 			`update
-			reports
-		set map_config=$1, title=$2, query_params=$3, readme=$4, updated_at=$5, version_id=$6
-		where id=$7 and author_email=$8 and is_playground=true`,
+				reports
+			set map_config=$1, title=$2, query_params=$3, readme=$4, updated_at=$5, version_id=$6
+			where id=$7 and author_email=$8 and is_playground=true`,
 			req.MapConfig,
 			req.Title,
-			string(paramsJSON),
+			paramsJSON,
 			readme,
 			updated_at,
 			newVersionID,
@@ -846,12 +850,12 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	} else {
 		result, err = s.db.ExecContext(ctx,
 			`update
-			reports
-		set map_config=$1, title=$2, query_params=$3, readme=$4, updated_at=$5, version_id=$6
-		where id=$7 and (author_email=$8 or allow_edit) and workspace_id=$9`,
+				reports
+			set map_config=$1, title=$2, query_params=$3, readme=$4, updated_at=$5, version_id=$6
+			where id=$7 and (author_email=$8 or allow_edit) and workspace_id=$9`,
 			req.MapConfig,
 			req.Title,
-			string(paramsJSON),
+			paramsJSON,
 			readme,
 			updated_at,
 			newVersionID,
