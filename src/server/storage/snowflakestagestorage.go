@@ -180,7 +180,21 @@ func snowflakeStageObjectName(fileName string, stageName string) string {
 	if idx := strings.Index(strings.ToLower(name), strings.ToLower(stagePrefix)); idx >= 0 {
 		return strings.TrimPrefix(name[idx+len(stagePrefix):], "/")
 	}
+	// LIST on a relative application stage returns "<stage_name>/<object>".
+	// Strip only that stage directory so root backups stay visible to restore.
+	stageDir := snowflakeStageDirectoryName(stageName)
+	if stageDir != "" && strings.HasPrefix(strings.ToLower(name), strings.ToLower(stageDir)+"/") {
+		return strings.TrimPrefix(name[len(stageDir):], "/")
+	}
 	return strings.TrimPrefix(name, "/")
+}
+
+func snowflakeStageDirectoryName(stageName string) string {
+	parts := strings.Split(strings.Trim(strings.TrimSpace(stageName), "@/"), ".")
+	if len(parts) == 0 {
+		return ""
+	}
+	return strings.TrimSpace(parts[len(parts)-1])
 }
 
 type removeOnCloseReader struct {
