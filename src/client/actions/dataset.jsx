@@ -7,7 +7,7 @@ import { get } from '../lib/api'
 import getDatasetName from '../lib/getDatasetName'
 import { runQuery } from './query'
 import wasmInit from 'parquet-wasm'
-import { mimeFromExtension } from '../lib/mime'
+import { filenameWithExtension, mimeFromExtension } from '../lib/mime'
 
 // Custom error to mark empty result cases for downstream handling
 class EmptyResultError extends Error {
@@ -221,7 +221,7 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
       const blob = await res.blob()
       const file = new File(
         [blob],
-        label,
+        filenameWithExtension(label, extension),
         { type: mimeFromExtension(extension) })
 
       // Add to queue and wait for sequential processing

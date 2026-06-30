@@ -40,6 +40,22 @@ export function contentTypeFromExtension (extension) {
   return mime || 'text/csv'
 }
 
+// Kepler passes browser File objects to loaders.gl, which treats File.name as
+// the resource URL during loader selection. Keep the UI label unchanged, but
+// give the loader an extension-bearing name such as "zones.geojson".
+export function filenameWithExtension (label, extension) {
+  const safeLabel = typeof label === 'string' && label.trim() ? label : 'dataset'
+  const ext = typeof extension === 'string' ? extension.trim().replace(/^\./, '') : ''
+  if (!ext || !mimeFromExtension(ext)) {
+    return safeLabel
+  }
+  return new RegExp(`\\.${escapeRegExp(ext)}$`, 'i').test(safeLabel) ? safeLabel : `${safeLabel}.${ext}`
+}
+
+function escapeRegExp (value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 export const MIME_CONSTANTS = {
   CSV: EXT_TO_MIME.csv,
   GEOJSON: EXT_TO_MIME.geojson,

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { mimeFromExtension, extensionFromMime, inferMimeFromName, contentTypeFromExtension } from './mime'
+import { mimeFromExtension, extensionFromMime, inferMimeFromName, contentTypeFromExtension, filenameWithExtension } from './mime'
 
 describe('mime helpers (client)', () => {
   it('maps extension to mime', () => {
@@ -30,5 +30,15 @@ describe('mime helpers (client)', () => {
     expect(contentTypeFromExtension('parquet')).toBe('application/vnd.apache.parquet')
     expect(contentTypeFromExtension('json')).toBe('application/json')
     expect(contentTypeFromExtension('unknown')).toBe('text/csv')
+  })
+
+  it('builds loader filenames with known extensions', () => {
+    expect(filenameWithExtension('ZIP-derived delivery zone groups', 'geojson')).toBe('ZIP-derived delivery zone groups.geojson')
+    expect(filenameWithExtension('sample.geojson', 'geojson')).toBe('sample.geojson')
+    expect(filenameWithExtension('sample.GEOJSON', 'geojson')).toBe('sample.GEOJSON')
+    expect(filenameWithExtension('sample', '.geojson')).toBe('sample.geojson')
+    expect(filenameWithExtension('', 'geojson')).toBe('dataset.geojson')
+    expect(filenameWithExtension(null, '')).toBe('dataset')
+    expect(filenameWithExtension('sample', 'unknown')).toBe('sample')
   })
 })

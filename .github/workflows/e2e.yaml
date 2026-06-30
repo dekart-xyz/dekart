@@ -389,7 +389,7 @@ jobs:
             skip_postgres: true
 
           - id: local-file-upload-readme-persistence
-            spec: cypress/e2e/local/fileUploadPersistenceMcp.cy.js
+            spec: cypress/e2e/local/fileUploadPersistenceMcp.cy.js,cypress/e2e/local/geojsonDatasetLabelNoExtension.cy.js
             skip_postgres: true
 
           - id: pg-s3-postgres
