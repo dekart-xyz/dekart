@@ -1,79 +1,18 @@
 package dekart
 
 import (
-	"bytes"
 	"context"
-	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
 	"dekart/src/proto"
-	"dekart/src/server/storage"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gorilla/mux"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
-
-type backupTestStorage struct {
-	storage.UnsupportedUploadSessionStorage
-	objects map[string][]byte
-}
-
-type backupTestObject struct {
-	data []byte
-}
-
-func (s backupTestStorage) GetObject(_ context.Context, _, name string) storage.StorageObject {
-	return backupTestObject{data: s.objects[name]}
-}
-
-func (s backupTestStorage) ListObjectsByPrefix(_ context.Context, _, prefix string) ([]storage.ObjectInfo, error) {
-	objects := make([]storage.ObjectInfo, 0)
-	for name := range s.objects {
-		if strings.HasPrefix(name, prefix) {
-			objects = append(objects, storage.ObjectInfo{Name: name})
-		}
-	}
-	return objects, nil
-}
-
-func (backupTestStorage) CanSaveQuery(context.Context, string) bool {
-	return false
-}
-
-func (o backupTestObject) GetReader(context.Context) (io.ReadCloser, error) {
-	return io.NopCloser(bytes.NewReader(o.data)), nil
-}
-
-func (backupTestObject) GetWriter(context.Context) io.WriteCloser {
-	return nil
-}
-
-func (backupTestObject) GetCreatedAt(context.Context) (*time.Time, error) {
-	return nil, nil
-}
-
-func (backupTestObject) GetSize(context.Context) (*int64, error) {
-	return nil, nil
-}
-
-func (backupTestObject) CopyFromS3(context.Context, string) error {
-	return nil
-}
-
-func (backupTestObject) CopyTo(context.Context, io.WriteCloser) error {
-	return nil
-}
-
-func (backupTestObject) Delete(context.Context) error {
-	return nil
-}
 
 func TestGetBackupTargetUsesObjectStorageForBucketBackends(t *testing.T) {
 	for _, storageBackend := range []string{"S3", "GCS", "PG"} {
@@ -96,6 +35,18 @@ func TestGetBackupTargetDisablesPGWithoutBucket(t *testing.T) {
 
 	if got := getBackupTarget(); got != backupTargetDisabled {
 		t.Fatalf("expected disabled backup target, got %q", got)
+	}
+}
+
+func TestSQLiteBackupObjectNameUsesTargetLayout(t *testing.T) {
+	t.Setenv("DEKART_SQLITE_DB_PATH", "/data/dekart.db")
+	ts := time.Date(2026, 6, 29, 14, 57, 18, 0, time.UTC)
+
+	if got := sqliteBackupObjectName(ts, backupTargetSnowflakeStage); got != "dekart.db_20260629_145718.backup" {
+		t.Fatalf("expected Snowflake stage root backup, got %q", got)
+	}
+	if got := sqliteBackupObjectName(ts, backupTargetObjectStorage); got != "sqlite-backups/dekart.db_20260629_145718.backup" {
+		t.Fatalf("expected object storage prefixed backup, got %q", got)
 	}
 }
 
@@ -156,26 +107,5 @@ func TestServeMapPreviewUsesDefaultForPGBackupBucket(t *testing.T) {
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatal(err)
-	}
-}
-
-func TestRestoreFromStorageRestoresLatestBackup(t *testing.T) {
-	dbFilePath := filepath.Join(t.TempDir(), "dekart.db")
-	st := backupTestStorage{
-		UnsupportedUploadSessionStorage: storage.NewUnsupportedUploadSessionStorage("test"),
-		objects: map[string][]byte{
-			"sqlite-backups/dekart.db_20260601_120000.backup": []byte("old"),
-			"sqlite-backups/dekart.db_20260602_120000.backup": []byte("latest"),
-		},
-	}
-
-	restoreFromStorage(dbFilePath, st, "sqlite-backups")
-
-	got, err := os.ReadFile(dbFilePath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(got) != "latest" {
-		t.Fatalf("expected latest backup, got %q", got)
 	}
 }

@@ -57,14 +57,9 @@ func (s *SnowflakeStageStorage) ListObjectsByPrefix(ctx context.Context, stage, 
 		if err := rows.Scan(&fileName, &size, &md5, &lastModified); err != nil {
 			continue
 		}
-		parts := strings.Split(fileName, "/")
-		name := parts[len(parts)-1]
-		if prefix != "" {
-			if idx := strings.Index(fileName, prefix); idx >= 0 {
-				name = fileName[idx:]
-			} else if !strings.HasPrefix(name, prefix) {
-				continue
-			}
+		name := snowflakeStageObjectName(fileName, stageName)
+		if prefix != "" && !strings.HasPrefix(name, prefix) {
+			continue
 		}
 		t := time.Now().UTC()
 		if parsed, err := time.Parse("Mon, 2 Jan 2006 15:04:05 MST", lastModified); err == nil {
@@ -176,6 +171,16 @@ func resolveStageName(stage string) string {
 		stageName = strings.TrimSpace(os.Getenv("DEKART_SNOWFLAKE_STAGE"))
 	}
 	return stageName
+}
+
+// snowflakeStageObjectName converts Snowflake LIST names back to object paths.
+func snowflakeStageObjectName(fileName string, stageName string) string {
+	name := strings.TrimPrefix(strings.TrimSpace(fileName), "@")
+	stagePrefix := strings.Trim(strings.TrimSpace(stageName), "@/") + "/"
+	if idx := strings.Index(strings.ToLower(name), strings.ToLower(stagePrefix)); idx >= 0 {
+		return strings.TrimPrefix(name[idx+len(stagePrefix):], "/")
+	}
+	return strings.TrimPrefix(name, "/")
 }
 
 type removeOnCloseReader struct {
