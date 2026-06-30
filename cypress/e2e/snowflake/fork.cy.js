@@ -18,7 +18,8 @@ describe('fork', () => {
 
     cy.location('pathname').then((pathname) => {
       cy.setDevClaimsEmail('test2@gmail.com')
-      cy.visit(`${pathname}/source`)
+      const reportPath = pathname.replace(/\/source$/, '')
+      cy.visit(`${reportPath}/source`)
     })
 
     cy.get('button#dekart-fork-button').click()
