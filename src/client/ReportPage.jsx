@@ -385,9 +385,10 @@ function Kepler ({ snapshot, onSnapshotBasemapReadyChange }) {
   const env = useSelector(state => state.env)
   const report = useSelector(state => state.report)
   const isSnowpark = useSelector(state => state.env.isSnowpark)
+  const keplerMapState = useSelector(state => state.keplerGl.kepler?.mapState)
   const dispatch = useDispatch()
   const [mapboxRef, setMapboxRef] = useState(null)
-  useBasemapReady(snapshot, mapboxRef, onSnapshotBasemapReadyChange)
+  useBasemapReady(snapshot, mapboxRef, onSnapshotBasemapReadyChange, keplerMapState)
 
   // Filter out MapLibre styles (dark-matter, positron, voyager) only when isSnowpark is true
   // Keep only Mapbox styles and no-basemap option
