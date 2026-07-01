@@ -27,6 +27,13 @@ For `DEV_REFRESH_TOKEN_INFO`, repeat the flow with only these scopes: `https://w
 
 Set `DEKART_DEV_CLAIMS=1` in the backend env file to allow local dev identity claims from `X-Dekart-Claim-Email`. Cypress should set the matching browser cookie with `cy.setDevClaimsEmail('you@example.com')` before `cy.visit()`.
 
+For manual browser testing, set the same cookie from the browser console, then reload:
+
+```js
+document.cookie = 'dekart-dev-claim-email=you@example.com; path=/'
+location.reload()
+```
+
 ## Running Cypress locally
 
 Cypress talks to the Vite frontend at `http://localhost:3000`, and the frontend talks to the backend on `http://localhost:8080`. Run the database, backend, frontend, and Cypress in separate terminals.
