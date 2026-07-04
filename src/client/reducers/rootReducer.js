@@ -40,7 +40,20 @@ function keplerGl (state, action) {
   const newState = customKeplerGlReducer(state, action)
   switch (action.type) {
     case KeplerActionTypes.LOAD_FILES_ERR:
-      return state // suppress file loading error
+      if (!newState?.kepler) {
+        return state
+      }
+      // Keep Kepler's load-files task completion, but let Dekart show the user-facing download error.
+      return {
+        ...newState,
+        kepler: {
+          ...newState.kepler,
+          uiState: {
+            ...newState.kepler.uiState,
+            notifications: state?.kepler?.uiState?.notifications || []
+          }
+        }
+      }
     case KeplerActionTypes.REGISTER_ENTRY:
       // set mapbox token for map export
       newState.kepler.uiState = setUserMapboxAccessTokenUpdater(newState.kepler.uiState, {

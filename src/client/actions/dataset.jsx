@@ -212,6 +212,7 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
       const newReportId = getState().report?.id
       if (newReportId !== reportId) {
         // new report opened while waiting for wasmInit
+        dispatch(finishAddingDatasetToMap(dataset))
         return
       }
     }
@@ -232,6 +233,11 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension) {
       })
     } catch (err) {
       dispatch(processDownloadError(err, dataset, label))
+      return
+    }
+    if (getState().report?.id !== reportId) {
+      // new report opened while Kepler was parsing the file
+      dispatch(finishAddingDatasetToMap(dataset))
       return
     }
 
