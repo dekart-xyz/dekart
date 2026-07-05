@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/conn"
+	"dekart/src/server/dbtime"
 	"dekart/src/server/errtype"
 	"dekart/src/server/secrets"
 	"dekart/src/server/user"
@@ -191,29 +192,7 @@ func (o PGStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, error) {
 	if err != nil {
 		return nil, err
 	}
-	return parseDatabaseTime(createdAtValue)
-}
-
-// parseDatabaseTime accepts timestamp shapes returned by Postgres and SQLite drivers.
-func parseDatabaseTime(value any) (*time.Time, error) {
-	switch createdAt := value.(type) {
-	case time.Time:
-		return &createdAt, nil
-	case string:
-		parsed, err := time.ParseInLocation("2006-01-02 15:04:05", createdAt, time.UTC)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse created_at timestamp: %v", err)
-		}
-		return &parsed, nil
-	case []byte:
-		parsed, err := time.ParseInLocation("2006-01-02 15:04:05", string(createdAt), time.UTC)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse created_at timestamp: %v", err)
-		}
-		return &parsed, nil
-	default:
-		return nil, fmt.Errorf("unsupported created_at timestamp type %T", value)
-	}
+	return dbtime.ParseTimestamp(createdAtValue)
 }
 
 func (o PGStorageObject) GetSize(context.Context) (*int64, error) {

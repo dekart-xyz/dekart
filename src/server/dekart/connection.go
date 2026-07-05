@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/conn"
+	"dekart/src/server/dbtime"
 	"dekart/src/server/errtype"
 	"dekart/src/server/secrets"
 	"dekart/src/server/snowflakeutils"
@@ -830,8 +831,7 @@ func (s Server) getLastConnectionUpdate(ctx context.Context) (int64, error) {
 		if !lastConnectionUpdateDate.Valid {
 			return 0, nil // or any default value you prefer
 		}
-		// Parse SQLite timestamp (stored in UTC)
-		lastConnectionUpdateDateParsed, err := time.ParseInLocation("2006-01-02 15:04:05", lastConnectionUpdateDate.String, time.UTC)
+		lastConnectionUpdateDateParsed, err := dbtime.ParseTimestampString(lastConnectionUpdateDate.String)
 		if err != nil {
 			errtype.LogError(err, "failed to parse connection update timestamp")
 			return 0, err

@@ -4,13 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/dbtime"
 	"dekart/src/server/errtype"
 	"dekart/src/server/notifications"
 	"dekart/src/server/user"
 	"net/http"
 	"os"
 	"sync"
-	"time"
 
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
@@ -202,8 +202,7 @@ func (s Server) getWorkspaceUpdate(ctx context.Context) (int64, error) {
 		if !updatedAtStr.Valid {
 			return 0, nil
 		}
-		// Parse the timestamp string into a time.Time (SQLite stores in UTC)
-		parsedTime, err := time.ParseInLocation("2006-01-02 15:04:05", updatedAtStr.String, time.UTC)
+		parsedTime, err := dbtime.ParseTimestampString(updatedAtStr.String)
 		if err != nil {
 			errtype.LogError(err, "Error parsing updated_at timestamp")
 			return 0, err
