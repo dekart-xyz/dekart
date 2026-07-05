@@ -6,6 +6,10 @@ import { needSensitiveScopes } from './user'
 
 export const SystemConnectionID = '00000000-0000-0000-0000-000000000000'
 
+function defaultPostgresSslMode (isCloud) {
+  return isCloud ? 'require' : 'disable'
+}
+
 export function isSystemConnectionID (connectionID) {
   return (
     connectionID === SystemConnectionID ||
@@ -185,11 +189,13 @@ export function saveConnection (id, connectionType, connectionProps) {
         secret.setClientEncrypted(await encryptPassword(connectionProps.wherobotsKey, getState().env.variables.AES_KEY, getState().env.variables.AES_IV))
         connection.setWherobotsKey(secret)
       } else if (connectionType === ConnectionType.CONNECTION_TYPE_POSTGRES) {
+        const postgresSslMode = connectionProps.postgresSslMode || defaultPostgresSslMode(getState().env.isCloud)
         connection.setConnectionName(connectionProps.connectionName || 'Postgres')
         connection.setPostgresHost(connectionProps.postgresHost)
         connection.setPostgresUsername(connectionProps.postgresUsername)
         connection.setPostgresDatabase(connectionProps.postgresDatabase)
         connection.setPostgresPort(Number(connectionProps.postgresPort))
+        connection.setPostgresSslMode(postgresSslMode)
         const secret = new Secret()
         secret.setClientEncrypted(await encryptPassword(connectionProps.postgresPassword, getState().env.variables.AES_KEY, getState().env.variables.AES_IV))
         connection.setPostgresPassword(secret)
@@ -241,11 +247,13 @@ export function saveConnection (id, connectionType, connectionProps) {
           connection.setBigqueryKey(secret)
         }
       } else if (connectionType === ConnectionType.CONNECTION_TYPE_POSTGRES) {
+        const postgresSslMode = connectionProps.postgresSslMode || defaultPostgresSslMode(getState().env.isCloud)
         connection.setConnectionName(connectionProps.connectionName)
         connection.setPostgresHost(connectionProps.postgresHost)
         connection.setPostgresUsername(connectionProps.postgresUsername)
         connection.setPostgresDatabase(connectionProps.postgresDatabase)
         connection.setPostgresPort(Number(connectionProps.postgresPort))
+        connection.setPostgresSslMode(postgresSslMode)
         if (prevConnection?.postgresPassword !== connectionProps.postgresPassword) {
           const secret = new Secret()
           secret.setClientEncrypted(await encryptPassword(connectionProps.postgresPassword, getState().env.variables.AES_KEY, getState().env.variables.AES_IV))
@@ -380,11 +388,13 @@ export function testConnection (connectionType, values) {
       connection.setWherobotsKey(secret)
     } else if (connectionType === ConnectionType.CONNECTION_TYPE_POSTGRES) {
       const { connectionName, postgresHost, postgresUsername, postgresPassword, postgresDatabase, postgresPort } = values
+      const postgresSslMode = values.postgresSslMode || defaultPostgresSslMode(getState().env.isCloud)
       connection.setConnectionName(connectionName)
       connection.setPostgresHost(postgresHost)
       connection.setPostgresUsername(postgresUsername)
       connection.setPostgresDatabase(postgresDatabase)
       connection.setPostgresPort(Number(postgresPort))
+      connection.setPostgresSslMode(postgresSslMode)
       const secret = new Secret()
       secret.setClientEncrypted(await encryptPassword(postgresPassword, AES_KEY, AES_IV))
       connection.setPostgresPassword(secret)

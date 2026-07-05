@@ -86,6 +86,48 @@ jobs:
             sleep $((attempt * 10))
           done
 
+      - name: Start TLS Postgres fixture
+        run: |
+          cat > /tmp/postgres-tls-init.sql <<'SQL'
+          CREATE SCHEMA IF NOT EXISTS sample;
+          CREATE TABLE sample.geospatial_points (
+            id integer,
+            latitude double precision,
+            longitude double precision,
+            name text
+          );
+          INSERT INTO sample.geospatial_points (id, latitude, longitude, name)
+          SELECT i, 37.7 + i * 0.001, -122.4 - i * 0.001, 'Point ' || i
+          FROM generate_series(1, 100) AS i;
+          SQL
+          docker run -d \
+            --name postgres-tls \
+            -p 5433:5432 \
+            -e POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
+            -e POSTGRES_USER=$DEKART_POSTGRES_USER \
+            -e POSTGRES_DB=dekart_geo \
+            -v /tmp/postgres-tls-init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro \
+            postgres:15 \
+            bash -c 'set -e
+              openssl req -new -x509 -days 365 -nodes -text \
+                -out /var/lib/postgresql/server.crt \
+                -keyout /var/lib/postgresql/server.key \
+                -subj "/CN=localhost"
+              chown postgres:postgres /var/lib/postgresql/server.crt /var/lib/postgresql/server.key
+              chmod 600 /var/lib/postgresql/server.key
+              exec docker-entrypoint.sh postgres \
+                -c ssl=on \
+                -c ssl_cert_file=/var/lib/postgresql/server.crt \
+                -c ssl_key_file=/var/lib/postgresql/server.key'
+          for i in $(seq 1 30); do
+            if docker exec postgres-tls pg_isready -U $DEKART_POSTGRES_USER -d dekart_geo >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs postgres-tls
+          exit 1
+
       - name: E2E part 1 (start + login regression)
         run: |
           docker run -i \
@@ -154,6 +196,42 @@ jobs:
             -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
             -e DEKART_CLOUD=1 \
             -e TEST_SPEC=cypress/e2e/cloud/cloudBasicFlowEnd.cy.js \
+            -e CYPRESS_CI=1 \
+            ${REG_PREFIX}/dekart:${{ env.IMAGE_CACHE_KEY }}
+
+      - name: E2E part 3 (Cloud Postgres TLS)
+        run: |
+          docker run -i \
+            --network="host" \
+            -v $(pwd)/${GOOGLE_APPLICATION_CREDENTIALS}:/dekart/${GOOGLE_APPLICATION_CREDENTIALS} \
+            -v /tmp/cypress/fixtures/POI25Mb.csv:/dekart/cypress/fixtures/POI25Mb.csv \
+            -v /tmp/cypress/videos:/dekart/cypress/videos/ \
+            -v /tmp/cypress/screenshots:/dekart/cypress/screenshots/ \
+            -e DEKART_LOG_DEBUG=1 \
+            -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
+            -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
+            -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
+            -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
+            -e DEKART_POSTGRES_DB=$DEKART_POSTGRES_DB \
+            -e DEKART_POSTGRES_HOST=localhost \
+            -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
+            -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
+            -e DEKART_STORAGE=USER \
+            -e DEKART_DATASOURCE=USER \
+            -e DEKART_ALLOW_FILE_UPLOAD=1 \
+            -e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
+            -e DEKART_GOOGLE_OAUTH_CLIENT_ID=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }} \
+            -e DEKART_GOOGLE_OAUTH_SECRET=${{ secrets.GOOGLE_OAUTH_SECRET }} \
+            -e DEKART_DATA_ENCRYPTION_KEY=projects/910252011719/secrets/dekart-dev-user-data-encoding-key/versions/latest \
+            -e DEKART_CORS_ORIGIN=http://localhost:3000 \
+            -e DEKART_ALLOW_WORKSPACE_CREATION=1 \
+            -e DEKART_UX_DISABLE_VERSION_CHECK=1 \
+            -e DEKART_DEV_NO_DATASET_CACHE=1 \
+            -e DEKART_DEV_CLAIMS=1 \
+            -e DEKART_MAPBOX_TOKEN=$MAPBOX_TOKEN_SEC \
+            -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
+            -e DEKART_CLOUD=1 \
+            -e TEST_SPEC=cypress/e2e/cloud/postgresTlsConnectionHappyPath.cy.js \
             -e CYPRESS_CI=1 \
             ${REG_PREFIX}/dekart:${{ env.IMAGE_CACHE_KEY }}
 

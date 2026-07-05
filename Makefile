@@ -127,7 +127,7 @@ docker: # build docker for local use
 up-and-down:
 	@set -e; \
 	cleanup() { docker compose --env-file .env --profile local down --volumes --remove-orphans; }; \
-	docker compose --env-file .env --profile local up db adminer & pid=$$!; \
+	docker compose --env-file .env --profile local up db db-tls adminer & pid=$$!; \
 	trap 'kill $$pid 2>/dev/null || true; cleanup; exit 0' INT TERM; \
 	wait $$pid || true; \
 	cleanup

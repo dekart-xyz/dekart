@@ -18,7 +18,6 @@ export const OTHER_CONNECTOR_OPTIONS = [
   { label: 'DuckDB / S3 / GCP', value: 'duckdb_s3_gcp' },
   { label: 'MotherDuck', value: 'motherduck' },
   { label: 'MySQL', value: 'mysql' },
-  { label: 'PostgreSQL / PostGIS', value: 'postgresql_postgis' },
   { label: 'Presto / Trino', value: 'presto_trino' },
   { label: 'Redshift', value: 'redshift' },
   { label: 'Other', value: 'other' }

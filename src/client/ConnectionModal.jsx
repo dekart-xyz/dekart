@@ -1,6 +1,7 @@
 import Form from 'antd/es/form'
 import Input from 'antd/es/input'
 import Modal from 'antd/es/modal'
+import Select from 'antd/es/select'
 import { useSelector, useDispatch } from 'react-redux'
 import Button from 'antd/es/button'
 import styles from './ConnectionModal.module.css'
@@ -55,7 +56,7 @@ function Footer ({ form, saveWithoutTest = false, testDisabled = false }) {
       <div className={styles.spacer} />
       <Button
         id='saveConnection'
-        type={tested && testSuccess ? 'primary' : 'default'} disabled={((!tested || loading) && !saveWithoutTest) || !isAdmin} onClick={() => {
+        type={tested && testSuccess ? 'primary' : 'default'} disabled={((!tested || !testSuccess || loading) && !saveWithoutTest) || !isAdmin} onClick={() => {
           track('SaveConnection')
           dispatch(saveConnection(id, connectionType, form.getFieldsValue()))
           form.resetFields()
@@ -239,27 +240,49 @@ function SnowflakeConnectionModal ({ form }) {
 function PostgresConnectionModal ({ form }) {
   const { dialog } = useSelector(state => state.connection)
   const { id, loading } = dialog
+  const isCloud = useSelector(state => state.env.isCloud)
   const dispatch = useDispatch()
   const connection = useSelector(state => state.connection.list.find(s => s.id === id))
   const datasetUsed = connection?.datasetCount > 0
-  const passwordChanged = !connection || form.getFieldValue('postgresPassword') !== connection?.postgresPassword
+  const postgresHost = Form.useWatch('postgresHost', form)
+  const postgresUsername = Form.useWatch('postgresUsername', form)
+  const postgresPassword = Form.useWatch('postgresPassword', form)
+  const postgresDatabase = Form.useWatch('postgresDatabase', form)
+  const postgresPort = Form.useWatch('postgresPort', form)
+  const postgresSslMode = Form.useWatch('postgresSslMode', form)
+  const passwordChanged = !connection || postgresPassword !== connection?.postgresPassword
+  const connectionNeedsTest = !connection ||
+    postgresHost !== connection?.postgresHost ||
+    postgresUsername !== connection?.postgresUsername ||
+    postgresPassword !== connection?.postgresPassword ||
+    postgresDatabase !== connection?.postgresDatabase ||
+    Number(postgresPort) !== Number(connection?.postgresPort) ||
+    postgresSslMode !== connection?.postgresSslMode
+  const passwordRequiredForTest = Boolean(connection && connectionNeedsTest && !passwordChanged)
+  const sslModeOptions = isCloud
+    ? [{ value: 'require', label: 'Require SSL' }]
+    : [
+        { value: 'disable', label: 'Disable SSL' },
+        { value: 'require', label: 'Require SSL' }
+      ]
 
   useEffect(() => {
     if (!connection) {
       form.resetFields()
       form.setFieldsValue({
         connectionName: 'Postgres',
-        postgresPort: 5432
+        postgresPort: 5432,
+        postgresSslMode: isCloud ? 'require' : 'disable'
       })
     }
-  }, [connection, form])
+  }, [connection, form, isCloud])
 
   return (
     <Modal
       open
       title={<><DatasourceIcon type={ConnectionType.CONNECTION_TYPE_POSTGRES} /> Postgres</>}
       onCancel={() => dispatch(closeConnectionDialog())}
-      footer={<Footer form={form} saveWithoutTest={!passwordChanged} testDisabled={!passwordChanged} />}
+      footer={<Footer form={form} saveWithoutTest={!connectionNeedsTest} testDisabled={!connectionNeedsTest || passwordRequiredForTest} />}
     >
       <div className={styles.modalBody}>
         <Form
@@ -267,12 +290,23 @@ function PostgresConnectionModal ({ form }) {
           disabled={loading}
           layout='vertical'
           onValuesChange={(changedValues) => {
-            if (connectionTestFieldsChanged(changedValues, ['connectionName', 'postgresHost', 'postgresUsername', 'postgresPassword', 'postgresDatabase', 'postgresPort'])) {
+            if (connectionTestFieldsChanged(changedValues, ['connectionName', 'postgresHost', 'postgresUsername', 'postgresPassword', 'postgresDatabase', 'postgresPort', 'postgresSslMode'])) {
               dispatch(connectionChanged())
             }
           }}
         >
           {datasetUsed ? <div className={styles.datasetsCountAlert}><Alert message={<>This connection is used in {connection.datasetCount} dataset{connection.datasetCount > 1 ? 's' : ''}.</>} description='Changing may cause map errors' type='warning' /></div> : null}
+          {isCloud
+            ? (
+              <Alert
+                className={styles.postgresSetupAlert}
+                message='Before connecting'
+                description={<>Allowlist Dekart Cloud egress IPs in your database firewall and use a read-only database user. <a href='https://dekart.xyz/docs/usage/postgres-connection/' target='_blank' rel='noreferrer'>Read setup instructions</a>.</>}
+                type='info'
+                showIcon
+              />
+              )
+            : null}
           <Form.Item required label='Connection Name' name='connectionName'>
             <Input placeholder='Postgres' />
           </Form.Item>
@@ -282,7 +316,7 @@ function PostgresConnectionModal ({ form }) {
           <Form.Item required label='Username' name='postgresUsername' extra='Name of the user account.'>
             <Input placeholder='postgres' />
           </Form.Item>
-          <Form.Item required label='Password' name='postgresPassword' extra='Password for the user account.'>
+          <Form.Item required label='Password' name='postgresPassword' extra={passwordRequiredForTest ? 'Enter the password again to test connection changes.' : 'Password for the user account.'}>
             <Input.Password
               placeholder='••••••••'
               visibilityToggle={passwordChanged}
@@ -303,6 +337,9 @@ function PostgresConnectionModal ({ form }) {
           </Form.Item>
           <Form.Item required label='Port' name='postgresPort' extra='TCP port where your server is listening for connections.'>
             <Input type='number' placeholder='5432' />
+          </Form.Item>
+          <Form.Item required label='SSL Mode' name='postgresSslMode' extra={isCloud ? 'Dekart Cloud requires SSL for Postgres connections.' : 'Use Disable SSL for local development databases that do not support TLS.'}>
+            <Select options={sslModeOptions} />
           </Form.Item>
         </Form>
       </div>

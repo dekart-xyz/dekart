@@ -538,8 +538,8 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 		retrievalBranch = "result_uri_presigned_s3"
 	} else if dwJobID != "" {
 		// temp data warehouse table is used as source
-		if os.Getenv("DEKART_STORAGE") == "PG" {
-			// PG replay mode can always re-execute the query, so dw_job_id is not treated as expirable.
+		if isPostgresReplayResult(connection) {
+			// Postgres replay mode can always re-execute the query, so dw_job_id is not treated as expirable.
 			jobIsRecent = true
 		} else {
 			expired, recent, err := s.checkJobExpiration(ctx, vars["source"])

@@ -198,7 +198,7 @@ func configureBucket(db *sql.DB) storage.Storage {
 		bucket = storage.NewPGStorage(db)
 	case "USER":
 		log.Info().Msg("Using USER defined storage backend, based on connection dialog")
-		bucket = storage.NewUserStorage()
+		bucket = storage.NewUserStorage(db)
 	default:
 		log.Fatal().Str("DEKART_STORAGE", os.Getenv("DEKART_STORAGE")).Msg("Unknown storage backend")
 	}

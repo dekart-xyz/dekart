@@ -1747,6 +1747,9 @@ export class Connection extends jspb.Message {
   getPostgresPort(): number;
   setPostgresPort(value: number): void;
 
+  getPostgresSslMode(): string;
+  setPostgresSslMode(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Connection.AsObject;
   static toObject(includeInstance: boolean, msg: Connection): Connection.AsObject;
@@ -1785,6 +1788,7 @@ export namespace Connection {
     postgresPassword?: Secret.AsObject,
     postgresDatabase: string,
     postgresPort: number,
+    postgresSslMode: string,
   }
 }
 

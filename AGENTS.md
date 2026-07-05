@@ -39,6 +39,7 @@ tool input.
 - Never force-push.
 - Do not stage changes unless the user explicitly asks to stage, commit, or push.
 - Commit and push changes only when the user explicitly asks to commit or push.
+- Do not modify `.env*` files without explicit user permission, except example env files such as `.env.example`.
 - Reuse existing contract types in the touched module (proto/shared schema) before adding local ad-hoc request structs; if you must diverge, add a one-line reason.
 - Keep Cypress `cypress/e2e/<folder>` aligned with env config name used to run it (for example, `.env.local` -> `cypress/e2e/local`, `.env.pg-s3` -> `cypress/e2e/pg-s3`).
 - After changing behavior, remove obsolete flags/params/branches that are no longer needed (no leftover transitional wiring).

@@ -4,6 +4,7 @@ import copy from '../../fixtures/copy.json'
 describe('postgres user-defined connection happy path', () => {
   it('creates postgres connection, saves it, and runs query via that connection', () => {
     const connName = `Postgres Local ${Date.now()}`
+    cy.setDevClaimsEmail(`postgres-local-${Date.now()}@example.com`)
     const setInputValue = (selector, value) => {
       cy.get(selector).then(($input) => {
         const el = $input[0]
@@ -24,7 +25,8 @@ describe('postgres user-defined connection happy path', () => {
     cy.get('body', { timeout: 20000 }).should(($body) => {
       const ready = $body.find('#dekart-connection-type-card-postgres').length > 0 ||
         $body.find('#dekart-new-connection-connections').length > 0 ||
-        $body.find('#dekart-new-connection-onboarding').length > 0
+        $body.find('#dekart-new-connection-onboarding').length > 0 ||
+        $body.find('#dekart-create-report').length > 0
       expect(ready, 'connection entry point should be visible').to.eq(true)
     }).then(($body) => {
       const onSelectorScreen = $body.find('#dekart-connection-type-card-postgres').length > 0
@@ -35,6 +37,10 @@ describe('postgres user-defined connection happy path', () => {
       const onConnectionsPage = $body.find('#dekart-new-connection-connections').length > 0
       if (onConnectionsPage) {
         cy.get('#dekart-new-connection-connections', { timeout: 20000 }).click({ force: true })
+      } else if ($body.find('#dekart-create-report').length > 0) {
+        cy.get('#dekart-create-report', { timeout: 20000 }).click({ force: true })
+        cy.contains('Add and edit connections', { timeout: 20000 }).click({ force: true })
+        cy.get('#dekart-new-connection-connections', { timeout: 20000 }).click({ force: true })
       } else {
         cy.get('#dekart-new-connection-onboarding', { timeout: 20000 }).click({ force: true })
       }
@@ -42,6 +48,7 @@ describe('postgres user-defined connection happy path', () => {
     })
 
     cy.get('div.ant-modal-title', { timeout: 20000 }).should('contain', 'Postgres')
+    cy.contains('.ant-select-selection-item', 'Disable SSL').should('exist')
     setInputValue('input#connectionName', connName)
     setInputValue('input#postgresHost', 'localhost')
     setInputValue('input#postgresUsername', 'postgres')

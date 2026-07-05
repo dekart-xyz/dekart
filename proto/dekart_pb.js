@@ -14427,7 +14427,8 @@ proto.Connection.toObject = function(includeInstance, msg) {
     postgresUsername: jspb.Message.getFieldWithDefault(msg, 23, ""),
     postgresPassword: (f = msg.getPostgresPassword()) && proto.Secret.toObject(includeInstance, f),
     postgresDatabase: jspb.Message.getFieldWithDefault(msg, 25, ""),
-    postgresPort: jspb.Message.getFieldWithDefault(msg, 26, 0)
+    postgresPort: jspb.Message.getFieldWithDefault(msg, 26, 0),
+    postgresSslMode: jspb.Message.getFieldWithDefault(msg, 27, "")
   };
 
   if (includeInstance) {
@@ -14572,6 +14573,10 @@ proto.Connection.deserializeBinaryFromReader = function(msg, reader) {
     case 26:
       var value = /** @type {number} */ (reader.readInt32());
       msg.setPostgresPort(value);
+      break;
+    case 27:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setPostgresSslMode(value);
       break;
     default:
       reader.skipField();
@@ -14786,6 +14791,13 @@ proto.Connection.serializeBinaryToWriter = function(message, writer) {
   if (f !== 0) {
     writer.writeInt32(
       26,
+      f
+    );
+  }
+  f = message.getPostgresSslMode();
+  if (f.length > 0) {
+    writer.writeString(
+      27,
       f
     );
   }
@@ -15352,6 +15364,24 @@ proto.Connection.prototype.getPostgresPort = function() {
  */
 proto.Connection.prototype.setPostgresPort = function(value) {
   return jspb.Message.setProto3IntField(this, 26, value);
+};
+
+
+/**
+ * optional string postgres_ssl_mode = 27;
+ * @return {string}
+ */
+proto.Connection.prototype.getPostgresSslMode = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 27, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.Connection} returns this
+ */
+proto.Connection.prototype.setPostgresSslMode = function(value) {
+  return jspb.Message.setProto3StringField(this, 27, value);
 };
 
 

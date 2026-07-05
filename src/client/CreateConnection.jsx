@@ -83,22 +83,20 @@ function ConnectionTypeSelector () {
       }
     }
   ]
-  if (!isCloud) {
-    connectionCards.push({
-      key: 'postgres',
-      title: 'Postgres',
-      icon: <DatasourceIcon type={ConnectionType.CONNECTION_TYPE_POSTGRES} />,
-      handleClick: () => {
-        track('ConnectionTypeSelectorPostgres')
-        dispatch(newConnection(ConnectionType.CONNECTION_TYPE_POSTGRES))
-      }
-    })
-  }
+  connectionCards.push({
+    key: 'postgres',
+    title: 'Postgres',
+    icon: <DatasourceIcon type={ConnectionType.CONNECTION_TYPE_POSTGRES} />,
+    handleClick: () => {
+      track('ConnectionTypeSelectorPostgres')
+      dispatch(newConnection(ConnectionType.CONNECTION_TYPE_POSTGRES))
+    }
+  })
   if (isCloud) {
     connectionCards.push({
       key: 'other',
       title: 'Other',
-      subtitle: 'Postgres, Databricks, Redshift, more',
+      subtitle: 'Databricks, Redshift, more',
       icon: <DatabaseOutlined />,
       hideConnectCta: true,
       handleClick: () => {
