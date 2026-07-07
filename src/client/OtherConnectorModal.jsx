@@ -179,8 +179,8 @@ export default function OtherConnectorModal ({ open, onClose }) {
                   : <>Want it sooner? Book a call and we can prioritise your workspace for the next batch.</>}
               </p>
               <div className={styles.actions}>
-                <Button type='primary' onClick={onNotify}>Notify me</Button>
-                <Button className={styles.bookCallBtn} onClick={onBookCall}>Book a call</Button>
+                <Button type='primary' onClick={onBookCall}>Book a call</Button>
+                <Button onClick={onNotify}>Notify me</Button>
               </div>
             </>
             )}

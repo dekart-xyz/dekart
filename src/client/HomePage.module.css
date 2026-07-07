@@ -191,7 +191,7 @@
     width: max-content;
     max-width: 100%;
     /* margin: 30px 0px; */
-    margin-bottom: 30px;
+    margin-bottom: 26px;
 }
 
 .connectionTypeCard {
@@ -278,6 +278,31 @@
     line-height: 1;
 }
 
+.connectionSelectorFooter {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+}
+
+.moreWarehousesButton {
+    white-space: nowrap;
+}
+
+.moreWarehousesPrimary {
+    font-weight: 500;
+}
+
+.moreWarehousesHint {
+    color: rgb(0 0 0 / 45%);
+    margin-left: 8px;
+    font-weight: 400;
+}
+
+.connectionSelectorBack {
+    color: #4A5158;
+}
+
 @media (max-width: 1400px) {
     .connectionTypeSelector {
         grid-template-columns: repeat(2, 231px);
@@ -290,6 +315,10 @@
     }
     .connectionTypeCard {
         min-height: 160px;
+    }
+
+    .moreWarehousesHint {
+        display: none;
     }
 }
 
