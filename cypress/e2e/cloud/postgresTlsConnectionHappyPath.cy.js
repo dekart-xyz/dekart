@@ -72,7 +72,7 @@ describe('cloud postgres TLS connector happy path', () => {
     openPostgresConnectionModal()
 
     cy.get('div.ant-modal-title', { timeout: 20000 }).should('contain', 'Postgres')
-    cy.contains('a', 'Read setup instructions').should('have.attr', 'href').and('include', '/docs/usage/postgres-connection/')
+    cy.contains('a', 'Setup instructions').should('have.attr', 'href').and('include', '/docs/usage/postgres-connection/')
     cy.contains('.ant-select-selection-item', 'Require SSL').should('exist')
     setInputValue('input#connectionName', connName)
     setInputValue('input#postgresHost', 'localhost')
