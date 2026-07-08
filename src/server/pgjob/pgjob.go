@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	"dekart/src/proto"
@@ -61,14 +62,7 @@ func buildDSNFromConnection(connection *proto.Connection, claims *user.Claims) (
 		}
 		return "", fmt.Errorf("postgres_password is required")
 	}
-	return fmt.Sprintf(
-		"host=%s port=%d user=%s dbname=%s password=%s sslmode=disable",
-		connection.PostgresHost,
-		connection.PostgresPort,
-		connection.PostgresUsername,
-		connection.PostgresDatabase,
-		password,
-	), nil
+	return conn.BuildPostgresKeywordDSN(connection, password)
 }
 
 // Create creates a postgres job for report query execution.
@@ -148,12 +142,30 @@ func TestConnection(ctx context.Context, req *proto.TestConnectionRequest) (*pro
 	if err := db.PingContext(pingCtx); err != nil {
 		return &proto.TestConnectionResponse{
 			Success: false,
-			Error:   err.Error(),
+			Error:   postgresConnectionError(err),
 		}, nil
 	}
 	return &proto.TestConnectionResponse{
 		Success: true,
 	}, nil
+}
+
+// postgresConnectionError adds setup context to common lib/pq connection failures.
+func postgresConnectionError(err error) string {
+	msg := err.Error()
+	lower := strings.ToLower(msg)
+	switch {
+	case strings.Contains(lower, "ssl") || strings.Contains(lower, "tls") || strings.Contains(lower, "certificate"):
+		return "Postgres TLS connection failed. Check that the database accepts SSL connections and that SSL mode matches the server configuration: " + msg
+	case strings.Contains(lower, "password authentication failed") || strings.Contains(lower, "authentication failed"):
+		return "Postgres authentication failed. Check the username and password: " + msg
+	case strings.Contains(lower, "does not exist"):
+		return "Postgres database was not found. Check the database name: " + msg
+	case strings.Contains(lower, "connection refused") || strings.Contains(lower, "timeout") || strings.Contains(lower, "no route to host") || strings.Contains(lower, "i/o timeout"):
+		return "Postgres network connection failed. Check host, port, firewall, and Dekart Cloud IP allowlisting: " + msg
+	default:
+		return msg
+	}
 }
 
 func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connection) error {

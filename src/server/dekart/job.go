@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/dbtime"
 	"dekart/src/server/deadline"
 	"dekart/src/server/errtype"
 	"dekart/src/server/job"
@@ -339,12 +340,11 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 			if err != nil {
 				return nil, fmt.Errorf("scan failed in rowsToQueryJobs error=%q", err)
 			}
-			// Parse SQLite timestamp strings (SQLite stores in UTC)
-			updatedAtTime, err := time.ParseInLocation("2006-01-02 15:04:05", updatedAtStr, time.UTC)
+			updatedAtTime, err := dbtime.ParseTimestampString(updatedAtStr)
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse updated_at timestamp: %v", err)
 			}
-			createdAtTime, err := time.ParseInLocation("2006-01-02 15:04:05", createdAtStr, time.UTC)
+			createdAtTime, err := dbtime.ParseTimestampString(createdAtStr)
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse created_at timestamp: %v", err)
 			}
@@ -430,16 +430,15 @@ func (s Server) getJobTimestampsFromResultID(ctx context.Context, resultID strin
 			}
 			return nil, nil, err
 		}
-		// Parse SQLite timestamp strings (SQLite stores in UTC)
-		created, err := time.ParseInLocation("2006-01-02 15:04:05", createdStr, time.UTC)
+		created, err := dbtime.ParseTimestampString(createdStr)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to parse created_at timestamp: %v", err)
 		}
-		updated, err := time.ParseInLocation("2006-01-02 15:04:05", updatedStr, time.UTC)
+		updated, err := dbtime.ParseTimestampString(updatedStr)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to parse updated_at timestamp: %v", err)
 		}
-		return &created, &updated, nil
+		return created, updated, nil
 	}
 
 	// PostgreSQL

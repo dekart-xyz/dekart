@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/bqstorage"
 	"dekart/src/server/conn"
@@ -15,10 +16,11 @@ import (
 
 // UserStorage implements Storage interface and creates StorageObject based on user connection settings
 type UserStorage struct {
+	metadataDB *sql.DB
 }
 
-func NewUserStorage() *UserStorage {
-	return &UserStorage{}
+func NewUserStorage(metadataDB *sql.DB) *UserStorage {
+	return &UserStorage{metadataDB: metadataDB}
 }
 
 func (s *UserStorage) GetObject(ctx context.Context, storageMeta string, object string) StorageObject {
@@ -36,10 +38,9 @@ func (s *UserStorage) GetObject(ctx context.Context, storageMeta string, object 
 	if connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_WHEROBOTS {
 		return NewPresignedS3Object(object)
 	}
-	// Postgres fallback for USER storage: keep local files only when no bucket is configured.
-	// If CloudStorageBucket is set (for example, pg-s3/pg-gcs setups), use bucket storage below.
+	// Postgres user-defined results are replayed from the source DB until published.
 	if connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_POSTGRES && connection.CloudStorageBucket == "" {
-		return NewLocalFSStorageObject(GetLocalFilesRoot(), filepath.Base(object))
+		return NewUserPostgresStorageObject(s.metadataDB, object, connection)
 	}
 
 	if connection.CloudStorageBucket != "" {

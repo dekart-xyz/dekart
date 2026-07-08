@@ -1,12 +1,13 @@
 import Form from 'antd/es/form'
 import Input from 'antd/es/input'
 import Modal from 'antd/es/modal'
+import Select from 'antd/es/select'
 import { useSelector, useDispatch } from 'react-redux'
 import Button from 'antd/es/button'
 import styles from './ConnectionModal.module.css'
 import { useEffect, useState } from 'react'
 import { archiveConnection, closeConnectionDialog, connectionChanged, getWherobotsConnectionHint, reOpenDialog, saveConnection, testConnection } from './actions/connection'
-import { CheckCircleTwoTone, ExclamationCircleTwoTone, LoadingOutlined } from '@ant-design/icons'
+import { CheckCircleTwoTone, ExclamationCircleTwoTone, InfoCircleOutlined, LoadingOutlined, LockOutlined } from '@ant-design/icons'
 import Tooltip from 'antd/es/tooltip'
 import AutoComplete from 'antd/es/auto-complete'
 import Alert from 'antd/es/alert'
@@ -19,7 +20,7 @@ function connectionTestFieldsChanged (changedValues, fields) {
   return fields.some(field => Object.prototype.hasOwnProperty.call(changedValues, field))
 }
 
-function Footer ({ form, saveWithoutTest = false, testDisabled = false }) {
+function Footer ({ form, saveWithoutTest = false, testDisabled = false, archiveBeforeSave = false, primaryTest = true }) {
   const { dialog, test } = useSelector(state => state.connection)
   const { tested, testing, error: testError, success: testSuccess } = test
   const { id, loading, connectionType } = dialog
@@ -36,11 +37,37 @@ function Footer ({ form, saveWithoutTest = false, testDisabled = false }) {
   }
   , [testSuccess, testError])
 
+  const saveButton = (
+    <Button
+      id='saveConnection'
+      className={archiveBeforeSave ? styles.saveButton : undefined}
+      type={tested && testSuccess ? 'primary' : 'default'} disabled={((!tested || !testSuccess || loading) && !saveWithoutTest) || !isAdmin} onClick={() => {
+        track('SaveConnection')
+        dispatch(saveConnection(id, connectionType, form.getFieldsValue()))
+        form.resetFields()
+      }}
+    >
+      Save
+    </Button>
+  )
+  const archiveButton = (
+    <Button
+      className={styles.archiveButton}
+      disabled={!id || !isAdmin}
+      onClick={() => {
+        track('ArchiveConnection', { connectionId: id })
+        dispatch(archiveConnection(id))
+      }}
+    >
+      Archive
+    </Button>
+  )
+
   return (
     <div className={styles.modalFooter}>
       <Button
         id='testConnection'
-        type='primary' disabled={testing || tested || testDisabled} loading={testing} onClick={() => {
+        type={primaryTest ? 'primary' : 'default'} disabled={testing || tested || testDisabled} loading={testing} onClick={() => {
           track('TestConnection')
           dispatch(testConnection(connectionType, form.getFieldsValue()))
         }}
@@ -53,26 +80,8 @@ function Footer ({ form, saveWithoutTest = false, testDisabled = false }) {
           : null
       }
       <div className={styles.spacer} />
-      <Button
-        id='saveConnection'
-        type={tested && testSuccess ? 'primary' : 'default'} disabled={((!tested || loading) && !saveWithoutTest) || !isAdmin} onClick={() => {
-          track('SaveConnection')
-          dispatch(saveConnection(id, connectionType, form.getFieldsValue()))
-          form.resetFields()
-        }}
-      >
-        Save
-      </Button>
-      <Button
-        className={styles.archiveButton}
-        disabled={!id || !isAdmin}
-        onClick={() => {
-          track('ArchiveConnection', { connectionId: id })
-          dispatch(archiveConnection(id))
-        }}
-      >
-        Archive
-      </Button>
+      {archiveBeforeSave ? archiveButton : saveButton}
+      {archiveBeforeSave ? saveButton : archiveButton}
     </div>
   )
 }
@@ -239,71 +248,108 @@ function SnowflakeConnectionModal ({ form }) {
 function PostgresConnectionModal ({ form }) {
   const { dialog } = useSelector(state => state.connection)
   const { id, loading } = dialog
+  const isCloud = useSelector(state => state.env.isCloud)
   const dispatch = useDispatch()
   const connection = useSelector(state => state.connection.list.find(s => s.id === id))
   const datasetUsed = connection?.datasetCount > 0
-  const passwordChanged = !connection || form.getFieldValue('postgresPassword') !== connection?.postgresPassword
+  const postgresHost = Form.useWatch('postgresHost', form)
+  const postgresUsername = Form.useWatch('postgresUsername', form)
+  const postgresPassword = Form.useWatch('postgresPassword', form)
+  const postgresDatabase = Form.useWatch('postgresDatabase', form)
+  const postgresPort = Form.useWatch('postgresPort', form)
+  const postgresSslMode = Form.useWatch('postgresSslMode', form)
+  const passwordChanged = !connection || postgresPassword !== connection?.postgresPassword
+  const connectionNeedsTest = !connection ||
+    postgresHost !== connection?.postgresHost ||
+    postgresUsername !== connection?.postgresUsername ||
+    postgresPassword !== connection?.postgresPassword ||
+    postgresDatabase !== connection?.postgresDatabase ||
+    Number(postgresPort) !== Number(connection?.postgresPort) ||
+    postgresSslMode !== connection?.postgresSslMode
+  const passwordRequiredForTest = Boolean(connection && connectionNeedsTest && !passwordChanged)
+  const sslModeOptions = isCloud
+    ? [{ value: 'require', label: 'Require SSL' }]
+    : [
+        { value: 'disable', label: 'Disable SSL' },
+        { value: 'require', label: 'Require SSL' }
+      ]
 
   useEffect(() => {
     if (!connection) {
       form.resetFields()
       form.setFieldsValue({
         connectionName: 'Postgres',
-        postgresPort: 5432
+        postgresPort: 5432,
+        postgresSslMode: isCloud ? 'require' : 'disable'
       })
     }
-  }, [connection, form])
+  }, [connection, form, isCloud])
 
   return (
     <Modal
       open
       title={<><DatasourceIcon type={ConnectionType.CONNECTION_TYPE_POSTGRES} /> Postgres</>}
       onCancel={() => dispatch(closeConnectionDialog())}
-      footer={<Footer form={form} saveWithoutTest={!passwordChanged} testDisabled={!passwordChanged} />}
+      footer={<Footer form={form} saveWithoutTest={!connectionNeedsTest} testDisabled={!connectionNeedsTest || passwordRequiredForTest} archiveBeforeSave primaryTest={false} />}
     >
       <div className={styles.modalBody}>
         <Form
           form={form}
           disabled={loading}
           layout='vertical'
+          requiredMark={false}
           onValuesChange={(changedValues) => {
-            if (connectionTestFieldsChanged(changedValues, ['connectionName', 'postgresHost', 'postgresUsername', 'postgresPassword', 'postgresDatabase', 'postgresPort'])) {
+            if (connectionTestFieldsChanged(changedValues, ['connectionName', 'postgresHost', 'postgresUsername', 'postgresPassword', 'postgresDatabase', 'postgresPort', 'postgresSslMode'])) {
               dispatch(connectionChanged())
             }
           }}
         >
-          {datasetUsed ? <div className={styles.datasetsCountAlert}><Alert message={<>This connection is used in {connection.datasetCount} dataset{connection.datasetCount > 1 ? 's' : ''}.</>} description='Changing may cause map errors' type='warning' /></div> : null}
-          <Form.Item required label='Connection Name' name='connectionName'>
+          {datasetUsed ? <div className={styles.datasetsCountAlert}><Alert showIcon message={<>Used in {connection.datasetCount} dataset{connection.datasetCount > 1 ? 's' : ''} - changing this connection may cause map errors.</>} type='warning' /></div> : null}
+          <Form.Item required label='Connection name' name='connectionName'>
             <Input placeholder='Postgres' />
           </Form.Item>
-          <Form.Item required label='Server' name='postgresHost' extra='DNS name or IP address for your PostgreSQL server.'>
-            <Input placeholder='db.example.com' />
-          </Form.Item>
-          <Form.Item required label='Username' name='postgresUsername' extra='Name of the user account.'>
-            <Input placeholder='postgres' />
-          </Form.Item>
-          <Form.Item required label='Password' name='postgresPassword' extra='Password for the user account.'>
-            <Input.Password
-              placeholder='••••••••'
-              visibilityToggle={passwordChanged}
-              onFocus={() => {
-                if (!passwordChanged) {
-                  form.setFieldsValue({ postgresPassword: '' })
-                }
-              }}
-              onBlur={() => {
-                if (form.getFieldValue('postgresPassword') === '') {
-                  form.setFieldsValue({ postgresPassword: connection?.postgresPassword })
-                }
-              }}
-            />
-          </Form.Item>
+          <div className={styles.postgresFieldRow}>
+            <Form.Item required label='Server' name='postgresHost' className={styles.postgresFieldWide}>
+              <Input placeholder='db.example.com' />
+            </Form.Item>
+            <Form.Item required label='Port' name='postgresPort' className={styles.postgresFieldNarrow}>
+              <Input type='number' placeholder='5432' />
+            </Form.Item>
+          </div>
+          <div className={styles.postgresFieldRow}>
+            <Form.Item required label='Username' name='postgresUsername' className={styles.postgresFieldWide}>
+              <Input placeholder='postgres' />
+            </Form.Item>
+            <Form.Item required label='Password' name='postgresPassword' extra={passwordRequiredForTest ? 'Enter the password again to test connection changes.' : null} className={styles.postgresFieldNarrow}>
+              <Input.Password
+                placeholder='••••••••'
+                visibilityToggle={passwordChanged}
+                onFocus={() => {
+                  if (!passwordChanged) {
+                    form.setFieldsValue({ postgresPassword: '' })
+                  }
+                }}
+                onBlur={() => {
+                  if (form.getFieldValue('postgresPassword') === '') {
+                    form.setFieldsValue({ postgresPassword: connection?.postgresPassword })
+                  }
+                }}
+              />
+            </Form.Item>
+          </div>
           <Form.Item required label='Database' name='postgresDatabase' extra='Database your connection will use.'>
             <Input placeholder='postgres' />
           </Form.Item>
-          <Form.Item required label='Port' name='postgresPort' extra='TCP port where your server is listening for connections.'>
-            <Input type='number' placeholder='5432' />
+          <Form.Item required={isCloud} label='SSL mode' name='postgresSslMode' extra={isCloud ? <><LockOutlined /> Required on Dekart Cloud. Outbound connections must be encrypted.</> : "Optional for self-hosted Dekart. Match your server's SSL configuration."}>
+            <Select options={sslModeOptions} disabled={isCloud} />
           </Form.Item>
+          {isCloud
+            ? (
+              <div className={styles.postgresSetupHint}>
+                <InfoCircleOutlined /> Allowlist Dekart Cloud egress IPs and use a read-only database user. <a href='https://dekart.xyz/docs/usage/postgres-connection/' target='_blank' rel='noreferrer'>Setup instructions</a>
+              </div>
+              )
+            : null}
         </Form>
       </div>
     </Modal>
@@ -484,6 +530,7 @@ function BigQueryConnectionModal ({ form }) {
 export default function ConnectionModal () {
   const { dialog } = useSelector(state => state.connection)
   const { visible, id, connectionType, bigqueryKey } = dialog
+  const isCloud = useSelector(state => state.env.isCloud)
   const dispatch = useDispatch()
 
   useEffect(() => {
@@ -496,9 +543,15 @@ export default function ConnectionModal () {
 
   useEffect(() => {
     if (connection) {
-      form.setFieldsValue(connection)
+      const formConnection = connectionType === ConnectionType.CONNECTION_TYPE_POSTGRES && isCloud && connection.postgresSslMode !== 'require'
+        ? { ...connection, postgresSslMode: 'require' }
+        : connection
+      form.setFieldsValue(formConnection)
+      if (formConnection !== connection) {
+        dispatch(connectionChanged())
+      }
     }
-  }, [connection, form])
+  }, [connection, connectionType, dispatch, form, isCloud])
 
   if (!visible) {
     return null

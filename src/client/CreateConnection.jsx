@@ -2,22 +2,73 @@ import { useEffect, useState } from 'react'
 import Button from 'antd/es/button'
 import Result from 'antd/es/result'
 import { useDispatch, useSelector } from 'react-redux'
-import { ApiTwoTone, LeftOutlined, DatabaseOutlined } from '@ant-design/icons'
+import { ApiTwoTone, ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 import { ConnectionType, PlanType } from 'dekart-proto/dekart_pb'
 import { DatasourceIcon } from './Datasource'
 import { track } from './lib/tracking'
 import { newConnection, newConnectionScreen } from './actions/connection'
 import BigQueryConnectionTypeSelectorModal from './BigQueryConnectionTypeSelectorModal'
-import OtherConnectorModal from './OtherConnectorModal'
+import OtherConnectorModal, { OTHER_CONNECTOR_OPTIONS } from './OtherConnectorModal'
 import styles from './HomePage.module.css'
 
-function ConnectionTypeSelectorBottom () {
+const moreWarehouseHint = ['databricks', 'redshift', 'duckdb_s3_gcp']
+  .map(value => OTHER_CONNECTOR_OPTIONS.find(option => option.value === value)?.label.split('/')[0].trim())
+  .filter(Boolean)
+  .join(', ')
+
+function ConnectionTypeSelectorBottom ({ onMoreWarehouses }) {
   const dispatch = useDispatch()
   const planType = useSelector(state => state.user.stream.planType)
   const showCancel = useSelector(state => state.connection.list).length > 0
   const newScreen = useSelector(state => state.connection.screen)
+  const isCloud = useSelector(state => state.env.isCloud)
   const history = useHistory()
+  const showBack = showCancel || newScreen
+  // Cloud replaces the old Other card with a footer overflow entry point.
+  if (isCloud) {
+    return (
+      <div className={styles.connectionSelectorFooter}>
+        <Button
+          id='dekart-more-warehouses'
+          size='large'
+          icon={<PlusOutlined />}
+          onClick={onMoreWarehouses}
+          className={styles.moreWarehousesButton}
+          style={{ borderStyle: 'dashed' }}
+        >
+          <span className={styles.moreWarehousesPrimary}>More warehouses</span>
+          <span className={styles.moreWarehousesHint}>{moreWarehouseHint} &amp; more</span>
+        </Button>
+        {showBack
+          ? (
+            <Button
+              type='text'
+              icon={<ArrowLeftOutlined />}
+              className={styles.connectionSelectorBack}
+              onClick={() => {
+                track('ReturnFromConnectionSelector')
+                if (newScreen) {
+                  dispatch(newConnectionScreen(false))
+                } else {
+                  history.push('/')
+                }
+              }}
+            >Back
+            </Button>
+            )
+          : null}
+        {planType === PlanType.TYPE_PERSONAL && !showBack
+          ? (
+            <div className={styles.notSure}>
+              <p>or</p>
+              <Button ghost type='primary' href='https://dekart.xyz/self-hosted/?ref=ConnectionTypeSelector' target='_blank' onClick={() => track('GetStartedWithSelfHosting')}>Get Started with Self-Hosting</Button>
+            </div>
+            )
+          : null}
+      </div>
+    )
+  }
   if (showCancel) {
     return (
       <div>
@@ -31,7 +82,7 @@ function ConnectionTypeSelectorBottom () {
               history.push('/')
             }
           }}
-          icon={<LeftOutlined />}
+          icon={<ArrowLeftOutlined />}
         >Back
         </Button>
       </div>
@@ -53,7 +104,6 @@ function ConnectionTypeSelector () {
   const dispatch = useDispatch()
   const [bigqueryModalOpen, setBigqueryModalOpen] = useState(false)
   const [otherModalOpen, setOtherModalOpen] = useState(false)
-  const isCloud = useSelector(state => state.env.isCloud)
   const connectionCards = [
     {
       key: 'bigquery',
@@ -83,29 +133,18 @@ function ConnectionTypeSelector () {
       }
     }
   ]
-  if (!isCloud) {
-    connectionCards.push({
-      key: 'postgres',
-      title: 'Postgres',
-      icon: <DatasourceIcon type={ConnectionType.CONNECTION_TYPE_POSTGRES} />,
-      handleClick: () => {
-        track('ConnectionTypeSelectorPostgres')
-        dispatch(newConnection(ConnectionType.CONNECTION_TYPE_POSTGRES))
-      }
-    })
-  }
-  if (isCloud) {
-    connectionCards.push({
-      key: 'other',
-      title: 'Other',
-      subtitle: 'Postgres, Databricks, Redshift, more',
-      icon: <DatabaseOutlined />,
-      hideConnectCta: true,
-      handleClick: () => {
-        track('ConnectionTypeSelectorOther')
-        setOtherModalOpen(true)
-      }
-    })
+  connectionCards.push({
+    key: 'postgres',
+    title: 'Postgres',
+    icon: <DatasourceIcon type={ConnectionType.CONNECTION_TYPE_POSTGRES} />,
+    handleClick: () => {
+      track('ConnectionTypeSelectorPostgres')
+      dispatch(newConnection(ConnectionType.CONNECTION_TYPE_POSTGRES))
+    }
+  })
+  const openOtherConnectorModal = () => {
+    track('ConnectionTypeSelectorOther')
+    setOtherModalOpen(true)
   }
   useEffect(() => {
     track('ConnectionTypeSelector')
@@ -138,7 +177,7 @@ function ConnectionTypeSelector () {
           </button>
         ))}
       </div>
-      <ConnectionTypeSelectorBottom />
+      <ConnectionTypeSelectorBottom onMoreWarehouses={openOtherConnectorModal} />
     </>
   )
 }

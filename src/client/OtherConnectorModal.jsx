@@ -18,7 +18,6 @@ export const OTHER_CONNECTOR_OPTIONS = [
   { label: 'DuckDB / S3 / GCP', value: 'duckdb_s3_gcp' },
   { label: 'MotherDuck', value: 'motherduck' },
   { label: 'MySQL', value: 'mysql' },
-  { label: 'PostgreSQL / PostGIS', value: 'postgresql_postgis' },
   { label: 'Presto / Trino', value: 'presto_trino' },
   { label: 'Redshift', value: 'redshift' },
   { label: 'Other', value: 'other' }
@@ -180,8 +179,8 @@ export default function OtherConnectorModal ({ open, onClose }) {
                   : <>Want it sooner? Book a call and we can prioritise your workspace for the next batch.</>}
               </p>
               <div className={styles.actions}>
-                <Button type='primary' onClick={onNotify}>Notify me</Button>
-                <Button className={styles.bookCallBtn} onClick={onBookCall}>Book a call</Button>
+                <Button type='primary' onClick={onBookCall}>Book a call</Button>
+                <Button onClick={onNotify}>Notify me</Button>
               </div>
             </>
             )}

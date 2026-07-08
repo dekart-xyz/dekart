@@ -3,6 +3,7 @@ package deviceauth
 import (
 	"context"
 	"database/sql"
+	"dekart/src/server/dbtime"
 	"fmt"
 	"strings"
 	"time"
@@ -33,7 +34,7 @@ func GetTokenUpdate(ctx context.Context, db *sql.DB, workspaceID string, email s
 		if !updatedAtStr.Valid {
 			return 0, nil
 		}
-		parsed, err := time.ParseInLocation("2006-01-02 15:04:05", updatedAtStr.String, time.UTC)
+		parsed, err := dbtime.ParseTimestampString(updatedAtStr.String)
 		if err != nil {
 			return 0, err
 		}

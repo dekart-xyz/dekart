@@ -8,12 +8,41 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_PASSWORD: "${DEKART_POSTGRES_PASSWORD}"
-      POSTGRES_USER: "${DEKART_POSTGRES_USER}"
-      POSTGRES_DB: "${DEKART_POSTGRES_DB}"
+      POSTGRES_PASSWORD: "${DEKART_POSTGRES_PASSWORD:-dekart}"
+      POSTGRES_USER: "${DEKART_POSTGRES_USER:-postgres}"
+      POSTGRES_DB: "${DEKART_POSTGRES_DB:-dekart}"
     volumes:
       - ./install/docker/postgres/oidc-init.sql:/docker-entrypoint-initdb.d/10-oidc-init.sql:ro
       - ./install/docker/postgres/denmark-pois.csv:/docker-entrypoint-initdb.d/denmark-pois.csv:ro
+  db-tls:
+    image: postgres
+    profiles:
+      - local
+      - postgres-tls
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_PASSWORD: "${DEKART_POSTGRES_PASSWORD:-dekart}"
+      POSTGRES_USER: "${DEKART_POSTGRES_USER:-postgres}"
+      POSTGRES_DB: "${DEKART_POSTGRES_DB:-dekart}"
+    volumes:
+      - ./install/docker/postgres/oidc-init.sql:/docker-entrypoint-initdb.d/10-oidc-init.sql:ro
+      - ./install/docker/postgres/denmark-pois.csv:/docker-entrypoint-initdb.d/denmark-pois.csv:ro
+    command:
+      - bash
+      - -c
+      - |
+        set -e
+        openssl req -new -x509 -days 365 -nodes -text \
+          -out /var/lib/postgresql/server.crt \
+          -keyout /var/lib/postgresql/server.key \
+          -subj "/CN=localhost"
+        chown postgres:postgres /var/lib/postgresql/server.crt /var/lib/postgresql/server.key
+        chmod 600 /var/lib/postgresql/server.key
+        exec docker-entrypoint.sh postgres \
+          -c ssl=on \
+          -c ssl_cert_file=/var/lib/postgresql/server.crt \
+          -c ssl_key_file=/var/lib/postgresql/server.key
   adminer:
     image: adminer
     profiles:

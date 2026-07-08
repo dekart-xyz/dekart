@@ -3,7 +3,12 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"dekart/src/proto"
+	"dekart/src/server/conn"
+	"dekart/src/server/dbtime"
 	"dekart/src/server/errtype"
+	"dekart/src/server/secrets"
+	"dekart/src/server/user"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -23,6 +28,7 @@ type PGStorage struct {
 type PGStorageObject struct {
 	metadataDB        *sql.DB
 	dataSourceConnStr string
+	connection        *proto.Connection
 	jobID             string
 }
 
@@ -54,6 +60,14 @@ func (s *PGStorage) GetObject(_ context.Context, _ string, object string) Storag
 	}
 }
 
+func NewUserPostgresStorageObject(metadataDB *sql.DB, object string, connection *proto.Connection) StorageObject {
+	return PGStorageObject{
+		metadataDB: metadataDB,
+		connection: connection,
+		jobID:      object,
+	}
+}
+
 func (o PGStorageObject) GetWriter(context.Context) io.WriteCloser {
 	return errorWriteCloser{err: fmt.Errorf("GetWriter is not supported for PG replay storage")}
 }
@@ -63,7 +77,11 @@ func (o PGStorageObject) GetReader(ctx context.Context) (io.ReadCloser, error) {
 	if err != nil {
 		return nil, err
 	}
-	dataDB, err := sql.Open("postgres", o.dataSourceConnStr)
+	dsn, err := o.getDataSourceConnStr(ctx)
+	if err != nil {
+		return nil, err
+	}
+	dataDB, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, err
 	}
@@ -123,6 +141,17 @@ func (o PGStorageObject) GetReader(ctx context.Context) (io.ReadCloser, error) {
 	return pr, nil
 }
 
+func (o PGStorageObject) getDataSourceConnStr(ctx context.Context) (string, error) {
+	if o.connection == nil {
+		return o.dataSourceConnStr, nil
+	}
+	password := secrets.SecretToString(o.connection.PostgresPassword, user.GetClaims(ctx))
+	if password == "" {
+		return "", fmt.Errorf("postgres_password is required")
+	}
+	return conn.BuildPostgresKeywordDSN(o.connection, password)
+}
+
 func (o PGStorageObject) getQueryText(ctx context.Context) (string, error) {
 	var queryText sql.NullString
 	err := o.metadataDB.QueryRowContext(
@@ -147,23 +176,23 @@ func (o PGStorageObject) getQueryText(ctx context.Context) (string, error) {
 }
 
 func (o PGStorageObject) GetCreatedAt(ctx context.Context) (*time.Time, error) {
-	createdAt := time.Time{}
+	var createdAtValue any
 	err := o.metadataDB.QueryRowContext(
 		ctx,
 		`select created_at from query_jobs where id = $1 order by created_at desc limit 1`,
 		o.jobID,
-	).Scan(&createdAt)
+	).Scan(&createdAtValue)
 	if err == sql.ErrNoRows {
 		err = o.metadataDB.QueryRowContext(
 			ctx,
 			`select created_at from query_jobs where job_result_id = $1 order by created_at desc limit 1`,
 			o.jobID,
-		).Scan(&createdAt)
+		).Scan(&createdAtValue)
 	}
 	if err != nil {
 		return nil, err
 	}
-	return &createdAt, nil
+	return dbtime.ParseTimestamp(createdAtValue)
 }
 
 func (o PGStorageObject) GetSize(context.Context) (*int64, error) {

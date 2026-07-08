@@ -176,6 +176,14 @@ func (s Server) unpublishReport(reqCtx context.Context, reportID string) {
 	}
 }
 
+func isPostgresReplayResult(connection *proto.Connection) bool {
+	return os.Getenv("DEKART_STORAGE") == "PG" ||
+		(os.Getenv("DEKART_STORAGE") == "USER" &&
+			connection != nil &&
+			connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_POSTGRES &&
+			connection.CloudStorageBucket == "")
+}
+
 func (s Server) checkExpiredQueryResult(ctx context.Context, reportID string) (bool, error) {
 	datasets, err := s.getDatasets(ctx, reportID)
 	if err != nil {
@@ -191,6 +199,10 @@ func (s Server) checkExpiredQueryResult(ctx context.Context, reportID string) (b
 		if queryJob.JobResultId == "" {
 			continue
 		}
+		connection, err := s.getConnectionFromQueryID(ctx, queryJob.QueryId)
+		if err != nil {
+			return false, fmt.Errorf("cannot retrieve connection: %w", err)
+		}
 
 		dwJobID, err := s.getDWJobIDFromResultID(ctx, queryJob.JobResultId)
 		if err != nil {
@@ -203,6 +215,9 @@ func (s Server) checkExpiredQueryResult(ctx context.Context, reportID string) (b
 		}
 
 		if dwJobID != "" {
+			if isPostgresReplayResult(connection) {
+				continue
+			}
 			// if dwJobID use checkJobExpiration
 			expired, _, err := s.checkJobExpiration(ctx, queryJob.JobResultId)
 			if err != nil {

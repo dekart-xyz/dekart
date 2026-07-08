@@ -489,6 +489,7 @@ message Connection {
     Secret postgres_password = 24;
     string postgres_database = 25;
     int32 postgres_port = 26;
+    string postgres_ssl_mode = 27;
 }
 
 message Secret {
