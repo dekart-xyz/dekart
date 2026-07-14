@@ -510,11 +510,32 @@ jobs:
               -e DEKART_ALLOW_FILE_UPLOAD=0 \
 
           - id: pg-s3-postgres-expired-license-read-only
-            spec: cypress/e2e/pg-s3/licenseExpiredReadOnly.cy.js,cypress/e2e/pg-s3/licenseExpiredMemberRoles.cy.js
+            spec: cypress/e2e/pg-s3/licenseExpiredReadOnly.cy.js
             expired_license_read_only: true
             extra_env: |
               -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_EXP_SEC \
               -e DEKART_DEV_ALLOW_EXPIRED_LICENSE_KEY_STARTUP=1 \
+              -e DEKART_POSTGRES_HOST=localhost \
+              -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
+              -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
+              -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
+              -e DEKART_POSTGRES_DB=$DEKART_POSTGRES_DB \
+              -e DEKART_STORAGE=S3 \
+              -e DEKART_DATASOURCE=PG \
+              -e DEKART_CLOUD_STORAGE_BUCKET=$S3_BUCKET_SEC \
+              -e DEKART_POSTGRES_DATASOURCE_CONNECTION=postgres://$DEKART_POSTGRES_USER:$DEKART_POSTGRES_PASSWORD@localhost:5432/dekart_geo?sslmode=disable \
+              -e AWS_REGION=$AWS_REGION \
+              -e AWS_ACCESS_KEY_ID=$AWS_KEY_SEC \
+              -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_SEC \
+              -e DEKART_ALLOW_FILE_UPLOAD=0 \
+
+          - id: pg-s3-postgres-expired-license-member-roles
+            spec: cypress/e2e/pg-s3/licenseExpiredMemberRoles.cy.js
+            expired_license_read_only: true
+            extra_env: |
+              -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_EXP_SEC \
+              -e DEKART_DEV_ALLOW_EXPIRED_LICENSE_KEY_STARTUP=1 \
+              -e DEKART_DEV_CLAIMS=1 \
               -e DEKART_POSTGRES_HOST=localhost \
               -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
               -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
