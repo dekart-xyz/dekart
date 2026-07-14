@@ -660,7 +660,11 @@ func (s Server) UpdateWorkspaceUser(ctx context.Context, req *proto.UpdateWorksp
 	if workspaceInfo.ID == "" {
 		return nil, status.Error(codes.NotFound, "Workspace not found")
 	}
-	if err := requireWorkspaceWrite(ctx); err != nil {
+	readOnlyRoleUpdate := workspaceInfo.ReadOnly && req.UserUpdateType == proto.UpdateWorkspaceUserRequest_USER_UPDATE_TYPE_UPDATE &&
+		(workspaceInfo.ReadOnlyReason == proto.GetWorkspaceResponse_READ_ONLY_REASON_SUBSCRIPTION_EXPIRED ||
+			workspaceInfo.ReadOnlyReason == proto.GetWorkspaceResponse_READ_ONLY_REASON_LICENSE_KEY_EXPIRED)
+	// Expired subscriptions and licenses may change existing roles so admins can manage paid seats before renewal.
+	if err := requireWorkspaceWrite(ctx); err != nil && !readOnlyRoleUpdate {
 		return nil, err
 	}
 	if workspaceInfo.UserRole != proto.UserRole_ROLE_ADMIN {

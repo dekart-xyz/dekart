@@ -213,6 +213,10 @@ func (s Server) updateSeats(ctx context.Context) error {
 			log.Error().Str("workspace_id", workspaceInfo.ID).Err(err).Send()
 			return err
 		}
+		// Terminal Stripe subscriptions have no updateable item; a new checkout uses the refreshed billed-user count.
+		if sub.Expired && (sub.StripeSubscriptionId == "" || sub.ItemId == "") {
+			return nil
+		}
 		params := &stripe.SubscriptionParams{
 			Items: []*stripe.SubscriptionItemsParams{
 				{
