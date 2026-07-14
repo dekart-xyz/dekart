@@ -192,10 +192,11 @@ jobs:
             -e DEKART_ALLOW_WORKSPACE_CREATION=1 \
             -e DEKART_UX_DISABLE_VERSION_CHECK=1 \
             -e DEKART_DEV_NO_DATASET_CACHE=1 \
+            -e DEKART_DEV_CLAIMS=1 \
             -e DEKART_MAPBOX_TOKEN=$MAPBOX_TOKEN_SEC \
             -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
             -e DEKART_CLOUD=1 \
-            -e TEST_SPEC=cypress/e2e/cloud/cloudBasicFlowEnd.cy.js \
+            -e TEST_SPEC=cypress/e2e/cloud/cloudBasicFlowEnd.cy.js,cypress/e2e/cloud/readOnlyMemberRoles.cy.js \
             -e CYPRESS_CI=1 \
             ${REG_PREFIX}/dekart:${{ env.IMAGE_CACHE_KEY }}
 
@@ -509,7 +510,7 @@ jobs:
               -e DEKART_ALLOW_FILE_UPLOAD=0 \
 
           - id: pg-s3-postgres-expired-license-read-only
-            spec: cypress/e2e/pg-s3/licenseExpiredReadOnly.cy.js
+            spec: cypress/e2e/pg-s3/licenseExpiredReadOnly.cy.js,cypress/e2e/pg-s3/licenseExpiredMemberRoles.cy.js
             expired_license_read_only: true
             extra_env: |
               -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_EXP_SEC \

@@ -2,7 +2,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import styles from './MembersTab.module.css'
 import { useCallback, useEffect, useState } from 'react'
 import { updateWorkspaceUser } from './actions/workspace'
-import { PlanType, UpdateWorkspaceUserRequest, UserRole } from 'dekart-proto/dekart_pb'
+import { GetWorkspaceResponse, PlanType, UpdateWorkspaceUserRequest, UserRole } from 'dekart-proto/dekart_pb'
 import Input from 'antd/es/input'
 import Button from 'antd/es/button'
 import Tag from 'antd/es/tag'
@@ -42,15 +42,21 @@ export default function MembersTab () {
   const [inviteRole, setInviteRole] = useState(UserRole.ROLE_VIEWER)
   const isAdmin = useSelector(state => state.user.isAdmin)
   const readOnly = useSelector(state => state.workspace.readOnly)
+  const readOnlyReason = useSelector(state => state.workspace.readOnlyReason)
   const hasAuthenticatedUser = Boolean(userStream?.email && userStream.email !== UNKNOWN_EMAIL)
-  const canManageUsers = isAdmin && !readOnly && hasAuthenticatedUser
+  const roleChangesAllowedWhileReadOnly = readOnly && [
+    GetWorkspaceResponse.ReadOnlyReason.READ_ONLY_REASON_SUBSCRIPTION_EXPIRED,
+    GetWorkspaceResponse.ReadOnlyReason.READ_ONLY_REASON_LICENSE_KEY_EXPIRED
+  ].includes(readOnlyReason)
+  const canChangeUserRoles = isAdmin && hasAuthenticatedUser && (!readOnly || roleChangesAllowedWhileReadOnly)
+  const canManageMembership = isAdmin && !readOnly && hasAuthenticatedUser
   const addUserCb = useCallback(() => {
     track('InviteUser')
-    if (email && canManageUsers) {
+    if (email && canManageMembership) {
       dispatch(updateWorkspaceUser(email, UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_ADD, inviteRole))
       setEmail('')
     }
-  }, [dispatch, email, canManageUsers, inviteRole])
+  }, [dispatch, email, canManageMembership, inviteRole])
   const usersLoaded = Boolean(users)
   useEffect(() => {
     if (usersLoaded) {
@@ -63,9 +69,9 @@ export default function MembersTab () {
 
   let inviteDisabled
   if (planType === PlanType.TYPE_TEAM) {
-    inviteDisabled = !canManageUsers || addedUsersCount >= 20
+    inviteDisabled = !canManageMembership || addedUsersCount >= 20
   } else {
-    inviteDisabled = !canManageUsers
+    inviteDisabled = !canManageMembership
   }
 
   return (
@@ -127,7 +133,7 @@ export default function MembersTab () {
                 <Tag className={styles.statusTag}>{['Unknown', 'Pending', 'Active', 'Removed', 'Rejected'][u.status]}</Tag>
               </div>
               <div className={styles.memberCopyColumn}>
-                {u.status === 1 && canManageUsers
+                {u.status === 1 && canManageMembership
                   ? (
                     <Button
                       icon={<CopyOutlined />}
@@ -150,7 +156,7 @@ export default function MembersTab () {
                     <Select
                       defaultValue={u.role}
                       style={{ width: 220 }}
-                      disabled={u.email === userStream.email || !canManageUsers}
+                      disabled={u.email === userStream.email || !canChangeUserRoles}
                       onChange={(value) => {
                         track('ChangeUserRole', { email: u.email, newRole: value })
                         dispatch(updateWorkspaceUser(u.email, UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_UPDATE, value))
