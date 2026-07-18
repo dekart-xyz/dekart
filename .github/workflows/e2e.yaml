@@ -128,6 +128,9 @@ jobs:
           docker logs postgres-tls
           exit 1
 
+      - name: Add deterministic Postgres connection failure address
+        run: sudo ip address add 192.0.2.1/32 dev lo
+
       - name: E2E part 1 (start + login regression)
         run: |
           docker run -i \
@@ -160,7 +163,7 @@ jobs:
             -e DEKART_MAPBOX_TOKEN=$MAPBOX_TOKEN_SEC \
             -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
             -e DEKART_CLOUD=1 \
-            -e TEST_SPEC=cypress/e2e/cloud/cloudBasicFlowStart.cy.js \
+            -e TEST_SPEC=cypress/e2e/cloud/cloudBasicFlowStart.cy.js,cypress/e2e/cloud/postgresConnectionUsesEnteredHost.cy.js \
             -e CYPRESS_CI=1 \
             ${REG_PREFIX}/dekart:${{ env.IMAGE_CACHE_KEY }}
       - name: E2E part 2

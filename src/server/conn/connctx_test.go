@@ -114,6 +114,18 @@ func TestPostgresKeywordDSNEscapesValues(t *testing.T) {
 	require.Equal(t, `user='de kart' password='pa\'ss\\word'`, dsn)
 }
 
+func TestBuildPostgresKeywordDSNUsesResolvedCloudHost(t *testing.T) {
+	t.Setenv("DEKART_CLOUD", "1")
+	con := validPostgresConnection()
+	con.PostgresHost = "192.0.2.1"
+
+	dsn, err := BuildPostgresKeywordDSN(con, "secret")
+
+	require.NoError(t, err)
+	require.Contains(t, dsn, "host='192.0.2.1'")
+	require.NotContains(t, dsn, "hostaddr=")
+}
+
 func validPostgresConnection() *proto.Connection {
 	return &proto.Connection{
 		Id:               "test-connection",

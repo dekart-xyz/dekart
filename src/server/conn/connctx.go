@@ -85,16 +85,14 @@ func BuildPostgresKeywordDSN(connection *proto.Connection, password string) (str
 	if err != nil {
 		return "", err
 	}
-	hostKey := "host"
 	hostValue := connection.PostgresHost
 	if hostaddr, err := ResolvePostgresHostForCloud(connection.PostgresHost); err != nil {
 		return "", err
 	} else if hostaddr != "" {
-		hostKey = "hostaddr"
 		hostValue = hostaddr
 	}
 	return PostgresKeywordDSN(
-		PostgresDSNParam{Key: hostKey, Value: hostValue},
+		PostgresDSNParam{Key: "host", Value: hostValue},
 		PostgresDSNParam{Key: "port", Value: strconv.Itoa(int(connection.PostgresPort))},
 		PostgresDSNParam{Key: "user", Value: connection.PostgresUsername},
 		PostgresDSNParam{Key: "dbname", Value: connection.PostgresDatabase},
