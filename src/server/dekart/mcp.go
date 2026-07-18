@@ -63,6 +63,7 @@ type addReportReadmeMCPArgs struct {
 }
 
 const mcpBigQueryServiceAccountRequiredMessage = "BigQuery via MCP requires a service-account-backed connection"
+const mcpCreateConnectionDisabledMessage = "create_connection via MCP is disabled; create the connection in Dekart UI first"
 const mcpCreateReportLimitReachedEventName = "MCPCreateReportLimitReached"
 
 // HandleCreateReport wraps CreateReport RPC with protojson HTTP endpoint.
@@ -146,7 +147,7 @@ func (s *Server) callMCPTool(ctx context.Context, request *mcpCallRequest) (json
 	case "list_connections":
 		return s.callListConnectionsTool(ctx)
 	case "create_connection":
-		return s.callCreateConnectionTool(ctx, request.Arguments)
+		return nil, status.Error(codes.FailedPrecondition, mcpCreateConnectionDisabledMessage)
 	case "create_report":
 		return s.callCreateReportTool(ctx)
 	case "create_dataset":
@@ -251,16 +252,6 @@ func clearSecretFields(message gproto.Message) {
 	}
 }
 
-// sanitizeCreateConnectionResponseForMCP strips secret fields before returning create_connection payload.
-func sanitizeCreateConnectionResponseForMCP(response *proto.CreateConnectionResponse) *proto.CreateConnectionResponse {
-	if response == nil {
-		return nil
-	}
-	return &proto.CreateConnectionResponse{
-		Connection: sanitizeConnectionForMCP(response.GetConnection()),
-	}
-}
-
 // isBigQueryPassthroughConnectionExcludedForMCP returns true when connection
 // should be excluded from MCP run-queries scope as BigQuery passthrough.
 func isBigQueryPassthroughConnectionExcludedForMCP(connection *proto.Connection) bool {
@@ -347,22 +338,6 @@ func (s *Server) callListConnectionsTool(ctx context.Context) (json.RawMessage, 
 	return mcp.MarshalProtoJSON(&proto.GetConnectionListResponse{
 		Connections: sanitized,
 	})
-}
-
-// callCreateConnectionTool creates one connection from proto-shaped connection payload.
-func (s *Server) callCreateConnectionTool(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
-	request := &proto.CreateConnectionRequest{}
-	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
-		return nil, err
-	}
-	if err := requireMCPBigQueryServiceAccount(ctx, request.GetConnection()); err != nil {
-		return nil, err
-	}
-	response, err := s.CreateConnection(ctx, request)
-	if err != nil {
-		return nil, err
-	}
-	return mcp.MarshalProtoJSON(sanitizeCreateConnectionResponseForMCP(response))
 }
 
 // callGetMapConfigSchemaTool returns the JSON schema used for map config validation.
@@ -905,25 +880,7 @@ func mcpToolDefinitions() []mcpTool {
 			WhenNotToUse: "Do not use when you already have a valid connection_id and need to perform writes.",
 			SideEffects:  []string{"read"},
 			ExampleInput: map[string]any{},
-			NextTools:    []string{"create_connection", "create_dataset"},
-		},
-		{
-			Name:         "create_connection",
-			Description:  "Create a new workspace connection. Payload follows CreateConnectionRequest proto with one connection object.",
-			InputSchema:  mcpschema.ForProto(&proto.CreateConnectionRequest{}, []string{"connection"}),
-			WhenToUse:    "Use when user has no suitable connection yet. BigQuery via MCP requires a service-account-backed connection with connection.bigquery_key; project-only BigQuery passthrough is unsupported.",
-			WhenNotToUse: "Do not use to create project-only BigQuery passthrough connections or to edit existing connections; use update_connection endpoint/RPC flow instead.",
-			SideEffects:  []string{"write"},
-			ExampleInput: map[string]any{
-				"connection": map[string]any{
-					"connection_name": "My BigQuery Service Account",
-					"connection_type": "CONNECTION_TYPE_BIGQUERY",
-					"bigquery_key": map[string]any{
-						"client_encrypted": "encrypted-service-account-json",
-					},
-				},
-			},
-			NextTools: []string{"list_connections", "create_dataset"},
+			NextTools:    []string{"create_dataset"},
 		},
 		{
 			Name:         "create_report",
