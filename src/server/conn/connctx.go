@@ -81,20 +81,23 @@ func PostgresKeywordDSN(params ...PostgresDSNParam) string {
 
 // BuildPostgresKeywordDSN applies Cloud host safety, SSL defaults, and lib/pq quoting.
 func BuildPostgresKeywordDSN(connection *proto.Connection, password string) (string, error) {
+	return buildPostgresKeywordDSN(connection, password, net.LookupIP)
+}
+
+// buildPostgresKeywordDSN accepts a scoped lookup function for deterministic hostname resolution.
+func buildPostgresKeywordDSN(connection *proto.Connection, password string, lookupIP func(string) ([]net.IP, error)) (string, error) {
 	sslMode, err := NormalizePostgresSSLMode(connection.PostgresSslMode)
 	if err != nil {
 		return "", err
 	}
-	hostKey := "host"
 	hostValue := connection.PostgresHost
-	if hostaddr, err := ResolvePostgresHostForCloud(connection.PostgresHost); err != nil {
+	if hostaddr, err := resolvePostgresHostForCloud(connection.PostgresHost, lookupIP); err != nil {
 		return "", err
 	} else if hostaddr != "" {
-		hostKey = "hostaddr"
 		hostValue = hostaddr
 	}
 	return PostgresKeywordDSN(
-		PostgresDSNParam{Key: hostKey, Value: hostValue},
+		PostgresDSNParam{Key: "host", Value: hostValue},
 		PostgresDSNParam{Key: "port", Value: strconv.Itoa(int(connection.PostgresPort))},
 		PostgresDSNParam{Key: "user", Value: connection.PostgresUsername},
 		PostgresDSNParam{Key: "dbname", Value: connection.PostgresDatabase},
@@ -149,6 +152,11 @@ func isPublicPostgresAddr(addr netip.Addr) bool {
 
 // ResolvePostgresHostForCloud prevents Cloud connectors from probing internal networks.
 func ResolvePostgresHostForCloud(host string) (string, error) {
+	return resolvePostgresHostForCloud(host, net.LookupIP)
+}
+
+// resolvePostgresHostForCloud validates hostname answers using the provided resolver.
+func resolvePostgresHostForCloud(host string, lookupIP func(string) ([]net.IP, error)) (string, error) {
 	if os.Getenv("DEKART_CLOUD") == "" {
 		return "", nil
 	}
@@ -161,7 +169,7 @@ func ResolvePostgresHostForCloud(host string) (string, error) {
 		}
 		return addr.Unmap().String(), nil
 	}
-	ips, err := net.LookupIP(host)
+	ips, err := lookupIP(host)
 	if err != nil || len(ips) == 0 {
 		return "", status.Error(codes.InvalidArgument, "postgres_host must resolve to a public address in cloud")
 	}

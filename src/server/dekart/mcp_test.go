@@ -148,9 +148,8 @@ func TestMCPToolDefinitions_ContainsUpdateTools(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, []string{}, listConnectionsTool.InputSchema["required"])
 
-	createConnectionTool, ok := names["create_connection"]
-	assert.True(t, ok)
-	assert.Contains(t, createConnectionTool.InputSchema["required"], "connection")
+	_, ok = names["create_connection"]
+	assert.False(t, ok)
 
 	createQueryTool, ok := names["create_query"]
 	assert.True(t, ok)
@@ -283,7 +282,7 @@ func TestCallMCPTool_CreateQuery_InvalidArguments(t *testing.T) {
 	assert.Contains(t, err.Error(), "datasetId")
 }
 
-func TestCallCreateConnectionTool_RejectsBigQueryWithoutServiceAccountBeforePersistence(t *testing.T) {
+func TestCallMCPTool_CreateConnectionDisabled(t *testing.T) {
 	server := &Server{}
 	ctx := testUserContext("user@example.com")
 	ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{
@@ -292,42 +291,15 @@ func TestCallCreateConnectionTool_RejectsBigQueryWithoutServiceAccountBeforePers
 		UserRole: proto.UserRole_ROLE_ADMIN,
 	})
 
-	payload, err := server.callCreateConnectionTool(ctx, json.RawMessage(`{
-		"connection": {
-			"connection_name": "MCP BigQuery",
-			"connection_type": "CONNECTION_TYPE_BIGQUERY",
-			"bigquery_project_id": "dekart-dev"
-		}
-	}`))
-
-	assert.Nil(t, payload)
-	assert.Error(t, err)
-	assert.Equal(t, codes.FailedPrecondition, status.Code(err))
-	assert.Equal(t, mcpBigQueryServiceAccountRequiredMessage, status.Convert(err).Message())
-}
-
-func TestCallCreateConnectionTool_RejectsBigQueryEmptyServiceAccountBeforePersistence(t *testing.T) {
-	server := &Server{}
-	ctx := testUserContext("user@example.com")
-	ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{
-		ID:       "workspace-1",
-		PlanType: proto.PlanType_TYPE_COMMUNITY,
-		UserRole: proto.UserRole_ROLE_ADMIN,
+	payload, err := server.callMCPTool(ctx, &mcpCallRequest{
+		Name:      "create_connection",
+		Arguments: json.RawMessage(`{"connection": {"connection_name": "MCP Postgres"}}`),
 	})
 
-	payload, err := server.callCreateConnectionTool(ctx, json.RawMessage(`{
-		"connection": {
-			"connection_name": "MCP BigQuery",
-			"connection_type": "CONNECTION_TYPE_BIGQUERY",
-			"bigquery_project_id": "dekart-dev",
-			"bigquery_key": {}
-		}
-	}`))
-
 	assert.Nil(t, payload)
 	assert.Error(t, err)
 	assert.Equal(t, codes.FailedPrecondition, status.Code(err))
-	assert.Equal(t, mcpBigQueryServiceAccountRequiredMessage, status.Convert(err).Message())
+	assert.Equal(t, mcpCreateConnectionDisabledMessage, status.Convert(err).Message())
 }
 
 func TestCallMCPTool_UpdateQuery_DispatchesToHandler(t *testing.T) {
@@ -549,26 +521,6 @@ func TestSanitizeConnectionForMCP_StripsSecrets(t *testing.T) {
 	assert.Equal(t, "conn-1", sanitized.Id)
 	assert.Equal(t, "test", sanitized.ConnectionName)
 	assertAllSecretFieldsCleared(t, sanitized)
-}
-
-func TestSanitizeCreateConnectionResponseForMCP_StripsSecrets(t *testing.T) {
-	response := &proto.CreateConnectionResponse{
-		Connection: &proto.Connection{
-			Id:                "conn-1",
-			ConnectionName:    "test",
-			SnowflakePassword: &proto.Secret{ServerEncrypted: "secret"},
-			SnowflakeKey:      &proto.Secret{ServerEncrypted: "secret"},
-			BigqueryKey:       &proto.Secret{ServerEncrypted: "secret"},
-			WherobotsKey:      &proto.Secret{ServerEncrypted: "secret"},
-			PostgresPassword:  &proto.Secret{ServerEncrypted: "secret"},
-		},
-	}
-
-	sanitized := sanitizeCreateConnectionResponseForMCP(response)
-	if assert.NotNil(t, sanitized) && assert.NotNil(t, sanitized.Connection) {
-		assert.Equal(t, "conn-1", sanitized.Connection.Id)
-		assertAllSecretFieldsCleared(t, sanitized.Connection)
-	}
 }
 
 func assertAllSecretFieldsCleared(t *testing.T, connection *proto.Connection) {

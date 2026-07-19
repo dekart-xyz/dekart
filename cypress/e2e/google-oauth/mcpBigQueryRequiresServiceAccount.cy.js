@@ -4,7 +4,7 @@ const appUrl = Cypress.env('DEKART_E2E_BASE_URL') || 'http://localhost:3000'
 const ciValue = String(Cypress.env('CI') ?? '').toLowerCase()
 const isCI = ciValue === 'true' || ciValue === '1' || String(Cypress.env('CYPRESS_CI') ?? '') === '1'
 const apiBase = isCI ? `${appUrl}/api/v1` : 'http://localhost:8080/api/v1'
-const serviceAccountError = 'BigQuery via MCP requires a service-account-backed connection'
+const createConnectionDisabledError = 'create_connection via MCP is disabled; create the connection in Dekart UI first'
 
 const getDeviceToken = () => {
   return cy.request('POST', `${apiBase}/device`, {
@@ -55,7 +55,7 @@ const expectMCPError = (token, name, args, status, message) => {
 }
 
 describe('google-oauth MCP BigQuery passthrough rejection', () => {
-  it('rejects project-only BigQuery MCP create_connection', () => {
+  it('rejects MCP create_connection until secret retrieval is supported', () => {
     const connectionName = `MCP BigQuery Passthrough Repro ${Date.now()}`
 
     getDeviceToken().then((token) => {
@@ -67,7 +67,7 @@ describe('google-oauth MCP BigQuery passthrough rejection', () => {
         }
       }).then((response) => {
         expect(response.status, 'create_connection http status').to.eq(412)
-        expect(response.body, 'create_connection error').to.eq(`${serviceAccountError}\n`)
+        expect(response.body, 'create_connection error').to.eq(`${createConnectionDisabledError}\n`)
       })
     })
   })
