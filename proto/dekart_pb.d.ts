@@ -2069,6 +2069,7 @@ export namespace GetEnvResponse {
       TYPE_REQUIRE_OIDC: 29;
       TYPE_VERSION_CHECK_URL: 30;
       TYPE_VERSION_CHECK_FORCE_CURRENT_VERSION: 31;
+      TYPE_INSTANCE_ID: 32;
     }
 
     export const Type: TypeMap;

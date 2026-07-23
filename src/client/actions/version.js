@@ -21,6 +21,9 @@ export function testVersion (variables) {
       const url = new URL(getVersionCheckURL(variables))
       url.searchParams.set('app_domain', window.location.host || '')
       url.searchParams.set('current_version', getCurrentVersion(variables))
+      if (variables.INSTANCE_ID) {
+        url.searchParams.set('instance_id', variables.INSTANCE_ID)
+      }
 
       const res = await window.fetch(url.toString())
       if (!res.ok || res.status === 204) {

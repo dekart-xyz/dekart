@@ -6,6 +6,7 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/conn"
 	"dekart/src/server/job"
+	"dekart/src/server/jwtkeys"
 	"dekart/src/server/notifications"
 	"dekart/src/server/report"
 	"dekart/src/server/secrets"
@@ -17,6 +18,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -395,10 +397,36 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 		}
 
 	}
+	if instanceID := s.versionCheckInstanceID(ctx); instanceID != "" {
+		variables = append(variables, &proto.GetEnvResponse_Variable{
+			Type:  proto.GetEnvResponse_Variable_TYPE_INSTANCE_ID,
+			Value: instanceID,
+		})
+	}
 	return &proto.GetEnvResponse{
 		Variables:  variables,
 		ServerTime: time.Now().Unix(),
 	}, nil
+}
+
+// versionCheckInstanceID returns only the self-hosted ID transmitted by version checks.
+func (s Server) versionCheckInstanceID(ctx context.Context) string {
+	// Cloud installations use workspace identity and must not emit a self-hosted instance ID.
+	if os.Getenv("DEKART_CLOUD") != "" {
+		return ""
+	}
+	for _, key := range []string{"CI", "CYPRESS_CI"} {
+		// CI exercises the complete transport without persisting a test installation.
+		if value := strings.TrimSpace(strings.ToLower(os.Getenv(key))); value == "1" || value == "true" || value == "yes" || value == "on" {
+			return CITelemetryID
+		}
+	}
+	instanceID, err := jwtkeys.GetActiveBootstrapInstanceID(ctx, s.db)
+	// Identity lookup is best effort and must never prevent environment loading.
+	if err != nil {
+		return ""
+	}
+	return instanceID
 }
 
 // GetWherobotsConnectionHint returns a hint for Wherobots connection based on the provided host and key

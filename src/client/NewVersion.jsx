@@ -12,13 +12,13 @@ export default function NewVersion () {
   const env = useSelector(state => state.env)
   const usage = useSelector(state => state.usage)
   const dispatch = useDispatch()
-  const { UX_DISABLE_VERSION_CHECK, VERSION_CHECK_URL, VERSION_CHECK_FORCE_CURRENT_VERSION } = env.variables
+  const { UX_DISABLE_VERSION_CHECK, VERSION_CHECK_URL, VERSION_CHECK_FORCE_CURRENT_VERSION, INSTANCE_ID } = env.variables
   useEffect(() => {
     if (!env.loaded || UX_DISABLE_VERSION_CHECK) {
       return
     }
     dispatch(testVersion(env.variables))
-  }, [dispatch, env.loaded, UX_DISABLE_VERSION_CHECK, VERSION_CHECK_URL, VERSION_CHECK_FORCE_CURRENT_VERSION])
+  }, [dispatch, env.loaded, UX_DISABLE_VERSION_CHECK, VERSION_CHECK_URL, VERSION_CHECK_FORCE_CURRENT_VERSION, INSTANCE_ID])
   if (release) {
     const ref = getUrlRef(env, usage)
     return (
