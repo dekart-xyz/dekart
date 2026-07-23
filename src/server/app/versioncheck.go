@@ -96,7 +96,14 @@ func handleVersionCheck(dekartServer *dekart.Server, w http.ResponseWriter, r *h
 	outcome := "no_update"
 	defer func() {
 		if dekartServer != nil {
-			dekartServer.TrackVersionCheck(r.Context(), appDomain, currentVersion, latestVersion, outcome)
+			dekartServer.TrackVersionCheck(
+				r.Context(),
+				appDomain,
+				r.URL.Query().Get("instance_id"),
+				currentVersion,
+				latestVersion,
+				outcome,
+			)
 		}
 	}()
 
@@ -158,7 +165,14 @@ func handleCLIVersionCheck(dekartServer *dekart.Server, w http.ResponseWriter, r
 	outcome := "ok"
 	defer func() {
 		if dekartServer != nil {
-			dekartServer.TrackCLIVersionCheck(r.Context(), cliName, getSourceIP(r), strings.TrimSpace(r.UserAgent()), outcome)
+			dekartServer.TrackCLIVersionCheck(
+				r.Context(),
+				cliName,
+				r.URL.Query().Get("installation_id"),
+				getSourceIP(r),
+				strings.TrimSpace(r.UserAgent()),
+				outcome,
+			)
 		}
 	}()
 	if cliName == "" {

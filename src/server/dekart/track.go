@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
 
@@ -68,6 +69,26 @@ func (s Server) TrackEvent(ctx context.Context, req *proto.TrackEventRequest) (*
 
 const versionCheckEventName = "VersionCheck"
 const cliVersionCheckEventName = "CLIVersionCheck"
+const CITelemetryID = "00000000-0000-4000-8000-000000000001"
+
+// normalizeTelemetryID returns a canonical UUIDv4 and flags CI events for exclusion.
+func normalizeTelemetryID(value string) (string, bool) {
+	parsed, err := uuid.Parse(strings.TrimSpace(value))
+	// Malformed IDs are ignored while preserving the event's legacy dimensions.
+	if err != nil {
+		return "", false
+	}
+	normalized := parsed.String()
+	// CI checks exercise transport but must never become installation events.
+	if normalized == CITelemetryID {
+		return "", true
+	}
+	// Product clients generate UUIDv4 identities; other UUID versions are discarded.
+	if parsed.Version() != 4 {
+		return "", false
+	}
+	return normalized, false
+}
 
 // trackAnonymousEvent stores one anonymous analytics event in track_events for cloud mode.
 func (s Server) trackAnonymousEvent(ctx context.Context, identity, eventName string, payload map[string]string) {
@@ -103,9 +124,14 @@ func (s Server) trackAnonymousEvent(ctx context.Context, identity, eventName str
 }
 
 // TrackVersionCheck stores anonymous version check pings for cloud analytics.
-func (s Server) TrackVersionCheck(ctx context.Context, appDomain, currentVersion, latestVersion, outcome string) {
+func (s Server) TrackVersionCheck(ctx context.Context, appDomain, instanceID, currentVersion, latestVersion, outcome string) {
 	domain := strings.TrimSpace(strings.ToLower(appDomain))
 	if domain == "" {
+		return
+	}
+	normalizedInstanceID, excluded := normalizeTelemetryID(instanceID)
+	// Reserved CI checks are excluded from ingestion, including legacy counts.
+	if excluded {
 		return
 	}
 
@@ -115,13 +141,22 @@ func (s Server) TrackVersionCheck(ctx context.Context, appDomain, currentVersion
 		"latest_version":  strings.TrimSpace(latestVersion),
 		"outcome":         strings.TrimSpace(outcome),
 	}
+	// Older clients remain valid legacy events without an instance identity.
+	if normalizedInstanceID != "" {
+		eventData["instance_id"] = normalizedInstanceID
+	}
 	s.trackAnonymousEvent(ctx, domain, versionCheckEventName, eventData)
 }
 
 // TrackCLIVersionCheck stores anonymous CLI version check pings for cloud analytics.
-func (s Server) TrackCLIVersionCheck(ctx context.Context, cliName, sourceIP, userAgent, outcome string) {
+func (s Server) TrackCLIVersionCheck(ctx context.Context, cliName, installationID, sourceIP, userAgent, outcome string) {
 	name := strings.TrimSpace(strings.ToLower(cliName))
 	if name == "" {
+		return
+	}
+	normalizedInstallationID, excluded := normalizeTelemetryID(installationID)
+	// Reserved CI checks are excluded from ingestion, including legacy counts.
+	if excluded {
 		return
 	}
 	if len(name) > 128 {
@@ -146,6 +181,10 @@ func (s Server) TrackCLIVersionCheck(ctx context.Context, cliName, sourceIP, use
 		"source_ip":  ip,
 		"user_agent": ua,
 		"outcome":    strings.TrimSpace(outcome),
+	}
+	// Older clients remain valid legacy events without an installation identity.
+	if normalizedInstallationID != "" {
+		eventData["installation_id"] = normalizedInstallationID
 	}
 	s.trackAnonymousEvent(ctx, email, cliVersionCheckEventName, eventData)
 }

@@ -46,6 +46,23 @@ func GetActiveBootstrapKey(ctx context.Context, db *sql.DB) ([]byte, []byte, err
 	return []byte(privateKeyPEM), []byte(publicKeyPEM), nil
 }
 
+// GetActiveBootstrapInstanceID returns the persistent ID of the bootstrap root row.
+func GetActiveBootstrapInstanceID(ctx context.Context, db *sql.DB) (string, error) {
+	var instanceID string
+	err := db.QueryRowContext(ctx,
+		`select id
+		from instance_keys
+		where key_name=$1
+		order by created_at desc
+		limit 1`,
+		bootstrapKeyName,
+	).Scan(&instanceID)
+	if err != nil {
+		return "", err
+	}
+	return instanceID, nil
+}
+
 // EnsureActiveBootstrapKey returns bootstrap keypair, creating one when absent.
 func EnsureActiveBootstrapKey(ctx context.Context, db *sql.DB) ([]byte, []byte, bool, error) {
 	privateKeyPEM, publicKeyPEM, err := GetActiveBootstrapKey(ctx, db)
