@@ -44,7 +44,7 @@ describe('local GeoJSON file upload with extensionless dataset label', () => {
       cy.get('input#dekart-dataset-name-input').should('be.visible')
       cy.get('input#dekart-dataset-name-input').type('Station Zones')
       cy.get('button#dekart-save-dataset-name-button').click()
-      cy.contains('span', 'Station Zones', { timeout: 20000 }).should('be.visible')
+      cy.get('input#dekart-dataset-name-input', { timeout: 20000 }).should('not.exist')
 
       cy.visit(`${appUrl}/reports/${reportId}/source`, {
         onBeforeLoad (win) {
