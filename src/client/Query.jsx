@@ -21,6 +21,7 @@ import Tooltip from 'antd/es/tooltip'
 import { getDatasourceMeta } from './lib/datasource'
 import { copyErrorToClipboard } from './actions/clipboard'
 import { track } from './lib/tracking'
+import GeoSQLBanner from './GeoSQLBanner'
 
 function CancelButton ({ queryJob }) {
   const dispatch = useDispatch()
@@ -198,31 +199,34 @@ function QueryEditor ({ queryId, queryText, onChange, canWrite, canExecute, onEx
 
   return (
     <div className={styles.editor}>
-      <AutoSizer>
-        {({ height, width }) => (
-          <AceEditor
-            mode='sql'
-            width={`${width}px`}
-            height={`${height}px`}
-            theme='sqlserver'
-            name={'AceEditor' + queryId}
-            keyboardHandler='vscode'
-            onChange={onChange}
-            onLoad={onEditorLoad}
-            value={queryText}
-            readOnly={!canWrite}
-            editorProps={{ $blockScrolling: true }}
-            setOptions={{
-              enableBasicAutocompletion: true,
-              enableLiveAutocompletion: true,
-              enableSnippets: true,
-              highlightActiveLine: canWrite,
-              highlightGutterLine: canWrite
-            }}
-          />
-        )}
-      </AutoSizer>
-      {queryText && queryText.trim().length ? null : <SampleQuery queryId={queryId} />}
+      <GeoSQLBanner canShow={canWrite} />
+      <div className={styles.aceEditor}>
+        <AutoSizer>
+          {({ height, width }) => (
+            <AceEditor
+              mode='sql'
+              width={`${width}px`}
+              height={`${height}px`}
+              theme='sqlserver'
+              name={'AceEditor' + queryId}
+              keyboardHandler='vscode'
+              onChange={onChange}
+              onLoad={onEditorLoad}
+              value={queryText}
+              readOnly={!canWrite}
+              editorProps={{ $blockScrolling: true }}
+              setOptions={{
+                enableBasicAutocompletion: true,
+                enableLiveAutocompletion: true,
+                enableSnippets: true,
+                highlightActiveLine: canWrite,
+                highlightGutterLine: canWrite
+              }}
+            />
+          )}
+        </AutoSizer>
+        {queryText && queryText.trim().length ? null : <SampleQuery queryId={queryId} />}
+      </div>
     </div>
   )
 }

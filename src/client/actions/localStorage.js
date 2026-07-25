@@ -1,9 +1,11 @@
 import { LOCAL_STORAGE_KEY } from '../lib/constants'
 
+// Keep every persisted local-storage key declared in this default state.
 const initialState = {
   sensitiveScopesGrantedOnce: false,
   loginHint: null,
-  preferredWorkspaceId: ''
+  preferredWorkspaceId: '',
+  agentHintDismissedByUser: {}
 }
 
 let current = initialState

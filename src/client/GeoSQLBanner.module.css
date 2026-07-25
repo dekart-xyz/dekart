@@ -1,0 +1,62 @@
+.banner {
+    min-height: 44px;
+    padding-left: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #334155;
+    background: #EFF6FF;
+    border-bottom: 1px solid #BFDBFE;
+}
+
+.sparkles {
+    flex: none;
+}
+
+.message {
+    min-width: 0;
+}
+
+.link {
+    flex: none;
+    color: #2563EB;
+}
+
+.link:focus-visible,
+.dismiss:focus-visible {
+    outline: 2px solid #2563EB;
+    outline-offset: 2px;
+}
+
+.dismiss {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    margin-left: auto;
+    color: #64748B;
+}
+
+@media (max-width: 360px) {
+    .banner {
+        position: relative;
+        flex-wrap: wrap;
+        padding-top: 8px;
+        padding-right: 44px;
+        padding-bottom: 8px;
+    }
+
+    .message {
+        flex: 1;
+    }
+
+    .link {
+        margin-left: 24px;
+        flex-basis: 100%;
+    }
+
+    .dismiss {
+        position: absolute;
+        top: 0;
+        right: 0;
+    }
+}

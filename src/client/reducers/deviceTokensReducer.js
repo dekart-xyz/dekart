@@ -2,7 +2,8 @@ import { deviceTokensUpdate, getDeviceTokens, revokeDeviceToken } from '../actio
 
 const defaultState = {
   list: [],
-  loading: false
+  loading: false,
+  initialized: false
 }
 
 export default function deviceTokens (state = defaultState, action) {
@@ -15,7 +16,8 @@ export default function deviceTokens (state = defaultState, action) {
     case deviceTokensUpdate.name:
       return {
         list: action.tokensList,
-        loading: false
+        loading: false,
+        initialized: true
       }
     case revokeDeviceToken.name:
       return state
