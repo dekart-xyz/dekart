@@ -1,6 +1,6 @@
 .banner {
     min-height: 44px;
-    padding-left: 12px;
+    padding: 8px 12px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -11,6 +11,7 @@
 
 .sparkles {
     flex: none;
+    color: #64748B;
 }
 
 .message {
@@ -33,7 +34,12 @@
     height: 44px;
     min-width: 44px;
     margin-left: auto;
-    color: #64748B;
+    font-size: 12px;
+    color: #94A3B8;
+}
+
+.dismiss:hover {
+    color: #475569;
 }
 
 @media (max-width: 360px) {

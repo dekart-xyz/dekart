@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import Button from 'antd/es/button'
-import { CloseOutlined } from '@ant-design/icons'
+import { CloseOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import styles from './GeoSQLBanner.module.css'
 import { updateLocalStorage } from './actions/localStorage'
 import { updateSessionStorage } from './actions/sessionStorage'
@@ -48,9 +48,9 @@ export default function GeoSQLBanner ({ canShow }) {
       className={styles.banner}
       aria-label='AI agent SQL help'
     >
-      <span className={styles.sparkles} aria-hidden='true'>✨</span>
+      <ThunderboltOutlined className={styles.sparkles} aria-hidden='true' />
       <span className={styles.message}>
-        <strong>Don’t want to write SQL by hand?</strong> Let your AI agent write it.
+        Claude and Codex can write this SQL.
       </span>
       <a
         id='dekart-geosql-banner-link'
