@@ -1,6 +1,6 @@
 import { combineReducers } from 'redux'
 import { needSensitiveScopes, setClaimEmailCookie, userStreamUpdate } from '../actions/user'
-import { localStorageInit } from '../actions/localStorage'
+import { localStorageInit, updateLocalStorage } from '../actions/localStorage'
 import { sessionStorageInit } from '../actions/sessionStorage'
 import { setRedirectState } from '../actions/redirect'
 import { PlanType, UserRole } from 'dekart-proto/dekart_pb'
@@ -91,6 +91,17 @@ function loginHint (state = null, action) {
   }
 }
 
+// agentHintDismissedByUser keeps banner dismissals scoped to the signed-in email.
+function agentHintDismissedByUser (state = {}, action) {
+  switch (action.type) {
+    case localStorageInit.name:
+    case updateLocalStorage.name:
+      return action.current.agentHintDismissedByUser || {}
+    default:
+      return state
+  }
+}
+
 function isDefaultWorkspace (state = false, action) {
   switch (action.type) {
     case userStreamUpdate.name:
@@ -172,6 +183,7 @@ export default combineReducers({
   sensitiveScopesNeeded,
   sensitiveScopesGranted,
   loginHint,
+  agentHintDismissedByUser,
   isPlayground,
   isDefaultWorkspace,
   redirectStateReceived,
