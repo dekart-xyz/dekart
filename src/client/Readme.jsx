@@ -3,6 +3,7 @@ import { AutoSizer } from 'react-virtualized'
 import styles from './Readme.module.css'
 import Button from 'antd/es/button'
 import Markdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { useDispatch, useSelector } from 'react-redux'
 import { setPreview, setReadmeValue } from './actions/readme'
 import { track } from './lib/tracking'
@@ -13,6 +14,13 @@ import 'ace-builds/src-noconflict/ext-language_tools'
 import 'ace-builds/src-noconflict/keybinding-vscode'
 import 'ace-builds/src-noconflict/ext-beautify'
 import 'ace-builds/src-noconflict/ext-emmet'
+
+// Keep horizontal table scrolling outside the semantic table so rows retain their full height.
+function MarkdownTable ({ children }) {
+  return <div className={styles.tableWrapper}><table>{children}</table></div>
+}
+
+const markdownComponents = { table: MarkdownTable }
 
 export default function Readme ({ readme }) {
   const { canWrite } = useSelector(state => state.report)
@@ -39,13 +47,13 @@ export default function Readme ({ readme }) {
           showPreview
             ? (
               <div
-                className={styles.preview} style={
+                id='dekart-readme-preview' className={styles.preview} style={
                 {
                   width: `${width}px`,
                   height: `${height}px`
                 }
             }
-              ><Markdown>{markdown}</Markdown>
+              ><Markdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{markdown}</Markdown>
                 {/* Safari + react-virtualized AutoSizer workaround:
                     a flex spacer below markdown makes short readmes paint immediately. */}
                 <div
