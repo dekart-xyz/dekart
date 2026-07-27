@@ -98,10 +98,14 @@
   box-sizing: border-box;
 }
 
-.preview table {
-  display: block;
+.tableWrapper {
   width: 100%;
-  overflow: auto;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.preview table {
+  width: 100%;
   border-spacing: 0;
   border-collapse: collapse;
 }
