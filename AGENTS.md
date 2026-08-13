@@ -31,6 +31,7 @@ tool input.
 - Business endpoint orchestration belongs in `src/server/dekart` methods on `Server` and is wired in `src/server/app/app.go`.
 - Reusable domain logic belongs in `src/server/<domain>` packages and is called from `server/dekart`.
 - Keep auth/workspace gates explicit at endpoint entry points (`user.GetClaims`, workspace checks).
+- Avoid creating new states when current state machine can be re-used or extended.
 
 ## Cross-cutting Rules
 
