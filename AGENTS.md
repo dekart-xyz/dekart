@@ -19,6 +19,7 @@ Goal: contributions should blend into the existing codebase and minimize maintai
 tool input.
 - MCP E2E tests must authenticate through the device flow (`POST /device`, browser authorization, then `POST /device/token`) and use the returned device token as the MCP bearer token. Do not call `/authenticate` directly or hand-roll OAuth/protobuf state helpers for MCP tests.
 - For E2E tests, group specs by runtime configuration; split only long-running configurations into multiple parallel lanes.
+– Cypress tests should verify what is visible to user (on DOM level) and not rely on internal state and redux state specifically.
 
 
 
@@ -32,6 +33,7 @@ tool input.
 - Reusable domain logic belongs in `src/server/<domain>` packages and is called from `server/dekart`.
 - Keep auth/workspace gates explicit at endpoint entry points (`user.GetClaims`, workspace checks).
 - Avoid creating new states when current state machine can be re-used or extended.
+– Don't introduce selectors, use reducers and react hooks.
 
 ## Cross-cutting Rules
 
