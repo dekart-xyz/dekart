@@ -3,6 +3,7 @@ package query
 import (
 	"context"
 	"database/sql"
+	"dekart/src/proto"
 	"fmt"
 
 	"github.com/rs/zerolog/log"
@@ -10,6 +11,7 @@ import (
 
 type QueryDetails struct {
 	ReportID, PrevQuerySourceId, ConnectionID, QueryText string
+	ExecutionEngine                                      proto.QueryExecutionEngine
 }
 
 func GetQueryDetails(ctx context.Context, db *sql.DB, queryID string) (*QueryDetails, error) {
@@ -18,7 +20,8 @@ func GetQueryDetails(ctx context.Context, db *sql.DB, queryID string) (*QueryDet
 			reports.id,
 			queries.query_source_id,
 			datasets.connection_id,
-			queries.query_text
+			queries.query_text,
+			queries.execution_engine
 		from queries
 			left join datasets on queries.id = datasets.query_id
 			left join reports on (datasets.report_id = reports.id or queries.report_id = reports.id)
@@ -35,18 +38,23 @@ func GetQueryDetails(ctx context.Context, db *sql.DB, queryID string) (*QueryDet
 	var prevQuerySourceId string
 	var connectionID sql.NullString
 	var queryText string
+	var executionEngine proto.QueryExecutionEngine
 	for queriesRows.Next() {
-		err := queriesRows.Scan(&reportID, &prevQuerySourceId, &connectionID, &queryText)
+		err := queriesRows.Scan(&reportID, &prevQuerySourceId, &connectionID, &queryText, &executionEngine)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, err
 		}
+	}
+	if err := queriesRows.Err(); err != nil {
+		return nil, err
 	}
 	return &QueryDetails{
 		ReportID:          reportID,
 		PrevQuerySourceId: prevQuerySourceId,
 		ConnectionID:      connectionID.String,
 		QueryText:         queryText,
+		ExecutionEngine:   executionEngine,
 	}, nil
 }
 
@@ -75,6 +83,9 @@ func GetQueryDetailsByResultID(ctx context.Context, db *sql.DB, resultID string)
 	var connectionID sql.NullString
 	var queryText sql.NullString
 	if !queriesRows.Next() {
+		if err := queriesRows.Err(); err != nil {
+			return nil, err
+		}
 		return nil, fmt.Errorf("query not found for dw_job_id: %s", resultID)
 	}
 	err = queriesRows.Scan(&reportID, &connectionID, &queryText)

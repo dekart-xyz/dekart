@@ -1,5 +1,6 @@
 import { combineReducers } from 'redux'
-import { addDatasetToMap, addToLoadFilesQueue, cancelDownloading, closeDatasetSettingsModal, downloadDataset, downloadingProgress, finishAddingDatasetToMap, finishDownloading, keplerDatasetFinishUpdating, keplerDatasetStartUpdating, openDatasetSettingsModal, processDownloadError, removeFromLoadFilesQueue, setActiveDataset, setLoadFilesProcessing } from '../actions/dataset'
+import { addDatasetToMap, cancelDownloading, closeDatasetSettingsModal, downloadDataset, downloadingProgress, finishAddingDatasetToMap, finishDownloading, openDatasetSettingsModal, processDownloadError, setActiveDataset } from '../actions/dataset'
+import { keplerDatasetFinishUpdating, keplerDatasetStartUpdating } from '../actions/kepler'
 import { closeReport, openReport, reportUpdate } from '../actions/report'
 
 function lastAddedQueryParamsHash (state = {}, action) {
@@ -39,16 +40,18 @@ function lastAddedQueryQueryJob (state = {}, action) {
 }
 
 function downloading (state = [], action) {
+  const matchesDownload = d => d.controller === action.controller
   switch (action.type) {
     case downloadDataset.name:
-      return state.concat({
+      return state.filter(d => d.dataset.id !== action.dataset.id).concat({
         dataset: action.dataset,
         controller: action.controller,
+        sourceId: action.sourceId,
         loaded: 0
       })
     case downloadingProgress.name:
       return state.map(d => {
-        if (d.dataset.id === action.dataset.id) {
+        if (matchesDownload(d)) {
           return {
             ...d,
             loaded: action.loaded
@@ -61,7 +64,7 @@ function downloading (state = [], action) {
       return []
     case addDatasetToMap.name:
       return state.map(d => {
-        if (d.dataset.id === action.dataset.id) {
+        if (matchesDownload(d)) {
           return {
             ...d,
             addingToMap: true
@@ -71,7 +74,7 @@ function downloading (state = [], action) {
       })
     case finishDownloading.name:
       return state.map(d => {
-        if (d.dataset.id === action.dataset.id) {
+        if (matchesDownload(d)) {
           return {
             ...d,
             res: action.res,
@@ -84,7 +87,7 @@ function downloading (state = [], action) {
       })
     case finishAddingDatasetToMap.name: // dataset added to map, remove from downloading list
     case processDownloadError.name: // error occurred, remove from downloading list
-      return state.filter(d => d.dataset.id !== action.dataset.id)
+      return state.filter(d => !matchesDownload(d))
     default:
       return state
   }
@@ -156,38 +159,12 @@ function updatingNum (state = 0, action) {
   }
 }
 
-// LoadFiles queue state
-function loadFilesQueue (state = { queue: [], isProcessing: false }, action) {
-  switch (action.type) {
-    case openReport.name:
-      return { queue: [], isProcessing: false }
-    case addToLoadFilesQueue.name:
-      return {
-        ...state,
-        queue: [...state.queue, action.item]
-      }
-    case removeFromLoadFilesQueue.name:
-      return {
-        ...state,
-        queue: state.queue.slice(1)
-      }
-    case setLoadFilesProcessing.name:
-      return {
-        ...state,
-        isProcessing: action.isProcessing
-      }
-    default:
-      return state
-  }
-}
-
 export default combineReducers({
   downloading,
   active,
   settings,
   list,
   updatingNum,
-  loadFilesQueue,
   lastAddedQueryParamsHash,
   lastAddedQueryQueryJob
 })

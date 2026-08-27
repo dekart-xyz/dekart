@@ -287,6 +287,9 @@ func requireMCPBigQueryServiceAccount(ctx context.Context, connection *proto.Con
 }
 
 func (s *Server) requireMCPCreateQueryConnection(ctx context.Context, request *proto.CreateQueryRequest) error {
+	if request.ExecutionEngine != proto.QueryExecutionEngine_QUERY_EXECUTION_ENGINE_CONNECTION {
+		return status.Error(codes.InvalidArgument, "MCP queries require a connection execution engine")
+	}
 	connection, err := s.getConnection(ctx, request.GetConnectionId())
 	if err != nil {
 		return status.Error(codes.Internal, err.Error())
@@ -401,6 +404,9 @@ func (s *Server) callCreateQueryTool(ctx context.Context, raw json.RawMessage) (
 	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
 		return nil, err
 	}
+	if request.ExecutionEngine == proto.QueryExecutionEngine_QUERY_EXECUTION_ENGINE_UNSPECIFIED {
+		request.ExecutionEngine = proto.QueryExecutionEngine_QUERY_EXECUTION_ENGINE_CONNECTION
+	}
 	response, err := s.createQuery(ctx, request, s.requireMCPCreateQueryConnection)
 	if err != nil {
 		return nil, err
@@ -422,6 +428,9 @@ func (s *Server) callUpdateQueryTool(ctx context.Context, raw json.RawMessage) (
 }
 
 func (s *Server) validateMCPUpdateQuery(ctx context.Context, request *proto.UpdateQueryRequest, queryDetails *query.QueryDetails) (*proto.QueryDryRunResult, error) {
+	if queryDetails.ExecutionEngine != proto.QueryExecutionEngine_QUERY_EXECUTION_ENGINE_CONNECTION {
+		return nil, status.Error(codes.InvalidArgument, "MCP cannot update browser-executed DuckDB queries")
+	}
 	connection, err := s.getConnection(ctx, queryDetails.ConnectionID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

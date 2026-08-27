@@ -3,6 +3,7 @@ package dekart
 import (
 	"context"
 	"crypto/sha1"
+	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/conn"
 	"dekart/src/server/errtype"
@@ -74,14 +75,16 @@ func (e *queryWasNotUpdated) Error() string {
 	return "query was not updated"
 }
 
-func (s Server) storeQuerySync(ctx context.Context, queryID string, queryText string, prevQuerySourceId string) error {
+// storeQuerySync writes a CAS-protected definition through the caller's transaction.
+func storeQuerySync(ctx context.Context, tx *sql.Tx, queryID string, queryText string, prevQuerySourceId string) error {
 	h := sha1.New()
 	queryTextByte := []byte(queryText)
 	h.Write(queryTextByte)
 	newQuerySourceId := fmt.Sprintf("%x", h.Sum(nil))
 	// now we always store the query text in the database
-	result, err := s.db.ExecContext(ctx,
-		`update queries set query_text=$1, query_source_id=$2, query_source=$3, updated_at=CURRENT_TIMESTAMP where id=$4 and (query_source_id=$5 or query_source_id='')`,
+	result, err := tx.ExecContext(ctx,
+		`update queries set query_text=$1, query_source_id=$2, query_source=$3, updated_at=CURRENT_TIMESTAMP
+		where id=$4 and (query_source_id=$5 or query_source_id='')`,
 		queryText,
 		newQuerySourceId,
 		proto.Query_QUERY_SOURCE_INLINE,

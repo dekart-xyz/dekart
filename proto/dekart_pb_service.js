@@ -181,15 +181,6 @@ Dekart.UpdateDatasetName = {
   responseType: dekart_pb.UpdateDatasetNameResponse
 };
 
-Dekart.UpdateDatasetConnection = {
-  methodName: "UpdateDatasetConnection",
-  service: Dekart,
-  requestStream: false,
-  responseStream: false,
-  requestType: dekart_pb.UpdateDatasetConnectionRequest,
-  responseType: dekart_pb.UpdateDatasetConnectionResponse
-};
-
 Dekart.CreateFile = {
   methodName: "CreateFile",
   service: Dekart,
@@ -233,6 +224,15 @@ Dekart.RunQuery = {
   responseStream: false,
   requestType: dekart_pb.RunQueryRequest,
   responseType: dekart_pb.RunQueryResponse
+};
+
+Dekart.RunDuckDBQuery = {
+  methodName: "RunDuckDBQuery",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: dekart_pb.RunDuckDBQueryRequest,
+  responseType: dekart_pb.RunDuckDBQueryResponse
 };
 
 Dekart.RunAllQueries = {
@@ -1074,37 +1074,6 @@ DekartClient.prototype.updateDatasetName = function updateDatasetName(requestMes
   };
 };
 
-DekartClient.prototype.updateDatasetConnection = function updateDatasetConnection(requestMessage, metadata, callback) {
-  if (arguments.length === 2) {
-    callback = arguments[1];
-  }
-  var client = grpc.unary(Dekart.UpdateDatasetConnection, {
-    request: requestMessage,
-    host: this.serviceHost,
-    metadata: metadata,
-    transport: this.options.transport,
-    debug: this.options.debug,
-    onEnd: function (response) {
-      if (callback) {
-        if (response.status !== grpc.Code.OK) {
-          var err = new Error(response.statusMessage);
-          err.code = response.status;
-          err.metadata = response.trailers;
-          callback(err, null);
-        } else {
-          callback(null, response.message);
-        }
-      }
-    }
-  });
-  return {
-    cancel: function () {
-      callback = null;
-      client.close();
-    }
-  };
-};
-
 DekartClient.prototype.createFile = function createFile(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
@@ -1234,6 +1203,37 @@ DekartClient.prototype.runQuery = function runQuery(requestMessage, metadata, ca
     callback = arguments[1];
   }
   var client = grpc.unary(Dekart.RunQuery, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.runDuckDBQuery = function runDuckDBQuery(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.RunDuckDBQuery, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,

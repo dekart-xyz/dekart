@@ -2776,6 +2776,11 @@ export class QueryJob extends jspb.Message {
   getDatasetId(): string;
   setDatasetId(value: string): void;
 
+  clearDependencyRevisionsList(): void;
+  getDependencyRevisionsList(): Array<QueryJobDependencyRevision>;
+  setDependencyRevisionsList(value: Array<QueryJobDependencyRevision>): void;
+  addDependencyRevisions(value?: QueryJobDependencyRevision, index?: number): QueryJobDependencyRevision;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): QueryJob.AsObject;
   static toObject(includeInstance: boolean, msg: QueryJob): QueryJob.AsObject;
@@ -2804,6 +2809,7 @@ export namespace QueryJob {
     queryParamsHash: string,
     resultExtension: string,
     datasetId: string,
+    dependencyRevisionsList: Array<QueryJobDependencyRevision.AsObject>,
   }
 
   export interface JobStatusMap {
@@ -2816,6 +2822,34 @@ export namespace QueryJob {
   }
 
   export const JobStatus: JobStatusMap;
+}
+
+export class QueryJobDependencyRevision extends jspb.Message {
+  getDatasetId(): string;
+  setDatasetId(value: string): void;
+
+  getQueryJobId(): string;
+  setQueryJobId(value: string): void;
+
+  getFileSourceId(): string;
+  setFileSourceId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): QueryJobDependencyRevision.AsObject;
+  static toObject(includeInstance: boolean, msg: QueryJobDependencyRevision): QueryJobDependencyRevision.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: QueryJobDependencyRevision, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): QueryJobDependencyRevision;
+  static deserializeBinaryFromReader(message: QueryJobDependencyRevision, reader: jspb.BinaryReader): QueryJobDependencyRevision;
+}
+
+export namespace QueryJobDependencyRevision {
+  export type AsObject = {
+    datasetId: string,
+    queryJobId: string,
+    fileSourceId: string,
+  }
 }
 
 export class Query extends jspb.Message {
@@ -2837,6 +2871,17 @@ export class Query extends jspb.Message {
   getQuerySourceId(): string;
   setQuerySourceId(value: string): void;
 
+  clearDuckdbDependencyDatasetIdsList(): void;
+  getDuckdbDependencyDatasetIdsList(): Array<string>;
+  setDuckdbDependencyDatasetIdsList(value: Array<string>): void;
+  addDuckdbDependencyDatasetIds(value: string, index?: number): string;
+
+  getDuckdbValidationError(): string;
+  setDuckdbValidationError(value: string): void;
+
+  getExecutionEngine(): QueryExecutionEngineMap[keyof QueryExecutionEngineMap];
+  setExecutionEngine(value: QueryExecutionEngineMap[keyof QueryExecutionEngineMap]): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Query.AsObject;
   static toObject(includeInstance: boolean, msg: Query): Query.AsObject;
@@ -2855,6 +2900,9 @@ export namespace Query {
     updatedAt: number,
     querySource: Query.QuerySourceMap[keyof Query.QuerySourceMap],
     querySourceId: string,
+    duckdbDependencyDatasetIdsList: Array<string>,
+    duckdbValidationError: string,
+    executionEngine: QueryExecutionEngineMap[keyof QueryExecutionEngineMap],
   }
 
   export interface QuerySourceMap {
@@ -3231,6 +3279,54 @@ export namespace RunQueryResponse {
   }
 }
 
+export class RunDuckDBQueryRequest extends jspb.Message {
+  getQueryId(): string;
+  setQueryId(value: string): void;
+
+  getQueryText(): string;
+  setQueryText(value: string): void;
+
+  getQueryParamsValues(): string;
+  setQueryParamsValues(value: string): void;
+
+  getExpectedQuerySourceId(): string;
+  setExpectedQuerySourceId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): RunDuckDBQueryRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: RunDuckDBQueryRequest): RunDuckDBQueryRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: RunDuckDBQueryRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RunDuckDBQueryRequest;
+  static deserializeBinaryFromReader(message: RunDuckDBQueryRequest, reader: jspb.BinaryReader): RunDuckDBQueryRequest;
+}
+
+export namespace RunDuckDBQueryRequest {
+  export type AsObject = {
+    queryId: string,
+    queryText: string,
+    queryParamsValues: string,
+    expectedQuerySourceId: string,
+  }
+}
+
+export class RunDuckDBQueryResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): RunDuckDBQueryResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: RunDuckDBQueryResponse): RunDuckDBQueryResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: RunDuckDBQueryResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RunDuckDBQueryResponse;
+  static deserializeBinaryFromReader(message: RunDuckDBQueryResponse, reader: jspb.BinaryReader): RunDuckDBQueryResponse;
+}
+
+export namespace RunDuckDBQueryResponse {
+  export type AsObject = {
+  }
+}
+
 export class UpdateQueryRequest extends jspb.Message {
   getQueryId(): string;
   setQueryId(value: string): void;
@@ -3353,46 +3449,6 @@ export class UpdateDatasetNameResponse extends jspb.Message {
 }
 
 export namespace UpdateDatasetNameResponse {
-  export type AsObject = {
-  }
-}
-
-export class UpdateDatasetConnectionRequest extends jspb.Message {
-  getDatasetId(): string;
-  setDatasetId(value: string): void;
-
-  getConnectionId(): string;
-  setConnectionId(value: string): void;
-
-  serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): UpdateDatasetConnectionRequest.AsObject;
-  static toObject(includeInstance: boolean, msg: UpdateDatasetConnectionRequest): UpdateDatasetConnectionRequest.AsObject;
-  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
-  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: UpdateDatasetConnectionRequest, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): UpdateDatasetConnectionRequest;
-  static deserializeBinaryFromReader(message: UpdateDatasetConnectionRequest, reader: jspb.BinaryReader): UpdateDatasetConnectionRequest;
-}
-
-export namespace UpdateDatasetConnectionRequest {
-  export type AsObject = {
-    datasetId: string,
-    connectionId: string,
-  }
-}
-
-export class UpdateDatasetConnectionResponse extends jspb.Message {
-  serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): UpdateDatasetConnectionResponse.AsObject;
-  static toObject(includeInstance: boolean, msg: UpdateDatasetConnectionResponse): UpdateDatasetConnectionResponse.AsObject;
-  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
-  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: UpdateDatasetConnectionResponse, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): UpdateDatasetConnectionResponse;
-  static deserializeBinaryFromReader(message: UpdateDatasetConnectionResponse, reader: jspb.BinaryReader): UpdateDatasetConnectionResponse;
-}
-
-export namespace UpdateDatasetConnectionResponse {
   export type AsObject = {
   }
 }
@@ -3806,6 +3862,9 @@ export class CreateQueryRequest extends jspb.Message {
   getConnectionId(): string;
   setConnectionId(value: string): void;
 
+  getExecutionEngine(): QueryExecutionEngineMap[keyof QueryExecutionEngineMap];
+  setExecutionEngine(value: QueryExecutionEngineMap[keyof QueryExecutionEngineMap]): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CreateQueryRequest.AsObject;
   static toObject(includeInstance: boolean, msg: CreateQueryRequest): CreateQueryRequest.AsObject;
@@ -3820,6 +3879,7 @@ export namespace CreateQueryRequest {
   export type AsObject = {
     datasetId: string,
     connectionId: string,
+    executionEngine: QueryExecutionEngineMap[keyof QueryExecutionEngineMap],
   }
 }
 
@@ -4103,4 +4163,12 @@ export interface ConnectionTypeMap {
 }
 
 export const ConnectionType: ConnectionTypeMap;
+
+export interface QueryExecutionEngineMap {
+  QUERY_EXECUTION_ENGINE_UNSPECIFIED: 0;
+  QUERY_EXECUTION_ENGINE_CONNECTION: 1;
+  QUERY_EXECUTION_ENGINE_DUCKDB: 2;
+}
+
+export const QueryExecutionEngine: QueryExecutionEngineMap;
 

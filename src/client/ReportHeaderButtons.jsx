@@ -19,6 +19,7 @@ import MapChangeHistoryModal from './MapChangeHistoryModal'
 import classNames from 'classnames'
 import { goToPresent, goToSource } from './lib/navigation'
 import { toggleSnapshotModal } from './actions/snapshots'
+import { useQueriesRunning } from './lib/useQueriesRunning'
 
 function formatIntervalLabel (seconds) {
   if (seconds === 0) return 'None'
@@ -89,7 +90,7 @@ function ForkButton ({ primary }) {
 function RefreshButton ({ showAutoRefreshSettings = false }) {
   const { canRefresh } = useSelector(state => state.report)
   const readOnly = useSelector(state => state.workspace.readOnly)
-  const numRunningQueries = useSelector(state => state.numRunningQueries)
+  const queriesRunning = useQueriesRunning()
   const numQueries = useSelector(state => state.queries.length)
   const dispatch = useDispatch()
   const { canWrite } = useSelector(state => state.report)
@@ -101,9 +102,6 @@ function RefreshButton ({ showAutoRefreshSettings = false }) {
   }
 
   const handleRefresh = () => {
-    if (numRunningQueries || readOnly) {
-      return
-    }
     track('RefreshAllQueries')
     dispatch(runAllQueries())
   }
@@ -113,8 +111,8 @@ function RefreshButton ({ showAutoRefreshSettings = false }) {
       label: 'Refresh Now',
       key: 'refresh',
       id: 'dekart-refresh-now-button',
-      icon: numRunningQueries ? <LoadingOutlined /> : <ReloadOutlined />,
-      disabled: numRunningQueries || readOnly,
+      icon: queriesRunning ? <LoadingOutlined /> : <ReloadOutlined />,
+      disabled: queriesRunning || readOnly,
       onClick: handleRefresh
     },
     {
@@ -142,7 +140,7 @@ function RefreshButton ({ showAutoRefreshSettings = false }) {
           id='dekart-refresh-button'
           type='text'
           disabled={readOnly}
-          icon={numRunningQueries ? <LoadingOutlined /> : autoRefreshIntervalSeconds > 0 ? <span className={classNames({ [styles.shimmerIcon]: !edit })}><ClockCircleOutlined /></span> : <ReloadOutlined />}
+          icon={queriesRunning ? <LoadingOutlined /> : autoRefreshIntervalSeconds > 0 ? <span className={classNames({ [styles.shimmerIcon]: !edit })}><ClockCircleOutlined /></span> : <ReloadOutlined />}
           title={readOnly ? 'Workspace is read-only' : autoRefreshIntervalSeconds > 0 ? 'Refresh (Auto-refresh enabled)' : 'Refresh'}
         />
       </Dropdown>

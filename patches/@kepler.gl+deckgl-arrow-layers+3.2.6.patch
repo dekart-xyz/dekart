@@ -1,0 +1,210 @@
+diff --git a/node_modules/@kepler.gl/deckgl-arrow-layers/dist/layers/geo-arrow-arc-layer.js b/node_modules/@kepler.gl/deckgl-arrow-layers/dist/layers/geo-arrow-arc-layer.js
+index fc59bd1..4feda41 100644
+--- a/node_modules/@kepler.gl/deckgl-arrow-layers/dist/layers/geo-arrow-arc-layer.js
++++ b/node_modules/@kepler.gl/deckgl-arrow-layers/dist/layers/geo-arrow-arc-layer.js
+@@ -47,6 +47,31 @@ var ourDefaultProps = {
+   _validate: true
+ };
+
++// GeoArrow recreates binary data wrappers whenever its composite layer renders.
++// Reuse the previous wrapper when every immutable Arrow buffer is unchanged so
++// viewport changes do not make deck.gl upload every line attribute again.
++function getStableBinaryData(data, oldData) {
++  // A different record batch or row count must publish fresh binary data.
++  if (!oldData || data.data !== oldData.data || data.length !== oldData.length) {
++    return data;
++  }
++  var attributes = data.attributes;
++  var oldAttributes = oldData.attributes;
++  var names = Object.keys(attributes);
++  // Added or removed binary accessors must invalidate the previous wrapper.
++  if (names.length !== Object.keys(oldAttributes).length) {
++    return data;
++  }
++  // Arrow values are immutable; descriptor identity can be retained while each
++  // accessor still references the same buffer with the same layout.
++  var unchanged = names.every(function (name) {
++    var attribute = attributes[name];
++    var oldAttribute = oldAttributes[name];
++    return oldAttribute && attribute.value === oldAttribute.value && attribute.size === oldAttribute.size && attribute.normalized === oldAttribute.normalized;
++  });
++  return unchanged ? oldData : data;
++}
++
+ // @ts-expect-error
+ var defaultProps = _objectSpread(_objectSpread({}, _defaultProps), ourDefaultProps);
+ var GeoArrowArcLayer = exports.GeoArrowArcLayer = /*#__PURE__*/function (_CompositeLayer) {
+@@ -87,6 +112,7 @@ var GeoArrowArcLayer = exports.GeoArrowArcLayer = /*#__PURE__*/function (_Compos
+         accessors = _extractAccessorsFrom2[0],
+         otherProps = _extractAccessorsFrom2[1];
+       var tableOffsets = (0, _picking.computeChunkOffsets)(table.data);
++      var oldLayers = this.getSubLayers();
+       var layers = [];
+       for (var recordBatchIdx = 0; recordBatchIdx < table.batches.length; recordBatchIdx++) {
+         var sourceData = sourcePosition.data[recordBatchIdx];
+@@ -129,6 +155,7 @@ var GeoArrowArcLayer = exports.GeoArrowArcLayer = /*#__PURE__*/function (_Compos
+             batchOffset: batchOffset
+           });
+         }
++        props.data = getStableBinaryData(props.data, oldLayers[recordBatchIdx] && oldLayers[recordBatchIdx].props.data);
+         var SubLayerClass = this.getSubLayerClass('geo-arrow-arc-layer', _typed2.ArcLayer);
+         var layer = new SubLayerClass(_objectSpread(_objectSpread({}, this.getSubLayerProps(props)), {}, {
+           // preserve binded accessors, as they are overwriten back by pass-through accessors from extensions
+diff --git a/node_modules/@kepler.gl/deckgl-arrow-layers/dist/layers/geo-arrow-scatterplot-layer.js b/node_modules/@kepler.gl/deckgl-arrow-layers/dist/layers/geo-arrow-scatterplot-layer.js
+index 5bd9c31..101356d 100644
+--- a/node_modules/@kepler.gl/deckgl-arrow-layers/dist/layers/geo-arrow-scatterplot-layer.js
++++ b/node_modules/@kepler.gl/deckgl-arrow-layers/dist/layers/geo-arrow-scatterplot-layer.js
+@@ -18,6 +18,7 @@ var _typed = require("@deck.gl/core/typed");
+ var _typed2 = require("@deck.gl/layers/typed");
+ var ga = _interopRequireWildcard(require("@geoarrow/geoarrow-js"));
+ var _constants = require("@kepler.gl/constants");
++var _keplerUtils = require("@kepler.gl/utils");
+ var _utils = require("../utils/utils");
+ var _picking = require("../utils/picking");
+ var _validate = require("../utils/validate");
+@@ -46,6 +47,41 @@ var ourDefaultProps = {
+   _validate: true
+ };
+
++// GeoArrow recreates the binary data wrapper whenever its composite layer renders.
++// Reuse the previous wrapper when the underlying batch and buffers are unchanged
++// so viewport changes do not make deck.gl rebuild every GPU attribute.
++function getStableBinaryData(data, oldData) {
++  if (!data || !oldData || data.geometryType !== oldData.geometryType || data.data !== oldData.data || data.length !== oldData.length) {
++    return data;
++  }
++  var attributes = data.attributes;
++  var oldAttributes = oldData.attributes;
++  var position = attributes.getPosition;
++  var oldPosition = oldAttributes.getPosition;
++  if (!oldPosition || position.value !== oldPosition.value || position.size !== oldPosition.size) {
++    return data;
++  }
++  if (data.sourceAccessors) {
++    var sourceNames = Object.keys(data.sourceAccessors);
++    if (data.geometryOffsets !== oldData.geometryOffsets || sourceNames.length !== Object.keys(oldData.sourceAccessors || {}).length || !sourceNames.every(function (name) {
++      return data.sourceAccessors[name] === oldData.sourceAccessors[name];
++    })) {
++      return data;
++    }
++    return oldData;
++  }
++  var names = Object.keys(attributes);
++  if (names.length !== Object.keys(oldAttributes).length) {
++    return data;
++  }
++  var unchanged = names.every(function (name) {
++    var attribute = attributes[name];
++    var oldAttribute = oldAttributes[name];
++    return oldAttribute && attribute.value === oldAttribute.value && attribute.size === oldAttribute.size && attribute.normalized === oldAttribute.normalized;
++  });
++  return unchanged ? oldData : data;
++}
++
+ // @ts-expect-error
+ var defaultProps = _objectSpread(_objectSpread({}, _upstreamDefaultProps), ourDefaultProps);
+ var GeoArrowScatterplotLayer = exports.GeoArrowScatterplotLayer = /*#__PURE__*/function (_CompositeLayer) {
+@@ -99,6 +135,7 @@ var GeoArrowScatterplotLayer = exports.GeoArrowScatterplotLayer = /*#__PURE__*/f
+         accessors = _extractAccessorsFrom2[0],
+         otherProps = _extractAccessorsFrom2[1];
+       var tableOffsets = (0, _picking.computeChunkOffsets)(table.data);
++      var oldLayers = this.getSubLayers();
+       var layers = [];
+       for (var recordBatchIdx = 0; recordBatchIdx < table.batches.length; recordBatchIdx++) {
+         var geometryData = geometryColumn.data[recordBatchIdx];
+@@ -115,6 +152,7 @@ var GeoArrowScatterplotLayer = exports.GeoArrowScatterplotLayer = /*#__PURE__*/f
+           data: {
+             // @ts-expect-error
+             data: table.batches[recordBatchIdx],
++            geometryType: 'point',
+             length: geometryData.length,
+             attributes: {
+               getPosition: {
+@@ -136,6 +174,7 @@ var GeoArrowScatterplotLayer = exports.GeoArrowScatterplotLayer = /*#__PURE__*/f
+             batchOffset: batchOffset
+           });
+         }
++        props.data = getStableBinaryData(props.data, oldLayers[recordBatchIdx] && oldLayers[recordBatchIdx].props.data);
+         var layer = new _typed2.ScatterplotLayer(_objectSpread(_objectSpread({}, this.getSubLayerProps(props)), {}, {
+           // preserve binded accessors, as they are overwriten back by pass-through accessors from extensions
+           getFiltered: props.getFiltered,
+@@ -163,6 +202,7 @@ var GeoArrowScatterplotLayer = exports.GeoArrowScatterplotLayer = /*#__PURE__*/f
+         accessors = _extractAccessorsFrom4[0],
+         otherProps = _extractAccessorsFrom4[1];
+       var tableOffsets = (0, _picking.computeChunkOffsets)(table.data);
++      var oldLayers = this.getSubLayers();
+       var layers = [];
+       for (var recordBatchIdx = 0; recordBatchIdx < table.batches.length; recordBatchIdx++) {
+         var multiPointData = geometryColumn.data[recordBatchIdx];
+@@ -173,39 +213,48 @@ var GeoArrowScatterplotLayer = exports.GeoArrowScatterplotLayer = /*#__PURE__*/f
+
+         // @ts-expect-error how to properly retrieve batch offset?
+         var batchOffset = geometryColumn._offsets[recordBatchIdx];
++        var binaryData = {
++          // @ts-expect-error
++          data: table.batches[recordBatchIdx],
++          geometryType: 'multi-point',
++          geometryOffsets: geomOffsets,
++          sourceAccessors: accessors,
++          // Note: this needs to be the length one level down.
++          length: pointData.length,
++          attributes: {
++            getPosition: {
++              value: flatCoordinateArray,
++              size: pointData.type.listSize
++            }
++          }
++        };
++        var oldData = oldLayers[recordBatchIdx] && oldLayers[recordBatchIdx].props.data;
++        var stableData = getStableBinaryData(binaryData, oldData);
++        if (stableData === binaryData) {
++          // Map from expanded multi-geometry index to original index.
++          stableData.invertedGeomOffsets = (0, _utils.invertOffsets)(geomOffsets);
++        }
+         var props = _objectSpread(_objectSpread(_objectSpread({}, ourDefaultProps), otherProps), {}, {
+           // used for picking purposes
+           recordBatchIdx: recordBatchIdx,
+           tableOffsets: tableOffsets,
+           id: "".concat(this.props.id, "-geoarrow-scatterplot-").concat(recordBatchIdx),
+-          data: {
+-            // @ts-expect-error
+-            data: table.batches[recordBatchIdx],
+-            // Map from expanded multi-geometry index to original index
+-            // Used both in picking and for function callbacks
+-            invertedGeomOffsets: (0, _utils.invertOffsets)(geomOffsets),
+-            // Note: this needs to be the length one level down.
+-            length: pointData.length,
+-            attributes: {
+-              getPosition: {
+-                value: flatCoordinateArray,
+-                size: pointData.type.listSize
+-              }
+-            }
+-          }
++          data: stableData
+         });
+         for (var _i2 = 0, _Object$entries2 = Object.entries(accessors); _i2 < _Object$entries2.length; _i2++) {
+           var _Object$entries2$_i = (0, _slicedToArray2["default"])(_Object$entries2[_i2], 2),
+             propName = _Object$entries2$_i[0],
+             propInput = _Object$entries2$_i[1];
+-          (0, _utils.assignAccessor)({
+-            props: props,
+-            propName: propName,
+-            propInput: propInput,
+-            chunkIdx: recordBatchIdx,
+-            geomCoordOffsets: geomOffsets,
+-            batchOffset: batchOffset
+-          });
++          if (stableData !== oldData || !(0, _keplerUtils.isArrowVector)(propInput)) {
++            (0, _utils.assignAccessor)({
++              props: props,
++              propName: propName,
++              propInput: propInput,
++              chunkIdx: recordBatchIdx,
++              geomCoordOffsets: geomOffsets,
++              batchOffset: batchOffset
++            });
++          }
+         }
+         var layer = new _typed2.ScatterplotLayer(_objectSpread(_objectSpread({}, this.getSubLayerProps(props)), {}, {
+           // preserve binded accessors, as they are overwriten back by pass-through accessors from extensions

@@ -175,15 +175,6 @@ type DekartUpdateDatasetName = {
   readonly responseType: typeof dekart_pb.UpdateDatasetNameResponse;
 };
 
-type DekartUpdateDatasetConnection = {
-  readonly methodName: string;
-  readonly service: typeof Dekart;
-  readonly requestStream: false;
-  readonly responseStream: false;
-  readonly requestType: typeof dekart_pb.UpdateDatasetConnectionRequest;
-  readonly responseType: typeof dekart_pb.UpdateDatasetConnectionResponse;
-};
-
 type DekartCreateFile = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -227,6 +218,15 @@ type DekartRunQuery = {
   readonly responseStream: false;
   readonly requestType: typeof dekart_pb.RunQueryRequest;
   readonly responseType: typeof dekart_pb.RunQueryResponse;
+};
+
+type DekartRunDuckDBQuery = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof dekart_pb.RunDuckDBQueryRequest;
+  readonly responseType: typeof dekart_pb.RunDuckDBQueryResponse;
 };
 
 type DekartRunAllQueries = {
@@ -493,12 +493,12 @@ export class Dekart {
   static readonly CreateDataset: DekartCreateDataset;
   static readonly RemoveDataset: DekartRemoveDataset;
   static readonly UpdateDatasetName: DekartUpdateDatasetName;
-  static readonly UpdateDatasetConnection: DekartUpdateDatasetConnection;
   static readonly CreateFile: DekartCreateFile;
   static readonly ReplaceFile: DekartReplaceFile;
   static readonly CreateQuery: DekartCreateQuery;
   static readonly UpdateQuery: DekartUpdateQuery;
   static readonly RunQuery: DekartRunQuery;
+  static readonly RunDuckDBQuery: DekartRunDuckDBQuery;
   static readonly RunAllQueries: DekartRunAllQueries;
   static readonly CancelJob: DekartCancelJob;
   static readonly GetEnv: DekartGetEnv;
@@ -731,15 +731,6 @@ export class DekartClient {
     requestMessage: dekart_pb.UpdateDatasetNameRequest,
     callback: (error: ServiceError|null, responseMessage: dekart_pb.UpdateDatasetNameResponse|null) => void
   ): UnaryResponse;
-  updateDatasetConnection(
-    requestMessage: dekart_pb.UpdateDatasetConnectionRequest,
-    metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: dekart_pb.UpdateDatasetConnectionResponse|null) => void
-  ): UnaryResponse;
-  updateDatasetConnection(
-    requestMessage: dekart_pb.UpdateDatasetConnectionRequest,
-    callback: (error: ServiceError|null, responseMessage: dekart_pb.UpdateDatasetConnectionResponse|null) => void
-  ): UnaryResponse;
   createFile(
     requestMessage: dekart_pb.CreateFileRequest,
     metadata: grpc.Metadata,
@@ -784,6 +775,15 @@ export class DekartClient {
   runQuery(
     requestMessage: dekart_pb.RunQueryRequest,
     callback: (error: ServiceError|null, responseMessage: dekart_pb.RunQueryResponse|null) => void
+  ): UnaryResponse;
+  runDuckDBQuery(
+    requestMessage: dekart_pb.RunDuckDBQueryRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.RunDuckDBQueryResponse|null) => void
+  ): UnaryResponse;
+  runDuckDBQuery(
+    requestMessage: dekart_pb.RunDuckDBQueryRequest,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.RunDuckDBQueryResponse|null) => void
   ): UnaryResponse;
   runAllQueries(
     requestMessage: dekart_pb.RunAllQueriesRequest,

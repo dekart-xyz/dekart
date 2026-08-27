@@ -89,6 +89,55 @@ ELECTRON_RUN_AS_NODE= npx cypress open
 
 Only tests that call `cy.stubGoogleOAuthToken(...)` need Google OAuth refresh-token env vars. Cloud tests use `DEV_REFRESH_TOKEN_INFO` and/or `DEV_REFRESH_TOKEN`; Google OAuth tests use `DEV_REFRESH_TOKEN`. `DEV_REFRESH_TOKEN_INFO` must be an info-only token, while `DEV_REFRESH_TOKEN` must include BigQuery and storage scopes. Tests that only use `cy.setDevClaimsEmail(...)` need `DEKART_DEV_CLAIMS=1` in the backend env but do not need refresh tokens.
 
+### Running the map performance benchmark
+
+`cypress/e2e/cloud/mapPerformance.cy.js` is an opt-in, machine-local benchmark for both Point (Scatterplot) and Arc layers. It is not part of the default Cypress or CI suites because GPU and compositor performance depends on the host machine.
+
+Prepare one saved report per layer type:
+
+1. Start Postgres, the `.env.cloud` backend, and the frontend as described above. The backend must have `DEKART_DEV_CLAIMS=1`.
+2. Open Dekart using the same email that will be passed as `performanceEmail`.
+3. Upload a representative dataset no larger than 60 MB.
+4. Create and save exactly one visible layer: a Point (Scatterplot) layer or an Arc layer.
+5. Record the report ID from the URL, the visible dataset name, and its exact row count without thousands separators (for example, `1000000`, not `1,000,000`).
+
+Export the Cypress environment before each run:
+
+```bash
+set -a
+. ./.env
+. ./.env.cloud
+set +a
+```
+
+Run the Point benchmark in headed Chrome:
+
+```bash
+ELECTRON_RUN_AS_NODE= npx cypress run \
+  --browser chrome \
+  --headed \
+  --config video=false \
+  --spec cypress/e2e/cloud/mapPerformance.cy.js \
+  --env '{"runPerformance":true,"performanceReportId":"<point-report-id>","performanceDatasetName":"<dataset-name>","performanceRows":"<row-count-without-separators>","performanceLayerType":"point","performanceLabel":"Point","performanceEmail":"<email>"}'
+```
+
+Run the Arc benchmark with the Arc report:
+
+```bash
+ELECTRON_RUN_AS_NODE= npx cypress run \
+  --browser chrome \
+  --headed \
+  --config video=false \
+  --spec cypress/e2e/cloud/mapPerformance.cy.js \
+  --env '{"runPerformance":true,"performanceReportId":"<arc-report-id>","performanceDatasetName":"<dataset-name>","performanceRows":"<row-count-without-separators>","performanceLayerType":"arc","performanceLabel":"Arc","performanceEmail":"<email>"}'
+```
+
+The terminal prints a label followed by measured FPS, p95 and worst frame time,
+median blocked time per sample, and the longest main-thread task. The benchmark
+takes three native zoom samples and requires at least 20 FPS, at most a 100 ms
+p95 frame, at most a 200 ms worst frame, and at most a 150 ms longest task.
+Compare results only on the same machine with other heavy applications idle.
+
 ## Device auth JWT keypair
 
 Device auth uses its own JWT keypair and must not reuse license signing keys.

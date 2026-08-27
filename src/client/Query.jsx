@@ -14,7 +14,7 @@ import { ConnectionType, QueryJob } from 'dekart-proto/dekart_pb'
 import { SendOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone, CopyOutlined } from '@ant-design/icons'
 import { Duration } from 'luxon'
 import DataDocumentationLink from './DataDocumentationLink'
-import { cancelJob, queryChanged, runQuery } from './actions/query'
+import { cancelJob, queryChanged, runDuckDBQuery, runWarehouseQuery } from './actions/query'
 import { setActiveDataset } from './actions/dataset'
 import { showReadmeTab } from './actions/readme'
 import Tooltip from 'antd/es/tooltip'
@@ -22,6 +22,7 @@ import { getDatasourceMeta } from './lib/datasource'
 import { copyErrorToClipboard } from './actions/clipboard'
 import { track } from './lib/tracking'
 import GeoSQLBanner from './GeoSQLBanner'
+import { DUCKDB_DATASOURCE, DuckDBJobStatus, isDuckDBQuery } from './lib/duckdb/constants'
 
 function CancelButton ({ queryJob }) {
   const dispatch = useDispatch()
@@ -142,11 +143,13 @@ function focusAceEditor (editor) {
 
 function QueryEditor ({ queryId, queryText, onChange, canWrite, canExecute, onExecute }) {
   const dataset = useSelector(state => state.dataset.list.find(q => q.queryId === queryId))
+  const query = useSelector(state => state.queries.find(query => query.id === queryId))
   const datasets = useSelector(state => state.dataset.list)
   const connection = useSelector(state => state.connection.list.find(c => c.id === dataset?.connectionId))
   const reportReadme = useSelector(state => state.report.readme)
-  const connectionType = useConnectionType(connection?.id)
-  const completer = getDatasourceMeta(connectionType)?.completer
+  const connectionType = useConnectionType(connection?.id, dataset?.connectionType)
+  const datasource = isDuckDBQuery(query) ? DUCKDB_DATASOURCE : connectionType
+  const completer = getDatasourceMeta(datasource)?.completer
   const dispatch = useDispatch()
   const datasetsRef = useRef(datasets)
   const reportReadmeRef = useRef(reportReadme)
@@ -234,20 +237,34 @@ function QueryEditor ({ queryId, queryText, onChange, canWrite, canExecute, onEx
 function QueryStatus ({ children, query }) {
   const hash = useSelector(state => state.queryParams.hash)
   const queryJob = useSelector(state => state.queryJobs.find(job => job.queryId === query.id && job.queryParamsHash === hash))
+  const isDuckDB = isDuckDBQuery(query)
+  const duckDBJobState = useSelector(state => state.duckDBJobStates[queryJob?.id])
+  const queryExecutionPending = useSelector(state => state.queryExecutionsPending[query.id])
   let message, errorMessage, action, style
   let icon = null
   const dispatch = useDispatch()
 
   // Track query errors
   useEffect(() => {
-    if (queryJob?.jobError) {
+    if (!isDuckDB && queryJob?.jobError) {
       track('QueryError', {
         queryId: query.id,
         uerror: queryJob.jobError?.substring(0, 1000), // User error - SQL error
         jobId: queryJob.id
       })
     }
-  }, [queryJob?.jobError, query.id, queryJob?.id])
+  }, [isDuckDB, queryJob?.jobError, query.id, queryJob?.id])
+
+  useEffect(() => {
+    if (isDuckDB &&
+      duckDBJobState?.status === DuckDBJobStatus.DUCKDB_JOB_STATUS_ERROR) {
+      track('QueryError', {
+        queryId: query.id,
+        uerror: duckDBJobState.error?.substring(0, 1000),
+        jobId: queryJob.id
+      })
+    }
+  }, [isDuckDB, duckDBJobState?.status, duckDBJobState?.error, query.id, queryJob?.id])
 
   // Track query success
   useEffect(() => {
@@ -260,49 +277,92 @@ function QueryStatus ({ children, query }) {
     }
   }, [queryJob?.jobStatus, queryJob?.jobResultId, query.id, queryJob?.id, queryJob?.bytesProcessed])
 
-  if (queryJob?.jobError) {
+  useEffect(() => {
+    if (isDuckDB &&
+      duckDBJobState?.status === DuckDBJobStatus.DUCKDB_JOB_STATUS_READY) {
+      track('QuerySuccess', {
+        queryId: query.id,
+        jobId: queryJob.id,
+        totalRows: duckDBJobState.totalRows
+      })
+    }
+  }, [isDuckDB, duckDBJobState?.status, duckDBJobState?.totalRows, query.id, queryJob?.id])
+
+  if (isDuckDB && queryExecutionPending) {
+    icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
+    message = 'Running'
+    style = styles.info
+  } else if (isDuckDB && query.duckdbValidationError) {
+    message = 'Query Error'
+    style = styles.error
+    errorMessage = query.duckdbValidationError
+    icon = <ExclamationCircleTwoTone className={styles.icon} twoToneColor='#F66B55' />
+  } else if (isDuckDB && queryJob) {
+    const localStatus = duckDBJobState?.status
+    if ((queryJob.jobStatus === QueryJob.JobStatus.JOB_STATUS_UNSPECIFIED && queryJob.jobError) ||
+      localStatus === DuckDBJobStatus.DUCKDB_JOB_STATUS_ERROR) {
+      message = 'Query Error'
+      style = styles.error
+      errorMessage = duckDBJobState?.error || queryJob.jobError
+      icon = <ExclamationCircleTwoTone className={styles.icon} twoToneColor='#F66B55' />
+    } else if (!localStatus ||
+      localStatus === DuckDBJobStatus.DUCKDB_JOB_STATUS_WAITING_FOR_SOURCES) {
+      icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
+      message = 'Waiting for source data'
+      style = styles.info
+    } else if (localStatus === DuckDBJobStatus.DUCKDB_JOB_STATUS_RUNNING) {
+      icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
+      message = 'Running'
+      style = styles.info
+    } else if (localStatus === DuckDBJobStatus.DUCKDB_JOB_STATUS_READY) {
+      icon = <CheckCircleTwoTone className={styles.icon} twoToneColor='#52c41a' />
+      message = <span>Ready</span>
+      style = styles.success
+    }
+  } else if (queryJob?.jobError) {
     message = 'Query Error'
     style = styles.error
     errorMessage = queryJob.jobError
     icon = <ExclamationCircleTwoTone className={styles.icon} twoToneColor='#F66B55' />
-  }
-  switch (queryJob?.jobStatus) {
-    case QueryJob.JobStatus.JOB_STATUS_PENDING:
-      icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
-      message = 'Pending'
-      style = styles.info
-      action = <StatusActions queryJob={queryJob} />
-      break
-    case QueryJob.JobStatus.JOB_STATUS_RUNNING:
-      icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
-      message = 'Running'
-      style = styles.info
-      action = <StatusActions queryJob={queryJob} />
-      break
-    case QueryJob.JobStatus.JOB_STATUS_DONE_LEGACY:
-      if (!queryJob.jobResultId) {
+  } else {
+    switch (queryJob?.jobStatus) {
+      case QueryJob.JobStatus.JOB_STATUS_PENDING:
+        icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
+        message = 'Pending'
+        style = styles.info
+        action = <StatusActions queryJob={queryJob} />
+        break
+      case QueryJob.JobStatus.JOB_STATUS_RUNNING:
+        icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
+        message = 'Running'
+        style = styles.info
+        action = <StatusActions queryJob={queryJob} />
+        break
+      case QueryJob.JobStatus.JOB_STATUS_DONE_LEGACY:
+        if (!queryJob.jobResultId) {
+          message = 'Reading Result'
+          style = styles.info
+          icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
+          action = <StatusActions queryJob={queryJob} />
+          break
+        }
+        icon = <CheckCircleTwoTone className={styles.icon} twoToneColor='#52c41a' />
+        message = <span>Ready</span>
+        style = styles.success
+        break
+      case QueryJob.JobStatus.JOB_STATUS_READING_RESULTS:
         message = 'Reading Result'
         style = styles.info
         icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
         action = <StatusActions queryJob={queryJob} />
         break
-      }
-      icon = <CheckCircleTwoTone className={styles.icon} twoToneColor='#52c41a' />
-      message = <span>Ready</span>
-      style = styles.success
-      break
-    case QueryJob.JobStatus.JOB_STATUS_READING_RESULTS:
-      message = 'Reading Result'
-      style = styles.info
-      icon = <ClockCircleTwoTone className={styles.icon} twoToneColor='#B8B8B8' />
-      action = <StatusActions queryJob={queryJob} />
-      break
-    case QueryJob.JobStatus.JOB_STATUS_DONE:
-      icon = <CheckCircleTwoTone className={styles.icon} twoToneColor='#52c41a' />
-      message = <span>Ready</span>
-      style = styles.success
-      break
-    default:
+      case QueryJob.JobStatus.JOB_STATUS_DONE:
+        icon = <CheckCircleTwoTone className={styles.icon} twoToneColor='#52c41a' />
+        message = <span>Ready</span>
+        style = styles.success
+        break
+      default:
+    }
   }
   return (
     <div className={[styles.queryStatus, style].join(' ')}>
@@ -340,22 +400,23 @@ function QueryStatus ({ children, query }) {
 }
 
 // custom react hook which gets connectionType
-function useConnectionType (connectionId) {
+function useConnectionType (connectionId, fallbackConnectionType) {
   const isPlayground = useSelector(state => state.user.isPlayground)
   const connectionType = useSelector(state => state.connection.list.find(c => c.id === connectionId)?.connectionType)
-  return isPlayground ? ConnectionType.CONNECTION_TYPE_BIGQUERY : connectionType
+  return isPlayground ? ConnectionType.CONNECTION_TYPE_BIGQUERY : (connectionType ?? fallbackConnectionType)
 }
 
 function SampleQuery ({ queryId }) {
   const { UX_SAMPLE_QUERY_SQL, UX_DATA_DOCUMENTATION } = useSelector(state => state.env.variables)
   const queryStatus = useSelector(state => state.queryStatus[queryId])
   const dataset = useSelector(state => state.dataset.list.find(q => q.queryId === queryId))
+  const query = useSelector(state => state.queries.find(query => query.id === queryId))
   const connection = useSelector(state => state.connection.list.find(c => c.id === dataset?.connectionId))
   const { DATASOURCE } = useSelector(state => state.env.variables)
   const isPlayground = useSelector(state => state.user.isPlayground)
 
-  let connectionType = connection?.connectionType
-  if (isPlayground) {
+  let connectionType = isDuckDBQuery(query) ? DUCKDB_DATASOURCE : connection?.connectionType ?? dataset?.connectionType
+  if (isPlayground && !isDuckDBQuery(query)) {
     // TODO: what if snowflake connection is used in playground?
     connectionType = ConnectionType.CONNECTION_TYPE_BIGQUERY
   }
@@ -372,9 +433,8 @@ function SampleQuery ({ queryId }) {
   }
   let showSampleQuery = UX_SAMPLE_QUERY_SQL
   if (!showSampleQuery) {
-    if (connection) {
-      showSampleQuery = getDatasourceMeta(connection.connectionType)?.sampleQuery
-    } else if (DATASOURCE) {
+    showSampleQuery = getDatasourceMeta(connectionType)?.sampleQuery
+    if (!showSampleQuery && DATASOURCE) {
       showSampleQuery = getDatasourceMeta(DATASOURCE)?.sampleQuery
     }
   }
@@ -412,17 +472,30 @@ function SampleQuery ({ queryId }) {
 }
 
 export default function Query ({ query }) {
-  const { canRun, queryText } = useSelector(state => state.queryStatus[query.id])
+  const { canRun, changed, queryText } = useSelector(state => state.queryStatus[query.id])
   const { canWrite } = useSelector(state => state.report)
   const readOnly = useSelector(state => state.workspace.readOnly)
   const edit = useSelector(state => state.reportStatus.edit)
+  const hash = useSelector(state => state.queryParams.hash)
+  const queryJob = useSelector(state => state.queryJobs.find(job => job.queryId === query.id && job.queryParamsHash === hash))
+  const duckDBJobState = useSelector(state => state.duckDBJobStates[queryJob?.id])
+  const queryExecutionPending = useSelector(state => state.queryExecutionsPending[query.id])
   const dispatch = useDispatch()
   const canMutate = canWrite && edit && !readOnly
-  const canExecute = canMutate && canRun && queryText
+  const isDuckDB = isDuckDBQuery(query)
+  const duckDBJobBusy = isDuckDB &&
+    queryJob?.jobStatus === QueryJob.JobStatus.JOB_STATUS_DONE &&
+    ![
+      DuckDBJobStatus.DUCKDB_JOB_STATUS_READY,
+      DuckDBJobStatus.DUCKDB_JOB_STATUS_ERROR
+    ].includes(duckDBJobState?.status)
+  const canExecute = canMutate && canRun && (!isDuckDB || !changed) && !queryExecutionPending && !duckDBJobBusy && queryText
   const executeQuery = useCallback(() => {
     track('QueryExecute', { queryId: query.id })
-    dispatch(runQuery(query.id, queryText))
-  }, [dispatch, query.id, queryText])
+    dispatch(isDuckDB
+      ? runDuckDBQuery(query.id, queryText)
+      : runWarehouseQuery(query.id, queryText))
+  }, [dispatch, isDuckDB, query.id, queryText])
 
   return (
     <div key={query.id} className={styles.query}>

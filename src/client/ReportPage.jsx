@@ -10,6 +10,7 @@ import { EditOutlined, WarningFilled, MoreOutlined, ReadOutlined } from '@ant-de
 import { QueryJob } from 'dekart-proto/dekart_pb'
 import Tabs from 'antd/es/tabs'
 import classnames from 'classnames'
+import { DuckDBJobStatus } from './lib/duckdb/constants'
 import { Header } from './Header'
 import ReportHeaderButtons from './ReportHeaderButtons'
 import Downloading from './Downloading'
@@ -48,7 +49,7 @@ function getTabShortcutLabel (tabIndex) {
   return `In editor: Ctrl+Shift+${tabIndex + 1}`
 }
 
-function TabIcon ({ job }) {
+function TabIcon ({ job, duckDBJobState }) {
   let iconColor = 'transparent'
   if (job.jobError) {
     iconColor = '#F66B55'
@@ -60,11 +61,20 @@ function TabIcon ({ job }) {
       iconColor = '#B8B8B8'
       break
     case QueryJob.JobStatus.JOB_STATUS_DONE:
-      if (!job.jobResultId) {
-        iconColor = '#B8B8B8'
-        break
+      if (duckDBJobState) {
+        switch (duckDBJobState.status) {
+          case DuckDBJobStatus.DUCKDB_JOB_STATUS_READY:
+            iconColor = '#52c41a'
+            break
+          case DuckDBJobStatus.DUCKDB_JOB_STATUS_ERROR:
+            iconColor = '#F66B55'
+            break
+          default:
+            iconColor = '#B8B8B8'
+        }
+      } else {
+        iconColor = job.jobResultId ? '#52c41a' : '#B8B8B8'
       }
-      iconColor = '#52c41a'
       break
     default:
       // do nothing
@@ -120,7 +130,7 @@ function QueryTooltip ({ job, dataset }) {
   if (!job) {
     return null
   }
-  const updatedAt = new Date(job.updatedAt * 1000)
+  const updatedAt = job.updatedAt ? new Date(job.updatedAt * 1000) : null
   const connection = connectionList.find(c => c.id === dataset.connectionId)
   const connectionMeta = connection ? getDatasourceMeta(connection.connectionType) : null
 
@@ -130,7 +140,7 @@ function QueryTooltip ({ job, dataset }) {
       {
         connection && connectionMeta ? <span>{connection.connectionName} ({connectionMeta.name})</span> : null
       }
-      <span title={updatedAt.toISOString()}>{updatedAt.toLocaleString()}</span>
+      {updatedAt ? <span title={updatedAt.toISOString()}>{updatedAt.toLocaleString()}</span> : null}
       <span>{processed}</span>
       {
         job?.resultSize ? <span>Result {prettyBites(job.resultSize)}</span> : null
@@ -139,17 +149,20 @@ function QueryTooltip ({ job, dataset }) {
   )
 }
 
-function getTabPane (dataset, queries, files, status, queryJobs, closable, lastDataset, tabIndex) {
+function getTabPane (dataset, datasets, files, status, queryJobs, duckDBJobStates, queryParamsHash, closable, lastDataset, tabIndex) {
   let changed = false
-  const title = getDatasetName(dataset, queries, files)
+  const title = getDatasetName(dataset, datasets, files)
   let tabIcon = null
   let tooltip = null
   const shortcutLabel = getTabShortcutLabel(tabIndex)
   if (dataset.queryId) {
-    const job = queryJobs.find(j => j.queryId === dataset.queryId)
+    const job = queryJobs.find(j =>
+      j.queryId === dataset.queryId &&
+      j.queryParamsHash === queryParamsHash
+    )
     if (job) {
       tooltip = <QueryTooltip job={job} dataset={dataset} />
-      tabIcon = <TabIcon job={job} />
+      tabIcon = <TabIcon job={job} duckDBJobState={duckDBJobStates[job.id]} />
     }
     changed = status.changed
   }
@@ -181,8 +194,9 @@ function getTabPane (dataset, queries, files, status, queryJobs, closable, lastD
 
 function DatasetSection ({ reportId }) {
   let datasets = useSelector(state => state.dataset.list)
-  const queries = useSelector(state => state.queries)
   const queryJobs = useSelector(state => state.queryJobs)
+  const duckDBJobStates = useSelector(state => state.duckDBJobStates)
+  const queryParamsHash = useSelector(state => state.queryParams.hash)
   const files = useSelector(state => state.files)
   const activeDataset = useSelector(state => state.dataset.active)
   const report = useSelector(state => state.report)
@@ -263,10 +277,12 @@ function DatasetSection ({ reportId }) {
                 >
                   {readmeTab.concat(datasets.map((dataset, index) => getTabPane(
                     dataset,
-                    queries,
+                    datasets,
                     files,
                     queryStatus,
                     queryJobs,
+                    duckDBJobStates,
+                    queryParamsHash,
                     closable,
                     lastDataset,
                     index + (report.readme ? 1 : 0)

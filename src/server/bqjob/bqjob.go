@@ -245,7 +245,7 @@ func (job *Job) Run(storageObject storage.StorageObject, conn *proto.Connection)
 	client, err := bqutils.GetClient(job.GetCtx(), conn)
 	if err != nil {
 		log.Warn().Err(err).Msg("bigquery.NewClient failed")
-		job.Cancel()
+		job.CancelWithError(err)
 		return err
 	}
 
@@ -259,7 +259,7 @@ func (job *Job) Run(storageObject storage.StorageObject, conn *proto.Connection)
 	bigqueryJob, err := query.Run(job.GetCtx())
 	if err != nil {
 		log.Warn().Err(err).Msg("query.Run failed")
-		job.Cancel()
+		job.CancelWithError(err)
 		return err
 	}
 	job.Lock()

@@ -9,6 +9,7 @@ import (
 	"dekart/src/server/errtype"
 	"dekart/src/server/job"
 	"dekart/src/server/user"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -19,73 +20,73 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s Server) updateJobStatus(job job.Job, jobStatus chan int32, paramHash string, queryText string) {
+// insertPendingQueryJob synchronously records a warehouse revision before execution starts.
+func (s Server) insertPendingQueryJob(ctx context.Context, tx *sql.Tx, job job.Job, paramHash string, queryText string) error {
+	_, err := tx.ExecContext(
+		ctx,
+		`insert into query_jobs (
+			query_id,
+			id,
+			job_status,
+			query_params_hash,
+			query_text
+		)
+		values ($1, $2, $3, $4, $5)`,
+		job.GetQueryID(),
+		job.GetID(),
+		proto.QueryJob_JOB_STATUS_PENDING,
+		paramHash,
+		queryText,
+	)
+	return err
+}
+
+func (s Server) updateJobStatus(job job.Job, jobStatus chan int32, paramsHash string) {
 	for {
 		select {
 		case status := <-jobStatus:
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			var err error
-			if status == int32(proto.QueryJob_JOB_STATUS_PENDING) {
-				//insert into query_jobs
-				_, err = s.db.ExecContext(
-					ctx,
-					`insert into query_jobs (
-						query_id,
-						id,
-						job_status,
-						query_params_hash,
-						dw_job_id,
-						dw_job_location,
-						job_result_id,
-						job_error,
-						query_text
-					)
-					values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-					job.GetQueryID(),
-					job.GetID(),
-					status,
-					paramHash,
-					job.GetDWJobID(),
-					job.GetDWJobLocation(),
-					job.GetResultID(),
-					job.Err(),
-					queryText,
-				)
-			} else {
-				_, err = s.db.ExecContext(
-					ctx,
-					`update query_jobs set
-						job_status = $1,
-						job_error = $2,
-						job_result_id = $3,
-						total_rows = $4,
-						bytes_processed = $5,
-						result_size = $6,
-						dw_job_id = $7,
-						dw_job_location = $8,
-						result_uri = $9,
-						updated_at=CURRENT_TIMESTAMP
-					where id = $10`,
-					status,
-					job.Err(),
-					job.GetResultID(),
-					job.GetTotalRows(),
-					job.GetProcessedBytes(),
-					job.GetResultSize(),
-					job.GetDWJobID(),
-					job.GetDWJobLocation(),
-					job.GetResultURI(),
-					job.GetID(),
-				)
-			}
-			cancel()
+			_, err := s.db.ExecContext(
+				ctx,
+				`update query_jobs set
+					job_status = $1,
+					job_error = $2,
+					job_result_id = $3,
+					total_rows = $4,
+					bytes_processed = $5,
+					result_size = $6,
+					dw_job_id = $7,
+					dw_job_location = $8,
+					result_uri = $9,
+					updated_at=CURRENT_TIMESTAMP
+				where id = $10`,
+				status,
+				job.Err(),
+				job.GetResultID(),
+				job.GetTotalRows(),
+				job.GetProcessedBytes(),
+				job.GetResultSize(),
+				job.GetDWJobID(),
+				job.GetDWJobLocation(),
+				job.GetResultURI(),
+				job.GetID(),
+			)
 			if err != nil {
+				cancel()
 				errtype.LogError(err, "updateJobStatus failed")
 				// Don't crash the server, just log and continue
 				// The job status update failure will be retried on next status change
 				continue
 			}
+			if status == int32(proto.QueryJob_JOB_STATUS_DONE) ||
+				status == int32(proto.QueryJob_JOB_STATUS_DONE_LEGACY) ||
+				status == int32(proto.QueryJob_JOB_STATUS_UNSPECIFIED) {
+				if err := s.reconcileDuckDBGraph(ctx, job.GetReportID(), paramsHash); err != nil {
+					errtype.LogError(err, "reconcile DuckDB jobs after warehouse completion failed")
+				}
+			}
 			s.reportStreams.Ping(job.GetReportID())
+			cancel()
 		case <-job.GetCtx().Done():
 			return
 		}
@@ -96,6 +97,7 @@ func (s Server) getQueryJob(ctx context.Context, jobID string) (*proto.QueryJob,
 	query := `select
 		query_jobs.id,
 		query_jobs.query_id,
+		query_jobs.query_text,
 		query_jobs.job_status,
 		query_jobs.job_result_id,
 		query_jobs.job_error,
@@ -104,12 +106,15 @@ func (s Server) getQueryJob(ctx context.Context, jobID string) (*proto.QueryJob,
 		query_jobs.result_size,
 		query_jobs.query_params_hash,
 		query_jobs.dw_job_id,
+		query_jobs.dependency_revisions,
 		query_jobs.updated_at,
 		query_jobs.created_at,
 		EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - query_jobs.created_at))::bigint * 1000 as job_duration
 		, COALESCE(connections.connection_type, 0) as connection_type
 		, COALESCE(datasets.id::text, '') as dataset_id
+		, COALESCE(queries.execution_engine, 0) as execution_engine
 	from query_jobs
+	left join queries on queries.id = query_jobs.query_id
 	left join datasets on datasets.query_id = query_jobs.query_id
 	left join connections on connections.id = datasets.connection_id
 	where query_jobs.id = $1
@@ -119,6 +124,7 @@ func (s Server) getQueryJob(ctx context.Context, jobID string) (*proto.QueryJob,
 		query = `select
 			query_jobs.id,
 			query_jobs.query_id,
+			query_jobs.query_text,
 			query_jobs.job_status,
 			query_jobs.job_result_id,
 			query_jobs.job_error,
@@ -127,12 +133,15 @@ func (s Server) getQueryJob(ctx context.Context, jobID string) (*proto.QueryJob,
 			query_jobs.result_size,
 			query_jobs.query_params_hash,
 			query_jobs.dw_job_id,
+			query_jobs.dependency_revisions,
 			query_jobs.updated_at,
 			query_jobs.created_at,
 			(STRFTIME('%s', 'now') - STRFTIME('%s', query_jobs.created_at)) * 1000 as job_duration,
 			COALESCE(connections.connection_type, 0) as connection_type,
-			COALESCE(datasets.id, '') as dataset_id
+			COALESCE(datasets.id, '') as dataset_id,
+			COALESCE(queries.execution_engine, 0) as execution_engine
 		from query_jobs
+		left join queries on queries.id = query_jobs.query_id
 		left join datasets on datasets.query_id = query_jobs.query_id
 		left join connections on connections.id = datasets.connection_id
 		where query_jobs.id = $1
@@ -226,6 +235,9 @@ func (s Server) CancelJob(ctx context.Context, req *proto.CancelJobRequest) (*pr
 				errtype.LogError(err, "update query_jobs failed")
 				return nil, status.Error(codes.Internal, err.Error())
 			}
+			if err := s.reconcileDuckDBGraph(ctx, reportID, job.QueryParamsHash); err != nil {
+				errtype.LogError(err, "refresh canceled DuckDB dependents failed")
+			}
 			s.reportStreams.Ping(reportID)
 		}
 	}
@@ -252,6 +264,7 @@ func (s Server) getDatasetsQueryJobs(ctx context.Context, datasets []*proto.Data
 				`SELECT
 					query_jobs.id,
 					query_jobs.query_id,
+					query_jobs.query_text,
 					query_jobs.job_status,
 					query_jobs.job_result_id,
 					query_jobs.job_error,
@@ -259,18 +272,29 @@ func (s Server) getDatasetsQueryJobs(ctx context.Context, datasets []*proto.Data
 					query_jobs.bytes_processed,
 					query_jobs.result_size,
 					query_jobs.query_params_hash,
-					query_jobs.dw_job_id,
-					query_jobs.updated_at,
+						query_jobs.dw_job_id,
+						query_jobs.dependency_revisions,
+						query_jobs.updated_at,
 					query_jobs.created_at,
 					(STRFTIME('%s', 'now') - STRFTIME('%s', query_jobs.created_at)) * 1000 as job_duration,
 					COALESCE(connections.connection_type, 0) as connection_type,
-					COALESCE(datasets.id, '') as dataset_id
+					COALESCE(datasets.id, '') as dataset_id,
+					COALESCE(queries.execution_engine, 0) as execution_engine
 				FROM query_jobs
+				LEFT JOIN queries ON queries.id = query_jobs.query_id
 				LEFT JOIN datasets ON datasets.query_id = query_jobs.query_id
 				LEFT JOIN connections ON connections.id = datasets.connection_id
-				WHERE query_jobs.query_id IN (`+queryIdsStr+`)
-				GROUP BY query_jobs.query_params_hash, query_jobs.query_id
-				HAVING query_jobs.created_at = MAX(query_jobs.created_at)
+				WHERE query_jobs.id IN (
+					SELECT id FROM (
+						SELECT id, ROW_NUMBER() OVER (
+							PARTITION BY query_params_hash, query_id
+							ORDER BY created_at DESC
+						) AS row_rank
+						FROM query_jobs
+						WHERE query_id IN (`+queryIdsStr+`)
+					) ranked_jobs
+					WHERE row_rank=1
+				)
 				ORDER BY query_jobs.query_params_hash, query_jobs.query_id`,
 			)
 		} else {
@@ -278,6 +302,7 @@ func (s Server) getDatasetsQueryJobs(ctx context.Context, datasets []*proto.Data
 				`select distinct on (query_jobs.query_params_hash, query_jobs.query_id)
 				query_jobs.id,
 				query_jobs.query_id,
+				query_jobs.query_text,
 				query_jobs.job_status,
 				query_jobs.job_result_id,
 				query_jobs.job_error,
@@ -285,13 +310,16 @@ func (s Server) getDatasetsQueryJobs(ctx context.Context, datasets []*proto.Data
 				query_jobs.bytes_processed,
 				query_jobs.result_size,
 				query_jobs.query_params_hash,
-				query_jobs.dw_job_id,
-				query_jobs.updated_at,
+					query_jobs.dw_job_id,
+					query_jobs.dependency_revisions,
+					query_jobs.updated_at,
 				query_jobs.created_at,
 				EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - query_jobs.created_at))::bigint * 1000 as job_duration,
 				COALESCE(connections.connection_type, 0) as connection_type,
-				COALESCE(datasets.id::text, '') as dataset_id
+				COALESCE(datasets.id::text, '') as dataset_id,
+				COALESCE(queries.execution_engine, 0) as execution_engine
 			from query_jobs
+			left join queries on queries.id = query_jobs.query_id
 			left join datasets on datasets.query_id = query_jobs.query_id
 			left join connections on connections.id = datasets.connection_id
 			where query_jobs.query_id = ANY($1)
@@ -303,11 +331,47 @@ func (s Server) getDatasetsQueryJobs(ctx context.Context, datasets []*proto.Data
 			errtype.LogError(err, "select from query_jobs failed")
 			return nil, fmt.Errorf("select from query_jobs failed, ids: %s: %w", queryIdsStr, err)
 		}
-		defer queryRows.Close()
-		return rowsToQueryJobs(queryRows)
+		jobs, err := rowsToQueryJobs(queryRows)
+		if closeErr := queryRows.Close(); err == nil {
+			err = closeErr
+		}
+		if err != nil {
+			return nil, err
+		}
+		return s.appendPinnedQueryJobClosure(ctx, jobs, queryIds)
 
 	}
 	return make([]*proto.QueryJob, 0), nil
+}
+
+// appendPinnedQueryJobClosure includes historical results referenced by the latest DuckDB jobs.
+// Publishing and public hydration must retain every immutable source revision in that graph.
+func (s Server) appendPinnedQueryJobClosure(ctx context.Context, jobs []*proto.QueryJob, allowedQueryIDs []string) ([]*proto.QueryJob, error) {
+	allowed := make(map[string]bool, len(allowedQueryIDs))
+	for _, queryID := range allowedQueryIDs {
+		allowed[queryID] = true
+	}
+	seen := make(map[string]bool, len(jobs))
+	for _, queryJob := range jobs {
+		seen[queryJob.Id] = true
+	}
+	for index := 0; index < len(jobs); index++ {
+		for _, revision := range jobs[index].DependencyRevisions {
+			if revision.QueryJobId == "" || seen[revision.QueryJobId] {
+				continue
+			}
+			pinnedJob, err := s.getQueryJob(ctx, revision.QueryJobId)
+			if err != nil {
+				return nil, err
+			}
+			if pinnedJob == nil || !allowed[pinnedJob.QueryId] {
+				return nil, fmt.Errorf("pinned query job %s is outside the report", revision.QueryJobId)
+			}
+			seen[pinnedJob.Id] = true
+			jobs = append(jobs, pinnedJob)
+		}
+	}
+	return jobs, nil
 }
 
 func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
@@ -318,24 +382,31 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 		var datasetID sql.NullString
 		var jobResultId sql.NullString
 		var dwJobId sql.NullString
+		var queryText sql.NullString
+		var jobError sql.NullString
+		var dependencyRevisionsJSON string
+		var executionEngine int32
 		if IsSqlite() {
 			var updatedAtStr, createdAtStr string
 			err := rows.Scan(
 				&job.Id,
 				&job.QueryId,
+				&queryText,
 				&job.JobStatus,
 				&jobResultId,
-				&job.JobError,
+				&jobError,
 				&job.TotalRows,
 				&job.BytesProcessed,
 				&job.ResultSize,
 				&job.QueryParamsHash,
 				&dwJobId,
+				&dependencyRevisionsJSON,
 				&updatedAtStr, // SQLite timestamp string in this case
 				&createdAtStr,
 				&job.JobDuration,
 				&connectionType,
 				&datasetID,
+				&executionEngine,
 			)
 			if err != nil {
 				return nil, fmt.Errorf("scan failed in rowsToQueryJobs error=%q", err)
@@ -355,19 +426,22 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 			err := rows.Scan(
 				&job.Id,
 				&job.QueryId,
+				&queryText,
 				&job.JobStatus,
 				&jobResultId,
-				&job.JobError,
+				&jobError,
 				&job.TotalRows,
 				&job.BytesProcessed,
 				&job.ResultSize,
 				&job.QueryParamsHash,
 				&dwJobId,
+				&dependencyRevisionsJSON,
 				&updatedAt,
 				&createdAt,
 				&job.JobDuration,
 				&connectionType,
 				&datasetID,
+				&executionEngine,
 			)
 			if err != nil {
 				return nil, fmt.Errorf("scan failed in rowsToQueryJobs error=%q", err)
@@ -377,8 +451,15 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 		}
 		job.DwJobId = dwJobId.String
 		job.JobResultId = jobResultId.String
+		if proto.QueryExecutionEngine(executionEngine) == proto.QueryExecutionEngine_QUERY_EXECUTION_ENGINE_DUCKDB {
+			job.QueryText = queryText.String
+		}
+		job.JobError = jobError.String
 		job.DatasetId = datasetID.String
 		job.ResultExtension = resultExtensionByConnectionType(proto.ConnectionType(connectionType))
+		if err := json.Unmarshal([]byte(dependencyRevisionsJSON), &job.DependencyRevisions); err != nil {
+			return nil, fmt.Errorf("decode query job dependency revisions: %w", err)
+		}
 		jobs = append(jobs, job)
 	}
 	return jobs, nil

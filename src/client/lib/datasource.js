@@ -104,6 +104,14 @@ LIMIT 1000;`
         name: 'Local Files',
         usageStatsId: 5
       }
+    case 'DUCKDB':
+      return {
+        name: 'DuckDB',
+        usageStatsId: 6,
+        sampleQuery: `SELECT *
+FROM datasets."Dataset 1"
+LIMIT 100;`
+      }
     default:
       return {
         name: 'Unknown',

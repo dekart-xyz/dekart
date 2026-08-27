@@ -12,6 +12,7 @@ import { ForkOutlined } from '@ant-design/icons'
 import { track } from './lib/tracking'
 import { ConnectionType } from 'dekart-proto/dekart_pb'
 import { isSystemConnectionID } from './actions/connection'
+import { isDuckDBDataset } from './lib/duckdb/constants'
 
 export function useRequireOnboarding () {
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
@@ -21,9 +22,12 @@ export function useRequireOnboarding () {
   const { canWrite } = useSelector(state => state.report)
   const connections = useSelector(state => state.connection.list)
   const connectionListLoaded = useSelector(state => state.connection.listLoaded) || userStream?.planType === 0
+  const queries = useSelector(state => state.queries)
   const connectionTypesRequired = useSelector(state => state.dataset.list.reduce((acc, dataset) => {
     let connectionType = null
-    if (dataset.connectionType === ConnectionType.CONNECTION_TYPE_UNSPECIFIED) {
+    if (isDuckDBDataset(dataset, queries)) {
+      return acc
+    } else if (dataset.connectionType === ConnectionType.CONNECTION_TYPE_UNSPECIFIED) {
       // default connection used, ok for files
       if (dataset.queryId) {
         // if this query we need user to have BigQuery connection

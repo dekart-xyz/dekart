@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/errtype"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -19,6 +20,7 @@ func rowsToQueries(queryRows *sql.Rows) ([]*proto.Query, error) {
 		query := proto.Query{}
 		var createdAt time.Time
 		var updatedAt time.Time
+		var duckDBDependencyDatasetIDsJSON string
 		if err := queryRows.Scan(
 			&query.Id,
 			&queryText,
@@ -26,9 +28,15 @@ func rowsToQueries(queryRows *sql.Rows) ([]*proto.Query, error) {
 			&updatedAt,
 			&query.QuerySource,
 			&query.QuerySourceId,
+			&duckDBDependencyDatasetIDsJSON,
+			&query.DuckdbValidationError,
+			&query.ExecutionEngine,
 		); err != nil {
 			errtype.LogError(err, "scan query failed")
 			return nil, fmt.Errorf("scan query failed: %w", err)
+		}
+		if err := json.Unmarshal([]byte(duckDBDependencyDatasetIDsJSON), &query.DuckdbDependencyDatasetIds); err != nil {
+			return nil, fmt.Errorf("decode DuckDB query dependencies: %w", err)
 		}
 
 		switch query.QuerySource {
@@ -70,8 +78,11 @@ func (s Server) getQueries(ctx context.Context, datasets []*proto.Dataset) ([]*p
 				created_at,
 				updated_at,
 				query_source,
-				query_source_id
-			from queries where id IN (`+queryIdsStr+`) order by created_at asc`,
+				query_source_id,
+				duckdb_dependency_dataset_ids,
+				duckdb_validation_error,
+				execution_engine
+			from queries where id IN (`+queryIdsStr+`)`,
 			)
 		} else {
 			queryRows, err = s.db.QueryContext(ctx,
@@ -81,8 +92,11 @@ func (s Server) getQueries(ctx context.Context, datasets []*proto.Dataset) ([]*p
 				created_at,
 				updated_at,
 				query_source,
-				query_source_id
-			from queries where id = ANY($1) order by created_at asc`,
+				query_source_id,
+				duckdb_dependency_dataset_ids,
+				duckdb_validation_error,
+				execution_engine
+			from queries where id = ANY($1)`,
 				pq.Array(queryIds),
 			)
 		}

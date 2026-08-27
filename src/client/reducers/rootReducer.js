@@ -2,7 +2,7 @@ import { combineReducers } from 'redux'
 import { ActionTypes as KeplerActionTypes } from '@kepler.gl/actions'
 import { setUserMapboxAccessTokenUpdater } from '@kepler.gl/reducers/dist/ui-state-updaters'
 import { openReport, reportUpdate } from '../actions/report'
-import { numRunningQueries, queries, queryJobs, queryParams, queryStatus } from './queryReducer'
+import { duckDBJobStates, queries, queryExecutionsPending, queryJobs, queryParams, queryStatus, runAllQueriesPending } from './queryReducer'
 import { setUsage } from '../actions/usage'
 import { setEnv } from '../actions/env'
 import { newRelease } from '../actions/version'
@@ -158,9 +158,11 @@ export default combineReducers({
   storage,
   queries,
   queryStatus,
+  queryExecutionsPending,
+  runAllQueriesPending,
   queryParams,
   queryJobs,
-  numRunningQueries,
+  duckDBJobStates,
   sessionStorage,
   readme,
   analytics,

@@ -5,6 +5,7 @@ import (
 	"dekart/src/server/conn"
 	"dekart/src/server/errtype"
 	"dekart/src/server/storage"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -74,6 +75,7 @@ func (s Server) HandleStartFileUploadSession(w http.ResponseWriter, r *http.Requ
 	)
 	if err != nil {
 		log.Error().Err(err).Str("file_id", fileID).Msg("start upload session failed")
+		s.setUploadError(ctxData.reportID, fileSourceID, err)
 		http.Error(w, "failed to start upload session", http.StatusBadRequest)
 		return
 	}
@@ -197,6 +199,7 @@ func (s Server) HandleCompleteFileUploadSession(w http.ResponseWriter, r *http.R
 	}
 	if fileStatus == int64(proto.File_STATUS_STORED) {
 		// why: complete must be idempotent for client retries after success.
+		s.reconcileExistingDuckDBJobs(r.Context(), ctxData.reportID, "refresh DuckDB jobs during idempotent upload completion failed")
 		writeProtoJSON(w, http.StatusOK, &proto.CompleteFileUploadSessionResponse{
 			Status:   "completed",
 			FileId:   fileID,
@@ -241,6 +244,7 @@ func (s Server) HandleCompleteFileUploadSession(w http.ResponseWriter, r *http.R
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
+	s.reconcileExistingDuckDBJobs(r.Context(), ctxData.reportID, "refresh DuckDB jobs after upload session completion failed")
 	if err = s.storage.AbortUploadSession(
 		conn.GetCtx(r.Context(), ctxData.connection),
 		storage.AbortUploadSessionInput{
@@ -294,5 +298,6 @@ func (s Server) HandleAbortFileUploadSession(w http.ResponseWriter, r *http.Requ
 		http.Error(w, "failed to abort upload session", http.StatusBadRequest)
 		return
 	}
+	s.setUploadError(ctxData.reportID, ctxData.fileSourceID, errors.New("file upload was aborted"))
 	writeProtoJSON(w, http.StatusOK, &proto.AbortFileUploadSessionResponse{Status: "aborted"})
 }

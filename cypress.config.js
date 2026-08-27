@@ -75,6 +75,11 @@ module.exports = defineConfig({
     baseUrl: 'http://localhost:3000',
     setupNodeEvents (on) {
       on('task', {
+        // performanceResult exposes browser measurements in terminal output for A/B runs.
+        performanceResult (message) {
+          console.log(message)
+          return null
+        },
         async googleOAuthRedirectState ({ refreshTokenEnvName }) {
           const token = await exchangeRefreshToken(refreshTokenEnvName)
           return encodeRedirectState(token)

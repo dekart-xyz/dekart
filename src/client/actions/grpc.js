@@ -38,12 +38,12 @@ export function grpcCall (method, request, resolve = () => {}, reject = (err) =>
     while (attempts <= maxRetries) {
       try {
         const response = await unary(method, request, headers)
-        resolve(response)
+        await resolve(response)
         return
       } catch (err) {
         attempts++
-        const passErr = reject(err)
         if (attempts > maxRetries) {
+          const passErr = reject(err)
           if (passErr instanceof GrpcError) {
             dispatch(setStreamError(passErr.code, passErr.message))
           } else if (passErr) {

@@ -1,10 +1,11 @@
-import { CancelJobRequest, CreateQueryRequest, QueryParam, RunAllQueriesRequest, RunQueryRequest } from 'dekart-proto/dekart_pb'
+import { CancelJobRequest, CreateQueryRequest, QueryExecutionEngine, QueryParam, RunAllQueriesRequest, RunDuckDBQueryRequest, RunQueryRequest } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { get } from '../lib/api'
-import { getQueryParamsObjArr, getQueryParamsString } from '../lib/queryParams'
+import { getQueryParamsHash, getQueryParamsObjArr, getQueryParamsString, getQueryParamsValuesFromSearch, normalizeQueryParamsValues } from '../lib/queryParams'
 import { grpcCall } from './grpc'
 import { setError } from './message'
-import { md5 } from 'js-md5'
+
+let runAllQueriesGeneration = 0
 
 export function queryChanged (queryId, queryText) {
   return (dispatch, getState) => {
@@ -51,39 +52,103 @@ export function updateQueryParamsFromQueries () {
   }
 }
 
-export function createQuery (datasetId, connectionId) {
+export function createQuery (datasetId, connectionId = '', executionEngine = QueryExecutionEngine.QUERY_EXECUTION_ENGINE_CONNECTION) {
   return (dispatch) => {
     dispatch({ type: createQuery.name })
     const request = new CreateQueryRequest()
     request.setDatasetId(datasetId)
     request.setConnectionId(connectionId)
+    request.setExecutionEngine(executionEngine)
     dispatch(grpcCall(Dekart.CreateQuery, request))
   }
 }
 
-export function runQuery (queryId, queryText) {
+// runWarehouseQuery executes a connection-backed query through the warehouse service.
+export function runWarehouseQuery (queryId, queryText) {
   return async (dispatch, getState) => {
-    dispatch({ type: runQuery.name, queryId })
     const { queryParams } = getState()
+    const previousJob = getState().queryJobs.find(job =>
+      job.queryId === queryId &&
+      job.queryParamsHash === queryParams.hash
+    )
+    dispatch(queryExecutionStarted(queryId, queryParams.hash, previousJob?.id || ''))
     const request = new RunQueryRequest()
     request.setQueryId(queryId)
     request.setQueryText(queryText)
     request.setQueryParamsList(getQueryParamsObjArr(queryParams.list))
     request.setQueryParamsValues(queryParams.url)
-    dispatch(grpcCall(Dekart.RunQuery, request))
+    await dispatch(grpcCall(Dekart.RunQuery, request, undefined, err => {
+      dispatch(queryExecutionRejected(queryId))
+      return err
+    }))
   }
+}
+
+// runDuckDBQuery sends one versioned command and leaves canonical state to the report stream.
+export function runDuckDBQuery (queryId, queryText) {
+  return async (dispatch, getState) => {
+    const { queryParams } = getState()
+    const query = getState().queries.find(query => query.id === queryId)
+    const currentJob = getState().queryJobs.find(job =>
+      job.queryId === queryId && job.queryParamsHash === queryParams.hash
+    )
+    const observedJobId = currentJob?.id || ''
+    dispatch(queryExecutionStarted(queryId, queryParams.hash, observedJobId))
+    const request = new RunDuckDBQueryRequest()
+    request.setQueryId(queryId)
+    request.setQueryText(queryText)
+    request.setQueryParamsValues(queryParams.url)
+    request.setExpectedQuerySourceId(query?.querySourceId || '')
+    await dispatch(grpcCall(Dekart.RunDuckDBQuery, request, undefined, err => {
+      dispatch(queryExecutionRejected(queryId))
+      return err
+    }))
+  }
+}
+
+export function queryExecutionStarted (queryId, queryParamsHash, observedJobId) {
+  return { type: queryExecutionStarted.name, queryId, queryParamsHash, observedJobId }
+}
+
+export function queryExecutionRejected (queryId) {
+  return { type: queryExecutionRejected.name, queryId }
+}
+
+export function runAllQueriesStarted (generation) {
+  return { type: runAllQueriesStarted.name, generation }
+}
+
+export function runAllQueriesFinished (generation) {
+  return { type: runAllQueriesFinished.name, generation }
 }
 
 export function runAllQueries () {
   return async (dispatch, getState) => {
     const reportId = getState().report.id
-    const { queryParams } = getState()
-    const request = new RunAllQueriesRequest()
-    request.setReportId(reportId)
-    request.setQueryParamsList(getQueryParamsObjArr(queryParams.list))
-    request.setQueryParamsValues(queryParams.url)
-    dispatch(grpcCall(Dekart.RunAllQueries, request))
+    const generation = ++runAllQueriesGeneration
+    dispatch(runAllQueriesStarted(generation))
+    try {
+      const { queryParams } = getState()
+      const request = new RunAllQueriesRequest()
+      request.setReportId(reportId)
+      request.setQueryParamsList(getQueryParamsObjArr(queryParams.list))
+      request.setQueryParamsValues(queryParams.url)
+      await dispatch(grpcCall(
+        Dekart.RunAllQueries,
+        request,
+        undefined,
+        error => getState().runAllQueriesPending === generation ? error : null
+      ))
+    } finally {
+      dispatch(runAllQueriesFinished(generation))
+    }
   }
+}
+
+// invalidateRunAllQueries prevents late unary failures from mutating a closed or replaced report.
+export function invalidateRunAllQueries () {
+  runAllQueriesGeneration++
+  return { type: invalidateRunAllQueries.name }
 }
 
 export function cancelJob (jobId) {
@@ -142,14 +207,7 @@ export function setQueryParamValue (name, value) {
 
 export function updateQueryParamsFromURL (search) {
   return async function (dispatch) {
-    const params = new URLSearchParams(search)
-    const values = {}
-    params.forEach((value, key) => {
-      if (key.startsWith('qp_')) {
-        values[key.substring(3)] = value
-      }
-    })
-    dispatch(setQueryParamsValues(values))
+    dispatch(setQueryParamsValues(getQueryParamsValuesFromSearch(search)))
   }
 }
 
@@ -164,16 +222,11 @@ export function applyQueryParams () {
 export function setQueryParamsValues (valuesIn) {
   return async function (dispatch, getState) {
     const { queryParams } = getState()
-    const values = { ...valuesIn }
-    queryParams.list.forEach(param => {
-      if (!valuesIn[param.name]) {
-        valuesIn[param.name] = param.defaultValue
-      }
-    })
+    const values = normalizeQueryParamsValues(queryParams.list, valuesIn)
     const paramsStr = getQueryParamsString(queryParams.list, values)
     window.history.replaceState({}, '', `${window.location.pathname}?${paramsStr}`)
 
-    const hash = md5(paramsStr)
+    const hash = getQueryParamsHash(queryParams.list, values)
     dispatch({ type: setQueryParamsValues.name, values, url: paramsStr, hash })
   }
 }

@@ -13,7 +13,8 @@ import { updateSessionStorage } from './actions/sessionStorage'
 import { getDatasourceMeta } from './lib/datasource'
 import { track } from './lib/tracking'
 import { isSystemConnectionID } from './actions/connection'
-import { ConnectionType } from 'dekart-proto/dekart_pb'
+import { ConnectionType, QueryExecutionEngine } from 'dekart-proto/dekart_pb'
+import { DUCKDB_DATASOURCE } from './lib/duckdb/constants'
 
 function DatasetSelectorButton ({ icon, title, subtitle, onClick, id, disable, disabledNote }) {
   return (
@@ -105,6 +106,20 @@ function DatasetSelector ({ dataset }) {
             }}
           />
         )}
+        <DatasetSelectorButton
+          icon={<DatasourceIcon type={DUCKDB_DATASOURCE} />}
+          disable={!report.canWrite || readOnly}
+          disabledNote={readOnly ? 'Workspace is read-only' : undefined}
+          title='DuckDB'
+          subtitle='Transform datasets already in this map'
+          onClick={() => {
+            track('CreateQueryFromConnection', {
+              datasetId: dataset.id,
+              executionEngine: QueryExecutionEngine.QUERY_EXECUTION_ENGINE_DUCKDB
+            })
+            dispatch(createQuery(dataset.id, '', QueryExecutionEngine.QUERY_EXECUTION_ENGINE_DUCKDB))
+          }}
+        />
 
         {filteredConnectionList.map((connection) => (
           <DatasetSelectorButton

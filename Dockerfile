@@ -6,7 +6,8 @@ COPY package.json package-lock.json .npmrc ./
 ENV CI=true
 RUN --mount=type=cache,target=/root/.npm npm ci --ignore-scripts
 COPY proto proto
-RUN npm run proto-copy-to-node
+COPY patches patches
+RUN npm run prepare-node-modules
 COPY public public
 COPY src/client src/client
 COPY index.html .

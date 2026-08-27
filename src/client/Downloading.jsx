@@ -83,25 +83,25 @@ export default function Downloading () {
   // auto add dataset to map when no confirmation needed
   useEffect(() => {
     if (downloaded.length > 0 && pendingConfirmationList.length === 0) {
-      const { dataset, prevDatasetsList, res, extension } = downloaded[0]
-      dispatch(addDatasetToMap(dataset, prevDatasetsList, res, extension))
+      const { dataset, prevDatasetsList, res, extension, sourceId, controller } = downloaded[0]
+      dispatch(addDatasetToMap(dataset, prevDatasetsList, res, extension, sourceId, controller))
     }
   }, [downloaded, pendingConfirmationList, dispatch])
 
   // confirm loading large dataset
   useEffect(() => {
     if (pendingConfirmation) {
-      const { dataset, res, extension, loaded, prevDatasetsList, label } = pendingConfirmation
+      const { dataset, res, extension, loaded, prevDatasetsList, label, sourceId, controller } = pendingConfirmation
       mdl.confirm({
         title: `${label} result is larger than ${prettyBites(maxDatasetSize)}`,
         content: `Dataset size is ${prettyBites(loaded)}. Loading this dataset may slow down your browser. Continue?`,
         onOk: () => {
-          dispatch(addDatasetToMap(dataset, prevDatasetsList, res, extension))
+          dispatch(addDatasetToMap(dataset, prevDatasetsList, res, extension, sourceId, controller))
           setMaxDatasetSize(Math.round(loaded * 1.2)) // do not ask for same size again
           setPendingConfirmation(null)
         },
         onCancel: () => {
-          dispatch(processDownloadError(new Error(`Downloading ${label} cancelled by user`), dataset, label))
+          dispatch(processDownloadError(new Error(`Downloading ${label} cancelled by user`), dataset, label, false, controller))
           setPendingConfirmation(null)
         }
       })
