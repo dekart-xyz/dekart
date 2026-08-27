@@ -23,7 +23,7 @@ FROM nodedeps AS nodetest
 RUN npm run lint
 RUN npm run test
 
-FROM golang:1.25 AS godeps
+FROM golang:1.25-bookworm AS godeps
 
 # Install necessary packages for CGO
 RUN apt-get update && apt-get install -y gcc
