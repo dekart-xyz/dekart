@@ -161,7 +161,7 @@ export function createSharedDuckDBAdapter () {
   const getAdapter = () => {
     if (!adapterPromise) {
       adapterPromise = getSharedDuckDB()
-        .then(db => new DuckDBWasmAdapter(db))
+        .then(db => new DuckDBWasmAdapter(Promise.resolve(db)))
         .catch(error => {
           adapterPromise = null
           throw error
