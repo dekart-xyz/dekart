@@ -53,6 +53,7 @@ tool input.
 - After changing behavior, remove obsolete flags/params/branches that are no longer needed (no leftover transitional wiring).
 - Do not introduce new environment variables in code/workflows without an explicit plan or direct user approval.
 - Preserve comments that explain intent, race conditions, invariants, or non-obvious constraints. Remove comments only when they are obsolete.
+- When a touched file exceeds 500 lines, assess whether it contains separable responsibilities. Extract cohesive functionality when it improves navigation and comprehension. Do not split solely to satisfy a line-count limit. Prefer modules of 150–300 lines, but prioritize cohesion.
 
 ## Skill Usage
 

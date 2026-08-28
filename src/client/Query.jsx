@@ -13,16 +13,16 @@ import 'ace-builds/src-noconflict/ext-emmet'
 import { ConnectionType, QueryJob } from 'dekart-proto/dekart_pb'
 import { SendOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, ClockCircleTwoTone, CopyOutlined } from '@ant-design/icons'
 import { Duration } from 'luxon'
-import DataDocumentationLink from './DataDocumentationLink'
 import { cancelJob, queryChanged, runDuckDBQuery, runWarehouseQuery } from './actions/query'
 import { setActiveDataset } from './actions/dataset'
 import { showReadmeTab } from './actions/readme'
-import Tooltip from 'antd/es/tooltip'
 import { getDatasourceMeta } from './lib/datasource'
 import { copyErrorToClipboard } from './actions/clipboard'
 import { track } from './lib/tracking'
 import GeoSQLBanner from './GeoSQLBanner'
 import { DUCKDB_DATASOURCE, DuckDBJobStatus, isDuckDBQuery } from './lib/duckdb/constants'
+import { getDuckDBSources, registerDuckDBCompleter } from './lib/duckdb/datasets'
+import SampleQuery from './SampleQuery'
 
 function CancelButton ({ queryJob }) {
   const dispatch = useDispatch()
@@ -145,6 +145,7 @@ function QueryEditor ({ queryId, queryText, onChange, canWrite, canExecute, onEx
   const dataset = useSelector(state => state.dataset.list.find(q => q.queryId === queryId))
   const query = useSelector(state => state.queries.find(query => query.id === queryId))
   const datasets = useSelector(state => state.dataset.list)
+  const files = useSelector(state => state.files)
   const connection = useSelector(state => state.connection.list.find(c => c.id === dataset?.connectionId))
   const reportReadme = useSelector(state => state.report.readme)
   const connectionType = useConnectionType(connection?.id, dataset?.connectionType)
@@ -155,7 +156,10 @@ function QueryEditor ({ queryId, queryText, onChange, canWrite, canExecute, onEx
   const reportReadmeRef = useRef(reportReadme)
   const canExecuteRef = useRef(canExecute)
   const onExecuteRef = useRef(onExecute)
-  const editorRef = useRef(null)
+  const [editor, setEditor] = useState(null)
+  const duckDBSourcesRef = useRef([])
+
+  duckDBSourcesRef.current = getDuckDBSources(datasets, files, dataset?.id)
 
   useEffect(() => {
     datasetsRef.current = datasets
@@ -180,10 +184,10 @@ function QueryEditor ({ queryId, queryText, onChange, canWrite, canExecute, onEx
     }
   }, [completer])
 
-  const onEditorLoad = useCallback((editor) => {
-    editorRef.current = editor
+  const onEditorLoad = useCallback((loadedEditor) => {
+    setEditor(loadedEditor)
     registerQueryEditorKeyboardInterceptors({
-      editor,
+      editor: loadedEditor,
       getCanExecute: () => canExecuteRef.current,
       executeQuery: () => onExecuteRef.current(),
       switchTab: (tabIndex) => switchTabFromEditorShortcut({
@@ -193,12 +197,20 @@ function QueryEditor ({ queryId, queryText, onChange, canWrite, canExecute, onEx
         dispatch
       })
     })
-    focusAceEditor(editor)
+    focusAceEditor(loadedEditor)
   }, [dispatch])
 
   useEffect(() => {
-    focusAceEditor(editorRef.current)
-  }, [queryId])
+    // Replace Ace completers only while this reused editor belongs to DuckDB.
+    if (!editor || datasource !== DUCKDB_DATASOURCE) {
+      return
+    }
+    return registerDuckDBCompleter(editor, () => duckDBSourcesRef.current)
+  }, [datasource, editor])
+
+  useEffect(() => {
+    focusAceEditor(editor)
+  }, [editor, queryId])
 
   return (
     <div className={styles.editor}>
@@ -404,71 +416,6 @@ function useConnectionType (connectionId, fallbackConnectionType) {
   const isPlayground = useSelector(state => state.user.isPlayground)
   const connectionType = useSelector(state => state.connection.list.find(c => c.id === connectionId)?.connectionType)
   return isPlayground ? ConnectionType.CONNECTION_TYPE_BIGQUERY : (connectionType ?? fallbackConnectionType)
-}
-
-function SampleQuery ({ queryId }) {
-  const { UX_SAMPLE_QUERY_SQL, UX_DATA_DOCUMENTATION } = useSelector(state => state.env.variables)
-  const queryStatus = useSelector(state => state.queryStatus[queryId])
-  const dataset = useSelector(state => state.dataset.list.find(q => q.queryId === queryId))
-  const query = useSelector(state => state.queries.find(query => query.id === queryId))
-  const connection = useSelector(state => state.connection.list.find(c => c.id === dataset?.connectionId))
-  const { DATASOURCE } = useSelector(state => state.env.variables)
-  const isPlayground = useSelector(state => state.user.isPlayground)
-
-  let connectionType = isDuckDBQuery(query) ? DUCKDB_DATASOURCE : connection?.connectionType ?? dataset?.connectionType
-  if (isPlayground && !isDuckDBQuery(query)) {
-    // TODO: what if snowflake connection is used in playground?
-    connectionType = ConnectionType.CONNECTION_TYPE_BIGQUERY
-  }
-
-  const downloadingSource = queryStatus?.downloadingSource
-  const dispatch = useDispatch()
-  if (UX_DATA_DOCUMENTATION) {
-    return <DataDocumentationLink className={styles.dataDoc} />
-  }
-  if (
-    downloadingSource) {
-    // do not show sample query while downloading source
-    return null
-  }
-  let showSampleQuery = UX_SAMPLE_QUERY_SQL
-  if (!showSampleQuery) {
-    showSampleQuery = getDatasourceMeta(connectionType)?.sampleQuery
-    if (!showSampleQuery && DATASOURCE) {
-      showSampleQuery = getDatasourceMeta(DATASOURCE)?.sampleQuery
-    }
-  }
-  if (showSampleQuery) {
-    return (
-      <div className={styles.sampleQuery}>
-        <Tooltip title={<>Don't know where to start?<br />Try running public dataset query.</>}>
-          <Button
-            type='link' onClick={() => {
-              track('SampleQueryClicked', { queryId })
-              dispatch(queryChanged(queryId, showSampleQuery))
-            }}
-          >💡 Start with a sample query
-          </Button>
-        </Tooltip>
-      </div>
-    )
-  }
-  const examplesUrl = getDatasourceMeta(connectionType)?.examplesUrl
-  if (examplesUrl) {
-    return (
-      <div className={styles.sampleQuery}>
-        <Tooltip title={<>Don't know where to start?<br />Try running public dataset query.</>}>
-          <a
-            href={examplesUrl}
-            target='_blank'
-            rel='noreferrer'
-          >💡 Start with public dataset query
-          </a>
-        </Tooltip>
-      </div>
-    )
-  }
-  return null
 }
 
 export default function Query ({ query }) {

@@ -39,6 +39,12 @@
     background-size: contain;
 }
 
+.duckdb {
+    background-image: url('./duckdb.svg');
+    background-repeat: no-repeat;
+    background-size: contain;
+}
+
 .datasourceIcon {
     width: 1em;
     height: 1em;

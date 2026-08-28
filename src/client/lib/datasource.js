@@ -107,10 +107,8 @@ LIMIT 1000;`
     case 'DUCKDB':
       return {
         name: 'DuckDB',
-        usageStatsId: 6,
-        sampleQuery: `SELECT *
-FROM datasets."Dataset 1"
-LIMIT 100;`
+        style: 'duckdb',
+        usageStatsId: 6
       }
     default:
       return {

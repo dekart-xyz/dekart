@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
 
-// createReportAndUpload creates a report and waits for its uploaded source to load.
-function createReportAndUpload (fixture) {
+// createReport opens a new empty report through the available local entry point.
+function createReport () {
   cy.visit('http://localhost:3000/')
   cy.get('body', { timeout: 20000 }).then(($body) => {
     if ($body.text().includes('Ready to connect')) {
@@ -10,17 +10,38 @@ function createReportAndUpload (fixture) {
       cy.get('button#dekart-create-report', { timeout: 20000 }).click()
     }
   })
+}
 
+// uploadActiveDataset selects a file for the active empty dataset and waits for storage.
+function uploadActiveDataset (fixture) {
   cy.contains('button', 'Upload File', { timeout: 20000 }).scrollIntoView().click({ force: true })
   cy.get('input[type="file"]', { timeout: 20000 }).selectFile(`cypress/fixtures/${fixture}`, { force: true })
   cy.contains('button', 'Upload').click()
   cy.contains('Ready', { timeout: 120000 }).should('be.visible')
 }
 
-// runActiveDuckDBQuery selects DuckDB and executes SQL for the active empty dataset.
-function runActiveDuckDBQuery (sql) {
-  cy.contains('button', 'DuckDB', { timeout: 20000 }).first().scrollIntoView().click({ force: true })
-  cy.get('.ace_editor:visible textarea').focus().then($textarea => {
+// createReportAndUpload creates a report and waits for its uploaded source to load.
+function createReportAndUpload (fixture) {
+  createReport()
+  uploadActiveDataset(fixture)
+}
+
+// selectDuckDB chooses the browser-local query engine and verifies its supplied logo.
+function selectDuckDB () {
+  cy.contains('button', 'DuckDB', { timeout: 20000 }).as('duckDBButton')
+  cy.get('@duckDBButton').find('.anticon').should('have.css', 'background-image').and('include', 'Ebene_1')
+  cy.get('@duckDBButton').scrollIntoView().click({ force: true })
+}
+
+// replaceEditorText replaces the visible Ace value through its keyboard input.
+function replaceEditorText (sql) {
+  cy.get('.ace_editor:not(.ace_autocomplete):visible textarea').focus().type('{esc}', { force: true })
+  cy.get('.ace_autocomplete:visible').should('not.exist')
+  cy.get('.ace_editor:not(.ace_autocomplete):visible textarea').type('{selectall}{backspace}', { force: true })
+  cy.get('.ace_editor:not(.ace_autocomplete):visible .ace_content').should($content => {
+    expect($content.text().trim()).to.equal('')
+  })
+  cy.get('.ace_editor:not(.ace_autocomplete):visible textarea').then($textarea => {
     const view = $textarea[0].ownerDocument.defaultView
     const clipboardData = new view.DataTransfer()
     clipboardData.setData('text/plain', sql)
@@ -29,7 +50,25 @@ function runActiveDuckDBQuery (sql) {
       cancelable: true,
       clipboardData
     }))
-  }).wait(250)
+  })
+  editorShouldContain(sql)
+}
+
+// editorShouldContain asserts the SQL rendered by the visible Ace editor.
+function editorShouldContain (sql) {
+  cy.get('.ace_editor:visible .ace_content').should('contain.text', sql)
+}
+
+// insertSampleQuery opens the default example and verifies its visible SQL.
+function insertSampleQuery (sql) {
+  cy.contains('button', 'Start with a sample query').click()
+  editorShouldContain(sql)
+}
+
+// runActiveDuckDBQuery selects DuckDB and executes SQL for the active empty dataset.
+function runActiveDuckDBQuery (sql) {
+  selectDuckDB()
+  replaceEditorText(sql)
   cy.get('#dekart-query-execute-button').click()
   cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Ready')
 }
@@ -52,19 +91,88 @@ function addDuckDBQuery (sql, datasetLabel, expectedRows, expectedFields, expect
 describe('browser-local DuckDB datasets', () => {
   it('queries an uploaded CSV and a chained DuckDB result', () => {
     createReportAndUpload('sample.csv')
+
+    cy.get('button.ant-tabs-nav-add:visible').first().click()
+    cy.contains('[role="tab"]', 'New').click({ force: true })
+    selectDuckDB()
+    insertSampleQuery('FROM datasets."sample.csv"')
+    cy.get('#dekart-query-execute-button').click()
+    cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Ready')
+    cy.assertDatasetRows('Query 1', 100)
+
+    cy.get('button.ant-tabs-nav-add:visible').first().click()
+    cy.contains('[role="tab"]', 'New').click({ force: true })
+    selectDuckDB()
+    cy.get('.ace_editor:not(.ace_autocomplete):visible textarea').type('DATASETS', { force: true }).type('.', { force: true })
+    cy.get('.ace_autocomplete:visible', { timeout: 20000 }).should('contain.text', 'sample.csv').and('contain.text', 'Query 1')
+    cy.get('.ace_autocomplete:visible').contains('.ace_line', 'sample.csv').click({ force: true })
+    editorShouldContain('DATASETS."sample.csv"')
+    replaceEditorText('SELECT primary_type, latitude, longitude FROM datasets."sample.csv"')
+    cy.get('#dekart-query-execute-button').click()
+    cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Ready')
+    cy.assertDatasetRows('Query 2', 8276)
+
     addDuckDBQuery(
-      'SELECT primary_type, latitude, longitude FROM datasets."sample.csv"',
-      'Query 1',
-      8276,
-      ['primary_type', 'latitude', 'longitude'],
-      ['THEFT']
-    )
-    addDuckDBQuery(
-      'SELECT primary_type, count(*) AS total FROM datasets."Query 1" GROUP BY primary_type',
-      'Query 2',
+      'SELECT primary_type, count(*) AS total FROM datasets."Query 2" GROUP BY primary_type',
+      'Query 3',
       29,
       ['primary_type', 'total']
     )
+  })
+
+  it('generates points when no existing query can be pinned', () => {
+    createReport()
+    selectDuckDB()
+    insertSampleQuery('FROM range(100)')
+    cy.get('#dekart-query-execute-button').click()
+    cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Ready')
+    cy.assertDatasetTable('Query 1', ['latitude', 'longitude'])
+    cy.assertDatasetRows('Query 1', 100)
+  })
+
+  it('quotes dataset labels and skips failed sources in the default example', () => {
+    createReport()
+    selectDuckDB()
+    replaceEditorText('SELECT unknown_function(1)')
+    cy.get('#dekart-query-execute-button').click()
+    cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Query Error')
+
+    cy.get('button.ant-tabs-nav-add:visible').first().click()
+    cy.contains('[role="tab"]', 'New').click({ force: true })
+    uploadActiveDataset('sample.csv')
+    cy.get('.ant-tabs-tab-active span[title="Dataset setting"]').click()
+    cy.get('#dekart-dataset-name-input').type('source "one"')
+    cy.get('#dekart-save-dataset-name-button').click()
+    cy.get('#dekart-dataset-name-input', { timeout: 20000 }).should('not.exist')
+
+    cy.get('button.ant-tabs-nav-add:visible').first().click()
+    cy.contains('[role="tab"]', 'New').click({ force: true })
+    selectDuckDB()
+    cy.get('.ace_editor:not(.ace_autocomplete):visible textarea').type('datasets', { force: true }).type('.', { force: true })
+    cy.get('.ace_autocomplete:visible', { timeout: 20000 }).contains('.ace_line', 'source "one"').click({ force: true })
+    editorShouldContain('datasets."source ""one"""')
+    replaceEditorText('datasets."source ')
+    cy.get('.ace_editor:not(.ace_autocomplete):visible textarea').type('o', { force: true })
+    cy.get('.ace_autocomplete:visible', { timeout: 20000 }).contains('.ace_line', 'source "one"').click({ force: true })
+    editorShouldContain('datasets."source ""one"""')
+    replaceEditorText('')
+    insertSampleQuery('FROM datasets."source ""one"""')
+    cy.get('#dekart-query-execute-button').click()
+    cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Ready')
+
+    replaceEditorText('')
+    cy.get('.ant-tabs-tab-active span[title="Dataset setting"]').click()
+    cy.get('#dekart-dataset-name-input').type('source "one"')
+    cy.get('#dekart-save-dataset-name-button').click()
+    cy.get('#dekart-dataset-name-input', { timeout: 20000 }).should('not.exist')
+    cy.get('.ace_editor:not(.ace_autocomplete):visible textarea').type('datasets', { force: true }).type('.', { force: true })
+    cy.get('body').should($body => {
+      expect($body.find('.ace_autocomplete:visible').text()).not.to.include('source "one"')
+    })
+    replaceEditorText('')
+    insertSampleQuery('FROM range(100)')
+    cy.get('#dekart-query-execute-button').click()
+    cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Ready')
   })
 
   it('queries GeoJSON through the bundled spatial extension', () => {

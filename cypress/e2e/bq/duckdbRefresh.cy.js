@@ -132,6 +132,29 @@ describe('DuckDB refresh from BigQuery', () => {
     cy.ensureTestWorkspace()
   })
 
+  it('scopes report dataset completion to DuckDB while switching query tabs', () => {
+    createLoadedBigQuerySource()
+    cy.get('button.ant-tabs-nav-add:visible').click()
+    cy.contains('[role="tab"]', 'New').click({ force: true })
+    selectDuckDBQuery()
+
+    enterVisibleQuery('datasets')
+    cy.get('.ace_editor:visible textarea').type('.', { force: true })
+    cy.get('.ace_autocomplete:visible', { timeout: 20000 }).should('contain.text', 'Query 1')
+
+    cy.contains('[role="tab"]', 'Query 1').click({ force: true })
+    enterVisibleQuery('datasets')
+    cy.get('.ace_editor:visible textarea').type('.', { force: true })
+    cy.get('body').should($body => {
+      expect($body.find('.ace_autocomplete:visible').text()).not.to.include('Query 1')
+    })
+
+    cy.contains('[role="tab"]', 'Query 2').click({ force: true })
+    enterVisibleQuery('datasets')
+    cy.get('.ace_editor:visible textarea').type('.', { force: true })
+    cy.get('.ace_autocomplete:visible', { timeout: 20000 }).should('contain.text', 'Query 1')
+  })
+
   it('shows feedback when an accepted DuckDB query is materialized', () => {
     cy.visit('/')
     cy.get('button#dekart-create-report').click()
