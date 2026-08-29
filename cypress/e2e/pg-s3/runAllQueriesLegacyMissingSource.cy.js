@@ -5,6 +5,7 @@ const appUrl = Cypress.env('DEKART_E2E_BASE_URL') || 'http://localhost:3000'
 const ciValue = String(Cypress.env('CI') ?? '').toLowerCase()
 const isCI = ciValue === 'true' || ciValue === '1' || String(Cypress.env('CYPRESS_CI') ?? '') === '1'
 const apiBase = isCI ? `${appUrl}/api/v1` : 'http://localhost:8080/api/v1'
+const systemConnectionId = '00000000-0000-0000-0000-000000000000'
 
 const sqlString = (value) => `'${value.replace(/'/g, "''")}'`
 
@@ -87,7 +88,7 @@ const createRunnableReport = () => {
 
       return callMCP('create_query', {
         dataset_id: datasetId,
-        connection_id: ''
+        connection_id: systemConnectionId
       }).then((query) => {
         const queryId = readId(query, ['query_id', 'queryId']) || readId(query?.query, ['id'])
         expect(queryId, 'query_id').to.be.a('string')
@@ -118,7 +119,7 @@ const createLegacyMissingSourceQuery = (reportId) => {
 
     return callMCP('create_query', {
       dataset_id: datasetId,
-      connection_id: ''
+      connection_id: systemConnectionId
     }).then((query) => {
       const queryId = readId(query, ['query_id', 'queryId']) || readId(query?.query, ['id'])
       expect(queryId, 'query_id').to.be.a('string')

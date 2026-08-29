@@ -254,7 +254,7 @@ describe('local MCP postgres happy path with device auth', () => {
                     cy.visit(`${appUrl}/reports/${reportId}/source?qp_row_limit=7`)
                     cy.contains('span', 'Ready', { timeout: 120000 }).should('be.visible')
                     cy.get('div:contains("7 rows")', { timeout: 120000 }).should('have.length.at.least', 2)
-                    cy.contains('.source-data-title .dataset-name', 'Result').then($name => {
+                    cy.contains('.source-data-title .dataset-name', 'Result', { timeout: 120000 }).then($name => {
                       const section = $name.closest('.source-data-title').parent().parent()
                       section.find('.show-data-table svg')[0].dispatchEvent(new MouseEvent('click', { bubbles: true }))
                     })

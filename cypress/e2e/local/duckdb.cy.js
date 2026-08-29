@@ -15,9 +15,12 @@ function createReport () {
 // uploadActiveDataset selects a file for the active empty dataset and waits for storage.
 function uploadActiveDataset (fixture) {
   cy.contains('button', 'Upload File', { timeout: 20000 }).scrollIntoView().click({ force: true })
+  cy.intercept('POST', '**/api/v1/file/*/upload-sessions/*/complete').as('completeUploadSession')
   cy.get('input[type="file"]', { timeout: 20000 }).selectFile(`cypress/fixtures/${fixture}`, { force: true })
   cy.contains('button', 'Upload').click()
+  cy.wait('@completeUploadSession', { timeout: 120000 })
   cy.contains('Ready', { timeout: 120000 }).should('be.visible')
+  cy.contains(fixture, { timeout: 20000 }).should('be.visible')
 }
 
 // createReportAndUpload creates a report and waits for its uploaded source to load.
@@ -56,7 +59,18 @@ function replaceEditorText (sql) {
 
 // editorShouldContain asserts the SQL rendered by the visible Ace editor.
 function editorShouldContain (sql) {
-  cy.get('.ace_editor:visible .ace_content').should('contain.text', sql)
+  cy.get('.ace_editor:not(.ace_autocomplete):visible .ace_content').should('contain.text', sql)
+}
+
+// acceptAutocomplete inserts a named suggestion through Ace's completion path.
+function acceptAutocomplete (completion) {
+  cy.get('.ace_autocomplete:visible', { timeout: 20000 }).should('contain.text', completion)
+  cy.get('.ace_editor:not(.ace_autocomplete):visible').then(($editor) => {
+    const editor = $editor[0].ownerDocument.defaultView.ace.edit($editor[0])
+    const match = editor.completer.completions.filtered.find(candidate => candidate.caption === completion)
+    expect(match, `autocomplete match for ${completion}`).to.exist
+    editor.completer.insertMatch(match)
+  })
 }
 
 // insertSampleQuery opens the default example and verifies its visible SQL.
@@ -69,7 +83,7 @@ function insertSampleQuery (sql) {
 function runActiveDuckDBQuery (sql) {
   selectDuckDB()
   replaceEditorText(sql)
-  cy.get('#dekart-query-execute-button').click()
+  cy.get('#dekart-query-execute-button', { timeout: 20000 }).should('be.enabled').click()
   cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Ready')
 }
 
@@ -105,7 +119,7 @@ describe('browser-local DuckDB datasets', () => {
     selectDuckDB()
     cy.get('.ace_editor:not(.ace_autocomplete):visible textarea').type('DATASETS', { force: true }).type('.', { force: true })
     cy.get('.ace_autocomplete:visible', { timeout: 20000 }).should('contain.text', 'sample.csv').and('contain.text', 'Query 1')
-    cy.get('.ace_autocomplete:visible').contains('.ace_line', 'sample.csv').click({ force: true })
+    acceptAutocomplete('sample.csv')
     editorShouldContain('DATASETS."sample.csv"')
     replaceEditorText('SELECT primary_type, latitude, longitude FROM datasets."sample.csv"')
     cy.get('#dekart-query-execute-button').click()
@@ -140,7 +154,8 @@ describe('browser-local DuckDB datasets', () => {
     cy.get('button.ant-tabs-nav-add:visible').first().click()
     cy.contains('[role="tab"]', 'New').click({ force: true })
     uploadActiveDataset('sample.csv')
-    cy.get('.ant-tabs-tab-active span[title="Dataset setting"]').click()
+    cy.get('.ant-message-notice', { timeout: 20000 }).should('not.exist')
+    cy.get('.ant-tabs-tab-active .ant-tabs-tab-remove').click()
     cy.get('#dekart-dataset-name-input').type('source "one"')
     cy.get('#dekart-save-dataset-name-button').click()
     cy.get('#dekart-dataset-name-input', { timeout: 20000 }).should('not.exist')
@@ -149,11 +164,11 @@ describe('browser-local DuckDB datasets', () => {
     cy.contains('[role="tab"]', 'New').click({ force: true })
     selectDuckDB()
     cy.get('.ace_editor:not(.ace_autocomplete):visible textarea').type('datasets', { force: true }).type('.', { force: true })
-    cy.get('.ace_autocomplete:visible', { timeout: 20000 }).contains('.ace_line', 'source "one"').click({ force: true })
+    acceptAutocomplete('source "one"')
     editorShouldContain('datasets."source ""one"""')
     replaceEditorText('datasets."source ')
     cy.get('.ace_editor:not(.ace_autocomplete):visible textarea').type('o', { force: true })
-    cy.get('.ace_autocomplete:visible', { timeout: 20000 }).contains('.ace_line', 'source "one"').click({ force: true })
+    acceptAutocomplete('source "one"')
     editorShouldContain('datasets."source ""one"""')
     replaceEditorText('')
     insertSampleQuery('FROM datasets."source ""one"""')
@@ -161,7 +176,8 @@ describe('browser-local DuckDB datasets', () => {
     cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Ready')
 
     replaceEditorText('')
-    cy.get('.ant-tabs-tab-active span[title="Dataset setting"]').click()
+    cy.get('.ant-message-notice', { timeout: 20000 }).should('not.exist')
+    cy.get('.ant-tabs-tab-active .ant-tabs-tab-remove').click()
     cy.get('#dekart-dataset-name-input').type('source "one"')
     cy.get('#dekart-save-dataset-name-button').click()
     cy.get('#dekart-dataset-name-input', { timeout: 20000 }).should('not.exist')

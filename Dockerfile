@@ -57,6 +57,7 @@ RUN rm -f /etc/apt/sources.list.d/google-chrome.list \
     curl \
     ca-certificates \
     postgresql-client \
+    sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 RUN update-ca-certificates
 ENV DEKART_PORT=3000

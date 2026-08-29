@@ -6,9 +6,11 @@ const CHICAGO_CRIME_SAMPLE_QUERY = 'SELECT primary_type, district, latitude, lon
 function enterVisibleQuery (sql) {
   cy.get('.ace_editor:visible textarea', { timeout: 30000 }).first()
     .focus()
-    .type('{selectall}{backspace}', { force: true })
-    .wait(100)
+    .type('{selectall}', { force: true })
     .then($textarea => {
+      if (sql === '') {
+        return cy.wrap($textarea).type('{backspace}', { force: true })
+      }
       const view = $textarea[0].ownerDocument.defaultView
       const clipboardData = new view.DataTransfer()
       clipboardData.setData('text/plain', sql)
@@ -41,9 +43,11 @@ function queryParameterInput (name) {
 }
 
 function openHistory () {
+  cy.intercept('POST', '**/Dekart/GetSnapshots').as('getSnapshots')
   cy.contains('.ant-select-selection-item', 'Editing').click()
   cy.contains('History').click()
   cy.contains('.ant-modal-title', 'Map Change History').should('be.visible')
+  cy.wait('@getSnapshots', { timeout: 30000 })
   cy.contains('.ant-modal:visible .ant-collapse-header-text', 'Today', { timeout: 30000 }).click()
   cy.get('.ant-modal:visible .ant-collapse-header').eq(1).click()
 }

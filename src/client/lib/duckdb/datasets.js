@@ -37,17 +37,21 @@ export function registerDuckDBCompleter (editor, getSources) {
   const previousCompleters = editor.completers
   const completer = {
     getCompletions (editor, session, pos, prefix, callback) {
-      const beforeCursor = session.getLine(pos.row).slice(0, pos.column)
-      const identifierLength = beforeCursor.match(DUCKDB_DATASET_IDENTIFIER)?.[0].slice('datasets.'.length).length || 0
       callback(null, getSources().map(({ label }) => ({
         caption: label,
         value: quoteDuckDBIdentifier(label),
-        range: {
-          start: { row: pos.row, column: pos.column - identifierLength },
-          end: pos
-        },
+        completer,
         meta: 'dataset'
       })))
+    },
+    insertMatch (editor, completion) {
+      const pos = editor.getCursorPosition()
+      const beforeCursor = editor.session.getLine(pos.row).slice(0, pos.column)
+      const identifierLength = beforeCursor.match(DUCKDB_DATASET_IDENTIFIER)?.[0].slice('datasets.'.length).length || 0
+      editor.session.replace({
+        start: { row: pos.row, column: pos.column - identifierLength },
+        end: pos
+      }, completion.value)
     }
   }
   const defaultCompleters = [
