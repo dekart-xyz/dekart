@@ -6,6 +6,7 @@ import (
 	"crypto/sha1"
 	"database/sql"
 	"dekart/src/server/bqutils"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
@@ -394,6 +395,22 @@ type runQueryOptions struct {
 	changedBy        string
 }
 
+// loadReportQueryParamsTx reads the saved declaration order used for values and job identity.
+func loadReportQueryParamsTx(ctx context.Context, tx *sql.Tx, reportID string) ([]*proto.QueryParam, error) {
+	var queryParamsJSON []byte
+	if err := tx.QueryRowContext(ctx, `select query_params from reports where id=$1`, reportID).Scan(&queryParamsJSON); err != nil {
+		return nil, err
+	}
+	queryParams := make([]*proto.QueryParam, 0)
+	// Empty reports have no declarations to decode.
+	if len(queryParamsJSON) > 0 {
+		if err := json.Unmarshal(queryParamsJSON, &queryParams); err != nil {
+			return nil, err
+		}
+	}
+	return queryParams, nil
+}
+
 func (s Server) runQuery(ctx context.Context, o runQueryOptions) (*proto.QueryJob, error) {
 	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
@@ -413,7 +430,15 @@ func (s Server) runQuery(ctx context.Context, o runQueryOptions) (*proto.QueryJo
 	if o.updateQuery || queryText == "" {
 		queryText = o.queryText
 	}
-	queryTextParsed, queryParamsHash, err := injectQueryParams(queryText, o.queryParams, o.queryParamValues)
+	queryParams := o.queryParams
+	// MCP/CLI callers send values only; browser callers may still send declarations.
+	if len(queryParams) == 0 {
+		queryParams, err = loadReportQueryParamsTx(ctx, tx, o.reportID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	queryTextParsed, queryParamsHash, err := injectQueryParams(queryText, queryParams, o.queryParamValues)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -523,8 +548,19 @@ func injectQueryParams(queryText string, params []*proto.QueryParam, valuesUrlEn
 		}
 	}
 
+	// Hash saved declarations in their report order so caller key order cannot
+	// create a second execution identity for the same values.
+	canonicalValues := make([]string, 0, len(params))
+	for _, param := range params {
+		value, exists := values[param.Name]
+		// Omitted values hash as defaults, while explicit empty strings retain their identity.
+		if !exists {
+			value = param.DefaultValue
+		}
+		canonicalValues = append(canonicalValues, formURLEncode("qp_"+param.Name)+"="+formURLEncode(value))
+	}
 	h := md5.New()
-	h.Write([]byte(valuesUrlEncoded))
+	h.Write([]byte(strings.Join(canonicalValues, "&")))
 	valuesHash := fmt.Sprintf("%x", h.Sum(nil))
 
 	// replace query parameters with values, query parameters should be in format {{param_name}}
@@ -541,6 +577,14 @@ func injectQueryParams(queryText string, params []*proto.QueryParam, valuesUrlEn
 	}
 
 	return queryText, valuesHash, nil
+}
+
+// formURLEncode matches the browser URLSearchParams serializer used for job identity.
+func formURLEncode(value string) string {
+	encoded := url.QueryEscape(value)
+	encoded = strings.ReplaceAll(encoded, "%2A", "*")
+	encoded = strings.ReplaceAll(encoded, "~", "%7E")
+	return encoded
 }
 
 // dryRunQuery validates SQL synchronously for supported engines (BigQuery for now).
@@ -598,47 +642,66 @@ func (s Server) dryRunQuery(ctx context.Context, connection *proto.Connection, q
 	}, nil
 }
 
-// updateQueryTextIfChanged stores query text and snapshots report when text differs.
-func (s Server) updateQueryTextIfChanged(ctx context.Context, queryID string, q *query.QueryDetails, queryText string) (bool, error) {
-	if queryText == q.QueryText {
-		return false, nil
+// updateQueryTextIfChanged stores query text and returns current DuckDB validation.
+func (s Server) updateQueryTextIfChanged(ctx context.Context, queryID string, q *query.QueryDetails, queryText string) (bool, string, error) {
+	// Unchanged connection queries have no compiler state to read under the report lock.
+	if queryText == q.QueryText && q.ExecutionEngine != proto.QueryExecutionEngine_QUERY_EXECUTION_ENGINE_DUCKDB {
+		return false, "", nil
 	}
 	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
-		return false, status.Error(codes.Internal, err.Error())
+		return false, "", status.Error(codes.Internal, err.Error())
 	}
 	defer tx.Rollback()
 	if err := lockReportTx(ctx, tx, q.ReportID); err != nil {
-		return false, status.Error(codes.Internal, err.Error())
+		return false, "", status.Error(codes.Internal, err.Error())
+	}
+	var currentText, validationError string
+	if err := tx.QueryRowContext(ctx, `select query_text, duckdb_validation_error from queries where id=$1`, queryID).
+		Scan(&currentText, &validationError); err != nil {
+		return false, "", status.Error(codes.Internal, err.Error())
+	}
+	updated := currentText != queryText
+	// Unchanged DuckDB queries return the stored validation from this locked state.
+	if !updated {
+		return false, validationError, nil
 	}
 	err = storeQuerySync(ctx, tx, queryID, queryText, q.PrevQuerySourceId)
 	if err != nil {
+		// A concurrent query-source write remains a canceled versioned command.
 		if _, ok := err.(*queryWasNotUpdated); ok {
 			log.Warn().Str("queryId", queryID).Msg("Query was not updated")
-			return false, status.Error(codes.Canceled, err.Error())
+			return false, "", status.Error(codes.Canceled, err.Error())
 		}
 		log.Error().Err(err).Send()
-		return false, status.Error(codes.Internal, err.Error())
+		return false, "", status.Error(codes.Internal, err.Error())
 	}
 	if q.ExecutionEngine == proto.QueryExecutionEngine_QUERY_EXECUTION_ENGINE_DUCKDB {
 		duckDBQueries, catalog, queryParams, err := loadDuckDBGraphTx(ctx, tx, q.ReportID)
 		if err != nil {
-			return false, status.Error(codes.Internal, err.Error())
+			return false, "", status.Error(codes.Internal, err.Error())
 		}
 		if err := analyzeDuckDBQueries(ctx, tx, duckDBQueries, catalog, queryParams); err != nil {
-			return false, status.Error(codes.Internal, err.Error())
+			return false, "", status.Error(codes.Internal, err.Error())
+		}
+		for _, candidate := range duckDBQueries {
+			// The response reports validation for the query being updated.
+			if candidate.queryID == queryID {
+				validationError = candidate.validationError
+				break
+			}
 		}
 	}
 	claims := user.GetClaims(ctx)
 	if err := s.snapshotDuckDBQueryChangeTx(ctx, tx, q.ReportID, claims.Email); err != nil {
 		errtype.LogError(err, "Error creating report snapshot")
-		return false, status.Error(codes.Internal, err.Error())
+		return false, "", status.Error(codes.Internal, err.Error())
 	}
 	if err := tx.Commit(); err != nil {
-		return false, status.Error(codes.Internal, err.Error())
+		return false, "", status.Error(codes.Internal, err.Error())
 	}
 	s.reportStreams.Ping(q.ReportID)
-	return true, nil
+	return true, validationError, nil
 }
 
 // snapshotDuckDBQueryChangeTx records a query definition change in report history.
@@ -670,7 +733,7 @@ func (s Server) updateQuery(ctx context.Context, req *proto.UpdateQueryRequest, 
 		}
 	}
 
-	updated, err := s.updateQueryTextIfChanged(ctx, req.QueryId, q, req.GetQueryText())
+	updated, _, err := s.updateQueryTextIfChanged(ctx, req.QueryId, q, req.GetQueryText())
 	if err != nil {
 		return nil, err
 	}
@@ -826,7 +889,8 @@ func (s Server) runQueryRequest(ctx context.Context, req *proto.RunQueryRequest,
 	}
 
 	res := &proto.RunQueryResponse{
-		QueryJob: queryJob,
+		QueryJob:        queryJob,
+		ExecutionEngine: proto.QueryExecutionEngine_QUERY_EXECUTION_ENGINE_CONNECTION,
 	}
 	return res, nil
 }
@@ -851,7 +915,11 @@ func (s Server) RunDuckDBQuery(ctx context.Context, req *proto.RunDuckDBQueryReq
 	if err := lockReportTx(ctx, tx, q.ReportID); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	_, paramsHash, err := injectQueryParams("", nil, req.GetQueryParamsValues())
+	queryParams, err := loadReportQueryParamsTx(ctx, tx, q.ReportID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	_, paramsHash, err := injectQueryParams("", queryParams, req.GetQueryParamsValues())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}

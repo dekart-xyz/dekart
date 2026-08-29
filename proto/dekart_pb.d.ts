@@ -3238,6 +3238,9 @@ export class RunQueryRequest extends jspb.Message {
   getQueryParamsValues(): string;
   setQueryParamsValues(value: string): void;
 
+  getAcceptDuckdbExecution(): boolean;
+  setAcceptDuckdbExecution(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): RunQueryRequest.AsObject;
   static toObject(includeInstance: boolean, msg: RunQueryRequest): RunQueryRequest.AsObject;
@@ -3254,6 +3257,7 @@ export namespace RunQueryRequest {
     queryText: string,
     queryParamsList: Array<QueryParam.AsObject>,
     queryParamsValues: string,
+    acceptDuckdbExecution: boolean,
   }
 }
 
@@ -3262,6 +3266,9 @@ export class RunQueryResponse extends jspb.Message {
   clearQueryJob(): void;
   getQueryJob(): QueryJob | undefined;
   setQueryJob(value?: QueryJob): void;
+
+  getExecutionEngine(): QueryExecutionEngineMap[keyof QueryExecutionEngineMap];
+  setExecutionEngine(value: QueryExecutionEngineMap[keyof QueryExecutionEngineMap]): void;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): RunQueryResponse.AsObject;
@@ -3276,6 +3283,160 @@ export class RunQueryResponse extends jspb.Message {
 export namespace RunQueryResponse {
   export type AsObject = {
     queryJob?: QueryJob.AsObject,
+    executionEngine: QueryExecutionEngineMap[keyof QueryExecutionEngineMap],
+  }
+}
+
+export class PrepareDuckDBExecutionRequest extends jspb.Message {
+  getQueryId(): string;
+  setQueryId(value: string): void;
+
+  getQueryParamsValues(): string;
+  setQueryParamsValues(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): PrepareDuckDBExecutionRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: PrepareDuckDBExecutionRequest): PrepareDuckDBExecutionRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: PrepareDuckDBExecutionRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): PrepareDuckDBExecutionRequest;
+  static deserializeBinaryFromReader(message: PrepareDuckDBExecutionRequest, reader: jspb.BinaryReader): PrepareDuckDBExecutionRequest;
+}
+
+export namespace PrepareDuckDBExecutionRequest {
+  export type AsObject = {
+    queryId: string,
+    queryParamsValues: string,
+  }
+}
+
+export class PrepareDuckDBExecutionResponse extends jspb.Message {
+  hasQueryJob(): boolean;
+  clearQueryJob(): void;
+  getQueryJob(): QueryJob | undefined;
+  setQueryJob(value?: QueryJob): void;
+
+  hasDuckdbExecution(): boolean;
+  clearDuckdbExecution(): void;
+  getDuckdbExecution(): DuckDBExecution | undefined;
+  setDuckdbExecution(value?: DuckDBExecution): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): PrepareDuckDBExecutionResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: PrepareDuckDBExecutionResponse): PrepareDuckDBExecutionResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: PrepareDuckDBExecutionResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): PrepareDuckDBExecutionResponse;
+  static deserializeBinaryFromReader(message: PrepareDuckDBExecutionResponse, reader: jspb.BinaryReader): PrepareDuckDBExecutionResponse;
+}
+
+export namespace PrepareDuckDBExecutionResponse {
+  export type AsObject = {
+    queryJob?: QueryJob.AsObject,
+    duckdbExecution?: DuckDBExecution.AsObject,
+  }
+}
+
+export class DuckDBExecution extends jspb.Message {
+  getDuckdbVersion(): string;
+  setDuckdbVersion(value: string): void;
+
+  clearSourcesList(): void;
+  getSourcesList(): Array<DuckDBExecutionSource>;
+  setSourcesList(value: Array<DuckDBExecutionSource>): void;
+  addSources(value?: DuckDBExecutionSource, index?: number): DuckDBExecutionSource;
+
+  clearStatementsList(): void;
+  getStatementsList(): Array<DuckDBExecutionStatement>;
+  setStatementsList(value: Array<DuckDBExecutionStatement>): void;
+  addStatements(value?: DuckDBExecutionStatement, index?: number): DuckDBExecutionStatement;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): DuckDBExecution.AsObject;
+  static toObject(includeInstance: boolean, msg: DuckDBExecution): DuckDBExecution.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: DuckDBExecution, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): DuckDBExecution;
+  static deserializeBinaryFromReader(message: DuckDBExecution, reader: jspb.BinaryReader): DuckDBExecution;
+}
+
+export namespace DuckDBExecution {
+  export type AsObject = {
+    duckdbVersion: string,
+    sourcesList: Array<DuckDBExecutionSource.AsObject>,
+    statementsList: Array<DuckDBExecutionStatement.AsObject>,
+  }
+}
+
+export class DuckDBExecutionSource extends jspb.Message {
+  getDatasetId(): string;
+  setDatasetId(value: string): void;
+
+  hasFileSourceId(): boolean;
+  clearFileSourceId(): void;
+  getFileSourceId(): string;
+  setFileSourceId(value: string): void;
+
+  hasQueryJobId(): boolean;
+  clearQueryJobId(): void;
+  getQueryJobId(): string;
+  setQueryJobId(value: string): void;
+
+  getExtension$(): string;
+  setExtension$(value: string): void;
+
+  getRevisionCase(): DuckDBExecutionSource.RevisionCase;
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): DuckDBExecutionSource.AsObject;
+  static toObject(includeInstance: boolean, msg: DuckDBExecutionSource): DuckDBExecutionSource.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: DuckDBExecutionSource, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): DuckDBExecutionSource;
+  static deserializeBinaryFromReader(message: DuckDBExecutionSource, reader: jspb.BinaryReader): DuckDBExecutionSource;
+}
+
+export namespace DuckDBExecutionSource {
+  export type AsObject = {
+    datasetId: string,
+    fileSourceId: string,
+    queryJobId: string,
+    extension: string,
+  }
+
+  export enum RevisionCase {
+    REVISION_NOT_SET = 0,
+    FILE_SOURCE_ID = 2,
+    QUERY_JOB_ID = 3,
+  }
+}
+
+export class DuckDBExecutionStatement extends jspb.Message {
+  getSql(): string;
+  setSql(value: string): void;
+
+  clearParametersList(): void;
+  getParametersList(): Array<string>;
+  setParametersList(value: Array<string>): void;
+  addParameters(value: string, index?: number): string;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): DuckDBExecutionStatement.AsObject;
+  static toObject(includeInstance: boolean, msg: DuckDBExecutionStatement): DuckDBExecutionStatement.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: DuckDBExecutionStatement, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): DuckDBExecutionStatement;
+  static deserializeBinaryFromReader(message: DuckDBExecutionStatement, reader: jspb.BinaryReader): DuckDBExecutionStatement;
+}
+
+export namespace DuckDBExecutionStatement {
+  export type AsObject = {
+    sql: string,
+    parametersList: Array<string>,
   }
 }
 

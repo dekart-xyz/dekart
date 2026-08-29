@@ -287,8 +287,18 @@ func requireMCPBigQueryServiceAccount(ctx context.Context, connection *proto.Con
 }
 
 func (s *Server) requireMCPCreateQueryConnection(ctx context.Context, request *proto.CreateQueryRequest) error {
+	// DuckDB definitions are intentionally connectionless.
+	if request.ExecutionEngine == proto.QueryExecutionEngine_QUERY_EXECUTION_ENGINE_DUCKDB {
+		if request.GetConnectionId() != "" {
+			return status.Error(codes.InvalidArgument, "DuckDB query cannot reference a connection")
+		}
+		return nil
+	}
 	if request.ExecutionEngine != proto.QueryExecutionEngine_QUERY_EXECUTION_ENGINE_CONNECTION {
-		return status.Error(codes.InvalidArgument, "MCP queries require a connection execution engine")
+		return status.Error(codes.InvalidArgument, "execution_engine is required")
+	}
+	if request.GetConnectionId() == "" {
+		return status.Error(codes.InvalidArgument, "connection_id is required for connection queries")
 	}
 	connection, err := s.getConnection(ctx, request.GetConnectionId())
 	if err != nil {
@@ -420,7 +430,17 @@ func (s *Server) callUpdateQueryTool(ctx context.Context, raw json.RawMessage) (
 	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
 		return nil, err
 	}
-	response, err := s.updateQuery(ctx, request, s.validateMCPUpdateQuery)
+	queryDetails, err := s.getWritableQueryDetails(ctx, request.GetQueryId())
+	if err != nil {
+		return nil, err
+	}
+	var response *proto.UpdateQueryResponse
+	// DuckDB validation is compiler-owned and must be read from the saved graph transaction.
+	if queryDetails.ExecutionEngine == proto.QueryExecutionEngine_QUERY_EXECUTION_ENGINE_DUCKDB {
+		response, err = s.updateDuckDBQueryForMCP(ctx, request, queryDetails)
+	} else {
+		response, err = s.updateQuery(ctx, request, s.validateMCPUpdateQuery)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -429,7 +449,7 @@ func (s *Server) callUpdateQueryTool(ctx context.Context, raw json.RawMessage) (
 
 func (s *Server) validateMCPUpdateQuery(ctx context.Context, request *proto.UpdateQueryRequest, queryDetails *query.QueryDetails) (*proto.QueryDryRunResult, error) {
 	if queryDetails.ExecutionEngine != proto.QueryExecutionEngine_QUERY_EXECUTION_ENGINE_CONNECTION {
-		return nil, status.Error(codes.InvalidArgument, "MCP cannot update browser-executed DuckDB queries")
+		return nil, status.Error(codes.FailedPrecondition, "query has no supported execution engine")
 	}
 	connection, err := s.getConnection(ctx, queryDetails.ConnectionID)
 	if err != nil {
@@ -458,6 +478,31 @@ func (s *Server) callRunQueryTool(ctx context.Context, raw json.RawMessage) (jso
 	request := &proto.RunQueryRequest{}
 	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
 		return nil, err
+	}
+	if user.GetClaims(ctx) == nil {
+		return nil, Unauthenticated
+	}
+	if err := validateUUIDField(request.GetQueryId(), "query_id"); err != nil {
+		return nil, err
+	}
+	queryDetails, err := query.GetQueryDetails(ctx, s.db, request.GetQueryId())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	// Only explicit capability opt-in may change the MCP response to a local program.
+	if queryDetails.ExecutionEngine == proto.QueryExecutionEngine_QUERY_EXECUTION_ENGINE_DUCKDB && request.GetAcceptDuckdbExecution() {
+		// Saved DuckDB definitions and parameters are server-owned for preparation.
+		if request.GetQueryText() != "" || len(request.GetQueryParams()) != 0 {
+			return nil, status.Error(codes.InvalidArgument, "query_text and query_params are not accepted for DuckDB execution")
+		}
+		response, err := s.prepareDuckDBExecution(ctx, &proto.PrepareDuckDBExecutionRequest{
+			QueryId:           request.GetQueryId(),
+			QueryParamsValues: request.GetQueryParamsValues(),
+		}, requireMCPBigQueryServiceAccount)
+		if err != nil {
+			return nil, err
+		}
+		return mcp.MarshalProtoJSON(response)
 	}
 	response, err := s.runQueryRequest(ctx, request, requireMCPBigQueryServiceAccount)
 	if err != nil {
@@ -915,9 +960,9 @@ func mcpToolDefinitions() []mcpTool {
 		},
 		{
 			Name:         "create_query",
-			Description:  "Create query metadata for one dataset and bind it to a connection.",
-			InputSchema:  mcpschema.ForProto(&proto.CreateQueryRequest{}, []string{"dataset_id", "connection_id"}),
-			WhenToUse:    "Use after dataset creation when the dataset should run SQL against a selected connection.",
+			Description:  "Create connection-backed or browser/local DuckDB query metadata for one dataset.",
+			InputSchema:  mcpschema.ForProto(&proto.CreateQueryRequest{}, []string{"dataset_id"}),
+			WhenToUse:    "Use after dataset creation; connection queries require connection_id while DuckDB queries omit it.",
 			WhenNotToUse: "Do not use for file-based datasets or when query already exists and only query text needs update.",
 			SideEffects:  []string{"write"},
 			ExampleInput: map[string]any{"dataset_id": "00000000-0000-0000-0000-000000000000", "connection_id": "00000000-0000-0000-0000-000000000000"},
@@ -935,7 +980,7 @@ func mcpToolDefinitions() []mcpTool {
 		},
 		{
 			Name:         "run_query",
-			Description:  "Start query execution for query_id and return immediately without waiting for completion.",
+			Description:  "Start connection execution or explicitly prepare a DuckDB query for local execution.",
 			InputSchema:  mcpschema.ForProto(&proto.RunQueryRequest{}, []string{"query_id"}),
 			WhenToUse:    "Use after query text is ready and execution should begin asynchronously.",
 			WhenNotToUse: "Do not use when only SQL text should be edited without running; use update_query instead.",

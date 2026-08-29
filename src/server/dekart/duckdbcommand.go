@@ -43,7 +43,7 @@ func lockReportTx(ctx context.Context, tx *sql.Tx, reportID string) error {
 
 // compileDuckDBParameterReferences targets the deterministic runtime table for this dataset.
 func compileDuckDBParameterReferences(sql, datasetID string, parameterCount int) string {
-	viewName := "d_" + strings.ReplaceAll(datasetID, "-", "_")
+	viewName := duckDBDatasetViewName(datasetID)
 	parameterTable := `dekart_internal."params_` + viewName + `"`
 	for index := 0; index < parameterCount; index++ {
 		token := fmt.Sprintf(`__DEKART_BOUND_PARAMETER_%d__`, index)
@@ -120,15 +120,9 @@ func loadDuckDBGraphTx(ctx context.Context, tx *sql.Tx, reportID string) ([]duck
 			})
 		}
 	}
-	var paramsJSON []byte
-	if err := tx.QueryRowContext(ctx, `select query_params from reports where id=$1`, reportID).Scan(&paramsJSON); err != nil {
+	params, err := loadReportQueryParamsTx(ctx, tx, reportID)
+	if err != nil {
 		return nil, nil, nil, err
-	}
-	params := make([]*proto.QueryParam, 0)
-	if len(paramsJSON) > 0 {
-		if err := json.Unmarshal(paramsJSON, &params); err != nil {
-			return nil, nil, nil, err
-		}
 	}
 	return queries, catalog, params, nil
 }
@@ -388,22 +382,8 @@ func insertDuckDBExecutionTx(ctx context.Context, tx *sql.Tx, queryID, paramsHas
 	return &proto.QueryJob{Id: jobID, QueryId: queryID, QueryText: compiledSQL, JobStatus: statusValue, JobError: structuralError, QueryParamsHash: paramsHash, DependencyRevisions: revisions}, nil
 }
 
-// reconcileDuckDBGraphTx analyzes the current Query graph and appends only changed executions.
-func (s Server) reconcileDuckDBGraphTx(ctx context.Context, tx *sql.Tx, reportID, paramsHash string, roots []string, forceRoot string, preferred map[string]*proto.QueryJob) ([]*proto.QueryJob, error) {
-	queries, catalog, params, err := loadDuckDBGraphTx(ctx, tx, reportID)
-	if err != nil {
-		return nil, err
-	}
-	if err := analyzeDuckDBQueries(ctx, tx, queries, catalog, params); err != nil {
-		return nil, err
-	}
-	if len(roots) == 0 {
-		roots = make([]string, 0, len(queries))
-		for _, query := range queries {
-			roots = append(roots, query.queryID)
-		}
-	}
-	affected := affectedDuckDBQueryIDs(queries, roots)
+// reconcileSelectedDuckDBQueriesTx appends immutable jobs for one selected graph.
+func reconcileSelectedDuckDBQueriesTx(ctx context.Context, tx *sql.Tx, reportID, paramsHash string, queries []duckDBGraphQuery, selected map[string]bool, forceRoot string, preferred map[string]*proto.QueryJob) ([]*proto.QueryJob, map[string]*proto.QueryJob, error) {
 	components := duckDBCycleComponents(queries)
 	queryIDByDatasetID := make(map[string]string, len(queries))
 	for _, query := range queries {
@@ -413,8 +393,9 @@ func (s Server) reconcileDuckDBGraphTx(ctx context.Context, tx *sql.Tx, reportID
 		preferred = make(map[string]*proto.QueryJob)
 	}
 	accepted := make([]*proto.QueryJob, 0)
+	var err error
 	for _, query := range orderedDuckDBQueries(queries, components) {
-		if !affected[query.queryID] {
+		if !selected[query.queryID] {
 			continue
 		}
 		if strings.TrimSpace(query.queryText) == "" && !query.hasExecutionHistory {
@@ -439,12 +420,12 @@ func (s Server) reconcileDuckDBGraphTx(ctx context.Context, tx *sql.Tx, reportID
 		if structuralError == "" {
 			revisions, err = resolveDuckDBRevisionsTx(ctx, tx, reportID, paramsHash, dependencies, preferred)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 		latest, err := latestDuckDBJobTx(ctx, tx, query.queryID, paramsHash)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		matches := latest != nil && latest.QueryText == query.compiledSQL && latest.JobError == structuralError &&
 			slices.EqualFunc(latest.DependencyRevisions, revisions, func(a, b *proto.QueryJobDependencyRevision) bool {
@@ -454,7 +435,7 @@ func (s Server) reconcileDuckDBGraphTx(ctx context.Context, tx *sql.Tx, reportID
 		if query.queryID == forceRoot || !matches {
 			job, err = insertDuckDBExecutionTx(ctx, tx, query.queryID, paramsHash, query.compiledSQL, structuralError, revisions)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			accepted = append(accepted, job)
 		}
@@ -462,7 +443,27 @@ func (s Server) reconcileDuckDBGraphTx(ctx context.Context, tx *sql.Tx, reportID
 			preferred[query.datasetID] = job
 		}
 	}
-	return accepted, nil
+	return accepted, preferred, nil
+}
+
+// reconcileDuckDBGraphTx analyzes the current Query graph and appends only changed executions.
+func (s Server) reconcileDuckDBGraphTx(ctx context.Context, tx *sql.Tx, reportID, paramsHash string, roots []string, forceRoot string, preferred map[string]*proto.QueryJob) ([]*proto.QueryJob, error) {
+	queries, catalog, params, err := loadDuckDBGraphTx(ctx, tx, reportID)
+	if err != nil {
+		return nil, err
+	}
+	if err := analyzeDuckDBQueries(ctx, tx, queries, catalog, params); err != nil {
+		return nil, err
+	}
+	if len(roots) == 0 {
+		roots = make([]string, 0, len(queries))
+		for _, query := range queries {
+			roots = append(roots, query.queryID)
+		}
+	}
+	affected := affectedDuckDBQueryIDs(queries, roots)
+	accepted, _, err := reconcileSelectedDuckDBQueriesTx(ctx, tx, reportID, paramsHash, queries, affected, forceRoot, preferred)
+	return accepted, err
 }
 
 // reportHasDuckDB avoids graph transactions for ordinary reports.

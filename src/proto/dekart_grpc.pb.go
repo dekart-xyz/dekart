@@ -43,6 +43,7 @@ const (
 	Dekart_CreateQuery_FullMethodName                   = "/Dekart/CreateQuery"
 	Dekart_UpdateQuery_FullMethodName                   = "/Dekart/UpdateQuery"
 	Dekart_RunQuery_FullMethodName                      = "/Dekart/RunQuery"
+	Dekart_PrepareDuckDBExecution_FullMethodName        = "/Dekart/PrepareDuckDBExecution"
 	Dekart_RunDuckDBQuery_FullMethodName                = "/Dekart/RunDuckDBQuery"
 	Dekart_RunAllQueries_FullMethodName                 = "/Dekart/RunAllQueries"
 	Dekart_CancelJob_FullMethodName                     = "/Dekart/CancelJob"
@@ -105,6 +106,7 @@ type DekartClient interface {
 	CreateQuery(ctx context.Context, in *CreateQueryRequest, opts ...grpc.CallOption) (*CreateQueryResponse, error)
 	UpdateQuery(ctx context.Context, in *UpdateQueryRequest, opts ...grpc.CallOption) (*UpdateQueryResponse, error)
 	RunQuery(ctx context.Context, in *RunQueryRequest, opts ...grpc.CallOption) (*RunQueryResponse, error)
+	PrepareDuckDBExecution(ctx context.Context, in *PrepareDuckDBExecutionRequest, opts ...grpc.CallOption) (*PrepareDuckDBExecutionResponse, error)
 	RunDuckDBQuery(ctx context.Context, in *RunDuckDBQueryRequest, opts ...grpc.CallOption) (*RunDuckDBQueryResponse, error)
 	RunAllQueries(ctx context.Context, in *RunAllQueriesRequest, opts ...grpc.CallOption) (*RunAllQueriesResponse, error)
 	// jobs
@@ -384,6 +386,16 @@ func (c *dekartClient) RunQuery(ctx context.Context, in *RunQueryRequest, opts .
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RunQueryResponse)
 	err := c.cc.Invoke(ctx, Dekart_RunQuery_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) PrepareDuckDBExecution(ctx context.Context, in *PrepareDuckDBExecutionRequest, opts ...grpc.CallOption) (*PrepareDuckDBExecutionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PrepareDuckDBExecutionResponse)
+	err := c.cc.Invoke(ctx, Dekart_PrepareDuckDBExecution_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -729,6 +741,7 @@ type DekartServer interface {
 	CreateQuery(context.Context, *CreateQueryRequest) (*CreateQueryResponse, error)
 	UpdateQuery(context.Context, *UpdateQueryRequest) (*UpdateQueryResponse, error)
 	RunQuery(context.Context, *RunQueryRequest) (*RunQueryResponse, error)
+	PrepareDuckDBExecution(context.Context, *PrepareDuckDBExecutionRequest) (*PrepareDuckDBExecutionResponse, error)
 	RunDuckDBQuery(context.Context, *RunDuckDBQueryRequest) (*RunDuckDBQueryResponse, error)
 	RunAllQueries(context.Context, *RunAllQueriesRequest) (*RunAllQueriesResponse, error)
 	// jobs
@@ -845,6 +858,9 @@ func (UnimplementedDekartServer) UpdateQuery(context.Context, *UpdateQueryReques
 }
 func (UnimplementedDekartServer) RunQuery(context.Context, *RunQueryRequest) (*RunQueryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RunQuery not implemented")
+}
+func (UnimplementedDekartServer) PrepareDuckDBExecution(context.Context, *PrepareDuckDBExecutionRequest) (*PrepareDuckDBExecutionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PrepareDuckDBExecution not implemented")
 }
 func (UnimplementedDekartServer) RunDuckDBQuery(context.Context, *RunDuckDBQueryRequest) (*RunDuckDBQueryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RunDuckDBQuery not implemented")
@@ -1379,6 +1395,24 @@ func _Dekart_RunQuery_Handler(srv interface{}, ctx context.Context, dec func(int
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DekartServer).RunQuery(ctx, req.(*RunQueryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_PrepareDuckDBExecution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PrepareDuckDBExecutionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).PrepareDuckDBExecution(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_PrepareDuckDBExecution_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).PrepareDuckDBExecution(ctx, req.(*PrepareDuckDBExecutionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1968,6 +2002,10 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RunQuery",
 			Handler:    _Dekart_RunQuery_Handler,
+		},
+		{
+			MethodName: "PrepareDuckDBExecution",
+			Handler:    _Dekart_PrepareDuckDBExecution_Handler,
 		},
 		{
 			MethodName: "RunDuckDBQuery",

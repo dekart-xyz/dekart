@@ -62,6 +62,8 @@ func writeGrpcErrorAsHTTP(w http.ResponseWriter, err error, operation string) {
 		http.Error(w, grpcStatus.Message(), http.StatusNotFound)
 	case codes.FailedPrecondition:
 		http.Error(w, grpcStatus.Message(), http.StatusPreconditionFailed)
+	case codes.Aborted:
+		http.Error(w, grpcStatus.Message(), http.StatusConflict)
 	default:
 		log.Error().Err(err).Msg(operation + " failed")
 		http.Error(w, "internal server error", http.StatusInternalServerError)

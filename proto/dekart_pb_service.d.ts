@@ -220,6 +220,15 @@ type DekartRunQuery = {
   readonly responseType: typeof dekart_pb.RunQueryResponse;
 };
 
+type DekartPrepareDuckDBExecution = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof dekart_pb.PrepareDuckDBExecutionRequest;
+  readonly responseType: typeof dekart_pb.PrepareDuckDBExecutionResponse;
+};
+
 type DekartRunDuckDBQuery = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -498,6 +507,7 @@ export class Dekart {
   static readonly CreateQuery: DekartCreateQuery;
   static readonly UpdateQuery: DekartUpdateQuery;
   static readonly RunQuery: DekartRunQuery;
+  static readonly PrepareDuckDBExecution: DekartPrepareDuckDBExecution;
   static readonly RunDuckDBQuery: DekartRunDuckDBQuery;
   static readonly RunAllQueries: DekartRunAllQueries;
   static readonly CancelJob: DekartCancelJob;
@@ -775,6 +785,15 @@ export class DekartClient {
   runQuery(
     requestMessage: dekart_pb.RunQueryRequest,
     callback: (error: ServiceError|null, responseMessage: dekart_pb.RunQueryResponse|null) => void
+  ): UnaryResponse;
+  prepareDuckDBExecution(
+    requestMessage: dekart_pb.PrepareDuckDBExecutionRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.PrepareDuckDBExecutionResponse|null) => void
+  ): UnaryResponse;
+  prepareDuckDBExecution(
+    requestMessage: dekart_pb.PrepareDuckDBExecutionRequest,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.PrepareDuckDBExecutionResponse|null) => void
   ): UnaryResponse;
   runDuckDBQuery(
     requestMessage: dekart_pb.RunDuckDBQueryRequest,

@@ -34,6 +34,7 @@ service Dekart {
     rpc CreateQuery(CreateQueryRequest) returns (CreateQueryResponse) {}
     rpc UpdateQuery(UpdateQueryRequest) returns (UpdateQueryResponse) {}
     rpc RunQuery(RunQueryRequest) returns (RunQueryResponse) {}
+    rpc PrepareDuckDBExecution(PrepareDuckDBExecutionRequest) returns (PrepareDuckDBExecutionResponse) {}
     rpc RunDuckDBQuery(RunDuckDBQueryRequest) returns (RunDuckDBQueryResponse) {}
     rpc RunAllQueries(RunAllQueriesRequest) returns (RunAllQueriesResponse) {}
 
@@ -864,10 +865,42 @@ message RunQueryRequest {
     string query_text = 2;
     repeated QueryParam query_params = 3;
     string query_params_values = 4; // url encoded
+    bool accept_duckdb_execution = 5; // MCP opt-in; RunQuery itself remains connection-only.
 }
 
 message RunQueryResponse {
     QueryJob query_job = 1;
+    QueryExecutionEngine execution_engine = 2;
+}
+
+message PrepareDuckDBExecutionRequest {
+    string query_id = 1;
+    string query_params_values = 2; // qp_ URL encoding; canonicalized against saved report parameters.
+}
+
+message PrepareDuckDBExecutionResponse {
+    QueryJob query_job = 1; // Exact newly forced DuckDB root job.
+    DuckDBExecution duckdb_execution = 2;
+}
+
+message DuckDBExecution {
+    string duckdb_version = 1;
+    repeated DuckDBExecutionSource sources = 2;
+    repeated DuckDBExecutionStatement statements = 3;
+}
+
+message DuckDBExecutionSource {
+    string dataset_id = 1;
+    oneof revision {
+        string file_source_id = 2;
+        string query_job_id = 3;
+    }
+    string extension = 4; // csv | parquet | json | geojson
+}
+
+message DuckDBExecutionStatement {
+    string sql = 1;
+    repeated string parameters = 2; // VARCHAR literals or reserved dekart_source_<i>_path bindings.
 }
 
 message RunDuckDBQueryRequest {

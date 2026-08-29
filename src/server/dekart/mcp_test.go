@@ -37,6 +37,15 @@ func TestWriteMCPCallError_GrpcInvalidArgumentMapsTo400(t *testing.T) {
 	assert.Equal(t, "invalid report_id format\n", recorder.Body.String())
 }
 
+func TestWriteMCPCallError_GrpcAbortedMapsTo409(t *testing.T) {
+	recorder := httptest.NewRecorder()
+
+	writeMCPCallError(recorder, status.Error(codes.Aborted, "report changed"))
+
+	assert.Equal(t, http.StatusConflict, recorder.Code)
+	assert.Equal(t, "report changed\n", recorder.Body.String())
+}
+
 func TestWriteMCPCallError_MapConfigValidationErrorStructured(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
@@ -154,7 +163,8 @@ func TestMCPToolDefinitions_ContainsUpdateTools(t *testing.T) {
 	createQueryTool, ok := names["create_query"]
 	assert.True(t, ok)
 	assert.Contains(t, createQueryTool.InputSchema["required"], "dataset_id")
-	assert.Contains(t, createQueryTool.InputSchema["required"], "connection_id")
+	assert.NotContains(t, createQueryTool.InputSchema["required"], "connection_id")
+	assert.Contains(t, createQueryTool.InputSchema["properties"], "execution_engine")
 
 	updateQueryTool, ok := names["update_query"]
 	assert.True(t, ok)
@@ -168,6 +178,7 @@ func TestMCPToolDefinitions_ContainsUpdateTools(t *testing.T) {
 	runQueryTool, ok := names["run_query"]
 	assert.True(t, ok)
 	assert.Contains(t, runQueryTool.InputSchema["required"], "query_id")
+	assert.Contains(t, runQueryTool.InputSchema["properties"], "accept_duckdb_execution")
 
 	snapshotTool, ok := names["create_report_snapshot"]
 	assert.True(t, ok)
@@ -423,6 +434,26 @@ func TestRequireMCPBigQueryServiceAccount(t *testing.T) {
 			assert.NoError(t, err)
 		})
 	}
+}
+
+func TestRequireMCPCreateQueryConnectionAllowsConnectionlessDuckDB(t *testing.T) {
+	server := &Server{}
+
+	err := server.requireMCPCreateQueryConnection(context.Background(), &proto.CreateQueryRequest{
+		ExecutionEngine: proto.QueryExecutionEngine_QUERY_EXECUTION_ENGINE_DUCKDB,
+	})
+	assert.NoError(t, err)
+
+	err = server.requireMCPCreateQueryConnection(context.Background(), &proto.CreateQueryRequest{
+		ExecutionEngine: proto.QueryExecutionEngine_QUERY_EXECUTION_ENGINE_DUCKDB,
+		ConnectionId:    "connection",
+	})
+	assert.Equal(t, codes.InvalidArgument, status.Code(err))
+
+	err = server.requireMCPCreateQueryConnection(context.Background(), &proto.CreateQueryRequest{
+		ExecutionEngine: proto.QueryExecutionEngine_QUERY_EXECUTION_ENGINE_CONNECTION,
+	})
+	assert.Equal(t, codes.InvalidArgument, status.Code(err))
 }
 
 func TestFilterConnectionsForMCPRunQueriesScope_KeepsSelfHostedSystemBigQuery(t *testing.T) {
