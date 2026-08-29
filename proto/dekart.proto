@@ -900,7 +900,7 @@ message DuckDBExecutionSource {
 
 message DuckDBExecutionStatement {
     string sql = 1;
-    repeated string parameters = 2; // VARCHAR literals or reserved dekart_source_<i>_path bindings.
+    repeated string parameters = 2; // Ordered VARCHAR literals; source paths use reserved DuckDB variables.
 }
 
 message RunDuckDBQueryRequest {

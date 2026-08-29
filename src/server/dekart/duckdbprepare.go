@@ -192,8 +192,8 @@ func (s *Server) captureDuckDBPreparationTx(ctx context.Context, tx *sql.Tx, rep
 	}
 
 	revisions := make([]duckDBCatalogRevision, 0, len(catalog))
-	rows, err := tx.QueryContext(ctx, `select d.id, cast(d.updated_at as text), coalesce(d.query_id, ''),
-		coalesce(cast(q.updated_at as text), ''), coalesce(q.query_source_id, ''), coalesce(f.file_source_id, '')
+	rows, err := tx.QueryContext(ctx, `select d.id, cast(d.updated_at as text), coalesce(cast(d.query_id as text), ''),
+		coalesce(cast(q.updated_at as text), ''), coalesce(q.query_source_id, ''), coalesce(cast(f.file_source_id as text), '')
 		from datasets d left join queries q on q.id=d.query_id left join files f on f.id=d.file_id
 		where d.report_id=$1 order by d.created_at, d.id`, reportID)
 	if err != nil {
@@ -388,16 +388,16 @@ func lowerDuckDBExecution(snapshot *duckDBPreparationSnapshot, jobsByDatasetID m
 			input.Revision = &proto.DuckDBExecutionSource_QueryJobId{QueryJobId: job.Id}
 		}
 		sources = append(sources, input)
-		reader := "read_csv_auto(?, header=true)"
+		path := fmt.Sprintf("getvariable('dekart_source_%d_path')", index)
+		reader := fmt.Sprintf("read_csv_auto(%s, header=true)", path)
 		// Reader selection mirrors the browser's four supported source formats.
 		if source.extension == "parquet" {
-			reader = "read_parquet(?)"
+			reader = fmt.Sprintf("read_parquet(%s)", path)
 		} else if source.extension == "json" || source.extension == "geojson" {
-			reader = "(SELECT * EXCLUDE (wkb_geometry), wkb_geometry AS _geojson FROM ST_Read(?, keep_wkb=true))"
+			reader = fmt.Sprintf("(SELECT * EXCLUDE (wkb_geometry), wkb_geometry AS _geojson FROM ST_Read(%s, keep_wkb=true))", path)
 		}
 		statements = append(statements, &proto.DuckDBExecutionStatement{
-			Sql:        fmt.Sprintf("CREATE OR REPLACE VIEW datasets.%s AS SELECT * FROM %s", quoteDuckDBIdentifier(duckDBDatasetViewName(source.datasetID)), reader),
-			Parameters: []string{fmt.Sprintf("dekart_source_%d_path", index)},
+			Sql: fmt.Sprintf("CREATE OR REPLACE VIEW datasets.%s AS SELECT * FROM %s", quoteDuckDBIdentifier(duckDBDatasetViewName(source.datasetID)), reader),
 		})
 	}
 	parameterValues, err := duckDBParameterValues(snapshot.params, encodedValues)

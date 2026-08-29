@@ -82,6 +82,8 @@ func TestLowerDuckDBExecutionIsDeterministic(t *testing.T) {
 	require.Len(t, execution.Sources, 2)
 	require.Equal(t, "file-source", execution.Sources[0].GetFileSourceId())
 	require.Equal(t, "warehouse-job", execution.Sources[1].GetQueryJobId())
+	require.Contains(t, execution.Statements[2].Sql, "getvariable('dekart_source_0_path')")
+	require.Empty(t, execution.Statements[2].Parameters)
 	require.Equal(t, []string{"first", "override"}, execution.Statements[4].Parameters)
 	require.Contains(t, execution.Statements[5].Sql, `dekart_internal."job_root_job"`)
 	require.Contains(t, execution.Statements[7].Sql, `datasets."d_root_id"`)

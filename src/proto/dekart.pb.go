@@ -7839,7 +7839,7 @@ type DuckDBExecutionStatement struct {
 	unknownFields protoimpl.UnknownFields
 
 	Sql        string   `protobuf:"bytes,1,opt,name=sql,proto3" json:"sql,omitempty"`
-	Parameters []string `protobuf:"bytes,2,rep,name=parameters,proto3" json:"parameters,omitempty"` // VARCHAR literals or reserved dekart_source_<i>_path bindings.
+	Parameters []string `protobuf:"bytes,2,rep,name=parameters,proto3" json:"parameters,omitempty"` // Ordered VARCHAR literals; source paths use reserved DuckDB variables.
 }
 
 func (x *DuckDBExecutionStatement) Reset() {
