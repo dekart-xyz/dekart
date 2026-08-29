@@ -274,6 +274,7 @@ describe('local MCP postgres happy path with device auth', () => {
                     cy.intercept('POST', '**/Dekart/RunDuckDBQuery').as('browserDuckDBRun')
                     cy.get('#dekart-query-execute-button').should('be.enabled').click()
                     cy.wait('@browserDuckDBRun')
+                    cy.get('#dekart-query-status-message', { timeout: 120000 }).should('contain', 'Ready')
                     cy.assertDatasetTable('Result', ['browser_revision'], ['browser'])
 
                     // A catalog change after a warehouse leaf is accepted aborts preparation.
