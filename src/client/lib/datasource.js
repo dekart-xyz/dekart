@@ -104,6 +104,12 @@ LIMIT 1000;`
         name: 'Local Files',
         usageStatsId: 5
       }
+    case 'DUCKDB':
+      return {
+        name: 'DuckDB',
+        style: 'duckdb',
+        usageStatsId: 6
+      }
     default:
       return {
         name: 'Unknown',

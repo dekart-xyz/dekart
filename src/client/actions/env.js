@@ -1,6 +1,7 @@
 import { GetEnvRequest, GetEnvResponse } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { grpcCall } from './grpc'
+import { configureDuckDB } from '../lib/duckdb/applicationConfig'
 
 export function setEnv (variables, serverTime) {
   return { type: setEnv.name, variables, serverTime }
@@ -12,12 +13,13 @@ export function getEnv () {
   return async dispatch => {
     dispatch({ type: getEnv.name })
     const req = new GetEnvRequest()
-    dispatch(grpcCall(Dekart.GetEnv, req, (res) => {
+    dispatch(grpcCall(Dekart.GetEnv, req, async (res) => {
       const { variablesList, serverTime } = res
       const variables = variablesList.reduce((variables, v) => {
         variables[typeToName[v.type]] = v.value
         return variables
       }, {})
+      await configureDuckDB()
       dispatch(setEnv(variables, serverTime))
     }))
   }

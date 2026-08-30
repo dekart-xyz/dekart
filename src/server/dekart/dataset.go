@@ -43,7 +43,7 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 			connections.connection_type
 		from datasets
 		left join connections on datasets.connection_id=connections.id
-		where report_id=$1 order by datasets.created_at asc`,
+		where report_id=$1 order by datasets.created_at asc, datasets.id asc`,
 		reportID,
 	)
 	if err != nil {
@@ -84,6 +84,9 @@ func (s Server) getDatasets(ctx context.Context, reportID string) ([]*proto.Data
 		}
 		datasets = append(datasets, &dataset)
 	}
+	if err := datasetRows.Err(); err != nil {
+		return nil, err
+	}
 	return datasets, nil
 }
 
@@ -106,6 +109,9 @@ func (s Server) getReportID(ctx context.Context, datasetID string, canWrite bool
 			return nil, err
 		}
 	}
+	if err := datasetRows.Err(); err != nil {
+		return nil, err
+	}
 	if reportID == "" {
 		// check legacy queries
 		queryRows, err := s.db.QueryContext(ctx,
@@ -121,6 +127,9 @@ func (s Server) getReportID(ctx context.Context, datasetID string, canWrite bool
 			if err != nil {
 				return nil, err
 			}
+		}
+		if err := queryRows.Err(); err != nil {
+			return nil, err
 		}
 		if reportID == "" {
 			return nil, nil
@@ -161,7 +170,15 @@ func (s Server) UpdateDatasetName(ctx context.Context, req *proto.UpdateDatasetN
 		return nil, err
 	}
 
-	_, err = s.db.ExecContext(ctx,
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer tx.Rollback()
+	if err := lockReportTx(ctx, tx, *reportID); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	_, err = tx.ExecContext(ctx,
 		`update
 			datasets set
 			name = $1,
@@ -174,59 +191,16 @@ func (s Server) UpdateDatasetName(ctx context.Context, req *proto.UpdateDatasetN
 		errtype.LogError(err, "Error updating dataset name")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+	if err := s.reconcileExistingDuckDBJobsTx(ctx, tx, *reportID); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 
 	s.reportStreams.Ping(*reportID)
 
 	return &proto.UpdateDatasetNameResponse{}, nil
-}
-
-func (s Server) updateDatasetConnection(ctx context.Context, datasetID string, connectionID string) error {
-	_, err := s.db.ExecContext(ctx,
-		`update
-			datasets set
-			connection_id = $1
-			where id=$2`,
-		conn.ConnectionIDToNullString(connectionID),
-		datasetID,
-	)
-	if err != nil {
-		errtype.LogError(err, "Error updating dataset connection")
-		return err
-	}
-	return nil
-}
-
-func (s Server) UpdateDatasetConnection(ctx context.Context, req *proto.UpdateDatasetConnectionRequest) (*proto.UpdateDatasetConnectionResponse, error) {
-	claims := user.GetClaims(ctx)
-	if claims == nil {
-		return nil, Unauthenticated
-	}
-	reportID, err := s.getReportID(ctx, req.DatasetId, true)
-
-	if err != nil {
-		errtype.LogError(err, "Error getting report id")
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	if reportID == nil {
-		err := fmt.Errorf("dataset not found id:%s", req.DatasetId)
-		log.Warn().Err(err).Msg("Dataset not found")
-		return nil, status.Error(codes.NotFound, err.Error())
-	}
-	if err := s.requireReportWorkspaceWrite(ctx, *reportID); err != nil {
-		return nil, err
-	}
-
-	err = s.updateDatasetConnection(ctx, req.DatasetId, req.ConnectionId)
-
-	if err != nil {
-		errtype.LogError(err, "Error updating dataset connection")
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	s.reportStreams.Ping(*reportID)
-
-	return &proto.UpdateDatasetConnectionResponse{}, nil
 }
 
 func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetRequest) (*proto.RemoveDatasetResponse, error) {
@@ -257,7 +231,15 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 
 	// s.jobs.Cancel(req.QueryId)
 
-	_, err = s.db.ExecContext(ctx,
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer tx.Rollback()
+	if err := lockReportTx(ctx, tx, *reportID); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	_, err = tx.ExecContext(ctx,
 		`delete from datasets where id=$1`,
 		req.DatasetId,
 	)
@@ -267,12 +249,18 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 	}
 
 	// legacy queries
-	_, err = s.db.ExecContext(ctx,
+	_, err = tx.ExecContext(ctx,
 		`delete from queries where id=$1`,
 		req.DatasetId,
 	)
 	if err != nil {
 		errtype.LogError(err, "Error deleting legacy query")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if err := s.reconcileExistingDuckDBJobsTx(ctx, tx, *reportID); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if err := tx.Commit(); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -281,13 +269,13 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 	return &proto.RemoveDatasetResponse{}, nil
 }
 
-func (s Server) insertDataset(ctx context.Context, reportID string) (string, sql.Result, error) {
+func (s Server) insertDataset(ctx context.Context, tx *sql.Tx, reportID string) (string, sql.Result, error) {
 	id := newUUID()
 	claims := user.GetClaims(ctx)
 	var res sql.Result
 	var err error
 	if checkWorkspace(ctx).IsPlayground {
-		res, err = s.db.ExecContext(ctx,
+		res, err = tx.ExecContext(ctx,
 			`insert into datasets (id, report_id)
 			select
 				$1 as id,
@@ -300,7 +288,7 @@ func (s Server) insertDataset(ctx context.Context, reportID string) (string, sql
 			claims.Email,
 		)
 	} else {
-		res, err = s.db.ExecContext(ctx,
+		res, err = tx.ExecContext(ctx,
 			`insert into datasets (id, report_id)
 			select
 				$1 as id,
@@ -344,7 +332,15 @@ func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetReque
 	if err := s.requireReportWorkspaceWrite(ctx, reportID); err != nil {
 		return nil, err
 	}
-	datasetID, result, err := s.insertDataset(ctx, reportID)
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer tx.Rollback()
+	if err := lockReportTx(ctx, tx, reportID); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	datasetID, result, err := s.insertDataset(ctx, tx, reportID)
 
 	if err != nil {
 		errtype.LogError(err, "Error inserting dataset")
@@ -361,6 +357,12 @@ func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetReque
 		err := fmt.Errorf("report=%s, author_email=%s not found", reportID, claims.Email)
 		log.Warn().Err(err).Msg("Report not found")
 		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if err := s.reconcileExistingDuckDBJobsTx(ctx, tx, reportID); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 	s.reportStreams.Ping(reportID)
 	s.userStreams.PingAll() // because dataset count is now part of connection info

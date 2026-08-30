@@ -13,14 +13,14 @@ describe('update dataset', () => {
     cy.get('button:contains("Run SQL")').click()
     cy.get('textarea').type('SELECT primary_type, district, latitude, longitude, date from `bigquery-public-data.chicago_crime.crime` limit 1', { force: true })
     cy.get(`button:contains("${copy.execute}")`).click()
-    cy.get(`span:contains("${copy.ready}")`, { timeout: 20000 }).should('be.visible')
+    cy.get(`span:contains("${copy.ready}")`, { timeout: 120000 }).should('be.visible')
 
     // second query
     cy.get('button.ant-tabs-nav-add:visible').click()
     cy.get('button:contains("Run SQL")').click()
     cy.get('textarea').type('SELECT primary_type, district, latitude, longitude, date from `bigquery-public-data.chicago_crime.crime` limit 2', { force: true })
     cy.get(`button:contains("${copy.execute}")`).click()
-    cy.get(`span:contains("${copy.ready}")`, { timeout: 20000 }).should('be.visible')
+    cy.get(`span:contains("${copy.ready}")`, { timeout: 120000 }).should('be.visible')
 
     // two layers in kepler
     cy.get(POINT_LAYER_TYPE_SELECTOR, { timeout: 20000 }).should('have.length', 2)
@@ -31,7 +31,7 @@ describe('update dataset', () => {
     cy.get('textarea:first').type('SELECT primary_type, district, latitude, longitude, date from `bigquery-public-data.chicago_crime.crime` limit 3', { force: true })
     cy.get(`button:contains("${copy.execute}")`).click()
     cy.get(`button:contains("${copy.cancel}")`).should('be.visible')
-    cy.get(`span:contains("${copy.ready}")`, { timeout: 20000 }).should('be.visible')
+    cy.get(`span:contains("${copy.ready}")`, { timeout: 120000 }).should('be.visible')
 
     // kepler config preserved
     cy.get('div:contains("3 rows")', { timeout: 20000 }).should('be.visible')

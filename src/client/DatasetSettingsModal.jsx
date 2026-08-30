@@ -54,7 +54,7 @@ function ModalFooter ({ saving, setSaving, name, datasetId }) {
 export default function DatasetSettingsModal () {
   const datasetId = useSelector(state => state.dataset.settings.datasetId)
   const dataset = useSelector(state => state.dataset.list.find(d => d.id === datasetId))
-  const queries = useSelector(state => state.queries)
+  const datasets = useSelector(state => state.dataset.list)
   const files = useSelector(state => state.files)
   const visible = useSelector(state => state.dataset.settings.visible)
 
@@ -93,7 +93,7 @@ export default function DatasetSettingsModal () {
     >
       <div className={styles.modalBody}>
         <Input
-          placeholder={getDatasetName(dataset, queries, files)}
+          placeholder={getDatasetName(dataset, datasets, files)}
           value={name}
           onChange={(e) => setName(e.target.value)}
           disabled={saving}

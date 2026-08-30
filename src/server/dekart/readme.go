@@ -2,6 +2,7 @@ package dekart
 
 import (
 	"context"
+	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/errtype"
 	"dekart/src/server/user"
@@ -46,27 +47,50 @@ func (s Server) AddReadme(ctx context.Context, req *proto.AddReadmeRequest) (*pr
 	updatedAt := time.Now()
 	newVersionID := newUUID()
 
-	_, err = s.db.ExecContext(ctx,
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer tx.Rollback()
+	if err := lockReportTx(ctx, tx, req.ReportId); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	_, err = tx.ExecContext(ctx,
 		`update reports set readme = $1, updated_at = $2, version_id = $3 where id = $4`,
 		req.Markdown, updatedAt, newVersionID, req.ReportId)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	err = s.createReportSnapshotWithVersionID(ctx, newVersionID, req.ReportId, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE)
+	err = s.createReportSnapshotWithVersionIDTx(ctx, tx, newVersionID, req.ReportId, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE)
 	if err != nil {
 		errtype.LogError(err, "Cannot create report snapshot for readme update")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+	datasetRemoved := false
 	if strings.TrimSpace(req.FromDatasetId) != "" {
-		_, err = s.db.ExecContext(ctx,
+		result, deleteErr := tx.ExecContext(ctx,
 			`delete from datasets where id=$1 and report_id=$2 and query_id is null and file_id is null`,
 			req.FromDatasetId,
 			req.ReportId,
 		)
-		if err != nil {
-			errtype.LogError(err, "Error deleting dataset")
+		if deleteErr != nil {
+			errtype.LogError(deleteErr, "Error deleting dataset")
+			return nil, status.Error(codes.Internal, deleteErr.Error())
 		}
+		affected, rowsErr := result.RowsAffected()
+		if rowsErr != nil {
+			return nil, status.Error(codes.Internal, rowsErr.Error())
+		}
+		datasetRemoved = affected > 0
+		if datasetRemoved {
+			if graphErr := s.reconcileExistingDuckDBJobsTx(ctx, tx, req.ReportId); graphErr != nil {
+				return nil, status.Error(codes.Internal, graphErr.Error())
+			}
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 	s.reportStreams.Ping(req.ReportId)
 	return &proto.AddReadmeResponse{}, nil

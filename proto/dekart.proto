@@ -25,7 +25,6 @@ service Dekart {
     rpc CreateDataset(CreateDatasetRequest) returns (CreateDatasetResponse) {}
     rpc RemoveDataset(RemoveDatasetRequest) returns (RemoveDatasetResponse) {}
     rpc UpdateDatasetName(UpdateDatasetNameRequest) returns (UpdateDatasetNameResponse) {}
-    rpc UpdateDatasetConnection(UpdateDatasetConnectionRequest) returns (UpdateDatasetConnectionResponse) {}
 
     // files
     rpc CreateFile(CreateFileRequest) returns (CreateFileResponse) {}
@@ -35,6 +34,8 @@ service Dekart {
     rpc CreateQuery(CreateQueryRequest) returns (CreateQueryResponse) {}
     rpc UpdateQuery(UpdateQueryRequest) returns (UpdateQueryResponse) {}
     rpc RunQuery(RunQueryRequest) returns (RunQueryResponse) {}
+    rpc PrepareDuckDBExecution(PrepareDuckDBExecutionRequest) returns (PrepareDuckDBExecutionResponse) {}
+    rpc RunDuckDBQuery(RunDuckDBQueryRequest) returns (RunDuckDBQueryResponse) {}
     rpc RunAllQueries(RunAllQueriesRequest) returns (RunAllQueriesResponse) {}
 
     //jobs
@@ -352,7 +353,6 @@ message RunAllQueriesRequest {
 }
 
 message RunAllQueriesResponse {
-
 }
 
 message Workspace {
@@ -459,7 +459,12 @@ enum ConnectionType {
     CONNECTION_TYPE_POSTGRES = 5;
     CONNECTION_TYPE_CLICKHOUSE = 6;
     CONNECTION_TYPE_LOCAL = 7;
+}
 
+enum QueryExecutionEngine {
+    QUERY_EXECUTION_ENGINE_UNSPECIFIED = 0;
+    QUERY_EXECUTION_ENGINE_CONNECTION = 1;
+    QUERY_EXECUTION_ENGINE_DUCKDB = 2;
 }
 
 message Connection {
@@ -757,6 +762,13 @@ message QueryJob {
 
     string result_extension = 15; // csv | parquet
     string dataset_id = 16;
+    repeated QueryJobDependencyRevision dependency_revisions = 17; // The immutable snapshot: exactly which version of each dependency this execution must use
+}
+
+message QueryJobDependencyRevision {
+    string dataset_id = 1;
+    string query_job_id = 2;
+    string file_source_id = 3;
 }
 
 message Query {
@@ -772,6 +784,9 @@ message Query {
     }
     QuerySource query_source = 5;
     string query_source_id = 6;
+    repeated string duckdb_dependency_dataset_ids = 7; // The mutable dependency graph: which datasets the SQL references
+    string duckdb_validation_error = 8;
+    QueryExecutionEngine execution_engine = 9;
 }
 
 message File {
@@ -850,10 +865,52 @@ message RunQueryRequest {
     string query_text = 2;
     repeated QueryParam query_params = 3;
     string query_params_values = 4; // url encoded
+    bool accept_duckdb_execution = 5; // MCP opt-in; RunQuery itself remains connection-only.
 }
 
 message RunQueryResponse {
     QueryJob query_job = 1;
+    QueryExecutionEngine execution_engine = 2;
+}
+
+message PrepareDuckDBExecutionRequest {
+    string query_id = 1;
+    string query_params_values = 2; // qp_ URL encoding; canonicalized against saved report parameters.
+}
+
+message PrepareDuckDBExecutionResponse {
+    QueryJob query_job = 1; // Exact newly forced DuckDB root job.
+    DuckDBExecution duckdb_execution = 2;
+}
+
+message DuckDBExecution {
+    string duckdb_version = 1;
+    repeated DuckDBExecutionSource sources = 2;
+    repeated DuckDBExecutionStatement statements = 3;
+}
+
+message DuckDBExecutionSource {
+    string dataset_id = 1;
+    oneof revision {
+        string file_source_id = 2;
+        string query_job_id = 3;
+    }
+    string extension = 4; // csv | parquet | json | geojson
+}
+
+message DuckDBExecutionStatement {
+    string sql = 1;
+    repeated string parameters = 2; // Ordered VARCHAR literals; source paths use reserved DuckDB variables.
+}
+
+message RunDuckDBQueryRequest {
+    string query_id = 1;
+    string query_text = 2;
+    string query_params_values = 3; // url encoded
+    string expected_query_source_id = 4;
+}
+
+message RunDuckDBQueryResponse {
 }
 
 message UpdateQueryRequest {
@@ -880,14 +937,6 @@ message UpdateDatasetNameRequest {
 }
 
 message UpdateDatasetNameResponse {
-}
-
-message UpdateDatasetConnectionRequest {
-    string dataset_id = 1;
-    string connection_id = 2;
-}
-
-message UpdateDatasetConnectionResponse {
 }
 
 message CreateDatasetRequest {
@@ -986,6 +1035,7 @@ message AbortFileUploadSessionResponse {
 message CreateQueryRequest {
     string dataset_id = 1;
     string connection_id = 2;
+    QueryExecutionEngine execution_engine = 3;
 }
 
 message CreateQueryResponse {

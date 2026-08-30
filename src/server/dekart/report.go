@@ -17,8 +17,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -202,6 +204,9 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 			}
 		}
 	}
+	if err := reportRows.Err(); err != nil {
+		return nil, err
+	}
 	if report.Id != "" {
 		directAccessEmails, err := s.getDirectAccessEmails(ctx, report.Id)
 		if err != nil {
@@ -328,6 +333,10 @@ func (s Server) createReportSnapshot(ctx context.Context, reportID string, trigg
 // createReportSnapshotWithVersionIDTx creates a snapshot of the report content
 // using the provided transaction.
 func (s Server) createReportSnapshotWithVersionIDTx(ctx context.Context, tx *sql.Tx, versionID string, reportID string, changedBy string, triggerType proto.ReportSnapshot_TriggerType) error {
+	versionIDExpression := "$1::uuid"
+	if IsSqlite() {
+		versionIDExpression = "$1"
+	}
 	// Create report snapshot using INSERT ... SELECT from reports
 	_, err := tx.ExecContext(ctx,
 		`INSERT INTO report_snapshots (
@@ -352,7 +361,7 @@ func (s Server) createReportSnapshotWithVersionIDTx(ctx context.Context, tx *sql
 			report_version_id, dataset_id, report_id, query_id, file_id, name, connection_id, author_email
 		)
 		SELECT
-			$1::uuid AS report_version_id,
+			`+versionIDExpression+` AS report_version_id,
 			d.id AS dataset_id,
 			d.report_id,
 			d.query_id,
@@ -374,14 +383,16 @@ func (s Server) createReportSnapshotWithVersionIDTx(ctx context.Context, tx *sql
 	// Create query snapshots for all queries referenced by this report's datasets
 	_, err = tx.ExecContext(ctx,
 		`INSERT INTO query_snapshots (
-			report_version_id, query_id, report_id, query_text, query_source_id, author_email
+			report_version_id, query_id, report_id, query_text, query_source_id,
+			execution_engine, author_email
 		)
 		SELECT DISTINCT
-			$1::uuid AS report_version_id,
+			`+versionIDExpression+` AS report_version_id,
 			q.id AS query_id,
 			d.report_id,
 			q.query_text,
 			COALESCE(q.query_source_id, ''),
+			q.execution_engine,
 			$2 AS author_email
 		FROM queries q
 		JOIN datasets d ON d.query_id = q.id
@@ -424,6 +435,14 @@ func updateDatasetIds(report *proto.Report, datasets []*proto.Dataset) (newMapCo
 	return newMapConfig, newDatasetIds
 }
 
+type snapshotDatasetState struct {
+	id           string
+	queryID      sql.NullString
+	fileID       sql.NullString
+	name         string
+	connectionID sql.NullString
+}
+
 // marshalReportQueryParams stores absent query params as the schema default.
 func marshalReportQueryParams(params []*proto.QueryParam) (string, error) {
 	if params == nil {
@@ -436,7 +455,14 @@ func marshalReportQueryParams(params []*proto.QueryParam) (string, error) {
 	return string(paramsJSON), nil
 }
 
-func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Report, datasets []*proto.Dataset, jobs []*proto.QueryJob) error {
+func (s Server) commitReportWithDatasets(
+	ctx context.Context,
+	report *proto.Report,
+	datasets []*proto.Dataset,
+	queries []*proto.Query,
+	jobs []*proto.QueryJob,
+	duckDBHashes []string,
+) error {
 	claims := user.GetClaims(ctx)
 	// Validate map config size to prevent gRPC message size errors
 	if len(report.MapConfig) > MaxMapConfigSize {
@@ -464,6 +490,18 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 		return errReportLimitReached
 	}
 	newMapConfig, newDatasetIds := updateDatasetIds(report, datasets)
+	newQueryIDByOldID := make(map[string]string, len(queries))
+	for _, dataset := range datasets {
+		if dataset.QueryId != "" {
+			if _, exists := newQueryIDByOldID[dataset.QueryId]; !exists {
+				newQueryIDByOldID[dataset.QueryId] = newUUID()
+			}
+		}
+	}
+	queryByID := make(map[string]*proto.Query, len(queries))
+	for _, query := range queries {
+		queryByID[query.Id] = query
+	}
 	paramsJSON, err := marshalReportQueryParams(report.QueryParams)
 	if err != nil {
 		errtype.LogError(err, "database operation failed")
@@ -508,7 +546,10 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 	if err != nil {
 		return err
 	}
+	forkCreatedAt := time.Now().UTC()
+	copiedQueryIDs := make(map[string]bool, len(newQueryIDByOldID))
 	for i, dataset := range datasets {
+		createdAt := forkCreatedAt.Add(time.Duration(i) * time.Microsecond)
 		datasetId := newDatasetIds[i]
 		var connectionId *string
 		if dataset.ConnectionId != "" {
@@ -517,39 +558,56 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 		var queryId *string
 		var fileId *string
 		if dataset.QueryId != "" {
-			newQueryID := newUUID()
+			newQueryID := newQueryIDByOldID[dataset.QueryId]
 			queryId = &newQueryID
-			_, err = tx.ExecContext(ctx,
-				`INSERT INTO queries (
+			if !copiedQueryIDs[dataset.QueryId] {
+				// Legacy reports may share one query across multiple datasets.
+				copiedQueryIDs[dataset.QueryId] = true
+				sourceQuery := queryByID[dataset.QueryId]
+				if sourceQuery == nil {
+					return fmt.Errorf("query %s not found during fork", dataset.QueryId)
+				}
+				_, err = tx.ExecContext(ctx,
+					`INSERT INTO queries (
 						id,
 						query_text,
 						query_source,
-						query_source_id
-					) select
-						$1,
-						query_text,
-						query_source,
-						query_source_id
-					from queries where id=$2`,
-				newQueryID,
-				dataset.QueryId,
-			)
-			if err != nil {
-				log.Warn().Err(err).Send()
-				return err
-			}
-			// iterate over query jobs and insert new query jobs with new query id and new id
-			for _, job := range jobs {
-				if job.QueryId == dataset.QueryId {
-					_, err = tx.ExecContext(ctx,
-						`INSERT INTO query_jobs (
+						query_source_id,
+						duckdb_dependency_dataset_ids,
+						duckdb_validation_error,
+						execution_engine,
+						created_at
+					) values ($1, $2, $3, $4, $5, $6, $7, $8)`,
+					newQueryID,
+					sourceQuery.QueryText,
+					sourceQuery.QuerySource,
+					sourceQuery.QuerySourceId,
+					"[]",
+					"",
+					sourceQuery.ExecutionEngine,
+					createdAt,
+				)
+				if err != nil {
+					log.Warn().Err(err).Send()
+					return err
+				}
+				// iterate over query jobs and insert new query jobs with new query id and new id
+				for _, job := range jobs {
+					if job.QueryId == dataset.QueryId {
+						// Forked DuckDB jobs must be recreated from remapped query dependencies.
+						if sourceQuery.ExecutionEngine == proto.QueryExecutionEngine_QUERY_EXECUTION_ENGINE_DUCKDB {
+							continue
+						}
+						_, err = tx.ExecContext(ctx,
+							`INSERT INTO query_jobs (
 							id,
 							query_id,
 							job_status,
 							query_params_hash,
 							dw_job_id,
 							job_result_id,
-							job_error
+							job_error,
+							query_text
 						) select
 							$1,
 							$2,
@@ -557,15 +615,17 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 							query_params_hash,
 							dw_job_id,
 							job_result_id,
-							job_error
+							job_error,
+							query_text
 						from query_jobs where id=$3`,
-						newUUID(),
-						newQueryID,
-						job.Id,
-					)
-					if err != nil {
-						log.Warn().Err(err).Send()
-						return err
+							newUUID(),
+							newQueryID,
+							job.Id,
+						)
+						if err != nil {
+							log.Warn().Err(err).Send()
+							return err
+						}
 					}
 				}
 			}
@@ -596,18 +656,30 @@ func (s Server) commitReportWithDatasets(ctx context.Context, report *proto.Repo
 			}
 		}
 		_, err = tx.ExecContext(ctx, `
-			INSERT INTO datasets (id, report_id, query_id, file_id, name, connection_id)
-			VALUES($1, $2, $3, $4, $5, $6)`,
+			INSERT INTO datasets (id, report_id, query_id, file_id, name, connection_id, created_at)
+			VALUES($1, $2, $3, $4, $5, $6, $7)`,
 			datasetId,
 			report.Id,
 			queryId,
 			fileId,
 			dataset.Name,
 			connectionId,
+			createdAt,
 		)
 		if err != nil {
 			log.Warn().Err(err).Send()
 			return err
+		}
+	}
+	if len(duckDBHashes) == 0 {
+		if err := analyzeDuckDBGraphTx(ctx, tx, report.Id); err != nil {
+			return err
+		}
+	} else {
+		for _, hash := range duckDBHashes {
+			if _, err := s.reconcileDuckDBGraphTx(ctx, tx, report.Id, hash, nil, "", nil); err != nil {
+				return err
+			}
 		}
 	}
 	err = tx.Commit()
@@ -661,7 +733,16 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 		errtype.LogError(err, "Cannot retrieve datasets")
 		return nil, err
 	}
-	connectionUpdated := false
+	queries, err := s.getQueries(ctx, datasets)
+	if err != nil {
+		errtype.LogError(err, "Cannot retrieve queries")
+		return nil, err
+	}
+	queryByID := make(map[string]*proto.Query, len(queries))
+	for _, query := range queries {
+		queryByID[query.Id] = query
+	}
+	connectionUpdatedQueryIDs := make(map[string]bool)
 
 	// we need to replace connection ids with the user connections ids when
 	// forking a public report
@@ -674,6 +755,10 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 		}
 		// replace dataset connection ids with new connection ids with same connection type
 		for _, dataset := range datasets {
+			query := queryByID[dataset.QueryId]
+			if query != nil && query.ExecutionEngine == proto.QueryExecutionEngine_QUERY_EXECUTION_ENGINE_DUCKDB {
+				continue
+			}
 			var newConnectionID string
 			for _, connection := range userConnections {
 				if dataset.ConnectionId == connection.Id {
@@ -689,22 +774,42 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 				return nil, status.Error(codes.NotFound, "Connection not found")
 			}
 			if newConnectionID != dataset.ConnectionId {
-				connectionUpdated = true
+				if dataset.QueryId != "" {
+					connectionUpdatedQueryIDs[dataset.QueryId] = true
+				}
 			}
 			dataset.ConnectionId = newConnectionID
 		}
 	}
-	var jobs []*proto.QueryJob
-	if !connectionUpdated {
-		// copy query jobs only if user has access to the connection
-		jobs, err = s.getDatasetsQueryJobs(ctx, datasets)
-		if err != nil {
-			errtype.LogError(err, "Cannot retrieve query jobs")
-			return nil, err
-		}
+	jobs, err := s.getDatasetsQueryJobs(ctx, datasets)
+	if err != nil {
+		errtype.LogError(err, "Cannot retrieve query jobs")
+		return nil, err
 	}
-
-	err = s.commitReportWithDatasets(ctx, report, datasets, jobs)
+	duckDBHashSet := make(map[string]bool)
+	seenJobs := make(map[string]bool, len(jobs))
+	reusableJobs := make([]*proto.QueryJob, 0, len(jobs))
+	for _, queryJob := range jobs {
+		query := queryByID[queryJob.QueryId]
+		if query != nil && query.ExecutionEngine == proto.QueryExecutionEngine_QUERY_EXECUTION_ENGINE_DUCKDB {
+			duckDBHashSet[queryJob.QueryParamsHash] = true
+		}
+		key := queryJob.QueryId + "\x00" + queryJob.QueryParamsHash
+		if seenJobs[key] || connectionUpdatedQueryIDs[queryJob.QueryId] {
+			continue
+		}
+		seenJobs[key] = true
+		reusableJobs = append(reusableJobs, queryJob)
+	}
+	duckDBHashes := slices.Sorted(maps.Keys(duckDBHashSet))
+	if len(connectionUpdatedQueryIDs) > 0 {
+		// Remapped warehouse connections have no reusable result revision. The first
+		// new warehouse result supplies its parameter hash and reconciles DuckDB.
+		duckDBHashes = nil
+	}
+	// getDatasetsQueryJobs returns current jobs before pinned historical closure;
+	// forks reuse only the first job per query/hash and recreate DuckDB jobs.
+	err = s.commitReportWithDatasets(ctx, report, datasets, queries, reusableJobs, duckDBHashes)
 	if err != nil {
 		if errors.Is(err, errReportLimitReached) {
 			return &proto.ForkReportResponse{
@@ -714,7 +819,6 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 		errtype.LogError(err, "database operation failed")
 		return nil, err
 	}
-
 	s.createReportSnapshotWithVersionID(ctx, report.VersionId, newReportID, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE)
 
 	return &proto.ForkReportResponse{
@@ -831,9 +935,17 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	// Update report with new values
 	newVersionID := newUUID()
 	updated_at := time.Now()
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer tx.Rollback()
+	if err := lockReportTx(ctx, tx, req.ReportId); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 	var result sql.Result
 	if workspaceInfo.IsPlayground {
-		result, err = s.db.ExecContext(ctx,
+		result, err = tx.ExecContext(ctx,
 			`update
 				reports
 			set map_config=$1, title=$2, query_params=$3, readme=$4, updated_at=$5, version_id=$6
@@ -848,7 +960,7 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 			claims.Email,
 		)
 	} else {
-		result, err = s.db.ExecContext(ctx,
+		result, err = tx.ExecContext(ctx,
 			`update
 				reports
 			set map_config=$1, title=$2, query_params=$3, readme=$4, updated_at=$5, version_id=$6
@@ -884,7 +996,7 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 
 	// save queries
 	for _, query := range req.Query {
-		err := s.storeQuerySync(ctx, query.Id, query.QueryText, query.QuerySourceId)
+		err := storeQuerySync(ctx, tx, query.Id, query.QueryText, query.QuerySourceId)
 		if err != nil {
 			if _, ok := err.(*queryWasNotUpdated); ok {
 				log.Warn().Str("queryId", query.Id).Msg("Query text not updated")
@@ -894,11 +1006,19 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 			}
 		}
 	}
-
-	// Create report snapshot (non-blocking, no transaction)
-	err = s.createReportSnapshotWithVersionID(ctx, newVersionID, req.ReportId, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE)
+	duckDBQueries, catalog, queryParams, err := loadDuckDBGraphTx(ctx, tx, req.ReportId)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if err := analyzeDuckDBQueries(ctx, tx, duckDBQueries, catalog, queryParams); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	err = s.createReportSnapshotWithVersionIDTx(ctx, tx, newVersionID, req.ReportId, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE)
 	if err != nil {
 		errtype.LogError(err, "Cannot create report snapshot")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if err := tx.Commit(); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -1155,6 +1275,9 @@ func (s Server) getDirectAccessEmails(ctx context.Context, reportID string) ([]s
 		}
 		emails = append(emails, email)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	return emails, nil
 }
 
@@ -1226,6 +1349,9 @@ func (s Server) AddReportDirectAccess(ctx context.Context, req *proto.AddReportD
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 		currentAccess[email] = accessLevel
+	}
+	if err := rows.Err(); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	// Build set of requested emails for view access (level 1)
@@ -1355,6 +1481,9 @@ func (s Server) GetSnapshots(ctx context.Context, req *proto.GetSnapshotsRequest
 			TriggerType: triggerType,
 		})
 	}
+	if err := reportRows.Err(); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 
 	return &proto.GetSnapshotsResponse{
 		ReportSnapshots: reportSnapshots,
@@ -1428,7 +1557,14 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	defer tx.Rollback()
-
+	if err := lockReportTx(ctx, tx, req.ReportId); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	var currentParamsText sql.NullString
+	if err := tx.QueryRowContext(ctx, `select query_params from reports where id=$1`, req.ReportId).Scan(&currentParamsText); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	parameterDeclarationsUnchanged := currentParamsText.String == snapshotParamsText.String
 	// Restore report content (map_config, title, query_params, readme, version_id)
 	_, err = tx.ExecContext(ctx, `
 		UPDATE reports
@@ -1444,7 +1580,6 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 		errtype.LogError(err, "failed to restore report from snapshot")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-
 	// ---- Restore queries from query_snapshots (no delta, only update existing) ----
 	_, err = tx.ExecContext(ctx, `
 		UPDATE queries
@@ -1460,29 +1595,27 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 				WHERE qs.report_version_id = $2
 				  AND qs.query_id = queries.id
 			),
-			updated_at = CURRENT_TIMESTAMP
-		WHERE id IN (
-			SELECT query_id
-			FROM query_snapshots
-			WHERE report_version_id = $3
-			  AND report_id = $4
-		)
-	`, req.VersionId, req.VersionId, req.VersionId, req.ReportId)
+			execution_engine = (
+					SELECT qs.execution_engine
+					FROM query_snapshots qs
+					WHERE qs.report_version_id = $3
+					  AND qs.query_id = queries.id
+				),
+				updated_at = CURRENT_TIMESTAMP
+			WHERE id IN (
+				SELECT query_id
+				FROM query_snapshots
+				WHERE report_version_id = $4
+				  AND report_id = $5
+			)
+		`, req.VersionId, req.VersionId, req.VersionId, req.VersionId, req.ReportId)
 	if err != nil {
 		errtype.LogError(err, "failed to update queries from snapshot")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	// ---- Restore datasets from dataset_snapshots using diff (add/update/remove) ----
-	type datasetState struct {
-		id           string
-		queryID      sql.NullString
-		fileID       sql.NullString
-		name         string
-		connectionID sql.NullString
-	}
-
-	currentDatasets := map[string]datasetState{}
+	currentDatasets := map[string]snapshotDatasetState{}
 	rows, err := tx.QueryContext(ctx, `
 		SELECT id, query_id, file_id, name, connection_id
 		FROM datasets
@@ -1493,7 +1626,7 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	for rows.Next() {
-		var d datasetState
+		var d snapshotDatasetState
 		if err := rows.Scan(&d.id, &d.queryID, &d.fileID, &d.name, &d.connectionID); err != nil {
 			errtype.LogError(err, "failed to scan current dataset")
 			rows.Close()
@@ -1503,7 +1636,7 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 	}
 	rows.Close()
 
-	snapshotDatasets := map[string]datasetState{}
+	snapshotDatasets := map[string]snapshotDatasetState{}
 	rows, err = tx.QueryContext(ctx, `
 		SELECT dataset_id, query_id, file_id, name, connection_id
 		FROM dataset_snapshots
@@ -1514,7 +1647,7 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	for rows.Next() {
-		var d datasetState
+		var d snapshotDatasetState
 		if err := rows.Scan(&d.id, &d.queryID, &d.fileID, &d.name, &d.connectionID); err != nil {
 			errtype.LogError(err, "failed to scan dataset snapshot")
 			rows.Close()
@@ -1621,6 +1754,16 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 				errtype.LogError(err, "failed to update dataset from snapshot")
 				return nil, status.Error(codes.Internal, err.Error())
 			}
+		}
+	}
+
+	if parameterDeclarationsUnchanged {
+		if err := s.reconcileExistingDuckDBJobsTx(ctx, tx, req.ReportId); err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	} else {
+		if err := analyzeDuckDBGraphTx(ctx, tx, req.ReportId); err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 	}
 
@@ -1814,7 +1957,7 @@ func (s Server) ServeMapPreview(w http.ResponseWriter, r *http.Request) {
 
 	// Set cache headers
 	// Use ETag based on updated_at timestamp for conditional caching
-	hash := sha256.Sum256([]byte(fmt.Sprintf("%s-%d", reportID, updatedAt.Unix())))
+	hash := sha256.Sum256(fmt.Appendf(nil, "%s-%d", reportID, updatedAt.Unix()))
 	etag := fmt.Sprintf("\"%x\"", hash)
 	w.Header().Set("ETag", etag)
 

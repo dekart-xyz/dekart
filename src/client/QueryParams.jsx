@@ -9,6 +9,7 @@ import Modal from 'antd/es/modal'
 import { useEffect, useState } from 'react'
 import { applyQueryParams, closeQueryParamSettings, openQueryParamSettings, queryParamChanged, setQueryParamValue, updateQueryParamsFromURL } from './actions/query'
 import { useLocation } from 'react-router-dom'
+import { useQueriesRunning } from './lib/useQueriesRunning'
 
 function Label ({ children }) {
   return (
@@ -92,13 +93,13 @@ export default function QueryParams () {
   const name = useSelector(state => state.queryParams.modal)
   const modalQueryParam = useSelector(state => state.queryParams.list.find(p => p.name === name))
   const { lastChanged, lastSaved } = useSelector(state => state.reportStatus)
-  const numRunningQueries = useSelector(state => state.numRunningQueries)
+  const queriesRunning = useQueriesRunning()
   const { canRefresh } = useSelector(state => state.report)
   const reportChanged = lastChanged > lastSaved
 
   const applyButtonDisabled = (
     reportChanged || // report has unsaved changes
-    numRunningQueries > 0 || // some queries are running
+    queriesRunning || // some queries are running
     !canRefresh || // report can't refresh
     tempDisabled // apply button was clicked
   )
@@ -106,7 +107,7 @@ export default function QueryParams () {
   const applyButtonDisabledReason = (
     reportChanged
       ? 'Save map changes before applying query parameters'
-      : numRunningQueries > 0
+      : queriesRunning
         ? 'Wait for running queries to finish'
         : !canRefresh
             ? 'Map is read-only'
@@ -118,7 +119,7 @@ export default function QueryParams () {
   useEffect(() => {
     // reset tempDisabled when queries start running
     setTempDisabled(false)
-  }, [numRunningQueries])
+  }, [queriesRunning])
 
   useEffect(() => {
     // Handle URL parameter changes here

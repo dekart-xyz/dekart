@@ -53,8 +53,45 @@ Cypress.Commands.add('resetCloudTestDatabase', () => {
       IF stmt IS NOT NULL THEN
         EXECUTE stmt;
       END IF;
-    END $$
+    END $$;
   `)
+})
+
+Cypress.Commands.add('assertDatasetRows', (label, rows, timeout = 120000) => {
+  const formattedRows = rows.toLocaleString('en-US')
+  cy.contains('.source-data-title .dataset-name', label, { timeout }).should($name => {
+    const section = $name.closest('.source-data-title').parent().parent()
+    expect(section.find('.source-data-rows').text()).to.contain(`${formattedRows} rows`)
+  })
+})
+
+Cypress.Commands.add('assertDatasetTable', (label, fields, values = []) => {
+  cy.get('body').then($body => {
+    if ($body.find('button[title="Save this map"]').length) {
+      cy.get('button[title="Save this map"]').should('not.be.disabled')
+      cy.wait(2000)
+    }
+  })
+  cy.get('body').then($body => {
+    if (!$body.find('.source-data-title .dataset-name:visible').length) {
+      cy.get('.side-bar__close').click({ force: true })
+    }
+  })
+  cy.contains('.source-data-title .dataset-name', label, { timeout: 120000 }).then($name => {
+    const section = $name.closest('.source-data-title').parent().parent()
+    const icon = section.find('.show-data-table svg')[0]
+    expect(icon, `data table button for ${label}`).to.not.equal(undefined)
+    icon.dispatchEvent(new icon.ownerDocument.defaultView.MouseEvent('click', { bubbles: true, cancelable: true }))
+  })
+  cy.get('#dataset-modal', { timeout: 30000 }).should('be.visible')
+  fields.forEach(field => {
+    cy.get(`#dataset-modal .header-cell[title="${field}"]`, { timeout: 120000 }).should('be.visible')
+  })
+  values.forEach(value => {
+    cy.get(`#dataset-modal .cell[title="${value}"]`, { timeout: 120000 }).should('be.visible')
+  })
+  cy.get('.modal--close').click()
+  cy.get('#dataset-modal').should('not.exist')
 })
 
 Cypress.Commands.add('ensureTestWorkspace', () => {
@@ -73,9 +110,15 @@ Cypress.Commands.add('ensureTestWorkspace', () => {
       cy.contains('button', 'Create Workspace').click()
     }
     cy.get('input#name').type('test')
-    cy.get('#source').click()
-    cy.get('.ant-select-item-option').contains('Google Search').click()
+    cy.get('body').then($workspace => {
+      if ($workspace.find('#source').length) {
+        cy.get('#source').click()
+        cy.get('.ant-select-item-option').contains('Google Search').click()
+      }
+    })
     cy.get('button:contains("Create")').click()
+    // Wait for workspace selection to finish before the calling test navigates again.
+    cy.get('button#dekart-create-report', { timeout: 30000 }).should('be.visible')
   })
 })
 

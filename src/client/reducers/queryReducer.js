@@ -1,9 +1,10 @@
 import { combineReducers } from 'redux'
 import { Query, QueryJob } from 'dekart-proto/dekart_pb'
 import { downloadDataset } from '../actions/dataset'
-import { closeQueryParamSettings, openQueryParamSettings, queryChanged, queryParamChanged, querySource, setQueryParamsValues, setQueryParamValue, updateQueryParamsFromQueries } from '../actions/query'
+import { closeQueryParamSettings, invalidateRunAllQueries, openQueryParamSettings, queryChanged, queryExecutionRejected, queryExecutionStarted, queryParamChanged, querySource, runAllQueriesFinished, runAllQueriesStarted, setQueryParamsValues, setQueryParamValue, updateQueryParamsFromQueries } from '../actions/query'
 import { openReport, reportUpdate } from '../actions/report'
 import { ActionTypes as KeplerActionTypes } from '@kepler.gl/actions'
+import { duckDBJobStateChanged } from '../actions/duckdb'
 
 export function queries (state = [], action) {
   switch (action.type) {
@@ -16,32 +17,36 @@ export function queries (state = [], action) {
   }
 }
 
-export function numRunningQueries (state = 0, action) {
-  switch (action.type) {
-    case openReport.name:
-      return 0
-    case reportUpdate.name:
-      return action.queryJobsList.filter(job => job.queryParamsHash === action.hash).reduce((loadingNumber, q) => {
-        switch (q.jobStatus) {
-          case QueryJob.JobStatus.JOB_STATUS_PENDING:
-          case QueryJob.JobStatus.JOB_STATUS_RUNNING:
-          case QueryJob.JobStatus.JOB_STATUS_READING_RESULTS:
-            return loadingNumber + 1
-          default:
-            return loadingNumber
-        }
-      }, 0)
-    default:
-      return state
-  }
-}
-
 export function queryJobs (state = [], action) {
   switch (action.type) {
     case openReport.name:
       return []
     case reportUpdate.name:
       return action.queryJobsList
+    default:
+      return state
+  }
+}
+
+// browser-local execution states
+export function duckDBJobStates (state = {}, action) {
+  switch (action.type) {
+    case openReport.name:
+      return {}
+    case reportUpdate.name: {
+      const currentJobIds = new Set(action.queryJobsList.map(job => job.id))
+      return Object.fromEntries(Object.entries(state).filter(([jobId]) => currentJobIds.has(jobId)))
+    }
+    case duckDBJobStateChanged.name:
+      return {
+        ...state,
+        [action.jobId]: {
+          status: action.status,
+          error: action.error,
+          totalRows: action.totalRows,
+          datasetId: action.datasetId || state[action.jobId]?.datasetId || ''
+        }
+      }
     default:
       return state
   }
@@ -125,7 +130,13 @@ export function queryStatus (state = {}, action) {
         const queryJob = action.queryJobsList.find(job => job.queryId === query.id && job.queryParamsHash === action.hash)
         queryStatus[query.id] = {
           // can run if no job or job is done
-          canRun: queryJob ? [QueryJob.JobStatus.JOB_STATUS_UNSPECIFIED, QueryJob.JobStatus.JOB_STATUS_DONE, QueryJob.JobStatus.JOB_STATUS_DONE_LEGACY].includes(queryJob.jobStatus) : true,
+          canRun: queryJob
+            ? [
+                QueryJob.JobStatus.JOB_STATUS_UNSPECIFIED,
+                QueryJob.JobStatus.JOB_STATUS_DONE,
+                QueryJob.JobStatus.JOB_STATUS_DONE_LEGACY
+              ].includes(queryJob.jobStatus)
+            : true,
           downloadingResults: false,
           querySourceId: query.querySourceId,
           querySource: query.querySource,
@@ -155,10 +166,62 @@ export function queryStatus (state = {}, action) {
   }
 }
 
+export function runAllQueriesPending (state = null, action) {
+  switch (action.type) {
+    case runAllQueriesStarted.name:
+      return action.generation
+    case runAllQueriesFinished.name:
+      return state === action.generation ? null : state
+    case invalidateRunAllQueries.name:
+    case openReport.name:
+      return null
+    default:
+      return state
+  }
+}
+
+export function queryExecutionsPending (state = {}, action) {
+  switch (action.type) {
+    case queryExecutionStarted.name:
+      return {
+        ...state,
+        [action.queryId]: {
+          queryParamsHash: action.queryParamsHash,
+          observedJobId: action.observedJobId
+        }
+      }
+    case queryExecutionRejected.name: {
+      const next = { ...state }
+      delete next[action.queryId]
+      return next
+    }
+    case invalidateRunAllQueries.name:
+    case openReport.name:
+      return {}
+    case reportUpdate.name: {
+      const next = { ...state }
+      Object.entries(state).forEach(([queryId, command]) => {
+        const activeJob = action.queryJobsList.find(job =>
+          job.queryId === queryId && job.queryParamsHash === command.queryParamsHash
+        )
+        // A newer streamed job supersedes the locally pending execution command.
+        if (activeJob?.id && activeJob.id !== command.observedJobId) {
+          delete next[queryId]
+        }
+      })
+      return next
+    }
+    default:
+      return state
+  }
+}
+
 // query parameters
 
 function queryParamsValues (state = {}, action) {
   switch (action.type) {
+    case reportUpdate.name:
+      return action.queryParamsValues
     case setQueryParamsValues.name:
       return action.values
     case setQueryParamValue.name:
@@ -173,6 +236,8 @@ function queryParamsValues (state = {}, action) {
 
 function queryParamsUrl (state = '', action) {
   switch (action.type) {
+    case reportUpdate.name:
+      return action.queryParamsUrl
     case setQueryParamsValues.name:
       return action.url
     default:
@@ -212,6 +277,8 @@ const emptyStringHash = 'd41d8cd98f00b204e9800998ecf8427e'
 
 function queryParamsHash (state = emptyStringHash, action) {
   switch (action.type) {
+    case reportUpdate.name:
+      return action.hash
     case setQueryParamsValues.name:
       return action.hash
     default:

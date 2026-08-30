@@ -5,20 +5,22 @@ Goal: contributions should blend into the existing codebase and minimize maintai
 ## Core Rule
 
 - Make the smallest correct change that solves the task.
+- Implement the simplest architecture that satisfies the reproduced behavior, then stop.
 - Prefer existing patterns in the touched folder over introducing new patterns.
 - Avoid speculative hardening. Add extra guards only for real, observed failure modes.
-- Each line in this repo is reviewed by a human who authored original code. This is a slow and expensive process. Avoid adding complexity that requires extra review cycles without a clear observed need.
+- No new state, table, version, guard, RPC mode, or compatibility path without a failing test demonstrating why it is needed.
 
 ## Testing Rules
 - Do not add tests merely to increase coverage.
 - Do not duplicate implementation logic in tests.
-– Prefer test driven development using cypress and unit tests.
-– For every component that has UX or state (db, memory), use cypress tests.
+- Prefer test-driven development using Cypress and unit tests.
+- For every component that has UX or state (database, memory), use Cypress tests.
 - Only use unit tests for stateless no UX components with no side effects (like schema validator)
-– when a bug was spotted in production or QA the fix must start with a failing regression test for the exact bad
+- When a bug is found in production or QA, the fix must start with a failing regression test for the exact bad
 tool input.
 - MCP E2E tests must authenticate through the device flow (`POST /device`, browser authorization, then `POST /device/token`) and use the returned device token as the MCP bearer token. Do not call `/authenticate` directly or hand-roll OAuth/protobuf state helpers for MCP tests.
 - For E2E tests, group specs by runtime configuration; split only long-running configurations into multiple parallel lanes.
+- Cypress tests should verify what is visible to the user in the DOM, not internal or Redux state.
 
 
 
@@ -27,10 +29,16 @@ tool input.
 - Proto is the source of truth for client/server contracts. Never edit generated proto files manually. Run `make proto`.
 - Use gRPC (`dekart.proto`) for internal client-server communication by default.
 - Use REST/MCP endpoints only for external API surfaces and large-payload flows.
-- Preserve command/query separation pattern. Client send GRPC command and receives versioned (updated_at) update. We should rely on simple determenistic reconsilation instead of duck typing and deep comparing current and received structures.
+- Preserve command/query separation. The client sends a gRPC command and receives versioned (`updated_at`) updates. Rely on simple deterministic reconciliation instead of duck typing or deep structural comparisons.
+- Resolve races with versioned commands and deterministic reconciliation: a command carries the entity version observed by the client, the server applies it only if that version still matches, and the client reconciles or retries from newer canonical updates received through the server stream. Follow query-source CAS for conditional writes and report/dataset updated_at handling for stream reconciliation.
+- Compare explicit versions or revision IDs; avoid deep structural comparisons and duck typing.
+- Keep each RPC single-purpose: one operation, one responsibility. Do not introduce boolean mode switches that change command semantics.
 - Business endpoint orchestration belongs in `src/server/dekart` methods on `Server` and is wired in `src/server/app/app.go`.
 - Reusable domain logic belongs in `src/server/<domain>` packages and is called from `server/dekart`.
 - Keep auth/workspace gates explicit at endpoint entry points (`user.GetClaims`, workspace checks).
+- Avoid creating new states when current state machine can be re-used or extended.
+- Don't introduce selectors, use reducers and react hooks.
+- Use reducers or hooks when state normalization is needed (`isCloud`, `oidcEnabled`, etc.).
 
 ## Cross-cutting Rules
 
@@ -44,6 +52,8 @@ tool input.
 - Keep Cypress `cypress/e2e/<folder>` aligned with env config name used to run it (for example, `.env.local` -> `cypress/e2e/local`, `.env.pg-s3` -> `cypress/e2e/pg-s3`).
 - After changing behavior, remove obsolete flags/params/branches that are no longer needed (no leftover transitional wiring).
 - Do not introduce new environment variables in code/workflows without an explicit plan or direct user approval.
+- Preserve comments that explain intent, race conditions, invariants, or non-obvious constraints. Remove comments only when they are obsolete.
+- When a touched file exceeds 500 lines, assess whether it contains separable responsibilities. Extract cohesive functionality when it improves navigation and comprehension. Do not split solely to satisfy a line-count limit. Prefer modules of 150–300 lines, but prioritize cohesion.
 
 ## Skill Usage
 

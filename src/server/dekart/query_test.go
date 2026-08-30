@@ -80,14 +80,15 @@ func TestUpdateQuery_MissingQueryUUID_ReturnsNotFound(t *testing.T) {
 			reports.id,
 			queries.query_source_id,
 			datasets.connection_id,
-			queries.query_text
+			queries.query_text,
+			queries.execution_engine
 		from queries
 			left join datasets on queries.id = datasets.query_id
 			left join reports on (datasets.report_id = reports.id or queries.report_id = reports.id)
 		where queries.id = $1
 		limit 1`)).
 		WithArgs(queryID).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "query_source_id", "connection_id", "query_text"}))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "query_source_id", "connection_id", "query_text", "execution_engine"}))
 
 	server := Server{db: db}
 	_, err = server.UpdateQuery(testUserContext("test@example.com"), &proto.UpdateQueryRequest{QueryId: queryID})
@@ -105,14 +106,15 @@ func TestRunQuery_MissingQueryUUID_ReturnsNotFound(t *testing.T) {
 			reports.id,
 			queries.query_source_id,
 			datasets.connection_id,
-			queries.query_text
+			queries.query_text,
+			queries.execution_engine
 		from queries
 			left join datasets on queries.id = datasets.query_id
 			left join reports on (datasets.report_id = reports.id or queries.report_id = reports.id)
 		where queries.id = $1
 		limit 1`)).
 		WithArgs(queryID).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "query_source_id", "connection_id", "query_text"}))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "query_source_id", "connection_id", "query_text", "execution_engine"}))
 
 	server := Server{db: db}
 	_, err = server.RunQuery(testUserContext("test@example.com"), &proto.RunQueryRequest{QueryId: queryID})

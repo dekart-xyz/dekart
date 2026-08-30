@@ -79,6 +79,9 @@ func (s Server) getFileReports(ctx context.Context, fileId string) (*string, err
 			return nil, err
 		}
 	}
+	if err := fileRows.Err(); err != nil {
+		return nil, err
+	}
 	if reportId == "" {
 		return nil, nil
 	}
@@ -90,7 +93,7 @@ func (s Server) setUploadError(reportID string, fileSourceID string, err error) 
 	defer cancel()
 	_, err = s.db.ExecContext(
 		ctx,
-		`update files set upload_error=$1, updated_at=CURRENT_TIMESTAMP where file_source_id=$2`,
+		`update files set upload_error=$1, updated_at=CURRENT_TIMESTAMP where file_source_id=$2 and file_status<>3`,
 		err.Error(),
 		fileSourceID,
 	)
@@ -98,6 +101,9 @@ func (s Server) setUploadError(reportID string, fileSourceID string, err error) 
 		errtype.LogError(err, "setUploadError failed")
 		return
 	}
+	s.reconcileExistingDuckDBJobs(ctx, reportID, "refresh DuckDB jobs after upload error failed")
+	// File error state must reach the report stream even when DuckDB
+	// reconciliation cannot proceed because the source is not stored.
 	s.reportStreams.Ping(reportID)
 }
 
@@ -129,7 +135,7 @@ func (s Server) moveFileToStorage(reqConCtx context.Context, fileSourceID string
 		return
 	}
 	_, err = s.db.ExecContext(userCtx,
-		`update files set file_status=3, updated_at=CURRENT_TIMESTAMP where file_source_id=$1`,
+		`update files set file_status=3, upload_error='', updated_at=CURRENT_TIMESTAMP where file_source_id=$1`,
 		fileSourceID,
 	)
 	if err != nil {
@@ -137,6 +143,9 @@ func (s Server) moveFileToStorage(reqConCtx context.Context, fileSourceID string
 		s.setUploadError(report.Id, fileSourceID, err)
 		return
 	}
+	s.reconcileExistingDuckDBJobs(userCtx, report.Id, "refresh DuckDB jobs after file storage failed")
+	// The stored File revision is canonical independently of best-effort
+	// reconciliation of every DuckDB parameter hash.
 	s.reportStreams.Ping(report.Id)
 }
 
@@ -241,7 +250,7 @@ func (s Server) UploadFile(w http.ResponseWriter, r *http.Request) {
 	fileSourceID := newUUID()
 
 	_, err = s.db.ExecContext(ctx,
-		`update files set name=$1, size=$2, mime_type=$3, file_status=2, file_source_id=$4, updated_at=CURRENT_TIMESTAMP where id=$5`,
+		`update files set name=$1, size=$2, mime_type=$3, file_status=2, file_source_id=$4, upload_error='', updated_at=CURRENT_TIMESTAMP where id=$5`,
 		handler.Filename,
 		handler.Size,
 		mimeType,
@@ -291,10 +300,17 @@ func (s Server) CreateFile(ctx context.Context, req *proto.CreateFileRequest) (*
 	if err := s.requireReportWorkspaceWrite(ctx, *reportID); err != nil {
 		return nil, err
 	}
-
 	id := newUUID()
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer tx.Rollback()
+	if err := lockReportTx(ctx, tx, *reportID); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 
-	_, err = s.db.ExecContext(ctx,
+	_, err = tx.ExecContext(ctx,
 		`insert into files (id) values ($1)`,
 		id,
 	)
@@ -303,35 +319,35 @@ func (s Server) CreateFile(ctx context.Context, req *proto.CreateFileRequest) (*
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	result, err := s.db.ExecContext(ctx,
-		`update datasets set file_id=$1, connection_id=$2, updated_at=CURRENT_TIMESTAMP where id=$3 and file_id is null`,
-		id,
-		conn.ConnectionIDToNullString(req.ConnectionId),
-		req.DatasetId,
-	)
+	result, err := tx.ExecContext(ctx, `update datasets set file_id=$1, connection_id=$2, updated_at=CURRENT_TIMESTAMP
+		where id=$3 and file_id is null and query_id is null`,
+		id, conn.ConnectionIDToNullString(req.ConnectionId), req.DatasetId)
 	if err != nil {
 		log.Err(err).Str("connectionId", req.ConnectionId).Msg("update datasets failed when creating file")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-
 	affectedRows, err := result.RowsAffected()
 	if err != nil {
-		errtype.LogError(err, "RowsAffected failed when creating file")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	fileID := id
 	if affectedRows == 0 {
+		fileID, hasQuery, bindingErr := s.getDatasetFileBinding(ctx, tx, req.DatasetId)
+		if bindingErr != nil {
+			return nil, status.Error(codes.NotFound, "dataset not found")
+		}
+		if hasQuery {
+			return nil, status.Error(codes.InvalidArgument, "query-backed dataset cannot have a file")
+		}
+		if fileID == "" {
+			return nil, status.Error(codes.Internal, "dataset file_id is empty")
+		}
 		log.Warn().Str("report", *reportID).Str("dataset", req.DatasetId).Msg("dataset file was already created")
-		fileID, err = s.getDatasetFileID(ctx, req.DatasetId)
-		if err != nil {
-			errtype.LogError(err, "get existing dataset file id failed")
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-		_, deleteErr := s.db.ExecContext(ctx, `delete from files where id=$1`, id)
-		if deleteErr != nil {
-			log.Warn().Err(deleteErr).Str("file_id", id).Msg("failed to cleanup orphan file record")
-		}
+		return &proto.CreateFileResponse{FileId: fileID}, nil
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	s.reportStreams.Ping(*reportID)
@@ -362,37 +378,41 @@ func (s Server) ReplaceFile(ctx context.Context, req *proto.ReplaceFileRequest) 
 	if err := s.requireReportWorkspaceWrite(ctx, *reportID); err != nil {
 		return nil, err
 	}
-
 	newFileID := newUUID()
-	_, err = s.db.ExecContext(ctx, `insert into files (id) values ($1)`, newFileID)
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer tx.Rollback()
+	if err := lockReportTx(ctx, tx, *reportID); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	_, err = tx.ExecContext(ctx, `insert into files (id) values ($1)`, newFileID)
 	if err != nil {
 		errtype.LogError(err, "insert into files failed")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	result, err := s.db.ExecContext(ctx,
-		`update datasets
-		set file_id=$1, connection_id=$2, updated_at=CURRENT_TIMESTAMP
-		where id=$3`,
-		newFileID,
-		conn.ConnectionIDToNullString(req.ConnectionId),
-		req.DatasetId,
-	)
+	result, err := tx.ExecContext(ctx, `update datasets set file_id=$1, connection_id=$2, updated_at=CURRENT_TIMESTAMP
+		where id=$3 and query_id is null`,
+		newFileID, conn.ConnectionIDToNullString(req.ConnectionId), req.DatasetId)
 	if err != nil {
 		log.Err(err).Str("connectionId", req.ConnectionId).Msg("update datasets failed when replacing file")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	affectedRows, err := result.RowsAffected()
 	if err != nil {
-		errtype.LogError(err, "RowsAffected failed when replacing file")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if affectedRows == 0 {
-		_, deleteErr := s.db.ExecContext(ctx, `delete from files where id=$1`, newFileID)
-		if deleteErr != nil {
-			log.Warn().Err(deleteErr).Str("file_id", newFileID).Msg("failed to cleanup orphan file record")
+		_, hasQuery, bindingErr := s.getDatasetFileBinding(ctx, tx, req.DatasetId)
+		if bindingErr == nil && hasQuery {
+			return nil, status.Error(codes.InvalidArgument, "query-backed dataset cannot have a file")
 		}
 		return nil, status.Error(codes.NotFound, "dataset not found")
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	s.reportStreams.Ping(*reportID)
@@ -400,16 +420,13 @@ func (s Server) ReplaceFile(ctx context.Context, req *proto.ReplaceFileRequest) 
 	return &proto.ReplaceFileResponse{FileId: newFileID}, nil
 }
 
-// getDatasetFileID returns linked file id from dataset row.
-func (s Server) getDatasetFileID(ctx context.Context, datasetID string) (string, error) {
-	var fileID sql.NullString
-	if err := s.db.QueryRowContext(ctx, `select file_id from datasets where id=$1`, datasetID).Scan(&fileID); err != nil {
-		return "", err
+// getDatasetFileBinding distinguishes an existing file from a rejected query-backed dataset.
+func (s Server) getDatasetFileBinding(ctx context.Context, tx *sql.Tx, datasetID string) (string, bool, error) {
+	var fileID, queryID sql.NullString
+	if err := tx.QueryRowContext(ctx, `select file_id, query_id from datasets where id=$1`, datasetID).Scan(&fileID, &queryID); err != nil {
+		return "", false, err
 	}
-	if !fileID.Valid || fileID.String == "" {
-		return "", fmt.Errorf("dataset file_id is empty")
-	}
-	return fileID.String, nil
+	return fileID.String, queryID.Valid && queryID.String != "", nil
 }
 
 func (s Server) getFiles(ctx context.Context, datasets []*proto.Dataset) ([]*proto.File, error) {

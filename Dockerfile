@@ -6,7 +6,8 @@ COPY package.json package-lock.json .npmrc ./
 ENV CI=true
 RUN --mount=type=cache,target=/root/.npm npm ci --ignore-scripts
 COPY proto proto
-RUN npm run proto-copy-to-node
+COPY patches patches
+RUN npm run prepare-node-modules
 COPY public public
 COPY src/client src/client
 COPY index.html .
@@ -22,7 +23,7 @@ FROM nodedeps AS nodetest
 RUN npm run lint
 RUN npm run test
 
-FROM golang:1.25 AS godeps
+FROM golang:1.25-bookworm AS godeps
 
 # Install necessary packages for CGO
 RUN apt-get update && apt-get install -y gcc
@@ -56,6 +57,7 @@ RUN rm -f /etc/apt/sources.list.d/google-chrome.list \
     curl \
     ca-certificates \
     postgresql-client \
+    sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 RUN update-ca-certificates
 ENV DEKART_PORT=3000

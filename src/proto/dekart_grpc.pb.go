@@ -38,12 +38,13 @@ const (
 	Dekart_CreateDataset_FullMethodName                 = "/Dekart/CreateDataset"
 	Dekart_RemoveDataset_FullMethodName                 = "/Dekart/RemoveDataset"
 	Dekart_UpdateDatasetName_FullMethodName             = "/Dekart/UpdateDatasetName"
-	Dekart_UpdateDatasetConnection_FullMethodName       = "/Dekart/UpdateDatasetConnection"
 	Dekart_CreateFile_FullMethodName                    = "/Dekart/CreateFile"
 	Dekart_ReplaceFile_FullMethodName                   = "/Dekart/ReplaceFile"
 	Dekart_CreateQuery_FullMethodName                   = "/Dekart/CreateQuery"
 	Dekart_UpdateQuery_FullMethodName                   = "/Dekart/UpdateQuery"
 	Dekart_RunQuery_FullMethodName                      = "/Dekart/RunQuery"
+	Dekart_PrepareDuckDBExecution_FullMethodName        = "/Dekart/PrepareDuckDBExecution"
+	Dekart_RunDuckDBQuery_FullMethodName                = "/Dekart/RunDuckDBQuery"
 	Dekart_RunAllQueries_FullMethodName                 = "/Dekart/RunAllQueries"
 	Dekart_CancelJob_FullMethodName                     = "/Dekart/CancelJob"
 	Dekart_GetEnv_FullMethodName                        = "/Dekart/GetEnv"
@@ -98,7 +99,6 @@ type DekartClient interface {
 	CreateDataset(ctx context.Context, in *CreateDatasetRequest, opts ...grpc.CallOption) (*CreateDatasetResponse, error)
 	RemoveDataset(ctx context.Context, in *RemoveDatasetRequest, opts ...grpc.CallOption) (*RemoveDatasetResponse, error)
 	UpdateDatasetName(ctx context.Context, in *UpdateDatasetNameRequest, opts ...grpc.CallOption) (*UpdateDatasetNameResponse, error)
-	UpdateDatasetConnection(ctx context.Context, in *UpdateDatasetConnectionRequest, opts ...grpc.CallOption) (*UpdateDatasetConnectionResponse, error)
 	// files
 	CreateFile(ctx context.Context, in *CreateFileRequest, opts ...grpc.CallOption) (*CreateFileResponse, error)
 	ReplaceFile(ctx context.Context, in *ReplaceFileRequest, opts ...grpc.CallOption) (*ReplaceFileResponse, error)
@@ -106,6 +106,8 @@ type DekartClient interface {
 	CreateQuery(ctx context.Context, in *CreateQueryRequest, opts ...grpc.CallOption) (*CreateQueryResponse, error)
 	UpdateQuery(ctx context.Context, in *UpdateQueryRequest, opts ...grpc.CallOption) (*UpdateQueryResponse, error)
 	RunQuery(ctx context.Context, in *RunQueryRequest, opts ...grpc.CallOption) (*RunQueryResponse, error)
+	PrepareDuckDBExecution(ctx context.Context, in *PrepareDuckDBExecutionRequest, opts ...grpc.CallOption) (*PrepareDuckDBExecutionResponse, error)
+	RunDuckDBQuery(ctx context.Context, in *RunDuckDBQueryRequest, opts ...grpc.CallOption) (*RunDuckDBQueryResponse, error)
 	RunAllQueries(ctx context.Context, in *RunAllQueriesRequest, opts ...grpc.CallOption) (*RunAllQueriesResponse, error)
 	// jobs
 	CancelJob(ctx context.Context, in *CancelJobRequest, opts ...grpc.CallOption) (*CancelJobResponse, error)
@@ -340,16 +342,6 @@ func (c *dekartClient) UpdateDatasetName(ctx context.Context, in *UpdateDatasetN
 	return out, nil
 }
 
-func (c *dekartClient) UpdateDatasetConnection(ctx context.Context, in *UpdateDatasetConnectionRequest, opts ...grpc.CallOption) (*UpdateDatasetConnectionResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateDatasetConnectionResponse)
-	err := c.cc.Invoke(ctx, Dekart_UpdateDatasetConnection_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *dekartClient) CreateFile(ctx context.Context, in *CreateFileRequest, opts ...grpc.CallOption) (*CreateFileResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateFileResponse)
@@ -394,6 +386,26 @@ func (c *dekartClient) RunQuery(ctx context.Context, in *RunQueryRequest, opts .
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RunQueryResponse)
 	err := c.cc.Invoke(ctx, Dekart_RunQuery_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) PrepareDuckDBExecution(ctx context.Context, in *PrepareDuckDBExecutionRequest, opts ...grpc.CallOption) (*PrepareDuckDBExecutionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PrepareDuckDBExecutionResponse)
+	err := c.cc.Invoke(ctx, Dekart_PrepareDuckDBExecution_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dekartClient) RunDuckDBQuery(ctx context.Context, in *RunDuckDBQueryRequest, opts ...grpc.CallOption) (*RunDuckDBQueryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RunDuckDBQueryResponse)
+	err := c.cc.Invoke(ctx, Dekart_RunDuckDBQuery_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -722,7 +734,6 @@ type DekartServer interface {
 	CreateDataset(context.Context, *CreateDatasetRequest) (*CreateDatasetResponse, error)
 	RemoveDataset(context.Context, *RemoveDatasetRequest) (*RemoveDatasetResponse, error)
 	UpdateDatasetName(context.Context, *UpdateDatasetNameRequest) (*UpdateDatasetNameResponse, error)
-	UpdateDatasetConnection(context.Context, *UpdateDatasetConnectionRequest) (*UpdateDatasetConnectionResponse, error)
 	// files
 	CreateFile(context.Context, *CreateFileRequest) (*CreateFileResponse, error)
 	ReplaceFile(context.Context, *ReplaceFileRequest) (*ReplaceFileResponse, error)
@@ -730,6 +741,8 @@ type DekartServer interface {
 	CreateQuery(context.Context, *CreateQueryRequest) (*CreateQueryResponse, error)
 	UpdateQuery(context.Context, *UpdateQueryRequest) (*UpdateQueryResponse, error)
 	RunQuery(context.Context, *RunQueryRequest) (*RunQueryResponse, error)
+	PrepareDuckDBExecution(context.Context, *PrepareDuckDBExecutionRequest) (*PrepareDuckDBExecutionResponse, error)
+	RunDuckDBQuery(context.Context, *RunDuckDBQueryRequest) (*RunDuckDBQueryResponse, error)
 	RunAllQueries(context.Context, *RunAllQueriesRequest) (*RunAllQueriesResponse, error)
 	// jobs
 	CancelJob(context.Context, *CancelJobRequest) (*CancelJobResponse, error)
@@ -831,9 +844,6 @@ func (UnimplementedDekartServer) RemoveDataset(context.Context, *RemoveDatasetRe
 func (UnimplementedDekartServer) UpdateDatasetName(context.Context, *UpdateDatasetNameRequest) (*UpdateDatasetNameResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateDatasetName not implemented")
 }
-func (UnimplementedDekartServer) UpdateDatasetConnection(context.Context, *UpdateDatasetConnectionRequest) (*UpdateDatasetConnectionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateDatasetConnection not implemented")
-}
 func (UnimplementedDekartServer) CreateFile(context.Context, *CreateFileRequest) (*CreateFileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateFile not implemented")
 }
@@ -848,6 +858,12 @@ func (UnimplementedDekartServer) UpdateQuery(context.Context, *UpdateQueryReques
 }
 func (UnimplementedDekartServer) RunQuery(context.Context, *RunQueryRequest) (*RunQueryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RunQuery not implemented")
+}
+func (UnimplementedDekartServer) PrepareDuckDBExecution(context.Context, *PrepareDuckDBExecutionRequest) (*PrepareDuckDBExecutionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PrepareDuckDBExecution not implemented")
+}
+func (UnimplementedDekartServer) RunDuckDBQuery(context.Context, *RunDuckDBQueryRequest) (*RunDuckDBQueryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RunDuckDBQuery not implemented")
 }
 func (UnimplementedDekartServer) RunAllQueries(context.Context, *RunAllQueriesRequest) (*RunAllQueriesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RunAllQueries not implemented")
@@ -1293,24 +1309,6 @@ func _Dekart_UpdateDatasetName_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Dekart_UpdateDatasetConnection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateDatasetConnectionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DekartServer).UpdateDatasetConnection(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Dekart_UpdateDatasetConnection_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DekartServer).UpdateDatasetConnection(ctx, req.(*UpdateDatasetConnectionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Dekart_CreateFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateFileRequest)
 	if err := dec(in); err != nil {
@@ -1397,6 +1395,42 @@ func _Dekart_RunQuery_Handler(srv interface{}, ctx context.Context, dec func(int
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DekartServer).RunQuery(ctx, req.(*RunQueryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_PrepareDuckDBExecution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PrepareDuckDBExecutionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).PrepareDuckDBExecution(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_PrepareDuckDBExecution_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).PrepareDuckDBExecution(ctx, req.(*PrepareDuckDBExecutionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dekart_RunDuckDBQuery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RunDuckDBQueryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).RunDuckDBQuery(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_RunDuckDBQuery_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).RunDuckDBQuery(ctx, req.(*RunDuckDBQueryRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1950,10 +1984,6 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Dekart_UpdateDatasetName_Handler,
 		},
 		{
-			MethodName: "UpdateDatasetConnection",
-			Handler:    _Dekart_UpdateDatasetConnection_Handler,
-		},
-		{
 			MethodName: "CreateFile",
 			Handler:    _Dekart_CreateFile_Handler,
 		},
@@ -1972,6 +2002,14 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RunQuery",
 			Handler:    _Dekart_RunQuery_Handler,
+		},
+		{
+			MethodName: "PrepareDuckDBExecution",
+			Handler:    _Dekart_PrepareDuckDBExecution_Handler,
+		},
+		{
+			MethodName: "RunDuckDBQuery",
+			Handler:    _Dekart_RunDuckDBQuery_Handler,
 		},
 		{
 			MethodName: "RunAllQueries",

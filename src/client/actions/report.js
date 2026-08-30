@@ -5,17 +5,19 @@ import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
 import { showMapConfigConflictMessage, success } from './message'
 import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType, SetTrackViewersRequest, SetAutoRefreshIntervalSecondsRequest, RestoreReportSnapshotRequest, SaveMapPreviewRequest } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
-import { createQuery, downloadQuerySource, runQuery } from './query'
+import { createQuery, downloadQuerySource, invalidateRunAllQueries, runWarehouseQuery } from './query'
 import { downloadDataset } from './dataset'
 import { shouldAddQuery } from '../lib/shouldAddQuery'
 import { shouldUpdateDataset } from '../lib/shouldUpdateDataset'
 import { needSensitiveScopes } from './user'
-import { getQueryParamsObjArr } from '../lib/queryParams'
+import { getQueryParamsObjArr, reconcileQueryParamsState } from '../lib/queryParams'
 import { receiveReportUpdateMapConfig } from '../lib/mapConfig'
 import { extensionFromMime } from '../lib/mime'
 import { showUpgradeModal, UpgradeModalType } from './upgradeModal'
 import { track } from '../lib/tracking'
 import { getReportIdFromUrl } from '../lib/getReportIdFromUrl'
+import { closeDuckDBReport, failDuckDBSource, runDuckDBGraph } from './duckdb'
+import { isDuckDBDataset } from '../lib/duckdb/constants'
 
 let reportSaveBarrier = null
 
@@ -38,6 +40,8 @@ function resolveReportSaveBarrier (barrier) {
 export function closeReport () {
   return (dispatch) => {
     dispatch(grpcStreamCancel(Dekart.GetReportStream))
+    dispatch(invalidateRunAllQueries())
+    dispatch(closeDuckDBReport())
     dispatch({
       type: closeReport.name
     })
@@ -177,7 +181,7 @@ export function scheduleQueryJobRefresh (reportStreamResponse) {
     // Schedule the refresh timeout
     const timeoutId = setTimeout(() => {
       const state = getState()
-      const { queries, dataset: { list: datasetsList }, queryJobs, queryParams, report: currentReport, reportStatus: { edit } } = state
+      const { queries, dataset: { list: datasetsList }, queryExecutionsPending, queryJobs, queryParams, report: currentReport, reportStatus: { edit } } = state
 
       // Only proceed if auto-refresh is still enabled
       if (!currentReport || (currentReport.autoRefreshIntervalSeconds || 0) <= 0 || !currentReport.canRefresh) {
@@ -192,7 +196,7 @@ export function scheduleQueryJobRefresh (reportStreamResponse) {
 
       // Check each dataset with a query and rerun if needed
       datasetsList.forEach((dataset) => {
-        if (dataset.queryId) {
+        if (dataset.queryId && !isDuckDBDataset(dataset, queries)) {
           const query = queries.find(q => q.id === dataset.queryId)
           if (!query) return
 
@@ -200,8 +204,8 @@ export function scheduleQueryJobRefresh (reportStreamResponse) {
           if (!queryJob) return
 
           const { canRun, queryText } = state.queryStatus[dataset.queryId] || {}
-          if (!edit && canRun && isQueryJobOutOfDate(currentReportStreamResponse, getState, queryJob)) {
-            dispatch(runQuery(dataset.queryId, queryText))
+          if (!edit && canRun && !queryExecutionsPending[dataset.queryId] && isQueryJobOutOfDate(currentReportStreamResponse, getState, queryJob)) {
+            dispatch(runWarehouseQuery(dataset.queryId, queryText))
           }
         }
       })
@@ -223,7 +227,7 @@ export function setQueryJobRefreshTimeout (timeoutId) {
 }
 
 export function reportUpdate (reportStreamResponse) {
-  const { report, queriesList, datasetsList, filesList, queryJobsList, directAccessEmailsList } = reportStreamResponse
+  const { report, queriesList, datasetsList, filesList, queryJobsList: streamedQueryJobsList, directAccessEmailsList } = reportStreamResponse
   return async (dispatch, getState) => {
     // postpone report updates when saving
     const barrier = reportSaveBarrier
@@ -243,12 +247,14 @@ export function reportUpdate (reportStreamResponse) {
       env,
       connection,
       user,
+      queryParams: currentQueryParams,
       queryJobs: prevQueryJobsList,
-      queryParams: { hash },
       reportStatus: { lastSaved, savedReportVersion, lastMapConfigChanged },
       hasOpenedKeplerPanel
     } = state
-
+    const activeQueryParams = reconcileQueryParamsState(currentQueryParams, report.queryParamsList, window.location.search)
+    const hash = activeQueryParams.hash
+    const queryJobsList = streamedQueryJobsList
     dispatch({
       type: reportUpdate.name,
       report,
@@ -259,7 +265,28 @@ export function reportUpdate (reportStreamResponse) {
       filesList,
       queryJobsList,
       hash,
+      queryParamsValues: activeQueryParams.values,
+      queryParamsUrl: activeQueryParams.url,
       directAccessEmailsList
+    })
+    queryJobsList.forEach(queryJob => {
+      const previous = prevQueryJobsList.find(job => job.id === queryJob.id)
+      // Propagate each newly streamed warehouse failure into its local derived branches once.
+      // Pinned historical closure follows active jobs in the stream and must not
+      // invalidate a newer successful revision of the same source.
+      const activeJob = queryJobsList.find(job =>
+        job.queryId === queryJob.queryId && job.queryParamsHash === queryJob.queryParamsHash
+      )
+      if (activeJob?.id !== queryJob.id || !queryJob.jobError || previous?.jobError === queryJob.jobError || queryJob.queryParamsHash !== hash) {
+        return
+      }
+      const source = datasetsList.find(dataset => dataset.queryId === queryJob.queryId && !isDuckDBDataset(dataset, queriesList))
+      // DuckDB jobs have browser-local errors and must never be treated as shared sources here.
+      if (source) {
+        dispatch(failDuckDBSource(source.id, queryJob.jobError, {
+          sourceVersion: queryJob.jobResultId || queryJob.id
+        }))
+      }
     })
     let mapConfigUpdated = false
     // user could change map config locally, then we just want to show map update message
@@ -298,18 +325,20 @@ export function reportUpdate (reportStreamResponse) {
 
     const { ALLOW_FILE_UPLOAD } = env.variables
     const { queryParams } = getState()
-    datasetsList.forEach((dataset) => {
+    for (const dataset of datasetsList) {
       let extension = 'csv'
-      if (dataset.queryId) {
+      if (dataset.queryId && !isDuckDBDataset(dataset, queriesList)) {
         const query = queriesList.find(q => q.id === dataset.queryId)
         const queryJob = queryJobsList.find(job => job.queryId === query.id && job.queryParamsHash === queryParams.hash)
         const { canRun, queryText } = getState().queryStatus[dataset.queryId]
+        const queryExecutionPending = getState().queryExecutionsPending[dataset.queryId]
         const { edit } = getState().reportStatus
         const lastAddedQueryQueryJob = getState().dataset.lastAddedQueryQueryJob[dataset.queryId]
         const doNotRefreshWhenEdit = edit && lastAddedQueryQueryJob && queryJob && lastAddedQueryQueryJob.id === queryJob.id
-        if (report.canRefresh && canRun && isQueryJobOutOfDate(reportStreamResponse, getState, queryJob) && !doNotRefreshWhenEdit) {
-          dispatch(runQuery(dataset.queryId, queryText))
-        } else if (shouldAddQuery(queryJob, prevQueryJobsList, mapConfigUpdated) || shouldUpdateDataset(dataset, prevDatasetsList)) {
+        if (report.canRefresh && canRun && !queryExecutionPending && isQueryJobOutOfDate(reportStreamResponse, getState, queryJob) && !doNotRefreshWhenEdit) {
+          dispatch(runWarehouseQuery(dataset.queryId, queryText))
+        // A renamed blank query dataset has no result to download yet.
+        } else if (queryJob && (shouldAddQuery(queryJob, prevQueryJobsList, mapConfigUpdated) || shouldUpdateDataset(dataset, prevDatasetsList))) {
           if (dataset.connectionType === ConnectionType.CONNECTION_TYPE_WHEROBOTS) {
             extension = 'parquet'
           }
@@ -332,11 +361,40 @@ export function reportUpdate (reportStreamResponse) {
             prevDatasetsList
           ))
         }
-      } else if ((!ALLOW_FILE_UPLOAD && !connection.userDefined) || (user.isPlayground && !user.isDefaultWorkspace)) {
+      } else if (!dataset.queryId && ((!ALLOW_FILE_UPLOAD && !connection.userDefined) || (user.isPlayground && !user.isDefaultWorkspace))) {
         // create query right away
         dispatch(createQuery(dataset.id))
       }
-    })
+    }
+
+    if (getState().report?.id !== report.id) {
+      return
+    }
+
+    const changedDuckDBDatasetIds = datasetsList.filter(dataset => isDuckDBDataset(dataset, queriesList)).filter(dataset => {
+      const previous = prevDatasetsList.find(item => item.id === dataset.id)
+      const queryJob = queryJobsList.find(job => job.queryId === dataset.queryId && job.queryParamsHash === hash)
+      const previousQueryJob = prevQueryJobsList.find(job => job.queryId === dataset.queryId && job.queryParamsHash === hash)
+      return !previous ||
+        previous.updatedAt !== dataset.updatedAt ||
+        previousQueryJob?.id !== queryJob?.id ||
+        previousQueryJob?.jobStatus !== queryJob?.jobStatus ||
+        previousQueryJob?.jobError !== queryJob?.jobError
+    }).map(dataset => dataset.id)
+    const changedDependencyDatasetIds = datasetsList.filter(dataset => {
+      const previous = prevDatasetsList.find(item => item.id === dataset.id)
+      return !previous || previous.updatedAt !== dataset.updatedAt
+    }).map(dataset => dataset.id)
+    const dependencyDatasetRemoved = prevDatasetsList.some(dataset => !datasetsList.find(item => item.id === dataset.id))
+    const hasDuckDBGraph = (
+      datasetsList.some(dataset => isDuckDBDataset(dataset, queriesList)) ||
+      prevDatasetsList.some(dataset => isDuckDBDataset(dataset, prevQueriesList))
+    )
+    const changedDatasetIds = [...new Set([...changedDuckDBDatasetIds, ...changedDependencyDatasetIds])]
+    if (changedDuckDBDatasetIds.length > 0 || (hasDuckDBGraph && (changedDependencyDatasetIds.length > 0 || dependencyDatasetRemoved))) {
+      const affectedDatasetIds = dependencyDatasetRemoved ? null : changedDatasetIds
+      dispatch(runDuckDBGraph(affectedDatasetIds))
+    }
 
     // Schedule query job refresh if auto-refresh is enabled
     dispatch(scheduleQueryJobRefresh(reportStreamResponse))
@@ -541,14 +599,15 @@ export function exportMapPreview () {
 
 export function saveMap (mapViewChanged = false) {
   return async (dispatch, getState) => {
-    const { keplerGl, report, reportStatus, queryStatus, queryParams, readme } = getState()
+    const state = getState()
+    const { keplerGl, report, reportStatus, queryStatus, queryParams, readme } = state
     const lastSaved = reportStatus.lastChanged
     const configToSave = KeplerGlSchema.getConfigToSave(keplerGl.kepler)
     const mapConfig = JSON.stringify(configToSave)
     const barrier = startReportSaveBarrier(report.id)
     dispatch({ type: saveMap.name })
     const request = new UpdateReportRequest()
-    const queries = Object.keys(queryStatus).reduce((queries, id) => {
+    const queryUpdates = Object.keys(queryStatus).reduce((queries, id) => {
       const status = queryStatus[id]
       if (status.changed) {
         const query = new Query()
@@ -567,7 +626,7 @@ export function saveMap (mapViewChanged = false) {
     request.setReportId(report.id)
     request.setMapConfig(mapConfig)
     request.setTitle(reportStatus.title)
-    request.setQueryList(queries)
+    request.setQueryList(queryUpdates)
     request.setQueryParamsList(getQueryParamsObjArr(queryParams.list))
     // TODO Promise all
     try {
