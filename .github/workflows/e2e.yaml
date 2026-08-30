@@ -323,8 +323,8 @@ jobs:
               -e DEKART_ALLOW_FILE_UPLOAD=1 \
 
           - id: bigquery-update-dataset
-            spec: cypress/e2e/bq/updateDataset.cy.js,cypress/e2e/bq/duckdbRefresh.cy.js
-            extra_env: |
+            spec: cypress/e2e/bq/updateDataset.cy.js
+            extra_env: &bigquery-duckdb-env |
               -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
               -e DEKART_DEV_CLAIMS=1 \
               -e DEKART_POSTGRES_HOST=localhost \
@@ -338,6 +338,18 @@ jobs:
               -e DEKART_STORAGE=GCS \
               -e DEKART_DATASOURCE=BQ \
               -e DEKART_ALLOW_FILE_UPLOAD=1 \
+
+          - id: bigquery-duckdb-refresh
+            spec: cypress/e2e/bq/duckdbRefresh.cy.js
+            extra_env: *bigquery-duckdb-env
+
+          - id: bigquery-duckdb-reconciliation
+            spec: cypress/e2e/bq/duckdbRefreshReconciliation.cy.js
+            extra_env: *bigquery-duckdb-env
+
+          - id: bigquery-duckdb-persistence
+            spec: cypress/e2e/bq/duckdbRefreshPersistence.cy.js
+            extra_env: *bigquery-duckdb-env
 
           - id: version-banner
             spec: cypress/e2e/version/spec.cy.js

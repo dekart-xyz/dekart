@@ -38,7 +38,11 @@ function selectDuckDB () {
 
 // replaceEditorText replaces the visible Ace value through its keyboard input.
 function replaceEditorText (sql) {
-  cy.get('.ace_editor:not(.ace_autocomplete):visible textarea').focus().type('{esc}', { force: true })
+  cy.get('.ace_editor:not(.ace_autocomplete):visible').then($editor => {
+    const editor = $editor[0].ownerDocument.defaultView.ace.edit($editor[0])
+    editor.completer?.detach()
+    editor.focus()
+  })
   cy.get('.ace_autocomplete:visible').should('not.exist')
   cy.get('.ace_editor:not(.ace_autocomplete):visible textarea').type('{selectall}{backspace}', { force: true })
   cy.get('.ace_editor:not(.ace_autocomplete):visible .ace_content').should($content => {
@@ -57,9 +61,12 @@ function replaceEditorText (sql) {
   editorShouldContain(sql)
 }
 
-// editorShouldContain asserts the SQL rendered by the visible Ace editor.
+// editorShouldContain asserts the visible Ace editor's current SQL value.
 function editorShouldContain (sql) {
-  cy.get('.ace_editor:not(.ace_autocomplete):visible .ace_content').should('contain.text', sql)
+  cy.get('.ace_editor:not(.ace_autocomplete):visible').should($editor => {
+    const editor = $editor[0].ownerDocument.defaultView.ace.edit($editor[0])
+    assert.include(editor.getValue(), sql)
+  })
 }
 
 // acceptAutocomplete inserts a named suggestion through Ace's completion path.
