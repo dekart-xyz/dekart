@@ -16,8 +16,7 @@ describe('DuckDB refresh from BigQuery', () => {
     cy.contains('[role="tab"]', 'New').click({ force: true })
     selectDuckDBQuery()
 
-    enterVisibleQuery('datasets')
-    cy.get('.ace_editor:visible textarea').type('.', { force: true })
+    cy.get('.ace_editor:visible textarea').type('datasets.', { force: true })
     cy.get('.ace_autocomplete:visible', { timeout: 20000 }).should('contain.text', 'Query 1')
 
     cy.contains('[role="tab"]', 'Query 1').click({ force: true })
@@ -44,7 +43,7 @@ describe('DuckDB refresh from BigQuery', () => {
 
     cy.intercept('POST', '**/Dekart/RunDuckDBQuery').as('acceptedDuckDBExecute')
     enterVisibleQuery('SELECT count(*) AS source_rows, \'re-executed\' AS execution_marker FROM datasets."Query 1"')
-    cy.get('#dekart-query-execute-button').click()
+    cy.get('#dekart-query-execute-button').click({ waitForAnimations: false })
     cy.wait('@acceptedDuckDBExecute')
     cy.get('#dekart-query-status-message').should($status => {
       expect(['Running', 'Ready']).to.include($status.text().trim())
