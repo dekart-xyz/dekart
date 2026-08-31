@@ -887,6 +887,7 @@ message DuckDBExecution {
     string duckdb_version = 1;
     repeated DuckDBExecutionSource sources = 2;
     repeated DuckDBExecutionStatement statements = 3;
+    repeated DuckDBExecutionExtension extensions = 4;
 }
 
 message DuckDBExecutionSource {
@@ -1086,4 +1087,9 @@ message QueryParam {
     }
     Type type = 3;
     string default_value = 4;
+}
+
+message DuckDBExecutionExtension {
+    string name = 1;
+    string repository = 2; // core | community
 }

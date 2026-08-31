@@ -146,7 +146,7 @@ function DatasetSelector ({ dataset }) {
             disabledNote={readOnly ? 'Workspace is read-only' : undefined}
             id='dekart-add-connection'
             title='Add connection'
-            subtitle='Connect BigQuery, Snowflake, Wherobots'
+            subtitle='Connect BigQuery, Snowflake, PostGIS, Wherobots'
             onClick={() => {
               dispatch(updateSessionStorage('redirectWhenSaveConnection', { reportId: report.id, edit: true }))
               history.push('/connections')

@@ -219,6 +219,29 @@ describe('browser-local DuckDB datasets', () => {
     )
   })
 
+  it('clusters uploaded points into H3 cells and visualizes them in Kepler', () => {
+    createReportAndUpload('h3-points.csv')
+    addDuckDBQuery(
+      `SELECT
+        h3_latlng_to_cell_string(latitude, longitude, 8) AS h3,
+        count(*) AS point_count,
+        json_extract_string(json_object('source', 'points'), '$.source') AS source
+      FROM datasets."h3-points.csv"
+      GROUP BY h3, source
+      ORDER BY h3`,
+      'Query 1',
+      2,
+      ['h3', 'point_count', 'source'],
+      ['points']
+    )
+    cy.contains('.layer__title__type', 'H3', { timeout: 120000 }).should('be.visible')
+    cy.get('.mapboxgl-canvas', { timeout: 30000 }).should($canvas => {
+      const bounds = $canvas[0].getBoundingClientRect()
+      expect(bounds.width, 'map width').to.be.greaterThan(0)
+      expect(bounds.height, 'map height').to.be.greaterThan(0)
+    })
+  })
+
   it('numbers queries by dataset order when they are created out of order', () => {
     createReportAndUpload('sample.csv')
     cy.get('button.ant-tabs-nav-add:visible').first().click()

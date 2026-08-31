@@ -3353,6 +3353,11 @@ export class DuckDBExecution extends jspb.Message {
   setStatementsList(value: Array<DuckDBExecutionStatement>): void;
   addStatements(value?: DuckDBExecutionStatement, index?: number): DuckDBExecutionStatement;
 
+  clearExtensionsList(): void;
+  getExtensionsList(): Array<DuckDBExecutionExtension>;
+  setExtensionsList(value: Array<DuckDBExecutionExtension>): void;
+  addExtensions(value?: DuckDBExecutionExtension, index?: number): DuckDBExecutionExtension;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): DuckDBExecution.AsObject;
   static toObject(includeInstance: boolean, msg: DuckDBExecution): DuckDBExecution.AsObject;
@@ -3368,6 +3373,7 @@ export namespace DuckDBExecution {
     duckdbVersion: string,
     sourcesList: Array<DuckDBExecutionSource.AsObject>,
     statementsList: Array<DuckDBExecutionStatement.AsObject>,
+    extensionsList: Array<DuckDBExecutionExtension.AsObject>,
   }
 }
 
@@ -4277,6 +4283,30 @@ export namespace QueryParam {
   }
 
   export const Type: TypeMap;
+}
+
+export class DuckDBExecutionExtension extends jspb.Message {
+  getName(): string;
+  setName(value: string): void;
+
+  getRepository(): string;
+  setRepository(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): DuckDBExecutionExtension.AsObject;
+  static toObject(includeInstance: boolean, msg: DuckDBExecutionExtension): DuckDBExecutionExtension.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: DuckDBExecutionExtension, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): DuckDBExecutionExtension;
+  static deserializeBinaryFromReader(message: DuckDBExecutionExtension, reader: jspb.BinaryReader): DuckDBExecutionExtension;
+}
+
+export namespace DuckDBExecutionExtension {
+  export type AsObject = {
+    name: string,
+    repository: string,
+  }
 }
 
 export interface UserStatusMap {

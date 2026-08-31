@@ -241,6 +241,12 @@ describe('local MCP postgres happy path with device auth', () => {
                             expect(rootJob.dataset_id).to.eq(duckDatasetId)
                             expect(rootJob.job_status).to.eq('JOB_STATUS_DONE')
                             expect(execution.duckdb_version).to.eq('1.4.3')
+                            expect(execution.extensions).to.deep.equal([
+                              { name: 'spatial', repository: 'core' },
+                              { name: 'parquet', repository: 'core' },
+                              { name: 'json', repository: 'core' },
+                              { name: 'h3', repository: 'community' }
+                            ])
                             expect(execution.statements).to.be.an('array').and.not.be.empty
                             expect(execution.sources).to.have.length(1)
                             const sourceJobId = execution.sources[0].query_job_id

@@ -15,6 +15,14 @@ match `@duckdb/duckdb-wasm` 1.32.0:
 - `spatial-mvp.duckdb_extension.wasm` from
   `https://extensions.duckdb.org/v1.4.3/wasm_mvp/spatial.duckdb_extension.wasm`
   (SHA-256 `7a745cfc5259f69b46f077bc6afeb7a6aefb8ef8d8b336bb0b770e5449708bb4`)
+- `public/duckdb-extensions/v1.4.3/wasm_eh/h3.duckdb_extension.wasm` from
+  `https://community-extensions.duckdb.org/v1.4.3/wasm_eh/h3.duckdb_extension.wasm`
+  (SHA-256 `324b17f77ff072a08cf98b363d98975fb374a0a4c1ddbec7060298d025f80950`)
+- `public/duckdb-extensions/v1.4.3/wasm_mvp/h3.duckdb_extension.wasm` from
+  `https://community-extensions.duckdb.org/v1.4.3/wasm_mvp/h3.duckdb_extension.wasm`
+  (SHA-256 `c6fa4ed30251abbd5a9e1b60e24bf742f9fe6e3686b3fa4690adeb587aa8b91c`)
 
-They are bundled so browser-local GeoJSON queries never fetch an extension
-from a CDN or other external runtime service.
+They are bundled so browser-local queries never fetch an extension from a CDN
+or other external runtime service. The H3 files preserve DuckDB's repository
+layout so DuckDB-Wasm can verify their community signatures. DuckDB's JSON
+extension is statically linked and loaded alongside these assets.

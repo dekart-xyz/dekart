@@ -79,6 +79,13 @@ func TestLowerDuckDBExecutionIsDeterministic(t *testing.T) {
 	execution, err := lowerDuckDBExecution(snapshot, jobs, "qp_z=override")
 	require.NoError(t, err)
 	require.Equal(t, duckDBExecutionVersion, execution.DuckdbVersion)
+	require.Equal(t, []string{"spatial", "parquet", "json", "h3"}, []string{
+		execution.Extensions[0].Name,
+		execution.Extensions[1].Name,
+		execution.Extensions[2].Name,
+		execution.Extensions[3].Name,
+	})
+	require.Equal(t, "community", execution.Extensions[3].Repository)
 	require.Len(t, execution.Sources, 2)
 	require.Equal(t, "file-source", execution.Sources[0].GetFileSourceId())
 	require.Equal(t, "warehouse-job", execution.Sources[1].GetQueryJobId())
