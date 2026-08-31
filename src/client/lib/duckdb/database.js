@@ -20,9 +20,6 @@ const LOCAL_BUNDLES = {
   }
 }
 
-let extensionAssets = null
-const extensionInstallations = new Map()
-
 export function quoteIdentifier (value) {
   return `"${String(value).replaceAll('"', '""')}"`
 }
@@ -112,9 +109,22 @@ async function initializeDuckDB () {
       await connection.query('SET autoinstall_known_extensions=false')
       await connection.query('SET autoload_known_extensions=false')
       const useEH = bundle.mainModule === duckdbEhWasm
-      extensionAssets = {
+      const extensionAssets = {
         spatial: useEH ? spatialEhWasm : spatialMvpWasm,
         parquet: useEH ? parquetEhWasm : parquetMvpWasm
+      }
+      // spatial/parquet → install bundled files
+      // h3             → install from bundled local repository
+      // json           → already built in
+      // all four       → LOAD to activate
+      for (const [name, asset] of Object.entries(extensionAssets)) {
+        await installExtension(db, name, asset)
+      }
+      await connection.query(
+        `INSTALL h3 FROM ${quoteString(`${window.location.origin}/duckdb-extensions`)}`
+      )
+      for (const name of ['spatial', 'parquet', 'json', 'h3']) {
+        await connection.query(`LOAD ${quoteString(name)}`)
       }
     } finally {
       await connection.close()
@@ -140,18 +150,8 @@ export function getSharedDuckDB () {
   return duckDBPromise
 }
 
-// loadDuckDBExtension installs a bundled extension once and loads it on this connection.
+// loadDuckDBExtension loads an eagerly installed extension on this connection.
 export async function loadDuckDBExtension (connection, name) {
-  const db = await getSharedDuckDB()
-  let installation = extensionInstallations.get(name)
-  if (!installation) {
-    installation = installExtension(db, name, extensionAssets[name]).catch(error => {
-      extensionInstallations.delete(name)
-      throw error
-    })
-    extensionInstallations.set(name, installation)
-  }
-  await installation
   await connection.query(`LOAD ${quoteString(name)}`)
 }
 

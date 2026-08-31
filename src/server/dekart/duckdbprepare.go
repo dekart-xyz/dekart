@@ -431,7 +431,17 @@ func lowerDuckDBExecution(snapshot *duckDBPreparationSnapshot, jobsByDatasetID m
 		}
 		statements = append(statements, &proto.DuckDBExecutionStatement{Sql: fmt.Sprintf("CREATE OR REPLACE VIEW datasets.%s AS SELECT * FROM %s", quoteDuckDBIdentifier(viewName), jobTable)})
 	}
-	return &proto.DuckDBExecution{DuckdbVersion: duckDBExecutionVersion, Sources: sources, Statements: statements}, nil
+	return &proto.DuckDBExecution{
+		DuckdbVersion: duckDBExecutionVersion,
+		Sources:       sources,
+		Statements:    statements,
+		Extensions: []*proto.DuckDBExecutionExtension{
+			{Name: "spatial", Repository: "core"},
+			{Name: "parquet", Repository: "core"},
+			{Name: "json", Repository: "core"},
+			{Name: "h3", Repository: "community"},
+		},
+	}, nil
 }
 
 func duckDBDatasetViewName(datasetID string) string {

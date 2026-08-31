@@ -50,7 +50,9 @@ class DuckDBReportRuntime {
         this.assertOpen()
         this.connection = await this.db.connect()
         this.assertOpen()
-        await loadDuckDBExtension(this.connection, 'spatial')
+        for (const extension of ['spatial', 'parquet', 'json', 'h3']) {
+          await loadDuckDBExtension(this.connection, extension)
+        }
         await this.connection.query('CREATE SCHEMA IF NOT EXISTS datasets')
         await this.connection.query('CREATE SCHEMA IF NOT EXISTS dekart_internal')
       } catch (error) {
