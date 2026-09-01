@@ -17,6 +17,24 @@ func TestGetFileExtensionFromMime(t *testing.T) {
 	}
 }
 
+func TestResolveUploadMimeType(t *testing.T) {
+	cases := []struct {
+		name     string
+		mimeType string
+		expected string
+	}{
+		{"sample.geojson", "application/octet-stream", "application/geo+json"},
+		{"sample.parquet", "application/octet-stream", "application/vnd.apache.parquet"},
+		{"sample.bin", "application/octet-stream", "application/octet-stream"},
+		{"sample.csv", "application/geo+json", "application/geo+json"},
+	}
+	for _, testCase := range cases {
+		if got := resolveUploadMimeType(testCase.name, testCase.mimeType); got != testCase.expected {
+			t.Fatalf("resolveUploadMimeType(%q, %q) => %q, want %q", testCase.name, testCase.mimeType, got, testCase.expected)
+		}
+	}
+}
+
 func TestGetContentTypeFromExtensionCentral(t *testing.T) {
 	cases := map[string]string{
 		"csv":     "text/csv",
