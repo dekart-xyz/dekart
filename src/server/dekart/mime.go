@@ -1,6 +1,9 @@
 package dekart
 
-import "strings"
+import (
+	"path/filepath"
+	"strings"
+)
 
 // Centralized mapping between file extensions and MIME types
 var extToMime = map[string]string{
@@ -27,6 +30,18 @@ func getFileExtensionFromMime(mimeType string) string {
 		return ext
 	}
 	return ""
+}
+
+// resolveUploadMimeType uses a supported filename when the client can only declare generic binary data.
+func resolveUploadMimeType(name, mimeType string) string {
+	if mimeType != "application/octet-stream" {
+		return mimeType
+	}
+	extension := strings.TrimPrefix(strings.ToLower(filepath.Ext(name)), ".")
+	if inferred, ok := extToMime[extension]; ok {
+		return inferred
+	}
+	return mimeType
 }
 
 func getContentTypeFromExtensionCentral(ext string) string {

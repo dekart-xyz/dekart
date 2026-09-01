@@ -46,6 +46,7 @@ func (s Server) HandleStartFileUploadSession(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	request.MimeType = resolveUploadMimeType(request.GetName(), request.GetMimeType())
 	fileExtension := getFileExtensionFromMime(request.GetMimeType())
 	if fileExtension == "" {
 		http.Error(w, "unsupported file type", http.StatusBadRequest)
