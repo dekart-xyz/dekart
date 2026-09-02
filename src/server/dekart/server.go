@@ -264,7 +264,7 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 		}
 
 		var allowWorkspaceCreation string
-		if user.CanCreateWorkspace() {
+		if user.CanCreateWorkspace(claims.Email) {
 			allowWorkspaceCreation = "1"
 		}
 

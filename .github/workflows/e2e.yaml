@@ -479,6 +479,13 @@ jobs:
             spec: cypress/e2e/local/defaultWorkspaceManagement.cy.js
             skip_postgres: true
 
+          - id: local-additional-workspace
+            spec: cypress/e2e/local/additionalWorkspaceCreation.cy.js
+            skip_postgres: true
+            extra_env: |
+              -e DEKART_DEV_CLAIMS=1 \
+              -e DEKART_DEFAULT_WORKSPACE_ADMIN=workspace-admin@example.com \
+
           - id: local-bigquery-service-account-retest
             spec: cypress/e2e/local/bigQueryServiceAccountNameRetest.cy.js
             skip_postgres: true

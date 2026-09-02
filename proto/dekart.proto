@@ -276,6 +276,7 @@ message CreateWorkspaceRequest {
 }
 
 message CreateWorkspaceResponse {
+    string workspace_id = 1;
 }
 
 message UpdateWorkspaceRequest {

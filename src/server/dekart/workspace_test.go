@@ -42,6 +42,43 @@ func TestCreateWorkspace_AllowedForSelfHostedWhenExplicitlyEnabled(t *testing.T)
 	testCreateWorkspaceAllowed(t)
 }
 
+func TestCreateWorkspace_AllowedForConfiguredSelfHostedAdmin(t *testing.T) {
+	t.Setenv("DEKART_CLOUD", "")
+	t.Setenv("DEKART_ALLOW_WORKSPACE_CREATION", "")
+	t.Setenv("DEKART_DEFAULT_WORKSPACE_ADMIN", "user@example.com")
+	t.Setenv("DEKART_LICENSE_KEY", "")
+	testCreateWorkspaceAllowed(t)
+}
+
+func TestCreateWorkspace_RejectsUnknownEmailWhenExplicitlyEnabled(t *testing.T) {
+	t.Setenv("DEKART_CLOUD", "")
+	t.Setenv("DEKART_ALLOW_WORKSPACE_CREATION", "1")
+	t.Setenv("DEKART_LICENSE_KEY", "")
+
+	server := Server{}
+	ctx := context.WithValue(context.Background(), user.ContextKey, &user.Claims{Email: user.UnknownEmail})
+
+	_, err := server.CreateWorkspace(ctx, &proto.CreateWorkspaceRequest{WorkspaceName: "Acme"})
+
+	require.Error(t, err)
+	require.Equal(t, codes.PermissionDenied, status.Code(err))
+}
+
+func TestCreateWorkspace_RejectsReadOnlyWorkspace(t *testing.T) {
+	t.Setenv("DEKART_CLOUD", "")
+	t.Setenv("DEKART_ALLOW_WORKSPACE_CREATION", "1")
+	t.Setenv("DEKART_LICENSE_KEY", "")
+
+	server := Server{}
+	ctx := context.WithValue(context.Background(), user.ContextKey, &user.Claims{Email: "user@example.com"})
+	ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{ReadOnly: true})
+
+	_, err := server.CreateWorkspace(ctx, &proto.CreateWorkspaceRequest{WorkspaceName: "Acme"})
+
+	require.Error(t, err)
+	require.Equal(t, codes.PermissionDenied, status.Code(err))
+}
+
 func testCreateWorkspaceAllowed(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
@@ -60,9 +97,10 @@ func testCreateWorkspaceAllowed(t *testing.T) {
 		WithArgs(sqlmock.AnyArg(), user.GetDefaultSubscription(), "user@example.com").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	_, err = server.CreateWorkspace(ctx, &proto.CreateWorkspaceRequest{WorkspaceName: "Acme"})
+	response, err := server.CreateWorkspace(ctx, &proto.CreateWorkspaceRequest{WorkspaceName: "Acme"})
 
 	require.NoError(t, err)
+	require.NotEmpty(t, response.WorkspaceId)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 

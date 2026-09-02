@@ -235,14 +235,14 @@ function UpdateWorkspaceForm () {
   )
 }
 
-function WorkspaceTab ({ nextStep, setNextStep }) {
+function WorkspaceTab ({ nextStep, setNextStep, isCreatingAdditionalWorkspace }) {
   const userStream = useSelector(state => state.user.stream)
   const workspace = useSelector(state => state.workspace)
   const invites = workspace.invites
   if (userStream.workspaceId && userStream.workspaceId !== workspace.id) {
     return null
   }
-  let form = workspace.id ? <UpdateWorkspaceForm /> : <CreateWorkspaceForm />
+  let form = workspace.id && !isCreatingAdditionalWorkspace ? <UpdateWorkspaceForm /> : <CreateWorkspaceForm />
   if (nextStep === 'invites') {
     form = <Invites />
   }
@@ -250,7 +250,7 @@ function WorkspaceTab ({ nextStep, setNextStep }) {
   let title = 'Create workspace'
   if (nextStep === 'invites') {
     title = 'Join workspace'
-  } else if (workspace.id) {
+  } else if (workspace.id && !isCreatingAdditionalWorkspace) {
     title = null
   }
 
@@ -287,7 +287,7 @@ function getMembersSubTitle (addedUsersCount, planType) {
   return ''
 }
 
-export function Workspace ({ nextStep, setNextStep, stepId }) {
+export function Workspace ({ nextStep, setNextStep, stepId, isCreatingAdditionalWorkspace }) {
   const userStream = useSelector(state => state.user.stream)
   const isSelfHosted = useSelector(state => state.user.isSelfHosted)
   const addedUsersCount = useSelector(state => state.workspace.addedUsersCount)
@@ -303,7 +303,7 @@ export function Workspace ({ nextStep, setNextStep, stepId }) {
   return (
     <div className={styles.workspace}>
       {
-        workspaceId
+        workspaceId && !isCreatingAdditionalWorkspace
           ? (
             <div className={styles.workspaceSteps}>
               <Radio.Group
@@ -349,7 +349,7 @@ export function Workspace ({ nextStep, setNextStep, stepId }) {
 
       {
         step === 'workspace'
-          ? <WorkspaceTab nextStep={nextStep} setNextStep={setNextStep} />
+          ? <WorkspaceTab nextStep={nextStep} setNextStep={setNextStep} isCreatingAdditionalWorkspace={isCreatingAdditionalWorkspace} />
           : step === 'plan'
             ? (!isSelfHosted ? <SubscriptionTab /> : <MembersTab />)
             : step === 'members'
@@ -426,6 +426,9 @@ export default function WorkspacePage ({ step, onboarding }) {
   const [nextStep, setNextStep] = useState(initialNextStep)
   const isPlayground = useSelector(state => state.user.isPlayground)
   const isAnonymous = useSelector(state => state.user.isAnonymous)
+  const env = useSelector(state => state.env)
+  const readOnly = useSelector(state => state.workspace.readOnly)
+  const isCreatingAdditionalWorkspace = onboarding === 'create' && Boolean(workspaceId) && !env.isCloud && Boolean(env.variables.ALLOW_WORKSPACE_CREATION) && !readOnly
   const dispatch = useDispatch()
   useEffect(() => {
     if (isPlayground) {
@@ -460,7 +463,7 @@ export default function WorkspacePage ({ step, onboarding }) {
       {userStream
         ? (
           <div className={styles.body}>
-            {workspaceId || nextStep ? <Workspace nextStep={nextStep} setNextStep={setNextStep} stepId={step} /> : <WelcomeScreen setNextStep={setNextStep} />}
+            {workspaceId || nextStep ? <Workspace nextStep={nextStep} setNextStep={setNextStep} stepId={step} isCreatingAdditionalWorkspace={isCreatingAdditionalWorkspace} /> : <WelcomeScreen setNextStep={setNextStep} />}
           </div>
           )
         : null}

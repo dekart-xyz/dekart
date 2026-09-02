@@ -57,12 +57,12 @@ export function createWorkspace (name) {
     dispatch({ type: createWorkspace.name })
     const request = new CreateWorkspaceRequest()
     request.setWorkspaceName(name)
-    dispatch(grpcCall(Dekart.CreateWorkspace, request, () => {
+    dispatch(grpcCall(Dekart.CreateWorkspace, request, (response) => {
       const pendingDeviceID = getState().sessionStorage.current?.[pendingDeviceAuthorizationKey] || ''
       const nextPath = pendingDeviceID ? getDeviceAuthorizePath(pendingDeviceID) : ''
       dispatch(updateSessionStorage(pendingDeviceAuthorizationKey, ''))
       // why: resume explicit device authorization right after onboarding when started from CLI flow.
-      window.location.href = nextPath || '/'
+      dispatch(switchWorkspace(response.workspaceId, nextPath || '/'))
     }))
   }
 }

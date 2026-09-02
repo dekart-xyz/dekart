@@ -9506,7 +9506,7 @@ proto.CreateWorkspaceResponse.prototype.toObject = function(opt_includeInstance)
  */
 proto.CreateWorkspaceResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
-
+    workspaceId: jspb.Message.getFieldWithDefault(msg, 1, "")
   };
 
   if (includeInstance) {
@@ -9543,6 +9543,10 @@ proto.CreateWorkspaceResponse.deserializeBinaryFromReader = function(msg, reader
     }
     var field = reader.getFieldNumber();
     switch (field) {
+    case 1:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setWorkspaceId(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -9572,6 +9576,31 @@ proto.CreateWorkspaceResponse.prototype.serializeBinary = function() {
  */
 proto.CreateWorkspaceResponse.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
+  f = message.getWorkspaceId();
+  if (f.length > 0) {
+    writer.writeString(
+      1,
+      f
+    );
+  }
+};
+
+
+/**
+ * optional string workspace_id = 1;
+ * @return {string}
+ */
+proto.CreateWorkspaceResponse.prototype.getWorkspaceId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 1, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.CreateWorkspaceResponse} returns this
+ */
+proto.CreateWorkspaceResponse.prototype.setWorkspaceId = function(value) {
+  return jspb.Message.setProto3StringField(this, 1, value);
 };
 
 
