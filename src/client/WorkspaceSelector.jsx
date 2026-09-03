@@ -3,7 +3,7 @@ import Select from 'antd/es/select'
 import Divider from 'antd/es/divider'
 import Dropdown from 'antd/es/dropdown'
 import Button from 'antd/es/button'
-import { SettingOutlined, UserOutlined, TeamOutlined, DownOutlined } from '@ant-design/icons'
+import { PlusOutlined, SettingOutlined, UserOutlined, TeamOutlined, DownOutlined } from '@ant-design/icons'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import classNames from 'classnames'
@@ -15,6 +15,7 @@ export default function WorkspaceSelector () {
   const userStream = useSelector(state => state.user.stream)
   const isPlayground = useSelector(state => state.user.isPlayground)
   const isDefaultWorkspace = useSelector(state => state.user.isDefaultWorkspace)
+  const readOnly = useSelector(state => state.workspace.readOnly)
   const env = useSelector(state => state.env)
   const [isManageHovered, setIsManageHovered] = useState(false)
   const history = useHistory()
@@ -25,12 +26,17 @@ export default function WorkspaceSelector () {
   }
   const workspaces = userStream.userWorkspacesList || []
   const currentWorkspaceId = userStream.workspaceId || workspaces[0]?.id
+  const canCreateWorkspace = !env.isCloud && env.variables.ALLOW_WORKSPACE_CREATION && !readOnly
   if (!currentWorkspaceId || workspaces.length === 0) {
     return null
   }
   const handleChange = (value) => {
     if (value === 'manage') {
       history.push('/workspace')
+      return
+    }
+    if (value === 'create') {
+      history.push('/workspace/create')
       return
     }
     dispatch(switchWorkspace(value))
@@ -54,6 +60,14 @@ export default function WorkspaceSelector () {
           >
             {menu}
             <Divider style={{ margin: '4px 0' }} />
+            {canCreateWorkspace
+              ? (
+                <div className={styles.manageOption} onClick={() => handleChange('create')}>
+                  <PlusOutlined />
+                  <span>Create Workspace</span>
+                </div>
+                )
+              : null}
             <div
               className={styles.manageOption}
               onClick={() => handleChange('manage')}

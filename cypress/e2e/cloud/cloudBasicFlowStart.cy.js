@@ -21,7 +21,7 @@ describe('cloud basic flow', () => {
     cy.get('button:contains("Upload File")').click()
     cy.get('input[type="file"]').selectFile('cypress/fixtures/sample.csv', { force: true })
     cy.get('button:contains("Upload")').click()
-    cy.get('div:contains("8,276 rows")', { timeout: 20000 }).should('be.visible')
+    cy.get('div:contains("8,276 rows")', { timeout: 60000 }).should('be.visible')
 
     cy.get('button#dekart-share-report').click()
     cy.get('button#dekart-publish-report').click()

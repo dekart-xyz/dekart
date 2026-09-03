@@ -147,7 +147,7 @@ Backend:
 
 Frontend or Cypress:
 - `.env.local`: workspace management is visible without `DEKART_ALLOW_WORKSPACE_CREATION=1`.
-- `.env.local`: additional workspace creation remains unavailable unless enabled.
+- `.env.local`: additional workspace creation remains unavailable unless enabled for all authenticated users or the user matches `DEKART_DEFAULT_WORKSPACE_ADMIN`.
 - `.env.local`: token list refreshes in auth-disabled self-hosted mode.
 - Authenticated self-hosted default workspace:
   - open workspace page;
@@ -182,7 +182,7 @@ Manual matrix:
 ## Acceptance Criteria
 
 - Default workspace management works in local self-hosted mode without setting `DEKART_ALLOW_WORKSPACE_CREATION=1`.
-- Additional workspace creation remains disabled in self-hosted mode unless explicitly enabled.
+- Additional workspace creation remains disabled in self-hosted mode except for the configured default workspace admin or when explicitly enabled for all authenticated users.
 - Authenticated self-hosted default workspace admins can manage the default workspace through the same endpoints and UI controls as user-created self-hosted workspaces.
 - `is_default_workspace` is reliable in user stream responses.
 - Cloud behavior is unchanged.

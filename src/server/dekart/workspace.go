@@ -123,7 +123,7 @@ func (s Server) getUserWorkspaces(ctx context.Context, email string) ([]*proto.W
 		return nil, err
 	}
 
-	if len(workspaces) == 0 && !user.CanCreateWorkspace() {
+	if len(workspaces) == 0 && user.ShouldUseDefaultWorkspace(email) {
 		// if user cannot create workspace, we should add the default workspace
 		workspaceID := user.GetDefaultWorkspaceID()
 		if err := s.ensureDefaultWorkspace(ctx, email); err != nil {
@@ -221,7 +221,7 @@ func (s Server) CreateWorkspace(ctx context.Context, req *proto.CreateWorkspaceR
 	if err := s.requireRuntimeLicenseWrite(); err != nil {
 		return nil, err
 	}
-	if !user.CanCreateWorkspace() {
+	if !user.CanCreateWorkspace(claims.Email) {
 		return nil, status.Error(codes.PermissionDenied, "Workspace creation is disabled")
 	}
 	if err := requireWorkspaceWrite(ctx); err != nil {
@@ -251,7 +251,7 @@ func (s Server) CreateWorkspace(ctx context.Context, req *proto.CreateWorkspaceR
 		log.Err(err).Send()
 		return nil, err
 	}
-	return &proto.CreateWorkspaceResponse{}, nil
+	return &proto.CreateWorkspaceResponse{WorkspaceId: workspaceID}, nil
 }
 
 func (s Server) UpdateWorkspace(ctx context.Context, req *proto.UpdateWorkspaceRequest) (*proto.UpdateWorkspaceResponse, error) {
@@ -464,7 +464,7 @@ func (s Server) getUserWorkspace(ctx context.Context, email string) (*proto.Work
 		}
 		return &workspace, &role, nil
 	}
-	if !user.CanCreateWorkspace() { // if user cannot create workspace, we should add the default workspace
+	if user.ShouldUseDefaultWorkspace(email) { // users without separate onboarding use the default workspace
 		workspaceID := user.GetDefaultWorkspaceID()
 		if err := s.ensureDefaultWorkspace(ctx, email); err != nil {
 			log.Err(err).Send()

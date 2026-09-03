@@ -919,6 +919,9 @@ export namespace CreateWorkspaceRequest {
 }
 
 export class CreateWorkspaceResponse extends jspb.Message {
+  getWorkspaceId(): string;
+  setWorkspaceId(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CreateWorkspaceResponse.AsObject;
   static toObject(includeInstance: boolean, msg: CreateWorkspaceResponse): CreateWorkspaceResponse.AsObject;
@@ -931,6 +934,7 @@ export class CreateWorkspaceResponse extends jspb.Message {
 
 export namespace CreateWorkspaceResponse {
   export type AsObject = {
+    workspaceId: string,
   }
 }
 
