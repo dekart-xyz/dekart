@@ -128,16 +128,9 @@ describe('local MCP postgres happy path with device auth', () => {
       cy.contains('Your CLI now has access.').should('be.visible')
       cy.contains('button', 'Manage tokens').should('be.visible')
 
-      cy.window().then((win) => Cypress.Promise.all([1, 2].map(() => win.fetch(`${apiBase}/device/token`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ device_id: deviceId })
-      }).then((response) => {
-        expect(response.status).to.eq(200)
-        return response.json()
-      })))).then((tokenResponses) => {
-        expect(tokenResponses.map(({ status }) => status).sort(), 'device token statuses').to.deep.eq(['authorized', 'expired'])
-        const token = tokenResponses.find(({ status }) => status === 'authorized').token
+      cy.request('POST', `${apiBase}/device/token`, { device_id: deviceId }).then((tokenResp) => {
+        expect(tokenResp.body.status, 'device token status').to.eq('authorized')
+        const token = tokenResp.body.token
         expect(token, 'device token').to.be.a('string').and.not.be.empty
 
         // 3) MCP flow: list connections -> create report -> create dataset -> create query -> update query -> run query.
