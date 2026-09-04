@@ -272,7 +272,7 @@ function delayDatasetSources () {
 }
 
 describe('local MCP snapshot viewport params', () => {
-  it('opens snapshot render URL with transient zoom, lat, and lon overrides', () => {
+  it('renders a sensitive report with transient zoom, lat, and lon overrides', () => {
     const override = { lat: 33.95, lon: -118.05, zoom: 8.2 }
     const saved = { lat: 37.7749, lon: -122.4194, zoom: 9 }
 
@@ -306,14 +306,19 @@ describe('local MCP snapshot viewport params', () => {
           zoom: override.zoom,
           lat: override.lat,
           lon: override.lon
-        })
-      }).then((snapshot) => {
+        }).then(snapshot => ({ reportId, snapshot }))
+      }).then(({ reportId, snapshot }) => {
         const renderUrl = snapshot.snapshot_render_url || snapshot.snapshotRenderUrl
         expect(renderUrl, 'snapshot_render_url').to.be.a('string')
         expect(renderUrl).to.include(`zoom=${override.zoom}`)
         expect(renderUrl).to.include(`lat=${override.lat}`)
         expect(renderUrl).to.include(`lon=${override.lon}`)
 
+        // Seed a sensitive passthrough dataset after token issuance without live Google credentials.
+        const connectionId = crypto.randomUUID()
+        const datasetId = crypto.randomUUID()
+        const queryId = crypto.randomUUID()
+        cy.exec(`sqlite3 "\${DEKART_SQLITE_DB_PATH:-data/dekart.db}" "INSERT INTO connections (id,connection_name,bigquery_project_id,connection_type) VALUES ('${connectionId}','Snapshot BigQuery','project',1); INSERT INTO queries (id,query_text,query_source_id,query_source,execution_engine) VALUES ('${queryId}','SELECT 1','',1,1); INSERT INTO datasets (report_id,id,query_id,connection_id,name) VALUES ('${reportId}','${datasetId}','${queryId}','${connectionId}','Sensitive');"`)
         delayDatasetSources()
         cy.visit(renderUrl)
         cy.contains('Untitled Report', { timeout: 60000 }).should('not.exist')
