@@ -93,7 +93,7 @@ func TestServeMapPreviewUsesDefaultForPGBackupBucket(t *testing.T) {
 
 	reportID := "00000000-0000-0000-0000-000000000004"
 	email := "user@example.com"
-	expectSnapshotReportAccess(mock, reportID, email)
+	expectSnapshotReportAccess(mock, reportID, email, 0)
 	server := Server{db: db}
 	request := httptest.NewRequest(http.MethodGet, "/reports/"+reportID+"/map-preview", nil)
 	request = request.WithContext(snapshotTestContext(email))

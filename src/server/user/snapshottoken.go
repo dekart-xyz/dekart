@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"dekart/src/server/reportsnapshot"
 	"strings"
 )
@@ -24,4 +25,19 @@ func validateSnapshotToken(token string) *Claims {
 		WorkspaceID:   snapshotClaims.WorkspaceID,
 		ReportID:      snapshotClaims.ReportID,
 	}
+}
+
+// WithSnapshotCredentials exposes stored Google credentials only to the dataset-source request that needs them.
+func WithSnapshotCredentials(ctx context.Context) context.Context {
+	claims := GetClaims(ctx)
+	if claims == nil || claims.SnapshotToken == "" {
+		return ctx
+	}
+	snapshotClaims, err := reportsnapshot.ParseAndValidateToken(claims.SnapshotToken)
+	if err != nil || snapshotClaims.WorkspaceID != claims.WorkspaceID || snapshotClaims.ReportID != claims.ReportID {
+		return ctx
+	}
+	requestClaims := *claims
+	requestClaims.MCPGoogleAccessToken = snapshotClaims.MCPGoogleAccessToken
+	return context.WithValue(ctx, ContextKey, &requestClaims)
 }

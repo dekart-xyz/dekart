@@ -86,7 +86,7 @@ export function openReport (reportId, snapshot = false) {
         if (err) {
           return err
         }
-        if (reportStreamResponse.report.needSensitiveScope && !user.sensitiveScopesGranted) {
+        if (!snapshot && reportStreamResponse.report.needSensitiveScope && !user.sensitiveScopesGranted) {
           dispatch(needSensitiveScopes())
         } else {
           dispatch(reportUpdate(reportStreamResponse))
@@ -170,6 +170,9 @@ function isQueryJobOutOfDate (reportStreamResponse, getState, queryJob) {
 
 export function scheduleQueryJobRefresh (reportStreamResponse) {
   return (dispatch, getState) => {
+    if (getState().reportStatus.snapshotMode) {
+      return
+    }
     const { report } = reportStreamResponse
     const autoRefreshIntervalSeconds = report?.autoRefreshIntervalSeconds || 0
 
@@ -249,7 +252,7 @@ export function reportUpdate (reportStreamResponse) {
       user,
       queryParams: currentQueryParams,
       queryJobs: prevQueryJobsList,
-      reportStatus: { lastSaved, savedReportVersion, lastMapConfigChanged },
+      reportStatus: { lastSaved, savedReportVersion, lastMapConfigChanged, snapshotMode },
       hasOpenedKeplerPanel
     } = state
     const activeQueryParams = reconcileQueryParamsState(currentQueryParams, report.queryParamsList, window.location.search)
@@ -335,7 +338,7 @@ export function reportUpdate (reportStreamResponse) {
         const { edit } = getState().reportStatus
         const lastAddedQueryQueryJob = getState().dataset.lastAddedQueryQueryJob[dataset.queryId]
         const doNotRefreshWhenEdit = edit && lastAddedQueryQueryJob && queryJob && lastAddedQueryQueryJob.id === queryJob.id
-        if (report.canRefresh && canRun && !queryExecutionPending && isQueryJobOutOfDate(reportStreamResponse, getState, queryJob) && !doNotRefreshWhenEdit) {
+        if (!snapshotMode && report.canRefresh && canRun && !queryExecutionPending && isQueryJobOutOfDate(reportStreamResponse, getState, queryJob) && !doNotRefreshWhenEdit) {
           dispatch(runWarehouseQuery(dataset.queryId, queryText))
         // A renamed blank query dataset has no result to download yet.
         } else if (queryJob && (shouldAddQuery(queryJob, prevQueryJobsList, mapConfigUpdated) || shouldUpdateDataset(dataset, prevDatasetsList))) {

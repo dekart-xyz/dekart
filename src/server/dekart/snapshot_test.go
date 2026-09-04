@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"dekart/src/proto"
+	"dekart/src/server/reportsnapshot"
 	"dekart/src/server/user"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -27,7 +28,7 @@ func snapshotTestContext(email string) context.Context {
 	})
 }
 
-func expectSnapshotReportAccess(mock sqlmock.Sqlmock, reportID string, email string) {
+func expectSnapshotReportAccess(mock sqlmock.Sqlmock, reportID string, email string, sensitiveConnections int) {
 	now := time.Now()
 	mock.ExpectQuery("select\\s+r\\.id").
 		WithArgs(email, reportID, reportID, reportID, reportID, false).
@@ -66,8 +67,8 @@ func expectSnapshotReportAccess(mock sqlmock.Sqlmock, reportID string, email str
 			now,
 			false,
 			0,
-			0,
-			0,
+			sensitiveConnections,
+			sensitiveConnections,
 			false,
 			false,
 			[]byte{},
@@ -92,7 +93,7 @@ func TestCreateReportSnapshot_ReturnsRenderURLWithoutBrowserlessCapture(t *testi
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
-	expectSnapshotReportAccess(mock, reportID, email)
+	expectSnapshotReportAccess(mock, reportID, email, 0)
 
 	server := NewServer(db, nil, nil)
 	response, err := server.CreateReportSnapshot(snapshotTestContext(email), &proto.CreateReportSnapshotRequest{ReportId: reportID})
@@ -113,7 +114,7 @@ func TestCreateReportSnapshot_AppendsValidViewportParamsToRenderURL(t *testing.T
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
-	expectSnapshotReportAccess(mock, reportID, email)
+	expectSnapshotReportAccess(mock, reportID, email, 0)
 
 	server := NewServer(db, nil, nil)
 	zoom := 12.0
@@ -144,7 +145,7 @@ func TestCreateReportSnapshot_IgnoresInvalidViewportParams(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
-	expectSnapshotReportAccess(mock, reportID, email)
+	expectSnapshotReportAccess(mock, reportID, email, 0)
 
 	server := NewServer(db, nil, nil)
 	zoom := 25.0
@@ -175,7 +176,7 @@ func TestCreateReportSnapshot_ReturnsImageURLWithBrowserlessCapture(t *testing.T
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
-	expectSnapshotReportAccess(mock, reportID, email)
+	expectSnapshotReportAccess(mock, reportID, email, 0)
 
 	server := NewServer(db, nil, nil)
 	response, err := server.CreateReportSnapshot(snapshotTestContext(email), &proto.CreateReportSnapshotRequest{ReportId: reportID})
@@ -196,7 +197,7 @@ func TestCreateReportSnapshot_AppendsViewportParamsToImageURLWithBrowserlessCapt
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
-	expectSnapshotReportAccess(mock, reportID, email)
+	expectSnapshotReportAccess(mock, reportID, email, 0)
 
 	server := NewServer(db, nil, nil)
 	zoom := 12.0
@@ -278,6 +279,70 @@ func TestCreateReportSnapshot_RequiresAuthAndReportAccess(t *testing.T) {
 
 	_, err = server.CreateReportSnapshot(snapshotTestContext(email), &proto.CreateReportSnapshotRequest{ReportId: reportID})
 	require.Equal(t, codes.NotFound, status.Code(err))
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestCreateReportSnapshot_RequiresDelegatedCredentialForSensitiveDeviceRequest(t *testing.T) {
+	reportID := "00000000-0000-0000-0000-000000000004"
+	email := "user@example.com"
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+	expectSnapshotReportAccess(mock, reportID, email, 1)
+	server := NewServer(db, nil, nil)
+	ctx := snapshotTestContext(email)
+	user.GetClaims(ctx).DeviceToken = "device-token"
+
+	_, err = server.CreateReportSnapshot(ctx, &proto.CreateReportSnapshotRequest{ReportId: reportID})
+
+	var credentialErr *mcpCredentialError
+	require.ErrorAs(t, err, &credentialErr)
+	require.Equal(t, "bigquery_passthrough_auth_required", credentialErr.response.Error)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestCreateReportSnapshot_AcceptsValidatedDelegatedCredentialForSensitiveRequest(t *testing.T) {
+	reportID := "00000000-0000-0000-0000-000000000005"
+	email := "user@example.com"
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+	expectSnapshotReportAccess(mock, reportID, email, 1)
+	server := NewServer(db, nil, nil)
+	ctx := snapshotTestContext(email)
+	user.GetClaims(ctx).MCPGoogleAccessToken = "delegated-token"
+
+	response, err := server.CreateReportSnapshot(ctx, &proto.CreateReportSnapshotRequest{ReportId: reportID})
+
+	require.NoError(t, err)
+	renderURL, err := url.Parse(response.SnapshotRenderUrl)
+	require.NoError(t, err)
+	token := renderURL.Query().Get("snapshot_token")
+	require.NotEmpty(t, token)
+	t.Cleanup(func() { reportsnapshot.DeleteToken(token) })
+	claims, err := reportsnapshot.ParseAndValidateToken(token)
+	require.NoError(t, err)
+	require.Equal(t, "delegated-token", claims.MCPGoogleAccessToken)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestCreateReportSnapshot_RequiresDelegatedCredentialForSensitiveBrowserRequest(t *testing.T) {
+	reportID := "00000000-0000-0000-0000-000000000006"
+	email := "user@example.com"
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+	expectSnapshotReportAccess(mock, reportID, email, 1)
+	server := NewServer(db, nil, nil)
+	ctx := snapshotTestContext(email)
+	user.GetClaims(ctx).AccessToken = "sensitive-scope-token"
+	user.GetClaims(ctx).SensitiveScopesGranted = true
+
+	_, err = server.CreateReportSnapshot(ctx, &proto.CreateReportSnapshotRequest{ReportId: reportID})
+
+	var credentialErr *mcpCredentialError
+	require.ErrorAs(t, err, &credentialErr)
+	require.Equal(t, "bigquery_passthrough_auth_required", credentialErr.response.Error)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 

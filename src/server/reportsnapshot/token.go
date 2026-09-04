@@ -25,23 +25,33 @@ type tokenEntry struct {
 
 // Claims carries short-lived snapshot authorization scope stored in memory for URL token validation.
 type Claims struct {
-	Email       string
-	WorkspaceID string
-	ReportID    string
+	Email                string
+	WorkspaceID          string
+	ReportID             string
+	MCPGoogleAccessToken string
 }
 
 // IssueToken creates opaque UUID token and stores claims in memory with default TTL.
 func IssueToken(claims Claims) (string, time.Time, error) {
-	expiresAt := time.Now().UTC().Add(readTokenTTL())
+	return issueToken(claims, readTokenTTL())
+}
+
+// issueToken stores claims for the requested lifetime and removes credentials at expiry.
+func issueToken(claims Claims, ttl time.Duration) (string, time.Time, error) {
+	expiresAt := time.Now().UTC().Add(ttl)
 	token, err := uuid.NewRandom()
 	if err != nil {
 		return "", time.Time{}, err
 	}
-	state.active.Store(token.String(), tokenEntry{
+	tokenValue := token.String()
+	state.active.Store(tokenValue, tokenEntry{
 		claims:    claims,
 		expiresAt: expiresAt,
 	})
-	return token.String(), expiresAt, nil
+	time.AfterFunc(ttl, func() {
+		state.active.Delete(tokenValue)
+	})
+	return tokenValue, expiresAt, nil
 }
 
 // ParseAndValidateToken loads in-memory token entry and validates expiry.
