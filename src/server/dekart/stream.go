@@ -404,7 +404,7 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 	if err != nil {
 		return GRPCError("Cannot get workspace update", err)
 	}
-	tokenUpdate, err := device.GetTokenUpdate(ctx, s.db, checkWorkspace(ctx).ID, claims.Email, IsSqlite())
+	tokenUpdate, err := device.GetTokenUpdate(ctx, s.db, checkWorkspace(ctx).ID, claims.Email)
 	if err != nil {
 		return GRPCError("Cannot get token update", err)
 	}

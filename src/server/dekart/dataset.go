@@ -149,6 +149,23 @@ func (s Server) getReportID(ctx context.Context, datasetID string, canWrite bool
 	return &reportID, nil
 }
 
+// datasetOwnsSource verifies that a result or uploaded file belongs to the requested dataset.
+func (s Server) datasetOwnsSource(ctx context.Context, datasetID string, sourceID string) (bool, error) {
+	var count int
+	err := s.db.QueryRowContext(ctx, `select count(*) from (
+		select qj.job_result_id from query_jobs as qj
+		where qj.job_result_id=$2 and qj.query_id in (
+			select query_id from datasets where id=$1
+			union select id from queries where id=$1
+		)
+		union all
+		select f.file_source_id from files as f
+		join datasets as d on d.file_id=f.id
+		where d.id=$1 and f.file_source_id=$2
+	) as owned_sources`, datasetID, sourceID).Scan(&count)
+	return count > 0, err
+}
+
 func (s Server) UpdateDatasetName(ctx context.Context, req *proto.UpdateDatasetNameRequest) (*proto.UpdateDatasetNameResponse, error) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
@@ -404,7 +421,7 @@ func (s Server) getResultURI(ctx context.Context, resultID string) (string, erro
 	return "", nil
 }
 
-// since reading is using connection no auth is needed here
+// ServeDatasetSource authorizes access and reads the stored result through its connection.
 func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	ctx := r.Context()
@@ -435,6 +452,23 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
+	// Snapshot credentials are valid only for datasets owned by the token-scoped report.
+	if claims.SnapshotToken != "" && claims.ReportID != *reportID {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	if claims.SnapshotToken != "" {
+		ownsSource, err := s.datasetOwnsSource(ctx, vars["dataset"], vars["source"])
+		if err != nil {
+			errtype.LogError(err, "Error checking snapshot dataset source")
+			HttpError(w, err)
+			return
+		}
+		if !ownsSource {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+	}
 
 	report, err := s.getReport(ctx, *reportID)
 
@@ -463,6 +497,16 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 		log.Warn().Err(err).Msg("Connection not found while serving dataset source")
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
+	}
+
+	ctx = user.WithMCPGoogleAccessTokenHeader(ctx, r.Header.Get(user.MCPGoogleAccessTokenHeader))
+	ctx = user.WithSnapshotCredentials(ctx)
+	if !report.IsPublic && requiresMCPGoogleCredential(connection) &&
+		(user.GetClaims(ctx).MCPGoogleAccessTokenHeader != "" || claims.DeviceToken != "") {
+		if err := user.ValidateMCPGoogleAccessToken(ctx); err != nil {
+			writeMCPCallError(w, newMCPGoogleCredentialError(err))
+			return
+		}
 	}
 
 	if conn.IsSystemConnectionID(connection.Id) {

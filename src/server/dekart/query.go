@@ -599,7 +599,7 @@ func (s Server) dryRunQuery(ctx context.Context, connection *proto.Connection, q
 			Message:   "dry run not supported",
 		}, nil
 	}
-	if connection.BigqueryKey == nil && !conn.IsSystemConnectionID(connection.GetId()) {
+	if connection.BigqueryKey == nil && !conn.IsSystemConnectionID(connection.GetId()) && !user.HasValidatedMCPGoogleAccessToken(ctx) {
 		return &proto.QueryDryRunResult{
 			Supported: false,
 			Valid:     false,

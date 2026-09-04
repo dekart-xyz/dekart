@@ -32,13 +32,15 @@ import (
 
 // Claims stores user detail received from request
 type Claims struct {
-	Email                  string
-	AccessToken            string
-	DeviceToken            string
-	SnapshotToken          string
-	SensitiveScopesGranted bool
-	WorkspaceID            string
-	ReportID               string
+	Email                      string
+	AccessToken                string
+	MCPGoogleAccessTokenHeader string
+	MCPGoogleAccessToken       string
+	DeviceToken                string
+	SnapshotToken              string
+	SensitiveScopesGranted     bool
+	WorkspaceID                string
+	ReportID                   string
 }
 
 // ContextKeyType type

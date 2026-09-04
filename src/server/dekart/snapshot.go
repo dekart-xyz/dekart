@@ -54,10 +54,17 @@ func (s *Server) CreateReportSnapshot(ctx context.Context, req *proto.CreateRepo
 	if err := validateSnapshotRequest(req); err != nil {
 		return nil, err
 	}
-	if err := s.ensureReportReadAccess(ctx, req.GetReportId()); err != nil {
+	report, err := s.ensureReportReadAccess(ctx, req.GetReportId())
+	if err != nil {
 		return nil, err
 	}
-	token, expiresAt, err := reportsnapshot.IssueToken(buildSnapshotClaims(ctx, claims.Email, req.GetReportId()))
+	if !report.IsPublic && report.NeedSensitiveScope {
+		// Sensitive passthrough snapshots require the explicitly delegated MCP credential.
+		if err := user.ValidateMCPGoogleAccessToken(ctx); err != nil {
+			return nil, newMCPGoogleCredentialError(err)
+		}
+	}
+	token, expiresAt, err := reportsnapshot.IssueToken(buildSnapshotClaims(ctx, claims, req.GetReportId()))
 	if err != nil {
 		return nil, status.Error(codes.Internal, "cannot issue snapshot token")
 	}
@@ -138,24 +145,25 @@ func validateSnapshotRequest(req *proto.CreateReportSnapshotRequest) error {
 }
 
 // ensureReportReadAccess checks caller access to report before snapshot URL issuance.
-func (s *Server) ensureReportReadAccess(ctx context.Context, reportID string) error {
+func (s *Server) ensureReportReadAccess(ctx context.Context, reportID string) (*proto.Report, error) {
 	report, err := s.getReport(ctx, reportID)
 	if err != nil {
-		return status.Error(codes.Internal, "failed to resolve report access")
+		return nil, status.Error(codes.Internal, "failed to resolve report access")
 	}
 	if report == nil {
-		return status.Error(codes.NotFound, "report not found")
+		return nil, status.Error(codes.NotFound, "report not found")
 	}
-	return nil
+	return report, nil
 }
 
 // buildSnapshotClaims builds compact token claims from authenticated context and request options.
-func buildSnapshotClaims(ctx context.Context, email string, reportID string) reportsnapshot.Claims {
+func buildSnapshotClaims(ctx context.Context, claims *user.Claims, reportID string) reportsnapshot.Claims {
 	workspaceID := checkWorkspace(ctx).ID
 	return reportsnapshot.Claims{
-		Email:       email,
-		WorkspaceID: workspaceID,
-		ReportID:    reportID,
+		Email:                claims.Email,
+		WorkspaceID:          workspaceID,
+		ReportID:             reportID,
+		MCPGoogleAccessToken: claims.MCPGoogleAccessToken,
 	}
 }
 

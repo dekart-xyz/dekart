@@ -3,17 +3,33 @@ package bqutils
 import (
 	"context"
 	"dekart/src/proto"
+	"dekart/src/server/conn"
 	"dekart/src/server/secrets"
 	"dekart/src/server/user"
 	"encoding/json"
 	"fmt"
+	"os"
 
 	bqStorage "cloud.google.com/go/bigquery/storage/apiv1"
 	"cloud.google.com/go/storage"
 
 	"cloud.google.com/go/bigquery"
+	"golang.org/x/oauth2"
 	"google.golang.org/api/option"
 )
+
+// getTokenSource confines delegated Google auth to BigQuery passthrough connections.
+func getTokenSource(ctx context.Context, connection *proto.Connection) oauth2.TokenSource {
+	useDelegatedToken := connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_BIGQUERY &&
+		connection.BigqueryKey == nil &&
+		(!conn.IsSystemConnectionID(connection.GetId()) || os.Getenv("DEKART_CLOUD") != "")
+	if useDelegatedToken {
+		if tokenSource := user.GetMCPGoogleTokenSource(ctx); tokenSource != nil {
+			return tokenSource
+		}
+	}
+	return user.GetTokenSource(ctx)
+}
 
 func GetTableFromJob(job *bigquery.Job) (*bigquery.Table, error) {
 	cfg, err := job.Config()
@@ -31,7 +47,7 @@ func GetProjectID(ctx context.Context, conn *proto.Connection) (string, option.C
 	if conn == nil {
 		return "", nil, fmt.Errorf("connection is nil")
 	}
-	tokenSource := user.GetTokenSource(ctx)
+	tokenSource := getTokenSource(ctx, conn)
 	var secretOption option.ClientOption
 	claims := user.GetClaims(ctx)
 	projectID := conn.BigqueryProjectId
@@ -73,7 +89,7 @@ func GetReadClient(ctx context.Context, conn *proto.Connection) (*bqStorage.BigQ
 	if conn == nil {
 		return nil, fmt.Errorf("connection is nil")
 	}
-	tokenSource := user.GetTokenSource(ctx)
+	tokenSource := getTokenSource(ctx, conn)
 	var secretOption option.ClientOption
 	claims := user.GetClaims(ctx)
 	if conn.BigqueryKey != nil {
@@ -101,7 +117,7 @@ func GetStorageClient(ctx context.Context, conn *proto.Connection, ignoreUserTok
 	if conn == nil {
 		return nil, fmt.Errorf("connection is nil")
 	}
-	tokenSource := user.GetTokenSource(ctx)
+	tokenSource := getTokenSource(ctx, conn)
 	var secretOption option.ClientOption
 	claims := user.GetClaims(ctx)
 	if conn.BigqueryKey != nil && !ignoreUserToken {

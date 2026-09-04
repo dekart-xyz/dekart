@@ -73,6 +73,20 @@ func TestWriteMCPCallError_MapConfigValidationErrorStructured(t *testing.T) {
 	}
 }
 
+func TestWriteMCPCallError_GoogleCredentialErrorStructured(t *testing.T) {
+	recorder := httptest.NewRecorder()
+
+	writeMCPCallError(recorder, newMCPGoogleCredentialError(user.ErrMCPGoogleScopeInsufficient))
+
+	assert.Equal(t, http.StatusForbidden, recorder.Code)
+	var payload mcpCredentialErrorResponse
+	err := json.Unmarshal(recorder.Body.Bytes(), &payload)
+	assert.NoError(t, err)
+	assert.Equal(t, "google_scope_insufficient", payload.Error)
+	assert.NotEmpty(t, payload.Message)
+	assert.Contains(t, payload.Hint, "gcloud auth login")
+}
+
 func TestCallUploadHandlerJSON_PropagatesHandlerStatusAndMessage(t *testing.T) {
 	server := &Server{}
 	handler := func(w http.ResponseWriter, _ *http.Request) {
@@ -382,19 +396,29 @@ func TestCallMCPTool_RunQuery_InvalidArguments(t *testing.T) {
 	assert.Contains(t, err.Error(), "queryId")
 }
 
-func TestRequireMCPBigQueryServiceAccount(t *testing.T) {
+func TestRequireMCPBigQueryCredential(t *testing.T) {
 	tests := []struct {
 		name       string
+		claims     *user.Claims
 		connection *proto.Connection
 		wantError  bool
 	}{
 		{
-			name: "rejects bigquery passthrough",
+			name:   "rejects bigquery passthrough",
+			claims: &user.Claims{Email: "user@example.com"},
 			connection: &proto.Connection{
 				ConnectionType:    proto.ConnectionType_CONNECTION_TYPE_BIGQUERY,
 				BigqueryProjectId: "dekart-dev",
 			},
 			wantError: true,
+		},
+		{
+			name:   "allows bigquery passthrough with validated token",
+			claims: &user.Claims{Email: "user@example.com", MCPGoogleAccessToken: "google-token"},
+			connection: &proto.Connection{
+				ConnectionType:    proto.ConnectionType_CONNECTION_TYPE_BIGQUERY,
+				BigqueryProjectId: "dekart-dev",
+			},
 		},
 		{
 			name: "allows self-hosted system bigquery",
@@ -424,11 +448,16 @@ func TestRequireMCPBigQueryServiceAccount(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := requireMCPBigQueryServiceAccount(context.Background(), tt.connection)
+			ctx := context.Background()
+			if tt.claims != nil {
+				ctx = context.WithValue(ctx, user.ContextKey, tt.claims)
+			}
+			err := requireMCPBigQueryCredential(ctx, tt.connection)
 			if tt.wantError {
 				assert.Error(t, err)
-				assert.Equal(t, codes.FailedPrecondition, status.Code(err))
-				assert.Equal(t, mcpBigQueryServiceAccountRequiredMessage, status.Convert(err).Message())
+				var credentialErr *mcpCredentialError
+				assert.True(t, errors.As(err, &credentialErr))
+				assert.Equal(t, http.StatusPreconditionFailed, credentialErr.statusCode)
 				return
 			}
 			assert.NoError(t, err)
@@ -456,9 +485,9 @@ func TestRequireMCPCreateQueryConnectionAllowsConnectionlessDuckDB(t *testing.T)
 	assert.Equal(t, codes.InvalidArgument, status.Code(err))
 }
 
-func TestFilterConnectionsForMCPRunQueriesScope_KeepsSelfHostedSystemBigQuery(t *testing.T) {
-	t.Setenv("DEKART_CLOUD", "")
-	connections := filterConnectionsForMCPRunQueriesScope([]*proto.Connection{
+func TestFilterConnectionsForMCPRunQueriesScope_IncludesPassthroughAndHidesCloudSystem(t *testing.T) {
+	t.Setenv("DEKART_CLOUD", "1")
+	allConnections := []*proto.Connection{
 		{
 			Id:                "00000000-0000-0000-0000-000000000000",
 			ConnectionName:    "BigQuery",
@@ -466,15 +495,23 @@ func TestFilterConnectionsForMCPRunQueriesScope_KeepsSelfHostedSystemBigQuery(t 
 			BigqueryProjectId: "dekart-dev",
 		},
 		{
-			Id:             "00000000-0000-0000-0000-000000000000",
+			Id:             "postgres",
 			ConnectionName: "Postgres",
 			ConnectionType: proto.ConnectionType_CONNECTION_TYPE_POSTGRES,
 		},
-	})
+		{
+			Id:                "passthrough",
+			ConnectionName:    "Passthrough",
+			ConnectionType:    proto.ConnectionType_CONNECTION_TYPE_BIGQUERY,
+			BigqueryProjectId: "dekart-dev",
+		},
+	}
 
-	if assert.Len(t, connections, 2) {
-		assert.Equal(t, proto.ConnectionType_CONNECTION_TYPE_BIGQUERY, connections[0].ConnectionType)
-		assert.Equal(t, proto.ConnectionType_CONNECTION_TYPE_POSTGRES, connections[1].ConnectionType)
+	filtered := filterConnectionsForMCPRunQueriesScope(allConnections)
+
+	if assert.Len(t, filtered, 2) {
+		assert.Equal(t, proto.ConnectionType_CONNECTION_TYPE_POSTGRES, filtered[0].ConnectionType)
+		assert.Equal(t, "passthrough", filtered[1].Id)
 	}
 }
 

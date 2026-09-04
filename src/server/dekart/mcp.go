@@ -57,6 +57,22 @@ type mcpValidationErrorResponse struct {
 	Issues []mapConfigValidationIssue `json:"issues"`
 }
 
+type mcpCredentialErrorResponse struct {
+	Error   string `json:"error"`
+	Message string `json:"message"`
+	Hint    string `json:"hint"`
+}
+
+type mcpCredentialError struct {
+	statusCode int
+	response   mcpCredentialErrorResponse
+}
+
+// Error returns a credential error without including the credential value.
+func (e *mcpCredentialError) Error() string {
+	return e.response.Message
+}
+
 type addReportReadmeMCPArgs struct {
 	ReportId string `json:"report_id"`
 	Markdown string `json:"markdown"`
@@ -128,7 +144,8 @@ func (s *Server) HandleMCPCall(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "name is required", http.StatusBadRequest)
 		return
 	}
-	result, err := s.callMCPTool(r.Context(), request)
+	ctx := user.WithMCPGoogleAccessTokenHeader(r.Context(), r.Header.Get(user.MCPGoogleAccessTokenHeader))
+	result, err := s.callMCPTool(ctx, request)
 	if err != nil {
 		writeMCPCallError(w, err)
 		return
@@ -252,9 +269,8 @@ func clearSecretFields(message gproto.Message) {
 	}
 }
 
-// isBigQueryPassthroughConnectionExcludedForMCP returns true when connection
-// should be excluded from MCP run-queries scope as BigQuery passthrough.
-func isBigQueryPassthroughConnectionExcludedForMCP(connection *proto.Connection) bool {
+// requiresMCPGoogleCredential identifies BigQuery connections that need delegated user auth.
+func requiresMCPGoogleCredential(connection *proto.Connection) bool {
 	if connection == nil {
 		return false
 	}
@@ -267,9 +283,13 @@ func isBigQueryPassthroughConnectionExcludedForMCP(connection *proto.Connection)
 	return connection.BigqueryKey == nil
 }
 
-func requireMCPBigQueryServiceAccount(ctx context.Context, connection *proto.Connection) error {
-	if isBigQueryPassthroughConnectionExcludedForMCP(connection) {
-		return status.Error(codes.FailedPrecondition, mcpBigQueryServiceAccountRequiredMessage)
+// requireMCPBigQueryCredential validates credentials only for the selected connection.
+func requireMCPBigQueryCredential(ctx context.Context, connection *proto.Connection) error {
+	if requiresMCPGoogleCredential(connection) {
+		if err := user.ValidateMCPGoogleAccessToken(ctx); err != nil {
+			return newMCPGoogleCredentialError(err)
+		}
+		return nil
 	}
 	if connection == nil || connection.ConnectionType != proto.ConnectionType_CONNECTION_TYPE_BIGQUERY {
 		return nil
@@ -307,7 +327,7 @@ func (s *Server) requireMCPCreateQueryConnection(ctx context.Context, request *p
 	if connection == nil && !conn.IsSystemConnectionID(request.GetConnectionId()) {
 		return status.Error(codes.NotFound, "connection not found")
 	}
-	return requireMCPBigQueryServiceAccount(ctx, connection)
+	return requireMCPBigQueryCredential(ctx, connection)
 }
 
 // filterConnectionsForMCPRunQueriesScope keeps only MCP-supported connections for
@@ -315,21 +335,8 @@ func (s *Server) requireMCPCreateQueryConnection(ctx context.Context, request *p
 func filterConnectionsForMCPRunQueriesScope(connections []*proto.Connection) []*proto.Connection {
 	filtered := make([]*proto.Connection, 0, len(connections))
 	for _, connection := range connections {
-		if connection == nil {
-			continue
-		}
-		if connection.GetId() == conn.SystemConnectionID {
-			if os.Getenv("DEKART_CLOUD") != "" {
-				continue
-			}
-			if isBigQueryPassthroughConnectionExcludedForMCP(connection) {
-				continue
-			}
-			// Keep MCP-supported system default connections visible for self-hosted deployments.
-			filtered = append(filtered, connection)
-			continue
-		}
-		if isBigQueryPassthroughConnectionExcludedForMCP(connection) {
+		// Cloud's internal system connection stays hidden; workspace connections remain discoverable.
+		if connection == nil || (connection.GetId() == conn.SystemConnectionID && os.Getenv("DEKART_CLOUD") != "") {
 			continue
 		}
 		filtered = append(filtered, connection)
@@ -460,7 +467,7 @@ func (s *Server) validateMCPUpdateQuery(ctx context.Context, request *proto.Upda
 	if connection == nil {
 		return nil, nil
 	}
-	if err := requireMCPBigQueryServiceAccount(ctx, connection); err != nil {
+	if err := requireMCPBigQueryCredential(ctx, connection); err != nil {
 		return nil, err
 	}
 	dryRun, err := s.dryRunQuery(ctx, connection, request.GetQueryText())
@@ -498,13 +505,13 @@ func (s *Server) callRunQueryTool(ctx context.Context, raw json.RawMessage) (jso
 		response, err := s.prepareDuckDBExecution(ctx, &proto.PrepareDuckDBExecutionRequest{
 			QueryId:           request.GetQueryId(),
 			QueryParamsValues: request.GetQueryParamsValues(),
-		}, requireMCPBigQueryServiceAccount)
+		}, requireMCPBigQueryCredential)
 		if err != nil {
 			return nil, err
 		}
 		return mcp.MarshalProtoJSON(response)
 	}
-	response, err := s.runQueryRequest(ctx, request, requireMCPBigQueryServiceAccount)
+	response, err := s.runQueryRequest(ctx, request, requireMCPBigQueryCredential)
 	if err != nil {
 		return nil, err
 	}
@@ -848,6 +855,56 @@ func writeJSON(w http.ResponseWriter, statusCode int, payload any) {
 	_ = json.NewEncoder(w).Encode(payload)
 }
 
+// newMCPGoogleCredentialError maps delegated Google auth failures to agent guidance.
+func newMCPGoogleCredentialError(err error) *mcpCredentialError {
+	credentialErr := &mcpCredentialError{
+		statusCode: http.StatusServiceUnavailable,
+		response: mcpCredentialErrorResponse{
+			Error:   "google_token_validation_unavailable",
+			Message: "Google access token could not be validated",
+			Hint:    "Retry later.",
+		},
+	}
+	switch {
+	case errors.Is(err, user.ErrMCPGoogleAccessTokenMissing):
+		credentialErr.statusCode = http.StatusPreconditionFailed
+		credentialErr.response = mcpCredentialErrorResponse{
+			Error:   "bigquery_passthrough_auth_required",
+			Message: "BigQuery passthrough requires local gcloud authorization",
+			Hint:    "Upgrade Dekart CLI to a version that supports BigQuery passthrough, then run `dekart init` and follow the gcloud setup prompts.",
+		}
+	case errors.Is(err, user.ErrMCPGoogleAccessTokenInvalid):
+		credentialErr.statusCode = http.StatusUnauthorized
+		credentialErr.response = mcpCredentialErrorResponse{
+			Error:   "google_access_token_invalid",
+			Message: "Google access token is invalid or expired",
+			Hint:    "Retry once, then run `gcloud auth login --account <your Dekart email>` if the token is still rejected.",
+		}
+	case errors.Is(err, user.ErrMCPGoogleAccountMismatch):
+		credentialErr.statusCode = http.StatusForbidden
+		credentialErr.response = mcpCredentialErrorResponse{
+			Error:   "google_account_mismatch",
+			Message: "Google account does not match the Dekart account",
+			Hint:    "Select the same Google account as Dekart, then run `dekart init` again.",
+		}
+	case errors.Is(err, user.ErrMCPGooglePrincipalUnsupported):
+		credentialErr.statusCode = http.StatusForbidden
+		credentialErr.response = mcpCredentialErrorResponse{
+			Error:   "google_principal_unsupported",
+			Message: "Google service-account principals are not supported for passthrough",
+			Hint:    "Use a normal Google user account.",
+		}
+	case errors.Is(err, user.ErrMCPGoogleScopeInsufficient):
+		credentialErr.statusCode = http.StatusForbidden
+		credentialErr.response = mcpCredentialErrorResponse{
+			Error:   "google_scope_insufficient",
+			Message: "Google access token does not include the cloud-platform scope",
+			Hint:    "Run `gcloud auth login` for the Dekart account, then try again.",
+		}
+	}
+	return credentialErr
+}
+
 // writeMCPCallError maps tool call errors to HTTP responses for MCP clients.
 func writeMCPCallError(w http.ResponseWriter, err error) {
 	var validationErr *mapConfigValidationError
@@ -856,6 +913,11 @@ func writeMCPCallError(w http.ResponseWriter, err error) {
 			Error:  "map_config_validation_failed",
 			Issues: validationErr.Issues,
 		})
+		return
+	}
+	var credentialErr *mcpCredentialError
+	if errors.As(err, &credentialErr) {
+		writeJSON(w, credentialErr.statusCode, credentialErr.response)
 		return
 	}
 	var httpErr *mcpHTTPError
