@@ -159,13 +159,12 @@ expire-local-trials:
 
 
 define run_server
-	@echo "Releasing local dev port 8080..."; \
+	@echo "Checking local dev port 8080..."; \
 	pids="$$(lsof -tiTCP:8080 -sTCP:LISTEN)"; \
 	if [ -n "$$pids" ]; then \
-		kill -9 $$pids; \
-		echo "Force-stopped listeners: $$pids"; \
-	else \
-		echo "No listeners on 8080"; \
+		echo "Port 8080 is already in use by PID(s): $$pids"; \
+		echo "Stop it first. For CLI-managed Dekart, run: dekart local down"; \
+		exit 1; \
 	fi; \
 	set -a; \
 	. $(1); \
