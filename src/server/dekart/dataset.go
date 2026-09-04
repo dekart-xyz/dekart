@@ -404,7 +404,7 @@ func (s Server) getResultURI(ctx context.Context, resultID string) (string, erro
 	return "", nil
 }
 
-// since reading is using connection no auth is needed here
+// ServeDatasetSource authorizes access and reads the stored result through its connection.
 func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	ctx := r.Context()
@@ -463,6 +463,15 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 		log.Warn().Err(err).Msg("Connection not found while serving dataset source")
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
+	}
+
+	ctx = user.WithMCPGoogleAccessTokenHeader(ctx, r.Header.Get(user.MCPGoogleAccessTokenHeader))
+	if !report.IsPublic && requiresMCPGoogleCredential(connection) &&
+		(user.GetClaims(ctx).MCPGoogleAccessTokenHeader != "" || claims.DeviceToken != "") {
+		if err := user.ValidateMCPGoogleAccessToken(ctx); err != nil {
+			writeMCPCallError(w, newMCPGoogleCredentialError(err))
+			return
+		}
 	}
 
 	if conn.IsSystemConnectionID(connection.Id) {

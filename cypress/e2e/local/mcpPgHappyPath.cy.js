@@ -366,15 +366,19 @@ describe('local MCP postgres happy path with device auth', () => {
                           query_id: partialQueryId,
                           query_text: 'SELECT * FROM datasets."Source" UNION ALL SELECT * FROM datasets."Bad"'
                         }).then(() => mcpRequest(apiBase, token, 'run_query', {
-                            query_id: partialQueryId,
-                            query_params_values: 'qp_row_limit=7',
-                            accept_duckdb_execution: true
-                          }).then((response) => {
-                            expect(response.status, 'partial launch status').to.eq(412)
-                            expect(response.body).to.eq('BigQuery via MCP requires a service-account-backed connection\n')
-                            // The accepted Source leaf remains available in the browser despite the later rejection.
-                            cy.assertDatasetRows('Source', 7)
-                          }))
+                          query_id: partialQueryId,
+                          query_params_values: 'qp_row_limit=7',
+                          accept_duckdb_execution: true
+                        }).then((response) => {
+                          expect(response.status, 'partial launch status').to.eq(412)
+                          expect(response.body).to.deep.eq({
+                            error: 'bigquery_passthrough_auth_required',
+                            message: 'BigQuery passthrough requires local gcloud authorization',
+                            hint: 'Upgrade Dekart CLI to a version that supports BigQuery passthrough, then run `dekart init` and follow the gcloud setup prompts.'
+                          })
+                          // The accepted Source leaf remains available in the browser despite the later rejection.
+                          cy.assertDatasetRows('Source', 7)
+                        }))
                       })
                     })
                   })
