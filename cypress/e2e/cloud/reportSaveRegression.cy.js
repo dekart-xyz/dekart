@@ -74,7 +74,7 @@ function updateReportMapConfigOutsideAppSave (store, mapConfig) {
   metadata.append('Content-Type', 'application/grpc-web+proto')
   metadata.append('X-Grpc-Web', '1')
 
-  const host = Cypress.env('CYPRESS_CI') ? Cypress.config('baseUrl') : 'http://localhost:8080'
+  const host = Cypress.env('DEKART_E2E_API_URL')
   return cy.window().then((win) => win.fetch(`${host}/Dekart/UpdateReport`, {
     method: 'POST',
     headers: metadata,

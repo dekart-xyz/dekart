@@ -2,11 +2,9 @@
 
 describe('local file-backed dataset download error', () => {
   it('shows the parse error and clears the downloading message', () => {
-    const appUrl = Cypress.env('DEKART_E2E_BASE_URL') || 'http://localhost:3000'
-    const ciValue = String(Cypress.env('CI') ?? '').toLowerCase()
-    const isCI = ciValue === 'true' || ciValue === '1' || String(Cypress.env('CYPRESS_CI') ?? '') === '1'
-    const apiOrigin = isCI ? appUrl : 'http://localhost:8080'
-    const apiBase = isCI ? `${appUrl}/api/v1` : 'http://localhost:8080/api/v1'
+    const appUrl = Cypress.config('baseUrl')
+    const apiOrigin = Cypress.env('DEKART_E2E_API_URL')
+    const apiBase = `${apiOrigin}/api/v1`
 
     const getDeviceToken = () => {
       return cy.request('POST', `${apiBase}/device`, {

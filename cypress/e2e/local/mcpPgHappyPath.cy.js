@@ -2,10 +2,8 @@
 
 describe('local MCP postgres happy path with device auth', () => {
   it('configures postgres in UX, authorizes device, executes MCP flow, and verifies map data in UI', () => {
-    const appUrl = Cypress.env('DEKART_E2E_BASE_URL') || 'http://localhost:3000'
-    const ciValue = String(Cypress.env('CI') ?? '').toLowerCase()
-    const isCI = ciValue === 'true' || ciValue === '1' || String(Cypress.env('CYPRESS_CI') ?? '') === '1'
-    const apiBase = isCI ? `${appUrl}/api/v1` : 'http://localhost:8080/api/v1'
+    const appUrl = Cypress.config('baseUrl')
+    const apiBase = `${Cypress.env('DEKART_E2E_API_URL')}/api/v1`
     const connName = `Postgres MCP Local ${Date.now()}`
 
     const setInputValue = (selector, value) => {
@@ -108,7 +106,7 @@ describe('local MCP postgres happy path with device auth', () => {
     setInputValue('input#postgresUsername', 'postgres')
     setInputValue('input#postgresPassword', 'dekart')
     setInputValue('input#postgresDatabase', 'dekart_geo')
-    setInputValue('input#postgresPort', '5432')
+    setInputValue('input#postgresPort', String(Cypress.env('DEKART_POSTGRES_PORT')))
     cy.get('button#testConnection').click()
     cy.wait('@testConnection')
     cy.get('button#saveConnection', { timeout: 60000 }).should('be.enabled').click()

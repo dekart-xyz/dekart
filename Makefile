@@ -1,10 +1,25 @@
-.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down up-and-down-oidc sqlite expire-local-trials proto-copy-to-node proto-stub server runner-install runner-register runner-start runner-stop runner-status runner-service-install runner-service-start runner-service-stop runner-service-status github-runner license-keygen license-issue
+.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down up-and-down-oidc sqlite compose-up compose-down cypress-run cypress-open expire-local-trials proto-copy-to-node proto-stub server runner-install runner-register runner-start runner-stop runner-status runner-service-install runner-service-start runner-service-stop runner-service-status github-runner license-keygen license-issue
 
 # load .env
 # https://lithic.tech/blog/2020-05/makefile-dot-env
 ifneq (,$(wildcard ./.env))
     include .env
 endif
+
+# Host-local resources. Override these once per clone in .env.
+COMPOSE_PROJECT_NAME ?= dekart
+DEKART_CLIENT_PORT ?= 3000
+DEKART_PORT ?= 8080
+DEKART_POSTGRES_PORT ?= 5432
+DEKART_POSTGRES_TLS_PORT ?= 5433
+DEKART_ADMINER_PORT ?= 8081
+DEKART_KEYCLOAK_PORT ?= 8082
+DEKART_OAUTH2_PROXY_PORT ?= 4180
+DEKART_BROWSERLESS_PORT ?= 3001
+
+export COMPOSE_PROJECT_NAME DEKART_CLIENT_PORT DEKART_PORT DEKART_POSTGRES_PORT
+export DEKART_POSTGRES_TLS_PORT DEKART_ADMINER_PORT DEKART_KEYCLOAK_PORT
+export DEKART_OAUTH2_PROXY_PORT DEKART_BROWSERLESS_PORT
 
 UNAME := $(shell uname -m)
 DOCKER_TTY := $(shell if [ -t 0 ] && [ -t 1 ]; then echo -it; fi)
@@ -112,7 +127,7 @@ docker-test:
 	-v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
 	-v $$(pwd)/cypress/videos:/dekart/cypress/videos/ \
 	-v $$(pwd)/cypress/screenshots:/dekart/cypress/screenshots/ \
-	-p 3000:3000 \
+	-p $(DEKART_CLIENT_PORT):3000 \
 	--env-file .env.snowflake-sqlite \
 	-e DEKART_PORT=3000 \
 	-e CYPRESS_CI=1 \
@@ -134,18 +149,47 @@ up-and-down:
 up-and-down-oidc:
 	docker compose --env-file .env.oidc --profile oidc up db adminer keycloak oauth2-proxy; docker compose --env-file .env.oidc --profile oidc down --volumes
 cloud:
-	docker compose  --env-file .env.cloud --profile cloud up; docker compose --profile cloud down --volumes
+	docker compose --env-file .env.cloud --profile cloud up; docker compose --env-file .env.cloud --profile cloud down --volumes
 up:
-	docker compose  --env-file .env --profile local up
+	docker compose --env-file .env --profile local up
 
 down:
 	docker compose --env-file .env --profile local down --volumes
 
 cloudsql:
-	docker compose  --env-file .env --profile cloudsql up
+	docker compose --env-file .env --profile cloudsql up
 
 sqlite:
-	docker-compose  --env-file .env --profile sqlite up
+	docker compose --env-file .env --profile sqlite up
+
+# Run any Compose profile while preserving the clone-local values loaded from .env.
+# Example: make compose-up PROFILE=snowflake-s3 ENV_FILE=.env.snowflake-s3
+compose-up:
+	@test -n "$(PROFILE)" || (echo "PROFILE is required"; exit 1)
+	docker compose --env-file "$(or $(ENV_FILE),.env.$(PROFILE))" --profile "$(PROFILE)" up
+
+compose-down:
+	@test -n "$(PROFILE)" || (echo "PROFILE is required"; exit 1)
+	docker compose --env-file "$(or $(ENV_FILE),.env.$(PROFILE))" --profile "$(PROFILE)" down --volumes --remove-orphans
+
+# Load lane settings, then restore the clone-local resources that lanes must not override.
+define run_cypress
+	@set -a; \
+	. ./.env; \
+	if [ -n "$(ENV_FILE)" ] && [ "$(ENV_FILE)" != ".env" ]; then . "$(ENV_FILE)"; fi; \
+	set +a; \
+	DEKART_CLIENT_PORT="$(DEKART_CLIENT_PORT)" \
+	DEKART_PORT="$(DEKART_PORT)" \
+	DEKART_POSTGRES_PORT="$(DEKART_POSTGRES_PORT)" \
+	DEKART_POSTGRES_TLS_PORT="$(DEKART_POSTGRES_TLS_PORT)" \
+	ELECTRON_RUN_AS_NODE= npx cypress $(1) $(2) $(if $(CYPRESS_ENV),--env "$(CYPRESS_ENV)",) $(CYPRESS_ARGS)
+endef
+
+cypress-run:
+	$(call run_cypress,run,$(if $(SPEC),--spec "$(SPEC)",))
+
+cypress-open:
+	$(call run_cypress,open,)
 
 expire-local-trials:
 	@case "$(LOCAL_DEV_POSTGRES_HOST)" in localhost|127.0.0.1|"") ;; *) echo "Refusing to expire trials on non-local Postgres host: $(LOCAL_DEV_POSTGRES_HOST)"; exit 1 ;; esac
@@ -158,17 +202,26 @@ expire-local-trials:
 		-Atc "WITH updated AS (UPDATE subscription_log SET trial_ends_at = NOW() - INTERVAL '1 minute' WHERE plan_type = 6 RETURNING 1) SELECT count(*) || ' trial subscription rows expired' FROM updated;"
 
 
+# OIDC is browser-facing through oauth2-proxy; other local lanes use Vite directly.
 define run_server
-	@echo "Checking local dev port 8080..."; \
-	pids="$$(lsof -tiTCP:8080 -sTCP:LISTEN)"; \
+	@echo "Checking local dev port $(DEKART_PORT)..."; \
+	pids="$$(lsof -tiTCP:$(DEKART_PORT) -sTCP:LISTEN)"; \
 	if [ -n "$$pids" ]; then \
-		echo "Port 8080 is already in use by PID(s): $$pids"; \
+		echo "Port $(DEKART_PORT) is already in use by PID(s): $$pids"; \
 		echo "Stop it first. For CLI-managed Dekart, run: dekart local down"; \
 		exit 1; \
 	fi; \
 	set -a; \
 	. $(1); \
 	set +a; \
+	if [ "$${DEKART_REQUIRE_OIDC:-0}" = "1" ]; then \
+		cors_origin="http://localhost:$(DEKART_OAUTH2_PROXY_PORT)"; \
+	else \
+		cors_origin="http://localhost:$(DEKART_CLIENT_PORT)"; \
+	fi; \
+	DEKART_PORT="$(DEKART_PORT)" \
+	DEKART_POSTGRES_PORT="$(DEKART_POSTGRES_PORT)" \
+	DEKART_CORS_ORIGIN="$$cors_origin" \
 	go run ./src/server/main.go
 endef
 
@@ -179,14 +232,16 @@ server:
 	$(call run_server,$(or $(filter-out server,$(MAKECMDGOALS)),.env))
 
 client:
-	@echo "Releasing local dev port 3000..."; \
-	pids="$$(lsof -tiTCP:3000 -sTCP:LISTEN)"; \
+	@echo "Releasing local dev port $(DEKART_CLIENT_PORT)..."; \
+	pids="$$(lsof -tiTCP:$(DEKART_CLIENT_PORT) -sTCP:LISTEN)"; \
 	if [ -n "$$pids" ]; then \
 		kill -9 $$pids; \
 		echo "Force-stopped listeners: $$pids"; \
 	else \
-		echo "No listeners on 3000"; \
+		echo "No listeners on $(DEKART_CLIENT_PORT)"; \
 	fi; \
+	DEKART_CLIENT_PORT="$(DEKART_CLIENT_PORT)" \
+	VITE_API_HOST="http://localhost:$(DEKART_PORT)" \
 	npm start
 
 # Dummy target to prevent Make from trying to build .env files as targets

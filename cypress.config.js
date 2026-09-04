@@ -1,6 +1,12 @@
 const { defineConfig } = require('cypress')
 const { RedirectState } = require('dekart-proto/dekart_pb')
 
+const clientPort = process.env.DEKART_CLIENT_PORT || 3000
+const serverPort = process.env.DEKART_PORT || 8080
+const appUrl = process.env.DEKART_E2E_BASE_URL || `http://localhost:${clientPort}`
+const isCI = [process.env.CI, process.env.CYPRESS_CI].some(value => ['1', 'true'].includes(String(value).toLowerCase()))
+const apiUrl = process.env.DEKART_E2E_API_URL || (isCI ? appUrl : `http://localhost:${serverPort}`)
+
 function sensitiveScopes () {
   return [
     'https://www.googleapis.com/auth/userinfo.profile',
@@ -71,8 +77,13 @@ module.exports = defineConfig({
   viewportWidth: 1280,
   viewportHeight: 720,
   video: true,
+  env: {
+    DEKART_E2E_API_URL: apiUrl,
+    DEKART_POSTGRES_PORT: process.env.DEKART_POSTGRES_PORT || 5432,
+    DEKART_POSTGRES_TLS_PORT: process.env.DEKART_POSTGRES_TLS_PORT || 5433
+  },
   e2e: {
-    baseUrl: 'http://localhost:3000',
+    baseUrl: appUrl,
     setupNodeEvents (on) {
       on('task', {
         // performanceResult exposes browser measurements in terminal output for A/B runs.

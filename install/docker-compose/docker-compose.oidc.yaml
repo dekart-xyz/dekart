@@ -27,6 +27,7 @@ services:
       KC_DB: "dev-mem"
       TMPDIR: "/opt/keycloak/data/tmp"
       JAVA_OPTS_APPEND: "-Djava.io.tmpdir=/opt/keycloak/data/tmp -Dvertx.cacheDirBase=/opt/keycloak/data/tmp/vertx-cache"
+      DEKART_OAUTH2_PROXY_URL: "http://localhost:4180"
     ports:
       - "8082:8080"
     volumes:

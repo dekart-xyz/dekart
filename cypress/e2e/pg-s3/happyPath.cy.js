@@ -17,12 +17,12 @@ describe('pg-s3 happy path', () => {
       })
     }
 
-    cy.visit('http://localhost:3000/')
+    cy.visit('/')
     ensureWorkspaceExists()
 
     cy.request({
       method: 'POST',
-      url: 'http://localhost:3000/api/v1/mcp/call',
+      url: '/api/v1/mcp/call',
       body: { name: 'create_report', arguments: {} },
       failOnStatusCode: false
     }).then((response) => {
@@ -30,7 +30,7 @@ describe('pg-s3 happy path', () => {
         const result = response.body?.result || {}
         const reportId = result?.report_id || result?.reportId || result?.id || result?.report?.id
         if (reportId) {
-          cy.visit(`http://localhost:3000/reports/${reportId}/source`)
+          cy.visit(`/reports/${reportId}/source`)
           return
         }
       }

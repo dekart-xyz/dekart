@@ -20,7 +20,7 @@ describe('postgres user-defined connection happy path', () => {
     cy.intercept('POST', '**/Dekart/CreateConnection').as('createConnection')
     cy.intercept('POST', '**/Dekart/RunQuery').as('runQuery')
 
-    cy.visit('http://localhost:3000/connections')
+    cy.visit('/connections')
 
     cy.get('body', { timeout: 20000 }).should(($body) => {
       const ready = $body.find('#dekart-connection-type-card-postgres').length > 0 ||
@@ -54,14 +54,14 @@ describe('postgres user-defined connection happy path', () => {
     setInputValue('input#postgresUsername', 'postgres')
     setInputValue('input#postgresPassword', 'dekart')
     setInputValue('input#postgresDatabase', 'dekart_geo')
-    setInputValue('input#postgresPort', '5432')
+    setInputValue('input#postgresPort', String(Cypress.env('DEKART_POSTGRES_PORT')))
 
     cy.get('button#testConnection').click()
     cy.wait('@testConnection')
     cy.get('button#saveConnection', { timeout: 60000 }).should('be.enabled').click()
     cy.wait('@createConnection')
 
-    cy.visit('http://localhost:3000/')
+    cy.visit('/')
     cy.get('button#dekart-create-report', { timeout: 20000 }).click()
     cy.contains('button', connName, { timeout: 60000 }).click({ force: true })
     cy.get('textarea', { timeout: 20000 }).type('SELECT * FROM sample.geospatial_points LIMIT 100', { force: true })

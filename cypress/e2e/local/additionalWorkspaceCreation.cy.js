@@ -6,7 +6,7 @@ describe('self-hosted additional workspace creation', () => {
     let originalWorkspaceName
 
     cy.setDevClaimsEmail('workspace-admin@example.com')
-    cy.visit('http://localhost:3000/workspace')
+    cy.visit('/workspace')
 
     cy.get('.ant-select-selection-item', { timeout: 30000 }).invoke('text').then((name) => {
       originalWorkspaceName = name.trim()
