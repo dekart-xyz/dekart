@@ -3,7 +3,6 @@ package deviceauth
 import (
 	"context"
 	"database/sql"
-	"dekart/src/server/dbtime"
 	"fmt"
 	"strings"
 	"time"
@@ -20,34 +19,16 @@ type WorkspaceDeviceToken struct {
 	CreatedAt    int64
 }
 
-// GetTokenUpdate returns unix timestamp marker for token list refresh decisions.
-func GetTokenUpdate(ctx context.Context, db *sql.DB, workspaceID string, email string, isSqlite bool) (int64, error) {
+// GetTokenUpdate returns a monotonic marker for token list refresh decisions.
+func GetTokenUpdate(ctx context.Context, db *sql.DB, workspaceID string, email string) (int64, error) {
 	if workspaceID == "" || email == "" {
 		return 0, nil
 	}
-	query := `SELECT MAX(created_at) FROM device_auth_log WHERE workspace_id = $1 AND email = $2`
-	if isSqlite {
-		var updatedAtStr sql.NullString
-		if err := db.QueryRowContext(ctx, query, workspaceID, email).Scan(&updatedAtStr); err != nil {
-			return 0, err
-		}
-		if !updatedAtStr.Valid {
-			return 0, nil
-		}
-		parsed, err := dbtime.ParseTimestampString(updatedAtStr.String)
-		if err != nil {
-			return 0, err
-		}
-		return parsed.Unix(), nil
-	}
-	var updatedAtTime sql.NullTime
-	if err := db.QueryRowContext(ctx, query, workspaceID, email).Scan(&updatedAtTime); err != nil {
+	var update int64
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM device_auth_log WHERE workspace_id = $1 AND email = $2`, workspaceID, email).Scan(&update); err != nil {
 		return 0, err
 	}
-	if !updatedAtTime.Valid {
-		return 0, nil
-	}
-	return updatedAtTime.Time.Unix(), nil
+	return update, nil
 }
 
 // ListWorkspaceTokens returns active device tokens for one user in one workspace.
@@ -59,14 +40,19 @@ func ListWorkspaceTokens(ctx context.Context, db *sql.DB, workspaceID string, em
 				device_id,
 				COALESCE(device_name, '') AS device_name,
 				status,
+				expires_at,
 				created_at,
-				ROW_NUMBER() OVER (PARTITION BY device_id ORDER BY created_at DESC) AS rn
+				ROW_NUMBER() OVER (
+					PARTITION BY device_id
+					ORDER BY created_at DESC,
+						CASE status WHEN 'revoked' THEN 4 WHEN 'expired' THEN 3 WHEN 'consumed' THEN 2 WHEN 'authorized' THEN 1 ELSE 0 END DESC
+				) AS rn
 			FROM device_auth_log
 			WHERE workspace_id = $1 AND email = $2
 		)
 		SELECT device_id, device_name, created_at
 		FROM latest
-		WHERE rn = 1 AND status IN ($3, $4)
+		WHERE rn = 1 AND ((status = $3 AND expires_at > CURRENT_TIMESTAMP) OR status = $4)
 		ORDER BY created_at DESC`,
 		workspaceID,
 		email,
@@ -101,24 +87,21 @@ func ListWorkspaceTokens(ctx context.Context, db *sql.DB, workspaceID string, em
 
 // RevokeWorkspaceToken revokes one active device token in user/workspace scope.
 func RevokeWorkspaceToken(ctx context.Context, db *sql.DB, workspaceID string, email string, tokenID string) (bool, error) {
-	logID, err := newLogID()
-	if err != nil {
-		return false, err
-	}
 	result, err := db.ExecContext(
 		ctx,
 		`INSERT INTO device_auth_log (id, device_id, device_name, status, email, workspace_id, expires_at)
-		 SELECT $1, device_id, device_name, $2, email, workspace_id, expires_at
+		 SELECT id || ':next', device_id, device_name, $1, email, workspace_id, expires_at
 		 FROM device_auth_log
 		 WHERE id = (
 		   SELECT id
 		   FROM device_auth_log
-		   WHERE device_id = $3 AND workspace_id = $4 AND email = $5
-		   ORDER BY created_at DESC
+		   WHERE device_id = $2 AND workspace_id = $3 AND email = $4
+		   ORDER BY created_at DESC,
+		     CASE status WHEN 'revoked' THEN 4 WHEN 'expired' THEN 3 WHEN 'consumed' THEN 2 WHEN 'authorized' THEN 1 ELSE 0 END DESC
 		   LIMIT 1
 		 )
-		   AND status IN ($6, $7)`,
-		logID,
+		   AND status IN ($5, $6)
+		 ON CONFLICT (id) DO NOTHING`,
 		SessionStatusRevoked,
 		tokenID,
 		workspaceID,
