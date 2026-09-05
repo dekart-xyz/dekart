@@ -27,8 +27,8 @@ describe('DuckDB refresh from BigQuery', () => {
     })
 
     cy.contains('[role="tab"]', 'Query 2').click({ force: true })
-    enterVisibleQuery('datasets')
-    cy.get('.ace_editor:visible textarea').type('.', { force: true })
+    enterVisibleQuery('')
+    cy.get('.ace_editor:visible textarea').type('datasets.', { force: true })
     cy.get('.ace_autocomplete:visible', { timeout: 20000 }).should('contain.text', 'Query 1')
   })
 
