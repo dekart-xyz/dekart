@@ -1,9 +1,6 @@
 /* eslint-disable no-undef */
 
-const appUrl = Cypress.env('DEKART_E2E_BASE_URL') || 'http://localhost:3000'
-const ciValue = String(Cypress.env('CI') ?? '').toLowerCase()
-const isCI = ciValue === 'true' || ciValue === '1' || String(Cypress.env('CYPRESS_CI') ?? '') === '1'
-const apiBase = isCI ? `${appUrl}/api/v1` : 'http://localhost:8080/api/v1'
+const apiBase = `${Cypress.env('DEKART_E2E_API_URL')}/api/v1`
 const createConnectionDisabledError = 'create_connection via MCP is disabled; create the connection in Dekart UI first'
 
 const getDeviceToken = () => {

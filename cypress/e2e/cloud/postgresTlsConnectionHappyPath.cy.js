@@ -17,7 +17,7 @@ function setInputValue (selector, value) {
 }
 
 function openPostgresConnectionModal () {
-  cy.visit('http://localhost:3000/connections')
+  cy.visit('/connections')
   cy.get('body', { timeout: 30000 }).should(($body) => {
     const ready = $body.find('#dekart-connection-type-card-postgres').length > 0 ||
       $body.find('#dekart-new-connection-connections').length > 0 ||
@@ -57,7 +57,7 @@ describe('cloud postgres TLS connector happy path', () => {
     cy.intercept('POST', '**/Dekart/CreateConnection').as('createConnection')
     cy.intercept('POST', '**/Dekart/RunQuery').as('runQuery')
 
-    cy.visit('http://localhost:3000/')
+    cy.visit('/')
     cy.ensureTestWorkspace()
     cy.get('button#dekart-create-report', { timeout: 60000 }).should('be.visible')
     // Upgrade only this test workspace so Cloud plan limits do not obscure the Postgres TLS flow.
@@ -79,14 +79,14 @@ describe('cloud postgres TLS connector happy path', () => {
     setInputValue('input#postgresUsername', 'postgres')
     setInputValue('input#postgresPassword', 'dekart')
     setInputValue('input#postgresDatabase', 'dekart_geo')
-    setInputValue('input#postgresPort', '5433')
+    setInputValue('input#postgresPort', String(Cypress.env('DEKART_POSTGRES_TLS_PORT')))
 
     cy.get('button#testConnection').click()
     cy.wait('@testConnection', { timeout: 30000 }).its('response.body').should('exist')
     cy.get('button#saveConnection', { timeout: 60000 }).should('be.enabled').click()
     cy.wait('@createConnection')
 
-    cy.visit('http://localhost:3000/')
+    cy.visit('/')
     cy.get('button#dekart-create-report', { timeout: 30000 }).click()
     cy.location('pathname', { timeout: 60000 }).should('match', /^\/reports\/[0-9a-f-]+\/source$/)
     cy.contains('button', connName, { timeout: 60000 }).click({ force: true })

@@ -2,7 +2,7 @@
 
 // createReport opens a new empty report through the available local entry point.
 function createReport () {
-  cy.visit('http://localhost:3000/')
+  cy.visit('/')
   cy.get('body', { timeout: 20000 }).then(($body) => {
     if ($body.text().includes('Ready to connect')) {
       cy.contains('button', 'Use file upload').click()

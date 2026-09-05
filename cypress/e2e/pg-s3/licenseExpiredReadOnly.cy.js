@@ -2,7 +2,7 @@
 
 describe('pg-s3 expired license read-only', () => {
   it('shows license expiry and blocks writes with the dev startup bypass', () => {
-    const appUrl = Cypress.env('DEKART_E2E_BASE_URL') || 'http://localhost:3000'
+    const appUrl = Cypress.config('baseUrl')
     const apiBase = `${appUrl}/api/v1`
 
     cy.visit(appUrl)

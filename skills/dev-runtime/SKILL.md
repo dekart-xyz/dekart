@@ -13,5 +13,7 @@ Use when starting local development, debugging server/frontend issues, or settin
 
 - `make up-and-down` runs local Postgres.
 - `make server .env.cloud` runs backend with the selected env file.
-- `make client` stops any existing listener on port 3000 and runs `npm start` for Vite on `http://localhost:3000`.
+- `make client` stops any existing listener on the clone's `DEKART_CLIENT_PORT` and starts Vite there.
+- Configure a unique `COMPOSE_PROJECT_NAME` and host-local ports once in each clone's `.env` before running clones concurrently.
+- `make compose-up PROFILE=<profile> ENV_FILE=<env-file>` runs any Compose profile with the clone-local resources from `.env`.
 - `make proto` regenerates proto stubs. After running, restart backend and frontend.

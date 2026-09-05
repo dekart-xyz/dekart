@@ -18,10 +18,10 @@
       "standardFlowEnabled": true,
       "serviceAccountsEnabled": false,
       "redirectUris": [
-        "http://localhost:4180/oauth2/callback"
+        "${DEKART_OAUTH2_PROXY_URL}/oauth2/callback"
       ],
       "webOrigins": [
-        "http://localhost:4180"
+        "${DEKART_OAUTH2_PROXY_URL}"
       ],
       "protocolMappers": [
         {

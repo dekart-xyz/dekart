@@ -1,10 +1,7 @@
 /* eslint-disable no-undef */
 import copy from '../../fixtures/copy.json'
 
-const appUrl = Cypress.env('DEKART_E2E_BASE_URL') || 'http://localhost:3000'
-const ciValue = String(Cypress.env('CI') ?? '').toLowerCase()
-const isCI = ciValue === 'true' || ciValue === '1' || String(Cypress.env('CYPRESS_CI') ?? '') === '1'
-const apiBase = isCI ? `${appUrl}/api/v1` : 'http://localhost:8080/api/v1'
+const apiBase = `${Cypress.env('DEKART_E2E_API_URL')}/api/v1`
 const systemConnectionId = '00000000-0000-0000-0000-000000000000'
 
 const sqlString = (value) => `'${value.replace(/'/g, "''")}'`
@@ -140,7 +137,7 @@ describe('pg-s3 run all queries legacy missing source regression', () => {
     cy.intercept('POST', '**/Dekart/RunAllQueries').as('runAllQueries')
 
     createRunnableReport().then((reportId) => {
-      cy.visit(`${appUrl}/reports/${reportId}/source`)
+      cy.visit(`/reports/${reportId}/source`)
       cy.get('button#dekart-refresh-button', { timeout: 30000 }).should('be.visible')
       return createLegacyMissingSourceQuery(reportId)
     })

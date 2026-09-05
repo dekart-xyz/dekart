@@ -2,7 +2,7 @@
 
 describe('report Readme Markdown', () => {
   it('renders GFM tables with formatting, alignment, and contained overflow', () => {
-    const appUrl = Cypress.env('DEKART_E2E_BASE_URL') || 'http://localhost:3000'
+    const appUrl = Cypress.config('baseUrl')
     const markdown = `# Table example
 
 | Left | Center | Right |

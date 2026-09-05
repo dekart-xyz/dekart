@@ -14,7 +14,7 @@ describe('self-hosted default workspace management', () => {
       })
     }
 
-    cy.visit('http://localhost:3000/workspace')
+    cy.visit('/workspace')
 
     cy.contains('label', 'Workspace name', { timeout: 30000 })
       .parents('.ant-form-item')

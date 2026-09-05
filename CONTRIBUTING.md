@@ -36,7 +36,9 @@ location.reload()
 
 ## Running Cypress locally
 
-Cypress talks to the Vite frontend at `http://localhost:3000`, and the frontend talks to the backend on `http://localhost:8080`. Run the database, backend, frontend, and Cypress in separate terminals.
+Cypress uses the clone-local frontend and backend ports from `.env`. Run the database, backend, frontend, and Cypress in separate terminals.
+
+To run multiple clones at once, copy `.env.example` to `.env` in each clone and give every clone a unique `COMPOSE_PROJECT_NAME` and unique values for all eight host-local ports at the top of the file. For example, a second clone can use ports `3010`, `8090`, `5442`, `5443`, `8091`, `8092`, `4190`, and `3011`. Remote credentials and remote resource names may remain shared.
 
 1. Start local Postgres and keep this terminal open:
 
@@ -50,15 +52,7 @@ make up-and-down
 make server .env.cloud
 ```
 
-Use `.env.googleoauth` for `cypress/e2e/google-oauth`, `.env.snowflake-s3` for `cypress/e2e/snowflake-s3`, and so on. If you run `.env.googleoauth` against local Vite, enable CORS for the frontend process-locally:
-
-```bash
-set -a
-. ./.env
-. ./.env.googleoauth
-set +a
-DEKART_CORS_ORIGIN=http://localhost:3000 go run ./src/server/main.go
-```
+Use `.env.googleoauth` for `cypress/e2e/google-oauth`, `.env.snowflake-s3` for `cypress/e2e/snowflake-s3`, and so on. `make server` keeps the selected lane settings while applying the clone-local server, database, and CORS ports from `.env`.
 
 3. Start the frontend:
 
@@ -66,25 +60,16 @@ DEKART_CORS_ORIGIN=http://localhost:3000 go run ./src/server/main.go
 make client
 ```
 
-4. Export the Cypress env in a new terminal. Source `.env` first and the lane env second so the lane-specific values win:
+4. Run Cypress through Make. It loads `.env` and the lane env, then reapplies only the clone-local resource settings from `.env`:
 
 ```bash
-set -a
-. ./.env
-. ./.env.cloud
-set +a
-```
-
-5. Run Cypress. On local machines where `ELECTRON_RUN_AS_NODE` is already set, clear it for Cypress:
-
-```bash
-ELECTRON_RUN_AS_NODE= npx cypress run --spec "cypress/e2e/cloud/*.cy.js"
+make cypress-run ENV_FILE=.env.cloud SPEC="cypress/e2e/cloud/*.cy.js"
 ```
 
 For the interactive UI:
 
 ```bash
-ELECTRON_RUN_AS_NODE= npx cypress open
+make cypress-open ENV_FILE=.env.cloud
 ```
 
 Only tests that call `cy.stubGoogleOAuthToken(...)` need Google OAuth refresh-token env vars. Cloud tests use `DEV_REFRESH_TOKEN_INFO` and/or `DEV_REFRESH_TOKEN`; Google OAuth tests use `DEV_REFRESH_TOKEN`. `DEV_REFRESH_TOKEN_INFO` must be an info-only token, while `DEV_REFRESH_TOKEN` must include BigQuery and storage scopes. Tests that only use `cy.setDevClaimsEmail(...)` need `DEKART_DEV_CLAIMS=1` in the backend env but do not need refresh tokens.
@@ -101,35 +86,22 @@ Prepare one saved report per layer type:
 4. Create and save exactly one visible layer: a Point (Scatterplot) layer or an Arc layer.
 5. Record the report ID from the URL, the visible dataset name, and its exact row count without thousands separators (for example, `1000000`, not `1,000,000`).
 
-Export the Cypress environment before each run:
-
-```bash
-set -a
-. ./.env
-. ./.env.cloud
-set +a
-```
-
 Run the Point benchmark in headed Chrome:
 
 ```bash
-ELECTRON_RUN_AS_NODE= npx cypress run \
-  --browser chrome \
-  --headed \
-  --config video=false \
-  --spec cypress/e2e/cloud/mapPerformance.cy.js \
-  --env '{"runPerformance":true,"performanceReportId":"<point-report-id>","performanceDatasetName":"<dataset-name>","performanceRows":"<row-count-without-separators>","performanceLayerType":"point","performanceLabel":"Point","performanceEmail":"<email>"}'
+make cypress-run ENV_FILE=.env.cloud \
+  SPEC=cypress/e2e/cloud/mapPerformance.cy.js \
+  CYPRESS_ENV='runPerformance=true,performanceReportId=POINT_REPORT_ID,performanceDatasetName=DATASET NAME,performanceRows=ROW_COUNT,performanceLayerType=point,performanceLabel=Point,performanceEmail=EMAIL' \
+  CYPRESS_ARGS='--browser chrome --headed --config video=false'
 ```
 
 Run the Arc benchmark with the Arc report:
 
 ```bash
-ELECTRON_RUN_AS_NODE= npx cypress run \
-  --browser chrome \
-  --headed \
-  --config video=false \
-  --spec cypress/e2e/cloud/mapPerformance.cy.js \
-  --env '{"runPerformance":true,"performanceReportId":"<arc-report-id>","performanceDatasetName":"<dataset-name>","performanceRows":"<row-count-without-separators>","performanceLayerType":"arc","performanceLabel":"Arc","performanceEmail":"<email>"}'
+make cypress-run ENV_FILE=.env.cloud \
+  SPEC=cypress/e2e/cloud/mapPerformance.cy.js \
+  CYPRESS_ENV='runPerformance=true,performanceReportId=ARC_REPORT_ID,performanceDatasetName=DATASET NAME,performanceRows=ROW_COUNT,performanceLayerType=arc,performanceLabel=Arc,performanceEmail=EMAIL' \
+  CYPRESS_ARGS='--browser chrome --headed --config video=false'
 ```
 
 The terminal prints a label followed by measured FPS, p95 and worst frame time,

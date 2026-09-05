@@ -2,7 +2,7 @@
 
 describe('local GeoJSON file upload with extensionless dataset label', () => {
   it('loads a GeoJSON dataset after renaming the dataset label without a file extension', () => {
-    const appUrl = Cypress.env('DEKART_E2E_BASE_URL') || 'http://localhost:3000'
+    const appUrl = Cypress.config('baseUrl')
 
     const getReportId = () => cy.location('pathname').should('match', /\/reports\/[^/]+\/source$/).then((pathname) => {
       return pathname.match(/\/reports\/([^/]+)\/source$/)[1]

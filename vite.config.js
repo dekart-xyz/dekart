@@ -11,7 +11,8 @@ export default defineConfig({
     react()
   ],
   server: {
-    port: 3000,
+    port: Number(process.env.DEKART_CLIENT_PORT || 3000),
+    strictPort: true,
     watch: {
       // Cypress writes videos, screenshots, and downloads while the app is under test.
       ignored: ['**/cypress/**']

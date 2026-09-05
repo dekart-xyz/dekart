@@ -7,7 +7,7 @@ describe('self-hosted first setup happy flow', () => {
     const snowflakeKey = Cypress.env('SNOWFLAKE_PRIVATE_KEY') || ''
     expect(snowflakeKey.length).to.be.greaterThan(100)
 
-    cy.visit('http://localhost:3000/')
+    cy.visit('/')
     cy.get('body', { timeout: 20000 }).then(($body) => {
       if ($body.text().includes('Ready to connect')) {
         cy.contains('Ready to connect').should('be.visible')
@@ -26,7 +26,7 @@ describe('self-hosted first setup happy flow', () => {
     cy.contains('Ready', { timeout: 120000 }).should('be.visible')
 
     // O2: create Snowflake connection
-    cy.visit('http://localhost:3000/connections')
+    cy.visit('/connections')
     cy.get('body', { timeout: 20000 }).then(($body) => {
       if ($body.find('button:contains("New Connection")').length > 0) {
         cy.contains('button', 'New Connection').click()
@@ -54,7 +54,7 @@ describe('self-hosted first setup happy flow', () => {
     cy.get('button#saveConnection', { timeout: 60000 }).should('be.enabled').click()
 
     // Use new connection in report and run SQL
-    cy.visit('http://localhost:3000/')
+    cy.visit('/')
     cy.get('button#dekart-create-report', { timeout: 20000 }).click()
     cy.contains(connName, { timeout: 20000 }).click()
     cy.get('textarea', { timeout: 20000 }).type(copy.simple_snowflake_query, { force: true })
