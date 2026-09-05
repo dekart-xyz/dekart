@@ -137,7 +137,7 @@ describe('pg-s3 run all queries legacy missing source regression', () => {
     cy.intercept('POST', '**/Dekart/RunAllQueries').as('runAllQueries')
 
     createRunnableReport().then((reportId) => {
-      cy.visit(`${appUrl}/reports/${reportId}/source`)
+      cy.visit(`/reports/${reportId}/source`)
       cy.get('button#dekart-refresh-button', { timeout: 30000 }).should('be.visible')
       return createLegacyMissingSourceQuery(reportId)
     })
