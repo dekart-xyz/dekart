@@ -1,6 +1,6 @@
 {
   "name": "dekart",
-  "version": "0.24.1-rc.1",
+  "version": "0.24.1",
   "private": true,
   "dependencies": {
     "@duckdb/duckdb-wasm": "1.32.0",
