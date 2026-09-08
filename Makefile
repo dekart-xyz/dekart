@@ -1,4 +1,4 @@
-.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down up-and-down-oidc sqlite compose-up compose-down cypress-run cypress-open expire-local-trials proto-copy-to-node proto-stub server runner-install runner-register runner-start runner-stop runner-status runner-service-install runner-service-start runner-service-stop runner-service-status github-runner license-keygen license-issue
+.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down up-and-down-oidc sqlite compose-up compose-down cypress-run cypress-open expire-local-trials proto-copy-to-node proto-stub server runner-install runner-register runner-start runner-stop runner-status runner-service-install runner-service-start runner-service-stop runner-service-status github-runner license-keygen license-issue branch-snapshot
 
 # load .env
 # https://lithic.tech/blog/2020-05/makefile-dot-env
@@ -267,6 +267,9 @@ patch: version
 
 test:
 	go test -v -count=1 ./src/server/**/
+
+branch-snapshot:
+	@./scripts/branch-snapshot.sh
 
 # License key helpers (offline JWT license keys).
 #
