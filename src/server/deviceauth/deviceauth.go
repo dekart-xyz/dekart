@@ -118,7 +118,8 @@ func AuthorizeDeviceSession(ctx context.Context, db *sql.DB, deviceID string, em
 		   SELECT id
 		   FROM device_auth_log
 		   WHERE device_id = $5
-		   ORDER BY created_at DESC
+		   ORDER BY created_at DESC,
+		     CASE status WHEN 'revoked' THEN 4 WHEN 'expired' THEN 3 WHEN 'consumed' THEN 2 WHEN 'authorized' THEN 1 ELSE 0 END DESC
 		   LIMIT 1
 		 )
 		   AND status = $6
@@ -151,7 +152,8 @@ func GetSessionState(ctx context.Context, db *sql.DB, deviceID string) (SessionS
 		`SELECT status, expires_at, COALESCE(email, ''), COALESCE(workspace_id, ''), COALESCE(device_name, '')
 		 FROM device_auth_log
 		 WHERE device_id = $1
-		 ORDER BY created_at DESC
+		 ORDER BY created_at DESC,
+		   CASE status WHEN 'revoked' THEN 4 WHEN 'expired' THEN 3 WHEN 'consumed' THEN 2 WHEN 'authorized' THEN 1 ELSE 0 END DESC
 		 LIMIT 1`,
 		deviceID,
 	)
@@ -209,7 +211,8 @@ func expireSession(ctx context.Context, db *sql.DB, deviceID string) (bool, erro
 		   SELECT id
 		   FROM device_auth_log
 		   WHERE device_id = $3
-		   ORDER BY created_at DESC
+		   ORDER BY created_at DESC,
+		     CASE status WHEN 'revoked' THEN 4 WHEN 'expired' THEN 3 WHEN 'consumed' THEN 2 WHEN 'authorized' THEN 1 ELSE 0 END DESC
 		   LIMIT 1
 		 )
 		   AND status = $4`,
@@ -251,7 +254,8 @@ func consumeAuthorizedSessionTx(ctx context.Context, tx *sql.Tx, deviceID string
 		   SELECT id
 		   FROM device_auth_log
 		   WHERE device_id = $3
-		   ORDER BY created_at DESC
+		   ORDER BY created_at DESC,
+		     CASE status WHEN 'revoked' THEN 4 WHEN 'expired' THEN 3 WHEN 'consumed' THEN 2 WHEN 'authorized' THEN 1 ELSE 0 END DESC
 		   LIMIT 1
 		 )
 		   AND status = $4

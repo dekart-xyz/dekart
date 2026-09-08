@@ -75,8 +75,10 @@ export function assertQueryAndDatasetLabels (labels) {
 
 // runBigQuery executes SQL and waits for the visible warehouse status to become ready.
 export function runBigQuery (sql) {
+  cy.intercept('POST', '**/Dekart/RunQuery').as('runBigQuery')
   enterVisibleQuery(sql)
   cy.get('#dekart-query-execute-button').click()
+  cy.wait('@runBigQuery', { timeout: 120000 }).its('response.statusCode').should('eq', 200)
   assertQueryStatus('Ready', 120000)
 }
 

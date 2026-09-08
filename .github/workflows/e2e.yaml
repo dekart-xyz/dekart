@@ -18,7 +18,7 @@ env:
 
   GOOGLE_APPLICATION_CREDENTIALS: GOOGLE_APPLICATION_CREDENTIALS.json
   AWS_REGION: us-east-1
-  IMAGE_CACHE_KEY: e2etest-${{ github.run_id }}-${{ github.run_attempt }}
+  IMAGE_CACHE_KEY: e2etest-${{ github.run_id }}
 
 jobs:
   e2e-cloud:

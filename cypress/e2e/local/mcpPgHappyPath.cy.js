@@ -126,10 +126,16 @@ describe('local MCP postgres happy path with device auth', () => {
       cy.contains('Your CLI now has access.').should('be.visible')
       cy.contains('button', 'Manage tokens').should('be.visible')
 
+      // SQLite timestamps have second precision; force the production race deterministically.
+      cy.exec(`sqlite3 data/dekart.db "UPDATE device_auth_log SET created_at='2000-01-01 00:00:00' WHERE device_id='${deviceId}'"`)
       cy.request('POST', `${apiBase}/device/token`, { device_id: deviceId }).then((tokenResp) => {
         expect(tokenResp.body.status, 'device token status').to.eq('authorized')
         const token = tokenResp.body.token
         expect(token, 'device token').to.be.a('string').and.not.be.empty
+        cy.exec(`sqlite3 data/dekart.db "UPDATE device_auth_log SET created_at='2000-01-01 00:00:00' WHERE device_id='${deviceId}'"`)
+        cy.request('POST', `${apiBase}/device/token`, { device_id: deviceId }).then((consumedResp) => {
+          expect(consumedResp.body.status, 'consumed device token status').to.eq('expired')
+        })
 
         // 3) MCP flow: list connections -> create report -> create dataset -> create query -> update query -> run query.
         mcpCall(apiBase, token, 'list_connections').then((listResult) => {
