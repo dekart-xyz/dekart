@@ -54,6 +54,20 @@ describe('pg-s3 happy path', () => {
       cy.get(`span:contains("${copy.ready}")`, { timeout: 120000 }).should('be.visible')
       cy.get('div:contains("1 rows")', { timeout: 120000 }).should('be.visible')
       cy.get(`span:contains("${copy.downloading}")`, { timeout: 120000 }).should('contain', 'B')
+
+      const ewkb = '0106000020E610000001000000010300000001000000040000009A99999999992A400000000000404A40CDCCCCCCCCCC2A400000000000404A40CDCCCCCCCCCC2A40CDCCCCCCCC4C4A409A99999999992A400000000000404A40'
+      cy.get('textarea').clear({ force: true }).type(`SELECT '${ewkb}' AS geometry, NULL::text AS empty_value`, { force: true })
+      cy.get(`button:contains("${copy.execute}")`).click()
+      cy.wait('@runQuery', { timeout: 120000 }).its('response.statusCode').should('eq', 200)
+      cy.get(`span:contains("${copy.ready}")`, { timeout: 120000 }).should('be.visible')
+      cy.contains('.layer__title__type', 'geojson', { timeout: 120000 }).should('be.visible')
+      cy.get('.source-data-title .dataset-name').first().then($name => {
+        const section = $name.closest('.source-data-title').parent().parent()
+        section.find('.show-data-table svg')[0].dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      })
+      cy.get('#dataset-modal .header-cell[title="geometry"]', { timeout: 30000 }).should('be.visible')
+      cy.get('#dataset-modal .header-cell[title="empty_value"]').should('be.visible')
+      cy.get('#dataset-modal .cell.row-0[title=""]').should('exist')
     })
   })
 })

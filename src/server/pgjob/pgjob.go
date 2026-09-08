@@ -241,7 +241,7 @@ func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connect
 				value := values[i]
 				switch x := value.(type) {
 				case *sql.NullString:
-					csvRow[i] = x.String
+					csvRow[i] = normalizeEWKBHex(x.String)
 				default:
 					err = fmt.Errorf("incorrect type of data: %T", x)
 					j.Logger.Error().Err(err).Msg("Unexpected postgres value type")
