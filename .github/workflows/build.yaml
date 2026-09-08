@@ -25,7 +25,7 @@ on:
       e2e_image:
         value: ${{ jobs.build.outputs.e2e_image }}
 env:
-  IMAGE_CACHE_KEY: e2etest-${{ github.run_id }}-${{ github.run_attempt }}
+  IMAGE_CACHE_KEY: e2etest-${{ github.run_id }}
 
 jobs:
   build:
