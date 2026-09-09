@@ -7,6 +7,7 @@ import (
 	"dekart/src/server/conn"
 	"dekart/src/server/dbtime"
 	"dekart/src/server/errtype"
+	"dekart/src/server/pgutils"
 	"dekart/src/server/secrets"
 	"dekart/src/server/user"
 	"encoding/csv"
@@ -110,17 +111,10 @@ func (o PGStorageObject) GetReader(ctx context.Context) (io.ReadCloser, error) {
 			return
 		}
 		for rows.Next() {
-			values := make([]interface{}, len(columnTypes))
-			for i := range columnTypes {
-				values[i] = new(sql.NullString)
-			}
-			if err := rows.Scan(values...); err != nil {
+			csvRow, err := pgutils.ScanRow(rows, len(columnTypes))
+			if err != nil {
 				_ = pw.CloseWithError(err)
 				return
-			}
-			csvRow := make([]string, len(columnTypes))
-			for i := range values {
-				csvRow[i] = values[i].(*sql.NullString).String
 			}
 			if err := csvWriter.Write(csvRow); err != nil {
 				_ = pw.CloseWithError(err)

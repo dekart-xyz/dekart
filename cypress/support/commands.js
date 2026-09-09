@@ -16,6 +16,23 @@ Cypress.Commands.add('setDevClaimsEmail', (email) => {
   cy.setCookie('dekart-dev-claim-email', email)
 })
 
+// enterQuery pastes SQL atomically so Ace auto-closing and indentation cannot alter it.
+Cypress.Commands.add('enterQuery', (sql) => {
+  cy.get('.ace_editor:not(.ace_autocomplete):visible textarea', { timeout: 30000 }).first()
+    .focus()
+    .type('{selectall}', { force: true })
+    .then($textarea => {
+      const view = $textarea[0].ownerDocument.defaultView
+      const clipboardData = new view.DataTransfer()
+      clipboardData.setData('text/plain', sql)
+      $textarea[0].dispatchEvent(new view.ClipboardEvent('paste', {
+        bubbles: true,
+        cancelable: true,
+        clipboardData
+      }))
+    })
+})
+
 Cypress.Commands.add('psql', (sql, options = {}) => {
   const escaped = sql
     .replace(/\\/g, '\\\\')

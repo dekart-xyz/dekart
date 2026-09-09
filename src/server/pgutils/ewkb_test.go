@@ -1,4 +1,4 @@
-package pgjob
+package pgutils
 
 import "testing"
 
@@ -77,8 +77,8 @@ func TestNormalizeEWKBHexSupportedGeometryFamilies(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := normalizeEWKBHex(tt.input); got != tt.want {
-				t.Fatalf("normalizeEWKBHex() = %q, want %q", got, tt.want)
+			if got := NormalizeEWKBHex(tt.input); got != tt.want {
+				t.Fatalf("NormalizeEWKBHex() = %q, want %q", got, tt.want)
 			}
 		})
 	}
@@ -105,8 +105,8 @@ func TestNormalizeEWKBHexLeavesUnsupportedValuesUnchanged(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := normalizeEWKBHex(tt.input); got != tt.input {
-				t.Fatalf("normalizeEWKBHex() = %q, want unchanged %q", got, tt.input)
+			if got := NormalizeEWKBHex(tt.input); got != tt.input {
+				t.Fatalf("NormalizeEWKBHex() = %q, want unchanged %q", got, tt.input)
 			}
 		})
 	}
@@ -118,6 +118,6 @@ func FuzzNormalizeEWKBHex(f *testing.F) {
 	f.Add("not geometry")
 
 	f.Fuzz(func(t *testing.T, value string) {
-		_ = normalizeEWKBHex(value)
+		_ = NormalizeEWKBHex(value)
 	})
 }

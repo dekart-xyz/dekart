@@ -575,7 +575,7 @@ jobs:
 
     services:
       postgres:
-        image: ${{ (!matrix.target || matrix.target == inputs.target) && !matrix.skip_postgres && (matrix.id == 'pg-s3-postgres' && 'postgis/postgis:15-3.4' || 'postgres:15') || '' }}
+        image: ${{ (!matrix.target || matrix.target == inputs.target) && !matrix.skip_postgres && ((matrix.id == 'pg-s3-postgres' || matrix.id == 'local-user-postgres') && 'postgis/postgis:15-3.4' || 'postgres:15') || '' }}
         credentials:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -631,7 +631,7 @@ jobs:
             'POINT(' || (12.45 + (gs::double precision * 0.01))::text || ' ' || (55.60 + (gs::double precision * 0.005))::text || ')'
           FROM generate_series(1, 150) AS gs;
           SQL
-          if [ "${{ matrix.id }}" = "pg-s3-postgres" ]; then
+          if [ "${{ matrix.id }}" = "pg-s3-postgres" ] || [ "${{ matrix.id }}" = "local-user-postgres" ]; then
             docker exec -e PGPASSWORD="$DEKART_POSTGRES_PASSWORD" "$pg_cid" \
               psql -U "$DEKART_POSTGRES_USER" -d dekart_geo -v ON_ERROR_STOP=1 \
               -c "CREATE EXTENSION IF NOT EXISTS postgis"

@@ -1,4 +1,4 @@
-package pgjob
+package pgutils
 
 import (
 	"encoding/binary"
@@ -18,8 +18,8 @@ type ewkbWalker struct {
 	output []byte
 }
 
-// normalizeEWKBHex removes PostGIS EWKB flags that the map parser cannot read.
-func normalizeEWKBHex(value string) string {
+// NormalizeEWKBHex removes PostGIS EWKB flags that the map parser cannot read.
+func NormalizeEWKBHex(value string) string {
 	// Reject ordinary strings after inspecting only the fixed-size WKB header.
 	if len(value) < 10 || len(value)%2 != 0 {
 		return value

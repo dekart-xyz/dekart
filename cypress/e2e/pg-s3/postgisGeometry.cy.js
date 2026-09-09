@@ -1,23 +1,6 @@
 /* eslint-disable no-undef */
 import copy from '../../fixtures/copy.json'
 
-// Paste SQL atomically so Ace auto-closing and indentation cannot alter it.
-const enterQuery = (sql) => {
-  cy.get('.ace_editor:not(.ace_autocomplete):visible textarea', { timeout: 30000 }).first()
-    .focus()
-    .type('{selectall}', { force: true })
-    .then($textarea => {
-      const view = $textarea[0].ownerDocument.defaultView
-      const clipboardData = new view.DataTransfer()
-      clipboardData.setData('text/plain', sql)
-      $textarea[0].dispatchEvent(new view.ClipboardEvent('paste', {
-        bubbles: true,
-        cancelable: true,
-        clipboardData
-      }))
-    })
-}
-
 describe('pg-s3 PostGIS geometry', () => {
   it('renders raw PostGIS geometry without ST_AsGeoJSON', () => {
     cy.intercept('POST', '**/Dekart/RunQuery').as('runQuery')
@@ -41,7 +24,7 @@ describe('pg-s3 PostGIS geometry', () => {
     SELECT geometry
     FROM source
     ORDER BY geometry_order`
-    enterQuery(postgisQuery)
+    cy.enterQuery(postgisQuery)
     cy.get(`button:contains("${copy.execute}"):visible`).click()
     cy.wait('@runQuery', { timeout: 120000 }).its('response.statusCode').should('eq', 200)
     cy.get(`span:contains("${copy.ready}")`, { timeout: 120000 }).should('be.visible')

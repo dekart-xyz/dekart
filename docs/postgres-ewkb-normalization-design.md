@@ -14,7 +14,7 @@ Normalization does not transform coordinates: EPSG:2154 coordinates would remain
 
 ## Evidence
 
-- Dekart's PostgreSQL job scans every result value into `sql.NullString` and writes it unchanged to CSV in `src/server/pgjob/pgjob.go`.
+- Dekart's PostgreSQL result paths scan every value into `sql.NullString`: the regular job writes CSV in `src/server/pgjob/pgjob.go`, while a user-defined connection without a cloud bucket replays its query and writes CSV in `src/server/storage/pgstorage.go`.
 - PostGIS returns geometry in hex-encoded EWKB. The reproduced `MULTIPOLYGON` is `0106000020E610000001000000010300000001000000040000009A99999999992A400000000000404A40CDCCCCCCCCCC2A400000000000404A40CDCCCCCCCCCC2A40CDCCCCCCCC4C4A409A99999999992A400000000000404A40`: type 6, the EWKB SRID flag, SRID 4326, and one polygon.
 - Kepler recognizes the value as hex WKB and delegates it to loaders.gl, but loaders.gl calculates an ISO WKB type before removing EWKB flags. The SRID bit is therefore interpreted as an invalid ISO dimension and parsing fails.
 - `ST_AsGeoJSON(geom)` and `ST_AsText(geom)` both render because they avoid the failing EWKB parser path.
@@ -22,7 +22,7 @@ Normalization does not transform coordinates: EPSG:2154 coordinates would remain
 
 ## Proposed Behavior
 
-Normalize PostGIS EWKB values at the PostgreSQL connector boundary:
+Normalize PostGIS EWKB values at both PostgreSQL CSV boundaries, including query replay for user-defined connections without cloud storage:
 
 1. Preserve the existing empty-field serialization of SQL `NULL`. Leave ordinary strings, standard WKB, and non-hex values unchanged.
 2. For a hex value whose binary header carries EWKB extension flags, fully validate and normalize it as EWKB.
@@ -89,7 +89,7 @@ These are valid encoding workarounds for map-ready coordinates but violate the e
 
 ## Verification Notes
 
-The stateless pgjob tests begin with the exact captured EWKB value. The Cypress regression selects real PostGIS Polygon and MultiPolygon values without an encoding function, then verifies that they reach the browser as normalized ISO WKB and render as a GeoJSON layer. Its CI lane therefore uses a PostGIS-enabled PostgreSQL service.
+The stateless PostgreSQL utility tests begin with the exact captured EWKB value. The stored-result Cypress regression selects real PostGIS Polygon and MultiPolygon values without an encoding function. The user-defined connection regression selects a real PostGIS Polygon through query replay, then verifies that it reaches the browser as normalized ISO WKB and renders as a GeoJSON layer. Both CI lanes therefore use a PostGIS-enabled PostgreSQL service.
 
 ## Rollout and Follow-up
 

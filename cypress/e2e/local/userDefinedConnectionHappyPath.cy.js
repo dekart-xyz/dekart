@@ -64,10 +64,25 @@ describe('postgres user-defined connection happy path', () => {
     cy.visit('/')
     cy.get('button#dekart-create-report', { timeout: 20000 }).click()
     cy.contains('button', connName, { timeout: 60000 }).click({ force: true })
-    cy.get('textarea', { timeout: 20000 }).type('SELECT * FROM sample.geospatial_points LIMIT 100', { force: true })
+    cy.enterQuery(`SELECT ST_MakeEnvelope(
+      -118.08330882698346, 33.7756905,
+      -118.06330882698346, 33.7956905,
+      4326
+    ) AS geometry`)
     cy.get('button#dekart-query-execute-button').click()
     cy.wait('@runQuery', { timeout: 120000 })
     cy.get(`span:contains("${copy.ready}")`, { timeout: 120000 }).should('be.visible')
-    cy.get('div:contains("100 rows")', { timeout: 120000 }).should('be.visible')
+    cy.get('div:contains("1 rows")', { timeout: 120000 }).should('be.visible')
+    cy.contains('.layer__title__type', 'geojson', { timeout: 120000 }).should('be.visible')
+    cy.get('.source-data-title .dataset-name').first().then($name => {
+      const section = $name.closest('.source-data-title').parent().parent()
+      section.find('.show-data-table svg')[0].dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    cy.get('#dataset-modal .header-cell[title="geometry"]', { timeout: 30000 }).should('be.visible')
+    cy.get('#dataset-modal .cell.row-0').first()
+      .should('have.attr', 'title')
+      .and('match', /^0103000000/)
+    cy.get('.modal--close').click()
+    cy.get('.mapboxgl-canvas').should('be.visible')
   })
 })
