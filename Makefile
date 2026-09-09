@@ -212,15 +212,18 @@ define run_server
 		exit 1; \
 	fi; \
 	set -a; \
+	unset DEKART_POSTGRES_URL DEKART_POSTGRES_USER DEKART_POSTGRES_PASSWORD DEKART_POSTGRES_HOST DEKART_POSTGRES_PORT DEKART_POSTGRES_DB; \
 	. $(1); \
 	set +a; \
+	if env | grep -Eq '^DEKART_POSTGRES_(URL|USER|PASSWORD|HOST|PORT|DB)='; then \
+		export DEKART_POSTGRES_PORT="$(DEKART_POSTGRES_PORT)"; \
+	fi; \
 	if [ "$${DEKART_REQUIRE_OIDC:-0}" = "1" ]; then \
 		cors_origin="http://localhost:$(DEKART_OAUTH2_PROXY_PORT)"; \
 	else \
 		cors_origin="http://localhost:$(DEKART_CLIENT_PORT)"; \
 	fi; \
 	DEKART_PORT="$(DEKART_PORT)" \
-	DEKART_POSTGRES_PORT="$(DEKART_POSTGRES_PORT)" \
 	DEKART_CORS_ORIGIN="$$cors_origin" \
 	go run ./src/server/main.go
 endef
@@ -266,7 +269,7 @@ patch: version
 patch: version
 
 test:
-	go test -v -count=1 ./src/server/**/
+	go test -v -count=1 ./src/server/...
 
 branch-snapshot:
 	@./scripts/branch-snapshot.sh
