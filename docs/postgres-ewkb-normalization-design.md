@@ -89,7 +89,7 @@ These are valid encoding workarounds for map-ready coordinates but violate the e
 
 ## Verification Notes
 
-The stateless pgjob tests begin with the exact captured EWKB value. The Cypress regression sends that literal text through PostgreSQL, CSV, and Kepler, proving the user-visible parser path without adding a PostGIS CI service. It does not prove how a real PostGIS geometry column is encoded by the driver.
+The stateless pgjob tests begin with the exact captured EWKB value. The Cypress regression selects real PostGIS Polygon and MultiPolygon values without an encoding function, then verifies that they reach the browser as normalized ISO WKB and render as a GeoJSON layer. Its CI lane therefore uses a PostGIS-enabled PostgreSQL service.
 
 ## Rollout and Follow-up
 

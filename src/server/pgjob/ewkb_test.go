@@ -7,21 +7,17 @@ const (
 	nanCoordinate = "000000000000f87f"
 )
 
-func TestNormalizeEWKBHexIssue280(t *testing.T) {
-	input := "0106000020E610000001000000010300000001000000040000009A99999999992A400000000000404A40CDCCCCCCCCCC2A400000000000404A40CDCCCCCCCCCC2A40CDCCCCCCCC4C4A409A99999999992A400000000000404A40"
-	want := "010600000001000000010300000001000000040000009a99999999992a400000000000404a40cdcccccccccc2a400000000000404a40cdcccccccccc2a40cdcccccccc4c4a409a99999999992a400000000000404a40"
-
-	if got := normalizeEWKBHex(input); got != want {
-		t.Fatalf("normalizeEWKBHex() = %q, want %q", got, want)
-	}
-}
-
 func TestNormalizeEWKBHexSupportedGeometryFamilies(t *testing.T) {
 	tests := []struct {
 		name  string
 		input string
 		want  string
 	}{
+		{
+			name:  "issue 280 multi polygon",
+			input: "0106000020E610000001000000010300000001000000040000009A99999999992A400000000000404A40CDCCCCCCCCCC2A400000000000404A40CDCCCCCCCCCC2A40CDCCCCCCCC4C4A409A99999999992A400000000000404A40",
+			want:  "010600000001000000010300000001000000040000009a99999999992a400000000000404a40cdcccccccccc2a400000000000404a40cdcccccccccc2a40cdcccccccc4c4a409a99999999992a400000000000404a40",
+		},
 		{
 			name:  "point",
 			input: "0101000020e6100000" + zeroXY,
@@ -124,11 +120,4 @@ func FuzzNormalizeEWKBHex(f *testing.F) {
 	f.Fuzz(func(t *testing.T, value string) {
 		_ = normalizeEWKBHex(value)
 	})
-}
-
-func BenchmarkNormalizeEWKBHexOrdinaryValue(b *testing.B) {
-	value := "a non-geometry PostgreSQL result that should be rejected from its short prefix"
-	for b.Loop() {
-		normalizeEWKBHex(value)
-	}
 }
