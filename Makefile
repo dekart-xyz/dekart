@@ -205,12 +205,7 @@ expire-local-trials:
 # OIDC is browser-facing through oauth2-proxy; other local lanes use Vite directly.
 define run_server
 	@echo "Checking local dev port $(DEKART_PORT)..."; \
-	pids="$$(lsof -tiTCP:$(DEKART_PORT) -sTCP:LISTEN)"; \
-	if [ -n "$$pids" ]; then \
-		echo "Port $(DEKART_PORT) is already in use by PID(s): $$pids"; \
-		echo "Stop it first. For CLI-managed Dekart, run: dekart local down"; \
-		exit 1; \
-	fi; \
+	./scripts/restart-local-server.sh "$(DEKART_PORT)" "$(CURDIR)"; \
 	set -a; \
 	unset DEKART_POSTGRES_URL DEKART_POSTGRES_USER DEKART_POSTGRES_PASSWORD DEKART_POSTGRES_HOST DEKART_POSTGRES_PORT DEKART_POSTGRES_DB; \
 	. $(1); \
@@ -269,6 +264,7 @@ patch: version
 patch: version
 
 test:
+	./scripts/restart-local-server_test.sh
 	go test -v -count=1 ./src/server/...
 
 branch-snapshot:
