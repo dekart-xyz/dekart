@@ -9,7 +9,11 @@ describe('pg-s3 PostGIS geometry', () => {
     cy.ensureTestWorkspace()
     cy.get('button#dekart-create-report', { timeout: 30000 }).click({ force: true })
 
-    cy.contains('button', /Run SQL directly on Postgres|Run SQL directly on PostgreSQL|Postgres/i, { timeout: 30000 }).first().click({ force: true })
+    cy.get('.ace_editor:not(.ace_autocomplete):visible textarea, button:contains("Run SQL directly on Postgres")', { timeout: 30000 }).then(($elements) => {
+      // Existing system connections can open the SQL editor without a source-selection step.
+      if ($elements.filter('textarea').length > 0) return
+      cy.wrap($elements.filter('button').first()).click({ force: true })
+    })
     const postgisQuery = `WITH polygon AS (
       SELECT ST_MakeEnvelope(
         -118.08330882698346, 33.7756905,
