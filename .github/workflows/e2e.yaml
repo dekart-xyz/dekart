@@ -259,7 +259,7 @@ jobs:
       AWS_SECRET_SEC:          ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       SNOW_ID_SEC:             ${{ secrets.SNOWFLAKE_ACCOUNT_ID }}
       SNOW_USER_SEC:           ${{ secrets.SNOWFLAKE_USER }}
-      SNOW_PASS_SEC:           ${{ secrets.SNOWFLAKE_PASSWORD }}
+      SNOW_KEY_SEC:            ${{ secrets.DEKART_SNOWFLAKE_PRIVATE_KEY }}
       MAPBOX_TOKEN_SEC:        ${{ secrets.DEKART_MAPBOX_TOKEN }}
       DEKART_LICENSE_KEY_SEC:  ${{ secrets.DEKART_LICENSE_KEY }}
       DEKART_LICENSE_KEY_EXP_SEC: ${{ secrets.DEKART_LICENSE_KEY_EXP }}
@@ -406,7 +406,7 @@ jobs:
               -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_SEC \
               -e DEKART_SNOWFLAKE_ACCOUNT_ID=$SNOW_ID_SEC \
               -e DEKART_SNOWFLAKE_USER=$SNOW_USER_SEC \
-              -e DEKART_SNOWFLAKE_PASSWORD=$SNOW_PASS_SEC \
+              -e DEKART_SNOWFLAKE_PRIVATE_KEY=$SNOW_KEY_SEC \
               -e DEKART_REQUIRE_AMAZON_OIDC=1 \
               -e DEKART_DEV_CLAIMS=1 \
               -e DEKART_ALLOW_FILE_UPLOAD=1 \
@@ -428,7 +428,7 @@ jobs:
               -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_SEC \
               -e DEKART_SNOWFLAKE_ACCOUNT_ID=$SNOW_ID_SEC \
               -e DEKART_SNOWFLAKE_USER=$SNOW_USER_SEC \
-              -e DEKART_SNOWFLAKE_PASSWORD=$SNOW_PASS_SEC \
+              -e DEKART_SNOWFLAKE_PRIVATE_KEY=$SNOW_KEY_SEC \
               -e DEKART_REQUIRE_AMAZON_OIDC=1 \
               -e DEKART_DEV_CLAIMS=1 \
               -e DEKART_ALLOW_FILE_UPLOAD=1 \
@@ -450,7 +450,7 @@ jobs:
               -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_SEC \
               -e DEKART_SNOWFLAKE_ACCOUNT_ID=$SNOW_ID_SEC \
               -e DEKART_SNOWFLAKE_USER=$SNOW_USER_SEC \
-              -e DEKART_SNOWFLAKE_PASSWORD=$SNOW_PASS_SEC \
+              -e DEKART_SNOWFLAKE_PRIVATE_KEY=$SNOW_KEY_SEC \
               -e DEKART_REQUIRE_AMAZON_OIDC=1 \
               -e DEKART_DEV_CLAIMS=1 \
               -e DEKART_ALLOW_FILE_UPLOAD=1 \
@@ -463,7 +463,7 @@ jobs:
               -e DEKART_DATASOURCE=SNOWFLAKE \
               -e DEKART_SNOWFLAKE_ACCOUNT_ID=$SNOW_ID_SEC \
               -e DEKART_SNOWFLAKE_USER=$SNOW_USER_SEC \
-              -e DEKART_SNOWFLAKE_PASSWORD=$SNOW_PASS_SEC \
+              -e DEKART_SNOWFLAKE_PRIVATE_KEY=$SNOW_KEY_SEC \
               -e DEKART_SQLITE_DB_PATH=./dekart.db \
               -e DEKART_REQUIRE_SNOWFLAKE_CONTEXT=1 \
               -e DEKART_DEV_CLAIMS=1 \
@@ -495,7 +495,7 @@ jobs:
             skip_postgres: true
 
           - id: pg-s3-postgres
-            spec: cypress/e2e/pg-s3/happyPath.cy.js,cypress/e2e/pg-s3/runAllQueriesLegacyMissingSource.cy.js
+            spec: cypress/e2e/pg-s3/happyPath.cy.js,cypress/e2e/pg-s3/postgisGeometry.cy.js,cypress/e2e/pg-s3/runAllQueriesLegacyMissingSource.cy.js
             extra_env: |
               -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
               -e DEKART_POSTGRES_HOST=localhost \
@@ -575,7 +575,7 @@ jobs:
 
     services:
       postgres:
-        image: ${{ (!matrix.target || matrix.target == inputs.target) && !matrix.skip_postgres && 'postgres:15' || '' }}
+        image: ${{ (!matrix.target || matrix.target == inputs.target) && !matrix.skip_postgres && ((matrix.id == 'pg-s3-postgres' || matrix.id == 'local-user-postgres') && 'postgis/postgis:15-3.4' || 'postgres:15') || '' }}
         credentials:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -631,6 +631,11 @@ jobs:
             'POINT(' || (12.45 + (gs::double precision * 0.01))::text || ' ' || (55.60 + (gs::double precision * 0.005))::text || ')'
           FROM generate_series(1, 150) AS gs;
           SQL
+          if [ "${{ matrix.id }}" = "pg-s3-postgres" ] || [ "${{ matrix.id }}" = "local-user-postgres" ]; then
+            docker exec -e PGPASSWORD="$DEKART_POSTGRES_PASSWORD" "$pg_cid" \
+              psql -U "$DEKART_POSTGRES_USER" -d dekart_geo -v ON_ERROR_STOP=1 \
+              -c "CREATE EXTENSION IF NOT EXISTS postgis"
+          fi
 
       - uses: docker/setup-qemu-action@v2
       - uses: docker/setup-buildx-action@v2

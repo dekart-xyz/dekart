@@ -13,6 +13,7 @@ import (
 	"dekart/src/proto"
 	"dekart/src/server/conn"
 	"dekart/src/server/job"
+	"dekart/src/server/pgutils"
 	"dekart/src/server/secrets"
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
@@ -224,30 +225,11 @@ func (j *Job) Run(storageObject storage.StorageObject, connection *proto.Connect
 				csvRows <- columnNames
 			}
 
-			csvRow := make([]string, len(columnTypes))
-			values := make([]interface{}, len(columnTypes))
-			for i := range columnTypes {
-				values[i] = new(sql.NullString)
-			}
-
-			err = rows.Scan(values...)
+			csvRow, err := pgutils.ScanRow(rows, len(columnTypes))
 			if err != nil {
 				j.Logger.Error().Err(err).Msg("Error scanning row")
 				j.CancelWithError(err)
 				return
-			}
-
-			for i := range columnTypes {
-				value := values[i]
-				switch x := value.(type) {
-				case *sql.NullString:
-					csvRow[i] = x.String
-				default:
-					err = fmt.Errorf("incorrect type of data: %T", x)
-					j.Logger.Error().Err(err).Msg("Unexpected postgres value type")
-					j.CancelWithError(err)
-					return
-				}
 			}
 			csvRows <- csvRow
 		}

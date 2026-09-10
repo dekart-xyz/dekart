@@ -36,4 +36,63 @@ describe('compactArrowColumns', () => {
 
     expect(display.fields.map(field => field.name)).toEqual(['primary_type', 'longitude'])
   })
+
+  it('recognizes PostGIS GeoJSON returned as DuckDB VARCHAR', async () => {
+    const dataset = new DekartDuckDBTable({ info: { id: 'dataset', label: 'Query 1' } })
+    const geometry = JSON.stringify({
+      type: 'Polygon',
+      coordinates: [[
+        [-118.08, 33.78],
+        [-118.07, 33.78],
+        [-118.07, 33.79],
+        [-118.08, 33.78]
+      ]]
+    })
+    const result = tableFromArrays({ geometry: [...Array(51).fill(null), geometry] })
+
+    const display = await dataset.createTableAndGetArrow({
+      dekartArrowTable: result,
+      dekartTypeMap: { geometry: 'VARCHAR' }
+    })
+
+    expect(display.fields[0]).toMatchObject({
+      type: 'geojson',
+      analyzerType: 'GEOMETRY_FROM_STRING'
+    })
+  })
+
+  it('recognizes a PostGIS record returned as a GeoJSON Feature', async () => {
+    const dataset = new DekartDuckDBTable({ info: { id: 'dataset', label: 'Query 1' } })
+    const feature = JSON.stringify({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [-118.08, 33.78] },
+      properties: { id: 1 }
+    })
+    const result = tableFromArrays({ feature: [feature] })
+
+    const display = await dataset.createTableAndGetArrow({
+      dekartArrowTable: result,
+      dekartTypeMap: { feature: 'VARCHAR' }
+    })
+
+    expect(display.fields[0]).toMatchObject({
+      type: 'geojson',
+      analyzerType: 'GEOMETRY_FROM_STRING'
+    })
+  })
+
+  it('keeps ordinary JSON returned as DuckDB VARCHAR non-geospatial', async () => {
+    const dataset = new DekartDuckDBTable({ info: { id: 'dataset', label: 'Query 1' } })
+    const result = tableFromArrays({ metadata: [JSON.stringify({ type: 'Polygon', category: 'building' })] })
+
+    const display = await dataset.createTableAndGetArrow({
+      dekartArrowTable: result,
+      dekartTypeMap: { metadata: 'VARCHAR' }
+    })
+
+    expect(display.fields[0]).toMatchObject({
+      type: 'object',
+      analyzerType: 'OBJECT'
+    })
+  })
 })
