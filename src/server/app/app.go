@@ -24,6 +24,36 @@ type ResponseWriter struct {
 	statusCode int
 }
 
+type idleTimeoutResponseWriter struct {
+	http.ResponseWriter
+	timeout    time.Duration
+	controller *http.ResponseController
+}
+
+// newIdleTimeoutResponseWriter starts a rolling write deadline for a streaming response.
+func newIdleTimeoutResponseWriter(w http.ResponseWriter, timeout time.Duration) (*idleTimeoutResponseWriter, error) {
+	controller := http.NewResponseController(w)
+	// Dataset streaming requires deadline control from the concrete server writer.
+	if err := controller.SetWriteDeadline(time.Now().Add(timeout)); err != nil {
+		return nil, err
+	}
+	return &idleTimeoutResponseWriter{ResponseWriter: w, timeout: timeout, controller: controller}, nil
+}
+
+// Write extends the deadline only after the response makes progress.
+func (w *idleTimeoutResponseWriter) Write(p []byte) (int, error) {
+	n, err := w.ResponseWriter.Write(p)
+	// Only a completed non-empty write proves that the client is still receiving data.
+	if err != nil || n == 0 {
+		return n, err
+	}
+	// Stop the stream if its rolling deadline can no longer be maintained.
+	if deadlineErr := w.controller.SetWriteDeadline(time.Now().Add(w.timeout)); deadlineErr != nil {
+		return n, deadlineErr
+	}
+	return n, nil
+}
+
 // Header implementation
 func (m ResponseWriter) Header() http.Header {
 	return m.w.Header()
@@ -138,7 +168,14 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		if r.Method == http.MethodOptions {
 			return
 		}
-		dekartServer.ServeDatasetSource(w, r)
+		streamWriter, err := newIdleTimeoutResponseWriter(w, getHTTPWriteTimeout())
+		// Fail before headers are sent when the server cannot enforce the idle timeout.
+		if err != nil {
+			log.Error().Err(err).Msg("failed to configure dataset source write timeout")
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+		dekartServer.ServeDatasetSource(streamWriter, r)
 	}).Methods("GET", "OPTIONS")
 
 	api.HandleFunc("/report/{report}/analytics.csv", func(w http.ResponseWriter, r *http.Request) {

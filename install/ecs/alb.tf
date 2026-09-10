@@ -2,6 +2,7 @@
 resource "aws_alb" "dekart" {
   name               = var.dekart_deployment_name
   load_balancer_type = "application"
+  idle_timeout       = 120
   security_groups    = [aws_security_group.dekart_private.id, aws_security_group.dekart_alb.id]
   subnets            = aws_subnet.public.*.id
 }
