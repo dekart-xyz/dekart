@@ -502,7 +502,7 @@ jobs:
               -e DEKART_POSTGRES_DATASOURCE_CONNECTION=postgres://$DEKART_POSTGRES_USER:$DEKART_POSTGRES_PASSWORD@localhost:5432/dekart_geo?sslmode=disable \
               -e DEKART_SQLITE_DB_PATH=./dekart.db \
               -e DEKART_DEV_CLAIMS=1 \
-              -e DEKART_HTTP_WRITE_TIMEOUT_SECONDS=1 \
+              -e DEKART_HTTP_WRITE_TIMEOUT_SECONDS=5 \
 
           - id: pg-s3-postgres
             spec: cypress/e2e/pg-s3/happyPath.cy.js,cypress/e2e/pg-s3/postgisGeometry.cy.js,cypress/e2e/pg-s3/runAllQueriesLegacyMissingSource.cy.js
