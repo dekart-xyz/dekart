@@ -494,6 +494,16 @@ jobs:
             spec: cypress/e2e/local/fileUploadPersistenceMcp.cy.js,cypress/e2e/local/geojsonDatasetLabelNoExtension.cy.js,cypress/e2e/local/mcpGeoJSONUpload.cy.js,cypress/e2e/local/mcpSnapshotViewport.cy.js,cypress/e2e/local/readmeMarkdown.cy.js,cypress/e2e/local/duckdb.cy.js
             skip_postgres: true
 
+          - id: pg-dataset-streaming
+            spec: cypress/e2e/pg/datasetSourceWriteTimeout.cy.js
+            extra_env: |
+              -e DEKART_STORAGE=PG \
+              -e DEKART_DATASOURCE=PG \
+              -e DEKART_POSTGRES_DATASOURCE_CONNECTION=postgres://$DEKART_POSTGRES_USER:$DEKART_POSTGRES_PASSWORD@localhost:5432/dekart_geo?sslmode=disable \
+              -e DEKART_SQLITE_DB_PATH=./dekart.db \
+              -e DEKART_DEV_CLAIMS=1 \
+              -e DEKART_HTTP_WRITE_TIMEOUT_SECONDS=1 \
+
           - id: pg-s3-postgres
             spec: cypress/e2e/pg-s3/happyPath.cy.js,cypress/e2e/pg-s3/postgisGeometry.cy.js,cypress/e2e/pg-s3/runAllQueriesLegacyMissingSource.cy.js
             extra_env: |
