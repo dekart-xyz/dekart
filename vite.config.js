@@ -6,9 +6,12 @@ const defineProcessEnv = {
   'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
 }
 
-export default defineConfig({
+export default defineConfig(async () => {
+  const { default: tailwindcss } = await import('@tailwindcss/vite')
+  return {
   plugins: [
-    react()
+    react(),
+    tailwindcss()
   ],
   server: {
     port: Number(process.env.DEKART_CLIENT_PORT || 3000),
@@ -41,6 +44,9 @@ export default defineConfig({
   },
   build: {
     outDir: 'build',
+    // npm links the local CommonJS proto package outside node_modules.
+    commonjsOptions: { include: [/node_modules/, /proto/] },
     assetsDir: '.'
   }
+}
 })

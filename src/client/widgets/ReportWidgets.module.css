@@ -1,0 +1,30 @@
+.provider { display: contents; }
+.panel { width: 390px; flex-shrink: 0; min-height: 0; display: flex; flex-direction: column; color: #eef3fa; background: #1b2330; border-left: 1px solid #39424f; font-size: 13px; }
+.hidden { display: none; }
+.heading { padding: 16px 20px 8px; }
+.heading h2 { margin: 2px 0 0; color: #eef3fa; font-size: 19px; font-weight: 600; }
+.heading small { color: #86bcae; letter-spacing: 1.4px; font-size: 9px; }
+.source { display: flex; flex-direction: column; gap: 5px; padding: 8px 20px 14px; }
+.source label { font-size: 11px; color: #a7b4c3; }
+.source select { background: #263241; color: #eef3fa; border: 1px solid #455163; border-radius: 5px; padding: 7px 9px; width: 100%; }
+.summary { margin: 0 20px 14px; padding: 13px 16px; background: #263241; border: 1px solid #3b485a; border-radius: 7px; display: flex; flex-direction: column; }
+.summary span { color: #c1cdda; font-size: 11px; }
+.summary strong { font-size: 30px; font-weight: 550; line-height: 1.5; }
+.summary small { color: #94a5b8; font-size: 10px; }
+.charts { flex: 1; min-height: 0; overflow: auto; }
+.actions { display: flex; justify-content: space-between; gap: 8px; padding: 14px 20px; border-top: 1px solid #39424f; }
+.actions button, .settings button { gap: 6px; }
+.settings { flex: 1; min-height: 0; overflow: auto; }
+.empty { padding: 30px 24px; flex: 1; color: #adbdcb; }
+.empty h3 { color: #f2f5fa; font-size: 17px; }
+.error { margin: 12px 20px; padding: 14px; background: #573a35; color: #ffd5c8; border-radius: 6px; }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 20px 12px; }
+.filters button { color: #98e3cf; border: 1px solid #3c655c; border-radius: 4px; padding: 3px 6px; display: flex; gap: 6px; align-items: center; font-size: 11px; background: #25443e; }
+.viewer :global(button[aria-label='Open panel settings']), .viewer :global(button[aria-label='Shrink panel horizontally']), .viewer :global(button[aria-label='Expand panel horizontally']), .viewer :global(.sqlrooms-grid-resize-handle) { display: none; }
+.viewer :global(.lucide-grip-vertical) { visibility: hidden; width: 0; }
+.viewer :global([data-selectable-panel]) { outline: none; }
+@media (max-width: 1050px) { .panel { width: 350px; } }
+@media (max-width: 760px) { .panel { width: 100%; height: 800px; border-left: 0; } }
+
+.builderDialog { color: #eef3fa; max-width: 512px; }
+.builderDialog h2, .builderDialog h3 { color: inherit; }

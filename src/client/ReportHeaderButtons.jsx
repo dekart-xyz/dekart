@@ -338,18 +338,18 @@ function ViewSelectDropdown ({ menu, onHistoryClick }) {
   )
 }
 
-function ViewSelect (value) {
+function ViewSelect ({ value }) {
   const dispatch = useDispatch()
   const history = useHistory()
   const { id } = useSelector(state => state.report)
 
-  const handleChange = (value) => {
+  const handleChange = async (value) => {
     if (value === 'edit') {
       track('SwitchToEditMode', { reportId: id })
       goToSource(history, id)
     } else if (value === 'view') {
       track('SwitchToViewMode', { reportId: id })
-      goToPresent(history, id)
+      if (await dispatch(saveMap())) goToPresent(history, id)
     } else if (value === 'history') {
       track('OpenHistory', { reportId: id })
       dispatch(toggleSnapshotModal(true))
@@ -365,7 +365,7 @@ function ViewSelect (value) {
       <Select
         ghost
         className={styles.reportViewSelect}
-        defaultValue={value}
+        value={value}
         onChange={handleChange}
         options={[
           { value: 'view', label: <><EyeOutlined /> Viewing</> },

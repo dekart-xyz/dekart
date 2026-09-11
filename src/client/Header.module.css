@@ -135,3 +135,10 @@ a.dekartLink {
         display: none;
     }
 }
+/* Keep report actions reachable when map and widgets stack on a phone. */
+@media (max-width: 600px) {
+    .top { flex-wrap: wrap; }
+    .left { flex-basis: 100%; }
+    .buttons { flex-basis: 100%; min-width: 0; }
+    .middle { display: none; }
+}

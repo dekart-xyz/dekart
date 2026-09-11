@@ -1,0 +1,17 @@
+@import '@sqlrooms/ui/tailwind-preset.css';
+@source '../../../node_modules/@sqlrooms';
+@source './';
+:root {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --background: 216 23% 12%; --foreground: 210 25% 94%;
+  --card: 216 21% 15%; --card-foreground: 210 25% 94%;
+  --popover: 216 21% 16%; --popover-foreground: 210 25% 94%;
+  --primary: 165 47% 56%; --primary-foreground: 216 28% 10%;
+  --secondary: 216 18% 21%; --secondary-foreground: 210 25% 94%;
+  --muted: 216 18% 19%; --muted-foreground: 215 15% 65%;
+  --accent: 216 18% 23%; --accent-foreground: 210 25% 94%;
+  --border: 216 18% 24%; --input: 216 18% 29%; --ring: 165 47% 56%;
+  --chart-1: 165 47% 56%; --chart-overlay: #73849933;
+
+}
+

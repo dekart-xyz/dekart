@@ -287,6 +287,8 @@ function PostgresConnectionModal ({ form }) {
 
   return (
     <Modal
+      style={{ top: 24 }}
+      bodyStyle={{ maxHeight: 'calc(100vh - 190px)', overflowY: 'auto' }}
       open
       title={<><DatasourceIcon type={ConnectionType.CONNECTION_TYPE_POSTGRES} /> Postgres</>}
       onCancel={() => dispatch(closeConnectionDialog())}

@@ -24,6 +24,7 @@ class DuckDBReportRuntime {
     this.registeredSourceFiles = new Map()
     this.nativeTables = new Set()
     this.jobTables = new Set()
+    this.widgetJobTables = new Map()
     this.ownedViews = new Set()
     this.initializing = null
     this.db = null
@@ -219,6 +220,7 @@ class DuckDBReportRuntime {
       const viewName = duckDBViewName(datasetId)
       const fileName = this.registeredSourceFiles.get(datasetId)
       this.nativeSources.delete(datasetId)
+      this.widgetJobTables.delete(datasetId)
       this.fileSources.delete(datasetId)
       this.sourceErrors.delete(datasetId)
       this.registeredSourceVersions.delete(datasetId)
@@ -253,6 +255,14 @@ class DuckDBReportRuntime {
     } finally {
       release()
     }
+  }
+
+  // Widget views read the same immutable physical revision as Kepler.
+  widgetTable (datasetId) {
+    const source = this.nativeSources.get(datasetId)
+    if (source) return `main.${quoteIdentifier(source.tableName)}`
+    const job = this.widgetJobTables.get(datasetId)
+    return job ? `dekart_internal.${quoteIdentifier(job)}` : null
   }
 
   nextGeneration () {
@@ -363,6 +373,7 @@ class DuckDBReportRuntime {
     try {
       await this.connection.query(`CREATE OR REPLACE TABLE ${jobTable} AS ${node.queryJob.queryText}`)
       this.jobTables.add(jobTableName)
+      this.widgetJobTables.set(node.dataset.id, jobTableName)
     } finally {
       if (paramsTable) {
         await this.connection.query(`DROP TABLE IF EXISTS ${paramsTable}`).catch(() => {})
@@ -374,7 +385,7 @@ class DuckDBReportRuntime {
     await this.connection.query(`CREATE OR REPLACE VIEW ${view} AS SELECT * FROM ${jobTable}`)
     this.ownedViews.add(viewName)
     const columns = await getColumnTypes(this.connection, jobTable)
-    const reader = await this.connection.send(castDuckDBTypesForKepler(jobTable, columns), true)
+    const reader = await this.connection.send(castDuckDBTypesForKepler(jobTable, columns) + ' ORDER BY rowid', true)
     const result = new Table(await reader.readAll())
     setGeoArrowWKBExtension(result, columns)
     return {
