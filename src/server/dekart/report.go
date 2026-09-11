@@ -62,6 +62,7 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 		`select
 			r.id,
 			case when r.map_config is null then '' else r.map_config end as map_config,
+            COALESCE(r.widgets_config, '') as widgets_config,
 			case when r.title is null then 'Untitled' else r.title end as title,
 			r.author_email = $1 as is_author,
 			r.author_email,
@@ -128,6 +129,7 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 		err = reportRows.Scan(
 			&report.Id,
 			&report.MapConfig,
+			&report.WidgetsConfig,
 			&report.Title,
 			&report.IsAuthor,
 			&report.AuthorEmail,
@@ -340,9 +342,9 @@ func (s Server) createReportSnapshotWithVersionIDTx(ctx context.Context, tx *sql
 	// Create report snapshot using INSERT ... SELECT from reports
 	_, err := tx.ExecContext(ctx,
 		`INSERT INTO report_snapshots (
-			version_id, report_id, map_config, title, query_params, readme, author_email, trigger_type
+			version_id, report_id, map_config, title, query_params, readme, author_email, trigger_type, widgets_config
 		)
-		SELECT $1, id, map_config, title, query_params, readme, $2, $3
+		SELECT $1, id, map_config, title, query_params, readme, $2, $3, widgets_config
 		FROM reports
 		WHERE id = $4`,
 		versionID,
@@ -490,6 +492,10 @@ func (s Server) commitReportWithDatasets(
 		return errReportLimitReached
 	}
 	newMapConfig, newDatasetIds := updateDatasetIds(report, datasets)
+	newWidgetsConfig, err := remapWidgetDatasets(report.WidgetsConfig, datasets, newDatasetIds)
+	if err != nil {
+		return status.Error(codes.InvalidArgument, err.Error())
+	}
 	newQueryIDByOldID := make(map[string]string, len(queries))
 	for _, dataset := range datasets {
 		if dataset.QueryId != "" {
@@ -522,17 +528,18 @@ func (s Server) commitReportWithDatasets(
 
 	if checkWorkspace(ctx).IsPlayground {
 		_, err = tx.ExecContext(ctx,
-			"INSERT INTO reports (id, author_email, map_config, title, query_params, is_playground, readme) VALUES ($1, $2, $3, $4, $5, true, $6)",
+			"INSERT INTO reports (id, author_email, map_config, title, query_params, is_playground, readme, widgets_config) VALUES ($1, $2, $3, $4, $5, true, $6, $7)",
 			report.Id,
 			claims.Email,
 			newMapConfig,
 			report.Title,
 			paramsJSON,
 			readme,
+			newWidgetsConfig,
 		)
 	} else {
 		_, err = tx.ExecContext(ctx,
-			"INSERT INTO reports (id, author_email, map_config, title, query_params, is_public, workspace_id, readme) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+			"INSERT INTO reports (id, author_email, map_config, title, query_params, is_public, workspace_id, readme, widgets_config) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
 			report.Id,
 			claims.Email,
 			newMapConfig,
@@ -541,6 +548,7 @@ func (s Server) commitReportWithDatasets(
 			report.IsPublic,
 			checkWorkspace(ctx).ID,
 			readme,
+			newWidgetsConfig,
 		)
 	}
 	if err != nil {
@@ -943,6 +951,25 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	if err := lockReportTx(ctx, tx, req.ReportId); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+	// Serialize map and widgets against one report revision; omitted widgets preserve storage.
+	var currentVersion, currentWidgets sql.NullString
+	if err := tx.QueryRowContext(ctx, "SELECT version_id, widgets_config FROM reports WHERE id=$1", req.ReportId).Scan(&currentVersion, &currentWidgets); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if req.ExpectedVersionId != nil && *req.ExpectedVersionId != currentVersion.String {
+		return nil, status.Error(codes.Aborted, "This report changed in another session. Reload before saving.")
+	}
+	if currentWidgets.String != "" && req.ExpectedVersionId == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Reload this dashboard before saving.")
+	}
+	if req.WidgetsConfig != nil {
+		if err := validateWidgetsConfig(*req.WidgetsConfig); err != nil {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		if _, err := tx.ExecContext(ctx, "UPDATE reports SET widgets_config=$1 WHERE id=$2", *req.WidgetsConfig, req.ReportId); err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
 	var result sql.Result
 	if workspaceInfo.IsPlayground {
 		result, err = tx.ExecContext(ctx,
@@ -1026,6 +1053,7 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 
 	return &proto.UpdateReportResponse{
 		UpdatedAt: updated_at.Unix(),
+		VersionId: newVersionID,
 	}, nil
 }
 
@@ -1526,14 +1554,15 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 
 	// Load snapshot of report content
 	var (
-		snapshotMapConfig  sql.NullString
-		snapshotTitle      sql.NullString
-		snapshotParamsText sql.NullString
-		snapshotReadme     sql.NullString
+		snapshotMapConfig     sql.NullString
+		snapshotWidgetsConfig sql.NullString
+		snapshotTitle         sql.NullString
+		snapshotParamsText    sql.NullString
+		snapshotReadme        sql.NullString
 	)
 
 	err = s.db.QueryRowContext(ctx, `
-		SELECT map_config, title, query_params, readme
+		SELECT map_config, title, query_params, readme, widgets_config
 		FROM report_snapshots
 		WHERE version_id = $1 AND report_id = $2
 	`, req.VersionId, req.ReportId).Scan(
@@ -1541,6 +1570,7 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 		&snapshotTitle,
 		&snapshotParamsText,
 		&snapshotReadme,
+		&snapshotWidgetsConfig,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -1565,7 +1595,8 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	parameterDeclarationsUnchanged := currentParamsText.String == snapshotParamsText.String
-	// Restore report content (map_config, title, query_params, readme, version_id)
+	// Restore both configurations and history atomically at a fresh live revision.
+	restoredVersionID := newUUID()
 	_, err = tx.ExecContext(ctx, `
 		UPDATE reports
 		SET map_config = $1,
@@ -1573,9 +1604,9 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 			query_params = $3,
 			readme = $4,
 			updated_at = CURRENT_TIMESTAMP,
-			version_id = $5
-		WHERE id = $6
-	`, snapshotMapConfig, snapshotTitle, snapshotParamsText, snapshotReadme, req.VersionId, req.ReportId)
+			widgets_config = $5, version_id = $6
+		WHERE id = $7
+	`, snapshotMapConfig, snapshotTitle, snapshotParamsText, snapshotReadme, snapshotWidgetsConfig, restoredVersionID, req.ReportId)
 	if err != nil {
 		errtype.LogError(err, "failed to restore report from snapshot")
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1767,14 +1798,11 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
-		errtype.LogError(err, "failed to commit snapshot restore transaction")
+	if err := s.createReportSnapshotWithVersionIDTx(ctx, tx, restoredVersionID, req.ReportId, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_SNAPSHOT_RESTORE); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-
-	err = s.createReportSnapshot(ctx, req.ReportId, proto.ReportSnapshot_TRIGGER_TYPE_SNAPSHOT_RESTORE)
-	if err != nil {
-		errtype.LogError(err, "failed to create report snapshot")
+	if err := tx.Commit(); err != nil {
+		errtype.LogError(err, "failed to commit snapshot restore transaction")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 

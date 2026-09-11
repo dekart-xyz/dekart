@@ -252,7 +252,7 @@ export function reportUpdate (reportStreamResponse) {
       user,
       queryParams: currentQueryParams,
       queryJobs: prevQueryJobsList,
-      reportStatus: { lastSaved, savedReportVersion, lastMapConfigChanged, snapshotMode },
+      reportStatus: { lastSaved, savedReportVersion, savedVersionId, lastMapConfigChanged, snapshotMode },
       hasOpenedKeplerPanel
     } = state
     const activeQueryParams = reconcileQueryParamsState(currentQueryParams, report.queryParamsList, window.location.search)
@@ -298,7 +298,7 @@ export function reportUpdate (reportStreamResponse) {
     const hasUnsavedUserMapChanges = lastSaved < lastMapConfigChanged && hasOpenedKeplerPanel
     const hasRemoteMapConflict = (
       report.mapConfig &&
-      report.updatedAt > savedReportVersion && // ignore when updated version same as last saved to prevent maps reloads
+      (report.versionId ? report.versionId !== savedVersionId : report.updatedAt > savedReportVersion) && // ignore when updated version same as last saved to prevent maps reloads
       hasUnsavedUserMapChanges
     )
     if (hasRemoteMapConflict) {
@@ -306,7 +306,7 @@ export function reportUpdate (reportStreamResponse) {
     }
     if (
       report.mapConfig &&
-      report.updatedAt > savedReportVersion && // ignore when updated version same as last saved to prevent maps reloads
+      (report.versionId ? report.versionId !== savedVersionId : report.updatedAt > savedReportVersion) && // ignore when updated version same as last saved to prevent maps reloads
       !hasUnsavedUserMapChanges // ignore overwriting unsaved user map changes
     ) {
       mapConfigUpdated = receiveReportUpdateMapConfig(report, dispatch, getState)
@@ -516,8 +516,8 @@ export function reportTitleChange (title) {
   }
 }
 
-export function savedReport (lastSaved, savedReportVersion) {
-  return { type: savedReport.name, lastSaved, savedReportVersion }
+export function savedReport (lastSaved, savedReportVersion, versionId, widgetRevision) {
+  return { type: savedReport.name, lastSaved, savedReportVersion, versionId, widgetRevision }
 }
 
 export function saveMapFailed () {
@@ -628,6 +628,8 @@ export function saveMap (mapViewChanged = false) {
     }
     request.setReportId(report.id)
     request.setMapConfig(mapConfig)
+    request.setExpectedVersionId(report.versionId)
+    if (state.widgets.config) request.setWidgetsConfig(JSON.stringify(state.widgets.config))
     request.setTitle(reportStatus.title)
     request.setQueryList(queryUpdates)
     request.setQueryParamsList(getQueryParamsObjArr(queryParams.list))
@@ -642,9 +644,11 @@ export function saveMap (mapViewChanged = false) {
       if (mapViewChanged) {
         dispatch(exportMapPreview())
       }
-      dispatch(savedReport(lastSaved, res.updatedAt))
+      dispatch(savedReport(lastSaved, res.updatedAt, res.versionId, state.widgets.revision))
+      return true
     } catch (err) {
       dispatch(saveMapFailed())
+      return false
     } finally {
       resolveReportSaveBarrier(barrier)
     }

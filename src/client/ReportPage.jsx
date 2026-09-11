@@ -3,10 +3,12 @@ import Input from 'antd/es/input'
 import { useEffect, useState, Component, useMemo } from 'react'
 import { Helmet } from 'react-helmet'
 import { KeplerGl } from '@kepler.gl/components'
+import { toggleSidePanel } from '@kepler.gl/actions'
+import ReportWidgets from './widgets/ReportWidgets'
+import { BarChartOutlined, EnvironmentOutlined, EditOutlined, WarningFilled, MoreOutlined, ReadOutlined } from '@ant-design/icons'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
 import { useDispatch, useSelector } from 'react-redux'
-import { EditOutlined, WarningFilled, MoreOutlined, ReadOutlined } from '@ant-design/icons'
 import { QueryJob } from 'dekart-proto/dekart_pb'
 import Tabs from 'antd/es/tabs'
 import classnames from 'classnames'
@@ -397,7 +399,7 @@ function buildMapboxStaticIconURL (styleURL, token) {
   return `https://api.mapbox.com/styles/v1/${path}/static/0,0,1/160x120?access_token=${token}&logo=false&attribution=false`
 }
 
-function Kepler ({ snapshot, onSnapshotBasemapReadyChange }) {
+function Kepler ({ snapshot, editing, onSnapshotBasemapReadyChange }) {
   const env = useSelector(state => state.env)
   const report = useSelector(state => state.report)
   const isSnowpark = useSelector(state => state.env.isSnowpark)
@@ -460,6 +462,7 @@ function Kepler ({ snapshot, onSnapshotBasemapReadyChange }) {
           <CatchKeplerError onError={(err) => dispatch(setError(err))}>
             <KeplerGl
               id='kepler'
+              readOnly={!editing}
               mapboxApiAccessToken={env.variables.MAPBOX_TOKEN}
               width={width}
               height={height}
@@ -481,6 +484,12 @@ export default function ReportPage ({ edit, snapshot }) {
   const report = useSelector(state => state.report)
   const files = useSelector(state => state.files || [])
   const queries = useSelector(state => state.queries || [])
+  const [leftPanel, setLeftPanel] = useState(edit ? 'map' : 'widgets')
+  const activeKeplerPanel = useSelector(state => state.keplerGl.kepler?.uiState.activeSidePanel)
+  const widgetFilterCount = useSelector(state => (state.keplerGl.kepler?.visState.filters || []).filter(filter => filter.id.startsWith('widget:')).length)
+  const widgetConfig = useSelector(state => state.widgets.config)
+  const readOnly = useSelector(state => state.workspace.readOnly)
+  const { saving, lastChanged, lastSaved } = useSelector(state => state.reportStatus)
   const fullscreen = useSelector(state => state.reportStatus.fullscreen)
   const [snapshotBasemapReady, setSnapshotBasemapReady] = useState(false)
   const snapshotViewportApplied = useSnapshotViewportOverride(snapshot, id, setSnapshotBasemapReady)
@@ -526,6 +535,17 @@ export default function ReportPage ({ edit, snapshot }) {
 
   useCheckMapConfig()
 
+  // Kepler stays mounted so its selected tab and editing state survive panel switches.
+  useEffect(() => {
+    // Viewing opens the dashboard instead of leaving an editor-only panel selected.
+    if (!edit) setLeftPanel('widgets')
+  }, [edit])
+
+  const openMapSettings = () => {
+    setLeftPanel(leftPanel === 'map' && activeKeplerPanel ? null : 'map')
+    if (!activeKeplerPanel) dispatch(toggleSidePanel('layer'))
+  }
+
   if (!report) {
     return <Loading />
   }
@@ -549,10 +569,19 @@ export default function ReportPage ({ edit, snapshot }) {
           )
         : null}
       <div className={classnames(styles.body, { [styles.snapshotBody]: snapshot })}>
-        <div className={styles.keplerFlexWrapper}>
+        <div className={classnames(styles.keplerFlexWrapper, { [styles.hideMapSettings]: leftPanel !== 'map' })}>
           <div className={styles.keplerFlex}>
+            {!snapshot && (
+              <div className={styles.panelSwitcher} role='navigation' aria-label='Map panels'>
+                {edit && report.canWrite && !readOnly && <button data-testid='map-settings-tab' aria-expanded={leftPanel === 'map' && Boolean(activeKeplerPanel)} onClick={openMapSettings}><EnvironmentOutlined />Map settings</button>}
+                <button data-testid='widgets-tab' aria-expanded={leftPanel === 'widgets'} onClick={() => setLeftPanel(leftPanel === 'widgets' ? null : 'widgets')}><BarChartOutlined />Widgets{widgetFilterCount > 0 && <span> · {widgetFilterCount} {widgetFilterCount === 1 ? 'filter' : 'filters'}</span>}</button>
+                {edit && <span className={styles.saveStatus}>{saving || lastChanged > lastSaved ? 'Saving…' : 'Saved'}</span>}
+              </div>
+            )}
+            {!snapshot && <ReportWidgets key={id} visible={leftPanel === 'widgets' && (edit || Boolean(widgetConfig))} editing={edit && report.canWrite && !readOnly} onClose={() => setLeftPanel(null)} onOpenData={() => document.getElementById('dekart-report-page-tabs')?.scrollIntoView({ block: 'nearest' })} />}
             <Kepler
               snapshot={snapshot}
+              editing={edit && report.canWrite && !readOnly}
               onSnapshotBasemapReadyChange={setSnapshotBasemapReady}
             />
             {!snapshot
@@ -566,7 +595,7 @@ export default function ReportPage ({ edit, snapshot }) {
               : null}
           </div>
         </div>
-        {!snapshot && !fullscreen ? <DatasetSection reportId={id} /> : null}
+        {!snapshot && !fullscreen && edit ? <DatasetSection reportId={id} /> : null}
       </div>
     </div>
   )

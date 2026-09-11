@@ -1,0 +1,46 @@
+/* global cy, describe, it, Cypress, expect */
+
+describe('Shared map and widgets panel', () => {
+  it('keeps SQL independent and creates widgets inline', () => {
+    cy.visit('/')
+    cy.get('body', { timeout: 30000 }).should(body => {
+      expect(body.find('#dekart-create-report').length || body.text().includes('Ready to connect')).to.be.ok
+    }).then(body => {
+      if (body.text().includes('Ready to connect')) cy.contains('button', 'Use file upload').click()
+      else cy.get('#dekart-create-report').click()
+    })
+    cy.contains('button', 'Upload File', { timeout: 30000 }).click()
+    cy.get('input[type="file"]').selectFile({ contents: Cypress.Buffer.from('latitude,longitude,operator\n52,13,Alpha\n53,14,Beta\n'), fileName: 'panel-stations.csv', mimeType: 'text/csv' }, { force: true })
+    cy.contains('button', 'Upload', { matchCase: true }).last().click()
+    cy.contains('Ready', { timeout: 120000 }).should('be.visible')
+    cy.contains('button', 'Map settings').should('be.visible')
+    cy.get('[data-testid="widgets-tab"]').click()
+    cy.get('[data-testid="widget-row-count"]', { timeout: 60000 }).should('have.text', '2')
+    cy.get('[role="tab"]').contains('panel-stations.csv').should('be.visible')
+    cy.get('[aria-label="Report widgets"]').then(panel => {
+      expect(panel[0].getBoundingClientRect().left).to.be.lessThan(40)
+    })
+    cy.contains('button', 'Add widget').click()
+    cy.get('[role="dialog"]').should('not.exist')
+    cy.get('[data-testid="inline-widget-builder"]').should('be.visible')
+    cy.contains('button', 'Category').click()
+    cy.contains('button', 'Map settings').click()
+    cy.get('[aria-label="Report widgets"]').should('not.be.visible')
+    cy.get('#kepler-gl__kepler .side-panel--container').should('be.visible')
+    cy.get('[data-testid="widgets-tab"]').click()
+    cy.get('[data-testid="inline-widget-builder"]').should('be.visible')
+    cy.contains('[role="combobox"]', 'Select column').click()
+    cy.contains('[role="option"]', 'operator').click()
+    cy.contains('button', /^Create$/).click()
+    cy.get('[data-testid="inline-widget-builder"]').should('not.be.visible')
+    cy.get('button[aria-label="Open panel settings"]').should('have.length', 2)
+    cy.get('g[aria-label="bar"][data-index="1"] rect').first().click()
+    cy.get('[data-testid="widget-row-count"]').should('have.text', '1')
+    cy.contains('button', 'Map settings').click()
+    cy.get('[data-testid="widgets-tab"]').should('contain.text', '1 filter')
+    cy.get('[data-testid="widgets-tab"]').click()
+    cy.get('[data-testid="widget-row-count"]').should('have.text', '1')
+    cy.contains('button', 'Clear filters').click()
+    cy.get('[data-testid="widget-row-count"]').should('have.text', '2')
+  })
+})
