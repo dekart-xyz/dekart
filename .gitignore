@@ -57,3 +57,4 @@ data
 keys/license-private.pem
 keys/device-auth-private.pem
 keys/device-auth-public.pem
+.gstack/

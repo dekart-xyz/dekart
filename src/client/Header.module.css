@@ -135,3 +135,13 @@ a.dekartLink {
         display: none;
     }
 }
+/* Preserve report identity and keep actions in deliberate rows on compact screens. */
+@media (max-width: 1023px) {
+    .top { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+    .left { grid-column: 1; min-width: 0; }
+    .user { grid-column: 2; grid-row: 1; margin-top: 0; }
+    .middle { position: static; grid-column: 1 / -1; grid-row: 2; width: 100%; min-width: 0; }
+    .titleWrap { height: 32px; }
+    .buttons { grid-column: 1 / -1; grid-row: 3; min-width: 0; height: 44px; }
+    .buttons :global(.ant-btn) { min-width: 44px; height: 44px; }
+}

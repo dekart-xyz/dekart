@@ -264,7 +264,35 @@ cursor: default !important;
 }
 
 @media (max-width: 1023px) {
-    .title {
-        display: none;
+    .titleText { font-size: 14px; padding: 4px 12px; }
+}
+
+.dashboardToolbar { height: 43px; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; padding: 0 16px; background: #1e2937; border-bottom: 1px solid #3b4757; color: #aebdcb; font-size: 11px; }
+.dashboardToolbar nav { display: flex; height: 100%; gap: 8px; }
+.dashboardToolbar button { display: flex; align-items: center; gap: 8px; padding: 0 14px; background: transparent; color: #aebdcb; border: 0; border-bottom: 2px solid transparent; cursor: pointer; }
+.dashboardToolbar .selectedSection { border-bottom-color: #64c9ad; color: #9de6d1; }
+.body { min-height: 0; }
+.keplerFlexWrapper { min-width: 0; overflow: hidden; }
+@media (max-width: 760px) { .body { flex-wrap: wrap; overflow-y: auto; } .keplerFlexWrapper { flex-basis: 100%; height: 45vh; } .resizable { max-width: 100%; width: 100% !important; min-height: 450px; } .datasetSection { min-width: 0; } }
+
+/* Dashboard navigation uses the same scale and focus treatment as its controls. */
+.dashboardToolbar { font-size: 12px; height: 44px; }
+.dashboardToolbar button:hover { background: #293748; color: #eef3fa; }
+.dashboardToolbar button:focus-visible { outline: 2px solid #64c9ad; outline-offset: -4px; }
+@media (max-width: 760px) {
+    .dashboardToolbar { padding: 0 8px; }
+    .dashboardToolbar nav { gap: 0; }
+    .dashboardToolbar button { min-height: 44px; padding: 0 12px; }
+    .body:has([aria-label='Report widgets']:not([class*='hidden'])) .keplerFlexWrapper { height: clamp(180px, 26vh, 260px); flex-shrink: 0; }
+}
+@media (max-width: 760px) {
+    .body:has([aria-label='Report widgets']:not([class*='hidden'])) .keplerBlock :global(#kepler-gl__kepler .map-control) {
+        margin-top: 0;
+        top: auto;
+        bottom: 28px;
+        grid-auto-flow: column;
+        grid-template-columns: repeat(5, 44px);
+        gap: 4px;
     }
+    .body:has([aria-label='Report widgets']:not([class*='hidden'])) .keplerBlock :global(#kepler-gl__kepler .map-control > button) { width: 44px; height: 44px; }
 }

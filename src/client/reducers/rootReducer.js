@@ -8,6 +8,7 @@ import { setEnv } from '../actions/env'
 import { newRelease } from '../actions/version'
 import keplerGlReducer from '@kepler.gl/reducers'
 import stream from './streamReducer'
+import widgets from './widgetsReducer'
 import token from './tokenReducer'
 import connection from './connectionReducer'
 import user from './userReducer'
@@ -32,7 +33,7 @@ const customKeplerGlReducer = keplerGlReducer.initialState({
     activeSidePanel: null
   },
   mapStyle: {
-    styleType: 'dark'
+    styleType: 'dark-matter'
   }
 })
 
@@ -138,6 +139,7 @@ function release (state = null, action) {
 
 export default combineReducers({
   keplerGl,
+  widgets,
   report,
   reportStatus,
   reportsList,

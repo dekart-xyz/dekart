@@ -720,6 +720,7 @@ message Report {
     int32 auto_refresh_interval_seconds = 22; // auto refresh interval in seconds
     string version_id = 23; // version id of the report
     bool has_map_preview = 24; // true - map preview exists, false - no map preview
+    string widgets_config = 26; // SQLRooms dashboard configuration, separate from Kepler
     repeated ConnectionType connection_types = 25; // unique connection types used by datasets in this report
 }
 
@@ -815,10 +816,13 @@ message UpdateReportRequest {
     repeated Query query = 4;
     repeated QueryParam query_params = 5;
     Readme readme = 6;
+    optional string widgets_config = 7; // omission preserves existing widgets
+    optional string expected_version_id = 8; // shared report revision for conditional saves
 }
 
 message UpdateReportResponse {
     int64 updated_at = 1;
+    string version_id = 2;
 }
 
 // MCP-specific payload for renaming report title without sending full report update body.
