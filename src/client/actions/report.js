@@ -1,9 +1,8 @@
-import { KeplerGlSchema } from '@kepler.gl/schemas'
 import { cleanupExportImage, removeDataset, setExportImageSetting, startExportingImage } from '@kepler.gl/actions'
 
 import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
 import { showMapConfigConflictMessage, success } from './message'
-import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType, SetTrackViewersRequest, SetAutoRefreshIntervalSecondsRequest, RestoreReportSnapshotRequest, SaveMapPreviewRequest } from 'dekart-proto/dekart_pb'
+import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, QueryJob, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType, SetTrackViewersRequest, SetAutoRefreshIntervalSecondsRequest, RestoreReportSnapshotRequest, SaveMapPreviewRequest } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { createQuery, downloadQuerySource, invalidateRunAllQueries, runWarehouseQuery } from './query'
 import { downloadDataset } from './dataset'
@@ -11,7 +10,7 @@ import { shouldAddQuery } from '../lib/shouldAddQuery'
 import { shouldUpdateDataset } from '../lib/shouldUpdateDataset'
 import { needSensitiveScopes } from './user'
 import { getQueryParamsObjArr, reconcileQueryParamsState } from '../lib/queryParams'
-import { receiveReportUpdateMapConfig } from '../lib/mapConfig'
+import { getMapConfigToSave, mapConfigHasDataset, receiveReportUpdateMapConfig } from '../lib/mapConfig'
 import { extensionFromMime } from '../lib/mime'
 import { showUpgradeModal, UpgradeModalType } from './upgradeModal'
 import { track } from '../lib/tracking'
@@ -129,6 +128,24 @@ function shouldDownloadQueryText (query, prevQueriesList, queriesList) {
   const prevQueryState = prevQueriesList.find(q => q.id === query.id)
   if (!prevQueryState || prevQueryState.querySourceId !== query.querySourceId) {
     return true
+  }
+  return false
+}
+
+// datasetHasPublishedData distinguishes saved layer choices from a blank dataset awaiting its first result.
+function datasetHasPublishedData (dataset, mapConfig, filesList, queryJobsList) {
+  const savedDatasetState = mapConfigHasDataset(mapConfig, dataset.id)
+  if (savedDatasetState !== null) {
+    return savedDatasetState
+  }
+  if (dataset.fileId) {
+    const file = filesList.find(file => file.id === dataset.fileId)
+    return file?.fileStatus >= File.Status.STATUS_STORED && Boolean(file.sourceId)
+  }
+  if (dataset.queryId) {
+    return queryJobsList.some(job => job.queryId === dataset.queryId && (
+      job.jobResultId || job.jobStatus === QueryJob.JobStatus.JOB_STATUS_DONE
+    ))
   }
   return false
 }
@@ -255,9 +272,16 @@ export function reportUpdate (reportStreamResponse) {
       reportStatus: { lastSaved, savedReportVersion, lastMapConfigChanged, snapshotMode },
       hasOpenedKeplerPanel
     } = state
+    const queryJobsList = streamedQueryJobsList
+    // Saved config is authoritative only after a dataset has published data at least once.
+    const autoCreateLayerIds = state.report
+      ? datasetsList.filter(dataset =>
+        !prevDatasetsList.some(previous => previous.id === dataset.id) &&
+        mapConfigHasDataset(report.mapConfig, dataset.id) !== true
+      ).map(dataset => dataset.id)
+      : datasetsList.filter(dataset => !report.mapConfig || !datasetHasPublishedData(dataset, report.mapConfig, filesList, queryJobsList)).map(dataset => dataset.id)
     const activeQueryParams = reconcileQueryParamsState(currentQueryParams, report.queryParamsList, window.location.search)
     const hash = activeQueryParams.hash
-    const queryJobsList = streamedQueryJobsList
     dispatch({
       type: reportUpdate.name,
       report,
@@ -265,6 +289,7 @@ export function reportUpdate (reportStreamResponse) {
       prevQueriesList,
       datasetsList,
       prevDatasetsList,
+      autoCreateLayerIds,
       filesList,
       queryJobsList,
       hash,
@@ -603,9 +628,9 @@ export function exportMapPreview () {
 export function saveMap (mapViewChanged = false) {
   return async (dispatch, getState) => {
     const state = getState()
-    const { keplerGl, report, reportStatus, queryStatus, queryParams, readme } = state
+    const { keplerGl, report, reportStatus, queryStatus, queryParams, readme, dataset } = state
     const lastSaved = reportStatus.lastChanged
-    const configToSave = KeplerGlSchema.getConfigToSave(keplerGl.kepler)
+    const configToSave = getMapConfigToSave(keplerGl.kepler, dataset.list, report.mapConfig)
     const mapConfig = JSON.stringify(configToSave)
     const barrier = startReportSaveBarrier(report.id)
     dispatch({ type: saveMap.name })

@@ -11,20 +11,42 @@ export function shouldUpdateMapConfig (oldMapConfigIn, newMapConfigIn) {
     // when server config is empty but kepler has a config, we should update
     return true
   }
-  if (newMapConfigIn.config.visState.layers.length > 0) {
-    const newMapConfig = structuredClone(newMapConfigIn)
-    newMapConfig.config.mapState.latitude = 0
-    newMapConfig.config.mapState.longitude = 0
-    newMapConfig.config.mapState.zoom = 0
+  const newMapConfig = structuredClone(newMapConfigIn)
+  newMapConfig.config.mapState.latitude = 0
+  newMapConfig.config.mapState.longitude = 0
+  newMapConfig.config.mapState.zoom = 0
 
-    const oldMapConfig = structuredClone(oldMapConfigIn)
-    oldMapConfig.config.mapState.latitude = 0
-    oldMapConfig.config.mapState.longitude = 0
-    oldMapConfig.config.mapState.zoom = 0
+  const oldMapConfig = structuredClone(oldMapConfigIn)
+  oldMapConfig.config.mapState.latitude = 0
+  oldMapConfig.config.mapState.longitude = 0
+  oldMapConfig.config.mapState.zoom = 0
 
-    return !deepCompare(oldMapConfig, newMapConfig)
+  return !deepCompare(oldMapConfig, newMapConfig)
+}
+
+// Keep dataset publication history beside the Kepler config so an empty layer list remains authoritative.
+export function getMapConfigToSave (kepler, datasets, mapConfigInputStr) {
+  const config = KeplerGlSchema.getConfigToSave(kepler)
+  const activeDatasetIds = new Set(datasets.map(dataset => dataset.id))
+  let savedDatasetIds = []
+  if (mapConfigInputStr) {
+    savedDatasetIds = JSON.parse(mapConfigInputStr).dekart?.datasetIds || []
   }
-  return false
+  const loadedDatasetIds = Object.keys(kepler?.visState?.datasets || {})
+  config.dekart = {
+    datasetIds: [...new Set([...savedDatasetIds, ...loadedDatasetIds])]
+      .filter(datasetId => activeDatasetIds.has(datasetId))
+  }
+  return config
+}
+
+// null identifies legacy configs whose publication state still needs server-side inference.
+export function mapConfigHasDataset (mapConfigInputStr, datasetId) {
+  if (!mapConfigInputStr) {
+    return null
+  }
+  const datasetIds = JSON.parse(mapConfigInputStr).dekart?.datasetIds
+  return datasetIds ? datasetIds.includes(datasetId) : null
 }
 
 // Update the map config if it has changed locally
@@ -56,7 +78,7 @@ function checkMapConfig (kepler, mapConfigInputStr, dispatch, datasets) {
   }
   checkMapConfigTimer = setTimeout(() => {
     if (kepler && datasets) {
-      const configToSaveObj = KeplerGlSchema.getConfigToSave(kepler)
+      const configToSaveObj = getMapConfigToSave(kepler, datasets, mapConfigInputStr)
       const currentConfig = mapConfigInputStr ? JSON.parse(mapConfigInputStr) : null
       if (shouldUpdateMapConfig(currentConfig, configToSaveObj)) {
         dispatch(setLastMapConfigChanged())
@@ -75,7 +97,10 @@ export function receiveReportUpdateMapConfig (report, dispatch, getState) {
   const { kepler } = getState().keplerGl
   const newConfig = JSON.parse(report.mapConfig)
   const currentConfig = KeplerGlSchema.getConfigToSave(kepler)
-  if (shouldUpdateMapConfig(currentConfig, newConfig)) {
+  // Dekart metadata must not make a legacy config look like a remote visual change.
+  const newKeplerConfig = structuredClone(newConfig)
+  delete newKeplerConfig.dekart
+  if (shouldUpdateMapConfig(currentConfig, newKeplerConfig)) {
     const newConfigNormalized = KeplerGlSchema.parseSavedConfig(newConfig)
     dispatch(receiveMapConfig(newConfigNormalized))
     return true

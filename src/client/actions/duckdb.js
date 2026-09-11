@@ -6,7 +6,7 @@ import { DuckDBJobStatus, isDuckDBDataset } from '../lib/duckdb/constants'
 import { getQueryParamsValuesFromSearch } from '../lib/queryParams'
 import waitForKeplerDataset from '../lib/waitForKeplerDataset'
 import { setError } from './message'
-import { keplerDatasetFinishUpdating, keplerDatasetStartUpdating } from './kepler'
+import { consumeAutoCreateLayer, keplerDatasetFinishUpdating, keplerDatasetStartUpdating } from './kepler'
 
 let runtimeModule = null
 
@@ -107,7 +107,9 @@ function addDuckDBResultToMap (dispatch, getState, node, result) {
       }
     }))
   } else {
-    dispatch(addDataToMap({ datasets: datasetToUse }))
+    const autoCreateLayers = state.dataset.autoCreateLayerIds.includes(node.dataset.id)
+    dispatch(addDataToMap({ datasets: datasetToUse, options: { autoCreateLayers } }))
+    dispatch(consumeAutoCreateLayer(node.dataset.id))
   }
   dispatch(keplerDatasetFinishUpdating())
   return existing

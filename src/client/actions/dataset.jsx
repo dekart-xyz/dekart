@@ -9,7 +9,7 @@ import { runWarehouseQuery } from './query'
 import { filenameWithExtension, mimeFromExtension } from '../lib/mime'
 import { failDuckDBSource, registerDuckDBFileSource, registerDuckDBSource, removeDuckDBSource } from './duckdb'
 import waitForKeplerDataset from '../lib/waitForKeplerDataset'
-import { keplerDatasetFinishUpdating, keplerDatasetStartUpdating } from './kepler'
+import { consumeAutoCreateLayer, keplerDatasetFinishUpdating, keplerDatasetStartUpdating } from './kepler'
 
 let duckDBDatabaseModule = null
 
@@ -299,6 +299,7 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension, sour
           dispatch(keplerDatasetFinishUpdating())
         } else {
           dispatch(keplerDatasetStartUpdating())
+          const autoCreateLayers = getState().dataset.autoCreateLayerIds.includes(dataset.id)
           dispatch(addDataToMap({
             datasets: {
               info: {
@@ -306,8 +307,10 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension, sour
                 id: dataset.id
               },
               data
-            }
+            },
+            options: { autoCreateLayers }
           }))
+          dispatch(consumeAutoCreateLayer(dataset.id))
           dispatch(keplerDatasetFinishUpdating())
         }
         // Native-table publication is asynchronous and must finish before runtime adoption.

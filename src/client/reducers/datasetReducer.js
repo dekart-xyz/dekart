@@ -1,6 +1,6 @@
 import { combineReducers } from 'redux'
 import { addDatasetToMap, cancelDownloading, closeDatasetSettingsModal, downloadDataset, downloadingProgress, finishAddingDatasetToMap, finishDownloading, openDatasetSettingsModal, processDownloadError, setActiveDataset } from '../actions/dataset'
-import { keplerDatasetFinishUpdating, keplerDatasetStartUpdating } from '../actions/kepler'
+import { consumeAutoCreateLayer, keplerDatasetFinishUpdating, keplerDatasetStartUpdating } from '../actions/kepler'
 import { closeReport, openReport, reportUpdate } from '../actions/report'
 
 function lastAddedQueryParamsHash (state = {}, action) {
@@ -130,6 +130,23 @@ function list (state = [], action) {
   }
 }
 
+// autoCreateLayerIds keeps first-insertion eligibility across asynchronous dataset publication.
+function autoCreateLayerIds (state = [], action) {
+  switch (action.type) {
+    case openReport.name:
+    case closeReport.name:
+      return []
+    case reportUpdate.name: {
+      const activeIds = state.filter(id => action.datasetsList.some(dataset => dataset.id === id))
+      return [...new Set([...activeIds, ...action.autoCreateLayerIds])]
+    }
+    case consumeAutoCreateLayer.name:
+      return state.filter(id => id !== action.datasetId)
+    default:
+      return state
+  }
+}
+
 function settings (state = { datasetId: null, visible: false }, action) {
   switch (action.type) {
     case openDatasetSettingsModal.name:
@@ -164,6 +181,7 @@ export default combineReducers({
   active,
   settings,
   list,
+  autoCreateLayerIds,
   updatingNum,
   lastAddedQueryParamsHash,
   lastAddedQueryQueryJob
