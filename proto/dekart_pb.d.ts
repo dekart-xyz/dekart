@@ -2634,6 +2634,9 @@ export class Report extends jspb.Message {
   getHasMapPreview(): boolean;
   setHasMapPreview(value: boolean): void;
 
+  getWidgetsConfig(): string;
+  setWidgetsConfig(value: string): void;
+
   clearConnectionTypesList(): void;
   getConnectionTypesList(): Array<ConnectionTypeMap[keyof ConnectionTypeMap]>;
   setConnectionTypesList(value: Array<ConnectionTypeMap[keyof ConnectionTypeMap]>): void;
@@ -2675,6 +2678,7 @@ export namespace Report {
     autoRefreshIntervalSeconds: number,
     versionId: string,
     hasMapPreview: boolean,
+    widgetsConfig: string,
     connectionTypesList: Array<ConnectionTypeMap[keyof ConnectionTypeMap]>,
   }
 }
@@ -3004,6 +3008,16 @@ export class UpdateReportRequest extends jspb.Message {
   getReadme(): Readme | undefined;
   setReadme(value?: Readme): void;
 
+  hasWidgetsConfig(): boolean;
+  clearWidgetsConfig(): void;
+  getWidgetsConfig(): string;
+  setWidgetsConfig(value: string): void;
+
+  hasExpectedVersionId(): boolean;
+  clearExpectedVersionId(): void;
+  getExpectedVersionId(): string;
+  setExpectedVersionId(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): UpdateReportRequest.AsObject;
   static toObject(includeInstance: boolean, msg: UpdateReportRequest): UpdateReportRequest.AsObject;
@@ -3022,12 +3036,17 @@ export namespace UpdateReportRequest {
     queryList: Array<Query.AsObject>,
     queryParamsList: Array<QueryParam.AsObject>,
     readme?: Readme.AsObject,
+    widgetsConfig: string,
+    expectedVersionId: string,
   }
 }
 
 export class UpdateReportResponse extends jspb.Message {
   getUpdatedAt(): number;
   setUpdatedAt(value: number): void;
+
+  getVersionId(): string;
+  setVersionId(value: string): void;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): UpdateReportResponse.AsObject;
@@ -3042,6 +3061,7 @@ export class UpdateReportResponse extends jspb.Message {
 export namespace UpdateReportResponse {
   export type AsObject = {
     updatedAt: number,
+    versionId: string,
   }
 }
 

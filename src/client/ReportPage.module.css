@@ -264,7 +264,23 @@ cursor: default !important;
 }
 
 @media (max-width: 1023px) {
-    .title {
-        display: none;
-    }
+    .titleText { font-size: 14px; padding: 4px 12px; }
 }
+
+
+.body { min-height: 0; }
+.keplerFlexWrapper { min-width: 0; overflow: hidden; }
+.keplerFlex { --pane-top: 12px; --pane-left: 12px; --pane-width: min(320px, calc(100% - 64px)); }
+.hideMapSettings .keplerBlock :global(#kepler-gl__kepler .side-panel--container) { display: none; }
+.keplerBlock :global(#kepler-gl__kepler .side-panel--container) { padding: 0; width: var(--pane-width); top: calc(var(--pane-top) + 44px); left: var(--pane-left); height: calc(100% - var(--pane-top) - 56px); border-radius: 0 0 5px 5px; overflow: hidden; }
+@media (max-width: 760px) {
+    .body { flex-wrap: wrap; overflow-y: auto; }
+    .keplerFlexWrapper { flex-basis: 100%; height: 70vh; min-height: 440px; flex-shrink: 0; }
+    .resizable { max-width: 100%; width: 100% !important; min-height: 450px; }
+    .datasetSection { min-width: 0; }
+    .keplerFlex { --pane-top: 8px; --pane-left: 8px; }
+}
+
+/* The shared header replaces Kepler’s separate collapse handle. */
+.keplerBlock :global(#kepler-gl__kepler .side-bar__close) { display: none; }
+.keplerBlock :global(#kepler-gl__kepler .side-bar) { width: 100% !important; }

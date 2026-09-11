@@ -1,0 +1,36 @@
+/* Reuse Kepler's floating panel proportions; SQLRooms owns chart controls. */
+.provider { display: contents; }
+.panel { position: absolute; top: calc(var(--pane-top) + 44px); bottom: 12px; left: var(--pane-left); width: var(--pane-width); border-radius: 0 0 5px 5px; z-index: 20; display: flex; flex-direction: column; min-height: 0; color: #f3f5f7; background: #242730; --primary: 160 82% 32%; --primary-foreground: 0 0% 100%; box-shadow: 0 2px 8px #0005; font: 12px 'ff-clan-web-pro', 'Helvetica Neue', Helvetica, sans-serif; }
+.hidden { display: none !important; }
+.source { display: flex; flex-direction: column; gap: 6px; padding: 12px 16px; }
+.source label { color: #c6d0dc; }
+.source select { min-height: 32px; background: #3a4552; color: #f3f5f7; border: 1px solid #45515f; padding: 4px 8px; width: 100%; }
+.panel :global(svg text) { font-family: inherit; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px; border-top: 1px solid #3a4552; }
+.actions button { flex: 1; border-radius: 0; gap: 6px; }
+.settings, .inlineBuilder { flex: 1; min-height: 0; overflow: auto; }
+.settings h2, .settings h3, .inlineBuilder h3 { color: inherit; }
+.inlineBuilder { padding: 0 16px 16px; }
+.builderHeading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.builderHeading h3 { font-size: 14px; margin: 0; }
+.inlineBuilder :global(.grid) { grid-template-columns: 1fr; }
+.empty { padding: 20px 16px; flex: 1; color: #c6d0dc; }
+.empty h3 { color: #f3f5f7; font-size: 16px; }
+.error { margin: 12px 16px; padding: 12px; background: #573a35; color: #ffd5c8; overflow-wrap: anywhere; }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 12px; }
+.filters button { color: #e0e4ff; border: 1px solid #747b9a; padding: 4px 6px; display: flex; gap: 6px; align-items: center; font-size: 12px; background: #3a405c; cursor: pointer; }
+.panel button:focus-visible, .panel select:focus-visible { outline: 2px solid #a0a7ff; outline-offset: 2px; }
+.viewer :global(button[aria-label='Open panel settings']), .viewer :global(button[aria-label='Shrink panel horizontally']), .viewer :global(button[aria-label='Expand panel horizontally']), .viewer :global(.sqlrooms-grid-resize-handle) { display: none; }
+.viewer :global(.lucide-grip-vertical) { visibility: hidden; width: 0; }
+.viewer :global([data-selectable-panel]) { outline: none; }
+@media (max-width: 760px) {
+    .source select, .settings input, .inlineBuilder input { font-size: 16px; }
+    .actions button, .filters button, .builderHeading button { min-height: 44px; }
+}
+.reportCharts { flex: 1; min-height: 0; overflow: auto; }
+.datasetWidgets { min-width: 0; }
+.datasetLabel { margin: 0; padding: 12px 16px 0; color: #c6d0dc; font-size: 12px; font-weight: 500; }
+.chartSettings { padding: 0 16px 16px; }
+.source input { min-width: 0; background: #3a4552; color: #f3f5f7; border: 1px solid #45515f; padding: 6px 8px; }
+.datasetLabel { position: sticky; top: 0; background: #242730; z-index: 2; }
+.filters { position: sticky; top: 26px; background: #242730; z-index: 2; padding-top: 6px; }

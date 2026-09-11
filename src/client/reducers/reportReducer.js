@@ -109,6 +109,7 @@ export function reportStatus (state = defaultReportStatus, action) {
   switch (action.type) {
     case updateQueryParamsFromQueries.name:
     case queryParamChanged.name:
+    case 'widgetsChanged':
     case queryChanged.name:
     case setReadmeValue.name: {
       const lastChanged = Date.now()
@@ -152,7 +153,8 @@ export function reportStatus (state = defaultReportStatus, action) {
         ...state,
         saving: false,
         lastSaved: action.lastSaved,
-        savedReportVersion: action.savedReportVersion
+        savedReportVersion: action.savedReportVersion,
+        savedVersionId: action.versionId
       }
     case saveMapFailed.name:
       return {

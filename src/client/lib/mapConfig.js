@@ -11,7 +11,7 @@ export function shouldUpdateMapConfig (oldMapConfigIn, newMapConfigIn) {
     // when server config is empty but kepler has a config, we should update
     return true
   }
-  if (newMapConfigIn.config.visState.layers.length > 0) {
+  if (newMapConfigIn) {
     const newMapConfig = structuredClone(newMapConfigIn)
     newMapConfig.config.mapState.latitude = 0
     newMapConfig.config.mapState.longitude = 0
