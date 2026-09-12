@@ -153,6 +153,10 @@ export function setLastMapConfigChanged () {
   return { type: setLastMapConfigChanged.name }
 }
 
+export function markKeplerPanelInteracted () {
+  return { type: markKeplerPanelInteracted.name }
+}
+
 function isQueryJobOutOfDate (reportStreamResponse, getState, queryJob) {
   const { report } = reportStreamResponse
   const { env } = getState()

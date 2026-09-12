@@ -19,7 +19,7 @@ import { Resizable } from 're-resizable'
 import DatasetSettingsModal from './DatasetSettingsModal'
 import getDatasetName from './lib/getDatasetName'
 import { createDataset, openDatasetSettingsModal, removeDataset, setActiveDataset } from './actions/dataset'
-import { closeReport, openReport, reportTitleChange, reportWillOpen, toggleReportEdit } from './actions/report'
+import { closeReport, markKeplerPanelInteracted, openReport, reportTitleChange, reportWillOpen, toggleReportEdit } from './actions/report'
 import { setError } from './actions/message'
 import Tooltip from 'antd/es/tooltip'
 import prettyBites from 'pretty-bytes'
@@ -440,12 +440,18 @@ function Kepler ({ snapshot, onSnapshotBasemapReadyChange }) {
   }
 
   const hideInteraction = !report.allowExport && !report.canWrite
+  // Treat interaction with an automatically opened Kepler panel as explicit user map work.
+  const markSidePanelInteraction = event => event.target.closest('.side-panel--container') && dispatch(markKeplerPanelInteracted())
   return (
-    <div className={classnames(
-      styles.keplerBlock, {
-        [styles.hideExport]: !report.allowExport,
-        [styles.hideInteraction]: hideInteraction
-      })}
+    <div
+      className={classnames(
+        styles.keplerBlock, {
+          [styles.hideExport]: !report.allowExport,
+          [styles.hideInteraction]: hideInteraction
+        })}
+      onClickCapture={markSidePanelInteraction}
+      onKeyDownCapture={markSidePanelInteraction}
+      onPointerDownCapture={markSidePanelInteraction}
     >
       {!snapshot
         ? (

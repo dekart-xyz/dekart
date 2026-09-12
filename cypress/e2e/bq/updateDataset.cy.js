@@ -16,7 +16,8 @@ describe('update dataset', () => {
     cy.reload()
 
     // first query
-    cy.contains('button', 'Start with a sample query').click()
+    cy.get('button:contains("Run SQL")').click()
+    cy.enterQuery('SELECT primary_type, district, latitude, longitude, date from `bigquery-public-data.chicago_crime.crime` limit 1')
     cy.get(`button:contains("${copy.execute}")`).click()
     cy.get(`span:contains("${copy.ready}")`, { timeout: 120000 }).should('be.visible')
     cy.contains('Downloading Map Data', { timeout: 120000 }).should('not.exist')
@@ -25,8 +26,8 @@ describe('update dataset', () => {
 
     // second query
     cy.get('button.ant-tabs-nav-add:visible').click()
-    cy.contains('button', 'Start with a sample query').click()
-    cy.get('textarea').clear({ force: true }).type('SELECT primary_type, district, latitude, longitude, date from `bigquery-public-data.chicago_crime.crime` limit 2', { force: true })
+    cy.get('button:contains("Run SQL")').click()
+    cy.enterQuery('SELECT primary_type, district, latitude, longitude, date from `bigquery-public-data.chicago_crime.crime` limit 2')
     cy.get(`button:contains("${copy.execute}")`).click()
     cy.get(`span:contains("${copy.ready}")`, { timeout: 120000 }).should('be.visible')
 
@@ -34,9 +35,7 @@ describe('update dataset', () => {
     cy.get(POINT_LAYER_TYPE_SELECTOR, { timeout: 20000 }).should('have.length', 2)
 
     // update second query
-    cy.get('textarea:first').clear({ force: true })
-    cy.get('textarea:first').invoke('val', '')
-    cy.get('textarea:first').type('SELECT primary_type, district, latitude, longitude, date from `bigquery-public-data.chicago_crime.crime` limit 3', { force: true })
+    cy.enterQuery('SELECT primary_type, district, latitude, longitude, date from `bigquery-public-data.chicago_crime.crime` limit 3')
     cy.get(`button:contains("${copy.execute}")`).click()
     cy.get(`button:contains("${copy.cancel}")`).should('be.visible')
     cy.get(`span:contains("${copy.ready}")`, { timeout: 120000 }).should('be.visible')

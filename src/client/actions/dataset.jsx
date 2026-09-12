@@ -2,7 +2,7 @@ import { CreateDatasetRequest, RemoveDatasetRequest, UpdateDatasetNameRequest } 
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { setError, success, info, warn } from './message'
-import { addDataToMap, replaceDataInMap } from '@kepler.gl/actions'
+import { addDataToMap, toggleSidePanel, replaceDataInMap } from '@kepler.gl/actions'
 import { get } from '../lib/api'
 import getDatasetName from '../lib/getDatasetName'
 import { runWarehouseQuery } from './query'
@@ -334,6 +334,10 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension, sour
       if (getState().report?.id !== reportId || !currentDownload) {
         dispatch(finishAddingDatasetToMap(controller))
         return
+      }
+      if (getState().reportStatus.edit) {
+        // Keep the established publication UX without treating this programmatic open as user map work.
+        dispatch({ ...toggleSidePanel('layer'), automatic: true })
       }
       try {
         const adopted = await dispatch(registerDuckDBSource(

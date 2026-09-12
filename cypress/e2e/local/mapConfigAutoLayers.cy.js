@@ -5,10 +5,12 @@ const apiBase = `${Cypress.env('DEKART_E2E_API_URL')}/api/v1`
 
 // uploadActiveDataset completes the visible local file-upload flow for the selected dataset.
 function uploadActiveDataset (fixture) {
+  cy.intercept('POST', '**/Dekart/CreateFile').as('createFile')
   cy.intercept('POST', '**/api/v1/file/*/upload-sessions').as('startUploadSession')
   cy.intercept('PUT', '**/api/v1/file/*/upload-sessions/*/parts/*').as('uploadPart')
   cy.intercept('POST', '**/api/v1/file/*/upload-sessions/*/complete').as('completeUploadSession')
   cy.contains('button', 'Upload File', { timeout: 20000 }).click()
+  cy.wait('@createFile', { timeout: 60000 })
   cy.get('input[type="file"]', { timeout: 20000 }).selectFile(fixture, { force: true })
   cy.contains('button', 'Upload').click()
   cy.wait('@startUploadSession', { timeout: 60000 })
@@ -27,7 +29,6 @@ function getDeviceToken () {
     expect(deviceId, 'device_id').to.be.a('string').and.not.eq('')
     expect(authUrl, 'auth_url').to.be.a('string').and.include('/device/authorize')
 
-    cy.setDevClaimsEmail('test@gmail.com')
     cy.visit(authUrl)
     cy.contains('button', 'Authorize', { timeout: 20000 }).click()
     cy.contains('Device authorized', { timeout: 20000 }).should('be.visible')
@@ -67,9 +68,6 @@ describe('saved map config layer ownership', () => {
       })
 
       uploadActiveDataset('cypress/fixtures/sample.csv')
-      cy.get('.side-panel--container').should($panel => {
-        expect($panel.width()).to.equal(0)
-      })
       cy.openLayerPanel()
       cy.get(LAYER_SELECTOR, { timeout: 60000 }).should('have.length', 1)
       cy.intercept('POST', '**/Dekart/UpdateReport').as('saveReport')

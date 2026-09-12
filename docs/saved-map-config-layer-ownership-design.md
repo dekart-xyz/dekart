@@ -18,7 +18,7 @@ Two regressions define the required behavior:
 - Allow an initially blank dataset, or a dataset first observed later in the session, to infer a layer once when its first non-empty result reaches Kepler.
 - Pass `autoCreateLayers: false` for every other insertion, replacement, rerun, and recomputation.
 - Apply a saved config with `config.visState.layers: []`; an empty layer list is a valid user decision.
-- Stop automatically opening the layer panel after dataset publication; the user explicitly opens it to edit.
+- Preserve automatic layer-panel opening after dataset publication, but do not count that programmatic action as user map work.
 - Keep Kepler's existing tooltip inference unchanged. This design owns automatic layers only.
 
 ## Root Cause
@@ -67,9 +67,9 @@ For a pending DuckDB dataset, do not insert a zero-row first result into Kepler.
 
 ## Layer Panel and Conflict Tracking
 
-The existing map-conflict gate uses `hasOpenedKeplerPanel` to distinguish user-visible map work from Kepler defaults. Dataset publication automatically opens the layer panel today, which incorrectly arms that gate.
+The existing map-conflict gate uses `hasOpenedKeplerPanel` to distinguish user-visible map work from Kepler defaults. Dataset publication also opens the layer panel as established UX, but that programmatic action must not arm the gate.
 
-Remove that automatic panel toggle. The inferred layer still renders on the map, while a user who wants to edit it explicitly opens the panel and arms the existing conflict gate. This avoids both false conflicts from automatic opening and silent overwrite of edits made inside an automatically opened panel, with no new action metadata or state.
+Mark the existing programmatic panel action so `hasOpenedKeplerPanel` ignores it. Capture subsequent user interaction inside the panel with a dedicated marker action that arms the existing conflict gate before an edit. This preserves the established publication UX while preventing inferred defaults from blocking a later authoritative config, without maintaining an edit-action inventory.
 
 ## DuckDB Saved-Config Reload
 
@@ -97,7 +97,7 @@ MCP continues to read and write standard Kepler v1 JSON only.
 - `update_report_map_config` remains a complete replacement operation.
 - A changed config with `layers: []` is authoritative when applied through the normal stream path.
 - An agent creating data while no UI is open should write the complete desired config; a later UI load does not infer layers for already completed datasets.
-- If an MCP-created dataset is observed live before an observably changed config, the browser may infer a temporary layer. The later applied config replaces it or produces the existing conflict prompt.
+- If an MCP-created dataset is observed live before an observably changed config, the browser may infer a temporary layer. The later applied config replaces it unless the user performed separate unsaved map work.
 
 No compatibility handling is required because no stored or API contract changes.
 
