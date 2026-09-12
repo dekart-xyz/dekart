@@ -1,6 +1,6 @@
 import { combineReducers } from 'redux'
-import { addDatasetToMap, cancelDownloading, closeDatasetSettingsModal, downloadDataset, downloadingProgress, finishAddingDatasetToMap, finishDownloading, openDatasetSettingsModal, processDownloadError, setActiveDataset } from '../actions/dataset'
-import { keplerDatasetFinishUpdating, keplerDatasetStartUpdating } from '../actions/kepler'
+import { addDatasetToMap, cancelDownloading, closeDatasetSettingsModal, downloadDataset, downloadingProgress, finishAddingDatasetToMap, finishDownloading, openDatasetSettingsModal, processDownloadError, removeDataset, setActiveDataset } from '../actions/dataset'
+import { consumeAutoCreateLayer, keplerDatasetFinishUpdating, keplerDatasetStartUpdating } from '../actions/kepler'
 import { closeReport, openReport, reportUpdate } from '../actions/report'
 
 function lastAddedQueryParamsHash (state = {}, action) {
@@ -130,6 +130,30 @@ function list (state = [], action) {
   }
 }
 
+// Tracks which datasets may ask Kepler to infer a layer once in this browser session.
+function autoCreateLayerIds (state = [], action) {
+  switch (action.type) {
+    case openReport.name:
+    case closeReport.name:
+      return []
+    case reportUpdate.name: {
+      if (action.initialHydration) {
+        return action.initialAutoCreateLayerIds
+      }
+      if (action.liveMapConfigAccepted) {
+        return []
+      }
+      const datasetIds = new Set(action.datasetsList.map(dataset => dataset.id))
+      return [...new Set([...state, ...action.newDatasetIds])].filter(id => datasetIds.has(id))
+    }
+    case consumeAutoCreateLayer.name:
+    case removeDataset.name:
+      return state.filter(id => id !== action.datasetId)
+    default:
+      return state
+  }
+}
+
 function settings (state = { datasetId: null, visible: false }, action) {
   switch (action.type) {
     case openDatasetSettingsModal.name:
@@ -165,6 +189,7 @@ export default combineReducers({
   settings,
   list,
   updatingNum,
+  autoCreateLayerIds,
   lastAddedQueryParamsHash,
   lastAddedQueryQueryJob
 })

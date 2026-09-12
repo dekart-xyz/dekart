@@ -1,5 +1,7 @@
 /* eslint-disable no-undef */
 
+const LAYER_SELECTOR = '[data-testid="sortable-layer-item"], [data-testid="static-layer-item"]'
+
 // createReport opens a new empty report through the available local entry point.
 function createReport () {
   cy.visit('/')
@@ -75,7 +77,7 @@ function acceptAutocomplete (completion) {
   cy.get('.ace_editor:not(.ace_autocomplete):visible').then(($editor) => {
     const editor = $editor[0].ownerDocument.defaultView.ace.edit($editor[0])
     const match = editor.completer.completions.filtered.find(candidate => candidate.caption === completion)
-    expect(match, `autocomplete match for ${completion}`).to.exist
+    expect(match, `autocomplete match for ${completion}`).to.not.equal(undefined)
     editor.completer.insertMatch(match)
   })
 }
@@ -141,14 +143,18 @@ describe('browser-local DuckDB datasets', () => {
     )
   })
 
-  it('generates points when no existing query can be pinned', () => {
+  it('keeps a zero-row first result eligible for later point inference', () => {
     createReport()
-    selectDuckDB()
-    insertSampleQuery('FROM range(100)')
+    runActiveDuckDBQuery('SELECT i::DOUBLE AS latitude, i::DOUBLE AS longitude FROM range(0) t(i)')
+    cy.get('.side-bar__close').click({ force: true })
+    cy.get(LAYER_SELECTOR).should('not.exist')
+
+    replaceEditorText('SELECT i::DOUBLE AS latitude, i::DOUBLE AS longitude FROM range(100) t(i)')
     cy.get('#dekart-query-execute-button').click()
     cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Ready')
     cy.assertDatasetTable('Query 1', ['latitude', 'longitude'])
     cy.assertDatasetRows('Query 1', 100)
+    cy.contains('.layer__title__type', 'point').should('be.visible')
   })
 
   it('quotes dataset labels and skips failed sources in the default example', () => {

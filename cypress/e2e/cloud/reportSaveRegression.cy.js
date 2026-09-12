@@ -1,6 +1,8 @@
 /* eslint-disable no-undef */
 import { UpdateReportRequest } from 'dekart-proto/dekart_pb'
 
+const LAYER_SELECTOR = '[data-testid="sortable-layer-item"], [data-testid="static-layer-item"]'
+
 function getReduxStoreFromWindow (win) {
   const rootNode = win.document.getElementById('root')
   const reactRootKey = Object.keys(rootNode).find(key => key.startsWith('__reactContainer$') || key.startsWith('__reactFiber$'))
@@ -75,7 +77,7 @@ function updateReportMapConfigOutsideAppSave (store, mapConfig) {
   metadata.append('X-Grpc-Web', '1')
 
   const host = Cypress.env('DEKART_E2E_API_URL')
-  return cy.window().then((win) => win.fetch(`${host}/Dekart/UpdateReport`, {
+  return cy.window().then((win) => win.fetch(`${host}/Dekart/UpdateReport?cypress_remote_update=1`, {
     method: 'POST',
     headers: metadata,
     body
@@ -124,15 +126,55 @@ describe('cloud report save regression', () => {
     getStore().then((store) => {
       const state = store.getState()
       const remoteMapConfig = JSON.parse(state.report.mapConfig)
-      remoteMapConfig.config.mapState = {
-        ...remoteMapConfig.config.mapState,
-        zoom: (remoteMapConfig.config.mapState.zoom || 0) + 1
-      }
+      remoteMapConfig.config.mapState.zoom = (remoteMapConfig.config.mapState.zoom || 0) + 1
       return updateReportMapConfigOutsideAppSave(store, JSON.stringify(remoteMapConfig))
     })
 
     cy.contains('Map changed', { timeout: 5000 }).should('be.visible')
     cy.contains('Reload').should('be.visible')
+  })
+
+  it('tracks edits made in the automatically opened layer panel', () => {
+    createUploadedReport()
+
+    const visibilityToggle = '.layer__visibility-toggle .panel--header__action__component'
+    cy.get(visibilityToggle).should('have.attr', 'data-for').and('include', 'tooltip.hideLayer')
+    cy.get(visibilityToggle).trigger('click')
+    cy.get(visibilityToggle).should('have.attr', 'data-for').and('include', 'tooltip.showLayer')
+    getStore().then((store) => {
+      const state = store.getState()
+      const remoteMapConfig = JSON.parse(state.report.mapConfig)
+      remoteMapConfig.config.mapState.zoom = (remoteMapConfig.config.mapState.zoom || 0) + 1
+      return updateReportMapConfigOutsideAppSave(store, JSON.stringify(remoteMapConfig))
+    })
+
+    cy.contains('Map changed', { timeout: 5000 }).should('be.visible')
+    cy.contains('Reload').should('be.visible')
+  })
+
+  it('accepts a remote map update after automatic panel opening without user edits', () => {
+    cy.intercept('POST', '**/Dekart/UpdateReport*', (req) => {
+      if (new URL(req.url).searchParams.has('cypress_remote_update')) {
+        req.continue()
+      } else {
+        req.reply({ statusCode: 503 })
+      }
+    }).as('blockedAutoSave')
+    createUploadedReport()
+    cy.wait('@blockedAutoSave', { timeout: 60000 })
+    cy.get(LAYER_SELECTOR).should('have.length', 1)
+
+    getStore().then((store) => {
+      const state = store.getState()
+      const remoteMapConfig = JSON.parse(state.report.mapConfig)
+      remoteMapConfig.config.visState.layers = []
+      remoteMapConfig.config.mapState.zoom = (remoteMapConfig.config.mapState.zoom || 0) + 1
+      return updateReportMapConfigOutsideAppSave(store, JSON.stringify(remoteMapConfig))
+    })
+
+    cy.get(LAYER_SELECTOR, { timeout: 5000 }).should('not.exist')
+    cy.contains('Map changed').should('not.exist')
+    cy.contains('Reload').should('not.exist')
   })
 
   it('keeps README removed after immediate save and report reload', () => {

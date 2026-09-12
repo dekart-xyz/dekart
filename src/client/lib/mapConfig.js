@@ -11,20 +11,17 @@ export function shouldUpdateMapConfig (oldMapConfigIn, newMapConfigIn) {
     // when server config is empty but kepler has a config, we should update
     return true
   }
-  if (newMapConfigIn.config.visState.layers.length > 0) {
-    const newMapConfig = structuredClone(newMapConfigIn)
-    newMapConfig.config.mapState.latitude = 0
-    newMapConfig.config.mapState.longitude = 0
-    newMapConfig.config.mapState.zoom = 0
+  const newMapConfig = structuredClone(newMapConfigIn)
+  newMapConfig.config.mapState.latitude = 0
+  newMapConfig.config.mapState.longitude = 0
+  newMapConfig.config.mapState.zoom = 0
 
-    const oldMapConfig = structuredClone(oldMapConfigIn)
-    oldMapConfig.config.mapState.latitude = 0
-    oldMapConfig.config.mapState.longitude = 0
-    oldMapConfig.config.mapState.zoom = 0
+  const oldMapConfig = structuredClone(oldMapConfigIn)
+  oldMapConfig.config.mapState.latitude = 0
+  oldMapConfig.config.mapState.longitude = 0
+  oldMapConfig.config.mapState.zoom = 0
 
-    return !deepCompare(oldMapConfig, newMapConfig)
-  }
-  return false
+  return !deepCompare(oldMapConfig, newMapConfig)
 }
 
 // Update the map config if it has changed locally
