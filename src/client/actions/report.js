@@ -133,6 +133,22 @@ function shouldDownloadQueryText (query, prevQueriesList, queriesList) {
   return false
 }
 
+// Finds initial datasets whose first publishable result has not been produced yet.
+function initialAutoCreateLayerIds (datasets, queries, files, queryJobs) {
+  return datasets.filter(dataset => {
+    if (isDuckDBDataset(dataset, queries)) {
+      return false
+    }
+    if (dataset.fileId) {
+      return !files.find(file => file.id === dataset.fileId)?.sourceId
+    }
+    if (dataset.queryId) {
+      return !queryJobs.some(job => job.queryId === dataset.queryId && job.jobResultId)
+    }
+    return true
+  }).map(dataset => dataset.id)
+}
+
 export function setLastMapConfigChanged () {
   return { type: setLastMapConfigChanged.name }
 }
@@ -258,6 +274,21 @@ export function reportUpdate (reportStreamResponse) {
     const activeQueryParams = reconcileQueryParamsState(currentQueryParams, report.queryParamsList, window.location.search)
     const hash = activeQueryParams.hash
     const queryJobsList = streamedQueryJobsList
+    const initialHydration = !state.report
+    const serializedMapConfigChanged = state.report?.mapConfig !== report.mapConfig
+    let mapConfigUpdated = false
+    // user could change map config locally, then we just want to show map update message
+    // but config could also change when Kepler applied deafults
+    // we ignore changes if user never opened pannel
+    const hasUnsavedUserMapChanges = lastSaved < lastMapConfigChanged && hasOpenedKeplerPanel
+    const liveMapConfigChanged = Boolean(
+      !initialHydration &&
+      serializedMapConfigChanged &&
+      report.mapConfig &&
+      report.updatedAt > savedReportVersion
+    )
+    const hasRemoteMapConflict = liveMapConfigChanged && hasUnsavedUserMapChanges
+    const liveMapConfigAccepted = liveMapConfigChanged && !hasUnsavedUserMapChanges
     dispatch({
       type: reportUpdate.name,
       report,
@@ -270,8 +301,19 @@ export function reportUpdate (reportStreamResponse) {
       hash,
       queryParamsValues: activeQueryParams.values,
       queryParamsUrl: activeQueryParams.url,
-      directAccessEmailsList
+      directAccessEmailsList,
+      initialHydration,
+      initialAutoCreateLayerIds: initialAutoCreateLayerIds(datasetsList, queriesList, filesList, queryJobsList),
+      newDatasetIds: datasetsList.filter(dataset => !prevDatasetsList.find(previous => previous.id === dataset.id)).map(dataset => dataset.id),
+      liveMapConfigAccepted
     })
+    if (hasRemoteMapConflict) {
+      dispatch(showMapConfigConflictMessage())
+    }
+    // Initial hydration always applies canonical config; later updates keep the existing conflict gate.
+    if ((initialHydration && report.mapConfig) || liveMapConfigAccepted) {
+      mapConfigUpdated = receiveReportUpdateMapConfig(report, dispatch, getState)
+    }
     queryJobsList.forEach(queryJob => {
       const previous = prevQueryJobsList.find(job => job.id === queryJob.id)
       // Propagate each newly streamed warehouse failure into its local derived branches once.
@@ -291,26 +333,6 @@ export function reportUpdate (reportStreamResponse) {
         }))
       }
     })
-    let mapConfigUpdated = false
-    // user could change map config locally, then we just want to show map update message
-    // but config could also change when Kepler applied deafults
-    // we ignore changes if user never opened pannel
-    const hasUnsavedUserMapChanges = lastSaved < lastMapConfigChanged && hasOpenedKeplerPanel
-    const hasRemoteMapConflict = (
-      report.mapConfig &&
-      report.updatedAt > savedReportVersion && // ignore when updated version same as last saved to prevent maps reloads
-      hasUnsavedUserMapChanges
-    )
-    if (hasRemoteMapConflict) {
-      dispatch(showMapConfigConflictMessage())
-    }
-    if (
-      report.mapConfig &&
-      report.updatedAt > savedReportVersion && // ignore when updated version same as last saved to prevent maps reloads
-      !hasUnsavedUserMapChanges // ignore overwriting unsaved user map changes
-    ) {
-      mapConfigUpdated = receiveReportUpdateMapConfig(report, dispatch, getState)
-    }
 
     if (!mapConfigUpdated) { // new map config reset data anyway
       prevDatasetsList.forEach(dataset => {
@@ -394,8 +416,8 @@ export function reportUpdate (reportStreamResponse) {
       prevDatasetsList.some(dataset => isDuckDBDataset(dataset, prevQueriesList))
     )
     const changedDatasetIds = [...new Set([...changedDuckDBDatasetIds, ...changedDependencyDatasetIds])]
-    if (changedDuckDBDatasetIds.length > 0 || (hasDuckDBGraph && (changedDependencyDatasetIds.length > 0 || dependencyDatasetRemoved))) {
-      const affectedDatasetIds = dependencyDatasetRemoved ? null : changedDatasetIds
+    if (mapConfigUpdated || changedDuckDBDatasetIds.length > 0 || (hasDuckDBGraph && (changedDependencyDatasetIds.length > 0 || dependencyDatasetRemoved))) {
+      const affectedDatasetIds = mapConfigUpdated || dependencyDatasetRemoved ? null : changedDatasetIds
       dispatch(runDuckDBGraph(affectedDatasetIds))
     }
 

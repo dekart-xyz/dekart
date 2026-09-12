@@ -2,14 +2,14 @@ import { CreateDatasetRequest, RemoveDatasetRequest, UpdateDatasetNameRequest } 
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { setError, success, info, warn } from './message'
-import { addDataToMap, toggleSidePanel, replaceDataInMap } from '@kepler.gl/actions'
+import { addDataToMap, replaceDataInMap } from '@kepler.gl/actions'
 import { get } from '../lib/api'
 import getDatasetName from '../lib/getDatasetName'
 import { runWarehouseQuery } from './query'
 import { filenameWithExtension, mimeFromExtension } from '../lib/mime'
 import { failDuckDBSource, registerDuckDBFileSource, registerDuckDBSource, removeDuckDBSource } from './duckdb'
 import waitForKeplerDataset from '../lib/waitForKeplerDataset'
-import { keplerDatasetFinishUpdating, keplerDatasetStartUpdating } from './kepler'
+import { consumeAutoCreateLayer, keplerDatasetFinishUpdating, keplerDatasetStartUpdating } from './kepler'
 
 let duckDBDatabaseModule = null
 
@@ -298,6 +298,7 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension, sour
           }))
           dispatch(keplerDatasetFinishUpdating())
         } else {
+          const autoCreateLayers = getState().dataset.autoCreateLayerIds.includes(dataset.id)
           dispatch(keplerDatasetStartUpdating())
           dispatch(addDataToMap({
             datasets: {
@@ -306,7 +307,8 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension, sour
                 id: dataset.id
               },
               data
-            }
+            },
+            options: { autoCreateLayers }
           }))
           dispatch(keplerDatasetFinishUpdating())
         }
@@ -323,6 +325,7 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension, sour
           dispatch(finishAddingDatasetToMap(controller))
           return
         }
+        dispatch(consumeAutoCreateLayer(dataset.id))
       } catch (err) {
         dispatch(processDownloadError(err, dataset, label, false, controller))
         return
@@ -331,10 +334,6 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension, sour
       if (getState().report?.id !== reportId || !currentDownload) {
         dispatch(finishAddingDatasetToMap(controller))
         return
-      }
-      const { reportStatus } = getState()
-      if (reportStatus.edit) {
-        dispatch(toggleSidePanel('layer'))
       }
       try {
         const adopted = await dispatch(registerDuckDBSource(
