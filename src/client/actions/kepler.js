@@ -5,3 +5,7 @@ export function keplerDatasetStartUpdating () {
 export function keplerDatasetFinishUpdating () {
   return { type: keplerDatasetFinishUpdating.name }
 }
+
+export function consumeAutoCreateLayer (datasetId) {
+  return { type: consumeAutoCreateLayer.name, datasetId }
+}

@@ -9,7 +9,7 @@ import { runWarehouseQuery } from './query'
 import { filenameWithExtension, mimeFromExtension } from '../lib/mime'
 import { failDuckDBSource, registerDuckDBFileSource, registerDuckDBSource, removeDuckDBSource } from './duckdb'
 import waitForKeplerDataset from '../lib/waitForKeplerDataset'
-import { keplerDatasetFinishUpdating, keplerDatasetStartUpdating } from './kepler'
+import { consumeAutoCreateLayer, keplerDatasetFinishUpdating, keplerDatasetStartUpdating } from './kepler'
 
 let duckDBDatabaseModule = null
 
@@ -298,6 +298,7 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension, sour
           }))
           dispatch(keplerDatasetFinishUpdating())
         } else {
+          const autoCreateLayers = getState().dataset.autoCreateLayerIds.includes(dataset.id)
           dispatch(keplerDatasetStartUpdating())
           dispatch(addDataToMap({
             datasets: {
@@ -306,7 +307,8 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension, sour
                 id: dataset.id
               },
               data
-            }
+            },
+            options: { autoCreateLayers }
           }))
           dispatch(keplerDatasetFinishUpdating())
         }
@@ -323,6 +325,7 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension, sour
           dispatch(finishAddingDatasetToMap(controller))
           return
         }
+        dispatch(consumeAutoCreateLayer(dataset.id))
       } catch (err) {
         dispatch(processDownloadError(err, dataset, label, false, controller))
         return
@@ -332,9 +335,9 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension, sour
         dispatch(finishAddingDatasetToMap(controller))
         return
       }
-      const { reportStatus } = getState()
-      if (reportStatus.edit) {
-        dispatch(toggleSidePanel('layer'))
+      if (getState().reportStatus.edit) {
+        // Keep the established publication UX without treating this programmatic open as user map work.
+        dispatch({ ...toggleSidePanel('layer'), automatic: true })
       }
       try {
         const adopted = await dispatch(registerDuckDBSource(

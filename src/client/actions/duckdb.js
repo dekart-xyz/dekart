@@ -6,7 +6,7 @@ import { DuckDBJobStatus, isDuckDBDataset } from '../lib/duckdb/constants'
 import { getQueryParamsValuesFromSearch } from '../lib/queryParams'
 import waitForKeplerDataset from '../lib/waitForKeplerDataset'
 import { setError } from './message'
-import { keplerDatasetFinishUpdating, keplerDatasetStartUpdating } from './kepler'
+import { consumeAutoCreateLayer, keplerDatasetFinishUpdating, keplerDatasetStartUpdating } from './kepler'
 
 let runtimeModule = null
 
@@ -84,6 +84,7 @@ function externalSourceVersion (state, queryJob, datasetId) {
 function addDuckDBResultToMap (dispatch, getState, node, result) {
   const state = getState()
   const existing = state.keplerGl.kepler?.visState.datasets?.[node.dataset.id]
+  const autoCreateLayers = state.dataset.autoCreateLayerIds.includes(node.dataset.id)
   const label = existing?.label || getDatasetName(node.dataset, state.dataset.list, state.files)
   const datasetToUse = {
     info: {
@@ -103,11 +104,15 @@ function addDuckDBResultToMap (dispatch, getState, node, result) {
       datasetToUse,
       options: {
         keepExistingConfig: true,
+        autoCreateLayers: false,
         centerMap: false
       }
     }))
   } else {
-    dispatch(addDataToMap({ datasets: datasetToUse }))
+    dispatch(addDataToMap({
+      datasets: datasetToUse,
+      options: { autoCreateLayers }
+    }))
   }
   dispatch(keplerDatasetFinishUpdating())
   return existing
@@ -441,15 +446,24 @@ export function runDuckDBGraph (changedDatasetIds = null) {
             return
           }
           if (node.publish) {
-            const previousKeplerDataset = addDuckDBResultToMap(dispatch, getState, node, result)
-            const published = await waitForKeplerDataset(
-              getState,
-              node.dataset.id,
-              previousKeplerDataset,
-              result.totalRows,
-              executionIsCurrent
-            )
-            if (!published) return
+            const pendingAutoCreateLayer = getState().dataset.autoCreateLayerIds.includes(node.dataset.id)
+            // Keep a first empty result eligible until Kepler can infer from real rows.
+            // Pending dataset: 0 rows → do not publish → 100 rows → first insertion + inferred layer
+            // Established dataset: 100 rows → 0 rows → publish replacement to remove the old 100 rows
+            if (!pendingAutoCreateLayer || result.totalRows > 0) {
+              const previousKeplerDataset = addDuckDBResultToMap(dispatch, getState, node, result)
+              const published = await waitForKeplerDataset(
+                getState,
+                node.dataset.id,
+                previousKeplerDataset,
+                result.totalRows,
+                executionIsCurrent
+              )
+              if (!published) return
+              if (result.totalRows > 0) {
+                dispatch(consumeAutoCreateLayer(node.dataset.id))
+              }
+            }
           }
           if (!executionIsCurrent()) {
             return

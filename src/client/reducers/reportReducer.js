@@ -2,7 +2,7 @@ import { ActionTypes as KeplerActionTypes } from '@kepler.gl/actions'
 import { setStreamError } from '../actions/message'
 import { queryChanged, queryParamChanged, updateQueryParamsFromQueries } from '../actions/query'
 import { setReadmeValue } from '../actions/readme'
-import { closeReport, exportMapPreview, forkReport, newForkedReport, newReport, openReport, reportsListUpdate, reportTitleChange, reportUpdate, reportWillOpen, savedReport, saveMap, saveMapFailed, saveMapPreview, setAutoRefreshIntervalSeconds, setLastMapConfigChanged, setQueryJobRefreshTimeout, toggleReportEdit, toggleReportFullscreen, unsubscribeReports } from '../actions/report'
+import { closeReport, exportMapPreview, forkReport, markKeplerPanelInteracted, newForkedReport, newReport, openReport, reportsListUpdate, reportTitleChange, reportUpdate, reportWillOpen, savedReport, saveMap, saveMapFailed, saveMapPreview, setAutoRefreshIntervalSeconds, setLastMapConfigChanged, setQueryJobRefreshTimeout, toggleReportEdit, toggleReportFullscreen, unsubscribeReports } from '../actions/report'
 
 export function reportDirectAccessEmails (state = [], action) {
   switch (action.type) {
@@ -100,7 +100,9 @@ export function hasOpenedKeplerPanel (state = false, action) {
       return false
     case KeplerActionTypes.TOGGLE_SIDE_PANEL:
       // Once user opens any Kepler side panel, start tracking config changes.
-      return state || Boolean(action.payload)
+      return state || Boolean(action.payload && !action.automatic)
+    case markKeplerPanelInteracted.name:
+      return true
     default:
       return state
   }

@@ -16,6 +16,14 @@ Cypress.Commands.add('setDevClaimsEmail', (email) => {
   cy.setCookie('dekart-dev-claim-email', email)
 })
 
+Cypress.Commands.add('openLayerPanel', () => {
+  cy.get('.side-panel--container', { timeout: 20000 }).then($panel => {
+    if ($panel.width() === 0) {
+      cy.get('.side-bar__close').click({ force: true })
+    }
+  })
+})
+
 // enterQuery pastes SQL atomically so Ace auto-closing and indentation cannot alter it.
 Cypress.Commands.add('enterQuery', (sql) => {
   cy.get('.ace_editor:not(.ace_autocomplete):visible textarea', { timeout: 30000 }).first()
@@ -76,6 +84,7 @@ Cypress.Commands.add('resetCloudTestDatabase', () => {
 
 Cypress.Commands.add('assertDatasetRows', (label, rows, timeout = 120000) => {
   const formattedRows = rows.toLocaleString('en-US')
+  cy.openLayerPanel()
   cy.contains('.source-data-title .dataset-name', label, { timeout }).should($name => {
     const section = $name.closest('.source-data-title').parent().parent()
     expect(section.find('.source-data-rows').text()).to.contain(`${formattedRows} rows`)
@@ -89,11 +98,7 @@ Cypress.Commands.add('assertDatasetTable', (label, fields, values = []) => {
       cy.wait(2000)
     }
   })
-  cy.get('body').then($body => {
-    if (!$body.find('.source-data-title .dataset-name:visible').length) {
-      cy.get('.side-bar__close').click({ force: true })
-    }
-  })
+  cy.openLayerPanel()
   cy.contains('.source-data-title .dataset-name', label, { timeout: 120000 }).then($name => {
     const section = $name.closest('.source-data-title').parent().parent()
     const icon = section.find('.show-data-table svg')[0]
