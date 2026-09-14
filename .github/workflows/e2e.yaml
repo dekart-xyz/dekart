@@ -475,6 +475,16 @@ jobs:
           - id: local-mcp-postgres
             spec: cypress/e2e/local/mcpPgHappyPath.cy.js
 
+          - id: local-mcp-workspace-roles
+            spec: cypress/e2e/local/mcpWorkspaceRoles.cy.js
+            skip_postgres: true
+            extra_env: |
+              -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
+              -e DEKART_DEV_CLAIMS=1 \
+              -e DEKART_REQUIRE_GOOGLE_OAUTH=1 \
+              -e DEKART_GOOGLE_OAUTH_CLIENT_ID=cypress-device-auth \
+              -e DEKART_GOOGLE_OAUTH_SECRET=cypress-device-auth \
+
           - id: local-default-workspace
             spec: cypress/e2e/local/defaultWorkspaceManagement.cy.js
             skip_postgres: true

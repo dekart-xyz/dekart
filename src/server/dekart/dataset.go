@@ -346,8 +346,19 @@ func (s Server) CreateDataset(ctx context.Context, req *proto.CreateDatasetReque
 			Msg("CreateDataset called with invalid report_id format")
 		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid report_id format: %v", err))
 	}
+	// Resolve the report capability before the insert SQL can honor allow_edit directly.
+	report, err := s.getReport(ctx, reportID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("report not found id:%s", reportID))
+	}
 	if err := s.requireReportWorkspaceWrite(ctx, reportID); err != nil {
 		return nil, err
+	}
+	if !report.CanWrite {
+		return nil, status.Error(codes.PermissionDenied, "cannot write to report")
 	}
 	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {

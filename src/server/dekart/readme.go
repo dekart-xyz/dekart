@@ -21,9 +21,6 @@ func (s Server) AddReadme(ctx context.Context, req *proto.AddReadmeRequest) (*pr
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	if err := requireWorkspaceWrite(ctx); err != nil {
-		return nil, err
-	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -37,6 +34,10 @@ func (s Server) AddReadme(ctx context.Context, req *proto.AddReadmeRequest) (*pr
 		err := fmt.Errorf("report not found id:%s", req.ReportId)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	// Enforce the target report's subscription state when authors access across workspaces.
+	if err := s.requireReportWorkspaceWrite(ctx, req.ReportId); err != nil {
+		return nil, err
 	}
 	if !report.CanWrite {
 		err := fmt.Errorf("user cannot write to report %s", req.ReportId)
@@ -101,9 +102,6 @@ func (s Server) RemoveReadme(ctx context.Context, req *proto.RemoveReadmeRequest
 	if claims == nil {
 		return nil, Unauthenticated
 	}
-	if err := requireWorkspaceWrite(ctx); err != nil {
-		return nil, err
-	}
 	_, err := uuid.Parse(req.ReportId)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -117,6 +115,10 @@ func (s Server) RemoveReadme(ctx context.Context, req *proto.RemoveReadmeRequest
 		err := fmt.Errorf("report not found id:%s", req.ReportId)
 		log.Warn().Err(err).Send()
 		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	// Enforce the target report's subscription state when authors access across workspaces.
+	if err := s.requireReportWorkspaceWrite(ctx, req.ReportId); err != nil {
+		return nil, err
 	}
 	if !report.CanWrite {
 		err := fmt.Errorf("user cannot write to report %s", req.ReportId)
