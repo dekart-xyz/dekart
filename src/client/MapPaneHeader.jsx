@@ -19,8 +19,8 @@ export default function MapPaneHeader ({ selected, expanded, canEdit, filterCoun
         {tabs.map(panel => (
           <button key={panel} role='tab' data-testid={panel === 'map' ? 'map-settings-tab' : 'widgets-tab'} aria-selected={selected === panel} aria-expanded={selected === panel && expanded} tabIndex={selected === panel ? 0 : -1} onClick={() => onSelect(panel)}>
             {panel === 'map' ? <Layers size={15} /> : <ChartNoAxesColumn size={15} />}
-            {panel === 'map' ? 'Map settings' : 'Widgets'}
-            {panel === 'widgets' && filterCount > 0 && <span className={styles.badge} title={`${filterCount} active widget filters`}>{filterCount}<span className={styles.srOnly}> {filterCount === 1 ? 'filter' : 'filters'}</span></span>}
+            {panel === 'map' ? 'Map layers' : 'Charts'}
+            {panel === 'widgets' && filterCount > 0 && <span className={styles.badge} title={`${filterCount} active chart filters`}>{filterCount}<span className={styles.srOnly}> {filterCount === 1 ? 'filter' : 'filters'}</span></span>}
           </button>
         ))}
       </div>

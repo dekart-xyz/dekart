@@ -114,7 +114,7 @@ export default function ReportWidgets ({ visible, editing, onOpenData }) {
       }
       if (alive) { setReadySources(sources); setError('') }
     }
-    prepare().catch(error => { if (alive) setError(`Widgets could not load: ${error.message}`) })
+    prepare().catch(error => { if (alive) setError(`Charts could not load: ${error.message}`) })
     return () => { alive = false }
   }, [initialized, report?.id, datasetList, downloads, tables, store])
 
@@ -127,9 +127,9 @@ export default function ReportWidgets ({ visible, editing, onOpenData }) {
   return (
     <RoomShell roomStore={store} className={styles.provider}>
       <RoomShell.DndProvider>
-        <aside className={classnames(styles.panel, { [styles.hidden]: !visible, [styles.viewer]: !editing })} aria-label='Report widgets'>
+        <aside className={classnames(styles.panel, { [styles.hidden]: !visible, [styles.viewer]: !editing })} aria-label='Report charts'>
           {widgets.conflict && <div role='alert' className={styles.error}>This report changed in another session. Reload to use the latest saved dashboard.</div>}
-          {error ? <div role='alert' className={styles.error}>{error}</div> : sources.some(source => source.physical) || bindings.length ? <WidgetContents store={store} sources={sources} editing={editing} onOpenData={onOpenData} /> : <div className={styles.empty}><h3>Load data to add widgets</h3><p>Upload a file or run a query.</p>{editing && <Button onClick={onOpenData}>Open data</Button>}</div>}
+          {error ? <div role='alert' className={styles.error}>{error}</div> : sources.some(source => source.physical) || bindings.length ? <WidgetContents store={store} sources={sources} editing={editing} onOpenData={onOpenData} /> : <div className={styles.empty}><h3>Load data to add charts</h3><p>Upload a file or run a query.</p>{editing && <Button onClick={onOpenData}>Open data</Button>}</div>}
         </aside>
       </RoomShell.DndProvider>
     </RoomShell>

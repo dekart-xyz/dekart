@@ -4,7 +4,7 @@ import { MosaicDashboard, ChartBuilderRoot, ChartBuilderContent, MosaicChartSett
 import { Button } from '@sqlrooms/ui'
 import { Plus, ArrowLeft, RotateCcw, X } from 'lucide-react'
 import classnames from 'classnames'
-import { chartTypes, fitWidgetPanels, suggestWidgets, widgetTableName } from './widgetStore'
+import { chartTypes, fitWidgetPanels, widgetTableName } from './widgetStore'
 import { useWidgetFilters } from './useWidgetFilters'
 import styles from './ReportWidgets.module.css'
 
@@ -22,19 +22,19 @@ export default function WidgetContents ({ store, sources, editing, onOpenData })
   }, [editing, store])
   return (
     <>
+      {!builder && !(editing && settingsOpen) && <div className={styles.actions}><h2>Charts</h2>{editing && <Button aria-label='Add chart' onClick={() => setBuilder(true)}><Plus size={15} />Add chart</Button>}</div>}
       <div className={classnames(styles.reportCharts, { [styles.hidden]: builder || (editing && settingsOpen) })}>
         {sources.filter(source => dashboards[source.id]).map(source => <DatasetCharts key={`${source.id}:${source.physical}`} store={store} source={source} editing={editing} showSource={sources.length > 1} onOpenData={onOpenData} />)}
-        {!hasWidgets && <div className={styles.empty}><h3>Dashboard is empty</h3><p>Add a widget from any report dataset.</p></div>}
+        {!hasWidgets && <div className={styles.empty}><h3>Dashboard is empty</h3><p>Add a chart from any report dataset.</p></div>}
       </div>
       {editing && settingsOpen && !builder && <WidgetSettings store={store} sources={available} />}
       {editing && builder && (
         <div className={styles.inlineBuilder} data-testid='inline-widget-builder'>
-          <div className={styles.builderHeading}><h3>Add widget</h3><Button variant='ghost' onClick={() => setBuilder(false)}>Cancel</Button></div>
+          <div className={styles.builderHeading}><h3>Add chart</h3><Button variant='ghost' onClick={() => setBuilder(false)}>Cancel</Button></div>
           <SourceSelector id='widget-source' value={datasetId} sources={available} onChange={setSelectedSource} />
           {datasetId ? <WidgetBuilder key={datasetId} store={store} datasetId={datasetId} onCreated={() => setBuilder(false)} /> : <p>Wait for a dataset to finish loading.</p>}
         </div>
       )}
-      {editing && !builder && <div className={styles.actions}><Button aria-label='Add widget' onClick={() => { store.getState().blockSettings.requestCloseSettingsPanel(); setBuilder(true) }}><Plus size={15} />Add widget</Button><Button variant='ghost' onClick={() => available.forEach(source => suggestWidgets(store, source.id, source.fields))}>Suggest widgets</Button></div>}
     </>
   )
 }
@@ -48,7 +48,7 @@ function DatasetCharts ({ store, source, editing, showSource, onOpenData }) {
   const { clauses, clear, error } = useWidgetFilters(store, source.id, Boolean(source.physical))
   const dashboard = useStore(store, state => state.mosaicDashboard.config.dashboardsById[source.id])
   return (
-    <section className={styles.datasetWidgets} data-testid='dataset-widgets' aria-label={`${source.label} widgets`}>
+    <section className={styles.datasetWidgets} data-testid='dataset-widgets' aria-label={`${source.label} charts`}>
       {showSource && dashboard?.panels.length > 0 && <h3 className={styles.datasetLabel}>{source.label}</h3>}
       {!!clauses.length && <div className={styles.filters}>{clauses.map((clause, index) => <button key={index} onClick={() => clear(clause)}>{clause.meta?.type === 'interval' ? 'Selected range' : Array.isArray(clause.value) ? clause.value.flat().join(', ') : clause.value}<X size={12} /></button>)}<button onClick={() => clauses.forEach(clear)}><RotateCcw size={12} />Clear filters</button></div>}
       {source.error || error ? <div role='alert' className={styles.error}>{source.error || error}{editing && <Button onClick={onOpenData}>Open data</Button>}</div> : source.pending || !source.physical ? <div className={styles.empty}>Loading {source.label}…</div> : dashboard?.panels.length > 0 ? <MosaicDashboard.Root dashboardId={source.id} readOnly={!editing}><MosaicDashboard.Panels /></MosaicDashboard.Root> : null}
@@ -92,7 +92,7 @@ function WidgetSettings ({ store, sources }) {
   }
   return (
     <div className={styles.settings} data-testid='widget-settings'>
-      <Button variant='ghost' onClick={close}><ArrowLeft size={14} />Back to widgets</Button>
+      <Button variant='ghost' onClick={close}><ArrowLeft size={14} />Back to charts</Button>
       <div className={styles.source}><label htmlFor='widget-title'>Title</label><input id='widget-title' value={panel.title || ''} onChange={event => api.updatePanel(selected.dashboardId, selected.id, { title: event.target.value })} /></div>
       <SourceSelector id='widget-settings-source' value={selected.dashboardId} sources={sources} onChange={changeSource} />
       <div className={styles.chartSettings}><MosaicChartSettingsPanel dataTable={table} config={panel.config} onChange={config => api.updatePanel(selected.dashboardId, selected.id, { config })} showViewSpecButton={false} /></div>
