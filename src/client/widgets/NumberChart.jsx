@@ -70,7 +70,7 @@ class NumberClient extends MosaicClient {
     return Query.from(getMosaicSqlTableReference(this.table)).select({ value: expression }).where(filter)
   }
 
-  queryPending () { this.onChange({ loading: true }); return this }
+  queryPending () { this.onChange(previous => ({ ...previous, loading: true })); return this }
   queryResult (data) { this.onChange({ value: data.toArray()[0]?.value }); return this }
   queryError (error) { this.onChange({ error: error.message }); return this }
 }
@@ -85,7 +85,7 @@ function NumberChart ({ config, coordinator, table, params }) {
   useEffect(() => {
     if (!operation) return
     let alive = true
-    setResult({ loading: true })
+    setResult(previous => ({ ...previous, loading: true }))
     const client = new NumberClient(selection, table, { operation, field }, result => { if (alive) setResult(result) })
     coordinator.connect(client)
     return () => { alive = false; client.destroy() }
@@ -93,6 +93,6 @@ function NumberChart ({ config, coordinator, table, params }) {
   if (!settings) return <div className={styles.message}>Choose a field in chart settings.</div>
   if (result.error) return <div className={styles.message} role='alert'>Could not calculate this metric: {result.error}</div>
   const options = settings.format === 'auto' ? { maximumFractionDigits: 2 } : { minimumFractionDigits: settings.decimals, maximumFractionDigits: settings.decimals, ...(settings.format === 'compact' ? { notation: 'compact' } : {}), ...(settings.format === 'percent' ? { style: 'percent' } : {}) }
-  const value = result.loading ? '…' : result.value == null ? 'No data' : new Intl.NumberFormat(undefined, options).format(result.value)
-  return <div className={styles.card} data-testid='number-chart' aria-busy={Boolean(result.loading)}><div className={styles.value} aria-live='polite' title={result.value == null ? undefined : String(result.value)}>{result.value != null && !result.loading && settings.prefix}<span data-testid='number-value'>{value}</span>{result.value != null && !result.loading && settings.suffix && <span className={styles.unit}>{settings.suffix}</span>}</div>{settings.subtitle && <p className={styles.subtitle}>{settings.subtitle}</p>}</div>
+  const value = result.loading && result.value === undefined ? '…' : result.value == null ? 'No data' : new Intl.NumberFormat(undefined, options).format(result.value)
+  return <div className={styles.card} data-testid='number-chart' aria-busy={Boolean(result.loading)}><div className={styles.value} aria-live='polite' title={result.value == null ? undefined : String(result.value)}>{result.value != null && settings.prefix}<span data-testid='number-value'>{value}</span>{result.value != null && settings.suffix && <span className={styles.unit}>{settings.suffix}</span>}</div>{settings.subtitle && <p className={styles.subtitle}>{settings.subtitle}</p>}</div>
 }

@@ -29,16 +29,21 @@ export const chartTypes = createDefaultChartTypes({ includeCustomSpec: false }).
     }).concat(numberChartType)
 
 // Each open report owns its upstream UI store and shares Dekart's one DuckDB worker.
-export function createWidgetStore () {
+export function createWidgetStore (onQueryPending = () => {}) {
+  let pendingQueries = 0
   let db
   const connector = createBaseDuckDbConnector({}, {
     async initializeInternal () { db = await getSharedDuckDB() },
     async executeQueryInternal (sql, signal) {
       signal.throwIfAborted()
-      const connection = await db.connect()
-      const cancel = () => connection.cancelSent()
-      signal.addEventListener('abort', cancel)
-      try { return await connection.query(sql) } finally { signal.removeEventListener('abort', cancel); await connection.close() }
+      // One counter covers concurrent chart queries, including errors and cancellation.
+      onQueryPending(++pendingQueries > 0)
+      try {
+        const connection = await db.connect()
+        const cancel = () => connection.cancelSent()
+        signal.addEventListener('abort', cancel)
+        try { return await connection.query(sql) } finally { signal.removeEventListener('abort', cancel); await connection.close() }
+      } finally { onQueryPending(--pendingQueries > 0) }
     }
   })
   const panelRenderers = createDefaultMosaicDashboardPanelRenderers()

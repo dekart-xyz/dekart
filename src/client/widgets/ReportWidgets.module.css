@@ -63,3 +63,24 @@
 @media (hover: none) { .reportCharts :global([data-selectable-panel] > div > div:first-child button) { opacity: 1; } }
 .reportCharts :global([data-layout-grid-item-id] > div:first-child) { border: 0; border-radius: 0; background: transparent; }
 .reportCharts :global(.py-2:has(> .sqlrooms-grid-layout)) { padding-top: 0; padding-bottom: 0; }
+
+/* Keep the last results in place while the pane's shared queries settle. */
+.reportCharts { transition: opacity 240ms ease-in-out; }
+.calculating .reportCharts:not(:has(.chartStub)) { opacity: .45; }
+.calculationLine { opacity: 0; visibility: hidden; transition: opacity 240ms ease-in-out, visibility 0s linear 240ms; position: absolute; top: 0; left: 0; right: 0; height: 1px; z-index: 1; pointer-events: none; background: linear-gradient(90deg, #3b5bf5 0%, #7b4fe0 35%, #e0509b 65%, #3b5bf5 100%); background-size: 200% 100%; animation: calculationSlide 1.6s linear infinite; }
+.calculating .calculationLine { opacity: 1; visibility: visible; transition-delay: 0s; }
+.calculationLine::after { content: ''; position: absolute; top: 1px; left: 0; right: 0; height: 10px; background: inherit; animation: inherit; opacity: .3; mask-image: linear-gradient(180deg, #000, transparent), linear-gradient(90deg, transparent 0%, #000 40%, #000 60%, transparent 100%); mask-composite: intersect; }
+@keyframes calculationSlide { from { background-position: 0% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .calculationLine { animation: none; } .reportCharts, .calculationLine { transition: none; } }
+
+/* Initial loading uses the mockup's quiet label and three line placeholders. */
+.chartStub { padding: 16px 18px 20px; border-top: 1px solid #2a2f39; }
+.stubLabel { width: 88px; height: 9px; border-radius: 2px; background: #2c313b; margin-bottom: 16px; animation: stubPulse 1.7s ease-in-out infinite; }
+.chartStub:nth-child(3n + 2) .stubLabel { width: 124px; animation-delay: -.28s; }
+.chartStub:nth-child(3n) .stubLabel { width: 70px; animation-delay: -.56s; }
+.stubLines { display: flex; flex-direction: column; gap: 12px; }
+.stubLines i { display: block; height: 4px; border-radius: 2px; background: #2f343f; animation: stubPulse 1.7s ease-in-out infinite; }
+.stubLines i:nth-child(2) { width: 72%; animation-delay: -.2s; }
+.stubLines i:nth-child(3) { width: 48%; animation-delay: -.4s; }
+@keyframes stubPulse { 0%, 100% { opacity: .45; } 50% { opacity: .9; } }
+@media (prefers-reduced-motion: reduce) { .stubLabel, .stubLines i { animation: none; } }

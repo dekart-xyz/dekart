@@ -14,7 +14,8 @@ const emptyTables = {}
 
 // The panel is part of a report: Redux/report streams own saved state, SQLRooms owns editing.
 export default function ReportWidgets ({ visible, editing, onOpenData, onChartCountChange }) {
-  const [store] = useState(createWidgetStore)
+  const [queryPending, setQueryPending] = useState(false)
+  const [store] = useState(() => createWidgetStore(setQueryPending))
   const [readySources, setReadySources] = useState({})
   const [error, setError] = useState('')
   const report = useSelector(state => state.report)
@@ -33,7 +34,9 @@ export default function ReportWidgets ({ visible, editing, onOpenData, onChartCo
   const authoredConfigs = useRef(new WeakSet())
   const initialized = useStore(store, state => state.room.initialized)
   const config = useStore(store, state => state.mosaicDashboard.config)
-  const chartCount = Object.values(config.dashboardsById).reduce((count, dashboard) => count + dashboard.panels.length, 0)
+  // Saved metadata opens the pane before the query engine can adopt its config.
+  const displayConfig = initialized && adoptedConfig.current === widgets.config ? config : widgets.config?.config || config
+  const chartCount = Object.values(displayConfig.dashboardsById).reduce((count, dashboard) => count + dashboard.panels.length, 0)
   useEffect(() => { onChartCountChange(chartCount) }, [chartCount, onChartCountChange])
   const bindings = Object.keys(config.dashboardsById)
   const datasetId = datasetList.find(dataset => readySources[dataset.id])?.id || ''
@@ -124,13 +127,16 @@ export default function ReportWidgets ({ visible, editing, onOpenData, onChartCo
     if (initialized && editing && datasetId && tables[datasetId] && readySources[datasetId] && !widgets.config && !bindings.length) suggestWidgets(store, datasetId, tables[datasetId].fields)
   }, [initialized, editing, datasetId, readySources, widgets.config, bindings.length, tables, store])
 
+  const calculating = queryPending || sources.some(source => source.pending || downloads.some(download => download.dataset.id === source.id))
+
   if (!report) return null
   return (
     <RoomShell roomStore={store} className={styles.provider}>
       <RoomShell.DndProvider>
-        <aside className={classnames(styles.panel, { [styles.hidden]: !visible })} aria-label='Report charts'>
+        <aside className={classnames(styles.panel, { [styles.hidden]: !visible, [styles.calculating]: calculating })} aria-label='Report charts' aria-busy={calculating}>
+          <div className={styles.calculationLine} role='status' aria-hidden={!calculating} aria-label='Updating charts' data-testid='chart-calculation-line' />
           {widgets.conflict && <div role='alert' className={styles.error}>This report changed in another session. Reload to use the latest saved dashboard.</div>}
-          {error ? <div role='alert' className={styles.error}>{error}</div> : <WidgetContents store={store} sources={sources} onOpenData={onOpenData} />}
+          {error ? <div role='alert' className={styles.error}>{error}</div> : <WidgetContents store={store} sources={sources} loading={!initialized || calculating} placeholderCount={Object.values(widgets.config?.config?.dashboardsById || {}).reduce((count, dashboard) => count + dashboard.panels.length, 0) || 3} onOpenData={onOpenData} />}
         </aside>
       </RoomShell.DndProvider>
     </RoomShell>

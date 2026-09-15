@@ -44,8 +44,25 @@ describe('Category chart rows', () => {
     cy.contains('button', /^Create$/).click()
     cy.get('[data-testid="number-value"]').should('have.text', '210')
     cy.get('[data-testid="category-chart"]').scrollIntoView()
+    const loadingStates = []
+    let loadingObserver
+    cy.get('aside[aria-label="Report charts"]').then(pane => {
+      const element = pane[0]
+      loadingObserver = new element.ownerDocument.defaultView.MutationObserver(() => {
+        if (element.getAttribute('aria-busy') === 'true') loadingStates.push({
+          line: element.querySelector('[data-testid="chart-calculation-line"]')?.getAttribute('aria-hidden') === 'false',
+          value: element.querySelector('[data-testid="number-value"]')?.textContent
+        })
+      })
+      loadingObserver.observe(element, { attributes: true, childList: true, subtree: true })
+    })
     cy.get('[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line').first().click()
     cy.get('[data-testid="number-value"]').should('have.text', '20')
+    cy.get('aside[aria-label="Report charts"]').should('have.attr', 'aria-busy', 'false').then(() => {
+      loadingObserver.disconnect()
+      expect(loadingStates.some(state => state.line && state.value === '210'), 'previous value stays visible under the loading line').to.equal(true)
+    })
+    cy.get('[data-testid="chart-calculation-line"]').should('not.be.visible')
     cy.get('[data-testid="filter-strip"]').should('contain', 'primary type').and('contain', 'Clear all')
     cy.screenshot('chart-filter-strip')
     cy.get('[data-testid="map-settings-tab"]').click()
@@ -67,7 +84,18 @@ describe('Category chart rows', () => {
     cy.screenshot('widget-stack')
     cy.get('#dekart-save-button').click()
     cy.get('#dekart-save-button [aria-label="cloud"]', { timeout: 20000 }).should('be.visible')
+    cy.intercept({ method: 'GET', url: '**/duckdb-eh.wasm', times: 1 }, request => request.continue(response => response.setDelay(3000)))
+    // Hold the initial data response so the saved chart placeholders can be inspected.
+    cy.intercept({ method: 'GET', url: '**/api/v1/dataset-source/**', times: 1 }, request => {
+      request.headers['X-Dekart-Claim-Email'] = email
+      request.continue(response => response.setDelay(3000))
+    })
     cy.reload()
+    cy.get('[data-testid="widgets-tab"]', { timeout: 2000 }).should('have.attr', 'aria-expanded', 'true').and('contain', '3')
+    cy.get('[data-testid="chart-stub"]', { timeout: 30000 }).should('have.length', 3).first().should('be.visible')
+    cy.get('aside[aria-label="Report charts"]').should('not.contain.text', 'Loading')
+    cy.screenshot('chart-loading-stubs')
+    cy.get('[data-testid="chart-stub"]', { timeout: 180000 }).should('not.exist')
     cy.get('[data-testid="widgets-tab"]', { timeout: 30000 }).should('have.attr', 'aria-expanded', 'true').and('contain', '3')
     cy.url().then(url => cy.visit(url.replace('/source', '')))
     cy.get('[data-testid="widgets-tab"]', { timeout: 30000 }).should('have.attr', 'aria-expanded', 'true').and('contain', '3')

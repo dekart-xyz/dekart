@@ -9,20 +9,22 @@ import { useWidgetFilters } from './useWidgetFilters'
 import styles from './ReportWidgets.module.css'
 
 // Dataset bindings remain separate for filtering; the report presents them in one scroll area.
-export default function WidgetContents ({ store, sources, onOpenData }) {
+export default function WidgetContents ({ store, sources, loading, placeholderCount, onOpenData }) {
   const [builder, setBuilder] = useState(false)
   const [selectedSource, setSelectedSource] = useState('')
   const dashboards = useStore(store, state => state.mosaicDashboard.config.dashboardsById)
   const settingsOpen = useStore(store, state => state.blockSettings.runtime.isSettingsPanelOpen)
   const available = sources.filter(source => source.physical && !source.pending && !source.error)
   const datasetId = available.find(source => source.id === selectedSource)?.id || available[0]?.id || ''
+  const hasBoundCharts = sources.some(source => dashboards[source.id]?.panels.length)
   const hasWidgets = Object.values(dashboards).some(dashboard => dashboard.panels.length)
   return (
     <>
       {!builder && !settingsOpen && <div className={styles.actions}><h2>Charts</h2><Button aria-label='Add chart' disabled={!datasetId} onClick={() => setBuilder(true)}><Plus size={15} />Add chart</Button></div>}
       <div className={classnames(styles.reportCharts, { [styles.hidden]: builder || settingsOpen })}>
         {sources.filter(source => dashboards[source.id]).map(source => <DatasetCharts key={`${source.id}:${source.physical}`} store={store} source={source} showSource={sources.length > 1} onOpenData={onOpenData} />)}
-        {!hasWidgets && datasetId && <div className={styles.empty}><h3>Dashboard is empty</h3><p>Add a chart from any report dataset.</p></div>}
+        {!hasBoundCharts && loading && <ChartStubs count={placeholderCount} />}
+        {!hasWidgets && !loading && datasetId && <div className={styles.empty}><h3>Dashboard is empty</h3><p>Add a chart from any report dataset.</p></div>}
       </div>
       {settingsOpen && !builder && <WidgetSettings store={store} sources={available} />}
       {builder && (
@@ -40,6 +42,11 @@ function SourceSelector ({ id, value, sources, onChange }) {
   return <div className={styles.source}><label htmlFor={id}>Dataset</label><select id={id} value={value} onChange={event => onChange(event.target.value)}>{sources.map(source => <option key={source.id} value={source.id}>{source.label}</option>)}</select></div>
 }
 
+// Use the same placeholders before config adoption and while individual datasets load.
+function ChartStubs ({ count }) {
+  return Array.from({ length: count }, (_, index) => <div key={index} className={styles.chartStub} data-testid='chart-stub' aria-hidden='true'><div className={styles.stubLabel} /><div className={styles.stubLines}><i /><i /><i /></div></div>)
+}
+
 // Keep each dataset's filter bridge alive while its charts are hidden by creation or settings.
 function DatasetCharts ({ store, source, showSource, onOpenData }) {
   const { error } = useWidgetFilters(store, source.id, Boolean(source.physical))
@@ -48,7 +55,7 @@ function DatasetCharts ({ store, source, showSource, onOpenData }) {
   return (
     <section className={styles.datasetWidgets} data-testid='dataset-widgets' aria-label={`${source.label} charts`}>
       {showSource && dashboard?.panels.length > 0 && <h3 className={styles.datasetLabel}>{source.label}</h3>}
-      {source.error || error ? <div role='alert' className={styles.error}>{source.error || error}<Button onClick={onOpenData}>Open data</Button></div> : source.pending || !source.physical ? <div className={styles.empty}>Loading {source.label}…</div> : dashboard?.panels.length > 0 ? <MosaicDashboard.Root dashboardId={source.id}><MosaicDashboard.Panels /></MosaicDashboard.Root> : null}
+      {source.error || error ? <div role='alert' className={styles.error}>{source.error || error}<Button onClick={onOpenData}>Open data</Button></div> : source.pending || !source.physical ? <ChartStubs count={dashboard?.panels.length || 0} /> : dashboard?.panels.length > 0 ? <MosaicDashboard.Root dashboardId={source.id}><MosaicDashboard.Panels /></MosaicDashboard.Root> : null}
     </section>
   )
 }
