@@ -40,7 +40,7 @@ func validateWidgetsConfig(value string) error {
 	}
 	for _, dashboard := range state.Dashboards {
 		for _, panel := range dashboard.Panels {
-			if panel.Type != "vgplot" || (panel.Config.ChartType != "count-plot" && panel.Config.ChartType != "histogram") {
+			if panel.Type != "vgplot" || (panel.Config.ChartType != "count-plot" && panel.Config.ChartType != "histogram" && panel.Config.ChartType != "number") {
 				return fmt.Errorf("unsupported widget type")
 			}
 		}

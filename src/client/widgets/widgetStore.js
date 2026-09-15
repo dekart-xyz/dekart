@@ -1,3 +1,4 @@
+import { numberChartType } from './NumberChart'
 import { setAutoFreeze } from 'immer'
 import { createRoomShellSlice, createRoomStore } from '@sqlrooms/room-shell'
 import { createBaseDuckDbConnector } from '@sqlrooms/duckdb-core'
@@ -21,7 +22,7 @@ export const chartTypes = createDefaultChartTypes({ includeCustomSpec: false }).
         plot.splice(2, 0, { select: 'toggleY', as: '$brush' })
         return { ...spec, plot }
       }
-    })
+    }).concat(numberChartType)
 
 // Each open report owns its upstream UI store and shares Dekart's one DuckDB worker.
 export function createWidgetStore () {

@@ -23,7 +23,7 @@ Map layers and Widgets are mutually exclusive. The tabs form the pane header (su
 
 - `widgets_config` is a separate nullable column on reports and report snapshots, with PostgreSQL and SQLite migrations. Existing report gRPC responses and updates carry it. Map and widgets share a report revision, transaction and history entry.
 - Version-aware saves reject stale writes. Omitted widget config preserves the saved value. The existing report permissions and workspace write gates also govern widget editing.
-- SQLRooms 0.29.0 supplies chart creation, settings, rendering and panel layout. Category and histogram are supported; there is no ambiguous report-wide row count. There is no custom chart builder or editable KPI/formula builder.
+- SQLRooms 0.29.0 supplies chart creation, settings, rendering and panel layout. Category, histogram and Number are supported; there is no ambiguous report-wide row count. Number is a Dekart-owned SQLRooms chart-type extension with one settings component reused by the upstream creation and editing flows.
 - Widgets use derived views over Dekart's actual file/warehouse/DuckDB result tables in the existing browser DuckDB worker. Refresh replaces views and invalidates chart queries. Running/failed queries show a pending/error state.
 - Native Kepler filters are evaluated by Kepler on the loaded rows, then applied as row membership to Mosaic. Widget selections mirror into stable, widget-owned Kepler filters. Saved defaults are restored from those filters.
 - Viewer exploration stays local to the session; authored changes persist through the backend, not localStorage.
@@ -32,7 +32,7 @@ Map layers and Widgets are mutually exclusive. The tabs form the pane header (su
 
 MCP authoring and code review are excluded. No deployment, commit or push is performed. This is a functional UX reference, not a claim that all release acceptance criteria have been completed.
 
-Category and histogram are available. Time series, viewport filtering, arbitrary formulas, cross-dataset joins from widget clicks and full-dashboard image export are not included. Existing map image exports remain map-only. Widgets and Kepler settings share a floating left panel; persistent Map layers / Widgets buttons switch between them without resetting filters or drafts. SQL/file tabs remain independent on the right (below the map on narrow screens).
+Category, histogram and Number are available. Time series, viewport filtering, arbitrary formulas, cross-dataset joins from widget clicks and full-dashboard image export are not included. Existing map image exports remain map-only. Widgets and Kepler settings share a floating left panel; persistent Map layers / Widgets buttons switch between them without resetting filters or drafts. SQL/file tabs remain independent on the right (below the map on narrow screens).
 
 The category click adapter imports a pinned upstream internal spec helper. React 18 retains Dekart's existing root lifecycle; moving to concurrent rendering needs separate handling of report/Kepler initialization. Dependency/bundle optimization, exhaustive filter-type and large-data performance coverage remain clean-implementation work.
 
@@ -46,3 +46,11 @@ Run `make cypress-run ENV_FILE=.env.local SPEC=cypress/e2e/local/widgets.cy.js` 
 Computer-use checks also exercise native capacity filters combined with category selection, upstream creation/settings and history restore. Lint, frontend unit tests, affected Go tests and the production build are checked separately. Cypress writes screenshots and a video to its ignored output directories.
 
 The pane tabs are labelled **Map layers** and **Charts**. Above the charts, a Kepler-style **Charts / + Add chart** row opens inline creation. There is no suggestion button; initial chart inference remains automatic.
+
+## Number charts
+
+Add chart → Number creates a Honeycomb-style single metric for one dataset. Operations: count rows, count distinct, sum, average, minimum, maximum and median. Numeric operations use a numeric field; distinct count also accepts categorical fields. Settings include subtitle, automatic/number/compact/percent formatting, decimals and prefix/suffix units. The existing chart title and dataset controls apply. Percent formatting treats 0.25 as 25%.
+
+Numbers subscribe to the shared Mosaic selection and therefore follow dataset-specific chart and Kepler filters. They do not create filters. Empty counts are zero; empty/null numeric aggregates show “No data”. Configurations persist through the existing backend widget save/reload flow. Initial inference is unchanged; Number is added explicitly.
+
+`NumberChart.jsx` contains the local chart-type definition, shared settings and Mosaic query client. It uses SQLRooms’ exported chart-type extension mechanism; the settings-context hook currently requires a pinned package subpath. This has not been contributed upstream. `widgetNumbers.cy.js` checks aggregate values, linked filtering and saved presentation settings against a real uploaded CSV.
