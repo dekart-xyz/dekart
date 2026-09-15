@@ -23,9 +23,6 @@
 .empty h3 { color: #f3f5f7; font-size: 16px; }
 .error { margin: 12px 16px; padding: 12px; background: #573a35; color: #ffd5c8; overflow-wrap: anywhere; }
 .panel button:focus-visible, .panel select:focus-visible { outline: 2px solid #a0a7ff; outline-offset: 2px; }
-.viewer :global(button[aria-label='Open panel settings']), .viewer :global(button[aria-label='Shrink panel horizontally']), .viewer :global(button[aria-label='Expand panel horizontally']), .viewer :global(.sqlrooms-grid-resize-handle) { display: none; }
-.viewer :global(.lucide-grip-vertical) { visibility: hidden; width: 0; }
-.viewer :global([data-selectable-panel]) { outline: none; }
 
 .reportCharts { flex: 1; min-height: 0; overflow: auto; }
 .datasetWidgets { min-width: 0; }

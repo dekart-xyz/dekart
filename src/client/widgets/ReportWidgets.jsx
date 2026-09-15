@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useStore } from 'zustand'
 import { RoomShell } from '@sqlrooms/room-shell'
-import { Button } from '@sqlrooms/ui'
 import WidgetContents from './WidgetContents'
 import classnames from 'classnames'
 import { QueryJob } from 'dekart-proto/dekart_pb'
@@ -14,7 +13,7 @@ import './theme.css'
 const emptyTables = {}
 
 // The panel is part of a report: Redux/report streams own saved state, SQLRooms owns editing.
-export default function ReportWidgets ({ visible, editing, onOpenData }) {
+export default function ReportWidgets ({ visible, editing, onOpenData, onChartCountChange }) {
   const [store] = useState(createWidgetStore)
   const [readySources, setReadySources] = useState({})
   const [error, setError] = useState('')
@@ -34,6 +33,8 @@ export default function ReportWidgets ({ visible, editing, onOpenData }) {
   const authoredConfigs = useRef(new WeakSet())
   const initialized = useStore(store, state => state.room.initialized)
   const config = useStore(store, state => state.mosaicDashboard.config)
+  const chartCount = Object.values(config.dashboardsById).reduce((count, dashboard) => count + dashboard.panels.length, 0)
+  useEffect(() => { onChartCountChange(chartCount) }, [chartCount, onChartCountChange])
   const bindings = Object.keys(config.dashboardsById)
   const datasetId = datasetList.find(dataset => readySources[dataset.id])?.id || ''
   const sources = datasetList.map(dataset => {
@@ -120,16 +121,16 @@ export default function ReportWidgets ({ visible, editing, onOpenData }) {
 
   useEffect(() => {
     // The first eligible dataset gets defaults once. An explicitly empty config stays empty.
-    if (initialized && editing && visible && datasetId && tables[datasetId] && readySources[datasetId] && !widgets.config && !bindings.length) suggestWidgets(store, datasetId, tables[datasetId].fields)
-  }, [initialized, editing, visible, datasetId, readySources, widgets.config, bindings.length, tables, store])
+    if (initialized && editing && datasetId && tables[datasetId] && readySources[datasetId] && !widgets.config && !bindings.length) suggestWidgets(store, datasetId, tables[datasetId].fields)
+  }, [initialized, editing, datasetId, readySources, widgets.config, bindings.length, tables, store])
 
   if (!report) return null
   return (
     <RoomShell roomStore={store} className={styles.provider}>
       <RoomShell.DndProvider>
-        <aside className={classnames(styles.panel, { [styles.hidden]: !visible, [styles.viewer]: !editing })} aria-label='Report charts'>
+        <aside className={classnames(styles.panel, { [styles.hidden]: !visible })} aria-label='Report charts'>
           {widgets.conflict && <div role='alert' className={styles.error}>This report changed in another session. Reload to use the latest saved dashboard.</div>}
-          {error ? <div role='alert' className={styles.error}>{error}</div> : sources.some(source => source.physical) || bindings.length ? <WidgetContents store={store} sources={sources} editing={editing} onOpenData={onOpenData} /> : <div className={styles.empty}><h3>Load data to add charts</h3><p>Upload a file or run a query.</p>{editing && <Button onClick={onOpenData}>Open data</Button>}</div>}
+          {error ? <div role='alert' className={styles.error}>{error}</div> : <WidgetContents store={store} sources={sources} onOpenData={onOpenData} />}
         </aside>
       </RoomShell.DndProvider>
     </RoomShell>

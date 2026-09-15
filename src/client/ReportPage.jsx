@@ -486,12 +486,12 @@ export default function ReportPage ({ edit, snapshot }) {
   const report = useSelector(state => state.report)
   const files = useSelector(state => state.files || [])
   const queries = useSelector(state => state.queries || [])
-  const [leftPanel, setLeftPanel] = useState(edit ? 'map' : 'widgets')
-  const [paneCollapsed, setPaneCollapsed] = useState(false)
+  const [leftPanel, setLeftPanel] = useState('widgets')
+  const [paneCollapsed, setPaneCollapsed] = useState(true)
   const activeKeplerPanel = useSelector(state => state.keplerGl.kepler?.uiState.activeSidePanel)
   const filterDatasetId = useSelector(state => Object.keys(state.keplerGl.kepler?.visState.datasets || {})[0])
-  const widgetConfig = useSelector(state => state.widgets.config)
-  const chartCount = Object.values(widgetConfig?.config?.dashboardsById || {}).reduce((count, dashboard) => count + dashboard.panels.length, 0)
+  const [chartCount, setChartCount] = useState(0)
+  const hasCharts = chartCount > 0
   const readOnly = useSelector(state => state.workspace.readOnly)
   const fullscreen = useSelector(state => state.reportStatus.fullscreen)
   const [snapshotBasemapReady, setSnapshotBasemapReady] = useState(false)
@@ -540,9 +540,10 @@ export default function ReportPage ({ edit, snapshot }) {
 
   // Kepler stays mounted so its selected tab and editing state survive panel switches.
   useEffect(() => {
-    // Viewing opens the dashboard instead of leaving an editor-only panel selected.
-    if (!edit) { setLeftPanel('widgets'); setPaneCollapsed(false) }
-  }, [edit])
+    // Existing charts open by default in both modes; an empty report starts collapsed.
+    setLeftPanel('widgets')
+    setPaneCollapsed(!hasCharts)
+  }, [id, edit, hasCharts])
 
   const paneOpen = !paneCollapsed && (leftPanel !== 'map' || Boolean(activeKeplerPanel))
 
@@ -585,8 +586,8 @@ export default function ReportPage ({ edit, snapshot }) {
         <div className={classnames(styles.keplerFlexWrapper, { [styles.hideMapSettings]: leftPanel !== 'map' || !paneOpen })}>
           <div className={styles.keplerFlex}>
             {!snapshot && <MapPaneHeader selected={leftPanel} expanded={paneOpen} canEdit={edit && report.canWrite && !readOnly} chartCount={chartCount} onSelect={selectPane} onToggle={() => paneOpen ? setPaneCollapsed(true) : selectPane(leftPanel)} />}
-            {!snapshot && <FilterStrip visible={paneOpen} editing={edit && report.canWrite && !readOnly} onEdit={editFilter} />}
-            {!snapshot && <ReportWidgets key={id} visible={paneOpen && leftPanel === 'widgets' && (edit || Boolean(widgetConfig))} editing={edit && report.canWrite && !readOnly} onOpenData={() => document.getElementById('dekart-report-page-tabs')?.scrollIntoView({ block: 'nearest' })} />}
+            {!snapshot && <FilterStrip visible={paneOpen && leftPanel === 'widgets'} editing={edit && report.canWrite && !readOnly} onEdit={editFilter} />}
+            {!snapshot && <ReportWidgets key={id} visible={paneOpen && leftPanel === 'widgets'} onChartCountChange={setChartCount} editing={edit && report.canWrite && !readOnly} onOpenData={() => document.getElementById('dekart-report-page-tabs')?.scrollIntoView({ block: 'nearest' })} />}
             <Kepler
               snapshot={snapshot}
               editing={edit && report.canWrite && !readOnly}

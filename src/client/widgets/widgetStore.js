@@ -16,6 +16,7 @@ export const widgetFilterId = id => `widget:${id}`
 export const chartTypes = createDefaultChartTypes({ includeCustomSpec: false }).filter(type => ['count-plot', 'histogram'].includes(type.id)).map(type => type.id !== 'count-plot'
   ? {
       ...type,
+      buildTitle: settings => settings.field?.replaceAll('_', ' ') || 'Histogram',
       createSpec: options => {
         const spec = createHistogramSpec(options)
         return { ...spec, yAxis: null, yLabel: null, xLabel: null, xTicks: 4, margins: { left: 8, right: 8, top: 8, bottom: 28 }, plot: spec.plot.map(mark => mark.mark ? { ...mark, fill: mark.data.filterBy ? '#36b99a' : '#1b1e26' } : mark) }
@@ -73,6 +74,10 @@ export function fitWidgetPanels (store, datasetId) {
   const api = store.getState().mosaicDashboard
   const layout = api.getDashboard(datasetId).layout
   const panels = api.getDashboard(datasetId).panels
+  // Replace the upstream generated histogram heading while preserving authored titles.
+  for (const panel of panels) {
+    if (panel.config.chartType === 'histogram' && /^histogram of a field\s*-/i.test(panel.title)) api.updatePanel(datasetId, panel.id, { title: panel.config.settings.field.replaceAll('_', ' ') })
+  }
   const layouts = Object.fromEntries(['lg', 'sm'].map(key => {
     let y = 0
     const ordered = [...layout.children].sort((a, b) => (layout.layouts[key]?.find(item => item.i === a.id)?.y ?? 0) - (layout.layouts[key]?.find(item => item.i === b.id)?.y ?? 0))

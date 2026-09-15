@@ -9,7 +9,7 @@ import { useWidgetFilters } from './useWidgetFilters'
 import styles from './ReportWidgets.module.css'
 
 // Dataset bindings remain separate for filtering; the report presents them in one scroll area.
-export default function WidgetContents ({ store, sources, editing, onOpenData }) {
+export default function WidgetContents ({ store, sources, onOpenData }) {
   const [builder, setBuilder] = useState(false)
   const [selectedSource, setSelectedSource] = useState('')
   const dashboards = useStore(store, state => state.mosaicDashboard.config.dashboardsById)
@@ -17,18 +17,15 @@ export default function WidgetContents ({ store, sources, editing, onOpenData })
   const available = sources.filter(source => source.physical && !source.pending && !source.error)
   const datasetId = available.find(source => source.id === selectedSource)?.id || available[0]?.id || ''
   const hasWidgets = Object.values(dashboards).some(dashboard => dashboard.panels.length)
-  useEffect(() => {
-    if (!editing) { setBuilder(false); store.getState().blockSettings.requestCloseSettingsPanel() }
-  }, [editing, store])
   return (
     <>
-      {!builder && !(editing && settingsOpen) && <div className={styles.actions}><h2>Charts</h2>{editing && <Button aria-label='Add chart' onClick={() => setBuilder(true)}><Plus size={15} />Add chart</Button>}</div>}
-      <div className={classnames(styles.reportCharts, { [styles.hidden]: builder || (editing && settingsOpen) })}>
-        {sources.filter(source => dashboards[source.id]).map(source => <DatasetCharts key={`${source.id}:${source.physical}`} store={store} source={source} editing={editing} showSource={sources.length > 1} onOpenData={onOpenData} />)}
-        {!hasWidgets && <div className={styles.empty}><h3>Dashboard is empty</h3><p>Add a chart from any report dataset.</p></div>}
+      {!builder && !settingsOpen && <div className={styles.actions}><h2>Charts</h2><Button aria-label='Add chart' disabled={!datasetId} onClick={() => setBuilder(true)}><Plus size={15} />Add chart</Button></div>}
+      <div className={classnames(styles.reportCharts, { [styles.hidden]: builder || settingsOpen })}>
+        {sources.filter(source => dashboards[source.id]).map(source => <DatasetCharts key={`${source.id}:${source.physical}`} store={store} source={source} showSource={sources.length > 1} onOpenData={onOpenData} />)}
+        {!hasWidgets && datasetId && <div className={styles.empty}><h3>Dashboard is empty</h3><p>Add a chart from any report dataset.</p></div>}
       </div>
-      {editing && settingsOpen && !builder && <WidgetSettings store={store} sources={available} />}
-      {editing && builder && (
+      {settingsOpen && !builder && <WidgetSettings store={store} sources={available} />}
+      {builder && (
         <div className={styles.inlineBuilder} data-testid='inline-widget-builder'>
           <div className={styles.builderHeading}><h3>Add chart</h3><Button variant='ghost' onClick={() => setBuilder(false)}>Cancel</Button></div>
           <SourceSelector id='widget-source' value={datasetId} sources={available} onChange={setSelectedSource} />
@@ -44,14 +41,14 @@ function SourceSelector ({ id, value, sources, onChange }) {
 }
 
 // Keep each dataset's filter bridge alive while its charts are hidden by creation or settings.
-function DatasetCharts ({ store, source, editing, showSource, onOpenData }) {
+function DatasetCharts ({ store, source, showSource, onOpenData }) {
   const { error } = useWidgetFilters(store, source.id, Boolean(source.physical))
   const dashboard = useStore(store, state => state.mosaicDashboard.config.dashboardsById[source.id])
   useEffect(() => { if (dashboard?.panels.length) fitWidgetPanels(store, source.id) }, [store, source.id, dashboard?.panels])
   return (
     <section className={styles.datasetWidgets} data-testid='dataset-widgets' aria-label={`${source.label} charts`}>
       {showSource && dashboard?.panels.length > 0 && <h3 className={styles.datasetLabel}>{source.label}</h3>}
-      {source.error || error ? <div role='alert' className={styles.error}>{source.error || error}{editing && <Button onClick={onOpenData}>Open data</Button>}</div> : source.pending || !source.physical ? <div className={styles.empty}>Loading {source.label}…</div> : dashboard?.panels.length > 0 ? <MosaicDashboard.Root dashboardId={source.id} readOnly={!editing}><MosaicDashboard.Panels /></MosaicDashboard.Root> : null}
+      {source.error || error ? <div role='alert' className={styles.error}>{source.error || error}<Button onClick={onOpenData}>Open data</Button></div> : source.pending || !source.physical ? <div className={styles.empty}>Loading {source.label}…</div> : dashboard?.panels.length > 0 ? <MosaicDashboard.Root dashboardId={source.id}><MosaicDashboard.Panels /></MosaicDashboard.Root> : null}
     </section>
   )
 }
