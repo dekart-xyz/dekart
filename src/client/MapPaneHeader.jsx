@@ -3,7 +3,7 @@ import classnames from 'classnames'
 import styles from './MapPaneHeader.module.css'
 
 // One persistent anchor for both editors, including when their bodies are collapsed.
-export default function MapPaneHeader ({ selected, expanded, canEdit, filterCount, onSelect, onToggle }) {
+export default function MapPaneHeader ({ selected, expanded, canEdit, chartCount, onSelect, onToggle }) {
   const tabs = canEdit ? ['map', 'widgets'] : ['widgets']
   const navigate = event => {
     const direction = { ArrowRight: 1, ArrowLeft: -1, Home: -tabs.length, End: tabs.length }[event.key]
@@ -20,7 +20,7 @@ export default function MapPaneHeader ({ selected, expanded, canEdit, filterCoun
           <button key={panel} role='tab' data-testid={panel === 'map' ? 'map-settings-tab' : 'widgets-tab'} aria-selected={selected === panel} aria-expanded={selected === panel && expanded} tabIndex={selected === panel ? 0 : -1} onClick={() => onSelect(panel)}>
             {panel === 'map' ? <Layers size={15} /> : <ChartNoAxesColumn size={15} />}
             {panel === 'map' ? 'Map layers' : 'Charts'}
-            {panel === 'widgets' && filterCount > 0 && <span className={styles.badge} title={`${filterCount} active chart filters`}>{filterCount}<span className={styles.srOnly}> {filterCount === 1 ? 'filter' : 'filters'}</span></span>}
+            {panel === 'widgets' && chartCount > 0 && <span className={styles.badge} title={`${chartCount} charts`}>{chartCount}<span className={styles.srOnly}> {chartCount === 1 ? 'chart' : 'charts'}</span></span>}
           </button>
         ))}
       </div>

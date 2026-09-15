@@ -1,0 +1,19 @@
+.strip { position: absolute; top: calc(var(--pane-top) + 44px); left: var(--pane-left); width: var(--pane-width); z-index: 99; display: flex; align-items: flex-start; gap: 8px; padding: 9px 11px; box-sizing: border-box; background: #1e212a; border-bottom: 1px solid #2a2f39; color: #8b93a1; font: 11px/16px 'ff-clan-web-pro', 'Helvetica Neue', Helvetica, sans-serif; }
+.icon { flex: none; margin-top: 5px; }
+.strip button { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.strip button:focus-visible, .overflow summary:focus-visible { outline: 2px solid #58c7a3; outline-offset: 2px; }
+.chips { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; padding: 4px 7px; border-radius: 3px; background: #2e3947; border: 1px solid #3f5063; }
+.chip .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #f2f4f7; font-weight: 600; }
+.chip .name:disabled { cursor: default; }
+.remove { display: flex; flex: none; }
+.remove:hover, .clear:hover { color: #fff; }
+.chips .add { display: flex; align-items: center; justify-content: center; width: 25px; height: 26px; border: 1px dashed #3a414c; border-radius: 3px; }
+.strip .clear { display: flex; align-items: center; gap: 5px; flex: none; white-space: nowrap; margin-top: 5px; }
+.empty { flex: 1; padding: 5px 0; }
+.overflow { position: relative; }
+.overflow summary { display: flex; align-items: center; gap: 4px; padding: 4px 6px; border: 1px solid #3a414c; border-radius: 3px; color: #c7cdd8; cursor: pointer; list-style: none; white-space: nowrap; }
+.menu { position: absolute; top: 32px; left: -60px; width: 200px; max-height: 220px; overflow: auto; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 10px; border: 1px solid #3f5063; border-radius: 3px; background: #1e212a; box-shadow: 0 4px 12px #0006; }
+
+.chips > .chip { max-width: calc((100% - 6px) / 2); box-sizing: border-box; }
+.chips[data-count='4'] .add { position: absolute; right: 11px; bottom: 9px; }

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useStore } from 'zustand'
 import { MosaicDashboard, ChartBuilderRoot, ChartBuilderContent, MosaicChartSettingsPanel, createMosaicDashboardChartPanelConfig } from '@sqlrooms/mosaic'
 import { Button } from '@sqlrooms/ui'
-import { Plus, ArrowLeft, RotateCcw, X } from 'lucide-react'
+import { Plus, ArrowLeft } from 'lucide-react'
 import classnames from 'classnames'
 import { chartTypes, fitWidgetPanels, widgetTableName } from './widgetStore'
 import { useWidgetFilters } from './useWidgetFilters'
@@ -45,12 +45,12 @@ function SourceSelector ({ id, value, sources, onChange }) {
 
 // Keep each dataset's filter bridge alive while its charts are hidden by creation or settings.
 function DatasetCharts ({ store, source, editing, showSource, onOpenData }) {
-  const { clauses, clear, error } = useWidgetFilters(store, source.id, Boolean(source.physical))
+  const { error } = useWidgetFilters(store, source.id, Boolean(source.physical))
   const dashboard = useStore(store, state => state.mosaicDashboard.config.dashboardsById[source.id])
+  useEffect(() => { if (dashboard?.panels.length) fitWidgetPanels(store, source.id) }, [store, source.id, dashboard?.panels])
   return (
     <section className={styles.datasetWidgets} data-testid='dataset-widgets' aria-label={`${source.label} charts`}>
       {showSource && dashboard?.panels.length > 0 && <h3 className={styles.datasetLabel}>{source.label}</h3>}
-      {!!clauses.length && <div className={styles.filters}>{clauses.map((clause, index) => <button key={index} onClick={() => clear(clause)}>{clause.meta?.type === 'interval' ? 'Selected range' : Array.isArray(clause.value) ? clause.value.flat().join(', ') : clause.value}<X size={12} /></button>)}<button onClick={() => clauses.forEach(clear)}><RotateCcw size={12} />Clear filters</button></div>}
       {source.error || error ? <div role='alert' className={styles.error}>{source.error || error}{editing && <Button onClick={onOpenData}>Open data</Button>}</div> : source.pending || !source.physical ? <div className={styles.empty}>Loading {source.label}…</div> : dashboard?.panels.length > 0 ? <MosaicDashboard.Root dashboardId={source.id} readOnly={!editing}><MosaicDashboard.Panels /></MosaicDashboard.Root> : null}
     </section>
   )

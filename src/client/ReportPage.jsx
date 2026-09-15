@@ -3,9 +3,10 @@ import Input from 'antd/es/input'
 import { useEffect, useState, Component, useMemo } from 'react'
 import { Helmet } from 'react-helmet'
 import { KeplerGl } from '@kepler.gl/components'
-import { toggleSidePanel } from '@kepler.gl/actions'
+import { toggleSidePanel, addFilter } from '@kepler.gl/actions'
 import ReportWidgets from './widgets/ReportWidgets'
 import MapPaneHeader from './MapPaneHeader'
+import FilterStrip from './widgets/FilterStrip'
 import { EditOutlined, WarningFilled, MoreOutlined, ReadOutlined } from '@ant-design/icons'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
@@ -488,8 +489,9 @@ export default function ReportPage ({ edit, snapshot }) {
   const [leftPanel, setLeftPanel] = useState(edit ? 'map' : 'widgets')
   const [paneCollapsed, setPaneCollapsed] = useState(false)
   const activeKeplerPanel = useSelector(state => state.keplerGl.kepler?.uiState.activeSidePanel)
-  const widgetFilterCount = useSelector(state => (state.keplerGl.kepler?.visState.filters || []).filter(filter => filter.id.startsWith('widget:')).length)
+  const filterDatasetId = useSelector(state => Object.keys(state.keplerGl.kepler?.visState.datasets || {})[0])
   const widgetConfig = useSelector(state => state.widgets.config)
+  const chartCount = Object.values(widgetConfig?.config?.dashboardsById || {}).reduce((count, dashboard) => count + dashboard.panels.length, 0)
   const readOnly = useSelector(state => state.workspace.readOnly)
   const fullscreen = useSelector(state => state.reportStatus.fullscreen)
   const [snapshotBasemapReady, setSnapshotBasemapReady] = useState(false)
@@ -551,6 +553,12 @@ export default function ReportPage ({ edit, snapshot }) {
     if (panel === 'map' && !activeKeplerPanel) dispatch(toggleSidePanel('layer'))
   }
 
+  const editFilter = index => {
+    selectPane('map')
+    if (activeKeplerPanel !== 'filter') dispatch(toggleSidePanel('filter'))
+    if (index === undefined) dispatch(addFilter(filterDatasetId))
+  }
+
   if (!report) {
     return <Loading />
   }
@@ -576,7 +584,8 @@ export default function ReportPage ({ edit, snapshot }) {
       <div className={classnames(styles.body, { [styles.snapshotBody]: snapshot })}>
         <div className={classnames(styles.keplerFlexWrapper, { [styles.hideMapSettings]: leftPanel !== 'map' || !paneOpen })}>
           <div className={styles.keplerFlex}>
-            {!snapshot && <MapPaneHeader selected={leftPanel} expanded={paneOpen} canEdit={edit && report.canWrite && !readOnly} filterCount={widgetFilterCount} onSelect={selectPane} onToggle={() => paneOpen ? setPaneCollapsed(true) : selectPane(leftPanel)} />}
+            {!snapshot && <MapPaneHeader selected={leftPanel} expanded={paneOpen} canEdit={edit && report.canWrite && !readOnly} chartCount={chartCount} onSelect={selectPane} onToggle={() => paneOpen ? setPaneCollapsed(true) : selectPane(leftPanel)} />}
+            {!snapshot && <FilterStrip visible={paneOpen} editing={edit && report.canWrite && !readOnly} onEdit={editFilter} />}
             {!snapshot && <ReportWidgets key={id} visible={paneOpen && leftPanel === 'widgets' && (edit || Boolean(widgetConfig))} editing={edit && report.canWrite && !readOnly} onOpenData={() => document.getElementById('dekart-report-page-tabs')?.scrollIntoView({ block: 'nearest' })} />}
             <Kepler
               snapshot={snapshot}

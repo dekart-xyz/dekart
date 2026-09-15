@@ -18,7 +18,6 @@ export function useWidgetFilters (store, datasetId, ready) {
   const selection = store.getState().mosaic.getSelection(getMosaicDashboardSelectionName(datasetId))
   const source = useRef({})
   const defaults = useRef(new Map())
-  const [clauses, setClauses] = useState([])
   const [error, setError] = useState('')
   const generation = useRef(0)
   const mirrored = useRef(new Map())
@@ -88,7 +87,6 @@ export function useWidgetFilters (store, datasetId, ready) {
     restoreDefaults()
     const sync = async () => {
       const current = ++generation.current
-      setClauses([...selection.clauses])
       const dashboard = api.getDashboard(datasetId)
       const active = new Set()
       for (const panel of dashboard?.panels || []) {
@@ -129,17 +127,8 @@ export function useWidgetFilters (store, datasetId, ready) {
       })
     }
     selection.addEventListener('value', sync)
-    setClauses([...selection.clauses])
     return () => { alive = false; generation.current++; stop(); selection.removeEventListener('value', sync) }
   }, [store, datasetId, ready, selection, dispatch, redux])
 
-  function clear (clause) {
-    if (clause.source === source.current) {
-      const currentFilters = redux.getState().keplerGl.kepler.visState.filters
-      currentFilters.map((filter, index) => ({ filter, index })).reverse().forEach(({ filter, index }) => {
-        if (!filter.id.startsWith('widget:') && filter.dataId.includes(datasetId)) dispatch(removeFilter(index))
-      })
-    } else selection.update({ ...clause, value: null, predicate: null })
-  }
-  return { clauses, clear, error }
+  return { error }
 }

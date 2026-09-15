@@ -39,12 +39,12 @@ describe('Number charts', () => {
     // The category selected in the map dashboard narrows the metric's source rows.
     cy.get('g[aria-label="bar"][data-index="1"] rect').first().click({ force: true })
     cy.get('[data-testid="number-value"]').should('have.text', '40')
-    cy.contains('button', 'Clear filters').click()
+    cy.contains('button', 'Clear all').click()
     cy.get('[data-testid="number-value"]').should('have.text', '120')
     // Null-only groups distinguish an absent metric from a zero-valued metric.
     cy.get('g[aria-label="bar"][data-index="1"] rect').last().click({ force: true })
     cy.get('[data-testid="number-value"]').should('have.text', 'No data')
-    cy.contains('button', 'Clear filters').click()
+    cy.contains('button', 'Clear all').click()
     cy.get('[data-testid="number-value"]').should('have.text', '120')
     for (const [operation, expected] of [['Average', '40'], ['Minimum', '10'], ['Maximum', '80'], ['Median', '30'], ['Count rows', '5']]) {
       cy.get('button[aria-label="Open panel settings"]').last().click()

@@ -3,7 +3,9 @@ import { setAutoFreeze } from 'immer'
 import { createRoomShellSlice, createRoomStore } from '@sqlrooms/room-shell'
 import { createBaseDuckDbConnector } from '@sqlrooms/duckdb-core'
 import { createMosaicSlice, createDashboardFeatureSlices, createDefaultMosaicDashboardPanelRenderers, createDefaultChartTypes, createMosaicDashboardChartPanelConfig } from '@sqlrooms/mosaic'
-import { createCountPlotSpec } from '@sqlrooms/mosaic/dist/charts/chart-types/count-plot/spec'
+import CategoryChart from './CategoryChart'
+import ChartHeaderActions from './ChartHeaderActions'
+import { createHistogramSpec } from '@sqlrooms/mosaic/dist/charts/chart-types/histogram/spec'
 import { getSharedDuckDB } from '../lib/duckdb/database'
 import { duckDBViewName } from '../lib/duckdb/constants'
 
@@ -12,16 +14,17 @@ export const widgetTableName = id => `widgets.${duckDBViewName(id)}`
 export const widgetFilterId = id => `widget:${id}`
 // Keep upstream builders and settings; only category interaction uses Mosaic click selection.
 export const chartTypes = createDefaultChartTypes({ includeCustomSpec: false }).filter(type => ['count-plot', 'histogram'].includes(type.id)).map(type => type.id !== 'count-plot'
-  ? type
+  ? {
+      ...type,
+      createSpec: options => {
+        const spec = createHistogramSpec(options)
+        return { ...spec, yAxis: null, yLabel: null, xLabel: null, xTicks: 4, margins: { left: 8, right: 8, top: 8, bottom: 28 }, plot: spec.plot.map(mark => mark.mark ? { ...mark, fill: mark.data.filterBy ? '#36b99a' : '#1b1e26' } : mark) }
+      }
+    }
   : {
       ...type,
       label: 'Category',
-      createSpec: options => {
-        const spec = createCountPlotSpec(options)
-        const plot = spec.plot.filter(mark => !mark.select)
-        plot.splice(2, 0, { select: 'toggleY', as: '$brush' })
-        return { ...spec, plot }
-      }
+      renderer: CategoryChart
     }).concat(numberChartType)
 
 // Each open report owns its upstream UI store and shares Dekart's one DuckDB worker.
@@ -37,10 +40,14 @@ export function createWidgetStore () {
       try { return await connection.query(sql) } finally { signal.removeEventListener('abort', cancel); await connection.close() }
     }
   })
+  const panelRenderers = createDefaultMosaicDashboardPanelRenderers()
+  for (const [key, renderer] of Object.entries(panelRenderers)) {
+    if (renderer.headerActions) panelRenderers[key] = { ...renderer, headerActions: ChartHeaderActions, icon: null }
+  }
   const { roomStore } = createRoomStore((set, get, store) => ({
     ...createRoomShellSlice({ connector, config: { title: 'Report widgets', dataSources: [] } })(set, get, store),
     ...createMosaicSlice({ preagg: { enabled: false } })(set, get, store),
-    ...createDashboardFeatureSlices({ panelRenderers: createDefaultMosaicDashboardPanelRenderers(), chartTypes, addPanelActions: [] })(set, get, store)
+    ...createDashboardFeatureSlices({ panelRenderers, chartTypes, addPanelActions: [] })(set, get, store)
   }))
   return roomStore
 }
@@ -65,5 +72,16 @@ export function suggestWidgets (store, datasetId, fields) {
 export function fitWidgetPanels (store, datasetId) {
   const api = store.getState().mosaicDashboard
   const layout = api.getDashboard(datasetId).layout
-  api.setLayout(datasetId, { ...layout, rowHeight: 120, layouts: Object.fromEntries(['lg', 'sm'].map(key => [key, layout.children.map((child, index) => ({ i: child.id, x: 0, y: index * 2, w: key === 'lg' ? 12 : 6, h: 2 }))])) })
+  const panels = api.getDashboard(datasetId).panels
+  const layouts = Object.fromEntries(['lg', 'sm'].map(key => {
+    let y = 0
+    const ordered = [...layout.children].sort((a, b) => (layout.layouts[key]?.find(item => item.i === a.id)?.y ?? 0) - (layout.layouts[key]?.find(item => item.i === b.id)?.y ?? 0))
+    return [key, ordered.map(child => {
+      const h = panels.find(panel => panel.id === child.panel?.meta?.panelId)?.config.chartType === 'number' ? 1 : 2
+      const item = { i: child.id, x: 0, y, w: key === 'lg' ? 12 : 6, h }
+      y += h
+      return item
+    })]
+  }))
+  api.setLayout(datasetId, { ...layout, rowHeight: 100, margin: [0, 0], containerPadding: [0, 0], layouts })
 }
