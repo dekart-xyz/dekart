@@ -3,8 +3,8 @@ import classnames from 'classnames'
 import styles from './MapPaneHeader.module.css'
 
 // One persistent anchor for both editors, including when their bodies are collapsed.
-export default function MapPaneHeader ({ selected, expanded, canEdit, chartCount, onSelect, onToggle }) {
-  const tabs = canEdit ? ['map', 'widgets'] : ['widgets']
+export default function MapPaneHeader ({ selected, expanded, chartCount, onSelect, onToggle }) {
+  const tabs = ['widgets', 'map']
   const navigate = event => {
     const direction = { ArrowRight: 1, ArrowLeft: -1, Home: -tabs.length, End: tabs.length }[event.key]
     if (direction === undefined) return

@@ -64,6 +64,10 @@ export function suggestWidgets (store, datasetId, fields) {
   api.ensureDashboard(datasetId, 'Widgets', 'grid')
   api.setSelectedTable(datasetId, `"memory"."widgets"."${duckDBViewName(datasetId)}"`)
   const existing = api.getDashboard(datasetId).panels
+  // Every dataset gets a useful total before the field-specific charts.
+  if (!existing.some(panel => panel.config.chartType === 'number' && panel.config.settings.operation === 'count')) {
+    api.addPanel(datasetId, createMosaicDashboardChartPanelConfig('Row count', { chartType: 'number', settings: { operation: 'count' } }))
+  }
   const category = fields.find(field => ['string', 'boolean'].includes(field.type) && /category|type|status|operator|name|region/i.test(field.name)) || fields.find(field => field.type === 'string')
   const metric = fields.find(field => ['integer', 'real'].includes(field.type) && !/^(lat|latitude|lng|lon|longitude|id|index)$/i.test(field.name))
   for (const [field, chartType] of [[category, 'count-plot'], [metric, 'histogram']]) {

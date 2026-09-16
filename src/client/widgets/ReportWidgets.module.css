@@ -57,7 +57,7 @@
 .reportCharts :global([data-selectable-panel] .lucide-grip-vertical) { opacity: 0; width: 12px; min-width: 12px; }
 .reportCharts :global([data-selectable-panel] > div > div:first-child button) { opacity: 0; }
 .reportCharts :global([data-selectable-panel]:hover > div > div:first-child button), .reportCharts :global([data-selectable-panel]:focus-within > div > div:first-child button), .reportCharts :global([data-selectable-panel]:hover .lucide-grip-vertical), .reportCharts :global([data-selectable-panel]:focus-within .lucide-grip-vertical) { opacity: 1; }
-.reportCharts :global([data-selectable-panel] button[aria-label='Open panel settings']), .reportCharts :global([data-selectable-panel] button[aria-label='Remove dashboard panel']), .reportCharts :global(.sqlrooms-grid-resize-handle) { display: none; }
+.reportCharts :global([data-selectable-panel] button[aria-label='Open panel settings']), .reportCharts :global([data-selectable-panel] button[aria-label='Remove dashboard panel']), .reportCharts :global(button[aria-label='Shrink panel horizontally']), .reportCharts :global(button[aria-label='Expand panel horizontally']), .reportCharts :global(.sqlrooms-grid-resize-handle) { display: none; }
 .reportCharts :global([data-selectable-panel] .p-2) { padding: 0 18px 8px 24px; }
 .reportCharts :global([data-selectable-panel]:hover [data-testid='category-count']), .reportCharts :global([data-selectable-panel]:focus-within [data-testid='category-count']) { visibility: hidden; }
 @media (hover: none) { .reportCharts :global([data-selectable-panel] > div > div:first-child button) { opacity: 1; } }
