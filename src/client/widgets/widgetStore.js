@@ -18,8 +18,9 @@ export const chartTypes = createDefaultChartTypes({ includeCustomSpec: false }).
       ...type,
       buildTitle: settings => settings.field?.replaceAll('_', ' ') || 'Histogram',
       createSpec: options => {
+        // Brush raw values, not bin expressions, so Mosaic and Kepler use the same interval.
         const spec = createHistogramSpec(options)
-        return { ...spec, yAxis: null, yLabel: null, xLabel: null, xTicks: 4, margins: { left: 8, right: 8, top: 8, bottom: 28 }, plot: spec.plot.map(mark => mark.mark ? { ...mark, fill: mark.data.filterBy ? '#36b99a' : '#1b1e26' } : mark) }
+        return { ...spec, yAxis: null, yLabel: null, xLabel: null, xTicks: 4, margins: { left: 8, right: 8, top: 8, bottom: 28 }, plot: spec.plot.map(mark => mark.mark ? { ...mark, fill: mark.data.filterBy ? '#36b99a' : '#1b1e26' } : mark.select === 'intervalX' ? { ...mark, field: options.settings.field } : mark) }
       }
     }
   : {

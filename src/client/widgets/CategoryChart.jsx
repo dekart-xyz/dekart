@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Selection } from '@uwdata/mosaic-core'
 import { column, isIn, literal } from '@uwdata/mosaic-sql'
-import { useSelector } from 'react-redux'
+import { shallowEqual, useSelector } from 'react-redux'
 import { duckDBViewName } from '../lib/duckdb/constants'
 import { VgPlotChart } from '@sqlrooms/mosaic'
 import { createCountPlotSpec } from '@sqlrooms/mosaic/dist/charts/chart-types/count-plot/spec'
@@ -10,10 +10,12 @@ import styles from './CategoryChart.module.css'
 
 // Retain the upstream query, settings and selection clients, with a readable sidebar layout.
 export default function CategoryChart ({ config, coordinator, dataTable, table, selectionName, ...chartProps }) {
-  const layer = useSelector(state => {
+  const { layer, scaleType, colorDomain, colorRange } = useSelector(state => {
     const matches = (state.keplerGl.kepler?.visState.layers || []).filter(layer => layer.config.colorField?.name === config.settings.field && duckDBViewName(layer.config.dataId) === table.table)
-    return matches.find(layer => layer.config.isVisible) || matches[0]
-  })
+    const layer = matches.find(layer => layer.config.isVisible) || matches[0]
+    // Kepler mutates layer instances; capture color inputs so palette edits notify this chart.
+    return { layer, scaleType: layer?.config.colorScale, colorDomain: layer?.config.colorDomain, colorRange: layer?.config.visConfig.colorRange }
+  }, shallowEqual)
   const filter = useSelector(state => state.keplerGl.kepler?.visState.filters.find(filter => filter.name?.includes(config.settings.field) && filter.dataId.some(id => duckDBViewName(id) === table.table)))
   const highlight = useMemo(() => Selection.intersect(), [])
   const params = useMemo(() => new Map(chartProps.params).set('categoryHighlight', highlight), [chartProps.params, highlight])
@@ -29,8 +31,7 @@ export default function CategoryChart ({ config, coordinator, dataTable, table, 
       const spec = createCountPlotSpec({ dataTable, selectionName, settings: config.settings, visibleCategoryCount: categories.count })
       const [background, foreground, value] = spec.plot
       // Evaluate Kepler's actual scale so category assignments survive chart sorting and filtering.
-      const colorScale = layer?.getColorScale(layer.config.colorScale, layer.config.colorDomain, layer.config.visConfig.colorRange)
-      const colorDomain = layer?.config.colorDomain
+      const colorScale = layer?.getColorScale(scaleType, colorDomain, colorRange)
       const colors = colorScale && colorDomain?.length
         ? {
             colorScale: 'ordinal',
@@ -67,7 +68,7 @@ export default function CategoryChart ({ config, coordinator, dataTable, table, 
         }
       }
     } catch (error) { return { error: error.message } }
-  }, [config.settings, dataTable, selectionName, categories.count, layer])
+  }, [config.settings, dataTable, selectionName, categories.count, layer, scaleType, colorDomain, colorRange])
   if (result.error) return <div className={styles.message}>{result.error}</div>
   const count = Math.min(categories.count ?? 0, config.settings.maxBars ?? 20)
   return <div className={styles.category}><span className={styles.count} data-testid='category-count'>{categories.count} values</span><div className={styles.scroll} style={{ maxHeight: expanded ? undefined : 110, overflowY: expanded ? 'auto' : 'hidden' }} data-testid='category-chart'><div className={styles.plot} style={{ height: result.spec.height }}><VgPlotChart {...chartProps} params={params} spec={result.spec} /></div></div>{count > 3 && <button className={styles.more} onClick={() => setExpanded(!expanded)}>{expanded ? 'Show less' : `Show ${count - 3} more`}</button>}</div>

@@ -41,6 +41,15 @@ describe('Category chart rows', () => {
       expect(new Set(colors).size, 'Kepler category palette').to.be.greaterThan(1)
       expect(colors).not.to.include('#36b99a')
     })
+    let initialColors
+    cy.get('[data-testid="category-chart"] g[aria-label="bar"] rect').then(bars => { initialColors = [...bars].map(bar => bar.getAttribute('fill')) })
+    cy.get('[data-testid="map-settings-tab"]').click()
+    cy.get('.color-selector__selector').first().click()
+    cy.get('.color-palette-outer').last().click()
+    cy.get('[data-testid="widgets-tab"]').click()
+    cy.get('[data-testid="category-chart"] g[aria-label="bar"] rect').should(bars => {
+      expect([...bars].map(bar => bar.getAttribute('fill')), 'updated Kepler palette').not.to.deep.equal(initialColors)
+    })
     cy.get('svg text').should(elements => {
       const labels = [...elements].filter(element => categories.includes(element.querySelector('title')?.textContent))
       expect(labels.length).to.be.greaterThan(10)
@@ -92,7 +101,35 @@ describe('Category chart rows', () => {
     })
     cy.get('[data-testid="filter-strip"]').contains('button', 'Add filter').click()
     cy.get('[data-testid="map-settings-tab"]').should('have.attr', 'aria-selected', 'true')
+    cy.get('.field-selector .item-selector').last().click()
+    cy.contains('.field-selector_list-item', 'district').click()
+    cy.get('.kg-range-slider__input').last().clear().type('3{enter}')
     cy.get('[data-testid="widgets-tab"]').click()
+    // Native range membership combines with chart selection without filtering its own alternatives away.
+    cy.get('[data-testid="number-value"]').should('have.text', '39')
+    cy.get('[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line').first().click()
+    cy.get('[data-testid="number-value"]').should('have.text', '20')
+    cy.get('[data-testid="category-chart"]').should('contain.text', 'BATTERY')
+    cy.get('button[aria-label="Remove primary type filter"]').click()
+    cy.get('[data-testid="number-value"]').should('have.text', '39')
+    cy.get('button[aria-label="Remove district filter"]').click()
+    cy.get('[data-testid="number-value"]').should('have.text', '210')
+    // A narrow brush inside a histogram bin filters raw district values, not bin start positions.
+    cy.get('.interval-x .overlay').last().scrollIntoView().then(overlay => {
+      const element = overlay[0]
+      const svg = element.ownerSVGElement
+      const bounds = svg.getBoundingClientRect()
+      const scale = svg.scale('x')
+      const view = element.ownerDocument.defaultView
+      const clientY = element.getBoundingClientRect().top + 20
+      cy.wrap(element).trigger('mousedown', { clientX: bounds.left + scale.apply(6.5), clientY, button: 0, view })
+      cy.get('body').trigger('mousemove', { clientX: bounds.left + scale.apply(9.5), clientY, buttons: 1, view })
+      cy.get('body').trigger('mouseup', { clientX: bounds.left + scale.apply(9.5), clientY, button: 0, view })
+    })
+    cy.get('[data-testid="number-value"]').should('have.text', '17')
+    cy.get('[data-testid="filter-strip"]').should('contain.text', 'district')
+    cy.get('button[aria-label="Remove district filter"]').click()
+    cy.get('[data-testid="number-value"]').should('have.text', '210')
     cy.get('button[aria-label="Chart actions"]').last().focus().click()
     cy.contains('[role="menuitem"]', 'Edit chart').click()
     cy.get('[data-testid="widget-settings"]').should('be.visible')

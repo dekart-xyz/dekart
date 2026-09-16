@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { useStore } from 'zustand'
 import { useDispatch, useSelector, useStore as useReduxStore } from 'react-redux'
 import { copyTable } from '@kepler.gl/table'
+import { getFilterRecord } from '@kepler.gl/utils'
+import { nativeFilterInputs } from '../lib/nativeFilterInputs'
 import { createOrUpdateFilter, removeFilter } from '@kepler.gl/actions'
 import { getMosaicDashboardPanelId, getMosaicDashboardSelectionName } from '@sqlrooms/mosaic'
-import { column, isIn, isBetween, literal, Query, min, max } from '@uwdata/mosaic-sql'
-import { widgetFilterId, widgetTableName } from './widgetStore'
+import { column, isIn, isBetween, literal } from '@uwdata/mosaic-sql'
+import { widgetFilterId } from './widgetStore'
 
 // Native Kepler filters retain their semantics (including GPU/time/polygon filters).
 export function useWidgetFilters (store, datasetId, ready) {
@@ -17,10 +19,30 @@ export function useWidgetFilters (store, datasetId, ready) {
   const layers = useSelector(state => state.keplerGl.kepler?.visState.layers)
   const selection = store.getState().mosaic.getSelection(getMosaicDashboardSelectionName(datasetId))
   const source = useRef({})
+  const nativeCache = useRef(null)
   const defaults = useRef(new Map())
   const [error, setError] = useState('')
-  const generation = useRef(0)
+  const [nativeError, setNativeError] = useState('')
   const mirrored = useRef(new Map())
+
+  useEffect(() => {
+    if (!ready || !table) return
+    try {
+      // Applicability is Kepler's contract. Chart-owned filters are separate Mosaic clauses.
+      const native = getFilterRecord(datasetId, filters.filter(filter => !filter.id.startsWith('widget:')), { cpuOnly: true, ignoreDomain: true }).cpu
+      const inputs = nativeFilterInputs(table, native, layers)
+      const previous = nativeCache.current
+      if (previous?.selection === selection && inputs.length === previous.inputs.length && inputs.every((input, index) => Object.is(input, previous.inputs[index]))) return
+      // Kepler's internal diff misses enabled/spatial changes; scan only after our inputs change.
+      const copy = copyTable(table)
+      copy.filterRecord = undefined
+      const indices = copy.filterTable(native, layers, { cpuOnly: true, ignoreDomain: true }).filteredIndex
+      const predicate = indices.length === table.dataContainer.numRows() ? null : indices.length ? isIn(column('__dekart_row'), indices) : literal(false)
+      selection.update({ source: source.current, value: predicate ? 'Map filters' : null, predicate })
+      nativeCache.current = { inputs, selection }
+      setNativeError('')
+    } catch (error) { nativeCache.current = null; setNativeError(`Could not apply map filters: ${error.message}`) }
+  }, [ready, table, filters, layers, selection, datasetId])
 
   useEffect(() => {
     if (!ready || !table) return
@@ -32,11 +54,6 @@ export function useWidgetFilters (store, datasetId, ready) {
           if (filter.id.startsWith('widget:') && filter.dataId.includes(datasetId) && !panelFilters.has(filter.id)) dispatch(removeFilter(index))
         })
       }
-      const native = (filters || []).filter(filter => !filter.id.startsWith('widget:'))
-      const copy = copyTable(table)
-      copy.filterRecord = undefined
-      const indices = copy.filterTable(native, layers, { cpuOnly: true, ignoreDomain: true }).filteredIndex
-      selection.update({ source: source.current, value: indices.length === table.dataContainer.numRows() ? null : 'Map filters', predicate: indices.length === table.dataContainer.numRows() ? null : indices.length ? isIn(column('__dekart_row'), indices) : literal(false) })
       // A filter edited or removed in Kepler also updates its originating widget.
       const dashboard = store.getState().mosaicDashboard.getDashboard(datasetId)
       for (const panel of dashboard?.panels || []) {
@@ -48,16 +65,19 @@ export function useWidgetFilters (store, datasetId, ready) {
         const clause = selection.clauses.find(clause => clients.includes(clause.source) || clause.source === defaults.current.get(panel.id))
         if (clause) {
           const field = column(panel.config.settings.field)
-          selection.update({ ...clause, value: current?.value ?? null, predicate: !current ? null : panel.config.chartType === 'histogram' ? isBetween(field, current.value) : isIn(field, current.value.map(literal)) })
+          const value = !current ? null : panel.config.chartType === 'count-plot' ? current.value.map(value => [value]) : current.value
+          // Mosaic's category Toggle keeps its own point tuples; external edits must update them too.
+          if (panel.config.chartType === 'count-plot' && clients.includes(clause.source)) clause.source.value = value
+          if (!current) selection.reset([clause])
+          else selection.update({ ...clause, value, predicate: panel.config.chartType === 'histogram' ? isBetween(field, current.value) : isIn(field, current.value.map(literal)) })
         }
       }
       setError('')
     } catch (error) { setError(`Could not apply map filters: ${error.message}`) }
-  }, [ready, table, filters, layers, selection, panels, datasetId, dispatch])
+  }, [ready, table, filters, selection, panels, datasetId, dispatch])
 
   useEffect(() => {
     if (!ready) return
-    let alive = true
     const api = store.getState().mosaicDashboard
     // Saved widget-owned Kepler filters reconstruct defaults through stable panel identities.
     const restoreDefaults = () => {
@@ -85,8 +105,7 @@ export function useWidgetFilters (store, datasetId, ready) {
     }
     const stop = store.subscribe(restoreDefaults)
     restoreDefaults()
-    const sync = async () => {
-      const current = ++generation.current
+    const sync = () => {
       const dashboard = api.getDashboard(datasetId)
       const active = new Set()
       for (const panel of dashboard?.panels || []) {
@@ -104,31 +123,22 @@ export function useWidgetFilters (store, datasetId, ready) {
         if (!selected?.predicate) continue
         active.add(widgetFilterId(panel.id))
         const field = panel.config.settings.field
-        let value
         try {
-          if (panel.config.chartType === 'histogram') {
-            // Query the actual bin predicate, rather than treating pixel brush bounds as values.
-            const result = await store.getState().db.connector.query(Query.from(widgetTableName(datasetId)).select({ lo: min(field), hi: max(field) }).where(selected.predicate).toString())
-            const row = result.toArray()[0]
-            value = row.lo == null ? selected.value : [Number(row.lo), Number(row.hi)]
-          } else {
-            value = selected.value.flat()
-          }
-          if (!alive || current !== generation.current) return
+          // Both engines consume the same raw-field interval; no async bounds translation.
+          const value = panel.config.chartType === 'histogram' ? selected.value : selected.value.flat()
           mirrored.current.set(panel.id, value)
           const existing = redux.getState().keplerGl.kepler.visState.filters.find(filter => filter.id === widgetFilterId(panel.id))
           if (JSON.stringify(existing?.value) !== JSON.stringify(value)) dispatch(createOrUpdateFilter(widgetFilterId(panel.id), datasetId, field, value))
         } catch (error) { setError(`Could not link the widget to the map: ${error.message}`) }
       }
-      if (!alive || current !== generation.current) return
       const currentFilters = redux.getState().keplerGl.kepler.visState.filters
       currentFilters.map((filter, index) => ({ filter, index })).reverse().forEach(({ filter, index }) => {
         if (filter.id.startsWith('widget:') && filter.dataId.includes(datasetId) && !active.has(filter.id)) dispatch(removeFilter(index))
       })
     }
     selection.addEventListener('value', sync)
-    return () => { alive = false; generation.current++; stop(); selection.removeEventListener('value', sync) }
+    return () => { stop(); selection.removeEventListener('value', sync) }
   }, [store, datasetId, ready, selection, dispatch, redux])
 
-  return { error }
+  return { error: nativeError || error }
 }
