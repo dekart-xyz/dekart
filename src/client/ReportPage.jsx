@@ -401,7 +401,7 @@ function buildMapboxStaticIconURL (styleURL, token) {
   return `https://api.mapbox.com/styles/v1/${path}/static/0,0,1/160x120?access_token=${token}&logo=false&attribution=false`
 }
 
-function Kepler ({ snapshot, editing, onSnapshotBasemapReadyChange }) {
+function Kepler ({ snapshot, onSnapshotBasemapReadyChange }) {
   const env = useSelector(state => state.env)
   const report = useSelector(state => state.report)
   const isSnowpark = useSelector(state => state.env.isSnowpark)
@@ -464,7 +464,7 @@ function Kepler ({ snapshot, editing, onSnapshotBasemapReadyChange }) {
           <CatchKeplerError onError={(err) => dispatch(setError(err))}>
             <KeplerGl
               id='kepler'
-              readOnly={!editing}
+              readOnly={Boolean(snapshot)}
               mapboxApiAccessToken={env.variables.MAPBOX_TOKEN}
               width={width}
               height={height}
@@ -585,12 +585,11 @@ export default function ReportPage ({ edit, snapshot }) {
       <div className={classnames(styles.body, { [styles.snapshotBody]: snapshot })}>
         <div className={classnames(styles.keplerFlexWrapper, { [styles.hideMapSettings]: leftPanel !== 'map' || !paneOpen })}>
           <div className={styles.keplerFlex}>
-            {!snapshot && <MapPaneHeader selected={leftPanel} expanded={paneOpen} canEdit={edit && report.canWrite && !readOnly} chartCount={chartCount} onSelect={selectPane} onToggle={() => paneOpen ? setPaneCollapsed(true) : selectPane(leftPanel)} />}
+            {!snapshot && <MapPaneHeader selected={leftPanel} expanded={paneOpen} chartCount={chartCount} onSelect={selectPane} onToggle={() => paneOpen ? setPaneCollapsed(true) : selectPane(leftPanel)} />}
             {!snapshot && <FilterStrip visible={paneOpen && leftPanel === 'widgets'} editing={edit && report.canWrite && !readOnly} onEdit={editFilter} />}
             {!snapshot && <ReportWidgets key={id} visible={paneOpen && leftPanel === 'widgets'} onChartCountChange={setChartCount} editing={edit && report.canWrite && !readOnly} onOpenData={() => document.getElementById('dekart-report-page-tabs')?.scrollIntoView({ block: 'nearest' })} />}
             <Kepler
               snapshot={snapshot}
-              editing={edit && report.canWrite && !readOnly}
               onSnapshotBasemapReadyChange={setSnapshotBasemapReady}
             />
             {!snapshot
