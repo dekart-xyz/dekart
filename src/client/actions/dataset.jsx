@@ -42,7 +42,9 @@ export function createDataset (reportId) {
     dispatch({ type: createDataset.name })
     const request = new CreateDatasetRequest()
     request.setReportId(reportId)
-    dispatch(grpcCall(Dekart.CreateDataset, request))
+    dispatch(grpcCall(Dekart.CreateDataset, request, response => {
+      dispatch({ type: 'widgetDatasetCreated', datasetId: response.id })
+    }))
   }
 }
 

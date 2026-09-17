@@ -20501,7 +20501,8 @@ proto.Report.toObject = function(includeInstance, msg) {
     autoRefreshIntervalSeconds: jspb.Message.getFieldWithDefault(msg, 22, 0),
     versionId: jspb.Message.getFieldWithDefault(msg, 23, ""),
     hasMapPreview: jspb.Message.getBooleanFieldWithDefault(msg, 24, false),
-    connectionTypesList: (f = jspb.Message.getRepeatedField(msg, 25)) == null ? undefined : f
+    connectionTypesList: (f = jspb.Message.getRepeatedField(msg, 25)) == null ? undefined : f,
+    widgetsConfig: jspb.Message.getFieldWithDefault(msg, 26, "")
   };
 
   if (includeInstance) {
@@ -20641,6 +20642,10 @@ proto.Report.deserializeBinaryFromReader = function(msg, reader) {
       for (var i = 0; i < values.length; i++) {
         msg.addConnectionTypes(values[i]);
       }
+      break;
+    case 26:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setWidgetsConfig(value);
       break;
     default:
       reader.skipField();
@@ -20845,6 +20850,13 @@ proto.Report.serializeBinaryToWriter = function(message, writer) {
   if (f.length > 0) {
     writer.writePackedEnum(
       25,
+      f
+    );
+  }
+  f = message.getWidgetsConfig();
+  if (f.length > 0) {
+    writer.writeString(
+      26,
       f
     );
   }
@@ -21356,6 +21368,24 @@ proto.Report.prototype.addConnectionTypes = function(value, opt_index) {
  */
 proto.Report.prototype.clearConnectionTypesList = function() {
   return this.setConnectionTypesList([]);
+};
+
+
+/**
+ * optional string widgets_config = 26;
+ * @return {string}
+ */
+proto.Report.prototype.getWidgetsConfig = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 26, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.Report} returns this
+ */
+proto.Report.prototype.setWidgetsConfig = function(value) {
+  return jspb.Message.setProto3StringField(this, 26, value);
 };
 
 
@@ -23402,7 +23432,9 @@ proto.UpdateReportRequest.toObject = function(includeInstance, msg) {
     proto.Query.toObject, includeInstance),
     queryParamsList: jspb.Message.toObjectList(msg.getQueryParamsList(),
     proto.QueryParam.toObject, includeInstance),
-    readme: (f = msg.getReadme()) && proto.Readme.toObject(includeInstance, f)
+    readme: (f = msg.getReadme()) && proto.Readme.toObject(includeInstance, f),
+    widgetsConfig: jspb.Message.getFieldWithDefault(msg, 7, ""),
+    expectedVersionId: jspb.Message.getFieldWithDefault(msg, 8, "")
   };
 
   if (includeInstance) {
@@ -23465,6 +23497,14 @@ proto.UpdateReportRequest.deserializeBinaryFromReader = function(msg, reader) {
       var value = new proto.Readme;
       reader.readMessage(value,proto.Readme.deserializeBinaryFromReader);
       msg.setReadme(value);
+      break;
+    case 7:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setWidgetsConfig(value);
+      break;
+    case 8:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setExpectedVersionId(value);
       break;
     default:
       reader.skipField();
@@ -23538,6 +23578,20 @@ proto.UpdateReportRequest.serializeBinaryToWriter = function(message, writer) {
       6,
       f,
       proto.Readme.serializeBinaryToWriter
+    );
+  }
+  f = /** @type {string} */ (jspb.Message.getField(message, 7));
+  if (f != null) {
+    writer.writeString(
+      7,
+      f
+    );
+  }
+  f = /** @type {string} */ (jspb.Message.getField(message, 8));
+  if (f != null) {
+    writer.writeString(
+      8,
+      f
     );
   }
 };
@@ -23710,6 +23764,78 @@ proto.UpdateReportRequest.prototype.hasReadme = function() {
 };
 
 
+/**
+ * optional string widgets_config = 7;
+ * @return {string}
+ */
+proto.UpdateReportRequest.prototype.getWidgetsConfig = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 7, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.UpdateReportRequest} returns this
+ */
+proto.UpdateReportRequest.prototype.setWidgetsConfig = function(value) {
+  return jspb.Message.setField(this, 7, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.UpdateReportRequest} returns this
+ */
+proto.UpdateReportRequest.prototype.clearWidgetsConfig = function() {
+  return jspb.Message.setField(this, 7, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.UpdateReportRequest.prototype.hasWidgetsConfig = function() {
+  return jspb.Message.getField(this, 7) != null;
+};
+
+
+/**
+ * optional string expected_version_id = 8;
+ * @return {string}
+ */
+proto.UpdateReportRequest.prototype.getExpectedVersionId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 8, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.UpdateReportRequest} returns this
+ */
+proto.UpdateReportRequest.prototype.setExpectedVersionId = function(value) {
+  return jspb.Message.setField(this, 8, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.UpdateReportRequest} returns this
+ */
+proto.UpdateReportRequest.prototype.clearExpectedVersionId = function() {
+  return jspb.Message.setField(this, 8, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.UpdateReportRequest.prototype.hasExpectedVersionId = function() {
+  return jspb.Message.getField(this, 8) != null;
+};
+
+
 
 
 
@@ -23742,7 +23868,8 @@ proto.UpdateReportResponse.prototype.toObject = function(opt_includeInstance) {
  */
 proto.UpdateReportResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
-    updatedAt: jspb.Message.getFieldWithDefault(msg, 1, 0)
+    updatedAt: jspb.Message.getFieldWithDefault(msg, 1, 0),
+    versionId: jspb.Message.getFieldWithDefault(msg, 2, "")
   };
 
   if (includeInstance) {
@@ -23783,6 +23910,10 @@ proto.UpdateReportResponse.deserializeBinaryFromReader = function(msg, reader) {
       var value = /** @type {number} */ (reader.readInt64());
       msg.setUpdatedAt(value);
       break;
+    case 2:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setVersionId(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -23819,6 +23950,13 @@ proto.UpdateReportResponse.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
+  f = message.getVersionId();
+  if (f.length > 0) {
+    writer.writeString(
+      2,
+      f
+    );
+  }
 };
 
 
@@ -23837,6 +23975,24 @@ proto.UpdateReportResponse.prototype.getUpdatedAt = function() {
  */
 proto.UpdateReportResponse.prototype.setUpdatedAt = function(value) {
   return jspb.Message.setProto3IntField(this, 1, value);
+};
+
+
+/**
+ * optional string version_id = 2;
+ * @return {string}
+ */
+proto.UpdateReportResponse.prototype.getVersionId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 2, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.UpdateReportResponse} returns this
+ */
+proto.UpdateReportResponse.prototype.setVersionId = function(value) {
+  return jspb.Message.setProto3StringField(this, 2, value);
 };
 
 
@@ -24163,7 +24319,8 @@ proto.UpdateReportMapConfigRequest.prototype.toObject = function(opt_includeInst
 proto.UpdateReportMapConfigRequest.toObject = function(includeInstance, msg) {
   var f, obj = {
     reportId: jspb.Message.getFieldWithDefault(msg, 1, ""),
-    mapConfig: jspb.Message.getFieldWithDefault(msg, 2, "")
+    mapConfig: jspb.Message.getFieldWithDefault(msg, 2, ""),
+    expectedVersionId: jspb.Message.getFieldWithDefault(msg, 3, "")
   };
 
   if (includeInstance) {
@@ -24208,6 +24365,10 @@ proto.UpdateReportMapConfigRequest.deserializeBinaryFromReader = function(msg, r
       var value = /** @type {string} */ (reader.readString());
       msg.setMapConfig(value);
       break;
+    case 3:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setExpectedVersionId(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -24251,6 +24412,13 @@ proto.UpdateReportMapConfigRequest.serializeBinaryToWriter = function(message, w
       f
     );
   }
+  f = /** @type {string} */ (jspb.Message.getField(message, 3));
+  if (f != null) {
+    writer.writeString(
+      3,
+      f
+    );
+  }
 };
 
 
@@ -24290,6 +24458,42 @@ proto.UpdateReportMapConfigRequest.prototype.setMapConfig = function(value) {
 };
 
 
+/**
+ * optional string expected_version_id = 3;
+ * @return {string}
+ */
+proto.UpdateReportMapConfigRequest.prototype.getExpectedVersionId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 3, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.UpdateReportMapConfigRequest} returns this
+ */
+proto.UpdateReportMapConfigRequest.prototype.setExpectedVersionId = function(value) {
+  return jspb.Message.setField(this, 3, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.UpdateReportMapConfigRequest} returns this
+ */
+proto.UpdateReportMapConfigRequest.prototype.clearExpectedVersionId = function() {
+  return jspb.Message.setField(this, 3, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.UpdateReportMapConfigRequest.prototype.hasExpectedVersionId = function() {
+  return jspb.Message.getField(this, 3) != null;
+};
+
+
 
 
 
@@ -24322,7 +24526,8 @@ proto.UpdateReportMapConfigResponse.prototype.toObject = function(opt_includeIns
  */
 proto.UpdateReportMapConfigResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
-    updatedAt: jspb.Message.getFieldWithDefault(msg, 1, 0)
+    updatedAt: jspb.Message.getFieldWithDefault(msg, 1, 0),
+    versionId: jspb.Message.getFieldWithDefault(msg, 2, "")
   };
 
   if (includeInstance) {
@@ -24363,6 +24568,10 @@ proto.UpdateReportMapConfigResponse.deserializeBinaryFromReader = function(msg, 
       var value = /** @type {number} */ (reader.readInt64());
       msg.setUpdatedAt(value);
       break;
+    case 2:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setVersionId(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -24399,6 +24608,13 @@ proto.UpdateReportMapConfigResponse.serializeBinaryToWriter = function(message, 
       f
     );
   }
+  f = message.getVersionId();
+  if (f.length > 0) {
+    writer.writeString(
+      2,
+      f
+    );
+  }
 };
 
 
@@ -24417,6 +24633,24 @@ proto.UpdateReportMapConfigResponse.prototype.getUpdatedAt = function() {
  */
 proto.UpdateReportMapConfigResponse.prototype.setUpdatedAt = function(value) {
   return jspb.Message.setProto3IntField(this, 1, value);
+};
+
+
+/**
+ * optional string version_id = 2;
+ * @return {string}
+ */
+proto.UpdateReportMapConfigResponse.prototype.getVersionId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 2, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.UpdateReportMapConfigResponse} returns this
+ */
+proto.UpdateReportMapConfigResponse.prototype.setVersionId = function(value) {
+  return jspb.Message.setProto3StringField(this, 2, value);
 };
 
 

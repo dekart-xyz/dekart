@@ -668,15 +668,33 @@ func (s *Server) callUpdateReportMapConfigTool(ctx context.Context, raw json.Raw
 			"Map configuration is too large (%d bytes). Maximum allowed size is %d bytes. Please simplify your map configuration.",
 			len(request.MapConfig), MaxMapConfigSize)
 	}
-	// Validate Kepler map config schema and dataset bindings before persisting.
-	if err := s.validateReportMapConfig(ctx, request.ReportId, request.MapConfig); err != nil {
-		return nil, err
-	}
 	updatedAt := time.Now()
 	newVersionID := newUUID()
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer tx.Rollback()
+	if err := lockReportTx(ctx, tx, request.ReportId); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	var currentVersion, currentWidgets sql.NullString
+	if err := tx.QueryRowContext(ctx, "SELECT version_id, widgets_config FROM reports WHERE id=$1", request.ReportId).Scan(&currentVersion, &currentWidgets); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if request.ExpectedVersionId != nil && request.GetExpectedVersionId() != currentVersion.String {
+		return nil, status.Error(codes.Aborted, "This report changed in another session. Reload before saving.")
+	}
+	if currentWidgets.String != "" && request.ExpectedVersionId == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Reload this dashboard before updating its map.")
+	}
+	// Validate bindings while the report lock prevents concurrent dataset changes.
+	if err := s.validateReportMapConfigTx(ctx, tx, request.ReportId, request.MapConfig); err != nil {
+		return nil, err
+	}
 	var result sql.Result
 	if workspaceInfo.IsPlayground {
-		result, err = s.db.ExecContext(ctx,
+		result, err = tx.ExecContext(ctx,
 			`update
 			reports
 		set map_config=$1, updated_at=$2, version_id=$3
@@ -688,7 +706,7 @@ func (s *Server) callUpdateReportMapConfigTool(ctx context.Context, raw json.Raw
 			claims.Email,
 		)
 	} else {
-		result, err = s.db.ExecContext(ctx,
+		result, err = tx.ExecContext(ctx,
 			`update
 			reports
 		set map_config=$1, updated_at=$2, version_id=$3
@@ -711,11 +729,14 @@ func (s *Server) callUpdateReportMapConfigTool(ctx context.Context, raw json.Raw
 	if affectedRows == 0 {
 		return nil, status.Error(codes.NotFound, fmt.Sprintf("report not found id:%s", request.ReportId))
 	}
-	if err := s.createReportSnapshotWithVersionID(ctx, newVersionID, request.ReportId, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE); err != nil {
+	if err := s.createReportSnapshotWithVersionIDTx(ctx, tx, newVersionID, request.ReportId, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if err := tx.Commit(); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	s.reportStreams.Ping(request.ReportId)
-	return mcp.MarshalProtoJSON(&proto.UpdateReportMapConfigResponse{UpdatedAt: updatedAt.Unix()})
+	return mcp.MarshalProtoJSON(&proto.UpdateReportMapConfigResponse{UpdatedAt: updatedAt.Unix(), VersionId: newVersionID})
 }
 
 // callAddReportReadmeTool adds readme markdown without exposing dataset deletion.
@@ -1101,12 +1122,13 @@ func mcpToolDefinitions() []mcpTool {
 			Name:         "update_report_map_config",
 			Description:  "Update report map config by report_id.",
 			InputSchema:  mcpschema.ForProto(&proto.UpdateReportMapConfigRequest{}, []string{"report_id", "map_config"}),
-			WhenToUse:    "Use to apply Kepler.gl map configuration changes (layers, filters, map style, map state). Before calling, agent should preflight map_config semantics: each layer dataId exists, required layer columns exist, and visual-channel field names exist in dataset schema. In visState.layers[*].config.dataId, use report dataset_id values (kepler data ids), not file_id or tab labels.",
+			WhenToUse:    "Use to apply Kepler.gl map configuration changes (layers, filters, map style, map state). Read get_report_properties first and pass its report.version_id as expected_version_id so map and chart state share one conditional revision. Before calling, agent should preflight map_config semantics: each layer dataId exists, required layer columns exist, and visual-channel field names exist in dataset schema. In visState.layers[*].config.dataId, use report dataset_id values (kepler data ids), not file_id or tab labels.",
 			WhenNotToUse: "Do not use when only report title or dataset name should change.",
 			SideEffects:  []string{"write"},
 			ExampleInput: map[string]any{
-				"report_id":  "00000000-0000-0000-0000-000000000000",
-				"map_config": "{\"version\":\"v1\",\"config\":{\"visState\":{\"layers\":[]},\"mapState\":{},\"mapStyle\":{}}}",
+				"report_id":           "00000000-0000-0000-0000-000000000000",
+				"map_config":          "{\"version\":\"v1\",\"config\":{\"visState\":{\"layers\":[]},\"mapState\":{},\"mapStyle\":{}}}",
+				"expected_version_id": "00000000-0000-0000-0000-000000000001",
 			},
 			NextTools: []string{"create_report_snapshot", "update_report_title"},
 			ReferenceDocs: []string{

@@ -57,15 +57,31 @@ function getReportStream (reportId, onMessage, onError) {
 }
 
 export function toggleReportEdit (edit) {
-  return function (dispatch, getState) {
-    const report = getState().report
+  return async function (dispatch, getState) {
+    let state = getState()
+    const report = state.report
     let fullscreen = null
     if (edit) {
       fullscreen = false
     } else if (report) {
       fullscreen = !report.readme
     }
+    if (!edit && state.reportStatus.edit) {
+      if (reportSaveBarrier) await reportSaveBarrier.promise
+      state = getState()
+      const { reportStatus, workspace } = state
+      if (reportStatus.lastChanged > reportStatus.lastSaved && report.canWrite && !workspace.readOnly && reportStatus.online && !reportStatus.saving) {
+        const saved = await dispatch(saveMap(reportStatus.lastMapConfigChanged > reportStatus.lastPreviewSaved))
+        if (!saved) return false
+      }
+    }
     dispatch({ type: toggleReportEdit.name, edit, fullscreen })
+    // Viewer exploration is intentionally local. Entering edit mode restores the
+    // last authored map instead of promoting view-only filters into the report.
+    if (edit && report?.mapConfig) {
+      receiveReportUpdateMapConfig(report, dispatch, getState, { keepExistingConfig: true, replaceFilters: true })
+    }
+    return true
   }
 }
 
@@ -272,7 +288,7 @@ export function reportUpdate (reportStreamResponse) {
       user,
       queryParams: currentQueryParams,
       queryJobs: prevQueryJobsList,
-      reportStatus: { lastSaved, savedReportVersion, lastMapConfigChanged, snapshotMode },
+      reportStatus: { lastSaved, savedReportVersion, savedVersionId, lastMapConfigChanged, snapshotMode },
       hasOpenedKeplerPanel
     } = state
     const activeQueryParams = reconcileQueryParamsState(currentQueryParams, report.queryParamsList, window.location.search)
@@ -289,7 +305,7 @@ export function reportUpdate (reportStreamResponse) {
       !initialHydration &&
       serializedMapConfigChanged &&
       report.mapConfig &&
-      report.updatedAt > savedReportVersion
+      (report.versionId ? report.versionId !== savedVersionId : report.updatedAt > savedReportVersion)
     )
     const hasRemoteMapConflict = liveMapConfigChanged && hasUnsavedUserMapChanges
     const liveMapConfigAccepted = liveMapConfigChanged && !hasUnsavedUserMapChanges
@@ -542,8 +558,8 @@ export function reportTitleChange (title) {
   }
 }
 
-export function savedReport (lastSaved, savedReportVersion) {
-  return { type: savedReport.name, lastSaved, savedReportVersion }
+export function savedReport (lastSaved, savedReportVersion, versionId, widgetRevision) {
+  return { type: savedReport.name, lastSaved, savedReportVersion, versionId, widgetRevision }
 }
 
 export function saveMapFailed () {
@@ -629,7 +645,7 @@ export function exportMapPreview () {
 export function saveMap (mapViewChanged = false) {
   return async (dispatch, getState) => {
     const state = getState()
-    const { keplerGl, report, reportStatus, queryStatus, queryParams, readme } = state
+    const { keplerGl, report, reportStatus, queryStatus, queryParams, readme, widgets } = state
     const lastSaved = reportStatus.lastChanged
     const configToSave = KeplerGlSchema.getConfigToSave(keplerGl.kepler)
     const mapConfig = JSON.stringify(configToSave)
@@ -654,6 +670,8 @@ export function saveMap (mapViewChanged = false) {
     }
     request.setReportId(report.id)
     request.setMapConfig(mapConfig)
+    request.setExpectedVersionId(widgets.revision > widgets.savedRevision ? widgets.versionId : report.versionId)
+    if (widgets.revision > widgets.savedRevision && widgets.compatibility === 'supported') request.setWidgetsConfig(JSON.stringify(widgets.config))
     request.setTitle(reportStatus.title)
     request.setQueryList(queryUpdates)
     request.setQueryParamsList(getQueryParamsObjArr(queryParams.list))
@@ -668,9 +686,11 @@ export function saveMap (mapViewChanged = false) {
       if (mapViewChanged) {
         dispatch(exportMapPreview())
       }
-      dispatch(savedReport(lastSaved, res.updatedAt))
+      dispatch(savedReport(lastSaved, res.updatedAt, res.versionId, widgets.revision))
+      return true
     } catch (err) {
       dispatch(saveMapFailed())
+      return false
     } finally {
       resolveReportSaveBarrier(barrier)
     }

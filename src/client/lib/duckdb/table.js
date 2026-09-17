@@ -126,7 +126,7 @@ export class DekartDuckDBTable extends KeplerGlDuckDbTable {
       const { schema = 'main', name } = data.dekartDuckDBTable
       const reference = `${quoteIdentifier(schema)}.${quoteIdentifier(name)}`
       const columns = await getColumnTypes(connection, reference)
-      const result = await connection.query(castDuckDBTypesForKepler(reference, columns))
+      const result = await connection.query(castDuckDBTypesForKepler(reference, columns) + ' ORDER BY rowid')
       setGeoArrowWKBExtension(result, columns)
       const compactColumns = compactArrowColumns(
         [...Array(result.numCols).keys()].map(index => result.getChildAt(index))

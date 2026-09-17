@@ -23,6 +23,8 @@ export function report (state = null, action) {
       return null
     case reportUpdate.name:
       return action.report
+    case savedReport.name:
+      return state ? { ...state, versionId: action.versionId || state.versionId } : state
     default:
       return state
   }
@@ -85,6 +87,7 @@ const defaultReportStatus = {
   lastMapConfigChanged: 0,
   lastPreviewSaved: 0, // last time preview was saved
   savedReportVersion: 0,
+  savedVersionId: '',
   fullscreen: null,
   autoRefreshIntervalSeconds: 0,
   queryJobRefreshTimeoutId: null,
@@ -111,6 +114,7 @@ export function reportStatus (state = defaultReportStatus, action) {
   switch (action.type) {
     case updateQueryParamsFromQueries.name:
     case queryParamChanged.name:
+    case 'widgetsChanged':
     case queryChanged.name:
     case setReadmeValue.name: {
       const lastChanged = Date.now()
@@ -154,7 +158,8 @@ export function reportStatus (state = defaultReportStatus, action) {
         ...state,
         saving: false,
         lastSaved: action.lastSaved,
-        savedReportVersion: action.savedReportVersion
+        savedReportVersion: action.savedReportVersion,
+        savedVersionId: action.versionId || state.savedVersionId
       }
     case saveMapFailed.name:
       return {
@@ -182,6 +187,7 @@ export function reportStatus (state = defaultReportStatus, action) {
         lastUpdated: Date.now(),
         fullscreen,
         autoRefreshIntervalSeconds: action.report.autoRefreshIntervalSeconds || 0,
+        savedVersionId: action.initialHydration || action.liveMapConfigAccepted ? action.report.versionId : state.savedVersionId,
         queryJobRefreshTimeoutId: null
       }
     }
@@ -201,7 +207,10 @@ export function reportStatus (state = defaultReportStatus, action) {
       return {
         ...state,
         edit: action.edit,
-        fullscreen: action.fullscreen
+        fullscreen: action.fullscreen,
+        ...(action.edit && !state.edit
+          ? { lastChanged: state.lastSaved, lastMapConfigChanged: state.lastSaved }
+          : {})
       }
     }
     case closeReport.name:
