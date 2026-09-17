@@ -8977,7 +8977,8 @@ proto.GetWorkspaceResponse.toObject = function(includeInstance, msg) {
     proto.WorkspaceInvite.toObject, includeInstance),
     addedUsersCount: jspb.Message.getFieldWithDefault(msg, 5, 0),
     readOnly: jspb.Message.getBooleanFieldWithDefault(msg, 6, false),
-    readOnlyReason: jspb.Message.getFieldWithDefault(msg, 7, 0)
+    readOnlyReason: jspb.Message.getFieldWithDefault(msg, 7, 0),
+    hasReports: jspb.Message.getBooleanFieldWithDefault(msg, 8, false)
   };
 
   if (includeInstance) {
@@ -9045,6 +9046,10 @@ proto.GetWorkspaceResponse.deserializeBinaryFromReader = function(msg, reader) {
     case 7:
       var value = /** @type {!proto.GetWorkspaceResponse.ReadOnlyReason} */ (reader.readEnum());
       msg.setReadOnlyReason(value);
+      break;
+    case 8:
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setHasReports(value);
       break;
     default:
       reader.skipField();
@@ -9128,6 +9133,13 @@ proto.GetWorkspaceResponse.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
+  f = message.getHasReports();
+  if (f) {
+    writer.writeBool(
+      8,
+      f
+    );
+  }
 };
 
 
@@ -9137,7 +9149,8 @@ proto.GetWorkspaceResponse.serializeBinaryToWriter = function(message, writer) {
 proto.GetWorkspaceResponse.ReadOnlyReason = {
   READ_ONLY_REASON_UNSPECIFIED: 0,
   READ_ONLY_REASON_SUBSCRIPTION_EXPIRED: 1,
-  READ_ONLY_REASON_LICENSE_KEY_EXPIRED: 2
+  READ_ONLY_REASON_LICENSE_KEY_EXPIRED: 2,
+  READ_ONLY_REASON_TRIAL_NOT_STARTED: 3
 };
 
 /**
@@ -9341,6 +9354,24 @@ proto.GetWorkspaceResponse.prototype.getReadOnlyReason = function() {
  */
 proto.GetWorkspaceResponse.prototype.setReadOnlyReason = function(value) {
   return jspb.Message.setProto3EnumField(this, 7, value);
+};
+
+
+/**
+ * optional bool has_reports = 8;
+ * @return {boolean}
+ */
+proto.GetWorkspaceResponse.prototype.getHasReports = function() {
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 8, false));
+};
+
+
+/**
+ * @param {boolean} value
+ * @return {!proto.GetWorkspaceResponse} returns this
+ */
+proto.GetWorkspaceResponse.prototype.setHasReports = function(value) {
+  return jspb.Message.setProto3BooleanField(this, 8, value);
 };
 
 
@@ -31779,8 +31810,7 @@ proto.ForkReportResponse.prototype.toObject = function(opt_includeInstance) {
  */
 proto.ForkReportResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
-    reportId: jspb.Message.getFieldWithDefault(msg, 1, ""),
-    reportLimitReached: jspb.Message.getBooleanFieldWithDefault(msg, 2, false)
+    reportId: jspb.Message.getFieldWithDefault(msg, 1, "")
   };
 
   if (includeInstance) {
@@ -31821,10 +31851,6 @@ proto.ForkReportResponse.deserializeBinaryFromReader = function(msg, reader) {
       var value = /** @type {string} */ (reader.readString());
       msg.setReportId(value);
       break;
-    case 2:
-      var value = /** @type {boolean} */ (reader.readBool());
-      msg.setReportLimitReached(value);
-      break;
     default:
       reader.skipField();
       break;
@@ -31861,13 +31887,6 @@ proto.ForkReportResponse.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
-  f = message.getReportLimitReached();
-  if (f) {
-    writer.writeBool(
-      2,
-      f
-    );
-  }
 };
 
 
@@ -31886,24 +31905,6 @@ proto.ForkReportResponse.prototype.getReportId = function() {
  */
 proto.ForkReportResponse.prototype.setReportId = function(value) {
   return jspb.Message.setProto3StringField(this, 1, value);
-};
-
-
-/**
- * optional bool report_limit_reached = 2;
- * @return {boolean}
- */
-proto.ForkReportResponse.prototype.getReportLimitReached = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 2, false));
-};
-
-
-/**
- * @param {boolean} value
- * @return {!proto.ForkReportResponse} returns this
- */
-proto.ForkReportResponse.prototype.setReportLimitReached = function(value) {
-  return jspb.Message.setProto3BooleanField(this, 2, value);
 };
 
 
@@ -32040,8 +32041,7 @@ proto.CreateReportResponse.prototype.toObject = function(opt_includeInstance) {
  */
 proto.CreateReportResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
-    report: (f = msg.getReport()) && proto.Report.toObject(includeInstance, f),
-    reportLimitReached: jspb.Message.getBooleanFieldWithDefault(msg, 2, false)
+    report: (f = msg.getReport()) && proto.Report.toObject(includeInstance, f)
   };
 
   if (includeInstance) {
@@ -32083,10 +32083,6 @@ proto.CreateReportResponse.deserializeBinaryFromReader = function(msg, reader) {
       reader.readMessage(value,proto.Report.deserializeBinaryFromReader);
       msg.setReport(value);
       break;
-    case 2:
-      var value = /** @type {boolean} */ (reader.readBool());
-      msg.setReportLimitReached(value);
-      break;
     default:
       reader.skipField();
       break;
@@ -32122,13 +32118,6 @@ proto.CreateReportResponse.serializeBinaryToWriter = function(message, writer) {
       1,
       f,
       proto.Report.serializeBinaryToWriter
-    );
-  }
-  f = message.getReportLimitReached();
-  if (f) {
-    writer.writeBool(
-      2,
-      f
     );
   }
 };
@@ -32168,24 +32157,6 @@ proto.CreateReportResponse.prototype.clearReport = function() {
  */
 proto.CreateReportResponse.prototype.hasReport = function() {
   return jspb.Message.getField(this, 1) != null;
-};
-
-
-/**
- * optional bool report_limit_reached = 2;
- * @return {boolean}
- */
-proto.CreateReportResponse.prototype.getReportLimitReached = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 2, false));
-};
-
-
-/**
- * @param {boolean} value
- * @return {!proto.CreateReportResponse} returns this
- */
-proto.CreateReportResponse.prototype.setReportLimitReached = function(value) {
-  return jspb.Message.setProto3BooleanField(this, 2, value);
 };
 
 

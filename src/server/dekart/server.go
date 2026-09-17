@@ -105,6 +105,20 @@ func (s Server) requireWorkspaceIDWrite(ctx context.Context, workspaceID string)
 			ReadOnlyReason: proto.GetWorkspaceResponse_READ_ONLY_REASON_SUBSCRIPTION_EXPIRED,
 		})
 	}
+	// Resolve the persisted default-workspace exemption only for a potentially gated plan.
+	if subscription != nil && isTrialGatedWorkspace(user.WorkspaceInfo{PlanType: subscription.PlanType}) {
+		isDefaultWorkspace, err := s.isDefaultWorkspace(ctx, workspaceID)
+		if err != nil {
+			return status.Error(codes.Internal, err.Error())
+		}
+		// Cloud Personal workspaces must not mutate existing reports before the trial starts.
+		if !isDefaultWorkspace {
+			return workspaceReadOnlyError(user.WorkspaceInfo{
+				ReadOnly:       true,
+				ReadOnlyReason: proto.GetWorkspaceResponse_READ_ONLY_REASON_TRIAL_NOT_STARTED,
+			})
+		}
+	}
 	return nil
 }
 

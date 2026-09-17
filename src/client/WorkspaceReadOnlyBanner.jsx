@@ -1,7 +1,5 @@
 import React from 'react'
-import { AlertOutlined } from '@ant-design/icons'
 import Button from 'antd/es/button'
-import Text from 'antd/es/typography/Text'
 import styles from './WorkspaceReadOnlyBanner.module.css'
 import { useSelector } from 'react-redux'
 import { useLocation, useHistory } from 'react-router-dom'
@@ -15,38 +13,54 @@ export default function WorkspaceReadOnlyBanner () {
   const location = useLocation()
   const history = useHistory()
 
-  if (!readOnly || location.pathname === '/workspace/plan') {
+  if (!readOnly || location.pathname === '/workspace/plan' || location.pathname === '/workspace/trial') {
     return null
   }
   const licenseExpired = readOnlyReason === GetWorkspaceResponse.ReadOnlyReason.READ_ONLY_REASON_LICENSE_KEY_EXPIRED
-  const headline = licenseExpired
-    ? 'License key expired'
-    : isTrial
-      ? 'Workspace is read-only — your trial has ended.'
-      : 'Workspace is read-only — no active subscription.'
-  const ctaLabel = licenseExpired ? 'Extend Key' : isTrial ? 'Upgrade Now' : 'Manage Subscription'
+  const trialNotStarted = readOnlyReason === GetWorkspaceResponse.ReadOnlyReason.READ_ONLY_REASON_TRIAL_NOT_STARTED
+  const trialExpired = readOnlyReason === GetWorkspaceResponse.ReadOnlyReason.READ_ONLY_REASON_SUBSCRIPTION_EXPIRED && isTrial
+  const ctaLabel = trialNotStarted ? 'Start 14-day trial' : trialExpired ? 'Book a call' : licenseExpired ? 'Extend Key' : 'See plans'
+  const headline = trialNotStarted
+    ? 'Start your trial to use this workspace.'
+    : licenseExpired
+      ? 'License key expired'
+      : 'Workspace is read-only.'
+  const detail = trialNotStarted
+    ? 'Your maps stay viewable until you do.'
+    : trialExpired
+      ? 'Your trial has ended. Your maps stay viewable.'
+      : licenseExpired
+        ? ''
+        : 'No active subscription.'
+
+  const trackClick = (ctaLabel) => track('WorkspaceReadOnlyBannerClick', { isTrial, ctaLabel, readOnlyReason })
 
   return (
     <div className={styles.banner} role='status'>
       <div className={styles.message}>
-        <AlertOutlined className={styles.icon} aria-hidden />
-        <Text className={styles.headline}>
-          {headline}
-        </Text>
+        <div className={styles.headline}>{headline}</div>
+        {detail ? <div className={styles.detail}>{detail}</div> : null}
       </div>
       <div className={styles.actions}>
-        <Button
-          type='default'
-          ghost
-          {...(licenseExpired ? { href: 'https://calendly.com/vladi-dekart/30min', target: '_blank' } : {})}
-          onClick={() => {
-            track('WorkspaceReadOnlyBannerClick', { isTrial, ctaLabel, readOnlyReason })
-            if (!licenseExpired) {
+        {(trialExpired || trialNotStarted) && (
+          <Button
+            type='link'
+            className={styles.secondaryAction}
+            onClick={() => {
+              trackClick('See plans')
               history.push('/workspace/plan')
-            }
+            }}
+          >See plans
+          </Button>
+        )}
+        <Button
+          ghost
+          {...(trialExpired || licenseExpired ? { href: 'https://calendly.com/vladi-dekart/meet-vladi', target: '_blank', rel: 'noreferrer' } : {})}
+          onClick={() => {
+            trackClick(ctaLabel)
+            if (!trialExpired && !licenseExpired) history.push(trialNotStarted ? '/workspace/trial' : '/workspace/plan')
           }}
-        >
-          {ctaLabel}
+        >{ctaLabel}
         </Button>
       </div>
     </div>

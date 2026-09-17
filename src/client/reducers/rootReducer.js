@@ -21,7 +21,6 @@ import sessionStorage from './sessionStorageReducer'
 import readme from './readmeReducer'
 import analytics from './analyticsReducer'
 import snapshots from './snapshotsReducer'
-import { upgradeModal } from './upgradeModalReducer'
 import fileUploadStatus from './fileUploadReducer'
 import deviceTokens from './deviceTokensReducer'
 import { hasOpenedKeplerPanel, mapPreview, report, reportDirectAccessEmails, reportsList, reportStatus } from './reportReducer'
@@ -167,7 +166,6 @@ export default combineReducers({
   readme,
   analytics,
   snapshots,
-  upgradeModal,
   location,
   mapPreview,
   hasOpenedKeplerPanel

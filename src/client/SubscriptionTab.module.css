@@ -8,14 +8,15 @@
 }
 
 .termsLink {
-  margin-top: 30px;
-  text-align: center;
-  font-size: 1.2em;
+  font-size: 13px;
+  margin-top: 28px;
+  text-align: left;
 }
 
 .subscriptionTab {
+  max-width: 880px;
+  min-width: 0;
   width: 100%;
-  min-width: 900px;
 }
 
 .trialBanner {
@@ -93,4 +94,3 @@
 .secondaryAction:focus {
   color: #ffffff !important;
 }
-

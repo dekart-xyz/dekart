@@ -15,6 +15,7 @@ describe('cloud basic flow', () => {
     cy.get('#source').click()
     cy.get('.ant-select-item-option').contains('Google Search').click()
     cy.get('button:contains("Create")').click()
+    cy.get('button#dekart-start-trial', { timeout: 30000 }).click()
 
     // create new report
     cy.get('button#dekart-create-report').click()
