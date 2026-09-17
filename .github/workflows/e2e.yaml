@@ -196,10 +196,12 @@ jobs:
             -e DEKART_UX_DISABLE_VERSION_CHECK=1 \
             -e DEKART_DEV_NO_DATASET_CACHE=1 \
             -e DEKART_DEV_CLAIMS=1 \
+            -e STRIPE_SECRET_KEY=${{ secrets.STRIPE_TEST_SECRET_KEY }} \
+            -e STRIPE_PRICE_ID=price_1ODLzrCnpQUpbHMFAnP2ZWm2 \
             -e DEKART_MAPBOX_TOKEN=$MAPBOX_TOKEN_SEC \
             -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
             -e DEKART_CLOUD=1 \
-            -e TEST_SPEC=cypress/e2e/cloud/cloudBasicFlowEnd.cy.js,cypress/e2e/cloud/readOnlyMemberRoles.cy.js \
+            -e TEST_SPEC=cypress/e2e/cloud/cloudBasicFlowEnd.cy.js,cypress/e2e/cloud/readOnlyMemberRoles.cy.js,cypress/e2e/cloud/trialAcknowledgement.cy.js \
             -e CYPRESS_CI=1 \
             ${REG_PREFIX}/dekart:${{ env.IMAGE_CACHE_KEY }}
 
