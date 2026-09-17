@@ -76,7 +76,26 @@ describe('Category chart rows', () => {
       })
       loadingObserver.observe(element, { attributes: true, childList: true, subtree: true })
     })
+    // The browser must get a frame with feedback before the synchronous map filter runs.
+    let filterFrame
+    cy.get('[data-testid="category-chart"]').then(chart => {
+      chart[0].addEventListener('click', () => {
+        const document = chart[0].ownerDocument
+        filterFrame = new Promise(resolve => document.defaultView.requestAnimationFrame(() => resolve({
+          busy: document.querySelector('aside[aria-label="Report charts"]').getAttribute('aria-busy'),
+          line: document.querySelector('[data-testid="chart-calculation-line"]').getAttribute('aria-hidden'),
+          filter: document.querySelector('[data-testid="filter-strip"]').textContent,
+          value: document.querySelector('[data-testid="number-value"]').textContent
+        })))
+      }, { capture: true, once: true })
+    })
     cy.get('[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line').first().click()
+    cy.then(() => filterFrame).then(frame => {
+      expect(frame.busy, 'busy before map filtering').to.equal('true')
+      expect(frame.line, 'loading line before map filtering').to.equal('false')
+      expect(frame.filter, 'map filtering waits for a frame').not.to.contain('primary type')
+      expect(frame.value, 'previous result while waiting').to.equal('210')
+    })
     cy.get('[data-testid="number-value"]').should('have.text', '20')
     cy.get('[data-testid="category-chart"] g[aria-label="bar"] rect').should(bars => {
       const opacities = [...bars].map(bar => bar.ownerDocument.defaultView.getComputedStyle(bar).opacity)
@@ -88,6 +107,11 @@ describe('Category chart rows', () => {
       expect(loadingStates.some(state => state.line && state.value === '210'), 'previous value stays visible under the loading line').to.equal(true)
     })
     cy.get('[data-testid="chart-calculation-line"]').should('not.be.visible')
+    // Repeated selections update the existing map filter rather than rebinding its field.
+    cy.get('[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line').eq(1).click({ shiftKey: true })
+    cy.get('[data-testid="number-value"]').should('have.text', '39')
+    cy.get('[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line').eq(1).click({ shiftKey: true })
+    cy.get('[data-testid="number-value"]').should('have.text', '20')
     cy.get('[data-testid="filter-strip"]').should('contain', 'primary type').and('contain', 'Clear all')
     cy.get('[data-testid="map-settings-tab"]').click()
     cy.get('[data-testid="filter-strip"]').should('not.be.visible')
@@ -99,6 +123,25 @@ describe('Category chart rows', () => {
     cy.get('[data-testid="category-chart"] g[aria-label="bar"] rect').should(bars => {
       expect([...bars].every(bar => bar.ownerDocument.defaultView.getComputedStyle(bar).opacity === '1')).to.equal(true)
     })
+    // Repeating the same category can serve cached chart results before the map paints.
+    let mapFilterFrame
+    cy.get('[data-testid="filter-strip"]').then(strip => {
+      const element = strip[0]
+      const view = element.ownerDocument.defaultView
+      mapFilterFrame = new Promise(resolve => {
+        const observer = new view.MutationObserver(() => {
+          if (!element.textContent.includes('primary type')) return
+          observer.disconnect()
+          view.requestAnimationFrame(() => resolve(element.ownerDocument.querySelector('aside[aria-label="Report charts"]').getAttribute('aria-busy')))
+        })
+        observer.observe(element, { childList: true, subtree: true })
+      })
+    })
+    cy.get('[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line').first().click()
+    cy.then(() => mapFilterFrame).should('equal', 'true')
+    cy.get('[data-testid="number-value"]').should('have.text', '20')
+    cy.contains('button', 'Clear all').click()
+    cy.get('[data-testid="number-value"]').should('have.text', '210')
     cy.get('[data-testid="filter-strip"]').contains('button', 'Add filter').click()
     cy.get('[data-testid="map-settings-tab"]').should('have.attr', 'aria-selected', 'true')
     cy.get('.field-selector .item-selector').last().click()
@@ -115,6 +158,7 @@ describe('Category chart rows', () => {
     cy.get('button[aria-label="Remove district filter"]').click()
     cy.get('[data-testid="number-value"]').should('have.text', '210')
     // A narrow brush inside a histogram bin filters raw district values, not bin start positions.
+    cy.get('aside[aria-label="Report charts"]').should('have.attr', 'aria-busy', 'false')
     cy.get('.interval-x .overlay').last().scrollIntoView().then(overlay => {
       const element = overlay[0]
       const svg = element.ownerSVGElement
@@ -122,7 +166,7 @@ describe('Category chart rows', () => {
       const scale = svg.scale('x')
       const view = element.ownerDocument.defaultView
       const clientY = element.getBoundingClientRect().top + 20
-      cy.wrap(element).trigger('mousedown', { clientX: bounds.left + scale.apply(6.5), clientY, button: 0, view })
+      cy.get('.interval-x .overlay').last().trigger('mousedown', { clientX: bounds.left + scale.apply(6.5), clientY, button: 0, view })
       cy.get('body').trigger('mousemove', { clientX: bounds.left + scale.apply(9.5), clientY, buttons: 1, view })
       cy.get('body').trigger('mouseup', { clientX: bounds.left + scale.apply(9.5), clientY, button: 0, view })
     })
@@ -136,6 +180,10 @@ describe('Category chart rows', () => {
     cy.contains('button', 'Back to charts').click()
     cy.get('g[aria-label="rect"]', { timeout: 30000 }).should('exist')
     cy.get('[data-testid="widgets-tab"]').should('contain', '3')
+    // A saved category selection must filter other charts without removing its own alternatives.
+    cy.get('[data-testid="category-chart"]').scrollIntoView()
+    cy.get('[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line').first().click()
+    cy.get('[data-testid="number-value"]').should('have.text', '20')
     cy.get('#dekart-save-button').click()
     cy.get('#dekart-save-button [aria-label="cloud"]', { timeout: 20000 }).should('be.visible')
     cy.intercept({ method: 'GET', url: '**/duckdb-eh.wasm', times: 1 }, request => request.continue(response => response.setDelay(3000)))
@@ -150,6 +198,22 @@ describe('Category chart rows', () => {
     cy.get('aside[aria-label="Report charts"]').should('not.contain.text', 'Loading')
     cy.get('[data-testid="chart-stub"]', { timeout: 180000 }).should('not.exist')
     cy.get('[data-testid="widgets-tab"]', { timeout: 30000 }).should('have.attr', 'aria-expanded', 'true').and('contain', '3')
+    cy.get('[data-testid="number-value"]').should('have.text', '20')
+    cy.get('[data-testid="category-chart"] g[aria-label="bar"] rect').should('have.length', 20)
+    cy.get('[data-testid="category-chart"]').should('contain.text', 'BATTERY')
+    cy.get('[data-testid="category-chart"]').closest('[data-selectable-panel]').find('button[aria-label="Reset filters"]').should('not.be.disabled')
+    // The first click on the restored selection must clear it, just like a live selection.
+    cy.get('[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line').first().click()
+    cy.get('[data-testid="number-value"]').should('have.text', '210')
+    cy.get('[data-testid="filter-strip"]').should('contain.text', 'No filters')
+    cy.get('[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line').first().click()
+    cy.get('[data-testid="number-value"]').should('have.text', '20')
+    cy.get('[data-testid="category-chart"]').closest('[data-selectable-panel]').find('button[aria-label="Reset filters"]').focus().click()
+    cy.get('[data-testid="number-value"]').should('have.text', '210')
+    cy.get('[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line').first().click()
+    cy.get('[data-testid="number-value"]').should('have.text', '20')
+    cy.contains('button', 'Clear all').click()
+    cy.get('[data-testid="number-value"]').should('have.text', '210')
     cy.url().then(url => cy.visit(url.replace('/source', '')))
     cy.get('[data-testid="widgets-tab"]', { timeout: 30000 }).should('have.attr', 'aria-expanded', 'true').and('contain', '3')
     cy.get('[data-testid="map-settings-tab"]').should('be.visible').click()

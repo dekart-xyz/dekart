@@ -1,3 +1,4 @@
+import { flushSync } from 'react-dom'
 import { numberChartType } from './NumberChart'
 import { setAutoFreeze } from 'immer'
 import { createRoomShellSlice, createRoomStore } from '@sqlrooms/room-shell'
@@ -31,20 +32,20 @@ export const chartTypes = createDefaultChartTypes({ includeCustomSpec: false }).
 
 // Each open report owns its upstream UI store and shares Dekart's one DuckDB worker.
 export function createWidgetStore (onQueryPending = () => {}) {
-  let pendingQueries = 0
+  let pendingOperations = 0
   let db
   const connector = createBaseDuckDbConnector({}, {
     async initializeInternal () { db = await getSharedDuckDB() },
     async executeQueryInternal (sql, signal) {
       signal.throwIfAborted()
       // One counter covers concurrent chart queries, including errors and cancellation.
-      onQueryPending(++pendingQueries > 0)
+      onQueryPending(++pendingOperations > 0)
       try {
         const connection = await db.connect()
         const cancel = () => connection.cancelSent()
         signal.addEventListener('abort', cancel)
         try { return await connection.query(sql) } finally { signal.removeEventListener('abort', cancel); await connection.close() }
-      } finally { onQueryPending(--pendingQueries > 0) }
+      } finally { onQueryPending(--pendingOperations > 0) }
     }
   })
   const panelRenderers = createDefaultMosaicDashboardPanelRenderers()
@@ -52,6 +53,26 @@ export function createWidgetStore (onQueryPending = () => {}) {
     if (renderer.headerActions) panelRenderers[key] = { ...renderer, headerActions: ChartHeaderActions, icon: null }
   }
   const { roomStore } = createRoomStore((set, get, store) => ({
+    // Paint feedback before Kepler's synchronous scan; callers cancel superseded work.
+    deferWidgetFilter (apply) {
+      onQueryPending(++pendingOperations > 0)
+      let frame = window.requestAnimationFrame(() => {
+        frame = window.requestAnimationFrame(() => {
+          frame = null
+          // Commit the map props while still busy, then let deck.gl draw before clearing feedback.
+          try { flushSync(apply) } finally {
+            window.requestAnimationFrame(() => window.requestAnimationFrame(() => onQueryPending(--pendingOperations > 0)))
+          }
+        })
+      })
+      return () => {
+        if (frame !== null) {
+          window.cancelAnimationFrame(frame)
+          frame = null
+          onQueryPending(--pendingOperations > 0)
+        }
+      }
+    },
     ...createRoomShellSlice({ connector, config: { title: 'Report widgets', dataSources: [] } })(set, get, store),
     ...createMosaicSlice({ preagg: { enabled: false } })(set, get, store),
     ...createDashboardFeatureSlices({ panelRenderers, chartTypes, addPanelActions: [] })(set, get, store)
