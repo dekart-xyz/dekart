@@ -13,7 +13,7 @@ import { QuestionOutlined, WarningOutlined } from '@ant-design/icons'
 import Result from 'antd/es/result'
 import { useSelector, useDispatch } from 'react-redux'
 import { getUsage } from './actions/usage'
-import { AuthState, RedirectState as DekartRedirectState } from 'dekart-proto/dekart_pb'
+import { AuthState, GetWorkspaceResponse, PlanType, RedirectState as DekartRedirectState } from 'dekart-proto/dekart_pb'
 import { getEnv } from './actions/env'
 import { authRedirect, setRedirectState } from './actions/redirect'
 import { setClaimEmailCookie, subscribeUserStream, switchPlayground, unsubscribeUserStream } from './actions/user'
@@ -24,14 +24,14 @@ import { useHistory, useLocation } from 'react-router-dom/cjs/react-router-dom'
 import Button from 'antd/es/button'
 import { loadSessionStorage } from './actions/sessionStorage'
 import { Loading } from './Loading'
-import UpgradeModal from './UpgradeModal'
 import WorkspaceReadOnlyBanner from './WorkspaceReadOnlyBanner'
 import NewVersion from './NewVersion'
 import styles from './App.module.css'
-import { hideUpgradeModal } from './actions/upgradeModal'
 import { WorkspaceSelectorLight } from './WorkspaceSelector'
 import DeviceAuthorizePage from './DeviceAuthorizePage'
+import TrialPage from './TrialPage'
 import { setSnapshotToken } from './actions/token'
+import { getWorkspace } from './actions/workspace'
 
 // RedirectState reads states passed in the URL from the server
 function RedirectState () {
@@ -81,11 +81,13 @@ function AppRedirect ({ allowWorkspaceRedirect = true }) {
   const sensitiveScopesGrantedOnce = useSelector(state => state.user.sensitiveScopesGrantedOnce)
   const reportWillOpen = useSelector(state => state.reportStatus.willOpen)
   const report = useSelector(state => state.report)
+  const readOnlyReason = useSelector(state => state.workspace.readOnlyReason)
   const redirectStateReceived = useSelector(state => state.user.redirectStateReceived)
   const dispatch = useDispatch()
   const isAnonymous = useSelector(state => state.user.isAnonymous)
   const isReportUrl = useIsReportUrl()
   const isWorkspaceUrl = location.pathname.startsWith('/workspace')
+  const trialNotStarted = userStream?.planType === PlanType.TYPE_PERSONAL && readOnlyReason === GetWorkspaceResponse.ReadOnlyReason.READ_ONLY_REASON_TRIAL_NOT_STARTED
 
   useEffect(() => {
     if (
@@ -111,15 +113,14 @@ function AppRedirect ({ allowWorkspaceRedirect = true }) {
   if (
     allowWorkspaceRedirect &&
     userStream &&
-    !userStream.planType &&
-    !isWorkspaceUrl &&
+    ((trialNotStarted && !['/workspace/trial', '/workspace/plan'].includes(location.pathname)) || (!userStream.planType && !isWorkspaceUrl)) &&
     !isPlayground &&
     !(reportWillOpen && !report) && // report is being loaded
     !(report?.isPlayground) && // playground report
     !(report?.isPublic) && // public report
     !(report?.hasDirectAccess) // public report
   ) {
-    return <Redirect to='/workspace' push />
+    return <Redirect to={trialNotStarted ? '/workspace/trial' : '/workspace'} push />
   }
 
   if (newReportId) {
@@ -257,7 +258,8 @@ export default function App () {
   const storageLoaded = useSelector(state => state.storage.loaded)
   const page401 = window.location.pathname.startsWith('/401')
   const isSnapshotPath = isSnapshotRoute(window.location.pathname)
-  const upgradeModalVisible = useSelector(state => state.upgradeModal.visible)
+  const planType = useSelector(state => state.user.stream?.planType)
+  const trialEndsAt = useSelector(state => state.workspace.subscription?.cancelAt)
 
   useEffect(() => {
     dispatch(loadLocalStorage())
@@ -290,6 +292,13 @@ export default function App () {
       dispatch(unsubscribeUserStream())
     }
   }, [dispatch, loadData, isSnapshotPath])
+
+  useEffect(() => {
+    if (planType !== PlanType.TYPE_TRIAL || !trialEndsAt) return
+    // cancelAt has second precision while the database deadline may include fractional seconds.
+    const timeout = setTimeout(() => dispatch(getWorkspace()), Math.max(0, trialEndsAt * 1000 - Date.now() + 1000))
+    return () => clearTimeout(timeout)
+  }, [dispatch, planType, trialEndsAt])
 
   // do not render until storage is loaded and environment is loaded
   const startRender = isSnapshotPath || loadData || page401 || status === 401
@@ -348,6 +357,10 @@ export default function App () {
               <AppRedirect />
               <WorkspacePage step='plan' />
             </Route>
+            <Route exact path='/workspace/trial'>
+              <AppRedirect />
+              <TrialPage />
+            </Route>
             <Route exact path='/workspace/members'>
               <AppRedirect />
               <WorkspacePage step='members' />
@@ -382,10 +395,6 @@ export default function App () {
             </Route>
           </Switch>
         </div>
-        <UpgradeModal
-          visible={upgradeModalVisible}
-          onClose={() => dispatch(hideUpgradeModal())}
-        />
         <NewVersion />
         <WorkspaceReadOnlyBanner />
       </div>

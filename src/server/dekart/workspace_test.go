@@ -30,6 +30,28 @@ func TestCreateWorkspace_DisabledForSelfHostedByDefault(t *testing.T) {
 	require.Equal(t, codes.PermissionDenied, status.Code(err))
 }
 
+func TestIsTrialGatedWorkspace(t *testing.T) {
+	tests := []struct {
+		name          string
+		cloud         string
+		workspaceInfo user.WorkspaceInfo
+		want          bool
+	}{
+		{name: "cloud personal", cloud: "1", workspaceInfo: user.WorkspaceInfo{PlanType: proto.PlanType_TYPE_PERSONAL}, want: true},
+		{name: "self hosted personal", workspaceInfo: user.WorkspaceInfo{PlanType: proto.PlanType_TYPE_PERSONAL}},
+		{name: "cloud playground", cloud: "1", workspaceInfo: user.WorkspaceInfo{PlanType: proto.PlanType_TYPE_PERSONAL, IsPlayground: true}},
+		{name: "cloud default workspace", cloud: "1", workspaceInfo: user.WorkspaceInfo{PlanType: proto.PlanType_TYPE_PERSONAL, IsDefaultWorkspace: true}},
+		{name: "cloud trial", cloud: "1", workspaceInfo: user.WorkspaceInfo{PlanType: proto.PlanType_TYPE_TRIAL}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv("DEKART_CLOUD", test.cloud)
+			require.Equal(t, test.want, isTrialGatedWorkspace(test.workspaceInfo))
+		})
+	}
+}
+
 func TestCreateWorkspace_AllowedForCloud(t *testing.T) {
 	t.Setenv("DEKART_CLOUD", "1")
 	testCreateWorkspaceAllowed(t)

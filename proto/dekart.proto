@@ -261,6 +261,7 @@ message GetWorkspaceResponse {
         READ_ONLY_REASON_UNSPECIFIED = 0;
         READ_ONLY_REASON_SUBSCRIPTION_EXPIRED = 1;
         READ_ONLY_REASON_LICENSE_KEY_EXPIRED = 2;
+        READ_ONLY_REASON_TRIAL_NOT_STARTED = 3;
     }
     Workspace Workspace = 1;
     Subscription subscription = 2;
@@ -269,6 +270,7 @@ message GetWorkspaceResponse {
     int64 added_users_count = 5; // to not duplicate count logic in UI
     bool read_only = 6;
     ReadOnlyReason read_only_reason = 7;
+    bool has_reports = 8;
 }
 
 message CreateWorkspaceRequest {
@@ -1067,7 +1069,8 @@ message ForkReportRequest {
 
 message ForkReportResponse {
     string report_id = 1;
-    bool report_limit_reached = 2; // true if report creation was blocked due to free workspace map limit
+    reserved 2;
+    reserved "report_limit_reached";
 }
 
 message CreateReportRequest {
@@ -1076,7 +1079,8 @@ message CreateReportRequest {
 
 message CreateReportResponse {
     Report report = 1;
-    bool report_limit_reached = 2; // true if report creation was blocked due to free workspace map limit
+    reserved 2;
+    reserved "report_limit_reached";
 }
 
 message QueryParam {

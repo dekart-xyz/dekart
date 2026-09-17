@@ -68,7 +68,7 @@ func (s Server) getSubscription(ctx context.Context, workspaceId string) (*proto
 		var expired bool
 		if trialEndsAt.Valid {
 			cancelAt = trialEndsAt.Time.Unix()
-			expired = trialEndsAt.Time.Unix() < time.Now().Unix()
+			expired = !trialEndsAt.Time.After(time.Now())
 		}
 		return &proto.Subscription{
 			PlanType:   planType,
@@ -350,12 +350,24 @@ func (s Server) CreateSubscription(ctx context.Context, req *proto.CreateSubscri
 			log.Error().Msg("Workspace is not on personal plan when creating trial subscription")
 			return nil, status.Error(codes.InvalidArgument, "Workspace is not on personal plan when creating trial subscription")
 		}
-		err := s.createTrialSubscription(ctx, workspaceInfo.ID, claims.Email)
+		users, err := s.getWorkspaceUsers(ctx, workspaceInfo.ID)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-		s.userStreams.Ping([]string{claims.Email})
+		activeUserEmails := make([]string, 0, len(users))
+		for _, workspaceUser := range users {
+			// Only active workspace members need their access state refreshed.
+			if workspaceUser.Status == proto.UserStatus_USER_STATUS_ACTIVE {
+				activeUserEmails = append(activeUserEmails, workspaceUser.Email)
+			}
+		}
+		err = s.createTrialSubscription(ctx, workspaceInfo.ID, claims.Email)
+		if err != nil {
+			log.Err(err).Send()
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		s.userStreams.Ping(activeUserEmails)
 		return &proto.CreateSubscriptionResponse{}, nil
 	case proto.PlanType_TYPE_TEAM, proto.PlanType_TYPE_GROW, proto.PlanType_TYPE_MAX:
 		stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
