@@ -10,20 +10,8 @@ import { Loading } from './Loading'
 function TrialBanner () {
   const expired = useSelector(state => state.workspace.subscription?.expired)
   const isTrial = useSelector(state => state.user.isTrial)
-  if (!expired) {
+  if (!expired || isTrial) {
     return null
-  }
-
-  let headline = ''
-  let description = ''
-
-  if (isTrial) {
-    headline = 'Trial ended — workspace is paused.'
-    description = 'Upgrade to resume creating maps and sharing with your team, or book a quick call to extend your trial free.'
-  } else {
-    // Subscription Ended
-    headline = 'No active subscription'
-    description = 'Upgrade to resume creating maps and sharing with your team.'
   }
 
   return (
@@ -31,9 +19,9 @@ function TrialBanner () {
       <div className={styles.trialMessage}>
         <AlertOutlined className={styles.trialIcon} />
         <div>
-          <div className={styles.trialHeadline}>{headline}</div>
+          <div className={styles.trialHeadline}>No active subscription</div>
           <div className={styles.trialDescription}>
-            {description}
+            Upgrade to resume creating maps and sharing with your team.
           </div>
         </div>
       </div>
@@ -76,7 +64,7 @@ export default function SubscriptionTab () {
     <div className={styles.subscriptionTab}>
       <TrialBanner />
       <Plans />
-      <div className={styles.termsLink}><a href='https://dekart.xyz/legal/terms/' target='_blank' rel='noreferrer'>🎓 Terms and conditions</a></div>
+      <div className={styles.termsLink}><a href='https://dekart.xyz/legal/terms/' target='_blank' rel='noreferrer'>Terms and conditions</a></div>
     </div>
   )
 }

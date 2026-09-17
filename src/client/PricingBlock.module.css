@@ -1,0 +1,66 @@
+.pricingBlock {
+  display: grid;
+  gap: 40px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 32px;
+}
+
+.plan {
+  max-width: 100%;
+}
+
+.price {
+  color: #141414;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  margin-top: 14px;
+}
+
+.interval {
+  color: #8c8c8c;
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: normal;
+}
+
+.description {
+  color: #595959;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-top: 10px;
+}
+
+.trialPlan > strong {
+  color: #8c8c8c;
+  display: block;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.trialPlan .price {
+  color: #141414;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  margin: 0 0 8px;
+}
+
+.trialPlan .interval {
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+}
+
+.trialPlan .description {
+  color: #8c8c8c;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+@media (max-width: 640px) {
+  .pricingBlock {
+    grid-template-columns: 1fr;
+  }
+}

@@ -868,6 +868,9 @@ export class GetWorkspaceResponse extends jspb.Message {
   getReadOnlyReason(): GetWorkspaceResponse.ReadOnlyReasonMap[keyof GetWorkspaceResponse.ReadOnlyReasonMap];
   setReadOnlyReason(value: GetWorkspaceResponse.ReadOnlyReasonMap[keyof GetWorkspaceResponse.ReadOnlyReasonMap]): void;
 
+  getHasReports(): boolean;
+  setHasReports(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetWorkspaceResponse.AsObject;
   static toObject(includeInstance: boolean, msg: GetWorkspaceResponse): GetWorkspaceResponse.AsObject;
@@ -887,12 +890,14 @@ export namespace GetWorkspaceResponse {
     addedUsersCount: number,
     readOnly: boolean,
     readOnlyReason: GetWorkspaceResponse.ReadOnlyReasonMap[keyof GetWorkspaceResponse.ReadOnlyReasonMap],
+    hasReports: boolean,
   }
 
   export interface ReadOnlyReasonMap {
     READ_ONLY_REASON_UNSPECIFIED: 0;
     READ_ONLY_REASON_SUBSCRIPTION_EXPIRED: 1;
     READ_ONLY_REASON_LICENSE_KEY_EXPIRED: 2;
+    READ_ONLY_REASON_TRIAL_NOT_STARTED: 3;
   }
 
   export const ReadOnlyReason: ReadOnlyReasonMap;
@@ -4188,9 +4193,6 @@ export class ForkReportResponse extends jspb.Message {
   getReportId(): string;
   setReportId(value: string): void;
 
-  getReportLimitReached(): boolean;
-  setReportLimitReached(value: boolean): void;
-
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): ForkReportResponse.AsObject;
   static toObject(includeInstance: boolean, msg: ForkReportResponse): ForkReportResponse.AsObject;
@@ -4204,7 +4206,6 @@ export class ForkReportResponse extends jspb.Message {
 export namespace ForkReportResponse {
   export type AsObject = {
     reportId: string,
-    reportLimitReached: boolean,
   }
 }
 
@@ -4230,9 +4231,6 @@ export class CreateReportResponse extends jspb.Message {
   getReport(): Report | undefined;
   setReport(value?: Report): void;
 
-  getReportLimitReached(): boolean;
-  setReportLimitReached(value: boolean): void;
-
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CreateReportResponse.AsObject;
   static toObject(includeInstance: boolean, msg: CreateReportResponse): CreateReportResponse.AsObject;
@@ -4246,7 +4244,6 @@ export class CreateReportResponse extends jspb.Message {
 export namespace CreateReportResponse {
   export type AsObject = {
     report?: Report.AsObject,
-    reportLimitReached: boolean,
   }
 }
 

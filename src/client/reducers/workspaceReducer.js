@@ -8,7 +8,8 @@ export default function workspace (state = {
   invites: [],
   addedUsersCount: NaN,
   readOnly: null,
-  readOnlyReason: null
+  readOnlyReason: null,
+  hasReports: null
 }, action) {
   switch (action.type) {
     case workspaceUpdate.name:
@@ -20,7 +21,8 @@ export default function workspace (state = {
         invites: action.invitesList || [],
         addedUsersCount: action.addedUsersCount,
         readOnly: action.readOnly,
-        readOnlyReason: action.readOnlyReason
+        readOnlyReason: action.readOnlyReason,
+        hasReports: action.hasReports
       }
     default:
       return state

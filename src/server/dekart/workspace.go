@@ -19,6 +19,14 @@ import (
 
 var defaultWorkspaceEnsureMu sync.Mutex
 
+// isTrialGatedWorkspace identifies Cloud Personal workspaces that must start a trial before editing.
+func isTrialGatedWorkspace(workspaceInfo user.WorkspaceInfo) bool {
+	return os.Getenv("DEKART_CLOUD") != "" &&
+		!workspaceInfo.IsPlayground &&
+		!workspaceInfo.IsDefaultWorkspace &&
+		workspaceInfo.PlanType == proto.PlanType_TYPE_PERSONAL
+}
+
 func (s Server) getUserWorkspaces(ctx context.Context, email string) ([]*proto.Workspace, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		WITH last_status AS (
@@ -568,6 +576,13 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 		log.Err(err).Send()
 		return ctx
 	}
+	if isTrialGatedWorkspace(user.WorkspaceInfo{
+		PlanType:           planType,
+		IsDefaultWorkspace: isDefaultWorkspace,
+	}) {
+		readOnly = true
+		readOnlyReason = proto.GetWorkspaceResponse_READ_ONLY_REASON_TRIAL_NOT_STARTED
+	}
 
 	ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{
 		ID:                 workspaceId,
@@ -636,6 +651,11 @@ func (s Server) GetWorkspace(ctx context.Context, req *proto.GetWorkspaceRequest
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+	var hasReports bool
+	if err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM reports WHERE workspace_id = $1)`, workspaceInfo.ID).Scan(&hasReports); err != nil {
+		log.Err(err).Send()
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 
 	return &proto.GetWorkspaceResponse{
 		Workspace: &proto.Workspace{
@@ -648,6 +668,7 @@ func (s Server) GetWorkspace(ctx context.Context, req *proto.GetWorkspaceRequest
 		AddedUsersCount: workspaceInfo.AddedUsersCount,
 		ReadOnly:        workspaceInfo.ReadOnly,
 		ReadOnlyReason:  workspaceInfo.ReadOnlyReason,
+		HasReports:      hasReports,
 	}, nil
 }
 
