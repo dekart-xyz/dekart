@@ -1,8 +1,11 @@
 import { useParams } from 'react-router-dom'
 import Input from 'antd/es/input'
-import { useEffect, useState, Component, useMemo } from 'react'
+import { lazy, Suspense, useEffect, useState, Component, useMemo, useRef } from 'react'
 import { Helmet } from 'react-helmet'
-import { KeplerGl } from '@kepler.gl/components'
+import { injectComponents, MapContainerFactory } from '@kepler.gl/components'
+import { addFilter, toggleSidePanel } from '@kepler.gl/actions'
+import FilterStrip from './widgets/FilterStrip'
+import MapPaneHeader from './MapPaneHeader'
 import styles from './ReportPage.module.css'
 import { AutoSizer } from 'react-virtualized'
 import { useDispatch, useSelector } from 'react-redux'
@@ -40,6 +43,20 @@ import UserPositionOverlay from './UserPositionOverlay'
 import { useBasemapReady } from './lib/useBasemapReady'
 import { useSnapshotReady } from './lib/useSnapshotReady'
 import { useSnapshotViewportOverride } from './lib/snapshotViewportParams'
+import { deferMapPresentation, notifyMapRendered } from './lib/mapRender'
+
+const ReportWidgets = lazy(() => import('./widgets/ReportWidgets'))
+
+// Inject the supported Kepler map container callback so linked chart work ends after deck.gl paints.
+function MapContainerWithRenderFactory (...dependencies) {
+  const MapContainer = MapContainerFactory(...dependencies)
+  return function MapContainerWithRender (props) {
+    const callbacks = props.deckRenderCallbacks
+    return <MapContainer {...props} deckRenderCallbacks={{ ...callbacks, onDeckAfterRender: deckProps => { callbacks?.onDeckAfterRender?.(deckProps); notifyMapRendered() } }} />
+  }
+}
+MapContainerWithRenderFactory.deps = MapContainerFactory.deps
+const KeplerGl = injectComponents([[MapContainerFactory, MapContainerWithRenderFactory]])
 
 // Build keyboard hint text for tab tooltips.
 function getTabShortcutLabel (tabIndex) {
@@ -487,6 +504,16 @@ export default function ReportPage ({ edit, snapshot }) {
   const report = useSelector(state => state.report)
   const files = useSelector(state => state.files || [])
   const queries = useSelector(state => state.queries || [])
+  const [leftPanel, setLeftPanel] = useState('widgets')
+  const [paneCollapsed, setPaneCollapsed] = useState(true)
+  const [chartCount, setChartCount] = useState(0)
+  const [widgetFilterPending, setWidgetFilterPending] = useState(false)
+  const widgetFilterCancel = useRef(() => {})
+  const paneChoiceMade = useRef(false)
+  const previousChartCount = useRef(0)
+  const activeKeplerPanel = useSelector(state => state.keplerGl.kepler?.uiState.activeSidePanel)
+  const filterDatasetId = useSelector(state => Object.keys(state.keplerGl.kepler?.visState.datasets || {})[0])
+  const readOnly = useSelector(state => state.workspace.readOnly)
   const fullscreen = useSelector(state => state.reportStatus.fullscreen)
   const [snapshotBasemapReady, setSnapshotBasemapReady] = useState(false)
   const snapshotViewportApplied = useSnapshotViewportOverride(snapshot, id, setSnapshotBasemapReady)
@@ -532,6 +559,46 @@ export default function ReportPage ({ edit, snapshot }) {
 
   useCheckMapConfig()
 
+  useEffect(() => {
+    setLeftPanel('widgets')
+    setPaneCollapsed(true)
+    paneChoiceMade.current = false
+    previousChartCount.current = 0
+  }, [id])
+
+  useEffect(() => () => widgetFilterCancel.current(), [])
+
+  const applyWidgetMapChange = apply => {
+    widgetFilterCancel.current()
+    setWidgetFilterPending(true)
+    widgetFilterCancel.current = deferMapPresentation(() => {
+      dispatch(markKeplerPanelInteracted())
+      return apply()
+    }, () => setWidgetFilterPending(false))
+  }
+
+  useEffect(() => {
+    if (chartCount > 0 && !paneChoiceMade.current) {
+      setPaneCollapsed(false)
+      paneChoiceMade.current = true
+    }
+    if (chartCount === 0 && previousChartCount.current > 0) setPaneCollapsed(true)
+    previousChartCount.current = chartCount
+  }, [chartCount])
+
+  const paneOpen = !paneCollapsed && (leftPanel !== 'map' || Boolean(activeKeplerPanel))
+  const selectPane = panel => {
+    paneChoiceMade.current = true
+    setLeftPanel(panel)
+    setPaneCollapsed(false)
+    if (panel === 'map' && !activeKeplerPanel) dispatch(toggleSidePanel('layer'))
+  }
+  const editFilter = index => {
+    selectPane('map')
+    if (activeKeplerPanel !== 'filter') dispatch(toggleSidePanel('filter'))
+    if (index === undefined && filterDatasetId) dispatch(addFilter(filterDatasetId))
+  }
+
   if (!report) {
     return <Loading />
   }
@@ -555,8 +622,11 @@ export default function ReportPage ({ edit, snapshot }) {
           )
         : null}
       <div className={classnames(styles.body, { [styles.snapshotBody]: snapshot })}>
-        <div className={styles.keplerFlexWrapper}>
+        <div className={classnames(styles.keplerFlexWrapper, { [styles.hideMapSettings]: leftPanel !== 'map' || !paneOpen })}>
           <div className={styles.keplerFlex}>
+            {!snapshot && <MapPaneHeader selected={leftPanel} expanded={paneOpen} onSelect={selectPane} onToggle={() => { paneChoiceMade.current = true; paneOpen ? setPaneCollapsed(true) : selectPane(leftPanel) }} />}
+            {!snapshot && <FilterStrip visible={paneOpen && leftPanel === 'widgets'} editing={edit && report.canWrite && !readOnly} onEdit={editFilter} onApply={applyWidgetMapChange} />}
+            {!snapshot && <Suspense fallback={null}><ReportWidgets key={id} visible={paneOpen && leftPanel === 'widgets'} presentationPending={widgetFilterPending} onChartCountChange={setChartCount} editing={edit && report.canWrite && !readOnly} onOpenData={() => document.getElementById('dekart-report-page-tabs')?.scrollIntoView({ block: 'nearest' })} /></Suspense>}
             <Kepler
               snapshot={snapshot}
               onSnapshotBasemapReadyChange={setSnapshotBasemapReady}
