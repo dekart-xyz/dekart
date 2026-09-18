@@ -24,6 +24,8 @@ class DuckDBReportRuntime {
     this.registeredSourceFiles = new Map()
     this.nativeTables = new Set()
     this.jobTables = new Set()
+    // REVIEW: Track the immutable DuckDB job table currently backing widgets for each dataset.
+    this.widgetJobTables = new Map()
     this.ownedViews = new Set()
     this.initializing = null
     this.db = null
@@ -102,6 +104,8 @@ class DuckDBReportRuntime {
     }
     this.ownedViews.clear()
     this.jobTables.clear()
+    // REVIEW: Discard widget table bindings when the report-local DuckDB runtime closes.
+    this.widgetJobTables.clear()
     this.nativeTables.clear()
     this.registeredSourceFiles.clear()
     this.connection = null
@@ -219,6 +223,8 @@ class DuckDBReportRuntime {
       const viewName = duckDBViewName(datasetId)
       const fileName = this.registeredSourceFiles.get(datasetId)
       this.nativeSources.delete(datasetId)
+      // REVIEW: Remove a dataset's widget table binding together with its native and file sources.
+      this.widgetJobTables.delete(datasetId)
       this.fileSources.delete(datasetId)
       this.sourceErrors.delete(datasetId)
       this.registeredSourceVersions.delete(datasetId)
@@ -258,6 +264,24 @@ class DuckDBReportRuntime {
   nextGeneration () {
     this.generation++
     return this.generation
+  }
+
+  // REVIEW: Expose stable table and revision identities so widgets query the same immutable data generation displayed by Kepler.
+  // widgetTable returns the immutable revision currently displayed by Kepler.
+  widgetTable (datasetId) {
+    const source = this.nativeSources.get(datasetId)
+    if (source) return `main.${quoteIdentifier(source.tableName)}`
+    const jobTable = this.widgetJobTables.get(datasetId)
+    return jobTable ? `dekart_internal.${quoteIdentifier(jobTable)}` : null
+  }
+
+  // widgetRevision identifies the immutable source currently backing charts.
+  widgetRevision (datasetId) {
+    const nativeSource = this.nativeSources.get(datasetId)
+    if (nativeSource) return nativeSource.version || nativeSource.tableName
+    const fileSource = this.fileSources.get(datasetId)
+    if (fileSource) return fileSource.version
+    return this.widgetJobTables.get(datasetId) || null
   }
 
   // acquireExecution serializes generations on the single report-local connection.
@@ -363,6 +387,8 @@ class DuckDBReportRuntime {
     try {
       await this.connection.query(`CREATE OR REPLACE TABLE ${jobTable} AS ${node.queryJob.queryText}`)
       this.jobTables.add(jobTableName)
+      // REVIEW: Bind each completed query dataset to its newly materialized immutable job table.
+      this.widgetJobTables.set(node.dataset.id, jobTableName)
     } finally {
       if (paramsTable) {
         await this.connection.query(`DROP TABLE IF EXISTS ${paramsTable}`).catch(() => {})
@@ -374,7 +400,8 @@ class DuckDBReportRuntime {
     await this.connection.query(`CREATE OR REPLACE VIEW ${view} AS SELECT * FROM ${jobTable}`)
     this.ownedViews.add(viewName)
     const columns = await getColumnTypes(this.connection, jobTable)
-    const reader = await this.connection.send(castDuckDBTypesForKepler(jobTable, columns), true)
+    // REVIEW: Read materialized rows in rowid order so Kepler and chart filtering share deterministic row positions.
+    const reader = await this.connection.send(castDuckDBTypesForKepler(jobTable, columns) + ' ORDER BY rowid', true)
     const result = new Table(await reader.readAll())
     setGeoArrowWKBExtension(result, columns)
     return {
@@ -392,6 +419,10 @@ class DuckDBReportRuntime {
       if (!retained.has(tableName)) {
         await this.connection.query(`DROP TABLE IF EXISTS dekart_internal.${quoteIdentifier(tableName)}`)
         this.jobTables.delete(tableName)
+        // REVIEW: Clear dataset bindings when obsolete job tables are pruned from the runtime.
+        for (const [datasetId, widgetTableName] of this.widgetJobTables) {
+          if (widgetTableName === tableName) this.widgetJobTables.delete(datasetId)
+        }
       }
     }
   }

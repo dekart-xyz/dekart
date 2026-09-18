@@ -11,13 +11,16 @@ import { shouldAddQuery } from '../lib/shouldAddQuery'
 import { shouldUpdateDataset } from '../lib/shouldUpdateDataset'
 import { needSensitiveScopes } from './user'
 import { getQueryParamsObjArr, reconcileQueryParamsState } from '../lib/queryParams'
-import { receiveReportUpdateMapConfig } from '../lib/mapConfig'
+// REVIEW: Compare incoming map configurations structurally so identical streamed revisions do not create false conflicts.
+import { receiveReportUpdateMapConfig, shouldUpdateMapConfig } from '../lib/mapConfig'
 import { extensionFromMime } from '../lib/mime'
 import { showUpgradeModal, UpgradeModalType } from './upgradeModal'
 import { track } from '../lib/tracking'
 import { getReportIdFromUrl } from '../lib/getReportIdFromUrl'
 import { closeDuckDBReport, failDuckDBSource, runDuckDBGraph } from './duckdb'
 import { isDuckDBDataset } from '../lib/duckdb/constants'
+// REVIEW: Inspect gRPC status codes so version conflicts use the report stream's recoverable reload experience.
+import { grpc } from '@improbable-eng/grpc-web'
 
 let reportSaveBarrier = null
 
@@ -57,15 +60,36 @@ function getReportStream (reportId, onMessage, onError) {
 }
 
 export function toggleReportEdit (edit) {
-  return function (dispatch, getState) {
-    const report = getState().report
+  // REVIEW: Allow edit-mode transitions to wait for and initiate asynchronous report saves.
+  return async function (dispatch, getState) {
+    let state = getState()
+    const report = state.report
     let fullscreen = null
     if (edit) {
       fullscreen = false
     } else if (report) {
       fullscreen = !report.readme
     }
+    // REVIEW: Preserve unsaved authored changes by refusing to leave edit mode when they cannot be saved safely.
+    if (!edit && state.reportStatus.edit) {
+      if (reportSaveBarrier) await reportSaveBarrier.promise
+      state = getState()
+      const { reportStatus, workspace } = state
+      if (reportStatus.lastChanged > reportStatus.lastSaved) {
+        // Leaving edit mode must never turn an unsaved authored draft into a disposable viewer draft.
+        if (!report.canWrite || workspace.readOnly || !reportStatus.online || reportStatus.saving) return false
+        const saved = await dispatch(saveMap(reportStatus.lastMapConfigChanged > reportStatus.lastPreviewSaved))
+        if (!saved) return false
+      }
+    }
     dispatch({ type: toggleReportEdit.name, edit, fullscreen })
+    // REVIEW: Restore the last authored filter configuration when returning from local viewer exploration.
+    // Viewer exploration is intentionally local. Entering edit mode restores the
+    // last authored map instead of promoting view-only filters into the report.
+    if (edit && report?.mapConfig) {
+      receiveReportUpdateMapConfig(report, dispatch, getState, { keepExistingConfig: true, replaceFilters: true })
+    }
+    return true
   }
 }
 
@@ -272,7 +296,8 @@ export function reportUpdate (reportStreamResponse) {
       user,
       queryParams: currentQueryParams,
       queryJobs: prevQueryJobsList,
-      reportStatus: { lastSaved, savedReportVersion, lastMapConfigChanged, snapshotMode },
+      // REVIEW: Track the last accepted report version identifier alongside the legacy update timestamp.
+      reportStatus: { lastSaved, savedReportVersion, savedVersionId, lastMapConfigChanged, snapshotMode },
       hasOpenedKeplerPanel
     } = state
     const activeQueryParams = reconcileQueryParamsState(currentQueryParams, report.queryParamsList, window.location.search)
@@ -289,10 +314,13 @@ export function reportUpdate (reportStreamResponse) {
       !initialHydration &&
       serializedMapConfigChanged &&
       report.mapConfig &&
-      report.updatedAt > savedReportVersion
+      // REVIEW: Use version identifiers to distinguish remote saves even when database timestamps have insufficient precision.
+      (report.versionId ? report.versionId !== savedVersionId : report.updatedAt > savedReportVersion)
     )
-    const hasRemoteMapConflict = liveMapConfigChanged && hasUnsavedUserMapChanges
-    const liveMapConfigAccepted = liveMapConfigChanged && !hasUnsavedUserMapChanges
+    // REVIEW: Treat a streamed map as conflicting only when it is both newer and structurally different from the local map.
+    const liveMapConfigMatches = liveMapConfigChanged && !shouldUpdateMapConfig(KeplerGlSchema.getConfigToSave(state.keplerGl.kepler), JSON.parse(report.mapConfig))
+    const hasRemoteMapConflict = liveMapConfigChanged && hasUnsavedUserMapChanges && !liveMapConfigMatches
+    const liveMapConfigAccepted = liveMapConfigChanged && (!hasUnsavedUserMapChanges || liveMapConfigMatches)
     dispatch({
       type: reportUpdate.name,
       report,
@@ -309,7 +337,9 @@ export function reportUpdate (reportStreamResponse) {
       initialHydration,
       initialAutoCreateLayerIds: initialAutoCreateLayerIds(datasetsList, queriesList, filesList, queryJobsList),
       newDatasetIds: datasetsList.filter(dataset => !prevDatasetsList.find(previous => previous.id === dataset.id)).map(dataset => dataset.id),
-      liveMapConfigAccepted
+      // REVIEW: Pass explicit remote map conflict state to the reducer while retaining the accepted-config signal.
+      liveMapConfigAccepted,
+      hasRemoteMapConflict
     })
     if (hasRemoteMapConflict) {
       dispatch(showMapConfigConflictMessage())
@@ -542,8 +572,9 @@ export function reportTitleChange (title) {
   }
 }
 
-export function savedReport (lastSaved, savedReportVersion) {
-  return { type: savedReport.name, lastSaved, savedReportVersion }
+// REVIEW: Record the saved report version and exact widget revision so both stores advance from the same response.
+export function savedReport (lastSaved, savedReportVersion, versionId, widgetRevision, widgetRaw) {
+  return { type: savedReport.name, lastSaved, savedReportVersion, versionId, widgetRevision, widgetRaw }
 }
 
 export function saveMapFailed () {
@@ -629,7 +660,9 @@ export function exportMapPreview () {
 export function saveMap (mapViewChanged = false) {
   return async (dispatch, getState) => {
     const state = getState()
-    const { keplerGl, report, reportStatus, queryStatus, queryParams, readme } = state
+    // REVIEW: Block stale map or widget saves before constructing a request that could overwrite remote work.
+    const { keplerGl, report, reportStatus, queryStatus, queryParams, readme, widgets } = state
+    if (reportStatus.mapConfigConflict || widgets.conflict) return false
     const lastSaved = reportStatus.lastChanged
     const configToSave = KeplerGlSchema.getConfigToSave(keplerGl.kepler)
     const mapConfig = JSON.stringify(configToSave)
@@ -654,6 +687,9 @@ export function saveMap (mapViewChanged = false) {
     }
     request.setReportId(report.id)
     request.setMapConfig(mapConfig)
+    // REVIEW: Send compare-and-swap version data and include widget configuration only when widgets changed locally.
+    request.setExpectedVersionId(widgets.revision > widgets.savedRevision ? widgets.versionId : report.versionId)
+    if (widgets.revision > widgets.savedRevision && widgets.compatibility === 'supported') request.setWidgetsConfig(widgets.raw)
     request.setTitle(reportStatus.title)
     request.setQueryList(queryUpdates)
     request.setQueryParamsList(getQueryParamsObjArr(queryParams.list))
@@ -662,15 +698,22 @@ export function saveMap (mapViewChanged = false) {
       const res = await new Promise((resolve, reject) => {
         dispatch(grpcCall(Dekart.UpdateReport, request, resolve, (err) => {
           reject(err)
+          // REVIEW: Let aborted saves surface through the existing streamed conflict message instead of adding a duplicate generic error.
+          // The report stream presents the existing recoverable reload UX for a real conflict.
+          if (err.code === grpc.Code.Aborted) return
           return err
         }))
       })
       if (mapViewChanged) {
         dispatch(exportMapPreview())
       }
-      dispatch(savedReport(lastSaved, res.updatedAt))
+      // REVIEW: Advance map and widget save baselines together and report successful completion to callers.
+      dispatch(savedReport(lastSaved, res.updatedAt, res.versionId, widgets.revision, widgets.raw))
+      return true
     } catch (err) {
       dispatch(saveMapFailed())
+      // REVIEW: Return an explicit failure result so navigation can remain in edit mode after a rejected save.
+      return false
     } finally {
       resolveReportSaveBarrier(barrier)
     }

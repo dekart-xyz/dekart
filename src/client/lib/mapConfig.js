@@ -1,4 +1,5 @@
-import { receiveMapConfig } from '@kepler.gl/actions'
+// REVIEW: Use Kepler's filter actions when an authored configuration must fully replace viewer-only filters.
+import { addFilter, applyFilterConfig, receiveMapConfig, removeFilter } from '@kepler.gl/actions'
 import { KeplerGlSchema } from '@kepler.gl/schemas'
 import { setLastMapConfigChanged } from '../actions/report'
 import { useDispatch, useSelector } from 'react-redux'
@@ -68,13 +69,24 @@ function checkMapConfig (kepler, mapConfigInputStr, dispatch, datasets) {
   }
 }
 
-export function receiveReportUpdateMapConfig (report, dispatch, getState) {
+// REVIEW: Accept receive options so callers can preserve datasets while choosing whether filters are replaced.
+export function receiveReportUpdateMapConfig (report, dispatch, getState, options) {
   const { kepler } = getState().keplerGl
   const newConfig = JSON.parse(report.mapConfig)
   const currentConfig = KeplerGlSchema.getConfigToSave(kepler)
   if (shouldUpdateMapConfig(currentConfig, newConfig)) {
     const newConfigNormalized = KeplerGlSchema.parseSavedConfig(newConfig)
-    dispatch(receiveMapConfig(newConfigNormalized))
+    // REVIEW: Recreate saved filters explicitly because Kepler's keep-existing mode otherwise retains local viewer filters.
+    const { replaceFilters, ...receiveOptions } = options || {}
+    dispatch(receiveMapConfig(newConfigNormalized, receiveOptions))
+    if (replaceFilters) {
+      const currentFilters = getState().keplerGl.kepler.visState.filters
+      for (let index = currentFilters.length - 1; index >= 0; index--) dispatch(removeFilter(index))
+      for (const filter of newConfigNormalized.visState.filters || []) {
+        dispatch(addFilter(filter.dataId, filter.id))
+        dispatch(applyFilterConfig(filter.id, filter))
+      }
+    }
     return true
   } else {
     return false

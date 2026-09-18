@@ -23,6 +23,9 @@ export function report (state = null, action) {
       return null
     case reportUpdate.name:
       return action.report
+    // REVIEW: Update the report's version identifier from the authoritative save response.
+    case savedReport.name:
+      return state ? { ...state, versionId: action.versionId || state.versionId } : state
     default:
       return state
   }
@@ -85,6 +88,9 @@ const defaultReportStatus = {
   lastMapConfigChanged: 0,
   lastPreviewSaved: 0, // last time preview was saved
   savedReportVersion: 0,
+  // REVIEW: Track the accepted map version and a dedicated map-configuration conflict state.
+  savedVersionId: '',
+  mapConfigConflict: false,
   fullscreen: null,
   autoRefreshIntervalSeconds: 0,
   queryJobRefreshTimeoutId: null,
@@ -109,8 +115,10 @@ export function hasOpenedKeplerPanel (state = false, action) {
 }
 export function reportStatus (state = defaultReportStatus, action) {
   switch (action.type) {
+    // REVIEW: Treat widget edits as report changes so the existing save and autosave controls include them.
     case updateQueryParamsFromQueries.name:
     case queryParamChanged.name:
+    case 'widgetsChanged':
     case queryChanged.name:
     case setReadmeValue.name: {
       const lastChanged = Date.now()
@@ -154,7 +162,9 @@ export function reportStatus (state = defaultReportStatus, action) {
         ...state,
         saving: false,
         lastSaved: action.lastSaved,
-        savedReportVersion: action.savedReportVersion
+        // REVIEW: Advance the accepted version identifier whenever a report save completes.
+        savedReportVersion: action.savedReportVersion,
+        savedVersionId: action.versionId || state.savedVersionId
       }
     case saveMapFailed.name:
       return {
@@ -182,6 +192,9 @@ export function reportStatus (state = defaultReportStatus, action) {
         lastUpdated: Date.now(),
         fullscreen,
         autoRefreshIntervalSeconds: action.report.autoRefreshIntervalSeconds || 0,
+        // REVIEW: Accept streamed version identifiers only with accepted map state and retain any detected map conflict.
+        savedVersionId: action.initialHydration || action.liveMapConfigAccepted ? action.report.versionId : state.savedVersionId,
+        mapConfigConflict: state.mapConfigConflict || action.hasRemoteMapConflict,
         queryJobRefreshTimeoutId: null
       }
     }
@@ -201,7 +214,11 @@ export function reportStatus (state = defaultReportStatus, action) {
       return {
         ...state,
         edit: action.edit,
-        fullscreen: action.fullscreen
+        // REVIEW: Reset viewer-only dirty markers when edit mode resumes from the last authored save baseline.
+        fullscreen: action.fullscreen,
+        ...(action.edit && !state.edit
+          ? { lastChanged: state.lastSaved, lastMapConfigChanged: state.lastSaved }
+          : {})
       }
     }
     case closeReport.name:

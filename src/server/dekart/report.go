@@ -62,6 +62,8 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 		`select
 			r.id,
 			case when r.map_config is null then '' else r.map_config end as map_config,
+			// REVIEW: Load the persisted widget configuration with every report stream payload.
+			coalesce(r.widgets_config, '') as widgets_config,
 			case when r.title is null then 'Untitled' else r.title end as title,
 			r.author_email = $1 as is_author,
 			r.author_email,
@@ -128,6 +130,8 @@ func (s Server) getReportWithOptions(ctx context.Context, reportID string, archi
 		err = reportRows.Scan(
 			&report.Id,
 			&report.MapConfig,
+			// REVIEW: Scan widget configuration into the report protocol alongside map configuration.
+			&report.WidgetsConfig,
 			&report.Title,
 			&report.IsAuthor,
 			&report.AuthorEmail,
@@ -340,9 +344,11 @@ func (s Server) createReportSnapshotWithVersionIDTx(ctx context.Context, tx *sql
 	// Create report snapshot using INSERT ... SELECT from reports
 	_, err := tx.ExecContext(ctx,
 		`INSERT INTO report_snapshots (
-			version_id, report_id, map_config, title, query_params, readme, author_email, trigger_type
+			// REVIEW: Include widget configuration in report snapshot records.
+			version_id, report_id, map_config, title, query_params, readme, author_email, trigger_type, widgets_config
 		)
-		SELECT $1, id, map_config, title, query_params, readme, $2, $3
+		// REVIEW: Copy widgets and map configuration from the same report revision into each snapshot.
+		SELECT $1, id, map_config, title, query_params, readme, $2, $3, widgets_config
 		FROM reports
 		WHERE id = $4`,
 		versionID,
@@ -423,16 +429,98 @@ func (s Server) createReportSnapshotWithVersionID(ctx context.Context, versionID
 	return tx.Commit()
 }
 
-// updateDatasetIds updates the map config with new dataset ids when forked
-func updateDatasetIds(report *proto.Report, datasets []*proto.Dataset) (newMapConfig string, newDatasetIds []string) {
-	newMapConfig = report.MapConfig
+// REVIEW: Return remapping errors and limit fork rewriting to schema-defined dataset references.
+// updateDatasetIds updates only schema-defined dataset references when forked.
+// Free-form labels and other strings that happen to contain an id are preserved.
+func updateDatasetIds(report *proto.Report, datasets []*proto.Dataset) (newMapConfig string, newDatasetIds []string, err error) {
 	newDatasetIds = make([]string, len(datasets))
+	// REVIEW: Build an explicit old-to-new dataset identifier mapping for structural configuration rewrites.
+	replacements := make(map[string]string, len(datasets))
 	for i, dataset := range datasets {
+		// REVIEW: Stop replacing arbitrary strings because a dataset identifier may legitimately appear in labels or other free-form content.
 		newID := newUUID()
-		newMapConfig = strings.ReplaceAll(newMapConfig, dataset.Id, newID)
 		newDatasetIds[i] = newID
+		// REVIEW: Parse and rewrite only Kepler layer, filter, and tooltip dataset bindings before encoding the forked map.
+		replacements[dataset.Id] = newID
 	}
-	return newMapConfig, newDatasetIds
+	if strings.TrimSpace(report.MapConfig) == "" {
+		return report.MapConfig, newDatasetIds, nil
+	}
+	var root map[string]any
+	if err := json.Unmarshal([]byte(report.MapConfig), &root); err != nil {
+		return "", nil, fmt.Errorf("cannot remap map config dataset ids: %w", err)
+	}
+	remapMapConfigDatasetRefs(root, replacements)
+	encoded, err := json.Marshal(root)
+	if err != nil {
+		return "", nil, fmt.Errorf("cannot encode remapped map config: %w", err)
+	}
+	return string(encoded), newDatasetIds, nil
+}
+
+func remapMapConfigDatasetRefs(root map[string]any, replacements map[string]string) {
+	config, ok := root["config"].(map[string]any)
+	if !ok {
+		return
+	}
+	visState, ok := config["visState"].(map[string]any)
+	if !ok {
+		return
+	}
+	if layers, ok := visState["layers"].([]any); ok {
+		for _, rawLayer := range layers {
+			layer, ok := rawLayer.(map[string]any)
+			if !ok {
+				continue
+			}
+			layerConfig, ok := layer["config"].(map[string]any)
+			if !ok {
+				continue
+			}
+			if id, ok := layerConfig["dataId"].(string); ok {
+				if replacement, exists := replacements[id]; exists {
+					layerConfig["dataId"] = replacement
+				}
+			}
+		}
+	}
+	if filters, ok := visState["filters"].([]any); ok {
+		for _, rawFilter := range filters {
+			filter, ok := rawFilter.(map[string]any)
+			if !ok {
+				continue
+			}
+			switch dataID := filter["dataId"].(type) {
+			case string:
+				if replacement, exists := replacements[dataID]; exists {
+					filter["dataId"] = replacement
+				}
+			case []any:
+				for i, rawID := range dataID {
+					if id, ok := rawID.(string); ok {
+						if replacement, exists := replacements[id]; exists {
+							dataID[i] = replacement
+						}
+					}
+				}
+			}
+		}
+	}
+	for _, fieldName := range []string{"fields", "fieldsToShow"} {
+		if fields, ok := visState["interactionConfig"].(map[string]any); ok {
+			if tooltip, ok := fields["tooltip"].(map[string]any); ok {
+				if fieldMap, ok := tooltip[fieldName].(map[string]any); ok {
+					for id, value := range fieldMap {
+						if replacement, exists := replacements[id]; exists {
+							delete(fieldMap, id)
+							fieldMap[replacement] = value
+						}
+					}
+				}
+			}
+		}
+		// REVIEW: Remove the previous raw-string remap return because structural rewriting now returns its own encoded result.
+	}
 }
 
 type snapshotDatasetState struct {
@@ -489,7 +577,15 @@ func (s Server) commitReportWithDatasets(
 	if !allowed {
 		return errReportLimitReached
 	}
-	newMapConfig, newDatasetIds := updateDatasetIds(report, datasets)
+	// REVIEW: Remap map and widget dataset bindings together before writing a forked report.
+	newMapConfig, newDatasetIds, err := updateDatasetIds(report, datasets)
+	if err != nil {
+		return status.Error(codes.InvalidArgument, err.Error())
+	}
+	newWidgetsConfig, err := remapWidgetDatasets(report.WidgetsConfig, datasets, newDatasetIds)
+	if err != nil {
+		return status.Error(codes.InvalidArgument, err.Error())
+	}
 	newQueryIDByOldID := make(map[string]string, len(queries))
 	for _, dataset := range datasets {
 		if dataset.QueryId != "" {
@@ -522,17 +618,21 @@ func (s Server) commitReportWithDatasets(
 
 	if checkWorkspace(ctx).IsPlayground {
 		_, err = tx.ExecContext(ctx,
-			"INSERT INTO reports (id, author_email, map_config, title, query_params, is_playground, readme) VALUES ($1, $2, $3, $4, $5, true, $6)",
+			// REVIEW: Persist widget configuration when creating a playground fork.
+			"INSERT INTO reports (id, author_email, map_config, title, query_params, is_playground, readme, widgets_config) VALUES ($1, $2, $3, $4, $5, true, $6, $7)",
 			report.Id,
 			claims.Email,
 			newMapConfig,
 			report.Title,
 			paramsJSON,
 			readme,
+			// REVIEW: Supply the remapped widget configuration to the playground report insert.
+			newWidgetsConfig,
 		)
 	} else {
 		_, err = tx.ExecContext(ctx,
-			"INSERT INTO reports (id, author_email, map_config, title, query_params, is_public, workspace_id, readme) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+			// REVIEW: Persist widget configuration when creating a workspace fork.
+			"INSERT INTO reports (id, author_email, map_config, title, query_params, is_public, workspace_id, readme, widgets_config) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
 			report.Id,
 			claims.Email,
 			newMapConfig,
@@ -541,6 +641,8 @@ func (s Server) commitReportWithDatasets(
 			report.IsPublic,
 			checkWorkspace(ctx).ID,
 			readme,
+			// REVIEW: Supply the remapped widget configuration to the workspace report insert.
+			newWidgetsConfig,
 		)
 	}
 	if err != nil {
@@ -943,6 +1045,22 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	if err := lockReportTx(ctx, tx, req.ReportId); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+	// REVIEW: Enforce compare-and-swap semantics and validate optional widget configuration under the report row lock.
+	var currentVersion sql.NullString
+	if err := tx.QueryRowContext(ctx, "SELECT version_id FROM reports WHERE id=$1", req.ReportId).Scan(&currentVersion); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if err := validateExpectedReportVersion(currentVersion.String, req.ExpectedVersionId, req.WidgetsConfig); err != nil {
+		return nil, err
+	}
+	if req.WidgetsConfig != nil {
+		if err := validateWidgetsConfig(req.GetWidgetsConfig()); err != nil {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		if _, err := tx.ExecContext(ctx, "UPDATE reports SET widgets_config=$1 WHERE id=$2", req.GetWidgetsConfig(), req.ReportId); err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
 	var result sql.Result
 	if workspaceInfo.IsPlayground {
 		result, err = tx.ExecContext(ctx,
@@ -1026,6 +1144,8 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 
 	return &proto.UpdateReportResponse{
 		UpdatedAt: updated_at.Unix(),
+		// REVIEW: Return the newly committed version identifier so the client can advance its save baseline immediately.
+		VersionId: newVersionID,
 	}, nil
 }
 
@@ -1526,14 +1646,17 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 
 	// Load snapshot of report content
 	var (
-		snapshotMapConfig  sql.NullString
-		snapshotTitle      sql.NullString
-		snapshotParamsText sql.NullString
-		snapshotReadme     sql.NullString
+		// REVIEW: Allocate storage for widget configuration when loading a report snapshot for restoration.
+		snapshotMapConfig     sql.NullString
+		snapshotWidgetsConfig sql.NullString
+		snapshotTitle         sql.NullString
+		snapshotParamsText    sql.NullString
+		snapshotReadme        sql.NullString
 	)
 
 	err = s.db.QueryRowContext(ctx, `
-		SELECT map_config, title, query_params, readme
+		// REVIEW: Load widget configuration from the same snapshot as map, title, parameters, and readme content.
+		SELECT map_config, title, query_params, readme, widgets_config
 		FROM report_snapshots
 		WHERE version_id = $1 AND report_id = $2
 	`, req.VersionId, req.ReportId).Scan(
@@ -1541,6 +1664,8 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 		&snapshotTitle,
 		&snapshotParamsText,
 		&snapshotReadme,
+		// REVIEW: Scan the snapshot widget configuration for atomic restoration.
+		&snapshotWidgetsConfig,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -1565,7 +1690,9 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	parameterDeclarationsUnchanged := currentParamsText.String == snapshotParamsText.String
-	// Restore report content (map_config, title, query_params, readme, version_id)
+	// REVIEW: Restore snapshots at a fresh live version so the restored state cannot reuse an historical revision identifier.
+	// Restore both configurations atomically at a fresh live revision.
+	restoredVersionID := newUUID()
 	_, err = tx.ExecContext(ctx, `
 		UPDATE reports
 		SET map_config = $1,
@@ -1573,9 +1700,11 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 			query_params = $3,
 			readme = $4,
 			updated_at = CURRENT_TIMESTAMP,
-			version_id = $5
-		WHERE id = $6
-	`, snapshotMapConfig, snapshotTitle, snapshotParamsText, snapshotReadme, req.VersionId, req.ReportId)
+			// REVIEW: Restore widget and map configurations together under the new report revision.
+			widgets_config = $5,
+			version_id = $6
+		WHERE id = $7
+	`, snapshotMapConfig, snapshotTitle, snapshotParamsText, snapshotReadme, snapshotWidgetsConfig, restoredVersionID, req.ReportId)
 	if err != nil {
 		errtype.LogError(err, "failed to restore report from snapshot")
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1767,14 +1896,13 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
-		errtype.LogError(err, "failed to commit snapshot restore transaction")
+	// REVIEW: Create the restoration snapshot inside the same transaction as the restored report content.
+	if err := s.createReportSnapshotWithVersionIDTx(ctx, tx, restoredVersionID, req.ReportId, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_SNAPSHOT_RESTORE); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-
-	err = s.createReportSnapshot(ctx, req.ReportId, proto.ReportSnapshot_TRIGGER_TYPE_SNAPSHOT_RESTORE)
-	if err != nil {
-		errtype.LogError(err, "failed to create report snapshot")
+	// REVIEW: Commit restored content and its snapshot atomically before notifying report subscribers.
+	if err := tx.Commit(); err != nil {
+		errtype.LogError(err, "failed to commit snapshot restore transaction")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
