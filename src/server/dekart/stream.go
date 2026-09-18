@@ -390,7 +390,7 @@ func (s Server) sendUserStreamResponse(incomingCtx context.Context, srv proto.De
 	if !checkWorkspace(ctx).IsPlayground {
 		// if playground we don't care about workspace
 		// if not playground, we need to check if workspace was not created after stream was requested
-		ctx = s.SetWorkspaceContext(incomingCtx, nil)
+		ctx = s.refreshWorkspaceContext(incomingCtx)
 	}
 	claims := user.GetClaims(ctx)
 

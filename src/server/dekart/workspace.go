@@ -490,13 +490,31 @@ func (s Server) getUserWorkspace(ctx context.Context, email string) (*proto.Work
 }
 
 func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) context.Context {
+	var preferredWorkspaceID string
+	var isPlayground bool
+	if r != nil {
+		preferredWorkspaceID = r.Header.Get("X-Dekart-Workspace-Id")
+		isPlayground = r.Header.Get("X-Dekart-Playground") == "true"
+	}
+	return s.resolveWorkspaceContext(ctx, preferredWorkspaceID, isPlayground)
+}
+
+// refreshWorkspaceContext rebuilds mutable workspace state while preserving the selected workspace.
+func (s Server) refreshWorkspaceContext(ctx context.Context) context.Context {
+	workspace := checkWorkspace(ctx)
+	return s.resolveWorkspaceContext(ctx, workspace.ID, workspace.IsPlayground)
+}
+
+// resolveWorkspaceContext selects a workspace and loads its current access state.
+func (s Server) resolveWorkspaceContext(ctx context.Context, preferredWorkspaceID string, isPlayground bool) context.Context {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		return ctx
 	}
 	isCloud := os.Getenv("DEKART_CLOUD") != ""
+	isPlayground = !isCloud && isPlayground
 	// Playground mode is self-hosted only; Cloud requests always use a real workspace.
-	if !isCloud && r != nil && r.Header.Get("X-Dekart-Playground") == "true" && claims.WorkspaceID == "" {
+	if isPlayground && claims.WorkspaceID == "" {
 		playground := user.WorkspaceInfo{IsPlayground: true}
 		if s.runtimeLicenseReadOnly() {
 			playground.ReadOnly = true
@@ -522,16 +540,9 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 		errtype.LogError(err, "Error getting user workspaces")
 		return ctx
 	}
-	var preferredWorkspaceId string
-	isPlayground := !isCloud && checkWorkspace(ctx).IsPlayground
-	if r != nil {
-		preferredWorkspaceId = r.Header.Get("X-Dekart-Workspace-Id")
-	} else if checkWorkspace(ctx).ID != "" {
-		preferredWorkspaceId = checkWorkspace(ctx).ID
-	}
 	if claims.WorkspaceID != "" {
 		// why: device/snapshot tokens are workspace-scoped and must drive workspace selection.
-		preferredWorkspaceId = claims.WorkspaceID
+		preferredWorkspaceID = claims.WorkspaceID
 	}
 	var workspaceId string
 	var planType proto.PlanType
@@ -543,12 +554,12 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 	var userRole proto.UserRole = proto.UserRole_ROLE_UNSPECIFIED
 	for _, workspace := range workspaces {
 		// if preferred workspace is not set or is not found, use the first workspace
-		if preferredWorkspaceId == workspace.Id || (workspaceId == "" && claims.WorkspaceID == "") {
+		if preferredWorkspaceID == workspace.Id || (workspaceId == "" && claims.WorkspaceID == "") {
 			userRole = workspace.Role
 			workspaceId = workspace.Id
 			name = workspace.Name
 		}
-		if preferredWorkspaceId == workspace.Id {
+		if preferredWorkspaceID == workspace.Id {
 			break
 		}
 	}
@@ -721,7 +732,7 @@ func (s Server) UpdateWorkspaceUser(ctx context.Context, req *proto.UpdateWorksp
 	}
 
 	// because we are adding/removing users, we need to update the seats in the workspace context
-	updatedCtx := s.SetWorkspaceContext(ctx, nil)
+	updatedCtx := s.refreshWorkspaceContext(ctx)
 	err = s.updateSeats(updatedCtx)
 	if err != nil {
 		log.Err(err).Send()

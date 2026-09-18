@@ -1,6 +1,7 @@
 package dekart
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"net/http"
@@ -12,6 +13,8 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -191,6 +194,10 @@ func TestSetWorkspaceContext_UsesPersistedDefaultWorkspaceForUnknownEmail(t *tes
 	ctx := context.WithValue(context.Background(), user.ContextKey, &user.Claims{Email: user.UnknownEmail})
 	workspaceID := user.GetDefaultWorkspaceID()
 	now := time.Now()
+	var logOutput bytes.Buffer
+	originalLogger := log.Logger
+	log.Logger = zerolog.New(&logOutput)
+	t.Cleanup(func() { log.Logger = originalLogger })
 
 	mock.ExpectQuery("WITH last_status").
 		WithArgs(user.UnknownEmail).
@@ -227,6 +234,7 @@ func TestSetWorkspaceContext_UsesPersistedDefaultWorkspaceForUnknownEmail(t *tes
 	require.Equal(t, proto.UserRole_ROLE_ADMIN, workspace.UserRole)
 	require.Equal(t, int64(1), workspace.AddedUsersCount)
 	require.Equal(t, int64(1), workspace.BilledUsers)
+	require.NotContains(t, logOutput.String(), "workspaceInfo not found in context")
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
