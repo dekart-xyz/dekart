@@ -325,6 +325,7 @@ func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *m
 		router.HandleFunc("/workspace/create", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace/join", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace/plan", staticFilesHandler.ServeIndex)
+		router.HandleFunc("/workspace/trial", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace/members", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace/tokens", staticFilesHandler.ServeIndex)
 		router.HandleFunc("/workspace/invite/{id}", staticFilesHandler.ServeIndex)
