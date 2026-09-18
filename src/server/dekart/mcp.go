@@ -668,15 +668,23 @@ func (s *Server) callUpdateReportMapConfigTool(ctx context.Context, raw json.Raw
 			"Map configuration is too large (%d bytes). Maximum allowed size is %d bytes. Please simplify your map configuration.",
 			len(request.MapConfig), MaxMapConfigSize)
 	}
-	// Validate Kepler map config schema and dataset bindings before persisting.
-	if err := s.validateReportMapConfig(ctx, request.ReportId, request.MapConfig); err != nil {
-		return nil, err
+	newVersionID := newUUID()
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer tx.Rollback()
+	if err := lockReportTx(ctx, tx, request.ReportId); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 	updatedAt := time.Now()
-	newVersionID := newUUID()
+	// Validate bindings while the report lock prevents concurrent dataset changes.
+	if err := s.validateReportMapConfigTx(ctx, tx, request.ReportId, request.MapConfig); err != nil {
+		return nil, err
+	}
 	var result sql.Result
 	if workspaceInfo.IsPlayground {
-		result, err = s.db.ExecContext(ctx,
+		result, err = tx.ExecContext(ctx,
 			`update
 			reports
 		set map_config=$1, updated_at=$2, version_id=$3
@@ -688,7 +696,7 @@ func (s *Server) callUpdateReportMapConfigTool(ctx context.Context, raw json.Raw
 			claims.Email,
 		)
 	} else {
-		result, err = s.db.ExecContext(ctx,
+		result, err = tx.ExecContext(ctx,
 			`update
 			reports
 		set map_config=$1, updated_at=$2, version_id=$3
@@ -711,7 +719,10 @@ func (s *Server) callUpdateReportMapConfigTool(ctx context.Context, raw json.Raw
 	if affectedRows == 0 {
 		return nil, status.Error(codes.NotFound, fmt.Sprintf("report not found id:%s", request.ReportId))
 	}
-	if err := s.createReportSnapshotWithVersionID(ctx, newVersionID, request.ReportId, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE); err != nil {
+	if err := s.createReportSnapshotWithVersionIDTx(ctx, tx, newVersionID, request.ReportId, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if err := tx.Commit(); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	s.reportStreams.Ping(request.ReportId)

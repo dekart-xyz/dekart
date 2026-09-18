@@ -2,7 +2,7 @@ import { CreateDatasetRequest, RemoveDatasetRequest, UpdateDatasetNameRequest } 
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { setError, success, info, warn } from './message'
-import { addDataToMap, toggleSidePanel, replaceDataInMap } from '@kepler.gl/actions'
+import { addDataToMap, toggleSidePanel, replaceDataInMap, removeDataset as removeKeplerDataset } from '@kepler.gl/actions'
 import { get } from '../lib/api'
 import getDatasetName from '../lib/getDatasetName'
 import { runWarehouseQuery } from './query'
@@ -10,6 +10,7 @@ import { filenameWithExtension, mimeFromExtension } from '../lib/mime'
 import { failDuckDBSource, registerDuckDBFileSource, registerDuckDBSource, removeDuckDBSource } from './duckdb'
 import waitForKeplerDataset from '../lib/waitForKeplerDataset'
 import { consumeAutoCreateLayer, keplerDatasetFinishUpdating, keplerDatasetStartUpdating } from './kepler'
+import { removeDatasetWidgets } from './widgets'
 
 let duckDBDatabaseModule = null
 
@@ -42,7 +43,9 @@ export function createDataset (reportId) {
     dispatch({ type: createDataset.name })
     const request = new CreateDatasetRequest()
     request.setReportId(reportId)
-    dispatch(grpcCall(Dekart.CreateDataset, request))
+    dispatch(grpcCall(Dekart.CreateDataset, request, response => {
+      dispatch({ type: 'widgetDatasetCreated', datasetId: response.id })
+    }))
   }
 }
 
@@ -89,9 +92,9 @@ export function removeDataset (datasetId, silent = false) {
     const request = new RemoveDatasetRequest()
     request.setDatasetId(datasetId)
     dispatch(grpcCall(Dekart.RemoveDataset, request, (res) => {
-      if (!silent) {
-        dispatch(success('Dataset removed'))
-      }
+      dispatch(removeKeplerDataset(datasetId))
+      dispatch(removeDatasetWidgets(datasetId))
+      if (!silent) dispatch(success('Dataset removed'))
     }))
   }
 }

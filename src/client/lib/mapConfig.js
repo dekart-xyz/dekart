@@ -1,4 +1,4 @@
-import { receiveMapConfig } from '@kepler.gl/actions'
+import { addFilter, applyFilterConfig, receiveMapConfig, removeFilter } from '@kepler.gl/actions'
 import { KeplerGlSchema } from '@kepler.gl/schemas'
 import { setLastMapConfigChanged } from '../actions/report'
 import { useDispatch, useSelector } from 'react-redux'
@@ -68,13 +68,22 @@ function checkMapConfig (kepler, mapConfigInputStr, dispatch, datasets) {
   }
 }
 
-export function receiveReportUpdateMapConfig (report, dispatch, getState) {
+export function receiveReportUpdateMapConfig (report, dispatch, getState, options) {
   const { kepler } = getState().keplerGl
   const newConfig = JSON.parse(report.mapConfig)
   const currentConfig = KeplerGlSchema.getConfigToSave(kepler)
   if (shouldUpdateMapConfig(currentConfig, newConfig)) {
     const newConfigNormalized = KeplerGlSchema.parseSavedConfig(newConfig)
-    dispatch(receiveMapConfig(newConfigNormalized))
+    const { replaceFilters, ...receiveOptions } = options || {}
+    dispatch(receiveMapConfig(newConfigNormalized, receiveOptions))
+    if (replaceFilters) {
+      const currentFilters = getState().keplerGl.kepler.visState.filters
+      for (let index = currentFilters.length - 1; index >= 0; index--) dispatch(removeFilter(index))
+      for (const filter of newConfigNormalized.visState.filters || []) {
+        dispatch(addFilter(filter.dataId, filter.id))
+        dispatch(applyFilterConfig(filter.id, filter))
+      }
+    }
     return true
   } else {
     return false

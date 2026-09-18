@@ -2,6 +2,7 @@ import { combineReducers } from 'redux'
 import { addDatasetToMap, cancelDownloading, closeDatasetSettingsModal, downloadDataset, downloadingProgress, finishAddingDatasetToMap, finishDownloading, openDatasetSettingsModal, processDownloadError, removeDataset, setActiveDataset } from '../actions/dataset'
 import { consumeAutoCreateLayer, keplerDatasetFinishUpdating, keplerDatasetStartUpdating } from '../actions/kepler'
 import { closeReport, openReport, reportUpdate } from '../actions/report'
+import { widgetsDefaultsConsumed } from '../actions/widgets'
 
 function lastAddedQueryParamsHash (state = {}, action) {
   switch (action.type) {
@@ -154,6 +155,24 @@ function autoCreateLayerIds (state = [], action) {
   }
 }
 
+// Widget defaults are offered only for the exact dataset returned by the UI
+// CreateDataset request. Report-stream additions may originate from MCP or
+// another session and must never inherit that eligibility.
+export function autoCreateWidgetIds (state = [], action) {
+  switch (action.type) {
+    case openReport.name:
+    case closeReport.name:
+      return []
+    case 'widgetDatasetCreated':
+      return action.datasetId && !state.includes(action.datasetId) ? [...state, action.datasetId] : state
+    case widgetsDefaultsConsumed.name:
+    case removeDataset.name:
+      return state.filter(id => id !== action.datasetId)
+    default:
+      return state
+  }
+}
+
 function settings (state = { datasetId: null, visible: false }, action) {
   switch (action.type) {
     case openDatasetSettingsModal.name:
@@ -190,6 +209,7 @@ export default combineReducers({
   list,
   updatingNum,
   autoCreateLayerIds,
+  autoCreateWidgetIds,
   lastAddedQueryParamsHash,
   lastAddedQueryQueryJob
 })
