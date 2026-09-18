@@ -12,7 +12,7 @@ Learn how to grant access to datasets and users, and enhance your visualizations
 
 → [Get support in Slack Community](https://slack.dekart.xyz/)
 
-→ [Book a walkthrough demo with our team](https://calendly.com/vladi-dekart/30min)
+→ [Book a walkthrough demo with our team](https://calendly.com/vladi-dekart/meet-vladi)
 
 → [Create a GitHub Issue](https://github.com/dekart-xyz/dekart/issues)
 

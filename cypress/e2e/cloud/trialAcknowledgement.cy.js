@@ -1,7 +1,84 @@
 /* eslint-disable no-undef */
+import { CreateSubscriptionRequest, GetWorkspaceRequest, GetWorkspaceResponse, PlanType } from 'dekart-proto/dekart_pb'
+
+function decodeGrpcRequest (body) {
+  const bytes = Cypress.Buffer.from(body)
+  return CreateSubscriptionRequest.deserializeBinary(new Uint8Array(bytes.buffer, bytes.byteOffset + 5, bytes.length - 5))
+}
+
+function grpcFrame (message) {
+  const requestBytes = message.serializeBinary()
+  const body = new Uint8Array(requestBytes.length + 5)
+  const view = new DataView(body.buffer)
+  view.setUint32(1, requestBytes.length)
+  body.set(requestBytes, 5)
+  return body
+}
+
+function readGrpcResponse (response, bytes) {
+  const headerStatus = response.headers.get('grpc-status')
+  let status = headerStatus === null ? null : Number(headerStatus)
+  let data
+  let offset = 0
+  while (offset + 5 <= bytes.length) {
+    const frameType = bytes[offset]
+    const length = new DataView(bytes.buffer, bytes.byteOffset + offset + 1, 4).getUint32(0)
+    const payload = bytes.subarray(offset + 5, offset + 5 + length)
+    if ((frameType & 0x80) !== 0) {
+      const match = new TextDecoder().decode(payload).match(/grpc-status:\s*(\d+)/i)
+      if (match) status = Number(match[1])
+    } else if (!data) {
+      data = payload
+    }
+    offset += 5 + length
+  }
+  if (status === null) throw new Error('gRPC status missing')
+  return { status, data }
+}
+
+function startTrialRequest (win, email, workspaceId, revision) {
+  const request = new CreateSubscriptionRequest()
+  request.setPlanType(PlanType.TYPE_TRIAL)
+  request.setRevision(revision)
+  const headers = new win.Headers({
+    'Content-Type': 'application/grpc-web+proto',
+    'X-Grpc-Web': '1',
+    'X-Dekart-Claim-Email': email,
+    'X-Dekart-Workspace-Id': workspaceId
+  })
+  return win.fetch(`${Cypress.env('DEKART_E2E_API_URL')}/Dekart/CreateSubscription`, {
+    method: 'POST',
+    headers,
+    body: grpcFrame(request)
+  }).then(async response => {
+    const bytes = new Uint8Array(await response.arrayBuffer())
+    return readGrpcResponse(response, bytes).status
+  })
+}
+
+function getWorkspaceRequest (win, email, workspaceId) {
+  const request = new GetWorkspaceRequest()
+  const headers = new win.Headers({
+    'Content-Type': 'application/grpc-web+proto',
+    'X-Grpc-Web': '1',
+    'X-Dekart-Claim-Email': email,
+    'X-Dekart-Workspace-Id': workspaceId
+  })
+  return win.fetch(`${Cypress.env('DEKART_E2E_API_URL')}/Dekart/GetWorkspace`, {
+    method: 'POST',
+    headers,
+    body: grpcFrame(request)
+  }).then(async response => {
+    const bytes = new Uint8Array(await response.arrayBuffer())
+    const grpcResponse = readGrpcResponse(response, bytes)
+    expect(grpcResponse.status).to.equal(0)
+    return GetWorkspaceResponse.deserializeBinary(grpcResponse.data)
+  })
+}
 
 describe('Cloud trial acknowledgement', () => {
   const email = 'trial-ack@example.com'
+  const apiBase = `${Cypress.env('DEKART_E2E_API_URL')}/api/v1`
 
   beforeEach(() => {
     cy.resetCloudTestDatabase()
@@ -41,13 +118,22 @@ describe('Cloud trial acknowledgement', () => {
     cy.contains('Start your 14-day trial').should('be.visible')
     cy.contains('$49/month per editor').should('be.visible')
     cy.contains('$490/month').should('be.visible')
+    cy.get('button#dekart-start-trial').should('be.disabled')
     cy.wait('@delayedWorkspace')
     cy.contains('Your 14-day trial').should('be.visible')
-    cy.intercept('POST', '**/Dekart/GetWorkspace').as('deviceWorkspace')
-    cy.visit('/device/authorize?device_id=00000000-0000-0000-0000-000000000398')
-    cy.wait('@deviceWorkspace')
-    cy.contains('Authorize this device').should('be.visible')
-    cy.contains('Start your trial to use this workspace.').should('not.exist')
+    cy.get('button#dekart-start-trial').should('not.be.disabled')
+    cy.request('POST', `${apiBase}/device`, { device_name: 'cypress-trial-gate' }).then(startResp => {
+      const deviceId = startResp.body.device_id
+      cy.visit(startResp.body.auth_url)
+      cy.contains('Authorize this device').should('be.visible')
+      cy.contains('Start your trial to use this workspace.').should('not.exist')
+      cy.contains('button', 'Authorize').click()
+      cy.location('pathname', { timeout: 20000 }).should('equal', '/workspace/trial')
+      cy.request('POST', `${apiBase}/device/token`, { device_id: deviceId }).then(tokenResp => {
+        expect(tokenResp.body.status).to.equal('authorized')
+        expect(tokenResp.body.token).to.be.a('string').and.not.be.empty
+      })
+    })
     cy.visit('/workspace/trial')
     cy.visit('/workspace/plan')
     cy.location('pathname').should('equal', '/workspace/plan')
@@ -120,6 +206,38 @@ describe('Cloud trial acknowledgement', () => {
     cy.contains('button', 'Upgrade').should('be.disabled')
   })
 
+  it('requires the legacy Cloud default workspace to start a trial', () => {
+    const workspaceId = '00000000-0000-0000-0000-000000000000'
+    let delayInitialWorkspaceResponse = true
+    cy.intercept('POST', '**/Dekart/GetWorkspace', req => {
+      const delayResponse = delayInitialWorkspaceResponse
+      delayInitialWorkspaceResponse = false
+      if (delayResponse) req.alias = 'delayedInitialWorkspace'
+      req.continue(res => {
+        if (delayResponse) res.setDelay(3000)
+      })
+    })
+    cy.psql(`
+      INSERT INTO workspaces (id, name, is_default)
+      VALUES ('${workspaceId}', 'Default', TRUE);
+
+      INSERT INTO workspace_log (workspace_id, email, status, authored_by, id, role)
+      VALUES ('${workspaceId}', '${email}', 1, '${email}', '00000000-0000-0000-0000-000000000351', 1);
+
+      INSERT INTO subscription_log (workspace_id, authored_by, plan_type)
+      VALUES ('${workspaceId}', '${email}', 1);
+    `)
+
+    cy.visit('/')
+    cy.location('pathname', { timeout: 30000 }).should('equal', '/workspace/trial')
+    cy.get('button#dekart-start-trial').should('be.disabled')
+    cy.wait('@delayedInitialWorkspace')
+    cy.contains('Your 14-day trial').should('be.visible')
+    cy.get('button#dekart-start-trial').should('not.be.disabled')
+    cy.get('button#dekart-start-trial').click()
+    cy.get('button#dekart-create-report', { timeout: 30000 }).should('be.visible')
+  })
+
   it('keeps the legacy Team plan fully available', () => {
     // Stripe test subscription sub_1UGcKGCnpQUpbHMF71A3sEY4 belongs to this shared read-only fixture customer.
     const legacyTeamCustomerId = 'cus_VHALvFVvwmmmGA'
@@ -154,6 +272,125 @@ describe('Cloud trial acknowledgement', () => {
     cy.contains('Team').should('be.visible')
     cy.contains('button', 'Manage subscription').should('be.visible').and('not.be.disabled')
     cy.contains('Workspace is read-only.').should('not.exist')
+  })
+
+  it('keeps an existing Personal map viewable while gating its source route', () => {
+    const workspaceId = '00000000-0000-0000-0000-000000000501'
+    const reportId = '00000000-0000-0000-0000-000000000502'
+    cy.psql(`
+      INSERT INTO workspaces (id, name)
+      VALUES ('${workspaceId}', 'Personal map workspace');
+
+      INSERT INTO workspace_log (workspace_id, email, status, authored_by, id, role)
+      VALUES ('${workspaceId}', '${email}', 1, '${email}', '00000000-0000-0000-0000-000000000503', 1);
+
+      INSERT INTO subscription_log (workspace_id, authored_by, plan_type)
+      VALUES ('${workspaceId}', '${email}', 1);
+
+      INSERT INTO reports (id, title, author_email, workspace_id)
+      VALUES ('${reportId}', 'Existing Personal map', '${email}', '${workspaceId}');
+    `)
+
+    cy.visit(`/reports/${reportId}`)
+    cy.location('pathname', { timeout: 30000 }).should('equal', `/reports/${reportId}`)
+    cy.contains('Existing Personal map').should('be.visible')
+    cy.contains('Start your trial to use this workspace.').should('be.visible')
+
+    cy.visit(`/reports/${reportId}/source`)
+    cy.location('pathname', { timeout: 30000 }).should('equal', '/workspace/trial')
+  })
+
+  it('recovers when trial activation fails', () => {
+    const workspaceId = '00000000-0000-0000-0000-000000000601'
+    cy.psql(`
+      INSERT INTO workspaces (id, name)
+      VALUES ('${workspaceId}', 'Trial retry workspace');
+
+      INSERT INTO workspace_log (workspace_id, email, status, authored_by, id, role)
+      VALUES ('${workspaceId}', '${email}', 1, '${email}', '00000000-0000-0000-0000-000000000602', 1);
+
+      INSERT INTO subscription_log (workspace_id, authored_by, plan_type)
+      VALUES ('${workspaceId}', '${email}', 1);
+    `)
+    cy.intercept('POST', '**/Dekart/CreateSubscription', { forceNetworkError: true }).as('failedTrialStart')
+
+    cy.visit('/workspace/trial')
+    cy.get('button#dekart-start-trial').click()
+    cy.wait('@failedTrialStart')
+    cy.contains('Could not start the trial. Please try again.').should('be.visible')
+    cy.get('button#dekart-start-trial').should('not.be.disabled')
+  })
+
+  it('sends Grow and Max upgrades and recovers when checkout creation fails', () => {
+    const workspaceId = '00000000-0000-0000-0000-000000000701'
+    cy.psql(`
+      INSERT INTO workspaces (id, name)
+      VALUES ('${workspaceId}', 'Trial upgrade workspace');
+
+      INSERT INTO workspace_log (workspace_id, email, status, authored_by, id, role)
+      VALUES ('${workspaceId}', '${email}', 1, '${email}', '00000000-0000-0000-0000-000000000702', 1);
+
+      INSERT INTO subscription_log (workspace_id, authored_by, plan_type, trial_ends_at)
+      VALUES ('${workspaceId}', '${email}', 6, NOW() + INTERVAL '14 days');
+    `)
+    const requestedPlans = []
+    cy.intercept('POST', '**/Dekart/CreateSubscription', req => {
+      const planType = decodeGrpcRequest(req.body).getPlanType()
+      if (requestedPlans.at(-1) !== planType) requestedPlans.push(planType)
+      return new Cypress.Promise(resolve => {
+        setTimeout(() => {
+          req.destroy()
+          resolve()
+        }, 500)
+      })
+    }).as('failedCheckout')
+
+    cy.visit('/workspace/plan')
+    cy.get(`button#dekart-${PlanType.TYPE_GROW}-choose-plan`).click().should('be.disabled')
+    cy.wait('@failedCheckout')
+    cy.get(`button#dekart-${PlanType.TYPE_GROW}-choose-plan`).should('not.be.disabled')
+    cy.get(`button#dekart-${PlanType.TYPE_MAX}-choose-plan`).click().should('be.disabled')
+    cy.wait('@failedCheckout')
+    cy.get(`button#dekart-${PlanType.TYPE_MAX}-choose-plan`).should('not.be.disabled')
+    cy.then(() => expect(requestedPlans).to.deep.equal([PlanType.TYPE_GROW, PlanType.TYPE_MAX]))
+  })
+
+  it('serializes concurrent trial starts with one stale command', () => {
+    const workspaceId = '00000000-0000-0000-0000-000000000801'
+    cy.psql(`
+      INSERT INTO workspaces (id, name)
+      VALUES ('${workspaceId}', 'Concurrent trial workspace');
+
+      INSERT INTO workspace_log (workspace_id, email, status, authored_by, id, role)
+      VALUES ('${workspaceId}', '${email}', 1, '${email}', '00000000-0000-0000-0000-000000000802', 1);
+
+      INSERT INTO subscription_log (workspace_id, authored_by, plan_type)
+      VALUES ('${workspaceId}', '${email}', 1);
+    `)
+
+    cy.visit('/workspace/trial')
+    cy.window().then(win => {
+      return getWorkspaceRequest(win, email, workspaceId).then(workspace => {
+        const revision = workspace.getSubscription().getRevision()
+        expect(revision).to.be.a('string').and.not.be.empty
+        return Cypress.Promise.all([
+          startTrialRequest(win, email, workspaceId, revision),
+          startTrialRequest(win, email, workspaceId, revision)
+        ]).then(statuses => {
+          expect(statuses.sort()).to.deep.equal([0, 10])
+          return getWorkspaceRequest(win, email, workspaceId)
+        }).then(current => {
+          expect(current.getSubscription().getPlanType()).to.equal(PlanType.TYPE_TRIAL)
+        })
+      })
+    })
+    cy.psql(`
+      SELECT COUNT(*)
+      FROM subscription_log
+      WHERE workspace_id = '${workspaceId}' AND plan_type = 6
+    `).its('stdout').should('match', /^1\s*$/)
+    cy.visit('/')
+    cy.get('button#dekart-create-report', { timeout: 30000 }).should('be.visible')
   })
 
 })

@@ -19,6 +19,11 @@ import (
 
 var defaultWorkspaceEnsureMu sync.Mutex
 
+// isTrialGatedWorkspace identifies Cloud Personal workspaces that must start a trial before editing.
+func isTrialGatedWorkspace(isCloud bool, planType proto.PlanType) bool {
+	return isCloud && planType == proto.PlanType_TYPE_PERSONAL
+}
+
 func (s Server) getUserWorkspaces(ctx context.Context, email string) ([]*proto.Workspace, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		WITH last_status AS (
@@ -489,6 +494,16 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 	if claims == nil {
 		return ctx
 	}
+	isCloud := os.Getenv("DEKART_CLOUD") != ""
+	// Playground mode is self-hosted only; Cloud requests always use a real workspace.
+	if !isCloud && r != nil && r.Header.Get("X-Dekart-Playground") == "true" && claims.WorkspaceID == "" {
+		playground := user.WorkspaceInfo{IsPlayground: true}
+		if s.runtimeLicenseReadOnly() {
+			playground.ReadOnly = true
+			playground.ReadOnlyReason = proto.GetWorkspaceResponse_READ_ONLY_REASON_LICENSE_KEY_EXPIRED
+		}
+		return user.SetWorkspaceCtx(ctx, playground)
+	}
 
 	if claims.Email == user.UnknownEmail && os.Getenv("DEKART_CLOUD") == "" && s.db == nil {
 		// In tests without a database, preserve the auth-disabled self-hosted fallback.
@@ -508,6 +523,7 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 		return ctx
 	}
 	var preferredWorkspaceId string
+	isPlayground := !isCloud && checkWorkspace(ctx).IsPlayground
 	if r != nil {
 		preferredWorkspaceId = r.Header.Get("X-Dekart-Workspace-Id")
 	} else if checkWorkspace(ctx).ID != "" {
@@ -568,6 +584,11 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 		log.Err(err).Send()
 		return ctx
 	}
+	// Preserve license and subscription expiry precedence over the pre-trial gate.
+	if !readOnly && isTrialGatedWorkspace(isCloud, planType) {
+		readOnly = true
+		readOnlyReason = proto.GetWorkspaceResponse_READ_ONLY_REASON_TRIAL_NOT_STARTED
+	}
 
 	ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{
 		ID:                 workspaceId,
@@ -575,6 +596,7 @@ func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) contex
 		Name:               name,
 		AddedUsersCount:    addedUsersCount,
 		BilledUsers:        billedUsers,
+		IsPlayground:       isPlayground,
 		IsDefaultWorkspace: isDefaultWorkspace,
 		UserRole:           userRole,
 		ReadOnly:           readOnly,

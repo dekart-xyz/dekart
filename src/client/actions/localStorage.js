@@ -38,7 +38,7 @@ export function loadLocalStorage () {
   return (dispatch) => {
     const localStorageValue = window.localStorage.getItem(LOCAL_STORAGE_KEY)
     if (localStorageValue) {
-      current = JSON.parse(localStorageValue)
+      current = { ...initialState, ...JSON.parse(localStorageValue) }
     }
     dispatch(localStorageInit())
   }

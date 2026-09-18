@@ -1,42 +1,47 @@
 .banner {
-  position: sticky;
-  bottom: 0;
-  display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 8px 20px;
-  background: #328EB2;
-  z-index: 2000;
-  color: rgba(255, 255, 255, 0.9);
+  background: #0b72ce;
+  bottom: 0;
+  color: #fff;
+  display: flex;
   font-size: 14px;
+  gap: 24px;
+  justify-content: space-between;
   line-height: 20px;
-  width: 100%;
   margin-top: auto;
-  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  padding: 14px 24px;
+  padding-bottom: calc(14px + env(safe-area-inset-bottom));
+  position: sticky;
+  width: 100%;
+  z-index: 2000;
 }
 
 .message {
+  align-items: baseline;
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
   min-height: 0;
 }
 
-.icon {
-  font-size: 16px;
-  color: rgba(255, 255, 255, 0.95);
-  line-height: 1;
+.headline {
+  color: #fff;
+  font-weight: 600;
 }
 
-.headline {
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.94) !important;
+.detail {
+  color: #fff;
 }
 
 .actions {
-  display: flex;
   align-items: center;
-  gap: 16px;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 10px;
+}
+
+.secondaryAction {
+  color: #fff !important;
 }
 
 @media (max-width: 768px) {
@@ -61,4 +66,3 @@
     width: 100%;
   }
 }
-

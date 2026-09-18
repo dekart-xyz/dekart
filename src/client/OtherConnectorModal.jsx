@@ -9,7 +9,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { success } from './actions/message'
 
 const REQUESTED_CONNECTORS_KEY = 'requestedOtherConnectors'
-const CALENDLY_URL = 'https://calendly.com/vladi-dekart/30min'
+const CALENDLY_URL = 'https://calendly.com/vladi-dekart/meet-vladi'
 
 export const OTHER_CONNECTOR_OPTIONS = [
   { label: 'Athena', value: 'athena' },

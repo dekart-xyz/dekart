@@ -105,6 +105,14 @@ func (s Server) requireWorkspaceIDWrite(ctx context.Context, workspaceID string)
 			ReadOnlyReason: proto.GetWorkspaceResponse_READ_ONLY_REASON_SUBSCRIPTION_EXPIRED,
 		})
 	}
+	isCloud := os.Getenv("DEKART_CLOUD") != ""
+	if subscription != nil && isTrialGatedWorkspace(isCloud, subscription.PlanType) {
+		// Cloud Personal workspaces must not mutate existing reports before the trial starts.
+		return workspaceReadOnlyError(user.WorkspaceInfo{
+			ReadOnly:       true,
+			ReadOnlyReason: proto.GetWorkspaceResponse_READ_ONLY_REASON_TRIAL_NOT_STARTED,
+		})
+	}
 	return nil
 }
 

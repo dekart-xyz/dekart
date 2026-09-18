@@ -1,16 +1,17 @@
 import Tag from 'antd/es/tag'
 import styles from './Plans.module.css'
 import Title from 'antd/es/typography/Title'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import Button from 'antd/es/button'
 import { createSubscription, redirectToCustomerPortal } from './actions/workspace'
 import { PlanType } from 'dekart-proto/dekart_pb'
-import { CheckCircleOutlined } from '@ant-design/icons'
+import { CheckOutlined } from '@ant-design/icons'
 import Text from 'antd/es/typography/Text'
 import Tooltip from 'antd/es/tooltip'
 import classNames from 'classnames'
 import { track } from './lib/tracking'
+import PricingBlock from './PricingBlock'
 
 export function PlanTitle ({ name, price, icon, color, description, selected }) {
   return (
@@ -49,119 +50,38 @@ function ManageSubscriptionButton ({ disabled, loading, cancelAt, onManage }) {
   )
 }
 
-export function Plan ({ title, children, planType, cancelAt, addedUsersCount, isCurrentPlan }) {
+export function Plan ({ title, children, planType, cancelAt, isCurrentPlan, primaryAction }) {
   const [hover, setHover] = useState(false)
   const userStream = useSelector(state => state.user.stream)
   const dispatch = useDispatch()
   const [waitForRedirect, setWaitForRedirect] = useState(false)
-  const [waitForPlanChange, setWaitForPlanChange] = useState(false)
-  const [upgradeDisabled, setUpgradeDisabled] = useState(false)
   const isAdmin = useSelector(state => state.user.isAdmin)
   const workspace = useSelector(state => state.workspace)
-
-  useEffect(() => {
-    if (waitForPlanChange) {
-      setWaitForPlanChange(false)
-    }
-  }, [planType])
 
   let actionButton = (
     <Button
       key='1'
-      type={isCurrentPlan ? 'primary' : (hover ? 'primary' : 'default')}
+      type={isCurrentPlan || primaryAction ? 'primary' : (hover ? 'primary' : 'default')}
       id={`dekart-${planType}-choose-plan`}
       disabled={waitForRedirect || !isAdmin}
       loading={waitForRedirect}
       onClick={() => {
-        track('ChoosePlan', { planType })
+        track(userStream.planType === PlanType.TYPE_TRIAL ? 'UpgradeFromTrial' : 'ChoosePlan', { planType })
         setWaitForRedirect(true)
-        dispatch(createSubscription(planType))
+        dispatch(createSubscription(planType, () => {
+          setWaitForRedirect(false)
+          return null
+        }))
       }}
-      ghost={hover && !isCurrentPlan}
+      ghost={hover && !isCurrentPlan && !primaryAction}
       className={styles.actionButton}
     >
       {isCurrentPlan ? 'Continue' : 'Upgrade'}
     </Button>
   )
 
-  if (planType === PlanType.TYPE_PERSONAL) {
-    if (userStream.planType !== PlanType.TYPE_PERSONAL) {
-      actionButton = (
-        <Button disabled title='Downgrading from Team to Personal is not supported' className={styles.actionButton}>
-          Choose plan
-        </Button>
-      )
-    } else if (userStream.planType === PlanType.TYPE_PERSONAL) {
-      actionButton = <Button disabled className={styles.actionButton}>Current plan</Button>
-    }
-  } else if (planType === PlanType.TYPE_GROW) {
-    // Handle Grow plan with trial functionality
-    if (userStream.planType === PlanType.TYPE_PERSONAL) {
-      // When on Personal plan, show "Start trial" button
-      actionButton = (
-        <>
-          <Button
-            type='primary'
-            id='dekart-grow-start-trial'
-            disabled={waitForRedirect || !isAdmin}
-            loading={waitForPlanChange}
-            onClick={() => {
-              track('StartTrial', { planType: PlanType.TYPE_GROW })
-              setWaitForPlanChange(true)
-              setUpgradeDisabled(true) // disable upgrade button after clicking, so user cannot click it again, otherwise it will cancel the trial
-              dispatch(createSubscription(PlanType.TYPE_TRIAL))
-            }}
-            className={styles.actionButton}
-          >
-            Start free 14-day trial
-          </Button>
-          <div className={styles.cancelAt}>
-            No credit card required
-          </div>
-        </>
-      )
-    } else if (userStream.planType === PlanType.TYPE_TRIAL) {
-      // When on Trial plan, show trial end date and "Upgrade" button
-      const trialEndDate = workspace?.subscription?.cancelAt * 1000
-      actionButton = (
-        <>
-          <Button
-            type='primary'
-            id='dekart-grow-upgrade'
-            disabled={waitForRedirect || !isAdmin || upgradeDisabled}
-            loading={waitForRedirect}
-            onClick={() => {
-              track('UpgradeFromTrial', { planType: PlanType.TYPE_GROW })
-              setWaitForRedirect(true)
-              dispatch(createSubscription(PlanType.TYPE_GROW))
-            }}
-            className={styles.actionButton}
-          >
-            Upgrade
-          </Button>
-          {!workspace?.subscription?.expired && trialEndDate && (
-            <div className={styles.cancelAt}>
-              Trial ends at {(new Date(trialEndDate)).toLocaleDateString()}
-            </div>
-          )}
-        </>
-      )
-    } else if (userStream.planType === PlanType.TYPE_GROW && !workspace?.subscription?.expired) {
-      // When already on Grow plan, show manage subscription
-      actionButton = (
-        <ManageSubscriptionButton
-          disabled={waitForRedirect || !isAdmin}
-          loading={waitForRedirect}
-          cancelAt={cancelAt}
-          onManage={() => {
-            track('ManageSubscription')
-            setWaitForRedirect(true)
-            dispatch(redirectToCustomerPortal())
-          }}
-        />
-      )
-    }
-  } else if (planType === userStream.planType && !workspace?.subscription?.expired) {
+  // Active paid plans use the customer portal instead of starting another checkout.
+  if (planType === userStream.planType && !workspace?.subscription?.expired) {
     actionButton = (
       <ManageSubscriptionButton
         disabled={waitForRedirect || !isAdmin}
@@ -197,117 +117,125 @@ export function Plan ({ title, children, planType, cancelAt, addedUsersCount, is
   )
 }
 
+// TrialStatusCard shows remaining trial time and the single upgrade action.
+function TrialStatusCard () {
+  const cancelAt = useSelector(state => state.workspace.subscription?.cancelAt)
+  const actualDaysLeft = Math.ceil(((cancelAt || 0) * 1000 - Date.now()) / (24 * 60 * 60 * 1000))
+  if (actualDaysLeft > 14) return null
+  const daysLeft = Math.max(0, actualDaysLeft)
+  const daysLabel = daysLeft === 1 ? '1 day left' : `${daysLeft} days left`
+  const trialPercent = `${Math.round((daysLeft / 14) * 100)}%`
+
+  return (
+    <div className={styles.trialStatus}>
+      <div className={styles.trialStatusHeader}>
+        <div className={styles.trialDays}>
+          <strong>{daysLabel}</strong>
+          <span>of your 14-day trial</span>
+        </div>
+        <div className={styles.trialSummary}>Unlimited maps, editors, viewers and database connections.</div>
+      </div>
+      <div className={styles.trialProgress}>
+        <div style={{ width: trialPercent }} />
+      </div>
+      <div className={styles.trialNotice}>When the trial ends, your workspace becomes read-only and your maps stay viewable.</div>
+    </div>
+  )
+}
+
+// TrialEndedCard replaces the active-trial progress with the recovery actions.
+function TrialEndedCard ({ isAdmin }) {
+  return (
+    <div className={styles.trialEnded}>
+      <div>
+        <div className={styles.trialEndedHeadline}>Your trial has ended</div>
+        <div className={styles.trialEndedDescription}>
+          {isAdmin
+            ? 'The workspace is read-only and your maps stay viewable. Upgrade below to start editing again, or book a call to extend the trial.'
+            : 'The workspace is read-only and your maps stay viewable. Ask your workspace admin to upgrade, or book a call to extend the trial.'}
+        </div>
+      </div>
+      <Button
+        href='https://calendly.com/vladi-dekart/meet-vladi'
+        target='_blank'
+        rel='noreferrer'
+        onClick={() => track('BookCallFromTrialEndedCard')}
+      >Book a call
+      </Button>
+    </div>
+  )
+}
+
 export default function Plans () {
   const userStream = useSelector(state => state.user.stream)
   const workspace = useSelector(state => state.workspace)
+  const isAdmin = useSelector(state => state.user.isAdmin)
+  const isTrial = userStream.planType === PlanType.TYPE_TRIAL
+  const trialExpired = isTrial && workspace.subscription?.expired
   return (
     <div className={styles.plans}>
-      {userStream.planType !== PlanType.TYPE_TEAM && (
+      {trialExpired ? <TrialEndedCard isAdmin={isAdmin} /> : isTrial ? <TrialStatusCard /> : null}
+      <div className={styles.planGrid}>
+        {userStream.planType === PlanType.TYPE_TEAM
+          ? (
+            <Plan
+              title={<PlanTitle
+                name='Team'
+                price='$100/month'
+                selected={userStream.planType === PlanType.TYPE_TEAM}
+                description={<Tooltip placement='bottom' title='You can continue using Team plan. If you switch to another plan you will not be able to switch back.'><Tag color='red'>Deprecated</Tag></Tooltip>}
+                     />}
+              planType={PlanType.TYPE_TEAM}
+              cancelAt={workspace?.subscription?.cancelAt}
+              isCurrentPlan={userStream.planType === PlanType.TYPE_TEAM}
+            >
+              <div className={styles.feature}>
+                <CheckOutlined className={styles.checkIcon} />
+                <Text>Everything from Personal</Text>
+              </div>
+              <div className={styles.feature}>
+                <CheckOutlined className={styles.checkIcon} />
+                <Text>Unlimited Maps</Text>
+              </div>
+              <div className={styles.feature}>
+                <CheckOutlined className={styles.checkIcon} />
+                <Text>20 seats included</Text>
+              </div>
+            </Plan>
+            )
+          : null}
         <Plan
-          addedUsersCount={workspace.addedUsersCount}
-          title={<PlanTitle
-            name='Personal'
-            selected={userStream.planType === PlanType.TYPE_PERSONAL}
-            price='Free'
-            description='3 maps included'
-                 />}
-          planType={PlanType.TYPE_PERSONAL}
-          isCurrentPlan={userStream.planType === PlanType.TYPE_PERSONAL}
+          title={<PricingBlock planType={PlanType.TYPE_GROW} />}
+          planType={PlanType.TYPE_GROW}
+          cancelAt={workspace?.subscription?.cancelAt}
+          isCurrentPlan={userStream.planType === PlanType.TYPE_GROW}
+          primaryAction={isTrial}
         >
           <div className={styles.feature}>
-            <CheckCircleOutlined className={styles.checkIcon} />
-            <Text>Unlimited database connectors</Text>
+            <CheckOutlined className={styles.checkIcon} />
+            <Text>Unlimited maps and database connectors</Text>
           </div>
           <div className={styles.feature}>
-            <CheckCircleOutlined className={styles.checkIcon} />
-            <Text>Share maps with link or email</Text>
-          </div>
-          <div className={styles.feature}>
-            <CheckCircleOutlined className={styles.checkIcon} />
-            <Text>See who viewed your maps</Text>
-          </div>
-          <div className={styles.feature}>
-            <CheckCircleOutlined className={styles.checkIcon} />
-            <Text>MCP for AI Agents</Text>
+            <CheckOutlined className={styles.checkIcon} />
+            <Text>Unlimited viewers, always free</Text>
           </div>
         </Plan>
-
-      )}
-      {userStream.planType === PlanType.TYPE_TEAM
-        ? (
-          <Plan
-            addedUsersCount={workspace.addedUsersCount}
-            title={<PlanTitle
-              name='Team'
-              price='$100/month'
-              selected={userStream.planType === PlanType.TYPE_TEAM}
-              description={<Tooltip placement='bottom' title='You can continue using Team plan. If you switch to another plan you will not be able to switch back.'><Tag color='red'>Deprecated</Tag></Tooltip>}
-                   />}
-            planType={PlanType.TYPE_TEAM}
-            cancelAt={workspace?.subscription?.cancelAt}
-            isCurrentPlan={userStream.planType === PlanType.TYPE_TEAM}
-          >
-            <div className={styles.feature}>
-              <CheckCircleOutlined className={styles.checkIcon} />
-              <Text>Everything from Personal</Text>
-            </div>
-            <div className={styles.feature}>
-              <CheckCircleOutlined className={styles.checkIcon} />
-              <Text>Unlimited Maps</Text>
-            </div>
-            <div className={styles.feature}>
-              <CheckCircleOutlined className={styles.checkIcon} />
-              <Text>20 seats included</Text>
-            </div>
-          </Plan>
-          )
-        : null}
-      <Plan
-        addedUsersCount={workspace.addedUsersCount}
-        title={<PlanTitle
-          name='Grow'
-          price='$49/month'
-          selected={userStream.planType === PlanType.TYPE_GROW || userStream.planType === PlanType.TYPE_TRIAL}
-          description='Pay per editor'
-               />}
-        planType={PlanType.TYPE_GROW}
-        cancelAt={workspace?.subscription?.cancelAt}
-        isCurrentPlan={userStream.planType === PlanType.TYPE_GROW || userStream.planType === PlanType.TYPE_TRIAL}
-      >
-        <div className={styles.feature}>
-          <CheckCircleOutlined className={styles.checkIcon} />
-          <Text>Everything in Free</Text>
-        </div>
-        <div className={styles.feature}>
-          <CheckCircleOutlined className={styles.checkIcon} />
-          <Text>Unlimited maps, no 3-map cap</Text>
-        </div>
-        <div className={styles.feature}>
-          <CheckCircleOutlined className={styles.checkIcon} />
-          <Text>Unlimited workspace viewers</Text>
-        </div>
-      </Plan>
-      <Plan
-        addedUsersCount={workspace.addedUsersCount}
-        title={<PlanTitle
-          name='Max'
-          price='$490/month'
-          selected={userStream.planType === PlanType.TYPE_MAX}
-          description='Unlimited'
-               />}
-        planType={PlanType.TYPE_MAX}
-        cancelAt={workspace?.subscription?.cancelAt}
-        isCurrentPlan={userStream.planType === PlanType.TYPE_MAX}
-      >
-        <div className={styles.feature}>
-          <CheckCircleOutlined className={styles.checkIcon} />
-          <Text>Everything in Grow</Text>
-        </div>
-        <div className={styles.feature}>
-          <CheckCircleOutlined className={styles.checkIcon} />
-          <Text>Unlimited editors</Text>
-        </div>
-      </Plan>
+        <Plan
+          title={<PricingBlock planType={PlanType.TYPE_MAX} />}
+          planType={PlanType.TYPE_MAX}
+          cancelAt={workspace?.subscription?.cancelAt}
+          isCurrentPlan={userStream.planType === PlanType.TYPE_MAX}
+        >
+          <div className={styles.feature}>
+            <CheckOutlined className={styles.checkIcon} />
+            <Text>Everything in Grow</Text>
+          </div>
+          <div className={styles.feature}>
+            <CheckOutlined className={styles.checkIcon} />
+            <Text>Unlimited editors</Text>
+          </div>
+        </Plan>
+      </div>
     </div>
   )
 }

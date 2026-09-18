@@ -32,14 +32,16 @@ export function subscribeUserStream () {
     const prevRes = {
       connectionUpdate: -1,
       workspaceUpdate: -1,
+      planType: -1,
       tokenUpdate: -1
     }
     dispatch(grpcStream(Dekart.GetUserStream, request, (message, err) => {
       if (message) {
         dispatch(updateLocalStorage('loginHint', message.email))
         dispatch(userStreamUpdate(message))
-        if (prevRes.workspaceUpdate !== message.workspaceUpdate) {
+        if (prevRes.workspaceUpdate !== message.workspaceUpdate || prevRes.planType !== message.planType) {
           prevRes.workspaceUpdate = message.workspaceUpdate
+          prevRes.planType = message.planType
           dispatch(getWorkspace())
         }
         // Auth-disabled self-hosted mode uses UNKNOWN_EMAIL, but still has workspace-scoped device tokens.

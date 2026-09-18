@@ -14,7 +14,6 @@ import (
 	"dekart/src/server/user"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"maps"
@@ -258,15 +257,6 @@ func (s Server) CreateReport(ctx context.Context, req *proto.CreateReportRequest
 		return nil, err
 	}
 	defer tx.Rollback()
-	allowed, err := checkCreateReportGateTx(ctx, tx, workspaceInfo)
-	if err != nil {
-		return nil, err
-	}
-	if !allowed {
-		return &proto.CreateReportResponse{
-			ReportLimitReached: true,
-		}, nil
-	}
 	id := newUUID()
 	versionID := newUUID()
 	if workspaceInfo.IsPlayground {
@@ -482,13 +472,6 @@ func (s Server) commitReportWithDatasets(
 		return err
 	}
 	defer tx.Rollback()
-	allowed, err := checkCreateReportGateTx(ctx, tx, checkWorkspace(ctx))
-	if err != nil {
-		return err
-	}
-	if !allowed {
-		return errReportLimitReached
-	}
 	newMapConfig, newDatasetIds := updateDatasetIds(report, datasets)
 	newQueryIDByOldID := make(map[string]string, len(queries))
 	for _, dataset := range datasets {
@@ -811,11 +794,6 @@ func (s Server) ForkReport(ctx context.Context, req *proto.ForkReportRequest) (*
 	// forks reuse only the first job per query/hash and recreate DuckDB jobs.
 	err = s.commitReportWithDatasets(ctx, report, datasets, queries, reusableJobs, duckDBHashes)
 	if err != nil {
-		if errors.Is(err, errReportLimitReached) {
-			return &proto.ForkReportResponse{
-				ReportLimitReached: true,
-			}, nil
-		}
 		errtype.LogError(err, "database operation failed")
 		return nil, err
 	}

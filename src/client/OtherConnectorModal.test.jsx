@@ -4,7 +4,7 @@ import { buildBookCallUrl } from './OtherConnectorModal'
 describe('buildBookCallUrl', () => {
   it('includes connector and workspace query params', () => {
     const url = buildBookCallUrl('redshift', 'ws-123')
-    expect(url).toContain('https://calendly.com/vladi-dekart/30min?')
+    expect(url).toContain('https://calendly.com/vladi-dekart/meet-vladi?')
     expect(url).toContain('connector=redshift')
     expect(url).toContain('workspace=ws-123')
   })

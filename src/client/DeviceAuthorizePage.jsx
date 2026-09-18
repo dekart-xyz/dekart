@@ -7,7 +7,7 @@ import { useHistory, useLocation } from 'react-router-dom'
 import { authorizeDevice } from './actions/deviceAuth'
 import { updateSessionStorage } from './actions/sessionStorage'
 import { pendingDeviceAuthorizationKey } from './lib/deviceAuth'
-import { ConnectionType } from 'dekart-proto/dekart_pb'
+import { ConnectionType, PlanType } from 'dekart-proto/dekart_pb'
 import { track } from './lib/tracking'
 import { Header } from './Header'
 import { Loading } from './Loading'
@@ -104,6 +104,7 @@ export default function DeviceAuthorizePage () {
   const deviceID = queryDeviceID || pendingDeviceID
   const envLoaded = useSelector(state => state.env.loaded)
   const googleOAuthEnabled = useSelector(state => state.env.googleOAuthEnabled)
+  const isCloud = useSelector(state => state.env.isCloud)
   const userStream = useSelector(state => state.user.stream)
   const isAnonymous = useSelector(state => state.user.isAnonymous)
   const isAdmin = useSelector(state => state.user.isAdmin)
@@ -141,6 +142,11 @@ export default function DeviceAuthorizePage () {
     try {
       await dispatch(authorizeDevice(deviceID))
       dispatch(updateSessionStorage(pendingDeviceAuthorizationKey, ''))
+      // Cloud Personal workspaces continue to the trial gate after device authorization.
+      if (isCloud && userStream.planType === PlanType.TYPE_PERSONAL) {
+        history.push('/workspace/trial')
+        return
+      }
       setAuthorized(true)
     } catch (err) {
       setErrorMessage(getErrorMessage(err))

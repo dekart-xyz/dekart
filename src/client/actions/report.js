@@ -13,7 +13,6 @@ import { needSensitiveScopes } from './user'
 import { getQueryParamsObjArr, reconcileQueryParamsState } from '../lib/queryParams'
 import { receiveReportUpdateMapConfig } from '../lib/mapConfig'
 import { extensionFromMime } from '../lib/mime'
-import { showUpgradeModal, UpgradeModalType } from './upgradeModal'
 import { track } from '../lib/tracking'
 import { getReportIdFromUrl } from '../lib/getReportIdFromUrl'
 import { closeDuckDBReport, failDuckDBSource, runDuckDBGraph } from './duckdb'
@@ -509,10 +508,6 @@ export function forkReport (reportId) {
     const request = new ForkReportRequest()
     request.setReportId(reportId)
     dispatch(grpcCall(Dekart.ForkReport, request, (res) => {
-      if (res.reportLimitReached) {
-        dispatch(showUpgradeModal(UpgradeModalType.CREATE_REPORT_LIMIT))
-        return
-      }
       const { reportId } = res
       dispatch(newForkedReport(reportId))
       dispatch(success('Report Forked'))
@@ -524,10 +519,6 @@ export function createReport () {
   return async (dispatch) => {
     const request = new CreateReportRequest()
     dispatch(grpcCall(Dekart.CreateReport, request, (res) => {
-      if (res.reportLimitReached) {
-        dispatch(showUpgradeModal(UpgradeModalType.CREATE_REPORT_LIMIT))
-        return
-      }
       const { report } = res
       dispatch(newReport(report.id))
       dispatch(success('New Map Created'))
