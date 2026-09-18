@@ -9,7 +9,7 @@ describe('pg-s3 expired license read-only', () => {
 
     cy.contains('License key expired', { timeout: 30000 }).should('be.visible')
     cy.contains('a', 'Extend Key')
-      .should('have.attr', 'href', 'https://calendly.com/vladi-dekart/30min')
+      .should('have.attr', 'href', 'https://calendly.com/vladi-dekart/meet-vladi')
 
     cy.get('#dekart-create-report', { timeout: 30000 })
       .should('be.visible')

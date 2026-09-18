@@ -261,6 +261,7 @@ message GetWorkspaceResponse {
         READ_ONLY_REASON_UNSPECIFIED = 0;
         READ_ONLY_REASON_SUBSCRIPTION_EXPIRED = 1;
         READ_ONLY_REASON_LICENSE_KEY_EXPIRED = 2;
+        READ_ONLY_REASON_TRIAL_NOT_STARTED = 3;
     }
     Workspace Workspace = 1;
     Subscription subscription = 2;
@@ -372,10 +373,14 @@ message Subscription {
     int64 cancel_at = 9; //seconds
     string item_id = 10; // stripe subscription item id
     bool expired = 11; // true if subscription is expired
+    string revision = 12; // opaque revision of the canonical subscription row
 }
 
 enum PlanType {
     TYPE_UNSPECIFIED = 0;
+    // In Cloud, Personal means trial activation is pending.
+    // Those workspaces remain read-only until trial activation appends a TYPE_TRIAL row.
+    // TODO: rename to TYPE_PENDING_TRIAL
     TYPE_PERSONAL = 1;
     TYPE_TEAM = 2;
     TYPE_GROW = 3;
@@ -389,6 +394,7 @@ enum PlanType {
 message CreateSubscriptionRequest {
     PlanType plan_type = 1;
     string ui_url = 2;
+    string revision = 3; // canonical subscription revision observed by the client
 }
 
 message CreateSubscriptionResponse {
@@ -1067,7 +1073,6 @@ message ForkReportRequest {
 
 message ForkReportResponse {
     string report_id = 1;
-    bool report_limit_reached = 2; // true if report creation was blocked due to free workspace map limit
 }
 
 message CreateReportRequest {
@@ -1076,7 +1081,6 @@ message CreateReportRequest {
 
 message CreateReportResponse {
     Report report = 1;
-    bool report_limit_reached = 2; // true if report creation was blocked due to free workspace map limit
 }
 
 message QueryParam {

@@ -9137,7 +9137,8 @@ proto.GetWorkspaceResponse.serializeBinaryToWriter = function(message, writer) {
 proto.GetWorkspaceResponse.ReadOnlyReason = {
   READ_ONLY_REASON_UNSPECIFIED: 0,
   READ_ONLY_REASON_SUBSCRIPTION_EXPIRED: 1,
-  READ_ONLY_REASON_LICENSE_KEY_EXPIRED: 2
+  READ_ONLY_REASON_LICENSE_KEY_EXPIRED: 2,
+  READ_ONLY_REASON_TRIAL_NOT_STARTED: 3
 };
 
 /**
@@ -11925,7 +11926,8 @@ proto.Subscription.toObject = function(includeInstance, msg) {
     stripeCustomerEmail: jspb.Message.getFieldWithDefault(msg, 8, ""),
     cancelAt: jspb.Message.getFieldWithDefault(msg, 9, 0),
     itemId: jspb.Message.getFieldWithDefault(msg, 10, ""),
-    expired: jspb.Message.getBooleanFieldWithDefault(msg, 11, false)
+    expired: jspb.Message.getBooleanFieldWithDefault(msg, 11, false),
+    revision: jspb.Message.getFieldWithDefault(msg, 12, "")
   };
 
   if (includeInstance) {
@@ -11993,6 +11995,10 @@ proto.Subscription.deserializeBinaryFromReader = function(msg, reader) {
     case 11:
       var value = /** @type {boolean} */ (reader.readBool());
       msg.setExpired(value);
+      break;
+    case 12:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setRevision(value);
       break;
     default:
       reader.skipField();
@@ -12076,6 +12082,13 @@ proto.Subscription.serializeBinaryToWriter = function(message, writer) {
   if (f) {
     writer.writeBool(
       11,
+      f
+    );
+  }
+  f = message.getRevision();
+  if (f.length > 0) {
+    writer.writeString(
+      12,
       f
     );
   }
@@ -12226,6 +12239,24 @@ proto.Subscription.prototype.setExpired = function(value) {
 };
 
 
+/**
+ * optional string revision = 12;
+ * @return {string}
+ */
+proto.Subscription.prototype.getRevision = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 12, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.Subscription} returns this
+ */
+proto.Subscription.prototype.setRevision = function(value) {
+  return jspb.Message.setProto3StringField(this, 12, value);
+};
+
+
 
 
 
@@ -12259,7 +12290,8 @@ proto.CreateSubscriptionRequest.prototype.toObject = function(opt_includeInstanc
 proto.CreateSubscriptionRequest.toObject = function(includeInstance, msg) {
   var f, obj = {
     planType: jspb.Message.getFieldWithDefault(msg, 1, 0),
-    uiUrl: jspb.Message.getFieldWithDefault(msg, 2, "")
+    uiUrl: jspb.Message.getFieldWithDefault(msg, 2, ""),
+    revision: jspb.Message.getFieldWithDefault(msg, 3, "")
   };
 
   if (includeInstance) {
@@ -12304,6 +12336,10 @@ proto.CreateSubscriptionRequest.deserializeBinaryFromReader = function(msg, read
       var value = /** @type {string} */ (reader.readString());
       msg.setUiUrl(value);
       break;
+    case 3:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setRevision(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -12347,6 +12383,13 @@ proto.CreateSubscriptionRequest.serializeBinaryToWriter = function(message, writ
       f
     );
   }
+  f = message.getRevision();
+  if (f.length > 0) {
+    writer.writeString(
+      3,
+      f
+    );
+  }
 };
 
 
@@ -12383,6 +12426,24 @@ proto.CreateSubscriptionRequest.prototype.getUiUrl = function() {
  */
 proto.CreateSubscriptionRequest.prototype.setUiUrl = function(value) {
   return jspb.Message.setProto3StringField(this, 2, value);
+};
+
+
+/**
+ * optional string revision = 3;
+ * @return {string}
+ */
+proto.CreateSubscriptionRequest.prototype.getRevision = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 3, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.CreateSubscriptionRequest} returns this
+ */
+proto.CreateSubscriptionRequest.prototype.setRevision = function(value) {
+  return jspb.Message.setProto3StringField(this, 3, value);
 };
 
 
@@ -31779,8 +31840,7 @@ proto.ForkReportResponse.prototype.toObject = function(opt_includeInstance) {
  */
 proto.ForkReportResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
-    reportId: jspb.Message.getFieldWithDefault(msg, 1, ""),
-    reportLimitReached: jspb.Message.getBooleanFieldWithDefault(msg, 2, false)
+    reportId: jspb.Message.getFieldWithDefault(msg, 1, "")
   };
 
   if (includeInstance) {
@@ -31821,10 +31881,6 @@ proto.ForkReportResponse.deserializeBinaryFromReader = function(msg, reader) {
       var value = /** @type {string} */ (reader.readString());
       msg.setReportId(value);
       break;
-    case 2:
-      var value = /** @type {boolean} */ (reader.readBool());
-      msg.setReportLimitReached(value);
-      break;
     default:
       reader.skipField();
       break;
@@ -31861,13 +31917,6 @@ proto.ForkReportResponse.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
-  f = message.getReportLimitReached();
-  if (f) {
-    writer.writeBool(
-      2,
-      f
-    );
-  }
 };
 
 
@@ -31886,24 +31935,6 @@ proto.ForkReportResponse.prototype.getReportId = function() {
  */
 proto.ForkReportResponse.prototype.setReportId = function(value) {
   return jspb.Message.setProto3StringField(this, 1, value);
-};
-
-
-/**
- * optional bool report_limit_reached = 2;
- * @return {boolean}
- */
-proto.ForkReportResponse.prototype.getReportLimitReached = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 2, false));
-};
-
-
-/**
- * @param {boolean} value
- * @return {!proto.ForkReportResponse} returns this
- */
-proto.ForkReportResponse.prototype.setReportLimitReached = function(value) {
-  return jspb.Message.setProto3BooleanField(this, 2, value);
 };
 
 
@@ -32040,8 +32071,7 @@ proto.CreateReportResponse.prototype.toObject = function(opt_includeInstance) {
  */
 proto.CreateReportResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
-    report: (f = msg.getReport()) && proto.Report.toObject(includeInstance, f),
-    reportLimitReached: jspb.Message.getBooleanFieldWithDefault(msg, 2, false)
+    report: (f = msg.getReport()) && proto.Report.toObject(includeInstance, f)
   };
 
   if (includeInstance) {
@@ -32083,10 +32113,6 @@ proto.CreateReportResponse.deserializeBinaryFromReader = function(msg, reader) {
       reader.readMessage(value,proto.Report.deserializeBinaryFromReader);
       msg.setReport(value);
       break;
-    case 2:
-      var value = /** @type {boolean} */ (reader.readBool());
-      msg.setReportLimitReached(value);
-      break;
     default:
       reader.skipField();
       break;
@@ -32122,13 +32148,6 @@ proto.CreateReportResponse.serializeBinaryToWriter = function(message, writer) {
       1,
       f,
       proto.Report.serializeBinaryToWriter
-    );
-  }
-  f = message.getReportLimitReached();
-  if (f) {
-    writer.writeBool(
-      2,
-      f
     );
   }
 };
@@ -32168,24 +32187,6 @@ proto.CreateReportResponse.prototype.clearReport = function() {
  */
 proto.CreateReportResponse.prototype.hasReport = function() {
   return jspb.Message.getField(this, 1) != null;
-};
-
-
-/**
- * optional bool report_limit_reached = 2;
- * @return {boolean}
- */
-proto.CreateReportResponse.prototype.getReportLimitReached = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 2, false));
-};
-
-
-/**
- * @param {boolean} value
- * @return {!proto.CreateReportResponse} returns this
- */
-proto.CreateReportResponse.prototype.setReportLimitReached = function(value) {
-  return jspb.Message.setProto3BooleanField(this, 2, value);
 };
 
 

@@ -15,7 +15,6 @@ import {
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { success, trialSuccess } from './message'
-import { hideUpgradeModal } from './upgradeModal'
 import { updateSessionStorage } from './sessionStorage'
 import { updateLocalStorage } from './localStorage'
 import { getDeviceAuthorizePath, pendingDeviceAuthorizationKey } from '../lib/deviceAuth'
@@ -59,10 +58,10 @@ export function createWorkspace (name) {
     request.setWorkspaceName(name)
     dispatch(grpcCall(Dekart.CreateWorkspace, request, (response) => {
       const pendingDeviceID = getState().sessionStorage.current?.[pendingDeviceAuthorizationKey] || ''
-      const nextPath = pendingDeviceID ? getDeviceAuthorizePath(pendingDeviceID) : ''
+      const nextPath = pendingDeviceID ? getDeviceAuthorizePath(pendingDeviceID) : '/workspace/trial'
       dispatch(updateSessionStorage(pendingDeviceAuthorizationKey, ''))
       // why: resume explicit device authorization right after onboarding when started from CLI flow.
-      dispatch(switchWorkspace(response.workspaceId, nextPath || '/'))
+      dispatch(switchWorkspace(response.workspaceId, nextPath))
     }))
   }
 }
@@ -101,21 +100,30 @@ export function getWorkspace () {
   }
 }
 
-export function createSubscription (plantType) {
-  return (dispatch) => {
+export function createSubscription (plantType, reject) {
+  return (dispatch, getState) => {
     dispatch({ type: createSubscription.name })
     const request = new CreateSubscriptionRequest()
     request.setPlanType(plantType)
     request.setUiUrl(window.location.href)
+    request.setRevision(getState().workspace.subscription?.revision || '')
     dispatch(grpcCall(Dekart.CreateSubscription, request, (res) => {
       if (res.redirectUrl) {
         window.location.href = res.redirectUrl
       } else if (plantType === PlanType.TYPE_TRIAL) {
-        dispatch(hideUpgradeModal())
+        // Refresh directly because stream revisions have second precision and may not change on rapid activation.
+        dispatch(getWorkspace())
         dispatch(trialSuccess())
       } else {
         success('Subscription created')
       }
+    }, err => {
+      // A concurrent trial start reconciles from canonical state instead of surfacing a global error.
+      if (plantType === PlanType.TYPE_TRIAL && err?.code === 10) {
+        dispatch(getWorkspace())
+        return reject ? reject(err) : null
+      }
+      return reject ? reject(err) : err
     }))
   }
 }

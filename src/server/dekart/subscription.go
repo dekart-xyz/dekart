@@ -2,6 +2,7 @@ package dekart
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/user"
@@ -20,6 +21,47 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type subscriptionQueryer interface {
+	QueryRowContext(context.Context, string, ...interface{}) *sql.Row
+}
+
+type subscriptionRow struct {
+	createdAt   time.Time
+	customerID  sql.NullString
+	planType    proto.PlanType
+	trialEndsAt sql.NullTime
+}
+
+// revision returns an opaque version for the complete canonical subscription row.
+func (row subscriptionRow) revision() string {
+	trialEndsAt := ""
+	if row.trialEndsAt.Valid {
+		trialEndsAt = row.trialEndsAt.Time.UTC().Format(time.RFC3339Nano)
+	}
+	value := fmt.Sprintf("%s|%d|%s|%s", row.createdAt.UTC().Format(time.RFC3339Nano), row.planType, row.customerID.String, trialEndsAt)
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(value)))
+}
+
+// getLatestSubscriptionRow loads the canonical row using deterministic full-precision ordering.
+func getLatestSubscriptionRow(ctx context.Context, queryer subscriptionQueryer, workspaceID string) (*subscriptionRow, error) {
+	row := &subscriptionRow{}
+	err := queryer.QueryRowContext(ctx, `
+		SELECT customer_id, plan_type, created_at, trial_ends_at
+		FROM subscription_log
+		WHERE workspace_id = $1
+		ORDER BY created_at DESC, plan_type DESC, COALESCE(customer_id, '') DESC, trial_ends_at DESC NULLS LAST
+		LIMIT 1
+	`, workspaceID).Scan(&row.customerID, &row.planType, &row.createdAt, &row.trialEndsAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	row.planType = user.ReclassifyLegacySelfHostedPlan(row.planType)
+	return row, nil
+}
+
 // getPriceID returns the stripe price ID for the given plan type
 func getPriceID(planType proto.PlanType) string {
 	if planType == proto.PlanType_TYPE_GROW {
@@ -35,57 +77,39 @@ func getPriceID(planType proto.PlanType) string {
 }
 
 func (s Server) getSubscription(ctx context.Context, workspaceId string) (*proto.Subscription, error) {
-	var createdAt sql.NullTime
-	var customerID sql.NullString
-	var planType proto.PlanType
-	var trialEndsAt sql.NullTime
-
-	err := s.db.QueryRowContext(ctx, `
-        SELECT
-            sl.customer_id,
-            sl.plan_type,
-            sl.created_at,
-			sl.trial_ends_at
-        FROM subscription_log sl
-        WHERE sl.workspace_id = $1
-        ORDER BY sl.created_at DESC
-        LIMIT 1
-        `,
-		workspaceId,
-	).Scan(&customerID, &planType, &createdAt, &trialEndsAt)
-	if err == sql.ErrNoRows {
+	row, err := getLatestSubscriptionRow(ctx, s.db, workspaceId)
+	if row == nil && err == nil {
 		return nil, nil
 	}
 	if err != nil {
 		log.Err(err).Send()
 		return nil, err
 	}
-	planType = user.ReclassifyLegacySelfHostedPlan(planType)
-
 	// If latest plan is TRIAL, use preselected latestTrialEndsAt and bypass Stripe
-	if planType == proto.PlanType_TYPE_TRIAL {
+	if row.planType == proto.PlanType_TYPE_TRIAL {
 		var cancelAt int64
 		var expired bool
-		if trialEndsAt.Valid {
-			cancelAt = trialEndsAt.Time.Unix()
-			expired = trialEndsAt.Time.Unix() < time.Now().Unix()
+		if row.trialEndsAt.Valid {
+			cancelAt = row.trialEndsAt.Time.Unix()
+			expired = !row.trialEndsAt.Time.After(time.Now())
 		}
 		return &proto.Subscription{
-			PlanType:   planType,
-			CustomerId: customerID.String,
-			UpdatedAt:  createdAt.Time.Unix(),
+			PlanType:   row.planType,
+			CustomerId: row.customerID.String,
+			UpdatedAt:  row.createdAt.Unix(),
 			CancelAt:   cancelAt,
 			Expired:    expired,
+			Revision:   row.revision(),
 		}, nil
 	}
 
-	priceID := getPriceID(planType)
+	priceID := getPriceID(row.planType)
 
 	if priceID != "" { // one of the paid plans
 		stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 		params := &stripe.CustomerParams{}
 		params.AddExpand("subscriptions")
-		c, err := customer.Get(customerID.String, params)
+		c, err := customer.Get(row.customerID.String, params)
 
 		if err != nil {
 			log.Err(err).Send()
@@ -97,13 +121,14 @@ func (s Server) getSubscription(ctx context.Context, workspaceId string) (*proto
 					for _, item := range sub.Items.Data {
 						if item.Price.ID == priceID && !item.Deleted {
 							return &proto.Subscription{
-								PlanType:             planType,
-								UpdatedAt:            createdAt.Time.Unix(),
-								CustomerId:           customerID.String,
+								PlanType:             row.planType,
+								UpdatedAt:            row.createdAt.Unix(),
+								CustomerId:           row.customerID.String,
 								StripeSubscriptionId: sub.ID,
 								StripeCustomerEmail:  c.Email,
 								CancelAt:             sub.CancelAt,
 								ItemId:               item.ID,
+								Revision:             row.revision(),
 							}, nil
 
 						}
@@ -113,17 +138,19 @@ func (s Server) getSubscription(ctx context.Context, workspaceId string) (*proto
 		}
 		// no active subscription
 		return &proto.Subscription{
-			PlanType:   planType,
-			CustomerId: customerID.String,
-			UpdatedAt:  createdAt.Time.Unix(),
+			PlanType:   row.planType,
+			CustomerId: row.customerID.String,
+			UpdatedAt:  row.createdAt.Unix(),
 			Expired:    true,
+			Revision:   row.revision(),
 		}, nil
 	}
 	// free plan or unknown plan
 	return &proto.Subscription{
-		PlanType:   planType,
-		CustomerId: customerID.String,
-		UpdatedAt:  createdAt.Time.Unix(),
+		PlanType:   row.planType,
+		CustomerId: row.customerID.String,
+		UpdatedAt:  row.createdAt.Unix(),
+		Revision:   row.revision(),
 	}, nil
 }
 
@@ -296,10 +323,28 @@ func (s Server) createDefaultSubscription(ctx context.Context, workspaceID strin
 	return nil
 }
 
-func (s Server) createTrialSubscription(ctx context.Context, workspaceID string, email string) error {
+func (s Server) createTrialSubscription(ctx context.Context, workspaceID, email, observedRevision string) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var lockedWorkspaceID string
+	if err := tx.QueryRowContext(ctx, `SELECT id FROM workspaces WHERE id = $1 FOR UPDATE`, workspaceID).Scan(&lockedWorkspaceID); err != nil {
+		return err
+	}
+	row, err := getLatestSubscriptionRow(ctx, tx, workspaceID)
+	if err != nil {
+		return err
+	}
+	// A stale or repeated command must reconcile instead of appending another Trial row.
+	if row == nil || row.planType != proto.PlanType_TYPE_PERSONAL || row.revision() != observedRevision {
+		return status.Error(codes.Aborted, "subscription changed; refresh workspace state")
+	}
 	trialEndsAt := time.Now().Add(14 * 24 * time.Hour) // 14 days from now
 
-	_, err := s.db.ExecContext(ctx, `insert into subscription_log (workspace_id, plan_type, authored_by, trial_ends_at) values ($1, $2, $3, $4)`,
+	_, err = tx.ExecContext(ctx, `insert into subscription_log (workspace_id, plan_type, authored_by, trial_ends_at) values ($1, $2, $3, $4)`,
 		workspaceID,
 		proto.PlanType_TYPE_TRIAL,
 		email,
@@ -309,7 +354,7 @@ func (s Server) createTrialSubscription(ctx context.Context, workspaceID string,
 		log.Err(err).Send()
 		return err
 	}
-	return nil
+	return tx.Commit()
 }
 
 func (s Server) CreateSubscription(ctx context.Context, req *proto.CreateSubscriptionRequest) (*proto.CreateSubscriptionResponse, error) {
@@ -350,12 +395,27 @@ func (s Server) CreateSubscription(ctx context.Context, req *proto.CreateSubscri
 			log.Error().Msg("Workspace is not on personal plan when creating trial subscription")
 			return nil, status.Error(codes.InvalidArgument, "Workspace is not on personal plan when creating trial subscription")
 		}
-		err := s.createTrialSubscription(ctx, workspaceInfo.ID, claims.Email)
+		users, err := s.getWorkspaceUsers(ctx, workspaceInfo.ID)
 		if err != nil {
 			log.Err(err).Send()
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-		s.userStreams.Ping([]string{claims.Email})
+		activeUserEmails := make([]string, 0, len(users))
+		for _, workspaceUser := range users {
+			// Only active workspace members need their access state refreshed.
+			if workspaceUser.Status == proto.UserStatus_USER_STATUS_ACTIVE {
+				activeUserEmails = append(activeUserEmails, workspaceUser.Email)
+			}
+		}
+		err = s.createTrialSubscription(ctx, workspaceInfo.ID, claims.Email, req.Revision)
+		if err != nil {
+			log.Err(err).Send()
+			if status.Code(err) == codes.Aborted {
+				return nil, err
+			}
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		s.userStreams.Ping(activeUserEmails)
 		return &proto.CreateSubscriptionResponse{}, nil
 	case proto.PlanType_TYPE_TEAM, proto.PlanType_TYPE_GROW, proto.PlanType_TYPE_MAX:
 		stripe.Key = os.Getenv("STRIPE_SECRET_KEY")

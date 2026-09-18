@@ -1,8 +1,10 @@
 package dekart
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"net/http"
 	"testing"
 	"time"
 
@@ -11,6 +13,8 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -28,6 +32,25 @@ func TestCreateWorkspace_DisabledForSelfHostedByDefault(t *testing.T) {
 
 	require.Error(t, err)
 	require.Equal(t, codes.PermissionDenied, status.Code(err))
+}
+
+func TestIsTrialGatedWorkspace(t *testing.T) {
+	tests := []struct {
+		name     string
+		cloud    string
+		planType proto.PlanType
+		want     bool
+	}{
+		{name: "cloud personal", cloud: "1", planType: proto.PlanType_TYPE_PERSONAL, want: true},
+		{name: "self hosted personal", planType: proto.PlanType_TYPE_PERSONAL},
+		{name: "cloud trial", cloud: "1", planType: proto.PlanType_TYPE_TRIAL},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.want, isTrialGatedWorkspace(test.cloud != "", test.planType))
+		})
+	}
 }
 
 func TestCreateWorkspace_AllowedForCloud(t *testing.T) {
@@ -171,6 +194,10 @@ func TestSetWorkspaceContext_UsesPersistedDefaultWorkspaceForUnknownEmail(t *tes
 	ctx := context.WithValue(context.Background(), user.ContextKey, &user.Claims{Email: user.UnknownEmail})
 	workspaceID := user.GetDefaultWorkspaceID()
 	now := time.Now()
+	var logOutput bytes.Buffer
+	originalLogger := log.Logger
+	log.Logger = zerolog.New(&logOutput)
+	t.Cleanup(func() { log.Logger = originalLogger })
 
 	mock.ExpectQuery("WITH last_status").
 		WithArgs(user.UnknownEmail).
@@ -188,7 +215,7 @@ func TestSetWorkspaceContext_UsesPersistedDefaultWorkspaceForUnknownEmail(t *tes
 		WithArgs(user.UnknownEmail).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "role", "plan_type"}).
 			AddRow(workspaceID, "Default", proto.UserRole_ROLE_ADMIN, proto.PlanType_TYPE_COMMUNITY))
-	mock.ExpectQuery("SELECT\\s+sl.customer_id").
+	mock.ExpectQuery("SELECT customer_id, plan_type, created_at, trial_ends_at").
 		WithArgs(workspaceID).
 		WillReturnRows(sqlmock.NewRows([]string{"customer_id", "plan_type", "created_at", "trial_ends_at"}).
 			AddRow("", proto.PlanType_TYPE_COMMUNITY, now, nil))
@@ -207,5 +234,38 @@ func TestSetWorkspaceContext_UsesPersistedDefaultWorkspaceForUnknownEmail(t *tes
 	require.Equal(t, proto.UserRole_ROLE_ADMIN, workspace.UserRole)
 	require.Equal(t, int64(1), workspace.AddedUsersCount)
 	require.Equal(t, int64(1), workspace.BilledUsers)
+	require.NotContains(t, logOutput.String(), "workspaceInfo not found in context")
 	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestSetWorkspaceContext_IsolatesPlaygroundFromSelectedWorkspace(t *testing.T) {
+	t.Setenv("DEKART_CLOUD", "")
+	server := Server{}
+	ctx := context.WithValue(context.Background(), user.ContextKey, &user.Claims{Email: "user@example.com"})
+	req, err := http.NewRequest(http.MethodPost, "/Dekart/CreateReport", nil)
+	require.NoError(t, err)
+	req.Header.Set("X-Dekart-Workspace-Id", "00000000-0000-0000-0000-000000000099")
+	req.Header.Set("X-Dekart-Playground", "true")
+
+	workspace := user.CheckWorkspaceCtx(server.SetWorkspaceContext(ctx, req))
+
+	require.True(t, workspace.IsPlayground)
+	require.Empty(t, workspace.ID)
+	require.Equal(t, proto.UserRole_ROLE_UNSPECIFIED, workspace.UserRole)
+}
+
+func TestSetWorkspaceContext_ExpiredLicenseKeepsPlaygroundReadOnly(t *testing.T) {
+	t.Setenv("DEKART_CLOUD", "")
+	expiredAt := time.Now().Add(-time.Hour)
+	server := Server{licenseState: RuntimeLicenseState{Required: true, ExpiresAt: &expiredAt}}
+	ctx := context.WithValue(context.Background(), user.ContextKey, &user.Claims{Email: "user@example.com"})
+	req, err := http.NewRequest(http.MethodPost, "/Dekart/CreateReport", nil)
+	require.NoError(t, err)
+	req.Header.Set("X-Dekart-Playground", "true")
+
+	workspace := user.CheckWorkspaceCtx(server.SetWorkspaceContext(ctx, req))
+
+	require.True(t, workspace.IsPlayground)
+	require.True(t, workspace.ReadOnly)
+	require.Equal(t, proto.GetWorkspaceResponse_READ_ONLY_REASON_LICENSE_KEY_EXPIRED, workspace.ReadOnlyReason)
 }

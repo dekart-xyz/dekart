@@ -893,6 +893,7 @@ export namespace GetWorkspaceResponse {
     READ_ONLY_REASON_UNSPECIFIED: 0;
     READ_ONLY_REASON_SUBSCRIPTION_EXPIRED: 1;
     READ_ONLY_REASON_LICENSE_KEY_EXPIRED: 2;
+    READ_ONLY_REASON_TRIAL_NOT_STARTED: 3;
   }
 
   export const ReadOnlyReason: ReadOnlyReasonMap;
@@ -1301,6 +1302,9 @@ export class Subscription extends jspb.Message {
   getExpired(): boolean;
   setExpired(value: boolean): void;
 
+  getRevision(): string;
+  setRevision(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Subscription.AsObject;
   static toObject(includeInstance: boolean, msg: Subscription): Subscription.AsObject;
@@ -1321,6 +1325,7 @@ export namespace Subscription {
     cancelAt: number,
     itemId: string,
     expired: boolean,
+    revision: string,
   }
 }
 
@@ -1330,6 +1335,9 @@ export class CreateSubscriptionRequest extends jspb.Message {
 
   getUiUrl(): string;
   setUiUrl(value: string): void;
+
+  getRevision(): string;
+  setRevision(value: string): void;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CreateSubscriptionRequest.AsObject;
@@ -1345,6 +1353,7 @@ export namespace CreateSubscriptionRequest {
   export type AsObject = {
     planType: PlanTypeMap[keyof PlanTypeMap],
     uiUrl: string,
+    revision: string,
   }
 }
 
@@ -4188,9 +4197,6 @@ export class ForkReportResponse extends jspb.Message {
   getReportId(): string;
   setReportId(value: string): void;
 
-  getReportLimitReached(): boolean;
-  setReportLimitReached(value: boolean): void;
-
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): ForkReportResponse.AsObject;
   static toObject(includeInstance: boolean, msg: ForkReportResponse): ForkReportResponse.AsObject;
@@ -4204,7 +4210,6 @@ export class ForkReportResponse extends jspb.Message {
 export namespace ForkReportResponse {
   export type AsObject = {
     reportId: string,
-    reportLimitReached: boolean,
   }
 }
 
@@ -4230,9 +4235,6 @@ export class CreateReportResponse extends jspb.Message {
   getReport(): Report | undefined;
   setReport(value?: Report): void;
 
-  getReportLimitReached(): boolean;
-  setReportLimitReached(value: boolean): void;
-
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CreateReportResponse.AsObject;
   static toObject(includeInstance: boolean, msg: CreateReportResponse): CreateReportResponse.AsObject;
@@ -4246,7 +4248,6 @@ export class CreateReportResponse extends jspb.Message {
 export namespace CreateReportResponse {
   export type AsObject = {
     report?: Report.AsObject,
-    reportLimitReached: boolean,
   }
 }
 

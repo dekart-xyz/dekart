@@ -119,11 +119,17 @@ Cypress.Commands.add('assertDatasetTable', (label, fields, values = []) => {
 Cypress.Commands.add('ensureTestWorkspace', () => {
   cy.get('body', { timeout: 30000 }).should(($body) => {
     const workspaceReady = $body.find('button#dekart-create-report').length > 0 ||
+      $body.find('button#dekart-start-trial').length > 0 ||
       $body.find('button#dekart-create-workspace').length > 0 ||
       $body.text().includes('Create Workspace')
     expect(workspaceReady).to.equal(true)
   }).then(($body) => {
     if ($body.find('button#dekart-create-report').length > 0) {
+      return
+    }
+    if ($body.find('button#dekart-start-trial').length > 0) {
+      cy.get('button#dekart-start-trial').click()
+      cy.get('button#dekart-create-report', { timeout: 30000 }).should('be.visible')
       return
     }
     if ($body.find('button#dekart-create-workspace').length > 0) {
@@ -139,7 +145,8 @@ Cypress.Commands.add('ensureTestWorkspace', () => {
       }
     })
     cy.get('button:contains("Create")').click()
-    // Wait for workspace selection to finish before the calling test navigates again.
+    cy.get('button#dekart-start-trial', { timeout: 30000 }).click()
+    // Wait for trial activation and workspace selection before the calling test navigates again.
     cy.get('button#dekart-create-report', { timeout: 30000 }).should('be.visible')
   })
 })
