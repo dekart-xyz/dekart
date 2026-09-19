@@ -668,15 +668,26 @@ func (s *Server) callUpdateReportMapConfigTool(ctx context.Context, raw json.Raw
 			"Map configuration is too large (%d bytes). Maximum allowed size is %d bytes. Please simplify your map configuration.",
 			len(request.MapConfig), MaxMapConfigSize)
 	}
-	// Validate Kepler map config schema and dataset bindings before persisting.
-	if err := s.validateReportMapConfig(ctx, request.ReportId, request.MapConfig); err != nil {
-		return nil, err
+	// REVIEW: Start a transaction and lock the report before validating or applying an authoritative MCP map update.
+	newVersionID := newUUID()
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer tx.Rollback()
+	if err := lockReportTx(ctx, tx, request.ReportId); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 	updatedAt := time.Now()
-	newVersionID := newUUID()
+	// REVIEW: Validate dataset bindings under the report lock so concurrent dataset changes cannot invalidate the check.
+	// Validate bindings while the report lock prevents concurrent dataset changes.
+	if err := s.validateReportMapConfigTx(ctx, tx, request.ReportId, request.MapConfig); err != nil {
+		return nil, err
+	}
 	var result sql.Result
 	if workspaceInfo.IsPlayground {
-		result, err = s.db.ExecContext(ctx,
+		// REVIEW: Apply playground report updates through the same transaction as validation and snapshot creation.
+		result, err = tx.ExecContext(ctx,
 			`update
 			reports
 		set map_config=$1, updated_at=$2, version_id=$3
@@ -688,7 +699,8 @@ func (s *Server) callUpdateReportMapConfigTool(ctx context.Context, raw json.Raw
 			claims.Email,
 		)
 	} else {
-		result, err = s.db.ExecContext(ctx,
+		// REVIEW: Apply workspace report updates through the locked transaction for atomic persistence.
+		result, err = tx.ExecContext(ctx,
 			`update
 			reports
 		set map_config=$1, updated_at=$2, version_id=$3
@@ -711,7 +723,11 @@ func (s *Server) callUpdateReportMapConfigTool(ctx context.Context, raw json.Raw
 	if affectedRows == 0 {
 		return nil, status.Error(codes.NotFound, fmt.Sprintf("report not found id:%s", request.ReportId))
 	}
-	if err := s.createReportSnapshotWithVersionID(ctx, newVersionID, request.ReportId, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE); err != nil {
+	// REVIEW: Create the report snapshot and commit it atomically with the MCP map update.
+	if err := s.createReportSnapshotWithVersionIDTx(ctx, tx, newVersionID, request.ReportId, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if err := tx.Commit(); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	s.reportStreams.Ping(request.ReportId)

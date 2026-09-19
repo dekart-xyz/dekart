@@ -1,7 +1,9 @@
 import { combineReducers } from 'redux'
-import { addDatasetToMap, cancelDownloading, closeDatasetSettingsModal, downloadDataset, downloadingProgress, finishAddingDatasetToMap, finishDownloading, openDatasetSettingsModal, processDownloadError, removeDataset, setActiveDataset } from '../actions/dataset'
+import { addDatasetToMap, cancelDownloading, closeDatasetSettingsModal, datasetRemoved, downloadDataset, downloadingProgress, finishAddingDatasetToMap, finishDownloading, openDatasetSettingsModal, processDownloadError, setActiveDataset } from '../actions/dataset'
 import { consumeAutoCreateLayer, keplerDatasetFinishUpdating, keplerDatasetStartUpdating } from '../actions/kepler'
 import { closeReport, openReport, reportUpdate } from '../actions/report'
+// REVIEW: Consume automatic widget eligibility after defaults are created for a dataset.
+import { widgetsDefaultsConsumed } from '../actions/widgets'
 
 function lastAddedQueryParamsHash (state = {}, action) {
   switch (action.type) {
@@ -130,24 +132,41 @@ function list (state = [], action) {
   }
 }
 
+// Reconcile one consumer's pending visualization defaults with the report stream.
+function reportAutoCreateIds (state, action) {
+  if (action.initialHydration) return action.initialAutoCreateLayerIds
+  const datasetIds = new Set(action.datasetsList.map(dataset => dataset.id))
+  return [...new Set([...state, ...action.newDatasetIds])].filter(id => datasetIds.has(id))
+}
+
 // Tracks which datasets may ask Kepler to infer a layer once in this browser session.
 function autoCreateLayerIds (state = [], action) {
   switch (action.type) {
     case openReport.name:
     case closeReport.name:
       return []
-    case reportUpdate.name: {
-      if (action.initialHydration) {
-        return action.initialAutoCreateLayerIds
-      }
-      if (action.liveMapConfigAccepted) {
-        return []
-      }
-      const datasetIds = new Set(action.datasetsList.map(dataset => dataset.id))
-      return [...new Set([...state, ...action.newDatasetIds])].filter(id => datasetIds.has(id))
-    }
+    case reportUpdate.name:
+      return reportAutoCreateIds(state, action)
     case consumeAutoCreateLayer.name:
-    case removeDataset.name:
+    case datasetRemoved.name:
+      return state.filter(id => id !== action.datasetId)
+    default:
+      return state
+  }
+}
+
+// REVIEW: Seed widget defaults from the same report-stream lifecycle as automatic layers while keeping independent consumption.
+// Widgets and layers become ready independently, so each consumer keeps its own
+// copy of the report-stream eligibility queue.
+export function autoCreateWidgetIds (state = [], action) {
+  switch (action.type) {
+    case openReport.name:
+    case closeReport.name:
+      return []
+    case reportUpdate.name:
+      return reportAutoCreateIds(state, action)
+    case widgetsDefaultsConsumed.name:
+    case datasetRemoved.name:
       return state.filter(id => id !== action.datasetId)
     default:
       return state
@@ -190,6 +209,8 @@ export default combineReducers({
   list,
   updatingNum,
   autoCreateLayerIds,
+  // REVIEW: Publish widget-default eligibility alongside the existing dataset lifecycle state.
+  autoCreateWidgetIds,
   lastAddedQueryParamsHash,
   lastAddedQueryQueryJob
 })
