@@ -56,6 +56,7 @@ function updateReportMapConfigOutsideAppSave (store, mapConfig) {
   request.setReportId(state.report.id)
   request.setMapConfig(mapConfig)
   request.setTitle(state.report.title)
+  request.setExpectedVersionId(state.report.versionId)
 
   const metadata = new window.Headers()
   if (state.token?.access_token) {

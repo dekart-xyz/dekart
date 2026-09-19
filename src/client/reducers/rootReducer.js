@@ -8,6 +8,8 @@ import { setEnv } from '../actions/env'
 import { newRelease } from '../actions/version'
 import keplerGlReducer from '@kepler.gl/reducers'
 import stream from './streamReducer'
+// REVIEW: Register widget persistence state as a first-class Redux slice.
+import widgets from './widgetsReducer'
 import token from './tokenReducer'
 import connection from './connectionReducer'
 import user from './userReducer'
@@ -138,6 +140,8 @@ function release (state = null, action) {
 
 export default combineReducers({
   keplerGl,
+  // REVIEW: Expose the widget reducer through the application root state.
+  widgets,
   report,
   reportStatus,
   reportsList,

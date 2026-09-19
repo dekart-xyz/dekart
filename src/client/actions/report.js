@@ -1,23 +1,24 @@
 import { KeplerGlSchema } from '@kepler.gl/schemas'
-import { cleanupExportImage, removeDataset, setExportImageSetting, startExportingImage } from '@kepler.gl/actions'
+import { cleanupExportImage, setExportImageSetting, startExportingImage } from '@kepler.gl/actions'
 
 import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
 import { showMapConfigConflictMessage, success } from './message'
 import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType, SetTrackViewersRequest, SetAutoRefreshIntervalSecondsRequest, RestoreReportSnapshotRequest, SaveMapPreviewRequest } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { createQuery, downloadQuerySource, invalidateRunAllQueries, runWarehouseQuery } from './query'
-import { downloadDataset } from './dataset'
+import { cleanupRemovedDataset, downloadDataset } from './dataset'
 import { shouldAddQuery } from '../lib/shouldAddQuery'
 import { shouldUpdateDataset } from '../lib/shouldUpdateDataset'
 import { needSensitiveScopes } from './user'
 import { getQueryParamsObjArr, reconcileQueryParamsState } from '../lib/queryParams'
-import { receiveReportUpdateMapConfig } from '../lib/mapConfig'
+import { receiveReportUpdateMapConfig, shouldUpdateMapConfig } from '../lib/mapConfig'
 import { extensionFromMime } from '../lib/mime'
 import { showUpgradeModal, UpgradeModalType } from './upgradeModal'
 import { track } from '../lib/tracking'
 import { getReportIdFromUrl } from '../lib/getReportIdFromUrl'
 import { closeDuckDBReport, failDuckDBSource, runDuckDBGraph } from './duckdb'
 import { isDuckDBDataset } from '../lib/duckdb/constants'
+import { grpc } from '@improbable-eng/grpc-web'
 
 let reportSaveBarrier = null
 
@@ -57,15 +58,34 @@ function getReportStream (reportId, onMessage, onError) {
 }
 
 export function toggleReportEdit (edit) {
-  return function (dispatch, getState) {
-    const report = getState().report
+  return async function (dispatch, getState) {
+    let state = getState()
+    const report = state.report
     let fullscreen = null
     if (edit) {
       fullscreen = false
     } else if (report) {
       fullscreen = !report.readme
     }
+    if (!edit && state.reportStatus.edit) {
+      if (reportSaveBarrier) await reportSaveBarrier.promise
+      state = getState()
+      const { reportStatus, workspace } = state
+      if (reportStatus.lastChanged > reportStatus.lastSaved) {
+        // Leaving edit mode must never turn an unsaved authored draft into a disposable viewer draft.
+        if (!report.canWrite || workspace.readOnly || !reportStatus.online || reportStatus.saving) return false
+        const saved = await dispatch(saveMap(reportStatus.lastMapConfigChanged > reportStatus.lastPreviewSaved))
+        if (!saved) return false
+      }
+    }
     dispatch({ type: toggleReportEdit.name, edit, fullscreen })
+    // Restore the last authored filter configuration when returning from local viewer exploration.
+    // Viewer exploration is intentionally local. Entering edit mode restores the
+    // last authored map instead of promoting view-only filters into the report.
+    if (edit && report?.mapConfig) {
+      receiveReportUpdateMapConfig(report, dispatch, getState, { keepExistingConfig: true, replaceFilters: true })
+    }
+    return true
   }
 }
 
@@ -272,7 +292,7 @@ export function reportUpdate (reportStreamResponse) {
       user,
       queryParams: currentQueryParams,
       queryJobs: prevQueryJobsList,
-      reportStatus: { lastSaved, savedReportVersion, lastMapConfigChanged, snapshotMode },
+      reportStatus: { lastSaved, savedReportVersion, savedVersionId, lastMapConfigChanged, snapshotMode },
       hasOpenedKeplerPanel
     } = state
     const activeQueryParams = reconcileQueryParamsState(currentQueryParams, report.queryParamsList, window.location.search)
@@ -289,10 +309,13 @@ export function reportUpdate (reportStreamResponse) {
       !initialHydration &&
       serializedMapConfigChanged &&
       report.mapConfig &&
-      report.updatedAt > savedReportVersion
+      // Use version identifiers to distinguish remote saves even when database timestamps have insufficient precision.
+      (report.versionId ? report.versionId !== savedVersionId : report.updatedAt > savedReportVersion)
     )
-    const hasRemoteMapConflict = liveMapConfigChanged && hasUnsavedUserMapChanges
-    const liveMapConfigAccepted = liveMapConfigChanged && !hasUnsavedUserMapChanges
+    // Treat a streamed map as conflicting only when it is both newer and structurally different from the local map.
+    const liveMapConfigMatches = liveMapConfigChanged && !shouldUpdateMapConfig(KeplerGlSchema.getConfigToSave(state.keplerGl.kepler), JSON.parse(report.mapConfig))
+    const hasRemoteMapConflict = liveMapConfigChanged && hasUnsavedUserMapChanges && !liveMapConfigMatches
+    const liveMapConfigAccepted = liveMapConfigChanged && (!hasUnsavedUserMapChanges || liveMapConfigMatches)
     dispatch({
       type: reportUpdate.name,
       report,
@@ -309,7 +332,8 @@ export function reportUpdate (reportStreamResponse) {
       initialHydration,
       initialAutoCreateLayerIds: initialAutoCreateLayerIds(datasetsList, queriesList, filesList, queryJobsList),
       newDatasetIds: datasetsList.filter(dataset => !prevDatasetsList.find(previous => previous.id === dataset.id)).map(dataset => dataset.id),
-      liveMapConfigAccepted
+      liveMapConfigAccepted,
+      hasRemoteMapConflict
     })
     if (hasRemoteMapConflict) {
       dispatch(showMapConfigConflictMessage())
@@ -338,13 +362,22 @@ export function reportUpdate (reportStreamResponse) {
       }
     })
 
-    if (!mapConfigUpdated) { // new map config reset data anyway
-      prevDatasetsList.forEach(dataset => {
-        if (!datasetsList.find(d => d.id === dataset.id)) {
-          dispatch(removeDataset(dataset.id))
-        }
+    // Reconcile every dataset missing from the report stream, including legacy widget bindings discovered during initial hydration, through one browser-runtime cleanup path.
+    const currentDatasetIds = new Set(datasetsList.map(dataset => dataset.id))
+    const removedDatasetIds = new Set(
+      prevDatasetsList.filter(dataset => !currentDatasetIds.has(dataset.id)).map(dataset => dataset.id)
+    )
+    if (initialHydration) {
+      const hydratedWidgets = getState().widgets
+      Object.keys(hydratedWidgets.config.config.dashboardsById).forEach(datasetId => {
+        if (!currentDatasetIds.has(datasetId)) removedDatasetIds.add(datasetId)
       })
     }
+    removedDatasetIds.forEach(datasetId => {
+      // Persisted bindings are removed by the server. Reconcile browser-owned
+      // DuckDB, Kepler and Redux state for streamed and legacy orphan removals.
+      dispatch(cleanupRemovedDataset(datasetId))
+    })
 
     queriesList.forEach((query) => {
       if (shouldDownloadQueryText(query, prevQueriesList, queriesList)) {
@@ -542,8 +575,8 @@ export function reportTitleChange (title) {
   }
 }
 
-export function savedReport (lastSaved, savedReportVersion) {
-  return { type: savedReport.name, lastSaved, savedReportVersion }
+export function savedReport (lastSaved, savedReportVersion, versionId, widgetRevision, widgetRaw) {
+  return { type: savedReport.name, lastSaved, savedReportVersion, versionId, widgetRevision, widgetRaw }
 }
 
 export function saveMapFailed () {
@@ -629,7 +662,9 @@ export function exportMapPreview () {
 export function saveMap (mapViewChanged = false) {
   return async (dispatch, getState) => {
     const state = getState()
-    const { keplerGl, report, reportStatus, queryStatus, queryParams, readme } = state
+    const { keplerGl, report, reportStatus, queryStatus, queryParams, readme, widgets } = state
+    // Block stale map or widget saves before constructing a request that could overwrite remote work.
+    if (reportStatus.mapConfigConflict || widgets.conflict) return false
     const lastSaved = reportStatus.lastChanged
     const configToSave = KeplerGlSchema.getConfigToSave(keplerGl.kepler)
     const mapConfig = JSON.stringify(configToSave)
@@ -654,6 +689,9 @@ export function saveMap (mapViewChanged = false) {
     }
     request.setReportId(report.id)
     request.setMapConfig(mapConfig)
+    // Use the report revision as the single save authority and persist widget configuration with every map save.
+    request.setExpectedVersionId(report.versionId)
+    request.setWidgetsConfig(widgets.raw)
     request.setTitle(reportStatus.title)
     request.setQueryList(queryUpdates)
     request.setQueryParamsList(getQueryParamsObjArr(queryParams.list))
@@ -662,15 +700,20 @@ export function saveMap (mapViewChanged = false) {
       const res = await new Promise((resolve, reject) => {
         dispatch(grpcCall(Dekart.UpdateReport, request, resolve, (err) => {
           reject(err)
+          // Let aborted saves surface through the existing streamed conflict message instead of adding a duplicate generic error.
+          // The report stream presents the existing recoverable reload UX for a real conflict.
+          if (err.code === grpc.Code.Aborted) return
           return err
         }))
       })
       if (mapViewChanged) {
         dispatch(exportMapPreview())
       }
-      dispatch(savedReport(lastSaved, res.updatedAt))
+      dispatch(savedReport(lastSaved, res.updatedAt, res.versionId, widgets.revision, widgets.raw))
+      return true
     } catch (err) {
       dispatch(saveMapFailed())
+      return false
     } finally {
       resolveReportSaveBarrier(barrier)
     }

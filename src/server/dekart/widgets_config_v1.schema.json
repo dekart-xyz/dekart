@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "inmemory://widgets_config_v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "provider", "config"],
+  "properties": {
+    "version": { "const": 1 },
+    "provider": { "const": "sqlrooms" },
+    "initialized": { "type": "boolean" },
+    "config": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dashboardsById"],
+      "properties": {
+        "dashboardsById": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/dashboard" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "shortText": { "type": "string", "maxLength": 256 },
+    "identifier": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" },
+    "dashboard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "panelOrder", "panels"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "title": { "$ref": "#/$defs/shortText" },
+        "panelOrder": { "type": "array", "items": { "$ref": "#/$defs/identifier" }, "uniqueItems": true },
+        "panels": { "type": "array", "items": { "$ref": "#/$defs/panel" }, "maxItems": 100 }
+      }
+    },
+    "panel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "title", "config"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "type": { "const": "vgplot" },
+        "title": { "$ref": "#/$defs/shortText" },
+        "config": {
+          "oneOf": [
+            { "$ref": "#/$defs/numberConfig" },
+            { "$ref": "#/$defs/countPlotConfig" },
+            { "$ref": "#/$defs/histogramConfig" }
+          ]
+        }
+      }
+    },
+    "numberConfig": {
+      "type": "object", "additionalProperties": false, "required": ["chartType", "settings"],
+      "properties": {
+        "chartType": { "const": "number" },
+        "settings": {
+          "type": "object", "additionalProperties": false, "required": ["operation"],
+          "properties": {
+            "operation": { "enum": ["count", "distinct", "sum", "avg", "min", "max", "median"] },
+            "field": { "type": "string", "minLength": 1, "maxLength": 256 },
+            "format": { "enum": ["auto", "number", "compact", "percent"] },
+            "decimals": { "type": "integer", "minimum": 0, "maximum": 6 },
+            "subtitle": { "$ref": "#/$defs/shortText" },
+            "prefix": { "$ref": "#/$defs/shortText" },
+            "suffix": { "$ref": "#/$defs/shortText" }
+          }
+        }
+      }
+    },
+    "countPlotConfig": {
+      "type": "object", "additionalProperties": false, "required": ["chartType", "settings"],
+      "properties": {
+        "chartType": { "const": "count-plot" },
+        "settings": {
+          "type": "object", "additionalProperties": false, "required": ["field"],
+          "properties": {
+            "field": { "type": "string", "minLength": 1, "maxLength": 256 },
+            "metric": { "const": "count" },
+            "sort": { "enum": ["value-desc", "value-asc", "label-asc", "label-desc"] },
+            "maxBars": { "type": "integer", "minimum": 1, "maximum": 100 }
+          }
+        }
+      }
+    },
+    "histogramConfig": {
+      "type": "object", "additionalProperties": false, "required": ["chartType", "settings"],
+      "properties": {
+        "chartType": { "const": "histogram" },
+        "settings": {
+          "type": "object", "additionalProperties": false, "required": ["field"],
+          "properties": {
+            "field": { "type": "string", "minLength": 1, "maxLength": 256 },
+            "maxBins": { "type": "integer", "minimum": 1, "maximum": 1000 },
+            "color": { "type": "string", "minLength": 1, "maxLength": 64 }
+          }
+        }
+      }
+    }
+  }
+}
