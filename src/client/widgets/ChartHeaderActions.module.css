@@ -1,0 +1,4 @@
+.actions { display: flex; align-items: center; gap: 3px; }
+.trigger { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: 0; background: transparent; color: #a0a7b4; cursor: pointer; }
+.trigger:hover { color: #fff; background: #29323c; }
+
