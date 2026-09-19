@@ -1,0 +1,11 @@
+.scroll { flex: 1; min-height: 0; overflow: auto; scrollbar-width: thin; scrollbar-color: #59616d transparent; }
+.plot { width: 100%; flex-shrink: 0; }
+.plot svg { display: block; font-family: inherit; }
+.plot :global(g[aria-label='rule']) { cursor: pointer; }
+.message { padding: 16px; color: #a0a7b4; }
+
+.category { height: 100%; display: flex; flex-direction: column; }
+.count { color: #6a7485; font-size: 11px; position: absolute; top: 15px; right: 18px; pointer-events: none; }
+.more { flex: none; align-self: flex-start; margin: 6px 8px 0; padding: 0; background: none; border: none; color: #788393; font: inherit; font-size: 11px; cursor: pointer; }
+.more:hover { color: #f2f4f7; }
+.settings { display: flex; flex-direction: column; gap: 16px; }

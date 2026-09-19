@@ -721,6 +721,7 @@ message Report {
     string version_id = 23; // version id of the report
     bool has_map_preview = 24; // true - map preview exists, false - no map preview
     repeated ConnectionType connection_types = 25; // unique connection types used by datasets in this report
+    string widgets_config = 26; // versioned declarative dashboard configuration; selections remain in map_config
 }
 
 message Dataset {
@@ -815,10 +816,13 @@ message UpdateReportRequest {
     repeated Query query = 4;
     repeated QueryParam query_params = 5;
     Readme readme = 6;
+    optional string widgets_config = 7; // omission preserves the stored dashboard configuration
+    optional string expected_version_id = 8; // conditional save against the shared report revision
 }
 
 message UpdateReportResponse {
     int64 updated_at = 1;
+    string version_id = 2;
 }
 
 // MCP-specific payload for renaming report title without sending full report update body.

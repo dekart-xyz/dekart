@@ -190,6 +190,7 @@ jobs:
             -e DEKART_GOOGLE_OAUTH_CLIENT_ID=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }} \
             -e DEKART_GOOGLE_OAUTH_SECRET=${{ secrets.GOOGLE_OAUTH_SECRET }} \
             -e DEV_REFRESH_TOKEN=${{ secrets.DEV_REFRESH_TOKEN }} \
+            -e DEV_REFRESH_TOKEN_INFO=${{ secrets.DEV_REFRESH_TOKEN_INFO }} \
             -e DEKART_DATA_ENCRYPTION_KEY=projects/910252011719/secrets/dekart-dev-user-data-encoding-key/versions/latest \
             -e DEKART_CORS_ORIGIN=http://localhost:3000 \
             -e DEKART_ALLOW_WORKSPACE_CREATION=1 \
@@ -199,7 +200,7 @@ jobs:
             -e DEKART_MAPBOX_TOKEN=$MAPBOX_TOKEN_SEC \
             -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
             -e DEKART_CLOUD=1 \
-            -e TEST_SPEC=cypress/e2e/cloud/cloudBasicFlowEnd.cy.js,cypress/e2e/cloud/readOnlyMemberRoles.cy.js \
+            -e TEST_SPEC=cypress/e2e/cloud/cloudBasicFlowEnd.cy.js,cypress/e2e/cloud/readOnlyMemberRoles.cy.js,cypress/e2e/cloud/widgetsFirstSlice.cy.js,cypress/e2e/cloud/widgetsCategoryLayout.cy.js,cypress/e2e/cloud/widgetsMultiDataset.cy.js,cypress/e2e/cloud/widgetsReportConflict.cy.js,cypress/e2e/cloud/widgetsLegacyStyleCompatibility.cy.js,cypress/e2e/cloud/keplerFilterReload.cy.js,cypress/e2e/cloud/reportSaveRegression.cy.js \
             -e CYPRESS_CI=1 \
             ${REG_PREFIX}/dekart:${{ env.IMAGE_CACHE_KEY }}
 

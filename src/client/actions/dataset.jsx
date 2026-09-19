@@ -2,7 +2,7 @@ import { CreateDatasetRequest, RemoveDatasetRequest, UpdateDatasetNameRequest } 
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { setError, success, info, warn } from './message'
-import { addDataToMap, toggleSidePanel, replaceDataInMap } from '@kepler.gl/actions'
+import { addDataToMap, addFilter, applyFilterConfig, toggleSidePanel, replaceDataInMap, removeDataset as removeKeplerDataset } from '@kepler.gl/actions'
 import { get } from '../lib/api'
 import getDatasetName from '../lib/getDatasetName'
 import { runWarehouseQuery } from './query'
@@ -56,6 +56,19 @@ export function setActiveDataset (datasetId) {
   }
 }
 
+export function datasetRemoved (datasetId) {
+  return { type: datasetRemoved.name, datasetId }
+}
+
+// Reconcile browser-owned resources after the server has removed a dataset.
+export function cleanupRemovedDataset (datasetId) {
+  return async dispatch => {
+    dispatch(datasetRemoved(datasetId))
+    dispatch(removeKeplerDataset(datasetId))
+    await dispatch(removeDuckDBSource(datasetId))
+  }
+}
+
 export function updateDatasetName (datasetId, name) {
   return async (dispatch, getState) => {
     const { list: datasets } = getState().dataset
@@ -74,24 +87,19 @@ export function updateDatasetName (datasetId, name) {
 export function removeDataset (datasetId, silent = false) {
   return async (dispatch, getState) => {
     const { list: datasets, active: activeDataset } = getState().dataset
+    const datasetsLeft = datasets.filter(q => q.id !== datasetId)
     if (activeDataset.id === datasetId) {
       // removed active query
-      const datasetsLeft = datasets.filter(q => q.id !== datasetId)
       if (datasetsLeft.length === 0) {
         dispatch(setError(new Error('Cannot remove last dataset')))
         return
       }
-      dispatch(setActiveDataset(datasetsLeft[0].id))
     }
-    await dispatch(removeDuckDBSource(datasetId))
-    dispatch({ type: removeDataset.name, datasetId })
 
     const request = new RemoveDatasetRequest()
     request.setDatasetId(datasetId)
-    dispatch(grpcCall(Dekart.RemoveDataset, request, (res) => {
-      if (!silent) {
-        dispatch(success('Dataset removed'))
-      }
+    return dispatch(grpcCall(Dekart.RemoveDataset, request, () => {
+      if (!silent) dispatch(success('Dataset removed'))
     }))
   }
 }
@@ -158,6 +166,14 @@ export function finishDownloading (prevDatasetsList, res, extension, label, cont
 // remove dataset from downloading list
 export function finishAddingDatasetToMap (controller) {
   return { type: finishAddingDatasetToMap.name, controller }
+}
+
+function restoreDatasetFilters (dispatch, getState, datasetId, filters) {
+  for (const filter of filters) {
+    const current = getState().keplerGl.kepler.visState.filters.find(candidate => candidate.id === filter.id)
+    if (!current) dispatch(addFilter(filter.dataId, filter.id))
+    dispatch(applyFilterConfig(filter.id, filter))
+  }
 }
 
 // clearDatasetInMap publishes a zero-row Arrow table while preserving existing layers and fields.
@@ -270,6 +286,9 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension, sour
       const addedDatasets = getState().keplerGl.kepler?.visState.datasets || {}
       const prevDataset = prevDatasetsList.find(d => d.id === dataset.id && d.id in addedDatasets)
       const previousKeplerDataset = addedDatasets[dataset.id]
+      const filtersToRestore = (getState().keplerGl.kepler?.visState.filters || [])
+        .filter(filter => filter.dataId.includes(dataset.id))
+        .map(filter => JSON.parse(JSON.stringify(filter)))
       const i = getState().dataset.list.findIndex(d => d.id === dataset.id)
       if (i < 0) {
         dispatch(finishAddingDatasetToMap(controller))
@@ -325,6 +344,7 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension, sour
           dispatch(finishAddingDatasetToMap(controller))
           return
         }
+        // restoreDatasetFilters(dispatch, getState, dataset.id, filtersToRestore)
         dispatch(consumeAutoCreateLayer(dataset.id))
       } catch (err) {
         dispatch(processDownloadError(err, dataset, label, false, controller))

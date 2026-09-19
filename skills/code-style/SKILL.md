@@ -35,6 +35,8 @@ Policy/architecture guardrails are defined in `AGENTS.md`. This skill is the sou
 - Keep side effects/network calls in actions/thunks, not reducers.
 - Keep reducers pure and action-driven.
 - Keep reusable non-UI logic in `src/client/lib`.
+- Declare named functions as `function doThing (...)` at module scope, not as `const doThing = () => {}` inside a component body. Pass what they need as explicit arguments. Keep one inside the component only when it must close over props, state or refs and hoisting it would need a long parameter list; then split out the render-independent part instead.
+- Anonymous inline callbacks are fine: event handlers, `map`/`filter` callbacks and effect bodies stay where they are.
 - Prefer Ant Design components for UI by default.
 
 ## Redundant Checks
