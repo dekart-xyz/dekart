@@ -2,6 +2,8 @@ package dekart
 
 import (
 	"context"
+	// REVIEW: Accept a SQL transaction so map validation can share the caller's report lock.
+	"database/sql"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -50,14 +52,28 @@ var (
 	keplerMapConfigSchemaErr  error
 )
 
-// validateReportMapConfig validates Kepler map config shape and dataset bindings for one report.
-func (s Server) validateReportMapConfig(ctx context.Context, reportID string, mapConfig string) error {
+// validateReportMapConfigTx validates bindings against the dataset set protected
+// by the report row lock held by the caller.
+func (s Server) validateReportMapConfigTx(ctx context.Context, tx *sql.Tx, reportID string, mapConfig string) error {
 	if strings.TrimSpace(mapConfig) == "" {
 		return nil
 	}
-
-	datasetIDs, err := s.getReportDatasetIDSet(ctx, reportID)
+	// Read dataset identifiers through the locked transaction instead of an independent database query.
+	rows, err := tx.QueryContext(ctx, "SELECT id FROM datasets WHERE report_id=$1", reportID)
 	if err != nil {
+		return status.Error(codes.Internal, err.Error())
+	}
+	// Build the validation set directly from transactional rows and propagate scan failures as internal errors.
+	defer rows.Close()
+	datasetIDs := make(map[string]struct{})
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return status.Error(codes.Internal, err.Error())
+		}
+		datasetIDs[id] = struct{}{}
+	}
+	if err := rows.Err(); err != nil {
 		return status.Error(codes.Internal, err.Error())
 	}
 	issues := validateKeplerMapConfigV1Detailed(mapConfig, datasetIDs)
@@ -65,22 +81,6 @@ func (s Server) validateReportMapConfig(ctx context.Context, reportID string, ma
 		return nil
 	}
 	return &mapConfigValidationError{Issues: issues}
-}
-
-// getReportDatasetIDSet returns report dataset ids as a lookup set.
-func (s Server) getReportDatasetIDSet(ctx context.Context, reportID string) (map[string]struct{}, error) {
-	datasets, err := s.getDatasets(ctx, reportID)
-	if err != nil {
-		return nil, err
-	}
-	ids := make(map[string]struct{}, len(datasets))
-	for _, dataset := range datasets {
-		id := strings.TrimSpace(dataset.GetId())
-		if id != "" {
-			ids[id] = struct{}{}
-		}
-	}
-	return ids, nil
 }
 
 // validateKeplerMapConfigV1 validates Kepler v1 config shape and returns human-readable issues.

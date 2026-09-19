@@ -277,6 +277,9 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 	if err := s.reconcileExistingDuckDBJobsTx(ctx, tx, *reportID); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+	if err := s.snapshotDatasetRemovalTx(ctx, tx, *reportID, claims.Email); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 	if err := tx.Commit(); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -284,6 +287,15 @@ func (s Server) RemoveDataset(ctx context.Context, req *proto.RemoveDatasetReque
 	s.reportStreams.Ping(*reportID)
 
 	return &proto.RemoveDatasetResponse{}, nil
+}
+
+// snapshotDatasetRemovalTx makes the deleted dataset state a new canonical report revision.
+func (s Server) snapshotDatasetRemovalTx(ctx context.Context, tx *sql.Tx, reportID, changedBy string) error {
+	versionID := newUUID()
+	if _, err := tx.ExecContext(ctx, "UPDATE reports SET version_id=$1 WHERE id=$2", versionID, reportID); err != nil {
+		return err
+	}
+	return s.createReportSnapshotWithVersionIDTx(ctx, tx, versionID, reportID, changedBy, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE)
 }
 
 func (s Server) insertDataset(ctx context.Context, tx *sql.Tx, reportID string) (string, sql.Result, error) {

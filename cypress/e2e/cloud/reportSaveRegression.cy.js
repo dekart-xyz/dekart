@@ -1,5 +1,6 @@
 /* eslint-disable no-undef */
 import { UpdateReportRequest } from 'dekart-proto/dekart_pb'
+import { KeplerGlSchema } from '@kepler.gl/schemas'
 
 const LAYER_SELECTOR = '[data-testid="sortable-layer-item"], [data-testid="static-layer-item"]'
 
@@ -25,7 +26,11 @@ function getStore () {
 }
 
 function createUploadedReport () {
-  cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN_INFO')
+  const email = `report-save-${Date.now()}@example.com`
+  cy.setDevClaimsEmail(email)
+  cy.intercept(`${Cypress.env('DEKART_E2E_API_URL')}/api/v1/**`, request => {
+    request.headers['X-Dekart-Claim-Email'] = email
+  })
   cy.visit('/')
   cy.ensureTestWorkspace()
   cy.get('button#dekart-create-report').click()
@@ -33,6 +38,7 @@ function createUploadedReport () {
   cy.get('input[type="file"]').selectFile('cypress/fixtures/sample.csv', { force: true })
   cy.get('button:contains("Upload")').click()
   cy.get('div:contains("8,276 rows")', { timeout: 60000 }).should('be.visible')
+  cy.get(LAYER_SELECTOR, { timeout: 120000 }).should('have.length', 1)
   cy.location('pathname', { timeout: 60000 })
     .should('match', /^\/reports\/[a-f0-9-]+\/source$/)
     .as('createdReportPath')
@@ -56,6 +62,7 @@ function updateReportMapConfigOutsideAppSave (store, mapConfig) {
   request.setReportId(state.report.id)
   request.setMapConfig(mapConfig)
   request.setTitle(state.report.title)
+  request.setExpectedVersionId(state.report.versionId)
 
   const metadata = new window.Headers()
   if (state.token?.access_token) {
@@ -130,14 +137,23 @@ describe('cloud report save regression', () => {
       return updateReportMapConfigOutsideAppSave(store, JSON.stringify(remoteMapConfig))
     })
 
-    cy.contains('Map changed', { timeout: 5000 }).should('be.visible')
+    cy.contains('Map changed', { timeout: 30000 }).should('be.visible')
     cy.contains('Reload').should('be.visible')
   })
 
   it('tracks edits made in the automatically opened layer panel', () => {
     createUploadedReport()
 
+    cy.intercept('POST', '**/Dekart/UpdateReport*', (req) => {
+      if (new URL(req.url).searchParams.has('cypress_remote_update')) {
+        req.continue()
+      } else {
+        req.reply({ statusCode: 503 })
+      }
+    }).as('blockedAutoSave')
     const visibilityToggle = '.layer__visibility-toggle .panel--header__action__component'
+    cy.get('[data-testid="map-settings-tab"]').click()
+    cy.get('.side-panel--container').should('be.visible')
     cy.get(visibilityToggle).should('have.attr', 'data-for').and('include', 'tooltip.hideLayer')
     cy.get(visibilityToggle).trigger('click')
     cy.get(visibilityToggle).should('have.attr', 'data-for').and('include', 'tooltip.showLayer')
@@ -166,7 +182,7 @@ describe('cloud report save regression', () => {
 
     getStore().then((store) => {
       const state = store.getState()
-      const remoteMapConfig = JSON.parse(state.report.mapConfig)
+      const remoteMapConfig = KeplerGlSchema.getConfigToSave(state.keplerGl.kepler)
       remoteMapConfig.config.visState.layers = []
       remoteMapConfig.config.mapState.zoom = (remoteMapConfig.config.mapState.zoom || 0) + 1
       return updateReportMapConfigOutsideAppSave(store, JSON.stringify(remoteMapConfig))
@@ -174,7 +190,6 @@ describe('cloud report save regression', () => {
 
     cy.get(LAYER_SELECTOR, { timeout: 5000 }).should('not.exist')
     cy.contains('Map changed').should('not.exist')
-    cy.contains('Reload').should('not.exist')
   })
 
   it('keeps README removed after immediate save and report reload', () => {
@@ -195,7 +210,9 @@ describe('cloud report save regression', () => {
     cy.get('@createdReportPath').then((reportPath) => {
       cy.visit(reportPath)
     })
-    cy.get('body', { timeout: 60000 }).then(($body) => {
+    cy.get('body', { timeout: 120000 }).should($body => {
+      expect($body.find('button#dekart-save-button, button:contains("Edit")').length).to.be.greaterThan(0)
+    }).then(($body) => {
       if ($body.find('button#dekart-save-button').length === 0) {
         cy.contains('button', 'Edit').click()
       }

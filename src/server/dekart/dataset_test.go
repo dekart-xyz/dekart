@@ -76,6 +76,28 @@ func TestCreateDataset_EmptyReportID_ReturnsInvalidArgument(t *testing.T) {
 	require.Equal(t, "report_id is required", st.Message())
 }
 
+func TestSnapshotDatasetRemovalTxRotatesVersionAndSnapshotsReport(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+	mock.ExpectBegin()
+	tx, err := db.Begin()
+	require.NoError(t, err)
+
+	reportID := "00000000-0000-0000-0000-000000000061"
+	email := "user@example.com"
+	mock.ExpectExec("UPDATE reports SET version_id").WithArgs(sqlmock.AnyArg(), reportID).WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec("INSERT INTO report_snapshots").WithArgs(sqlmock.AnyArg(), email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE, reportID).WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectExec("INSERT INTO dataset_snapshots").WithArgs(sqlmock.AnyArg(), email, reportID).WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectExec("INSERT INTO query_snapshots").WithArgs(sqlmock.AnyArg(), email, reportID).WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit()
+
+	server := NewServer(db, nil, nil)
+	require.NoError(t, server.snapshotDatasetRemovalTx(context.Background(), tx, reportID, email))
+	require.NoError(t, tx.Commit())
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestServeDatasetSourceRejectsDatasetOutsideSnapshotReport(t *testing.T) {
 	datasetID := "00000000-0000-0000-0000-000000000031"
 	requestedReportID := "00000000-0000-0000-0000-000000000032"

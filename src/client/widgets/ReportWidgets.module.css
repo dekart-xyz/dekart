@@ -1,0 +1,81 @@
+/* Reuse Kepler's floating panel proportions; SQLRooms owns chart controls. */
+.provider { display: contents; }
+.panel { position: absolute; top: calc(var(--pane-top) + 44px + var(--filter-strip-height, 0px)); bottom: 12px; left: var(--pane-left); width: var(--pane-width); border-radius: 0 0 5px 5px; z-index: 20; display: flex; flex-direction: column; min-height: 0; color: #f3f5f7; background: #242730; --primary: 159.56 81.82% 32.35%; --primary-foreground: 0 0% 100%; box-shadow: 0 2px 8px #0005; font: 12.25px/1.71429 'ff-clan-web-pro', 'Helvetica Neue', Helvetica, sans-serif; }
+.hidden { display: none !important; }
+.source { display: flex; flex-direction: column; gap: 4px; padding: 12px 16px; }
+.source label, .settings label, .inlineBuilder label { color: #a0a7b4; font-size: 11px; font-weight: 500; line-height: 18px; }
+.panel :global(svg text) { font-family: inherit; }
+.actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 14px 13px; flex-shrink: 0; border-bottom: 1px solid #2a2f39; }
+.actions h2 { margin: 0; color: #fff; font-size: 17px; font-weight: 600; line-height: 1.71429; }
+/* Kepler's default action button: 32px, 11px type, 9px/12px padding. */
+.actions button, .settings :global(button.h-9), .settings :global(button.h-10), .inlineBuilder :global(button.h-9), .inlineBuilder :global(button.h-10) { height: 32px; min-height: 32px; border-radius: 2px; gap: 6px; padding: 9px 12px; font-family: inherit; font-size: 11px; font-weight: 500; line-height: 14px; }
+.actions button { background: #0f9668; color: #fff; }
+.actions button:hover { background: #13b17b; }
+.actions button svg { width: 12px; height: 12px; }
+.settings, .inlineBuilder { flex: 1; min-height: 0; overflow: auto; }
+.settings h2, .settings h3, .inlineBuilder h3 { color: inherit; }
+.inlineBuilder, .settings { padding: 16px; }
+.inlineBuilder .source, .settings .source { padding: 12px 0; }
+.builderHeading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.builderHeading h3 { font-size: 20px; font-weight: 400; line-height: 1.71429; margin: 0; }
+.inlineBuilder :global(.grid) { grid-template-columns: 1fr; }
+.empty { padding: 20px 16px; flex: 1; color: #c6d0dc; }
+.empty h3 { color: #f3f5f7; font-size: 16px; }
+.error { margin: 12px 16px; padding: 12px; background: #573a35; color: #ffd5c8; overflow-wrap: anywhere; }
+.panel button:focus-visible, .panel select:focus-visible { outline: 2px solid #a0a7ff; outline-offset: 2px; }
+
+.reportCharts { flex: 1; min-height: 0; overflow: auto; }
+.datasetWidgets { min-width: 0; }
+.datasetLabel { position: sticky; top: 0; z-index: 2; margin: 0; padding: 12px 16px 0; color: #c6d0dc; background: #242730; font-size: 12px; font-weight: 500; }
+.chartSettings { padding: 0; }
+.unavailablePanel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(110px, 1fr) auto; align-items: center; gap: 8px; padding: 8px 16px; color: #e3e7ec; border-top: 1px solid #323844; }
+.unavailablePanel span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Keep upstream form behavior; use the same field metrics as Kepler. */
+.panel input:not([type='checkbox']):not([type='radio']), .panel select, .panel button[role='combobox'] { height: 34px; min-height: 34px; padding: 4px 10px; border: 1px solid #29323c; border-radius: 1px; background: #29323c; color: #a0a7b4; font-family: inherit; font-size: 11px; font-weight: 500; line-height: 18px; box-shadow: none; }
+.panel button[role='combobox'] span { font-size: inherit; }
+.panel input:hover, .panel select:hover, .panel button[role='combobox']:hover { background: #3a414c; border-color: #3a414c; }
+.inlineBuilder button { font-family: inherit; font-size: 11px; border-radius: 2px; }
+/* SQLRooms menus are portalled outside the pane. */
+:global([data-radix-popper-content-wrapper]) { font-family: ff-clan-web-pro, 'Helvetica Neue', Helvetica, sans-serif; font-size: 11px; line-height: 18px; }
+:global([data-radix-popper-content-wrapper] [role='option']) { font-family: inherit; font-size: 11px; }
+
+/* Preserve upstream compact color pickers next to full-width field selectors. */
+.panel input:not([type='checkbox']):not([type='radio']), .panel select { width: 100%; }
+
+/* Charts share the pane surface; hairlines and a reserved handle gutter define each section. */
+.reportCharts :global(.px-5:has(> .sqlrooms-grid-layout)) { padding: 0; }
+.reportCharts :global([data-selectable-panel]) { border: 0 !important; border-radius: 0 !important; outline: none !important; box-shadow: none !important; background: transparent !important; border-top: 1px solid #2a2f39 !important; }
+.reportCharts :global([data-selectable-panel] > div > div:first-child) { min-height: 40px; padding: 10px 14px 4px 10px; border: 0; background: transparent; overflow: visible; }
+.reportCharts :global([data-selectable-panel] [role='button']) { font-size: 11px; font-weight: 500; color: #8b93a1; }
+.reportCharts :global([data-selectable-panel] [role='button'] span) { font-size: 11px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; }
+.reportCharts :global([data-selectable-panel] .lucide-grip-vertical) { opacity: 0; width: 12px; min-width: 12px; }
+.reportCharts :global([data-selectable-panel] > div > div:first-child button) { opacity: 0; }
+.reportCharts :global([data-selectable-panel]:hover > div > div:first-child button), .reportCharts :global([data-selectable-panel]:focus-within > div > div:first-child button), .reportCharts :global([data-selectable-panel]:hover .lucide-grip-vertical), .reportCharts :global([data-selectable-panel]:focus-within .lucide-grip-vertical) { opacity: 1; }
+.reportCharts :global([data-selectable-panel] button[aria-label='Open panel settings']), .reportCharts :global([data-selectable-panel] button[aria-label='Remove dashboard panel']), .reportCharts :global(button[aria-label='Shrink panel horizontally']), .reportCharts :global(button[aria-label='Expand panel horizontally']), .reportCharts :global(.sqlrooms-grid-resize-handle) { display: none; }
+.reportCharts :global([data-selectable-panel] .p-2) { padding: 0 18px 8px 24px; }
+.reportCharts :global([data-selectable-panel]:hover [data-testid='category-count']), .reportCharts :global([data-selectable-panel]:focus-within [data-testid='category-count']) { visibility: hidden; }
+@media (hover: none) { .reportCharts :global([data-selectable-panel] > div > div:first-child button) { opacity: 1; } }
+.reportCharts :global([data-layout-grid-item-id] > div:first-child) { border: 0; border-radius: 0; background: transparent; }
+.reportCharts :global(.py-2:has(> .sqlrooms-grid-layout)) { padding-top: 0; padding-bottom: 0; }
+
+/* Keep the last results in place while the pane's shared queries settle. */
+.reportCharts { transition: opacity 240ms ease-in-out; }
+.calculating .reportCharts:not(:has(.chartStub)) { opacity: .45; }
+.calculationLine { opacity: 0; visibility: hidden; transition: opacity 240ms ease-in-out, visibility 0s linear 240ms; position: absolute; top: 0; left: 0; right: 0; height: 1px; z-index: 1; pointer-events: none; background: linear-gradient(90deg, #3b5bf5 0%, #7b4fe0 35%, #e0509b 65%, #3b5bf5 100%); background-size: 200% 100%; animation: calculationSlide 1.6s linear infinite; }
+.calculating .calculationLine { opacity: 1; visibility: visible; transition-delay: 0s; }
+.calculationLine::after { content: ''; position: absolute; top: 1px; left: 0; right: 0; height: 10px; background: inherit; animation: inherit; opacity: .3; mask-image: linear-gradient(180deg, #000, transparent), linear-gradient(90deg, transparent 0%, #000 40%, #000 60%, transparent 100%); mask-composite: intersect; }
+@keyframes calculationSlide { from { background-position: 0% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .calculationLine { animation: none; } .reportCharts, .calculationLine { transition: none; } }
+
+/* Initial loading uses the mockup's quiet label and three line placeholders. */
+.chartStub { padding: 16px 18px 20px; border-top: 1px solid #2a2f39; }
+.stubLabel { width: 88px; height: 9px; border-radius: 2px; background: #2c313b; margin-bottom: 16px; animation: stubPulse 1.7s ease-in-out infinite; }
+.chartStub:nth-child(3n + 2) .stubLabel { width: 124px; animation-delay: -.28s; }
+.chartStub:nth-child(3n) .stubLabel { width: 70px; animation-delay: -.56s; }
+.stubLines { display: flex; flex-direction: column; gap: 12px; }
+.stubLines i { display: block; height: 4px; border-radius: 2px; background: #2f343f; animation: stubPulse 1.7s ease-in-out infinite; }
+.stubLines i:nth-child(2) { width: 72%; animation-delay: -.2s; }
+.stubLines i:nth-child(3) { width: 48%; animation-delay: -.4s; }
+@keyframes stubPulse { 0%, 100% { opacity: .45; } 50% { opacity: .9; } }
+@media (prefers-reduced-motion: reduce) { .stubLabel, .stubLines i { animation: none; } }
