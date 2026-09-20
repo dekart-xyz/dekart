@@ -4,7 +4,7 @@ import Button from 'antd/es/button'
 import { EyeOutlined, DownloadOutlined, CloudOutlined, EditOutlined, ForkOutlined, ReloadOutlined, LoadingOutlined, CloudSyncOutlined, PlusOutlined, InfoCircleOutlined, ClockCircleOutlined, HistoryOutlined } from '@ant-design/icons'
 import { useDispatch, useSelector } from 'react-redux'
 import ShareButton from './ShareButton'
-import { forkReport, saveMap, saveMapPreview } from './actions/report'
+import { forkReport, saveMap, saveMapPreview, toggleReportEdit } from './actions/report'
 import { runAllQueries } from './actions/query'
 import { toggleModal } from '@kepler.gl/actions/dist/ui-state-actions'
 import { EXPORT_DATA_ID, EXPORT_IMAGE_ID, EXPORT_MAP_ID } from '@kepler.gl/constants'
@@ -166,7 +166,7 @@ function useAutoSave () {
   const { canWrite } = useSelector(state => state.report)
   const readOnly = useSelector(state => state.workspace.readOnly)
   const dispatch = useDispatch()
-  const { saving, online } = useSelector(state => state.reportStatus)
+  const { saving, online, edit } = useSelector(state => state.reportStatus)
   const reportChanged = useReportChanged()
   const mapViewChanged = useMapViewChanged()
   const { exporting, dataUri } = useSelector(state => state.mapPreview)
@@ -178,7 +178,7 @@ function useAutoSave () {
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      if (reportChanged && canWrite && !readOnly && !saving && online) {
+      if (edit && reportChanged && canWrite && !readOnly && !saving && online) {
         dispatch(saveMap(mapViewChanged))
       }
     }, 1000)
@@ -186,7 +186,7 @@ function useAutoSave () {
     return () => {
       clearTimeout(handler)
     }
-  }, [canWrite, readOnly, saving, online, dispatch, mapViewChanged, reportChanged])
+  }, [canWrite, readOnly, saving, online, edit, dispatch, mapViewChanged, reportChanged])
 }
 
 function useRequireWorkspace () {
@@ -233,7 +233,8 @@ function WorkspaceOnboarding () {
 function EditModeButtons () {
   const dispatch = useDispatch()
   const { canWrite } = useSelector(state => state.report)
-  const { saving } = useSelector(state => state.reportStatus)
+  const { saving, mapConfigConflict } = useSelector(state => state.reportStatus)
+  const widgetsConflict = useSelector(state => state.widgets.conflict)
   const readOnly = useSelector(state => state.workspace.readOnly)
   const changed = useReportChanged()
   const forkOnboarding = useRequireOnboarding()
@@ -249,11 +250,11 @@ function EditModeButtons () {
             <ForkButton />
             <Button
               id='dekart-save-button'
-              title={readOnly ? 'Workspace is read-only' : saving ? 'Saving...' : 'Save this map'}
+              title={readOnly ? 'Workspace is read-only' : mapConfigConflict || widgetsConflict ? 'Reload before saving' : saving ? 'Saving...' : 'Save this map'}
               type='text'
               ghost
               icon={saving || changed ? <CloudSyncOutlined /> : <CloudOutlined />}
-              disabled={saving || readOnly}
+              disabled={saving || readOnly || mapConfigConflict || widgetsConflict}
               onClick={() => {
                 track('SaveMap')
                 dispatch(saveMap())
@@ -338,18 +339,21 @@ function ViewSelectDropdown ({ menu, onHistoryClick }) {
   )
 }
 
-function ViewSelect (value) {
+function ViewSelect ({ value }) {
   const dispatch = useDispatch()
   const history = useHistory()
   const { id } = useSelector(state => state.report)
 
-  const handleChange = (value) => {
+  const handleChange = async (value) => {
     if (value === 'edit') {
       track('SwitchToEditMode', { reportId: id })
       goToSource(history, id)
     } else if (value === 'view') {
-      track('SwitchToViewMode', { reportId: id })
-      goToPresent(history, id)
+      const switched = await dispatch(toggleReportEdit(false))
+      if (switched) {
+        track('SwitchToViewMode', { reportId: id })
+        goToPresent(history, id)
+      }
     } else if (value === 'history') {
       track('OpenHistory', { reportId: id })
       dispatch(toggleSnapshotModal(true))
@@ -365,14 +369,14 @@ function ViewSelect (value) {
       <Select
         ghost
         className={styles.reportViewSelect}
-        defaultValue={value}
+        value={value}
         onChange={handleChange}
         options={[
           { value: 'view', label: <><EyeOutlined /> Viewing</> },
           { value: 'edit', label: <><EditOutlined /> Editing</> }
         ]}
         dropdownRender={(menu) => (
-          // add history option to the dropdown after divider
+        // add history option to the dropdown after divider
           <ViewSelectDropdown menu={menu} onHistoryClick={handleHistoryClick} />
         )}
       />

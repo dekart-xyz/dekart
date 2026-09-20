@@ -29,13 +29,16 @@ Policy/architecture guardrails are defined in `AGENTS.md`. This skill is the sou
 
 ## Frontend Conventions
 
+- Prefer Ant Design components for UI by default.
 - Component files use `PascalCase.jsx`; component styles use matching `PascalCase.module.css`.
 - Non-component frontend files use `camelCase.js` (actions, reducers, lib hooks/utils).
 - Keep shared application state in Redux.
 - Keep side effects/network calls in actions/thunks, not reducers.
 - Keep reducers pure and action-driven.
 - Keep reusable non-UI logic in `src/client/lib`.
-- Prefer Ant Design components for UI by default.
+- Never create a named function inside another function. Every named function is declared as `function doThing (...)` at module scope and takes what it needs as explicit arguments, including refs and setters. There is no exception for closing over props, state or refs: pass them in, or group them into one object.
+- Anonymous inline callbacks are fine.
+– Move large useEffect hooks into custom hooks to keep component logic readable.
 
 ## Redundant Checks
 
