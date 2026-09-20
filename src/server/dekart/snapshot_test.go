@@ -35,6 +35,7 @@ func expectSnapshotReportAccess(mock sqlmock.Sqlmock, reportID string, email str
 		WillReturnRows(sqlmock.NewRows([]string{
 			"id",
 			"map_config",
+			"widgets_config",
 			"title",
 			"is_author",
 			"author_email",
@@ -58,6 +59,7 @@ func expectSnapshotReportAccess(mock sqlmock.Sqlmock, reportID string, email str
 		}).AddRow(
 			reportID,
 			"{}",
+			"",
 			"Snapshot Report",
 			true,
 			email,
@@ -254,6 +256,7 @@ func TestCreateReportSnapshot_RequiresAuthAndReportAccess(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{
 			"id",
 			"map_config",
+			"widgets_config",
 			"title",
 			"is_author",
 			"author_email",

@@ -2,7 +2,7 @@ import { CreateDatasetRequest, RemoveDatasetRequest, UpdateDatasetNameRequest } 
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { grpcCall } from './grpc'
 import { setError, success, info, warn } from './message'
-import { addDataToMap, toggleSidePanel, replaceDataInMap } from '@kepler.gl/actions'
+import { addDataToMap, toggleSidePanel, replaceDataInMap, removeDataset as removeKeplerDataset } from '@kepler.gl/actions'
 import { get } from '../lib/api'
 import getDatasetName from '../lib/getDatasetName'
 import { runWarehouseQuery } from './query'
@@ -56,6 +56,19 @@ export function setActiveDataset (datasetId) {
   }
 }
 
+export function datasetRemoved (datasetId) {
+  return { type: datasetRemoved.name, datasetId }
+}
+
+// Reconcile browser-owned resources after the server has removed a dataset.
+export function cleanupRemovedDataset (datasetId) {
+  return async dispatch => {
+    dispatch(datasetRemoved(datasetId))
+    dispatch(removeKeplerDataset(datasetId))
+    await dispatch(removeDuckDBSource(datasetId))
+  }
+}
+
 export function updateDatasetName (datasetId, name) {
   return async (dispatch, getState) => {
     const { list: datasets } = getState().dataset
@@ -76,22 +89,16 @@ export function removeDataset (datasetId, silent = false) {
     const { list: datasets, active: activeDataset } = getState().dataset
     if (activeDataset.id === datasetId) {
       // removed active query
-      const datasetsLeft = datasets.filter(q => q.id !== datasetId)
-      if (datasetsLeft.length === 0) {
+      if (datasets.filter(q => q.id !== datasetId).length === 0) {
         dispatch(setError(new Error('Cannot remove last dataset')))
         return
       }
-      dispatch(setActiveDataset(datasetsLeft[0].id))
     }
-    await dispatch(removeDuckDBSource(datasetId))
-    dispatch({ type: removeDataset.name, datasetId })
 
     const request = new RemoveDatasetRequest()
     request.setDatasetId(datasetId)
-    dispatch(grpcCall(Dekart.RemoveDataset, request, (res) => {
-      if (!silent) {
-        dispatch(success('Dataset removed'))
-      }
+    return dispatch(grpcCall(Dekart.RemoveDataset, request, () => {
+      if (!silent) dispatch(success('Dataset removed'))
     }))
   }
 }

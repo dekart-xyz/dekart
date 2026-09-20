@@ -488,6 +488,10 @@ func TestMCPToolDefinitions_MapConfigToolHasKeplerReference(t *testing.T) {
 		assert.Contains(t, strings.Join(mapConfigTool.ReferenceDocs, " "), "docs.kepler.gl")
 		assert.Contains(t, strings.ToLower(mapConfigTool.WhenToUse), "dataid")
 		assert.Contains(t, mapConfigTool.WhenToUse, "dataset_id")
+		properties, ok := mapConfigTool.InputSchema["properties"].(map[string]any)
+		if assert.True(t, ok) {
+			assert.NotContains(t, properties, "expected_version_id")
+		}
 	}
 }
 

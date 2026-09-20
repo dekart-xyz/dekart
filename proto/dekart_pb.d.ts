@@ -2648,6 +2648,9 @@ export class Report extends jspb.Message {
   setConnectionTypesList(value: Array<ConnectionTypeMap[keyof ConnectionTypeMap]>): void;
   addConnectionTypes(value: ConnectionTypeMap[keyof ConnectionTypeMap], index?: number): ConnectionTypeMap[keyof ConnectionTypeMap];
 
+  getWidgetsConfig(): string;
+  setWidgetsConfig(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Report.AsObject;
   static toObject(includeInstance: boolean, msg: Report): Report.AsObject;
@@ -2685,6 +2688,7 @@ export namespace Report {
     versionId: string,
     hasMapPreview: boolean,
     connectionTypesList: Array<ConnectionTypeMap[keyof ConnectionTypeMap]>,
+    widgetsConfig: string,
   }
 }
 
@@ -3013,6 +3017,16 @@ export class UpdateReportRequest extends jspb.Message {
   getReadme(): Readme | undefined;
   setReadme(value?: Readme): void;
 
+  hasWidgetsConfig(): boolean;
+  clearWidgetsConfig(): void;
+  getWidgetsConfig(): string;
+  setWidgetsConfig(value: string): void;
+
+  hasExpectedVersionId(): boolean;
+  clearExpectedVersionId(): void;
+  getExpectedVersionId(): string;
+  setExpectedVersionId(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): UpdateReportRequest.AsObject;
   static toObject(includeInstance: boolean, msg: UpdateReportRequest): UpdateReportRequest.AsObject;
@@ -3031,12 +3045,17 @@ export namespace UpdateReportRequest {
     queryList: Array<Query.AsObject>,
     queryParamsList: Array<QueryParam.AsObject>,
     readme?: Readme.AsObject,
+    widgetsConfig: string,
+    expectedVersionId: string,
   }
 }
 
 export class UpdateReportResponse extends jspb.Message {
   getUpdatedAt(): number;
   setUpdatedAt(value: number): void;
+
+  getVersionId(): string;
+  setVersionId(value: string): void;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): UpdateReportResponse.AsObject;
@@ -3051,6 +3070,7 @@ export class UpdateReportResponse extends jspb.Message {
 export namespace UpdateReportResponse {
   export type AsObject = {
     updatedAt: number,
+    versionId: string,
   }
 }
 
