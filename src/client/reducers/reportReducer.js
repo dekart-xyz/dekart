@@ -196,7 +196,9 @@ export function reportStatus (state = defaultReportStatus, action) {
         lastUpdated: Date.now(),
         fullscreen,
         autoRefreshIntervalSeconds: action.report.autoRefreshIntervalSeconds || 0,
-        savedVersionId: action.initialHydration || action.liveMapConfigAccepted ? action.report.versionId : state.savedVersionId,
+        // Query, dataset, and readme writes rotate the report version without changing the map,
+        // so the baseline follows every streamed version except a still-unapplied remote map change.
+        savedVersionId: action.hasRemoteMapConflict ? state.savedVersionId : action.report.versionId,
         mapConfigConflict: state.mapConfigConflict || action.hasRemoteMapConflict,
         queryJobRefreshTimeoutId: null
       }

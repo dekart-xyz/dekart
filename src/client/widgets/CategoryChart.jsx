@@ -92,7 +92,12 @@ export default function CategoryChart ({ config, coordinator, dataTable, table, 
   }, [config.settings, dataTable, selectionName, categories.count, layer, scaleType, colorDomain, colorRange, emphasis])
   if (result.error) return <div className={styles.message}>{result.error}</div>
   const count = Math.min(categories.count ?? 0, config.settings.maxBars ?? 20)
-  return <div className={styles.category}><span className={styles.count} data-testid='category-count'>{categories.count} values</span><div className={styles.scroll} style={{ maxHeight: expanded ? undefined : 110, overflowY: expanded ? 'auto' : 'hidden' }} data-testid='category-chart'><div className={styles.plot} style={{ height: result.spec.height, opacity: selected.active && !selected.values.length ? 0.25 : 1 }} data-testid='category-plot'><FreshVgPlotChart {...chartProps} spec={result.spec} /></div></div>{count > 3 && <button className={styles.more} onClick={() => setExpanded(!expanded)}>{expanded ? 'Show less' : `Show ${count - 3} more`}</button>}</div>
+  // The count-plot bar mark stacks, and Plot's stack transform reads facets that
+  // only exist once the mark has data. Mounting the plot before the first result
+  // lands throws inside vgplot, so wait for the category count that arrives with it.
+  // Later re-queries keep the count, so the chart holds its bars instead of blanking.
+  const ready = categories.count !== undefined
+  return <div className={styles.category}><span className={styles.count} data-testid='category-count'>{categories.count} values</span><div className={styles.scroll} style={{ maxHeight: expanded ? undefined : 110, overflowY: expanded ? 'auto' : 'hidden' }} data-testid='category-chart'><div className={styles.plot} style={{ height: result.spec.height, opacity: selected.active && !selected.values.length ? 0.25 : 1 }} data-testid='category-plot'>{ready && <FreshVgPlotChart {...chartProps} spec={result.spec} />}</div></div>{count > 3 && <button className={styles.more} onClick={() => setExpanded(!expanded)}>{expanded ? 'Show less' : `Show ${count - 3} more`}</button>}</div>
 }
 
 // SQLRooms retains charts across layout changes. A source-revision remount must

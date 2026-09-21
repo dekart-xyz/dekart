@@ -21,8 +21,10 @@ import { grpc } from '@improbable-eng/grpc-web'
 
 let reportSaveBarrier = null
 
-function startReportSaveBarrier (reportId) {
-  const barrier = { reportId }
+// The barrier holds stream messages while a save is in flight and remembers which
+// version that save replaced, once the server has accepted it.
+function startReportSaveBarrier (expectedVersionId) {
+  const barrier = { expectedVersionId, saved: false }
   barrier.promise = new Promise(resolve => {
     barrier.resolve = resolve
   })
@@ -275,6 +277,13 @@ export function reportUpdate (reportStreamResponse) {
     const barrier = reportSaveBarrier
     if (barrier) {
       await barrier.promise
+      // The server accepted that save only because the report was still at the expected version,
+      // so a message carrying it was built before the save and would revert this session's newer
+      // state. Nothing is lost by dropping it: the save pings the stream after it commits, and
+      // that later message carries the full current report.
+      if (barrier.saved && report.versionId && report.versionId === barrier.expectedVersionId) {
+        return
+      }
     }
     const state = getState()
     // make we are still on the same report
@@ -321,7 +330,7 @@ export function reportUpdate (reportStreamResponse) {
     )
     // Drop the removed dataset from Kepler before the map config below is reconciled,
     // so its layers are already gone and the incoming map is not seen as a remote change.
-    removedDatasetIds.forEach(datasetId => dispatch(cleanupRemovedDataset(datasetId)))
+    const removedDatasetsCleanup = Promise.all([...removedDatasetIds].map(datasetId => dispatch(cleanupRemovedDataset(datasetId))))
     dispatch({
       type: reportUpdate.name,
       report,
@@ -338,7 +347,6 @@ export function reportUpdate (reportStreamResponse) {
       initialHydration,
       initialAutoCreateLayerIds: initialAutoCreateLayerIds(datasetsList, queriesList, filesList, queryJobsList),
       newDatasetIds: datasetsList.filter(dataset => !prevDatasetsList.find(previous => previous.id === dataset.id)).map(dataset => dataset.id),
-      liveMapConfigAccepted,
       hasRemoteMapConflict
     })
     if (hasRemoteMapConflict) {
@@ -444,6 +452,11 @@ export function reportUpdate (reportStreamResponse) {
     const changedDatasetIds = [...new Set([...changedDuckDBDatasetIds, ...changedDependencyDatasetIds])]
     if (mapConfigUpdated || changedDuckDBDatasetIds.length > 0 || (hasDuckDBGraph && (changedDependencyDatasetIds.length > 0 || dependencyDatasetRemoved))) {
       const affectedDatasetIds = mapConfigUpdated || dependencyDatasetRemoved ? null : changedDatasetIds
+      // Source removal starts a new runtime generation, which would cancel a rerun started before it finished.
+      await removedDatasetsCleanup
+      if (getState().report?.id !== report.id) {
+        return
+      }
       dispatch(runDuckDBGraph(affectedDatasetIds))
     }
 
@@ -649,7 +662,7 @@ export function saveMap (mapViewChanged = false) {
     const lastSaved = reportStatus.lastChanged
     const configToSave = KeplerGlSchema.getConfigToSave(keplerGl.kepler)
     const mapConfig = JSON.stringify(configToSave)
-    const barrier = startReportSaveBarrier(report.id)
+    const barrier = startReportSaveBarrier(report.versionId)
     dispatch({ type: saveMap.name })
     const request = new UpdateReportRequest()
     const queryUpdates = Object.keys(queryStatus).reduce((queries, id) => {
@@ -687,6 +700,7 @@ export function saveMap (mapViewChanged = false) {
           return err
         }))
       })
+      barrier.saved = true
       if (mapViewChanged) {
         dispatch(exportMapPreview())
       }

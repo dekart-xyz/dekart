@@ -406,18 +406,16 @@ class DuckDBReportRuntime {
     }
   }
 
-  // discardJobTables retains only revisions reachable from the current streamed graph.
+  // discardJobTables retains revisions reachable from the current streamed graph plus the
+  // revision charts still read for each dataset, since widgets keep serving the previous
+  // table until the rerun publishes and the dataset rebinds.
   async discardJobTables (jobIds) {
     await this.initialize()
-    const retained = new Set(jobIds.map(duckDBJobTableName))
+    const retained = new Set([...jobIds.map(duckDBJobTableName), ...this.widgetJobTables.values()])
     for (const tableName of this.jobTables) {
       if (!retained.has(tableName)) {
         await this.connection.query(`DROP TABLE IF EXISTS dekart_internal.${quoteIdentifier(tableName)}`)
         this.jobTables.delete(tableName)
-        // Clear dataset bindings when obsolete job tables are pruned from the runtime.
-        for (const [datasetId, widgetTableName] of this.widgetJobTables) {
-          if (widgetTableName === tableName) this.widgetJobTables.delete(datasetId)
-        }
       }
     }
   }

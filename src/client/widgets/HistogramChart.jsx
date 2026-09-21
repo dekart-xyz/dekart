@@ -2,6 +2,7 @@ import React, { useEffect, useMemo } from 'react'
 import { useSelector } from 'react-redux'
 import { getMosaicDashboardPanelId, useStoreWithMosaicDashboard, VgPlotChart } from '@sqlrooms/mosaic'
 import { createHistogramSpec } from '@sqlrooms/mosaic/dist/charts/chart-types/histogram/spec'
+import styles from './CategoryChart.module.css'
 
 const noClients = []
 
@@ -63,7 +64,13 @@ export default function HistogramChart ({ config, dataTable, selectionName, rete
     frame = window.requestAnimationFrame(syncBrush)
     return () => window.cancelAnimationFrame(frame)
   }, [clients, range])
-  const spec = useMemo(() => createDekartHistogramSpec({ dataTable, selectionName, settings: config.settings }), [config.settings, dataTable, selectionName])
+  // A re-executed source can drop the configured field; show that instead of crashing the panel.
+  const result = useMemo(() => {
+    try {
+      return { spec: createDekartHistogramSpec({ dataTable, selectionName, settings: config.settings }) }
+    } catch (error) { return { error: error.message } }
+  }, [config.settings, dataTable, selectionName])
   const writeOnlyRetention = useMemo(() => retention && { setChart: retention.setChart }, [retention?.setChart])
-  return <VgPlotChart spec={spec} params={params} retention={writeOnlyRetention} dataPolicy={dataPolicy} runtimeIssueContext={runtimeIssueContext} runtimeIssueReporter={runtimeIssueReporter} />
+  if (result.error) return <div className={styles.message}>{result.error}</div>
+  return <VgPlotChart spec={result.spec} params={params} retention={writeOnlyRetention} dataPolicy={dataPolicy} runtimeIssueContext={runtimeIssueContext} runtimeIssueReporter={runtimeIssueReporter} />
 }

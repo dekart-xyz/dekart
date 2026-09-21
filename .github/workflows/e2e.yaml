@@ -323,7 +323,8 @@ jobs:
       LOGIN_REG:  ${{ inputs.target == 'premium' && 'ghcr' || 'dh' }}
     strategy:
       fail-fast: false
-      max-parallel: 10
+      # e2e-cloud runs 2 lanes alongside these; the registry rejects pulls past 10 concurrent.
+      max-parallel: 8
       matrix:
         include:
           - id: google-oauth
