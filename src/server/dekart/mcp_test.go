@@ -71,6 +71,29 @@ func TestWriteMCPCallError_MapConfigValidationErrorStructured(t *testing.T) {
 	}
 }
 
+func TestWriteMCPCallError_WidgetsConfigValidationErrorStructured(t *testing.T) {
+	recorder := httptest.NewRecorder()
+
+	writeMCPCallError(recorder, &widgetsConfigValidationError{
+		Issues: []mapConfigValidationIssue{{
+			Path:     "widgets_config.widgets[0].dataId",
+			Reason:   "unknown_dataset_id",
+			Expected: "one of: dataset-1",
+			Actual:   "dataset-missing",
+		}},
+	})
+
+	assert.Equal(t, http.StatusBadRequest, recorder.Code)
+	var payload mcpValidationErrorResponse
+	err := json.Unmarshal(recorder.Body.Bytes(), &payload)
+	assert.NoError(t, err)
+	assert.Equal(t, "widgets_config_validation_failed", payload.Error)
+	if assert.Len(t, payload.Issues, 1) {
+		assert.Equal(t, "widgets_config.widgets[0].dataId", payload.Issues[0].Path)
+		assert.Equal(t, "dataset-missing", payload.Issues[0].Actual)
+	}
+}
+
 func TestWriteMCPCallError_GoogleCredentialErrorStructured(t *testing.T) {
 	recorder := httptest.NewRecorder()
 

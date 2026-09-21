@@ -860,7 +860,6 @@ message UpdateReportWidgetsConfigRequest {
 
 message UpdateReportWidgetsConfigResponse {
     int64 updated_at = 1;
-    repeated string unbound_dashboards = 2; // stored dashboard keys that match no report dataset
 }
 
 // MCP-specific payload for replacing report readme markdown.

@@ -1,19 +1,93 @@
-import { parseWidgetsConfig, serializeWidgetsConfig } from './widgetsConfig'
+import { applyWidgetsConfig, emptyWidgetsConfig, parseWidgetsConfig, serializeWidgetsConfig } from './widgetsConfig'
 import { expect, test } from 'vitest'
 
-const panel = { id: 'count_1', type: 'vgplot', title: 'Rows', config: { chartType: 'number', settings: { operation: 'count' } } }
+const panels = {
+  number: { id: 'number_1', type: 'vgplot', title: 'Rows', config: { chartType: 'number', settings: { operation: 'count' } } },
+  category: { id: 'category_1', type: 'vgplot', title: 'Category', config: { chartType: 'count-plot', settings: { field: 'category' } } },
+  histogram: { id: 'histogram_1', type: 'vgplot', title: 'Amount', config: { chartType: 'histogram', settings: { field: 'amount' } } }
+}
 
-test('serializes declarative widget config without runtime authority', () => {
-  const saved = serializeWidgetsConfig({ dashboardsById: { dataset_1: { id: 'dataset_1', title: 'Widgets', selectedTable: 'secret', updatedAt: 1, panels: [panel], layout: { children: [{ panel: { meta: { panelId: 'count_1' } } }] } } } })
-  expect(saved.config.dashboardsById.dataset_1).toEqual({ id: 'dataset_1', title: 'Widgets', panelOrder: ['count_1'], panels: [{ ...panel, config: { ...panel.config, settings: { operation: 'count', format: 'auto', decimals: 2, subtitle: '', prefix: '', suffix: '' } } }] })
-  expect(JSON.stringify(saved)).not.toMatch(/secret|updatedAt|layout/)
+function runtimeConfig () {
+  return {
+    dashboardsById: {
+      dataset_1: {
+        id: 'dataset_1',
+        title: 'Widgets',
+        selectedTable: 'secret',
+        panels: [panels.number, panels.category],
+        layout: {
+          children: [
+            { id: 'child-number', panel: { meta: { panelId: 'number_1' } } },
+            { id: 'child-category', panel: { meta: { panelId: 'category_1' } } }
+          ],
+          layouts: { sm: [{ i: 'child-number', x: 0, y: 2 }, { i: 'child-category', x: 0, y: 0 }] }
+        }
+      },
+      dataset_2: {
+        id: 'dataset_2',
+        title: 'Widgets',
+        panels: [panels.histogram],
+        layout: {
+          children: [{ id: 'child-histogram', panel: { meta: { panelId: 'histogram_1' } } }],
+          layouts: { sm: [{ i: 'child-histogram', x: 0, y: 0 }] }
+        }
+      }
+    }
+  }
+}
+
+function fakeStore () {
+  const calls = []
+  const api = {
+    clearAllDashboardRuntime: () => calls.push(['clear']),
+    setConfig: config => calls.push(['setConfig', config]),
+    ensureDashboard: id => calls.push(['ensureDashboard', id]),
+    setSelectedTable: id => calls.push(['setSelectedTable', id]),
+    addPanel: (id, panel) => calls.push(['addPanel', id, panel])
+  }
+  return { calls, store: { getState: () => ({ mosaicDashboard: api }) } }
+}
+
+test('serializes flat widgets with runtime state removed and chart defaults normalized', () => {
+  const saved = serializeWidgetsConfig(runtimeConfig())
+  expect(saved).toEqual({
+    version: 1,
+    widgets: [
+      { id: 'category_1', dataId: 'dataset_1', type: 'count-plot', title: 'Category', settings: { field: 'category', metric: 'count', sort: 'value-desc', maxBars: 20 } },
+      { id: 'number_1', dataId: 'dataset_1', type: 'number', title: 'Rows', settings: { operation: 'count', format: 'auto', decimals: 2, subtitle: '', prefix: '', suffix: '' } },
+      { id: 'histogram_1', dataId: 'dataset_2', type: 'histogram', title: 'Amount', settings: { field: 'amount', maxBins: 15 } }
+    ]
+  })
+  expect(JSON.stringify(saved)).not.toMatch(/secret|dashboardsById|layout/)
 })
 
-test('rejects unsupported persisted content', () => {
-  const raw = JSON.stringify({ version: 2, provider: 'sqlrooms', config: { dashboardsById: {} } })
-  expect(() => parseWidgetsConfig(raw)).toThrow('Invalid persisted widget configuration')
+test('preserves cross-dataset positions while applying runtime order within each dataset', () => {
+  const previous = { version: 1, widgets: [{ id: 'histogram_1', dataId: 'dataset_2' }, { id: 'number_1', dataId: 'dataset_1' }, { id: 'category_1', dataId: 'dataset_1' }] }
+  expect(serializeWidgetsConfig(runtimeConfig(), previous).widgets.map(widget => widget.id)).toEqual(['histogram_1', 'category_1', 'number_1'])
 })
 
-test('normalizes missing content to an empty Widgets V1 config', () => {
-  expect(parseWidgetsConfig('')).toMatchObject({ config: { version: 1, provider: 'sqlrooms', config: { dashboardsById: {} } } })
+test('groups widgets by dataId and preserves order within each runtime dashboard', () => {
+  const { calls, store } = fakeStore()
+  applyWidgetsConfig(store, {
+    version: 1,
+    widgets: [
+      { id: 'a', dataId: 'dataset_1', type: 'number', title: 'A', settings: { operation: 'count' } },
+      { id: 'skip', dataId: 'missing', type: 'number', title: 'Skip', settings: { operation: 'count' } },
+      { id: 'b', dataId: 'dataset_2', type: 'histogram', title: 'B', settings: { field: 'amount' } },
+      { id: 'c', dataId: 'dataset_1', type: 'count-plot', title: 'C', settings: { field: 'category' } }
+    ]
+  }, ['dataset_1', 'dataset_2'])
+  expect(calls.filter(call => call[0] === 'addPanel').map(call => [call[1], call[2].id])).toEqual([['dataset_1', 'a'], ['dataset_2', 'b'], ['dataset_1', 'c']])
+  expect(calls[0]).toEqual(['clear'])
+  expect(calls[1]).toEqual(['setConfig', { dashboardsById: {} }])
+})
+
+test('rejects documents the runtime cannot safely adapt while preserving the raw error boundary', () => {
+  const duplicate = JSON.stringify({ version: 1, widgets: [{ id: 'same', dataId: 'a', type: 'number', title: 'A', settings: {} }, { id: 'same', dataId: 'b', type: 'number', title: 'B', settings: {} }] })
+  expect(() => parseWidgetsConfig(duplicate)).toThrow('Invalid persisted widget configuration')
+  expect(() => parseWidgetsConfig('{')).toThrow('Invalid persisted widget configuration')
+})
+
+test('normalizes missing content to an empty flat Widgets V1 config', () => {
+  expect(parseWidgetsConfig('')).toEqual({ config: emptyWidgetsConfig(), raw: JSON.stringify(emptyWidgetsConfig()) })
 })

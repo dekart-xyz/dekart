@@ -3194,11 +3194,6 @@ export class UpdateReportWidgetsConfigResponse extends jspb.Message {
   getUpdatedAt(): number;
   setUpdatedAt(value: number): void;
 
-  clearUnboundDashboardsList(): void;
-  getUnboundDashboardsList(): Array<string>;
-  setUnboundDashboardsList(value: Array<string>): void;
-  addUnboundDashboards(value: string, index?: number): string;
-
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): UpdateReportWidgetsConfigResponse.AsObject;
   static toObject(includeInstance: boolean, msg: UpdateReportWidgetsConfigResponse): UpdateReportWidgetsConfigResponse.AsObject;
@@ -3212,7 +3207,6 @@ export class UpdateReportWidgetsConfigResponse extends jspb.Message {
 export namespace UpdateReportWidgetsConfigResponse {
   export type AsObject = {
     updatedAt: number,
-    unboundDashboardsList: Array<string>,
   }
 }
 

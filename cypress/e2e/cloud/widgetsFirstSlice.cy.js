@@ -136,5 +136,17 @@ describe('Widgets first production slice', () => {
     cy.get('[data-testid="category-chart"]').should('not.exist')
     cy.get('[data-testid="number-value"]').should('have.text', '5')
     cy.get('[data-testid="filter-strip"]').should('contain.text', 'No filters')
+
+    // An explicit empty replacement clears SQLRooms state and stays empty after reload.
+    cy.get('button[aria-label="Chart actions"]').first().click()
+    cy.contains('[role="menuitem"]', 'Delete chart').click()
+    cy.get('button[aria-label="Chart actions"]').first().click()
+    cy.contains('[role="menuitem"]', 'Delete chart').click()
+    cy.contains('Dashboard is empty').should('be.visible')
+    cy.wait(2500)
+    cy.reload()
+    cy.get('[data-testid="widgets-tab"]', { timeout: 180000 }).click()
+    cy.contains('Dashboard is empty', { timeout: 180000 }).should('be.visible')
+    cy.get('[data-testid="number-value"], [data-testid="category-chart"], [data-testid="histogram-chart"]').should('not.exist')
   })
 })

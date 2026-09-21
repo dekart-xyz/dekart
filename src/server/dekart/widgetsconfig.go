@@ -1,10 +1,11 @@
 package dekart
 
 import (
+	"context"
+	"database/sql"
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"sort"
 	"strings"
 	"sync"
 
@@ -25,26 +26,31 @@ var (
 )
 
 type persistedWidgetsConfig struct {
-	Config struct {
-		Dashboards map[string]persistedWidgetDashboard `json:"dashboardsById"`
-	} `json:"config"`
+	Version int               `json:"version"`
+	Widgets []persistedWidget `json:"widgets"`
 }
 
-type persistedWidgetDashboard struct {
-	ID         string                 `json:"id"`
-	PanelOrder []string               `json:"panelOrder"`
-	Panels     []persistedWidgetPanel `json:"panels"`
+type persistedWidget struct {
+	ID       string         `json:"id"`
+	DataID   string         `json:"dataId"`
+	Type     string         `json:"type"`
+	Title    string         `json:"title"`
+	Settings map[string]any `json:"settings"`
 }
 
-type persistedWidgetPanel struct {
-	ID     string `json:"id"`
-	Config struct {
-		ChartType string `json:"chartType"`
-		Settings  struct {
-			Operation string `json:"operation"`
-			Field     string `json:"field"`
-		} `json:"settings"`
-	} `json:"config"`
+type widgetsConfigValidationError struct {
+	Issues []mapConfigValidationIssue `json:"issues"`
+}
+
+func (e *widgetsConfigValidationError) Error() string {
+	if e == nil || len(e.Issues) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(e.Issues))
+	for _, issue := range e.Issues {
+		parts = append(parts, formatMapConfigIssue(issue))
+	}
+	return fmt.Sprintf("Widgets config validation failed: %s", strings.Join(parts, "; "))
 }
 
 func getWidgetsConfigSchema() (*jsonschema.Schema, error) {
@@ -59,8 +65,7 @@ func getWidgetsConfigSchema() (*jsonschema.Schema, error) {
 	return widgetsConfigSchema, widgetsConfigSchemaErr
 }
 
-// validateWidgetsConfig accepts only Dekart's declarative V1 subset. Runtime
-// table names, layouts, SQL and selections are intentionally absent.
+// validateWidgetsConfig accepts only Dekart's declarative flat V1 document.
 func validateWidgetsConfig(value string) error {
 	if strings.TrimSpace(value) == "" {
 		return fmt.Errorf("widget configuration must be a non-empty JSON object")
@@ -83,55 +88,53 @@ func validateWidgetsConfig(value string) error {
 	if err := json.Unmarshal([]byte(value), &config); err != nil {
 		return fmt.Errorf("invalid widget configuration: %w", err)
 	}
-	panelIDs := make(map[string]struct{})
-	for key, dashboard := range config.Config.Dashboards {
-		if key != dashboard.ID {
-			return fmt.Errorf("dashboard id %q must match its key %q", dashboard.ID, key)
+	widgetIDs := make(map[string]struct{}, len(config.Widgets))
+	for _, widget := range config.Widgets {
+		if _, exists := widgetIDs[widget.ID]; exists {
+			return fmt.Errorf("widget id %q must be unique within the report", widget.ID)
 		}
-		ordered := make(map[string]struct{}, len(dashboard.PanelOrder))
-		for _, id := range dashboard.PanelOrder {
-			ordered[id] = struct{}{}
-		}
-		if len(ordered) != len(dashboard.Panels) {
-			return fmt.Errorf("dashboard %q panelOrder must contain every panel exactly once", key)
-		}
-		for _, panel := range dashboard.Panels {
-			if _, exists := panelIDs[panel.ID]; exists {
-				return fmt.Errorf("panel id %q must be unique within the report", panel.ID)
-			}
-			panelIDs[panel.ID] = struct{}{}
-			if _, exists := ordered[panel.ID]; !exists {
-				return fmt.Errorf("dashboard %q panelOrder is missing panel %q", key, panel.ID)
-			}
-			settings := panel.Config.Settings
-			if panel.Config.ChartType == "number" && settings.Operation != "count" && strings.TrimSpace(settings.Field) == "" {
-				return fmt.Errorf("number panel %q requires a field for %s", panel.ID, settings.Operation)
-			}
-		}
+		widgetIDs[widget.ID] = struct{}{}
 	}
 	return nil
 }
 
-// unboundWidgetDashboards names stored dashboard keys that match no report dataset.
-// Such dashboards are a designed V1 state: they are stored, skipped while rendering,
-// and pruned by the next browser save.
-func unboundWidgetDashboards(value string, datasetIDs map[string]struct{}) []string {
+// validateReportWidgetsConfigTx validates shape and dataset membership under the report lock held by the caller.
+func (s Server) validateReportWidgetsConfigTx(ctx context.Context, tx *sql.Tx, reportID string, value string) error {
+	if err := validateWidgetsConfig(value); err != nil {
+		return err
+	}
+	datasetIDs, err := reportDatasetIDsTx(ctx, tx, reportID)
+	if err != nil {
+		return err
+	}
 	var config persistedWidgetsConfig
-	// Callers validate first, which decodes the same bytes into this type; report nothing if that ever changes.
-	if json.Unmarshal([]byte(value), &config) != nil {
-		return nil
+	if err := json.Unmarshal([]byte(value), &config); err != nil {
+		return fmt.Errorf("invalid widget configuration: %w", err)
 	}
-	unbound := make([]string, 0)
-	for key := range config.Config.Dashboards {
-		if _, bound := datasetIDs[key]; !bound {
-			unbound = append(unbound, key)
+	knownIDs := sortedDatasetIDs(datasetIDs)
+	issues := make([]mapConfigValidationIssue, 0)
+	for i, widget := range config.Widgets {
+		if _, exists := datasetIDs[widget.DataID]; exists {
+			continue
 		}
+		expected := "existing report dataset_id"
+		if len(knownIDs) > 0 {
+			expected = fmt.Sprintf("one of: %s", strings.Join(knownIDs, ", "))
+		}
+		issues = append(issues, mapConfigValidationIssue{
+			Path:     fmt.Sprintf("widgets_config.widgets[%d].dataId", i),
+			Reason:   "unknown_dataset_id",
+			Expected: expected,
+			Actual:   widget.DataID,
+		})
 	}
-	sort.Strings(unbound)
-	return unbound
+	if len(issues) > 0 {
+		return &widgetsConfigValidationError{Issues: issues}
+	}
+	return nil
 }
 
-// remapWidgetDatasets structurally remaps only authoritative dataset bindings.
+// remapWidgetDatasets changes only explicit widget dataset bindings when a report is forked.
 func remapWidgetDatasets(value string, datasets []*proto.Dataset, ids []string) (string, error) {
 	if value == "" {
 		return "", nil
@@ -139,20 +142,20 @@ func remapWidgetDatasets(value string, datasets []*proto.Dataset, ids []string) 
 	if err := validateWidgetsConfig(value); err != nil {
 		return "", err
 	}
-	var root map[string]any
-	if err := json.Unmarshal([]byte(value), &root); err != nil {
+	// REVIEW: Report forks remap only explicit widget dataId bindings while preserving the rest of the flat document.
+	var config persistedWidgetsConfig
+	if err := json.Unmarshal([]byte(value), &config); err != nil {
 		return "", err
 	}
-	dashboards := root["config"].(map[string]any)["dashboardsById"].(map[string]any)
+	replacements := make(map[string]string, len(datasets))
 	for i, dataset := range datasets {
-		dashboard, exists := dashboards[dataset.Id]
-		if !exists {
-			continue
-		}
-		dashboard.(map[string]any)["id"] = ids[i]
-		delete(dashboards, dataset.Id)
-		dashboards[ids[i]] = dashboard
+		replacements[dataset.Id] = ids[i]
 	}
-	result, err := json.Marshal(root)
+	for i := range config.Widgets {
+		if replacement, exists := replacements[config.Widgets[i].DataID]; exists {
+			config.Widgets[i].DataID = replacement
+		}
+	}
+	result, err := json.Marshal(config)
 	return string(result), err
 }

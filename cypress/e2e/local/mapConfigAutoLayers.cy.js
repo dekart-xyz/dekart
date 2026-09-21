@@ -107,12 +107,16 @@ describe('saved map config layer ownership', () => {
           expect(addedDataset?.id, 'new dataset id').to.be.a('string')
           expect(addedDataset.id, 'new dataset id').not.to.equal('')
           return mcpCall(token, 'remove_dataset', { dataset_id: addedDataset.id })
-        }).then(() => mcpCall(token, 'get_report_properties', { report_id: reportId })).then((properties) => {
-          const widgetsConfig = JSON.parse(properties.report.widgetsConfig || properties.report.widgets_config)
-          expect(Object.keys(widgetsConfig.config.dashboardsById)).to.have.length(1)
         })
         cy.get('[data-testid="dataset-widgets"]', { timeout: 120000 }).should('have.length', 1)
         cy.get(LAYER_SELECTOR, { timeout: 60000 }).should('not.exist')
+        // Dataset removal leaves storage cleanup to the browser's next authored save.
+        cy.get('button#dekart-save-button', { timeout: 30000 }).should('not.be.disabled').click()
+        cy.get('button#dekart-save-button', { timeout: 30000 }).should('not.be.disabled')
+        mcpCall(token, 'get_report_properties', { report_id: reportId }).then((properties) => {
+          const widgetsConfig = JSON.parse(properties.report.widgetsConfig || properties.report.widgets_config)
+          expect(new Set(widgetsConfig.widgets.map(widget => widget.dataId)).size).to.eq(1)
+        })
       })
     })
   })

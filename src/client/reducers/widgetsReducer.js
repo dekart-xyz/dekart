@@ -29,7 +29,7 @@ export default function widgets (state = initial, action) {
     case reportUpdate.name: {
       const current = state
       if (action.report.versionId === current.versionId) return current
-      // TODO: check: The catch keeps conflict when local chart edits are unsaved, which blocks the save rather than dropping those edits.
+      // Keep the conflict while local chart edits are unsaved so a save cannot silently drop them.
       try {
         const incoming = parseWidgetsConfig(action.report.widgetsConfig)
         if (current.revision > current.savedRevision) {

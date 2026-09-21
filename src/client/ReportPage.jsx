@@ -537,9 +537,9 @@ export default function ReportPage ({ edit, snapshot }) {
   const filterDatasetId = useSelector(state => Object.keys(state.keplerGl.kepler?.visState.datasets || {})[0])
   const readOnly = useSelector(state => state.workspace.readOnly)
   const fullscreen = useSelector(state => state.reportStatus.fullscreen)
-  const hasWidgets = useSelector(state => Object.values(state.widgets.config?.config?.dashboardsById || {}).some(dashboard => dashboard.panels.length))
+  const hasWidgets = useSelector(state => Boolean(state.widgets.config?.widgets?.length))
   // A snapshot shows the pane only when some chart is bound to a dataset of this report.
-  const hasBoundWidgets = useSelector(state => Object.entries(state.widgets.config?.config?.dashboardsById || {}).some(([datasetId, dashboard]) => dashboard.panels.length && (state.dataset.list || []).some(dataset => dataset.id === datasetId)))
+  const hasBoundWidgets = useSelector(state => (state.widgets.config?.widgets || []).some(widget => (state.dataset.list || []).some(dataset => dataset.id === widget.dataId)))
   const [snapshotBasemapReady, setSnapshotBasemapReady] = useState(false)
   // Charts are a transient per-render option, carried like the viewport overrides.
   const snapshotWidgets = useMemo(() => Boolean(snapshot) && getSnapshotIncludeWidgets(), [snapshot])

@@ -20,7 +20,7 @@ function restoreWidgetsConfig (store, persisted, datasetIds) {
   const state = store.getState()
   const dashboardIds = new Set([
     ...Object.keys(state.mosaicDashboard.config.dashboardsById),
-    ...Object.keys(persisted?.config?.dashboardsById || {})
+    ...(persisted?.widgets || []).map(widget => widget.dataId)
   ])
   for (const dashboardId of dashboardIds) {
     state.mosaic.getSelection(getMosaicDashboardSelectionName(dashboardId)).reset()
@@ -31,15 +31,16 @@ function restoreWidgetsConfig (store, persisted, datasetIds) {
 // Adopt canonical configuration into the live store. Dashboards for datasets
 // that left the report are not restored, and that pruning is published like
 // any other authored edit so the next save persists it.
-function adoptWidgetsConfig (store, adoption, persisted, datasetIds, editing, dispatch) {
+function adoptWidgetsConfig (store, adoption, persisted, datasetIds, datasetKey, editing, dispatch) {
   const tracking = adoption.current
   tracking.applying = true
   restoreWidgetsConfig(store, persisted, datasetIds)
   for (const dashboardId of Object.keys(store.getState().mosaicDashboard.config.dashboardsById)) fitWidgetPanels(store, dashboardId)
   tracking.previousConfig = store.getState().mosaicDashboard.config
   tracking.adoptedConfig = persisted
+  tracking.datasetKey = datasetKey
   tracking.applying = false
-  const pruned = serializeWidgetsConfig(tracking.previousConfig, persisted?.initialized)
+  const pruned = serializeWidgetsConfig(tracking.previousConfig, persisted)
   if (!editing || sameWidgetsConfig(pruned, persisted)) return
   tracking.adoptedConfig = pruned
   tracking.authored.add(pruned)
@@ -62,7 +63,7 @@ export default function ReportWidgets ({ visible, snapshot, editing, presentatio
   const datasetList = useSelector(state => state.dataset.list)
   const autoCreateWidgetIds = useSelector(state => state.dataset.autoCreateWidgetIds)
   const dispatch = useDispatch()
-  const adoption = useRef({ applying: false, previousConfig: null, adoptedConfig: null, authored: new WeakSet() })
+  const adoption = useRef({ applying: false, previousConfig: null, adoptedConfig: null, datasetKey: null, authored: new WeakSet() })
   const wasEditing = useRef(editing)
   const datasetIds = datasetList.map(dataset => dataset.id)
   // A config the client cannot parse is preserved, not authored over.
@@ -78,8 +79,8 @@ export default function ReportWidgets ({ visible, snapshot, editing, presentatio
     if (!initialized || !report) return
     // Redux can echo an earlier local edit while a multi-step upstream action is still running.
     // Only external configurations should replace live charts and their filter clients.
-    if (sameWidgetsConfig(widgets.config, adoption.current.adoptedConfig) || (widgets.config && adoption.current.authored.has(widgets.config))) return
-    adoptWidgetsConfig(store, adoption, widgets.config, datasetIds, authoring, dispatch)
+    if (adoption.current.datasetKey === datasetKey && (sameWidgetsConfig(widgets.config, adoption.current.adoptedConfig) || (widgets.config && adoption.current.authored.has(widgets.config)))) return
+    adoptWidgetsConfig(store, adoption, widgets.config, datasetIds, datasetKey, authoring, dispatch)
   }, [initialized, widgets.config, store, report?.id, datasetKey])
 
   useEffect(() => {
@@ -87,7 +88,7 @@ export default function ReportWidgets ({ visible, snapshot, editing, presentatio
     wasEditing.current = editing
     if (!enteringEdit || !initialized || !report) return
     // Discard view-only chart edits before authoring resumes.
-    adoptWidgetsConfig(store, adoption, widgets.config, datasetIds, authoring, dispatch)
+    adoptWidgetsConfig(store, adoption, widgets.config, datasetIds, datasetKey, authoring, dispatch)
   }, [editing, initialized, report, widgets.config, store])
 
   useEffect(() => {
@@ -97,7 +98,7 @@ export default function ReportWidgets ({ visible, snapshot, editing, presentatio
       if (!tracking.adoptedConfig && !Object.keys(state.mosaicDashboard.config.dashboardsById).length) return
       tracking.previousConfig = state.mosaicDashboard.config
       if (authoring) {
-        const config = serializeWidgetsConfig(state.mosaicDashboard.config, tracking.adoptedConfig?.initialized)
+        const config = serializeWidgetsConfig(state.mosaicDashboard.config, tracking.adoptedConfig)
         tracking.adoptedConfig = config
         tracking.authored.add(config)
         dispatch(widgetsChanged(config))
@@ -121,9 +122,9 @@ export default function ReportWidgets ({ visible, snapshot, editing, presentatio
   const paintedPanels = useStore(store, state => state.paintedPanels)
   // Every panel on a dataset still in the report must reach a drawn, failed, or empty end state.
   const settled = Boolean(report) && (Boolean(error || widgets.error) || (initialized && !calculating &&
-    Object.values(widgets.config?.config?.dashboardsById || {})
-      .filter(dashboard => sources.some(source => source.id === dashboard.id))
-      .every(dashboard => dashboard.panels.every(panel => paintedPanels?.[panel.id]))))
+    (widgets.config?.widgets || [])
+      .filter(widget => sources.some(source => source.id === widget.dataId))
+      .every(widget => paintedPanels?.[widget.id])))
 
   useEffect(() => {
     if (onSettled) onSettled(settled)
@@ -136,7 +137,7 @@ export default function ReportWidgets ({ visible, snapshot, editing, presentatio
         <aside className={classnames(styles.panel, { [styles.hidden]: !visible, [styles.calculating]: calculating, [styles.snapshot]: snapshot })} aria-label='Report charts' aria-busy={calculating}>
           <div className={styles.calculationLine} role='status' aria-hidden={!calculating} aria-label='Updating charts' data-testid='chart-calculation-line' />
           {widgets.conflict && <div role='alert' className={styles.error}>This report changed in another session. Reload to use the latest saved dashboard.</div>}
-          {error || widgets.error ? <div role='alert' className={styles.error}>{error || widgets.error}</div> : <WidgetContents store={store} snapshot={snapshot} sources={sources} loading={!initialized || calculating} dataReloadPending={dataReloadPending} placeholderCount={Object.values(widgets.config?.config?.dashboardsById || {}).reduce((count, dashboard) => count + dashboard.panels.length, 0) || 3} onOpenData={onOpenData} editing={editing} />}
+          {error || widgets.error ? <div role='alert' className={styles.error}>{error || widgets.error}</div> : <WidgetContents store={store} snapshot={snapshot} sources={sources} loading={!initialized || calculating} dataReloadPending={dataReloadPending} placeholderCount={widgets.config?.widgets?.length || 3} onOpenData={onOpenData} editing={editing} />}
         </aside>
       </RoomShell.DndProvider>
     </RoomShell>

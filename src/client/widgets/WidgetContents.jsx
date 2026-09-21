@@ -52,7 +52,7 @@ function DatasetCharts ({ store, snapshot, source, dataReloadPending, showSource
   const { error } = useWidgetFilters(store, source.id, Boolean(source.physical), editing, source.pending || source.downloading || dataReloadPending)
   const dashboard = useStore(store, state => state.mosaicDashboard.config.dashboardsById[source.id])
   useEffect(() => { if (dashboard?.panels.length) fitWidgetPanels(store, source.id) }, [store, source.id, dashboard?.panels])
-  // REVIEW: A failed dataset or an empty slot in a snapshot is an end state, so all its panels are marked painted and the empty slot draws nothing instead of placeholders.
+  // Failed and empty snapshot datasets are settled states because neither renders panels.
   const failed = Boolean(source.error || error)
   // A snapshot of a dataset that cannot load says so rather than showing placeholders that never resolve.
   const empty = snapshot && !source.loadable
@@ -63,7 +63,7 @@ function DatasetCharts ({ store, snapshot, source, dataReloadPending, showSource
   return (
     <section className={styles.datasetWidgets} data-testid='dataset-widgets' aria-label={`${source.label} charts`}>
       {showSource && dashboard?.panels.length > 0 && <h3 className={styles.datasetLabel}>{source.label}</h3>}
-      {/* REVIEW: The dataset alert drops the Open data button in snapshots, where nothing is clickable. */}
+      {/* Snapshots omit actions because their content is not interactive. */}
       {failed ? <div role='alert' className={styles.error}>{source.error || error}{!snapshot && <Button onClick={onOpenData}>Open data</Button>}</div> : empty ? <div className={styles.empty}>No data to chart yet.</div> : source.pending || !source.physical ? <ChartStubs count={dashboard?.panels.length || 0} /> : dashboard?.panels.length > 0 ? <MosaicDashboard.Root dashboardId={source.id}><MosaicDashboard.Panels /></MosaicDashboard.Root> : null}
     </section>
   )
@@ -82,21 +82,6 @@ function WidgetBuilder ({ store, datasetId, onCreated }) {
   return <ChartBuilderRoot open={false} tableName={widgetTableName(datasetId)} columns={table?.columns || []} chartTypes={chartTypes} onCreateChart={(title, config) => { createWidget(store, datasetId, title, config); onCreated() }}><ChartBuilderContent /></ChartBuilderRoot>
 }
 
-// Moving one widget must not retarget every other widget from its original dataset.
-function moveWidgetToDataset (store, selected, panel, datasetId) {
-  const api = store.getState().mosaicDashboard
-  const targetTable = store.getState().db.tables.find(table => table.table.schema === 'widgets' && table.table.table === `d_${datasetId.replaceAll('-', '_')}`)
-  const fieldExists = targetTable?.columns.some(column => column.name === panel.config.settings.field)
-  const config = { ...panel.config, settings: { ...panel.config.settings, field: fieldExists ? panel.config.settings.field : '' } }
-  api.ensureDashboard(datasetId, 'Widgets', 'grid')
-  api.setSelectedTable(datasetId, `"memory"."widgets"."d_${datasetId.replaceAll('-', '_')}"`)
-  const id = api.addPanel(datasetId, { ...panel, config })
-  api.removePanel(selected.dashboardId, selected.id)
-  fitWidgetPanels(store, datasetId)
-  store.getState().blockSettings.selectBlock({ ...selected, id, dashboardId: datasetId })
-  store.getState().blockSettings.requestOpenSettingsPanel()
-}
-
 // Only the report title/source binding is hosted here; chart controls remain upstream SQLRooms.
 function WidgetSettings ({ store, sources }) {
   const selected = useStore(store, state => state.blockSettings.runtime.selectedBlock)
@@ -104,11 +89,12 @@ function WidgetSettings ({ store, sources }) {
   const table = useStore(store, state => state.db.tables.find(table => table.table.schema === 'widgets' && table.table.table === `d_${selected?.dashboardId?.replaceAll('-', '_')}`))
   if (!panel) return null
   const api = store.getState().mosaicDashboard
+  const sourceLabel = sources.find(source => source.id === selected.dashboardId)?.label || selected.dashboardId
   return (
     <div className={styles.settings} data-testid='widget-settings'>
       <Button variant='ghost' onClick={() => store.getState().blockSettings.requestCloseSettingsPanel()}><ArrowLeft size={14} />Back to charts</Button>
       <div className={styles.source}><label htmlFor='widget-title'>Title</label><input id='widget-title' value={panel.title || ''} onChange={event => api.updatePanel(selected.dashboardId, selected.id, { title: event.target.value })} /></div>
-      <SourceSelector id='widget-settings-source' value={selected.dashboardId} sources={sources} onChange={datasetId => moveWidgetToDataset(store, selected, panel, datasetId)} />
+      <div className={styles.source}><span>Dataset</span><strong data-testid='widget-settings-dataset'>{sourceLabel}</strong></div>
       <div className={styles.chartSettings}><MosaicChartSettingsPanel dataTable={table} config={panel.config} onChange={config => api.updatePanel(selected.dashboardId, selected.id, { config })} showViewSpecButton={false} /></div>
     </div>
   )

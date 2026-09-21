@@ -83,21 +83,11 @@ function mapConfig (datasetId, color) {
   })
 }
 
-// widgetsConfig builds the smallest valid chart document keyed by one dashboard id.
-function widgetsConfig (dashboardId) {
+// widgetsConfig builds the smallest valid chart document bound to one dataset.
+function widgetsConfig (dataId) {
   return JSON.stringify({
     version: 1,
-    provider: 'sqlrooms',
-    config: {
-      dashboardsById: {
-        [dashboardId]: {
-          id: dashboardId,
-          title: 'Widgets',
-          panelOrder: ['row-count'],
-          panels: [{ id: 'row-count', type: 'vgplot', title: 'Rows', config: { chartType: 'number', settings: { operation: 'count' } } }]
-        }
-      }
-    }
+    widgets: [{ id: 'row-count', dataId, type: 'number', title: 'Rows', settings: { operation: 'count' } }]
   })
 }
 
@@ -336,21 +326,11 @@ describe('MCP report capabilities', () => {
   it('preserves stored widgets_config the browser cannot parse', () => {
     const runId = Date.now()
     const email = `mcp-widgets-${runId}@example.com`
-    const dashboardId = 'ffffffff-ffff-4fff-8fff-ffffffffffff'
-    // A setting the current client rejects stands in for a config written by a newer release.
+    const datasetId = 'ffffffff-ffff-4fff-8fff-ffffffffffff'
+    // An unknown chart type stands in for a config written by a newer release.
     const seeded = JSON.stringify({
       version: 1,
-      provider: 'sqlrooms',
-      config: {
-        dashboardsById: {
-          [dashboardId]: {
-            id: dashboardId,
-            title: 'Widgets',
-            panelOrder: ['future-panel'],
-            panels: [{ id: 'future-panel', type: 'vgplot', title: 'Future', config: { chartType: 'count-plot', settings: { field: 'status', futureSetting: 'v2' } } }]
-          }
-        }
-      }
+      widgets: [{ id: 'future-panel', dataId: datasetId, type: 'future-chart', title: 'Future', settings: {} }]
     })
     let token
 

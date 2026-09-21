@@ -77,6 +77,8 @@ describe('Widgets dataset lifecycle', () => {
 
     cy.get('button[aria-label="Chart actions"]').first().click()
     cy.contains('[role="menuitem"]', 'Edit chart').click()
+    cy.get('[data-testid="widget-settings-dataset"]').should('be.visible').and('not.have.prop', 'tagName', 'SELECT')
+    cy.get('#widget-settings-source').should('not.exist')
     cy.get('#widget-title').clear().type('Pending row count')
     cy.contains('button', 'Back to charts').click()
 

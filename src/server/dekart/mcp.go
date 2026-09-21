@@ -782,18 +782,10 @@ func (s *Server) callUpdateReportWidgetsConfigTool(ctx context.Context, raw json
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	updatedAt := time.Now()
-	// validateWidgetsConfig also enforces MaxMapConfigSize, so no separate size guard is needed.
-	if err := validateWidgetsConfig(request.WidgetsConfig); err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-	// Unlike the map tool, an unknown binding is reported instead of rejected: orphaned dashboards
-	// are a designed V1 state, and rejecting would break read-modify-write on keys the agent did
-	// not author. Read the dataset set under the lock that blocks concurrent dataset changes.
-	datasetIDs, err := reportDatasetIDsTx(ctx, tx, request.ReportId)
-	if err != nil {
+	// Validate both the document and its report-owned dataset bindings under the same lock as the write.
+	if err := s.validateReportWidgetsConfigTx(ctx, tx, request.ReportId, request.WidgetsConfig); err != nil {
 		return nil, err
 	}
-	unboundDashboards := unboundWidgetDashboards(request.WidgetsConfig, datasetIDs)
 	var result sql.Result
 	if workspaceInfo.IsPlayground {
 		result, err = tx.ExecContext(ctx,
@@ -839,10 +831,7 @@ func (s *Server) callUpdateReportWidgetsConfigTool(ctx context.Context, raw json
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	s.reportStreams.Ping(request.ReportId)
-	return mcp.MarshalProtoJSON(&proto.UpdateReportWidgetsConfigResponse{
-		UpdatedAt:         updatedAt.Unix(),
-		UnboundDashboards: unboundDashboards,
-	})
+	return mcp.MarshalProtoJSON(&proto.UpdateReportWidgetsConfigResponse{UpdatedAt: updatedAt.Unix()})
 }
 
 // callAddReportReadmeTool adds readme markdown without exposing dataset deletion.
@@ -1022,6 +1011,14 @@ func newMCPGoogleCredentialError(err error) *mcpCredentialError {
 
 // writeMCPCallError maps tool call errors to HTTP responses for MCP clients.
 func writeMCPCallError(w http.ResponseWriter, err error) {
+	var widgetsValidationErr *widgetsConfigValidationError
+	if errors.As(err, &widgetsValidationErr) {
+		writeJSON(w, http.StatusBadRequest, mcpValidationErrorResponse{
+			Error:  "widgets_config_validation_failed",
+			Issues: widgetsValidationErr.Issues,
+		})
+		return
+	}
 	var validationErr *mapConfigValidationError
 	if errors.As(err, &validationErr) {
 		writeJSON(w, http.StatusBadRequest, mcpValidationErrorResponse{
@@ -1242,12 +1239,12 @@ func mcpToolDefinitions() []mcpTool {
 			Name:         "update_report_widgets_config",
 			Description:  "Replace report chart configuration by report_id.",
 			InputSchema:  mcpschema.ForProto(&proto.UpdateReportWidgetsConfigRequest{}, []string{"report_id", "widgets_config"}),
-			WhenToUse:    "Use to create, edit, reorder or delete charts on a report. This is a complete replacement: send the full widgets_config document, including charts you are not changing. Call get_report_properties first to read the current widgets_config, and get_widgets_config_schema to learn the format. Dashboard keys are report dataset_id values. A non-empty unbound_dashboards in the response means those charts will not render and the next browser edit deletes them; rebind them to a dataset_id from get_report_properties.",
+			WhenToUse:    "Use to create, edit, reorder or delete charts on a report. This is a complete replacement: send the full widgets_config document, including charts you are not changing. Call get_report_properties first to read the current widgets_config, and get_widgets_config_schema to learn the format. Every widget dataId must be a dataset_id from get_report_properties.",
 			WhenNotToUse: "Do not use to change map layers, styles, or which rows are filtered. Filter selections live in map_config and are set with update_report_map_config.",
 			SideEffects:  []string{"write"},
 			ExampleInput: map[string]any{
 				"report_id":      "00000000-0000-0000-0000-000000000000",
-				"widgets_config": "{\"version\":1,\"provider\":\"sqlrooms\",\"config\":{\"dashboardsById\":{\"11111111-1111-1111-1111-111111111111\":{\"id\":\"11111111-1111-1111-1111-111111111111\",\"title\":\"Widgets\",\"panelOrder\":[\"status-count\"],\"panels\":[{\"id\":\"status-count\",\"type\":\"vgplot\",\"title\":\"By status\",\"config\":{\"chartType\":\"count-plot\",\"settings\":{\"field\":\"status\"}}}]}}}}",
+				"widgets_config": "{\"version\":1,\"widgets\":[{\"id\":\"status-count\",\"dataId\":\"11111111-1111-1111-1111-111111111111\",\"type\":\"count-plot\",\"title\":\"By status\",\"settings\":{\"field\":\"status\"}}]}",
 			},
 			NextTools: []string{"get_report_properties", "create_report_snapshot"},
 		},

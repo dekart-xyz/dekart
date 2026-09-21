@@ -288,17 +288,7 @@ const countPanel = { id: 'stop-count', type: 'vgplot', title: 'Missed stops', co
 function buildWidgetsConfig (datasetId, panels = [countPanel]) {
   return JSON.stringify({
     version: 1,
-    provider: 'sqlrooms',
-    config: {
-      dashboardsById: {
-        [datasetId]: {
-          id: datasetId,
-          title: 'Snapshot charts',
-          panelOrder: panels.map(panel => panel.id),
-          panels
-        }
-      }
-    }
+    widgets: panels.map(panel => ({ id: panel.id, dataId: datasetId, type: panel.config.chartType, title: panel.title, settings: panel.config.settings }))
   })
 }
 

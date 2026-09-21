@@ -2614,7 +2614,7 @@ if (goog.DEBUG && !COMPILED) {
  * @constructor
  */
 proto.UpdateReportWidgetsConfigResponse = function(opt_data) {
-  jspb.Message.initialize(this, opt_data, 0, -1, proto.UpdateReportWidgetsConfigResponse.repeatedFields_, null);
+  jspb.Message.initialize(this, opt_data, 0, -1, null, null);
 };
 goog.inherits(proto.UpdateReportWidgetsConfigResponse, jspb.Message);
 if (goog.DEBUG && !COMPILED) {
@@ -24872,13 +24872,6 @@ proto.UpdateReportWidgetsConfigRequest.prototype.setWidgetsConfig = function(val
 
 
 
-/**
- * List of repeated fields within this message type.
- * @private {!Array<number>}
- * @const
- */
-proto.UpdateReportWidgetsConfigResponse.repeatedFields_ = [2];
-
 
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
@@ -24910,8 +24903,7 @@ proto.UpdateReportWidgetsConfigResponse.prototype.toObject = function(opt_includ
  */
 proto.UpdateReportWidgetsConfigResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
-    updatedAt: jspb.Message.getFieldWithDefault(msg, 1, 0),
-    unboundDashboardsList: (f = jspb.Message.getRepeatedField(msg, 2)) == null ? undefined : f
+    updatedAt: jspb.Message.getFieldWithDefault(msg, 1, 0)
   };
 
   if (includeInstance) {
@@ -24952,10 +24944,6 @@ proto.UpdateReportWidgetsConfigResponse.deserializeBinaryFromReader = function(m
       var value = /** @type {number} */ (reader.readInt64());
       msg.setUpdatedAt(value);
       break;
-    case 2:
-      var value = /** @type {string} */ (reader.readString());
-      msg.addUnboundDashboards(value);
-      break;
     default:
       reader.skipField();
       break;
@@ -24992,13 +24980,6 @@ proto.UpdateReportWidgetsConfigResponse.serializeBinaryToWriter = function(messa
       f
     );
   }
-  f = message.getUnboundDashboardsList();
-  if (f.length > 0) {
-    writer.writeRepeatedString(
-      2,
-      f
-    );
-  }
 };
 
 
@@ -25017,43 +24998,6 @@ proto.UpdateReportWidgetsConfigResponse.prototype.getUpdatedAt = function() {
  */
 proto.UpdateReportWidgetsConfigResponse.prototype.setUpdatedAt = function(value) {
   return jspb.Message.setProto3IntField(this, 1, value);
-};
-
-
-/**
- * repeated string unbound_dashboards = 2;
- * @return {!Array<string>}
- */
-proto.UpdateReportWidgetsConfigResponse.prototype.getUnboundDashboardsList = function() {
-  return /** @type {!Array<string>} */ (jspb.Message.getRepeatedField(this, 2));
-};
-
-
-/**
- * @param {!Array<string>} value
- * @return {!proto.UpdateReportWidgetsConfigResponse} returns this
- */
-proto.UpdateReportWidgetsConfigResponse.prototype.setUnboundDashboardsList = function(value) {
-  return jspb.Message.setField(this, 2, value || []);
-};
-
-
-/**
- * @param {string} value
- * @param {number=} opt_index
- * @return {!proto.UpdateReportWidgetsConfigResponse} returns this
- */
-proto.UpdateReportWidgetsConfigResponse.prototype.addUnboundDashboards = function(value, opt_index) {
-  return jspb.Message.addToRepeatedField(this, 2, value, opt_index);
-};
-
-
-/**
- * Clears the list making it empty but non-null.
- * @return {!proto.UpdateReportWidgetsConfigResponse} returns this
- */
-proto.UpdateReportWidgetsConfigResponse.prototype.clearUnboundDashboardsList = function() {
-  return this.setUnboundDashboardsList([]);
 };
 
 

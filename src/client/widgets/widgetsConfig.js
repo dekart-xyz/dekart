@@ -1,62 +1,19 @@
-const allowedRootKeys = new Set(['version', 'provider', 'initialized', 'config'])
-const allowedDashboardKeys = new Set(['id', 'title', 'panelOrder', 'panels'])
-const allowedPanelKeys = new Set(['id', 'type', 'title', 'config'])
-const allowedConfigKeys = new Set(['chartType', 'settings'])
-const settingsKeys = {
-  number: new Set(['operation', 'field', 'format', 'decimals', 'subtitle', 'prefix', 'suffix']),
-  'count-plot': new Set(['field', 'metric', 'sort', 'maxBars']),
-  histogram: new Set(['field', 'maxBins', 'color'])
-}
-
-const identifier = /^[A-Za-z0-9_-]{1,128}$/
-
-function onlyKeys (value, keys) {
-  return value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).every(key => keys.has(key))
-}
-
-function string (value, max = 256) {
-  return typeof value === 'string' && value.length <= max
-}
-
-function optional (value, predicate) {
-  return value === undefined || predicate(value)
-}
-
-function integerBetween (value, min, max) {
-  return Number.isInteger(value) && value >= min && value <= max
-}
-
-function validSettings (chartType, settings) {
-  if (!onlyKeys(settings, settingsKeys[chartType])) return false
-  if (chartType === 'number') {
-    const operations = ['count', 'distinct', 'sum', 'avg', 'min', 'max', 'median']
-    return operations.includes(settings.operation) && (settings.operation === 'count' || (string(settings.field) && settings.field.length > 0)) && optional(settings.format, value => ['auto', 'number', 'compact', 'percent'].includes(value)) && optional(settings.decimals, value => integerBetween(value, 0, 6)) && ['subtitle', 'prefix', 'suffix'].every(key => optional(settings[key], string))
-  }
-  if (!string(settings.field) || settings.field.length === 0) return false
-  if (chartType === 'count-plot') return optional(settings.metric, value => value === 'count') && optional(settings.sort, value => ['value-desc', 'value-asc', 'label-asc', 'label-desc'].includes(value)) && optional(settings.maxBars, value => integerBetween(value, 1, 100))
-  return optional(settings.maxBins, value => integerBetween(value, 1, 1000)) && optional(settings.color, value => string(value, 64) && value.length > 0)
-}
+const chartTypes = new Set(['number', 'count-plot', 'histogram'])
 
 export function emptyWidgetsConfig () {
-  return { version: 1, provider: 'sqlrooms', config: { dashboardsById: {} } }
+  return { version: 1, widgets: [] }
 }
 
+// Parse only what the runtime adapter needs. The server JSON Schema remains the persisted contract authority.
 export function parseWidgetsConfig (raw) {
   const value = raw || JSON.stringify(emptyWidgetsConfig())
   try {
     const root = JSON.parse(value)
-    if (root.version !== 1 || root.provider !== 'sqlrooms' || !onlyKeys(root, allowedRootKeys) || !onlyKeys(root.config, new Set(['dashboardsById']))) throw new Error('unsupported envelope')
-    const dashboards = root.config.dashboardsById
-    if (!dashboards || typeof dashboards !== 'object' || Array.isArray(dashboards)) throw new Error('invalid dashboards')
-    const reportPanelIds = new Set()
-    for (const [dashboardId, dashboard] of Object.entries(dashboards)) {
-      if (!onlyKeys(dashboard, allowedDashboardKeys) || dashboard.id !== dashboardId || !string(dashboardId) || !string(dashboard.title) || !Array.isArray(dashboard.panels) || !Array.isArray(dashboard.panelOrder)) throw new Error('unsupported dashboard')
-      const panelIds = new Set(dashboard.panels.map(panel => panel.id))
-      if (panelIds.size !== dashboard.panels.length || dashboard.panelOrder.length !== panelIds.size || !dashboard.panelOrder.every(id => panelIds.has(id))) throw new Error('invalid panel order')
-      for (const panel of dashboard.panels) {
-        if (!onlyKeys(panel, allowedPanelKeys) || !identifier.test(panel.id) || reportPanelIds.has(panel.id) || !string(panel.title) || panel.type !== 'vgplot' || !onlyKeys(panel.config, allowedConfigKeys) || !validSettings(panel.config.chartType, panel.config.settings)) throw new Error('unsupported panel')
-        reportPanelIds.add(panel.id)
-      }
+    if (!root || root.version !== 1 || !Array.isArray(root.widgets)) throw new Error('unsupported envelope')
+    const ids = new Set()
+    for (const widget of root.widgets) {
+      if (!widget || typeof widget.id !== 'string' || ids.has(widget.id) || typeof widget.dataId !== 'string' || !chartTypes.has(widget.type) || typeof widget.title !== 'string' || !widget.settings || typeof widget.settings !== 'object' || Array.isArray(widget.settings)) throw new Error('unsupported widget')
+      ids.add(widget.id)
     }
     return { config: root, raw: value }
   } catch (error) {
@@ -82,36 +39,79 @@ function chartSettings (chartType, settings) {
   return { field: settings.field, maxBins: settings.maxBins ?? 15, ...(settings.color ? { color: settings.color } : {}) }
 }
 
-// Strip SQLRooms runtime state. Persisted config contains no table, SQL, layout,
-// selection, client, cache, timestamp or editor-open state.
-export function serializeWidgetsConfig (runtimeConfig, initialized) {
-  const dashboardsById = Object.fromEntries(Object.entries(runtimeConfig.dashboardsById).map(([id, dashboard]) => {
-    const panels = dashboard.panels.filter(panel => settingsKeys[panel.config.chartType]).map(panel => ({
-      id: panel.id,
-      type: 'vgplot',
-      title: panel.title,
-      config: { chartType: panel.config.chartType, settings: chartSettings(panel.config.chartType, panel.config.settings || {}) }
-    }))
-    const ids = new Set(panels.map(panel => panel.id))
-    const layoutOrder = (dashboard.layout?.children || []).map(child => child.panel?.meta?.panelId).filter(id => ids.has(id))
-    const panelOrder = [...layoutOrder, ...panels.map(panel => panel.id).filter(id => !layoutOrder.includes(id))]
-    return [id, { id, title: dashboard.title || 'Widgets', panelOrder, panels }]
-  }))
-  return { version: 1, provider: 'sqlrooms', ...(initialized === undefined ? {} : { initialized }), config: { dashboardsById } }
+function orderedPanels (dashboard) {
+  const panels = dashboard.panels.filter(panel => chartTypes.has(panel.config.chartType))
+  const ids = new Set(panels.map(panel => panel.id))
+  const children = dashboard.layout?.children || []
+  const grid = dashboard.layout?.layouts?.sm || dashboard.layout?.layouts?.lg || []
+  const position = new Map(grid.map(item => [item.i, item]))
+  // The widgets pane is narrower than SQLRooms' 768px breakpoint, so `sm` is
+  // the layout users drag. SQLRooms keeps child insertion order unchanged.
+  const layoutOrder = children
+    .map((child, index) => ({ child, index, position: position.get(child.id) }))
+    .sort((left, right) => (left.position?.y ?? Infinity) - (right.position?.y ?? Infinity) || (left.position?.x ?? Infinity) - (right.position?.x ?? Infinity) || left.index - right.index)
+    .map(({ child }) => child.panel?.meta?.panelId)
+    .filter(id => ids.has(id))
+  const order = [...layoutOrder, ...panels.map(panel => panel.id).filter(id => !layoutOrder.includes(id))]
+  const byID = Object.fromEntries(panels.map(panel => [panel.id, panel]))
+  return order.map(id => byID[id])
 }
 
-// Instantiates a dashboard only when its id is in the report's dataset list, binding on report membership rather than on loaded tables
-// exactly as Kepler does not render layers for a dataset it no longer holds.
+function persistedWidget (dataId, panel) {
+  return {
+    id: panel.id,
+    dataId,
+    type: panel.config.chartType,
+    title: panel.title,
+    settings: chartSettings(panel.config.chartType, panel.config.settings || {})
+  }
+}
+
+// Strip SQLRooms runtime state while preserving the previous document's global widget order.
+export function serializeWidgetsConfig (runtimeConfig, previous) {
+  const current = []
+  for (const [dataId, dashboard] of Object.entries(runtimeConfig.dashboardsById)) {
+    for (const panel of orderedPanels(dashboard)) current.push(persistedWidget(dataId, panel))
+  }
+  const byDataID = new Map()
+  for (const widget of current) {
+    const widgets = byDataID.get(widget.dataId) || []
+    widgets.push(widget)
+    byDataID.set(widget.dataId, widgets)
+  }
+  const consumed = new Map()
+  const widgets = []
+  for (const widget of previous?.widgets || []) {
+    const index = consumed.get(widget.dataId) || 0
+    const updated = byDataID.get(widget.dataId)?.[index]
+    if (!updated) continue
+    widgets.push(updated)
+    consumed.set(widget.dataId, index + 1)
+  }
+  for (const widget of current) {
+    const remaining = byDataID.get(widget.dataId)?.slice(consumed.get(widget.dataId) || 0) || []
+    if (!remaining.some(candidate => candidate.id === widget.id)) continue
+    widgets.push(widget)
+    consumed.set(widget.dataId, (consumed.get(widget.dataId) || 0) + 1)
+  }
+  return { version: 1, widgets }
+}
+
+// Group the flat document by dataset for SQLRooms without changing order inside each dataset.
 export function applyWidgetsConfig (store, persisted, datasetIds) {
   const api = store.getState().mosaicDashboard
   api.clearAllDashboardRuntime()
   api.setConfig({ dashboardsById: {} })
   const bound = new Set(datasetIds)
-  for (const dashboard of Object.values(persisted?.config?.dashboardsById || {})) {
-    if (!bound.has(dashboard.id)) continue
-    api.ensureDashboard(dashboard.id, dashboard.title, 'grid')
-    api.setSelectedTable(dashboard.id, `"memory"."widgets"."d_${dashboard.id.replaceAll('-', '_')}"`)
-    const byId = Object.fromEntries(dashboard.panels.map(panel => [panel.id, panel]))
-    for (const panelId of dashboard.panelOrder) api.addPanel(dashboard.id, byId[panelId])
+  for (const widget of persisted?.widgets || []) {
+    if (!bound.has(widget.dataId)) continue
+    api.ensureDashboard(widget.dataId, 'Widgets', 'grid')
+    api.setSelectedTable(widget.dataId, `"memory"."widgets"."d_${widget.dataId.replaceAll('-', '_')}"`)
+    api.addPanel(widget.dataId, {
+      id: widget.id,
+      type: 'vgplot',
+      title: widget.title,
+      config: { chartType: widget.type, settings: chartSettings(widget.type, widget.settings) }
+    })
   }
 }

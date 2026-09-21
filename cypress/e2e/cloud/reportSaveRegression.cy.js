@@ -55,13 +55,14 @@ function markLocalMapChanged () {
   })
 }
 
-function updateReportMapConfigOutsideAppSave (store, mapConfig) {
+function sendUpdateReportOutsideAppSave (store, mapConfig, widgetsConfig) {
   const state = store.getState()
   const request = new UpdateReportRequest()
   request.setReportId(state.report.id)
   request.setMapConfig(mapConfig)
   request.setTitle(state.report.title)
   request.setExpectedVersionId(state.report.versionId)
+  if (widgetsConfig !== undefined) request.setWidgetsConfig(widgetsConfig)
 
   const metadata = new window.Headers()
   if (state.token?.access_token) {
@@ -87,7 +88,11 @@ function updateReportMapConfigOutsideAppSave (store, mapConfig) {
     method: 'POST',
     headers: metadata,
     body
-  })).then((response) => {
+  }))
+}
+
+function updateReportMapConfigOutsideAppSave (store, mapConfig) {
+  return sendUpdateReportOutsideAppSave(store, mapConfig).then((response) => {
     expect(response.ok).to.equal(true)
     // A rejected save answers with HTTP 200 and a trailers-only grpc-status header.
     const grpcStatus = response.headers.get('grpc-status')
@@ -113,6 +118,22 @@ function clickWriteReadme () {
 describe('cloud report save regression', () => {
   beforeEach(() => {
     cy.resetCloudTestDatabase()
+  })
+
+  it('rejects a browser widget write bound to an unknown report dataset', () => {
+    createUploadedReport()
+    getStore().then((store) => {
+      const state = store.getState()
+      const widgetsConfig = JSON.stringify({
+        version: 1,
+        widgets: [{ id: 'unknown-binding', dataId: '11111111-1111-4111-8111-111111111111', type: 'number', title: 'Rows', settings: { operation: 'count' } }]
+      })
+      sendUpdateReportOutsideAppSave(store, state.report.mapConfig, widgetsConfig).then((response) => {
+        expect(response.ok).to.equal(true)
+        expect(response.headers.get('grpc-status')).to.equal('3')
+        expect(decodeURIComponent(response.headers.get('grpc-message'))).to.contain('widgets_config.widgets[0].dataId')
+      })
+    })
   })
 
   it('does not show map conflict when own save stream arrives before save response', () => {

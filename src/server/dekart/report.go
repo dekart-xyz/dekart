@@ -1030,7 +1030,7 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 		return nil, err
 	}
 	if req.WidgetsConfig != nil {
-		if err := validateWidgetsConfig(req.GetWidgetsConfig()); err != nil {
+		if err := s.validateReportWidgetsConfigTx(ctx, tx, req.ReportId, req.GetWidgetsConfig()); err != nil {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
 		if _, err := tx.ExecContext(ctx, "UPDATE reports SET widgets_config=$1 WHERE id=$2", req.GetWidgetsConfig(), req.ReportId); err != nil {
