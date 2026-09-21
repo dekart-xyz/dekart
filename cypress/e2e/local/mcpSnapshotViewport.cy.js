@@ -436,9 +436,10 @@ describe('local MCP snapshot viewport params', () => {
         .then((snapshot) => {
           cy.visit(snapshot.snapshot_render_url || snapshot.snapshotRenderUrl, { onBeforeLoad: sampleChartsWhenReady })
           expectSnapshotReadyToken()
-          // The bad column also fails its sibling through the shared selection; errors are the end state.
+          // The bad column also fails its sibling through the shared selection; both panels still settle visibly.
           cy.window().its('__dekartChartsAtReady').should('deep.eq', { stubs: 0, busy: 0, value: '' })
-          cy.contains('[aria-label="Report charts"]', 'Columns not found in data table')
+          cy.get('[aria-label="Report charts"]').contains('Missed stops').should('be.visible')
+          cy.get('[aria-label="Report charts"]').contains('Missing column').should('be.visible')
         })
     })
   })
