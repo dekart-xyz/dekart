@@ -304,7 +304,7 @@ describe('local MCP postgres happy path with device auth', () => {
 
                     // The open report adopts the MCP-authored chart from the report stream.
                     cy.get('[data-testid="widgets-tab"]').click()
-                    cy.get('[data-testid="dataset-widgets"][aria-label="Source charts"] [data-testid="number-value"]', { timeout: 120000 }).should('have.text', '7')
+                    cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.text', '7')
 
                     // An unknown dataset binding rejects the complete replacement.
                     const unboundKey = '11111111-1111-4111-8111-111111111111'

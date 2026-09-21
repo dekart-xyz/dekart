@@ -38,24 +38,7 @@ function chartSettings (chartType, settings) {
   if (chartType === 'count-plot') return { field: settings.field, metric: 'count', sort: settings.sort || 'value-desc', maxBars: settings.maxBars ?? 20 }
   return { field: settings.field, maxBins: settings.maxBins ?? 15, ...(settings.color ? { color: settings.color } : {}) }
 }
-
-function orderedPanels (dashboard) {
-  const panels = dashboard.panels.filter(panel => chartTypes.has(panel.config.chartType))
-  const ids = new Set(panels.map(panel => panel.id))
-  const children = dashboard.layout?.children || []
-  const grid = dashboard.layout?.layouts?.sm || dashboard.layout?.layouts?.lg || []
-  const position = new Map(grid.map(item => [item.i, item]))
-  // The widgets pane is narrower than SQLRooms' 768px breakpoint, so `sm` is
-  // the layout users drag. SQLRooms keeps child insertion order unchanged.
-  const layoutOrder = children
-    .map((child, index) => ({ child, index, position: position.get(child.id) }))
-    .sort((left, right) => (left.position?.y ?? Infinity) - (right.position?.y ?? Infinity) || (left.position?.x ?? Infinity) - (right.position?.x ?? Infinity) || left.index - right.index)
-    .map(({ child }) => child.panel?.meta?.panelId)
-    .filter(id => ids.has(id))
-  const order = [...layoutOrder, ...panels.map(panel => panel.id).filter(id => !layoutOrder.includes(id))]
-  const byID = Object.fromEntries(panels.map(panel => [panel.id, panel]))
-  return order.map(id => byID[id])
-}
+// REVIEW: Persisted order no longer depends on SQLRooms grid coordinates or per-dataset grouping.
 
 function persistedWidget (dataId, panel) {
   return {
@@ -71,30 +54,33 @@ function persistedWidget (dataId, panel) {
 export function serializeWidgetsConfig (runtimeConfig, previous) {
   const current = []
   for (const [dataId, dashboard] of Object.entries(runtimeConfig.dashboardsById)) {
-    for (const panel of orderedPanels(dashboard)) current.push(persistedWidget(dataId, panel))
+    for (const panel of dashboard.panels) {
+      if (chartTypes.has(panel.config.chartType)) current.push(persistedWidget(dataId, panel))
+    }
   }
-  const byDataID = new Map()
-  for (const widget of current) {
-    const widgets = byDataID.get(widget.dataId) || []
-    widgets.push(widget)
-    byDataID.set(widget.dataId, widgets)
-  }
-  const consumed = new Map()
+  const byID = new Map(current.map(widget => [widget.id, widget]))
   const widgets = []
   for (const widget of previous?.widgets || []) {
-    const index = consumed.get(widget.dataId) || 0
-    const updated = byDataID.get(widget.dataId)?.[index]
-    if (!updated) continue
-    widgets.push(updated)
-    consumed.set(widget.dataId, index + 1)
+    const updated = byID.get(widget.id)
+    if (updated) widgets.push(updated)
+    byID.delete(widget.id)
   }
-  for (const widget of current) {
-    const remaining = byDataID.get(widget.dataId)?.slice(consumed.get(widget.dataId) || 0) || []
-    if (!remaining.some(candidate => candidate.id === widget.id)) continue
-    widgets.push(widget)
-    consumed.set(widget.dataId, (consumed.get(widget.dataId) || 0) + 1)
-  }
+  for (const widget of current) if (byID.has(widget.id)) widgets.push(widget)
   return { version: 1, widgets }
+}
+
+// Move one persisted widget without changing any of its authored fields.
+export function reorderWidgets (config, draggedId, targetId) {
+  // No-op moves preserve identity so callers can suppress redundant publications.
+  if (draggedId === targetId) return config
+  const from = config.widgets.findIndex(widget => widget.id === draggedId)
+  const to = config.widgets.findIndex(widget => widget.id === targetId)
+  // Runtime drag IDs that are absent from the authored document are ignored safely.
+  if (from < 0 || to < 0) return config
+  const widgets = [...config.widgets]
+  const [dragged] = widgets.splice(from, 1)
+  widgets.splice(to, 0, dragged)
+  return { ...config, widgets }
 }
 
 // converts persisted widget JSON into SQLRooms runtime state

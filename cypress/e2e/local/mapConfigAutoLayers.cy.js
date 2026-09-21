@@ -100,15 +100,15 @@ describe('saved map config layer ownership', () => {
         cy.get('[data-testid="widgets-tab"]', { timeout: 120000 }).then(button => {
           if (button.attr('aria-expanded') !== 'true') cy.wrap(button).click()
         })
-        cy.get('[data-testid="dataset-widgets"]', { timeout: 120000 }).should('have.length', 2)
-        cy.get('[data-testid="dataset-widgets"]').eq(1).find('[data-testid="number-value"]').should('have.text', '8,276')
+        cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.length', 2)
+        cy.get('[data-testid="number-value"]').eq(1).should('have.text', '8,276')
         mcpCall(token, 'get_report_properties', { report_id: reportId }).then((properties) => {
           const addedDataset = (properties.datasets || properties.datasetsList || []).find(dataset => !initialDatasetIds.includes(dataset.id))
           expect(addedDataset?.id, 'new dataset id').to.be.a('string')
           expect(addedDataset.id, 'new dataset id').not.to.equal('')
           return mcpCall(token, 'remove_dataset', { dataset_id: addedDataset.id })
         })
-        cy.get('[data-testid="dataset-widgets"]', { timeout: 120000 }).should('have.length', 1)
+        cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.length', 1)
         cy.get(LAYER_SELECTOR, { timeout: 60000 }).should('not.exist')
         // Dataset removal leaves storage cleanup to the browser's next authored save.
         cy.get('button#dekart-save-button', { timeout: 30000 }).should('not.be.disabled').click()

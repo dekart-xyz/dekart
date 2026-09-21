@@ -131,7 +131,7 @@ describe('Widgets first production slice', () => {
 
     cy.get('[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line').first().click()
     cy.get('[data-testid="number-value"]').should('have.text', '2')
-    cy.get('[data-testid="category-chart"]').closest('.react-grid-item').find('button[aria-label="Chart actions"]').click()
+    cy.get('[data-testid="category-chart"]').closest('[data-testid="widget-item"]').find('button[aria-label="Chart actions"]').click()
     cy.contains('[role="menuitem"]', 'Delete chart').click()
     cy.get('[data-testid="category-chart"]').should('not.exist')
     cy.get('[data-testid="number-value"]').should('have.text', '5')

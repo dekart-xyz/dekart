@@ -1,4 +1,4 @@
-/* global cy, describe, it, Cypress */
+/* global cy, describe, it, Cypress, expect */
 
 function uploadCsv (name, rows, addDataset = false) {
   if (addDataset) cy.get('.ant-tabs-nav-add:visible').last().click()
@@ -18,6 +18,24 @@ function openWidgets () {
   })
 }
 
+// Exercise the same primary-pointer sequence dnd-kit receives from a visible widget header.
+function dragFirstWidgetBelowSecond () {
+  cy.get('[aria-label^="Move "]').then(handles => {
+    const source = handles[0]
+    const target = handles[1]
+    const sourceRect = source.getBoundingClientRect()
+    const targetRect = target.getBoundingClientRect()
+    const view = source.ownerDocument.defaultView
+    const pointer = { pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, view, force: true }
+    cy.wrap(source).trigger('pointerdown', { ...pointer, clientX: sourceRect.left + 12, clientY: sourceRect.top + 12 })
+    cy.get('body').trigger('pointermove', { ...pointer, buttons: 1, clientX: sourceRect.left + 12, clientY: sourceRect.top + 24 })
+    cy.wait(50)
+    cy.get('body').trigger('pointermove', { ...pointer, buttons: 1, clientX: targetRect.left + 12, clientY: targetRect.top + targetRect.height / 2 })
+    cy.wait(50)
+    cy.get('body').trigger('pointerup', { ...pointer, clientX: targetRect.left + 12, clientY: targetRect.top + targetRect.height / 2 })
+  })
+}
+
 describe('Widgets dataset lifecycle', () => {
   it('creates defaults for each UI dataset, isolates filters, and keeps viewer edits local', () => {
     cy.viewport(1280, 960)
@@ -33,18 +51,29 @@ describe('Widgets dataset lifecycle', () => {
     uploadCsv('dataset-b.csv', ['53.1,14.1,Open,5', '53.2,14.2,Closed,15', '53.3,14.3,Closed,25'], true)
     openWidgets()
 
-    cy.get('[data-testid="dataset-widgets"]', { timeout: 180000 }).should('have.length', 2)
+    cy.get('[data-testid="widget-item"]', { timeout: 180000 }).should('have.length.at.least', 2)
     cy.get('[data-testid="number-value"]', { timeout: 30000 }).should('have.length', 2).should(values => {
       const text = [...values].map(value => value.textContent)
       if (!text.includes('4') || !text.includes('3')) throw new Error(`Expected independent totals 4 and 3, got ${text.join(', ')}`)
     })
-    cy.get('[data-testid="dataset-widgets"]').eq(1).within(() => {
-      cy.get('[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line', { timeout: 30000 }).first().click()
-      cy.get('[data-testid="number-value"]', { timeout: 30000 }).should('have.text', '1')
+    let draggedLabel
+    let targetLabel
+    cy.get('[aria-label^="Move "]').then(handles => {
+      draggedLabel = handles[0].getAttribute('aria-label')
+      targetLabel = handles[1].getAttribute('aria-label')
+      expect(draggedLabel).not.to.equal(targetLabel)
     })
-    cy.get('[data-testid="dataset-widgets"]').eq(0).find('[data-testid="number-value"]', { timeout: 30000 }).should('have.text', '4')
+    dragFirstWidgetBelowSecond()
+    cy.get('[id^="DndLiveRegion"]').invoke('text').should('include', 'Moved')
+    cy.get('[aria-label^="Move "]').should(handles => {
+      expect(handles[0].getAttribute('aria-label')).to.equal(targetLabel)
+      expect(handles[1].getAttribute('aria-label')).to.equal(draggedLabel)
+    })
+    cy.get('[data-testid="category-chart"]').eq(1).find('g[aria-label="rule"][data-index="4"] line', { timeout: 30000 }).first().click()
+    cy.get('[data-testid="number-value"]', { timeout: 30000 }).eq(1).should('have.text', '1')
+    cy.get('[data-testid="number-value"]', { timeout: 30000 }).eq(0).should('have.text', '4')
     cy.contains('button', 'Clear all').click()
-    cy.get('[data-testid="dataset-widgets"]').eq(1).find('[data-testid="number-value"]', { timeout: 30000 }).should('have.text', '3')
+    cy.get('[data-testid="number-value"]', { timeout: 30000 }).eq(1).should('have.text', '3')
 
     // Leave immediately: the mode transition must flush the pending authored
     // defaults instead of relying on the one-second autosave debounce.
@@ -52,10 +81,8 @@ describe('Widgets dataset lifecycle', () => {
     cy.contains('.ant-select-item-option-content', 'Viewing').click()
     cy.location('pathname').should('not.match', /\/source$/)
     cy.get('[data-testid="number-value"]', { timeout: 180000 }).should('have.length', 2)
-    cy.get('[data-testid="dataset-widgets"]').eq(0).within(() => {
-      cy.get('[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line', { timeout: 30000 }).first().click()
-      cy.get('[data-testid="number-value"]', { timeout: 30000 }).should('have.text', '2')
-    })
+    cy.get('[data-testid="category-chart"]').eq(0).find('g[aria-label="rule"][data-index="4"] line', { timeout: 30000 }).first().click()
+    cy.get('[data-testid="number-value"]', { timeout: 30000 }).eq(0).should('have.text', '2')
     cy.contains('button', 'Add chart').click()
     cy.contains('button', /^Number/).click()
     cy.contains('button', /^Create$/).click()
@@ -64,15 +91,13 @@ describe('Widgets dataset lifecycle', () => {
     cy.contains('.ant-select-item-option-content', 'Editing').click()
     cy.location('pathname').should('match', /\/source$/)
     cy.get('[data-testid="number-value"]', { timeout: 180000 }).should('have.length', 2)
-    cy.get('[data-testid="dataset-widgets"]').eq(0).find('[data-testid="number-value"]', { timeout: 30000 }).should('have.text', '4')
+    cy.get('[data-testid="number-value"]', { timeout: 30000 }).eq(0).should('have.text', '4')
     cy.get('[data-testid="filter-strip"]').should('contain.text', 'No filters')
     cy.reload()
     openWidgets()
     cy.get('[data-testid="number-value"]', { timeout: 180000 }).should('have.length', 2)
-    cy.get('[data-testid="dataset-widgets"]').eq(1).within(() => {
-      cy.get('[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line', { timeout: 30000 }).first().click()
-      cy.get('[data-testid="number-value"]', { timeout: 30000 }).should('have.text', '1')
-    })
+    cy.get('[data-testid="category-chart"]').eq(1).find('g[aria-label="rule"][data-index="4"] line', { timeout: 30000 }).first().click()
+    cy.get('[data-testid="number-value"]', { timeout: 30000 }).eq(1).should('have.text', '1')
     cy.get('[data-testid="filter-strip"]').should('contain.text', 'category')
 
     cy.get('button[aria-label="Chart actions"]').first().click()
@@ -86,7 +111,7 @@ describe('Widgets dataset lifecycle', () => {
     cy.contains('button', 'Delete Dataset').click()
     cy.contains('.ant-modal-confirm', 'Remove dataset from map?').within(() => cy.contains('button', 'Yes').click())
     cy.contains('Dataset removed', { timeout: 30000 }).should('be.visible')
-    cy.get('[data-testid="dataset-widgets"]', { timeout: 30000 }).should('have.length', 1)
+    cy.get('[data-testid="widget-item"]', { timeout: 30000 }).should('have.length.at.least', 1)
     cy.get('[data-testid="number-value"]', { timeout: 30000 }).should('have.length', 1)
     cy.get('[data-testid="filter-strip"]').should('contain.text', 'No filters')
     cy.contains('This report changed in another session').should('not.exist')
@@ -96,7 +121,7 @@ describe('Widgets dataset lifecycle', () => {
     cy.get('button#dekart-save-button', { timeout: 30000 }).should('not.be.disabled')
     cy.reload()
     openWidgets()
-    cy.get('[data-testid="dataset-widgets"]', { timeout: 180000 }).should('have.length', 1)
+    cy.get('[data-testid="widget-item"]', { timeout: 180000 }).should('have.length.at.least', 1)
     cy.get('[data-testid="number-value"]', { timeout: 30000 }).should('have.length', 1).and('have.text', '4')
     cy.contains('Pending row count').should('be.visible')
   })

@@ -22,7 +22,19 @@ export function CategorySettings () {
 }
 
 // Retain the upstream query, settings and selection clients, with a readable sidebar layout.
-export default function CategoryChart ({ config, coordinator, dataTable, table, selectionName, ...chartProps }) {
+export default function CategoryChart (props) {
+  const { config, dataTable, runtimeIssueReporter } = props
+  const missingField = !dataTable.columns.some(column => column.name === config.settings.field)
+  useEffect(() => {
+    // Preflight missing fields before any Mosaic query client can affect sibling charts.
+    if (missingField) runtimeIssueReporter.reportIssue({ message: 'Chart failed' })
+  }, [missingField, runtimeIssueReporter])
+  // The Dekart panel wrapper owns the shared failure presentation.
+  if (missingField) return null
+  return <CategoryChartBody {...props} />
+}
+
+function CategoryChartBody ({ config, coordinator, dataTable, table, selectionName, runtimeIssueReporter, ...chartProps }) {
   const { layer, scaleType, colorDomain, colorRange } = useSelector(state => {
     const matches = (state.keplerGl.kepler?.visState.layers || []).filter(layer => layer.config.colorField?.name === config.settings.field && duckDBViewName(layer.config.dataId) === table.table)
     const layer = matches.find(layer => layer.config.isVisible) || matches[0]
@@ -91,13 +103,12 @@ export default function CategoryChart ({ config, coordinator, dataTable, table, 
       }
     } catch (error) { return null }
   }, [config.settings, dataTable, selectionName, categories.count, layer, scaleType, colorDomain, colorRange, emphasis])
-  const markPanelPainted = useStoreWithMosaicDashboard(state => state.markPanelPainted)
   // A spec error, or a category query that finished without a count, leaves nothing more to draw.
   const failed = !result || (!categories.isLoading && categories.count === undefined)
   useEffect(() => {
-    if (panelId && failed) markPanelPainted(panelId)
-  }, [panelId, failed, markPanelPainted])
-  // A chart whose spec cannot be built disappears; errors are never shown inline.
+    // Spec and category-query failures use the same sticky panel channel.
+    if (failed) runtimeIssueReporter.reportIssue({ message: 'Chart failed' })
+  }, [failed, runtimeIssueReporter])
   if (!result) return null
   const count = Math.min(categories.count ?? 0, config.settings.maxBars ?? 20)
   // The count-plot bar mark stacks, and Plot's stack transform reads facets that

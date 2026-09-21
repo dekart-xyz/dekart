@@ -1,4 +1,5 @@
 import { flushSync } from 'react-dom'
+import { createElement } from 'react'
 import { setAutoFreeze } from 'immer'
 import { numberChartType } from './NumberChart'
 import { createRoomShellSlice, createRoomStore } from '@sqlrooms/room-shell'
@@ -7,6 +8,7 @@ import { createMosaicSlice, createDashboardFeatureSlices, createDefaultMosaicDas
 import CategoryChart, { CategorySettings } from './CategoryChart'
 import ChartHeaderActions from './ChartHeaderActions'
 import HistogramChart from './HistogramChart'
+import DekartChartPanel from './WidgetPanel'
 import { getSharedDuckDB } from '../lib/duckdb/database'
 import { duckDBViewName } from '../lib/duckdb/constants'
 import { deferMapPresentation } from '../lib/mapRender'
@@ -55,31 +57,44 @@ export function createWidgetStore (onQueryPending = () => {}, onPresentationErro
   })
   const panelRenderers = createDefaultMosaicDashboardPanelRenderers()
   for (const [key, renderer] of Object.entries(panelRenderers)) {
-    if (renderer.headerActions) panelRenderers[key] = { ...renderer, headerActions: ChartHeaderActions, icon: null }
+    if (renderer.headerActions) panelRenderers[key] = { ...renderer, component: props => createElement(DekartChartPanel, { ...props, Renderer: renderer.component }), headerActions: ChartHeaderActions, icon: null }
   }
-  const { roomStore } = createRoomStore((set, get, store) => ({
-    // Paint feedback before Kepler's synchronous scan; callers cancel superseded work.
-    deferWidgetFilter (apply) {
-      onQueryPending(++pendingOperations > 0)
-      onPresentationError('')
-      return deferMapPresentation(
-        () => flushSync(apply),
-        () => onQueryPending(--pendingOperations > 0),
-        () => onPresentationError('Map rendering did not finish after applying the chart filter.')
-      )
-    },
-    // Snapshot readiness waits until every authored chart reaches a drawn, failed, or empty end state.
-    // Only snapshot renders track it; null keeps normal sessions free of the bookkeeping.
-    paintedPanels: trackPainting ? {} : null,
-    markPanelPainted (panelId) {
-      const painted = get().paintedPanels
-      // Ignore outside snapshots and repeat reports so subscribers only see the first paint.
-      if (painted && !painted[panelId]) set({ paintedPanels: { ...painted, [panelId]: true } })
-    },
-    ...createRoomShellSlice({ connector, config: { title: 'Report widgets', dataSources: [] } })(set, get, store),
-    ...createMosaicSlice({ preagg: { enabled: false } })(set, get, store),
-    ...createDashboardFeatureSlices({ panelRenderers, chartTypes, addPanelActions: [] })(set, get, store)
-  }))
+  const { roomStore } = createRoomStore((set, get, store) => {
+    const dashboardSlices = createDashboardFeatureSlices({ panelRenderers, chartTypes, addPanelActions: [] })(set, get, store)
+    const reportPanelIssueByKey = dashboardSlices.mosaicDashboard.reportPanelIssueByKey
+    dashboardSlices.mosaicDashboard.reportPanelIssueByKey = (runtimeKey, issue) => {
+      get().failPanel(runtimeKey.split(':panel:').at(-1))
+      reportPanelIssueByKey(runtimeKey, issue)
+    }
+    return {
+      // Paint feedback before Kepler's synchronous scan; callers cancel superseded work.
+      deferWidgetFilter (apply) {
+        onQueryPending(++pendingOperations > 0)
+        onPresentationError('')
+        return deferMapPresentation(
+          () => flushSync(apply),
+          () => onQueryPending(--pendingOperations > 0),
+          () => onPresentationError('Map rendering did not finish after applying the chart filter.')
+        )
+      },
+      // Snapshot readiness waits until every authored chart reaches a drawn, failed, or empty end state.
+      // Only snapshot renders track it; null keeps normal sessions free of the bookkeeping.
+      paintedPanels: trackPainting ? {} : null,
+      failedPanels: {},
+      failPanel (panelId) {
+        // Panel failures are sticky for this page lifetime and notify only once.
+        if (!get().failedPanels[panelId]) set(state => ({ failedPanels: { ...state.failedPanels, [panelId]: true } }))
+      },
+      markPanelPainted (panelId) {
+        const painted = get().paintedPanels
+        // Ignore outside snapshots and repeat reports so subscribers only see the first paint.
+        if (painted && !painted[panelId]) set({ paintedPanels: { ...painted, [panelId]: true } })
+      },
+      ...createRoomShellSlice({ connector, config: { title: 'Report widgets', dataSources: [] } })(set, get, store),
+      ...createMosaicSlice({ preagg: { enabled: false } })(set, get, store),
+      ...dashboardSlices
+    }
+  })
   return roomStore
 }
 
@@ -103,24 +118,12 @@ export function suggestWidgets (store, datasetId, fields) {
   fitWidgetPanels(store, datasetId)
 }
 
-// Sidebar panels use the full width of each upstream grid breakpoint.
+// Normalize the one upstream-generated title that does not fit the report pane.
 export function fitWidgetPanels (store, datasetId) {
   const api = store.getState().mosaicDashboard
-  const layout = api.getDashboard(datasetId).layout
   const panels = api.getDashboard(datasetId).panels
   // Replace the upstream generated histogram heading while preserving authored titles.
   for (const panel of panels) {
     if (panel.config.chartType === 'histogram' && /^histogram of a field\s*-/i.test(panel.title)) api.updatePanel(datasetId, panel.id, { title: panel.config.settings.field.replaceAll('_', ' ') })
   }
-  const layouts = Object.fromEntries(['lg', 'sm'].map(key => {
-    let y = 0
-    const ordered = [...layout.children].sort((a, b) => (layout.layouts[key]?.find(item => item.i === a.id)?.y ?? 0) - (layout.layouts[key]?.find(item => item.i === b.id)?.y ?? 0))
-    return [key, ordered.map(child => {
-      const h = panels.find(panel => panel.id === child.panel?.meta?.panelId)?.config.chartType === 'number' ? 1 : 2
-      const item = { i: child.id, x: 0, y, w: key === 'lg' ? 12 : 6, h }
-      y += h
-      return item
-    })]
-  }))
-  api.setLayout(datasetId, { ...layout, rowHeight: 100, margin: [0, 0], containerPadding: [0, 0], layouts })
 }

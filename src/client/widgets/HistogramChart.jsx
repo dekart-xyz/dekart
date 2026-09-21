@@ -23,7 +23,19 @@ export function createDekartHistogramSpec (options) {
 
 // Do not read an external retained chart after a source-revision remount. The
 // new instance still publishes its interactors for filter ownership.
-export default function HistogramChart ({ config, dataTable, selectionName, retention, params, dataPolicy, runtimeIssueContext, runtimeIssueReporter }) {
+export default function HistogramChart (props) {
+  const { config, dataTable, runtimeIssueReporter } = props
+  const missingField = !dataTable.columns.some(column => column.name === config.settings.field)
+  useEffect(() => {
+    // Preflight missing fields before mounting vgplot and its selection clients.
+    if (missingField) runtimeIssueReporter.reportIssue({ message: 'Chart failed' })
+  }, [missingField, runtimeIssueReporter])
+  // The Dekart panel wrapper owns the shared failure presentation.
+  if (missingField) return null
+  return <HistogramChartBody {...props} />
+}
+
+function HistogramChartBody ({ config, dataTable, selectionName, retention, params, dataPolicy, runtimeIssueContext, runtimeIssueReporter }) {
   const runtimeKey = useStoreWithMosaicDashboard(state => {
     for (const [dashboardId, dashboard] of Object.entries(state.mosaicDashboard.config.dashboardsById)) {
       const panel = dashboard.panels.find(panel => panel.config === config)
@@ -71,11 +83,10 @@ export default function HistogramChart ({ config, dataTable, selectionName, rete
     } catch (error) { return null }
   }, [config.settings, dataTable, selectionName])
   const writeOnlyRetention = usePaintedRetention(retention, panelId)
-  const markPanelPainted = useStoreWithMosaicDashboard(state => state.markPanelPainted)
   useEffect(() => {
-    // A chart without a spec draws nothing, so a snapshot must not wait for it.
-    if (panelId && !spec) markPanelPainted(panelId)
-  }, [panelId, spec, markPanelPainted])
+    // Histogram spec failures use the same sticky panel channel as query failures.
+    if (!spec) runtimeIssueReporter.reportIssue({ message: 'Chart failed' })
+  }, [runtimeIssueReporter, spec])
   if (!spec) return null
   return <VgPlotChart spec={spec} params={params} retention={writeOnlyRetention} dataPolicy={dataPolicy} runtimeIssueContext={runtimeIssueContext} runtimeIssueReporter={runtimeIssueReporter} />
 }

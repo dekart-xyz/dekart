@@ -27,8 +27,16 @@
 .panel button:focus-visible, .panel select:focus-visible { outline: 2px solid #a0a7ff; outline-offset: 2px; }
 
 .reportCharts { flex: 1; min-height: 0; overflow: auto; }
-.datasetWidgets { min-width: 0; }
-.datasetLabel { position: sticky; top: 0; z-index: 2; margin: 0; padding: 12px 16px 0; color: #c6d0dc; background: #242730; font-size: 12px; font-weight: 500; }
+.widgetItem { position: relative; min-width: 0; }
+.widgetItem > div, .widgetItem [data-selectable-panel], .widgetItem [data-selectable-panel] > div { height: 100%; }
+.numberWidget { height: 100px; }
+.chartWidget { height: 200px; }
+.draggingWidget { z-index: 3; opacity: .65; }
+.announcer { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.failedWidget::before { content: ''; position: absolute; top: 0; left: 0; right: 0; z-index: 2; height: 1px; background: #D9484E; pointer-events: none; }
+.widgetFailure { display: flex; align-items: flex-start; gap: 8px; height: 100%; padding: 14px 18px 16px; color: #C7CDD8; font-size: 13px; line-height: 18px; }
+.widgetFailure svg { flex: 0 0 13px; margin-top: 2px; }
+.widgetFailure button { display: inline; height: auto; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; color: #E6EAF1; font: inherit; text-decoration: underline; }
 .chartSettings { padding: 0; }
 .unavailablePanel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(110px, 1fr) auto; align-items: center; gap: 8px; padding: 8px 16px; color: #e3e7ec; border-top: 1px solid #323844; }
 .unavailablePanel span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -53,13 +61,13 @@
 .reportCharts :global([data-selectable-panel] [role='button'] span) { font-size: 11px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; }
 .reportCharts :global([data-selectable-panel] .lucide-grip-vertical) { opacity: 0; width: 12px; min-width: 12px; }
 .reportCharts :global([data-selectable-panel] > div > div:first-child button) { opacity: 0; }
-.reportCharts :global([data-selectable-panel]:hover > div > div:first-child button), .reportCharts :global([data-selectable-panel]:focus-within > div > div:first-child button), .reportCharts :global([data-selectable-panel]:hover .lucide-grip-vertical), .reportCharts :global([data-selectable-panel]:focus-within .lucide-grip-vertical) { opacity: 1; }
+.reportCharts :global([data-selectable-panel]:hover > div > div:first-child button), .reportCharts :global([data-selectable-panel]:focus-within > div > div:first-child button), .draggableWidget :global([data-selectable-panel]:hover .lucide-grip-vertical), .draggableWidget :global([data-selectable-panel]:focus-within .lucide-grip-vertical) { opacity: 1; }
+.draggableWidget :global([data-layout-drag-handle='true']) { cursor: grab; }
+.draggableWidget :global([data-layout-drag-handle='true']:active) { cursor: grabbing; }
 .reportCharts :global([data-selectable-panel] button[aria-label='Open panel settings']), .reportCharts :global([data-selectable-panel] button[aria-label='Remove dashboard panel']), .reportCharts :global(button[aria-label='Shrink panel horizontally']), .reportCharts :global(button[aria-label='Expand panel horizontally']), .reportCharts :global(.sqlrooms-grid-resize-handle) { display: none; }
 .reportCharts :global([data-selectable-panel] .p-2) { padding: 0 18px 8px 24px; }
 .reportCharts :global([data-selectable-panel]:hover [data-testid='category-count']), .reportCharts :global([data-selectable-panel]:focus-within [data-testid='category-count']) { visibility: hidden; }
 @media (hover: none) { .reportCharts :global([data-selectable-panel] > div > div:first-child button) { opacity: 1; } }
-.reportCharts :global([data-layout-grid-item-id] > div:first-child) { border: 0; border-radius: 0; background: transparent; }
-.reportCharts :global(.py-2:has(> .sqlrooms-grid-layout)) { padding-top: 0; padding-bottom: 0; }
 
 /* Keep the last results in place while the pane's shared queries settle. */
 .reportCharts { transition: opacity 240ms ease-in-out; }

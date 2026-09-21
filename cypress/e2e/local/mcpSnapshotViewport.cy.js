@@ -384,7 +384,7 @@ describe('local MCP snapshot viewport params', () => {
           expect(renderUrl, 'default render url').to.not.include('include_widgets')
           cy.visit(renderUrl)
           expectSnapshotReadyToken()
-          cy.get('[data-testid="dataset-widgets"]').should('not.exist')
+          cy.get('[data-testid="widget-item"]').should('not.exist')
         })
 
         return callMCP(token, 'create_report_snapshot', { report_id: reportId, include_widgets: true })
@@ -397,7 +397,7 @@ describe('local MCP snapshot viewport params', () => {
         expectSnapshotReadyToken()
         // Readiness must wait for the charts, so the capture never shows stubs or a loading value.
         cy.window().its('__dekartChartsAtReady').should('deep.eq', { stubs: 0, busy: 0, value: '8,000' })
-        cy.get('[data-testid="dataset-widgets"]').should('exist')
+        cy.get('[data-testid="widget-item"]').should('exist')
         cy.contains('button', 'Add chart').should('not.exist')
       })
     })
@@ -426,10 +426,11 @@ describe('local MCP snapshot viewport params', () => {
         .then((snapshot) => {
           cy.visit(snapshot.snapshot_render_url || snapshot.snapshotRenderUrl, { onBeforeLoad: sampleChartsWhenReady })
           expectSnapshotReadyToken()
-          // The bad column also fails its sibling through the shared selection; both panels still settle visibly.
-          cy.window().its('__dekartChartsAtReady').should('deep.eq', { stubs: 0, busy: 0, value: '' })
+          cy.window().its('__dekartChartsAtReady').should('deep.eq', { stubs: 0, busy: 0, value: '8,000' })
           cy.get('[aria-label="Report charts"]').contains('Missed stops').should('be.visible')
           cy.get('[aria-label="Report charts"]').contains('Missing column').should('be.visible')
+          cy.get('[aria-label="Report charts"]').contains('This chart couldn\'t load.').should('be.visible')
+          cy.get('[aria-label="Report charts"]').should('not.contain.text', 'no_such_column')
         })
     })
   })

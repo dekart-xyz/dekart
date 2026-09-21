@@ -16,6 +16,13 @@ function sameWidgetsConfig (left, right) {
   return left === right || Boolean(left && right && JSON.stringify(left) === JSON.stringify(right))
 }
 
+// Mark local widget edits before dispatch so Redux echoes never trigger adoption.
+function publishAuthored (adoption, config, dispatch) {
+  adoption.current.adoptedConfig = config
+  adoption.current.authored.add(config)
+  dispatch(widgetsChanged(config))
+}
+
 // Replace the currently displayed charts with the latest saved chart configuration
 function restoreWidgetsConfig (store, persisted, datasetIds) {
   const state = store.getState()
@@ -45,9 +52,7 @@ function adoptWidgetsConfig (store, adoption, persisted, datasetIds, datasetKey,
   tracking.applying = false
   const pruned = serializeWidgetsConfig(tracking.previousConfig, persisted)
   if (!editing || sameWidgetsConfig(pruned, persisted)) return
-  tracking.adoptedConfig = pruned
-  tracking.authored.add(pruned)
-  dispatch(widgetsChanged(pruned))
+  publishAuthored(adoption, pruned, dispatch)
 }
 
 // The panel is part of a report: Redux/report streams own saved state, SQLRooms owns editing.
@@ -105,9 +110,7 @@ export default function ReportWidgets ({ visible, snapshot, editing, presentatio
       tracking.previousConfig = state.mosaicDashboard.config
       if (authoring) {
         const config = serializeWidgetsConfig(state.mosaicDashboard.config, tracking.adoptedConfig)
-        tracking.adoptedConfig = config
-        tracking.authored.add(config)
-        dispatch(widgetsChanged(config))
+        publishAuthored(adoption, config, dispatch)
       }
     })
     return stop
@@ -143,7 +146,7 @@ export default function ReportWidgets ({ visible, snapshot, editing, presentatio
         <aside className={classnames(styles.panel, { [styles.hidden]: !visible, [styles.calculating]: calculating, [styles.snapshot]: snapshot })} aria-label='Report charts' aria-busy={calculating}>
           <div className={styles.calculationLine} role='status' aria-hidden={!calculating} aria-label='Updating charts' data-testid='chart-calculation-line' />
           {widgets.conflict && <div role='alert' className={styles.error}>This report changed in another session. Reload to use the latest saved dashboard.</div>}
-          {error || widgets.error ? <div role='alert' className={styles.error}>{error || widgets.error}</div> : <WidgetContents store={store} snapshot={snapshot} sources={sources} loading={!initialized || calculating} dataReloadPending={dataReloadPending} placeholderCount={widgets.config?.widgets?.length || 3} onOpenData={onOpenData} editing={editing} configRevision={configRevision} />}
+          {error || widgets.error ? <div role='alert' className={styles.error}>{error || widgets.error}</div> : <WidgetContents store={store} snapshot={snapshot} sources={sources} loading={!initialized || calculating} dataReloadPending={dataReloadPending} placeholderCount={widgets.config?.widgets?.length || 3} onOpenData={onOpenData} editing={editing} configRevision={configRevision} persistedConfig={widgets.config} onReorder={config => publishAuthored(adoption, config, dispatch)} />}
         </aside>
       </RoomShell.DndProvider>
     </RoomShell>

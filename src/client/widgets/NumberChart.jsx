@@ -76,31 +76,34 @@ class NumberClient extends MosaicClient {
 }
 
 // Present empty aggregates explicitly; never turn a missing average into a misleading zero.
-function NumberChart ({ config, coordinator, table, params }) {
+function NumberChart ({ config, coordinator, dataTable, table, params, runtimeIssueContext, runtimeIssueReporter }) {
   const [result, setResult] = useState({ loading: true })
   const parsed = settingsSchema.safeParse(config.settings)
   const settings = parsed.success ? parsed.data : null
   const { operation, field } = settings || {}
+  const missingField = Boolean(field && !dataTable.columns.some(column => column.name === field))
+  const panelId = runtimeIssueContext.panelId.split(':panel:').at(-1)
+  const markPanelPainted = useStoreWithMosaicDashboard(state => state.markPanelPainted)
   const selection = params?.get('brush')
   useEffect(() => {
-    if (!operation) return
+    // Invalid or missing settings never connect a client to the shared selection.
+    if (!operation || missingField) return
     let alive = true
     setResult(previous => ({ ...previous, loading: true }))
     const client = new NumberClient(selection, table, { operation, field }, result => { if (alive) setResult(result) })
     coordinator.connect(client)
     return () => { alive = false; client.destroy() }
-  }, [coordinator, table, selection, operation, field])
-  // Painted state is tracked only in snapshot renders, so normal sessions skip the panel lookup.
-  const panelId = useStoreWithMosaicDashboard(state => state.paintedPanels === null ? undefined : Object.values(state.mosaicDashboard.config.dashboardsById).flatMap(dashboard => dashboard.panels).find(panel => panel.config === config)?.id)
-  const markPanelPainted = useStoreWithMosaicDashboard(state => state.markPanelPainted)
-  const drawn = !settings || !result.loading
+  }, [coordinator, table, selection, operation, field, missingField])
   useEffect(() => {
-    // The first drawn result, error, or settings message is what a snapshot captures.
-    if (panelId && drawn) markPanelPainted(panelId)
-  }, [panelId, drawn, markPanelPainted])
-  if (!settings) return <div className={styles.message}>Choose a field in chart settings.</div>
-  // A metric whose query failed disappears; errors are never shown inline.
-  if (result.error) return null
+    // Settings, column, and query failures share the sticky panel failure channel.
+    if (!settings || missingField || result.error) runtimeIssueReporter.reportIssue({ message: 'Chart failed' })
+  }, [missingField, result.error, runtimeIssueReporter, settings])
+  useEffect(() => {
+    // Successful number results still participate in snapshot readiness.
+    if (settings && !missingField && !result.loading && !result.error) markPanelPainted(panelId)
+  }, [markPanelPainted, missingField, panelId, result.error, result.loading, settings])
+  // The Dekart panel wrapper owns the shared failure presentation.
+  if (!settings || missingField || result.error) return null
   const options = settings.format === 'auto' ? { maximumFractionDigits: 2 } : { minimumFractionDigits: settings.decimals, maximumFractionDigits: settings.decimals, ...(settings.format === 'compact' ? { notation: 'compact' } : {}), ...(settings.format === 'percent' ? { style: 'percent' } : {}) }
   const value = result.loading && result.value === undefined ? '…' : result.value == null ? 'No data' : new Intl.NumberFormat(undefined, options).format(result.value)
   return <div className={styles.card} data-testid='number-chart' aria-busy={Boolean(result.loading)}><div className={styles.value} aria-live='polite' title={result.value == null ? undefined : String(result.value)}>{result.value != null && settings.prefix}<span data-testid='number-value'>{value}</span>{result.value != null && settings.suffix && <span className={styles.unit}>{settings.suffix}</span>}</div>{settings.subtitle && <p className={styles.subtitle}>{settings.subtitle}</p>}</div>
