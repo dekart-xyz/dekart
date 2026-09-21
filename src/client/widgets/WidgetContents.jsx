@@ -9,7 +9,7 @@ import { useWidgetFilters } from './useWidgetFilters'
 import styles from './ReportWidgets.module.css'
 
 // Dataset bindings remain separate for filtering; the report presents them in one scroll area.
-export default function WidgetContents ({ store, snapshot, sources, loading, dataReloadPending, placeholderCount, onOpenData, editing }) {
+export default function WidgetContents ({ store, snapshot, sources, loading, dataReloadPending, placeholderCount, onOpenData, editing, configRevision }) {
   const [builder, setBuilder] = useState(false)
   const [selectedSource, setSelectedSource] = useState('')
   const dashboards = useStore(store, state => state.mosaicDashboard.config.dashboardsById)
@@ -22,7 +22,7 @@ export default function WidgetContents ({ store, snapshot, sources, loading, dat
     <>
       {!snapshot && !builder && !settingsOpen && <div className={styles.actions}><h2>Charts</h2><Button aria-label='Add chart' disabled={!datasetId} onClick={() => setBuilder(true)}><Plus size={15} />Add chart</Button></div>}
       <div className={classnames(styles.reportCharts, { [styles.hidden]: builder || settingsOpen })}>
-        {sources.filter(source => dashboards[source.id]).map(source => <DatasetCharts key={source.id} store={store} snapshot={snapshot} source={source} dataReloadPending={dataReloadPending} showSource={sources.length > 1} onOpenData={onOpenData} editing={editing} />)}
+        {sources.filter(source => dashboards[source.id]).map(source => <DatasetCharts key={source.id} store={store} snapshot={snapshot} source={source} dataReloadPending={dataReloadPending} showSource={sources.length > 1} onOpenData={onOpenData} editing={editing} configRevision={configRevision} />)}
         {!hasBoundCharts && loading && <ChartStubs count={placeholderCount} />}
         {!snapshot && !hasWidgets && !loading && datasetId && <div className={styles.empty}><h3>Dashboard is empty</h3><p>Add a chart from any report dataset.</p></div>}
       </div>
@@ -48,7 +48,7 @@ function ChartStubs ({ count }) {
 }
 
 // Keep each dataset's filter bridge alive while its charts are hidden by creation or settings.
-function DatasetCharts ({ store, snapshot, source, dataReloadPending, showSource, onOpenData, editing }) {
+function DatasetCharts ({ store, snapshot, source, dataReloadPending, showSource, onOpenData, editing, configRevision }) {
   const { error } = useWidgetFilters(store, source.id, Boolean(source.physical), editing, source.pending || source.downloading || dataReloadPending)
   const dashboard = useStore(store, state => state.mosaicDashboard.config.dashboardsById[source.id])
   useEffect(() => { if (dashboard?.panels.length) fitWidgetPanels(store, source.id) }, [store, source.id, dashboard?.panels])
@@ -64,7 +64,7 @@ function DatasetCharts ({ store, snapshot, source, dataReloadPending, showSource
     <section className={styles.datasetWidgets} data-testid='dataset-widgets' aria-label={`${source.label} charts`}>
       {showSource && dashboard?.panels.length > 0 && <h3 className={styles.datasetLabel}>{source.label}</h3>}
       {/* Snapshots omit actions because their content is not interactive. */}
-      {failed ? <div role='alert' className={styles.error}>{source.error || error}{!snapshot && <Button onClick={onOpenData}>Open data</Button>}</div> : empty ? <div className={styles.empty}>No data to chart yet.</div> : source.pending || !source.physical ? <ChartStubs count={dashboard?.panels.length || 0} /> : dashboard?.panels.length > 0 ? <MosaicDashboard.Root dashboardId={source.id}><MosaicDashboard.Panels /></MosaicDashboard.Root> : null}
+      {failed ? <div role='alert' className={styles.error}>{source.error || error}{!snapshot && <Button onClick={onOpenData}>Open data</Button>}</div> : empty ? <div className={styles.empty}>No data to chart yet.</div> : source.pending || !source.physical ? <ChartStubs count={dashboard?.panels.length || 0} /> : dashboard?.panels.length > 0 ? <MosaicDashboard.Root key={configRevision} dashboardId={source.id}><MosaicDashboard.Panels /></MosaicDashboard.Root> : null}
     </section>
   )
 }

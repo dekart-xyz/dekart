@@ -3,9 +3,8 @@
 .units { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .units > * { min-width: 0; }
 .hint, .subtitle { color: #a0a7b4; font-size: 11px; line-height: 1.6; margin: 0; }
-.card { height: 100%; display: flex; flex-direction: column; justify-content: flex-start; gap: 8px; padding: 0 8px 8px; overflow: auto; }
-.value { color: #f3f5f7; font-size: 38px; font-weight: 600; line-height: 1.2; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.card { box-sizing: border-box; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; gap: 2px; padding: 0 8px; overflow: hidden; }
+.value { color: #f3f5f7; font-size: 36px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .unit { margin-left: 6px; font-size: 13px; color: #a0a7b4; }
-.subtitle { overflow-wrap: anywhere; }
+.subtitle { line-height: 1.2; overflow-wrap: anywhere; }
 .message { padding: 16px; color: #a0a7b4; font-size: 12px; }
-

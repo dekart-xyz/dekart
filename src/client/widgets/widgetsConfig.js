@@ -97,7 +97,7 @@ export function serializeWidgetsConfig (runtimeConfig, previous) {
   return { version: 1, widgets }
 }
 
-// Group the flat document by dataset for SQLRooms without changing order inside each dataset.
+// converts persisted widget JSON into SQLRooms runtime state
 export function applyWidgetsConfig (store, persisted, datasetIds) {
   const api = store.getState().mosaicDashboard
   api.clearAllDashboardRuntime()

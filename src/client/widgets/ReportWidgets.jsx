@@ -16,16 +16,19 @@ function sameWidgetsConfig (left, right) {
   return left === right || Boolean(left && right && JSON.stringify(left) === JSON.stringify(right))
 }
 
+// Replace the currently displayed charts with the latest saved chart configuration
 function restoreWidgetsConfig (store, persisted, datasetIds) {
   const state = store.getState()
   const dashboardIds = new Set([
     ...Object.keys(state.mosaicDashboard.config.dashboardsById),
     ...(persisted?.widgets || []).map(widget => widget.dataId)
   ])
-  for (const dashboardId of dashboardIds) {
-    state.mosaic.getSelection(getMosaicDashboardSelectionName(dashboardId)).reset()
-  }
   applyWidgetsConfig(store, persisted, datasetIds)
+  // Destroy old clients before emitting the reset. Mosaic waits for selection
+  // listeners, so resetting first can strand later clicks behind torn-down queries.
+  for (const dashboardId of dashboardIds) {
+    store.getState().mosaic.getSelection(getMosaicDashboardSelectionName(dashboardId)).reset()
+  }
 }
 
 // Adopt canonical configuration into the live store. Dashboards for datasets
@@ -51,6 +54,7 @@ function adoptWidgetsConfig (store, adoption, persisted, datasetIds, datasetKey,
 export default function ReportWidgets ({ visible, snapshot, editing, presentationPending, dataReloadPending, onSettled, onOpenData }) {
   const [queryPending, setQueryPending] = useState(false)
   const [error, setError] = useState('')
+  const [configRevision, setConfigRevision] = useState(0)
   const [store] = useState(() => createWidgetStore(setQueryPending, setError, Boolean(snapshot)))
   const report = useSelector(state => state.report)
   const widgets = useSelector(state => state.widgets)
@@ -81,6 +85,7 @@ export default function ReportWidgets ({ visible, snapshot, editing, presentatio
     // Only external configurations should replace live charts and their filter clients.
     if (adoption.current.datasetKey === datasetKey && (sameWidgetsConfig(widgets.config, adoption.current.adoptedConfig) || (widgets.config && adoption.current.authored.has(widgets.config)))) return
     adoptWidgetsConfig(store, adoption, widgets.config, datasetIds, datasetKey, authoring, dispatch)
+    setConfigRevision(revision => revision + 1)
   }, [initialized, widgets.config, store, report?.id, datasetKey])
 
   useEffect(() => {
@@ -89,6 +94,7 @@ export default function ReportWidgets ({ visible, snapshot, editing, presentatio
     if (!enteringEdit || !initialized || !report) return
     // Discard view-only chart edits before authoring resumes.
     adoptWidgetsConfig(store, adoption, widgets.config, datasetIds, datasetKey, authoring, dispatch)
+    setConfigRevision(revision => revision + 1)
   }, [editing, initialized, report, widgets.config, store])
 
   useEffect(() => {
@@ -137,7 +143,7 @@ export default function ReportWidgets ({ visible, snapshot, editing, presentatio
         <aside className={classnames(styles.panel, { [styles.hidden]: !visible, [styles.calculating]: calculating, [styles.snapshot]: snapshot })} aria-label='Report charts' aria-busy={calculating}>
           <div className={styles.calculationLine} role='status' aria-hidden={!calculating} aria-label='Updating charts' data-testid='chart-calculation-line' />
           {widgets.conflict && <div role='alert' className={styles.error}>This report changed in another session. Reload to use the latest saved dashboard.</div>}
-          {error || widgets.error ? <div role='alert' className={styles.error}>{error || widgets.error}</div> : <WidgetContents store={store} snapshot={snapshot} sources={sources} loading={!initialized || calculating} dataReloadPending={dataReloadPending} placeholderCount={widgets.config?.widgets?.length || 3} onOpenData={onOpenData} editing={editing} />}
+          {error || widgets.error ? <div role='alert' className={styles.error}>{error || widgets.error}</div> : <WidgetContents store={store} snapshot={snapshot} sources={sources} loading={!initialized || calculating} dataReloadPending={dataReloadPending} placeholderCount={widgets.config?.widgets?.length || 3} onOpenData={onOpenData} editing={editing} configRevision={configRevision} />}
         </aside>
       </RoomShell.DndProvider>
     </RoomShell>
