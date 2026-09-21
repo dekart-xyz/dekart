@@ -1,6 +1,5 @@
 /* eslint-disable no-undef */
 import { UpdateReportRequest } from 'dekart-proto/dekart_pb'
-import { KeplerGlSchema } from '@kepler.gl/schemas'
 
 const LAYER_SELECTOR = '[data-testid="sortable-layer-item"], [data-testid="static-layer-item"]'
 
@@ -90,7 +89,16 @@ function updateReportMapConfigOutsideAppSave (store, mapConfig) {
     body
   })).then((response) => {
     expect(response.ok).to.equal(true)
+    // A rejected save answers with HTTP 200 and a trailers-only grpc-status header.
+    const grpcStatus = response.headers.get('grpc-status')
+    expect(grpcStatus === null || grpcStatus === '0', `remote update grpc-status ${grpcStatus}`).to.equal(true)
   })
+}
+
+// waitForIdleSave waits until no save is in flight and nothing is left unsaved,
+// which the save button shows with the plain cloud icon.
+function waitForIdleSave () {
+  cy.get('button#dekart-save-button .anticon-cloud', { timeout: 60000 }).should('exist')
 }
 
 function clickWriteReadme () {
@@ -126,19 +134,34 @@ describe('cloud report save regression', () => {
     cy.contains('Reload').should('not.exist')
   })
 
-  it('shows map conflict when a remote map update arrives with local unsaved map edits', () => {
+  it('does not show map conflict for its own save after a readme write rotated the report version', () => {
+    cy.intercept('POST', '**/Dekart/UpdateReport').as('autoSave')
     createUploadedReport()
+    cy.wait('@autoSave', { timeout: 60000 })
+    waitForIdleSave()
+    // AddReadme rotates the report version without changing the map.
+    clickWriteReadme()
+    cy.contains('.ant-tabs-tab', 'Readme', { timeout: 30000 }).should('be.visible')
+    waitForIdleSave()
+
+    cy.intercept('POST', '**/Dekart/UpdateReport', (req) => {
+      req.continue((res) => {
+        res.setDelay(4000)
+      })
+    }).as('updateReport')
 
     markLocalMapChanged()
-    getStore().then((store) => {
-      const state = store.getState()
-      const remoteMapConfig = JSON.parse(state.report.mapConfig)
-      remoteMapConfig.config.mapState.zoom = (remoteMapConfig.config.mapState.zoom || 0) + 1
-      return updateReportMapConfigOutsideAppSave(store, JSON.stringify(remoteMapConfig))
-    })
-
-    cy.contains('Map changed', { timeout: 30000 }).should('be.visible')
-    cy.contains('Reload').should('be.visible')
+    cy.get('button#dekart-save-button').click()
+    cy.get('button#dekart-save-button').should('be.disabled')
+    // A map edit while the save is in flight must not turn the save echo into a remote conflict.
+    const visibilityToggle = '.layer__visibility-toggle .panel--header__action__component'
+    cy.openLayerPanel()
+    cy.get(visibilityToggle).first().trigger('click')
+    cy.get(visibilityToggle).first().should('have.attr', 'data-for').and('include', 'tooltip.showLayer')
+    cy.wait('@updateReport')
+    cy.get('button#dekart-save-button', { timeout: 60000 }).should('not.be.disabled')
+    cy.contains('Map changed').should('not.exist')
+    cy.contains('Reload').should('not.exist')
   })
 
   it('accepts a remote map update after automatic panel opening without user edits', () => {
@@ -155,9 +178,17 @@ describe('cloud report save regression', () => {
 
     getStore().then((store) => {
       const state = store.getState()
-      const remoteMapConfig = KeplerGlSchema.getConfigToSave(state.keplerGl.kepler)
-      remoteMapConfig.config.visState.layers = []
-      remoteMapConfig.config.mapState.zoom = (remoteMapConfig.config.mapState.zoom || 0) + 1
+      // Every save is blocked here, so there is no persisted config to reuse, and the
+      // test image ships a minimal node_modules without Kepler's schema package.
+      // shouldUpdateMapConfig ignores viewport, so the empty layer list is what drives
+      // the update; the zoom bump only keeps the config distinguishable while reading.
+      const remoteMapConfig = {
+        version: 'v1',
+        config: {
+          visState: { layers: [] },
+          mapState: { ...state.keplerGl.kepler.mapState, zoom: (state.keplerGl.kepler.mapState.zoom || 0) + 1 }
+        }
+      }
       return updateReportMapConfigOutsideAppSave(store, JSON.stringify(remoteMapConfig))
     })
 

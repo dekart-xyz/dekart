@@ -63,7 +63,13 @@ export default function HistogramChart ({ config, dataTable, selectionName, rete
     frame = window.requestAnimationFrame(syncBrush)
     return () => window.cancelAnimationFrame(frame)
   }, [clients, range])
-  const spec = useMemo(() => createDekartHistogramSpec({ dataTable, selectionName, settings: config.settings }), [config.settings, dataTable, selectionName])
+  // A re-executed source can drop the configured field; the chart then disappears instead of crashing the panel.
+  const spec = useMemo(() => {
+    try {
+      return createDekartHistogramSpec({ dataTable, selectionName, settings: config.settings })
+    } catch (error) { return null }
+  }, [config.settings, dataTable, selectionName])
   const writeOnlyRetention = useMemo(() => retention && { setChart: retention.setChart }, [retention?.setChart])
+  if (!spec) return null
   return <VgPlotChart spec={spec} params={params} retention={writeOnlyRetention} dataPolicy={dataPolicy} runtimeIssueContext={runtimeIssueContext} runtimeIssueReporter={runtimeIssueReporter} />
 }

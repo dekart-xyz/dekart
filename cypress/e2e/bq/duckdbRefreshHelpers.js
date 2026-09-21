@@ -62,7 +62,8 @@ export function assertDatasetIsNonEmpty (label) {
 
 // assertQueryAndDatasetLabels verifies forked queries remain uniquely named in the visible UI.
 export function assertQueryAndDatasetLabels (labels) {
-  cy.get('[role="tab"]').should($tabs => {
+  // Scope to the query tabs; the shared left pane header renders its own tabs.
+  cy.get('#dekart-report-page-tabs [role="tab"]').should($tabs => {
     const tabLabels = [...$tabs].map(tab => tab.textContent.trim())
     expect(tabLabels).to.deep.equal(labels)
   })

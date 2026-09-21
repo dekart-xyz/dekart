@@ -12,6 +12,7 @@ function runQueryAndWaitReady (queryText) {
 }
 
 function getLayerNameInputs () {
+  cy.openLayerPanel()
   return cy.get(LAYER_NAME_INPUT_SELECTOR, { timeout: 60000 })
 }
 

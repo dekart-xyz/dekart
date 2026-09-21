@@ -16,12 +16,20 @@ Cypress.Commands.add('setDevClaimsEmail', (email) => {
   cy.setCookie('dekart-dev-claim-email', email)
 })
 
+// The left pane is shared between map settings and widgets and opens on widgets,
+// so Kepler's side panel is hidden until the map tab is selected.
 Cypress.Commands.add('openLayerPanel', () => {
-  cy.get('.side-panel--container', { timeout: 20000 }).then($panel => {
-    if ($panel.width() === 0) {
-      cy.get('.side-bar__close').click({ force: true })
-    }
-  })
+  // selectPane only ever opens the pane, so clicking unconditionally is idempotent and
+  // leaves the retry to the assertion below, which survives a remount back to the default.
+  cy.get('[data-testid="map-settings-tab"]', { timeout: 120000 }).click()
+  // Fail here rather than in the caller's selector if the panel never opened.
+  cy.get('[data-testid="map-settings-tab"]', { timeout: 60000 }).should('have.attr', 'aria-expanded', 'true')
+  cy.get('.side-panel--container', { timeout: 60000 }).should('be.visible')
+})
+
+// Clicks inside Kepler's panel are swallowed while queries run, so wait before clicking there.
+Cypress.Commands.add('waitForMapSettingsEnabled', () => {
+  cy.get('[class*="mapSettingsDisabled"]', { timeout: 120000 }).should('not.exist')
 })
 
 // enterQuery pastes SQL atomically so Ace auto-closing and indentation cannot alter it.
@@ -99,6 +107,7 @@ Cypress.Commands.add('assertDatasetTable', (label, fields, values = []) => {
     }
   })
   cy.openLayerPanel()
+  cy.waitForMapSettingsEnabled()
   cy.contains('.source-data-title .dataset-name', label, { timeout: 120000 }).then($name => {
     const section = $name.closest('.source-data-title').parent().parent()
     const icon = section.find('.show-data-table svg')[0]

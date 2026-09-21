@@ -479,7 +479,10 @@ export function runDuckDBGraph (changedDatasetIds = null) {
           if (!executionIsCurrent()) {
             return
           }
-          dispatch(setError(error))
+          // An unchanged job failing with the same error was already reported on an earlier run.
+          if (acceptedJobState?.status !== DuckDBJobStatus.DUCKDB_JOB_STATUS_ERROR || acceptedJobState.error !== error.message) {
+            dispatch(setError(error))
+          }
           markDuckDBNodeUnavailable(
             dispatch,
             getState,
