@@ -32,6 +32,23 @@ Only specs that call `cy.stubGoogleOAuthToken(...)` need `DEV_REFRESH_TOKEN_INFO
    - `make cypress-run ENV_FILE=<env-file> SPEC="<spec-path>"`
 7. Report: pass/fail, failing assertion, artifact paths (video/screenshot).
 
+## Output Discipline
+
+Cypress output is large, and everything printed stays in the agent's context for the rest of the thread. Send the full output to a log file and read only what explains the result.
+
+```bash
+LOG=/tmp/cy-$(date +%H%M%S).log
+make cypress-run ENV_FILE=<env-file> SPEC="<spec-path>" CYPRESS_ARGS="--quiet --reporter dot" > "$LOG" 2>&1; echo "exit=$?"
+grep -n -E "passing|failing|pending|^ +[0-9]+\) |Error|Timed out|expected .* to |Can't resolve|uncaught" "$LOG" | head -40
+tail -25 "$LOG"; echo "log: $LOG"
+```
+
+- Run it in the foreground with a timeout long enough for the spec. Do not start a run in the background and end the turn to wait for it.
+- Nothing is hidden. If the summary does not explain the failure, open the log around the failing test with `sed -n '<from>,<to>p' "$LOG"`. Do not guess from a partial view, and do not `cat` the whole log.
+- On a rerun of a failure already understood, the exit code and the passing/failing counts are enough.
+- Open a screenshot only when the assertion text and the log do not explain the failure. Never read videos.
+- CI logs follow the same rule: `gh run view <run> --job <job> --log-failed > "$LOG"`, then the same grep and tail.
+
 ## Canonical Commands
 
 - Run cloud specs:
