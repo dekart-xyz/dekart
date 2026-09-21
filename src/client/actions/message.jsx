@@ -158,7 +158,7 @@ export function setStreamError (code, msg) {
         dispatch(setHttpError(401))
         return
       default:
-        showStreamError(code, msg)
+        showStreamError(code, msg || serverErrorMessage)
     }
   }
 }
