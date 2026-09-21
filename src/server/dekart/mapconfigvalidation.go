@@ -51,29 +51,37 @@ var (
 	keplerMapConfigSchemaErr  error
 )
 
+// reportDatasetIDsTx reads dataset identifiers through the locked transaction instead of an independent database query.
+func reportDatasetIDsTx(ctx context.Context, tx *sql.Tx, reportID string) (map[string]struct{}, error) {
+	rows, err := tx.QueryContext(ctx, "SELECT id FROM datasets WHERE report_id=$1", reportID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	// Build the set directly from transactional rows and propagate scan failures as internal errors.
+	defer rows.Close()
+	datasetIDs := make(map[string]struct{})
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		datasetIDs[id] = struct{}{}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	return datasetIDs, nil
+}
+
 // validateReportMapConfigTx validates bindings against the dataset set protected
 // by the report row lock held by the caller.
 func (s Server) validateReportMapConfigTx(ctx context.Context, tx *sql.Tx, reportID string, mapConfig string) error {
 	if strings.TrimSpace(mapConfig) == "" {
 		return nil
 	}
-	// Read dataset identifiers through the locked transaction instead of an independent database query.
-	rows, err := tx.QueryContext(ctx, "SELECT id FROM datasets WHERE report_id=$1", reportID)
+	datasetIDs, err := reportDatasetIDsTx(ctx, tx, reportID)
 	if err != nil {
-		return status.Error(codes.Internal, err.Error())
-	}
-	// Build the validation set directly from transactional rows and propagate scan failures as internal errors.
-	defer rows.Close()
-	datasetIDs := make(map[string]struct{})
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			return status.Error(codes.Internal, err.Error())
-		}
-		datasetIDs[id] = struct{}{}
-	}
-	if err := rows.Err(); err != nil {
-		return status.Error(codes.Internal, err.Error())
+		return err
 	}
 	issues := validateKeplerMapConfigV1Detailed(mapConfig, datasetIDs)
 	if len(issues) == 0 {

@@ -685,7 +685,8 @@ export function saveMap (mapViewChanged = false) {
     request.setMapConfig(mapConfig)
     // Use the report revision as the single save authority and persist widget configuration with every map save.
     request.setExpectedVersionId(report.versionId)
-    request.setWidgetsConfig(widgets.raw)
+    // Omitting the optional field preserves stored bytes the client could not parse; sending them back would be rejected.
+    if (!widgets.error) request.setWidgetsConfig(widgets.raw)
     request.setTitle(reportStatus.title)
     request.setQueryList(queryUpdates)
     request.setQueryParamsList(getQueryParamsObjArr(queryParams.list))

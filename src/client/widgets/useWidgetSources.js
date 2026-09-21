@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { QueryJob } from 'dekart-proto/dekart_pb'
 import { getDuckDBRuntime } from '../lib/duckdb/runtime'
 import { widgetTableName } from './widgetStore'
+import { datasetCanLoad } from '../lib/datasetCanLoad'
 
 // A dataset is still moving if its query has not finished, if its local DuckDB job
 // has not settled, or if its data is being downloaded into the browser.
@@ -15,7 +16,7 @@ function sourcePending (dataset, jobs, localJobs, paramsHash) {
 
 // The panel's view of one dataset: its label and fields come from Kepler, its
 // physical table and revision from the report's DuckDB runtime once prepared.
-function describeSources (datasetList, tables, readySources, downloads, jobs, localJobs, paramsHash) {
+function describeSources (datasetList, tables, readySources, downloads, files, jobs, localJobs, paramsHash) {
   return datasetList.map(dataset => {
     const { pending, error } = sourcePending(dataset, jobs, localJobs, paramsHash)
     return {
@@ -23,6 +24,7 @@ function describeSources (datasetList, tables, readySources, downloads, jobs, lo
       label: tables[dataset.id]?.label || dataset.name || 'Dataset',
       fields: tables[dataset.id]?.fields || [],
       physical: readySources[dataset.id]?.physical,
+      loadable: datasetCanLoad(dataset, files, jobs, localJobs, paramsHash),
       error,
       pending,
       downloading: downloads.some(download => download.dataset.id === dataset.id),
@@ -111,7 +113,7 @@ function dropWidgetViews (store, preparedViews) {
 
 // Keep the widget views in step with the report's datasets and return what the
 // panel should render for each one.
-export default function useWidgetSources ({ store, report, initialized, datasetList, tables, jobs, localJobs, paramsHash, downloads, setError }) {
+export default function useWidgetSources ({ store, report, initialized, datasetList, tables, files, jobs, localJobs, paramsHash, downloads, setError }) {
   const [readySources, setReadySources] = useState({})
   const preparedViews = useRef(new Set())
   const preparedRevisions = useRef(new Map())
@@ -140,5 +142,5 @@ export default function useWidgetSources ({ store, report, initialized, datasetL
     }
   }, [initialized, report?.id, datasetList, downloads, tables, jobs, localJobs, paramsHash, store])
 
-  return { sources: describeSources(datasetList, tables, readySources, downloads, jobs, localJobs, paramsHash), readySources }
+  return { sources: describeSources(datasetList, tables, readySources, downloads, files, jobs, localJobs, paramsHash), readySources }
 }

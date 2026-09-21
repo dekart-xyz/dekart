@@ -2,6 +2,8 @@
 .provider { display: contents; }
 .panel { position: absolute; top: calc(var(--pane-top) + 44px + var(--filter-strip-height, 0px)); bottom: 12px; left: var(--pane-left); width: var(--pane-width); border-radius: 0 0 5px 5px; z-index: 20; display: flex; flex-direction: column; min-height: 0; color: #f3f5f7; background: #242730; --primary: 159.56 81.82% 32.35%; --primary-foreground: 0 0% 100%; box-shadow: 0 2px 8px #0005; font: 12.25px/1.71429 'ff-clan-web-pro', 'Helvetica Neue', Helvetica, sans-serif; }
 .hidden { display: none !important; }
+/* A snapshot renders the pane without the tab header it normally hangs from. */
+.snapshot { top: var(--pane-top); border-radius: 5px; }
 .source { display: flex; flex-direction: column; gap: 4px; padding: 12px 16px; }
 .source label, .settings label, .inlineBuilder label { color: #a0a7b4; font-size: 11px; font-weight: 500; line-height: 18px; }
 .panel :global(svg text) { font-family: inherit; }

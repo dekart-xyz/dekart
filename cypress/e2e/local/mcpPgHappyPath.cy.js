@@ -24,6 +24,22 @@ describe('local MCP postgres happy path with device auth', () => {
       return ''
     }
 
+    // widgetsConfig builds the smallest valid chart document keyed by one dashboard id.
+    const widgetsConfig = (dashboardId) => JSON.stringify({
+      version: 1,
+      provider: 'sqlrooms',
+      config: {
+        dashboardsById: {
+          [dashboardId]: {
+            id: dashboardId,
+            title: 'Widgets',
+            panelOrder: ['row-count'],
+            panels: [{ id: 'row-count', type: 'vgplot', title: 'Rows', config: { chartType: 'number', settings: { operation: 'count' } } }]
+          }
+        }
+      }
+    })
+
     const mcpRequest = (apiBase, token, name, args = {}) => cy.request({
       method: 'POST',
       url: `${apiBase}/mcp/call`,
@@ -276,6 +292,30 @@ describe('local MCP postgres happy path with device auth', () => {
                       expect(titles).to.include.members(['geometry', 'source_revision', 'longitude'])
                     })
                     cy.get('.modal--close').click()
+
+                    // Agent-facing argument errors use the CreateDataset strings.
+                    mcpRequest(apiBase, token, 'update_report_widgets_config', { report_id: '', widgets_config: widgetsConfig(datasetId) }).then((response) => {
+                      expect(response.status, 'empty report_id status').to.eq(400)
+                      expect(response.body).to.contain('report_id is required')
+                    })
+                    mcpRequest(apiBase, token, 'update_report_widgets_config', { report_id: 'not-a-uuid', widgets_config: widgetsConfig(datasetId) }).then((response) => {
+                      expect(response.status, 'malformed report_id status').to.eq(400)
+                      expect(response.body).to.contain('invalid report_id format')
+                    })
+                    mcpCall(apiBase, token, 'update_report_widgets_config', { report_id: reportId, widgets_config: widgetsConfig(datasetId) }).then((bound) => {
+                      expect(bound, 'bound write').to.not.have.property('unbound_dashboards')
+                    })
+
+                    // The open report adopts the MCP-authored chart from the report stream.
+                    cy.get('[data-testid="widgets-tab"]').click()
+                    cy.get('[data-testid="dataset-widgets"][aria-label="Source charts"] [data-testid="number-value"]', { timeout: 120000 }).should('have.text', '7')
+
+                    // A dashboard bound to no report dataset is stored and reported back.
+                    const unboundKey = '11111111-1111-4111-8111-111111111111'
+                    mcpCall(apiBase, token, 'update_report_widgets_config', { report_id: reportId, widgets_config: widgetsConfig(unboundKey) }).then((unbound) => {
+                      expect(unbound.unbound_dashboards, 'unbound dashboards').to.deep.eq([unboundKey])
+                    })
+                    cy.get('[data-testid="map-settings-tab"]').click()
 
                     // Exercise the existing browser command with the same saved parameter identity.
                     mcpCall(apiBase, token, 'update_query', {

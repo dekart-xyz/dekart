@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { z } from 'zod'
 import { Hash } from 'lucide-react'
-import { Field, ColumnSelector, getMosaicSqlTableReference } from '@sqlrooms/mosaic'
+import { Field, ColumnSelector, getMosaicSqlTableReference, useStoreWithMosaicDashboard } from '@sqlrooms/mosaic'
 import { useMosaicChartSettingsContext } from '@sqlrooms/mosaic/dist/charts/chart-settings/MosaicChartSettingsContext'
 import { Combobox, Input } from '@sqlrooms/ui'
 import { MosaicClient } from '@uwdata/mosaic-core'
@@ -90,6 +90,14 @@ function NumberChart ({ config, coordinator, table, params }) {
     coordinator.connect(client)
     return () => { alive = false; client.destroy() }
   }, [coordinator, table, selection, operation, field])
+  // Painted state is tracked only in snapshot renders, so normal sessions skip the panel lookup.
+  const panelId = useStoreWithMosaicDashboard(state => state.paintedPanels === null ? undefined : Object.values(state.mosaicDashboard.config.dashboardsById).flatMap(dashboard => dashboard.panels).find(panel => panel.config === config)?.id)
+  const markPanelPainted = useStoreWithMosaicDashboard(state => state.markPanelPainted)
+  const drawn = !settings || !result.loading
+  useEffect(() => {
+    // The first drawn result, error, or settings message is what a snapshot captures.
+    if (panelId && drawn) markPanelPainted(panelId)
+  }, [panelId, drawn, markPanelPainted])
   if (!settings) return <div className={styles.message}>Choose a field in chart settings.</div>
   // A metric whose query failed disappears; errors are never shown inline.
   if (result.error) return null

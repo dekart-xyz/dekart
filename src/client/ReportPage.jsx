@@ -42,7 +42,7 @@ import { getApplicationConfig } from '@kepler.gl/utils'
 import UserPositionOverlay from './UserPositionOverlay'
 import { useBasemapReady } from './lib/useBasemapReady'
 import { useSnapshotReady } from './lib/useSnapshotReady'
-import { useSnapshotViewportOverride } from './lib/snapshotViewportParams'
+import { getSnapshotIncludeWidgets, useSnapshotViewportOverride } from './lib/snapshotViewportParams'
 import { deferMapPresentation, notifyMapRendered } from './lib/mapRender'
 import { goToSource } from './lib/navigation'
 import { useQueriesRunning } from './lib/useQueriesRunning'
@@ -538,9 +538,14 @@ export default function ReportPage ({ edit, snapshot }) {
   const readOnly = useSelector(state => state.workspace.readOnly)
   const fullscreen = useSelector(state => state.reportStatus.fullscreen)
   const hasWidgets = useSelector(state => Object.values(state.widgets.config?.config?.dashboardsById || {}).some(dashboard => dashboard.panels.length))
+  // A snapshot shows the pane only when some chart is bound to a dataset of this report.
+  const hasBoundWidgets = useSelector(state => Object.entries(state.widgets.config?.config?.dashboardsById || {}).some(([datasetId, dashboard]) => dashboard.panels.length && (state.dataset.list || []).some(dataset => dataset.id === datasetId)))
   const [snapshotBasemapReady, setSnapshotBasemapReady] = useState(false)
+  // Charts are a transient per-render option, carried like the viewport overrides.
+  const snapshotWidgets = useMemo(() => Boolean(snapshot) && getSnapshotIncludeWidgets(), [snapshot])
+  const [snapshotChartsSettled, setSnapshotChartsSettled] = useState(false)
   const snapshotViewportApplied = useSnapshotViewportOverride(snapshot, id, setSnapshotBasemapReady)
-  const { reportDepsReady } = useSnapshotReady(snapshot, id, snapshotBasemapReady && snapshotViewportApplied)
+  const { reportDepsReady } = useSnapshotReady(snapshot, id, snapshotBasemapReady && snapshotViewportApplied && (!snapshotWidgets || snapshotChartsSettled))
   const updatedAt = [].concat(files, queries).reduce((updatedAt, item) => {
     if (item.updatedAt > updatedAt) {
       return item.updatedAt
@@ -649,10 +654,10 @@ export default function ReportPage ({ edit, snapshot }) {
         {/* Hide Kepler settings whenever the shared left pane is assigned to widgets or collapsed. */}
         <div className={classnames(styles.keplerFlexWrapper, { [styles.hideMapSettings]: leftPanel !== 'map' || !paneOpen })}>
           <div className={styles.keplerFlex}>
-            {/*  Mount the shared pane header, authoritative filter strip, and lazy widget dashboard outside snapshot mode. */}
+            {/*  Mount the shared pane header and authoritative filter strip outside snapshot mode; a snapshot renders charts without their controls. */}
             {!snapshot && <MapPaneHeader selected={leftPanel} expanded={paneOpen} onSelect={selectPane} onToggle={() => { paneChoiceMade.current = true; paneOpen ? setPaneCollapsed(true) : selectPane(leftPanel) }} />}
             {!snapshot && <FilterStrip visible={paneOpen && leftPanel === 'widgets'} editing={edit && report.canWrite && !readOnly} disabled={queriesRunning} onEdit={editFilter} onApply={apply => applyWidgetMapChange(apply, widgetFilterCancel, setWidgetFilterPending, dispatch)} />}
-            {!snapshot && <Suspense fallback={null}><ReportWidgets key={id} visible={paneOpen && leftPanel === 'widgets'} presentationPending={widgetFilterPending} dataReloadPending={queriesRunning} editing={edit && report.canWrite && !readOnly} onOpenData={() => document.getElementById('dekart-report-page-tabs')?.scrollIntoView({ block: 'nearest' })} /></Suspense>}
+            {(!snapshot || snapshotWidgets) && <Suspense fallback={null}><ReportWidgets key={id} snapshot={snapshotWidgets} visible={snapshotWidgets ? hasBoundWidgets : paneOpen && leftPanel === 'widgets'} presentationPending={widgetFilterPending} dataReloadPending={queriesRunning} editing={edit && report.canWrite && !readOnly} onSettled={snapshotWidgets ? setSnapshotChartsSettled : undefined} onOpenData={() => document.getElementById('dekart-report-page-tabs')?.scrollIntoView({ block: 'nearest' })} /></Suspense>}
             <Kepler
               snapshot={snapshot}
               interactionDisabled={queriesRunning}

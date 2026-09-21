@@ -35,7 +35,7 @@ export const chartTypes = createDefaultChartTypes({ includeCustomSpec: false }).
     }).concat(numberChartType)
 
 // Each open report owns its upstream UI store and shares Dekart's one DuckDB worker.
-export function createWidgetStore (onQueryPending = () => {}, onPresentationError = () => {}) {
+export function createWidgetStore (onQueryPending = () => {}, onPresentationError = () => {}, trackPainting = false) {
   let pendingOperations = 0
   let db
   const connector = createBaseDuckDbConnector({}, {
@@ -67,6 +67,14 @@ export function createWidgetStore (onQueryPending = () => {}, onPresentationErro
         () => onQueryPending(--pendingOperations > 0),
         () => onPresentationError('Map rendering did not finish after applying the chart filter.')
       )
+    },
+    // Snapshot readiness waits until every authored chart reaches a drawn, failed, or empty end state.
+    // Only snapshot renders track it; null keeps normal sessions free of the bookkeeping.
+    paintedPanels: trackPainting ? {} : null,
+    markPanelPainted (panelId) {
+      const painted = get().paintedPanels
+      // Ignore outside snapshots and repeat reports so subscribers only see the first paint.
+      if (painted && !painted[panelId]) set({ paintedPanels: { ...painted, [panelId]: true } })
     },
     ...createRoomShellSlice({ connector, config: { title: 'Report widgets', dataSources: [] } })(set, get, store),
     ...createMosaicSlice({ preagg: { enabled: false } })(set, get, store),

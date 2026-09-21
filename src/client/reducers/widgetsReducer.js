@@ -29,14 +29,19 @@ export default function widgets (state = initial, action) {
     case reportUpdate.name: {
       const current = state
       if (action.report.versionId === current.versionId) return current
-      const incoming = parseWidgetsConfig(action.report.widgetsConfig)
-      const saved = parseWidgetsConfig(current.savedRaw)
-      if (current.revision > current.savedRevision) {
-        // Query and dataset writes rotate the report version without changing the saved dashboard.
-        if (sameConfig(incoming.raw, current.raw) || sameConfig(incoming.raw, saved.raw)) return { ...current, savedRaw: incoming.raw, versionId: action.report.versionId, conflict: false }
-        return { ...current, conflict: true }
+      // TODO: check: The catch keeps conflict when local chart edits are unsaved, which blocks the save rather than dropping those edits.
+      try {
+        const incoming = parseWidgetsConfig(action.report.widgetsConfig)
+        if (current.revision > current.savedRevision) {
+          // Query and dataset writes rotate the report version without changing the saved dashboard.
+          if (sameConfig(incoming.raw, current.raw) || sameConfig(incoming.raw, current.savedRaw)) return { ...current, savedRaw: incoming.raw, versionId: action.report.versionId, conflict: false, error: undefined }
+          return { ...current, conflict: true, error: undefined }
+        }
+        return { ...current, ...incoming, savedRaw: incoming.raw, versionId: action.report.versionId, conflict: false, error: undefined }
+      } catch (e) {
+        // Keep stored bytes the client cannot parse: the editor is replaced by the error and the save omits widgets_config.
+        return { ...current, error: e.message, raw: action.report.widgetsConfig, savedRaw: action.report.widgetsConfig, versionId: action.report.versionId, conflict: current.revision > current.savedRevision }
       }
-      return { ...current, ...incoming, savedRaw: incoming.raw, versionId: action.report.versionId, conflict: false }
     }
     default: return state
   }

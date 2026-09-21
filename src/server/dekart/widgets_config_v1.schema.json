@@ -1,6 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "inmemory://widgets_config_v1.schema.json",
+  "title": "Dekart Widgets Config v1",
   "type": "object",
   "additionalProperties": false,
   "required": ["version", "provider", "config"],

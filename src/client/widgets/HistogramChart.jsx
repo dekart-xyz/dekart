@@ -2,6 +2,7 @@ import React, { useEffect, useMemo } from 'react'
 import { useSelector } from 'react-redux'
 import { getMosaicDashboardPanelId, useStoreWithMosaicDashboard, VgPlotChart } from '@sqlrooms/mosaic'
 import { createHistogramSpec } from '@sqlrooms/mosaic/dist/charts/chart-types/histogram/spec'
+import usePaintedRetention from './usePaintedRetention'
 
 const noClients = []
 
@@ -31,8 +32,8 @@ export default function HistogramChart ({ config, dataTable, selectionName, rete
   })
   const clients = useStoreWithMosaicDashboard(state => state.mosaicDashboard.runtime.panelClients[runtimeKey] || noClients)
   const filters = useSelector(state => state.keplerGl.kepler?.visState.filters || [])
+  const [dashboardKey, panelId] = runtimeKey?.split(':panel:') || []
   const range = useMemo(() => {
-    const [dashboardKey, panelId] = runtimeKey?.split(':panel:') || []
     const dashboardId = dashboardKey?.slice('dashboard:'.length)
     const matching = filters.filter(filter => {
       const datasetIndex = filter.dataId.indexOf(dashboardId)
@@ -44,7 +45,7 @@ export default function HistogramChart ({ config, dataTable, selectionName, rete
     const lower = Math.max(...matching.map(filter => filter.value[0]))
     const upper = Math.min(...matching.map(filter => filter.value[1]))
     return lower <= upper ? [lower, upper] : []
-  }, [filters, runtimeKey, config.settings.field])
+  }, [filters, dashboardKey, panelId, config.settings.field])
   useEffect(() => {
     const client = clients.find(client => client.selection && client.brush)
     if (!client) return
@@ -69,7 +70,12 @@ export default function HistogramChart ({ config, dataTable, selectionName, rete
       return createDekartHistogramSpec({ dataTable, selectionName, settings: config.settings })
     } catch (error) { return null }
   }, [config.settings, dataTable, selectionName])
-  const writeOnlyRetention = useMemo(() => retention && { setChart: retention.setChart }, [retention?.setChart])
+  const writeOnlyRetention = usePaintedRetention(retention, panelId)
+  const markPanelPainted = useStoreWithMosaicDashboard(state => state.markPanelPainted)
+  useEffect(() => {
+    // A chart without a spec draws nothing, so a snapshot must not wait for it.
+    if (panelId && !spec) markPanelPainted(panelId)
+  }, [panelId, spec, markPanelPainted])
   if (!spec) return null
   return <VgPlotChart spec={spec} params={params} retention={writeOnlyRetention} dataPolicy={dataPolicy} runtimeIssueContext={runtimeIssueContext} runtimeIssueReporter={runtimeIssueReporter} />
 }

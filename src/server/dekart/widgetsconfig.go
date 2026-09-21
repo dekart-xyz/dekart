@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 
@@ -109,6 +110,25 @@ func validateWidgetsConfig(value string) error {
 		}
 	}
 	return nil
+}
+
+// unboundWidgetDashboards names stored dashboard keys that match no report dataset.
+// Such dashboards are a designed V1 state: they are stored, skipped while rendering,
+// and pruned by the next browser save.
+func unboundWidgetDashboards(value string, datasetIDs map[string]struct{}) []string {
+	var config persistedWidgetsConfig
+	// Callers validate first, which decodes the same bytes into this type; report nothing if that ever changes.
+	if json.Unmarshal([]byte(value), &config) != nil {
+		return nil
+	}
+	unbound := make([]string, 0)
+	for key := range config.Config.Dashboards {
+		if _, bound := datasetIDs[key]; !bound {
+			unbound = append(unbound, key)
+		}
+	}
+	sort.Strings(unbound)
+	return unbound
 }
 
 // remapWidgetDatasets structurally remaps only authoritative dataset bindings.

@@ -9,7 +9,7 @@ import { useWidgetFilters } from './useWidgetFilters'
 import styles from './ReportWidgets.module.css'
 
 // Dataset bindings remain separate for filtering; the report presents them in one scroll area.
-export default function WidgetContents ({ store, sources, loading, dataReloadPending, placeholderCount, onOpenData, editing }) {
+export default function WidgetContents ({ store, snapshot, sources, loading, dataReloadPending, placeholderCount, onOpenData, editing }) {
   const [builder, setBuilder] = useState(false)
   const [selectedSource, setSelectedSource] = useState('')
   const dashboards = useStore(store, state => state.mosaicDashboard.config.dashboardsById)
@@ -20,11 +20,11 @@ export default function WidgetContents ({ store, sources, loading, dataReloadPen
   const hasWidgets = Object.values(dashboards).some(dashboard => dashboard.panels.length)
   return (
     <>
-      {!builder && !settingsOpen && <div className={styles.actions}><h2>Charts</h2><Button aria-label='Add chart' disabled={!datasetId} onClick={() => setBuilder(true)}><Plus size={15} />Add chart</Button></div>}
+      {!snapshot && !builder && !settingsOpen && <div className={styles.actions}><h2>Charts</h2><Button aria-label='Add chart' disabled={!datasetId} onClick={() => setBuilder(true)}><Plus size={15} />Add chart</Button></div>}
       <div className={classnames(styles.reportCharts, { [styles.hidden]: builder || settingsOpen })}>
-        {sources.filter(source => dashboards[source.id]).map(source => <DatasetCharts key={source.id} store={store} source={source} dataReloadPending={dataReloadPending} showSource={sources.length > 1} onOpenData={onOpenData} editing={editing} />)}
+        {sources.filter(source => dashboards[source.id]).map(source => <DatasetCharts key={source.id} store={store} snapshot={snapshot} source={source} dataReloadPending={dataReloadPending} showSource={sources.length > 1} onOpenData={onOpenData} editing={editing} />)}
         {!hasBoundCharts && loading && <ChartStubs count={placeholderCount} />}
-        {!hasWidgets && !loading && datasetId && <div className={styles.empty}><h3>Dashboard is empty</h3><p>Add a chart from any report dataset.</p></div>}
+        {!snapshot && !hasWidgets && !loading && datasetId && <div className={styles.empty}><h3>Dashboard is empty</h3><p>Add a chart from any report dataset.</p></div>}
       </div>
       {settingsOpen && !builder && <WidgetSettings store={store} sources={available} />}
       {builder && (
@@ -48,14 +48,23 @@ function ChartStubs ({ count }) {
 }
 
 // Keep each dataset's filter bridge alive while its charts are hidden by creation or settings.
-function DatasetCharts ({ store, source, dataReloadPending, showSource, onOpenData, editing }) {
+function DatasetCharts ({ store, snapshot, source, dataReloadPending, showSource, onOpenData, editing }) {
   const { error } = useWidgetFilters(store, source.id, Boolean(source.physical), editing, source.pending || source.downloading || dataReloadPending)
   const dashboard = useStore(store, state => state.mosaicDashboard.config.dashboardsById[source.id])
   useEffect(() => { if (dashboard?.panels.length) fitWidgetPanels(store, source.id) }, [store, source.id, dashboard?.panels])
+  // REVIEW: A failed dataset or an empty slot in a snapshot is an end state, so all its panels are marked painted and the empty slot draws nothing instead of placeholders.
+  const failed = Boolean(source.error || error)
+  // A snapshot of a dataset that cannot load says so rather than showing placeholders that never resolve.
+  const empty = snapshot && !source.loadable
+  useEffect(() => {
+    // A section showing an alert or the no-data message renders no panels, so it reports them settled.
+    if (failed || empty) dashboard?.panels.forEach(panel => store.getState().markPanelPainted(panel.id))
+  }, [failed, empty, dashboard?.panels, store])
   return (
     <section className={styles.datasetWidgets} data-testid='dataset-widgets' aria-label={`${source.label} charts`}>
       {showSource && dashboard?.panels.length > 0 && <h3 className={styles.datasetLabel}>{source.label}</h3>}
-      {source.error || error ? <div role='alert' className={styles.error}>{source.error || error}<Button onClick={onOpenData}>Open data</Button></div> : source.pending || !source.physical ? <ChartStubs count={dashboard?.panels.length || 0} /> : dashboard?.panels.length > 0 ? <MosaicDashboard.Root dashboardId={source.id}><MosaicDashboard.Panels /></MosaicDashboard.Root> : null}
+      {/* REVIEW: The dataset alert drops the Open data button in snapshots, where nothing is clickable. */}
+      {failed ? <div role='alert' className={styles.error}>{source.error || error}{!snapshot && <Button onClick={onOpenData}>Open data</Button>}</div> : empty ? <div className={styles.empty}>No data to chart yet.</div> : source.pending || !source.physical ? <ChartStubs count={dashboard?.panels.length || 0} /> : dashboard?.panels.length > 0 ? <MosaicDashboard.Root dashboardId={source.id}><MosaicDashboard.Panels /></MosaicDashboard.Root> : null}
     </section>
   )
 }

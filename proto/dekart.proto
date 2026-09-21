@@ -93,6 +93,7 @@ message CreateReportSnapshotRequest {
     optional double zoom = 2; // Optional initial snapshot zoom override.
     optional double lat = 3; // Optional initial snapshot latitude override.
     optional double lon = 4; // Optional initial snapshot longitude override.
+    bool include_widgets = 5; // Render the charts pane in the snapshot. Default renders the map only.
 }
 
 message CreateReportSnapshotResponse {
@@ -849,6 +850,17 @@ message UpdateReportMapConfigRequest {
 
 message UpdateReportMapConfigResponse {
     int64 updated_at = 1;
+}
+
+// MCP-specific payload for replacing report chart configuration without sending full report update body.
+message UpdateReportWidgetsConfigRequest {
+    string report_id = 1;
+    string widgets_config = 2;
+}
+
+message UpdateReportWidgetsConfigResponse {
+    int64 updated_at = 1;
+    repeated string unbound_dashboards = 2; // stored dashboard keys that match no report dataset
 }
 
 // MCP-specific payload for replacing report readme markdown.

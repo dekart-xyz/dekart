@@ -45,6 +45,11 @@ export function getSnapshotViewportParams (search = window.location.search) {
   return Object.keys(viewport).length > 0 ? viewport : null
 }
 
+// getSnapshotIncludeWidgets reports whether this render was asked to show the charts pane.
+export function getSnapshotIncludeWidgets (search = window.location.search) {
+  return new URLSearchParams(search).get('include_widgets') === 'true'
+}
+
 // getSnapshotViewportMapUpdate returns only the map fields that still need to move.
 export function getSnapshotViewportMapUpdate (currentMapState, snapshotViewportParams) {
   const mapUpdate = {}

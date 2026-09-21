@@ -45,6 +45,9 @@ Workspace-level operations that have no report capability use their existing end
 | `update_report_title` | Report structure | `CanWrite` | Denied | Allowed only with report edit access |
 | `update_report_map_config` | Report structure | `CanWrite` | Denied | Allowed only with report edit access |
 | `get_map_config_schema` | Stateless public metadata | None | Allowed | Allowed |
+<!-- REVIEW: The widgets write tool uses the same CanWrite gate as map config, and its schema tool is claim-free like the map schema tool. -->
+| `update_report_widgets_config` | Report structure | `CanWrite` | Denied | Allowed only with report edit access |
+| `get_widgets_config_schema` | Stateless public metadata | None | Allowed | Allowed |
 | `add_report_readme` | Report structure | `CanWrite` | Denied | Allowed only with report edit access |
 | `update_report_readme` | Report structure | `CanWrite` | Denied | Allowed only with report edit access |
 | `remove_report_readme` | Report structure | `CanWrite` | Denied | Allowed only with report edit access |
@@ -95,7 +98,7 @@ MCP should expose the status produced by the canonical server permission path:
 - subscription/license blocks persistence: `PermissionDenied` / HTTP 403 with the existing read-only message;
 - disabled `create_connection`: `FailedPrecondition` / HTTP 412.
 
-`get_map_config_schema` is intentionally callable without claims because it exposes only static public schema metadata.
+`get_map_config_schema` and `get_widgets_config_schema` are intentionally callable without claims because they expose only static public schema metadata.
 
 The dispatcher must not mask argument-validation, unauthenticated, or resource-specific errors with a tool-name-based role error.
 

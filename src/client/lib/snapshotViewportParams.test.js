@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getSnapshotViewportMapUpdate, getSnapshotViewportParams } from './snapshotViewportParams'
+import { getSnapshotIncludeWidgets, getSnapshotViewportMapUpdate, getSnapshotViewportParams } from './snapshotViewportParams'
 
 describe('getSnapshotViewportParams', () => {
   it('returns valid zoom and center overrides', () => {
@@ -18,6 +18,14 @@ describe('getSnapshotViewportParams', () => {
 
   it('ignores invalid values', () => {
     expect(getSnapshotViewportParams('?zoom=25&lat=-91&lon=181')).toBeNull()
+  })
+})
+
+describe('getSnapshotIncludeWidgets', () => {
+  it('is true only for the exact opt-in value', () => {
+    expect(getSnapshotIncludeWidgets('?include_widgets=true')).toBe(true)
+    expect(getSnapshotIncludeWidgets('?include_widgets=1')).toBe(false)
+    expect(getSnapshotIncludeWidgets('?zoom=8')).toBe(false)
   })
 })
 
