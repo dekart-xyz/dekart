@@ -268,11 +268,13 @@ describe('local MCP postgres happy path with device auth', () => {
                     })
                   }).then(() => {
                     // The same pinned jobs materialize in the browser runtime.
+                    cy.intercept('POST', '**/Dekart/UpdateReport').as('saveInitialMapConfig')
                     cy.visit(`${appUrl}/reports/${reportId}/source?qp_row_limit=7`)
                     cy.contains('span', 'Ready', { timeout: 120000 }).should('be.visible')
                     cy.get('div:contains("7 rows")', { timeout: 120000 }).should('have.length.at.least', 2)
                     cy.openLayerPanel()
                     cy.waitForMapSettingsEnabled()
+                    cy.wait('@saveInitialMapConfig')
                     cy.contains('.source-data-title .dataset-name', 'Result', { timeout: 120000 }).then($name => {
                       const section = $name.closest('.source-data-title').parent().parent()
                       section.find('.show-data-table svg')[0].dispatchEvent(new MouseEvent('click', { bubbles: true }))
@@ -294,6 +296,7 @@ describe('local MCP postgres happy path with device auth', () => {
                     })
                     mcpCall(apiBase, token, 'get_report_properties', { report_id: reportId }).then((before) => {
                       const mapConfigBefore = before.report.map_config
+                      expect(mapConfigBefore, 'saved map_config before widget update').to.be.a('string').and.not.be.empty
                       return mcpCall(apiBase, token, 'update_report_widgets_config', { report_id: reportId, widgets_config: widgetsConfig(datasetId) })
                         .then(() => mcpCall(apiBase, token, 'get_report_properties', { report_id: reportId }))
                         .then((after) => expect(after.report.map_config, 'widget-only update preserves exact map_config bytes').to.eq(mapConfigBefore))

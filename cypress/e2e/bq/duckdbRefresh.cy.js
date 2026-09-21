@@ -21,7 +21,7 @@ describe('DuckDB refresh from BigQuery', () => {
 
     cy.intercept('POST', '**/Dekart/RunDuckDBQuery').as('acceptedDuckDBExecute')
     enterVisibleQuery('SELECT count(*) AS source_rows, \'re-executed\' AS execution_marker FROM datasets."Query 1"')
-    cy.get('#dekart-query-execute-button').click({ waitForAnimations: false })
+    cy.get('#dekart-query-execute-button').should('not.be.disabled').click({ waitForAnimations: false })
     cy.wait('@acceptedDuckDBExecute')
     cy.get('#dekart-query-status-message').should($status => {
       expect(['Running', 'Ready']).to.include($status.text().trim())
