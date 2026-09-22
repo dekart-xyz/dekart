@@ -7,6 +7,7 @@ const toolNames = [
   'list_connections', 'create_report', 'create_dataset', 'create_query', 'update_query',
   'run_query', 'check_job_status', 'remove_dataset', 'create_file', 'replace_file',
   'update_report_title', 'update_report_map_config', 'get_map_config_schema',
+  'update_report_widgets_config', 'get_widgets_config_schema',
   'add_report_readme', 'update_report_readme', 'remove_report_readme',
   'update_dataset_name', 'get_report_properties', 'create_report_snapshot',
   'start_file_upload_session', 'complete_file_upload_session', 'abort_file_upload_session'
@@ -82,6 +83,14 @@ function mapConfig (datasetId, color) {
   })
 }
 
+// widgetsConfig builds the smallest valid chart document bound to one dataset.
+function widgetsConfig (dataId) {
+  return JSON.stringify({
+    version: 1,
+    widgets: [{ id: 'row-count', dataId, type: 'number', title: 'Rows', settings: { operation: 'count' } }]
+  })
+}
+
 // mutationCalls supplies valid resources and the canonical denial status for each shared mutation.
 function mutationCalls (r) {
   return [
@@ -93,6 +102,7 @@ function mutationCalls (r) {
     ['replace_file', { dataset_id: r.fileDatasetId }, 404],
     ['update_report_title', { report_id: r.reportId, title: 'Blocked title' }, 403],
     ['update_report_map_config', { report_id: r.reportId, map_config: mapConfig(r.mapDatasetId, [255, 0, 0]) }, 403],
+    ['update_report_widgets_config', { report_id: r.reportId, widgets_config: widgetsConfig(r.mapDatasetId) }, 403],
     ['add_report_readme', { report_id: r.reportId, markdown: 'Blocked' }, 403],
     ['update_report_readme', { report_id: r.reportId, markdown: 'Blocked' }, 403],
     ['remove_report_readme', { report_id: r.reportId }, 403],
@@ -141,6 +151,16 @@ function uploadFixture (token, fileId, abort) {
         total_size: totalSize
       })).then((r) => result(r, 'complete_file_upload_session'))
     })
+  })
+}
+
+// expectNewVersion polls the agent read path until a browser save has rotated the report version.
+function expectNewVersion (token, reportId, previousVersionId, attempts = 20) {
+  return callMCP(token, 'get_report_properties', { report_id: reportId }).then((r) => {
+    const properties = result(r, 'preserved get_report_properties')
+    if (properties.report.version_id !== previousVersionId) return properties
+    expect(attempts, 'browser save rotated the report version').to.be.greaterThan(1)
+    return cy.wait(500).then(() => expectNewVersion(token, reportId, previousVersionId, attempts - 1))
   })
 }
 
@@ -285,13 +305,54 @@ describe('MCP report capabilities', () => {
       .then(() => cy.exec(`sqlite3 data/dekart.db "DELETE FROM subscription_log WHERE workspace_id='${workspaceId}' AND authored_by='${collaboratorEmail}'"`))
       .then(() => createReport(ownerToken))
       .then((reportId) => cy.exec(`sqlite3 data/dekart.db "INSERT OR IGNORE INTO workspaces (id, name, is_default) VALUES ('${expiredWorkspaceId}', 'Expired report workspace', 0); UPDATE reports SET workspace_id='${expiredWorkspaceId}' WHERE id='${reportId}'; INSERT INTO subscription_log (workspace_id, authored_by, plan_type, trial_ends_at, created_at) VALUES ('${expiredWorkspaceId}', '${ownerEmail}', 6, datetime('now', '-1 day'), datetime('now', '+1 minute'))"`).then(() => reportId))
-      .then((reportId) => callMCP(ownerToken, 'add_report_readme', { report_id: reportId, markdown: 'Must stay blocked' }))
+      .then((reportId) => callMCP(ownerToken, 'add_report_readme', { report_id: reportId, markdown: 'Must stay blocked' }).then((r) => {
+        expect(r.status).to.eq(403)
+        return callMCP(ownerToken, 'update_report_widgets_config', { report_id: reportId, widgets_config: widgetsConfig('11111111-1111-4111-8111-111111111111') })
+      }))
       .then((r) => expect(r.status).to.eq(403))
       .then(() => cy.exec(`sqlite3 data/dekart.db "DELETE FROM subscription_log WHERE workspace_id='${expiredWorkspaceId}' AND authored_by='${ownerEmail}'"`))
       .then(() => callMCP(null, 'get_map_config_schema')).then((r) => result(r, 'public get_map_config_schema'))
+      .then(() => callMCP(null, 'get_widgets_config_schema')).then((r) => {
+        const schema = result(r, 'public get_widgets_config_schema')
+        expect(schema.schema_id).to.eq('inmemory://widgets_config_v1.schema.json')
+        expect(schema.title).to.eq('Dekart Widgets Config v1')
+      })
       .then(() => callMCP(null, 'get_report_properties', { report_id: resources.reportId })).then((r) => expect(r.status).to.eq(401))
       .then(() => cy.request('GET', `${apiBase}/mcp/tools`)).then((r) => {
         expect(r.body.tools.map((tool) => tool.name).sort()).to.deep.eq([...toolNames].sort())
       })
+  })
+
+  it('preserves stored widgets_config the browser cannot parse', () => {
+    const runId = Date.now()
+    const email = `mcp-widgets-${runId}@example.com`
+    const datasetId = 'ffffffff-ffff-4fff-8fff-ffffffffffff'
+    // An unknown chart type stands in for a config written by a newer release.
+    const seeded = JSON.stringify({
+      version: 1,
+      widgets: [{ id: 'future-panel', dataId: datasetId, type: 'future-chart', title: 'Future', settings: {} }]
+    })
+    let token
+
+    cy.exec(`sqlite3 data/dekart.db "INSERT OR IGNORE INTO workspaces (id, name, is_default) VALUES ('${workspaceId}', 'Default', 1)"`)
+    setRole(email, 2)
+    getDeviceToken(email, `mcp-widgets-${runId}`).then((deviceToken) => {
+      token = deviceToken
+      return createReport(token)
+    }).then((reportId) => {
+      cy.exec(`sqlite3 data/dekart.db "UPDATE reports SET widgets_config='${seeded.replace(/"/g, '\\"')}' WHERE id='${reportId}'"`)
+      cy.setDevClaimsEmail(email)
+      cy.visit(`/reports/${reportId}/source`)
+      cy.get('[data-testid="widgets-tab"]', { timeout: 60000 }).click()
+      cy.contains('[role="alert"]', 'Invalid persisted widget configuration', { timeout: 60000 }).should('be.visible')
+      // Any browser save must leave the unparseable config untouched; a new version proves the save landed.
+      cy.then(() => callMCP(token, 'get_report_properties', { report_id: reportId })).then((r) => {
+        const before = result(r, 'seeded get_report_properties').report.version_id
+        cy.get('#dekart-save-button').should('not.be.disabled').click()
+        expectNewVersion(token, reportId, before).then((properties) => {
+          expect(properties.report.widgets_config).to.eq(seeded)
+        })
+      })
+    })
   })
 })

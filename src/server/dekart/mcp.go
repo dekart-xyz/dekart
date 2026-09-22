@@ -183,6 +183,10 @@ func (s *Server) callMCPTool(ctx context.Context, request *mcpCallRequest) (json
 		return s.callUpdateReportMapConfigTool(ctx, request.Arguments)
 	case "get_map_config_schema":
 		return s.callGetMapConfigSchemaTool()
+	case "update_report_widgets_config":
+		return s.callUpdateReportWidgetsConfigTool(ctx, request.Arguments)
+	case "get_widgets_config_schema":
+		return s.callGetWidgetsConfigSchemaTool()
 	case "add_report_readme":
 		return s.callAddReportReadmeTool(ctx, request.Arguments)
 	case "update_report_readme":
@@ -656,15 +660,24 @@ func (s *Server) callUpdateReportMapConfigTool(ctx context.Context, raw json.Raw
 			"Map configuration is too large (%d bytes). Maximum allowed size is %d bytes. Please simplify your map configuration.",
 			len(request.MapConfig), MaxMapConfigSize)
 	}
-	// Validate Kepler map config schema and dataset bindings before persisting.
-	if err := s.validateReportMapConfig(ctx, request.ReportId, request.MapConfig); err != nil {
-		return nil, err
+	//Start a transaction and lock the report before validating or applying an authoritative MCP map update.
+	newVersionID := newUUID()
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer tx.Rollback()
+	if err := lockReportTx(ctx, tx, request.ReportId); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 	updatedAt := time.Now()
-	newVersionID := newUUID()
+	// Validate bindings while the report lock prevents concurrent dataset changes.
+	if err := s.validateReportMapConfigTx(ctx, tx, request.ReportId, request.MapConfig); err != nil {
+		return nil, err
+	}
 	var result sql.Result
 	if workspaceInfo.IsPlayground {
-		result, err = s.db.ExecContext(ctx,
+		result, err = tx.ExecContext(ctx,
 			`update
 			reports
 		set map_config=$1, updated_at=$2, version_id=$3
@@ -676,7 +689,7 @@ func (s *Server) callUpdateReportMapConfigTool(ctx context.Context, raw json.Raw
 			claims.Email,
 		)
 	} else {
-		result, err = s.db.ExecContext(ctx,
+		result, err = tx.ExecContext(ctx,
 			`update
 			reports
 		set map_config=$1, updated_at=$2, version_id=$3
@@ -699,11 +712,126 @@ func (s *Server) callUpdateReportMapConfigTool(ctx context.Context, raw json.Raw
 	if affectedRows == 0 {
 		return nil, status.Error(codes.NotFound, fmt.Sprintf("report not found id:%s", request.ReportId))
 	}
-	if err := s.createReportSnapshotWithVersionID(ctx, newVersionID, request.ReportId, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE); err != nil {
+	// Create the report snapshot and commit it atomically with the MCP map update.
+	if err := s.createReportSnapshotWithVersionIDTx(ctx, tx, newVersionID, request.ReportId, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if err := tx.Commit(); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	s.reportStreams.Ping(request.ReportId)
 	return mcp.MarshalProtoJSON(&proto.UpdateReportMapConfigResponse{UpdatedAt: updatedAt.Unix()})
+}
+
+// callGetWidgetsConfigSchemaTool returns the JSON schema used for widgets config validation.
+func (s *Server) callGetWidgetsConfigSchemaTool() (json.RawMessage, error) {
+	_ = s
+	var schema map[string]any
+	if err := json.Unmarshal([]byte(widgetsConfigSchemaJSON), &schema); err != nil {
+		return nil, status.Error(codes.Internal, "failed to load widgets config schema")
+	}
+	return mcp.MarshalJSON(map[string]any{
+		"schema_id":      schema["$id"],
+		"schema_version": schema["$schema"],
+		"title":          schema["title"],
+		"schema":         schema,
+	})
+}
+
+// callUpdateReportWidgetsConfigTool replaces report chart configuration while keeping map config and title.
+func (s *Server) callUpdateReportWidgetsConfigTool(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
+	request := &proto.UpdateReportWidgetsConfigRequest{}
+	if err := mcp.DecodeProtoArgs(raw, request); err != nil {
+		return nil, err
+	}
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	workspaceInfo := checkWorkspace(ctx)
+	// Agent-facing argument errors follow the CreateDataset strings, the one deliberate
+	// departure from the map tool, which returns the raw uuid.Parse error.
+	if strings.TrimSpace(request.ReportId) == "" {
+		return nil, status.Error(codes.InvalidArgument, "report_id is required")
+	}
+	if _, err := uuid.Parse(request.ReportId); err != nil {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid report_id format: %v", err))
+	}
+	// Match UpdateReport authorization before applying this MCP-only partial update.
+	report, err := s.getReport(ctx, request.ReportId)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if report == nil {
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("report not found id:%s", request.ReportId))
+	}
+	if err := s.requireReportWorkspaceWrite(ctx, request.ReportId); err != nil {
+		return nil, err
+	}
+	if !report.CanWrite {
+		return nil, status.Error(codes.PermissionDenied, "cannot write to report")
+	}
+	// Start a transaction and lock the report before validating or applying an authoritative MCP widgets update.
+	newVersionID := newUUID()
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer tx.Rollback()
+	if err := lockReportTx(ctx, tx, request.ReportId); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	updatedAt := time.Now()
+	// Validate both the document and its report-owned dataset bindings under the same lock as the write.
+	if err := s.validateReportWidgetsConfigTx(ctx, tx, request.ReportId, request.WidgetsConfig); err != nil {
+		return nil, err
+	}
+	var result sql.Result
+	if workspaceInfo.IsPlayground {
+		result, err = tx.ExecContext(ctx,
+			`update
+			reports
+		set widgets_config=$1, updated_at=$2, version_id=$3
+		where id=$4 and author_email=$5 and is_playground=true`,
+			request.WidgetsConfig,
+			updatedAt,
+			newVersionID,
+			request.ReportId,
+			claims.Email,
+		)
+	} else {
+		result, err = tx.ExecContext(ctx,
+			`update
+			reports
+		set widgets_config=$1, updated_at=$2, version_id=$3
+		where id=$4 and (author_email=$5 or allow_edit) and workspace_id=$6`,
+			request.WidgetsConfig,
+			updatedAt,
+			newVersionID,
+			request.ReportId,
+			claims.Email,
+			workspaceInfo.ID,
+		)
+	}
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	affectedRows, err := result.RowsAffected()
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if affectedRows == 0 {
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("report not found id:%s", request.ReportId))
+	}
+	// Create the report snapshot and commit it atomically with the MCP widgets update.
+	if err := s.createReportSnapshotWithVersionIDTx(ctx, tx, newVersionID, request.ReportId, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	s.reportStreams.Ping(request.ReportId)
+	return mcp.MarshalProtoJSON(&proto.UpdateReportWidgetsConfigResponse{UpdatedAt: updatedAt.Unix()})
 }
 
 // callAddReportReadmeTool adds readme markdown without exposing dataset deletion.
@@ -883,6 +1011,14 @@ func newMCPGoogleCredentialError(err error) *mcpCredentialError {
 
 // writeMCPCallError maps tool call errors to HTTP responses for MCP clients.
 func writeMCPCallError(w http.ResponseWriter, err error) {
+	var widgetsValidationErr *widgetsConfigValidationError
+	if errors.As(err, &widgetsValidationErr) {
+		writeJSON(w, http.StatusBadRequest, mcpValidationErrorResponse{
+			Error:  "widgets_config_validation_failed",
+			Issues: widgetsValidationErr.Issues,
+		})
+		return
+	}
 	var validationErr *mapConfigValidationError
 	if errors.As(err, &validationErr) {
 		writeJSON(w, http.StatusBadRequest, mcpValidationErrorResponse{
@@ -979,7 +1115,7 @@ func mcpToolDefinitions() []mcpTool {
 			ExampleInput: map[string]any{
 				"report_id": "00000000-0000-0000-0000-000000000000",
 			},
-			NextTools: []string{"create_file", "update_dataset_name", "remove_dataset"},
+			NextTools: []string{"create_file", "update_dataset_name", "remove_dataset", "update_report_widgets_config"},
 		},
 		{
 			Name:         "create_query",
@@ -1009,7 +1145,7 @@ func mcpToolDefinitions() []mcpTool {
 			WhenNotToUse: "Do not use when only SQL text should be edited without running; use update_query instead.",
 			SideEffects:  []string{"write"},
 			ExampleInput: map[string]any{"query_id": "00000000-0000-0000-0000-000000000000"},
-			NextTools:    []string{"check_job_status", "create_report_snapshot"},
+			NextTools:    []string{"check_job_status", "create_report_snapshot", "update_report_widgets_config"},
 		},
 		{
 			Name:         "check_job_status",
@@ -1081,7 +1217,7 @@ func mcpToolDefinitions() []mcpTool {
 				"report_id":  "00000000-0000-0000-0000-000000000000",
 				"map_config": "{\"version\":\"v1\",\"config\":{\"visState\":{\"layers\":[]},\"mapState\":{},\"mapStyle\":{}}}",
 			},
-			NextTools: []string{"create_report_snapshot", "update_report_title"},
+			NextTools: []string{"create_report_snapshot", "update_report_title", "update_report_widgets_config"},
 			ReferenceDocs: []string{
 				"https://docs.kepler.gl/docs/api-reference/advanced-usages/saving-loading-w-schema",
 			},
@@ -1098,6 +1234,29 @@ func mcpToolDefinitions() []mcpTool {
 			ReferenceDocs: []string{
 				"https://docs.kepler.gl/docs/api-reference/advanced-usages/saving-loading-w-schema",
 			},
+		},
+		{
+			Name:         "update_report_widgets_config",
+			Description:  "Replace report chart configuration by report_id.",
+			InputSchema:  mcpschema.ForProto(&proto.UpdateReportWidgetsConfigRequest{}, []string{"report_id", "widgets_config"}),
+			WhenToUse:    "Use to create, edit, reorder or delete charts on a report. This is a complete replacement: send the full widgets_config document, including charts you are not changing. Call get_report_properties first to read the current widgets_config, and get_widgets_config_schema to learn the format. Every widget dataId must be a dataset_id from get_report_properties.",
+			WhenNotToUse: "Do not use to change map layers, styles, or which rows are filtered. Filter selections live in map_config and are set with update_report_map_config.",
+			SideEffects:  []string{"write"},
+			ExampleInput: map[string]any{
+				"report_id":      "00000000-0000-0000-0000-000000000000",
+				"widgets_config": "{\"version\":1,\"widgets\":[{\"id\":\"status-count\",\"dataId\":\"11111111-1111-1111-1111-111111111111\",\"type\":\"count-plot\",\"title\":\"By status\",\"settings\":{\"field\":\"status\"}}]}",
+			},
+			NextTools: []string{"get_report_properties", "create_report_snapshot"},
+		},
+		{
+			Name:         "get_widgets_config_schema",
+			Description:  "Return the Dekart widgets_config v1 JSON schema used by MCP validation.",
+			InputSchema:  mcpschema.Object(nil, map[string]any{}),
+			WhenToUse:    "Use before building or editing widgets_config to discover the envelope, allowed chart types, required settings, enums and numeric bounds.",
+			WhenNotToUse: "Do not use for map layers, filters or selections. Those belong to map_config and get_map_config_schema.",
+			SideEffects:  []string{"read"},
+			ExampleInput: map[string]any{},
+			NextTools:    []string{"get_report_properties", "update_report_widgets_config"},
 		},
 		{
 			Name:        "add_report_readme",
@@ -1155,7 +1314,7 @@ func mcpToolDefinitions() []mcpTool {
 		},
 		{
 			Name:         "get_report_properties",
-			Description:  "Read report properties (title, map_config, readme), datasets, and queries by report_id.",
+			Description:  "Read report properties (title, map_config, widgets_config, readme), datasets, and queries by report_id.",
 			InputSchema:  mcpschema.ForProto(&proto.GetReportPropertiesRequest{}, []string{"report_id"}),
 			WhenToUse:    "Use before mutating report state to fetch current report and dataset context.",
 			WhenNotToUse: "Do not use when you only need to create a new report.",
@@ -1163,20 +1322,20 @@ func mcpToolDefinitions() []mcpTool {
 			ExampleInput: map[string]any{
 				"report_id": "00000000-0000-0000-0000-000000000000",
 			},
-			NextTools: []string{"update_report_title", "update_report_map_config", "update_report_readme"},
+			NextTools: []string{"update_report_title", "update_report_map_config", "update_report_readme", "get_widgets_config_schema", "update_report_widgets_config"},
 		},
 	}
 	tools = append(tools, mcpTool{
 		Name:         "create_report_snapshot",
 		Description:  "Create a short-lived report snapshot render URL. Prefer local render using snapshot_render_url. snapshot_url png may not be available for large reports.",
 		InputSchema:  mcpschema.ForProto(&proto.CreateReportSnapshotRequest{}, []string{"report_id"}),
-		WhenToUse:    "Use after map updates when you need a render URL, or a PNG snapshot URL when available.",
+		WhenToUse:    "Use after map updates when you need a render URL, or a PNG snapshot URL when available. Pass include_widgets true to verify charts written with update_report_widgets_config; the snapshot renders the map only by default.",
 		WhenNotToUse: "Do not use for mutating report or dataset data.",
 		SideEffects:  []string{"read"},
 		ExampleInput: map[string]any{
 			"report_id": "00000000-0000-0000-0000-000000000000",
 		},
-		NextTools: []string{"update_report_map_config", "update_report_title"},
+		NextTools: []string{"update_report_map_config", "update_report_title", "update_report_widgets_config"},
 	})
 	return normalizeMCPTools(append(tools, mcpUploadToolDefinitions()...))
 }

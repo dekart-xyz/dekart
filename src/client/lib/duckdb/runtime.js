@@ -24,6 +24,9 @@ class DuckDBReportRuntime {
     this.registeredSourceFiles = new Map()
     this.nativeTables = new Set()
     this.jobTables = new Set()
+    this.widgetNativeTables = new Map()
+    // Track the immutable DuckDB job table currently backing widgets for each dataset.
+    this.widgetJobTables = new Map()
     this.ownedViews = new Set()
     this.initializing = null
     this.db = null
@@ -102,6 +105,8 @@ class DuckDBReportRuntime {
     }
     this.ownedViews.clear()
     this.jobTables.clear()
+    this.widgetNativeTables.clear()
+    this.widgetJobTables.clear()
     this.nativeTables.clear()
     this.registeredSourceFiles.clear()
     this.connection = null
@@ -140,7 +145,8 @@ class DuckDBReportRuntime {
       } else {
         this.registeredSourceVersions.delete(datasetId)
       }
-      if (previous?.tableName && previous.tableName !== tableName) {
+      // Keep the previous source table when a widget view still reads it, and release it only after the view has rebound.
+      if (previous?.tableName && previous.tableName !== tableName && this.widgetNativeTables.get(datasetId) !== previous.tableName) {
         await this.initialize()
         try {
           await this.connection.query(`DROP TABLE IF EXISTS main.${quoteIdentifier(previous.tableName)}`)
@@ -188,7 +194,9 @@ class DuckDBReportRuntime {
     if (this.connection) {
       await this.connection.query(`DROP VIEW IF EXISTS datasets.${quoteIdentifier(viewName)}`).catch(() => {})
       this.ownedViews.delete(viewName)
-      if (nativeSource?.tableName) {
+      // The widgets view can still serve the previous revision while a failed
+      // refresh is being reconciled; its table remains owned until rebind/close.
+      if (nativeSource?.tableName && this.widgetNativeTables.get(datasetId) !== nativeSource.tableName) {
         try {
           await this.connection.query(`DROP TABLE IF EXISTS main.${quoteIdentifier(nativeSource.tableName)}`)
           this.nativeTables.delete(nativeSource.tableName)
@@ -219,6 +227,7 @@ class DuckDBReportRuntime {
       const viewName = duckDBViewName(datasetId)
       const fileName = this.registeredSourceFiles.get(datasetId)
       this.nativeSources.delete(datasetId)
+      this.widgetJobTables.delete(datasetId)
       this.fileSources.delete(datasetId)
       this.sourceErrors.delete(datasetId)
       this.registeredSourceVersions.delete(datasetId)
@@ -233,7 +242,8 @@ class DuckDBReportRuntime {
         } catch (_) {
           // Retain ownership so report teardown can retry cleanup.
         }
-        if (tableName) {
+        // The removed widget may still be rendering until React commits its unmount.
+        if (tableName && this.widgetNativeTables.get(datasetId) !== tableName) {
           try {
             await this.connection.query(`DROP TABLE IF EXISTS main.${quoteIdentifier(tableName)}`)
             this.nativeTables.delete(tableName)
@@ -258,6 +268,71 @@ class DuckDBReportRuntime {
   nextGeneration () {
     this.generation++
     return this.generation
+  }
+
+  // widgetTable returns the immutable revision currently displayed by Kepler.
+  widgetTable (datasetId) {
+    const source = this.nativeSources.get(datasetId)
+    if (source) return `main.${quoteIdentifier(source.tableName)}`
+    const jobTable = this.widgetJobTables.get(datasetId)
+    return jobTable ? `dekart_internal.${quoteIdentifier(jobTable)}` : null
+  }
+
+  // widgetRevision identifies the immutable source currently backing charts.
+  widgetRevision (datasetId) {
+    const nativeSource = this.nativeSources.get(datasetId)
+    if (nativeSource) return nativeSource.version || nativeSource.tableName
+    const fileSource = this.fileSources.get(datasetId)
+    if (fileSource) return fileSource.version
+    return this.widgetJobTables.get(datasetId) || null
+  }
+
+  // prepareWidgetSource keeps the previously bound native table alive until the
+  // widgets view has moved to the current immutable source under the execution lock.
+  async prepareWidgetSource (datasetId, prepare) {
+    const release = await this.acquireExecution()
+    try {
+      const physical = this.widgetTable(datasetId)
+      if (!physical) return null
+      const revision = this.widgetRevision(datasetId) || physical
+      await prepare(physical)
+      const previousTable = this.widgetNativeTables.get(datasetId)
+      const nativeTable = this.nativeSources.get(datasetId)?.tableName
+      if (nativeTable) {
+        this.widgetNativeTables.set(datasetId, nativeTable)
+      } else {
+        this.widgetNativeTables.delete(datasetId)
+      }
+      if (previousTable && previousTable !== nativeTable) {
+        await this.initialize()
+        try {
+          await this.connection.query(`DROP TABLE IF EXISTS main.${quoteIdentifier(previousTable)}`)
+          this.nativeTables.delete(previousTable)
+        } catch (_) {
+          // Retain ownership so report teardown can retry cleanup.
+        }
+      }
+      return { physical, revision }
+    } finally {
+      release()
+    }
+  }
+
+  // releaseWidgetSource drops a removed dataset's view before its retained table.
+  async releaseWidgetSource (datasetId, releaseView) {
+    const release = await this.acquireExecution()
+    try {
+      await releaseView()
+      const tableName = this.widgetNativeTables.get(datasetId)
+      this.widgetNativeTables.delete(datasetId)
+      if (tableName && ![...this.nativeSources.values()].some(source => source.tableName === tableName)) {
+        await this.initialize()
+        await this.connection.query(`DROP TABLE IF EXISTS main.${quoteIdentifier(tableName)}`)
+        this.nativeTables.delete(tableName)
+      }
+    } finally {
+      release()
+    }
   }
 
   // acquireExecution serializes generations on the single report-local connection.
@@ -363,6 +438,7 @@ class DuckDBReportRuntime {
     try {
       await this.connection.query(`CREATE OR REPLACE TABLE ${jobTable} AS ${node.queryJob.queryText}`)
       this.jobTables.add(jobTableName)
+      this.widgetJobTables.set(node.dataset.id, jobTableName)
     } finally {
       if (paramsTable) {
         await this.connection.query(`DROP TABLE IF EXISTS ${paramsTable}`).catch(() => {})
@@ -374,7 +450,7 @@ class DuckDBReportRuntime {
     await this.connection.query(`CREATE OR REPLACE VIEW ${view} AS SELECT * FROM ${jobTable}`)
     this.ownedViews.add(viewName)
     const columns = await getColumnTypes(this.connection, jobTable)
-    const reader = await this.connection.send(castDuckDBTypesForKepler(jobTable, columns), true)
+    const reader = await this.connection.send(castDuckDBTypesForKepler(jobTable, columns) + ' ORDER BY rowid', true)
     const result = new Table(await reader.readAll())
     setGeoArrowWKBExtension(result, columns)
     return {
@@ -384,10 +460,13 @@ class DuckDBReportRuntime {
     }
   }
 
-  // discardJobTables retains only revisions reachable from the current streamed graph.
+  // discardJobTables retains revisions reachable from the current streamed graph plus the
+  // revision charts still read for each dataset, since widgets keep serving the previous
+  // table until the rerun publishes and the dataset rebinds.
   async discardJobTables (jobIds) {
     await this.initialize()
-    const retained = new Set(jobIds.map(duckDBJobTableName))
+    // keep current widget job tables
+    const retained = new Set([...jobIds.map(duckDBJobTableName), ...this.widgetJobTables.values()])
     for (const tableName of this.jobTables) {
       if (!retained.has(tableName)) {
         await this.connection.query(`DROP TABLE IF EXISTS dekart_internal.${quoteIdentifier(tableName)}`)

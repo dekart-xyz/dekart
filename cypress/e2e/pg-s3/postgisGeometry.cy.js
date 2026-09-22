@@ -34,10 +34,12 @@ describe('pg-s3 PostGIS geometry', () => {
     cy.get(`span:contains("${copy.ready}")`, { timeout: 120000 }).should('be.visible')
     cy.get('div:contains("2 rows")', { timeout: 120000 }).should('be.visible')
     cy.get(`span:contains("${copy.downloading}")`, { timeout: 120000 }).should('contain', 'B')
+    cy.openLayerPanel()
     cy.get('.layer__title__type', { timeout: 120000 })
       .filter(':contains("geojson")')
       .should('have.length', 1)
       .and('be.visible')
+    cy.waitForMapSettingsEnabled()
     cy.get('.source-data-title .dataset-name').first().then($name => {
       const section = $name.closest('.source-data-title').parent().parent()
       section.find('.show-data-table svg')[0].dispatchEvent(new MouseEvent('click', { bubbles: true }))

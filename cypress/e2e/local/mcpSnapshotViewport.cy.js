@@ -134,7 +134,7 @@ function buildPointLayer (datasetId) {
   }
 }
 
-function buildMapConfig (mapState, datasetId) {
+function buildMapConfig (mapState, datasetId, filters = []) {
   const layers = datasetId ? [buildPointLayer(datasetId)] : []
   const fieldsToShow = datasetId
     ? {
@@ -149,7 +149,7 @@ function buildMapConfig (mapState, datasetId) {
     version: 'v1',
     config: {
       visState: {
-        filters: [],
+        filters,
         layers,
         effects: [],
         interactionConfig: {
@@ -268,6 +268,56 @@ function delayDatasetSources () {
   })
 }
 
+// sampleChartsWhenReady records the chart DOM exactly once, at the first moment the ready token appears.
+function sampleChartsWhenReady (win) {
+  win.__dekartChartsAtReady = null
+  const timer = win.setInterval(() => {
+    if (!win.__dekartSnapshotReadyToken || win.__dekartChartsAtReady) return
+    win.__dekartChartsAtReady = {
+      stubs: win.document.querySelectorAll('[data-testid="chart-stub"]').length,
+      busy: win.document.querySelectorAll('[aria-label="Report charts"] [aria-busy="true"]').length,
+      value: win.document.querySelector('[data-testid="number-value"]')?.textContent || ''
+    }
+    win.clearInterval(timer)
+  }, 10)
+}
+
+const countPanel = { id: 'stop-count', type: 'vgplot', title: 'Missed stops', config: { chartType: 'number', settings: { operation: 'count' } } }
+
+// buildWidgetsConfig keys the authored panels to the report dataset that holds the rows.
+function buildWidgetsConfig (datasetId, panels = [countPanel]) {
+  return JSON.stringify({
+    version: 1,
+    widgets: panels.map(panel => ({ id: panel.id, dataId: datasetId, type: panel.config.chartType, title: panel.title, settings: panel.config.settings }))
+  })
+}
+
+// createChartReport uploads the rows, saves a map, and authors the given charts through MCP.
+function createChartReport (token, panels, filters) {
+  return callMCP(token, 'create_report').then((reportResult) => {
+    const reportId = readId(reportResult, ['report_id', 'reportId', 'id']) ||
+      readId(reportResult?.report, ['id'])
+    return callMCP(token, 'create_dataset', { report_id: reportId }).then((datasetResult) => {
+      const datasetId = readId(datasetResult, ['dataset_id', 'datasetId', 'id']) ||
+        readId(datasetResult?.dataset, ['id'])
+      return callMCP(token, 'create_file', { dataset_id: datasetId }).then((fileResult) => {
+        const fileId = readId(fileResult, ['file_id', 'fileId', 'id']) ||
+          readId(fileResult?.file, ['id'])
+        return uploadMissedStopsCsv(token, fileId)
+          .then(() => callMCP(token, 'update_report_map_config', {
+            report_id: reportId,
+            map_config: buildMapConfig({ lat: 33.95, lon: -118.15, zoom: 9 }, datasetId, filters?.(datasetId))
+          }))
+          .then(() => callMCP(token, 'update_report_widgets_config', {
+            report_id: reportId,
+            widgets_config: buildWidgetsConfig(datasetId, panels)
+          }))
+          .then(() => reportId)
+      })
+    })
+  })
+}
+
 describe('local MCP snapshot viewport params', () => {
   it('renders a sensitive report with transient zoom, lat, and lon overrides', () => {
     const override = { lat: 33.95, lon: -118.05, zoom: 8.2 }
@@ -323,5 +373,114 @@ describe('local MCP snapshot viewport params', () => {
         expectSnapshotReadyToken()
       })
     })
+  })
+
+  it('renders the charts pane in a snapshot only when include_widgets is requested', () => {
+    getDeviceToken().then((token) => {
+      createChartReport(token).then((reportId) => {
+        // Default stays map-only: no charts pane and no request parameter.
+        callMCP(token, 'create_report_snapshot', { report_id: reportId }).then((snapshot) => {
+          const renderUrl = snapshot.snapshot_render_url || snapshot.snapshotRenderUrl
+          expect(renderUrl, 'default render url').to.not.include('include_widgets')
+          cy.visit(renderUrl)
+          expectSnapshotReadyToken()
+          cy.get('[data-testid="widget-item"]').should('not.exist')
+        })
+
+        return callMCP(token, 'create_report_snapshot', { report_id: reportId, include_widgets: true })
+      }).then((snapshot) => {
+        const renderUrl = snapshot.snapshot_render_url || snapshot.snapshotRenderUrl
+        expect(renderUrl, 'include_widgets render url').to.include('include_widgets=true')
+        // Delay the source fetch so readiness has to survive a slow chart load.
+        delayDatasetSources()
+        cy.visit(renderUrl, { onBeforeLoad: sampleChartsWhenReady })
+        expectSnapshotReadyToken()
+        // Readiness must wait for the charts, so the capture never shows stubs or a loading value.
+        cy.window().its('__dekartChartsAtReady').should('deep.eq', { stubs: 0, busy: 0, value: '8,000' })
+        cy.get('[data-testid="widget-item"]').should('exist')
+        cy.contains('button', 'Add chart').should('not.exist')
+      })
+    })
+  })
+
+  it('captures charts only after a saved map filter reaches them', () => {
+    // Half of every 100 generated rows fall inside this latitude band.
+    const latitudeBand = datasetId => [{ id: 'latitude-band', dataId: [datasetId], name: ['latitude'], type: 'range', value: [33.649, 33.9445], enabled: true }]
+    getDeviceToken().then((token) => {
+      createChartReport(token, undefined, latitudeBand)
+        .then((reportId) => callMCP(token, 'create_report_snapshot', { report_id: reportId, include_widgets: true }))
+        .then((snapshot) => {
+          cy.visit(snapshot.snapshot_render_url || snapshot.snapshotRenderUrl, { onBeforeLoad: sampleChartsWhenReady })
+          expectSnapshotReadyToken()
+          cy.window().its('__dekartChartsAtReady').should('deep.eq', { stubs: 0, busy: 0, value: '4,000' })
+        })
+    })
+  })
+
+  it('settles an include_widgets snapshot whose chart cannot load its column', () => {
+    // An agent can author a chart on a column the dataset does not have; the server only checks the schema.
+    const missingColumn = { id: 'no-such-column', type: 'vgplot', title: 'Missing column', config: { chartType: 'count-plot', settings: { field: 'no_such_column' } } }
+    getDeviceToken().then((token) => {
+      createChartReport(token, [countPanel, missingColumn])
+        .then((reportId) => callMCP(token, 'create_report_snapshot', { report_id: reportId, include_widgets: true }))
+        .then((snapshot) => {
+          cy.visit(snapshot.snapshot_render_url || snapshot.snapshotRenderUrl, { onBeforeLoad: sampleChartsWhenReady })
+          expectSnapshotReadyToken()
+          cy.window().its('__dekartChartsAtReady').should('deep.eq', { stubs: 0, busy: 0, value: '8,000' })
+          cy.get('[aria-label="Report charts"]').contains('Missed stops').should('be.visible')
+          cy.get('[aria-label="Report charts"]').contains('Missing column').should('be.visible')
+          cy.get('[aria-label="Report charts"]').contains('This chart couldn\'t load.').should('be.visible')
+          cy.get('[aria-label="Report charts"]').should('not.contain.text', 'no_such_column')
+        })
+    })
+  })
+
+  // expectSnapshotsSettle authors charts on a dataset prepared by fillSlot, then requires both renders to settle.
+  function expectSnapshotsSettle (fillSlot, charts) {
+    getDeviceToken().then((token) => {
+      callMCP(token, 'create_report').then((reportResult) => {
+        const reportId = readId(reportResult, ['report_id', 'reportId', 'id']) ||
+          readId(reportResult?.report, ['id'])
+        return callMCP(token, 'create_dataset', { report_id: reportId }).then((datasetResult) => {
+          const datasetId = readId(datasetResult, ['dataset_id', 'datasetId', 'id']) ||
+            readId(datasetResult?.dataset, ['id'])
+          return fillSlot(token, datasetId)
+            .then(() => callMCP(token, 'update_report_widgets_config', { report_id: reportId, widgets_config: buildWidgetsConfig(datasetId) }))
+            .then(() => reportId)
+        })
+      }).then((reportId) => {
+        // The map-only snapshot must not wait for data that will never arrive in this render.
+        callMCP(token, 'create_report_snapshot', { report_id: reportId }).then((snapshot) => {
+          cy.visit(snapshot.snapshot_render_url || snapshot.snapshotRenderUrl)
+          expectSnapshotReadyToken()
+        })
+        return callMCP(token, 'create_report_snapshot', { report_id: reportId, include_widgets: true })
+      }).then((snapshot) => {
+        cy.visit(snapshot.snapshot_render_url || snapshot.snapshotRenderUrl, { onBeforeLoad: sampleChartsWhenReady })
+        expectSnapshotReadyToken()
+        cy.window().its('__dekartChartsAtReady').should('deep.eq', { stubs: 0, busy: 0, value: '' })
+        cy.contains('[aria-label="Report charts"]', charts)
+      })
+    })
+  }
+
+  // An agent can author charts on a dataset slot before any query or file fills it.
+  it('settles snapshots of a report whose chart dataset has no data yet', () => {
+    expectSnapshotsSettle(() => cy.wrap(null), 'No data to chart yet.')
+  })
+
+  // A snapshot does not run queries, so a query that was never run never adds data.
+  it('settles snapshots of a report whose chart query was never run', () => {
+    expectSnapshotsSettle((token, datasetId) => callMCP(token, 'create_query', { dataset_id: datasetId, execution_engine: 'QUERY_EXECUTION_ENGINE_DUCKDB' }), 'No data to chart yet.')
+  })
+
+  // A DuckDB query that fails in the browser is an end state for both the map and the charts.
+  it('settles snapshots of a report whose chart query fails in the browser', () => {
+    expectSnapshotsSettle((token, datasetId) => callMCP(token, 'create_query', { dataset_id: datasetId, execution_engine: 'QUERY_EXECUTION_ENGINE_DUCKDB' })
+      .then((queryResult) => {
+        const queryId = readId(queryResult, ['query_id', 'queryId'])
+        return callMCP(token, 'update_query', { query_id: queryId, query_text: "SELECT error('snapshot boom') AS value" })
+          .then(() => callMCP(token, 'run_query', { query_id: queryId, accept_duckdb_execution: true }))
+      }), 'snapshot boom')
   })
 })

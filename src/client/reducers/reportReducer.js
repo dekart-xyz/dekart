@@ -2,6 +2,7 @@ import { ActionTypes as KeplerActionTypes } from '@kepler.gl/actions'
 import { setStreamError } from '../actions/message'
 import { queryChanged, queryParamChanged, updateQueryParamsFromQueries } from '../actions/query'
 import { setReadmeValue } from '../actions/readme'
+import { widgetsChanged } from '../actions/widgets'
 import { closeReport, exportMapPreview, forkReport, markKeplerPanelInteracted, newForkedReport, newReport, openReport, reportsListUpdate, reportTitleChange, reportUpdate, reportWillOpen, savedReport, saveMap, saveMapFailed, saveMapPreview, setAutoRefreshIntervalSeconds, setLastMapConfigChanged, setQueryJobRefreshTimeout, toggleReportEdit, toggleReportFullscreen, unsubscribeReports } from '../actions/report'
 
 export function reportDirectAccessEmails (state = [], action) {
@@ -23,6 +24,12 @@ export function report (state = null, action) {
       return null
     case reportUpdate.name:
       return action.report
+    // Update the report's version identifier from the authoritative save response.
+    // ignores an acknowledgement whose baseline matches neither the current nor the new version
+    case savedReport.name:
+      return state && (state.versionId === action.expectedVersionId || state.versionId === action.versionId)
+        ? { ...state, versionId: action.versionId || state.versionId }
+        : state
     default:
       return state
   }
@@ -85,6 +92,8 @@ const defaultReportStatus = {
   lastMapConfigChanged: 0,
   lastPreviewSaved: 0, // last time preview was saved
   savedReportVersion: 0,
+  savedVersionId: '',
+  mapConfigConflict: false,
   fullscreen: null,
   autoRefreshIntervalSeconds: 0,
   queryJobRefreshTimeoutId: null,
@@ -111,6 +120,7 @@ export function reportStatus (state = defaultReportStatus, action) {
   switch (action.type) {
     case updateQueryParamsFromQueries.name:
     case queryParamChanged.name:
+    case widgetsChanged.name:
     case queryChanged.name:
     case setReadmeValue.name: {
       const lastChanged = Date.now()
@@ -150,11 +160,15 @@ export function reportStatus (state = defaultReportStatus, action) {
         lastPreviewSaved: Date.now()
       }
     case savedReport.name:
+      if (state.savedVersionId !== action.expectedVersionId && state.savedVersionId !== action.versionId) {
+        return { ...state, saving: false, lastSaved: action.lastSaved }
+      }
       return {
         ...state,
         saving: false,
         lastSaved: action.lastSaved,
-        savedReportVersion: action.savedReportVersion
+        savedReportVersion: action.savedReportVersion,
+        savedVersionId: action.versionId || state.savedVersionId
       }
     case saveMapFailed.name:
       return {
@@ -182,6 +196,10 @@ export function reportStatus (state = defaultReportStatus, action) {
         lastUpdated: Date.now(),
         fullscreen,
         autoRefreshIntervalSeconds: action.report.autoRefreshIntervalSeconds || 0,
+        // Query, dataset, and readme writes rotate the report version without changing the map,
+        // so the baseline follows every streamed version except a still-unapplied remote map change.
+        savedVersionId: action.hasRemoteMapConflict ? state.savedVersionId : action.report.versionId,
+        mapConfigConflict: state.mapConfigConflict || action.hasRemoteMapConflict,
         queryJobRefreshTimeoutId: null
       }
     }
@@ -201,7 +219,11 @@ export function reportStatus (state = defaultReportStatus, action) {
       return {
         ...state,
         edit: action.edit,
-        fullscreen: action.fullscreen
+        // Reset viewer-only dirty markers when edit mode resumes from the last authored save baseline.
+        fullscreen: action.fullscreen,
+        ...(action.edit && !state.edit
+          ? { lastChanged: state.lastSaved, lastMapConfigChanged: state.lastSaved }
+          : {})
       }
     }
     case closeReport.name:

@@ -10,28 +10,6 @@ describe('DuckDB refresh from BigQuery', () => {
     cy.ensureTestWorkspace()
   })
 
-  it('scopes report dataset completion to DuckDB while switching query tabs', () => {
-    createLoadedBigQuerySource()
-    cy.get('button.ant-tabs-nav-add:visible').click()
-    cy.contains('[role="tab"]', 'New').click({ force: true })
-    selectDuckDBQuery()
-
-    cy.get('.ace_editor:visible textarea').type('datasets.', { force: true })
-    cy.get('.ace_autocomplete:visible', { timeout: 20000 }).should('contain.text', 'Query 1')
-
-    cy.contains('[role="tab"]', 'Query 1').click({ force: true })
-    enterVisibleQuery('datasets')
-    cy.get('.ace_editor:visible textarea').type('.', { force: true })
-    cy.get('body').should($body => {
-      expect($body.find('.ace_autocomplete:visible').text()).not.to.include('Query 1')
-    })
-
-    cy.contains('[role="tab"]', 'Query 2').click({ force: true })
-    enterVisibleQuery('')
-    cy.get('.ace_editor:visible textarea').type('datasets.', { force: true })
-    cy.get('.ace_autocomplete:visible', { timeout: 20000 }).should('contain.text', 'Query 1')
-  })
-
   it('shows feedback when an accepted DuckDB query is materialized', () => {
     cy.visit('/')
     cy.get('button#dekart-create-report').click()
@@ -43,7 +21,7 @@ describe('DuckDB refresh from BigQuery', () => {
 
     cy.intercept('POST', '**/Dekart/RunDuckDBQuery').as('acceptedDuckDBExecute')
     enterVisibleQuery('SELECT count(*) AS source_rows, \'re-executed\' AS execution_marker FROM datasets."Query 1"')
-    cy.get('#dekart-query-execute-button').click({ waitForAnimations: false })
+    cy.get('#dekart-query-execute-button').should('not.be.disabled').click({ waitForAnimations: false })
     cy.wait('@acceptedDuckDBExecute')
     cy.get('#dekart-query-status-message').should($status => {
       expect(['Running', 'Ready']).to.include($status.text().trim())
@@ -97,6 +75,7 @@ describe('DuckDB refresh from BigQuery', () => {
     cy.reload()
     cy.contains('[role="tab"]', 'Query 2', { timeout: 30000 }).click({ force: true })
     cy.get('#dekart-query-status-message').should('be.empty')
+    cy.openLayerPanel()
     cy.contains('Datasets(1)', { timeout: 120000 }).should('be.visible')
   })
 

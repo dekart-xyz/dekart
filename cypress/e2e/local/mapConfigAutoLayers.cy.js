@@ -9,7 +9,7 @@ function uploadActiveDataset (fixture) {
   cy.intercept('POST', '**/api/v1/file/*/upload-sessions').as('startUploadSession')
   cy.intercept('PUT', '**/api/v1/file/*/upload-sessions/*/parts/*').as('uploadPart')
   cy.intercept('POST', '**/api/v1/file/*/upload-sessions/*/complete').as('completeUploadSession')
-  cy.contains('button', 'Upload File', { timeout: 20000 }).click()
+  cy.contains('button', 'Upload File', { timeout: 20000 }).should('be.visible').click()
   cy.wait('@createFile', { timeout: 60000 })
   cy.get('input[type="file"]', { timeout: 20000 }).selectFile(fixture, { force: true })
   cy.contains('button', 'Upload').click()
@@ -70,13 +70,19 @@ describe('saved map config layer ownership', () => {
       uploadActiveDataset('cypress/fixtures/sample.csv')
       cy.openLayerPanel()
       cy.get(LAYER_SELECTOR, { timeout: 60000 }).should('have.length', 1)
+      cy.get('[data-testid="widgets-tab"]', { timeout: 120000 }).then(button => {
+        if (button.attr('aria-expanded') !== 'true') cy.wrap(button).click()
+      })
+      cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.text', '8,276')
       cy.intercept('POST', '**/Dekart/UpdateReport').as('saveReport')
       cy.get('button#dekart-save-button', { timeout: 20000 }).should('not.be.disabled').click()
       cy.wait('@saveReport', { timeout: 60000 })
 
       cy.location('pathname').should('match', /\/reports\/[^/]+\/source$/).then((pathname) => {
         const reportId = pathname.match(/\/reports\/([^/]+)\/source$/)[1]
+        let initialDatasetIds = []
         mcpCall(token, 'get_report_properties', { report_id: reportId }).then((properties) => {
+          initialDatasetIds = (properties.datasets || properties.datasetsList || []).map(dataset => dataset.id)
           const mapConfig = JSON.parse(properties.report.mapConfig || properties.report.map_config)
           mapConfig.config.visState.layers = []
           return mcpCall(token, 'update_report_map_config', {
@@ -91,6 +97,26 @@ describe('saved map config layer ownership', () => {
         cy.get('button.ant-tabs-nav-add:visible').click()
         uploadActiveDataset('cypress/fixtures/sample.csv')
         cy.get(LAYER_SELECTOR, { timeout: 60000 }).should('have.length', 1)
+        cy.get('[data-testid="widgets-tab"]', { timeout: 120000 }).then(button => {
+          if (button.attr('aria-expanded') !== 'true') cy.wrap(button).click()
+        })
+        cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.length', 2)
+        cy.get('[data-testid="number-value"]').eq(1).should('have.text', '8,276')
+        mcpCall(token, 'get_report_properties', { report_id: reportId }).then((properties) => {
+          const addedDataset = (properties.datasets || properties.datasetsList || []).find(dataset => !initialDatasetIds.includes(dataset.id))
+          expect(addedDataset?.id, 'new dataset id').to.be.a('string')
+          expect(addedDataset.id, 'new dataset id').not.to.equal('')
+          return mcpCall(token, 'remove_dataset', { dataset_id: addedDataset.id })
+        })
+        cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.length', 1)
+        cy.get(LAYER_SELECTOR, { timeout: 60000 }).should('not.exist')
+        // Dataset removal leaves storage cleanup to the browser's next authored save.
+        cy.get('button#dekart-save-button', { timeout: 30000 }).should('not.be.disabled').click()
+        cy.get('button#dekart-save-button', { timeout: 30000 }).should('not.be.disabled')
+        mcpCall(token, 'get_report_properties', { report_id: reportId }).then((properties) => {
+          const widgetsConfig = JSON.parse(properties.report.widgetsConfig || properties.report.widgets_config)
+          expect(new Set(widgetsConfig.widgets.map(widget => widget.dataId)).size).to.eq(1)
+        })
       })
     })
   })

@@ -170,6 +170,7 @@ describe('DuckDB persistence from BigQuery', () => {
     })
 
     cy.reload()
+    cy.openLayerPanel()
     cy.contains('Datasets(3)', { timeout: 120000 }).should('be.visible')
     assertQueryAndDatasetLabels(['Query 1', 'Query 2', 'Query 3'])
     cy.assertDatasetRows('Query 1', 1)

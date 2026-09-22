@@ -35,6 +35,7 @@ func expectSnapshotReportAccess(mock sqlmock.Sqlmock, reportID string, email str
 		WillReturnRows(sqlmock.NewRows([]string{
 			"id",
 			"map_config",
+			"widgets_config",
 			"title",
 			"is_author",
 			"author_email",
@@ -58,6 +59,7 @@ func expectSnapshotReportAccess(mock sqlmock.Sqlmock, reportID string, email str
 		}).AddRow(
 			reportID,
 			"{}",
+			"",
 			"Snapshot Report",
 			true,
 			email,
@@ -188,7 +190,7 @@ func TestCreateReportSnapshot_ReturnsImageURLWithBrowserlessCapture(t *testing.T
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestCreateReportSnapshot_AppendsViewportParamsToImageURLWithBrowserlessCapture(t *testing.T) {
+func TestCreateReportSnapshot_AppendsRenderParamsToImageURLWithBrowserlessCapture(t *testing.T) {
 	t.Setenv("DEKART_BROWSERLESS_TOKEN", "token")
 	t.Setenv("DEKART_APP_URL", "http://localhost:3000")
 	reportID := "00000000-0000-0000-0000-000000000023"
@@ -204,10 +206,11 @@ func TestCreateReportSnapshot_AppendsViewportParamsToImageURLWithBrowserlessCapt
 	lat := 52.52
 	lon := 13.405
 	response, err := server.CreateReportSnapshot(snapshotTestContext(email), &proto.CreateReportSnapshotRequest{
-		ReportId: reportID,
-		Zoom:     &zoom,
-		Lat:      &lat,
-		Lon:      &lon,
+		ReportId:       reportID,
+		Zoom:           &zoom,
+		Lat:            &lat,
+		Lon:            &lon,
+		IncludeWidgets: true,
 	})
 
 	require.NoError(t, err)
@@ -216,25 +219,27 @@ func TestCreateReportSnapshot_AppendsViewportParamsToImageURLWithBrowserlessCapt
 	require.Equal(t, "12", imageURL.Query().Get("zoom"))
 	require.Equal(t, "52.52", imageURL.Query().Get("lat"))
 	require.Equal(t, "13.405", imageURL.Query().Get("lon"))
+	require.Equal(t, "true", imageURL.Query().Get("include_widgets"))
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestBuildSnapshotRenderURLForBrowserless_AppendsRequestViewportParams(t *testing.T) {
+func TestBuildSnapshotRenderURLForBrowserless_AppendsRequestRenderParams(t *testing.T) {
 	t.Setenv("DEKART_SNAPSHOT_RENDER_BASE_URL_DEV", "http://localhost:3000")
 	reportID := "00000000-0000-0000-0000-000000000024"
-	request := httptest.NewRequest(http.MethodGet, "/snapshot/report/token.png?zoom=12&lat=52.52&lon=13.405", nil)
+	request := httptest.NewRequest(http.MethodGet, "/snapshot/report/token.png?zoom=12&lat=52.52&lon=13.405&include_widgets=true", nil)
 
 	renderURL, err := url.Parse(buildSnapshotRenderURLForBrowserless(
 		request,
 		"snapshot-token",
 		reportID,
-		snapshotViewportParamsFromQuery(request.URL.Query()),
+		snapshotRenderParamsFromQuery(request.URL.Query()),
 	))
 
 	require.NoError(t, err)
 	require.Equal(t, "12", renderURL.Query().Get("zoom"))
 	require.Equal(t, "52.52", renderURL.Query().Get("lat"))
 	require.Equal(t, "13.405", renderURL.Query().Get("lon"))
+	require.Equal(t, "true", renderURL.Query().Get("include_widgets"))
 }
 
 func TestCreateReportSnapshot_RequiresAuthAndReportAccess(t *testing.T) {
@@ -254,6 +259,7 @@ func TestCreateReportSnapshot_RequiresAuthAndReportAccess(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{
 			"id",
 			"map_config",
+			"widgets_config",
 			"title",
 			"is_author",
 			"author_email",

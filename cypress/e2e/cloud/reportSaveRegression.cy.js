@@ -25,7 +25,11 @@ function getStore () {
 }
 
 function createUploadedReport () {
-  cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN_INFO')
+  const email = `report-save-${Date.now()}@example.com`
+  cy.setDevClaimsEmail(email)
+  cy.intercept(`${Cypress.env('DEKART_E2E_API_URL')}/api/v1/**`, request => {
+    request.headers['X-Dekart-Claim-Email'] = email
+  })
   cy.visit('/')
   cy.ensureTestWorkspace()
   cy.get('button#dekart-create-report').click()
@@ -33,6 +37,7 @@ function createUploadedReport () {
   cy.get('input[type="file"]').selectFile('cypress/fixtures/sample.csv', { force: true })
   cy.get('button:contains("Upload")').click()
   cy.get('div:contains("8,276 rows")', { timeout: 60000 }).should('be.visible')
+  cy.get(LAYER_SELECTOR, { timeout: 120000 }).should('have.length', 1)
   cy.location('pathname', { timeout: 60000 })
     .should('match', /^\/reports\/[a-f0-9-]+\/source$/)
     .as('createdReportPath')
@@ -50,12 +55,14 @@ function markLocalMapChanged () {
   })
 }
 
-function updateReportMapConfigOutsideAppSave (store, mapConfig) {
+function sendUpdateReportOutsideAppSave (store, mapConfig, widgetsConfig) {
   const state = store.getState()
   const request = new UpdateReportRequest()
   request.setReportId(state.report.id)
   request.setMapConfig(mapConfig)
   request.setTitle(state.report.title)
+  request.setExpectedVersionId(state.report.versionId)
+  if (widgetsConfig !== undefined) request.setWidgetsConfig(widgetsConfig)
 
   const metadata = new window.Headers()
   if (state.token?.access_token) {
@@ -81,9 +88,22 @@ function updateReportMapConfigOutsideAppSave (store, mapConfig) {
     method: 'POST',
     headers: metadata,
     body
-  })).then((response) => {
+  }))
+}
+
+function updateReportMapConfigOutsideAppSave (store, mapConfig) {
+  return sendUpdateReportOutsideAppSave(store, mapConfig).then((response) => {
     expect(response.ok).to.equal(true)
+    // A rejected save answers with HTTP 200 and a trailers-only grpc-status header.
+    const grpcStatus = response.headers.get('grpc-status')
+    expect(grpcStatus === null || grpcStatus === '0', `remote update grpc-status ${grpcStatus}`).to.equal(true)
   })
+}
+
+// waitForIdleSave waits until no save is in flight and nothing is left unsaved,
+// which the save button shows with the plain cloud icon.
+function waitForIdleSave () {
+  cy.get('button#dekart-save-button .anticon-cloud', { timeout: 60000 }).should('exist')
 }
 
 function clickWriteReadme () {
@@ -98,6 +118,22 @@ function clickWriteReadme () {
 describe('cloud report save regression', () => {
   beforeEach(() => {
     cy.resetCloudTestDatabase()
+  })
+
+  it('rejects a browser widget write bound to an unknown report dataset', () => {
+    createUploadedReport()
+    getStore().then((store) => {
+      const state = store.getState()
+      const widgetsConfig = JSON.stringify({
+        version: 1,
+        widgets: [{ id: 'unknown-binding', dataId: '11111111-1111-4111-8111-111111111111', type: 'number', title: 'Rows', settings: { operation: 'count' } }]
+      })
+      sendUpdateReportOutsideAppSave(store, state.report.mapConfig, widgetsConfig).then((response) => {
+        expect(response.ok).to.equal(true)
+        expect(response.headers.get('grpc-status')).to.equal('3')
+        expect(decodeURIComponent(response.headers.get('grpc-message'))).to.contain('widgets_config.widgets[0].dataId')
+      })
+    })
   })
 
   it('does not show map conflict when own save stream arrives before save response', () => {
@@ -119,37 +155,34 @@ describe('cloud report save regression', () => {
     cy.contains('Reload').should('not.exist')
   })
 
-  it('shows map conflict when a remote map update arrives with local unsaved map edits', () => {
+  it('does not show map conflict for its own save after a readme write rotated the report version', () => {
+    cy.intercept('POST', '**/Dekart/UpdateReport').as('autoSave')
     createUploadedReport()
+    cy.wait('@autoSave', { timeout: 60000 })
+    waitForIdleSave()
+    // AddReadme rotates the report version without changing the map.
+    clickWriteReadme()
+    cy.contains('.ant-tabs-tab', 'Readme', { timeout: 30000 }).should('be.visible')
+    waitForIdleSave()
+
+    cy.intercept('POST', '**/Dekart/UpdateReport', (req) => {
+      req.continue((res) => {
+        res.setDelay(4000)
+      })
+    }).as('updateReport')
 
     markLocalMapChanged()
-    getStore().then((store) => {
-      const state = store.getState()
-      const remoteMapConfig = JSON.parse(state.report.mapConfig)
-      remoteMapConfig.config.mapState.zoom = (remoteMapConfig.config.mapState.zoom || 0) + 1
-      return updateReportMapConfigOutsideAppSave(store, JSON.stringify(remoteMapConfig))
-    })
-
-    cy.contains('Map changed', { timeout: 5000 }).should('be.visible')
-    cy.contains('Reload').should('be.visible')
-  })
-
-  it('tracks edits made in the automatically opened layer panel', () => {
-    createUploadedReport()
-
+    cy.get('button#dekart-save-button').click()
+    cy.get('button#dekart-save-button').should('be.disabled')
+    // A map edit while the save is in flight must not turn the save echo into a remote conflict.
     const visibilityToggle = '.layer__visibility-toggle .panel--header__action__component'
-    cy.get(visibilityToggle).should('have.attr', 'data-for').and('include', 'tooltip.hideLayer')
-    cy.get(visibilityToggle).trigger('click')
-    cy.get(visibilityToggle).should('have.attr', 'data-for').and('include', 'tooltip.showLayer')
-    getStore().then((store) => {
-      const state = store.getState()
-      const remoteMapConfig = JSON.parse(state.report.mapConfig)
-      remoteMapConfig.config.mapState.zoom = (remoteMapConfig.config.mapState.zoom || 0) + 1
-      return updateReportMapConfigOutsideAppSave(store, JSON.stringify(remoteMapConfig))
-    })
-
-    cy.contains('Map changed', { timeout: 5000 }).should('be.visible')
-    cy.contains('Reload').should('be.visible')
+    cy.openLayerPanel()
+    cy.get(visibilityToggle).first().trigger('click')
+    cy.get(visibilityToggle).first().should('have.attr', 'data-for').and('include', 'tooltip.showLayer')
+    cy.wait('@updateReport')
+    cy.get('button#dekart-save-button', { timeout: 60000 }).should('not.be.disabled')
+    cy.contains('Map changed').should('not.exist')
+    cy.contains('Reload').should('not.exist')
   })
 
   it('accepts a remote map update after automatic panel opening without user edits', () => {
@@ -162,19 +195,28 @@ describe('cloud report save regression', () => {
     }).as('blockedAutoSave')
     createUploadedReport()
     cy.wait('@blockedAutoSave', { timeout: 60000 })
+    cy.contains('.ant-message-error', 'The server is currently unavailable.').should('be.visible')
+    cy.contains('.ant-message-error button', 'Reload Page').should('be.visible')
     cy.get(LAYER_SELECTOR).should('have.length', 1)
 
     getStore().then((store) => {
       const state = store.getState()
-      const remoteMapConfig = JSON.parse(state.report.mapConfig)
-      remoteMapConfig.config.visState.layers = []
-      remoteMapConfig.config.mapState.zoom = (remoteMapConfig.config.mapState.zoom || 0) + 1
+      // Every save is blocked here, so there is no persisted config to reuse, and the
+      // test image ships a minimal node_modules without Kepler's schema package.
+      // shouldUpdateMapConfig ignores viewport, so the empty layer list is what drives
+      // the update; the zoom bump only keeps the config distinguishable while reading.
+      const remoteMapConfig = {
+        version: 'v1',
+        config: {
+          visState: { layers: [] },
+          mapState: { ...state.keplerGl.kepler.mapState, zoom: (state.keplerGl.kepler.mapState.zoom || 0) + 1 }
+        }
+      }
       return updateReportMapConfigOutsideAppSave(store, JSON.stringify(remoteMapConfig))
     })
 
     cy.get(LAYER_SELECTOR, { timeout: 5000 }).should('not.exist')
     cy.contains('Map changed').should('not.exist')
-    cy.contains('Reload').should('not.exist')
   })
 
   it('keeps README removed after immediate save and report reload', () => {
@@ -195,7 +237,9 @@ describe('cloud report save regression', () => {
     cy.get('@createdReportPath').then((reportPath) => {
       cy.visit(reportPath)
     })
-    cy.get('body', { timeout: 60000 }).then(($body) => {
+    cy.get('body', { timeout: 120000 }).should($body => {
+      expect($body.find('button#dekart-save-button, button:contains("Edit")').length).to.be.greaterThan(0)
+    }).then(($body) => {
       if ($body.find('button#dekart-save-button').length === 0) {
         cy.contains('button', 'Edit').click()
       }

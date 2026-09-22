@@ -73,7 +73,9 @@ describe('postgres user-defined connection happy path', () => {
     cy.wait('@runQuery', { timeout: 120000 })
     cy.get(`span:contains("${copy.ready}")`, { timeout: 120000 }).should('be.visible')
     cy.get('div:contains("1 rows")', { timeout: 120000 }).should('be.visible')
+    cy.openLayerPanel()
     cy.contains('.layer__title__type', 'geojson', { timeout: 120000 }).should('be.visible')
+    cy.waitForMapSettingsEnabled()
     cy.get('.source-data-title .dataset-name').first().then($name => {
       const section = $name.closest('.source-data-title').parent().parent()
       section.find('.show-data-table svg')[0].dispatchEvent(new MouseEvent('click', { bubbles: true }))

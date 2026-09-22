@@ -29,10 +29,11 @@ const defaultSnapshotDeviceScale = 1.0
 const minSnapshotZoom = 0
 const maxSnapshotZoom = 24
 
-type snapshotViewportParams struct {
-	zoom *float64
-	lat  *float64
-	lon  *float64
+type snapshotRenderParams struct {
+	zoom           *float64
+	lat            *float64
+	lon            *float64
+	includeWidgets bool
 }
 
 func getSnapshotTimeoutSeconds() int32 {
@@ -68,15 +69,15 @@ func (s *Server) CreateReportSnapshot(ctx context.Context, req *proto.CreateRepo
 	if err != nil {
 		return nil, status.Error(codes.Internal, "cannot issue snapshot token")
 	}
-	viewportParams := snapshotViewportParamsFromRequest(req)
+	renderParams := snapshotRenderParamsFromRequest(req)
 	snapshotURL := ""
 	if reportsnapshot.IsCaptureEnabled() {
-		snapshotURL = buildSnapshotImageURL(token, viewportParams)
+		snapshotURL = buildSnapshotImageURL(token, renderParams)
 	}
 	return &proto.CreateReportSnapshotResponse{
 		SnapshotUrl:       snapshotURL,
 		ExpiresIn:         int64(expiresAt.Sub(time.Now().UTC()).Seconds()),
-		SnapshotRenderUrl: buildSnapshotRenderURLForResponse(token, req.GetReportId(), viewportParams),
+		SnapshotRenderUrl: buildSnapshotRenderURLForResponse(token, req.GetReportId(), renderParams),
 	}, nil
 }
 
@@ -103,7 +104,7 @@ func (s *Server) HandleSnapshotReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	timeoutSeconds := getSnapshotTimeoutSeconds()
-	targetURL := buildSnapshotRenderURLForBrowserless(r, token, snapshotClaims.ReportID, snapshotViewportParamsFromQuery(r.URL.Query()))
+	targetURL := buildSnapshotRenderURLForBrowserless(r, token, snapshotClaims.ReportID, snapshotRenderParamsFromQuery(r.URL.Query()))
 	err = reportsnapshot.StreamImage(
 		authorizedCtx,
 		targetURL,
@@ -167,9 +168,9 @@ func buildSnapshotClaims(ctx context.Context, claims *user.Claims, reportID stri
 	}
 }
 
-// snapshotViewportParamsFromRequest keeps only supported viewport overrides.
-func snapshotViewportParamsFromRequest(req *proto.CreateReportSnapshotRequest) snapshotViewportParams {
-	params := snapshotViewportParams{}
+// snapshotRenderParamsFromRequest keeps only supported per-render overrides.
+func snapshotRenderParamsFromRequest(req *proto.CreateReportSnapshotRequest) snapshotRenderParams {
+	params := snapshotRenderParams{}
 	if req.Zoom != nil && isValidSnapshotZoom(req.GetZoom()) {
 		params.zoom = req.Zoom
 	}
@@ -177,12 +178,13 @@ func snapshotViewportParamsFromRequest(req *proto.CreateReportSnapshotRequest) s
 		params.lat = req.Lat
 		params.lon = req.Lon
 	}
+	params.includeWidgets = req.GetIncludeWidgets()
 	return params
 }
 
-// snapshotViewportParamsFromQuery keeps supported overrides from PNG snapshot requests.
-func snapshotViewportParamsFromQuery(values url.Values) snapshotViewportParams {
-	params := snapshotViewportParams{}
+// snapshotRenderParamsFromQuery keeps supported overrides from PNG snapshot requests.
+func snapshotRenderParamsFromQuery(values url.Values) snapshotRenderParams {
+	params := snapshotRenderParams{}
 	if zoom, ok := parseSnapshotFloat(values.Get("zoom")); ok && isValidSnapshotZoom(zoom) {
 		params.zoom = &zoom
 	}
@@ -192,6 +194,7 @@ func snapshotViewportParamsFromQuery(values url.Values) snapshotViewportParams {
 		params.lat = &lat
 		params.lon = &lon
 	}
+	params.includeWidgets = values.Get("include_widgets") == "true"
 	return params
 }
 
@@ -215,7 +218,7 @@ func isValidSnapshotLon(value float64) bool {
 	return value >= -180 && value <= 180
 }
 
-func appendSnapshotViewportParams(values url.Values, params snapshotViewportParams) {
+func appendSnapshotRenderParams(values url.Values, params snapshotRenderParams) {
 	if params.zoom != nil {
 		values.Set("zoom", strconv.FormatFloat(*params.zoom, 'f', -1, 64))
 	}
@@ -223,13 +226,17 @@ func appendSnapshotViewportParams(values url.Values, params snapshotViewportPara
 		values.Set("lat", strconv.FormatFloat(*params.lat, 'f', -1, 64))
 		values.Set("lon", strconv.FormatFloat(*params.lon, 'f', -1, 64))
 	}
+	// Omitted by default so existing callers keep byte-identical snapshot URLs.
+	if params.includeWidgets {
+		values.Set("include_widgets", "true")
+	}
 }
 
 // buildSnapshotImageURL returns API snapshot URL served by backend capture endpoint.
-func buildSnapshotImageURL(token string, viewportParams snapshotViewportParams) string {
+func buildSnapshotImageURL(token string, renderParams snapshotRenderParams) string {
 	path := fmt.Sprintf("/snapshot/report/%s.png", url.PathEscape(token))
 	values := url.Values{}
-	appendSnapshotViewportParams(values, viewportParams)
+	appendSnapshotRenderParams(values, renderParams)
 	if encodedValues := values.Encode(); encodedValues != "" {
 		path = fmt.Sprintf("%s?%s", path, encodedValues)
 	}
@@ -241,7 +248,7 @@ func buildSnapshotImageURL(token string, viewportParams snapshotViewportParams) 
 }
 
 // buildSnapshotRenderURLForBrowserless returns frontend render URL used by Browserless renderer.
-func buildSnapshotRenderURLForBrowserless(r *http.Request, token string, reportID string, viewportParams snapshotViewportParams) string {
+func buildSnapshotRenderURLForBrowserless(r *http.Request, token string, reportID string, renderParams snapshotRenderParams) string {
 	baseURL := urlFromEnv("DEKART_SNAPSHOT_RENDER_BASE_URL_DEV")
 	if baseURL == "" {
 		baseURL = strings.TrimSpace(device.RequestBaseURL(r))
@@ -249,23 +256,23 @@ func buildSnapshotRenderURLForBrowserless(r *http.Request, token string, reportI
 	if baseURL == "" {
 		baseURL = urlFromEnv("DEKART_APP_URL")
 	}
-	return fmt.Sprintf("%s%s", baseURL, buildSnapshotRenderPath(token, reportID, viewportParams))
+	return fmt.Sprintf("%s%s", baseURL, buildSnapshotRenderPath(token, reportID, renderParams))
 }
 
 // buildSnapshotRenderURLForResponse returns snapshot render URL shown to API/MCP clients.
 // This intentionally uses DEKART_APP_URL (public app URL), not dev Browserless override.
-func buildSnapshotRenderURLForResponse(token string, reportID string, viewportParams snapshotViewportParams) string {
+func buildSnapshotRenderURLForResponse(token string, reportID string, renderParams snapshotRenderParams) string {
 	baseURL := urlFromEnv("DEKART_APP_URL")
 	if baseURL == "" {
-		return buildSnapshotRenderPath(token, reportID, viewportParams)
+		return buildSnapshotRenderPath(token, reportID, renderParams)
 	}
-	return fmt.Sprintf("%s%s", baseURL, buildSnapshotRenderPath(token, reportID, viewportParams))
+	return fmt.Sprintf("%s%s", baseURL, buildSnapshotRenderPath(token, reportID, renderParams))
 }
 
-func buildSnapshotRenderPath(token string, reportID string, viewportParams snapshotViewportParams) string {
+func buildSnapshotRenderPath(token string, reportID string, renderParams snapshotRenderParams) string {
 	values := url.Values{}
 	values.Set("snapshot_token", token)
-	appendSnapshotViewportParams(values, viewportParams)
+	appendSnapshotRenderParams(values, renderParams)
 	return fmt.Sprintf(
 		"/reports/%s/snapshot?%s",
 		url.PathEscape(reportID),

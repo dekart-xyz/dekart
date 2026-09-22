@@ -62,6 +62,9 @@ export class CreateReportSnapshotRequest extends jspb.Message {
   getLon(): number;
   setLon(value: number): void;
 
+  getIncludeWidgets(): boolean;
+  setIncludeWidgets(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CreateReportSnapshotRequest.AsObject;
   static toObject(includeInstance: boolean, msg: CreateReportSnapshotRequest): CreateReportSnapshotRequest.AsObject;
@@ -78,6 +81,7 @@ export namespace CreateReportSnapshotRequest {
     zoom: number,
     lat: number,
     lon: number,
+    includeWidgets: boolean,
   }
 }
 
@@ -2648,6 +2652,9 @@ export class Report extends jspb.Message {
   setConnectionTypesList(value: Array<ConnectionTypeMap[keyof ConnectionTypeMap]>): void;
   addConnectionTypes(value: ConnectionTypeMap[keyof ConnectionTypeMap], index?: number): ConnectionTypeMap[keyof ConnectionTypeMap];
 
+  getWidgetsConfig(): string;
+  setWidgetsConfig(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Report.AsObject;
   static toObject(includeInstance: boolean, msg: Report): Report.AsObject;
@@ -2685,6 +2692,7 @@ export namespace Report {
     versionId: string,
     hasMapPreview: boolean,
     connectionTypesList: Array<ConnectionTypeMap[keyof ConnectionTypeMap]>,
+    widgetsConfig: string,
   }
 }
 
@@ -3013,6 +3021,16 @@ export class UpdateReportRequest extends jspb.Message {
   getReadme(): Readme | undefined;
   setReadme(value?: Readme): void;
 
+  hasWidgetsConfig(): boolean;
+  clearWidgetsConfig(): void;
+  getWidgetsConfig(): string;
+  setWidgetsConfig(value: string): void;
+
+  hasExpectedVersionId(): boolean;
+  clearExpectedVersionId(): void;
+  getExpectedVersionId(): string;
+  setExpectedVersionId(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): UpdateReportRequest.AsObject;
   static toObject(includeInstance: boolean, msg: UpdateReportRequest): UpdateReportRequest.AsObject;
@@ -3031,12 +3049,17 @@ export namespace UpdateReportRequest {
     queryList: Array<Query.AsObject>,
     queryParamsList: Array<QueryParam.AsObject>,
     readme?: Readme.AsObject,
+    widgetsConfig: string,
+    expectedVersionId: string,
   }
 }
 
 export class UpdateReportResponse extends jspb.Message {
   getUpdatedAt(): number;
   setUpdatedAt(value: number): void;
+
+  getVersionId(): string;
+  setVersionId(value: string): void;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): UpdateReportResponse.AsObject;
@@ -3051,6 +3074,7 @@ export class UpdateReportResponse extends jspb.Message {
 export namespace UpdateReportResponse {
   export type AsObject = {
     updatedAt: number,
+    versionId: string,
   }
 }
 
@@ -3137,6 +3161,50 @@ export class UpdateReportMapConfigResponse extends jspb.Message {
 }
 
 export namespace UpdateReportMapConfigResponse {
+  export type AsObject = {
+    updatedAt: number,
+  }
+}
+
+export class UpdateReportWidgetsConfigRequest extends jspb.Message {
+  getReportId(): string;
+  setReportId(value: string): void;
+
+  getWidgetsConfig(): string;
+  setWidgetsConfig(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): UpdateReportWidgetsConfigRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: UpdateReportWidgetsConfigRequest): UpdateReportWidgetsConfigRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: UpdateReportWidgetsConfigRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): UpdateReportWidgetsConfigRequest;
+  static deserializeBinaryFromReader(message: UpdateReportWidgetsConfigRequest, reader: jspb.BinaryReader): UpdateReportWidgetsConfigRequest;
+}
+
+export namespace UpdateReportWidgetsConfigRequest {
+  export type AsObject = {
+    reportId: string,
+    widgetsConfig: string,
+  }
+}
+
+export class UpdateReportWidgetsConfigResponse extends jspb.Message {
+  getUpdatedAt(): number;
+  setUpdatedAt(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): UpdateReportWidgetsConfigResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: UpdateReportWidgetsConfigResponse): UpdateReportWidgetsConfigResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: UpdateReportWidgetsConfigResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): UpdateReportWidgetsConfigResponse;
+  static deserializeBinaryFromReader(message: UpdateReportWidgetsConfigResponse, reader: jspb.BinaryReader): UpdateReportWidgetsConfigResponse;
+}
+
+export namespace UpdateReportWidgetsConfigResponse {
   export type AsObject = {
     updatedAt: number,
   }

@@ -24,6 +24,12 @@ describe('local MCP postgres happy path with device auth', () => {
       return ''
     }
 
+    // widgetsConfig builds the smallest valid chart document bound to one dataset.
+    const widgetsConfig = (dataId) => JSON.stringify({
+      version: 1,
+      widgets: [{ id: 'row-count', dataId, type: 'number', title: 'Rows', settings: { operation: 'count' } }]
+    })
+
     const mcpRequest = (apiBase, token, name, args = {}) => cy.request({
       method: 'POST',
       url: `${apiBase}/mcp/call`,
@@ -223,6 +229,8 @@ describe('local MCP postgres happy path with device auth', () => {
                           .then(() => {
                             // Rejection must not launch the changed warehouse prerequisite.
                             cy.visit(`${appUrl}/reports/${reportId}/source?qp_row_limit=7`)
+                            cy.openLayerPanel()
+                            cy.waitForMapSettingsEnabled()
                             cy.contains('.source-data-title .dataset-name', 'Source', { timeout: 120000 }).then($name => {
                               const section = $name.closest('.source-data-title').parent().parent()
                               section.find('.show-data-table svg')[0].dispatchEvent(new MouseEvent('click', { bubbles: true }))
@@ -260,9 +268,13 @@ describe('local MCP postgres happy path with device auth', () => {
                     })
                   }).then(() => {
                     // The same pinned jobs materialize in the browser runtime.
+                    cy.intercept('POST', '**/Dekart/UpdateReport').as('saveInitialMapConfig')
                     cy.visit(`${appUrl}/reports/${reportId}/source?qp_row_limit=7`)
                     cy.contains('span', 'Ready', { timeout: 120000 }).should('be.visible')
                     cy.get('div:contains("7 rows")', { timeout: 120000 }).should('have.length.at.least', 2)
+                    cy.openLayerPanel()
+                    cy.waitForMapSettingsEnabled()
+                    cy.wait('@saveInitialMapConfig')
                     cy.contains('.source-data-title .dataset-name', 'Result', { timeout: 120000 }).then($name => {
                       const section = $name.closest('.source-data-title').parent().parent()
                       section.find('.show-data-table svg')[0].dispatchEvent(new MouseEvent('click', { bubbles: true }))
@@ -272,6 +284,36 @@ describe('local MCP postgres happy path with device auth', () => {
                       expect(titles).to.include.members(['geometry', 'source_revision', 'longitude'])
                     })
                     cy.get('.modal--close').click()
+
+                    // Agent-facing argument errors use the CreateDataset strings.
+                    mcpRequest(apiBase, token, 'update_report_widgets_config', { report_id: '', widgets_config: widgetsConfig(datasetId) }).then((response) => {
+                      expect(response.status, 'empty report_id status').to.eq(400)
+                      expect(response.body).to.contain('report_id is required')
+                    })
+                    mcpRequest(apiBase, token, 'update_report_widgets_config', { report_id: 'not-a-uuid', widgets_config: widgetsConfig(datasetId) }).then((response) => {
+                      expect(response.status, 'malformed report_id status').to.eq(400)
+                      expect(response.body).to.contain('invalid report_id format')
+                    })
+                    mcpCall(apiBase, token, 'get_report_properties', { report_id: reportId }).then((before) => {
+                      const mapConfigBefore = before.report.map_config
+                      expect(mapConfigBefore, 'saved map_config before widget update').to.be.a('string').and.not.be.empty
+                      return mcpCall(apiBase, token, 'update_report_widgets_config', { report_id: reportId, widgets_config: widgetsConfig(datasetId) })
+                        .then(() => mcpCall(apiBase, token, 'get_report_properties', { report_id: reportId }))
+                        .then((after) => expect(after.report.map_config, 'widget-only update preserves exact map_config bytes').to.eq(mapConfigBefore))
+                    })
+
+                    // The open report adopts the MCP-authored chart from the report stream.
+                    cy.get('[data-testid="widgets-tab"]').click()
+                    cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.text', '7')
+
+                    // An unknown dataset binding rejects the complete replacement.
+                    const unboundKey = '11111111-1111-4111-8111-111111111111'
+                    mcpRequest(apiBase, token, 'update_report_widgets_config', { report_id: reportId, widgets_config: widgetsConfig(unboundKey) }).then((response) => {
+                      expect(response.status, 'unknown widget dataId status').to.eq(400)
+                      expect(response.body.error).to.eq('widgets_config_validation_failed')
+                      expect(response.body.issues[0]).to.include({ path: 'widgets_config.widgets[0].dataId', actual: unboundKey })
+                    })
+                    cy.get('[data-testid="map-settings-tab"]').click()
 
                     // Exercise the existing browser command with the same saved parameter identity.
                     mcpCall(apiBase, token, 'update_query', {

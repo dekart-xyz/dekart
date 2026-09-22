@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "inmemory://widgets_config_v1.schema.json",
+  "title": "Dekart Widgets Config v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "widgets"],
+  "properties": {
+    "version": { "const": 1 },
+    "widgets": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/widget" },
+      "maxItems": 100
+    }
+  },
+  "$defs": {
+    "shortText": { "type": "string", "maxLength": 256 },
+    "identifier": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" },
+    "dataId": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "widget": {
+      "oneOf": [
+        { "$ref": "#/$defs/numberWidget" },
+        { "$ref": "#/$defs/countPlotWidget" },
+        { "$ref": "#/$defs/histogramWidget" }
+      ]
+    },
+    "widgetBase": {
+      "type": "object",
+      "required": ["id", "dataId", "type", "title", "settings"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "dataId": { "$ref": "#/$defs/dataId" },
+        "title": { "$ref": "#/$defs/shortText" }
+      }
+    },
+    "numberWidget": {
+      "allOf": [
+        { "$ref": "#/$defs/widgetBase" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": { "$ref": "#/$defs/identifier" },
+            "dataId": { "$ref": "#/$defs/dataId" },
+            "type": { "const": "number" },
+            "title": { "$ref": "#/$defs/shortText" },
+            "settings": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["operation"],
+              "properties": {
+                "operation": { "enum": ["count", "distinct", "sum", "avg", "min", "max", "median"] },
+                "field": { "type": "string", "minLength": 1, "maxLength": 256 },
+                "format": { "enum": ["auto", "number", "compact", "percent"] },
+                "decimals": { "type": "integer", "minimum": 0, "maximum": 6 },
+                "subtitle": { "$ref": "#/$defs/shortText" },
+                "prefix": { "$ref": "#/$defs/shortText" },
+                "suffix": { "$ref": "#/$defs/shortText" }
+              },
+              "allOf": [
+                {
+                  "if": { "properties": { "operation": { "not": { "const": "count" } } }, "required": ["operation"] },
+                  "then": { "required": ["field"] }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "countPlotWidget": {
+      "allOf": [
+        { "$ref": "#/$defs/widgetBase" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": { "$ref": "#/$defs/identifier" },
+            "dataId": { "$ref": "#/$defs/dataId" },
+            "type": { "const": "count-plot" },
+            "title": { "$ref": "#/$defs/shortText" },
+            "settings": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["field"],
+              "properties": {
+                "field": { "type": "string", "minLength": 1, "maxLength": 256 },
+                "metric": { "const": "count" },
+                "sort": { "enum": ["value-desc", "value-asc", "label-asc", "label-desc"] },
+                "maxBars": { "type": "integer", "minimum": 1, "maximum": 100 }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "histogramWidget": {
+      "allOf": [
+        { "$ref": "#/$defs/widgetBase" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": { "$ref": "#/$defs/identifier" },
+            "dataId": { "$ref": "#/$defs/dataId" },
+            "type": { "const": "histogram" },
+            "title": { "$ref": "#/$defs/shortText" },
+            "settings": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["field"],
+              "properties": {
+                "field": { "type": "string", "minLength": 1, "maxLength": 256 },
+                "maxBins": { "type": "integer", "minimum": 1, "maximum": 1000 },
+                "color": { "type": "string", "minLength": 1, "maxLength": 64 }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

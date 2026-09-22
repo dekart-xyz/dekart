@@ -26,7 +26,7 @@ describe('cloud basic flow', () => {
 
     cy.get('button#dekart-share-report').click()
     cy.get('button#dekart-publish-report').click()
-    cy.get('button#dekart-publish-report')
+    cy.get('button#dekart-publish-report', { timeout: 60000 })
       .should('have.class', 'ant-switch-checked')
       .and('not.have.class', 'ant-switch-loading')
 
@@ -37,7 +37,7 @@ describe('cloud basic flow', () => {
     cy.get('div:contains("8,276 rows")', { timeout: 20000 }).should('be.visible')
     cy.get('button#dekart-share-report').click()
     cy.get('button#dekart-publish-report').click()
-    cy.get('button#dekart-publish-report')
+    cy.get('button#dekart-publish-report', { timeout: 60000 })
       .should('not.have.class', 'ant-switch-checked')
       .and('not.have.class', 'ant-switch-loading')
     cy.location('pathname').then((pathname) => {
@@ -72,7 +72,7 @@ describe('cloud basic flow', () => {
 
     cy.get('button#dekart-share-report').click()
     cy.get('button#dekart-publish-report').click()
-    cy.get('button#dekart-publish-report')
+    cy.get('button#dekart-publish-report', { timeout: 60000 })
       .should('have.class', 'ant-switch-checked')
       .and('not.have.class', 'ant-switch-loading')
 

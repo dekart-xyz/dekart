@@ -1,4 +1,4 @@
-.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down up-and-down-oidc sqlite compose-up compose-down cypress-run cypress-open expire-local-trials proto-copy-to-node proto-stub server runner-install runner-register runner-start runner-stop runner-status runner-service-install runner-service-start runner-service-stop runner-service-status github-runner license-keygen license-issue branch-snapshot
+.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down up-and-down-oidc sqlite compose-up compose-down cypress-run cypress-open expire-local-trials proto-copy-to-node proto-stub server server-release runner-install runner-register runner-start runner-stop runner-status runner-service-install runner-service-start runner-service-stop runner-service-status github-runner license-keygen license-issue branch-snapshot
 
 # load .env
 # https://lithic.tech/blog/2020-05/makefile-dot-env
@@ -29,6 +29,8 @@ RUNNER_LABELS ?= self-hosted,laptop-build
 RUNNER_NAME ?= $(shell hostname)-dekart-laptop
 GITHUB_RUNNER_TOKEN ?= $(RUNNER_TOKEN)
 RUNNER_VERSION ?= 2.328.0
+DEKART_RELEASE_IMAGE ?= dekartxyz/dekart:0.24
+DEKART_RELEASE_CONTAINER ?= dekart-server-release
 PSQL ?= psql
 LOCAL_DEV_POSTGRES_HOST ?= $(or $(DEKART_POSTGRES_HOST),localhost)
 LOCAL_DEV_POSTGRES_PORT ?= $(or $(DEKART_POSTGRES_PORT),5432)
@@ -223,11 +225,42 @@ define run_server
 	go run ./src/server/main.go
 endef
 
+define run_server_release
+	@env_file="$(1)"; \
+	docker rm -f "$(DEKART_RELEASE_CONTAINER)" >/dev/null 2>&1 || true; \
+	echo "Checking local dev port $(DEKART_PORT)..."; \
+	./scripts/restart-local-server.sh "$(DEKART_PORT)" "$(CURDIR)"; \
+	set -a; \
+	. "$$env_file"; \
+	set +a; \
+	container_postgres_host="$${DEKART_POSTGRES_HOST:-}"; \
+	case "$$container_postgres_host" in ""|localhost|127.0.0.1) container_postgres_host=host.docker.internal ;; esac; \
+	credential_mount=""; \
+	if [ -n "$${GOOGLE_APPLICATION_CREDENTIALS:-}" ] && [ -f "$$GOOGLE_APPLICATION_CREDENTIALS" ]; then \
+		credential_mount="-v $$GOOGLE_APPLICATION_CREDENTIALS:$$GOOGLE_APPLICATION_CREDENTIALS:ro"; \
+	fi; \
+	docker run $(DOCKER_TTY) --rm \
+		--name "$(DEKART_RELEASE_CONTAINER)" \
+		$$credential_mount \
+		--env-file "$$env_file" \
+		-e DEKART_PORT="$(DEKART_PORT)" \
+		-e DEKART_CORS_ORIGIN= \
+		-e DEKART_POSTGRES_HOST="$$container_postgres_host" \
+		-p "$(DEKART_PORT):$(DEKART_PORT)" \
+		$(DEKART_RELEASE_IMAGE)
+endef
+
 # Rule for the default .env file or custom env file passed as argument
 # Usage: make server           -> uses .env
 #        make server .env.cloud -> uses .env.cloud
 server:
 	$(call run_server,$(or $(filter-out server,$(MAKECMDGOALS)),.env))
+
+# Run the latest release image with a local env file.
+# Usage: make server-release            -> uses .env.cloud
+#        make server-release .env.cloud -> uses .env.cloud
+server-release:
+	$(call run_server_release,$(or $(filter-out server-release,$(MAKECMDGOALS)),.env.cloud))
 
 client:
 	@echo "Releasing local dev port $(DEKART_CLIENT_PORT)..."; \

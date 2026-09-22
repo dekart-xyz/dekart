@@ -2,14 +2,16 @@ import { useEffect } from 'react'
 import { useSelector } from 'react-redux'
 import { SNAPSHOT_TOKEN_TYPE } from '../actions/token'
 import { DuckDBJobStatus, isDuckDBDataset } from './duckdb/constants'
+import { datasetCanLoad } from './datasetCanLoad'
 
-// useSnapshotReady computes snapshot auth/data/basemap readiness flags from redux state.
-export function useSnapshotReady (snapshot, reportId, snapshotBasemapReady) {
+// useSnapshotReady computes snapshot auth/data readiness from redux state; renderReady carries the page's own gates (basemap, viewport, charts).
+export function useSnapshotReady (snapshot, reportId, renderReady) {
   const report = useSelector(state => state.report)
   const token = useSelector(state => state.token)
   const envLoaded = useSelector(state => state.env.loaded)
   const reportStatus = useSelector(state => state.reportStatus)
-  const datasetCount = useSelector(state => (state.dataset.list || []).length)
+  // Only datasets that can still load in this render may hold readiness back.
+  const hasLoadableDataset = useSelector(state => (state.dataset.list || []).some(dataset => datasetCanLoad(dataset, state.files, state.queryJobs, state.duckDBJobStates, state.queryParams.hash)))
   const downloadingCount = useSelector(state => (state.dataset.downloading || []).length)
   const duckDBReady = useSelector(state => {
     const keplerDatasets = state.keplerGl.kepler?.visState.datasets || {}
@@ -41,13 +43,13 @@ export function useSnapshotReady (snapshot, reportId, snapshotBasemapReady) {
     snapshot &&
     report?.id === reportId &&
     reportStatus.online &&
-    (reportStatus.dataAdded || datasetCount === 0) &&
+    (reportStatus.dataAdded || !hasLoadableDataset) &&
     downloadingCount === 0 &&
     duckDBReady
   )
   const reportDepsReady = envLoaded && (!snapshot || authReady)
-  // why: wait for report data/layers + basemap style readiness before rendering snapshot.
-  const snapshotReady = Boolean(snapshot && dataReady && snapshotBasemapReady)
+  // why: wait for report data/layers plus the page's render gates before rendering snapshot.
+  const snapshotReady = Boolean(snapshot && dataReady && renderReady)
   useEffect(() => {
     if (!snapshot) {
       return
