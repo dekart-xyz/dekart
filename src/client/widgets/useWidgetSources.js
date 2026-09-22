@@ -46,7 +46,8 @@ async function createWidgetView (store, datasetId, physical, preparedViews) {
   const connector = store.getState().db.connector
   await connector.query('CREATE SCHEMA IF NOT EXISTS widgets')
   await connector.query(`CREATE OR REPLACE VIEW ${widgetTableName(datasetId)} AS SELECT * FROM ${physical}`)
-  preparedViews.current.add(widgetTableName(datasetId))
+  // Key prepared views by dataset ID so deletion cleanup can find even a partially prepared source.
+  preparedViews.current.set(datasetId, widgetTableName(datasetId))
 }
 
 // Tell Mosaic that the tables behind the views changed. Only cached results are
@@ -66,6 +67,21 @@ async function prepareWidgetViews (context, generation) {
   const runtime = getDuckDBRuntime(report.id)
   const nextReadySources = {}
   const changedIds = []
+  // Remove a deleted dataset's widget view and retained table only after React has unmounted its consumers.
+  const datasetIds = new Set(datasetList.map(dataset => dataset.id))
+  const removedIds = [...preparedViews.current.keys()].filter(id => !datasetIds.has(id))
+  if (removedIds.length) {
+    // Removed charts must unmount before their view and retained source are released.
+    setReadySources(sources => Object.fromEntries(Object.entries(sources).filter(([id]) => datasetIds.has(id))))
+    await afterUnmountPainted()
+    if (!current()) return
+    for (const id of removedIds) {
+      const view = widgetTableName(id)
+      await runtime.releaseWidgetSource(id, () => store.getState().db.connector.query(`DROP VIEW IF EXISTS ${view}`))
+      preparedViews.current.delete(id)
+      preparedRevisions.current.delete(id)
+    }
+  }
   for (const dataset of datasetList) {
     if (!current()) return
     const { pending } = sourcePending(dataset, jobs, localJobs, paramsHash)
@@ -78,8 +94,10 @@ async function prepareWidgetViews (context, generation) {
     const physical = runtime.widgetTable(dataset.id)
     if (!physical) continue
     const revision = runtime.widgetRevision(dataset.id) || physical
-    nextReadySources[dataset.id] = { physical, revision }
-    if (preparedRevisions.current.get(dataset.id) === revision) continue
+    if (preparedRevisions.current.get(dataset.id) === revision) {
+      nextReadySources[dataset.id] = { physical, revision }
+      continue
+    }
     if (readySources[dataset.id]) {
       // Unmount consumers of the previous immutable source before replacing its
       // stable view. Otherwise a retained plot can render a partially invalidated
@@ -88,8 +106,13 @@ async function prepareWidgetViews (context, generation) {
       await afterUnmountPainted()
       if (!current()) return
     }
-    await createWidgetView(store, dataset.id, physical, preparedViews)
+    const preparedSource = await runtime.prepareWidgetSource(
+      dataset.id,
+      currentPhysical => createWidgetView(store, dataset.id, currentPhysical, preparedViews)
+    )
     if (!current()) return
+    if (!preparedSource) continue
+    nextReadySources[dataset.id] = preparedSource
     changedIds.push(dataset.id)
   }
   if (changedIds.length) {
@@ -108,14 +131,14 @@ function dropWidgetViews (store, preparedViews) {
   const state = store.getState()
   state.mosaicDashboard.clearAllDashboardRuntime()
   state.mosaic.destroyAllClients()
-  Promise.all([...preparedViews.current].map(view => state.db.connector.query(`DROP VIEW IF EXISTS ${view}`).catch(() => {}))).finally(() => state.room.destroy())
+  Promise.all([...preparedViews.current.values()].map(view => state.db.connector.query(`DROP VIEW IF EXISTS ${view}`).catch(() => {}))).finally(() => state.room.destroy())
 }
 
 // Keep the widget views in step with the report's datasets and return what the
 // panel should render for each one.
 export default function useWidgetSources ({ store, report, initialized, datasetList, tables, files, jobs, localJobs, paramsHash, downloads, setError }) {
   const [readySources, setReadySources] = useState({})
-  const preparedViews = useRef(new Set())
+  const preparedViews = useRef(new Map())
   const preparedRevisions = useRef(new Map())
   const prepareGeneration = useRef(0)
   // Passes are serialized: DuckDB DDL and Mosaic cache invalidation must not interleave.

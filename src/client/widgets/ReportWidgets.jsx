@@ -82,6 +82,7 @@ export default function ReportWidgets ({ visible, snapshot, editing, presentatio
   const initialized = useStore(store, state => state.room.initialized)
   const config = useStore(store, state => state.mosaicDashboard.config)
   const bindings = Object.keys(config.dashboardsById)
+  // TODO why pass to hook what it can take select itself from the store?
   const { sources, readySources } = useWidgetSources({ store, report, initialized, datasetList, tables, files, jobs, localJobs, paramsHash, downloads, setError })
 
   useEffect(() => {
