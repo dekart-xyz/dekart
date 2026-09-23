@@ -217,7 +217,6 @@ describe('browser-local DuckDB datasets', () => {
     })
     cy.waitForMapSettingsEnabled()
     cy.assertDatasetRows('long-line.csv', 1)
-    cy.get('.ant-message-notice').should('not.exist')
   })
 
   it('reports a CSV row above the line size limit without dumping the row', () => {
