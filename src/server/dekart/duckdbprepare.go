@@ -389,7 +389,8 @@ func lowerDuckDBExecution(snapshot *duckDBPreparationSnapshot, jobsByDatasetID m
 		}
 		sources = append(sources, input)
 		path := fmt.Sprintf("getvariable('dekart_source_%d_path')", index)
-		reader := fmt.Sprintf("read_csv_auto(%s, header=true)", path)
+		// max_line_size must match MAX_CSV_LINE_BYTES in src/client/lib/duckdb/database.js.
+		reader := fmt.Sprintf("read_csv_auto(%s, header=true, max_line_size=20000000)", path)
 		// Reader selection mirrors the browser's four supported source formats.
 		if source.extension == "parquet" {
 			reader = fmt.Sprintf("read_parquet(%s)", path)

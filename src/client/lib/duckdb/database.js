@@ -35,6 +35,8 @@ export async function getColumnTypes (connection, reference) {
   }))
 }
 
+const MAX_CSV_LINE_BYTES = 20000000
+
 function quoteString (value) {
   return `'${String(value).replaceAll("'", "''")}'`
 }
@@ -46,7 +48,8 @@ export function sourceReaderSQL (fileName, extension) {
   if (extension === 'geojson' || extension === 'json') {
     return `(SELECT * EXCLUDE (wkb_geometry), wkb_geometry AS _geojson FROM ST_Read(${quoteString(fileName)}, keep_wkb=true))`
   }
-  return `read_csv_auto(${quoteString(fileName)}, header=true)`
+  // Detailed warehouse geometries can exceed DuckDB's 2MB default CSV line limit.
+  return `read_csv_auto(${quoteString(fileName)}, header=true, max_line_size=${MAX_CSV_LINE_BYTES})`
 }
 
 function throwIfAborted (signal) {
@@ -206,6 +209,10 @@ export async function createDuckDBSourceTable (file, extension, datasetId, signa
     return { tableName, totalRows: Number(count.getChildAt(0).get(0)) }
   } catch (error) {
     await connection.query(`DROP TABLE IF EXISTS main.${quoteIdentifier(tableName)}`).catch(() => {})
+    // DuckDB's line size error embeds the whole oversized row, which is unreadable in the UI.
+    if (error.message?.includes('Maximum line size')) {
+      throw new Error(`CSV row exceeds ${MAX_CSV_LINE_BYTES / 1000000} MB limit`)
+    }
     throw error
   } finally {
     await connection.close().catch(() => {})

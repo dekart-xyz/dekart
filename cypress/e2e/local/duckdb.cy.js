@@ -14,15 +14,18 @@ function createReport () {
   })
 }
 
-// uploadActiveDataset selects a file for the active empty dataset and waits for storage.
+// uploadActiveDataset selects a fixture path or generated file for the active empty dataset and waits for storage.
 function uploadActiveDataset (fixture) {
+  const [file, fileName] = typeof fixture === 'string'
+    ? [`cypress/fixtures/${fixture}`, fixture]
+    : [fixture, fixture.fileName]
   cy.contains('button', 'Upload File', { timeout: 20000 }).scrollIntoView().click({ force: true })
   cy.intercept('POST', '**/api/v1/file/*/upload-sessions/*/complete').as('completeUploadSession')
-  cy.get('input[type="file"]', { timeout: 20000 }).selectFile(`cypress/fixtures/${fixture}`, { force: true })
+  cy.get('input[type="file"]', { timeout: 20000 }).selectFile(file, { force: true })
   cy.contains('button', 'Upload').click()
   cy.wait('@completeUploadSession', { timeout: 120000 })
   cy.contains('Ready', { timeout: 120000 }).should('be.visible')
-  cy.contains(fixture, { timeout: 20000 }).should('be.visible')
+  cy.contains(fileName, { timeout: 20000 }).should('be.visible')
 }
 
 // createReportAndUpload creates a report and waits for its uploaded source to load.
@@ -202,6 +205,30 @@ describe('browser-local DuckDB datasets', () => {
     insertSampleQuery('FROM range(100)')
     cy.get('#dekart-query-execute-button').click()
     cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Ready')
+  })
+
+  it('loads a CSV row longer than DuckDB default max line size', () => {
+    const coordinates = Array.from({ length: 60000 }, (_, i) => `[ ${(-115.26 + i * 1e-7).toExponential(15)}, ${(36.15 + i * 1e-7).toExponential(15)} ]`).join(', ')
+    const geometry = `{ "coordinates": [ ${coordinates} ], "type": "LineString" }`
+    createReportAndUpload({
+      contents: Cypress.Buffer.from(`name,geometry\nlong-road,"${geometry.replaceAll('"', '""')}"\n`),
+      fileName: 'long-line.csv',
+      mimeType: 'text/csv'
+    })
+    cy.waitForMapSettingsEnabled()
+    cy.assertDatasetRows('long-line.csv', 1)
+  })
+
+  it('reports a CSV row above the line size limit without dumping the row', () => {
+    const coordinates = Array.from({ length: 450000 }, (_, i) => `[ ${(-115.26 + i * 1e-8).toExponential(15)}, ${(36.15 + i * 1e-8).toExponential(15)} ]`).join(', ')
+    const geometry = `{ "coordinates": [ ${coordinates} ], "type": "LineString" }`
+    createReportAndUpload({
+      contents: Cypress.Buffer.from(`name,geometry\ntoo-long-road,"${geometry.replaceAll('"', '""')}"\n`),
+      fileName: 'too-long-line.csv',
+      mimeType: 'text/csv'
+    })
+    cy.contains('.ant-message-notice', 'CSV row exceeds 20 MB limit', { timeout: 120000 }).should('be.visible')
+    cy.get('.ant-message-notice').should('not.contain', 'Original Line')
   })
 
   it('queries GeoJSON through the bundled spatial extension', () => {
