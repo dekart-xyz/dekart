@@ -9,9 +9,11 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/grpc/codes"
 )
 
 // TrackEvent stores tracking event in database for Dekart Cloud when user is authorized
@@ -43,6 +45,11 @@ func (s Server) TrackEvent(ctx context.Context, req *proto.TrackEventRequest) (*
 		return &proto.TrackEventResponse{}, nil
 	}
 
+	// Mirror user-facing client errors to error logs so production alerts fire.
+	if clientErrorEvents[req.EventName] {
+		logClientError(ctx, req.EventName, req.EventDataJson)
+	}
+
 	if len(req.EventDataJson) > 10000 { // or appropriate limit
 		log.Error().Str("event_name", req.EventName).Int("event_data_json", len(req.EventDataJson)).Msg("Event data too large")
 		return &proto.TrackEventResponse{}, nil
@@ -65,6 +72,56 @@ func (s Server) TrackEvent(ctx context.Context, req *proto.TrackEventRequest) (*
 	}
 
 	return &proto.TrackEventResponse{}, nil
+}
+
+// clientErrorEvents are client track events that show an error to the user.
+var clientErrorEvents = map[string]bool{"setError": true, "setStreamError": true}
+
+const maxClientErrorMessageRunes = 2000
+
+type clientErrorEventData struct {
+	Message       string `json:"message"`
+	MessageLength int    `json:"message_length"`
+	Status        int    `json:"status"`
+	ReportID      string `json:"report_id"`
+	Seid          string `json:"seid"`
+}
+
+// logClientError writes one error log line for a user-facing client error event.
+func logClientError(ctx context.Context, eventName, eventDataJSON string) {
+	var data clientErrorEventData
+	// Malformed payloads still alert, with an empty message.
+	_ = json.Unmarshal([]byte(eventDataJSON), &data)
+	// Permission denied streams are expected navigation, kept analytics-only.
+	if eventName == "setStreamError" && data.Status == int(codes.PermissionDenied) {
+		return
+	}
+	// Old client bundles do not send message_length.
+	if data.MessageLength == 0 {
+		data.MessageLength = utf8.RuneCountInString(data.Message)
+	}
+	log.Error().
+		Str("client_error", eventName).
+		Str("client_message", truncateRunes(data.Message, maxClientErrorMessageRunes)).
+		Int("message_length", data.MessageLength).
+		Int("status", data.Status).
+		Str("report_id", data.ReportID).
+		Str("seid", data.Seid).
+		Str("workspace_id", user.WorkspaceIDForLogs(ctx)).
+		Int("payload_bytes", len(eventDataJSON)).
+		Msg("Client error shown to user")
+}
+
+// truncateRunes cuts s to at most n runes without splitting a UTF-8 sequence.
+func truncateRunes(s string, n int) string {
+	count := 0
+	for i := range s {
+		if count == n {
+			return s[:i]
+		}
+		count++
+	}
+	return s
 }
 
 const versionCheckEventName = "VersionCheck"

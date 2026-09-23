@@ -43,6 +43,13 @@ func CheckWorkspaceCtx(ctx context.Context) WorkspaceInfo {
 	return workspaceInfo
 }
 
+// WorkspaceIDForLogs returns the workspace ID for log fields only, or "" when absent, without logging.
+// Endpoint and business logic must use CheckWorkspaceCtx so a missing workspace is reported.
+func WorkspaceIDForLogs(ctx context.Context) string {
+	workspaceInfo, _ := ctx.Value(workspaceInfoKey).(WorkspaceInfo)
+	return workspaceInfo.ID
+}
+
 // CanCreateWorkspace checks if a user can create a workspace.
 func CanCreateWorkspace(email string) bool {
 	// Cloud keeps its existing workspace creation policy.

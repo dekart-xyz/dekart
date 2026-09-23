@@ -6,7 +6,7 @@ import MapControlButton from './MapControlButton'
 import styles from './ShowMyLocationButton.module.css'
 import classnames from 'classnames'
 import { setLocation, stopLocationTracking } from './actions/location'
-import { setError } from './actions/message'
+import { warn } from './actions/message'
 import { track } from './lib/tracking'
 
 function useUserLocation (isActive) {
@@ -49,8 +49,9 @@ function useUserLocation (isActive) {
       dispatch(setLocation({ latitude, longitude, heading, accuracy }, shouldZoom))
     }
 
+    // Denied, unavailable, and timed-out geolocation are expected user states, not app errors.
     const handleError = (error) => {
-      dispatch(setError(error))
+      dispatch(warn(error.message))
     }
 
     // Start watching position
@@ -89,6 +90,7 @@ export default function ShowMyLocationButton () {
     <div className={styles.showMyLocation}>
       <Tooltip title={isActive ? 'Hide my location' : 'Show my location'} placement='left'>
         <MapControlButton
+          id='dekart-show-my-location'
           active={isActive}
           disabled={!isGeolocationSupported}
           className={classnames(styles.showMyLocationButton, {
