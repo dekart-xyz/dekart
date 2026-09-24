@@ -5,10 +5,16 @@ import { Filter, Plus, X, ChevronDown } from 'lucide-react'
 import styles from './FilterStrip.module.css'
 
 function filterLabel (filter) {
+  if (filter.type === 'polygon') return 'Map area'
   return filter.name.filter(Boolean).join(', ').replaceAll('_', ' ')
 }
 
-function filterDescription (filter, datasets) {
+// Show bound layer labels in the map area tooltip so users can identify its scope.
+function filterDescription (filter, datasets, layers) {
+  if (filter.type === 'polygon') {
+    const labels = (filter.layerId || []).map(id => layers.find(layer => layer.id === id)?.config.label).filter(Boolean).join(', ')
+    return labels ? `Map area · ${labels}` : 'Map area'
+  }
   return `${filter.dataId.map(id => datasets[id]?.label || id).join(', ')} · ${JSON.stringify(filter.value)}`
 }
 
@@ -17,6 +23,7 @@ export default function FilterStrip ({ visible, editing, disabled, onEdit, onApp
   const dispatch = useDispatch()
   const filters = useSelector(state => state.keplerGl.kepler?.visState.filters || [])
   const datasets = useSelector(state => state.keplerGl.kepler?.visState.datasets || {})
+  const layers = useSelector(state => state.keplerGl.kepler?.visState.layers || [])
   const ref = useRef(null)
   useLayoutEffect(() => {
     const element = ref.current
@@ -27,10 +34,10 @@ export default function FilterStrip ({ visible, editing, disabled, onEdit, onApp
     resize()
     return () => { observer.disconnect(); parent.style.removeProperty('--filter-strip-height') }
   }, [])
-  const entries = filters.map((filter, index) => ({ filter, index })).filter(({ filter }) => filter.name?.some(Boolean))
+  const entries = filters.map((filter, index) => ({ filter, index })).filter(({ filter }) => filter.type === 'polygon' || filter.name?.some(Boolean))
   const chip = ({ filter, index }) => (
     <span className={styles.chip} key={filter.id}>
-      <button className={styles.name} title={filterDescription(filter, datasets)} onClick={() => onEdit(index)} disabled={!editing || disabled}>{filterLabel(filter)}</button>
+      <button className={styles.name} title={filterDescription(filter, datasets, layers)} onClick={() => onEdit(index)} disabled={!editing || disabled}>{filterLabel(filter)}</button>
       <button className={styles.remove} aria-label={`Remove ${filterLabel(filter)} filter`} disabled={disabled} onClick={() => onApply(() => dispatch(removeFilter(index)))}><X size={11} /></button>
     </span>
   )

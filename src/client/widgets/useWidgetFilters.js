@@ -3,7 +3,7 @@ import { useStore } from 'zustand'
 import { useDispatch, useSelector, useStore as useReduxStore } from 'react-redux'
 import { getFilterRecord } from '@kepler.gl/utils'
 import { nativeFilterInputs } from '../lib/nativeFilterInputs'
-import { nativeFilterPredicate } from '../lib/nativeFilterPredicate'
+import { nativeFilterField, nativeFilterPredicate } from '../lib/nativeFilterPredicate'
 import { createOrUpdateFilter, removeFilter, setFilter } from '@kepler.gl/actions'
 import { getMosaicDashboardPanelId, getMosaicDashboardSelectionName } from '@sqlrooms/mosaic'
 import { column, isIn, isBetween, literal } from '@uwdata/mosaic-sql'
@@ -51,12 +51,11 @@ export function useWidgetFilters (store, datasetId, ready, editing, pending) {
       // Keep native identities separate so a chart can exclude only filters on
       // its own field while Number and other fields still consume them.
       const native = filters.filter(filter => !filter.id.startsWith('widget:')).map(filter => {
-        const datasetIndex = filter.dataId.indexOf(datasetId)
-        const field = datasetIndex < 0 ? null : filter.name[datasetIndex]
+        const field = nativeFilterField(filter, datasetId)
         const interactors = field == null ? [] : (panels || []).filter(panel => panel.config.settings.field === field).flatMap(panel => panelClients[getMosaicDashboardPanelId(datasetId, panel.id)] || [])
         const clients = new Set(interactors.flatMap(client => client.selection === selection && typeof client.clause === 'function' ? [...(client.clause(client.value).clients || [])] : []))
         const record = getFilterRecord(datasetId, [filter], { cpuOnly: true, ignoreDomain: true }).cpu
-        return { filter, field, interactors, clients, record, predicate: record.length ? nativeFilterPredicate(filter, datasetId) : null }
+        return { filter, field, interactors, clients, record, predicate: record.length ? nativeFilterPredicate(filter, datasetId, layers) : null }
       })
       const inputs = nativeFilterInputs(table, [], layers)
       native.forEach(({ record, interactors }) => inputs.push(...nativeFilterInputs(table, record, layers).slice(2), ...interactors))

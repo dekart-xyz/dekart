@@ -1,13 +1,23 @@
 import { column, isBetween, isIn, literal } from '@uwdata/mosaic-sql'
+import { polygonFilterClause } from './polygonFilterClause'
 
-// Convert one scalar Kepler filter into the equivalent Mosaic SQL predicate.
-export function nativeFilterPredicate (filter, datasetId) {
+// Polygon names do not identify dataset fields; scalar names do.
+export function nativeFilterField (filter, datasetId) {
+  if (filter.type === 'polygon') return null
+  return filter.name[filter.dataId.indexOf(datasetId)] || null
+}
+
+// Convert one Kepler filter into the equivalent Mosaic SQL predicate.
+// example: district IN ('Berlin')
+export function nativeFilterPredicate (filter, datasetId, layers) {
   // Disabled filters remain persisted in Kepler but do not constrain charts.
   if (filter.enabled === false) return null
 
-  const datasetIndex = filter.dataId.indexOf(datasetId)
-  const field = filter.name[datasetIndex]
-  if (datasetIndex < 0 || !field) throw new Error('Map filter has no field for this dataset.')
+  // Polygon filters bind layers instead of fields and constrain every chart on their dataset.
+  if (filter.type === 'polygon') return polygonFilterClause(filter, datasetId, layers)
+
+  const field = nativeFilterField(filter, datasetId)
+  if (!field) throw new Error('Map filter has no field for this dataset.')
 
   switch (filter.type) {
     case 'select':
