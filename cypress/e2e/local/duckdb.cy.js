@@ -160,6 +160,41 @@ describe('browser-local DuckDB datasets', () => {
     cy.contains('.layer__title__type', 'point').should('be.visible')
   })
 
+  it('shows a DuckDB SQL error only on its query', () => {
+    createReport()
+    selectDuckDB()
+    replaceEditorText("SELECT ST_Y('POINT (1 2)'::VARCHAR)")
+    cy.get('#dekart-query-execute-button').click()
+    cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Query Error')
+    cy.get('#dekart-query-status-message').parent().should('contain', 'ST_Y(VARCHAR)')
+    cy.get('body').then($body => {
+      expect($body.find('.ant-message-error')).to.have.length(0)
+    })
+
+    replaceEditorText('SELECT 1 AS value')
+    cy.get('#dekart-query-execute-button').click()
+    cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Ready')
+  })
+
+  it('keeps an upstream DuckDB SQL error visible on a dependent query', () => {
+    createReport()
+    selectDuckDB()
+    replaceEditorText("SELECT ST_Y('POINT (1 2)'::VARCHAR) AS latitude")
+    cy.get('#dekart-query-execute-button').click()
+    cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Query Error')
+
+    cy.get('button.ant-tabs-nav-add:visible').first().click()
+    cy.contains('[role="tab"]', 'New').click({ force: true })
+    selectDuckDB()
+    replaceEditorText('SELECT * FROM datasets."Query 1"')
+    cy.get('#dekart-query-execute-button').click()
+    cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Query Error')
+    cy.get('#dekart-query-status-message').parent().should('contain', 'ST_Y(VARCHAR)')
+    cy.get('body').then($body => {
+      expect($body.find('.ant-message-error')).to.have.length(0)
+    })
+  })
+
   it('quotes dataset labels and skips failed sources in the default example', () => {
     createReport()
     selectDuckDB()
