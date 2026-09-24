@@ -383,13 +383,16 @@ export function runDuckDBGraph (changedDatasetIds = null) {
         })
         if (failedDependency) {
           const dependency = state.dataset.list.find(dataset => dataset.id === failedDependency)
+          // A pinned historical job may have no visible query tab, so pass its error downstream.
+          const revision = findDuckDBDependencyRevision(queryJob.dependencyRevisionsList, failedDependency)
+          const upstreamError = getState().duckDBJobStates[revision.queryJobId].error
           markDuckDBNodeUnavailable(
             dispatch,
             getState,
             node,
             queryJob.id,
             DuckDBJobStatus.DUCKDB_JOB_STATUS_ERROR,
-            `Upstream DuckDB dataset "${getDatasetName(dependency, state.dataset.list, state.files)}" failed.`
+            `Upstream DuckDB dataset "${getDatasetName(dependency, state.dataset.list, state.files)}" failed${upstreamError ? `: ${upstreamError}` : '.'}`
           )
           continue
         }
@@ -478,10 +481,6 @@ export function runDuckDBGraph (changedDatasetIds = null) {
         } catch (error) {
           if (!executionIsCurrent()) {
             return
-          }
-          // An unchanged job failing with the same error was already reported on an earlier run.
-          if (acceptedJobState?.status !== DuckDBJobStatus.DUCKDB_JOB_STATUS_ERROR || acceptedJobState.error !== error.message) {
-            dispatch(setError(error))
           }
           markDuckDBNodeUnavailable(
             dispatch,
