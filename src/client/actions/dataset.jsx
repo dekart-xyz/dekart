@@ -148,7 +148,7 @@ export function processDownloadError (err, dataset, label, emptySourceRetained, 
       dispatch(info(<><i>{label}</i> result expired, re-running</>, 'query-result-expired'))
       dispatch(runWarehouseQuery(dataset.queryId, queryText))
     } else if (err.name === 'AbortError') {
-      dispatch(setError(new Error('Download cancelled by user')))
+      dispatch(warn('Download cancelled'))
     } else if (err.status === 0) {
       dispatch(setError(new Error('Network error when downloading dataset'), false))
     } else {

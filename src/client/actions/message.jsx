@@ -7,6 +7,7 @@ import { track } from '../lib/tracking'
 const style = {}
 const STREAM_ERROR_KEY = 'stream-error'
 const MAP_CONFIG_CONFLICT_KEY = 'map-config-conflict'
+const MAX_TRACKED_MESSAGE_LENGTH = 2000
 
 message.config({ top: 40 })
 
@@ -73,30 +74,33 @@ export function showMapConfigConflictMessage () {
   return { type: showMapConfigConflictMessage.name }
 }
 
+// trackedErrorProps caps tracked error text so events stay under Plausible and TrackEvent size limits.
+function trackedErrorProps (errorMessage) {
+  const text = String(errorMessage ?? '')
+  return { message: text.slice(0, MAX_TRACKED_MESSAGE_LENGTH), message_length: text.length }
+}
+
 export function setError (err, transitive = true) {
-  return (dispatch) => {
+  return (dispatch, getState) => {
     console.error(err)
     if ([401, 403].includes(err.status)) {
       dispatch(setHttpError(err.status, `${err.message}: ${err.errorDetails}`))
-    } else if (transitive) {
-      track('setError', {
-        message: err.message // System error
-      })
-      message.error({
-        key: err.message,
-        content: err.message,
-        style
-      })
     } else {
-      track('setError', {
-        message: err.message // System error
-      })
-      message.error({
-        key: err.message,
-        content: (<PermanentError message={err.message} />),
-        duration: 10000,
-        style
-      })
+      track('setError', { ...trackedErrorProps(err.message), report_id: getState().report?.id }) // System error
+      if (transitive) {
+        message.error({
+          key: err.message,
+          content: err.message,
+          style
+        })
+      } else {
+        message.error({
+          key: err.message,
+          content: (<PermanentError message={err.message} />),
+          duration: 10000,
+          style
+        })
+      }
     }
     return { type: setError.name }
   }
@@ -115,10 +119,11 @@ export function setHttpError (status, message = '') {
 }
 
 // Helper to show error message with tracking
-function showStreamError (errorCode, errorMsg) {
+function showStreamError (errorCode, errorMsg, reportId) {
   track('setStreamError', {
     status: errorCode,
-    message: errorMsg
+    ...trackedErrorProps(errorMsg),
+    report_id: reportId
   })
   message.error({
     key: STREAM_ERROR_KEY,
@@ -146,7 +151,7 @@ export function setStreamError (code, msg) {
           // we already navigate off the page, so we don't need to show the error
           return
         }
-        showStreamError(code, serverErrorMessage)
+        showStreamError(code, serverErrorMessage, getState().report?.id)
         return
       case 5:
         dispatch(setHttpError(404))
@@ -158,7 +163,7 @@ export function setStreamError (code, msg) {
         dispatch(setHttpError(401))
         return
       default:
-        showStreamError(code, msg || serverErrorMessage)
+        showStreamError(code, msg || serverErrorMessage, getState().report?.id)
     }
   }
 }
