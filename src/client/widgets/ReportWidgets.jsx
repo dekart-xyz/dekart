@@ -56,7 +56,9 @@ function adoptWidgetsConfig (store, adoption, persisted, datasetIds, datasetKey,
 }
 
 // The panel is part of a report: Redux/report streams own saved state, SQLRooms owns editing.
-export default function ReportWidgets ({ visible, snapshot, editing, presentationPending, dataReloadPending, onSettled, onOpenData }) {
+export default function ReportWidgets ({
+  visible, snapshot, editing, presentationPending, dataReloadPending, onSettled
+}) {
   const [queryPending, setQueryPending] = useState(false)
   const [error, setError] = useState('')
   const [configRevision, setConfigRevision] = useState(0)
@@ -147,7 +149,22 @@ export default function ReportWidgets ({ visible, snapshot, editing, presentatio
         <aside className={classnames(styles.panel, { [styles.hidden]: !visible, [styles.calculating]: calculating, [styles.snapshot]: snapshot })} aria-label='Report charts' aria-busy={calculating}>
           <div className={styles.calculationLine} role='status' aria-hidden={!calculating} aria-label='Updating charts' data-testid='chart-calculation-line' />
           {widgets.conflict && <div role='alert' className={styles.error}>This report changed in another session. Reload to use the latest saved dashboard.</div>}
-          {error || widgets.error ? <div role='alert' className={styles.error}>{error || widgets.error}</div> : <WidgetContents store={store} snapshot={snapshot} sources={sources} loading={!initialized || calculating} dataReloadPending={dataReloadPending} placeholderCount={widgets.config?.widgets?.length || 3} onOpenData={onOpenData} editing={editing} configRevision={configRevision} persistedConfig={widgets.config} onReorder={config => publishAuthored(adoption, config, dispatch)} />}
+          {error || widgets.error
+            ? <div role='alert' className={styles.error}>{error || widgets.error}</div>
+            : (
+              <WidgetContents
+                store={store}
+                snapshot={snapshot}
+                sources={sources}
+                loading={!initialized || calculating}
+                dataReloadPending={dataReloadPending}
+                placeholderCount={widgets.config?.widgets?.length || 3}
+                editing={editing}
+                configRevision={configRevision}
+                persistedConfig={widgets.config}
+                onReorder={config => publishAuthored(adoption, config, dispatch)}
+              />
+              )}
         </aside>
       </RoomShell.DndProvider>
     </RoomShell>

@@ -72,5 +72,7 @@ Keep checks for: user input, environment variables, runtime variations, cross-pl
 - Keep tests independent from the implementation logic so the same mistake is not copied into both.
 
 ## Readability Guidance
+- Keep JavaScript/JSX and Go lines near 80–100 characters; review lines over 120, not a hard limit.
+- Break JSX props, conditions, and calls at logical boundaries. In Go, keep `gofmt` output.
 - when edit function that already exceeds 50 lines, consider splitting it into smaller functions with clear names and purpose.
 - when edit file that already exceeds 300 lines, consider splitting it into smaller files with clear names and purpose.

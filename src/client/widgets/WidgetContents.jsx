@@ -168,7 +168,11 @@ function handleSortableBlur (event, widget, config, keyboardDrag, setKeyboardDra
 }
 
 // Bind the flat-list sorter to SQLRooms' existing header without its grid drag behavior.
-function SortableWidget ({ store, widget, source, filterError, snapshot, onOpenData, editing, configRevision, count, dataReloadPending, config, configFingerprint, keyboardDrag, setKeyboardDrag, onReorder, setKeyboardAnnouncement }) {
+function SortableWidget ({
+  store, widget, source, filterError, snapshot, editing, configRevision, count,
+  dataReloadPending, config, configFingerprint, keyboardDrag, setKeyboardDrag,
+  onReorder, setKeyboardAnnouncement
+}) {
   const itemRef = useRef(null)
   const failed = useStore(store, state => Boolean(state.failedPanels[widget.id]))
   const { attributes, listeners, setActivatorNodeRef, setNodeRef, transform, transition, isDragging } = useSortable({ id: widget.id, disabled: !editing, data: { title: widget.title, count } })
@@ -183,7 +187,13 @@ function SortableWidget ({ store, widget, source, filterError, snapshot, onOpenD
     ? { attributes: { ...attributes, 'aria-label': `Move ${widget.title}`, 'aria-pressed': keyboardDrag?.id === widget.id }, listeners: keyboardDrag ? undefined : listeners }
     : noLayoutDrag
   const style = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scaleX(${transform.scaleX}) scaleY(${transform.scaleY})`, transition } : { transition }
-  const slot = { error: source?.error || filterError, pending: Boolean(source?.pending || source?.downloading || dataReloadPending), physical: Boolean(source?.physical), loadable: Boolean(source?.loadable), snapshot, onOpenData }
+  const slot = {
+    error: source?.error || filterError,
+    pending: Boolean(source?.pending || source?.downloading || dataReloadPending),
+    physical: Boolean(source?.physical),
+    loadable: Boolean(source?.loadable),
+    snapshot
+  }
   return (
     <div
       ref={element => { itemRef.current = element; setNodeRef(element) }}
@@ -200,7 +210,10 @@ function SortableWidget ({ store, widget, source, filterError, snapshot, onOpenD
 }
 
 // Dataset bindings remain separate for filtering; the report presents them in one scroll area.
-export default function WidgetContents ({ store, snapshot, sources, loading, dataReloadPending, placeholderCount, onOpenData, editing, configRevision, persistedConfig, onReorder }) {
+export default function WidgetContents ({
+  store, snapshot, sources, loading, dataReloadPending, placeholderCount, editing,
+  configRevision, persistedConfig, onReorder
+}) {
   const [builder, setBuilder] = useState(false)
   const [selectedSource, setSelectedSource] = useState('')
   const [filterErrors, setFilterErrors] = useState({})
@@ -227,7 +240,26 @@ export default function WidgetContents ({ store, snapshot, sources, loading, dat
       <div className={classnames(styles.reportCharts, { [styles.hidden]: builder || settingsOpen })}>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={event => publishDrag(event, config, onReorder)} accessibility={{ announcements: pointerAnnouncements }}>
           <SortableContext items={displayedConfig.widgets.map(widget => widget.id)} strategy={verticalListSortingStrategy}>
-            {displayedConfig.widgets.map(widget => <SortableWidget key={`${configRevision}:${widget.id}`} store={store} widget={widget} source={sources.find(source => source.id === widget.dataId)} filterError={filterErrors[widget.dataId]} snapshot={snapshot} onOpenData={onOpenData} editing={editing} configRevision={configRevision} count={displayedConfig.widgets.length} dataReloadPending={dataReloadPending} config={config} configFingerprint={configFingerprint} keyboardDrag={keyboardDrag} setKeyboardDrag={setKeyboardDrag} onReorder={onReorder} setKeyboardAnnouncement={setKeyboardAnnouncement} />)}
+            {displayedConfig.widgets.map(widget => (
+              <SortableWidget
+                key={`${configRevision}:${widget.id}`}
+                store={store}
+                widget={widget}
+                source={sources.find(source => source.id === widget.dataId)}
+                filterError={filterErrors[widget.dataId]}
+                snapshot={snapshot}
+                editing={editing}
+                configRevision={configRevision}
+                count={displayedConfig.widgets.length}
+                dataReloadPending={dataReloadPending}
+                config={config}
+                configFingerprint={configFingerprint}
+                keyboardDrag={keyboardDrag}
+                setKeyboardDrag={setKeyboardDrag}
+                onReorder={onReorder}
+                setKeyboardAnnouncement={setKeyboardAnnouncement}
+              />
+            ))}
           </SortableContext>
         </DndContext>
         <div className={styles.announcer} role='status' aria-live='assertive'>{keyboardAnnouncement}</div>
