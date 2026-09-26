@@ -109,7 +109,7 @@ Run commands from the repository root using the runtime configuration required b
 
 ```bash
 npm run lint
-make up-and-down
+make postgres
 make server .env.local
 make client
 set -a

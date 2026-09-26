@@ -24,7 +24,7 @@ Only specs that call `cy.stubGoogleOAuthToken(...)` need `DEV_REFRESH_TOKEN_INFO
 ## Standard Workflow
 
 1. Ensure you are in repo root.
-2. Start local Postgres with `make up-and-down`.
+2. Start local Postgres with `make postgres`.
 3. Start backend with the matching env file, for example `make server .env.cloud`.
 4. Start the frontend with `make client`.
 5. If Cypress binary is missing: `npx cypress install`

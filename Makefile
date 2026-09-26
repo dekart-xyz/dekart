@@ -1,4 +1,4 @@
-.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql up-and-down up-and-down-oidc sqlite compose-up compose-down cypress-run cypress-open expire-local-trials proto-copy-to-node proto-stub server server-release runner-install runner-register runner-start runner-stop runner-status runner-service-install runner-service-start runner-service-stop runner-service-status github-runner license-keygen license-issue branch-snapshot
+.PHONY: proto-clean proto-build proto-docker proto nodetest docker-compose-up down cloudsql postgres up-and-down-oidc sqlite compose-up compose-down cypress-run cypress-open expire-local-trials proto-copy-to-node proto-stub server server-release runner-install runner-register runner-start runner-stop runner-status runner-service-install runner-service-start runner-service-stop runner-service-status github-runner license-keygen license-issue branch-snapshot
 
 # load .env
 # https://lithic.tech/blog/2020-05/makefile-dot-env
@@ -141,7 +141,7 @@ docker-test:
 docker: # build docker for local use
 	docker buildx build --tag ${DEKART_DOCKER_DEV_TAG} -o type=image --platform=linux/amd64 -f ./Dockerfile .
 
-up-and-down:
+postgres:
 	@set -e; \
 	cleanup() { docker compose --env-file .env --profile local down --volumes --remove-orphans; }; \
 	docker compose --env-file .env --profile local up db db-tls adminer & pid=$$!; \

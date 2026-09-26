@@ -11,7 +11,7 @@ Use when starting local development, debugging server/frontend issues, or settin
 
 ## Commands
 
-- `make up-and-down` runs local Postgres.
+- `make postgres` runs local Postgres.
 - `make server .env.cloud` runs backend with the selected env file.
 - `make client` stops any existing listener on the clone's `DEKART_CLIENT_PORT` and starts Vite there.
 - Configure a unique `COMPOSE_PROJECT_NAME` and host-local ports once in each clone's `.env` before running clones concurrently.
