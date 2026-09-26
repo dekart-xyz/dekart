@@ -3,7 +3,7 @@ import { nativeFilterInputs } from './nativeFilterInputs'
 
 const table = { id: 'a', dataContainer: { numRows: () => 10 }, fields: [{ valueAccessor: () => {}, format: 'x' }] }
 const range = { id: 'range', type: 'range', dataId: ['a'], fieldIdx: [0], value: [1, 5] }
-const inputs = (filter = range, layers = [], source = table) => nativeFilterInputs(source, [filter], layers)
+const inputs = (filter = range, layers = [], source = table, columnTypes) => nativeFilterInputs(source, [filter], layers, columnTypes)
 
 describe('Native membership dependencies', () => {
   it('ignores presentation, GPU mode and unrelated layer changes', () => {
@@ -37,5 +37,13 @@ describe('Native membership dependencies', () => {
     const spatial = inputs(polygon, [layer])
     layer.centroids = [[3, 4]]
     expect(inputs(polygon, [layer])).not.toEqual(spatial)
+  })
+
+  it('invalidates only when a bound spatial column type changes', () => {
+    const polygon = { ...range, type: 'polygon', layerId: ['geo'] }
+    const layer = { id: 'geo', type: 'geojson', config: { dataId: 'a', columns: { geojson: { value: 'shape', fieldIdx: 0 } }, columnMode: 'geojson' } }
+    const before = inputs(polygon, [layer], table, { shape: 'VARCHAR', other: 'INTEGER' })
+    expect(inputs(polygon, [layer], table, { shape: 'VARCHAR', other: 'BIGINT', new: 'BLOB' })).toEqual(before)
+    expect(inputs(polygon, [layer], table, { shape: 'GEOMETRY', other: 'INTEGER' })).not.toEqual(before)
   })
 })

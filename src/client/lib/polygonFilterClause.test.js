@@ -35,4 +35,104 @@ describe('polygonFilterClause', () => {
     expect(polygonFilterClause(filter, 'other', layers).toString()).toContain('"east"')
     expect(polygonFilterClause(filter, 'other', layers).toString()).not.toContain('"longitude"')
   })
+
+  it.each(['arc', 'line'])('requires both %s endpoints inside the polygon', type => {
+    const columns = {
+      lng0: { value: 'start lng', fieldIdx: 0 },
+      lat0: { value: 'start lat', fieldIdx: 1 },
+      lng1: { value: 'end lng', fieldIdx: 2 },
+      lat1: { value: 'end lat', fieldIdx: 3 }
+    }
+    const clause = polygonFilterClause(polygon, 'dataset', [{ id: 'point', type, config: { dataId: 'dataset', columnMode: 'points', columns } }]).toString()
+    expect(clause).toContain('ST_Point("start lng", "start lat")')
+    expect(clause).toContain('ST_Point("end lng", "end lat")')
+    expect(clause).toContain(') AND (')
+  })
+
+  it('requires finite bound line altitudes as Kepler does', () => {
+    const columns = {
+      lng0: { value: 'lng0', fieldIdx: 0 },
+      lat0: { value: 'lat0', fieldIdx: 1 },
+      alt0: { value: 'height0', fieldIdx: 2 },
+      lng1: { value: 'lng1', fieldIdx: 3 },
+      lat1: { value: 'lat1', fieldIdx: 4 },
+      alt1: { value: 'height1', fieldIdx: 5 }
+    }
+    const layer = { id: 'point', type: 'line', config: { dataId: 'dataset', columnMode: 'points', columns } }
+    const clause = polygonFilterClause(polygon, 'dataset', [layer]).toString()
+    expect(clause).toContain('isfinite("height0")')
+    expect(clause).toContain('isfinite("height1")')
+  })
+
+  it.each(['arc', 'line'])('leaves %s non-point column modes without a clause', type => {
+    const layer = { id: 'point', type, config: { dataId: 'dataset', columnMode: 'geoarrow', columns: {} } }
+    expect(polygonFilterClause(polygon, 'dataset', [layer])).toBeNull()
+    expect(polygonFilterClause(polygon, 'dataset', [{ ...layer, config: { ...layer.config, columnMode: 'points' } }])).toBeNull()
+  })
+
+  it('checks H3 validity before testing the cell centroid', () => {
+    const layer = { id: 'point', type: 'hexagonId', config: { dataId: 'dataset', columns: { hex_id: { value: 'my h3', fieldIdx: 0 } } } }
+    const clause = polygonFilterClause(polygon, 'dataset', [layer]).toString()
+    expect(clause).toContain('CASE WHEN h3_is_valid_cell("my h3") THEN')
+    expect(clause).toContain('ST_Point(h3_cell_to_lng("my h3"), h3_cell_to_lat("my h3"))')
+    expect(clause).toContain('ELSE false END')
+    const stringClause = polygonFilterClause(polygon, 'dataset', [layer], { 'my h3': 'VARCHAR' }).toString()
+    expect(stringClause).toContain('h3_is_valid_cell(TRY_CAST("my h3" AS UBIGINT))')
+    expect(polygonFilterClause(polygon, 'dataset', [{ ...layer, config: { ...layer.config, columns: { hex_id: { value: null, fieldIdx: -1 } } } }])).toBeNull()
+  })
+
+  it('reads GeoArrow point coordinates from a fixed-size array', () => {
+    const layer = { id: 'point', type: 'point', config: { dataId: 'dataset', columnMode: 'geoarrow', columns: { geoarrow: { value: 'location', fieldIdx: 0 } } } }
+    const clause = polygonFilterClause(polygon, 'dataset', [layer], { location: 'DOUBLE[2]' }).toString()
+    expect(clause).toContain('isfinite("location"[1])')
+    expect(clause).toContain('ST_Point("location"[1], "location"[2])')
+    expect(polygonFilterClause(polygon, 'dataset', [layer], { location: 'FLOAT[3]' }).toString()).toContain('ST_Point("location"[1], "location"[2])')
+    expect(polygonFilterClause(polygon, 'dataset', [layer], { location: 'DOUBLE[1]' })).toBeNull()
+    expect(polygonFilterClause(polygon, 'dataset', [layer], { location: 'STRUCT(x DOUBLE, y DOUBLE)' })).toBeNull()
+    expect(polygonFilterClause(polygon, 'dataset', [layer], { location: 'UNKNOWN' })).toBeNull()
+  })
+
+  it('uses the bbox center of text geometry and accepts GeoJSON Features or WKT', () => {
+    const layer = { id: 'point', type: 'geojson', config: { dataId: 'dataset', columnMode: 'geojson', columns: { geojson: { value: 'shape', fieldIdx: 0 } } } }
+    const clause = polygonFilterClause(polygon, 'dataset', [layer], { shape: 'VARCHAR' }).toString()
+    expect(clause).toContain('ST_XMin(')
+    expect(clause).toContain('ST_XMax(')
+    expect(clause).toContain('ST_GeomFromGeoJSON(')
+    expect(clause).toContain('ST_GeomFromText(')
+    expect(clause).toContain('$.geometry')
+  })
+
+  it('uses inclusive rectangle bounds for text geometry centers', () => {
+    const rectangle = { ...polygon, value: { ...polygon.value, properties: { shape: 'Rectangle', bbox: [0, 0, 1, 1] } } }
+    const layer = { id: 'point', type: 'geojson', config: { dataId: 'dataset', columnMode: 'geojson', columns: { geojson: { value: 'shape', fieldIdx: 0 } } } }
+    const clause = polygonFilterClause(rectangle, 'dataset', [layer], { shape: 'VARCHAR' }).toString()
+    expect(clause).toContain('BETWEEN 0 AND 1')
+    expect(clause).not.toContain('ST_Within(')
+  })
+
+  it('matches Kepler empty maps for native geometry and skips unknown types', () => {
+    const layer = { id: 'point', type: 'geojson', config: { dataId: 'dataset', columnMode: 'geojson', columns: { geojson: { value: 'shape', fieldIdx: 0 } } } }
+    for (const type of ['GEOMETRY', 'BLOB']) expect(polygonFilterClause(polygon, 'dataset', [layer], { shape: type }).toString()).toBe('FALSE')
+    expect(polygonFilterClause(polygon, 'dataset', [layer], { shape: 'UNKNOWN' })).toBeNull()
+    expect(polygonFilterClause(polygon, 'dataset', [layer], {})).toBeNull()
+  })
+
+  it('does not invent a geometry predicate for point geojson mode', () => {
+    const layer = { id: 'point', type: 'point', config: { dataId: 'dataset', columnMode: 'geojson', columns: { geojson: { value: 'shape', fieldIdx: 0 } } } }
+    expect(polygonFilterClause(polygon, 'dataset', [layer], { shape: 'VARCHAR' })).toBeNull()
+  })
+
+  it.each(['arc', 'line'])('converts H3 string endpoints for %s layers', type => {
+    const columns = {
+      lng0: { value: 'start_h3', fieldIdx: 0 },
+      lat0: { value: 'start_h3', fieldIdx: 0 },
+      lng1: { value: 'end_h3', fieldIdx: 1 },
+      lat1: { value: 'end_h3', fieldIdx: 1 }
+    }
+    const layer = { id: 'point', type, config: { dataId: 'dataset', columnMode: 'points', columns } }
+    const clause = polygonFilterClause(polygon, 'dataset', [layer], { start_h3: 'VARCHAR', end_h3: 'VARCHAR' }).toString()
+    expect(clause).toContain('h3_is_valid_cell("start_h3")')
+    expect(clause).toContain('h3_is_valid_cell("end_h3")')
+    expect(clause).toContain('TRY_CAST("start_h3" AS UBIGINT)')
+  })
 })

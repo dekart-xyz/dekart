@@ -9,12 +9,12 @@ export function nativeFilterField (filter, datasetId) {
 
 // Convert one Kepler filter into the equivalent Mosaic SQL predicate.
 // example: district IN ('Berlin')
-export function nativeFilterPredicate (filter, datasetId, layers) {
+export function nativeFilterPredicate (filter, datasetId, layers, columnTypes) {
   // Disabled filters remain persisted in Kepler but do not constrain charts.
   if (filter.enabled === false) return null
 
   // Polygon filters bind layers instead of fields and constrain every chart on their dataset.
-  if (filter.type === 'polygon') return polygonFilterClause(filter, datasetId, layers)
+  if (filter.type === 'polygon') return polygonFilterClause(filter, datasetId, layers, columnTypes)
 
   const field = nativeFilterField(filter, datasetId)
   if (!field) throw new Error('Map filter has no field for this dataset.')

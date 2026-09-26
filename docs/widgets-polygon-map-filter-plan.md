@@ -22,9 +22,10 @@ Report widgets (Mosaic charts over DuckDB-Wasm) mirror Kepler map filters so cha
 | Layer type | Kepler row test | Chart SQL (`P` = polygon, `G` = parsed geometry) |
 | --- | --- | --- |
 | `point`, `icon` (lat/lng mode) | `[lng, lat, altitude?]` all finite, `[lng, lat]` within | `isfinite` on `lng`, `lat` (and bound altitude), then `ST_Within(ST_Point(lng, lat), P)` |
-| `point` (geojson/geoarrow mode) | position from geometry point, within | `ST_Within(G, P)` |
+| `point` (geojson mode) | Kepler's point accessor returns raw field values; text geometry is not parsed here | no clause until a real dataset establishes map/chart parity |
+| `point` (geoarrow mode) | Kepler reads the first two values from an Arrow FixedSizeList point | finite x/y from a `FLOAT[n]` or `DOUBLE[n]` widget column with n >= 2, then `ST_Within(ST_Point(x, y), P)` |
 | `arc`, `line` | both endpoints finite and within | same `isfinite` + point clause for `(lng0, lat0)` and `(lng1, lat1)` |
-| `hexagonId` | valid H3 id and centroid within | `CASE WHEN h3_is_valid_cell(id) THEN ST_Within(ST_Point(h3_cell_to_lng(id), h3_cell_to_lat(id)), P) ELSE false END` |
+| `hexagonId` | valid H3 id and centroid within; decimal string IDs are converted by Kepler for non-H3 fields | valid hex string or integer centroid, with a `TRY_CAST(id AS UBIGINT)` fallback for decimal strings |
 | `geojson`, text column (GeoJSON/WKT) | `@turf/center` (bbox center) within; `properties.shape === 'Rectangle'` uses inclusive bbox test on that center | center `ST_Point((ST_XMin(G)+ST_XMax(G))/2, (ST_YMin(G)+ST_YMax(G))/2)`, then `ST_Within(center, P)` or inclusive `BETWEEN` on the rectangle bbox |
 | `geojson`, DuckDB `GEOMETRY`/WKB column | Kepler computes no centroids for WKB, so every row fails (map hides all features) | `literal(false)` (Resolved Decision (a)) |
 | `geojson`, native GeoArrow column (e.g. `geoarrow.polygon`) | loaders.gl mean-vertex center within | out of scope; no clause until a dataset needs it |
@@ -75,13 +76,13 @@ Slice 3  + geometry columns ──► column types wired in; geojson text, geo-m
 - **Done when:** acceptance criteria 1, 3, 4, 5 and 7 hold for point layers.
 
 ### Slice 2: arc, line and H3
-- **Scope:** new builder cases only. `arc`/`line` apply the slice 1 point clause to `(lng0, lat0)` and `(lng1, lat1)`; `hexagonId` uses `CASE WHEN h3_is_valid_cell(id) THEN ST_Within(ST_Point(h3_cell_to_lng(id), h3_cell_to_lat(id)), P) ELSE false END`. Routing, hook and chip untouched; still no column types.
+- **Scope:** new builder cases only. `arc`/`line` apply the slice 1 point clause to `(lng0, lat0)` and `(lng1, lat1)`, including bound line altitudes; `hexagonId` uses `CASE WHEN h3_is_valid_cell(id) THEN ST_Within(ST_Point(h3_cell_to_lng(id), h3_cell_to_lat(id)), P) ELSE false END`. Routing, hook and chip untouched; still no column types.
 - **Cypress:** H3 query (`h3_latlng_to_cell_string(...) AS h3`, auto-created `hexagonId` layer) counts follow cell centroids.
 - **Unit:** arc/line both endpoints in, one endpoint out; valid and invalid H3 ids.
 - **Done when:** acceptance criterion 2 holds for H3; slice 1 specs still pass.
 
 ### Slice 3: geometry-column layers
-- **Scope:** read widget-view column types from `state.db.tables` in `useWidgetFilters`, pass them into the builder as a new `columnTypes` argument, and cache only the bound columns' type strings in `nativeFilterInputs` (D8); `geojson` on text columns (bbox center, inclusive bbox for `Rectangle`, Feature unwrapped to `$.geometry`, WKT via `ST_GeomFromText`, all inside `TRY`); `point` in geojson/geoarrow mode; `GEOMETRY`/`BLOB` geojson returns `literal(false)` with the `gstack-shortcut(dec-f4dbe00b)` marker (D1); unknown or missing type falls to the default case (D9).
+- **Scope:** read widget-view column types from `state.db.tables` in `useWidgetFilters`, pass them into the builder as a new `columnTypes` argument, and cache only the bound columns' type strings in `nativeFilterInputs` (D8); `geojson` on text columns (bbox center, inclusive bbox for `Rectangle`, Feature unwrapped to `$.geometry`, WKT via `ST_GeomFromText`, all inside `TRY`); H3 string coordinates in arc/line endpoints and decimal string IDs in `hexagonId`; GeoArrow point coordinates on fixed-size float arrays with at least two values; `GEOMETRY`/`BLOB` geojson returns `literal(false)` with the `gstack-shortcut(dec-f4dbe00b)` marker (D1); unknown or missing type falls to the default case (D9). Point geojson mode stays without a clause because Kepler 3.2.6's point accessor returns raw field values rather than a parsed geometry.
 - **Interface change:** only the added `columnTypes` argument. Slice 1 and 2 cases never read it, so their tests are unchanged.
 - **Cypress:** text GeoJSON dataset with the asymmetric polygon (charts follow bbox center); `GEOMETRY` dataset gives Number `0`, no error.
 - **Unit:** each column type, Feature vs bare geometry vs WKT, rectangle bbox branch, unknown type returns no clause, `nativeFilterInputs` invalidates on a bound column-type change and not on unrelated tables.
@@ -101,7 +102,7 @@ Slice 3  + geometry columns ──► column types wired in; geojson text, geo-m
 
 | Layer | What | Count |
 | --- | --- | --- |
-| Unit (vitest) | Builder output per layer type: point with and without altitude, geojson/geoarrow point mode, arc/line, H3, text GeoJSON (bare geometry, Feature, WKT) center and rectangle bbox, multi-layer AND, deleted layer id | +1 file |
+| Unit (vitest) | Builder output per layer type: point with and without altitude, point geojson mode's no-clause fallback, arc/line including H3 endpoints, H3, text GeoJSON (bare geometry, Feature, WKT) center and rectangle bbox, multi-layer AND, deleted layer id | +1 file |
 | Unit (vitest, stateless functions only per `AGENTS.md:18`) | Builder: `GEOMETRY`/`BLOB` -> `literal(false)` (D1), unknown/missing type -> no clause (D9), `column()` quoting with `my lat"x` (D4), disabled polygon -> null, two-dataset filter keeps only own layer (D8). `nativeFilterPredicate.test.js`: `nativeFilterField` (D5) and regression contract (scalar SQL unchanged beside a polygon). `nativeFilterInputs.test.js`: invalidates on bound column-type change, not on unrelated tables (D8) | +cases in 2 existing files |
 | E2E (cloud, extend existing spec) | Two point clusters (3 + 3 rows) ~10 degrees apart on a diagonal so auto-fit puts them in opposite corners (eng review D7), UI-drawn rectangle over one corner: Number `3`, category counts, `Map area` chip (replaces the current `No filters` assertion), remove → `6`, reload keeps `3`; labelled-layer variant | +2 cases |
 | E2E (cloud) | H3 query (`h3_latlng_to_cell_string(...) AS h3` so Kepler auto-creates a `hexagonId` layer) and text GeoJSON query with the asymmetric polygon | +2 cases |
@@ -372,8 +373,8 @@ useWidgetFilters (per dataset)
         └─ type==='polygon' → polygonFilterClause
               for layer in filter.layerId where layer.config.dataId===ds:
                 point/icon latlng  → isfinite(lng,lat[,alt]) AND ST_Within(ST_Point, P)
-                point geo mode     → ST_Within(TRY(G), P)
-                arc/line           → both endpoints as above
+                point geo mode     → no clause pending a parity dataset
+                arc/line           → both endpoints as above; H3 string fields use cell centroids
                 hexagonId          → h3_is_valid_cell ? ST_Within(h3 centroid, P) : false
                 geojson text       → bbox-center within P (Rectangle: inclusive BETWEEN)
                 geojson GEOMETRY/BLOB → literal(false)   [gstack-shortcut dec-f4dbe00b]
@@ -404,14 +405,16 @@ Synthesized from this review's findings, grouped as the Delivery Slices above. C
   - Files: `src/client/lib/polygonFilterClause.js` (+ test), `src/client/lib/nativeFilterPredicate.js` (+ test), `src/client/widgets/useWidgetFilters.js` (use `nativeFilterField`), `src/client/widgets/FilterStrip.jsx`, `cypress/e2e/cloud/widgetsPolygonMapFilter.cy.js`
   - Verify: `npx vitest run src/client/lib`; `make cypress-run ENV_FILE=.env.cloud SPEC="cypress/e2e/cloud/widgets*.cy.js"`
   - Implemented proof: 84 frontend unit tests, lint, and both point-layer Cypress cases pass. Cypress draws the rectangle through Kepler UI, then dispatches Kepler's `setPolygonFilterLayer` action because Electron could not pick the unfilled feature border reliably; chart and chip assertions use visible DOM.
-- [ ] **S2 (P1, human: ~0.5 day / CC: ~20min)** — Slice 2: arc, line and H3 cases
+- [x] **S2 (P1, human: ~0.5 day / CC: ~20min)** — Slice 2: arc, line and H3 cases
   - Surfaced by: plan semantics table, acceptance criterion 2
   - Files: `src/client/lib/polygonFilterClause.js` (+ test), `cypress/e2e/cloud/widgetsPolygonMapFilter.cy.js`
   - Verify: same commands as S1
-- [ ] **S3 (P1, human: ~1.5 days / CC: ~45min)** — Slice 3: geometry-column layers and column types
+  - Implemented proof: `npm test -- --run` passed 90 frontend tests, lint passed, and all three point/H3 polygon Cypress cases passed. Arc/line SQL requires both numeric endpoints inside the area; line altitudes must be finite, and non-point or incomplete endpoint bindings keep the existing no-clause behavior.
+- [x] **S3 (P1, human: ~1.5 days / CC: ~45min)** — Slice 3: geometry-column layers and column types
   - Surfaced by: D1, D8 (cache inputs), D9, plan steps 4 and 6
   - Files: `src/client/lib/polygonFilterClause.js` (+ test), `src/client/lib/nativeFilterPredicate.js`, `src/client/widgets/useWidgetFilters.js`, `src/client/lib/nativeFilterInputs.js` (+ test), `cypress/e2e/cloud/widgetsPolygonMapFilter.cy.js`
   - Verify: same commands as S1
+  - Implemented proof: `npm test -- --run` passed 98 frontend tests, lint passed, direct DuckDB checks covered GeoJSON, Feature, WKT, malformed text, decimal H3 strings, and fixed-size point arrays, and all seven point/H3/GeoJSON/GEOMETRY/GeoArrow Cypress cases passed. The wider widget and Kepler reload run passed 15 cases with one pre-existing pending spec. H3 string arc/line endpoints use cell centroids; point geojson mode remains without a clause because Kepler does not parse text geometry in that accessor. The GeoArrow Cypress case binds its layer explicitly because the current DuckDB delivery path does not attach `geoarrow.point` metadata for automatic layer creation.
 
 ### Unresolved decisions
 None.
@@ -434,7 +437,7 @@ None.
 ### Suppressed findings (appendix, confidence ≤ 5)
 - (5/10) Between the view swap (`useWidgetSources.js:48`) and schema refresh (`:119`), charts may briefly query with a clause built for the old column type; `TRY` keeps it to transient wrong counts, then the clause rebuilds.
 - (3/10) Mosaic pre-aggregation indexes may not apply to spatial predicates; unverified.
-- (4/10) H3 ids stored as integers vs strings may differ between Kepler `h3IsValid` and DuckDB `h3_is_valid_cell`; unverified.
+- (4/10) Kepler's H3 field typing can select a direct or decimal-converting accessor; DuckDB handles hex strings, integer IDs, and decimal strings, but mixed field inference was not tested end to end.
 
 ## GSTACK REVIEW REPORT
 
