@@ -62,13 +62,13 @@ function geojsonClause (name, type, filter, polygon) {
   return sql`ST_Within(ST_Point(${x}, ${y}), ${polygon})`
 }
 
-// Kepler's GeoArrow point accessor reads the first two values of an Arrow FixedSizeList.
-function geoarrowPointClause (name, type, polygon) {
+// Kepler's GeoArrow accessors read point coordinates from an Arrow FixedSizeList.
+function geoarrowPointClause (name, type, polygon, firstIndex = 1) {
   const arrayType = /^(?:FLOAT|DOUBLE)\[(\d+)\]$/.exec(type || '')
-  if (!name || !arrayType || Number(arrayType[1]) < 2) return null
+  if (!name || !arrayType || Number(arrayType[1]) < firstIndex + 1) return null
   const value = column(name)
-  const x = sql`${value}[1]`
-  const y = sql`${value}[2]`
+  const x = sql`${value}[${literal(firstIndex)}]`
+  const y = sql`${value}[${literal(firstIndex + 1)}]`
   return sql`(isfinite(${x}) AND isfinite(${y}) AND ST_Within(ST_Point(${x}, ${y}), ${polygon}))`
 }
 
@@ -85,6 +85,12 @@ export function polygonFilterClause (filter, datasetId, layers, columnTypes) {
       return pointClause(layer.config.columns, polygon)
     }
     // Kepler keeps a line only when both finite endpoints are inside the area.
+    if ((layer.type === 'arc' || layer.type === 'line') && layer.config.columnMode === 'geoarrow') {
+      const { geoarrow0, geoarrow1 } = layer.config.columns
+      const start = geoarrowPointClause(geoarrow0?.value, columnTypes?.[geoarrow0?.value], polygon)
+      const end = geoarrowPointClause(geoarrow1?.value, columnTypes?.[geoarrow1?.value], polygon, 3)
+      return start && end ? and(start, end) : null
+    }
     if ((layer.type === 'arc' || layer.type === 'line') && layer.config.columnMode === 'points') {
       const { lng0, lat0, alt0, lng1, lat1, alt1 } = layer.config.columns
       // A partially configured layer has no usable pair of map positions yet.

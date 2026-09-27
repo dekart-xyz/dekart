@@ -64,10 +64,20 @@ describe('polygonFilterClause', () => {
     expect(clause).toContain('isfinite("height1")')
   })
 
-  it.each(['arc', 'line'])('leaves %s non-point column modes without a clause', type => {
+  it.each(['arc', 'line'])('skips %s layers without usable endpoint columns', type => {
     const layer = { id: 'point', type, config: { dataId: 'dataset', columnMode: 'geoarrow', columns: {} } }
     expect(polygonFilterClause(polygon, 'dataset', [layer])).toBeNull()
     expect(polygonFilterClause(polygon, 'dataset', [{ ...layer, config: { ...layer.config, columnMode: 'points' } }])).toBeNull()
+  })
+
+  it.each(['arc', 'line'])('checks both %s GeoArrow endpoints', type => {
+    const columns = { geoarrow0: { value: 'start', fieldIdx: 0 }, geoarrow1: { value: 'end', fieldIdx: 1 } }
+    const layer = { id: 'point', type, config: { dataId: 'dataset', columnMode: 'geoarrow', columns } }
+    const clause = polygonFilterClause(polygon, 'dataset', [layer], { start: 'DOUBLE[2]', end: 'DOUBLE[4]' }).toString()
+    expect(clause).toContain('ST_Point("start"[1], "start"[2])')
+    expect(clause).toContain('ST_Point("end"[3], "end"[4])')
+    expect(clause).toContain(') AND (')
+    expect(polygonFilterClause(polygon, 'dataset', [layer], { start: 'DOUBLE[2]', end: 'DOUBLE[2]' })).toBeNull()
   })
 
   it('checks H3 validity before testing the cell centroid', () => {
