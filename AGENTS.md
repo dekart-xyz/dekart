@@ -62,14 +62,14 @@ tool input.
 - For implementation/refactor tasks, use `skills/code-style/SKILL.md`.
 - Before reporting code work complete, run `skills/verify-before-done/SKILL.md`.
 - For local frontend development, use `make client` so an existing Vite server on the clone's `DEKART_CLIENT_PORT` is stopped before starting a fresh one.
-- For local E2E tests, run local Postgres with `make up-and-down`, the backend with `make server <env-file>`, and the frontend with `make client`; do not rebuild Docker images unless explicitly validating the container/CI image.
+- For local E2E tests, run local Postgres with `make postgres`, the backend with `make server <env-file>`, and the frontend with `make client`; do not rebuild Docker images unless explicitly validating the container/CI image.
 - Keep the Cypress env file aligned with the spec folder: `.env.cloud` for `cypress/e2e/cloud`, `.env.googleoauth` for `cypress/e2e/google-oauth`, `.env.snowflake-s3` for `cypress/e2e/snowflake-s3`, and so on.
 - Run Cypress through `make cypress-run ENV_FILE=<env-file> SPEC="<spec-path>"` or `make cypress-open ENV_FILE=<env-file>` so lane settings and clone-local resources get the correct precedence.
 - For local authenticated Cypress/dev-claim workflows, use an env file with `DEKART_DEV_CLAIMS=1` and set identity before visiting with `cy.setDevClaimsEmail(email)`.
 - Use `DEV_REFRESH_TOKEN_INFO` and `DEV_REFRESH_TOKEN` only as Cypress/agent-side token inputs for tests that call `cy.stubGoogleOAuthToken(...)`; do not pass them to the server as a Dekart auth shortcut. Tests that do not call that helper do not need refresh tokens.
 - `make server <env-file>` derives local CORS from the clone's `DEKART_CLIENT_PORT`.
 - Cloud Cypress local proof command: run `make server .env.cloud`, run `make client`, then run `make cypress-run ENV_FILE=.env.cloud SPEC="cypress/e2e/cloud/*.cy.js"`.
-– Start with fresh local database when needed via `make up-and-down` or `rm ./data/dekart.db` to avoid stale state issues.
+– Start with fresh local database when needed via `make postgres` or `rm ./data/dekart.db` to avoid stale state issues.
 
 ## Skill Failure Recovery
 

@@ -481,6 +481,6 @@ describe('local MCP snapshot viewport params', () => {
         const queryId = readId(queryResult, ['query_id', 'queryId'])
         return callMCP(token, 'update_query', { query_id: queryId, query_text: "SELECT error('snapshot boom') AS value" })
           .then(() => callMCP(token, 'run_query', { query_id: queryId, accept_duckdb_execution: true }))
-      }), 'snapshot boom')
+      }), "This chart couldn't load.")
   })
 })

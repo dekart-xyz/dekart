@@ -43,7 +43,7 @@ To run multiple clones at once, copy `.env.example` to `.env` in each clone and 
 1. Start local Postgres and keep this terminal open:
 
 ```bash
-make up-and-down
+make postgres
 ```
 
 2. Start the backend with the env file that matches the spec folder:

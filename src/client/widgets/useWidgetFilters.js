@@ -3,7 +3,7 @@ import { useStore } from 'zustand'
 import { useDispatch, useSelector, useStore as useReduxStore } from 'react-redux'
 import { getFilterRecord } from '@kepler.gl/utils'
 import { nativeFilterInputs } from '../lib/nativeFilterInputs'
-import { nativeFilterPredicate } from '../lib/nativeFilterPredicate'
+import { nativeFilterField, nativeFilterPredicate } from '../lib/nativeFilterPredicate'
 import { createOrUpdateFilter, removeFilter, setFilter } from '@kepler.gl/actions'
 import { getMosaicDashboardPanelId, getMosaicDashboardSelectionName } from '@sqlrooms/mosaic'
 import { column, isIn, isBetween, literal } from '@uwdata/mosaic-sql'
@@ -22,6 +22,7 @@ export function useWidgetFilters (store, datasetId, ready, editing, pending) {
   const table = useSelector(state => state.keplerGl.kepler?.visState.datasets[datasetId])
   const filters = useSelector(state => state.keplerGl.kepler?.visState.filters)
   const layers = useSelector(state => state.keplerGl.kepler?.visState.layers)
+  const widgetColumns = useStore(store, state => state.db.tables.find(table => table.table.schema === 'widgets' && table.table.table === `d_${datasetId.replaceAll('-', '_')}`)?.columns)
   const panelClients = useStore(store, state => state.mosaicDashboard.runtime.panelClients)
   const selection = store.getState().mosaic.getSelection(getMosaicDashboardSelectionName(datasetId))
   const nativeSources = useRef(new Map())
@@ -48,18 +49,20 @@ export function useWidgetFilters (store, datasetId, ready, editing, pending) {
   useEffect(() => {
     if (!settled || !table) return
     try {
-      // Keep native identities separate so a chart can exclude only filters on
-      // its own field while Number and other fields still consume them.
+      // Kepler’s layer binding tells us which field it uses, but not whether the chart sees that field as text, native GEOMETRY, an H3 string, or GeoArrow coordinates.
+      // we need actual db type
+      const columnTypes = Object.fromEntries((widgetColumns || []).map(({ name, type }) => [name, type]))
+      // “Native” means a filter created and owned by Kepler’s map/filter UI. The code separates those from filters created by a chart, whose IDs start with widget:
+      // TODO: all filters should be native -> one directional flow
       const native = filters.filter(filter => !filter.id.startsWith('widget:')).map(filter => {
-        const datasetIndex = filter.dataId.indexOf(datasetId)
-        const field = datasetIndex < 0 ? null : filter.name[datasetIndex]
+        const field = nativeFilterField(filter, datasetId)
         const interactors = field == null ? [] : (panels || []).filter(panel => panel.config.settings.field === field).flatMap(panel => panelClients[getMosaicDashboardPanelId(datasetId, panel.id)] || [])
         const clients = new Set(interactors.flatMap(client => client.selection === selection && typeof client.clause === 'function' ? [...(client.clause(client.value).clients || [])] : []))
         const record = getFilterRecord(datasetId, [filter], { cpuOnly: true, ignoreDomain: true }).cpu
-        return { filter, field, interactors, clients, record, predicate: record.length ? nativeFilterPredicate(filter, datasetId) : null }
+        return { filter, field, interactors, clients, record, predicate: record.length ? nativeFilterPredicate(filter, datasetId, layers, columnTypes) : null }
       })
-      const inputs = nativeFilterInputs(table, [], layers)
-      native.forEach(({ record, interactors }) => inputs.push(...nativeFilterInputs(table, record, layers).slice(2), ...interactors))
+      const inputs = nativeFilterInputs(table, [], layers, columnTypes)
+      native.forEach(({ record, interactors }) => inputs.push(...nativeFilterInputs(table, record, layers, columnTypes).slice(2), ...interactors))
       const previous = nativeCache.current
       if (previous?.selection === selection && inputs.length === previous.inputs.length && inputs.every((input, index) => Object.is(input, previous.inputs[index]))) return
       return store.getState().deferWidgetFilter(() => {
@@ -84,7 +87,7 @@ export function useWidgetFilters (store, datasetId, ready, editing, pending) {
         return false
       })
     } catch (error) { nativeCache.current = null; setNativeError(`Could not apply map filters: ${error.message}`) }
-  }, [settled, table, filters, layers, selection, datasetId, store, panels, panelClients])
+  }, [settled, table, filters, layers, widgetColumns, selection, datasetId, store, panels, panelClients])
 
   useEffect(() => {
     if (!ready || (!pending && !reloadRecovery.current)) return

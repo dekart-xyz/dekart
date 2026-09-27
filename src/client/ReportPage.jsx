@@ -657,7 +657,20 @@ export default function ReportPage ({ edit, snapshot }) {
             {/*  Mount the shared pane header and authoritative filter strip outside snapshot mode; a snapshot renders charts without their controls. */}
             {!snapshot && <MapPaneHeader selected={leftPanel} expanded={paneOpen} onSelect={selectPane} onToggle={() => { paneChoiceMade.current = true; paneOpen ? setPaneCollapsed(true) : selectPane(leftPanel) }} />}
             {!snapshot && <FilterStrip visible={paneOpen && leftPanel === 'widgets'} editing={edit && report.canWrite && !readOnly} disabled={queriesRunning} onEdit={editFilter} onApply={apply => applyWidgetMapChange(apply, widgetFilterCancel, setWidgetFilterPending, dispatch)} />}
-            {(!snapshot || snapshotWidgets) && <Suspense fallback={null}><ReportWidgets key={id} snapshot={snapshotWidgets} visible={snapshotWidgets ? hasBoundWidgets : paneOpen && leftPanel === 'widgets'} presentationPending={widgetFilterPending} dataReloadPending={queriesRunning} editing={edit && report.canWrite && !readOnly} onSettled={snapshotWidgets ? setSnapshotChartsSettled : undefined} onOpenData={() => document.getElementById('dekart-report-page-tabs')?.scrollIntoView({ block: 'nearest' })} /></Suspense>}
+            {(!snapshot || snapshotWidgets) && (
+              // report shows nothing in that spot while the chart component loads
+              <Suspense fallback={null}>
+                <ReportWidgets
+                  key={id}
+                  snapshot={snapshotWidgets}
+                  visible={snapshotWidgets ? hasBoundWidgets : paneOpen && leftPanel === 'widgets'}
+                  presentationPending={widgetFilterPending}
+                  dataReloadPending={queriesRunning}
+                  editing={edit && report.canWrite && !readOnly}
+                  onSettled={snapshotWidgets ? setSnapshotChartsSettled : undefined}
+                />
+              </Suspense>
+            )}
             <Kepler
               snapshot={snapshot}
               interactionDisabled={queriesRunning}
