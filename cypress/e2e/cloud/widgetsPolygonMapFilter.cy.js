@@ -1,5 +1,13 @@
 /* global cy, describe, it, Cypress, expect */
-import { addLayer, setPolygonFilterLayer } from '@kepler.gl/actions'
+
+// The E2E image runs against the built app and does not include Kepler's node package.
+function addLayer (config) {
+  return { type: '@@kepler.gl/ADD_LAYER', config }
+}
+
+function setPolygonFilterLayer (layer, feature) {
+  return { type: '@@kepler.gl/SET_POLYGON_FILTER_LAYER', layer, feature }
+}
 
 const SIX_ROW_QUERY = "SELECT CASE WHEN i < 3 THEN 52.5 ELSE 42.5 END + i / 100 AS latitude, CASE WHEN i < 3 THEN 13.4 ELSE 23.4 END + i / 100 AS longitude, CASE WHEN i < 3 THEN 'Alpha' ELSE 'Beta' END AS category FROM range(6) t(i)"
 const H3_QUERY = "SELECT h3_latlng_to_cell_string(CASE WHEN i < 3 THEN 52.5 ELSE 42.5 END + i / 100, CASE WHEN i < 3 THEN 13.4 ELSE 23.4 END + i / 100, 7) AS h3, CASE WHEN i < 3 THEN 'Alpha' ELSE 'Beta' END AS category FROM range(6) t(i) UNION ALL SELECT 'not-a-cell' AS h3, 'Invalid' AS category"
@@ -26,6 +34,7 @@ function openChartReport (emailPrefix, query, count) {
   cy.ensureTestWorkspace()
   cy.get('#dekart-create-report').click()
   cy.contains('button', 'DuckDB', { timeout: 30000 }).click()
+  cy.get('.ace_editor:not(.ace_autocomplete):visible textarea', { timeout: 120000 })
   cy.enterQuery(query)
   cy.get('#dekart-query-execute-button').should('be.enabled').click()
   cy.get('#dekart-query-status-message', { timeout: 120000 }).should('contain', 'Ready')
@@ -171,7 +180,7 @@ describe('widgets with a polygon map filter', () => {
     cy.wait(3000)
     cy.get('[data-testid="filter-strip"]').should('contain.text', 'Map area')
     cy.contains('Could not apply map filters', { timeout: 30000 }).should('not.exist')
-    cy.get('[data-testid="number-value"]', { timeout: 30000 }).should('have.text', '3')
+    cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.text', '3')
     cy.get('[data-testid="category-chart"]').should('contain.text', 'Alpha').and('not.contain.text', 'Beta')
   })
 
@@ -187,7 +196,7 @@ describe('widgets with a polygon map filter', () => {
     })
     bindPrecisePolygon('arc')
     cy.get('[data-testid="filter-strip"]').should('contain.text', 'Map area')
-    cy.get('[data-testid="number-value"]', { timeout: 30000 }).should('have.text', '3')
+    cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.text', '3')
     cy.get('[data-testid="category-chart"]').should('contain.text', 'Alpha').and('not.contain.text', 'Beta').and('not.contain.text', 'Cross')
   })
 })

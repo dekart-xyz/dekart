@@ -20,7 +20,9 @@ describe('DuckDB refresh from BigQuery', () => {
     addDuckDBQuery('SELECT primary_type, district, latitude, longitude, date FROM datasets."Query 1"')
 
     cy.intercept('POST', '**/Dekart/RunDuckDBQuery').as('acceptedDuckDBExecute')
+    cy.intercept('POST', '**/Dekart/UpdateReport').as('saveDuckDBDraft')
     enterVisibleQuery('SELECT count(*) AS source_rows, \'re-executed\' AS execution_marker FROM datasets."Query 1"')
+    cy.wait('@saveDuckDBDraft')
     cy.get('#dekart-query-execute-button').should('not.be.disabled').click({ waitForAnimations: false })
     cy.wait('@acceptedDuckDBExecute')
     cy.get('#dekart-query-status-message').should($status => {
