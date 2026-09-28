@@ -19,14 +19,17 @@ func validWidgetsConfig() string {
 func TestValidateWidgetsConfigV1(t *testing.T) {
 	require.NoError(t, validateWidgetsConfig(validWidgetsConfig()))
 	require.NoError(t, validateWidgetsConfig(`{"version":1,"widgets":[{"id":"sum","dataId":"dataset-1","type":"number","title":"Sum","settings":{"operation":"sum","field":"amount"}}]}`))
+	require.NoError(t, validateWidgetsConfig(`{"version":1,"widgets":[{"id":"search","dataId":"dataset-1","type":"search","title":"Search","settings":{"field":"locker_name"}}]}`))
 	for name, value := range map[string]string{
-		"blank":              " ",
-		"old shape":          `{"version":1,"provider":"sqlrooms","config":{"dashboardsById":{}}}`,
-		"unknown root key":   `{"version":1,"widgets":[],"selection":[]}`,
-		"future chart":       `{"version":1,"widgets":[{"id":"p","dataId":"d","type":"pie","title":"x","settings":{}}]}`,
-		"missing field":      `{"version":1,"widgets":[{"id":"p","dataId":"d","type":"number","title":"x","settings":{"operation":"sum"}}]}`,
-		"duplicate ids":      `{"version":1,"widgets":[{"id":"p","dataId":"d","type":"number","title":"x","settings":{"operation":"count"}},{"id":"p","dataId":"d","type":"number","title":"y","settings":{"operation":"count"}}]}`,
-		"unknown widget key": `{"version":1,"widgets":[{"id":"p","dataId":"d","type":"number","title":"x","settings":{"operation":"count"},"sql":"select 1"}]}`,
+		"blank":                " ",
+		"old shape":            `{"version":1,"provider":"sqlrooms","config":{"dashboardsById":{}}}`,
+		"unknown root key":     `{"version":1,"widgets":[],"selection":[]}`,
+		"future chart":         `{"version":1,"widgets":[{"id":"p","dataId":"d","type":"pie","title":"x","settings":{}}]}`,
+		"search missing field": `{"version":1,"widgets":[{"id":"p","dataId":"d","type":"search","title":"x","settings":{}}]}`,
+		"search extra setting": `{"version":1,"widgets":[{"id":"p","dataId":"d","type":"search","title":"x","settings":{"field":"name","maxBins":15}}]}`,
+		"missing field":        `{"version":1,"widgets":[{"id":"p","dataId":"d","type":"number","title":"x","settings":{"operation":"sum"}}]}`,
+		"duplicate ids":        `{"version":1,"widgets":[{"id":"p","dataId":"d","type":"number","title":"x","settings":{"operation":"count"}},{"id":"p","dataId":"d","type":"number","title":"y","settings":{"operation":"count"}}]}`,
+		"unknown widget key":   `{"version":1,"widgets":[{"id":"p","dataId":"d","type":"number","title":"x","settings":{"operation":"count"},"sql":"select 1"}]}`,
 	} {
 		t.Run(name, func(t *testing.T) { require.Error(t, validateWidgetsConfig(value)) })
 	}

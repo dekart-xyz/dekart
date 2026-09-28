@@ -1,4 +1,4 @@
-const chartTypes = new Set(['number', 'count-plot', 'histogram'])
+const chartTypes = new Set(['number', 'count-plot', 'histogram', 'search'])
 
 export function emptyWidgetsConfig () {
   return { version: 1, widgets: [] }
@@ -36,6 +36,7 @@ function numberSettings (settings) {
 function chartSettings (chartType, settings) {
   if (chartType === 'number') return numberSettings(settings)
   if (chartType === 'count-plot') return { field: settings.field, metric: 'count', sort: settings.sort || 'value-desc', maxBars: settings.maxBars ?? 20 }
+  if (chartType === 'search') return { field: settings.field }
   return { field: settings.field, maxBins: settings.maxBins ?? 15, ...(settings.color ? { color: settings.color } : {}) }
 }
 // REVIEW: Persisted order no longer depends on SQLRooms grid coordinates or per-dataset grouping.

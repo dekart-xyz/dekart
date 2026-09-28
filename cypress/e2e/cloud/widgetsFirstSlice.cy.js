@@ -104,6 +104,19 @@ describe('Widgets first production slice', () => {
     cy.contains('button', 'Clear all').click()
     cy.get('[data-testid="number-value"]', { timeout: 30000 }).should('have.text', '5')
 
+    // Removing a Category chip must clear its local toggle before another bar is picked.
+    cy.get('[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line').first().click()
+    cy.get('[data-testid="number-value"]').should('have.text', '2')
+    cy.get('button[aria-label="Remove category filter"]').click()
+    cy.get('[data-testid="number-value"]').should('have.text', '5')
+    cy.get('[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line').eq(1).click()
+    cy.get('[data-testid="number-value"]').should('have.text', '2')
+    cy.get('[data-testid="category-chart"] g[aria-label="bar"] rect').should(bars => {
+      const opacities = [...bars].map(bar => bar.ownerDocument.defaultView.getComputedStyle(bar).opacity)
+      expect(opacities.filter(value => value === '1')).to.have.length(1)
+    })
+    cy.contains('button', 'Clear all').click()
+
     cy.get('[data-testid="filter-strip"]').contains('button', 'Add filter').click()
     cy.get('.field-selector .item-selector').last().click()
     cy.contains('.field-selector_list-item', 'capacity_kw').click()

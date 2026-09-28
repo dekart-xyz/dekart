@@ -30,6 +30,7 @@
 .widgetItem { position: relative; min-width: 0; }
 .widgetItem > div, .widgetItem [data-selectable-panel], .widgetItem [data-selectable-panel] > div { height: 100%; }
 .numberWidget { height: 100px; }
+.searchWidget { min-height: 100px; height: auto; }
 .chartWidget { height: 200px; }
 .draggingWidget { z-index: 3; opacity: .65; }
 .announcer { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

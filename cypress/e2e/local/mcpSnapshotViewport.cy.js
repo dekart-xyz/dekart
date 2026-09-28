@@ -435,6 +435,23 @@ describe('local MCP snapshot viewport params', () => {
     })
   })
 
+  it('settles a Search widget and a Search missing-field failure', () => {
+    const search = { id: 'search-primary-type', type: 'vgplot', title: 'Search type', config: { chartType: 'search', settings: { field: 'primary_type' } } }
+    const missing = { id: 'search-missing', type: 'vgplot', title: 'Search missing', config: { chartType: 'search', settings: { field: 'no_such_column' } } }
+    getDeviceToken().then(token => {
+      createChartReport(token, [countPanel, search, missing])
+        .then(reportId => callMCP(token, 'create_report_snapshot', { report_id: reportId, include_widgets: true }))
+        .then(snapshot => {
+          cy.visit(snapshot.snapshot_render_url || snapshot.snapshotRenderUrl, { onBeforeLoad: sampleChartsWhenReady })
+          expectSnapshotReadyToken()
+          cy.get('[aria-label="Report charts"]').contains('Search type').should('be.visible')
+          cy.get('[data-testid="search-widget"]').should('contain.text', 'Enter a value')
+          cy.get('[aria-label="Report charts"]').contains('Search missing').should('be.visible')
+          cy.get('[aria-label="Report charts"]').contains("This chart couldn't load.").should('be.visible')
+        })
+    })
+  })
+
   // expectSnapshotsSettle authors charts on a dataset prepared by fillSlot, then requires both renders to settle.
   function expectSnapshotsSettle (fillSlot, charts) {
     getDeviceToken().then((token) => {

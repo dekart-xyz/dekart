@@ -6,6 +6,7 @@ import { createRoomShellSlice, createRoomStore } from '@sqlrooms/room-shell'
 import { createBaseDuckDbConnector } from '@sqlrooms/duckdb-core'
 import { createMosaicSlice, createDashboardFeatureSlices, createDefaultMosaicDashboardPanelRenderers, createDefaultChartTypes, createMosaicDashboardChartPanelConfig } from '@sqlrooms/mosaic'
 import CategoryChart, { CategorySettings } from './CategoryChart'
+import { searchChartType } from './SearchWidget'
 import ChartHeaderActions from './ChartHeaderActions'
 import HistogramChart from './HistogramChart'
 import DekartChartPanel from './WidgetPanel'
@@ -34,7 +35,7 @@ export const chartTypes = createDefaultChartTypes({ includeCustomSpec: false }).
       label: 'Category',
       settingsComponent: CategorySettings,
       renderer: CategoryChart
-    }).concat(numberChartType)
+    }).concat(numberChartType, searchChartType)
 
 // Each open report owns its upstream UI store and shares Dekart's one DuckDB worker.
 export function createWidgetStore (onQueryPending = () => {}, onPresentationError = () => {}, trackPainting = false) {
