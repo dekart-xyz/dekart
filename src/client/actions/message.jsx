@@ -2,6 +2,8 @@ import message from 'antd/es/message'
 import PermanentError from '../PermanentError'
 import StreamError from '../StreamError'
 import MapConfigConflictMessage from '../MapConfigConflictMessage'
+import ReportIssueLink from '../ReportIssueLink'
+import errorStyles from '../ErrorMessage.module.css'
 import { track } from '../lib/tracking'
 
 const style = {}
@@ -90,7 +92,9 @@ export function setError (err, transitive = true) {
       if (transitive) {
         message.error({
           key: err.message,
-          content: err.message,
+          content: <span className={errorStyles.content}><span className={errorStyles.text} data-testid='error-message-text'>{err.message}</span><ReportIssueLink category='application error' /></span>,
+          duration: 10,
+          className: errorStyles.notice,
           style
         })
       } else {
@@ -98,6 +102,7 @@ export function setError (err, transitive = true) {
           key: err.message,
           content: (<PermanentError message={err.message} />),
           duration: 10000,
+          className: errorStyles.notice,
           style
         })
       }
@@ -129,6 +134,7 @@ function showStreamError (errorCode, errorMsg, reportId) {
     key: STREAM_ERROR_KEY,
     content: (<StreamError code={errorCode} message={errorMsg} />),
     duration: 10000,
+    className: errorStyles.notice,
     style
   })
 }
