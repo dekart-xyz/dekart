@@ -11,7 +11,7 @@ import { shouldAddQuery } from '../lib/shouldAddQuery'
 import { shouldUpdateDataset } from '../lib/shouldUpdateDataset'
 import { needSensitiveScopes } from './user'
 import { getQueryParamsObjArr, reconcileQueryParamsState } from '../lib/queryParams'
-import { receiveReportUpdateMapConfig, shouldUpdateMapConfig } from '../lib/mapConfig'
+import { receiveReportUpdateMapConfig, restoreAuthoredMapConfig, shouldUpdateMapConfig } from '../lib/mapConfig'
 import { extensionFromMime } from '../lib/mime'
 import { track } from '../lib/tracking'
 import { getReportIdFromUrl } from '../lib/getReportIdFromUrl'
@@ -80,11 +80,9 @@ export function toggleReportEdit (edit) {
       }
     }
     dispatch({ type: toggleReportEdit.name, edit, fullscreen })
-    // Restore the last authored filter configuration when returning from local viewer exploration.
-    // Viewer exploration is intentionally local. Entering edit mode restores the
-    // last authored map instead of promoting view-only filters into the report.
+    // Viewer exploration is local. Restore authored settings without merging saved layers again.
     if (edit && report?.mapConfig) {
-      receiveReportUpdateMapConfig(report, dispatch, getState, { keepExistingConfig: true, replaceFilters: true })
+      restoreAuthoredMapConfig(report, dispatch, getState)
     }
     return true
   }
