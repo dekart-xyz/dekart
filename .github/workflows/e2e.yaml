@@ -213,7 +213,7 @@ jobs:
             -e DEKART_MAPBOX_TOKEN=$MAPBOX_TOKEN_SEC \
             -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
             -e DEKART_CLOUD=1 \
-            -e TEST_SPEC=cypress/e2e/cloud/cloudBasicFlowEnd.cy.js,cypress/e2e/cloud/readOnlyMemberRoles.cy.js,cypress/e2e/cloud/trialAcknowledgement.cy.js,cypress/e2e/cloud/reportSaveRegression.cy.js \
+            -e TEST_SPEC=cypress/e2e/cloud/cloudBasicFlowEnd.cy.js,cypress/e2e/cloud/readOnlyMemberRoles.cy.js,cypress/e2e/cloud/trialAcknowledgement.cy.js,cypress/e2e/cloud/reportSaveRegression.cy.js,cypress/e2e/cloud/keplerPublishWarning.cy.js,cypress/e2e/cloud/geolocationDeniedWarning.cy.js \
             -e CYPRESS_CI=1 \
             ${REG_PREFIX}/dekart:${{ env.IMAGE_CACHE_KEY }}
 

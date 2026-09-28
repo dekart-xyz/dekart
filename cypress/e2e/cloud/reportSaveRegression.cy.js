@@ -196,7 +196,10 @@ describe('cloud report save regression', () => {
     createUploadedReport()
     cy.wait('@blockedAutoSave', { timeout: 60000 })
     cy.contains('.ant-message-error', 'The server is currently unavailable.').should('be.visible')
-    cy.contains('.ant-message-error button', 'Reload Page').should('be.visible')
+    cy.contains('.ant-message-error button', 'Reload page').should('be.visible')
+    cy.contains('.ant-message-error a', 'Report issue').should('have.attr', 'href').then(href => {
+      expect(new URL(href).searchParams.get('body')).to.include('Area: stream error')
+    })
     cy.get(LAYER_SELECTOR).should('have.length', 1)
 
     getStore().then((store) => {

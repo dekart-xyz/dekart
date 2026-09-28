@@ -9,6 +9,8 @@ import { runWarehouseQuery } from './query'
 import { filenameWithExtension, mimeFromExtension } from '../lib/mime'
 import { failDuckDBSource, registerDuckDBFileSource, registerDuckDBSource, removeDuckDBSource } from './duckdb'
 import waitForKeplerDataset from '../lib/waitForKeplerDataset'
+import ReportIssueLink from '../ReportIssueLink'
+import { track } from '../lib/tracking'
 import { consumeAutoCreateLayer, keplerDatasetFinishUpdating, keplerDatasetStartUpdating } from './kepler'
 
 let duckDBDatabaseModule = null
@@ -151,6 +153,9 @@ export function processDownloadError (err, dataset, label, emptySourceRetained, 
       dispatch(warn('Download cancelled'))
     } else if (err.status === 0) {
       dispatch(setError(new Error('Network error when downloading dataset'), false))
+    } else if (err.message === 'Kepler failed to publish the dataset.') {
+      track('KeplerPublishTimeout', { report_id: getState().report?.id })
+      dispatch(warn(<>{err.message} <ReportIssueLink category='dataset publication' /></>, false))
     } else {
       dispatch(setError(err))
     }

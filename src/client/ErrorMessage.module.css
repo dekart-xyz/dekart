@@ -1,0 +1,28 @@
+.notice :global(.ant-message-notice-content) {
+  padding: 8px 8px 8px 16px;
+}
+
+.notice :global(.ant-message-custom-content > .anticon) {
+  margin-right: 12px;
+}
+
+.content {
+  display: inline-flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.text {
+  display: inline-block;
+  max-width: min(40vw, 360px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}

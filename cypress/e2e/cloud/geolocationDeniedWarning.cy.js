@@ -21,6 +21,7 @@ describe('geolocation denied warning', () => {
     cy.get('#dekart-show-my-location', { timeout: 60000 }).click()
 
     cy.contains('.ant-message-warning', 'User denied Geolocation').should('be.visible')
+    cy.contains('.ant-message-warning', 'User denied Geolocation').should('not.contain', 'Report issue')
     cy.get('.ant-message-error').should('not.exist')
   })
 })
