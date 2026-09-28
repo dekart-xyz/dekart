@@ -106,6 +106,52 @@ function waitForIdleSave () {
   cy.get('button#dekart-save-button .anticon-cloud', { timeout: 60000 }).should('exist')
 }
 
+// Decode a user-visible screenshot so the test can compare the map canvas.
+function screenshotPixels (win, data) {
+  return new Cypress.Promise((resolve, reject) => {
+    const image = new win.Image()
+    image.onload = () => {
+      const canvas = win.document.createElement('canvas')
+      canvas.width = image.width
+      canvas.height = image.height
+      const context = canvas.getContext('2d')
+      context.drawImage(image, 0, 0)
+      resolve({ width: image.width, height: image.height, pixels: context.getImageData(0, 0, image.width, image.height).data })
+    }
+    image.onerror = reject
+    image.src = `data:image/png;base64,${data}`
+  })
+}
+
+// Hiding the point layer must visibly change the map area outside both panels.
+function expectPointLayerDrawn () {
+  cy.screenshot('points-after-view-widget-filter-edit')
+  cy.get('.layer__visibility-toggle .panel--header__action__component').first().click()
+  cy.get('.layer__visibility-toggle .panel--header__action__component').first()
+    .should('have.attr', 'data-for').and('include', 'tooltip.showLayer')
+  cy.wait(750)
+  cy.screenshot('points-with-layer-hidden')
+  const folder = `cypress/screenshots/${Cypress.spec.name}`
+  cy.readFile(`${folder}/points-after-view-widget-filter-edit.png`, 'base64').then(visible => {
+    cy.readFile(`${folder}/points-with-layer-hidden.png`, 'base64').then(hidden => {
+      cy.window().then(win => Cypress.Promise.all([
+        screenshotPixels(win, visible), screenshotPixels(win, hidden)
+      ])).then(([shown, concealed]) => {
+        let changed = 0
+        for (let y = Math.floor(shown.height * 0.15); y < shown.height * 0.95; y += 2) {
+          for (let x = Math.floor(shown.width * 0.26); x < shown.width * 0.48; x += 2) {
+            const index = (y * shown.width + x) * 4
+            if (Math.abs(shown.pixels[index] - concealed.pixels[index]) > 40 ||
+              Math.abs(shown.pixels[index + 1] - concealed.pixels[index + 1]) > 40 ||
+              Math.abs(shown.pixels[index + 2] - concealed.pixels[index + 2]) > 40) changed++
+          }
+        }
+        expect(changed, 'pixels drawn by the point layer').to.be.greaterThan(500)
+      })
+    })
+  })
+}
+
 function clickWriteReadme () {
   cy.get('body').then(($body) => {
     if ($body.find('button:contains("Write README")').length === 0) {
@@ -151,6 +197,28 @@ describe('cloud report save regression', () => {
     cy.get('@unexpectedSave.all').should('have.length', 0)
     cy.get('[data-testid="error-message-text"]').should('not.exist')
     cy.contains('An error in deck.gl').should('not.exist')
+  })
+
+  it('keeps point layers after a viewer filters a widget and returns to editing', () => {
+    cy.viewport(1280, 720)
+    createUploadedReport('sample.csv')
+    cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.text', '8,276')
+    cy.get('button#dekart-save-button').click()
+    waitForIdleSave()
+    cy.get('@createdReportPath').then(path => cy.visit(path.replace(/\/source$/, '')))
+    cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.text', '8,276')
+    cy.get('[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line').first().click()
+    cy.get('[data-testid="number-value"]', { timeout: 30000 }).should('have.text', '1,722')
+    cy.get('[data-testid="filter-strip"]').should('contain.text', 'primary type')
+    cy.screenshot('points-filtered-view')
+    cy.contains('.ant-select', 'Viewing').click()
+    cy.contains('.ant-select-item-option-content', 'Editing').click()
+    cy.location('pathname').should('match', /\/source$/)
+    cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.text', '8,276')
+    cy.get('[data-testid="filter-strip"]').should('contain.text', 'No filters')
+    cy.openLayerPanel()
+    cy.get(LAYER_SELECTOR, { timeout: 120000 }).should('have.length', 1)
+    expectPointLayerDrawn()
   })
 
   it('can split a map after returning from viewing to editing', () => {

@@ -1,4 +1,4 @@
-import { receiveMapConfig, removeEffect, removeFilter, removeLayer, setFeatures, toggleSplitMap } from '@kepler.gl/actions'
+import { addLayer, receiveMapConfig, removeEffect, removeFilter, removeLayer, setFeatures, toggleSplitMap } from '@kepler.gl/actions'
 import { KeplerGlSchema } from '@kepler.gl/schemas'
 import { setLastMapConfigChanged } from '../actions/report'
 import { useDispatch, useSelector } from 'react-redux'
@@ -97,6 +97,7 @@ export function receiveReportUpdateMapConfig (report, dispatch, getState) {
 }
 
 // Restore the full authored map without merging saved layers into the existing layers.
+// TODO: find more elegant way
 export function restoreAuthoredMapConfig (report, dispatch, getState) {
   const savedConfig = uniqueMapConfigLayers(JSON.parse(report.mapConfig))
   const currentConfig = KeplerGlSchema.getConfigToSave(getState().keplerGl.kepler)
@@ -110,5 +111,14 @@ export function restoreAuthoredMapConfig (report, dispatch, getState) {
   // Kepler appends effects and drawn features when keeping loaded datasets.
   for (const effect of currentVisState.effects) dispatch(removeEffect(effect.id))
   dispatch(setFeatures([]))
-  dispatch(receiveMapConfig(KeplerGlSchema.parseSavedConfig(savedConfig), { keepExistingConfig: true }))
+  const parsedConfig = KeplerGlSchema.parseSavedConfig(savedConfig)
+  dispatch(receiveMapConfig(parsedConfig, { keepExistingConfig: true }))
+  // Kepler's config merge restores layer objects but leaves layerData empty.
+  // Re-add loaded layers through its data-building action, preserving saved order.
+  const restoredLayers = getState().keplerGl.kepler.visState.layers
+  const loadedIds = new Set(restoredLayers.map(layer => layer.id))
+  for (const layer of restoredLayers) dispatch(removeLayer(layer.id))
+  for (const layer of [...parsedConfig.visState.layers].reverse()) {
+    if (loadedIds.has(layer.id)) dispatch(addLayer(layer))
+  }
 }
