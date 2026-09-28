@@ -10,6 +10,8 @@ import { column, isIn, isBetween, literal } from '@uwdata/mosaic-sql'
 import { widgetFilterId } from './widgetStore'
 import { markKeplerPanelInteracted } from '../actions/report'
 
+const categoricalTypes = new Set(['count-plot', 'search'])
+
 function mirroredFilterState (filter) {
   return filter && JSON.stringify({ value: filter.value, enabled: filter.enabled !== false, dataId: filter.dataId, name: filter.name })
 }
@@ -160,7 +162,7 @@ export function useWidgetFilters (store, datasetId, ready, editing, pending) {
         // Reloads temporarily empty Kepler's value; reconcile only against the completed domain.
         if (current && !current.value?.length) {
           const previous = JSON.parse(mirrored.current.get(panel.id) || 'null')
-          const retained = panel.config.chartType === 'count-plot' ? (previous?.value || []).filter(value => current.domain?.includes(value)) : []
+          const retained = categoricalTypes.has(panel.config.chartType) ? (previous?.value || []).filter(value => current.domain?.includes(value)) : []
           if (retained.length) dispatch(setFilter(currentIndex, 'value', retained))
           else {
             const clients = store.getState().mosaicDashboard.runtime.panelClients[getMosaicDashboardPanelId(datasetId, panel.id)] || []
@@ -180,9 +182,9 @@ export function useWidgetFilters (store, datasetId, ready, editing, pending) {
         const clients = store.getState().mosaicDashboard.runtime.panelClients[getMosaicDashboardPanelId(datasetId, panel.id)] || []
         const clause = selection.clauses.find(clause => clients.includes(clause.source) || clause.source === selectionClients.current.get(panel.id))
         const enabled = current && current.enabled !== false
-        const value = !enabled ? null : panel.config.chartType === 'count-plot' ? current.value.map(value => [value]) : current.value
+        const value = !enabled ? null : categoricalTypes.has(panel.config.chartType) ? current.value.map(value => [value]) : current.value
         // Reset also clears Toggle's local value when Mosaic has already removed its clause.
-        if (panel.config.chartType === 'count-plot') {
+        if (categoricalTypes.has(panel.config.chartType)) {
           const client = clients.find(client => client.selection === selection)
           if (client) client.value = value
         }
@@ -232,7 +234,7 @@ export function useWidgetFilters (store, datasetId, ready, editing, pending) {
           continue
         }
         selectionClients.current.set(panel.id, client)
-        const value = panel.config.chartType === 'count-plot' ? filter.value.map(value => [value]) : filter.value
+        const value = categoricalTypes.has(panel.config.chartType) ? filter.value.map(value => [value]) : filter.value
         client.value = value
         // SQLRooms registers interactors, not query marks. Use Mosaic's own exclusion clause.
         selection.update(client.clause(value))

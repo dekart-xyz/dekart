@@ -61,6 +61,17 @@ test('serializes flat widgets with runtime state removed and chart defaults norm
   expect(JSON.stringify(saved)).not.toMatch(/secret|dashboardsById|layout/)
 })
 
+test('search settings round-trip with only the selected field', () => {
+  const raw = JSON.stringify({ version: 1, widgets: [{ id: 'search_1', dataId: 'dataset_1', type: 'search', title: 'Search', settings: { field: 'locker_name' } }] })
+  const { config } = parseWidgetsConfig(raw)
+  const { calls, store } = fakeStore()
+  applyWidgetsConfig(store, config, ['dataset_1'])
+  const panel = calls.find(call => call[0] === 'addPanel')[2]
+  expect(panel.config.settings).toEqual({ field: 'locker_name' })
+  const saved = serializeWidgetsConfig({ dashboardsById: { dataset_1: { panels: [panel] } } }, config)
+  expect(saved.widgets[0].settings).toEqual({ field: 'locker_name' })
+})
+
 test('preserves every existing position by widget id while applying runtime edits', () => {
   const previous = { version: 1, widgets: [{ id: 'histogram_1', dataId: 'dataset_2' }, { id: 'number_1', dataId: 'dataset_1' }, { id: 'category_1', dataId: 'dataset_1' }] }
   const saved = serializeWidgetsConfig(runtimeConfig(), previous)

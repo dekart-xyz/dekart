@@ -198,7 +198,7 @@ function SortableWidget ({
     <div
       ref={element => { itemRef.current = element; setNodeRef(element) }}
       style={style}
-      className={classnames(styles.widgetItem, widget.type === 'number' ? styles.numberWidget : styles.chartWidget, { [styles.failedWidget]: failed, [styles.draggingWidget]: isDragging, [styles.draggableWidget]: editing })}
+      className={classnames(styles.widgetItem, widget.type === 'number' ? styles.numberWidget : widget.type === 'search' ? styles.searchWidget : styles.chartWidget, { [styles.failedWidget]: failed, [styles.draggingWidget]: isDragging, [styles.draggableWidget]: editing })}
       data-testid='widget-item'
       data-widget-id={widget.id}
       onKeyDown={event => handleSortableKeyDown(event, editing, widget, config, configFingerprint, keyboardDrag, setKeyboardDrag, onReorder, setKeyboardAnnouncement)}

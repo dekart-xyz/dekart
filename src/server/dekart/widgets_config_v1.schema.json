@@ -21,7 +21,8 @@
       "oneOf": [
         { "$ref": "#/$defs/numberWidget" },
         { "$ref": "#/$defs/countPlotWidget" },
-        { "$ref": "#/$defs/histogramWidget" }
+        { "$ref": "#/$defs/histogramWidget" },
+        { "$ref": "#/$defs/searchWidget" }
       ]
     },
     "widgetBase": {
@@ -88,6 +89,29 @@
                 "metric": { "const": "count" },
                 "sort": { "enum": ["value-desc", "value-asc", "label-asc", "label-desc"] },
                 "maxBars": { "type": "integer", "minimum": 1, "maximum": 100 }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "searchWidget": {
+      "allOf": [
+        { "$ref": "#/$defs/widgetBase" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": { "$ref": "#/$defs/identifier" },
+            "dataId": { "$ref": "#/$defs/dataId" },
+            "type": { "const": "search" },
+            "title": { "$ref": "#/$defs/shortText" },
+            "settings": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["field"],
+              "properties": {
+                "field": { "type": "string", "minLength": 1, "maxLength": 256 }
               }
             }
           }

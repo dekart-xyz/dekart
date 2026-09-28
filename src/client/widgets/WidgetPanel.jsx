@@ -31,8 +31,8 @@ function WidgetFailure ({ panelId }) {
     </div>
   )
 }
-
-function WidgetStub () {
+// it's needed also in SearchWidget to wait for Kepler field values
+export function WidgetStub () {
   return <div className={styles.chartStub} data-testid='chart-stub' aria-hidden='true'><div className={styles.stubLabel} /><div className={styles.stubLines}><i /><i /><i /></div></div>
 }
 
