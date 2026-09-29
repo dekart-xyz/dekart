@@ -12,6 +12,9 @@ const files = [
   ['flood-zones.csv', 56508285, 'Polygon']
 ]
 
+// Keep the six file types and layers in routine CI without rendering millions of vertices.
+const ciFiles = files.map(([name, , type]) => [name, name === 'flood-zones.csv' ? 250000 : 50000, type])
+
 function geometryFor (type, index) {
   const longitude = -84 + (index % 100) / 1000
   const latitude = 32 + (Math.floor(index / 100) % 100) / 1000
@@ -53,7 +56,7 @@ if (process.argv[2] === '--cleanup') {
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'dekart-kepler-report-'))
 const rows = {}
-for (const [name, bytes, type] of files) {
+for (const [name, bytes, type] of process.argv.includes('--small') ? ciFiles : files) {
   rows[name] = writeCsv(directory, name, bytes, type)
 }
 fs.writeFileSync(path.join(directory, 'manifest.json'), JSON.stringify(rows))
