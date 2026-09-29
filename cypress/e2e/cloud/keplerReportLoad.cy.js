@@ -64,7 +64,7 @@ describe('six GeoJSON CSV report load', () => {
     cy.openLayerPanel()
     cy.get('.source-data-title', { timeout: largeDatasetTimeout }).should('have.length', files.length)
     cy.get(layerSelector, { timeout: largeDatasetTimeout }).should('have.length', files.length)
-    cy.then(() => cy.readFile(`${fixtureDirectory}/manifest.json`)).then(rows => {
+    cy.then(() => cy.readFile(`${fixtureDirectory}/manifest.json`, { timeout: largeDatasetTimeout })).then(rows => {
       files.forEach(name => cy.assertDatasetRows(name, rows[name], largeDatasetTimeout))
     })
     cy.contains('Kepler failed to publish the dataset.').should('not.exist')
