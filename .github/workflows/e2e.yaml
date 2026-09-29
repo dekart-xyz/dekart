@@ -475,6 +475,26 @@ jobs:
               -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_SEC \
               -e DEKART_ALLOW_FILE_UPLOAD=0 \
 
+          - id: version-banner
+            spec: cypress/e2e/version/spec.cy.js
+            # The E2E image defaults to SQLite, while this lane stores metadata in Postgres.
+            extra_env: |
+              -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
+              -e DEKART_SQLITE_DB_PATH= \
+              -e DEKART_POSTGRES_HOST=localhost \
+              -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
+              -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
+              -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
+              -e DEKART_POSTGRES_DB=$DEKART_POSTGRES_DB \
+              -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
+              -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
+              -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
+              -e DEKART_STORAGE=GCS \
+              -e DEKART_DATASOURCE=BQ \
+              -e DEKART_VERSION_CHECK_URL=http://localhost:3000/api/v1/version \
+              -e DEKART_VERSION_CHECK_FORCE_CURRENT_VERSION=0.0.0 \
+              -e DEKART_ALLOW_FILE_UPLOAD=0 \
+
           - id: pg-s3-postgres-expired-license-startup
             spec: ""
             expired_license_startup: true
@@ -687,115 +707,4 @@ jobs:
         if: failure()
         with:
           name: ${{ matrix.id }}
-          path: /tmp/cypress/screenshots
-
-  e2e-version:
-    if: ${{ inputs.target == 'oss' }}
-    runs-on: ubuntu-latest
-    env:
-      REG_PREFIX: dekartxyz
-      GOOGLE_CRED_SEC: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
-      DEKART_LICENSE_KEY_SEC: ${{ secrets.DEKART_LICENSE_KEY }}
-    services:
-      postgres:
-        image: postgis/postgis:15-3.4
-        credentials:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-        env:
-          POSTGRES_PASSWORD: ${{ env.DEKART_POSTGRES_PASSWORD }}
-          POSTGRES_USER: ${{ env.DEKART_POSTGRES_USER }}
-          POSTGRES_DB: ${{ env.DEKART_POSTGRES_DB }}
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports: ['5432:5432']
-    steps:
-      - run: echo "$GOOGLE_CRED_SEC" > "$GOOGLE_APPLICATION_CREDENTIALS"
-      - name: Seed PostgreSQL test data (dekart_geo.sample.geospatial_points)
-        run: |
-          set -euo pipefail
-          pg_cid="${{ job.services.postgres.id }}"
-          test -n "$pg_cid"
-          docker exec -e PGPASSWORD="$DEKART_POSTGRES_PASSWORD" "$pg_cid" \
-            psql -U "$DEKART_POSTGRES_USER" -d postgres -v ON_ERROR_STOP=1 -c "SELECT 1 FROM pg_database WHERE datname='dekart_geo'" | grep -q 1 \
-            || docker exec -e PGPASSWORD="$DEKART_POSTGRES_PASSWORD" "$pg_cid" \
-              psql -U "$DEKART_POSTGRES_USER" -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE dekart_geo"
-          docker exec -i -e PGPASSWORD="$DEKART_POSTGRES_PASSWORD" "$pg_cid" \
-            psql -U "$DEKART_POSTGRES_USER" -d dekart_geo -v ON_ERROR_STOP=1 <<'SQL'
-          CREATE SCHEMA IF NOT EXISTS sample;
-          CREATE TABLE IF NOT EXISTS sample.geospatial_points (
-            id SERIAL PRIMARY KEY,
-            name TEXT NOT NULL,
-            category TEXT NOT NULL,
-            longitude DOUBLE PRECISION NOT NULL,
-            latitude DOUBLE PRECISION NOT NULL,
-            geom_wkt TEXT NOT NULL
-          );
-          TRUNCATE TABLE sample.geospatial_points;
-          INSERT INTO sample.geospatial_points (name, category, longitude, latitude, geom_wkt)
-          SELECT
-            'poi_' || gs::text,
-            CASE WHEN gs % 3 = 0 THEN 'food' WHEN gs % 3 = 1 THEN 'park' ELSE 'shop' END,
-            12.45 + (gs::double precision * 0.01),
-            55.60 + (gs::double precision * 0.005),
-            'POINT(' || (12.45 + (gs::double precision * 0.01))::text || ' ' || (55.60 + (gs::double precision * 0.005))::text || ')'
-          FROM generate_series(1, 150) AS gs;
-          SQL
-          docker exec -e PGPASSWORD="$DEKART_POSTGRES_PASSWORD" "$pg_cid" \
-            psql -U "$DEKART_POSTGRES_USER" -d dekart_geo -v ON_ERROR_STOP=1 \
-            -c "CREATE EXTENSION IF NOT EXISTS postgis"
-
-
-      # --------------------------- registry login ----------------------------
-      - uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Pre-pull test image (retry)
-        run: |
-          image="${REG_PREFIX}/dekart:${IMAGE_CACHE_KEY}"
-          for attempt in 1 2 3 4 5; do
-            echo "Pulling $image (attempt $attempt)..."
-            if docker pull "$image"; then
-              echo "Pulled $image"
-              break
-            fi
-            if [ "$attempt" -eq 5 ]; then
-              echo "Failed to pull $image after $attempt attempts"
-              exit 1
-            fi
-            sleep $((attempt * 10))
-          done
-      - name: Run OSS version banner spec
-        run: |
-          docker run -i --network host \
-            -v $(pwd)/$GOOGLE_APPLICATION_CREDENTIALS:/dekart/$GOOGLE_APPLICATION_CREDENTIALS \
-            -v /tmp/cypress/screenshots:/dekart/cypress/screenshots \
-            -e DEKART_LOG_DEBUG=1 \
-            -e CYPRESS_CI=1 \
-            -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
-            -e DEKART_POSTGRES_HOST=localhost \
-            -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
-            -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
-            -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
-            -e DEKART_POSTGRES_DB=$DEKART_POSTGRES_DB \
-            -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
-            -e DEKART_BIGQUERY_PROJECT_ID=dekart-dev \
-            -e DEKART_CLOUD_STORAGE_BUCKET=dekart-dev \
-            -e DEKART_STORAGE=GCS \
-            -e DEKART_DATASOURCE=BQ \
-            -e DEKART_VERSION_CHECK_URL=http://localhost:3000/api/v1/version \
-            -e DEKART_VERSION_CHECK_FORCE_CURRENT_VERSION=0.0.0 \
-            -e DEKART_ALLOW_FILE_UPLOAD=0 \
-            -e DEKART_CORS_ORIGIN=http://localhost:3000 \
-            -e DEKART_MAPBOX_TOKEN=${{ secrets.DEKART_MAPBOX_TOKEN }} \
-            -e TEST_SPEC=cypress/e2e/version/spec.cy.js \
-            ${REG_PREFIX}/dekart:${IMAGE_CACHE_KEY}
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: version-banner
           path: /tmp/cypress/screenshots
