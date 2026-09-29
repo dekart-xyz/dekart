@@ -53,8 +53,20 @@ const ReportWidgets = lazy(() => import('./widgets/ReportWidgets'))
 function MapContainerWithRenderFactory (...dependencies) {
   const MapContainer = MapContainerFactory(...dependencies)
   return function MapContainerWithRender (props) {
+    const dispatch = useDispatch()
     const callbacks = props.deckRenderCallbacks
-    return <MapContainer {...props} deckRenderCallbacks={{ ...callbacks, onDeckAfterRender: deckProps => { callbacks?.onDeckAfterRender?.(deckProps); notifyMapRendered() } }} />
+    const uiStateActions = {
+      ...props.uiStateActions,
+      addNotification: notification => {
+        if (notification.message?.startsWith('An error in deck.gl:') || notification.message?.startsWith('Your GPU was disconnected.')) {
+          console.error(notification.message)
+          dispatch(setError(new Error('A map layer could not be displayed. Please refresh the report or report the issue.')))
+          return
+        }
+        props.uiStateActions.addNotification(notification)
+      }
+    }
+    return <MapContainer {...props} uiStateActions={uiStateActions} deckRenderCallbacks={{ ...callbacks, onDeckAfterRender: deckProps => { callbacks?.onDeckAfterRender?.(deckProps); notifyMapRendered() } }} />
   }
 }
 MapContainerWithRenderFactory.deps = MapContainerFactory.deps

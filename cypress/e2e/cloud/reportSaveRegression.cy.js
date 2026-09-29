@@ -24,7 +24,7 @@ function getStore () {
   return cy.window({ timeout: 60000 }).then((win) => getReduxStoreFromWindow(win))
 }
 
-function createUploadedReport () {
+function createUploadedReport (fixture = 'sample.csv') {
   const email = `report-save-${Date.now()}@example.com`
   cy.setDevClaimsEmail(email)
   cy.intercept(`${Cypress.env('DEKART_E2E_API_URL')}/api/v1/**`, request => {
@@ -34,9 +34,9 @@ function createUploadedReport () {
   cy.ensureTestWorkspace()
   cy.get('button#dekart-create-report').click()
   cy.get('button:contains("Upload File")').click()
-  cy.get('input[type="file"]').selectFile('cypress/fixtures/sample.csv', { force: true })
+  cy.get('input[type="file"]').selectFile(`cypress/fixtures/${fixture}`, { force: true })
   cy.get('button:contains("Upload")').click()
-  cy.get('div:contains("8,276 rows")', { timeout: 60000 }).should('be.visible')
+  cy.contains('Ready', { timeout: 60000 }).should('be.visible')
   cy.get(LAYER_SELECTOR, { timeout: 120000 }).should('have.length', 1)
   cy.location('pathname', { timeout: 60000 })
     .should('match', /^\/reports\/[a-f0-9-]+\/source$/)
@@ -106,6 +106,52 @@ function waitForIdleSave () {
   cy.get('button#dekart-save-button .anticon-cloud', { timeout: 60000 }).should('exist')
 }
 
+// Decode a user-visible screenshot so the test can compare the map canvas.
+function screenshotPixels (win, data) {
+  return new Cypress.Promise((resolve, reject) => {
+    const image = new win.Image()
+    image.onload = () => {
+      const canvas = win.document.createElement('canvas')
+      canvas.width = image.width
+      canvas.height = image.height
+      const context = canvas.getContext('2d')
+      context.drawImage(image, 0, 0)
+      resolve({ width: image.width, height: image.height, pixels: context.getImageData(0, 0, image.width, image.height).data })
+    }
+    image.onerror = reject
+    image.src = `data:image/png;base64,${data}`
+  })
+}
+
+// Hiding the point layer must visibly change the map area outside both panels.
+function expectPointLayerDrawn () {
+  cy.screenshot('points-after-view-widget-filter-edit')
+  cy.get('.layer__visibility-toggle .panel--header__action__component').first().click()
+  cy.get('.layer__visibility-toggle .panel--header__action__component').first()
+    .should('have.attr', 'data-for').and('include', 'tooltip.showLayer')
+  cy.wait(750)
+  cy.screenshot('points-with-layer-hidden')
+  const folder = `cypress/screenshots/${Cypress.spec.name}`
+  cy.readFile(`${folder}/points-after-view-widget-filter-edit.png`, 'base64').then(visible => {
+    cy.readFile(`${folder}/points-with-layer-hidden.png`, 'base64').then(hidden => {
+      cy.window().then(win => Cypress.Promise.all([
+        screenshotPixels(win, visible), screenshotPixels(win, hidden)
+      ])).then(([shown, concealed]) => {
+        let changed = 0
+        for (let y = Math.floor(shown.height * 0.15); y < shown.height * 0.95; y += 2) {
+          for (let x = Math.floor(shown.width * 0.26); x < shown.width * 0.48; x += 2) {
+            const index = (y * shown.width + x) * 4
+            if (Math.abs(shown.pixels[index] - concealed.pixels[index]) > 40 ||
+              Math.abs(shown.pixels[index + 1] - concealed.pixels[index + 1]) > 40 ||
+              Math.abs(shown.pixels[index + 2] - concealed.pixels[index + 2]) > 40) changed++
+          }
+        }
+        expect(changed, 'pixels drawn by the point layer').to.be.greaterThan(500)
+      })
+    })
+  })
+}
+
 function clickWriteReadme () {
   cy.get('body').then(($body) => {
     if ($body.find('button:contains("Write README")').length === 0) {
@@ -118,6 +164,97 @@ function clickWriteReadme () {
 describe('cloud report save regression', () => {
   beforeEach(() => {
     cy.resetCloudTestDatabase()
+  })
+
+  it('returns from viewing to editing without duplicating layers or saving viewer changes', () => {
+    createUploadedReport('sample.geojson')
+    cy.get('button#dekart-save-button').click()
+    waitForIdleSave()
+    cy.get('@createdReportPath').then(path => cy.visit(path.replace(/\/source$/, '')))
+    cy.openLayerPanel()
+    cy.get(LAYER_SELECTOR, { timeout: 120000 }).should('have.length', 1)
+    cy.get('.layer__visibility-toggle .panel--header__action__component').first().click()
+    cy.get('.side-panel__tab[data-for="map-nav"]').click()
+    cy.get('.map-dropdown-option:not(.collapsed) .map-preview-name').should('have.length', 1).invoke('text').as('authoredMapStyle')
+    getStore().then(store => {
+      const currentStyle = store.getState().keplerGl.kepler.mapStyle.styleType
+      const viewerStyle = currentStyle === 'dark' ? 'light' : 'dark'
+      store.dispatch({ type: '@@kepler.gl/MAP_STYLE_CHANGE', payload: { styleType: viewerStyle } })
+      cy.get('.map-dropdown-option:not(.collapsed) .map-preview-name').should('have.text', viewerStyle === 'dark' ? 'Dark' : 'Light')
+    })
+
+    cy.intercept('POST', '**/Dekart/UpdateReport').as('unexpectedSave')
+    cy.contains('.ant-select', 'Viewing').click()
+    cy.contains('.ant-select-item-option-content', 'Editing').click()
+    cy.location('pathname').should('match', /\/source$/)
+    cy.get('.side-panel__tab[data-for="layer-nav"]').click()
+    cy.get(LAYER_SELECTOR).should('have.length', 1)
+    cy.get('.side-panel__tab[data-for="map-nav"]').click()
+    cy.get('@authoredMapStyle').then(style => {
+      cy.get('.map-dropdown-option:not(.collapsed) .map-preview-name').should('have.text', style)
+    })
+    cy.wait(1500)
+    cy.get('@unexpectedSave.all').should('have.length', 0)
+    cy.get('[data-testid="error-message-text"]').should('not.exist')
+    cy.contains('An error in deck.gl').should('not.exist')
+  })
+
+  it('keeps point layers after a viewer filters a widget and returns to editing', () => {
+    cy.viewport(1280, 720)
+    createUploadedReport('sample.csv')
+    cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.text', '8,276')
+    cy.get('button#dekart-save-button').click()
+    waitForIdleSave()
+    cy.get('@createdReportPath').then(path => cy.visit(path.replace(/\/source$/, '')))
+    cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.text', '8,276')
+    cy.get('[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line').first().click()
+    cy.get('[data-testid="number-value"]', { timeout: 30000 }).should('have.text', '1,722')
+    cy.get('[data-testid="filter-strip"]').should('contain.text', 'primary type')
+    cy.screenshot('points-filtered-view')
+    cy.contains('.ant-select', 'Viewing').click()
+    cy.contains('.ant-select-item-option-content', 'Editing').click()
+    cy.location('pathname').should('match', /\/source$/)
+    cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.text', '8,276')
+    cy.get('[data-testid="filter-strip"]').should('contain.text', 'No filters')
+    cy.openLayerPanel()
+    cy.get(LAYER_SELECTOR, { timeout: 120000 }).should('have.length', 1)
+    expectPointLayerDrawn()
+  })
+
+  it('can split a map after returning from viewing to editing', () => {
+    createUploadedReport('sample.geojson')
+    cy.get('button#dekart-save-button').click()
+    waitForIdleSave()
+    cy.get('@createdReportPath').then(path => cy.visit(path.replace(/\/source$/, '')))
+    cy.get('.map-control-button.split-map:not(.close-map)', { timeout: 120000 }).click()
+    cy.get('.map-control-button.close-map').should('have.length', 2)
+    cy.contains('.ant-select', 'Viewing').click()
+    cy.contains('.ant-select-item-option-content', 'Editing').click()
+    cy.get('.map-control-button.close-map').should('not.exist')
+    cy.get('.map-control-button.split-map:not(.close-map)').first().click()
+    cy.get('.map-control-button.close-map').should('have.length', 2)
+    cy.get('.mapboxgl-canvas').should('have.length', 2)
+  })
+
+  it('loads a saved map with duplicate layer IDs as one layer', () => {
+    createUploadedReport('sample.geojson')
+    cy.get('button#dekart-save-button').click()
+    waitForIdleSave()
+    cy.reload()
+    cy.openLayerPanel()
+    cy.get(LAYER_SELECTOR, { timeout: 120000 }).should('have.length', 1)
+    getStore().then(store => {
+      const config = JSON.parse(store.getState().report.mapConfig)
+      const layer = config.config.visState.layers[0]
+      config.config.visState.layers.push(layer)
+      config.config.visState.layerOrder = [layer.id, layer.id]
+      return updateReportMapConfigOutsideAppSave(store, JSON.stringify(config))
+    })
+    cy.get('@createdReportPath').then(path => cy.visit(path.replace(/\/source$/, '')))
+    cy.openLayerPanel()
+    cy.get(LAYER_SELECTOR, { timeout: 120000 }).should('have.length', 1)
+    cy.get('[data-testid="error-message-text"]').should('not.exist')
+    cy.contains('An error in deck.gl').should('not.exist')
   })
 
   it('rejects a browser widget write bound to an unknown report dataset', () => {
