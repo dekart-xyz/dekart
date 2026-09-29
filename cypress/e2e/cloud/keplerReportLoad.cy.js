@@ -9,6 +9,7 @@ const files = [
   'flood-zones.csv'
 ]
 const layerSelector = '[data-testid="sortable-layer-item"], [data-testid="static-layer-item"]'
+const largeDatasetTimeout = 300000
 
 describe('six GeoJSON CSV report load', () => {
   let fixtureDirectory
@@ -40,7 +41,8 @@ describe('six GeoJSON CSV report load', () => {
       cy.contains('Ready', { timeout: 120000 }).should('be.visible')
       cy.openLayerPanel()
       if (index === files.length - 1) {
-        cy.contains('.source-data-title .dataset-name', name, { timeout: 120000 }).should('be.visible')
+        // The final 56 MB CSV can take several minutes to download in CI.
+        cy.contains('.source-data-title .dataset-name', name, { timeout: largeDatasetTimeout }).should('be.visible')
         cy.contains('Downloading Map Data').should('not.exist')
         cy.get(layerSelector).then(layers => {
           if (layers.length === index) {
@@ -48,7 +50,7 @@ describe('six GeoJSON CSV report load', () => {
             cy.contains(name).last().click()
           }
         })
-        cy.get(layerSelector, { timeout: 120000 }).should('have.length', files.length)
+        cy.get(layerSelector, { timeout: largeDatasetTimeout }).should('have.length', files.length)
       } else {
         cy.get(layerSelector, { timeout: 120000 }).should('have.length', index + 1)
       }
@@ -60,10 +62,10 @@ describe('six GeoJSON CSV report load', () => {
     cy.location('pathname').should('match', /^\/reports\/[a-f0-9-]+\/source$/)
       .then(pathname => cy.visit(pathname))
     cy.openLayerPanel()
-    cy.get('.source-data-title', { timeout: 120000 }).should('have.length', files.length)
-    cy.get(layerSelector, { timeout: 120000 }).should('have.length', files.length)
+    cy.get('.source-data-title', { timeout: largeDatasetTimeout }).should('have.length', files.length)
+    cy.get(layerSelector, { timeout: largeDatasetTimeout }).should('have.length', files.length)
     cy.then(() => cy.readFile(`${fixtureDirectory}/manifest.json`)).then(rows => {
-      files.forEach(name => cy.assertDatasetRows(name, rows[name]))
+      files.forEach(name => cy.assertDatasetRows(name, rows[name], largeDatasetTimeout))
     })
     cy.contains('Kepler failed to publish the dataset.').should('not.exist')
   })

@@ -337,6 +337,7 @@ jobs:
           - id: pg-dataset-streaming
             spec: cypress/e2e/pg/happyPath.cy.js,cypress/e2e/pg/geosqlBanner.cy.js,cypress/e2e/pg/datasetSourceWriteTimeout.cy.js
             extra_env: |
+              -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
               -e DEKART_STORAGE=PG \
               -e DEKART_DATASOURCE=PG \
               -e DEKART_POSTGRES_HOST=localhost \
