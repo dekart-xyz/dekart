@@ -38,12 +38,12 @@ describe('six GeoJSON CSV report load', () => {
       cy.contains('button', 'Upload File', { timeout: 30000 }).click()
       cy.then(() => cy.get('input[type="file"]', { timeout: 120000 }).selectFile(`${fixtureDirectory}/${name}`, { force: true }))
       cy.contains('button', /^Upload$/).click()
-      cy.contains('Ready', { timeout: 120000 }).should('be.visible')
+      cy.contains('Ready', { timeout: index === files.length - 1 ? largeDatasetTimeout : 120000 }).should('be.visible')
       cy.openLayerPanel()
       if (index === files.length - 1) {
         // The final 56 MB CSV can take several minutes to download in CI.
         cy.contains('.source-data-title .dataset-name', name, { timeout: largeDatasetTimeout }).should('be.visible')
-        cy.contains('Downloading Map Data').should('not.exist')
+        cy.contains('Downloading Map Data', { timeout: largeDatasetTimeout }).should('not.exist')
         cy.get(layerSelector).then(layers => {
           if (layers.length === index) {
             cy.contains('button', 'Add Layer').click()
