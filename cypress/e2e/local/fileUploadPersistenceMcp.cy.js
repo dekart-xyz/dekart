@@ -50,7 +50,7 @@ describe('local file upload report persistence with readme conversion', () => {
         if (retries <= 0) {
           throw new Error('timed out waiting for report dataset')
         }
-        cy.wait(500)
+        cy.wait(500) // e2e-allow-wait: poll report until dataset appears
         return waitForAtLeastOneDataset(reportId, retries - 1)
       })
     }

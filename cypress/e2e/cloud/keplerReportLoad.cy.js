@@ -37,10 +37,10 @@ describe('six GeoJSON CSV report load', () => {
       cy.contains('button', 'Upload File', { timeout: 30000 }).click()
       cy.then(() => cy.get('input[type="file"]').selectFile(`${fixtureDirectory}/${name}`, { force: true }))
       cy.contains('button', /^Upload$/).click()
-      cy.contains('Ready', { timeout: 180000 }).should('be.visible')
+      cy.contains('Ready', { timeout: 120000 }).should('be.visible')
       cy.openLayerPanel()
       if (index === files.length - 1) {
-        cy.contains('.source-data-title .dataset-name', name, { timeout: 180000 }).should('be.visible')
+        cy.contains('.source-data-title .dataset-name', name, { timeout: 120000 }).should('be.visible')
         cy.contains('Downloading Map Data').should('not.exist')
         cy.get(layerSelector).then(layers => {
           if (layers.length === index) {
@@ -48,9 +48,9 @@ describe('six GeoJSON CSV report load', () => {
             cy.contains(name).last().click()
           }
         })
-        cy.get(layerSelector, { timeout: 180000 }).should('have.length', files.length)
+        cy.get(layerSelector, { timeout: 120000 }).should('have.length', files.length)
       } else {
-        cy.get(layerSelector, { timeout: 180000 }).should('have.length', index + 1)
+        cy.get(layerSelector, { timeout: 120000 }).should('have.length', index + 1)
       }
       cy.contains('Kepler failed to publish the dataset.').should('not.exist')
     })
@@ -60,8 +60,8 @@ describe('six GeoJSON CSV report load', () => {
     cy.location('pathname').should('match', /^\/reports\/[a-f0-9-]+\/source$/)
       .then(pathname => cy.visit(pathname))
     cy.openLayerPanel()
-    cy.get('.source-data-title', { timeout: 180000 }).should('have.length', files.length)
-    cy.get(layerSelector, { timeout: 180000 }).should('have.length', files.length)
+    cy.get('.source-data-title', { timeout: 120000 }).should('have.length', files.length)
+    cy.get(layerSelector, { timeout: 120000 }).should('have.length', files.length)
     cy.then(() => cy.readFile(`${fixtureDirectory}/manifest.json`)).then(rows => {
       files.forEach(name => cy.assertDatasetRows(name, rows[name]))
     })

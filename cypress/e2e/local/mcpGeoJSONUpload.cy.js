@@ -6,25 +6,7 @@ const apiBase = `${apiOrigin}/api/v1`
 
 // getDeviceToken authorizes this MCP test through the user-visible device flow.
 function getDeviceToken () {
-  return cy.request('POST', `${apiBase}/device`, {
-    device_name: 'cypress-local-mcp-geojson-upload'
-  }).then((startResp) => {
-    const deviceId = startResp.body.device_id
-    const authUrl = startResp.body.auth_url
-    expect(deviceId, 'device_id').to.be.a('string').and.not.eq('')
-    expect(authUrl, 'auth_url').to.be.a('string').and.include('/device/authorize')
-
-    cy.setDevClaimsEmail('test@gmail.com')
-    cy.visit(authUrl)
-    cy.contains('button', 'Authorize', { timeout: 20000 }).click()
-    cy.contains('Device authorized', { timeout: 20000 }).should('be.visible')
-
-    return cy.request('POST', `${apiBase}/device/token`, { device_id: deviceId }).then((tokenResp) => {
-      expect(tokenResp.body.status, 'device token status').to.eq('authorized')
-      expect(tokenResp.body.token, 'device token').to.be.a('string').and.not.eq('')
-      return tokenResp.body.token
-    })
-  })
+  return cy.mcpDeviceToken('test@gmail.com', { deviceName: 'cypress-local-mcp-geojson-upload' })
 }
 
 // callMCP invokes one named tool and returns its canonical result payload.

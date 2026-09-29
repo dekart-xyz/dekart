@@ -3,31 +3,7 @@
 const apiBase = `${Cypress.env('DEKART_E2E_API_URL')}/api/v1`
 const createConnectionDisabledError = 'create_connection via MCP is disabled; create the connection in Dekart UI first'
 
-const getDeviceToken = () => {
-  return cy.request('POST', `${apiBase}/device`, {
-    device_name: 'cypress-google-oauth-mcp'
-  }).then((startResp) => {
-    expect(startResp.status, 'device start status').to.eq(200)
-    const deviceId = startResp.body.device_id
-    const authUrl = startResp.body.auth_url
-    expect(deviceId, 'device_id').to.be.a('string')
-    expect(deviceId, 'device_id').not.to.eq('')
-    expect(authUrl, 'auth_url').to.be.a('string').and.include('/device/authorize')
-
-    cy.setDevClaimsEmail('test@gmail.com')
-    cy.visit(authUrl)
-    cy.contains('button', 'Authorize', { timeout: 20000 }).click()
-    cy.contains('Device authorized', { timeout: 20000 }).should('be.visible')
-
-    return cy.request('POST', `${apiBase}/device/token`, { device_id: deviceId }).then((tokenResp) => {
-      expect(tokenResp.status, 'device token status').to.eq(200)
-      expect(tokenResp.body.status, 'device token response status').to.eq('authorized')
-      expect(tokenResp.body.token, 'device token').to.be.a('string')
-      expect(tokenResp.body.token, 'device token').not.to.eq('')
-      return tokenResp.body.token
-    })
-  })
-}
+const getDeviceToken = () => cy.mcpDeviceToken('test@gmail.com', { deviceName: 'cypress-google-oauth-mcp' })
 
 const callMCP = (token, name, args = {}) => {
   return cy.request({

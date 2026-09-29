@@ -6,29 +6,7 @@ describe('local file-backed dataset download error', () => {
     const apiOrigin = Cypress.env('DEKART_E2E_API_URL')
     const apiBase = `${apiOrigin}/api/v1`
 
-    const getDeviceToken = () => {
-      return cy.request('POST', `${apiBase}/device`, {
-        device_name: 'cypress-local-download-error'
-      }).then((startResp) => {
-        expect(startResp.status, 'device start status').to.eq(200)
-        const deviceId = startResp.body.device_id
-        const authUrl = startResp.body.auth_url
-        expect(deviceId, 'device_id').to.be.a('string').and.not.eq('')
-        expect(authUrl, 'auth_url').to.be.a('string').and.include('/device/authorize')
-
-        cy.setDevClaimsEmail('test@gmail.com')
-        cy.visit(authUrl)
-        cy.contains('button', 'Authorize', { timeout: 20000 }).click()
-        cy.contains('Device authorized', { timeout: 20000 }).should('be.visible')
-
-        return cy.request('POST', `${apiBase}/device/token`, { device_id: deviceId }).then((tokenResp) => {
-          expect(tokenResp.status, 'device token status').to.eq(200)
-          expect(tokenResp.body.status, 'device token response status').to.eq('authorized')
-          expect(tokenResp.body.token, 'device token').to.be.a('string').and.not.eq('')
-          return tokenResp.body.token
-        })
-      })
-    }
+    const getDeviceToken = () => cy.mcpDeviceToken('test@gmail.com', { deviceName: 'cypress-local-download-error' })
 
     const mcpCall = (token, name, args = {}) => cy.request({
       method: 'POST',
@@ -175,7 +153,10 @@ describe('local file-backed dataset download error', () => {
 
       cy.visit(`${appUrl}/reports/${reportId}/source`)
       cy.wait('@brokenDatasetSource', { timeout: 60000 })
-      cy.contains('Error loading dataset', { timeout: 120000 }).should('be.visible')
+      cy.get('[data-testid="error-message-text"]', { timeout: 30000 })
+        .should('be.visible')
+        .invoke('text')
+        .should('match', /json|parse|syntax|unexpected/i)
       waitForNoDownloadMessage()
     })
   })

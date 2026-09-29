@@ -15,7 +15,7 @@ describe('cloud basic flow', () => {
     cy.get('button#dekart-create-report').click()
 
     // click #dekart-add-connection
-    cy.get('#dekart-add-connection').click()
+    cy.get('#dekart-add-connection', { timeout: 30000 }).should('be.visible').click()
 
     // create connection
     cy.get('button:contains("BigQuery")').click()

@@ -10,20 +10,20 @@ describe('archive and unarchive report', () => {
     // Create new report
     cy.get('button#dekart-create-report').click()
 
-    // Set report title - click on title to activate edit mode, then type
-    cy.get('span').contains('Untitled').click()
-    cy.get('input#dekart-report-title-input').should('be.visible')
-    cy.get('input#dekart-report-title-input').clear()
-    cy.get('input#dekart-report-title-input').type(reportName)
-    cy.get('input#dekart-report-title-input').should('have.value', reportName)
-    cy.get('input#dekart-report-title-input').type('{enter}')
-    cy.wait(1000)
-
     // Run a simple query to make the report valid
     cy.get('button:contains("Run SQL")').click()
     cy.get('textarea').type(copy.simple_sql_query, { force: true })
     cy.get(`button:contains("${copy.execute}")`).click()
     cy.get(`span:contains("${copy.ready}")`, { timeout: 20000 }).should('be.visible')
+
+    // Name the report after query setup so the initial report stream cannot replay Untitled.
+    cy.get('span').contains('Untitled').click()
+    cy.get('input#dekart-report-title-input').should('be.visible').clear().type(reportName)
+    cy.get('input#dekart-report-title-input').should('have.value', reportName)
+    cy.intercept('POST', '**/Dekart/UpdateReport').as('saveReportTitle')
+    cy.get('input#dekart-report-title-input').blur()
+    cy.contains('span', reportName, { timeout: 30000 }).should('be.visible')
+    cy.wait('@saveReportTitle').its('response.statusCode').should('eq', 200)
 
     // // Go back to home page
     cy.visit('/')
@@ -31,7 +31,9 @@ describe('archive and unarchive report', () => {
     // Archive the report (force click since button is only visible on hover)
     // Find the row containing the report name, then find the archive button in that row
     cy.contains('.dekart-map-card', reportName).should('be.visible')
+    cy.intercept('POST', '**/Dekart/ArchiveReport').as('archiveReport')
     cy.contains('.dekart-map-card', reportName).find('button#dekart-archive-report').click({ force: true })
+    cy.wait('@archiveReport').its('response.statusCode').should('eq', 200)
 
     // Switch to archived view
     cy.get('#dekart-archived-switch').click()

@@ -28,7 +28,7 @@ describe('DuckDB refresh from BigQuery', () => {
     cy.get('#dekart-query-status-message').should($status => {
       expect(['Running', 'Ready']).to.include($status.text().trim())
     })
-    assertQueryStatus('Ready', 300000)
+    assertQueryStatus('Ready', 120000)
     cy.get('#dekart-query-execute-button').should('not.be.disabled')
     cy.assertDatasetRows('Query 2', 1)
     cy.assertDatasetTable('Query 2', ['source_rows', 'execution_marker'], ['re-executed'])
@@ -67,7 +67,6 @@ describe('DuckDB refresh from BigQuery', () => {
     const sql = 'SELECT source_version, longitude, latitude FROM datasets."Query 1" ORDER BY source_version'
     cy.get('textarea').type(sql, { force: true, parseSpecialCharSequences: false })
     cy.wait('@saveDuckDBDraft')
-    cy.wait(750)
     cy.contains('.ace_editor:visible .ace_line', 'SELECT source_version').should('be.visible')
 
     cy.get('#dekart-query-status-message').should('be.empty')
@@ -101,7 +100,7 @@ describe('DuckDB refresh from BigQuery', () => {
 
     runBigQuery("SELECT 'recovered' AS source_version, 37.0 AS latitude, -122.0 AS longitude")
     cy.contains('[role="tab"]', 'Query 2').click({ force: true })
-    assertQueryStatus('Ready', 300000)
+    assertQueryStatus('Ready', 120000)
     cy.assertDatasetTable('Query 2', ['source_version'], ['recovered'])
   })
 

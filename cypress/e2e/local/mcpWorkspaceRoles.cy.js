@@ -31,16 +31,7 @@ function result (response, name) {
 
 // getDeviceToken authenticates every role through the user-visible device flow.
 function getDeviceToken (email, deviceName) {
-  return cy.request('POST', `${apiBase}/device`, { device_name: deviceName }).then((start) => {
-    cy.setDevClaimsEmail(email)
-    cy.visit(start.body.auth_url)
-    cy.contains('button', 'Authorize', { timeout: 20000 }).click()
-    cy.contains('Device authorized', { timeout: 20000 }).should('be.visible')
-    return cy.request('POST', `${apiBase}/device/token`, { device_id: start.body.device_id })
-  }).then((response) => {
-    expect(response.body.status).to.eq('authorized')
-    return response.body.token
-  })
+  return cy.mcpDeviceToken(email, { deviceName })
 }
 
 // setRole replaces the current default-workspace role without changing the device token.
@@ -160,7 +151,7 @@ function expectNewVersion (token, reportId, previousVersionId, attempts = 20) {
     const properties = result(r, 'preserved get_report_properties')
     if (properties.report.version_id !== previousVersionId) return properties
     expect(attempts, 'browser save rotated the report version').to.be.greaterThan(1)
-    return cy.wait(500).then(() => expectNewVersion(token, reportId, previousVersionId, attempts - 1))
+    return cy.wait(500).then(() => expectNewVersion(token, reportId, previousVersionId, attempts - 1)) // e2e-allow-wait: poll report until version changes
   })
 }
 

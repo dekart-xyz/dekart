@@ -66,7 +66,7 @@ const pollJobDone = (jobId, retries = 30) => {
     if (retries <= 0) {
       throw new Error(`query job timeout; last status=${status}`)
     }
-    cy.wait(1000)
+    cy.wait(1000) // e2e-allow-wait: poll job until terminal status
     return pollJobDone(jobId, retries - 1)
   })
 }

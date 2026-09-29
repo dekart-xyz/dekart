@@ -44,6 +44,7 @@ describe('Widgets first production slice', () => {
     cy.contains('button', /^Upload$/).click()
     cy.contains('Ready', { timeout: 120000 }).should('be.visible')
 
+    // Initial chart render after upload can take up to three minutes in CI.
     cy.get('[data-testid="widgets-tab"]', { timeout: 180000 }).should('have.attr', 'aria-expanded', 'true')
     cy.get('[data-testid="number-value"]', { timeout: 180000 }).should('have.text', '5')
     cy.get('[data-testid="category-chart"]').should('contain.text', 'Alpha').and('contain.text', 'Beta').and('contain.text', 'Gamma')
@@ -79,10 +80,10 @@ describe('Widgets first production slice', () => {
 
     // Definitions and the chart-owned selection share one report revision,
     // while the selection itself remains canonical Kepler map_config state.
-    cy.wait(2500)
+    cy.get('button#dekart-save-button .anticon-cloud', { timeout: 60000 }).should('exist')
     cy.reload()
-    cy.get('[data-testid="widgets-tab"]', { timeout: 180000 }).should('have.attr', 'aria-expanded', 'true')
-    cy.get('[data-testid="number-value"]', { timeout: 180000 }).should('have.text', '2')
+    cy.get('[data-testid="widgets-tab"]', { timeout: 120000 }).should('have.attr', 'aria-expanded', 'true')
+    cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.text', '2')
     cy.get('[data-testid="filter-strip"]').should('contain.text', 'category')
 
     cy.get('[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line').first().click()
@@ -93,9 +94,9 @@ describe('Widgets first production slice', () => {
     dragHistogramRange(25.5, 34.5)
     cy.get('[data-testid="number-value"]').should('have.text', '1')
     cy.get('[data-testid="filter-strip"]').should('contain.text', 'capacity kw')
-    cy.wait(2500)
+    cy.get('button#dekart-save-button .anticon-cloud', { timeout: 60000 }).should('exist')
     cy.reload()
-    cy.get('[data-testid="number-value"]', { timeout: 180000 }).should('have.text', '1')
+    cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.text', '1')
     cy.get('button[aria-label="Remove capacity kw filter"]').click()
     cy.get('[data-testid="number-value"]', { timeout: 30000 }).should('have.text', '5')
 
@@ -124,9 +125,9 @@ describe('Widgets first production slice', () => {
     cy.get('[data-testid="widgets-tab"]').click()
     cy.get('[data-testid="number-value"]').should('have.text', '2')
     cy.get('[data-testid="category-chart"]').should('contain.text', 'Alpha').and('not.contain.text', 'Beta')
-    cy.wait(2500)
+    cy.get('button#dekart-save-button .anticon-cloud', { timeout: 60000 }).should('exist')
     cy.reload()
-    cy.get('[data-testid="number-value"]', { timeout: 180000 }).should('have.text', '2')
+    cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.text', '2')
     cy.get('.interval-x .selection').last().should(selection => {
       expect(selection[0].getBoundingClientRect().width, 'native range shown in histogram').to.be.greaterThan(0)
     })
@@ -156,10 +157,10 @@ describe('Widgets first production slice', () => {
     cy.get('button[aria-label="Chart actions"]').first().click()
     cy.contains('[role="menuitem"]', 'Delete chart').click()
     cy.contains('Dashboard is empty').should('be.visible')
-    cy.wait(2500)
+    cy.get('button#dekart-save-button .anticon-cloud', { timeout: 60000 }).should('exist')
     cy.reload()
-    cy.get('[data-testid="widgets-tab"]', { timeout: 180000 }).click()
-    cy.contains('Dashboard is empty', { timeout: 180000 }).should('be.visible')
+    cy.get('[data-testid="widgets-tab"]', { timeout: 120000 }).click()
+    cy.contains('Dashboard is empty', { timeout: 120000 }).should('be.visible')
     cy.get('[data-testid="number-value"], [data-testid="category-chart"], [data-testid="histogram-chart"]').should('not.exist')
   })
 })

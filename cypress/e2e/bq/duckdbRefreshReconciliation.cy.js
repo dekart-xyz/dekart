@@ -61,7 +61,7 @@ describe('DuckDB reconciliation from BigQuery', () => {
       cy.visit(pathname)
     })
     cy.contains('[role="tab"]', 'Query 2', { timeout: 30000 }).click({ force: true })
-    assertQueryStatus('Ready', 300000)
+    assertQueryStatus('Ready', 120000)
     cy.assertDatasetTable('Query 2', ['source_version'], ['newer-source'])
     cy.get('#dekart-query-execute-button').should('not.exist')
   })
@@ -103,7 +103,6 @@ describe('DuckDB reconciliation from BigQuery', () => {
 
     cy.contains('[role="tab"]', 'Query 2').click({ force: true })
     assertQueryStatus('Query Error', 30000)
-    cy.wait(4000)
     assertQueryStatus('Query Error')
 
     cy.contains('[role="tab"]', 'Query 1').click({ force: true })
@@ -143,13 +142,13 @@ describe('DuckDB reconciliation from BigQuery', () => {
     runBigQuery("SELECT source_version, longitude, latitude FROM UNNEST([STRUCT('empty' AS source_version, 13.4 AS longitude, 52.5 AS latitude)]) WHERE FALSE")
     cy.assertDatasetRows('Query 1', 0)
     cy.contains('[role="tab"]', 'Query 2').click({ force: true })
-    assertQueryStatus('Ready', 300000)
+    assertQueryStatus('Ready', 120000)
     cy.assertDatasetRows('Query 2', 0)
 
     cy.contains('[role="tab"]', 'Query 1').click({ force: true })
     runBigQuery("SELECT 'restored' AS source_version, 13.5 AS longitude, 52.6 AS latitude")
     cy.contains('[role="tab"]', 'Query 2').click({ force: true })
-    assertQueryStatus('Ready', 300000)
+    assertQueryStatus('Ready', 120000)
     cy.assertDatasetRows('Query 2', 1)
     cy.assertDatasetTable('Query 2', ['source_version'], ['restored'])
   })

@@ -53,6 +53,5 @@ describe('pg-s3 PostGIS geometry', () => {
       .and('match', /^0106000000/)
     cy.get('.modal--close').click()
     cy.get('.mapboxgl-canvas').should('be.visible')
-    cy.wait(2000)
   })
 })

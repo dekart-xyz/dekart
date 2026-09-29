@@ -4,13 +4,7 @@ const apiBase = `${Cypress.env('DEKART_E2E_API_URL')}/api/v1`
 
 // MCP writes use the same device authorization flow as other widget specs.
 function authorizeDevice () {
-  return cy.request('POST', `${apiBase}/device`, { device_name: 'cypress-widgets-search' }).then(start => {
-    const deviceId = start.body.device_id
-    cy.visit(start.body.auth_url)
-    cy.contains('button', 'Authorize', { timeout: 30000 }).click()
-    cy.contains('Device authorized', { timeout: 30000 }).should('be.visible')
-    return cy.request('POST', `${apiBase}/device/token`, { device_id: deviceId }).then(response => response.body.token)
-  })
+  return cy.mcpDeviceToken(undefined, { deviceName: 'cypress-widgets-search' })
 }
 
 function callMCP (token, name, args = {}) {
@@ -64,7 +58,7 @@ describe('Search widget', () => {
     cy.get('[data-testid="search-widget"]').should('contain.text', 'Alpha%').and('contain.text', "O'Brien")
 
     cy.get('#dekart-save-button').click()
-    cy.wait(2500)
+    cy.get('button#dekart-save-button .anticon-cloud', { timeout: 60000 }).should('exist')
     cy.reload()
     cy.get('[data-testid="search-widget"]', { timeout: 120000 }).should('contain.text', 'Alpha%').and('contain.text', "O'Brien")
     cy.get('[data-testid="number-value"]').should('have.text', '2')

@@ -1,4 +1,4 @@
-/* eslint-disable no-undef */
+/* eslint-disable no-undef, no-unused-expressions */
 
 describe('local MCP postgres happy path with device auth', () => {
   it('configures postgres in UX, authorizes device, executes MCP flow, and verifies map data in UI', () => {
@@ -50,7 +50,7 @@ describe('local MCP postgres happy path with device auth', () => {
           if (retries <= 0) {
             throw new Error(`check_job_status failed with status=${response.status}`)
           }
-          cy.wait(1000)
+          cy.wait(1000) // e2e-allow-wait: poll MCP job until terminal status
           return pollJobDone(apiBase, token, jobId, retries - 1)
         }
         const job = response.body.result.query_job
@@ -76,7 +76,7 @@ describe('local MCP postgres happy path with device auth', () => {
         if (retries <= 0) {
           throw new Error(`query job timeout; last status=${status}`)
         }
-        cy.wait(1000)
+        cy.wait(1000) // e2e-allow-wait: poll MCP job until terminal status
         return pollJobDone(apiBase, token, jobId, retries - 1)
       })
     }
@@ -117,6 +117,28 @@ describe('local MCP postgres happy path with device auth', () => {
     cy.wait('@testConnection')
     cy.get('button#saveConnection', { timeout: 60000 }).should('be.enabled').click()
     cy.wait('@createConnection')
+
+    // Keep the UI regression for PostGIS geometry when the duplicate connection spec is removed.
+    cy.visit('/')
+    cy.get('button#dekart-create-report', { timeout: 20000 }).click()
+    cy.contains('button', connName, { timeout: 60000 }).click({ force: true })
+    cy.enterQuery('SELECT ST_MakeEnvelope(-118.08330882698346, 33.7756905, -118.06330882698346, 33.7956905, 4326) AS geometry')
+    cy.intercept('POST', '**/Dekart/RunQuery').as('postgisQuery')
+    cy.get('button#dekart-query-execute-button').click()
+    cy.wait('@postgisQuery', { timeout: 120000 })
+    cy.contains('Ready', { timeout: 120000 }).should('be.visible')
+    cy.openLayerPanel()
+    cy.contains('.layer__title__type', 'geojson', { timeout: 120000 }).should('be.visible')
+    cy.waitForMapSettingsEnabled()
+    cy.contains('.source-data-title .dataset-name', 'Query 1').then($name => {
+      $name.closest('.source-data-title').parent().parent()
+        .find('.show-data-table svg')[0]
+        .dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    cy.get('#dataset-modal .cell.row-0').first()
+      .should('have.attr', 'title')
+      .and('match', /^0103000000/)
+    cy.get('.modal--close').click()
 
     // 2) Device auth flow to obtain MCP bearer token.
     cy.request('POST', `${apiBase}/device`, { device_name: 'cypress-local-mcp' }).then((startResp) => {
