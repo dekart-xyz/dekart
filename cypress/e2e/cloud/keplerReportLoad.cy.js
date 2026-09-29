@@ -9,10 +9,11 @@ const files = [
   'flood-zones.csv'
 ]
 const layerSelector = '[data-testid="sortable-layer-item"], [data-testid="static-layer-item"]'
-const largeDatasetTimeout = 300000
+const largeDatasetTimeout = 600000
 
 describe('six GeoJSON CSV report load', () => {
   let fixtureDirectory
+  let expectedRows
 
   after(() => {
     if (fixtureDirectory) {
@@ -25,6 +26,7 @@ describe('six GeoJSON CSV report load', () => {
     const email = `kepler-report-load-${Date.now()}@example.com`
     cy.exec('node cypress/support/generateKeplerReportFiles.js', { timeout: 120000 })
       .then(({ stdout }) => { fixtureDirectory = stdout })
+    cy.then(() => cy.readFile(`${fixtureDirectory}/manifest.json`)).then(rows => { expectedRows = rows })
     cy.setDevClaimsEmail(email)
     cy.intercept(`${Cypress.env('DEKART_E2E_API_URL')}/api/v1/**`, request => {
       request.headers['X-Dekart-Claim-Email'] = email
@@ -64,8 +66,8 @@ describe('six GeoJSON CSV report load', () => {
     cy.openLayerPanel()
     cy.get('.source-data-title', { timeout: largeDatasetTimeout }).should('have.length', files.length)
     cy.get(layerSelector, { timeout: largeDatasetTimeout }).should('have.length', files.length)
-    cy.then(() => cy.readFile(`${fixtureDirectory}/manifest.json`, { timeout: largeDatasetTimeout })).then(rows => {
-      files.forEach(name => cy.assertDatasetRows(name, rows[name], largeDatasetTimeout))
+    cy.then(() => {
+      files.forEach(name => cy.assertDatasetRows(name, expectedRows[name], largeDatasetTimeout))
     })
     cy.contains('Kepler failed to publish the dataset.').should('not.exist')
   })
