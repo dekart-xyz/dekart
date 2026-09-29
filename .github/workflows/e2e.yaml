@@ -339,6 +339,11 @@ jobs:
             extra_env: |
               -e DEKART_STORAGE=PG \
               -e DEKART_DATASOURCE=PG \
+              -e DEKART_POSTGRES_HOST=localhost \
+              -e DEKART_POSTGRES_PORT=$DEKART_POSTGRES_PORT \
+              -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
+              -e DEKART_POSTGRES_PASSWORD=$DEKART_POSTGRES_PASSWORD \
+              -e DEKART_POSTGRES_DB=$DEKART_POSTGRES_DB \
               -e DEKART_POSTGRES_DATASOURCE_CONNECTION=postgres://$DEKART_POSTGRES_USER:$DEKART_POSTGRES_PASSWORD@localhost:5432/dekart_geo?sslmode=disable \
               -e DEKART_SQLITE_DB_PATH=./dekart.db \
               -e DEKART_DEV_CLAIMS=1 \

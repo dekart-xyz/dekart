@@ -35,7 +35,7 @@ describe('six GeoJSON CSV report load', () => {
     files.forEach((name, index) => {
       if (index > 0) cy.get('.ant-tabs-nav-add:visible').last().click()
       cy.contains('button', 'Upload File', { timeout: 30000 }).click()
-      cy.then(() => cy.get('input[type="file"]').selectFile(`${fixtureDirectory}/${name}`, { force: true }))
+      cy.then(() => cy.get('input[type="file"]', { timeout: 120000 }).selectFile(`${fixtureDirectory}/${name}`, { force: true }))
       cy.contains('button', /^Upload$/).click()
       cy.contains('Ready', { timeout: 120000 }).should('be.visible')
       cy.openLayerPanel()

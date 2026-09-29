@@ -29,7 +29,9 @@ function dragFirstWidgetBelowSecond () {
     const pointer = { pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, view, force: true }
     cy.wrap(source).trigger('pointerdown', { ...pointer, clientX: sourceRect.left + 12, clientY: sourceRect.top + 12 })
     cy.get('body').trigger('pointermove', { ...pointer, buttons: 1, clientX: sourceRect.left + 12, clientY: sourceRect.top + 24 })
+    cy.wait(50)
     cy.get('body').trigger('pointermove', { ...pointer, buttons: 1, clientX: targetRect.left + 12, clientY: targetRect.top + targetRect.height / 2 })
+    cy.wait(50)
     cy.get('body').trigger('pointerup', { ...pointer, clientX: targetRect.left + 12, clientY: targetRect.top + targetRect.height / 2 })
   })
 }
