@@ -62,6 +62,7 @@ Keep checks for: user input, environment variables, runtime variations, cross-pl
 
 ## Change Shape Guidance
 
+- For new self-contained logic/UI, consider a dark library; see `skills/dark-library/SKILL.md`.
 - Prefer small, surgical edits over broad refactors unless refactor is required for correctness.
 - Keep patterns consistent with neighboring code in the same folder.
 

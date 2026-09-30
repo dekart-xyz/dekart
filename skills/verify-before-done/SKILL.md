@@ -18,3 +18,4 @@ Use before reporting a code change as complete.
 5. When asked, behavior validated in the real runtime path (not just unit tests).
 6. Any changed unit-test coverage protects meaningful behavior under the unit-test policy in `AGENTS.md`; it is not coverage-only, an implementation duplicate, or a trivial copied-text assertion.
 7. Nothing in the change is unnecessary for the current scope.
+8. For dark-library changes, regenerate each affected library's `README.md`, run `make dark-check` and the relevant unit contract tests (including executable examples), and confirm any `README.md` diff is listed under `Dark API changes` in the PR description. Bootstrap these checks with the first real dark library per `skills/dark-library/SKILL.md`.
