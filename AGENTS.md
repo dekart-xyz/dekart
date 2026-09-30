@@ -40,6 +40,17 @@ tool input.
 - Don't introduce selectors, use reducers and react hooks.
 - Use reducers or hooks when state normalization is needed (`isCloud`, `oidcEnabled`, etc.).
 
+## Dark libraries
+
+- Use `skills/dark-library/SKILL.md` when creating or changing `src/client/dark/<name>/` or `src/server/dark/<name>/`, or when a new feature has self-contained logic/UI that can live there. Start with new features; do not migrate existing modules by default.
+- Client dark libraries use strict TypeScript; the rest of the client stays JavaScript. Server dark libraries use Go.
+- Dark libraries may contain functions, reducers, action creators, selectors, hooks, components and CSS modules. They depend only on their own files, other dark libraries' public entries and third-party packages, never non-dark app code, app state or generated proto types. Reviewed glue maps proto to/from library-owned types.
+- Every export must be unit-testable through the public API with real inputs and no mocks. Reviewed callers pass in I/O, clock, randomness and timer behavior. Component-instance state (`useState`, `useReducer`) and library-owned Redux state are allowed. Read-only package values are allowed; mutable state shared at package/module scope is not.
+- Redux libraries export their reducer, library-prefixed actions and components. The app mounts the reducer at any key and supplies a `getState(root) => slice` locator. Only the library's `store.ts` touches react-redux, reading through that locator; the library never assumes the app's root-state shape.
+- Scoped exceptions to the rules above: selectors are allowed inside dark libraries over dark-library state only; all dark code, including components and hooks, uses black-box unit contract tests (Vitest + Testing Library or Go external test packages). Cypress covers reviewed glue integration.
+- The review surface is each library's generated, committed `README.md` plus public contract tests and executable examples. Skip dark implementation review; everything outside `dark/` stays fully reviewed. Every export documents its contract; string-emitting exports also document escaping and include hostile-input examples.
+- Behavior changes require doc/example changes even when signatures stay the same. Callers change in the same PR, with no semver; list interface changes under `Dark API changes`. Bootstrap deterministic docs, isolation checks and CI with the first real library, following the skill.
+
 ## Cross-cutting Rules
 
 - Add a short purpose comment for each new non-trivial function and if statement

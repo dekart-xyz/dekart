@@ -8,6 +8,8 @@ Rule ownership:
 
 ## Available Skills
 
+- `dark-library` (`skills/dark-library/SKILL.md`)
+  - Use when creating or changing anything under `src/client/dark/` or `src/server/dark/`, or when a new feature has self-contained logic/UI that can live there.
 - `code-style` (`skills/code-style/SKILL.md`)
   - Use for implementation/refactor work to follow Dekart architecture, naming, style, and unit-test implementation conventions.
 - `verify-before-done` (`skills/verify-before-done/SKILL.md`)
