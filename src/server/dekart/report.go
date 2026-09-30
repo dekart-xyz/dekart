@@ -325,6 +325,10 @@ func (s Server) createReportSnapshot(ctx context.Context, reportID string, trigg
 // createReportSnapshotWithVersionIDTx creates a snapshot of the report content
 // using the provided transaction.
 func (s Server) createReportSnapshotWithVersionIDTx(ctx context.Context, tx *sql.Tx, versionID string, reportID string, changedBy string, triggerType proto.ReportSnapshot_TriggerType) error {
+	// Serialize every snapshot writer with restore before creating or compacting history.
+	if err := lockReportTx(ctx, tx, reportID); err != nil {
+		return err
+	}
 	versionIDExpression := "$1::uuid"
 	if IsSqlite() {
 		versionIDExpression = "$1"
@@ -398,7 +402,7 @@ func (s Server) createReportSnapshotWithVersionIDTx(ctx context.Context, tx *sql
 		return err
 	}
 
-	return nil
+	return s.compactReportHistoryTx(ctx, tx, reportID)
 }
 
 func (s Server) createReportSnapshotWithVersionID(ctx context.Context, versionID string, reportID string, changedBy string, triggerType proto.ReportSnapshot_TriggerType) error {
@@ -1619,7 +1623,16 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 		return nil, status.Error(codes.PermissionDenied, "Cannot restore snapshot")
 	}
 
-	// Load snapshot of report content
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer tx.Rollback()
+	if err := lockReportTx(ctx, tx, req.ReportId); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	// Read history under the report lock so compaction cannot remove its children during restore.
 	var (
 		snapshotMapConfig     sql.NullString
 		snapshotWidgetsConfig sql.NullString
@@ -1628,7 +1641,7 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 		snapshotReadme        sql.NullString
 	)
 
-	err = s.db.QueryRowContext(ctx, `
+	err = tx.QueryRowContext(ctx, `
 		SELECT map_config, title, query_params, readme, widgets_config
 		FROM report_snapshots
 		WHERE version_id = $1 AND report_id = $2
@@ -1649,14 +1662,6 @@ func (s Server) RestoreReportSnapshot(ctx context.Context, req *proto.RestoreRep
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	defer tx.Rollback()
-	if err := lockReportTx(ctx, tx, req.ReportId); err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
 	var currentParamsText sql.NullString
 	if err := tx.QueryRowContext(ctx, `select query_params from reports where id=$1`, req.ReportId).Scan(&currentParamsText); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
