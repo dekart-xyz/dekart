@@ -92,16 +92,16 @@ describe('DuckDB persistence from BigQuery', () => {
     cy.contains('[role="tab"]', 'Query 1').click({ force: true })
     runBigQuery("SELECT 'recovered-source' AS source_version, 13.5 AS longitude, 52.6 AS latitude")
     cy.contains('[role="tab"]', 'Query 3').click({ force: true })
-    assertQueryStatus('Ready', 300000)
+    assertQueryStatus('Ready', 120000)
 
     cy.location('pathname').then(pathname => {
       cy.setDevClaimsEmail('duckdb-interrupted-viewer@example.com')
       cy.visit(pathname)
     })
     cy.contains('[role="tab"]', 'Query 2', { timeout: 30000 }).click({ force: true })
-    assertQueryStatus('Ready', 300000)
+    assertQueryStatus('Ready', 120000)
     cy.contains('[role="tab"]', 'Query 3').click({ force: true })
-    assertQueryStatus('Ready', 300000)
+    assertQueryStatus('Ready', 120000)
     // Wait for the full graph before opening a modal; the descendant's Kepler
     // publication can otherwise replace the data-table UI mid-assertion.
     cy.contains('[role="tab"]', 'Query 2').click({ force: true })
@@ -125,7 +125,7 @@ describe('DuckDB persistence from BigQuery', () => {
     cy.contains('Snapshot restored', { timeout: 30000 }).should('be.visible')
 
     cy.contains('[role="tab"]', 'Query 2', { timeout: 30000 }).click({ force: true })
-    assertQueryStatus('Ready', 300000)
+    assertQueryStatus('Ready', 120000)
     cy.assertDatasetTable('Query 2', ['snapshot_marker'], ['before'])
   })
 
@@ -154,7 +154,7 @@ describe('DuckDB persistence from BigQuery', () => {
     cy.contains('.ant-tabs-tab', 'Readme', { timeout: 30000 }).should('be.visible')
     cy.get('[role="tab"]').filter(':contains("New")').should('have.length', 1)
     cy.contains('[role="tab"]', 'Query 2').click({ force: true }).should('have.attr', 'aria-selected', 'true')
-    assertQueryStatus('Ready', 300000)
+    assertQueryStatus('Ready', 120000)
     cy.assertDatasetTable('Query 2', ['source_version'], ['loaded-first'])
   })
 

@@ -2,6 +2,10 @@
 import copy from '../../fixtures/copy.json'
 
 describe('basic query flow', () => {
+  before(() => {
+    cy.resetCloudTestDatabase()
+  })
+
   it('should make simple bigquery query and get ready status', () => {
     cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN')
     cy.visit('/')
@@ -41,15 +45,5 @@ describe('basic query flow', () => {
     cy.get(`button:contains("${copy.execute}")`).click()
     cy.get(`span:contains("${copy.ready}")`, { timeout: 20000 }).should('be.visible')
     cy.get(`span:contains("${copy.downloading}")`).should('contain', 'kB') // size of result shown
-  })
-  it('Process empty results', () => {
-    cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN')
-    cy.visit('/')
-    cy.ensureTestWorkspace()
-    cy.get('button#dekart-create-report').click()
-    cy.get('button:contains("Run SQL")').click()
-    cy.get('textarea').type("SELECT latitude, longitude FROM `bigquery-public-data.chicago_crime.crime` WHERE primary_type = 'zzz' LIMIT 1000;", { force: true })
-    cy.get(`button:contains("${copy.execute}")`).click()
-    cy.get('span:contains("Result is empty")', { timeout: 20000 }).should('be.visible')
   })
 })

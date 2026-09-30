@@ -6,6 +6,7 @@ const serverPort = process.env.DEKART_PORT || 8080
 const appUrl = process.env.DEKART_E2E_BASE_URL || `http://localhost:${clientPort}`
 const isCI = [process.env.CI, process.env.CYPRESS_CI].some(value => ['1', 'true'].includes(String(value).toLowerCase()))
 const apiUrl = process.env.DEKART_E2E_API_URL || (isCI ? appUrl : `http://localhost:${serverPort}`)
+const redirectStateCache = new Map()
 
 function sensitiveScopes () {
   return [
@@ -76,7 +77,7 @@ module.exports = defineConfig({
   watchForFileChanges: false,
   viewportWidth: 1280,
   viewportHeight: 720,
-  video: true,
+  video: !isCI,
   env: {
     DEKART_E2E_API_URL: apiUrl,
     DEKART_POSTGRES_PORT: process.env.DEKART_POSTGRES_PORT || 5432,
@@ -92,8 +93,17 @@ module.exports = defineConfig({
           return null
         },
         async googleOAuthRedirectState ({ refreshTokenEnvName }) {
+          const cached = redirectStateCache.get(refreshTokenEnvName)
+          if (cached && cached.expiresAt > Date.now()) return cached.state
+
           const token = await exchangeRefreshToken(refreshTokenEnvName)
-          return encodeRedirectState(token)
+          const state = encodeRedirectState(token)
+          // Leave a minute for the redirect to complete before the Google token expires.
+          redirectStateCache.set(refreshTokenEnvName, {
+            state,
+            expiresAt: Date.now() + Math.max(0, Number(token.expires_in) - 60) * 1000
+          })
+          return state
         }
       })
     }

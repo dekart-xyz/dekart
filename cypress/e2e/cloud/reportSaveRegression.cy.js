@@ -129,7 +129,6 @@ function expectPointLayerDrawn () {
   cy.get('.layer__visibility-toggle .panel--header__action__component').first().click()
   cy.get('.layer__visibility-toggle .panel--header__action__component').first()
     .should('have.attr', 'data-for').and('include', 'tooltip.showLayer')
-  cy.wait(750)
   cy.screenshot('points-with-layer-hidden')
   const folder = `cypress/screenshots/${Cypress.spec.name}`
   cy.readFile(`${folder}/points-after-view-widget-filter-edit.png`, 'base64').then(visible => {
@@ -193,7 +192,6 @@ describe('cloud report save regression', () => {
     cy.get('@authoredMapStyle').then(style => {
       cy.get('.map-dropdown-option:not(.collapsed) .map-preview-name').should('have.text', style)
     })
-    cy.wait(1500)
     cy.get('@unexpectedSave.all').should('have.length', 0)
     cy.get('[data-testid="error-message-text"]').should('not.exist')
     cy.contains('An error in deck.gl').should('not.exist')

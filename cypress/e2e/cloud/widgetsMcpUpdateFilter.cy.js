@@ -4,22 +4,7 @@ const apiBase = `${Cypress.env('DEKART_E2E_API_URL')}/api/v1`
 const categoryBar = '[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line'
 
 function authorizeDevice () {
-  return cy.request('POST', `${apiBase}/device`, { device_name: 'cypress-widgets-mcp-update' }).then((startResponse) => {
-    expect(startResponse.status, 'device start status').to.eq(200)
-    expect(startResponse.body.auth_url, 'device authorization URL').to.include('/device/authorize')
-    const deviceId = startResponse.body.device_id
-
-    cy.visit(startResponse.body.auth_url)
-    cy.contains('button', 'Authorize', { timeout: 30000 }).click()
-    cy.contains('Device authorized', { timeout: 30000 }).should('be.visible')
-
-    return cy.request('POST', `${apiBase}/device/token`, { device_id: deviceId }).then((tokenResponse) => {
-      expect(tokenResponse.body.status, 'device token status').to.eq('authorized')
-      expect(tokenResponse.body.token, 'device token').to.be.a('string')
-      expect(tokenResponse.body.token, 'device token').not.to.eq('')
-      return tokenResponse.body.token
-    })
-  })
+  return cy.mcpDeviceToken(undefined, { deviceName: 'cypress-widgets-mcp-update' })
 }
 
 function callMCP (token, name, args = {}) {
@@ -98,7 +83,7 @@ describe('MCP widget updates preserve chart filtering', () => {
       // The local Mosaic selection updates both metrics, but the selection must also become canonical Kepler state.
       cy.get('[data-testid="filter-strip"]', { timeout: 30000 }).should('contain.text', 'category')
 
-      cy.wait(2500)
+      cy.get('button#dekart-save-button .anticon-cloud', { timeout: 60000 }).should('exist')
       cy.reload()
       cy.get('[data-testid="filter-strip"]', { timeout: 120000 }).should('contain.text', 'category')
       cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.length', 2).should(values => {

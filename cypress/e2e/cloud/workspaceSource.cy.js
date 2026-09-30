@@ -23,7 +23,7 @@ const waitForWorkspaceSourceSaved = (workspaceName, retries = 20) => {
         expect(count).to.be.greaterThan(0)
         return
       }
-      cy.wait(1000)
+      cy.wait(1000) // e2e-allow-wait: poll workspace source until saved
       waitForWorkspaceSourceSaved(workspaceName, retries - 1)
     })
 }

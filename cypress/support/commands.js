@@ -5,6 +5,7 @@
 let googleOAuthInterceptInstalled = false
 let googleOAuthRedirectState = ''
 let googleOAuthReturnUrl = ''
+const mcpDeviceTokens = new Map()
 
 Cypress.on('test:before:run', () => {
   googleOAuthInterceptInstalled = false
@@ -14,6 +15,32 @@ Cypress.on('test:before:run', () => {
 
 Cypress.Commands.add('setDevClaimsEmail', (email) => {
   cy.setCookie('dekart-dev-claim-email', email)
+})
+
+// mcpDeviceToken runs the browser authorization flow and reuses its bearer token within a spec.
+Cypress.Commands.add('mcpDeviceToken', (email, { fresh = false, deviceName = 'cypress-mcp' } = {}) => {
+  const key = `${Cypress.spec.relative}:${email || 'default'}`
+  if (!fresh && mcpDeviceTokens.has(key)) return cy.wrap(mcpDeviceTokens.get(key), { log: false })
+
+  const apiBase = `${Cypress.env('DEKART_E2E_API_URL')}/api/v1`
+  return cy.request('POST', `${apiBase}/device`, { device_name: deviceName }).then(start => {
+    expect(start.status, 'device start status').to.eq(200)
+    expect(start.body.device_id, 'device_id').to.be.a('string')
+    expect(start.body.device_id.length, 'device_id length').to.be.greaterThan(0)
+    expect(start.body.auth_url, 'device authorization URL').to.include('/device/authorize')
+    if (email) cy.setDevClaimsEmail(email)
+    cy.visit(start.body.auth_url)
+    cy.contains('button', 'Authorize', { timeout: 30000 }).click()
+    cy.contains('Device authorized', { timeout: 30000 }).should('be.visible')
+    return cy.request('POST', `${apiBase}/device/token`, { device_id: start.body.device_id })
+      .then(response => {
+        expect(response.body.status, 'device token status').to.eq('authorized')
+        expect(response.body.token, 'device token').to.be.a('string')
+        expect(response.body.token.length, 'device token length').to.be.greaterThan(0)
+        mcpDeviceTokens.set(key, response.body.token)
+        return response.body.token
+      })
+  })
 })
 
 // The left pane is shared between map settings and widgets and opens on widgets,

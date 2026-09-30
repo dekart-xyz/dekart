@@ -50,7 +50,7 @@ describe('local file upload report persistence with readme conversion', () => {
         if (retries <= 0) {
           throw new Error('timed out waiting for report dataset')
         }
-        cy.wait(500)
+        cy.wait(500) // e2e-allow-wait: poll report until dataset appears
         return waitForAtLeastOneDataset(reportId, retries - 1)
       })
     }
@@ -198,6 +198,10 @@ describe('local file upload report persistence with readme conversion', () => {
       cy.wait('@completeSession', { timeout: 120000 })
       cy.contains('Ready', { timeout: 120000 }).should('be.visible')
       cy.contains('sample.csv', { timeout: 20000 }).should('be.visible')
+      waitForNoDownloadMessage()
+      cy.openLayerPanel()
+      cy.get('[data-testid="sortable-layer-item"], [data-testid="static-layer-item"]', { timeout: 120000 })
+        .should('have.length', 1)
 
       cy.get('button#dekart-save-button', { timeout: 20000 }).click()
       cy.get('button#dekart-save-button', { timeout: 60000 }).should('not.be.disabled')
@@ -222,7 +226,6 @@ describe('local file upload report persistence with readme conversion', () => {
           return datasetId
         })
       }).then((datasetId) => {
-        waitForNoDownloadMessage()
         return mcpCall('add_report_readme', {
           report_id: reportId,
           markdown: '# Dataset notes\n\nThis report should keep its uploaded CSV dataset.'
@@ -230,6 +233,10 @@ describe('local file upload report persistence with readme conversion', () => {
       })
 
       cy.visit(`${appUrl}/reports/${reportId}/source`)
+      cy.openLayerPanel()
+      cy.contains('.source-data-title .dataset-name', 'sample.csv', { timeout: 120000 }).should('be.visible')
+      cy.get('[data-testid="sortable-layer-item"], [data-testid="static-layer-item"]', { timeout: 120000 })
+        .should('have.length', 1)
 
       waitForAtLeastOneDataset(reportId).then((properties) => {
         const datasets = properties.datasets || properties.datasetsList || []

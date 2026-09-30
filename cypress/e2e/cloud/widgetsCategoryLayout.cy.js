@@ -22,6 +22,7 @@ describe('Widget category layout', () => {
     }, { force: true })
     cy.contains('button', /^Upload$/).click()
     cy.contains('Ready', { timeout: 120000 }).should('be.visible')
+    // Initial chart render after upload can take up to three minutes in CI.
     cy.get('[data-testid="widgets-tab"]', { timeout: 180000 }).should('have.attr', 'aria-expanded', 'true')
     cy.get('[data-testid="category-count"]', { timeout: 180000 }).should('have.text', '20 values')
     cy.get('[data-testid="category-chart"]', { timeout: 180000 }).should('contain.text', 'THEFT').and('contain.text', 'CRIMINAL DAMAGE')

@@ -391,10 +391,6 @@ func (s Server) CreateSubscription(ctx context.Context, req *proto.CreateSubscri
 			RedirectUrl: "/", // redirect to home page
 		}, nil
 	case proto.PlanType_TYPE_TRIAL:
-		if workspaceInfo.PlanType != proto.PlanType_TYPE_PERSONAL {
-			log.Error().Msg("Workspace is not on personal plan when creating trial subscription")
-			return nil, status.Error(codes.InvalidArgument, "Workspace is not on personal plan when creating trial subscription")
-		}
 		users, err := s.getWorkspaceUsers(ctx, workspaceInfo.ID)
 		if err != nil {
 			log.Err(err).Send()

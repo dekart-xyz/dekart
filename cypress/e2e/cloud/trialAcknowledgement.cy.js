@@ -393,4 +393,31 @@ describe('Cloud trial acknowledgement', () => {
     cy.get('button#dekart-create-report', { timeout: 30000 }).should('be.visible')
   })
 
+  it('returns a stale revision when a trial was already started', () => {
+    const workspaceId = '00000000-0000-0000-0000-000000000803'
+    cy.psql(`
+      INSERT INTO workspaces (id, name)
+      VALUES ('${workspaceId}', 'Already started trial workspace');
+
+      INSERT INTO workspace_log (workspace_id, email, status, authored_by, id, role)
+      VALUES ('${workspaceId}', '${email}', 1, '${email}', '00000000-0000-0000-0000-000000000804', 1);
+
+      INSERT INTO subscription_log (workspace_id, authored_by, plan_type)
+      VALUES ('${workspaceId}', '${email}', 1);
+    `)
+
+    cy.visit('/workspace/trial')
+    cy.window().then(win => getWorkspaceRequest(win, email, workspaceId)).then(workspace => {
+      const staleRevision = workspace.getSubscription().getRevision()
+      cy.psql(`
+        INSERT INTO subscription_log (workspace_id, authored_by, plan_type)
+        VALUES ('${workspaceId}', '${email}', 6);
+      `)
+      cy.window().then(win => startTrialRequest(win, email, workspaceId, staleRevision))
+        .should('equal', 10)
+    })
+    cy.visit('/')
+    cy.get('button#dekart-create-report', { timeout: 30000 }).should('be.visible')
+    cy.contains('Start your trial to use this workspace.').should('not.exist')
+  })
 })

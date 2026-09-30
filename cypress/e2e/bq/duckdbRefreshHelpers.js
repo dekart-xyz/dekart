@@ -87,7 +87,7 @@ export function runBigQuery (sql) {
 export function runDuckDBQuery (sql) {
   enterVisibleQuery(sql)
   cy.get('#dekart-query-execute-button').should('not.be.disabled').click()
-  assertQueryStatus('Ready', 300000)
+  assertQueryStatus('Ready', 120000)
 }
 
 // addDuckDBQuery adds a DuckDB query using the dataset selector.

@@ -9,7 +9,7 @@ function uploadActiveDataset (fixture) {
   cy.intercept('POST', '**/api/v1/file/*/upload-sessions').as('startUploadSession')
   cy.intercept('PUT', '**/api/v1/file/*/upload-sessions/*/parts/*').as('uploadPart')
   cy.intercept('POST', '**/api/v1/file/*/upload-sessions/*/complete').as('completeUploadSession')
-  cy.contains('button', 'Upload File', { timeout: 20000 }).should('be.visible').click()
+  cy.contains('button', 'Upload File', { timeout: 20000 }).click({ force: true })
   cy.wait('@createFile', { timeout: 60000 })
   cy.get('input[type="file"]', { timeout: 20000 }).selectFile(fixture, { force: true })
   cy.contains('button', 'Upload').click()
@@ -21,24 +21,7 @@ function uploadActiveDataset (fixture) {
 
 // getDeviceToken authorizes MCP calls through the user-visible device flow.
 function getDeviceToken () {
-  return cy.request('POST', `${apiBase}/device`, {
-    device_name: 'cypress-local-map-config-auto-layers'
-  }).then((startResponse) => {
-    const deviceId = startResponse.body.device_id
-    const authUrl = startResponse.body.auth_url
-    expect(deviceId, 'device_id').to.be.a('string').and.not.eq('')
-    expect(authUrl, 'auth_url').to.be.a('string').and.include('/device/authorize')
-
-    cy.visit(authUrl)
-    cy.contains('button', 'Authorize', { timeout: 20000 }).click()
-    cy.contains('Device authorized', { timeout: 20000 }).should('be.visible')
-
-    return cy.request('POST', `${apiBase}/device/token`, { device_id: deviceId }).then((tokenResponse) => {
-      expect(tokenResponse.body.status, 'device token status').to.eq('authorized')
-      expect(tokenResponse.body.token, 'device token').to.be.a('string').and.not.eq('')
-      return tokenResponse.body.token
-    })
-  })
+  return cy.mcpDeviceToken(undefined, { deviceName: 'cypress-local-map-config-auto-layers' })
 }
 
 // mcpCall invokes one authenticated MCP tool and returns its result payload.

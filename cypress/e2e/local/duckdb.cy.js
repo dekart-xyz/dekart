@@ -1,118 +1,5 @@
 /* eslint-disable no-undef */
-
-const LAYER_SELECTOR = '[data-testid="sortable-layer-item"], [data-testid="static-layer-item"]'
-
-// createReport opens a new empty report through the available local entry point.
-function createReport () {
-  cy.visit('/')
-  cy.get('body', { timeout: 20000 }).then(($body) => {
-    if ($body.text().includes('Ready to connect')) {
-      cy.contains('button', 'Use file upload').click()
-    } else {
-      cy.get('button#dekart-create-report', { timeout: 20000 }).click()
-    }
-  })
-}
-
-// uploadActiveDataset selects a fixture path or generated file for the active empty dataset and waits for storage.
-function uploadActiveDataset (fixture) {
-  const [file, fileName] = typeof fixture === 'string'
-    ? [`cypress/fixtures/${fixture}`, fixture]
-    : [fixture, fixture.fileName]
-  cy.contains('button', 'Upload File', { timeout: 20000 }).scrollIntoView().click({ force: true })
-  cy.intercept('POST', '**/api/v1/file/*/upload-sessions/*/complete').as('completeUploadSession')
-  cy.get('input[type="file"]', { timeout: 20000 }).selectFile(file, { force: true })
-  cy.contains('button', 'Upload').click()
-  cy.wait('@completeUploadSession', { timeout: 120000 })
-  cy.contains('Ready', { timeout: 120000 }).should('be.visible')
-  cy.contains(fileName, { timeout: 20000 }).should('be.visible')
-}
-
-// createReportAndUpload creates a report and waits for its uploaded source to load.
-function createReportAndUpload (fixture) {
-  createReport()
-  uploadActiveDataset(fixture)
-}
-
-// selectDuckDB chooses the browser-local query engine and verifies its supplied logo.
-function selectDuckDB () {
-  cy.contains('button', 'DuckDB', { timeout: 20000 }).as('duckDBButton')
-  cy.get('@duckDBButton').find('.anticon').should('have.css', 'background-image').and('include', 'Ebene_1')
-  cy.get('@duckDBButton').scrollIntoView().click({ force: true })
-}
-
-// replaceEditorText replaces the visible Ace value through its keyboard input.
-function replaceEditorText (sql) {
-  cy.get('.ace_editor:not(.ace_autocomplete):visible').then($editor => {
-    const editor = $editor[0].ownerDocument.defaultView.ace.edit($editor[0])
-    editor.completer?.detach()
-    editor.focus()
-  })
-  cy.get('.ace_autocomplete:visible').should('not.exist')
-  cy.get('.ace_editor:not(.ace_autocomplete):visible textarea').type('{selectall}{backspace}', { force: true })
-  cy.get('.ace_editor:not(.ace_autocomplete):visible .ace_content').should($content => {
-    expect($content.text().trim()).to.equal('')
-  })
-  cy.get('.ace_editor:not(.ace_autocomplete):visible textarea').then($textarea => {
-    const view = $textarea[0].ownerDocument.defaultView
-    const clipboardData = new view.DataTransfer()
-    clipboardData.setData('text/plain', sql)
-    $textarea[0].dispatchEvent(new view.ClipboardEvent('paste', {
-      bubbles: true,
-      cancelable: true,
-      clipboardData
-    }))
-  })
-  editorShouldContain(sql)
-}
-
-// editorShouldContain asserts the visible Ace editor's current SQL value.
-function editorShouldContain (sql) {
-  cy.get('.ace_editor:not(.ace_autocomplete):visible').should($editor => {
-    const editor = $editor[0].ownerDocument.defaultView.ace.edit($editor[0])
-    assert.include(editor.getValue(), sql)
-  })
-}
-
-// acceptAutocomplete inserts a named suggestion through Ace's completion path.
-function acceptAutocomplete (completion) {
-  cy.get('.ace_autocomplete:visible', { timeout: 20000 }).should('contain.text', completion)
-  cy.get('.ace_editor:not(.ace_autocomplete):visible').then(($editor) => {
-    const editor = $editor[0].ownerDocument.defaultView.ace.edit($editor[0])
-    const match = editor.completer.completions.filtered.find(candidate => candidate.caption === completion)
-    expect(match, `autocomplete match for ${completion}`).to.not.equal(undefined)
-    editor.completer.insertMatch(match)
-  })
-}
-
-// insertSampleQuery opens the default example and verifies its visible SQL.
-function insertSampleQuery (sql) {
-  cy.contains('button', 'Start with a sample query').click()
-  editorShouldContain(sql)
-}
-
-// runActiveDuckDBQuery selects DuckDB and executes SQL for the active empty dataset.
-function runActiveDuckDBQuery (sql) {
-  selectDuckDB()
-  replaceEditorText(sql)
-  cy.get('#dekart-query-execute-button', { timeout: 20000 }).should('be.enabled').click()
-  cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Ready')
-}
-
-// addDuckDBQuery creates, executes, and verifies a browser-local query in the UI.
-function addDuckDBQuery (sql, datasetLabel, expectedRows, expectedFields, expectedValues = []) {
-  cy.get('button.ant-tabs-nav-add:visible').first().click()
-  cy.contains('[role="tab"]', 'New').click({ force: true })
-  cy.intercept('POST', '**/Dekart/UpdateReport').as('duckdbMapUpdate')
-  runActiveDuckDBQuery(sql)
-  cy.assertDatasetRows(datasetLabel, expectedRows)
-  // Kepler persists the visible dataset/layer update asynchronously. Wait for the
-  // public API save and its immediately-following layer reconciliation to settle
-  // before opening the data-table modal that a report refresh can otherwise close.
-  cy.wait('@duckdbMapUpdate', { timeout: 120000 }).its('response.statusCode').should('eq', 200)
-  cy.wait(2000)
-  cy.assertDatasetTable(datasetLabel, expectedFields, expectedValues)
-}
+import { LAYER_SELECTOR, createReport, createReportAndUpload, uploadActiveDataset, selectDuckDB, replaceEditorText, editorShouldContain, acceptAutocomplete, insertSampleQuery, runActiveDuckDBQuery, addDuckDBQuery } from './duckdbHelpers'
 
 describe('browser-local DuckDB datasets', () => {
   it('queries an uploaded CSV and a chained DuckDB result', () => {
@@ -123,7 +10,7 @@ describe('browser-local DuckDB datasets', () => {
     selectDuckDB()
     insertSampleQuery('FROM datasets."sample.csv"')
     cy.get('#dekart-query-execute-button').click()
-    cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Ready')
+    cy.get('#dekart-query-status-message', { timeout: 120000 }).should('contain', 'Ready')
     cy.assertDatasetRows('Query 1', 100)
 
     cy.get('button.ant-tabs-nav-add:visible').first().click()
@@ -135,7 +22,7 @@ describe('browser-local DuckDB datasets', () => {
     editorShouldContain('DATASETS."sample.csv"')
     replaceEditorText('SELECT primary_type, latitude, longitude FROM datasets."sample.csv"')
     cy.get('#dekart-query-execute-button').click()
-    cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Ready')
+    cy.get('#dekart-query-status-message', { timeout: 120000 }).should('contain', 'Ready')
     cy.assertDatasetRows('Query 2', 8276)
 
     addDuckDBQuery(
@@ -154,7 +41,7 @@ describe('browser-local DuckDB datasets', () => {
 
     replaceEditorText('SELECT i::DOUBLE AS latitude, i::DOUBLE AS longitude FROM range(100) t(i)')
     cy.get('#dekart-query-execute-button').click()
-    cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Ready')
+    cy.get('#dekart-query-status-message', { timeout: 120000 }).should('contain', 'Ready')
     cy.assertDatasetTable('Query 1', ['latitude', 'longitude'])
     cy.assertDatasetRows('Query 1', 100)
     cy.contains('.layer__title__type', 'point').should('be.visible')
@@ -165,7 +52,7 @@ describe('browser-local DuckDB datasets', () => {
     selectDuckDB()
     replaceEditorText("SELECT ST_Y('POINT (1 2)'::VARCHAR)")
     cy.get('#dekart-query-execute-button').click()
-    cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Query Error')
+    cy.get('#dekart-query-status-message', { timeout: 120000 }).should('contain', 'Query Error')
     cy.get('#dekart-query-status-message').parent().should('contain', 'ST_Y(VARCHAR)')
     cy.get('body').then($body => {
       expect($body.find('.ant-message-error')).to.have.length(0)
@@ -173,7 +60,7 @@ describe('browser-local DuckDB datasets', () => {
 
     replaceEditorText('SELECT 1 AS value')
     cy.get('#dekart-query-execute-button').click()
-    cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Ready')
+    cy.get('#dekart-query-status-message', { timeout: 120000 }).should('contain', 'Ready')
   })
 
   it('keeps an upstream DuckDB SQL error visible on a dependent query', () => {
@@ -181,14 +68,14 @@ describe('browser-local DuckDB datasets', () => {
     selectDuckDB()
     replaceEditorText("SELECT ST_Y('POINT (1 2)'::VARCHAR) AS latitude")
     cy.get('#dekart-query-execute-button').click()
-    cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Query Error')
+    cy.get('#dekart-query-status-message', { timeout: 120000 }).should('contain', 'Query Error')
 
     cy.get('button.ant-tabs-nav-add:visible').first().click()
     cy.contains('[role="tab"]', 'New').click({ force: true })
     selectDuckDB()
     replaceEditorText('SELECT * FROM datasets."Query 1"')
     cy.get('#dekart-query-execute-button').click()
-    cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Query Error')
+    cy.get('#dekart-query-status-message', { timeout: 120000 }).should('contain', 'Query Error')
     cy.get('#dekart-query-status-message').parent().should('contain', 'ST_Y(VARCHAR)')
     cy.get('body').then($body => {
       expect($body.find('.ant-message-error')).to.have.length(0)
@@ -200,7 +87,7 @@ describe('browser-local DuckDB datasets', () => {
     selectDuckDB()
     replaceEditorText('SELECT unknown_function(1)')
     cy.get('#dekart-query-execute-button').click()
-    cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Query Error')
+    cy.get('#dekart-query-status-message', { timeout: 120000 }).should('contain', 'Query Error')
 
     cy.get('button.ant-tabs-nav-add:visible').first().click()
     cy.contains('[role="tab"]', 'New').click({ force: true })
@@ -224,7 +111,7 @@ describe('browser-local DuckDB datasets', () => {
     replaceEditorText('')
     insertSampleQuery('FROM datasets."source ""one"""')
     cy.get('#dekart-query-execute-button').click()
-    cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Ready')
+    cy.get('#dekart-query-status-message', { timeout: 120000 }).should('contain', 'Ready')
 
     replaceEditorText('')
     cy.get('.ant-message-notice', { timeout: 20000 }).should('not.exist')
@@ -239,91 +126,6 @@ describe('browser-local DuckDB datasets', () => {
     replaceEditorText('')
     insertSampleQuery('FROM range(100)')
     cy.get('#dekart-query-execute-button').click()
-    cy.get('#dekart-query-status-message', { timeout: 300000 }).should('contain', 'Ready')
-  })
-
-  it('loads a CSV row longer than DuckDB default max line size', () => {
-    const coordinates = Array.from({ length: 60000 }, (_, i) => `[ ${(-115.26 + i * 1e-7).toExponential(15)}, ${(36.15 + i * 1e-7).toExponential(15)} ]`).join(', ')
-    const geometry = `{ "coordinates": [ ${coordinates} ], "type": "LineString" }`
-    createReportAndUpload({
-      contents: Cypress.Buffer.from(`name,geometry\nlong-road,"${geometry.replaceAll('"', '""')}"\n`),
-      fileName: 'long-line.csv',
-      mimeType: 'text/csv'
-    })
-    cy.waitForMapSettingsEnabled()
-    cy.assertDatasetRows('long-line.csv', 1)
-  })
-
-  it('reports a CSV row above the line size limit without dumping the row', () => {
-    const coordinates = Array.from({ length: 450000 }, (_, i) => `[ ${(-115.26 + i * 1e-8).toExponential(15)}, ${(36.15 + i * 1e-8).toExponential(15)} ]`).join(', ')
-    const geometry = `{ "coordinates": [ ${coordinates} ], "type": "LineString" }`
-    createReportAndUpload({
-      contents: Cypress.Buffer.from(`name,geometry\ntoo-long-road,"${geometry.replaceAll('"', '""')}"\n`),
-      fileName: 'too-long-line.csv',
-      mimeType: 'text/csv'
-    })
-    cy.contains('.ant-message-notice', 'CSV row exceeds 20 MB limit', { timeout: 120000 }).should('be.visible')
-    cy.get('.ant-message-notice').should('not.contain', 'Original Line')
-  })
-
-  it('queries GeoJSON through the bundled spatial extension', () => {
-    createReportAndUpload('sample.geojson')
-    addDuckDBQuery(
-      'SELECT name, ST_X(ST_GeomFromWKB(_geojson)) AS longitude, ST_Y(ST_GeomFromWKB(_geojson)) AS latitude FROM datasets."sample.geojson"',
-      'Query 1',
-      2,
-      ['name', 'longitude', 'latitude']
-    )
-  })
-
-  it('queries an uploaded Parquet file', () => {
-    createReportAndUpload('sample.parquet')
-    addDuckDBQuery(
-      'SELECT primary_type, latitude, longitude FROM datasets."sample.parquet"',
-      'Query 1',
-      8276,
-      ['primary_type', 'latitude', 'longitude'],
-      ['THEFT']
-    )
-  })
-
-  it('clusters uploaded points into H3 cells and visualizes them in Kepler', () => {
-    createReportAndUpload('h3-points.csv')
-    addDuckDBQuery(
-      `SELECT
-        h3_latlng_to_cell_string(latitude, longitude, 8) AS h3,
-        count(*) AS point_count,
-        json_extract_string(json_object('source', 'points'), '$.source') AS source
-      FROM datasets."h3-points.csv"
-      GROUP BY h3, source
-      ORDER BY h3`,
-      'Query 1',
-      2,
-      ['h3', 'point_count', 'source'],
-      ['points']
-    )
-    cy.contains('.layer__title__type', 'H3', { timeout: 120000 }).should('be.visible')
-    cy.get('.mapboxgl-canvas', { timeout: 30000 }).should($canvas => {
-      const bounds = $canvas[0].getBoundingClientRect()
-      expect(bounds.width, 'map width').to.be.greaterThan(0)
-      expect(bounds.height, 'map height').to.be.greaterThan(0)
-    })
-  })
-
-  it('numbers queries by dataset order when they are created out of order', () => {
-    createReportAndUpload('sample.csv')
-    cy.get('button.ant-tabs-nav-add:visible').first().click()
-    cy.get('[role="tab"]').filter(':contains("New")').should('have.length', 1)
-    cy.get('button.ant-tabs-nav-add:visible').first().click()
-    cy.get('[role="tab"]').filter(':contains("New")').should('have.length', 2)
-
-    runActiveDuckDBQuery('SELECT primary_type FROM datasets."sample.csv" LIMIT 1')
-    cy.get('[role="tab"]').filter(':contains("New")').click({ force: true })
-    runActiveDuckDBQuery('SELECT primary_type FROM datasets."sample.csv" LIMIT 1')
-
-    cy.get('[role="tab"]').should($tabs => {
-      const queryLabels = [...$tabs].map(tab => tab.textContent.trim()).filter(label => label.startsWith('Query '))
-      expect(queryLabels).to.deep.equal(['Query 1', 'Query 2'])
-    })
+    cy.get('#dekart-query-status-message', { timeout: 120000 }).should('contain', 'Ready')
   })
 })

@@ -20,21 +20,21 @@ describe('self-hosted first setup happy flow', () => {
     })
 
     // O1: just file upload
-    cy.contains('button', 'Upload File', { timeout: 20000 }).click()
+    cy.contains('button', 'Upload File', { timeout: 20000 }).click({ force: true })
     cy.get('input[type="file"]', { timeout: 20000 }).selectFile('cypress/fixtures/sample.csv', { force: true })
     cy.contains('button', 'Upload').click()
     cy.contains('Ready', { timeout: 120000 }).should('be.visible')
 
     // O2: create Snowflake connection
     cy.visit('/connections')
-    cy.get('body', { timeout: 20000 }).then(($body) => {
-      if ($body.find('button:contains("New Connection")').length > 0) {
-        cy.contains('button', 'New Connection').click()
-        cy.contains('div', 'Snowflake', { timeout: 20000 }).closest('button').click()
-      } else {
-        cy.contains('div', 'Snowflake', { timeout: 20000 }).closest('button').click()
+    cy.get('body', { timeout: 20000 }).should($body => {
+      expect($body.find('#dekart-new-connection-connections, #dekart-connection-type-card-snowflake').length).to.be.greaterThan(0)
+    }).then($body => {
+      if ($body.find('#dekart-new-connection-connections').length) {
+        cy.get('#dekart-new-connection-connections').click()
       }
     })
+    cy.get('#dekart-connection-type-card-snowflake', { timeout: 20000 }).click()
 
     cy.get('input#connectionName', { timeout: 20000 }).clear().type(connName)
     cy.get('input#snowflakeAccountId').clear().type(Cypress.env('SNOWFLAKE_ACCOUNT_ID'))
@@ -56,10 +56,10 @@ describe('self-hosted first setup happy flow', () => {
     // Use new connection in report and run SQL
     cy.visit('/')
     cy.get('button#dekart-create-report', { timeout: 20000 }).click()
-    cy.contains(connName, { timeout: 20000 }).click()
+    cy.contains('button', connName, { timeout: 20000 }).click({ force: true })
     cy.get('textarea', { timeout: 20000 }).type(copy.simple_snowflake_query, { force: true })
     cy.contains('button', copy.execute).click()
     cy.contains('span', copy.ready, { timeout: 120000 }).should('be.visible')
-    cy.contains('100 rows', { timeout: 60000 }).should('be.visible')
+    cy.get('[data-testid="number-value"]', { timeout: 60000 }).should('have.text', '100')
   })
 })
