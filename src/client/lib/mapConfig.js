@@ -1,4 +1,4 @@
-import { addLayer, receiveMapConfig, removeEffect, removeFilter, removeLayer, setFeatures, toggleSplitMap } from '@kepler.gl/actions'
+import { createNewDatasetSuccess, receiveMapConfig } from '@kepler.gl/actions'
 import { KeplerGlSchema } from '@kepler.gl/schemas'
 import { setLastMapConfigChanged } from '../actions/report'
 import { useDispatch, useSelector } from 'react-redux'
@@ -96,29 +96,18 @@ export function receiveReportUpdateMapConfig (report, dispatch, getState) {
   }
 }
 
-// Restore the full authored map without merging saved layers into the existing layers.
-// TODO: find more elegant way
+// Restore authored configuration and rebuild layer data using the already loaded tables.
 export function restoreAuthoredMapConfig (report, dispatch, getState) {
   const savedConfig = uniqueMapConfigLayers(JSON.parse(report.mapConfig))
   const currentConfig = KeplerGlSchema.getConfigToSave(getState().keplerGl.kepler)
   if (!shouldUpdateMapConfig(currentConfig, savedConfig)) return
 
-  const currentVisState = getState().keplerGl.kepler.visState
-  // Kepler merges split maps into the current layout, so close viewer panels first.
-  if (currentVisState.splitMaps.length) dispatch(toggleSplitMap(0))
-  for (let index = currentVisState.filters.length - 1; index >= 0; index--) dispatch(removeFilter(index))
-  for (const layer of currentVisState.layers) dispatch(removeLayer(layer.id))
-  // Kepler appends effects and drawn features when keeping loaded datasets.
-  for (const effect of currentVisState.effects) dispatch(removeEffect(effect.id))
-  dispatch(setFeatures([]))
-  const parsedConfig = KeplerGlSchema.parseSavedConfig(savedConfig)
-  dispatch(receiveMapConfig(parsedConfig, { keepExistingConfig: true }))
-  // Kepler's config merge restores layer objects but leaves layerData empty.
-  // Re-add loaded layers through its data-building action, preserving saved order.
-  const restoredLayers = getState().keplerGl.kepler.visState.layers
-  const loadedIds = new Set(restoredLayers.map(layer => layer.id))
-  for (const layer of restoredLayers) dispatch(removeLayer(layer.id))
-  for (const layer of [...parsedConfig.visState.layers].reverse()) {
-    if (loadedIds.has(layer.id)) dispatch(addLayer(layer))
-  }
+  const datasets = Object.values(getState().keplerGl.kepler.visState.datasets)
+  // Reset pending configuration too; retaining it merges saved layers again on the next query.
+  dispatch(receiveMapConfig(KeplerGlSchema.parseSavedConfig(savedConfig)))
+  // Reuse Kepler's completed tables without copying rows or downloading the viewer result again.
+  dispatch(createNewDatasetSuccess({
+    results: datasets.map(value => ({ status: 'fulfilled', value })),
+    addToMapOptions: { centerMap: false, autoCreateLayers: false, autoCreateTooltips: false }
+  }))
 }
