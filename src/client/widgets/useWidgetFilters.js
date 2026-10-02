@@ -20,6 +20,11 @@ function applyKeplerClause (selection, canonicalClauses, clause) {
 }
 
 // Kepler owns filter values; Mosaic interactors only submit user changes.
+// Flow:
+//  widget event
+//    → Kepler filter
+//    → SQL condition
+//    → chart update.
 export function useWidgetFilters (store, datasetId, ready, editing, pending) {
   const panels = useStore(store, state => state.mosaicDashboard.config.dashboardsById[datasetId]?.panels)
   const dispatch = useDispatch()
@@ -57,6 +62,8 @@ export function useWidgetFilters (store, datasetId, ready, editing, pending) {
       const columnTypes = Object.fromEntries((widgetColumns || []).map(({ name, type }) => [name, type]))
       // TODO: widgets with a polygon map filter → filters charts for a Named points point layer fails locally
       const record = getFilterRecord(datasetId, filters, { cpuOnly: true, ignoreDomain: true }).cpu
+      // Step 3: Read Kepler filters and turn them into SQL conditions for this dataset.
+      // Kepler panel edits and restored filters enter the flow here too.
       const clauses = deriveFilterClauses(filters, datasetId,
         new Set(record.map(filter => filter.id)),
         filter => polygonFilterClause(filter, datasetId, layers, columnTypes))
@@ -93,8 +100,9 @@ export function useWidgetFilters (store, datasetId, ready, editing, pending) {
                 ? categoricalTypes.has(owner.config.chartType) ? filter.value.map(value => [value]) : filter.value
                 : categoricalTypes.has(owner.config.chartType) ? null : undefined
               : sqlCondition ? 'Map filter' : null
+            // Step 4: Make widget controls and chart queries follow the Kepler filter.
             if (client) client.value = value
-            // The same interactor source atomically replaces the click clause with the canonical clause.
+            // Reuse the interactor source to replace its click condition without an unfiltered gap.
             applyKeplerClause(selection, canonicalClauses.current, { source, clients, value, predicate: sqlCondition })
           }
           for (const [id, source] of sources.current) {
@@ -115,7 +123,9 @@ export function useWidgetFilters (store, datasetId, ready, editing, pending) {
     if (!settled) return
     let cancel = () => {}
     const schedule = () => {
+      // Step 1: Mosaic reports a widget selection or reset through a value event.
       const clause = selection.active
+      // Prevent a loop: ignore events from conditions we applied in step 4.
       if (clause && canonicalClauses.current.has(clause)) return
       const dashboard = store.getState().mosaicDashboard.getDashboard(datasetId)
       const panel = dashboard?.panels.find(panel =>
@@ -131,6 +141,7 @@ export function useWidgetFilters (store, datasetId, ready, editing, pending) {
         const existing = filters[index]
         const field = panel.config.settings.field
         let changed = false
+        // Step 2: Create, update or remove the Kepler filter for this user selection.
         try {
           if (value === null) {
             if (existing && existing.enabled !== false) { dispatch(removeFilter(index)); changed = true }
