@@ -18,6 +18,8 @@ Rule ownership:
   - Use for local runtime setup/debug of backend/frontend.
 - `cypress-quick-start` (`skills/cypress-quick-start/SKILL.md`)
   - Use for Cypress runs/debugging (`ELECTRON_RUN_AS_NODE=` override).
+- `cypress-balance` (`skills/cypress-balance/SKILL.md`)
+  - Manual only: invoke `$cypress-balance` to balance CI lanes and refactor overlapping Cypress coverage. Do not select automatically during ordinary test work.
 - `release-notes` (`skills/release-notes/SKILL.md`)
   - Use when preparing release notes from commits/tags.
 
