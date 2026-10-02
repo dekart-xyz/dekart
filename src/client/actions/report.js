@@ -1,4 +1,3 @@
-import { KeplerGlSchema } from '@kepler.gl/schemas'
 import { cleanupExportImage, setExportImageSetting, startExportingImage } from '@kepler.gl/actions'
 
 import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
@@ -11,7 +10,7 @@ import { shouldAddQuery } from '../lib/shouldAddQuery'
 import { shouldUpdateDataset } from '../lib/shouldUpdateDataset'
 import { needSensitiveScopes } from './user'
 import { getQueryParamsObjArr, reconcileQueryParamsState } from '../lib/queryParams'
-import { receiveReportUpdateMapConfig, restoreAuthoredMapConfig, shouldUpdateMapConfig } from '../lib/mapConfig'
+import { getMapConfigToSave, receiveReportUpdateMapConfig, restoreAuthoredMapConfig, shouldUpdateMapConfig } from '../lib/mapConfig'
 import { extensionFromMime } from '../lib/mime'
 import { track } from '../lib/tracking'
 import { getReportIdFromUrl } from '../lib/getReportIdFromUrl'
@@ -319,7 +318,10 @@ export function reportUpdate (reportStreamResponse) {
       (report.versionId ? report.versionId !== savedVersionId : report.updatedAt > savedReportVersion)
     )
     // Treat a streamed map as conflicting only when it is both newer and structurally different from the local map.
-    const liveMapConfigMatches = liveMapConfigChanged && !shouldUpdateMapConfig(KeplerGlSchema.getConfigToSave(state.keplerGl.kepler), JSON.parse(report.mapConfig))
+    const liveMapConfigMatches = liveMapConfigChanged && !shouldUpdateMapConfig(
+      getMapConfigToSave(state.keplerGl.kepler, state.report.mapConfig),
+      JSON.parse(report.mapConfig)
+    )
     const hasRemoteMapConflict = liveMapConfigChanged && hasUnsavedUserMapChanges && !liveMapConfigMatches
     const liveMapConfigAccepted = liveMapConfigChanged && (!hasUnsavedUserMapChanges || liveMapConfigMatches)
     const currentDatasetIds = new Set(datasetsList.map(dataset => dataset.id))
@@ -352,7 +354,7 @@ export function reportUpdate (reportStreamResponse) {
     }
     // Initial hydration always applies canonical config; later updates keep the existing conflict gate.
     if ((initialHydration && report.mapConfig) || liveMapConfigAccepted) {
-      mapConfigUpdated = receiveReportUpdateMapConfig(report, dispatch, getState)
+      mapConfigUpdated = receiveReportUpdateMapConfig(report, dispatch, getState, state.report?.mapConfig)
     }
     queryJobsList.forEach(queryJob => {
       const previous = prevQueryJobsList.find(job => job.id === queryJob.id)
@@ -658,7 +660,7 @@ export function saveMap (mapViewChanged = false) {
     // Block stale map or widget saves before constructing a request that could overwrite remote work.
     if (reportStatus.mapConfigConflict || widgets.conflict) return false
     const lastSaved = reportStatus.lastChanged
-    const configToSave = KeplerGlSchema.getConfigToSave(keplerGl.kepler)
+    const configToSave = getMapConfigToSave(keplerGl.kepler, report.mapConfig)
     const mapConfig = JSON.stringify(configToSave)
     const deferred = deferReportUpdates(report.versionId)
     dispatch({ type: saveMap.name })

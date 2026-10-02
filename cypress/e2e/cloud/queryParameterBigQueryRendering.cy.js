@@ -1,24 +1,6 @@
 /* eslint-disable no-undef */
-import { LAYER_SELECTOR, createReport } from '../local/duckdbHelpers'
-
-// Keep the customer query and parameter behavior with a small result for CI.
-const ROW_LIMIT = 1000
-const SQL = `SELECT
-lat,
-lng,
-station_code,
-ROUND(planned_service_s / 60, 1) AS service_min
-FROM \`dekart-data-samples.demo_data_samples.last_mile_dropoffs\`
-WHERE ROUND(planned_service_s / 60, 1) < 10
-AND packages < 5
-AND station_code LIKE {{station}}
-LIMIT ${ROW_LIMIT}`
-
-// Save through the UI before applying parameters, as required by the report editor.
-function saveReport () {
-  cy.get('#dekart-save-button').should('be.enabled').click()
-  cy.get('#dekart-save-button .anticon-cloud', { timeout: 60000 }).should('exist')
-}
+import { LAYER_SELECTOR } from '../local/duckdbHelpers'
+import { ROW_LIMIT, createParameterizedReport, saveReport } from './queryParameterHelpers'
 
 // Count rendered colored pixels outside the side panel, without reading app state.
 function assertRenderedPoints (name, attempts = 10, visible = true) {
@@ -81,38 +63,7 @@ function applyStation (station, rows) {
 
 describe('query parameter layer rendering reproduction', () => {
   it('renders capped query results after parameter changes without clicking a layer', () => {
-    cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN')
-    cy.visit('/')
-    cy.ensureTestWorkspace()
-    cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN', '/connections')
-    cy.contains('.ant-radio-button-wrapper', 'Connections').click()
-    cy.location('pathname').should('eq', '/connections')
-    cy.get('body').then($body => {
-      // Existing workspaces open their connection list instead of the first-run chooser.
-      if (!$body.find('#dekart-connection-type-card-bigquery').length) {
-        cy.get('#dekart-new-connection-connections, #dekart-new-connection-onboarding').first().click()
-      }
-    })
-    cy.get('#dekart-connection-type-card-bigquery').click()
-    cy.location('pathname').then(path => cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN', path))
-    cy.contains('button', 'Connect with Google').click()
-    cy.contains('.ant-modal-title', 'BigQuery', { timeout: 30000 }).should('be.visible')
-    const connectionName = `Parameter BigQuery reproduction ${Date.now()}`
-    cy.get('input#connectionName').clear().type(connectionName)
-    cy.get('input#bigqueryProjectId').clear().type('dekart-dev')
-    cy.get('input#cloudStorageBucket').clear().type('dekart-dev')
-    cy.get('#testConnection').click()
-    cy.get('#saveConnection', { timeout: 60000 }).should('be.enabled').click()
-    cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN', '/')
-    createReport()
-    cy.contains('button', connectionName, { timeout: 30000 }).scrollIntoView().click({ force: true })
-    cy.enterQuery(SQL)
-    cy.contains('.ant-input-group-addon', 'station', { timeout: 30000 }).should('be.visible')
-    saveReport()
-    cy.contains('.ant-input-group-addon', 'station').parent().find('input').first().clear().type('DLA5%')
-    cy.get('button[title="Apply query parameters"]').should('be.enabled').click()
-    cy.assertDatasetRows('Query 1', ROW_LIMIT)
-    cy.get(LAYER_SELECTOR).should('have.length', 1)
+    createParameterizedReport()
     cy.get('.layer__duplicate .panel--header__action__component').first().click({ force: true })
     cy.get(LAYER_SELECTOR).should('have.length', 2)
     saveReport()
@@ -151,9 +102,15 @@ describe('query parameter layer rendering reproduction', () => {
     })
     cy.contains('.ant-select', 'Viewing', { timeout: 30000 }).should('be.visible')
     cy.contains('Downloading Map Data', { timeout: 120000 }).should('not.exist')
+    cy.contains('.ant-input-group-addon', 'station').parent().find('input').first().type('DLA5')
+    cy.intercept('POST', '**/Dekart/UpdateReport').as('transitionSave')
     cy.contains('.ant-select', 'Viewing').click()
     cy.contains('.ant-select-item-option-content', 'Editing').click()
     cy.location('pathname').should('match', /\/source$/)
+    // Allow the autosave timer to fire before checking that temporary viewer input was discarded.
+    cy.wait(2500)
+    cy.get('@transitionSave.all').should('have.length', 0)
+    cy.contains('.ant-input-group-addon', 'station').parent().find('input').first().should('have.value', '')
     cy.openLayerPanel()
     applyStation('DLA5', ROW_LIMIT)
   })

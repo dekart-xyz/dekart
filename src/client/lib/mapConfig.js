@@ -1,5 +1,6 @@
 import { createNewDatasetSuccess, receiveMapConfig } from '@kepler.gl/actions'
 import { KeplerGlSchema } from '@kepler.gl/schemas'
+import { insertLayerAtRightOrder } from '@kepler.gl/reducers'
 import { setLastMapConfigChanged } from '../actions/report'
 import { useDispatch, useSelector } from 'react-redux'
 import { useEffect } from 'react'
@@ -39,6 +40,35 @@ export function shouldUpdateMapConfig (oldMapConfigIn, newMapConfigIn) {
   return !deepCompare(oldMapConfig, newMapConfig)
 }
 
+// Kepler exports only bound layers. Preserve authored layers and tooltips still waiting for data.
+export function getMapConfigToSave (kepler, savedMapConfig) {
+  const config = KeplerGlSchema.getConfigToSave(kepler)
+  const pendingLayers = kepler.visState.layerToBeMerged
+  // Once every layer is bound, Kepler's export already contains the complete configuration.
+  if (!savedMapConfig || !pendingLayers.length) return config
+
+  const savedVisState = uniqueMapConfigLayers(JSON.parse(savedMapConfig)).config.visState
+  const pendingLayerIds = new Set(pendingLayers.map(layer => layer.id))
+  const pendingDatasetIds = new Set(pendingLayers.map(layer => layer.config.dataId))
+  // Use Kepler's surviving layer anchors so deletions cannot shift pending layers' stacking order.
+  const { newLayers, newLayerOrder } = insertLayerAtRightOrder(
+    config.config.visState.layers,
+    savedVisState.layers.filter(layer => pendingLayerIds.has(layer.id)),
+    config.config.visState.layers.map(layer => layer.id),
+    savedVisState.layers.map(layer => layer.id)
+  )
+  config.config.visState.layers = newLayerOrder.map(id => newLayers.find(layer => layer.id === id))
+  const pendingTooltipFields = Object.fromEntries(
+    Object.entries(savedVisState.interactionConfig?.tooltip?.fieldsToShow || {})
+      .filter(([dataId]) => pendingDatasetIds.has(dataId))
+  )
+  config.config.visState.interactionConfig.tooltip.fieldsToShow = {
+    ...config.config.visState.interactionConfig.tooltip.fieldsToShow,
+    ...pendingTooltipFields
+  }
+  return config
+}
+
 // Update the map config if it has changed locally
 export function useCheckMapConfig () {
   const dispatch = useDispatch()
@@ -68,7 +98,7 @@ function checkMapConfig (kepler, mapConfigInputStr, dispatch, datasets) {
   }
   checkMapConfigTimer = setTimeout(() => {
     if (kepler && datasets) {
-      const configToSaveObj = KeplerGlSchema.getConfigToSave(kepler)
+      const configToSaveObj = getMapConfigToSave(kepler, mapConfigInputStr)
       const currentConfig = mapConfigInputStr ? JSON.parse(mapConfigInputStr) : null
       if (shouldUpdateMapConfig(currentConfig, configToSaveObj)) {
         dispatch(setLastMapConfigChanged())
@@ -83,10 +113,12 @@ function checkMapConfig (kepler, mapConfigInputStr, dispatch, datasets) {
   }
 }
 
-export function receiveReportUpdateMapConfig (report, dispatch, getState) {
+// TODO: incsistent interafce we either pass getState or selector results
+export function receiveReportUpdateMapConfig (report, dispatch, getState, previousMapConfig) {
   const { kepler } = getState().keplerGl
   const newConfig = uniqueMapConfigLayers(JSON.parse(report.mapConfig))
-  const currentConfig = KeplerGlSchema.getConfigToSave(kepler)
+  // The report reducer already adopted the incoming version; pending layers still belong to the prior one.
+  const currentConfig = getMapConfigToSave(kepler, previousMapConfig)
   if (shouldUpdateMapConfig(currentConfig, newConfig)) {
     const newConfigNormalized = KeplerGlSchema.parseSavedConfig(newConfig)
     dispatch(receiveMapConfig(newConfigNormalized))
@@ -99,7 +131,7 @@ export function receiveReportUpdateMapConfig (report, dispatch, getState) {
 // Restore authored configuration and rebuild layer data using the already loaded tables.
 export function restoreAuthoredMapConfig (report, dispatch, getState) {
   const savedConfig = uniqueMapConfigLayers(JSON.parse(report.mapConfig))
-  const currentConfig = KeplerGlSchema.getConfigToSave(getState().keplerGl.kepler)
+  const currentConfig = getMapConfigToSave(getState().keplerGl.kepler, report.mapConfig)
   if (!shouldUpdateMapConfig(currentConfig, savedConfig)) return
 
   const datasets = Object.values(getState().keplerGl.kepler.visState.datasets)
