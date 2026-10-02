@@ -1,3 +1,4 @@
+import { filterRestore } from '../reducers/keplerReducer'
 import { cleanupExportImage, setExportImageSetting, startExportingImage } from '@kepler.gl/actions'
 
 import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
@@ -40,6 +41,9 @@ function resumeReportUpdates (deferred) {
 
 export function closeReport () {
   return (dispatch) => {
+    // Closing a report discards pending filter recovery before cancelling its stream and execution runtime.
+    dispatch(filterRestore.reset())
+
     dispatch(grpcStreamCancel(Dekart.GetReportStream))
     dispatch(invalidateRunAllQueries())
     dispatch(closeDuckDBReport())
@@ -93,6 +97,8 @@ export function reportWillOpen (reportId) {
 
 export function openReport (reportId, snapshot = false) {
   return (dispatch, getState) => {
+    // Opening a report clears the previous report’s recovery before subscribing to its data.
+    dispatch(filterRestore.reset())
     const user = getState().user
     dispatch({
       type: openReport.name,

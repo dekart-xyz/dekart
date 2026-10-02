@@ -22,7 +22,7 @@ src/client/dark/<name>/
   *.module.css         component styles
   store.ts             only react-redux integration (Redux libraries)
   *.test.ts(x)         public contract tests, imports from ./index only
-  examples.test.ts(x)  executable examples included in generated docs
+  examples.test.ts(x)  public contract tests; never imported into README
   README.md            generated, committed, reviewed
 
 src/server/dark/<name>/
@@ -103,6 +103,31 @@ passes I/O callbacks such as `onSave` or `fetchRows`. Reviewed actions/thunks
 dispatch library actions when server data arrives. Another dark library's state
 is accessed only through its exported hook/selector, never its internals.
 
+## Standalone package documentation
+
+The library and its generated README know nothing about Dekart. Do not reference
+project concepts, workflows, state shapes, configuration or paths, even to claim
+independence from them. Allowed vocabulary comes from library-owned contracts,
+third-party dependencies and other dark libraries' public APIs.
+
+Lead with the concrete capability or transformation. Document input/output shapes,
+units, invariants, errors and injected behavior. Define each library-owned term by
+its contract: an opaque binding ID is a lookup key, not an assumed app dataset;
+a pair of owner ID and field is a record, not an assumed app chart or panel.
+Name relevant dependencies without explaining what those products are.
+
+Generate the linked TOC and API-at-a-glance table from documentation headings and
+public API metadata; never hand-maintain symbol lists in package comments. Keep
+README examples short and focused on public usage. Write them inline in doc
+comments only when they help; otherwise omit them. Never import test cases,
+assertions, test fixtures or harness code into the README. Do not use
+`{@includeCode ...}` to pull source code into generated documentation.
+Do not require a quick start, tutorial, project integration narrative or packaging
+section. The public API and docs should be usable unchanged in a separate package.
+
+Edit package/export comments in `index.ts` or Go `doc.go`, tested examples and
+generator options; regenerate the README instead of editing generated output.
+
 ## Tests, docs and review
 
 - Contract tests import only `./index` on client (third-party test/render/store
@@ -113,15 +138,15 @@ is accessed only through its exported hook/selector, never its internals.
   contains only dark reducers. Use `go test` for server libraries. Cypress
   covers the reviewed glue integration under the existing repo rules.
 - Every exported symbol has a doc comment stating purpose, inputs, outputs,
-  invariants and error behavior. Provide an executable example per exported
-  function and per documented edge case.
+  invariants and error behavior. Cover exports and documented edge cases in
+  public contract tests; the README need not reproduce those tests.
 - Every string-emitting export (SQL, HTML, URL) documents its escaping contract
   and has at least one hostile-input example (quote, backslash, script tag as
   relevant) in `README.md`.
-- TypeScript examples use named regions in `examples.test.ts(x)`, included in
-  doc comments with `{@includeCode ./examples.test.ts#region}` (use the actual
-  filename). Vitest executes them. Go `Example*` functions use `// Output:`;
-  `go test` verifies output and gomarkdoc renders them.
+- TypeScript README snippets use inline `@example` comments with only the
+  imports, inputs and public calls needed to understand the example. No test
+  assertions or fixture helpers. Keep Vitest contracts separate. Go `Example*`
+  functions use `// Output:` and should stay short enough to read as usage.
 - Generate and commit `README.md` per library from TSDoc/Go docs and examples.
   TypeDoc uses `disableSources: true`; gomarkdoc has source links off. Output
   contains no source line numbers or git revisions. CI regenerates docs and
@@ -145,7 +170,7 @@ Do these with the first real dark library, not as a standalone scaffolding task.
    | Tool | Purpose |
    |---|---|
    | `typescript`, `@types/react` (dev) | `src/client/dark/tsconfig.json`: `strict`, `noEmit`, `allowJs: false`, `jsx: react-jsx`, `lib: ["es2022", "dom"]` |
-   | `typedoc`, `typedoc-plugin-markdown` (dev) | Per-library `README.md`; `disableSources: true`; include executable examples |
+   | `typedoc`, `typedoc-plugin-markdown` (dev) | Per-library `README.md`; `disableSources: true`; short inline usage examples only |
    | `github.com/princjef/gomarkdoc` via Go 1.25 `tool` directive | Per-package `README.md` with source links off |
    | `ts-standard` or `standard --parser` | TS lint parity; choose what works with `standard@17` without an eslint config |
 

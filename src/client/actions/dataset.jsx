@@ -8,6 +8,7 @@ import getDatasetName from '../lib/getDatasetName'
 import { runWarehouseQuery } from './query'
 import { filenameWithExtension, mimeFromExtension } from '../lib/mime'
 import { failDuckDBSource, registerDuckDBFileSource, registerDuckDBSource, removeDuckDBSource } from './duckdb'
+import { filterRestore } from '../reducers/keplerReducer'
 import waitForKeplerDataset from '../lib/waitForKeplerDataset'
 import ReportIssueLink from '../ReportIssueLink'
 import { track } from '../lib/tracking'
@@ -67,6 +68,7 @@ export function cleanupRemovedDataset (datasetId) {
   return async dispatch => {
     dispatch(datasetRemoved(datasetId))
     dispatch(removeKeplerDataset(datasetId))
+    dispatch(filterRestore.remove(datasetId))
     await dispatch(removeDuckDBSource(datasetId))
   }
 }
@@ -174,10 +176,14 @@ export function finishAddingDatasetToMap (controller) {
 
 // clearDatasetInMap publishes a zero-row Arrow table while preserving existing layers and fields.
 async function clearDatasetInMap (dispatch, getState, dataset, label, reportId, controller) {
+  // Reject obsolete download work before capturing or replacing current data.
+  if (getState().report?.id !== reportId ||
+    !getState().dataset.downloading.some(item => item.controller === controller)) return
   const existing = getState().keplerGl.kepler?.visState.datasets?.[dataset.id]
   if (!existing || existing.dataContainer.numRows() === 0) {
     return
   }
+  dispatch(filterRestore.capture(dataset.id))
   const emptyTable = existing.dataContainer.getTable().slice(0, 0)
   dispatch(keplerDatasetStartUpdating())
   dispatch(replaceDataInMap({
@@ -289,6 +295,7 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension, sour
       }
       try {
         if (prevDataset) {
+          dispatch(filterRestore.capture(dataset.id))
           dispatch(keplerDatasetStartUpdating())
           const prevDataId = prevDataset.id
           const { reportStatus } = getState()
@@ -333,10 +340,13 @@ export function addDatasetToMap (dataset, prevDatasetsList, res, extension, sour
           () => getState().report?.id === reportId &&
           getState().dataset.downloading.some(item => item.controller === controller)
         )
-        if (!published) {
+        // Recheck ownership after the asynchronous publication wait.
+        if (!published || getState().report?.id !== reportId ||
+          !getState().dataset.downloading.some(item => item.controller === controller)) {
           dispatch(finishAddingDatasetToMap(controller))
           return
         }
+        dispatch(filterRestore.restore(dataset.id))
         dispatch(consumeAutoCreateLayer(dataset.id))
       } catch (err) {
         dispatch(processDownloadError(err, dataset, label, false, controller))

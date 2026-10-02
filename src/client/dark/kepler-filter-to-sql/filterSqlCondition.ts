@@ -1,0 +1,47 @@
+import { column, isBetween, isIn, literal } from '@uwdata/mosaic-sql'
+import type { ExprNode } from '@uwdata/mosaic-sql'
+
+/** Library-owned filter projection. Values use Kepler's raw field units. */
+export interface Filter {
+  id: string
+  type: string
+  dataId: string[]
+  name: string[]
+  value: unknown
+  enabled?: boolean
+}
+/** Mosaic SQL expression; identifiers and literals are escaped by mosaic-sql. */
+export type SqlCondition = ExprNode
+
+/**
+ * Resolve the field at the matching dataId position. Polygons and absent bindings return null.
+ * Does not mutate inputs or emit SQL.
+ */
+export function filterField (filter: Filter, dataId: string): string | null {
+  if (filter.type === 'polygon') return null
+  const field = filter.name[filter.dataId.indexOf(dataId)]
+  return field === undefined || field === '' ? null : field
+}
+
+/**
+ * Translate enabled scalar filters to inclusive SQL conditions; disabled filters return null.
+ * Missing fields, unsupported types and invalid shapes throw. Polygon SQL conditions come from
+ * callers. Identifiers and values are escaped by mosaic-sql, never interpolated as SQL.
+ * Inputs are unchanged.
+
+ */
+export function filterSqlCondition (filter: Filter, dataId: string): SqlCondition | null {
+  if (filter.enabled === false) return null
+  const field = filterField(filter, dataId)
+  if (field === null) throw new Error('Filter has no field for this dataId.')
+  switch (filter.type) {
+    case 'select': return isIn(column(field), [literal(filter.value)])
+    case 'multiSelect':
+      if (!Array.isArray(filter.value)) throw new Error('Category filter needs an array.')
+      return filter.value.length > 0 ? isIn(column(field), filter.value.map(literal)) : literal(false)
+    case 'range':
+      if (!Array.isArray(filter.value) || filter.value.length !== 2) throw new Error('Range filter needs two bounds.')
+      return isBetween(column(field), filter.value)
+    default: throw new Error(`Filter type ${filter.type} is not supported.`)
+  }
+}

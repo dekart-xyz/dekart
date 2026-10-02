@@ -1,4 +1,5 @@
 import { addDataToMap, replaceDataInMap } from '@kepler.gl/actions'
+import { filterRestore } from '../reducers/keplerReducer'
 import { QueryJob } from 'dekart-proto/dekart_pb'
 import getDatasetName from '../lib/getDatasetName'
 import { buildDuckDBGraph } from '../lib/duckdb/graph'
@@ -122,6 +123,7 @@ function addDuckDBResultToMap (dispatch, getState, node, result) {
 function invalidateDuckDBResultInMap (dispatch, getState, datasetId, queryJobId = activeDatasetQueryJob(getState(), datasetId)?.id) {
   const existing = getState().keplerGl.kepler?.visState.datasets?.[datasetId]
   if (existing && existing.dataContainer.numRows() > 0) {
+    dispatch(filterRestore.capture(datasetId))
     const emptyTable = existing.dataContainer.getTable().slice(0, 0)
     addDuckDBResultToMap(dispatch, getState, {
       dataset: { id: datasetId },
@@ -454,6 +456,7 @@ export function runDuckDBGraph (changedDatasetIds = null) {
             // Pending dataset: 0 rows → do not publish → 100 rows → first insertion + inferred layer
             // Established dataset: 100 rows → 0 rows → publish replacement to remove the old 100 rows
             if (!pendingAutoCreateLayer || result.totalRows > 0) {
+              dispatch(filterRestore.capture(node.dataset.id))
               const previousKeplerDataset = addDuckDBResultToMap(dispatch, getState, node, result)
               const published = await waitForKeplerDataset(
                 getState,
@@ -462,7 +465,8 @@ export function runDuckDBGraph (changedDatasetIds = null) {
                 result.totalRows,
                 executionIsCurrent
               )
-              if (!published) return
+              if (!published || !executionIsCurrent()) return
+              dispatch(filterRestore.restore(node.dataset.id))
               if (result.totalRows > 0) {
                 dispatch(consumeAutoCreateLayer(node.dataset.id))
               }
