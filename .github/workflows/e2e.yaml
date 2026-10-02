@@ -108,11 +108,12 @@ jobs:
             spec: cypress/e2e/bq/duckdbRefreshReconciliation.cy.js
             extra_env: *bigquery-duckdb-env
 
+          # 159s in run 36715740996; pending-layer scenarios add ~73s to balance 204–254s cloud lanes.
           - id: cloud-core
             config: cloud
             target: premium
             cloud: true
-            spec: cypress/e2e/cloud/postgresTlsConnectionHappyPath.cy.js,cypress/e2e/cloud/moreWarehousesSelector.cy.js,cypress/e2e/cloud/workspaceSource.cy.js,cypress/e2e/cloud/keplerReportLoad.cy.js
+            spec: cypress/e2e/cloud/postgresTlsConnectionHappyPath.cy.js,cypress/e2e/cloud/moreWarehousesSelector.cy.js,cypress/e2e/cloud/workspaceSource.cy.js,cypress/e2e/cloud/keplerReportLoad.cy.js,cypress/e2e/cloud/queryParameterBigQueryRendering.cy.js,cypress/e2e/cloud/viewToEditQueryParameters.cy.js
             extra_env: |
               -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
               -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
