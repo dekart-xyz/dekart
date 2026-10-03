@@ -1,13 +1,19 @@
 import { column, isBetween, isIn, literal } from '@uwdata/mosaic-sql'
 import type { ExprNode } from '@uwdata/mosaic-sql'
 
-/** Library-owned filter projection. Values use Kepler's raw field units. */
+/**
+ * Library-owned filter projection. Scalar values use Kepler's raw field units.
+ * Polygon values contain GeoJSON `geometry` and may contain `properties.shape`
+ * `Rectangle` with a four-number `properties.bbox`; `layerId` names the bound layers.
+ * Invalid polygon geometry may throw during SQL derivation.
+ */
 export interface Filter {
   id: string
   type: string
   dataId: string[]
   name: string[]
   value: unknown
+  layerId?: string[]
   enabled?: boolean
 }
 /** Mosaic SQL expression; identifiers and literals are escaped by mosaic-sql. */

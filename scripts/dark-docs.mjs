@@ -66,7 +66,7 @@ for (const entry of readdirSync('src/client/dark', { withFileTypes: true })) {
       '--useHTMLAnchors', '--anchorPrefix', 'api-', '--json', join(temporary, 'api.json')
     ], { stdio: 'pipe' })
     const generated = addOverview(readFileSync(join(temporary, 'README.md'), 'utf8'),
-      JSON.parse(readFileSync(join(temporary, 'api.json'), 'utf8')))
+      JSON.parse(readFileSync(join(temporary, 'api.json'), 'utf8'))).replace(/[ \t]+$/gm, '')
     const target = `${library}/README.md`
     if (check) {
       if (readFileSync(target, 'utf8') !== generated) throw new Error(`Stale dark docs: ${target}; run npm run dark:docs`)

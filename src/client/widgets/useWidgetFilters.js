@@ -6,7 +6,6 @@ import { createOrUpdateFilter, removeFilter, setFilter } from '@kepler.gl/action
 import { getMosaicDashboardPanelId, getMosaicDashboardSelectionName } from '@sqlrooms/mosaic'
 import { deriveFilterClauses } from '../dark/kepler-filter-to-sql/index'
 import { nativeFilterInputs } from '../lib/nativeFilterInputs'
-import { polygonFilterClause } from '../lib/polygonFilterClause'
 import { widgetFilterId } from './widgetStore'
 import { markKeplerPanelInteracted } from '../actions/report'
 
@@ -66,7 +65,7 @@ export function useWidgetFilters (store, datasetId, ready, editing, pending) {
       // Kepler panel edits and restored filters enter the flow here too.
       const clauses = deriveFilterClauses(filters, datasetId,
         new Set(record.map(filter => filter.id)),
-        filter => polygonFilterClause(filter, datasetId, layers, columnTypes))
+        { layers, columnTypes })
       const bindings = clauses.map(clause => {
         const interactors = (panels || []).filter(panel => panel.config.settings.field === clause.field)
           .flatMap(panel => panelClients[getMosaicDashboardPanelId(datasetId, panel.id)] || [])

@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { literal } from '@uwdata/mosaic-sql'
 import { deriveFilterClauses } from './index'
 import type { Filter, FilterClause } from './index'
 // Exercise scalar translation through the library's public entry point.
 function scalarClause (filter: Filter): FilterClause {
-  return deriveFilterClauses([filter], 'a', new Set([filter.id]), () => null)[0]
+  return deriveFilterClauses([filter], 'a', new Set([filter.id]), { layers: [], columnTypes: {} })[0]
 }
 
 const category: Filter = { id: 'category-selection', type: 'multiSelect', dataId: ['a', 'b'], name: ['category', 'category'], value: ['Alpha'] }
@@ -28,13 +27,13 @@ describe('executable filter contracts', () => {
   })
   it('clauses', () => {
     const active = new Set([category.id, 'area'])
-    const area: Filter = { ...category, id: 'area', type: 'polygon', value: {} }
+    const area: Filter = { ...category, id: 'area', type: 'polygon', layerId: ['points'], value: { geometry: { type: 'Polygon', coordinates: [[[0, 0], [1, 0], [0, 1], [0, 0]]] } } }
     const filters = [category, area]
-    const spatial = (): ReturnType<typeof literal> => literal(true)
+    const spatial = { layers: [{ id: 'points', type: 'point', config: { dataId: 'a', columns: { lng: { value: 'longitude' }, lat: { value: 'latitude' } } } }], columnTypes: {} }
     const clauses = deriveFilterClauses(filters, 'a', active, spatial)
     expect(String(clauses[0].sqlCondition)).toBe('("category" IN (\'Alpha\'))')
     expect(clauses[1].field).toBeNull()
-    expect(String(clauses[1].sqlCondition)).toBe('TRUE')
+    expect(String(clauses[1].sqlCondition)).toContain('ST_Within(ST_Point("longitude", "latitude"),')
     expect(deriveFilterClauses([{ ...category, name: ['category', 'otherCategory'] }], 'b', active, spatial)[0].field).toBe('otherCategory')
     expect(deriveFilterClauses(filters, 'missing', active, spatial)).toEqual([])
     expect(deriveFilterClauses([{ ...category, enabled: false }], 'a', active, spatial)[0].sqlCondition).toBeNull()
