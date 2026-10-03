@@ -132,14 +132,17 @@ generator options; regenerate the README instead of editing generated output.
 
 - Contract tests import only `./index` on client (third-party test/render/store
   tooling and other libraries' public entries are allowed); Go tests declare
-  `package <name>_test`. Assert public input/output behavior, never internal
-  helpers, and do not copy implementation logic into tests.
+  `package <name>_test`. Exercise supported behavior through the library's
+  public interface. Assert observable outputs and effects, not internal
+  helpers, state representation, private call sequences or implementation steps; do
+  not copy implementation logic into tests.
 - Use Vitest + jsdom + Testing Library for components/hooks. A test Redux store
   contains only dark reducers. Use `go test` for server libraries. Cypress
   covers the reviewed glue integration under the existing repo rules.
 - Every exported symbol has a doc comment stating purpose, inputs, outputs,
-  invariants and error behavior. Cover exports and documented edge cases in
-  public contract tests; the README need not reproduce those tests.
+  invariants and error behavior. Cover exported contracts and documented edge
+  cases through the library boundary; do not require a separate test for each
+  export. The README need not reproduce those tests.
 - Every string-emitting export (SQL, HTML, URL) documents its escaping contract
   and has at least one hostile-input example (quote, backslash, script tag as
   relevant) in `README.md`.
