@@ -59,7 +59,6 @@ export function useWidgetFilters (store, datasetId, ready, editing, pending) {
     if (!settled || !table) return
     try {
       const columnTypes = Object.fromEntries((widgetColumns || []).map(({ name, type }) => [name, type]))
-      // TODO: widgets with a polygon map filter → filters charts for a Named points point layer fails locally
       const record = getFilterRecord(datasetId, filters, { cpuOnly: true, ignoreDomain: true }).cpu
       // Step 3: Read Kepler filters and turn them into SQL conditions for this dataset.
       // Kepler panel edits and restored filters enter the flow here too.
