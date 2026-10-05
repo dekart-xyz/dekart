@@ -43,10 +43,11 @@ function HistogramChartBody ({ config, dataTable, selectionName, retention, para
     }
   })
   const clients = useStoreWithMosaicDashboard(state => state.mosaicDashboard.runtime.panelClients[runtimeKey] || noClients)
-  const filters = useSelector(state => state.keplerGl.kepler?.visState.filters || [])
   const [dashboardKey, panelId] = runtimeKey?.split(':panel:') || []
+  const dashboardId = dashboardKey?.slice('dashboard:'.length)
+  const filterProjectionRevision = useStoreWithMosaicDashboard(state => state.filterProjectionRevisionByDataset[dashboardId] || 0)
+  const filters = useSelector(state => state.keplerGl.kepler?.visState.filters || [])
   const range = useMemo(() => {
-    const dashboardId = dashboardKey?.slice('dashboard:'.length)
     const matching = filters.filter(filter => {
       const datasetIndex = filter.dataId.indexOf(dashboardId)
       const owned = filter.id === `widget:${panelId}`
@@ -57,7 +58,7 @@ function HistogramChartBody ({ config, dataTable, selectionName, retention, para
     const lower = Math.max(...matching.map(filter => filter.value[0]))
     const upper = Math.min(...matching.map(filter => filter.value[1]))
     return lower <= upper ? [lower, upper] : []
-  }, [filters, dashboardKey, panelId, config.settings.field])
+  }, [filters, dashboardId, panelId, config.settings.field])
   useEffect(() => {
     const client = clients.find(client => client.selection && client.brush)
     if (!client) return
@@ -75,7 +76,7 @@ function HistogramChartBody ({ config, dataTable, selectionName, retention, para
     }
     frame = window.requestAnimationFrame(syncBrush)
     return () => window.cancelAnimationFrame(frame)
-  }, [clients, range])
+  }, [clients, range, filterProjectionRevision])
   // A re-executed source can drop the configured field; the chart then disappears instead of crashing the panel.
   const spec = useMemo(() => {
     try {

@@ -78,6 +78,15 @@ export function createWidgetStore (onQueryPending = () => {}, onPresentationErro
           () => onPresentationError('Map rendering did not finish after applying the chart filter.')
         )
       },
+      filterProjectionRevisionByDataset: {},
+      projectWidgetFilters (datasetId) {
+        set(state => ({
+          filterProjectionRevisionByDataset: {
+            ...state.filterProjectionRevisionByDataset,
+            [datasetId]: (state.filterProjectionRevisionByDataset[datasetId] || 0) + 1
+          }
+        }))
+      },
       // Snapshot readiness waits until every authored chart reaches a drawn, failed, or empty end state.
       // Only snapshot renders track it; null keeps normal sessions free of the bookkeeping.
       paintedPanels: trackPainting ? {} : null,

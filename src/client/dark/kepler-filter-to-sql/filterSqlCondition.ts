@@ -8,12 +8,19 @@ import type { ExprNode } from '@uwdata/mosaic-sql'
  * Invalid polygon geometry may throw during SQL derivation.
  */
 export interface Filter {
+  /** Stable identity carried into the derived FilterClause. */
   id: string
+  /** Kepler filter kind, such as select, multiSelect, range, or polygon. */
   type: string
+  /** Data binding IDs; each position corresponds to the same position in name. */
   dataId: string[]
+  /** Filter field names paired with dataId entries. */
   name: string[]
+  /** Scalar value or polygon geometry in the shape required by type. */
   value: unknown
+  /** Layer IDs used to derive a polygon filter's spatial condition. */
   layerId?: string[]
+  /** False disables this filter's SQL condition. */
   enabled?: boolean
 }
 /** Mosaic SQL expression; identifiers and literals are escaped by mosaic-sql. */

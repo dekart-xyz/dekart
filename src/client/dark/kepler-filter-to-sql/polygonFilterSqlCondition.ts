@@ -3,7 +3,9 @@ import type { SqlCondition } from './filterSqlCondition'
 
 /** A named column reference; a negative field index means an optional altitude binding is inactive. */
 export interface ColumnBinding {
+  /** Bound column name; null or absence leaves it unbound. */
   value?: string | null
+  /** Kepler field position; a negative value disables optional altitude. */
   fieldIdx?: number
 }
 
@@ -16,21 +18,32 @@ export interface ColumnBinding {
  * where applicable. Unsupported combinations contribute no condition.
  */
 export interface LayerBinding {
+  /** Layer ID matched against a polygon filter's layerId entries. */
   id: string
+  /** Kepler layer kind used to select the spatial condition. */
   type: string
+  /** Data binding and columns used to locate geometry or coordinates. */
   config: {
+    /** Data binding ID this layer belongs to. */
     dataId: string
+    /** Position mode used by point, arc, line, or GeoArrow layers. */
     columnMode?: string
+    /** Column bindings keyed by the names supported for this layer type. */
     columns: Record<string, ColumnBinding | undefined>
   }
 }
 
 /** An area filter with GeoJSON geometry and optional rectangle bounds. */
 export interface PolygonFilter {
+  /** Polygon filter kind. */
   type: 'polygon'
+  /** IDs of layers to test against the polygon. */
   layerId?: string[]
+  /** Geometry and optional rectangle metadata used for the spatial condition. */
   value: {
+    /** GeoJSON geometry to test against bound positions. */
     geometry: { type: string, coordinates: unknown }
+    /** Shape and bounds supplied for rectangle filters. */
     properties?: { shape?: string, bbox?: number[] }
   }
 }

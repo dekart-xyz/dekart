@@ -98,6 +98,7 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@types/react": "^18.3.31",
+    "@uwdata/mosaic-plot": "0.21.1",
     "@vitejs/plugin-react": "^4.4.1",
     "cypress-file-upload": "^5.0.8",
     "eslint-plugin-cypress": "^2.12.1",

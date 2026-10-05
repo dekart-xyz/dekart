@@ -39,10 +39,10 @@ A named column reference; a negative field index means an optional altitude bind
 
 #### Properties
 
-| Property | Type |
-| ------ | ------ |
-| <a id="api-fieldidx"></a> `fieldIdx?` | `number` |
-| <a id="api-value"></a> `value?` | `string` \| `null` |
+| Property | Type | Description |
+| ------ | ------ | ------ |
+| <a id="api-fieldidx"></a> `fieldIdx?` | `number` | Kepler field position; a negative value disables optional altitude. |
+| <a id="api-value"></a> `value?` | `string` \| `null` | Bound column name; null or absence leaves it unbound. |
 
 ***
 
@@ -57,15 +57,15 @@ Invalid polygon geometry may throw during SQL derivation.
 
 #### Properties
 
-| Property | Type |
-| ------ | ------ |
-| <a id="api-dataid"></a> `dataId` | `string`[] |
-| <a id="api-enabled"></a> `enabled?` | `boolean` |
-| <a id="api-id"></a> `id` | `string` |
-| <a id="api-layerid"></a> `layerId?` | `string`[] |
-| <a id="api-name"></a> `name` | `string`[] |
-| <a id="api-type"></a> `type` | `string` |
-| <a id="api-value-1"></a> `value` | `unknown` |
+| Property | Type | Description |
+| ------ | ------ | ------ |
+| <a id="api-dataid"></a> `dataId` | `string`[] | Data binding IDs; each position corresponds to the same position in name. |
+| <a id="api-enabled"></a> `enabled?` | `boolean` | False disables this filter's SQL condition. |
+| <a id="api-id"></a> `id` | `string` | Stable identity carried into the derived FilterClause. |
+| <a id="api-layerid"></a> `layerId?` | `string`[] | Layer IDs used to derive a polygon filter's spatial condition. |
+| <a id="api-name"></a> `name` | `string`[] | Filter field names paired with dataId entries. |
+| <a id="api-type"></a> `type` | `string` | Kepler filter kind, such as select, multiSelect, range, or polygon. |
+| <a id="api-value-1"></a> `value` | `unknown` | Scalar value or polygon geometry in the shape required by type. |
 
 ***
 
@@ -77,11 +77,11 @@ Clause for one binding key. A null SQL condition represents an inactive constrai
 
 #### Properties
 
-| Property | Type |
-| ------ | ------ |
-| <a id="api-field"></a> `field` | `string` \| `null` |
-| <a id="api-filterid-1"></a> `filterId` | `string` |
-| <a id="api-sqlcondition"></a> `sqlCondition` | `ExprNode` \| `null` |
+| Property | Type | Description |
+| ------ | ------ | ------ |
+| <a id="api-field"></a> `field` | `string` \| `null` | Matched scalar field, or null for polygon and unbound filters. |
+| <a id="api-filterid-1"></a> `filterId` | `string` | ID of the filter that produced this clause. |
+| <a id="api-sqlcondition"></a> `sqlCondition` | `ExprNode` \| `null` | SQL constraint, or null when this filter is inactive. |
 
 ***
 
@@ -98,14 +98,14 @@ where applicable. Unsupported combinations contribute no condition.
 
 #### Properties
 
-| Property | Type |
-| ------ | ------ |
-| <a id="api-config"></a> `config` | `object` |
-| `config.columnMode?` | `string` |
-| `config.columns` | `Record`\<`string`, [`ColumnBinding`](#api-columnbinding) \| `undefined`\> |
-| `config.dataId` | `string` |
-| <a id="api-id-1"></a> `id` | `string` |
-| <a id="api-type-1"></a> `type` | `string` |
+| Property | Type | Description |
+| ------ | ------ | ------ |
+| <a id="api-config"></a> `config` | `object` | Data binding and columns used to locate geometry or coordinates. |
+| `config.columnMode?` | `string` | Position mode used by point, arc, line, or GeoArrow layers. |
+| `config.columns` | `Record`\<`string`, [`ColumnBinding`](#api-columnbinding) \| `undefined`\> | Column bindings keyed by the names supported for this layer type. |
+| `config.dataId` | `string` | Data binding ID this layer belongs to. |
+| <a id="api-id-1"></a> `id` | `string` | Layer ID matched against a polygon filter's layerId entries. |
+| <a id="api-type-1"></a> `type` | `string` | Kepler layer kind used to select the spatial condition. |
 
 ## Type Aliases
 

@@ -5,8 +5,11 @@ import type { LayerBinding, PolygonFilter } from './polygonFilterSqlCondition'
 
 /** Clause for one binding key. A null SQL condition represents an inactive constraint. */
 export interface FilterClause {
+  /** ID of the filter that produced this clause. */
   filterId: string
+  /** Matched scalar field, or null for polygon and unbound filters. */
   field: string | null
+  /** SQL constraint, or null when this filter is inactive. */
   sqlCondition: SqlCondition | null
 }
 /**
