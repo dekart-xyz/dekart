@@ -80,15 +80,19 @@ describe('Widgets first production slice', () => {
 
     // Definitions and the chart-owned selection share one report revision,
     // while the selection itself remains canonical Kepler map_config state.
+    cy.intercept('POST', '**/Dekart/UpdateReport').as('saveCategory')
+    cy.get('button#dekart-save-button').should('not.be.disabled').click()
+    cy.wait('@saveCategory', { timeout: 60000 }).its('response.statusCode').should('eq', 200)
     cy.get('button#dekart-save-button .anticon-cloud', { timeout: 60000 }).should('exist')
     cy.reload()
     cy.get('[data-testid="widgets-tab"]', { timeout: 120000 }).should('have.attr', 'aria-expanded', 'true')
     cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.text', '2')
     cy.get('[data-testid="filter-strip"]').should('contain.text', 'category')
+    cy.get('[aria-label="Report charts"]', { timeout: 30000 }).should('have.attr', 'aria-busy', 'false')
 
     cy.get('[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line').first().click()
     cy.get('[data-testid="number-value"]', { timeout: 30000 }).should('have.text', '5')
-    cy.get('[data-testid="filter-strip"]').should('contain.text', 'No filters')
+    cy.get('[data-testid="filter-strip"]', { timeout: 20000 }).should('contain.text', 'No filters')
 
     // Histogram brushes persist raw field bounds rather than bin-start values.
     dragHistogramRange(25.5, 34.5)
@@ -141,7 +145,7 @@ describe('Widgets first production slice', () => {
     })
     cy.get('button[aria-label="Reset capacity kw filters"]').click()
     cy.get('[data-testid="number-value"]').should('have.text', '5')
-    cy.get('[data-testid="filter-strip"]').should('contain.text', 'No filters')
+    cy.get('[data-testid="filter-strip"]', { timeout: 20000 }).should('contain.text', 'No filters')
 
     cy.get('[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line').first().click()
     cy.get('[data-testid="number-value"]').should('have.text', '2')
@@ -149,7 +153,7 @@ describe('Widgets first production slice', () => {
     cy.contains('[role="menuitem"]', 'Delete chart').click()
     cy.get('[data-testid="category-chart"]').should('not.exist')
     cy.get('[data-testid="number-value"]').should('have.text', '5')
-    cy.get('[data-testid="filter-strip"]').should('contain.text', 'No filters')
+    cy.get('[data-testid="filter-strip"]', { timeout: 20000 }).should('contain.text', 'No filters')
 
     // An explicit empty replacement clears SQLRooms state and stays empty after reload.
     cy.get('button[aria-label="Chart actions"]').first().click()
@@ -163,4 +167,42 @@ describe('Widgets first production slice', () => {
     cy.contains('Dashboard is empty', { timeout: 120000 }).should('be.visible')
     cy.get('[data-testid="number-value"], [data-testid="category-chart"], [data-testid="histogram-chart"]').should('not.exist')
   })
+
+  it('reads Kepler panel edits and clears the interactor when its chip is removed', () => {
+    cy.viewport(1280, 960)
+    const email = `widgets-panel-edit-${Date.now()}@example.com`
+    cy.setDevClaimsEmail(email)
+    cy.intercept(`${Cypress.env('DEKART_E2E_API_URL')}/api/v1/**`, request => {
+      request.headers['X-Dekart-Claim-Email'] = email
+    })
+    cy.visit('/')
+    cy.ensureTestWorkspace()
+    cy.get('#dekart-create-report').click()
+    cy.contains('button', 'DuckDB', { timeout: 30000 }).click()
+    cy.enterQuery("SELECT 52.5 + i / 100 AS latitude, 13.4 + i / 100 AS longitude, CASE WHEN i < 2 THEN 'Alpha' WHEN i < 4 THEN 'Beta' ELSE 'Gamma' END AS category FROM range(5) t(i)")
+    cy.get('#dekart-query-execute-button').should('be.enabled').click()
+    cy.get('#dekart-query-status-message', { timeout: 120000 }).should('contain', 'Ready')
+    cy.get('[data-testid="widgets-tab"]').then(button => {
+      if (button.attr('aria-expanded') !== 'true') cy.wrap(button).click()
+    })
+    cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.text', '5')
+    cy.get('[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line').first().click()
+    cy.get('[data-testid="number-value"]').should('have.text', '2')
+    cy.get('[data-testid="filter-strip"]').contains('button', 'category').click()
+    cy.get('.multi-select-filter-panel .item-selector').last().click()
+    cy.contains('.list__item', 'Beta').click()
+    cy.get('[data-testid="widgets-tab"]').click()
+    cy.get('[data-testid="number-value"]').should('have.text', '4')
+    cy.get('[data-testid="category-chart"] g[aria-label="bar"] rect').should(bars => {
+      const opacity = [...bars].map(bar => bar.ownerDocument.defaultView.getComputedStyle(bar).opacity)
+      expect(opacity.filter(value => value === '1')).to.have.length(2)
+      expect(opacity).to.include('0.25')
+    })
+    cy.get('button[aria-label="Remove category filter"]').click()
+    cy.get('[data-testid="number-value"]').should('have.text', '5')
+    cy.get('[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line').last().click()
+    cy.get('[data-testid="number-value"]').should('have.text', '1')
+    cy.get('[data-testid="filter-strip"] button[title]').contains('category').should('have.attr', 'title').and('include', '["Gamma"]')
+  })
+
 })

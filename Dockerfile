@@ -20,6 +20,8 @@ ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run build
 
 FROM nodedeps AS nodetest
+COPY scripts/check-dark.sh scripts/check-dark.mjs scripts/dark-docs.mjs scripts/
+RUN npm run dark:check
 RUN npm run lint
 RUN npm run test
 

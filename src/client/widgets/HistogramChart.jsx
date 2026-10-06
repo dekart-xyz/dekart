@@ -1,8 +1,13 @@
 import React, { useEffect, useMemo } from 'react'
 import { useSelector } from 'react-redux'
-import { getMosaicDashboardPanelId, useStoreWithMosaicDashboard, VgPlotChart } from '@sqlrooms/mosaic'
+import {
+  getMosaicDashboardPanelId,
+  useStoreWithMosaicDashboard,
+  VgPlotChart
+} from '@sqlrooms/mosaic'
 import { createHistogramSpec } from '@sqlrooms/mosaic/dist/charts/chart-types/histogram/spec'
 import usePaintedRetention from './usePaintedRetention'
+import { compatibleWidgetFilter } from './compatibleWidgetFilter'
 
 const noClients = []
 
@@ -35,7 +40,10 @@ export default function HistogramChart (props) {
   return <HistogramChartBody {...props} />
 }
 
-function HistogramChartBody ({ config, dataTable, selectionName, retention, params, dataPolicy, runtimeIssueContext, runtimeIssueReporter }) {
+function HistogramChartBody ({
+  config, dataTable, selectionName, retention, params, dataPolicy,
+  runtimeIssueContext, runtimeIssueReporter
+}) {
   const runtimeKey = useStoreWithMosaicDashboard(state => {
     for (const [dashboardId, dashboard] of Object.entries(state.mosaicDashboard.config.dashboardsById)) {
       const panel = dashboard.panels.find(panel => panel.config === config)
@@ -43,21 +51,26 @@ function HistogramChartBody ({ config, dataTable, selectionName, retention, para
     }
   })
   const clients = useStoreWithMosaicDashboard(state => state.mosaicDashboard.runtime.panelClients[runtimeKey] || noClients)
-  const filters = useSelector(state => state.keplerGl.kepler?.visState.filters || [])
   const [dashboardKey, panelId] = runtimeKey?.split(':panel:') || []
+  const dashboardId = dashboardKey?.slice('dashboard:'.length)
+  const filterProjectionRevision = useStoreWithMosaicDashboard(state =>
+    state.filterProjectionRevisionByDataset[dashboardId] || 0)
+  const filters = useSelector(state => state.keplerGl.kepler?.visState.filters || [])
+  const datasets = useSelector(state => state.keplerGl.kepler?.visState.datasets || {})
   const range = useMemo(() => {
-    const dashboardId = dashboardKey?.slice('dashboard:'.length)
     const matching = filters.filter(filter => {
       const datasetIndex = filter.dataId.indexOf(dashboardId)
-      const owned = filter.id === `widget:${panelId}`
-      const native = !filter.id.startsWith('widget:') && datasetIndex >= 0 && filter.name[datasetIndex] === config.settings.field
-      return filter.enabled !== false && filter.value?.length === 2 && (owned || native)
+      // Intersect compatible range filters for this field, including filters authored by charts on other datasets.
+      return filter.enabled !== false && filter.type === 'range' &&
+        filter.value?.length === 2 && datasetIndex >= 0 &&
+        filter.name[datasetIndex] === config.settings.field &&
+        compatibleWidgetFilter(filter, dashboardId, datasets)
     })
     if (!matching.length) return null
     const lower = Math.max(...matching.map(filter => filter.value[0]))
     const upper = Math.min(...matching.map(filter => filter.value[1]))
     return lower <= upper ? [lower, upper] : []
-  }, [filters, dashboardKey, panelId, config.settings.field])
+  }, [filters, datasets, dashboardId, config.settings.field])
   useEffect(() => {
     const client = clients.find(client => client.selection && client.brush)
     if (!client) return
@@ -72,21 +85,38 @@ function HistogramChartBody ({ config, dataTable, selectionName, retention, para
       client.value = range.length ? range : undefined
       if (range.length) client.g.call(client.brush.moveSilent, range.map(client.scale.apply).sort((a, b) => a - b))
       else client.brush.reset(client.g)
+      // A queued vgplot brush paint can run after this projection in the same frame.
+      // Reapply on the next frame so a rejected edit visibly returns to Kepler's value.
+      frame = window.requestAnimationFrame(() => {
+        if (!client.g?.node()?.isConnected) return
+        client.value = range.length ? range : undefined
+        if (range.length) client.g.call(client.brush.moveSilent, range.map(client.scale.apply).sort((a, b) => a - b))
+        else client.brush.reset(client.g)
+      })
     }
     frame = window.requestAnimationFrame(syncBrush)
     return () => window.cancelAnimationFrame(frame)
-  }, [clients, range])
+  }, [clients, range, filterProjectionRevision])
   // A re-executed source can drop the configured field; the chart then disappears instead of crashing the panel.
   const spec = useMemo(() => {
     try {
       return createDekartHistogramSpec({ dataTable, selectionName, settings: config.settings })
     } catch (error) { return null }
   }, [config.settings, dataTable, selectionName])
-  const writeOnlyRetention = usePaintedRetention(retention, panelId)
+  const writeOnlyRetention = usePaintedRetention(retention, panelId, runtimeIssueContext.panelId)
   useEffect(() => {
     // Histogram spec failures use the same sticky panel channel as query failures.
     if (!spec) runtimeIssueReporter.reportIssue({ message: 'Chart failed' })
   }, [runtimeIssueReporter, spec])
   if (!spec) return null
-  return <VgPlotChart spec={spec} params={params} retention={writeOnlyRetention} dataPolicy={dataPolicy} runtimeIssueContext={runtimeIssueContext} runtimeIssueReporter={runtimeIssueReporter} />
+  return (
+    <VgPlotChart
+      spec={spec}
+      params={params}
+      retention={writeOnlyRetention}
+      dataPolicy={dataPolicy}
+      runtimeIssueContext={runtimeIssueContext}
+      runtimeIssueReporter={runtimeIssueReporter}
+    />
+  )
 }

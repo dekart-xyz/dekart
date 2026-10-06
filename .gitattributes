@@ -2,3 +2,9 @@ README.md    merge=ours
 LICENSE     merge=ours
 pulumi/*    merge=ours
 .gitattributes merge=ours
+
+src/client/dark/**/*.ts       linguist-generated=true
+src/client/dark/**/*.tsx      linguist-generated=true
+src/client/dark/**/*.css      linguist-generated=true
+src/client/dark/**/*.test.ts  -linguist-generated
+src/client/dark/**/*.test.tsx -linguist-generated

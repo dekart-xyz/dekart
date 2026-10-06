@@ -15,7 +15,10 @@ import { useMosaicChartSettingsContext } from '@sqlrooms/mosaic/dist/charts/char
 import { WidgetStub } from './WidgetPanel'
 import { widgetFilterId } from './widgetStore'
 
-const settingsSchema = z.object({ field: z.string().min(1) })
+const settingsSchema = z.object({
+  field: z.string().min(1),
+  crossFilter: z.boolean().optional()
+})
 const searchableFieldTypes = new Set(['string', 'h3', 'date'])
 
 export const searchChartType = {
@@ -33,7 +36,14 @@ export const searchChartType = {
 // Match Category's text-only field picker.
 export function SearchSettings () {
   const { config, onChangeConfig } = useMosaicChartSettingsContext('search')
-  return <Field label='Field' required><ColumnSelector.Categorical value={config.settings.field} onChange={value => onChangeConfig('field', value)} /></Field>
+  return (
+    <Field label='Field' required>
+      <ColumnSelector.Categorical
+        value={config.settings.field}
+        onChange={value => onChangeConfig('field', value)}
+      />
+    </Field>
+  )
 }
 
 // A class retains identity when SQLRooms registers panel clients inside Immer.

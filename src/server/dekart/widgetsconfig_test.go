@@ -20,6 +20,10 @@ func TestValidateWidgetsConfigV1(t *testing.T) {
 	require.NoError(t, validateWidgetsConfig(validWidgetsConfig()))
 	require.NoError(t, validateWidgetsConfig(`{"version":1,"widgets":[{"id":"sum","dataId":"dataset-1","type":"number","title":"Sum","settings":{"operation":"sum","field":"amount"}}]}`))
 	require.NoError(t, validateWidgetsConfig(`{"version":1,"widgets":[{"id":"search","dataId":"dataset-1","type":"search","title":"Search","settings":{"field":"locker_name"}}]}`))
+	for _, kind := range []string{"count-plot", "search", "histogram"} {
+		require.NoError(t, validateWidgetsConfig(`{"version":1,"widgets":[{"id":"cross","dataId":"dataset-1","type":"`+kind+`","title":"Cross","settings":{"field":"locker_name","crossFilter":true}}]}`))
+	}
+	require.Error(t, validateWidgetsConfig(`{"version":1,"widgets":[{"id":"number","dataId":"dataset-1","type":"number","title":"Number","settings":{"operation":"count","crossFilter":true}}]}`))
 	for name, value := range map[string]string{
 		"blank":                " ",
 		"old shape":            `{"version":1,"provider":"sqlrooms","config":{"dashboardsById":{}}}`,

@@ -6,7 +6,8 @@ import styles from './FilterStrip.module.css'
 
 function filterLabel (filter) {
   if (filter.type === 'polygon') return 'Map area'
-  return filter.name.filter(Boolean).join(', ').replaceAll('_', ' ')
+  // Use one field label for a filter shared by several datasets; the tooltip lists every bound field.
+  return (filter.name.find(Boolean) || '').replaceAll('_', ' ')
 }
 
 // Show bound layer labels in the map area tooltip so users can identify its scope.
@@ -15,7 +16,8 @@ function filterDescription (filter, datasets, layers) {
     const labels = (filter.layerId || []).map(id => layers.find(layer => layer.id === id)?.config.label).filter(Boolean).join(', ')
     return labels ? `Map area · ${labels}` : 'Map area'
   }
-  return `${filter.dataId.map(id => datasets[id]?.label || id).join(', ')} · ${JSON.stringify(filter.value)}`
+  const pairs = filter.dataId.map((id, index) => `${datasets[id]?.label || id}: ${filter.name[index]}`).join(', ')
+  return `${pairs} · ${JSON.stringify(filter.value)}`
 }
 
 // One shared filter surface; Kepler remains the owner of filter values and persistence.
@@ -37,7 +39,7 @@ export default function FilterStrip ({ visible, editing, disabled, onEdit, onApp
   const entries = filters.map((filter, index) => ({ filter, index })).filter(({ filter }) => filter.type === 'polygon' || filter.name?.some(Boolean))
   const chip = ({ filter, index }) => (
     <span className={styles.chip} key={filter.id}>
-      <button className={styles.name} title={filterDescription(filter, datasets, layers)} onClick={() => onEdit(index)} disabled={!editing || disabled}>{filterLabel(filter)}</button>
+      <button className={styles.name} title={filterDescription(filter, datasets, layers)} onClick={() => onEdit(index)} disabled={!editing || disabled}>{filterLabel(filter)}{filter.type !== 'polygon' && filter.dataId.length > 1 && <span className={styles.count}> · {filter.dataId.length} datasets</span>}</button>
       <button className={styles.remove} aria-label={`Remove ${filterLabel(filter)} filter`} disabled={disabled} onClick={() => onApply(() => dispatch(removeFilter(index)))}><X size={11} /></button>
     </span>
   )

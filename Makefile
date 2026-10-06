@@ -417,3 +417,7 @@ runner-service-status:
 
 # Simplified foreground runner command (keeps terminal open with live logs).
 github-runner: runner-start
+
+.PHONY: dark-check
+dark-check:
+	npm run dark:check

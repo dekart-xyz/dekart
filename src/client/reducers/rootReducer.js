@@ -1,12 +1,10 @@
 import { combineReducers } from 'redux'
-import { ActionTypes as KeplerActionTypes } from '@kepler.gl/actions'
-import { setUserMapboxAccessTokenUpdater } from '@kepler.gl/reducers/dist/ui-state-updaters'
 import { openReport, reportUpdate } from '../actions/report'
 import { duckDBJobStates, queries, queryExecutionsPending, queryJobs, queryParams, queryStatus, runAllQueriesPending } from './queryReducer'
 import { setUsage } from '../actions/usage'
 import { setEnv } from '../actions/env'
 import { newRelease } from '../actions/version'
-import keplerGlReducer from '@kepler.gl/reducers'
+import keplerGl from './keplerReducer'
 import stream from './streamReducer'
 import widgets from './widgetsReducer'
 import token from './tokenReducer'
@@ -25,45 +23,6 @@ import snapshots from './snapshotsReducer'
 import fileUploadStatus from './fileUploadReducer'
 import deviceTokens from './deviceTokensReducer'
 import { hasOpenedKeplerPanel, mapPreview, report, reportDirectAccessEmails, reportsList, reportStatus } from './reportReducer'
-
-const customKeplerGlReducer = keplerGlReducer.initialState({
-  uiState: {
-    currentModal: null,
-    activeSidePanel: null
-  },
-  mapStyle: {
-    styleType: 'dark'
-  }
-})
-
-function keplerGl (state, action) {
-  const newState = customKeplerGlReducer(state, action)
-  switch (action.type) {
-    case KeplerActionTypes.LOAD_FILES_ERR:
-      if (!newState?.kepler) {
-        return state
-      }
-      // Keep Kepler's load-files task completion, but let Dekart show the user-facing download error.
-      return {
-        ...newState,
-        kepler: {
-          ...newState.kepler,
-          uiState: {
-            ...newState.kepler.uiState,
-            notifications: state?.kepler?.uiState?.notifications || []
-          }
-        }
-      }
-    case KeplerActionTypes.REGISTER_ENTRY:
-      // set mapbox token for map export
-      newState.kepler.uiState = setUserMapboxAccessTokenUpdater(newState.kepler.uiState, {
-        payload: newState.kepler.mapStyle.mapboxApiAccessToken
-      })
-      return newState
-    default:
-      return newState
-  }
-}
 
 function files (state = [], action) {
   switch (action.type) {
