@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useStoreWithMosaicDashboard } from '@sqlrooms/mosaic'
 
 // A vgplot chart has painted once every mark finished and the plot put its SVG in the DOM.
@@ -19,21 +19,76 @@ function watchPlotPainted (chart, onPainted) {
   return () => window.cancelAnimationFrame(frame)
 }
 
-// Pass-through retention that reports the panel as painted after its first drawn result.
-export default function usePaintedRetention (retention, panelId) {
+// Keep chart interactions working after a redraw and report when the chart has drawn.
+// TODO: move to dark library
+export default function usePaintedRetention (retention, panelId, runtimePanelId) {
+  // Report images need a signal when every chart has finished drawing.
   const tracking = useStoreWithMosaicDashboard(state => state.paintedPanels !== null)
   const markPanelPainted = useStoreWithMosaicDashboard(state => state.markPanelPainted)
+  const registerPanelClient = useStoreWithMosaicDashboard(state => state.mosaicDashboard.registerPanelClient)
+  const unregisterPanelClient = useStoreWithMosaicDashboard(state => state.mosaicDashboard.unregisterPanelClient)
+  const getPanelClients = useStoreWithMosaicDashboard(state => state.mosaicDashboard.getPanelClients)
   const [chart, setChart] = useState(null)
+  // Remember what the chart now uses, what the panel knows about, and any scheduled update.
+  const clients = useRef([])
+  const registered = useRef(new Set())
+  const frame = useRef(null)
+  // The chart supplies both IDs in one string; split them to find its panel.
+  const match = /^dashboard:(.*):panel:(.*)$/.exec(runtimePanelId || '')
+  const dashboardId = match?.[1]
+  const registeredPanelId = match?.[2]
+  const panelConfig = useStoreWithMosaicDashboard(state => state.mosaicDashboard.config.dashboardsById[dashboardId]?.panels.find(panel => panel.id === registeredPanelId))
+  // Remove old handlers, then add the handlers from the chart's latest drawing.
+  const ensureClients = useCallback(() => {
+    if (!dashboardId || !registeredPanelId) return
+    for (const client of registered.current) {
+      if (!clients.current.includes(client)) {
+        unregisterPanelClient(dashboardId, registeredPanelId, client)
+        registered.current.delete(client)
+      }
+    }
+    for (const client of clients.current) {
+      if (!getPanelClients(dashboardId, registeredPanelId).includes(client)) registerPanelClient(dashboardId, registeredPanelId, client)
+      registered.current.add(client)
+    }
+  }, [dashboardId, registeredPanelId, getPanelClients, registerPanelClient, unregisterPanelClient])
+  // Let the chart library finish replacing its handlers before updating the panel.
+  // Cancel an earlier update if a newer drawing arrives first.
+  const scheduleClients = useCallback(() => {
+    if (frame.current !== null) window.cancelAnimationFrame(frame.current)
+    frame.current = window.requestAnimationFrame(() => {
+      frame.current = window.requestAnimationFrame(() => {
+        frame.current = null
+        ensureClients()
+      })
+    })
+  }, [ensureClients])
+  // A settings change can replace handlers even if the chart stays on screen.
   useEffect(() => {
-    // Watch only in snapshot renders, once both the created chart and its panel id are known.
+    scheduleClients()
+  }, [panelConfig, scheduleClients])
+  // Stop pending work and remove these handlers when the chart goes away.
+  useEffect(() => () => {
+    if (frame.current !== null) window.cancelAnimationFrame(frame.current)
+    for (const client of registered.current) unregisterPanelClient(dashboardId, registeredPanelId, client)
+  }, [dashboardId, registeredPanelId, unregisterPanelClient])
+  useEffect(() => {
+    // Report images wait until the drawn chart is on the page.
     if (!tracking || !chart || !panelId) return
     return watchPlotPainted(chart, () => markPanelPainted(panelId))
   }, [tracking, chart, panelId, markPanelPainted])
   return useMemo(() => ({
     setChart (next) {
+      // Keep the chart library's original callback working.
       retention?.setChart(next)
-      // Normal sessions skip the extra render; only snapshots read painted state.
+      // A new drawing may provide different click and drag handlers.
+      const nextClients = next?.element?.value?.interactors || []
+      if (clients.current.length !== nextClients.length || clients.current.some((client, index) => client !== nextClients[index])) {
+        clients.current = nextClients
+        scheduleClients()
+      }
+      // Only report images need to watch whether this chart has finished drawing.
       if (tracking) setChart(next)
     }
-  }), [retention?.setChart, tracking])
+  }), [retention?.setChart, scheduleClients, tracking])
 }

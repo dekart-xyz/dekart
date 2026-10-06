@@ -1,5 +1,6 @@
 import { flushSync } from 'react-dom'
 import { createElement } from 'react'
+import { z } from 'zod'
 import { setAutoFreeze } from 'immer'
 import { numberChartType } from './NumberChart'
 import { createRoomShellSlice, createRoomStore } from '@sqlrooms/room-shell'
@@ -27,12 +28,15 @@ export const chartTypes = createDefaultChartTypes({ includeCustomSpec: false }).
       return {
         ...componentType,
         buildTitle: settings => settings.field?.replaceAll('_', ' ') || 'Histogram',
+        // Accept the optional cross-filter setting for category and histogram charts in the client schema.
+        schema: type.schema.extend({ crossFilter: z.boolean().optional() }),
         renderer: HistogramChart
       }
     })()
   : {
       ...type,
       label: 'Category',
+      schema: type.schema.extend({ crossFilter: z.boolean().optional() }),
       settingsComponent: CategorySettings,
       renderer: CategoryChart
     }).concat(numberChartType, searchChartType)

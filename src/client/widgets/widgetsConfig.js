@@ -35,9 +35,11 @@ function numberSettings (settings) {
 
 function chartSettings (chartType, settings) {
   if (chartType === 'number') return numberSettings(settings)
-  if (chartType === 'count-plot') return { field: settings.field, metric: 'count', sort: settings.sort || 'value-desc', maxBars: settings.maxBars ?? 20 }
-  if (chartType === 'search') return { field: settings.field }
-  return { field: settings.field, maxBins: settings.maxBins ?? 15, ...(settings.color ? { color: settings.color } : {}) }
+  // Preserve enabled cross-filter settings when normalizing chart config for persistence.
+  const crossFilter = settings.crossFilter === true ? { crossFilter: true } : {}
+  if (chartType === 'count-plot') return { field: settings.field, metric: 'count', sort: settings.sort || 'value-desc', maxBars: settings.maxBars ?? 20, ...crossFilter }
+  if (chartType === 'search') return { field: settings.field, ...crossFilter }
+  return { field: settings.field, maxBins: settings.maxBins ?? 15, ...(settings.color ? { color: settings.color } : {}), ...crossFilter }
 }
 // REVIEW: Persisted order no longer depends on SQLRooms grid coordinates or per-dataset grouping.
 

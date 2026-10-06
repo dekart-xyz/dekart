@@ -8,6 +8,7 @@ import styles from './ReportWidgets.module.css'
 const WidgetSlotContext = createContext(null)
 
 export const WidgetSlotProvider = WidgetSlotContext.Provider
+export const useWidgetSlot = () => useContext(WidgetSlotContext)
 
 function handleReloadPage () {
   window.location.reload()
@@ -27,13 +28,20 @@ function WidgetFailure ({ panelId }) {
   return (
     <div className={styles.widgetFailure} role='alert'>
       <AlertTriangle size={13} color='#E86A6F' aria-hidden='true' />
-      <span>This chart couldn&apos;t load. <button type='button' onClick={handleReloadPage}>Reload the page.</button></span>
+      <span>
+        This chart couldn&apos;t load. <button type='button' onClick={handleReloadPage}>Reload the page.</button>
+      </span>
     </div>
   )
 }
 // it's needed also in SearchWidget to wait for Kepler field values
 export function WidgetStub () {
-  return <div className={styles.chartStub} data-testid='chart-stub' aria-hidden='true'><div className={styles.stubLabel} /><div className={styles.stubLines}><i /><i /><i /></div></div>
+  return (
+    <div className={styles.chartStub} data-testid='chart-stub' aria-hidden='true'>
+      <div className={styles.stubLabel} />
+      <div className={styles.stubLines}><i /><i /><i /></div>
+    </div>
+  )
 }
 
 // Keep render exceptions below the normal panel header and publish one sticky panel failure.
@@ -84,5 +92,9 @@ export default function DekartChartPanel ({ Renderer, ...props }) {
   if (sourceEmpty) return <div className={styles.empty}>No data to chart yet.</div>
   // Tables and the shared connection can be registered after the panel shell mounts.
   if (sourceUnavailable || !dataTable || connectionStatus === 'loading' || connectionStatus === 'idle') return <WidgetStub />
-  return <WidgetErrorBoundary panelId={panel.id} panelType={panel.type} failPanel={failPanel}><Renderer {...props} /></WidgetErrorBoundary>
+  return (
+    <WidgetErrorBoundary panelId={panel.id} panelType={panel.type} failPanel={failPanel}>
+      <Renderer {...props} />
+    </WidgetErrorBoundary>
+  )
 }

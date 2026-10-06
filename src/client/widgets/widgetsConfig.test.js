@@ -72,6 +72,24 @@ test('search settings round-trip with only the selected field', () => {
   expect(saved.widgets[0].settings).toEqual({ field: 'locker_name' })
 })
 
+test('cross filtering round-trips only when enabled', () => {
+  const runtime = runtimeConfig()
+  runtime.dashboardsById.dataset_1.panels[1] = {
+    ...panels.category,
+    config: { ...panels.category.config, settings: { field: 'category', crossFilter: true } }
+  }
+  runtime.dashboardsById.dataset_2.panels[0] = {
+    ...panels.histogram,
+    config: { ...panels.histogram.config, settings: { field: 'amount', crossFilter: false } }
+  }
+  const saved = serializeWidgetsConfig(runtime)
+  expect(saved.widgets[1].settings.crossFilter).toBe(true)
+  expect(saved.widgets[2].settings).not.toHaveProperty('crossFilter')
+  const { calls, store } = fakeStore()
+  applyWidgetsConfig(store, saved, ['dataset_1', 'dataset_2'])
+  expect(calls.find(call => call[0] === 'addPanel' && call[2].id === 'category_1')[2].config.settings.crossFilter).toBe(true)
+})
+
 test('preserves every existing position by widget id while applying runtime edits', () => {
   const previous = { version: 1, widgets: [{ id: 'histogram_1', dataId: 'dataset_2' }, { id: 'number_1', dataId: 'dataset_1' }, { id: 'category_1', dataId: 'dataset_1' }] }
   const saved = serializeWidgetsConfig(runtimeConfig(), previous)

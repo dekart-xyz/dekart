@@ -234,6 +234,12 @@ export function runDuckDBGraph (changedDatasetIds = null) {
     if (!reportId || reportDuckDBDatasets.length === 0) {
       return
     }
+    // Preserve authored values before a new job can empty Kepler's field domain.
+    const visState = initialState.keplerGl.kepler?.visState
+    const changing = changedDatasetIds?.length ? changedDatasetIds : reportDuckDBDatasets.map(dataset => dataset.id)
+    for (const id of changing) {
+      if (visState?.datasets[id]?.dataContainer.numRows() > 0 && visState.filters.some(filter => filter.dataId.includes(id))) dispatch(filterRestore.capture(id))
+    }
     let getDuckDBRuntime
     try {
       ({ getDuckDBRuntime } = await loadDuckDBRuntime())

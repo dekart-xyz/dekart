@@ -3,6 +3,8 @@ import { getFilterRecord } from '@kepler.gl/utils'
 import type { SelectionClause } from '@uwdata/mosaic-core'
 import { deriveFilterClauses } from '../kepler-filter-to-sql/index'
 import type { Filter, LayerBinding } from '../kepler-filter-to-sql/index'
+import { resolveFilterBindings } from '../kepler-filter-bindings/index'
+import type { BindingTable } from '../kepler-filter-bindings/index'
 
 /** A filter with the field index used by Kepler's CPU predicates. */
 export interface KeplerFilter extends Filter {
@@ -51,6 +53,8 @@ export interface Binding {
   field: string
   /** Whether chart values are category lists rather than numeric ranges. */
   categorical: boolean
+  /** Whether the current selection also binds matching loaded tables. */
+  crossFilter: boolean
   /** Interaction handlers registered for this chart. */
   clients: readonly MosaicClient[]
 }
@@ -80,6 +84,8 @@ export interface CurrentFilterInputs {
   columnTypes: Readonly<Record<string, string>>
   /** Current chart bindings; absence postpones reconciliation. */
   bindings?: readonly Binding[]
+  /** Current fields in all loaded tables, used to find matching filter targets. */
+  tables: readonly BindingTable[]
 }
 /** Injected state, scheduling and feedback for one selection and data binding. */
 export interface Options {
@@ -100,16 +106,16 @@ export interface Options {
    * false means no map change needs to render.
    */
   defer: (apply: () => boolean) => () => void
-  /** Called after a user edit changes a Kepler filter while editing is enabled. */
+  /** Called when an interaction or binding reconciliation changes a Kepler filter. */
   onUserEdit: () => void
   /** Called after Kepler filters have been projected into the selection. */
   onProjected: () => void
   /** Receives an error message, or an empty string after successful projection. */
   onError: (message: string) => void
 }
-/** Reconcile live filters or release the selection. Both methods are safe to repeat. */
+/** Reconcile current bindings and chart clauses or release the selection. Both methods are safe to repeat. */
 export interface FilterSync {
-  /** Project current Kepler filters into Mosaic when inputs changed. */
+  /** Apply current filter settings, then project Kepler filters into Mosaic. */
   reconcile: () => void
   /** Cancel pending work, remove the selection listener, and clear the selection. */
   dispose: () => void
@@ -145,6 +151,7 @@ function projectionKey (input: CurrentFilterInputs, dataId: string): unknown[] {
   for (const binding of input.bindings ?? []) key.push(binding.filterId, binding.field, binding.categorical, ...binding.clients, binding.clients.length)
   key.push(input.bindings?.length)
   for (const filter of filters) key.push(filter.id, filter.type, filter.enabled, JSON.stringify(filter.value), ...filter.dataId, ...filter.name, filter.dataId.length, filter.name.length)
+  for (const table of input.tables) key.push(table.dataId, ...table.fields.flatMap(field => [field.name, field.type]))
   key.push(filters.length)
   if (input.table != null) key.push(...nativeFilterInputs(input.table, filters, input.layers, input.columnTypes))
   return key
@@ -179,6 +186,38 @@ export function createKeplerMosaicFilterSync (options: Options): FilterSync {
   let cancelIntent: (() => void) | undefined
   let disposed = false
 
+  // Change only the pairs that differ; Kepler updates each paired ID/name atomically.
+  const applyPairs = (filterId: string, field: string, crossFilter: boolean): boolean => {
+    const input = options.current()
+    const current = input.filters.find(filter => filter.id === filterId)
+    if (current == null || current.dataId[0] !== dataId || current.name[0] !== field) return false
+    const desired = resolveFilterBindings({
+      tables: input.tables,
+      primaryDataId: dataId,
+      field,
+      crossFilter,
+      currentBindings: current.dataId.map((id, index) => ({ dataId: id, field: current.name[index] }))
+    }).bindings
+    if (desired[0]?.dataId !== dataId || desired[0]?.field !== field) return false
+    const same = current.dataId.length === desired.length && desired.every((pair, index) =>
+      current.dataId[index] === pair.dataId && current.name[index] === pair.field)
+    if (same) return false
+    // Remove from the end so earlier pair positions remain stable during Kepler reductions.
+    for (let index = current.dataId.length - 1; index > 0; index--) {
+      const pair = desired[index]
+      if (pair?.dataId === current.dataId[index] && pair.field === current.name[index]) continue
+      const liveIndex = options.current().filters.findIndex(filter => filter.id === filterId)
+      options.dispatch(setFilter(liveIndex, 'dataId', null, index))
+    }
+    for (let index = 1; index < desired.length; index++) {
+      const liveIndex = options.current().filters.findIndex(filter => filter.id === filterId)
+      const live = options.current().filters[liveIndex]
+      if (live?.dataId[index] === desired[index].dataId && live.name[index] === desired[index].field) continue
+      options.dispatch(setFilter(liveIndex, ['dataId', 'name'], [desired[index].dataId, desired[index].field], index))
+    }
+    return true
+  }
+
   const update = (clause: SelectionClause): void => {
     authored.add(clause)
     selection.update(clause)
@@ -195,6 +234,22 @@ export function createKeplerMosaicFilterSync (options: Options): FilterSync {
         const index = options.current().filters.findIndex(current => current.id === filter.id)
         if (index >= 0) options.dispatch(removeFilter(index))
       }
+    }
+    // Only the owner may change a widget filter's primary field or target pairs.
+    try {
+      for (const binding of input.bindings) {
+        const filter = options.current().filters.find(item => item.id === binding.filterId)
+        if (filter?.dataId[0] !== dataId) continue
+        if (filter.name[0] !== binding.field) {
+          const index = options.current().filters.findIndex(item => item.id === binding.filterId)
+          options.dispatch(removeFilter(index))
+          options.onUserEdit()
+        } else if (applyPairs(binding.filterId, binding.field, binding.crossFilter)) options.onUserEdit()
+      }
+    } catch {
+      appliedKey = null
+      options.onError(errorMessage)
+      return
     }
     let key: unknown[]
     try {
@@ -214,7 +269,19 @@ export function createKeplerMosaicFilterSync (options: Options): FilterSync {
       try {
         const currentKey = projectionKey(now, dataId)
         const record = getFilterRecord(dataId, now.filters as Parameters<typeof getFilterRecord>[1], { cpuOnly: true, ignoreDomain: true }).cpu
-        const clauses = deriveFilterClauses([...now.filters], dataId, new Set(record.map(filter => filter.id)), { layers: now.layers, columnTypes: now.columnTypes })
+        const eligible = new Set(record.map(filter => filter.id).filter(id => {
+          const filter = now.filters.find(item => item.id === id)
+          if (filter == null || !filter.id.startsWith(options.ownedFilterPrefix)) return true
+          const pairs = filter.dataId.map((boundId, index) => ({ dataId: boundId, field: filter.name[index] }))
+          return resolveFilterBindings({
+            tables: now.tables,
+            primaryDataId: filter.dataId[0],
+            field: filter.name[0],
+            crossFilter: false,
+            currentBindings: pairs
+          }).compatibleDataIds.includes(dataId)
+        }))
+        const clauses = deriveFilterClauses([...now.filters], dataId, eligible, { layers: now.layers, columnTypes: now.columnTypes })
         const bindings = now.bindings
         const desired = clauses.map(clause => {
           const binding = bindings.find(item => item.filterId === clause.filterId)
@@ -267,6 +334,9 @@ export function createKeplerMosaicFilterSync (options: Options): FilterSync {
     if (!input.ready || (input.bindings == null)) return
     const binding = input.bindings.find(item => item.clients.includes(clause.source as MosaicClient))
     if (binding == null) return
+    // A chart can emit an empty predicate while rebuilding after a source change.
+    // A user clearing the last category emits a null predicate instead.
+    if (binding.categorical && clause.predicate != null && Array.isArray(clause.value) && clause.value.flat().length === 0) return
     const value = (clause.predicate != null) ? binding.categorical ? (clause.value as unknown[]).flat() : clause.value : null
     const intent: Intent = { source: clause.source, filterId: binding.filterId, field: binding.field, editing: input.editing, value }
     appliedKey = null

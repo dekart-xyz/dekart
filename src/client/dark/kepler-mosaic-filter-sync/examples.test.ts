@@ -22,6 +22,7 @@ interface Fixture {
   queue: Array<{ apply: () => boolean, cancelled: boolean }>
   errors: string[]
   command: (action: Parameters<typeof wrapTo>[1]) => void
+  addTable: (id: string) => Promise<void>
   readonly projected: number
   readonly edits: number
   setReady: (value: boolean) => void
@@ -46,6 +47,12 @@ async function setup (): Promise<Fixture> {
   await table.importData({ data: rows })
   const fixtureAction = { type: 'fixture/table', table }
   store.dispatch(wrapTo('map', fixtureAction as Parameters<typeof wrapTo>[1]))
+  const addTable = async (id: string): Promise<void> => {
+    const next = new KeplerTable({ info: { id, label: id }, color: [1, 2, 3] })
+    await next.importData({ data: rows })
+    const action = { type: 'fixture/table', table: next }
+    store.dispatch(wrapTo('map', action as Parameters<typeof wrapTo>[1]))
+  }
   const selection = Selection.crossfilter()
   const mark = (field: string): { plot: { markSet: Set<object> }, channelField: () => { field: string, as: string } } => {
     const item = { plot: { markSet: new Set<object>() }, channelField: () => ({ field, as: field }) }
@@ -55,8 +62,8 @@ async function setup (): Promise<Fixture> {
   const category = new Toggle(mark('category'), { selection, channels: ['x'] })
   const range = new Interval1D(mark('score'), { selection, channel: 'x', field: 'score', brush: undefined })
   const bindings: Binding[] = [
-    { filterId: 'widget:category', field: 'category', categorical: true, clients: [category] },
-    { filterId: 'widget:score', field: 'score', categorical: false, clients: [range] }
+    { filterId: 'widget:category', field: 'category', categorical: true, crossFilter: false, clients: [category] },
+    { filterId: 'widget:score', field: 'score', categorical: false, crossFilter: false, clients: [range] }
   ]
   const queue: Array<{ apply: () => boolean, cancelled: boolean }> = []
   const errors: string[] = []
@@ -78,6 +85,10 @@ async function setup (): Promise<Fixture> {
     ready,
     editing,
     bindings: currentBindings,
+    tables: Object.values(state().datasets).map(table => ({
+      dataId: table.id,
+      fields: table.fields.map(field => ({ name: field.name, type: field.type }))
+    })),
     table: state().datasets.a,
     filters: filters().map(filter => {
       if (missingName) return { ...filter, name: undefined }
@@ -120,6 +131,7 @@ async function setup (): Promise<Fixture> {
     queue,
     errors,
     command,
+    addTable,
     get projected () { return projected },
     get edits () { return edits },
     setReady: (value: boolean) => { ready = value },
@@ -135,6 +147,35 @@ async function setup (): Promise<Fixture> {
 }
 
 describe('Kepler and Mosaic filter sync', () => {
+  it('updates paired bindings when the current setting changes', async () => {
+    const f = await setup()
+    await f.addTable('b')
+    f.command(createOrUpdateFilter('widget:category', 'a', 'category', ['Alpha']))
+    f.sync.reconcile(); await f.flush()
+    expect(f.filters()[0].dataId).toEqual(['a'])
+    f.setBindings([{ ...f.bindings[0], crossFilter: true }, f.bindings[1]])
+    f.sync.reconcile()
+    expect(f.filters()[0].dataId).toEqual(['a', 'b'])
+    expect(f.filters()[0].name).toEqual(['category', 'category'])
+    expect(f.filters()[0].value).toEqual(['Alpha'])
+    expect(f.edits).toBe(1)
+    f.setBindings(f.bindings)
+    f.sync.reconcile()
+    expect(f.filters()[0].dataId).toEqual(['a'])
+    expect(f.filters()[0].value).toEqual(['Alpha'])
+    expect(f.edits).toBe(2)
+    f.sync.dispose()
+  })
+
+  it('clears an old-field selection when the current field changes', async () => {
+    const f = await setup()
+    await f.addTable('b')
+    f.command(createOrUpdateFilter('widget:category', 'a', 'category', ['Alpha']))
+    f.setBindings([{ ...f.bindings[0], field: 'score' }, f.bindings[1]])
+    f.sync.reconcile()
+    expect(f.filters()).toEqual([])
+    f.sync.dispose()
+  })
   it('projects a categorical filter, skips display-only edits, and clears a removed filter', async () => {
     const f = await setup()
     f.command(createOrUpdateFilter('widget:category', 'a', 'category', ['Alpha']))
@@ -171,6 +212,17 @@ describe('Kepler and Mosaic filter sync', () => {
     f.sync.dispose()
   })
 
+  it('ignores an empty category predicate emitted while a chart rebuilds', async () => {
+    const f = await setup()
+    f.command(createOrUpdateFilter('widget:category', 'a', 'category', ['Alpha']))
+    f.sync.reconcile(); await f.flush()
+    f.category.value = [[]]
+    f.selection.update(f.category.clause(f.category.value))
+    await f.flush()
+    expect(f.filters()[0].value).toEqual(['Alpha'])
+    f.sync.dispose()
+  })
+
   it('rolls back a queued brush after its binding changes', async () => {
     const f = await setup()
     f.command(createOrUpdateFilter('widget:score', 'a', 'score', [10, 20]))
@@ -179,8 +231,8 @@ describe('Kepler and Mosaic filter sync', () => {
     f.selection.update(f.range.clause(f.range.value))
     f.setBindings([f.bindings[0], { ...f.bindings[1], field: 'other' }])
     await f.flush(); await f.flush()
-    expect(f.filters().find(filter => filter.id === 'widget:score')?.value).toEqual([10, 20])
-    expect(f.range.value).toEqual([10, 20])
+    expect(f.filters().find(filter => filter.id === 'widget:score')).toBeUndefined()
+    expect(f.range.value).toBeUndefined()
     f.sync.dispose()
   })
 
@@ -194,6 +246,15 @@ describe('Kepler and Mosaic filter sync', () => {
     f.setBindings(f.bindings)
     f.sync.reconcile(); await f.flush()
     expect(f.filters().map(filter => filter.id)).toEqual(['native'])
+    f.sync.dispose()
+  })
+
+  it('releases a selection when its chart no longer has a filter binding', async () => {
+    const f = await setup()
+    f.command(createOrUpdateFilter('widget:category', 'a', 'category', ['Alpha']))
+    f.setBindings([f.bindings[1]])
+    f.sync.reconcile(); await f.flush()
+    expect(f.filters()).toEqual([])
     f.sync.dispose()
   })
 

@@ -6,6 +6,7 @@
 .chip { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; padding: 4px 7px; border-radius: 3px; background: #2e3947; border: 1px solid #3f5063; }
 .chip .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #f2f4f7; font-weight: 600; }
 .chip .name:disabled { cursor: default; }
+.count { color: #a6afbd; font-weight: 400; }
 .remove { display: flex; flex: none; }
 .remove:hover, .clear:hover { color: #fff; }
 .chips .add { display: flex; align-items: center; justify-content: center; width: 25px; height: 26px; border: 1px dashed #3a414c; border-radius: 3px; }
@@ -17,4 +18,3 @@
 
 .chips > .chip { max-width: calc((100% - 6px) / 2); box-sizing: border-box; }
 .chips[data-count='4'] .add { position: absolute; right: 11px; bottom: 9px; }
-

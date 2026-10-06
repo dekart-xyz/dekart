@@ -24,7 +24,7 @@ back to the latest Kepler state.
 | :--- | :--- | :--- |
 | [Binding](#api-binding) | Interfaces | One chart's filter identity, current field and registered interaction handlers. |
 | [CurrentFilterInputs](#api-currentfilterinputs) | Interfaces | Live inputs. |
-| [FilterSync](#api-filtersync) | Interfaces | Reconcile live filters or release the selection. |
+| [FilterSync](#api-filtersync) | Interfaces | Reconcile current bindings and chart clauses or release the selection. |
 | [KeplerFilter](#api-keplerfilter) | Interfaces | A filter with the field index used by Kepler's CPU predicates. |
 | [KeplerLayer](#api-keplerlayer) | Interfaces | A layer with the spatial and display properties read by Kepler. |
 | [MosaicClient](#api-mosaicclient) | Interfaces | A chart interaction handler that owns a selection clause and displayed value. |
@@ -46,6 +46,7 @@ One chart's filter identity, current field and registered interaction handlers.
 | ------ | ------ | ------ |
 | <a id="api-categorical"></a> `categorical` | `boolean` | Whether chart values are category lists rather than numeric ranges. |
 | <a id="api-clients"></a> `clients` | readonly [`MosaicClient`](#api-mosaicclient)[] | Interaction handlers registered for this chart. |
+| <a id="api-crossfilter"></a> `crossFilter` | `boolean` | Whether the current selection also binds matching loaded tables. |
 | <a id="api-field"></a> `field` | `string` | Field selected for this chart's filter. |
 | <a id="api-filterid"></a> `filterId` | `string` | Stable ID of the filter controlled by this chart. |
 
@@ -72,6 +73,7 @@ Live inputs. Undefined bindings or table, or false ready, postpone reconciliatio
 | `table.dataContainer.numRows` | () => `number` | Current row count, used to detect changes to CPU filter inputs. |
 | `table.fields` | readonly `object`[] | Field metadata indexed by each filter's fieldIdx entry. |
 | `table.id` | `string` | Table binding ID, matched against filter dataId entries. |
+| <a id="api-tables"></a> `tables` | readonly `BindingTable`[] | Current fields in all loaded tables, used to find matching filter targets. |
 
 ***
 
@@ -79,14 +81,14 @@ Live inputs. Undefined bindings or table, or false ready, postpone reconciliatio
 
 ### FilterSync
 
-Reconcile live filters or release the selection. Both methods are safe to repeat.
+Reconcile current bindings and chart clauses or release the selection. Both methods are safe to repeat.
 
 #### Properties
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
 | <a id="api-dispose"></a> `dispose` | () => `void` | Cancel pending work, remove the selection listener, and clear the selection. |
-| <a id="api-reconcile"></a> `reconcile` | () => `void` | Project current Kepler filters into Mosaic when inputs changed. |
+| <a id="api-reconcile"></a> `reconcile` | () => `void` | Apply current filter settings, then project Kepler filters into Mosaic. |
 
 ***
 
@@ -199,7 +201,7 @@ Injected state, scheduling and feedback for one selection and data binding.
 | <a id="api-dispatch"></a> `dispatch` | (`action`) => `void` | Apply a Kepler filter action to the authoritative state. |
 | <a id="api-onerror"></a> `onError` | (`message`) => `void` | Receives an error message, or an empty string after successful projection. |
 | <a id="api-onprojected"></a> `onProjected` | () => `void` | Called after Kepler filters have been projected into the selection. |
-| <a id="api-onuseredit"></a> `onUserEdit` | () => `void` | Called after a user edit changes a Kepler filter while editing is enabled. |
+| <a id="api-onuseredit"></a> `onUserEdit` | () => `void` | Called when an interaction or binding reconciliation changes a Kepler filter. |
 | <a id="api-ownedfilterprefix"></a> `ownedFilterPrefix` | `string` | Prefix identifying filters this controller may remove when their bindings disappear. |
 | <a id="api-selection-1"></a> `selection` | [`MosaicSelection`](#api-mosaicselection) | Selection to update from Kepler filters and observe for user edits. |
 

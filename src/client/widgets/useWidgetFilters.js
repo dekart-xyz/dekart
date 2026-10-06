@@ -7,6 +7,7 @@ import { widgetFilterId } from './widgetStore'
 import { markKeplerPanelInteracted } from '../actions/report'
 
 const categoricalTypes = new Set(['count-plot', 'search'])
+const filterTypes = new Set(['count-plot', 'search', 'histogram'])
 
 // Keep the app store mapping separate from Kepler/Mosaic reconciliation.
 function widgetFilterInputs (store, redux, datasetId, ready, editing) {
@@ -18,13 +19,19 @@ function widgetFilterInputs (store, redux, datasetId, ready, editing) {
     ready,
     editing,
     table: kepler.datasets[datasetId],
+    // Pass loaded field metadata and each chart's cross-filter setting to the filter controller for binding reconciliation.
+    tables: Object.values(kepler.datasets).map(table => ({
+      dataId: table.id,
+      fields: table.fields.map(field => ({ name: field.name, type: field.type }))
+    })),
     filters: kepler.filters,
     layers: kepler.layers,
     columnTypes: Object.fromEntries((widgetColumns || []).map(({ name, type }) => [name, type])),
-    bindings: panels?.map(panel => ({
+    bindings: panels?.filter(panel => filterTypes.has(panel.config.chartType)).map(panel => ({
       filterId: widgetFilterId(panel.id),
       field: panel.config.settings.field,
       categorical: categoricalTypes.has(panel.config.chartType),
+      crossFilter: panel.config.settings.crossFilter === true,
       clients: state.mosaicDashboard.runtime.panelClients[getMosaicDashboardPanelId(datasetId, panel.id)] || []
     }))
   }
@@ -32,10 +39,12 @@ function widgetFilterInputs (store, redux, datasetId, ready, editing) {
 
 // One controller owns each selection; React effects only observe app inputs.
 export function useWidgetFilters (store, datasetId, ready, editing, pending) {
+  const dashboards = useStore(store, state => state.mosaicDashboard.config.dashboardsById)
   const panels = useStore(store, state => state.mosaicDashboard.config.dashboardsById[datasetId]?.panels)
   const panelClients = useStore(store, state => state.mosaicDashboard.runtime.panelClients)
   const widgetColumns = useStore(store, state => state.db.tables.find(table => table.table.schema === 'widgets' && table.table.table === `d_${datasetId.replaceAll('-', '_')}`)?.columns)
   const table = useSelector(state => state.keplerGl.kepler?.visState.datasets[datasetId])
+  const allTables = useSelector(state => state.keplerGl.kepler?.visState.datasets)
   const filters = useSelector(state => state.keplerGl.kepler?.visState.filters)
   const layers = useSelector(state => state.keplerGl.kepler?.visState.layers)
   const dispatch = useDispatch()
@@ -63,6 +72,6 @@ export function useWidgetFilters (store, datasetId, ready, editing, pending) {
     return () => { sync.dispose(); controller.current = null }
   }, [store, redux, datasetId, selection, dispatch])
 
-  useEffect(() => controller.current?.reconcile(), [panels, panelClients, widgetColumns, table, filters, layers, ready, editing, pending])
+  useEffect(() => controller.current?.reconcile(), [dashboards, panels, panelClients, widgetColumns, table, allTables, filters, layers, ready, editing, pending])
   return { error }
 }

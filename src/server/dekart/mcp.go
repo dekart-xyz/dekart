@@ -1252,7 +1252,7 @@ func mcpToolDefinitions() []mcpTool {
 			Name:         "get_widgets_config_schema",
 			Description:  "Return the Dekart widgets_config v1 JSON schema used by MCP validation.",
 			InputSchema:  mcpschema.Object(nil, map[string]any{}),
-			WhenToUse:    "Use before building or editing widgets_config to discover the envelope, allowed chart types, required settings, enums and numeric bounds.",
+			WhenToUse:    "Use before building or editing widgets_config to discover the envelope, allowed chart types, required settings, enums and numeric bounds. Category, Search and Histogram can set crossFilter true to filter other loaded datasets whose column has the exact same name and compatible type; integer and real are compatible. Number cannot use crossFilter.",
 			WhenNotToUse: "Do not use for map layers, filters or selections. Those belong to map_config and get_map_config_schema.",
 			SideEffects:  []string{"read"},
 			ExampleInput: map[string]any{},

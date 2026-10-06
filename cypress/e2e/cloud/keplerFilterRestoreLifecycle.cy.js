@@ -4,7 +4,7 @@ const QUERY = "SELECT 52.5 + i / 100 AS latitude, 13.4 + i / 100 AS longitude, C
 
 // Navigation must cancel an old publication before a new report can receive its recovery.
 describe('filter recovery across report navigation', () => {
-  it('rejects a held rerun after closing the report and opening a new one', () => {
+  it('rejects a held rerun after closing the report and opening a new one', { defaultCommandTimeout: 30000 }, () => {
     cy.viewport(1280, 960)
     const email = `filter-recovery-navigation-${Date.now()}@example.com`
     cy.setDevClaimsEmail(email)

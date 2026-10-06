@@ -88,7 +88,8 @@
                 "field": { "type": "string", "minLength": 1, "maxLength": 256 },
                 "metric": { "const": "count" },
                 "sort": { "enum": ["value-desc", "value-asc", "label-asc", "label-desc"] },
-                "maxBars": { "type": "integer", "minimum": 1, "maximum": 100 }
+                "maxBars": { "type": "integer", "minimum": 1, "maximum": 100 },
+                "crossFilter": { "type": "boolean" }
               }
             }
           }
@@ -111,7 +112,8 @@
               "additionalProperties": false,
               "required": ["field"],
               "properties": {
-                "field": { "type": "string", "minLength": 1, "maxLength": 256 }
+                "field": { "type": "string", "minLength": 1, "maxLength": 256 },
+                "crossFilter": { "type": "boolean" }
               }
             }
           }
@@ -136,7 +138,8 @@
               "properties": {
                 "field": { "type": "string", "minLength": 1, "maxLength": 256 },
                 "maxBins": { "type": "integer", "minimum": 1, "maximum": 1000 },
-                "color": { "type": "string", "minLength": 1, "maxLength": 64 }
+                "color": { "type": "string", "minLength": 1, "maxLength": 64 },
+                "crossFilter": { "type": "boolean" }
               }
             }
           }
