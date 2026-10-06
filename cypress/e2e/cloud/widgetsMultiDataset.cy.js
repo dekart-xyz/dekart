@@ -57,6 +57,7 @@ describe('Widgets dataset lifecycle', () => {
       const text = [...values].map(value => value.textContent)
       if (!text.includes('4') || !text.includes('3')) throw new Error(`Expected independent totals 4 and 3, got ${text.join(', ')}`)
     })
+    cy.get('[aria-label="Report charts"]').should('have.attr', 'aria-busy', 'false')
     let draggedLabel
     let targetLabel
     cy.get('[aria-label^="Move "]').then(handles => {
@@ -65,7 +66,7 @@ describe('Widgets dataset lifecycle', () => {
       expect(draggedLabel).not.to.equal(targetLabel)
     })
     dragFirstWidgetBelowSecond()
-    cy.get('[id^="DndLiveRegion"]').invoke('text').should('include', 'Moved')
+    cy.get('[id^="DndLiveRegion"]').invoke('text').should('include', 'position 2')
     cy.get('[aria-label^="Move "]').should(handles => {
       expect(handles[0].getAttribute('aria-label')).to.equal(targetLabel)
       expect(handles[1].getAttribute('aria-label')).to.equal(draggedLabel)

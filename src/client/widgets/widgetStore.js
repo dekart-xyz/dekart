@@ -21,6 +21,21 @@ setAutoFreeze(false)
 
 export const widgetTableName = id => `widgets.${duckDBViewName(id)}`
 export const widgetFilterId = id => `widget:${id}`
+// A selection can queue several value events while an earlier chart query is still running.
+async function waitForSelectionQueries (selection) {
+  let version = 0
+  const onValue = () => { version++ }
+  selection.addEventListener('value', onValue)
+  try {
+    let observed
+    do {
+      observed = version
+      await selection.pending('value')
+    } while (version !== observed)
+  } finally {
+    selection.removeEventListener('value', onValue)
+  }
+}
 // Keep upstream builders and settings; only category interaction uses Mosaic click selection.
 export const chartTypes = createDefaultChartTypes({ includeCustomSpec: false }).filter(type => ['count-plot', 'histogram'].includes(type.id)).map(type => type.id !== 'count-plot'
   ? (() => {
@@ -83,13 +98,36 @@ export function createWidgetStore (onQueryPending = () => {}, onPresentationErro
         )
       },
       filterProjectionRevisionByDataset: {},
-      projectWidgetFilters (datasetId) {
-        set(state => ({
-          filterProjectionRevisionByDataset: {
-            ...state.filterProjectionRevisionByDataset,
-            [datasetId]: (state.filterProjectionRevisionByDataset[datasetId] || 0) + 1
+      // Each active filter revision clears earlier paint markers and stays pending until its selection and chart paint finish.
+      filterProjectionSettledRevisionByDataset: {},
+      // track when filer is projected on chart
+      projectWidgetFilters (datasetId, hasActiveFilter, selection) {
+        if (!hasActiveFilter) return
+        const revision = (get().filterProjectionRevisionByDataset[datasetId] || 0) + 1
+        set(state => {
+          const paintedPanels = state.paintedPanels && { ...state.paintedPanels }
+          // A chart painted before saved map filters were projected is not ready for a snapshot.
+          if (paintedPanels) {
+            for (const panel of state.mosaicDashboard.config.dashboardsById[datasetId]?.panels || []) {
+              // Search and terminal failures do not redraw after a map filter changes.
+              if (panel.config.chartType !== 'search' && !state.failedPanels[panel.id]) delete paintedPanels[panel.id]
+            }
           }
-        }))
+          return {
+            paintedPanels,
+            filterProjectionRevisionByDataset: {
+              ...state.filterProjectionRevisionByDataset,
+              [datasetId]: revision
+            }
+          }
+        })
+        // Wait for every queued selection update and the resulting React paint.
+        Promise.resolve().then(async () => {
+          await waitForSelectionQueries(selection)
+          await new Promise(resolve => window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)))
+        }).then(() => set(state => state.filterProjectionRevisionByDataset[datasetId] === revision
+          ? { filterProjectionSettledRevisionByDataset: { ...state.filterProjectionSettledRevisionByDataset, [datasetId]: revision } }
+          : state))
       },
       // Snapshot readiness waits until every authored chart reaches a drawn, failed, or empty end state.
       // Only snapshot renders track it; null keeps normal sessions free of the bookkeeping.

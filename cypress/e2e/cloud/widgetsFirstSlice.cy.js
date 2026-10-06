@@ -80,15 +80,19 @@ describe('Widgets first production slice', () => {
 
     // Definitions and the chart-owned selection share one report revision,
     // while the selection itself remains canonical Kepler map_config state.
+    cy.intercept('POST', '**/Dekart/UpdateReport').as('saveCategory')
+    cy.get('button#dekart-save-button').should('not.be.disabled').click()
+    cy.wait('@saveCategory', { timeout: 60000 }).its('response.statusCode').should('eq', 200)
     cy.get('button#dekart-save-button .anticon-cloud', { timeout: 60000 }).should('exist')
     cy.reload()
     cy.get('[data-testid="widgets-tab"]', { timeout: 120000 }).should('have.attr', 'aria-expanded', 'true')
     cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.text', '2')
     cy.get('[data-testid="filter-strip"]').should('contain.text', 'category')
+    cy.get('[aria-label="Report charts"]', { timeout: 30000 }).should('have.attr', 'aria-busy', 'false')
 
     cy.get('[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line').first().click()
     cy.get('[data-testid="number-value"]', { timeout: 30000 }).should('have.text', '5')
-    cy.get('[data-testid="filter-strip"]').should('contain.text', 'No filters')
+    cy.get('[data-testid="filter-strip"]', { timeout: 20000 }).should('contain.text', 'No filters')
 
     // Histogram brushes persist raw field bounds rather than bin-start values.
     dragHistogramRange(25.5, 34.5)
@@ -141,7 +145,7 @@ describe('Widgets first production slice', () => {
     })
     cy.get('button[aria-label="Reset capacity kw filters"]').click()
     cy.get('[data-testid="number-value"]').should('have.text', '5')
-    cy.get('[data-testid="filter-strip"]').should('contain.text', 'No filters')
+    cy.get('[data-testid="filter-strip"]', { timeout: 20000 }).should('contain.text', 'No filters')
 
     cy.get('[data-testid="category-chart"] g[aria-label="rule"][data-index="4"] line').first().click()
     cy.get('[data-testid="number-value"]').should('have.text', '2')
@@ -149,7 +153,7 @@ describe('Widgets first production slice', () => {
     cy.contains('[role="menuitem"]', 'Delete chart').click()
     cy.get('[data-testid="category-chart"]').should('not.exist')
     cy.get('[data-testid="number-value"]').should('have.text', '5')
-    cy.get('[data-testid="filter-strip"]').should('contain.text', 'No filters')
+    cy.get('[data-testid="filter-strip"]', { timeout: 20000 }).should('contain.text', 'No filters')
 
     // An explicit empty replacement clears SQLRooms state and stays empty after reload.
     cy.get('button[aria-label="Chart actions"]').first().click()

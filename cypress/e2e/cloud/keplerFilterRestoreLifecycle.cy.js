@@ -32,23 +32,47 @@ describe('filter recovery across report navigation', () => {
     cy.get('#dekart-query-status-message', { timeout: 120000 }).should('contain', 'Error')
     cy.enterQuery(QUERY)
 
+    let held = false
+    let appWindow
+    let oldPath
     let release
     const gate = new Cypress.Promise(resolve => { release = resolve })
-    let held = false
+    cy.window().then(win => { appWindow = win; oldPath = win.location.pathname })
     cy.intercept('POST', '**/Dekart/RunDuckDBQuery', request => {
       if (!held) {
         held = true
+        request.alias = 'heldRerun'
+        // Cypress waits for the held request, so use the app's DOM to open the next report.
+        appWindow.setTimeout(() => {
+          appWindow.history.pushState({}, '', '/')
+          appWindow.dispatchEvent(new appWindow.PopStateEvent('popstate'))
+          const waitForHome = appWindow.setInterval(() => {
+            const create = appWindow.document.querySelector('#dekart-create-report')
+            if (!create) return
+            appWindow.clearInterval(waitForHome)
+            create.click()
+            const waitForDuckDB = appWindow.setInterval(() => {
+              const duckDB = [...appWindow.document.querySelectorAll('button')].find(button => button.textContent.includes('DuckDB'))
+              if (!duckDB) return
+              appWindow.clearInterval(waitForDuckDB)
+              duckDB.click()
+              const waitForReport = appWindow.setInterval(() => {
+                if (appWindow.location.pathname === oldPath || !appWindow.document.querySelector('#dekart-query-execute-button')) return
+                appWindow.clearInterval(waitForReport)
+                release()
+              }, 50)
+            }, 50)
+          }, 50)
+        }, 1000)
         return gate.then(() => request.continue())
       }
       request.continue()
     })
     cy.get('#dekart-query-execute-button').should('be.enabled').click()
     cy.wrap(null).should(() => { if (!held) throw new Error('Waiting for held rerun') })
-    cy.get('#dekart-main-menu').trigger('mouseover')
-    cy.contains('a', 'My Maps').click()
-    cy.get('#dekart-create-report', { timeout: 30000 }).click()
-    cy.contains('button', 'DuckDB', { timeout: 30000 }).click()
-    cy.then(() => release())
+    cy.location('pathname').should('not.eq', oldPath).and('not.eq', '/')
+    cy.get('#dekart-query-execute-button', { timeout: 30000 }).should('exist')
+    cy.wait('@heldRerun')
     cy.enterQuery(QUERY)
     cy.get('#dekart-query-execute-button').should('be.enabled').click()
     cy.get('#dekart-query-status-message', { timeout: 120000 }).should('contain', 'Ready')

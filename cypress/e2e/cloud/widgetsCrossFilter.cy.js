@@ -120,7 +120,9 @@ describe('Widget cross filtering', () => {
     let ownerId
     const openOwnerSettings = () => {
       cy.then(() => cy.get(`[data-widget-id="${ownerId}"]`, { timeout: 30000 }).find('button[aria-label="Chart actions"]').click())
-      cy.contains('[role="menuitem"]', 'Edit chart').click()
+      cy.contains('[role="menuitem"]', 'Edit chart', { timeout: 30000 })
+        .should(item => expect(item).not.to.have.attr('data-disabled'))
+        .click()
     }
     cy.setDevClaimsEmail(email)
     cy.intercept(`${Cypress.env('DEKART_E2E_API_URL')}/api/v1/**`, request => { request.headers['X-Dekart-Claim-Email'] = email })
@@ -148,8 +150,7 @@ describe('Widget cross filtering', () => {
     cy.get('button#dekart-save-button .anticon-cloud', { timeout: 60000 }).should('exist')
     cy.reload()
     openWidgets()
-    cy.then(() => cy.get(`[data-widget-id="${ownerId}"]`, { timeout: 120000 }).find('button[aria-label="Chart actions"]').click())
-    cy.contains('[role="menuitem"]', 'Edit chart').click()
+    openOwnerSettings()
     cy.get('[data-testid="cross-filter-setting"] input[type="checkbox"]').should('be.checked')
     cy.contains('button', 'Back to charts').click()
 
@@ -168,6 +169,7 @@ describe('Widget cross filtering', () => {
     cy.get('#dekart-query-status-message', { timeout: 120000 }).should('contain', 'Ready')
     openWidgets()
     cy.get('[data-testid="number-value"]', { timeout: 120000 }).eq(1).should('have.text', '2')
+    cy.get('[aria-label="Report charts"]').should('have.attr', 'aria-busy', 'false')
     openOwnerSettings()
     cy.get('[data-testid="cross-filter-setting"] input[type="checkbox"]').should('be.checked')
     cy.contains('button', 'Back to charts').click()
@@ -175,6 +177,5 @@ describe('Widget cross filtering', () => {
     cy.contains('[role="menuitem"]', 'Delete chart').click()
     cy.get('[data-testid="filter-strip"]').should('contain.text', 'No filters')
     cy.get('[data-testid="number-value"]', { timeout: 30000 }).last().should('have.text', '3')
-
   })
 })

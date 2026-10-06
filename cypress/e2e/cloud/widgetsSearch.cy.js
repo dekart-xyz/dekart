@@ -147,6 +147,7 @@ describe('Search widget', () => {
       cy.get('[data-testid="widgets-tab"]', { timeout: 120000 }).click()
       cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.text', '1')
       cy.get('#dekart-save-button').click()
+      cy.get('button#dekart-save-button .anticon-cloud', { timeout: 60000 }).should('exist')
       cy.location('pathname').then(pathname => {
         const reportId = pathname.split('/')[2]
         callMCP(token, 'get_report_properties', { report_id: reportId }).then(properties => {

@@ -64,7 +64,9 @@ export function useWidgetFilters (store, datasetId, ready, editing, pending) {
       dispatch,
       defer: apply => store.getState().deferWidgetFilter(apply),
       onUserEdit: () => dispatch(markKeplerPanelInteracted()),
-      onProjected: () => store.getState().projectWidgetFilters(datasetId),
+      // The store needs the active filter and selection to wait for chart updates only when a map filter affects this dataset.
+      onProjected: () => store.getState().projectWidgetFilters(datasetId,
+        redux.getState().keplerGl.kepler.visState.filters.some(filter => filter.enabled !== false && filter.dataId.includes(datasetId)), selection),
       onError: setError
     })
     controller.current = sync

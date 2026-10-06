@@ -37,6 +37,7 @@ export default function usePaintedRetention (retention, panelId, runtimePanelId)
   const match = /^dashboard:(.*):panel:(.*)$/.exec(runtimePanelId || '')
   const dashboardId = match?.[1]
   const registeredPanelId = match?.[2]
+  const projectionRevision = useStoreWithMosaicDashboard(state => state.filterProjectionRevisionByDataset[dashboardId])
   const panelConfig = useStoreWithMosaicDashboard(state => state.mosaicDashboard.config.dashboardsById[dashboardId]?.panels.find(panel => panel.id === registeredPanelId))
   // Remove old handlers, then add the handlers from the chart's latest drawing.
   const ensureClients = useCallback(() => {
@@ -76,7 +77,7 @@ export default function usePaintedRetention (retention, panelId, runtimePanelId)
     // Report images wait until the drawn chart is on the page.
     if (!tracking || !chart || !panelId) return
     return watchPlotPainted(chart, () => markPanelPainted(panelId))
-  }, [tracking, chart, panelId, markPanelPainted])
+  }, [tracking, chart, panelId, markPanelPainted, projectionRevision])
   return useMemo(() => ({
     setChart (next) {
       // Keep the chart library's original callback working.
@@ -85,10 +86,12 @@ export default function usePaintedRetention (retention, panelId, runtimePanelId)
       const nextClients = next?.element?.value?.interactors || []
       if (clients.current.length !== nextClients.length || clients.current.some((client, index) => client !== nextClients[index])) {
         clients.current = nextClients
+        // Register a visible chart's handlers before a click can change its selection.
+        ensureClients()
         scheduleClients()
       }
       // Only report images need to watch whether this chart has finished drawing.
       if (tracking) setChart(next)
     }
-  }), [retention?.setChart, scheduleClients, tracking])
+  }), [retention?.setChart, ensureClients, scheduleClients, tracking])
 }

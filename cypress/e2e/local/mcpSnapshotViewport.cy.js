@@ -263,6 +263,7 @@ function sampleChartsWhenReady (win) {
 }
 
 const countPanel = { id: 'stop-count', type: 'vgplot', title: 'Missed stops', config: { chartType: 'number', settings: { operation: 'count' } } }
+const latitudeBand = datasetId => [{ id: 'latitude-band', dataId: [datasetId], name: ['latitude'], type: 'range', value: [33.649, 33.9445], enabled: true }]
 
 // buildWidgetsConfig keys the authored panels to the report dataset that holds the rows.
 function buildWidgetsConfig (datasetId, panels = [countPanel]) {
@@ -385,7 +386,6 @@ describe('local MCP snapshot viewport params', () => {
 
   it('captures charts only after a saved map filter reaches them', () => {
     // Half of every 100 generated rows fall inside this latitude band.
-    const latitudeBand = datasetId => [{ id: 'latitude-band', dataId: [datasetId], name: ['latitude'], type: 'range', value: [33.649, 33.9445], enabled: true }]
     getDeviceToken().then((token) => {
       createChartReport(token, undefined, latitudeBand)
         .then((reportId) => callMCP(token, 'create_report_snapshot', { report_id: reportId, include_widgets: true }))
@@ -419,11 +419,12 @@ describe('local MCP snapshot viewport params', () => {
     const search = { id: 'search-primary-type', type: 'vgplot', title: 'Search type', config: { chartType: 'search', settings: { field: 'primary_type' } } }
     const missing = { id: 'search-missing', type: 'vgplot', title: 'Search missing', config: { chartType: 'search', settings: { field: 'no_such_column' } } }
     getDeviceToken().then(token => {
-      createChartReport(token, [countPanel, search, missing])
+      createChartReport(token, [countPanel, search, missing], latitudeBand)
         .then(reportId => callMCP(token, 'create_report_snapshot', { report_id: reportId, include_widgets: true }))
         .then(snapshot => {
           cy.visit(snapshot.snapshot_render_url || snapshot.snapshotRenderUrl, { onBeforeLoad: sampleChartsWhenReady })
           expectSnapshotReadyToken()
+          cy.window().its('__dekartChartsAtReady').should('deep.eq', { stubs: 0, busy: 0, value: '4,000' })
           cy.get('[aria-label="Report charts"]').contains('Search type').should('be.visible')
           cy.get('[data-testid="search-widget"]').should('contain.text', 'Enter a value')
           cy.get('[aria-label="Report charts"]').contains('Search missing').should('be.visible')
@@ -433,7 +434,7 @@ describe('local MCP snapshot viewport params', () => {
   })
 
   // expectSnapshotsSettle authors charts on a dataset prepared by fillSlot, then requires both renders to settle.
-  function expectSnapshotsSettle (fillSlot, charts) {
+  function expectSnapshotsSettle (fillSlot, charts, filters) {
     getDeviceToken().then((token) => {
       callMCP(token, 'create_report').then((reportResult) => {
         const reportId = readId(reportResult, ['report_id', 'reportId', 'id']) ||
@@ -442,6 +443,10 @@ describe('local MCP snapshot viewport params', () => {
           const datasetId = readId(datasetResult, ['dataset_id', 'datasetId', 'id']) ||
             readId(datasetResult?.dataset, ['id'])
           return fillSlot(token, datasetId)
+            .then(() => filters && callMCP(token, 'update_report_map_config', {
+              report_id: reportId,
+              map_config: buildMapConfig({ lat: 33.95, lon: -118.15, zoom: 9 }, datasetId, filters(datasetId))
+            }))
             .then(() => callMCP(token, 'update_report_widgets_config', { report_id: reportId, widgets_config: buildWidgetsConfig(datasetId) }))
             .then(() => reportId)
         })
@@ -463,7 +468,7 @@ describe('local MCP snapshot viewport params', () => {
 
   // An agent can author charts on a dataset slot before any query or file fills it.
   it('settles snapshots of a report whose chart dataset has no data yet', () => {
-    expectSnapshotsSettle(() => cy.wrap(null), 'No data to chart yet.')
+    expectSnapshotsSettle(() => cy.wrap(null), 'No data to chart yet.', latitudeBand)
   })
 
   // A snapshot does not run queries, so a query that was never run never adds data.

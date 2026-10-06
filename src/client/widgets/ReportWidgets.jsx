@@ -68,6 +68,7 @@ export default function ReportWidgets ({
   const report = useSelector(state => state.report)
   const widgets = useSelector(state => state.widgets)
   const tables = useSelector(state => state.keplerGl.kepler?.visState.datasets || emptyTables)
+  const filters = useSelector(state => state.keplerGl.kepler?.visState.filters || [])
   const downloads = useSelector(state => state.dataset.downloading)
   const jobs = useSelector(state => state.queryJobs)
   const files = useSelector(state => state.files)
@@ -162,11 +163,25 @@ export default function ReportWidgets ({
 
   // painted tracking in snapshots, reported via onSettled
   const paintedPanels = useStore(store, state => state.paintedPanels)
+  // Charts remain busy while a saved map filter is still being applied to their shared selection, so an early click cannot be overwritten.
+  const filterProjectionRevisionByDataset = useStore(store, state => state.filterProjectionRevisionByDataset)
+  const filterProjectionSettledRevisionByDataset = useStore(store, state => state.filterProjectionSettledRevisionByDataset)
+  const filterProjectionPending = sources.some(source => source.physical &&
+    filters.some(filter => filter.enabled !== false && filter.dataId.includes(source.id)) &&
+    (!filterProjectionRevisionByDataset[source.id] ||
+      filterProjectionSettledRevisionByDataset[source.id] !== filterProjectionRevisionByDataset[source.id]))
   // Every panel on a dataset still in the report must reach a drawn, failed, or empty end state.
   const settled = Boolean(report) && (Boolean(error || widgets.error) || (initialized && !calculating &&
     (widgets.config?.widgets || [])
       .filter(widget => sources.some(source => source.id === widget.dataId))
-      .every(widget => paintedPanels?.[widget.id])))
+      // A snapshot waits for charts to repaint after the latest saved filter reaches them, avoiding an image of the earlier values.
+      .every(widget => {
+        const source = sources.find(source => source.id === widget.dataId)
+        return paintedPanels?.[widget.id] &&
+          (!source.physical ||
+            !filters.some(filter => filter.enabled !== false && filter.dataId.includes(widget.dataId)) ||
+            (filterProjectionRevisionByDataset[widget.dataId] && filterProjectionSettledRevisionByDataset[widget.dataId] === filterProjectionRevisionByDataset[widget.dataId]))
+      })))
 
   useEffect(() => {
     if (onSettled) onSettled(settled)
@@ -180,15 +195,16 @@ export default function ReportWidgets ({
           className={classnames(styles.panel, {
             [styles.hidden]: !visible,
             [styles.calculating]: calculating,
+            [styles.projecting]: filterProjectionPending,
             [styles.snapshot]: snapshot
           })}
           aria-label='Report charts'
-          aria-busy={calculating}
+          aria-busy={calculating || filterProjectionPending}
         >
           <div
             className={styles.calculationLine}
             role='status'
-            aria-hidden={!calculating}
+            aria-hidden={!(calculating || filterProjectionPending)}
             aria-label='Updating charts'
             data-testid='chart-calculation-line'
           />
@@ -206,6 +222,7 @@ export default function ReportWidgets ({
                 sources={sources}
                 loading={!initialized || calculating}
                 calculating={calculating}
+                filterProjectionPending={filterProjectionPending}
                 dataReloadPending={dataReloadPending}
                 placeholderCount={widgets.config?.widgets?.length || 3}
                 editing={editing}
