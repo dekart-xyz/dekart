@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useStore } from 'zustand'
 import { useSelector } from 'react-redux'
+import { ThemeProvider } from 'styled-components'
+import { Switch } from '@kepler.gl/components'
+import { theme } from '@kepler.gl/styles'
 // TODO: SQLRooms 0.29.0 internal modules are imported directly to reuse the upstream panel shell outside its grid, so dependency upgrades must revalidate these paths.
 import { ChartBuilderRoot, ChartBuilderContent, MosaicChartSettingsPanel, createMosaicDashboardChartPanelConfig } from '@sqlrooms/mosaic'
 import { MosaicDashboardContext } from '@sqlrooms/mosaic/dist/dashboard/MosaicDashboardContext'
@@ -366,14 +369,36 @@ function CrossFilterSetting ({ panel, dataId, datasets, sources, columns, onChan
   })
   const type = tables.find(table => table.dataId === dataId)?.fields.find(item => item.name === field)?.type
   const label = id => sources.find(source => source.id === id)?.label || datasets[id]?.label || id
-  const matching = result.matchingDataIds.length
-    ? `Matches: ${result.matchingDataIds.map(label).join(', ')}`
-    : `No matching datasets for ${field} (${type})`
-  const skipped = result.skippedDataIds.length ? ` · Different type: ${result.skippedDataIds.map(label).join(', ')}` : ''
+  const skipped = result.skippedDataIds.length ? `Different type: ${result.skippedDataIds.map(label).join(', ')}` : ''
+  const enabled = Boolean(panel.config.settings.crossFilter)
+  const switchId = `cross-filter-${panel.id}`
   return (
-    <div className={styles.source} data-testid='cross-filter-setting'>
-      <label><input type='checkbox' checked={Boolean(panel.config.settings.crossFilter)} disabled={!field || !type} onChange={event => onChange(event.target.checked)} /> Filter other datasets with this column</label>
-      {panel.config.settings.crossFilter && field && type && <small>{matching}{skipped}</small>}
+    <div className={styles.crossFilter} data-testid='cross-filter-setting'>
+      <div className={styles.crossFilterHeader}>
+        <label htmlFor={switchId}>Cross-filter</label>
+        <ThemeProvider theme={theme}>
+          <Switch id={switchId} checked={enabled} disabled={!field || !type} onChange={event => onChange(event.target.checked)} />
+        </ThemeProvider>
+      </div>
+      {enabled && field && type && (
+        <div className={styles.crossFilterDetails}>
+          <span>Filter other datasets with this column</span>
+          {result.matchingDataIds.length
+            ? (
+              <div className={styles.crossFilterMatches}>
+                <span>Matches:</span>
+                {result.matchingDataIds.map(id => (
+                  <span className={styles.crossFilterDataset} key={id}>
+                    <span className={styles.crossFilterDatasetColor} style={{ backgroundColor: `rgb(${datasets[id].color.join(',')})` }} />
+                    {label(id)}
+                  </span>
+                ))}
+              </div>
+              )
+            : <small>No matching datasets for {field} ({type})</small>}
+          {skipped && <small>{skipped}</small>}
+        </div>
+      )}
     </div>
   )
 }

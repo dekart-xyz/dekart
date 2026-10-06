@@ -39,6 +39,16 @@
 .widgetFailure svg { flex: 0 0 13px; margin-top: 2px; }
 .widgetFailure button { display: inline; height: auto; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; color: #E6EAF1; font: inherit; text-decoration: underline; }
 .chartSettings { padding: 0; }
+.crossFilter { border-top: 1px solid #3a414c; margin-top: 12px; padding-top: 18px; }
+.crossFilterHeader { display: flex; align-items: center; gap: 10px; min-height: 18px; }
+.crossFilterHeader::before { content: ''; width: 2px; height: 14px; background: #6a7485; flex: none; }
+.crossFilterHeader label { flex: 1; margin: 0; color: #d3d8e0; font-size: 13px; font-weight: 600; line-height: 18px; cursor: pointer; }
+.crossFilterHeader :global(.kg-checkbox) { margin: 0 2px 0 0; }
+.crossFilterDetails { display: flex; flex-direction: column; gap: 10px; padding: 12px 0 0 12px; color: #a0a7b4; font-size: 12px; line-height: 18px; }
+.crossFilterDetails small { color: #8b93a1; font-size: 11px; }
+.crossFilterMatches { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; color: #6a7485; font-size: 11px; }
+.crossFilterDataset { display: inline-flex; align-items: center; gap: 6px; padding: 3px 7px; border-radius: 2px; background: #29323c; color: #d3d8e0; font-weight: 500; }
+.crossFilterDatasetColor { width: 7px; height: 7px; border-radius: 1px; flex: none; }
 .unavailablePanel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(110px, 1fr) auto; align-items: center; gap: 8px; padding: 8px 16px; color: #e3e7ec; border-top: 1px solid #323844; }
 .unavailablePanel span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

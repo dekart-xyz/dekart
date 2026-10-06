@@ -18,6 +18,10 @@ function openWidgets () {
   })
 }
 
+function toggleCrossFilter () {
+  cy.contains('[data-testid="cross-filter-setting"] label', 'Cross-filter').click()
+}
+
 describe('Widget cross filtering', () => {
   it('saves a Search cross-filter setting on leaving edit mode after adding two queries', () => {
     cy.viewport(1280, 960)
@@ -49,7 +53,9 @@ describe('Widget cross filtering', () => {
     cy.get('[data-testid="search-widget"]', { timeout: 30000 }).should('contain.text', 'Enter a value')
     cy.get('[data-testid="search-widget"]').closest('[data-testid="widget-item"]').find('button[aria-label="Chart actions"]').click()
     cy.contains('[role="menuitem"]', 'Edit chart').click()
-    cy.get('[data-testid="cross-filter-setting"] input[type="checkbox"]').check()
+    cy.get('[data-testid="cross-filter-setting"]').should('not.contain.text', 'Filter other datasets with this column')
+    toggleCrossFilter()
+    cy.get('[data-testid="cross-filter-setting"]').should('contain.text', 'Filter other datasets with this column')
     cy.get('[data-testid="cross-filter-setting"]').should('contain.text', 'Matches:')
     cy.contains('.ant-select', 'Editing').click()
     cy.contains('.ant-select-item-option-content', 'Viewing').click()
@@ -76,7 +82,7 @@ describe('Widget cross filtering', () => {
     openWidgets()
     cy.get('[data-testid="category-chart"]', { timeout: 120000 }).first().closest('[data-testid="widget-item"]').find('button[aria-label="Chart actions"]').click()
     cy.contains('[role="menuitem"]', 'Edit chart').click()
-    cy.get('[data-testid="cross-filter-setting"] input[type="checkbox"]').check()
+    toggleCrossFilter()
     cy.get('[data-testid="cross-filter-setting"]').should('contain.text', 'No matching datasets')
     cy.contains('button', 'Back to charts').click()
     cy.get('[data-testid="category-chart"]').first().find('g[aria-label="rule"][data-index="4"] line', { timeout: 30000 }).first().click()
@@ -89,9 +95,10 @@ describe('Widget cross filtering', () => {
     cy.get('[data-testid="number-value"]', { timeout: 30000 }).eq(1).should('have.text', '2')
     cy.get('[data-testid="category-chart"]').first().closest('[data-testid="widget-item"]').find('button[aria-label="Chart actions"]').click()
     cy.contains('[role="menuitem"]', 'Edit chart').click()
-    cy.get('[data-testid="cross-filter-setting"] input[type="checkbox"]').uncheck()
+    toggleCrossFilter()
+    cy.get('[data-testid="cross-filter-setting"]').should('not.contain.text', 'Filter other datasets with this column')
     cy.get('[data-testid="number-value"]', { timeout: 30000 }).eq(1).should('have.text', '3')
-    cy.get('[data-testid="cross-filter-setting"] input[type="checkbox"]').check()
+    toggleCrossFilter()
     cy.get('[data-testid="number-value"]', { timeout: 30000 }).eq(1).should('have.text', '2')
     cy.contains('button', 'Back to charts').click()
     cy.contains('button', 'Clear all').click()
@@ -130,7 +137,7 @@ describe('Widget cross filtering', () => {
     cy.get('[data-testid="number-value"]', { timeout: 180000 }).should('have.length', 2)
     cy.get('[data-testid="category-chart"]').closest('[data-testid="widget-item"]').not('[data-widget-source="cross-receiver.csv"]').invoke('attr', 'data-widget-id').then(id => { ownerId = id })
     openOwnerSettings()
-    cy.get('[data-testid="cross-filter-setting"] input[type="checkbox"]').check()
+    toggleCrossFilter()
     cy.contains('button', 'Back to charts').click()
     cy.then(() => cy.get(`[data-widget-id="${ownerId}"]`).find('g[aria-label="rule"][data-index="4"] line').first().click())
     cy.get('[data-testid="number-value"]', { timeout: 30000 }).eq(1).should('have.text', '2')
