@@ -1,6 +1,7 @@
 import { addDataToMap, replaceDataInMap } from '@kepler.gl/actions'
 import { filterRestore } from '../reducers/keplerReducer'
 import { QueryJob } from 'dekart-proto/dekart_pb'
+import { get } from '../lib/api'
 import getDatasetName from '../lib/getDatasetName'
 import { buildDuckDBGraph } from '../lib/duckdb/graph'
 import { DuckDBJobStatus, isDuckDBDataset } from '../lib/duckdb/constants'
@@ -442,6 +443,14 @@ export function runDuckDBGraph (changedDatasetIds = null) {
               if (!await runtime.registerDuckDBResult(dependencyId, revision.queryJobId)) {
                 throw new Error(`Upstream DuckDB job ${revision.queryJobId} is no longer available.`)
               }
+            }
+            for (const source of queryJob.httpSourcesList) {
+              const response = await get(
+                `/dataset-source/${node.dataset.id}/${source.sourceId}.${source.extension}`,
+                state.token, null, null, state.user.claimEmailCookie, reportId, state.user.loginHint
+              ).catch(error => { throw new Error(error.errorDetails || 'HTTP source download was interrupted. Try executing the query again.') })
+              if (!executionIsCurrent()) return
+              await runtime.registerHTTPSource(source, new Uint8Array(await response.arrayBuffer()))
             }
             dispatch(duckDBJobStateChanged(
               queryJob.id,

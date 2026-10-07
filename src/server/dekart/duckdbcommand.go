@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 
 	"google.golang.org/grpc/codes"
@@ -22,6 +23,7 @@ type duckDBGraphQuery struct {
 	queryText            string
 	compiledSQL          string
 	dependencyDatasetIDs []string
+	httpSources          []duckdbsql.HTTPSourceRef
 	validationError      string
 	hasExecutionHistory  bool
 }
@@ -128,7 +130,11 @@ func loadDuckDBGraphTx(ctx context.Context, tx *sql.Tx, reportID string) ([]duck
 }
 
 // analyzeDuckDBQueries compiles current Query SQL and persists its server-derived graph state.
-func analyzeDuckDBQueries(ctx context.Context, tx *sql.Tx, queries []duckDBGraphQuery, catalog []duckDBCatalogDataset, params []*proto.QueryParam) error {
+func analyzeDuckDBQueries(ctx context.Context, tx *sql.Tx, queries []duckDBGraphQuery, catalog []duckDBCatalogDataset, params []*proto.QueryParam, reportID string) error {
+	httpSources, sourceNames, err := loadHTTPSourcesTx(ctx, tx, reportID)
+	if err != nil {
+		return err
+	}
 	labels := make(map[string][]string)
 	for _, dataset := range catalog {
 		labels[dataset.label] = append(labels[dataset.label], dataset.id)
@@ -138,10 +144,15 @@ func analyzeDuckDBQueries(ctx context.Context, tx *sql.Tx, queries []duckDBGraph
 		parameterNames = append(parameterNames, param.Name)
 	}
 	for index := range queries {
-		result := duckdbsql.Compile(ctx, queries[index].queryText, labels, parameterNames)
+		result := duckdbsql.Compile(ctx, queries[index].queryText, labels, parameterNames, httpSources)
 		queries[index].compiledSQL = compileDuckDBParameterReferences(result.SQL, queries[index].datasetID, len(parameterNames))
 		queries[index].dependencyDatasetIDs = result.Dependencies
+		queries[index].httpSources = result.HTTPSources
 		queries[index].validationError = result.Error
+		// Compilation uses opaque source ids; errors identify the saved connection by name.
+		for id, name := range sourceNames {
+			queries[index].validationError = strings.ReplaceAll(queries[index].validationError, "HTTP source "+strconv.Quote(id), "HTTP source "+strconv.Quote(name))
+		}
 		dependenciesJSON, err := json.Marshal(queries[index].dependencyDatasetIDs)
 		if err != nil {
 			return err
@@ -160,7 +171,7 @@ func analyzeDuckDBGraphTx(ctx context.Context, tx *sql.Tx, reportID string) erro
 	if err != nil {
 		return err
 	}
-	return analyzeDuckDBQueries(ctx, tx, queries, catalog, params)
+	return analyzeDuckDBQueries(ctx, tx, queries, catalog, params, reportID)
 }
 
 // duckDBCycleComponents identifies each cycle so only intra-cycle pins are omitted.
@@ -349,10 +360,10 @@ func resolveDuckDBRevisionsTx(ctx context.Context, tx *sql.Tx, reportID, paramsH
 // latestDuckDBJobTx loads only immutable execution identity fields for comparison.
 func latestDuckDBJobTx(ctx context.Context, tx *sql.Tx, queryID, paramsHash string) (*proto.QueryJob, error) {
 	job := &proto.QueryJob{}
-	var revisionsJSON string
-	if err := tx.QueryRowContext(ctx, `select id, query_id, query_text, job_status, job_error, dependency_revisions
+	var revisionsJSON, httpSourcesJSON string
+	if err := tx.QueryRowContext(ctx, `select id, query_id, query_text, job_status, job_error, dependency_revisions, http_sources
 		from query_jobs where query_id=$1 and query_params_hash=$2 order by created_at desc limit 1`, queryID, paramsHash).
-		Scan(&job.Id, &job.QueryId, &job.QueryText, &job.JobStatus, &job.JobError, &revisionsJSON); err != nil {
+		Scan(&job.Id, &job.QueryId, &job.QueryText, &job.JobStatus, &job.JobError, &revisionsJSON, &httpSourcesJSON); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
@@ -361,10 +372,13 @@ func latestDuckDBJobTx(ctx context.Context, tx *sql.Tx, queryID, paramsHash stri
 	if err := json.Unmarshal([]byte(revisionsJSON), &job.DependencyRevisions); err != nil {
 		return nil, err
 	}
+	if err := json.Unmarshal([]byte(httpSourcesJSON), &job.HttpSources); err != nil {
+		return nil, err
+	}
 	return job, nil
 }
 
-func insertDuckDBExecutionTx(ctx context.Context, tx *sql.Tx, queryID, paramsHash, compiledSQL, structuralError string, revisions []*proto.QueryJobDependencyRevision) (*proto.QueryJob, error) {
+func insertDuckDBExecutionTx(ctx context.Context, tx *sql.Tx, queryID, paramsHash, compiledSQL, structuralError string, revisions []*proto.QueryJobDependencyRevision, httpSources []*proto.HTTPSourceRevision) (*proto.QueryJob, error) {
 	jobID := newUUID()
 	statusValue := proto.QueryJob_JOB_STATUS_DONE
 	if structuralError != "" {
@@ -374,12 +388,16 @@ func insertDuckDBExecutionTx(ctx context.Context, tx *sql.Tx, queryID, paramsHas
 	if err != nil {
 		return nil, err
 	}
-	if _, err := tx.ExecContext(ctx, `insert into query_jobs
-		(id, query_id, job_status, query_params_hash, query_text, job_error, dependency_revisions)
-		values ($1,$2,$3,$4,$5,$6,$7)`, jobID, queryID, statusValue, paramsHash, compiledSQL, structuralError, string(revisionsJSON)); err != nil {
+	httpSourcesJSON, err := json.Marshal(httpSources)
+	if err != nil {
 		return nil, err
 	}
-	return &proto.QueryJob{Id: jobID, QueryId: queryID, QueryText: compiledSQL, JobStatus: statusValue, JobError: structuralError, QueryParamsHash: paramsHash, DependencyRevisions: revisions}, nil
+	if _, err := tx.ExecContext(ctx, `insert into query_jobs
+		(id, query_id, job_status, query_params_hash, query_text, job_error, dependency_revisions, http_sources)
+		values ($1,$2,$3,$4,$5,$6,$7,$8)`, jobID, queryID, statusValue, paramsHash, compiledSQL, structuralError, string(revisionsJSON), string(httpSourcesJSON)); err != nil {
+		return nil, err
+	}
+	return &proto.QueryJob{Id: jobID, QueryId: queryID, QueryText: compiledSQL, JobStatus: statusValue, JobError: structuralError, QueryParamsHash: paramsHash, DependencyRevisions: revisions, HttpSources: httpSources}, nil
 }
 
 // reconcileSelectedDuckDBQueriesTx appends immutable jobs for one selected graph.
@@ -431,9 +449,23 @@ func reconcileSelectedDuckDBQueriesTx(ctx context.Context, tx *sql.Tx, reportID,
 			slices.EqualFunc(latest.DependencyRevisions, revisions, func(a, b *proto.QueryJobDependencyRevision) bool {
 				return a.DatasetId == b.DatasetId && a.QueryJobId == b.QueryJobId && a.FileSourceId == b.FileSourceId
 			})
+		httpSources := make([]*proto.HTTPSourceRevision, 0, len(query.httpSources))
+		for _, ref := range query.httpSources {
+			revision := &proto.HTTPSourceRevision{FileName: ref.FileName, ConnectionId: ref.SourceID, Url: ref.URL, Extension: ref.Extension, SourceId: newUUID()}
+			// Reconciliation preserves downloads for unchanged URLs; explicit runs get fresh ids.
+			if latest != nil && query.queryID != forceRoot {
+				for _, previous := range latest.HttpSources {
+					if previous.ConnectionId == revision.ConnectionId && previous.Url == revision.Url && previous.FileName == revision.FileName {
+						revision.SourceId = previous.SourceId
+						break
+					}
+				}
+			}
+			httpSources = append(httpSources, revision)
+		}
 		job := latest
 		if query.queryID == forceRoot || !matches {
-			job, err = insertDuckDBExecutionTx(ctx, tx, query.queryID, paramsHash, query.compiledSQL, structuralError, revisions)
+			job, err = insertDuckDBExecutionTx(ctx, tx, query.queryID, paramsHash, query.compiledSQL, structuralError, revisions, httpSources)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -452,7 +484,7 @@ func (s Server) reconcileDuckDBGraphTx(ctx context.Context, tx *sql.Tx, reportID
 	if err != nil {
 		return nil, err
 	}
-	if err := analyzeDuckDBQueries(ctx, tx, queries, catalog, params); err != nil {
+	if err := analyzeDuckDBQueries(ctx, tx, queries, catalog, params, reportID); err != nil {
 		return nil, err
 	}
 	if len(roots) == 0 {

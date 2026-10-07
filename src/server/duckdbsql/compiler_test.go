@@ -2,6 +2,7 @@ package duckdbsql
 
 import (
 	"context"
+	"dekart/src/server/httpsource"
 	"strings"
 	"testing"
 
@@ -16,7 +17,7 @@ func TestCompileRewritesDatasetReferencesAndParameters(t *testing.T) {
 			-- datasets."Fake"; DELETE
 		)
 		SELECT * FROM source WHERE region = {{region}};
-	`, map[string][]string{"Orders": {"dataset-id"}}, []string{"region"})
+	`, map[string][]string{"Orders": {"dataset-id"}}, []string{"region"}, nil)
 
 	require.Empty(t, result.Error)
 	require.Equal(t, []string{"dataset-id"}, result.Dependencies)
@@ -25,25 +26,25 @@ func TestCompileRewritesDatasetReferencesAndParameters(t *testing.T) {
 }
 
 func TestCompileRejectsReservedParameterSentinelInStringLiteral(t *testing.T) {
-	result := Compile(context.Background(), `SELECT '"__DEKART_BOUND_PARAMETER_0__"', {{region}}`, nil, []string{"region"})
+	result := Compile(context.Background(), `SELECT '"__DEKART_BOUND_PARAMETER_0__"', {{region}}`, nil, []string{"region"}, nil)
 	require.Equal(t, "DuckDB SQL uses a reserved parameter identifier", result.Error)
 }
 
 func TestCompileSupportsEscapedDatasetLabels(t *testing.T) {
-	result := Compile(context.Background(), `SELECT * FROM datasets."A ""quoted"" label"`, map[string][]string{`A "quoted" label`: {"quoted-id"}}, nil)
+	result := Compile(context.Background(), `SELECT * FROM datasets."A ""quoted"" label"`, map[string][]string{`A "quoted" label`: {"quoted-id"}}, nil, nil)
 	require.Empty(t, result.Error)
 	require.Equal(t, []string{"quoted-id"}, result.Dependencies)
 }
 
 func TestCompilePreservesParameterShapedTextInDatasetLabels(t *testing.T) {
-	result := Compile(context.Background(), `SELECT * FROM datasets."Sales {{region}}"`, map[string][]string{"Sales {{region}}": {"dataset-id"}}, []string{"region"})
+	result := Compile(context.Background(), `SELECT * FROM datasets."Sales {{region}}"`, map[string][]string{"Sales {{region}}": {"dataset-id"}}, []string{"region"}, nil)
 
 	require.Empty(t, result.Error)
 	require.Equal(t, []string{"dataset-id"}, result.Dependencies)
 }
 
 func TestCompilePreservesParameterShapedTextInCTENames(t *testing.T) {
-	result := Compile(context.Background(), `WITH "{{region}}" AS (SELECT 1) SELECT * FROM "{{region}}"`, nil, []string{"region"})
+	result := Compile(context.Background(), `WITH "{{region}}" AS (SELECT 1) SELECT * FROM "{{region}}"`, nil, []string{"region"}, nil)
 
 	require.Empty(t, result.Error)
 }
@@ -70,13 +71,13 @@ func TestCompileRejectsUnsafeSQL(t *testing.T) {
 	}
 	for _, sql := range unsafe {
 		t.Run(sql, func(t *testing.T) {
-			require.NotEmpty(t, Compile(context.Background(), sql, map[string][]string{"Orders": {"orders"}}, []string{"value"}).Error)
+			require.NotEmpty(t, Compile(context.Background(), sql, map[string][]string{"Orders": {"orders"}}, []string{"value"}, nil).Error)
 		})
 	}
 }
 
 func TestCompileIgnoresParametersInDollarQuotedStrings(t *testing.T) {
-	result := Compile(context.Background(), `SELECT $tag${{region}}$tag$ AS literal_value, {{region}} AS parameter_value`, nil, []string{"region"})
+	result := Compile(context.Background(), `SELECT $tag${{region}}$tag$ AS literal_value, {{region}} AS parameter_value`, nil, []string{"region"}, nil)
 
 	require.Empty(t, result.Error)
 	require.Contains(t, result.SQL, `'{{region}}'`)
@@ -84,7 +85,7 @@ func TestCompileIgnoresParametersInDollarQuotedStrings(t *testing.T) {
 }
 
 func TestCompileLetsDuckDBParseParametersAroundEscapesAndNestedComments(t *testing.T) {
-	result := Compile(context.Background(), `SELECT E'ignored\' {{missing}}', /* outer /* {{missing}} */ still ignored */ {{region}}`, nil, []string{"region"})
+	result := Compile(context.Background(), `SELECT E'ignored\' {{missing}}', /* outer /* {{missing}} */ still ignored */ {{region}}`, nil, []string{"region"}, nil)
 
 	require.Empty(t, result.Error)
 	require.Contains(t, result.SQL, `{{missing}}`)
@@ -92,13 +93,13 @@ func TestCompileLetsDuckDBParseParametersAroundEscapesAndNestedComments(t *testi
 }
 
 func TestCompileMatchesCTENamesCaseInsensitively(t *testing.T) {
-	result := Compile(context.Background(), `WITH Foo AS (SELECT 1) SELECT * FROM foo`, nil, nil)
+	result := Compile(context.Background(), `WITH Foo AS (SELECT 1) SELECT * FROM foo`, nil, nil, nil)
 
 	require.Empty(t, result.Error)
 }
 
 func TestCompileHandlesCommentSeparatedDatasetReference(t *testing.T) {
-	result := Compile(context.Background(), "SELECT * FROM datasets/**/.-- label\n\"Orders\"", map[string][]string{"Orders": {"orders"}}, nil)
+	result := Compile(context.Background(), "SELECT * FROM datasets/**/.-- label\n\"Orders\"", map[string][]string{"Orders": {"orders"}}, nil, nil)
 	require.Empty(t, result.Error)
 	require.Equal(t, []string{"orders"}, result.Dependencies)
 	require.Contains(t, result.SQL, `datasets.d_orders`)
@@ -112,14 +113,51 @@ func TestCompileAllowsSafeInMemoryTableFunctions(t *testing.T) {
 		`SELECT * FROM LATERAL (SELECT 1 AS x)`,
 	} {
 		t.Run(sql, func(t *testing.T) {
-			require.Empty(t, Compile(context.Background(), sql, nil, nil).Error)
+			require.Empty(t, Compile(context.Background(), sql, nil, nil, nil).Error)
 		})
 	}
 }
 
 func TestCompileReportsAmbiguousAndMissingDatasets(t *testing.T) {
-	ambiguous := Compile(context.Background(), `SELECT * FROM datasets."Orders"`, map[string][]string{"Orders": {"one", "two"}}, nil)
+	ambiguous := Compile(context.Background(), `SELECT * FROM datasets."Orders"`, map[string][]string{"Orders": {"one", "two"}}, nil, nil)
 	require.True(t, strings.Contains(strings.ToLower(ambiguous.Error), "ambiguous"))
-	missing := Compile(context.Background(), `SELECT * FROM datasets."Missing"`, nil, nil)
+	missing := Compile(context.Background(), `SELECT * FROM datasets."Missing"`, nil, nil, nil)
 	require.True(t, strings.Contains(strings.ToLower(missing.Error), "not found"))
+}
+
+func TestCompileHTTPReaders(t *testing.T) {
+	sources := []httpsource.Source{{ID: "api", BaseURL: "https://example.test/api", HeaderNames: []string{"Authorization"}}}
+	for _, fn := range []string{"read_json", "read_json_auto", "read_csv", "read_csv_auto", "read_parquet", "ST_Read"} {
+		t.Run(fn, func(t *testing.T) {
+			result := Compile(context.Background(), "SELECT * FROM "+fn+"('https://example.test/api/data')", nil, nil, sources)
+			require.Empty(t, result.Error)
+			require.Len(t, result.HTTPSources, 1)
+			ref := result.HTTPSources[0]
+			require.Equal(t, "api", ref.SourceID)
+			require.Contains(t, result.SQL, ref.FileName)
+			require.NotContains(t, result.SQL, "https://")
+		})
+	}
+	for _, sql := range []string{
+		"SELECT * FROM read_json('https://example.test/api/*.json')",
+		"SELECT * FROM read_json(['https://example.test/api/a'])",
+		"SELECT * FROM read_json('https://example.test/api/' || 'a')",
+		"SELECT * FROM read_json('https://example.test/api/{{value}}')",
+		"SELECT * FROM read_json('https://example.test/api/a?Authorization=x')",
+		"SELECT * FROM read_json('https://unknown.test/a')",
+		"SELECT * FROM read_json('https://example.test.evil/api/a')",
+		"SELECT * FROM read_json('https://user@example.test/api/a')",
+		"SELECT * FROM read_json('https://example.test/api/%2e%2e/a')",
+		"SELECT * FROM ST_Read('https://example.test/api/a', layer='x')",
+		"SELECT * FROM httpfs('https://example.test/api/a')",
+	} {
+		t.Run(sql, func(t *testing.T) {
+			require.NotEmpty(t, Compile(context.Background(), sql, nil, []string{"value"}, sources).Error)
+		})
+	}
+	for _, sql := range []string{"SELECT * FROM read_csv('https://example.test/api/a.csv.gz')", "SELECT * FROM read_csv('https://example.test/api/a', compression='gzip')"} {
+		result := Compile(context.Background(), sql, nil, nil, sources)
+		require.Empty(t, result.Error)
+		require.True(t, strings.HasSuffix(result.HTTPSources[0].FileName, ".csv.gz"))
+	}
 }

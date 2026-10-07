@@ -1108,7 +1108,7 @@ func (s Server) UpdateReport(ctx context.Context, req *proto.UpdateReportRequest
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	if err := analyzeDuckDBQueries(ctx, tx, duckDBQueries, catalog, queryParams); err != nil {
+	if err := analyzeDuckDBQueries(ctx, tx, duckDBQueries, catalog, queryParams, req.ReportId); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	err = s.createReportSnapshotWithVersionIDTx(ctx, tx, newVersionID, req.ReportId, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE)

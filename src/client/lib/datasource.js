@@ -104,6 +104,8 @@ LIMIT 1000;`
         name: 'Local Files',
         usageStatsId: 5
       }
+    case ConnectionType.CONNECTION_TYPE_HTTP:
+      return { name: 'HTTP source', usageStatsId: 6 }
     case 'DUCKDB':
       return {
         name: 'DuckDB',

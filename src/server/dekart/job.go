@@ -107,6 +107,7 @@ func (s Server) getQueryJob(ctx context.Context, jobID string) (*proto.QueryJob,
 		query_jobs.query_params_hash,
 		query_jobs.dw_job_id,
 		query_jobs.dependency_revisions,
+        query_jobs.http_sources,
 		query_jobs.updated_at,
 		query_jobs.created_at,
 		EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - query_jobs.created_at))::bigint * 1000 as job_duration
@@ -134,6 +135,7 @@ func (s Server) getQueryJob(ctx context.Context, jobID string) (*proto.QueryJob,
 			query_jobs.query_params_hash,
 			query_jobs.dw_job_id,
 			query_jobs.dependency_revisions,
+        query_jobs.http_sources,
 			query_jobs.updated_at,
 			query_jobs.created_at,
 			(STRFTIME('%s', 'now') - STRFTIME('%s', query_jobs.created_at)) * 1000 as job_duration,
@@ -274,6 +276,7 @@ func (s Server) getDatasetsQueryJobs(ctx context.Context, datasets []*proto.Data
 					query_jobs.query_params_hash,
 						query_jobs.dw_job_id,
 						query_jobs.dependency_revisions,
+        query_jobs.http_sources,
 						query_jobs.updated_at,
 					query_jobs.created_at,
 					(STRFTIME('%s', 'now') - STRFTIME('%s', query_jobs.created_at)) * 1000 as job_duration,
@@ -312,6 +315,7 @@ func (s Server) getDatasetsQueryJobs(ctx context.Context, datasets []*proto.Data
 				query_jobs.query_params_hash,
 					query_jobs.dw_job_id,
 					query_jobs.dependency_revisions,
+        query_jobs.http_sources,
 					query_jobs.updated_at,
 				query_jobs.created_at,
 				EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - query_jobs.created_at))::bigint * 1000 as job_duration,
@@ -384,7 +388,7 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 		var dwJobId sql.NullString
 		var queryText sql.NullString
 		var jobError sql.NullString
-		var dependencyRevisionsJSON string
+		var dependencyRevisionsJSON, httpSourcesJSON string
 		var executionEngine int32
 		if IsSqlite() {
 			var updatedAtStr, createdAtStr string
@@ -401,6 +405,7 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 				&job.QueryParamsHash,
 				&dwJobId,
 				&dependencyRevisionsJSON,
+				&httpSourcesJSON,
 				&updatedAtStr, // SQLite timestamp string in this case
 				&createdAtStr,
 				&job.JobDuration,
@@ -436,6 +441,7 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 				&job.QueryParamsHash,
 				&dwJobId,
 				&dependencyRevisionsJSON,
+				&httpSourcesJSON,
 				&updatedAt,
 				&createdAt,
 				&job.JobDuration,
@@ -459,6 +465,9 @@ func rowsToQueryJobs(rows *sql.Rows) ([]*proto.QueryJob, error) {
 		job.ResultExtension = resultExtensionByConnectionType(proto.ConnectionType(connectionType))
 		if err := json.Unmarshal([]byte(dependencyRevisionsJSON), &job.DependencyRevisions); err != nil {
 			return nil, fmt.Errorf("decode query job dependency revisions: %w", err)
+		}
+		if err := json.Unmarshal([]byte(httpSourcesJSON), &job.HttpSources); err != nil {
+			return nil, fmt.Errorf("decode HTTP sources: %w", err)
 		}
 		jobs = append(jobs, job)
 	}

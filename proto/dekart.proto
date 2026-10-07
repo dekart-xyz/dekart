@@ -467,6 +467,7 @@ enum ConnectionType {
     CONNECTION_TYPE_POSTGRES = 5;
     CONNECTION_TYPE_CLICKHOUSE = 6;
     CONNECTION_TYPE_LOCAL = 7;
+    CONNECTION_TYPE_HTTP = 8;
 }
 
 enum QueryExecutionEngine {
@@ -503,6 +504,9 @@ message Connection {
     string postgres_database = 25;
     int32 postgres_port = 26;
     string postgres_ssl_mode = 27;
+    string http_base_url = 28;
+    Secret http_headers_json = 29;
+    string http_docs_url = 30;
 }
 
 message Secret {
@@ -743,6 +747,15 @@ message Dataset {
     ConnectionType connection_type = 9;
 }
 
+// One remote URL downloaded and registered by the client before executing the SQL.
+message HTTPSourceRevision {
+    string file_name = 1;
+    string connection_id = 2;
+    string url = 3;
+    string source_id = 4;
+    string extension = 5;
+}
+
 message QueryJob {
     string id = 1;
     string query_id = 2;
@@ -771,6 +784,7 @@ message QueryJob {
 
     string result_extension = 15; // csv | parquet
     string dataset_id = 16;
+    repeated HTTPSourceRevision http_sources = 18;
     repeated QueryJobDependencyRevision dependency_revisions = 17; // The immutable snapshot: exactly which version of each dependency this execution must use
 }
 
@@ -917,7 +931,9 @@ message DuckDBExecutionSource {
     oneof revision {
         string file_source_id = 2;
         string query_job_id = 3;
+        string http_source_id = 5;
     }
+    string file_name = 6;
     string extension = 4; // csv | parquet | json | geojson
 }
 

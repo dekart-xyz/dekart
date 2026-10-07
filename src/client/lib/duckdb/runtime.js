@@ -394,6 +394,17 @@ class DuckDBReportRuntime {
     return true
   }
 
+  // Register the exact compiler file name again for each job before executing its SQL.
+  async registerHTTPSource (source, bytes) {
+    await this.initialize()
+    await this.db.dropFile(source.fileName).catch(() => {})
+    await this.db.registerFileBuffer(source.fileName, bytes)
+    this.registeredSourceFiles.set(source.fileName, source.fileName)
+    if (source.extension === 'parquet') {
+      await loadDuckDBExtension(this.connection, 'parquet')
+    }
+  }
+
   // registerDuckDBResult points a dependency alias at the exact materialized job revision.
   async registerDuckDBResult (datasetId, jobId) {
     const tableName = duckDBJobTableName(jobId)

@@ -127,7 +127,7 @@ func (s *Server) captureDuckDBPreparationTx(ctx context.Context, tx *sql.Tx, rep
 	if err != nil {
 		return nil, err
 	}
-	if err := analyzeDuckDBQueries(ctx, tx, queries, catalog, params); err != nil {
+	if err := analyzeDuckDBQueries(ctx, tx, queries, catalog, params, reportID); err != nil {
 		return nil, err
 	}
 	ordered, selected, externalIDs, err := prerequisiteDuckDBQueries(queries, rootQueryID)

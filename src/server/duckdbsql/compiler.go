@@ -3,7 +3,9 @@ package duckdbsql
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"dekart/src/server/httpsource"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -29,24 +31,28 @@ var safeTableFunctions = map[string]bool{
 	"UNNEST":          true,
 }
 
+type HTTPSourceRef struct{ FileName, SourceID, URL, Extension string }
+
 // Result contains the shared graph analysis and exact browser execution SQL.
 type Result struct {
+	HTTPSources  []HTTPSourceRef
 	SQL          string
 	Dependencies []string
 	Error        string
 }
 
 // Compile parses one read-only statement and resolves report dataset references.
-func Compile(ctx context.Context, query string, datasetsByLabel map[string][]string, parameterNames []string) Result {
-	compiled, dependencies, err := compile(ctx, query, datasetsByLabel, parameterNames)
+func Compile(ctx context.Context, query string, datasetsByLabel map[string][]string, parameterNames []string, httpSources []httpsource.Source) Result {
+	refs := []HTTPSourceRef{}
+	compiled, dependencies, err := compile(ctx, query, datasetsByLabel, parameterNames, httpSources, &refs)
 	if err != nil {
-		return Result{Dependencies: dependencies, Error: err.Error()}
+		return Result{Dependencies: dependencies, HTTPSources: refs, Error: err.Error()}
 	}
-	return Result{SQL: compiled, Dependencies: dependencies}
+	return Result{SQL: compiled, Dependencies: dependencies, HTTPSources: refs}
 }
 
 // compile delegates SQL syntax to DuckDB and only applies Dekart reference policy.
-func compile(ctx context.Context, query string, datasetsByLabel map[string][]string, parameterNames []string) (string, []string, error) {
+func compile(ctx context.Context, query string, datasetsByLabel map[string][]string, parameterNames []string, httpSources []httpsource.Source, refs *[]HTTPSourceRef) (string, []string, error) {
 	query, parameterNames, err := encodeParameters(query, parameterNames)
 	if err != nil {
 		return "", nil, err
@@ -61,7 +67,7 @@ func compile(ctx context.Context, query string, datasetsByLabel map[string][]str
 	}
 	dependencies := make([]string, 0)
 	seenDependencies := make(map[string]bool)
-	if err := rewriteAST(ast, nil, datasetsByLabel, parameterNames, &dependencies, seenDependencies); err != nil {
+	if err := rewriteAST(ast, nil, datasetsByLabel, parameterNames, &dependencies, seenDependencies, httpSources, refs); err != nil {
 		return "", dependencies, err
 	}
 	sort.Strings(dependencies)
@@ -114,11 +120,11 @@ func deserialize(ctx context.Context, ast map[string]any) (string, error) {
 }
 
 // rewriteAST resolves Dekart parameters and datasets while enforcing source policy.
-func rewriteAST(value any, inheritedCTEs map[string]bool, datasetsByLabel map[string][]string, parameterNames []string, dependencies *[]string, seenDependencies map[string]bool) error {
+func rewriteAST(value any, inheritedCTEs map[string]bool, datasetsByLabel map[string][]string, parameterNames []string, dependencies *[]string, seenDependencies map[string]bool, httpSources []httpsource.Source, refs *[]HTTPSourceRef) error {
 	switch value := value.(type) {
 	case []any:
 		for _, child := range value {
-			if err := rewriteAST(child, inheritedCTEs, datasetsByLabel, parameterNames, dependencies, seenDependencies); err != nil {
+			if err := rewriteAST(child, inheritedCTEs, datasetsByLabel, parameterNames, dependencies, seenDependencies, httpSources, refs); err != nil {
 				return err
 			}
 		}
@@ -144,11 +150,13 @@ func rewriteAST(value any, inheritedCTEs map[string]bool, datasetsByLabel map[st
 			function, _ := value["function"].(map[string]any)
 			name, _ := function["function_name"].(string)
 			if !safeTableFunctions[strings.ToUpper(name)] {
-				return fmt.Errorf("DuckDB SQL cannot use table function %s", name)
+				if err := rewriteHTTPFunction(function, name, parameterNames, httpSources, refs); err != nil {
+					return err
+				}
 			}
 		}
 		for _, key := range sortedKeys(value) {
-			if err := rewriteAST(value[key], ctes, datasetsByLabel, parameterNames, dependencies, seenDependencies); err != nil {
+			if err := rewriteAST(value[key], ctes, datasetsByLabel, parameterNames, dependencies, seenDependencies, httpSources, refs); err != nil {
 				return err
 			}
 		}
@@ -252,4 +260,61 @@ func restoreParameterInputs(value string, parameterNames []string) string {
 		value = strings.ReplaceAll(value, parameterInputMarker(index), "{{"+name+"}}")
 	}
 	return value
+}
+
+// rewriteHTTPFunction replaces approved remote literals with browser-registered file names.
+func rewriteHTTPFunction(function map[string]any, name string, parameterNames []string, sources []httpsource.Source, refs *[]HTTPSourceRef) error {
+	extensions := map[string]string{"read_json": "json", "read_json_auto": "json", "read_csv": "csv", "read_csv_auto": "csv", "read_parquet": "parquet", "st_read": "geojson"}
+	extension, allowed := extensions[strings.ToLower(name)]
+	if !allowed {
+		return fmt.Errorf("Only read_json, read_csv, read_parquet and ST_Read can read an HTTP source.")
+	}
+	children, _ := function["children"].([]any)
+	invalid := fmt.Errorf("%s needs a single quoted URL. Globs, lists, concatenation and parameters inside the URL are not supported.", name)
+	if len(children) == 0 {
+		return invalid
+	}
+	literal, _ := children[0].(map[string]any)
+	constant, _ := literal["value"].(map[string]any)
+	raw, ok := constant["value"].(string)
+	raw = restoreParameterInputs(raw, parameterNames)
+	if !ok || literal["class"] != "CONSTANT" || strings.ContainsAny(raw, "*?[]{}") && (strings.ContainsAny(strings.SplitN(raw, "?", 2)[0], "*?[]{}") || strings.Contains(raw, "{{")) {
+		return invalid
+	}
+	gzip := strings.HasSuffix(strings.ToLower(strings.SplitN(raw, "?", 2)[0]), ".gz")
+	for _, child := range children[1:] {
+		option, _ := child.(map[string]any)
+		left, _ := option["left"].(map[string]any)
+		names, _ := left["column_names"].([]any)
+		alias := ""
+		if len(names) == 1 {
+			alias, _ = names[0].(string)
+		}
+		if strings.EqualFold(name, "ST_Read") && alias != "keep_wkb" {
+			return invalid
+		}
+		right, _ := option["right"].(map[string]any)
+		v, _ := right["value"].(map[string]any)
+		if alias == "compression" && v["value"] == "gzip" {
+			gzip = true
+		}
+	}
+	match, err := httpsource.Resolve(raw, sources)
+	if err != nil {
+		return err
+	}
+	hash := sha256.Sum256([]byte(match.SourceID + "\n" + match.URL))
+	fileName := fmt.Sprintf("dekart_internal/http_%x.%s", hash[:8], extension)
+	if gzip {
+		fileName += ".gz"
+	}
+	constant["value"] = fileName
+	ref := HTTPSourceRef{FileName: fileName, SourceID: match.SourceID, URL: match.URL, Extension: extension}
+	for _, existing := range *refs {
+		if existing.FileName == fileName {
+			return nil
+		}
+	}
+	*refs = append(*refs, ref)
+	return nil
 }
