@@ -278,15 +278,6 @@ func (s *Server) prepareDuckDBExecution(ctx context.Context, req *proto.PrepareD
 	if err != nil {
 		return nil, err
 	}
-	// Reject the captured closure before starting any warehouse leaf jobs.
-	// TODO: remove it when CLI paritry on browser client
-	for _, candidate := range first.ordered {
-		for _, source := range candidate.httpSources {
-			if source.URLSQL != "" {
-				return nil, status.Error(codes.FailedPrecondition, "Dataset-derived HTTP URLs currently require browser execution.")
-			}
-		}
-	}
 	if err := firstTx.Commit(); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -414,6 +405,7 @@ func lowerDuckDBExecution(snapshot *duckDBPreparationSnapshot, jobsByDatasetID m
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
+	sourceIndex := len(sources)
 	for _, candidate := range snapshot.ordered {
 		job := jobsByDatasetID[candidate.datasetID]
 		// Local statements are emitted only for synchronous, error-free DuckDB metadata jobs.
@@ -434,19 +426,22 @@ func lowerDuckDBExecution(snapshot *duckDBPreparationSnapshot, jobsByDatasetID m
 			})
 		}
 		compiledSQL := job.QueryText
-		// Constant HTTP files use the same indexed download paths as other program sources.
+		// Download HTTP sources after this job's dependencies and parameters are available.
+		httpSources := make([]*proto.DuckDBExecutionSource, 0, len(job.HttpSources))
 		for _, source := range job.HttpSources {
-			index := len(sources)
-			sources = append(sources, &proto.DuckDBExecutionSource{
+			index := sourceIndex
+			sourceIndex++
+			httpSources = append(httpSources, &proto.DuckDBExecutionSource{
 				DatasetId: candidate.datasetID,
 				Revision:  &proto.DuckDBExecutionSource_HttpSourceId{HttpSourceId: source.SourceId},
 				FileName:  source.FileName,
+				UrlSql:    source.UrlSql,
 				Extension: source.Extension,
 			})
 			compiledSQL = strings.ReplaceAll(compiledSQL, "'"+source.FileName+"'", fmt.Sprintf("getvariable('dekart_source_%d_path')", index))
 		}
 		jobTable := `dekart_internal.` + quoteDuckDBIdentifier(duckDBJobTableName(job.Id))
-		statements = append(statements, &proto.DuckDBExecutionStatement{Sql: fmt.Sprintf("CREATE OR REPLACE TABLE %s AS %s", jobTable, compiledSQL)})
+		statements = append(statements, &proto.DuckDBExecutionStatement{Sql: fmt.Sprintf("CREATE OR REPLACE TABLE %s AS %s", jobTable, compiledSQL), HttpSources: httpSources})
 		// Parameter tables are node-local and must not leak into the next materialization.
 		if len(parameterValues) > 0 {
 			statements = append(statements, &proto.DuckDBExecutionStatement{Sql: "DROP TABLE IF EXISTS " + paramsTable})

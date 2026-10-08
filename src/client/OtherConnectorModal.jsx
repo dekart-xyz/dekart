@@ -15,7 +15,6 @@ export const OTHER_CONNECTOR_OPTIONS = [
   { label: 'Athena', value: 'athena' },
   { label: 'ClickHouse', value: 'clickhouse' },
   { label: 'Databricks', value: 'databricks' },
-  { label: 'DuckDB / S3 / GCP', value: 'duckdb_s3_gcp' },
   { label: 'MotherDuck', value: 'motherduck' },
   { label: 'MySQL', value: 'mysql' },
   { label: 'Presto / Trino', value: 'presto_trino' },

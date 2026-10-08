@@ -14,8 +14,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Masterminds/semver/v3"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -25,6 +27,8 @@ import (
 	gproto "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
+
+const minimumCLIVersion = "0.22.0"
 
 type mcpTool struct {
 	Name           string         `json:"name"`
@@ -134,6 +138,14 @@ func (s *Server) HandleMCPTools(w http.ResponseWriter, r *http.Request) {
 
 // HandleMCPCall executes one MCP tool call and returns structured result payload.
 func (s *Server) HandleMCPCall(w http.ResponseWriter, r *http.Request) {
+	// Old CLI versions cannot execute statement-attached HTTP sources.
+	if agent := r.UserAgent(); strings.HasPrefix(agent, "dekart-cli/") {
+		version, err := semver.StrictNewVersion(strings.TrimPrefix(agent, "dekart-cli/"))
+		if err == nil && version.LessThan(semver.MustParse(minimumCLIVersion)) {
+			http.Error(w, "Update GeoSQL and the Dekart CLI: pip install --upgrade geosql dekart", http.StatusPreconditionFailed)
+			return
+		}
+	}
 	request := &mcpCallRequest{}
 	if err := decodeJSONBody(r, request); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
@@ -322,13 +334,41 @@ func (s *Server) callListConnectionsTool(ctx context.Context) (json.RawMessage, 
 		return nil, err
 	}
 	filtered := filterConnectionsForMCPRunQueriesScope(response.GetConnections())
-	sanitized := make([]*proto.Connection, 0, len(filtered))
+	sanitized := make([]map[string]any, 0, len(filtered))
 	for _, connection := range filtered {
-		sanitized = append(sanitized, sanitizeConnectionForMCP(connection))
+		raw, err := mcp.MarshalProtoJSON(sanitizeConnectionForMCP(connection))
+		if err != nil {
+			return nil, err
+		}
+		var metadata map[string]any
+		if err := json.Unmarshal(raw, &metadata); err != nil {
+			return nil, err
+		}
+		// MCP discovery exposes header names while keeping their values on the server.
+		if connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_HTTP {
+			if err := s.loadHTTPConnection(ctx, connection, false); err != nil {
+				return nil, err
+			}
+			headerNames := make([]string, 0)
+			if encrypted := connection.GetHttpHeadersJson().GetServerEncrypted(); encrypted != "" {
+				raw, err := secrets.ServerDecrypt(encrypted)
+				if err != nil {
+					return nil, err
+				}
+				var headers map[string]string
+				if err := json.Unmarshal([]byte(raw), &headers); err != nil {
+					return nil, err
+				}
+				for name := range headers {
+					headerNames = append(headerNames, name)
+				}
+			}
+			sort.Strings(headerNames)
+			metadata["http_header_names"] = headerNames
+		}
+		sanitized = append(sanitized, metadata)
 	}
-	return mcp.MarshalProtoJSON(&proto.GetConnectionListResponse{
-		Connections: sanitized,
-	})
+	return mcp.MarshalJSON(map[string]any{"connections": sanitized})
 }
 
 // callGetMapConfigSchemaTool returns the JSON schema used for map config validation.

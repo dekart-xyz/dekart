@@ -22,12 +22,12 @@ A DuckDB query builds one HTTPS GET URL from values in the report's datasets, re
 - Execution: the server compiles the subquery and the final SQL together, resolving dataset names in both and collecting the union of their dependencies. The job records the compiled URL SQL and the template; nothing is fetched at job creation. The browser binds the pinned dependencies and the parameter values, runs the URL SQL, downloads the source with the resolved URL, registers the bytes under the recorded file name and runs the final SQL, all under the existing execution lock. Superseded or cancelled executions publish nothing. Explicit Execute, Refresh Now and auto-refresh create a fresh source id; reconciliation reuses a source id exactly as for constant URLs. A changed dependency revision or parameter value re-runs the URL SQL and downloads again.
 - Serving: a computed source is downloaded through the existing route with a `url` query parameter carrying the resolved URL. After the existing report, dataset, extension and connection checks the server decrypts the header map (it needs the header names), parses the recorded template against the current connection, and accepts the submitted URL only when scheme, host, port and path are equal, the query-key sets are equal with each key once and every fixed value equal after decoding; then it fetches with the existing policy and streams through with the existing cache headers. A `url` parameter on a constant-URL source, a missing one on a computed source, or a duplicate `url` parameter is rejected before any fetch. The submitted URL is never logged with its query values.
 - Sharing (accepted tradeoff, D1): anyone who can open the report, including snapshot renderers and anonymous readers of public reports, can download with any `{}` values; they cannot change host, path, keys or fixed values. Browser cache entries differ per resolved URL.
-- MCP: `create_query` and `update_query` save and validate this syntax. `run_query` with `accept_duckdb_execution`, and any program preparation, fails with `Dataset-derived HTTP URLs currently require browser execution.` when a computed source is anywhere in the dependency chain, checked on the first captured dependency graph before any warehouse leaf query is launched. Programs with only constant URLs are unchanged. Running these queries through the CLI is a later design that first adds a client capability check.
+- MCP: `create_query` and `update_query` save and validate this syntax. `run_query` with `accept_duckdb_execution` returns a program for computed sources too: the job statement that reads the source lists it with its `url_sql`, and the Dekart CLI runs that SQL, downloads with `?url=` and runs the statement, in the browser's order. The program contract, the CLI version gate and their tests are in `../../magic/docs/designs/duckdb-http-sources.md` (eng review 2026-10-08).
 - Errors use the existing Query Error line: unsupported syntax (non-constant template, placeholder and argument count differ, placeholder outside a query value, nested reader, several computed readers or a computed and a constant reader together) and `HTTP source URL query returned <n> rows; exactly one non-empty URL is required.` for cardinality and NULL results.
 
 ### Out of scope
 
-Computed scheme, host, path or query keys; partial values and escaped braces; per-row requests; several isochrones in one query; POST bodies; pagination; MCP or CLI execution of computed sources; server-side DuckDB; server-side storage of responses.
+Computed scheme, host, path or query keys; partial values and escaped braces; per-row requests; several isochrones in one query; POST bodies; pagination; server-side DuckDB; server-side storage of responses.
 
 ## 2. Acceptance tests
 
@@ -37,7 +37,7 @@ Computed scheme, host, path or query keys; partial values and escaped braces; pe
 | `src/server/duckdbsql/compiler_test.go`: subquery yields `URLSQL` with datasets rewritten and arguments wrapped, `URLTemplate`, deterministic file name, dependencies from both statements, parameter in the subquery predicate bound; rejects non-constant template, count mismatch, nested reader, two computed readers, computed plus constant reader; an outer CTE name yields the existing unknown-dataset error; `TestCompileHTTPReaders` unchanged | 9 | Go |
 | `cypress/e2e/cloud/httpSourceDatasetUrl.cy.js` over the public fixtures base: a station dataset from literal rows; a computed `sample.csv?station={}` query loads 8276 rows and the intercepted download `url` decodes to exactly the station value, which contains `&`, `=` and a space; final SQL joins the response with the station dataset; zero rows, two rows and a NULL coordinate show the error with no download; an unqualified outer column shows a binding error with no download; editing the station dataset and re-running the dependent query changes the `url`; a `{{parameter}}` in the subquery predicate selects the station and a parameter change changes the `url`; renaming the station dataset keeps the source id | 8 | Cypress cloud lane |
 | `cypress/e2e/cloud/httpSourceDatasetUrlAuth.cy.js`: direct GET with changed path, host, key, fixed value or duplicate `url` is 404; `url` on a constant source is 404; a viewer of the shared report and an anonymous reader of the public report download with another `{}` value; another report's source id is 404 | 5 | Cypress cloud lane |
-| `cypress/e2e/local/mcpHttpSourceDatasetUrl.cy.js` (device flow): `update_query` saves the syntax; `run_query` with `accept_duckdb_execution` returns the browser-execution error for the computed query and for a query depending on it, and no leaf job is created; a constant-URL program still returns sources | 3 | Cypress local lane |
+| MCP program cases: moved to `cypress/e2e/local/mcpHttpSource.cy.js` in the HTTP-source design (computed and constant programs, statement-attached sources, version gate) | see that plan | Cypress local lane |
 | Regression: `httpSource.cy.js`, `httpSourceCredentials.cy.js`, `TestCompileRejectsUnsafeSQL`, `cypress/e2e/bq/duckdbRefresh*.cy.js` | existing | Go, Cypress |
 
 ## 3. Public interfaces
@@ -78,7 +78,7 @@ type HTTPSourceRef struct { FileName, SourceID, URL, Extension, URLSQL, URLTempl
 
 ### Download route and MCP
 
-Internal changes only: `serveHTTPSource` gains the `url` parameter handling above; `prepareDuckDBExecution` rejects a chain containing a computed source on the first captured graph, before launching warehouse leaves.
+Internal changes only: `serveHTTPSource` gains the `url` parameter handling above; program lowering for computed sources is specified in the HTTP-source design.
 
 ### Client
 
@@ -93,7 +93,7 @@ No new library. `actions/duckdb.js` runs the URL SQL and downloads with the reso
 
 ## 5. Slices
 
-1. Server: `ParseTemplate` and `Match`, compiler subquery support, proto fields, job records, download route with `url`, MCP rejection. Done when the Go tests and the MCP local spec are green. No probe.
+1. Server: `ParseTemplate` and `Match`, compiler subquery support, proto fields, job records, download route with `url`. Done when the Go tests are green. No probe. MCP programs for computed sources: HTTP-source design, slice 2.
 2. Browser: URL SQL evaluation, download with the resolved URL, cardinality and binding errors, refresh behavior. Done when both cloud Cypress specs are green. No probe.
 3. Map: station dataset plus one TravelTime catchment query per selected station, joined with station name and power, shared as a viewer map. Done when a viewer opens the map and sees the polygon and station fields. Depends on the existing TravelTime HTTP source.
 

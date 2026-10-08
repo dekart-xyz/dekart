@@ -12,7 +12,7 @@ import BigQueryConnectionTypeSelectorModal from './BigQueryConnectionTypeSelecto
 import OtherConnectorModal, { OTHER_CONNECTOR_OPTIONS } from './OtherConnectorModal'
 import styles from './CreateConnection.module.css'
 
-const moreWarehouseHint = ['databricks', 'redshift', 'duckdb_s3_gcp']
+const moreWarehouseHint = ['databricks', 'redshift']
   .map(value => OTHER_CONNECTOR_OPTIONS.find(option => option.value === value)?.label.split('/')[0].trim())
   .filter(Boolean)
   .join(', ')
@@ -200,7 +200,7 @@ export default function CreateConnection () {
         className={styles.intro}
         status='success'
         icon={<ApiTwoTone />}
-        title='Connect your data.'
+        title='Connect your data. Warehouses run queries in place; HTTP sources are fetched and published with your map.'
       />
       <ConnectionTypeSelector />
     </div>

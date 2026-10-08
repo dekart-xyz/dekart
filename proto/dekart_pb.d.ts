@@ -3544,6 +3544,9 @@ export class DuckDBExecutionSource extends jspb.Message {
   getFileName(): string;
   setFileName(value: string): void;
 
+  getUrlSql(): string;
+  setUrlSql(value: string): void;
+
   getExtension$(): string;
   setExtension$(value: string): void;
 
@@ -3565,6 +3568,7 @@ export namespace DuckDBExecutionSource {
     queryJobId: string,
     httpSourceId: string,
     fileName: string,
+    urlSql: string,
     extension: string,
   }
 
@@ -3585,6 +3589,11 @@ export class DuckDBExecutionStatement extends jspb.Message {
   setParametersList(value: Array<string>): void;
   addParameters(value: string, index?: number): string;
 
+  clearHttpSourcesList(): void;
+  getHttpSourcesList(): Array<DuckDBExecutionSource>;
+  setHttpSourcesList(value: Array<DuckDBExecutionSource>): void;
+  addHttpSources(value?: DuckDBExecutionSource, index?: number): DuckDBExecutionSource;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): DuckDBExecutionStatement.AsObject;
   static toObject(includeInstance: boolean, msg: DuckDBExecutionStatement): DuckDBExecutionStatement.AsObject;
@@ -3599,6 +3608,7 @@ export namespace DuckDBExecutionStatement {
   export type AsObject = {
     sql: string,
     parametersList: Array<string>,
+    httpSourcesList: Array<DuckDBExecutionSource.AsObject>,
   }
 }
 

@@ -27335,6 +27335,7 @@ proto.DuckDBExecutionSource.toObject = function(includeInstance, msg) {
     queryJobId: jspb.Message.getFieldWithDefault(msg, 3, ""),
     httpSourceId: jspb.Message.getFieldWithDefault(msg, 5, ""),
     fileName: jspb.Message.getFieldWithDefault(msg, 6, ""),
+    urlSql: jspb.Message.getFieldWithDefault(msg, 7, ""),
     extension: jspb.Message.getFieldWithDefault(msg, 4, "")
   };
 
@@ -27391,6 +27392,10 @@ proto.DuckDBExecutionSource.deserializeBinaryFromReader = function(msg, reader) 
     case 6:
       var value = /** @type {string} */ (reader.readString());
       msg.setFileName(value);
+      break;
+    case 7:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setUrlSql(value);
       break;
     case 4:
       var value = /** @type {string} */ (reader.readString());
@@ -27457,6 +27462,13 @@ proto.DuckDBExecutionSource.serializeBinaryToWriter = function(message, writer) 
   if (f.length > 0) {
     writer.writeString(
       6,
+      f
+    );
+  }
+  f = message.getUrlSql();
+  if (f.length > 0) {
+    writer.writeString(
+      7,
       f
     );
   }
@@ -27615,6 +27627,24 @@ proto.DuckDBExecutionSource.prototype.setFileName = function(value) {
 
 
 /**
+ * optional string url_sql = 7;
+ * @return {string}
+ */
+proto.DuckDBExecutionSource.prototype.getUrlSql = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 7, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.DuckDBExecutionSource} returns this
+ */
+proto.DuckDBExecutionSource.prototype.setUrlSql = function(value) {
+  return jspb.Message.setProto3StringField(this, 7, value);
+};
+
+
+/**
  * optional string extension = 4;
  * @return {string}
  */
@@ -27638,7 +27668,7 @@ proto.DuckDBExecutionSource.prototype.setExtension$ = function(value) {
  * @private {!Array<number>}
  * @const
  */
-proto.DuckDBExecutionStatement.repeatedFields_ = [2];
+proto.DuckDBExecutionStatement.repeatedFields_ = [2,3];
 
 
 
@@ -27672,7 +27702,9 @@ proto.DuckDBExecutionStatement.prototype.toObject = function(opt_includeInstance
 proto.DuckDBExecutionStatement.toObject = function(includeInstance, msg) {
   var f, obj = {
     sql: jspb.Message.getFieldWithDefault(msg, 1, ""),
-    parametersList: (f = jspb.Message.getRepeatedField(msg, 2)) == null ? undefined : f
+    parametersList: (f = jspb.Message.getRepeatedField(msg, 2)) == null ? undefined : f,
+    httpSourcesList: jspb.Message.toObjectList(msg.getHttpSourcesList(),
+    proto.DuckDBExecutionSource.toObject, includeInstance)
   };
 
   if (includeInstance) {
@@ -27717,6 +27749,11 @@ proto.DuckDBExecutionStatement.deserializeBinaryFromReader = function(msg, reade
       var value = /** @type {string} */ (reader.readString());
       msg.addParameters(value);
       break;
+    case 3:
+      var value = new proto.DuckDBExecutionSource;
+      reader.readMessage(value,proto.DuckDBExecutionSource.deserializeBinaryFromReader);
+      msg.addHttpSources(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -27758,6 +27795,14 @@ proto.DuckDBExecutionStatement.serializeBinaryToWriter = function(message, write
     writer.writeRepeatedString(
       2,
       f
+    );
+  }
+  f = message.getHttpSourcesList();
+  if (f.length > 0) {
+    writer.writeRepeatedMessage(
+      3,
+      f,
+      proto.DuckDBExecutionSource.serializeBinaryToWriter
     );
   }
 };
@@ -27815,6 +27860,44 @@ proto.DuckDBExecutionStatement.prototype.addParameters = function(value, opt_ind
  */
 proto.DuckDBExecutionStatement.prototype.clearParametersList = function() {
   return this.setParametersList([]);
+};
+
+
+/**
+ * repeated DuckDBExecutionSource http_sources = 3;
+ * @return {!Array<!proto.DuckDBExecutionSource>}
+ */
+proto.DuckDBExecutionStatement.prototype.getHttpSourcesList = function() {
+  return /** @type{!Array<!proto.DuckDBExecutionSource>} */ (
+    jspb.Message.getRepeatedWrapperField(this, proto.DuckDBExecutionSource, 3));
+};
+
+
+/**
+ * @param {!Array<!proto.DuckDBExecutionSource>} value
+ * @return {!proto.DuckDBExecutionStatement} returns this
+*/
+proto.DuckDBExecutionStatement.prototype.setHttpSourcesList = function(value) {
+  return jspb.Message.setRepeatedWrapperField(this, 3, value);
+};
+
+
+/**
+ * @param {!proto.DuckDBExecutionSource=} opt_value
+ * @param {number=} opt_index
+ * @return {!proto.DuckDBExecutionSource}
+ */
+proto.DuckDBExecutionStatement.prototype.addHttpSources = function(opt_value, opt_index) {
+  return jspb.Message.addToRepeatedWrapperField(this, 3, opt_value, proto.DuckDBExecutionSource, opt_index);
+};
+
+
+/**
+ * Clears the list making it empty but non-null.
+ * @return {!proto.DuckDBExecutionStatement} returns this
+ */
+proto.DuckDBExecutionStatement.prototype.clearHttpSourcesList = function() {
+  return this.setHttpSourcesList([]);
 };
 
 

@@ -930,6 +930,7 @@ message DuckDBExecution {
     repeated DuckDBExecutionExtension extensions = 4;
 }
 
+// tells the CLI which data to download before executing SQL
 message DuckDBExecutionSource {
     string dataset_id = 1;
     oneof revision {
@@ -938,12 +939,19 @@ message DuckDBExecutionSource {
         string http_source_id = 5;
     }
     string file_name = 6;
+    // Run after predecessor statements to resolve a computed HTTP URL.
+    // Must return exactly one row containing a non-empty URL; empty for constant URLs.
+    // Example:
+    // SELECT format('https://example.com/stations?id={}', station_id)
+    // FROM datasets."Selected station"
+    string url_sql = 7;
     string extension = 4; // csv | parquet | json | geojson
 }
 
 message DuckDBExecutionStatement {
     string sql = 1;
     repeated string parameters = 2; // Ordered VARCHAR literals; source paths use reserved DuckDB variables.
+    repeated DuckDBExecutionSource http_sources = 3; // Download immediately before this statement.
 }
 
 message RunDuckDBQueryRequest {

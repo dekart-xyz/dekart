@@ -56,6 +56,29 @@ describe('HTTP source connections and DuckDB downloads', () => {
 
   beforeEach(() => cy.setDevClaimsEmail('http-source@dekart.xyz'))
 
+  it('keeps supported HTTP sources out of connector requests', () => {
+    cy.visit('/connections')
+    cy.get('#dekart-new-connection-connections').click()
+    cy.contains('Warehouses run queries in place; HTTP sources are fetched and published with your map.').should('be.visible')
+    cy.get('#dekart-more-warehouses').click()
+    cy.get('.ant-modal .ant-select').click()
+    cy.get('.ant-select-dropdown:visible').should('not.contain', 'DuckDB / S3 / GCP')
+    cy.contains('.ant-select-item-option', 'MotherDuck').click()
+    cy.contains('.ant-modal button', 'Next').click()
+    cy.contains('MotherDuck is in our pilot list').should('be.visible')
+    cy.get('.ant-modal-close').click()
+  })
+
+  it('offers HTTP sources in SQL autocomplete', () => {
+    createReport()
+    cy.contains('button', 'DuckDB').click()
+    replaceEditorText('SELECT * FROM read_')
+    cy.get('.ace_editor:not(.ace_autocomplete):visible textarea').type('{ctrl} ', { force: true })
+    cy.get('.ace_autocomplete:visible').should('contain.text', `read_json('${baseURL}`)
+    cy.contains('.ace_autocomplete:visible', `read_json('${baseURL}`).click()
+    editorShouldContain(`SELECT * FROM read_json('${baseURL}`)
+  })
+
   it('hides saved headers and does not offer editing them', () => {
     cy.visit('/connections')
     cy.contains('HTTP fixtures', { timeout: 20000 }).click()

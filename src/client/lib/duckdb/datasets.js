@@ -32,7 +32,7 @@ export function quoteDuckDBIdentifier (label) {
 }
 
 // Install report-aware DuckDB completion with Ace defaults on one editor.
-export function registerDuckDBCompleter (editor, getSources) {
+export function registerDuckDBCompleter (editor, getSources, getHTTPSources) {
   const langTools = window.ace.require('ace/ext/language_tools')
   const previousCompleters = editor.completers
   const completer = {
@@ -54,7 +54,18 @@ export function registerDuckDBCompleter (editor, getSources) {
       }, completion.value)
     }
   }
+  const httpCompleter = {
+    getCompletions (editor, session, pos, prefix, callback) {
+      callback(null, getHTTPSources().map(source => ({
+        caption: `read_json('${source.httpBaseUrl.replaceAll("'", "''")}`,
+        value: `read_json('${source.httpBaseUrl.replaceAll("'", "''")}`,
+        meta: 'HTTP source',
+        score: 1000
+      })))
+    }
+  }
   const defaultCompleters = [
+    httpCompleter,
     langTools.snippetCompleter,
     langTools.textCompleter,
     langTools.keyWordCompleter

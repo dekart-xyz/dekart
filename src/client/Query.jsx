@@ -146,6 +146,9 @@ function QueryEditor ({ queryId, queryText, onChange, canWrite, canExecute, onEx
   const query = useSelector(state => state.queries.find(query => query.id === queryId))
   const datasets = useSelector(state => state.dataset.list)
   const files = useSelector(state => state.files)
+  const connections = useSelector(state => state.connection.list)
+  const httpSourcesRef = useRef([])
+  httpSourcesRef.current = connections.filter(c => c.connectionType === ConnectionType.CONNECTION_TYPE_HTTP)
   const connection = useSelector(state => state.connection.list.find(c => c.id === dataset?.connectionId))
   const reportReadme = useSelector(state => state.report.readme)
   const connectionType = useConnectionType(connection?.id, dataset?.connectionType)
@@ -205,7 +208,7 @@ function QueryEditor ({ queryId, queryText, onChange, canWrite, canExecute, onEx
     if (!editor || datasource !== DUCKDB_DATASOURCE) {
       return
     }
-    return registerDuckDBCompleter(editor, () => duckDBSourcesRef.current)
+    return registerDuckDBCompleter(editor, () => duckDBSourcesRef.current, () => httpSourcesRef.current)
   }, [datasource, editor])
 
   useEffect(() => {
