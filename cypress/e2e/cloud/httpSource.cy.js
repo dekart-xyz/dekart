@@ -59,7 +59,7 @@ describe('HTTP source connections and DuckDB downloads', () => {
   it('keeps supported HTTP sources out of connector requests', () => {
     cy.visit('/connections')
     cy.get('#dekart-new-connection-connections').click()
-    cy.contains('Warehouses run queries in place; HTTP sources are fetched and published with your map.').should('be.visible')
+    cy.get('.ant-result-title').should('have.text', 'Connect your data')
     cy.get('#dekart-more-warehouses').click()
     cy.get('.ant-modal .ant-select').click()
     cy.get('.ant-select-dropdown:visible').should('not.contain', 'DuckDB / S3 / GCP')

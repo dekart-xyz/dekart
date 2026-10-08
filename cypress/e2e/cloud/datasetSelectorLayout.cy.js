@@ -3,6 +3,36 @@ import { createReport, editorShouldContain } from '../local/duckdbHelpers'
 
 const email = `dataset-layout-${Date.now()}@dekart.xyz`
 
+describe('dataset selector without connections', () => {
+  it('shows one connection button below the query cards', () => {
+    cy.setDevClaimsEmail(`dataset-no-connections-${Date.now()}@dekart.xyz`)
+    cy.visit('/')
+    cy.ensureTestWorkspace()
+    createReport()
+    cy.get('section[aria-label="Query"]').within(() => {
+      cy.contains('button', 'DuckDB').should('be.visible')
+      cy.get('button').should('have.length', 1)
+    })
+    cy.get('#dekart-add-connection').should('have.length', 1)
+      .and('be.visible').and('contain', 'Add and edit connections')
+      .and('have.css', 'border-top-style', 'dashed').then($button => {
+        cy.get('section[aria-label="Query"]').then($query => {
+          expect($button[0].getBoundingClientRect().top)
+            .to.be.greaterThan($query[0].getBoundingClientRect().bottom)
+        })
+      })
+    cy.get('#dekart-add-connection').click()
+    cy.location('pathname').should('eq', '/connections')
+    cy.get('#dekart-connection-type-card-http', { timeout: 30000 }).click()
+    cy.get('#connectionName').clear().type('First connection')
+    cy.get('#httpBaseUrl').type('https://example.com/data')
+    cy.get('#saveConnection').click()
+    cy.contains('button', 'First connection', { timeout: 30000 }).should('be.visible')
+    cy.get('section[aria-label="Query"] button').should('have.length', 2)
+    cy.get('#dekart-add-connection').should('have.length', 1).and('be.visible')
+  })
+})
+
 describe('new dataset panel layout', () => {
   before(() => {
     cy.setDevClaimsEmail(email)

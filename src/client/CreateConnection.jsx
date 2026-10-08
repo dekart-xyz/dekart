@@ -200,7 +200,7 @@ export default function CreateConnection () {
         className={styles.intro}
         status='success'
         icon={<ApiTwoTone />}
-        title='Connect your data. Warehouses run queries in place; HTTP sources are fetched and published with your map.'
+        title='Connect your data'
       />
       <ConnectionTypeSelector />
     </div>

@@ -20,7 +20,7 @@ describe('connection selector layout', () => {
 
   it('groups warehouses above APIs and files with working setup actions', () => {
     cy.viewport(1280, 900)
-    cy.contains('Connect your data.').should('be.visible')
+    cy.contains('Connect your data').should('be.visible')
     cy.contains('We run queries there; nothing is copied to Dekart.').should('not.exist')
     cy.get('.ant-result-icon .anticon').should('have.css', 'font-size', '32px')
     cy.get('.ant-result-title').should('have.css', 'font-size', '22px')
@@ -84,12 +84,12 @@ describe('connection selector layout', () => {
         expect($button[0].getBoundingClientRect().right).to.be.at.most(width)
       })
     })
-    cy.contains('Connect your data.').parents().filter((index, element) => {
+    cy.contains('Connect your data').parents().filter((index, element) => {
       return getComputedStyle(element).overflowY === 'scroll'
     }).scrollTo('top', { ensureScrollable: false })
     cy.screenshot('connection-selector-mobile', { capture: 'fullPage' })
     cy.viewport(1280, 900)
-    cy.contains('Connect your data.').parents().filter((index, element) => {
+    cy.contains('Connect your data').parents().filter((index, element) => {
       return getComputedStyle(element).overflowY === 'scroll'
     }).scrollTo('top', { ensureScrollable: false })
     cy.screenshot('connection-selector-desktop')

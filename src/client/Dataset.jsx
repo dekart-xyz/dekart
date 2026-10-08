@@ -5,7 +5,7 @@ import Query from './Query'
 import File from './File'
 import { createQuery } from './actions/query'
 import { createFile } from './actions/file'
-import { ApiTwoTone, PlusOutlined, ReadOutlined, RightOutlined, UploadOutlined } from '@ant-design/icons'
+import { PlusOutlined, ReadOutlined, RightOutlined, UploadOutlined } from '@ant-design/icons'
 import { DatasourceIcon } from './Datasource'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 import { addReadme } from './actions/readme'
@@ -16,10 +16,9 @@ import { isSystemConnectionID } from './actions/connection'
 import { ConnectionType, QueryExecutionEngine } from 'dekart-proto/dekart_pb'
 import { DUCKDB_DATASOURCE } from './lib/duckdb/constants'
 
-function DatasetSelectorButton ({ icon, title, subtitle, onClick, id, disable, disabledNote }) {
+function DatasetSelectorButton ({ icon, title, subtitle, onClick, disable, disabledNote }) {
   return (
     <Button
-      id={id}
       size='large'
       className={styles.datasetSelectorButton}
       onClick={onClick}
@@ -163,31 +162,18 @@ function DatasetSelector ({ dataset }) {
                 }}
               />
             ))}
-            {filteredConnectionList.length === 0 && (
-              <DatasetSelectorButton
-                icon={<ApiTwoTone />}
-                disable={!report.canWrite || readOnly}
-                disabledNote={readOnly ? 'Workspace is read-only' : undefined}
-                id='dekart-add-connection'
-                title='Add connection'
-                subtitle='Connect BigQuery, Snowflake, PostGIS, Wherobots'
-                onClick={() => {
-                  dispatch(updateSessionStorage('redirectWhenSaveConnection', { reportId: report.id, edit: true }))
-                  history.push('/connections')
-                  track('AddConnectionFromDatasetSelector')
-                }}
-              />
-            )}
           </div>
         </section>
       </div>
-      {isAdmin && userDefinedConnection && filteredConnectionList.length > 0 && (
+      {isAdmin && userDefinedConnection && (
         <Button
+          id='dekart-add-connection'
           className={styles.manageConnections}
           icon={<PlusOutlined />}
           disabled={readOnly}
           title={readOnly ? 'Workspace is read-only' : undefined}
           onClick={() => {
+            dispatch(updateSessionStorage('redirectWhenSaveConnection', { reportId: report.id, edit: true }))
             track('AddAndEditConnections')
             history.push('/connections')
           }}
