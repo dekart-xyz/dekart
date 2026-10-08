@@ -2,7 +2,8 @@ import { useSelector } from 'react-redux'
 import styles from './Datasource.module.css'
 import { getDatasourceMeta } from './lib/datasource'
 import classNames from 'classnames'
-import { ConsoleSqlOutlined } from '@ant-design/icons'
+import { ConsoleSqlOutlined, GlobalOutlined } from '@ant-design/icons'
+import { ConnectionType } from 'dekart-proto/dekart_pb'
 
 export function Datasource ({ connection }) {
   const env = useSelector(state => state.env)
@@ -26,6 +27,10 @@ export function Datasource ({ connection }) {
 }
 
 export function DatasourceIcon ({ type }) {
+  // HTTP connections use a globe wherever a source icon is displayed.
+  if (type === ConnectionType.CONNECTION_TYPE_HTTP) {
+    return <GlobalOutlined className={classNames(styles.datasourceIcon, styles.httpIcon)} />
+  }
   const style = getDatasourceMeta(type).style
   if (!style) {
     return <ConsoleSqlOutlined />

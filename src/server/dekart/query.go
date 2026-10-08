@@ -37,9 +37,23 @@ func (s Server) ensureSavedDuckDBJobs(ctx context.Context, reportID, queryParams
 	if err := lockReportTx(ctx, tx, reportID); err != nil {
 		return err
 	}
-	_, err = s.reconcileDuckDBGraphTx(ctx, tx, reportID, queryParamsHash, nil, "", acceptedJobsByDatasetID)
+	queries, catalog, params, err := loadDuckDBGraphTx(ctx, tx, reportID)
 	if err != nil {
 		return err
+	}
+	if err := analyzeDuckDBQueries(ctx, tx, queries, catalog, params, reportID); err != nil {
+		return err
+	}
+	for _, query := range orderedDuckDBQueries(queries, duckDBCycleComponents(queries)) {
+		forceRoot := ""
+		// An explicit Refresh creates fresh HTTP downloads; reconciliation retains existing source ids.
+		if len(query.httpSources) > 0 {
+			forceRoot = query.queryID
+		}
+		_, acceptedJobsByDatasetID, err = reconcileSelectedDuckDBQueriesTx(ctx, tx, reportID, queryParamsHash, queries, map[string]bool{query.queryID: true}, forceRoot, acceptedJobsByDatasetID)
+		if err != nil {
+			return err
+		}
 	}
 	if err := tx.Commit(); err != nil {
 		return err
@@ -681,7 +695,7 @@ func (s Server) updateQueryTextIfChanged(ctx context.Context, queryID string, q 
 		if err != nil {
 			return false, "", status.Error(codes.Internal, err.Error())
 		}
-		if err := analyzeDuckDBQueries(ctx, tx, duckDBQueries, catalog, queryParams); err != nil {
+		if err := analyzeDuckDBQueries(ctx, tx, duckDBQueries, catalog, queryParams, q.ReportID); err != nil {
 			return false, "", status.Error(codes.Internal, err.Error())
 		}
 		for _, candidate := range duckDBQueries {

@@ -394,6 +394,17 @@ class DuckDBReportRuntime {
     return true
   }
 
+  // Register the exact compiler file name again for each job before executing its SQL.
+  async registerHTTPSource (source, bytes) {
+    await this.initialize()
+    await this.db.dropFile(source.fileName).catch(() => {})
+    await this.db.registerFileBuffer(source.fileName, bytes)
+    this.registeredSourceFiles.set(source.fileName, source.fileName)
+    if (source.extension === 'parquet') {
+      await loadDuckDBExtension(this.connection, 'parquet')
+    }
+  }
+
   // registerDuckDBResult points a dependency alias at the exact materialized job revision.
   async registerDuckDBResult (datasetId, jobId) {
     const tableName = duckDBJobTableName(jobId)
@@ -409,13 +420,10 @@ class DuckDBReportRuntime {
     return true
   }
 
-  // executeNode binds parameters and keeps dependency results inside DuckDB.
-  async executeNode (node, parameterValues) {
+  // bindParameters makes the same parameter values available to URL and final SQL.
+  async bindParameters (datasetId, parameterValues) {
     await this.initialize()
-    const viewName = duckDBViewName(node.dataset.id)
-    const view = `datasets.${quoteIdentifier(viewName)}`
-    const jobTableName = duckDBJobTableName(node.queryJob.id)
-    const jobTable = `dekart_internal.${quoteIdentifier(jobTableName)}`
+    const viewName = duckDBViewName(datasetId)
     let paramsTable = null
     if (parameterValues.length) {
       const paramsTableName = `params_${viewName}`
@@ -435,6 +443,28 @@ class DuckDBReportRuntime {
         create: true
       })
     }
+    return paramsTable
+  }
+
+  // resolveHTTPSourceURL checks cardinality before any request can leave the browser.
+  async resolveHTTPSourceURL (sql) {
+    const result = await this.connection.query(sql)
+    const rows = result.toArray()
+    const value = rows.length === 1 ? rows[0][result.schema.fields[0].name] : null
+    if (typeof value !== 'string' || value.length === 0) {
+      throw new Error(`HTTP source URL query returned ${rows.length} rows; exactly one non-empty URL is required.`)
+    }
+    return value
+  }
+
+  // executeNode binds parameters and keeps dependency results inside DuckDB.
+  async executeNode (node, parameterValues) {
+    await this.initialize()
+    const viewName = duckDBViewName(node.dataset.id)
+    const view = `datasets.${quoteIdentifier(viewName)}`
+    const jobTableName = duckDBJobTableName(node.queryJob.id)
+    const jobTable = `dekart_internal.${quoteIdentifier(jobTableName)}`
+    const paramsTable = await this.bindParameters(node.dataset.id, parameterValues)
     try {
       await this.connection.query(`CREATE OR REPLACE TABLE ${jobTable} AS ${node.queryJob.queryText}`)
       this.jobTables.add(jobTableName)
