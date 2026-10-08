@@ -53,3 +53,7 @@
     background-size: contain;
     background-repeat: no-repeat;
 }
+
+.datasourceIcon.httpIcon {
+    color: #1890ff;
+}
