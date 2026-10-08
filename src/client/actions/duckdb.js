@@ -1,6 +1,7 @@
 import { addDataToMap, replaceDataInMap } from '@kepler.gl/actions'
 import { filterRestore } from '../reducers/keplerReducer'
 import { QueryJob } from 'dekart-proto/dekart_pb'
+import { get } from '../lib/api'
 import getDatasetName from '../lib/getDatasetName'
 import { buildDuckDBGraph } from '../lib/duckdb/graph'
 import { DuckDBJobStatus, isDuckDBDataset } from '../lib/duckdb/constants'
@@ -442,6 +443,20 @@ export function runDuckDBGraph (changedDatasetIds = null) {
               if (!await runtime.registerDuckDBResult(dependencyId, revision.queryJobId)) {
                 throw new Error(`Upstream DuckDB job ${revision.queryJobId} is no longer available.`)
               }
+            }
+            // Resolve computed URLs with bound parameters and pinned inputs before downloading and registering each job source.
+            // TODO: consider downloding in parallel to improve performance.
+            await runtime.bindParameters(node.dataset.id, parameterValues)
+            for (const source of queryJob.httpSourcesList) {
+              const resolvedURL = source.urlSql ? await runtime.resolveHTTPSourceURL(source.urlSql) : null
+              if (!executionIsCurrent()) return
+              const urlQuery = resolvedURL === null ? '' : `?url=${encodeURIComponent(resolvedURL)}`
+              const response = await get(
+                `/dataset-source/${node.dataset.id}/${source.sourceId}.${source.extension}${urlQuery}`,
+                state.token, null, null, state.user.claimEmailCookie, reportId, state.user.loginHint
+              ).catch(error => { throw new Error(error.errorDetails || 'HTTP source download was interrupted. Try executing the query again.') })
+              if (!executionIsCurrent()) return
+              await runtime.registerHTTPSource(source, new Uint8Array(await response.arrayBuffer()))
             }
             dispatch(duckDBJobStateChanged(
               queryJob.id,

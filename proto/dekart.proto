@@ -467,6 +467,7 @@ enum ConnectionType {
     CONNECTION_TYPE_POSTGRES = 5;
     CONNECTION_TYPE_CLICKHOUSE = 6;
     CONNECTION_TYPE_LOCAL = 7;
+    CONNECTION_TYPE_HTTP = 8;
 }
 
 enum QueryExecutionEngine {
@@ -503,6 +504,9 @@ message Connection {
     string postgres_database = 25;
     int32 postgres_port = 26;
     string postgres_ssl_mode = 27;
+    string http_base_url = 28;
+    Secret http_headers_json = 29;
+    string http_docs_url = 30;
 }
 
 message Secret {
@@ -743,6 +747,19 @@ message Dataset {
     ConnectionType connection_type = 9;
 }
 
+// One remote URL read by a DuckDB job. Clients download it and register it under file_name before running the job's SQL.
+message HTTPSourceRevision {
+    string file_name = 1; // dekart_internal/http_<16 hex>.<ext>[.gz], as used in compiled browser SQL.
+    string connection_id = 2; // Saved HTTP connection whose base URL and headers authorize the fetch.
+    string url = 3; // Normalized constant URL to fetch; empty for a computed URL.
+    // Assigned when creating a source revision; reused during reconciliation, renewed on explicit execution or refresh.
+    // Downloaded through /api/v1/dataset-source/{dataset}/{source_id}.{extension}, with ?url=<encoded resolved URL> for computed sources.
+    string source_id = 4;
+    string extension = 5; // json | csv | parquet | geojson; excludes the optional .gz filename suffix.
+    string url_sql = 6; // Computed URL: compiled SELECT returning one URL column; empty for a constant URL.
+    string url_template = 7; // Computed URL: constant template with {} for complete query values; empty for a constant URL.
+}
+
 message QueryJob {
     string id = 1;
     string query_id = 2;
@@ -771,6 +788,7 @@ message QueryJob {
 
     string result_extension = 15; // csv | parquet
     string dataset_id = 16;
+    repeated HTTPSourceRevision http_sources = 18;
     repeated QueryJobDependencyRevision dependency_revisions = 17; // The immutable snapshot: exactly which version of each dependency this execution must use
 }
 
@@ -917,7 +935,9 @@ message DuckDBExecutionSource {
     oneof revision {
         string file_source_id = 2;
         string query_job_id = 3;
+        string http_source_id = 5;
     }
+    string file_name = 6;
     string extension = 4; // csv | parquet | json | geojson
 }
 

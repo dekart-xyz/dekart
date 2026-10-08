@@ -1,0 +1,169 @@
+.createConnection {
+    width: 100%;
+    max-width: 1120px;
+    padding: clamp(20px, 4vh, 40px) 12px 48px;
+    box-sizing: border-box;
+    container-type: inline-size;
+    container-name: connections;
+}
+
+.createConnection .intro {
+    padding: 0;
+    margin-bottom: 28px;
+}
+
+.intro :global(.ant-result-icon) {
+    margin-bottom: 6px;
+}
+
+.intro :global(.ant-result-icon > .anticon) {
+    font-size: 32px;
+}
+
+.intro :global(.ant-result-title) {
+    font-size: 22px;
+    line-height: 1.57;
+    font-weight: 500;
+}
+
+.connectionGroup {
+    margin-bottom: 28px;
+}
+
+.connectionGroup h2 {
+    margin: 0 0 12px 2px;
+    font-size: 16px;
+    font-weight: 500;
+    color: rgb(0 0 0 / 85%);
+}
+
+.connectionGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+
+@container connections (min-width: 440px) {
+    .connectionGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@container connections (min-width: 860px) {
+    .connectionGrid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+.connectionTypeCard {
+    background: #fff;
+    border: 1px solid #f0f0f0;
+    border-radius: 4px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-height: 168px;
+    min-width: 0;
+    text-align: left;
+    cursor: pointer;
+    transition: box-shadow .2s, border-color .2s;
+}
+
+.connectionTypeCard:hover {
+    box-shadow: 0 2px 8px rgb(0 0 0 / 9%);
+    border-color: #e6e6e6;
+}
+
+.connectionTypeCardHeader {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.connectionTypeCardIcon {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    background: #f0f2f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.connectionTypeCardIcon :global(.anticon) {
+    width: 20px;
+    height: 20px;
+    font-size: 20px;
+    color: #1890ff;
+}
+
+.connectionTypeCardTitle {
+    font-size: 16px;
+    font-weight: 600;
+    color: rgb(0 0 0 / 85%);
+}
+
+.connectionTypeCardSubtitle {
+    flex: 1;
+    font-size: 13px;
+    line-height: 1.5;
+    color: rgb(0 0 0 / 55%);
+}
+
+.connectionTypeCardCtaLabel {
+    display: inline-block;
+    border: 1px solid #d9d9d9;
+    border-radius: 2px;
+    padding: 4px 15px;
+    background: #fff;
+    color: rgb(0 0 0 / 85%);
+    font-size: 14px;
+    line-height: 22px;
+    box-shadow: 0 2px 0 rgb(0 0 0 / 2%);
+}
+
+.connectionSelectorFooter {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+    margin-top: 12px;
+}
+
+.connectionSelectorFooter .moreWarehousesButton {
+    max-width: 100%;
+    height: auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: center;
+    gap: 4px 8px;
+    padding: 10px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    white-space: normal;
+    background: transparent;
+}
+
+.moreWarehousesButton > :global(.anticon) + span {
+    margin-left: 0;
+}
+
+.moreWarehousesPrimary {
+    font-weight: 600;
+}
+
+.moreWarehousesHint {
+    color: rgb(0 0 0 / 45%);
+    font-weight: 400;
+}
+
+.connectionSelectorBack {
+    margin: 0 0 8px -8px;
+}
+
+.notSure {
+    text-align: center;
+}
