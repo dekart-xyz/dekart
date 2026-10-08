@@ -16,7 +16,7 @@ describe('cloud connection selector overflow', () => {
       .scrollIntoView()
       .should('be.visible')
       .and('contain', 'More warehouses')
-      .and('contain', 'Databricks, Redshift, DuckDB & more')
+      .and('contain', 'Databricks, Redshift & more')
       .click()
     cy.get('div.ant-modal-title', { timeout: 20000 }).should('contain', 'Which database do you use?')
   })

@@ -43,7 +43,9 @@ function openPostgresConnectionModal () {
       cy.get('#dekart-new-connection-connections').click({ force: true })
     } else if ($body.find('#dekart-create-report').length > 0) {
       cy.get('#dekart-create-report').click({ force: true })
-      cy.contains('Add connection', { timeout: 20000 }).click({ force: true })
+      cy.get('#dekart-add-connection', { timeout: 20000 })
+        .should('contain', 'Add and edit connections')
+        .click({ force: true })
     } else {
       cy.get('#dekart-new-connection-onboarding').click({ force: true })
     }
