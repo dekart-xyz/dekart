@@ -22,7 +22,8 @@ function getParameterNamesFromQuery (queryText) {
   return matches ? matches.map(match => match.slice(2, -2)) : []
 }
 
-function getQueryParamsFromQuery (queryParams, queryText) {
+// Retain parameter metadata for the names used by the supplied SQL.
+export function getQueryParamsFromQuery (queryParams, queryText) {
   const queryParamNames = getParameterNamesFromQuery(queryText)
   const qp = []
   queryParamNames.forEach(name => {
