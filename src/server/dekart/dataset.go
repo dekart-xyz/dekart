@@ -163,7 +163,11 @@ func (s Server) datasetOwnsSource(ctx context.Context, datasetID string, sourceI
 		join datasets as d on d.file_id=f.id
 		where d.id=$1 and f.file_source_id=$2
 	) as owned_sources`, datasetID, sourceID).Scan(&count)
-	return count > 0, err
+	if err != nil || count > 0 {
+		return count > 0, err
+	}
+	source, err := s.findHTTPSource(ctx, datasetID, sourceID)
+	return source != nil, err
 }
 
 func (s Server) UpdateDatasetName(ctx context.Context, req *proto.UpdateDatasetNameRequest) (*proto.UpdateDatasetNameResponse, error) {
@@ -508,6 +512,21 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	source, err := s.findHTTPSource(ctx, vars["dataset"], vars["source"])
+	if err != nil {
+		HttpError(w, err)
+		return
+	}
+	if source != nil {
+		s.serveHTTPSource(w, r, source, vars["extension"])
+		return
+	}
+	// DuckDB URLs are authorized by their job records, never by a user-supplied URL.
+	var engine int32
+	if err := s.db.QueryRowContext(ctx, `select q.execution_engine from queries q join datasets d on d.query_id=q.id where d.id=$1`, vars["dataset"]).Scan(&engine); err == nil && proto.QueryExecutionEngine(engine) == proto.QueryExecutionEngine_QUERY_EXECUTION_ENGINE_DUCKDB {
+		http.Error(w, "source not found", http.StatusNotFound)
+		return
+	}
 	connection, err := s.getConnectionFromDatasetID(ctx, vars["dataset"])
 
 	if err != nil {

@@ -10,20 +10,47 @@ import { track } from './lib/tracking'
 import { newConnection, newConnectionScreen } from './actions/connection'
 import BigQueryConnectionTypeSelectorModal from './BigQueryConnectionTypeSelectorModal'
 import OtherConnectorModal, { OTHER_CONNECTOR_OPTIONS } from './OtherConnectorModal'
-import styles from './HomePage.module.css'
+import styles from './CreateConnection.module.css'
 
 const moreWarehouseHint = ['databricks', 'redshift', 'duckdb_s3_gcp']
   .map(value => OTHER_CONNECTOR_OPTIONS.find(option => option.value === value)?.label.split('/')[0].trim())
   .filter(Boolean)
   .join(', ')
 
-function ConnectionTypeSelectorBottom ({ onMoreWarehouses }) {
+// Keep the return action above setup options so it is visible before scrolling.
+function ConnectionTypeSelectorBack () {
   const dispatch = useDispatch()
-  const planType = useSelector(state => state.user.stream.planType)
   const showCancel = useSelector(state => state.connection.list).length > 0
   const newScreen = useSelector(state => state.connection.screen)
   const isCloud = useSelector(state => state.env.isCloud)
   const history = useHistory()
+  const showBack = showCancel || (isCloud && newScreen)
+  return showBack
+    ? (
+      <div className={styles.connectionSelectorBack}>
+        <Button
+          type='text'
+          icon={<ArrowLeftOutlined />}
+          onClick={() => {
+            track('ReturnFromConnectionSelector')
+            if (newScreen) {
+              dispatch(newConnectionScreen(false))
+            } else {
+              history.push('/')
+            }
+          }}
+        >Back
+        </Button>
+      </div>
+      )
+    : null
+}
+
+function ConnectionTypeSelectorBottom ({ onMoreWarehouses }) {
+  const planType = useSelector(state => state.user.stream.planType)
+  const showCancel = useSelector(state => state.connection.list).length > 0
+  const newScreen = useSelector(state => state.connection.screen)
+  const isCloud = useSelector(state => state.env.isCloud)
   const showBack = showCancel || newScreen
   // Cloud replaces the old Other card with a footer overflow entry point.
   if (isCloud) {
@@ -40,24 +67,6 @@ function ConnectionTypeSelectorBottom ({ onMoreWarehouses }) {
           <span className={styles.moreWarehousesPrimary}>More warehouses</span>
           <span className={styles.moreWarehousesHint}>{moreWarehouseHint} &amp; more</span>
         </Button>
-        {showBack
-          ? (
-            <Button
-              type='text'
-              icon={<ArrowLeftOutlined />}
-              className={styles.connectionSelectorBack}
-              onClick={() => {
-                track('ReturnFromConnectionSelector')
-                if (newScreen) {
-                  dispatch(newConnectionScreen(false))
-                } else {
-                  history.push('/')
-                }
-              }}
-            >Back
-            </Button>
-            )
-          : null}
         {planType === PlanType.TYPE_PERSONAL && !showBack
           ? (
             <div className={styles.notSure}>
@@ -70,23 +79,7 @@ function ConnectionTypeSelectorBottom ({ onMoreWarehouses }) {
     )
   }
   if (showCancel) {
-    return (
-      <div>
-        <Button
-          type='ghost'
-          onClick={() => {
-            track('ReturnFromConnectionSelector')
-            if (newScreen) {
-              dispatch(newConnectionScreen(false))
-            } else {
-              history.push('/')
-            }
-          }}
-          icon={<ArrowLeftOutlined />}
-        >Back
-        </Button>
-      </div>
-    )
+    return null
   }
   if (planType === PlanType.TYPE_PERSONAL) {
     return (
@@ -142,6 +135,17 @@ function ConnectionTypeSelector () {
       dispatch(newConnection(ConnectionType.CONNECTION_TYPE_POSTGRES))
     }
   })
+  connectionCards.push({
+    key: 'http',
+    title: 'HTTP source',
+    subtitle: 'API, S3, parquet over HTTPS',
+    icon: <DatasourceIcon type={ConnectionType.CONNECTION_TYPE_HTTP} />,
+    handleClick: () => dispatch(newConnection(ConnectionType.CONNECTION_TYPE_HTTP))
+  })
+  const connectionGroups = [
+    { title: 'Warehouses', cards: connectionCards.filter(card => card.key !== 'http') },
+    { title: 'APIs & files', cards: connectionCards.filter(card => card.key === 'http') }
+  ]
   const openOtherConnectorModal = () => {
     track('ConnectionTypeSelectorOther')
     setOtherModalOpen(true)
@@ -151,30 +155,33 @@ function ConnectionTypeSelector () {
   }, [])
   return (
     <>
-      <div className={styles.connectionTypeSelector}>
+      <div>
         <BigQueryConnectionTypeSelectorModal open={bigqueryModalOpen} onClose={() => setBigqueryModalOpen(false)} />
         <OtherConnectorModal open={otherModalOpen} onClose={() => setOtherModalOpen(false)} />
-        {connectionCards.map(card => (
-          <button
-            id={`dekart-connection-type-card-${card.key}`}
-            key={card.key}
-            type='button'
-            className={styles.connectionTypeCard}
-            onClick={card.handleClick}
-            disabled={Boolean(card.disabled)}
-            title={card.disabled ? card.disabledTitle : ''}
-          >
-            <div className={styles.connectionTypeCardIcon}>{card.icon}</div>
-            <div className={styles.connectionTypeCardTitle}>{card.title}</div>
-            {card.subtitle ? <div className={styles.connectionTypeCardSubtitle}>{card.subtitle}</div> : null}
-            {card.hideConnectCta
-              ? null
-              : (
-                <div className={styles.connectionTypeCardCta}>
-                  <span className={styles.connectionTypeCardCtaLabel}>Connect</span>
-                </div>
-                )}
-          </button>
+        {connectionGroups.map(group => (
+          <section key={group.title} className={styles.connectionGroup}>
+            <h2>{group.title}</h2>
+            <div className={styles.connectionGrid}>
+              {group.cards.map(card => (
+                <button
+                  id={`dekart-connection-type-card-${card.key}`}
+                  key={card.key}
+                  type='button'
+                  className={styles.connectionTypeCard}
+                  onClick={card.handleClick}
+                >
+                  <div className={styles.connectionTypeCardHeader}>
+                    <div className={styles.connectionTypeCardIcon}>{card.icon}</div>
+                    <div className={styles.connectionTypeCardTitle}>{card.title}</div>
+                  </div>
+                  <div className={styles.connectionTypeCardSubtitle}>{card.subtitle}</div>
+                  <div className={styles.connectionTypeCardCta}>
+                    <span className={styles.connectionTypeCardCtaLabel}>Connect</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
         ))}
       </div>
       <ConnectionTypeSelectorBottom onMoreWarehouses={openOtherConnectorModal} />
@@ -184,14 +191,15 @@ function ConnectionTypeSelector () {
 
 export default function CreateConnection () {
   return (
-    <>
+    <div className={styles.createConnection}>
+      <ConnectionTypeSelectorBack />
       <Result
+        className={styles.intro}
         status='success'
         icon={<ApiTwoTone />}
-        title='Connect your warehouse.'
-        subTitle={<>We run queries there; nothing is copied to Dekart.</>}
+        title='Connect your data.'
       />
       <ConnectionTypeSelector />
-    </>
+    </div>
   )
 }

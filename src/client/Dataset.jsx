@@ -128,14 +128,21 @@ function DatasetSelector ({ dataset }) {
             disabledNote={readOnly ? 'Workspace is read-only' : undefined}
             icon={<DatasourceIcon type={connection.connectionType} />}
             title={`${connection.connectionName}`}
-            subtitle={`Run SQL directly on ${getDatasourceMeta(connection.connectionType).name}`}
+            subtitle={connection.connectionType === ConnectionType.CONNECTION_TYPE_HTTP
+              ? <>DuckDB over {connection.httpBaseUrl}{connection.httpDocsUrl && <> · <a href={connection.httpDocsUrl} target='_blank' rel='noreferrer' onClick={event => event.stopPropagation()}>Docs</a></>}</>
+              : `Run SQL directly on ${getDatasourceMeta(connection.connectionType).name}`}
             onClick={() => {
               track('CreateQueryFromConnection', {
                 datasetId: dataset.id,
                 connectionId: connection.id,
                 connectionType: connection.connectionType
               })
-              dispatch(createQuery(dataset.id, connection.id))
+              if (connection.connectionType === ConnectionType.CONNECTION_TYPE_HTTP) {
+                dispatch(createQuery(dataset.id, '', QueryExecutionEngine.QUERY_EXECUTION_ENGINE_DUCKDB,
+                  `SELECT * FROM read_json('${connection.httpBaseUrl.replaceAll("'", "''")}')`))
+              } else {
+                dispatch(createQuery(dataset.id, connection.id))
+              }
             }}
           />
         ))}

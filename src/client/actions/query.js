@@ -52,14 +52,16 @@ export function updateQueryParamsFromQueries () {
   }
 }
 
-export function createQuery (datasetId, connectionId = '', executionEngine = QueryExecutionEngine.QUERY_EXECUTION_ENGINE_CONNECTION) {
+export function createQuery (datasetId, connectionId = '', executionEngine = QueryExecutionEngine.QUERY_EXECUTION_ENGINE_CONNECTION, queryText = '') {
   return (dispatch) => {
     dispatch({ type: createQuery.name })
     const request = new CreateQueryRequest()
     request.setDatasetId(datasetId)
     request.setConnectionId(connectionId)
     request.setExecutionEngine(executionEngine)
-    dispatch(grpcCall(Dekart.CreateQuery, request))
+    dispatch(grpcCall(Dekart.CreateQuery, request, response => {
+      if (queryText) dispatch(queryChanged(response.queryId, queryText))
+    }))
   }
 }
 
