@@ -2,6 +2,7 @@ package dekart
 
 import (
 	"context"
+	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/conn"
 	"dekart/src/server/reportsnapshot"
@@ -119,6 +120,7 @@ func TestServeDatasetSourceRejectsSourceOutsideSnapshotDataset(t *testing.T) {
 	mock.ExpectQuery("select count\\(\\*\\) from").
 		WithArgs(datasetID, "foreign-source").
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
+	mock.ExpectQuery("select qj.http_sources").WithArgs(datasetID).WillReturnRows(sqlmock.NewRows([]string{"http_sources"}))
 	server := NewServer(db, nil, nil)
 	ctx := context.WithValue(context.Background(), user.ContextKey, &user.Claims{
 		Email:         email,
@@ -153,6 +155,8 @@ func TestServeDatasetSourceRestoresSnapshotCredentialForConnectionReader(t *test
 	mock.ExpectQuery("select count\\(\\*\\) from").WithArgs(datasetID, sourceID).
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 	expectSnapshotReportAccess(mock, reportID, email, 1)
+	mock.ExpectQuery("select qj.http_sources").WithArgs(datasetID).WillReturnRows(sqlmock.NewRows([]string{"http_sources"}))
+	mock.ExpectQuery("select q.execution_engine").WithArgs(datasetID).WillReturnError(sql.ErrNoRows)
 	mock.ExpectQuery("select\\s+connection_id\\s+from datasets").WithArgs(datasetID).
 		WillReturnRows(sqlmock.NewRows([]string{"connection_id"}).AddRow(connectionID))
 	mock.ExpectQuery("select\\s+id,\\s+connection_name").WithArgs(connectionID).

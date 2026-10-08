@@ -330,6 +330,11 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 		log.Warn().Msgf("connection not found id:%s", connectionID)
 		return nil, nil
 	}
+	if connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_HTTP {
+		if err := s.loadHTTPConnection(ctx, &connection, false); err != nil {
+			return nil, err
+		}
+	}
 	return &connection, nil
 }
 
@@ -478,6 +483,14 @@ func (s Server) getUserConnections(ctx context.Context) ([]*proto.Connection, er
 		connections[len(connections)-1].IsDefault = true
 	}
 
+	rows.Close()
+	for _, connection := range connections {
+		if connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_HTTP {
+			if err := s.loadHTTPConnection(ctx, connection, true); err != nil {
+				return nil, err
+			}
+		}
+	}
 	return connections, nil
 
 }
@@ -521,6 +534,9 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 	}
 
 	err := conn.ValidateReqConnection(req.Connection)
+	if err == nil && req.Connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_HTTP {
+		err = validateHTTPConnection(ctx, req.Connection)
+	}
 	if err != nil {
 		log.Warn().
 			Err(err).
@@ -541,7 +557,10 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 
 	var res sql.Result
 
-	if req.Connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_SNOWFLAKE {
+	if req.Connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_HTTP {
+		res, err = s.db.ExecContext(ctx, `update connections set connection_name=$1,http_base_url=$2,http_docs_url=$3,
+            updated_at=CURRENT_TIMESTAMP where id=$4 and workspace_id=$5 and connection_type=$6`, req.Connection.ConnectionName, req.Connection.HttpBaseUrl, req.Connection.HttpDocsUrl, req.Connection.Id, checkWorkspace(ctx).ID, proto.ConnectionType_CONNECTION_TYPE_HTTP)
+	} else if req.Connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_SNOWFLAKE {
 		if req.Connection.SnowflakeKey != nil {
 			privateKey := secrets.SecretToString(req.Connection.SnowflakeKey, claims)
 			if privateKey == "" {
@@ -871,6 +890,9 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 		return nil, status.Error(codes.PermissionDenied, "only admins can create connections")
 	}
 	err := conn.ValidateReqConnection(req.Connection)
+	if err == nil && req.Connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_HTTP {
+		err = validateHTTPConnection(ctx, req.Connection)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -918,8 +940,9 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 			postgres_password_encrypted,
 			postgres_database,
 			postgres_port,
-			postgres_ssl_mode
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
+			postgres_ssl_mode,
+            http_base_url,http_docs_url,http_headers_json_encrypted
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)`,
 		id,
 		req.Connection.ConnectionName,
 		req.Connection.BigqueryProjectId,
@@ -943,6 +966,7 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 		req.Connection.PostgresDatabase,
 		req.Connection.PostgresPort,
 		req.Connection.PostgresSslMode,
+		req.Connection.HttpBaseUrl, req.Connection.HttpDocsUrl, secrets.SecretToServerEncrypted(req.Connection.HttpHeadersJson, claims),
 	)
 	if err != nil {
 		errtype.LogError(err, "insert into connections failed")
@@ -952,6 +976,9 @@ func (s Server) CreateConnection(ctx context.Context, req *proto.CreateConnectio
 	s.userStreams.PingAll()
 
 	req.Connection.Id = id
+	if req.Connection.ConnectionType == proto.ConnectionType_CONNECTION_TYPE_HTTP {
+		req.Connection.HttpHeadersJson = nil
+	}
 
 	return &proto.CreateConnectionResponse{
 		Connection: req.Connection,

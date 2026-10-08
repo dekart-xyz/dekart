@@ -142,6 +142,13 @@ function ConnectionTypeSelector () {
       dispatch(newConnection(ConnectionType.CONNECTION_TYPE_POSTGRES))
     }
   })
+  connectionCards.push({
+    key: 'http',
+    title: 'HTTP source',
+    subtitle: 'API, S3, parquet over HTTPS',
+    icon: <DatasourceIcon type={ConnectionType.CONNECTION_TYPE_HTTP} />,
+    handleClick: () => dispatch(newConnection(ConnectionType.CONNECTION_TYPE_HTTP))
+  })
   const openOtherConnectorModal = () => {
     track('ConnectionTypeSelectorOther')
     setOtherModalOpen(true)
