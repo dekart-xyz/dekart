@@ -1,3 +1,4 @@
+// Regression: A held rerun publishes the previous report filter after navigation.
 /* global cy, describe, it, Cypress */
 
 const QUERY = "SELECT 52.5 + i / 100 AS latitude, 13.4 + i / 100 AS longitude, CASE i % 2 WHEN 0 THEN 'Alpha' ELSE 'Beta' END AS category FROM range(6) t(i)"

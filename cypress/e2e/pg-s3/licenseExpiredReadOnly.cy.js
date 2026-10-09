@@ -1,3 +1,4 @@
+// Critical path: License expiry turns the instance read-only
 /* eslint-disable no-undef */
 
 describe('pg-s3 expired license read-only', () => {

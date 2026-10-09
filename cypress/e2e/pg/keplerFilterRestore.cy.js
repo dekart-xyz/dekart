@@ -1,3 +1,4 @@
+// Regression: An empty native query replacement loses the selected category or resurrects a removed filter.
 /* global cy, describe, it, Cypress */
 
 const QUERY = "SELECT 52.5 + i / 100.0 AS latitude, 13.4 + i / 100.0 AS longitude, CASE i % 2 WHEN 0 THEN 'Alpha' ELSE 'Beta' END AS category FROM generate_series(0, 5) t(i)"

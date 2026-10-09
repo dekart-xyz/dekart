@@ -1,3 +1,4 @@
+// Critical path: Widgets render and filter
 /* global cy, describe, it, Cypress, expect */
 
 const dragHistogramRange = (from, to) => {

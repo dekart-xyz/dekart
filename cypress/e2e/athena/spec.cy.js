@@ -1,3 +1,4 @@
+// Critical path: Athena query to map
 /* eslint-disable no-undef */
 
 import copy from '../../fixtures/copy.json'
