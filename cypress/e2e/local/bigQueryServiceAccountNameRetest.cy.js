@@ -1,3 +1,4 @@
+// Regression: Editing a service-account connection name leaves Test disabled; unconfigured OAuth remains selectable.
 /* eslint-disable no-undef */
 
 const setInputValue = (selector, value) => {

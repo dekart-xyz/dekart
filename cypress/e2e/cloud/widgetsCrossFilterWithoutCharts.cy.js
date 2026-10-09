@@ -1,3 +1,4 @@
+// Regression: Cross-filtering a dataset without charts prevents another selection (2166e1d).
 /* global cy, describe, it, Cypress */
 
 // Match a dashboard whose cross-filter target has map data but no charts.

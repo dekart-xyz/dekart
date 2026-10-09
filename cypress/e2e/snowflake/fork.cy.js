@@ -1,3 +1,4 @@
+// Regression: Forking a shared Snowflake report with empty query parameters fails (a3db146).
 /* eslint-disable no-undef */
 import copy from '../../fixtures/copy.json'
 

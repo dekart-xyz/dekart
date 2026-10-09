@@ -1,3 +1,4 @@
+// Regression: Switching from viewing to editing loses authored layers while parameter results are empty.
 /* eslint-disable no-undef */
 import { UpdateReportRequest, UpdateReportResponse } from 'dekart-proto/dekart_pb'
 import { LAYER_SELECTOR, uploadActiveDataset } from '../local/duckdbHelpers'

@@ -57,3 +57,6 @@ data
 keys/license-private.pem
 keys/device-auth-private.pem
 keys/device-auth-public.pem
+
+# Feature-driving Cypress specs stay local.
+cypress/e2e/**/tmp*.cy.js
