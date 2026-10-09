@@ -1,3 +1,4 @@
+import HTTPConnectionModal from './HTTPConnectionModal'
 import Form from 'antd/es/form'
 import Input from 'antd/es/input'
 import Modal from 'antd/es/modal'
@@ -560,6 +561,8 @@ export default function ConnectionModal () {
     return <BigQueryServiceAccountConnectionModal form={form} />
   }
   switch (connectionType) {
+    case ConnectionType.CONNECTION_TYPE_HTTP:
+      return <HTTPConnectionModal form={form} />
     case ConnectionType.CONNECTION_TYPE_POSTGRES:
       return <PostgresConnectionModal form={form} />
     case ConnectionType.CONNECTION_TYPE_SNOWFLAKE:

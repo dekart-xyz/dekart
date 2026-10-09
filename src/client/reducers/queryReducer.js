@@ -265,7 +265,7 @@ function queryParamsList (state = [], action) {
     case openReport.name:
       return []
     case reportUpdate.name:
-      return structuredClone(action.report.queryParamsList)
+      return structuredClone(action.queryParamsList)
     case updateQueryParamsFromQueries.name:
       return action.queryParamsList
     default:

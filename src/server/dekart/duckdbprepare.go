@@ -127,7 +127,7 @@ func (s *Server) captureDuckDBPreparationTx(ctx context.Context, tx *sql.Tx, rep
 	if err != nil {
 		return nil, err
 	}
-	if err := analyzeDuckDBQueries(ctx, tx, queries, catalog, params); err != nil {
+	if err := analyzeDuckDBQueries(ctx, tx, queries, catalog, params, reportID); err != nil {
 		return nil, err
 	}
 	ordered, selected, externalIDs, err := prerequisiteDuckDBQueries(queries, rootQueryID)
@@ -405,6 +405,7 @@ func lowerDuckDBExecution(snapshot *duckDBPreparationSnapshot, jobsByDatasetID m
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
+	sourceIndex := len(sources)
 	for _, candidate := range snapshot.ordered {
 		job := jobsByDatasetID[candidate.datasetID]
 		// Local statements are emitted only for synchronous, error-free DuckDB metadata jobs.
@@ -424,8 +425,23 @@ func lowerDuckDBExecution(snapshot *duckDBPreparationSnapshot, jobsByDatasetID m
 				Parameters: parameterValues,
 			})
 		}
+		compiledSQL := job.QueryText
+		// Download HTTP sources after this job's dependencies and parameters are available.
+		httpSources := make([]*proto.DuckDBExecutionSource, 0, len(job.HttpSources))
+		for _, source := range job.HttpSources {
+			index := sourceIndex
+			sourceIndex++
+			httpSources = append(httpSources, &proto.DuckDBExecutionSource{
+				DatasetId: candidate.datasetID,
+				Revision:  &proto.DuckDBExecutionSource_HttpSourceId{HttpSourceId: source.SourceId},
+				FileName:  source.FileName,
+				UrlSql:    source.UrlSql,
+				Extension: source.Extension,
+			})
+			compiledSQL = strings.ReplaceAll(compiledSQL, "'"+source.FileName+"'", fmt.Sprintf("getvariable('dekart_source_%d_path')", index))
+		}
 		jobTable := `dekart_internal.` + quoteDuckDBIdentifier(duckDBJobTableName(job.Id))
-		statements = append(statements, &proto.DuckDBExecutionStatement{Sql: fmt.Sprintf("CREATE OR REPLACE TABLE %s AS %s", jobTable, job.QueryText)})
+		statements = append(statements, &proto.DuckDBExecutionStatement{Sql: fmt.Sprintf("CREATE OR REPLACE TABLE %s AS %s", jobTable, compiledSQL), HttpSources: httpSources})
 		// Parameter tables are node-local and must not leak into the next materialization.
 		if len(parameterValues) > 0 {
 			statements = append(statements, &proto.DuckDBExecutionStatement{Sql: "DROP TABLE IF EXISTS " + paramsTable})

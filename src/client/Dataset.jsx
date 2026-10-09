@@ -5,7 +5,7 @@ import Query from './Query'
 import File from './File'
 import { createQuery } from './actions/query'
 import { createFile } from './actions/file'
-import { ApiTwoTone, InboxOutlined, ReadOutlined } from '@ant-design/icons'
+import { PlusOutlined, ReadOutlined, RightOutlined, UploadOutlined } from '@ant-design/icons'
 import { DatasourceIcon } from './Datasource'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom'
 import { addReadme } from './actions/readme'
@@ -16,10 +16,9 @@ import { isSystemConnectionID } from './actions/connection'
 import { ConnectionType, QueryExecutionEngine } from 'dekart-proto/dekart_pb'
 import { DUCKDB_DATASOURCE } from './lib/duckdb/constants'
 
-function DatasetSelectorButton ({ icon, title, subtitle, onClick, id, disable, disabledNote }) {
+function DatasetSelectorButton ({ icon, title, subtitle, onClick, disable, disabledNote }) {
   return (
     <Button
-      id={id}
       size='large'
       className={styles.datasetSelectorButton}
       onClick={onClick}
@@ -28,8 +27,12 @@ function DatasetSelectorButton ({ icon, title, subtitle, onClick, id, disable, d
     >
       <span className={styles.datasetSelectorButtonInner}>
         <span className={styles.datasetSelectorIcon}>{icon}</span>
-        <span className={styles.datasetSelectorTitle}>{title}</span>
-        <span className={styles.datasetSelectorSubtitle}>{subtitle}</span>
+        {/* REVIEW: Keep each option label and subtitle together beside its icon and navigation arrow. */}
+        <span className={styles.datasetSelectorText}>
+          <span className={styles.datasetSelectorTitle}>{title}</span>
+          <span className={styles.datasetSelectorSubtitle}>{subtitle}</span>
+        </span>
+        <RightOutlined className={styles.datasetSelectorArrow} />
       </span>
     </Button>
   )
@@ -82,85 +85,95 @@ function DatasetSelector ({ dataset }) {
   return (
     <div className={styles.datasetSelector}>
       <div className={styles.datasetSelectorInner}>
-        <DatasetSelectorButton
-          icon={<InboxOutlined />}
-          disable={!(allowFileUpload && report.canWrite) || readOnly}
-          disabledNote={readOnly ? 'Workspace is read-only' : disabledNote}
-          title='Upload File'
-          subtitle='Load files in CSV, GeoJSON, or Parquet formats'
-          onClick={() => {
-            track('ClickUploadFileOption', { datasetId: dataset.id })
-            dispatch(createFile(dataset.id, fileUploadConnection?.id))
-          }}
-        />
-        {!report.readme && (
-          <DatasetSelectorButton
-            icon={<ReadOutlined />}
-            disable={!report.canWrite || readOnly}
-            disabledNote={readOnly ? 'Workspace is read-only' : undefined}
-            title='Write README'
-            subtitle='Add Markdown description to your map'
-            onClick={() => {
-              track('ClickWriteReadme', { datasetId: dataset.id })
-              dispatch(addReadme(dataset.id))
-            }}
-          />
-        )}
-        <DatasetSelectorButton
-          icon={<DatasourceIcon type={DUCKDB_DATASOURCE} />}
-          disable={!report.canWrite || readOnly}
-          disabledNote={readOnly ? 'Workspace is read-only' : undefined}
-          title='DuckDB'
-          subtitle='Transform datasets already in this map'
-          onClick={() => {
-            track('CreateQueryFromConnection', {
-              datasetId: dataset.id,
-              executionEngine: QueryExecutionEngine.QUERY_EXECUTION_ENGINE_DUCKDB
-            })
-            dispatch(createQuery(dataset.id, '', QueryExecutionEngine.QUERY_EXECUTION_ENGINE_DUCKDB))
-          }}
-        />
+        {/* REVIEW: Group file actions separately from SQL sources while preserving write-permission gates. */}
+        <section aria-label='File' className={styles.datasetSelectorGroup}>
+          <h2>File</h2>
+          <div className={styles.datasetSelectorOptions}>
+            <DatasetSelectorButton
+              icon={<UploadOutlined />}
+              disable={!(allowFileUpload && report.canWrite) || readOnly}
+              disabledNote={readOnly ? 'Workspace is read-only' : disabledNote}
+              title='Upload File'
+              subtitle='Load files in CSV, GeoJSON, or Parquet formats'
+              onClick={() => {
+                track('ClickUploadFileOption', { datasetId: dataset.id })
+                dispatch(createFile(dataset.id, fileUploadConnection?.id))
+              }}
+            />
+            {!report.readme && (
+              <DatasetSelectorButton
+                icon={<ReadOutlined />}
+                disable={!report.canWrite || readOnly}
+                disabledNote={readOnly ? 'Workspace is read-only' : undefined}
+                title='Write README'
+                subtitle='Add Markdown description to your map'
+                onClick={() => {
+                  track('ClickWriteReadme', { datasetId: dataset.id })
+                  dispatch(addReadme(dataset.id))
+                }}
+              />
+            )}
+          </div>
+        </section>
+        <section aria-label='Query' className={styles.datasetSelectorGroup}>
+          <h2>Query</h2>
+          <div className={styles.datasetSelectorOptions}>
+            <DatasetSelectorButton
+              icon={<DatasourceIcon type={DUCKDB_DATASOURCE} />}
+              disable={!report.canWrite || readOnly}
+              disabledNote={readOnly ? 'Workspace is read-only' : undefined}
+              title='DuckDB'
+              subtitle='Transform datasets already in this map'
+              onClick={() => {
+                track('CreateQueryFromConnection', {
+                  datasetId: dataset.id,
+                  executionEngine: QueryExecutionEngine.QUERY_EXECUTION_ENGINE_DUCKDB
+                })
+                dispatch(createQuery(dataset.id, '', QueryExecutionEngine.QUERY_EXECUTION_ENGINE_DUCKDB))
+              }}
+            />
 
-        {filteredConnectionList.map((connection) => (
-          <DatasetSelectorButton
-            key={connection.id}
-            disable={!report.canWrite || readOnly}
-            disabledNote={readOnly ? 'Workspace is read-only' : undefined}
-            icon={<DatasourceIcon type={connection.connectionType} />}
-            title={`${connection.connectionName}`}
-            subtitle={`Run SQL directly on ${getDatasourceMeta(connection.connectionType).name}`}
-            onClick={() => {
-              track('CreateQueryFromConnection', {
-                datasetId: dataset.id,
-                connectionId: connection.id,
-                connectionType: connection.connectionType
-              })
-              dispatch(createQuery(dataset.id, connection.id))
-            }}
-          />
-        ))}
-        {filteredConnectionList.length === 0 && (
-          <DatasetSelectorButton
-            icon={<ApiTwoTone />}
-            disable={!report.canWrite || readOnly}
-            disabledNote={readOnly ? 'Workspace is read-only' : undefined}
-            id='dekart-add-connection'
-            title='Add connection'
-            subtitle='Connect BigQuery, Snowflake, PostGIS, Wherobots'
-            onClick={() => {
-              dispatch(updateSessionStorage('redirectWhenSaveConnection', { reportId: report.id, edit: true }))
-              history.push('/connections')
-              track('AddConnectionFromDatasetSelector')
-            }}
-          />
-        )}
+            {filteredConnectionList.map((connection) => (
+              <DatasetSelectorButton
+                key={connection.id}
+                disable={!report.canWrite || readOnly}
+                disabledNote={readOnly ? 'Workspace is read-only' : undefined}
+                icon={<DatasourceIcon type={connection.connectionType} />}
+                title={`${connection.connectionName}`}
+                subtitle={connection.connectionType === ConnectionType.CONNECTION_TYPE_HTTP
+                  ? (
+                    <span className={styles.datasetSelectorHost} title={connection.httpBaseUrl}>
+                      {connection.httpBaseUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                    </span>
+                    )
+                  : `Run SQL directly on ${getDatasourceMeta(connection.connectionType).name}`}
+                onClick={() => {
+                  track('CreateQueryFromConnection', {
+                    datasetId: dataset.id,
+                    connectionId: connection.id,
+                    connectionType: connection.connectionType
+                  })
+                  if (connection.connectionType === ConnectionType.CONNECTION_TYPE_HTTP) {
+                    dispatch(createQuery(dataset.id, '', QueryExecutionEngine.QUERY_EXECUTION_ENGINE_DUCKDB,
+                      `SELECT * FROM read_json('${connection.httpBaseUrl.replaceAll("'", "''")}')`))
+                  } else {
+                    dispatch(createQuery(dataset.id, connection.id))
+                  }
+                }}
+              />
+            ))}
+          </div>
+        </section>
       </div>
-      {isAdmin && userDefinedConnection && filteredConnectionList.length > 0 && (
+      {isAdmin && userDefinedConnection && (
         <Button
-          type='link'
+          id='dekart-add-connection'
+          className={styles.manageConnections}
+          icon={<PlusOutlined />}
           disabled={readOnly}
           title={readOnly ? 'Workspace is read-only' : undefined}
           onClick={() => {
+            dispatch(updateSessionStorage('redirectWhenSaveConnection', { reportId: report.id, edit: true }))
             track('AddAndEditConnections')
             history.push('/connections')
           }}

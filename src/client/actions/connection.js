@@ -54,7 +54,10 @@ export function editConnection (id, connectionType, bigqueryKey = false) {
   return async (dispatch) => {
     dispatch({ type: editConnection.name, id, connectionType, bigqueryKey })
     dispatch(getConnectionsList()) // get the latest connections list to ensure the connection is up-to-date
-    dispatch(getProjectList())
+    // Only BigQuery OAuth uses project discovery; other connections must not start Google authorization.
+    if (connectionType === ConnectionType.CONNECTION_TYPE_BIGQUERY && !bigqueryKey) {
+      dispatch(getProjectList())
+    }
   }
 }
 
@@ -164,6 +167,13 @@ export function connectionSaved () {
   }
 }
 
+// Saved headers stay separate from the metadata shared by create and update requests.
+function setHTTPConnectionMetadata (connection, props) {
+  connection.setConnectionName(props.connectionName)
+  connection.setHttpBaseUrl(props.httpBaseUrl)
+  connection.setHttpDocsUrl(props.httpDocsUrl || '')
+}
+
 export function saveConnection (id, connectionType, connectionProps) {
   return async (dispatch, getState) => {
     const connection = new Connection()
@@ -172,7 +182,13 @@ export function saveConnection (id, connectionType, connectionProps) {
     if (!id) {
       // create new connection
       const request = new CreateConnectionRequest()
-      if (connectionType === ConnectionType.CONNECTION_TYPE_SNOWFLAKE) {
+      if (connectionType === ConnectionType.CONNECTION_TYPE_HTTP) {
+        setHTTPConnectionMetadata(connection, connectionProps)
+        const headers = Object.fromEntries(connectionProps.httpHeaderRows.map(row => [row.name, row.value]))
+        const secret = new Secret()
+        secret.setClientEncrypted(await encryptPassword(JSON.stringify(headers), getState().env.variables.AES_KEY, getState().env.variables.AES_IV))
+        connection.setHttpHeadersJson(secret)
+      } else if (connectionType === ConnectionType.CONNECTION_TYPE_SNOWFLAKE) {
         connection.setConnectionName(connectionProps.connectionName || 'Snowflake')
         connection.setSnowflakeAccountId(connectionProps.snowflakeAccountId)
         connection.setSnowflakeUsername(connectionProps.snowflakeUsername)
@@ -225,7 +241,10 @@ export function saveConnection (id, connectionType, connectionProps) {
       // update existing connection
       const request = new UpdateConnectionRequest()
       connection.setId(id)
-      if (connectionType === ConnectionType.CONNECTION_TYPE_SNOWFLAKE) {
+      // Update HTTP metadata without sending or replacing saved credentials.
+      if (connectionType === ConnectionType.CONNECTION_TYPE_HTTP) {
+        setHTTPConnectionMetadata(connection, connectionProps)
+      } else if (connectionType === ConnectionType.CONNECTION_TYPE_SNOWFLAKE) {
         connection.setConnectionName(connectionProps.connectionName)
         connection.setSnowflakeAccountId(connectionProps.snowflakeAccountId)
         connection.setSnowflakeUsername(connectionProps.snowflakeUsername)

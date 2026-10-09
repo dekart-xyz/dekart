@@ -1,0 +1,16 @@
+## 2026-10-08 — Cleanup before human review
+- Split HTTP reader rewriting into `duckdbsql/http.go` and bounded fetching into `httpsource/fetch.go`.
+- Deduplicated filename generation and editable HTTP metadata; simplified connection card grouping.
+- Deleted the repeated path trim and custom header-name regex; use the existing HTTP validator.
+- Reformatted the HTTP form and compiler declarations for readability.
+- Interface changes from this pass: none; the incoming implementation's proto and public APIs are unchanged.
+- Interfaces proposed for dekart-refactor-plan: none.
+- No Cypress spec or generated/proto file changed during this pass.
+- Checks: `go test ./...`, frontend lint and 158 unit tests pass.
+- Cypress: 22 cloud + 3 local tests pass; two opt-in TravelTime/Vaylens tests skipped without credentials.
+- Vite IPv4 resolution and a frontend restart recovered setup failures; no test suppression or edits.
+- Complexity and maintainability reviewers: no actionable cleanup findings after recheck.
+- Added 52 REVIEW notes; two REVIEW!: flags mark existing save-error loading and retained HTTP buffers.
+- Deferred behavior work: those two flags, duplicate parameter binding and the implementation report's MCP/editor discovery gaps.
+- Review plan: `docs/review-plan-httpfs.md`; report/plan are handoff aids, not intended for commit.
+- Snapshot: `httpfs_snapshot_20261008_091928`; current changes remain unstaged and uncommitted.

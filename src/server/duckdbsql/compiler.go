@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"dekart/src/server/httpsource"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -29,24 +30,42 @@ var safeTableFunctions = map[string]bool{
 	"UNNEST":          true,
 }
 
+// REVIEW: Carry validated HTTP reader references alongside compiled SQL and dataset dependencies.
+type HTTPSourceRef struct{ FileName, SourceID, URL, Extension, URLSQL, URLTemplate string }
+
 // Result contains the shared graph analysis and exact browser execution SQL.
 type Result struct {
+	HTTPSources  []HTTPSourceRef
 	SQL          string
 	Dependencies []string
 	Error        string
 }
 
 // Compile parses one read-only statement and resolves report dataset references.
-func Compile(ctx context.Context, query string, datasetsByLabel map[string][]string, parameterNames []string) Result {
-	compiled, dependencies, err := compile(ctx, query, datasetsByLabel, parameterNames)
+func Compile(
+	ctx context.Context,
+	query string,
+	datasetsByLabel map[string][]string,
+	parameterNames []string,
+	httpSources []httpsource.Source,
+) Result {
+	refs := []HTTPSourceRef{}
+	compiled, dependencies, err := compile(ctx, query, datasetsByLabel, parameterNames, httpSources, &refs)
 	if err != nil {
-		return Result{Dependencies: dependencies, Error: err.Error()}
+		return Result{Dependencies: dependencies, HTTPSources: refs, Error: err.Error()}
 	}
-	return Result{SQL: compiled, Dependencies: dependencies}
+	return Result{SQL: compiled, Dependencies: dependencies, HTTPSources: refs}
 }
 
 // compile delegates SQL syntax to DuckDB and only applies Dekart reference policy.
-func compile(ctx context.Context, query string, datasetsByLabel map[string][]string, parameterNames []string) (string, []string, error) {
+func compile(
+	ctx context.Context,
+	query string,
+	datasetsByLabel map[string][]string,
+	parameterNames []string,
+	httpSources []httpsource.Source,
+	refs *[]HTTPSourceRef,
+) (string, []string, error) {
 	query, parameterNames, err := encodeParameters(query, parameterNames)
 	if err != nil {
 		return "", nil, err
@@ -61,11 +80,20 @@ func compile(ctx context.Context, query string, datasetsByLabel map[string][]str
 	}
 	dependencies := make([]string, 0)
 	seenDependencies := make(map[string]bool)
-	if err := rewriteAST(ast, nil, datasetsByLabel, parameterNames, &dependencies, seenDependencies); err != nil {
+	if err := rewriteAST(ast, nil, datasetsByLabel, parameterNames, &dependencies, seenDependencies, httpSources, refs); err != nil {
 		return "", dependencies, err
 	}
 	sort.Strings(dependencies)
 	compiled, err := deserialize(ctx, ast)
+	// Computed requests cannot share an execution with other HTTP readers.
+	// TODO: why is it needed?
+	if len(*refs) > 1 {
+		for _, ref := range *refs {
+			if ref.URLSQL != "" {
+				return "", dependencies, fmt.Errorf("A dataset-derived HTTP URL requires exactly one HTTP reader")
+			}
+		}
+	}
 	compiled = restoreParameterInputs(compiled, parameterNames)
 	return compiled, dependencies, err
 }
@@ -114,11 +142,20 @@ func deserialize(ctx context.Context, ast map[string]any) (string, error) {
 }
 
 // rewriteAST resolves Dekart parameters and datasets while enforcing source policy.
-func rewriteAST(value any, inheritedCTEs map[string]bool, datasetsByLabel map[string][]string, parameterNames []string, dependencies *[]string, seenDependencies map[string]bool) error {
+func rewriteAST(
+	value any,
+	inheritedCTEs map[string]bool,
+	datasetsByLabel map[string][]string,
+	parameterNames []string,
+	dependencies *[]string,
+	seenDependencies map[string]bool,
+	httpSources []httpsource.Source,
+	refs *[]HTTPSourceRef,
+) error {
 	switch value := value.(type) {
 	case []any:
 		for _, child := range value {
-			if err := rewriteAST(child, inheritedCTEs, datasetsByLabel, parameterNames, dependencies, seenDependencies); err != nil {
+			if err := rewriteAST(child, inheritedCTEs, datasetsByLabel, parameterNames, dependencies, seenDependencies, httpSources, refs); err != nil {
 				return err
 			}
 		}
@@ -144,11 +181,14 @@ func rewriteAST(value any, inheritedCTEs map[string]bool, datasetsByLabel map[st
 			function, _ := value["function"].(map[string]any)
 			name, _ := function["function_name"].(string)
 			if !safeTableFunctions[strings.ToUpper(name)] {
-				return fmt.Errorf("DuckDB SQL cannot use table function %s", name)
+				// Rewrite supported HTTP readers while retaining the existing table-function allowlist.
+				if err := rewriteHTTPFunction(function, name, parameterNames, httpSources, refs, datasetsByLabel, dependencies, seenDependencies); err != nil {
+					return err
+				}
 			}
 		}
 		for _, key := range sortedKeys(value) {
-			if err := rewriteAST(value[key], ctes, datasetsByLabel, parameterNames, dependencies, seenDependencies); err != nil {
+			if err := rewriteAST(value[key], ctes, datasetsByLabel, parameterNames, dependencies, seenDependencies, httpSources, refs); err != nil {
 				return err
 			}
 		}

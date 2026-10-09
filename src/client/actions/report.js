@@ -5,12 +5,12 @@ import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
 import { showMapConfigConflictMessage, success } from './message'
 import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType, SetTrackViewersRequest, SetAutoRefreshIntervalSecondsRequest, RestoreReportSnapshotRequest, SaveMapPreviewRequest } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
-import { createQuery, downloadQuerySource, invalidateRunAllQueries, runWarehouseQuery } from './query'
+import { createQuery, downloadQuerySource, getQueryParamsFromQuery, invalidateRunAllQueries, runWarehouseQuery } from './query'
 import { cleanupRemovedDataset, downloadDataset } from './dataset'
 import { shouldAddQuery } from '../lib/shouldAddQuery'
 import { shouldUpdateDataset } from '../lib/shouldUpdateDataset'
 import { needSensitiveScopes } from './user'
-import { getQueryParamsObjArr, reconcileQueryParamsState } from '../lib/queryParams'
+import { getQueryParamsObjArr, normalizeQueryParamsValues, reconcileQueryParamsState } from '../lib/queryParams'
 import { getMapConfigToSave, receiveReportUpdateMapConfig, restoreAuthoredMapConfig, shouldUpdateMapConfig } from '../lib/mapConfig'
 import { extensionFromMime } from '../lib/mime'
 import { track } from '../lib/tracking'
@@ -306,7 +306,20 @@ export function reportUpdate (reportStreamResponse) {
       reportStatus: { lastSaved, savedReportVersion, savedVersionId, lastMapConfigChanged, snapshotMode },
       hasOpenedKeplerPanel
     } = state
-    const activeQueryParams = reconcileQueryParamsState(currentQueryParams, report.queryParamsList, window.location.search)
+    const unsavedQueries = queriesList.filter(query => state.queryStatus[query.id]?.changed)
+    const localQueryParams = getQueryParamsFromQuery(currentQueryParams.list,
+      unsavedQueries.map(query => state.queryStatus[query.id].queryText).join('\n'))
+    // Keep newly added local parameters without replacing canonical definitions for saved queries.
+    const queryParamsList = [...report.queryParamsList, ...localQueryParams.filter(local =>
+      !report.queryParamsList.some(parameter => parameter.name === local.name))]
+    // Unsaved parameter definitions have not changed the applied URL; retain their draft inputs.
+    const activeQueryParams = unsavedQueries.length
+      ? {
+          values: normalizeQueryParamsValues(queryParamsList, currentQueryParams.values),
+          url: currentQueryParams.url,
+          hash: currentQueryParams.hash
+        }
+      : reconcileQueryParamsState(currentQueryParams, queryParamsList, window.location.search)
     const hash = activeQueryParams.hash
     const queryJobsList = streamedQueryJobsList
     const initialHydration = !state.report
@@ -349,6 +362,7 @@ export function reportUpdate (reportStreamResponse) {
       hash,
       queryParamsValues: activeQueryParams.values,
       queryParamsUrl: activeQueryParams.url,
+      queryParamsList,
       directAccessEmailsList,
       initialHydration,
       initialAutoCreateLayerIds: initialAutoCreateLayerIds(datasetsList, queriesList, filesList, queryJobsList),

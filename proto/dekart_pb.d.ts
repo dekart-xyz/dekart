@@ -1767,6 +1767,17 @@ export class Connection extends jspb.Message {
   getPostgresSslMode(): string;
   setPostgresSslMode(value: string): void;
 
+  getHttpBaseUrl(): string;
+  setHttpBaseUrl(value: string): void;
+
+  hasHttpHeadersJson(): boolean;
+  clearHttpHeadersJson(): void;
+  getHttpHeadersJson(): Secret | undefined;
+  setHttpHeadersJson(value?: Secret): void;
+
+  getHttpDocsUrl(): string;
+  setHttpDocsUrl(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Connection.AsObject;
   static toObject(includeInstance: boolean, msg: Connection): Connection.AsObject;
@@ -1806,6 +1817,9 @@ export namespace Connection {
     postgresDatabase: string,
     postgresPort: number,
     postgresSslMode: string,
+    httpBaseUrl: string,
+    httpHeadersJson?: Secret.AsObject,
+    httpDocsUrl: string,
   }
 }
 
@@ -2748,6 +2762,50 @@ export namespace Dataset {
   }
 }
 
+export class HTTPSourceRevision extends jspb.Message {
+  getFileName(): string;
+  setFileName(value: string): void;
+
+  getConnectionId(): string;
+  setConnectionId(value: string): void;
+
+  getUrl(): string;
+  setUrl(value: string): void;
+
+  getSourceId(): string;
+  setSourceId(value: string): void;
+
+  getExtension$(): string;
+  setExtension$(value: string): void;
+
+  getUrlSql(): string;
+  setUrlSql(value: string): void;
+
+  getUrlTemplate(): string;
+  setUrlTemplate(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): HTTPSourceRevision.AsObject;
+  static toObject(includeInstance: boolean, msg: HTTPSourceRevision): HTTPSourceRevision.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: HTTPSourceRevision, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): HTTPSourceRevision;
+  static deserializeBinaryFromReader(message: HTTPSourceRevision, reader: jspb.BinaryReader): HTTPSourceRevision;
+}
+
+export namespace HTTPSourceRevision {
+  export type AsObject = {
+    fileName: string,
+    connectionId: string,
+    url: string,
+    sourceId: string,
+    extension: string,
+    urlSql: string,
+    urlTemplate: string,
+  }
+}
+
 export class QueryJob extends jspb.Message {
   getId(): string;
   setId(value: string): void;
@@ -2797,6 +2855,11 @@ export class QueryJob extends jspb.Message {
   getDatasetId(): string;
   setDatasetId(value: string): void;
 
+  clearHttpSourcesList(): void;
+  getHttpSourcesList(): Array<HTTPSourceRevision>;
+  setHttpSourcesList(value: Array<HTTPSourceRevision>): void;
+  addHttpSources(value?: HTTPSourceRevision, index?: number): HTTPSourceRevision;
+
   clearDependencyRevisionsList(): void;
   getDependencyRevisionsList(): Array<QueryJobDependencyRevision>;
   setDependencyRevisionsList(value: Array<QueryJobDependencyRevision>): void;
@@ -2830,6 +2893,7 @@ export namespace QueryJob {
     queryParamsHash: string,
     resultExtension: string,
     datasetId: string,
+    httpSourcesList: Array<HTTPSourceRevision.AsObject>,
     dependencyRevisionsList: Array<QueryJobDependencyRevision.AsObject>,
   }
 
@@ -3472,6 +3536,17 @@ export class DuckDBExecutionSource extends jspb.Message {
   getQueryJobId(): string;
   setQueryJobId(value: string): void;
 
+  hasHttpSourceId(): boolean;
+  clearHttpSourceId(): void;
+  getHttpSourceId(): string;
+  setHttpSourceId(value: string): void;
+
+  getFileName(): string;
+  setFileName(value: string): void;
+
+  getUrlSql(): string;
+  setUrlSql(value: string): void;
+
   getExtension$(): string;
   setExtension$(value: string): void;
 
@@ -3491,6 +3566,9 @@ export namespace DuckDBExecutionSource {
     datasetId: string,
     fileSourceId: string,
     queryJobId: string,
+    httpSourceId: string,
+    fileName: string,
+    urlSql: string,
     extension: string,
   }
 
@@ -3498,6 +3576,7 @@ export namespace DuckDBExecutionSource {
     REVISION_NOT_SET = 0,
     FILE_SOURCE_ID = 2,
     QUERY_JOB_ID = 3,
+    HTTP_SOURCE_ID = 5,
   }
 }
 
@@ -3509,6 +3588,11 @@ export class DuckDBExecutionStatement extends jspb.Message {
   getParametersList(): Array<string>;
   setParametersList(value: Array<string>): void;
   addParameters(value: string, index?: number): string;
+
+  clearHttpSourcesList(): void;
+  getHttpSourcesList(): Array<DuckDBExecutionSource>;
+  setHttpSourcesList(value: Array<DuckDBExecutionSource>): void;
+  addHttpSources(value?: DuckDBExecutionSource, index?: number): DuckDBExecutionSource;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): DuckDBExecutionStatement.AsObject;
@@ -3524,6 +3608,7 @@ export namespace DuckDBExecutionStatement {
   export type AsObject = {
     sql: string,
     parametersList: Array<string>,
+    httpSourcesList: Array<DuckDBExecutionSource.AsObject>,
   }
 }
 
@@ -4424,6 +4509,7 @@ export interface ConnectionTypeMap {
   CONNECTION_TYPE_POSTGRES: 5;
   CONNECTION_TYPE_CLICKHOUSE: 6;
   CONNECTION_TYPE_LOCAL: 7;
+  CONNECTION_TYPE_HTTP: 8;
 }
 
 export const ConnectionType: ConnectionTypeMap;

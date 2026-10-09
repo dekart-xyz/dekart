@@ -22,7 +22,8 @@ function getParameterNamesFromQuery (queryText) {
   return matches ? matches.map(match => match.slice(2, -2)) : []
 }
 
-function getQueryParamsFromQuery (queryParams, queryText) {
+// Retain parameter metadata for the names used by the supplied SQL.
+export function getQueryParamsFromQuery (queryParams, queryText) {
   const queryParamNames = getParameterNamesFromQuery(queryText)
   const qp = []
   queryParamNames.forEach(name => {
@@ -52,14 +53,16 @@ export function updateQueryParamsFromQueries () {
   }
 }
 
-export function createQuery (datasetId, connectionId = '', executionEngine = QueryExecutionEngine.QUERY_EXECUTION_ENGINE_CONNECTION) {
+export function createQuery (datasetId, connectionId = '', executionEngine = QueryExecutionEngine.QUERY_EXECUTION_ENGINE_CONNECTION, queryText = '') {
   return (dispatch) => {
     dispatch({ type: createQuery.name })
     const request = new CreateQueryRequest()
     request.setDatasetId(datasetId)
     request.setConnectionId(connectionId)
     request.setExecutionEngine(executionEngine)
-    dispatch(grpcCall(Dekart.CreateQuery, request))
+    dispatch(grpcCall(Dekart.CreateQuery, request, response => {
+      if (queryText) dispatch(queryChanged(response.queryId, queryText))
+    }))
   }
 }
 
