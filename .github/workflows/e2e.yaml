@@ -174,7 +174,7 @@ jobs:
             config: cloud
             target: premium
             cloud: true
-            spec: cypress/e2e/cloud/widgetsReload.cy.js,cypress/e2e/cloud/keplerFilterRestoreLifecycle.cy.js,cypress/e2e/cloud/widgetsFirstSlice.cy.js,cypress/e2e/cloud/widgetsCategoryLayout.cy.js,cypress/e2e/cloud/widgetsMultiDataset.cy.js,cypress/e2e/cloud/widgetsCrossFilter.cy.js
+            spec: cypress/e2e/cloud/widgetsReload.cy.js,cypress/e2e/cloud/keplerFilterRestoreLifecycle.cy.js,cypress/e2e/cloud/widgetsFirstSlice.cy.js,cypress/e2e/cloud/widgetsCategoryLayout.cy.js,cypress/e2e/cloud/widgetsMultiDataset.cy.js,cypress/e2e/cloud/widgetsCrossFilter.cy.js,cypress/e2e/cloud/widgetsCrossFilterWithoutCharts.cy.js
             extra_env: |
               -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
               -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
