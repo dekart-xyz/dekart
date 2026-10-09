@@ -48,11 +48,12 @@ function queryParamSchemasEqual (current, next) {
 // Reinitialize only when the schema or URL changed; otherwise retain that draft.
 export function reconcileQueryParamsState (current, queryParams, search) {
   const fromURL = getQueryParamsState(queryParams, search)
-  if (queryParamSchemasEqual(current.list, queryParams) && current.url === fromURL.url) {
+  // Newly saved definitions add default URL entries without changing applied values.
+  const applied = getQueryParamsState(queryParams, current.url)
+  if (queryParamSchemasEqual(current.list, queryParams) && applied.url === fromURL.url) {
     return {
-      values: current.values,
-      url: current.url,
-      hash: current.hash
+      ...fromURL,
+      values: current.values
     }
   }
   return fromURL

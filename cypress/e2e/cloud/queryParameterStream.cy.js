@@ -2,6 +2,7 @@
 import { CreateQueryResponse, Query, QueryParam, UpdateReportRequest, UpdateReportResponse } from 'dekart-proto/dekart_pb'
 import { createReport, selectDuckDB } from '../local/duckdbHelpers'
 import { saveReport } from './queryParameterHelpers'
+import { enterVisibleQuery, queryParameterInput } from '../bq/duckdbRefreshHelpers'
 
 // Send another client's save from the last accepted request and report version.
 function renameReportRemotely (save, queryId) {
@@ -15,15 +16,18 @@ function renameReportRemotely (save, queryId) {
   )
   request.setTitle('Remote parameter stream')
   request.setExpectedVersionId(response.getVersionId())
-  const query = new Query()
-  query.setId(queryId)
-  query.setQueryText('SELECT {{remote}} AS remote')
-  request.setQueryList([query])
-  const parameter = new QueryParam()
-  parameter.setName('remote')
-  parameter.setType(QueryParam.Type.TYPE_STRING)
-  parameter.setDefaultValue('Remote default')
-  request.setQueryParamsList([parameter])
+  // A title-only save leaves the existing SQL and parameter definitions intact.
+  if (queryId) {
+    const query = new Query()
+    query.setId(queryId)
+    query.setQueryText('SELECT {{remote}} AS remote')
+    request.setQueryList([query])
+    const parameter = new QueryParam()
+    parameter.setName('remote')
+    parameter.setType(QueryParam.Type.TYPE_STRING)
+    parameter.setDefaultValue('Remote default')
+    request.setQueryParamsList([parameter])
+  }
   const payload = request.serializeBinary()
   const body = new Uint8Array(payload.length + 5)
   new DataView(body.buffer).setUint32(1, payload.length)
@@ -44,6 +48,38 @@ function renameReportRemotely (save, queryId) {
 }
 
 describe('query parameters during report stream updates', () => {
+  it('retains B, _x and a typed while their SQL save completes', () => {
+    cy.setDevClaimsEmail(`parameter-save-${Date.now()}@example.com`)
+    cy.visit('/')
+    cy.ensureTestWorkspace()
+    createReport()
+    selectDuckDB()
+    cy.enterQuery('SELECT 1')
+    saveReport()
+
+    // Hold the accepted save until all three draft inputs are visible.
+    let releaseSave
+    cy.intercept({ method: 'POST', url: '**/Dekart/UpdateReport', times: 1 }, request => {
+      request.continue(() => new Promise(resolve => { releaseSave = resolve }))
+    }).as('parameterSave')
+    enterVisibleQuery("SELECT CONCAT({{B}}, '|', {{_x}}, '|', {{a}}) AS binding")
+    cy.wrap(null).should(() => expect(releaseSave).to.be.a('function'))
+    queryParameterInput('B').clear().type('upper').should('have.value', 'upper')
+    queryParameterInput('_x').clear().type('underscore').should('have.value', 'underscore')
+    queryParameterInput('a').clear().type('lower').should('have.value', 'lower')
+    cy.then(() => releaseSave())
+    cy.wait('@parameterSave').then(save => {
+      cy.get('#dekart-save-button .anticon-cloud', { timeout: 60000 }).should('exist')
+      renameReportRemotely(save)
+    })
+    cy.contains('Remote parameter stream', { timeout: 30000 }).should('be.visible')
+    queryParameterInput('B').should('have.value', 'upper')
+    queryParameterInput('_x').should('have.value', 'underscore')
+    queryParameterInput('a').should('have.value', 'lower')
+    cy.get('button[title="Apply query parameters"]').should('be.enabled').click()
+    cy.assertDatasetTable('Query 1', ['binding'], ['upper|underscore|lower'])
+  })
+
   it('preserves parameters and input for unsaved SQL when another client saves', () => {
     cy.setDevClaimsEmail(`parameter-stream-${Date.now()}@example.com`)
     cy.visit('/')
