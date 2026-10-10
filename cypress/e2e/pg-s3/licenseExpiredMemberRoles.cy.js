@@ -1,3 +1,4 @@
+// Regression: An expired license disables an admin role downgrade along with membership writes (0ff50f8).
 /* eslint-disable no-undef */
 
 describe('pg-s3 expired license member roles', () => {

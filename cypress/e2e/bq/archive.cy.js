@@ -1,3 +1,4 @@
+// Critical path: BigQuery query to map
 /* eslint-disable no-undef */
 import copy from '../../fixtures/copy.json'
 
@@ -15,6 +16,10 @@ describe('archive and unarchive report', () => {
     cy.get('textarea').type(copy.simple_sql_query, { force: true })
     cy.get(`button:contains("${copy.execute}")`).click()
     cy.get(`span:contains("${copy.ready}")`, { timeout: 20000 }).should('be.visible')
+
+    cy.get(`span:contains("${copy.downloading}")`).should('contain', 'kB')
+    cy.openLayerPanel()
+    cy.get('[data-testid="sortable-layer-item"], [data-testid="static-layer-item"]', { timeout: 30000 }).should('have.length.at.least', 1)
 
     // Name the report after query setup so the initial report stream cannot replay Untitled.
     cy.get('span').contains('Untitled').click()

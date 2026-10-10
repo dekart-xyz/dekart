@@ -1,3 +1,4 @@
+// Regression: Report updates discard unsaved SQL parameters and typed input (5180a76, fa86eb3).
 /* eslint-disable no-undef */
 import { CreateQueryResponse, Query, QueryParam, UpdateReportRequest, UpdateReportResponse } from 'dekart-proto/dekart_pb'
 import { createReport, selectDuckDB } from '../local/duckdbHelpers'

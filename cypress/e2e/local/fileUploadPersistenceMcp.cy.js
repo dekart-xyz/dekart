@@ -1,3 +1,4 @@
+// Critical path: Self-hosted file upload persisted and read back through MCP
 /* eslint-disable no-undef, no-unused-expressions */
 
 describe('local file upload report persistence with readme conversion', () => {

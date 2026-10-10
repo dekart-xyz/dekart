@@ -1,3 +1,4 @@
+// Regression: Renaming a GeoJSON dataset without an extension breaks loading.
 /* eslint-disable no-undef */
 
 describe('local GeoJSON file upload with extensionless dataset label', () => {

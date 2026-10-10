@@ -18,7 +18,7 @@ import (
 	"dekart/src/server/storage"
 	"dekart/src/server/user"
 
-	_ "github.com/lib/pq" // postgres driver
+	"github.com/lib/pq"
 	"github.com/rs/zerolog/log"
 )
 
@@ -130,13 +130,15 @@ func TestConnection(ctx context.Context, req *proto.TestConnectionRequest) (*pro
 			Error:   err.Error(),
 		}, nil
 	}
-	db, err := sql.Open("postgres", dsn)
+	// Use the connector so lib/pq receives the ping deadline while dialing.
+	connector, err := pq.NewConnector(dsn)
 	if err != nil {
 		return &proto.TestConnectionResponse{
 			Success: false,
 			Error:   err.Error(),
 		}, nil
 	}
+	db := sql.OpenDB(connector)
 	defer db.Close()
 	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
