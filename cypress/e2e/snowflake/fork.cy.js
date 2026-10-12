@@ -1,3 +1,4 @@
+// Regression: Forking a shared Snowflake report with empty query parameters fails (a3db146).
 /* eslint-disable no-undef */
 import copy from '../../fixtures/copy.json'
 
@@ -6,6 +7,8 @@ describe('fork', () => {
     cy.setDevClaimsEmail('test@gmail.com')
     cy.visit('/')
     cy.get('button#dekart-create-report').click()
+    // Select the system Snowflake source before entering the fork's query.
+    cy.contains('button', 'Run SQL directly on Snowflake').click()
     cy.get('textarea').type('select 0 as lat, 0 as lon', { force: true })
     cy.get(`button:contains("${copy.execute}")`).click()
     cy.get(`span:contains("${copy.ready}")`, { timeout: 20000 }).should('be.visible')

@@ -1,3 +1,4 @@
+// Critical path: Trial acknowledgement and paid flow
 /* eslint-disable no-undef */
 import copy from '../../fixtures/copy.json'
 

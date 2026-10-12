@@ -14,10 +14,7 @@ Goal: contributions should blend into the existing codebase and minimize maintai
 - Do not add tests merely to increase coverage.
 - Do not duplicate implementation logic in tests.
 - Prefer test-driven development using Cypress and unit tests.
-- For every component that has UX or state (database, memory), use Cypress tests.
-- Only use unit tests for stateless no UX components with no side effects (like schema validator)
-- When a bug is found in production or QA, the fix must start with a failing regression test for the exact bad
-tool input.
+- When a bug is found in production or QA, start with a failing regression test for the exact bad input at the lowest layer that reproduces it: Go or Vitest for logic, Cypress e2e for wiring between client, server and database. E2e specs are critical-path smoke tests or regressions for reproduced bugs. Feature-driving specs start with `tmp*` and are not committed; performance specs start with `perf*`, are committed, run locally with `runPerformance=true`, and do not run in CI. A spec joins the matrix only with a reason line as its first comment: `// Critical path: <path>` or `// Regression: <bug, incident or customer report>`. Every other committed e2e spec is listed by file in exactly one runtime configuration lane.
 - MCP E2E tests must authenticate through the device flow (`POST /device`, browser authorization, then `POST /device/token`) and use the returned device token as the MCP bearer token. Do not call `/authenticate` directly or hand-roll OAuth/protobuf state helpers for MCP tests.
 - For E2E tests, group specs by runtime configuration; split only long-running configurations into multiple parallel lanes.
 - Cypress tests should verify what is visible to the user in the DOM, not internal or Redux state.

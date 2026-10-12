@@ -1,9 +1,10 @@
+// Critical path: License expiry turns the instance read-only
 /* eslint-disable no-undef */
 
 describe('pg-s3 expired license read-only', () => {
   it('shows license expiry and blocks writes with the dev startup bypass', () => {
     const appUrl = Cypress.config('baseUrl')
-    const apiBase = `${appUrl}/api/v1`
+    const apiBase = `${Cypress.env('DEKART_E2E_API_URL')}/api/v1`
 
     cy.visit(appUrl)
 
@@ -16,12 +17,14 @@ describe('pg-s3 expired license read-only', () => {
       .and('be.disabled')
       .and('have.attr', 'title', 'Workspace is read-only')
 
-    cy.request({
+    // A valid device token ensures license expiry, rather than missing auth, blocks the write.
+    cy.mcpDeviceToken('license-expired-admin@example.com').then(token => cy.request({
       method: 'POST',
       url: `${apiBase}/mcp/call`,
+      headers: { Authorization: `Bearer ${token}` },
       body: { name: 'create_report', arguments: {} },
       failOnStatusCode: false
-    }).then((response) => {
+    })).then((response) => {
       expect(response.status).to.eq(403)
       const errorText = typeof response.body === 'string' ? response.body : response.text
       expect(errorText).to.contain('license key expired')
