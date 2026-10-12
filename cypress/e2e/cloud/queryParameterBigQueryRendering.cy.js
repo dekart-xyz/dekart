@@ -1,3 +1,4 @@
+// Regression: Changing BigQuery parameters leaves capped query results invisible until a layer is clicked.
 /* eslint-disable no-undef */
 import { LAYER_SELECTOR } from '../local/duckdbHelpers'
 import { ROW_LIMIT, createParameterizedReport, saveReport } from './queryParameterHelpers'

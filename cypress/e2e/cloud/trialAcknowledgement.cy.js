@@ -1,3 +1,4 @@
+// Critical path: Trial acknowledgement and paid flow
 /* eslint-disable no-undef */
 import { CreateSubscriptionRequest, GetWorkspaceRequest, GetWorkspaceResponse, PlanType } from 'dekart-proto/dekart_pb'
 

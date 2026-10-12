@@ -1,3 +1,4 @@
+// Regression: Adding a dataset to a saved map fails to create its new layer.
 /* eslint-disable no-undef */
 
 const LAYER_SELECTOR = '[data-testid="sortable-layer-item"], [data-testid="static-layer-item"]'

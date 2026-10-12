@@ -166,7 +166,9 @@ export default function ReportWidgets ({
   // Charts remain busy while a saved map filter is still being applied to their shared selection, so an early click cannot be overwritten.
   const filterProjectionRevisionByDataset = useStore(store, state => state.filterProjectionRevisionByDataset)
   const filterProjectionSettledRevisionByDataset = useStore(store, state => state.filterProjectionSettledRevisionByDataset)
+  // Datasets without charts have no selection to project and must not block chart interactions.
   const filterProjectionPending = sources.some(source => source.physical &&
+    config.dashboardsById[source.id]?.panels.length > 0 &&
     filters.some(filter => filter.enabled !== false && filter.dataId.includes(source.id)) &&
     (!filterProjectionRevisionByDataset[source.id] ||
       filterProjectionSettledRevisionByDataset[source.id] !== filterProjectionRevisionByDataset[source.id]))

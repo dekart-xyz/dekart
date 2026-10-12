@@ -1,3 +1,4 @@
+// Regression: An empty native query replacement loses the selected category or resurrects a removed filter.
 /* global cy, describe, it, Cypress */
 
 const QUERY = "SELECT 52.5 + i / 100.0 AS latitude, 13.4 + i / 100.0 AS longitude, CASE i % 2 WHEN 0 THEN 'Alpha' ELSE 'Beta' END AS category FROM generate_series(0, 5) t(i)"
@@ -22,7 +23,7 @@ describe('Kepler filter restoration across native query replacement', () => {
     cy.visit('/')
     cy.ensureTestWorkspace()
     cy.get('#dekart-create-report').click()
-    cy.contains('button', 'Run SQL', { timeout: 30000 }).click()
+    cy.contains('button', 'Run SQL directly on Postgres', { timeout: 30000 }).click()
     execute(QUERY)
     cy.get('[data-testid="widgets-tab"]').then(button => {
       if (button.attr('aria-expanded') !== 'true') cy.wrap(button).click()
