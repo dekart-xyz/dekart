@@ -1,3 +1,4 @@
+// Regression: Dataset streaming is terminated by the HTTP write timeout (50648cb).
 /* eslint-disable no-undef */
 import copy from '../../fixtures/copy.json'
 
@@ -7,7 +8,7 @@ describe('dataset source write timeout', () => {
 
     cy.visit('/')
     cy.get('button#dekart-create-report', { timeout: 30000 }).click()
-    cy.get('button:contains("Run SQL")').click()
+    // The system Postgres source opens its SQL editor when the report is created.
     cy.get('textarea').click({ force: true }).type(query, { force: true })
     cy.get(`button:contains("${copy.execute}")`).click()
 

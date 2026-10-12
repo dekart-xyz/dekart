@@ -1,3 +1,4 @@
+// Regression: Refreshing a dataset loses the saved Kepler configuration and filter selections.
 /* eslint-disable no-undef */
 import copy from '../../fixtures/copy.json'
 
@@ -15,7 +16,7 @@ const widgetQuery = ({ firstCategory = 0, typeZeroRows = 10 } = {}) => `
 
 describe('update dataset', () => {
   // Skipped: the widget-owned filter survives a plain re-execute (covered and green in
-  // cloud/keplerFilterReload.cy.js) but is lost on the refresh path and on query edits that
+  // cloud/widgetsReload.cy.js) but is lost on the refresh path and on query edits that
   // change the data, which is where this scenario fails. Cause is not yet identified; the
   // one-directional bridge rewrite is the suspected fix. Notion: Widgets: make filter flow
   // one-directional (Kepler authoritative, Mosaic derived).

@@ -1,3 +1,4 @@
+// Regression: Dataset replacement and error recovery lose widget selections and bar emphasis.
 /* global cy, describe, it, Cypress, expect */
 
 const QUERY = "SELECT 52.5 + i / 100 AS latitude, 13.4 + i / 100 AS longitude, CASE i % 2 WHEN 0 THEN 'Alpha' ELSE 'Beta' END AS category, i * 10 AS capacity_kw FROM range(6) t(i)"

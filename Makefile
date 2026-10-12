@@ -133,7 +133,7 @@ docker-test:
 	--env-file .env.snowflake-sqlite \
 	-e DEKART_PORT=3000 \
 	-e CYPRESS_CI=1 \
-	-e TEST_SPEC=/dekart/cypress/e2e/snowflake/happyPath.cy.js \
+	-e TEST_SPEC=/dekart/cypress/e2e/snowflake/fork.cy.js \
 	-e DEKART_SQLITE_DB_PATH=/dekart/dekart.db \
 	-e DEKART_STATIC_FILES=./build \
 	${DEKART_DOCKER_E2E_TAG}

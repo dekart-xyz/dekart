@@ -1,3 +1,4 @@
+// Regression: A legacy query without its source prevents runnable queries from refreshing.
 /* eslint-disable no-undef */
 import copy from '../../fixtures/copy.json'
 

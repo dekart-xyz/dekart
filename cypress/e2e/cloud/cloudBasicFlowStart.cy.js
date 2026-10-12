@@ -1,3 +1,4 @@
+// Critical path: Cloud sign-up to first map, including the BigQuery grant-access screen
 /* eslint-disable no-undef */
 
 describe('cloud basic flow', () => {

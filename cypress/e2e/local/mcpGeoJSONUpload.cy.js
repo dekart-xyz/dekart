@@ -1,3 +1,4 @@
+// Regression: CLI generic MIME fallback prevents querying an uploaded .geojson file (f14298d).
 /* eslint-disable no-undef */
 
 const appUrl = Cypress.config('baseUrl')
