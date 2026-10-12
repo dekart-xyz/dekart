@@ -8,7 +8,7 @@ describe('dataset source write timeout', () => {
 
     cy.visit('/')
     cy.get('button#dekart-create-report', { timeout: 30000 }).click()
-    // The system Postgres source opens its SQL editor when the report is created.
+    cy.contains('button', 'Run SQL directly on Postgres', { timeout: 30000 }).click()
     cy.get('textarea').click({ force: true }).type(query, { force: true })
     cy.get(`button:contains("${copy.execute}")`).click()
 

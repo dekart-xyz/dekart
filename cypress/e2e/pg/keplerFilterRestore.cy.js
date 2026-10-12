@@ -23,7 +23,7 @@ describe('Kepler filter restoration across native query replacement', () => {
     cy.visit('/')
     cy.ensureTestWorkspace()
     cy.get('#dekart-create-report').click()
-    // The system Postgres source opens its SQL editor when the report is created.
+    cy.contains('button', 'Run SQL directly on Postgres', { timeout: 30000 }).click()
     execute(QUERY)
     cy.get('[data-testid="widgets-tab"]').then(button => {
       if (button.attr('aria-expanded') !== 'true') cy.wrap(button).click()
