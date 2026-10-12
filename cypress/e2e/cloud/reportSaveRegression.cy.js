@@ -1,3 +1,4 @@
+// Critical path: Save a report and reopen it with layers intact
 /* eslint-disable no-undef */
 import { UpdateReportRequest } from 'dekart-proto/dekart_pb'
 

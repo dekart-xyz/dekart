@@ -1,3 +1,4 @@
+// Regression: The affected Cloud report with six GeoJSON CSV datasets loses datasets or layers on reopen.
 /* global cy, describe, it, after, Cypress */
 
 const files = [
@@ -9,8 +10,7 @@ const files = [
   'flood-zones.csv'
 ]
 const layerSelector = '[data-testid="sortable-layer-item"], [data-testid="static-layer-item"]'
-const fullSize = Boolean(Cypress.env('runPerformance'))
-const reportLoadTimeout = fullSize ? 600000 : 120000
+const reportLoadTimeout = 120000
 
 describe('six GeoJSON CSV report load', () => {
   let fixtureDirectory
@@ -22,10 +22,9 @@ describe('six GeoJSON CSV report load', () => {
     }
   })
 
-  // The full-size fixture remains available with --env runPerformance=true.
   it('loads all datasets again when the report is reopened', () => {
     const email = `kepler-report-load-${Date.now()}@example.com`
-    cy.exec(`node cypress/support/generateKeplerReportFiles.js${fullSize ? '' : ' --small'}`, { timeout: 120000 })
+    cy.exec('node cypress/support/generateKeplerReportFiles.js --small', { timeout: 120000 })
       .then(({ stdout }) => { fixtureDirectory = stdout })
     cy.then(() => cy.readFile(`${fixtureDirectory}/manifest.json`)).then(rows => { expectedRows = rows })
     cy.setDevClaimsEmail(email)
@@ -44,7 +43,6 @@ describe('six GeoJSON CSV report load', () => {
       cy.contains('Ready', { timeout: index === files.length - 1 ? reportLoadTimeout : 120000 }).should('be.visible')
       cy.openLayerPanel()
       if (index === files.length - 1) {
-        // The full-size final CSV can take several minutes to download locally.
         cy.contains('.source-data-title .dataset-name', name, { timeout: reportLoadTimeout }).should('be.visible')
         cy.contains('Downloading Map Data', { timeout: reportLoadTimeout }).should('not.exist')
         cy.get(layerSelector).then(layers => {

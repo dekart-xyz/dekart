@@ -1,3 +1,4 @@
+// Critical path: Self-hosted first run as started by docker run or the CLI: ready-to-connect onboarding, file upload, first connection
 /* eslint-disable no-undef */
 import copy from '../../fixtures/copy.json'
 

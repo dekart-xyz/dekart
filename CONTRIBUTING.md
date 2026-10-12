@@ -76,7 +76,7 @@ Only tests that call `cy.stubGoogleOAuthToken(...)` need Google OAuth refresh-to
 
 ### Running the map performance benchmark
 
-`cypress/e2e/cloud/mapPerformance.cy.js` is an opt-in, machine-local benchmark for both Point (Scatterplot) and Arc layers. It is not part of the default Cypress or CI suites because GPU and compositor performance depends on the host machine.
+`cypress/e2e/cloud/perfMapPerformance.cy.js` is an opt-in, machine-local benchmark for both Point (Scatterplot) and Arc layers. It is not part of the default Cypress or CI suites because GPU and compositor performance depends on the host machine.
 
 Prepare one saved report per layer type:
 
@@ -90,7 +90,7 @@ Run the Point benchmark in headed Chrome:
 
 ```bash
 make cypress-run ENV_FILE=.env.cloud \
-  SPEC=cypress/e2e/cloud/mapPerformance.cy.js \
+  SPEC=cypress/e2e/cloud/perfMapPerformance.cy.js \
   CYPRESS_ENV='runPerformance=true,performanceReportId=POINT_REPORT_ID,performanceDatasetName=DATASET NAME,performanceRows=ROW_COUNT,performanceLayerType=point,performanceLabel=Point,performanceEmail=EMAIL' \
   CYPRESS_ARGS='--browser chrome --headed --config video=false'
 ```
@@ -99,7 +99,7 @@ Run the Arc benchmark with the Arc report:
 
 ```bash
 make cypress-run ENV_FILE=.env.cloud \
-  SPEC=cypress/e2e/cloud/mapPerformance.cy.js \
+  SPEC=cypress/e2e/cloud/perfMapPerformance.cy.js \
   CYPRESS_ENV='runPerformance=true,performanceReportId=ARC_REPORT_ID,performanceDatasetName=DATASET NAME,performanceRows=ROW_COUNT,performanceLayerType=arc,performanceLabel=Arc,performanceEmail=EMAIL' \
   CYPRESS_ARGS='--browser chrome --headed --config video=false'
 ```

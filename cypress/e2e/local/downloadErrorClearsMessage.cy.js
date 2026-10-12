@@ -1,3 +1,4 @@
+// Regression: A file parse error leaves the downloading message visible (7b6697a).
 /* eslint-disable no-undef */
 
 describe('local file-backed dataset download error', () => {

@@ -1,3 +1,4 @@
+// Regression: An own query save reports a concurrent edit; a failed save permits leaving edit mode.
 /* global cy, describe, expect, it, Cypress */
 
 function createDuckDBReport (email, rowCount) {

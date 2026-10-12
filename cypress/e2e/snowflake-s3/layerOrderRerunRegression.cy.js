@@ -1,3 +1,4 @@
+// Regression: Rerunning a query changes authored layer order from 1,2,3 to 3,1,2.
 /* eslint-disable no-undef */
 import copy from '../../fixtures/copy.json'
 
