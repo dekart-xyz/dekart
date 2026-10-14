@@ -67,6 +67,10 @@ func normalizeBearerToken(value string) (string, bool) {
 
 func (c ClaimsCheck) validateJWTFromOIDCHeader(r *http.Request) *Claims {
 	tokenValue := r.Header.Get(defaultOIDCTokenHeader)
+	// Direct clients authenticate with Authorization instead of the proxy header.
+	if r.Header.Get("Authorization") != "" {
+		tokenValue = r.Header.Get("Authorization")
+	}
 	if tokenValue == "" {
 		log.Warn().Str("tokenHeader", defaultOIDCTokenHeader).Msg("OIDC token header is missing")
 		return nil

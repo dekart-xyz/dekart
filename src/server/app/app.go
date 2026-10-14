@@ -54,6 +54,11 @@ func (w *idleTimeoutResponseWriter) Write(p []byte) (int, error) {
 	return n, nil
 }
 
+// Unwrap lets the response controller flush the underlying HTTP connection.
+func (w *idleTimeoutResponseWriter) Unwrap() http.ResponseWriter {
+	return w.ResponseWriter
+}
+
 // Header implementation
 func (m ResponseWriter) Header() http.Header {
 	return m.w.Header()
@@ -163,6 +168,22 @@ func setOriginHeader(w http.ResponseWriter, r *http.Request) {
 func configureHTTP(dekartServer *dekart.Server, claimsCheck user.ClaimsCheck) *mux.Router {
 	router := mux.NewRouter()
 	api := router.PathPrefix("/api/v1/").Subrouter()
+	// Agent access is opt-in for instances with a configured agent service.
+	if os.Getenv("DEKART_AGENT_URL") != "" {
+		api.HandleFunc("/agent/chat", func(w http.ResponseWriter, r *http.Request) {
+			setOriginHeader(w, r)
+			if r.Method == http.MethodOptions {
+				return
+			}
+			streamWriter, err := newIdleTimeoutResponseWriter(w, getHTTPWriteTimeout())
+			// Streaming requires a concrete server writer with deadline support.
+			if err != nil {
+				http.Error(w, "Cannot configure agent stream", http.StatusInternalServerError)
+				return
+			}
+			dekartServer.HandleAgentChat(streamWriter, r)
+		}).Methods("POST", "OPTIONS")
+	}
 	api.HandleFunc("/dataset-source/{dataset}/{source}.{extension:csv|geojson|json|parquet}", func(w http.ResponseWriter, r *http.Request) {
 		setOriginHeader(w, r)
 		if r.Method == http.MethodOptions {

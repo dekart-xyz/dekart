@@ -290,8 +290,18 @@ func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 			}
 		}
 	}
+	// Device bearers identify the caller independently of the instance's identity provider.
+	if token, ok := normalizeBearerToken(r.Header.Get("Authorization")); claims == nil && ok && shouldValidateAsDeviceToken(token) {
+		claims = c.validateDeviceAuthToken(ctx, "Bearer "+token)
+		return context.WithValue(ctx, ContextKey, claims)
+	}
 	if claims == nil && c.RequireIAP {
-		claims = c.validateJWTFromAppEngine(ctx, r.Header.Get("X-Goog-IAP-JWT-Assertion"))
+		header := r.Header.Get("X-Goog-IAP-JWT-Assertion")
+		// A direct browser client sends the IdP token without proxy headers.
+		if bearer, ok := normalizeBearerToken(r.Header.Get("Authorization")); ok {
+			header = bearer
+		}
+		claims = c.validateJWTFromAppEngine(ctx, header)
 	} else if claims == nil && c.RequireAmazonOIDC {
 		claims = c.validateJWTFromAmazonOIDC(ctx, r.Header.Get("x-amzn-oidc-data"))
 	} else if claims == nil && c.RequireOIDC {
@@ -537,6 +547,12 @@ func (c ClaimsCheck) Authenticate(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Warn().Err(err).Msg("Error parsing ui url")
 		http.Error(w, "Error parsing ui url", http.StatusBadRequest)
+		return
+	}
+
+	// Validate before exchanging or returning credentials to the browser.
+	if !allowedLoginReturnURL(uiURL, r) {
+		http.Error(w, "Return URL origin is not allowed", http.StatusBadRequest)
 		return
 	}
 
