@@ -428,6 +428,27 @@ func storageError(w http.ResponseWriter, err error) {
 	HttpError(w, err)
 }
 
+// Missing stored query results can be regenerated through the client's expiry flow.
+func (s Server) datasetSourceStorageError(ctx context.Context, datasetID, sourceID, branch string, storageErr error) error {
+	// Other storage branches and infrastructure failures retain their existing handling.
+	if branch != "source_extension_storage" || !isStorageObjectNotFound(storageErr) {
+		return storageErr
+	}
+	var completedResult bool
+	err := s.db.QueryRowContext(ctx, `select exists (
+		select 1 from datasets d join query_jobs qj on qj.query_id=d.query_id
+		where d.id=$1 and qj.job_result_id=$2 and qj.job_status in ($3, $4)
+	)`, datasetID, sourceID, proto.QueryJob_JOB_STATUS_DONE, proto.QueryJob_JOB_STATUS_DONE_LEGACY).Scan(&completedResult)
+	if err != nil {
+		return err
+	}
+	// Files and unrecognized or incomplete query results cannot use automatic recovery.
+	if !completedResult {
+		return storageErr
+	}
+	return &errtype.Expired{}
+}
+
 func (s Server) getResultURI(ctx context.Context, resultID string) (string, error) {
 	var uri sql.NullString
 	rows, err := s.db.QueryContext(ctx,
@@ -672,15 +693,15 @@ func (s Server) ServeDatasetSource(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		logDatasetSourceError(err, "ServeDatasetSource: GetCreatedAt failed")
-		// Job is recent or not a DW job, propagate the actual error
-		storageError(w, err)
+		// Missing stored query results use expiry recovery; other failures keep their classification.
+		storageError(w, s.datasetSourceStorageError(ctx, vars["dataset"], vars["source"], retrievalBranch, err))
 		return
 	}
 
 	objectReader, err := obj.GetReader(useCtx)
 	if err != nil {
 		logDatasetSourceError(err, "ServeDatasetSource: GetReader failed")
-		storageError(w, err)
+		storageError(w, s.datasetSourceStorageError(ctx, vars["dataset"], vars["source"], retrievalBranch, err))
 		return
 	}
 	defer objectReader.Close()
