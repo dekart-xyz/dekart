@@ -1,5 +1,5 @@
 import { combineReducers } from 'redux'
-import { addReadme, removeReadme, setPreview, setReadmeValue, showReadmeTab } from '../actions/readme'
+import { addReadme, setPreview, setReadmeValue, showReadmeTab } from '../actions/readme'
 import { closeReport, openReport, reportUpdate } from '../actions/report'
 import { createDataset, setActiveDataset } from '../actions/dataset'
 
@@ -23,7 +23,6 @@ function showTab (state = true, action) {
     case addReadme.name:
     case showReadmeTab.name:
       return true
-    case removeReadme.name:
     case setActiveDataset.name:
     case createDataset.name:
       return false
@@ -36,14 +35,13 @@ function markdown (state = null, action) {
   switch (action.type) {
     case openReport.name:
     case closeReport.name:
-    case removeReadme.name:
       return null
     case setReadmeValue.name:
     case addReadme.name:
       return action.markdown
     case reportUpdate.name: {
       const { readme } = action.report
-      return readme && state === null ? readme.markdown : state
+      return readme ? (state === null ? readme.markdown : state) : null
     }
     default:
       return state
