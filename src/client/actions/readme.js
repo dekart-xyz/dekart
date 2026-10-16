@@ -2,15 +2,13 @@ import { AddReadmeRequest, RemoveReadmeRequest } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { track } from '../lib/tracking'
 import { grpcCall } from './grpc'
+import { reportCommand } from './report'
 
+// Canonical stream content clears the draft after the dedicated removal is accepted.
 export function removeReadme () {
-  return (dispatch, getState) => {
-    dispatch({ type: removeReadme.name })
-    const request = new RemoveReadmeRequest()
-    const reportId = getState().report.id
-    request.setReportId(reportId)
-    dispatch(grpcCall(Dekart.RemoveReadme, request))
-  }
+  return reportCommand(Dekart.RemoveReadme, () => new RemoveReadmeRequest(), {
+    waitForReportUpdate: true
+  })
 }
 
 export function addReadme (datasetId) {

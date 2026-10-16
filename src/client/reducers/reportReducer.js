@@ -3,7 +3,7 @@ import { setStreamError } from '../actions/message'
 import { queryChanged, queryParamChanged, updateQueryParamsFromQueries } from '../actions/query'
 import { setReadmeValue } from '../actions/readme'
 import { widgetsChanged } from '../actions/widgets'
-import { closeReport, exportMapPreview, forkReport, markKeplerPanelInteracted, newForkedReport, newReport, openReport, reportsListUpdate, reportTitleChange, reportUpdate, reportWillOpen, savedReport, saveMap, saveMapFailed, saveMapPreview, setAutoRefreshIntervalSeconds, setLastMapConfigChanged, setQueryJobRefreshTimeout, toggleReportEdit, toggleReportFullscreen, unsubscribeReports } from '../actions/report'
+import { closeReport, reportCommand, exportMapPreview, forkReport, markKeplerPanelInteracted, newForkedReport, newReport, openReport, reportsListUpdate, reportTitleChange, reportUpdate, reportWillOpen, savedReport, saveMapFailed, saveMapPreview, setAutoRefreshIntervalSeconds, setLastMapConfigChanged, setQueryJobRefreshTimeout, toggleReportEdit, toggleReportFullscreen, unsubscribeReports } from '../actions/report'
 
 export function reportDirectAccessEmails (state = [], action) {
   switch (action.type) {
@@ -142,8 +142,10 @@ export function reportStatus (state = defaultReportStatus, action) {
         ...state,
         willOpen: true
       }
+    // Command status stays active until acknowledgement or canonical removal completes.
+    case reportCommand.name:
+      return { ...state, saving: action.saving }
     case forkReport.name:
-    case saveMap.name:
       return {
         ...state,
         saving: true

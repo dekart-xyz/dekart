@@ -179,6 +179,7 @@ func TestMCPToolDefinitions_ContainsUpdateTools(t *testing.T) {
 	removeReadmeTool, ok := names["remove_report_readme"]
 	assert.True(t, ok)
 	assert.Contains(t, removeReadmeTool.InputSchema["required"], "report_id")
+	assert.NotContains(t, removeReadmeTool.InputSchema["required"], "expected_version_id")
 
 	reportPropsTool, ok := names["get_report_properties"]
 	assert.True(t, ok)

@@ -32,15 +32,86 @@ function deferReportUpdates (expectedVersionId) {
   return deferred
 }
 
+// Release both stream processing and any command waiting for canonical content.
 function resumeReportUpdates (deferred) {
+  deferred.cancel?.()
   deferred.resolve()
   if (reportUpdateDeferred === deferred) {
     reportUpdateDeferred = null
   }
 }
 
+// Keep command completion and stream release together so queued saves preserve local drafts.
+export function reportCommand (method, buildRequest, {
+  waitForReportUpdate = false,
+  onAccepted = () => {},
+  onFailed,
+  onError = err => err
+} = {}) {
+  return async (dispatch, getState) => {
+    const reportId = getState().report.id
+    // Commands awaiting canonical content also wait for preceding commands.
+    if (waitForReportUpdate) {
+      const pending = reportUpdateDeferred
+      if (pending) await (pending.complete || pending.promise)
+      // A queued command must not follow navigation to a different report.
+      if (getState().report?.id !== reportId) return false
+    } else if (getState().reportStatus.saving) {
+      return false
+    }
+    const stateAtSend = getState()
+    const request = buildRequest(stateAtSend)
+    // Payload builders retain operation-specific conflict and skipped-save decisions.
+    if (request === false) return false
+    request.setReportId(stateAtSend.report.id)
+    request.setExpectedVersionId(stateAtSend.report.versionId)
+    const deferred = deferReportUpdates(stateAtSend.report.versionId)
+    // Keep saves blocked until canonical content is applied when requested by the caller.
+    if (waitForReportUpdate) {
+      deferred.complete = new Promise(resolve => {
+        deferred.onReportUpdate = () => {
+          dispatch({ type: reportCommand.name, saving: false })
+          resolve(true)
+        }
+        deferred.cancel = () => resolve(false)
+      })
+    }
+    dispatch({ type: reportCommand.name, saving: true })
+    try {
+      const response = await new Promise((resolve, reject) => {
+        dispatch(grpcCall(method, request, resolve, err => {
+          reject(err)
+          return onError(err)
+        }))
+      })
+      deferred.saved = true
+      onAccepted(response, stateAtSend, dispatch)
+      // Removal releases frames at acknowledgement, then waits for one to be applied.
+      if (deferred.complete) {
+        deferred.resolve()
+        return await deferred.complete
+      }
+      dispatch({ type: reportCommand.name, saving: false })
+      return true
+    } catch (err) {
+      // Callers may supply failure bookkeeping; otherwise clear status only on the same report.
+      if (onFailed) {
+        onFailed(dispatch)
+      } else if (getState().report?.id === reportId) {
+        dispatch({ type: reportCommand.name, saving: false })
+      }
+      return false
+    } finally {
+      resumeReportUpdates(deferred)
+    }
+  }
+}
+
 export function closeReport () {
   return (dispatch) => {
+    if (reportUpdateDeferred?.cancel) {
+      resumeReportUpdates(reportUpdateDeferred)
+    }
     // Closing a report discards pending filter recovery before cancelling its stream and execution runtime.
     dispatch(filterRestore.reset())
 
@@ -157,12 +228,14 @@ function shouldDownloadQueryText (query, prevQueriesList, queriesList) {
   return false
 }
 
-// Finds initial datasets whose first publishable result has not been produced yet.
-function initialAutoCreateLayerIds (datasets, queries, files, queryJobs) {
+// Restores defaults for unsaved maps without recreating layers removed from saved maps.
+function initialAutoCreateLayerIds (datasets, queries, files, queryJobs, mapConfig) {
   return datasets.filter(dataset => {
     if (isDuckDBDataset(dataset, queries)) {
       return false
     }
+    // Reloading before the first map save must still infer the initial layer.
+    if (!mapConfig) return true
     if (dataset.fileId) {
       return !files.find(file => file.id === dataset.fileId)?.sourceId
     }
@@ -365,7 +438,9 @@ export function reportUpdate (reportStreamResponse) {
       queryParamsList,
       directAccessEmailsList,
       initialHydration,
-      initialAutoCreateLayerIds: initialAutoCreateLayerIds(datasetsList, queriesList, filesList, queryJobsList),
+      initialAutoCreateLayerIds: initialAutoCreateLayerIds(
+        datasetsList, queriesList, filesList, queryJobsList, report.mapConfig
+      ),
       newDatasetIds: datasetsList.filter(dataset => !prevDatasetsList.find(previous => previous.id === dataset.id)).map(dataset => dataset.id),
       hasRemoteMapConflict
     })
@@ -482,6 +557,10 @@ export function reportUpdate (reportStreamResponse) {
 
     // Schedule query job refresh if auto-refresh is enabled
     dispatch(scheduleQueryJobRefresh(reportStreamResponse))
+    // REVIEW: A queued response from a finished command must not unblock a newer command.
+    if (deferred?.saved && deferred === reportUpdateDeferred) {
+      deferred.onReportUpdate?.(report)
+    }
   }
 }
 
@@ -674,16 +753,15 @@ export function exportMapPreview () {
 }
 
 export function saveMap (mapViewChanged = false) {
-  return async (dispatch, getState) => {
-    const state = getState()
+  return reportCommand(Dekart.UpdateReport, state => {
     const { keplerGl, report, reportStatus, queryStatus, queryParams, readme, widgets } = state
-    // Block stale map or widget saves before constructing a request that could overwrite remote work.
     if (reportStatus.mapConfigConflict || widgets.conflict) return false
-    const lastSaved = reportStatus.lastChanged
     const configToSave = getMapConfigToSave(keplerGl.kepler, report.mapConfig)
-    const mapConfig = JSON.stringify(configToSave)
-    const deferred = deferReportUpdates(report.versionId)
-    dispatch({ type: saveMap.name })
+    // An early metadata save must not turn pending default layers into a saved empty map.
+    const awaitingInitialData = !report.mapConfig &&
+      state.dataset.autoCreateLayerIds.length > 0 &&
+      Object.keys(keplerGl.kepler.visState.datasets).length === 0
+    const mapConfig = awaitingInitialData ? '' : JSON.stringify(configToSave)
     const request = new UpdateReportRequest()
     const queryUpdates = Object.keys(queryStatus).reduce((queries, id) => {
       const status = queryStatus[id]
@@ -701,39 +779,28 @@ export function saveMap (mapViewChanged = false) {
       readmeProp.setMarkdown(readme.markdown)
       request.setReadme(readmeProp)
     }
-    request.setReportId(report.id)
     request.setMapConfig(mapConfig)
-    // Use the report revision as the single save authority and persist widget configuration with every map save.
-    request.setExpectedVersionId(report.versionId)
     // Omitting the optional field preserves stored bytes the client could not parse; sending them back would be rejected.
     if (!widgets.error) request.setWidgetsConfig(widgets.raw)
     request.setTitle(reportStatus.title)
     request.setQueryList(queryUpdates)
     request.setQueryParamsList(getQueryParamsObjArr(queryParams.list))
-    // TODO Promise all
-    try {
-      const res = await new Promise((resolve, reject) => {
-        dispatch(grpcCall(Dekart.UpdateReport, request, resolve, (err) => {
-          reject(err)
-          // Let aborted saves surface through the existing streamed conflict message instead of adding a duplicate generic error.
-          // The report stream presents the existing recoverable reload UX for a real conflict.
-          if (err.code === grpc.Code.Aborted) return
-          return err
-        }))
-      })
-      deferred.saved = true
+    return request
+  }, {
+    onFailed: dispatch => dispatch(saveMapFailed()),
+    // Conflicts use the streamed reload message instead of a second generic error.
+    onError: err => err.code === grpc.Code.Aborted ? undefined : err,
+    onAccepted: (res, state, dispatch) => {
+      const { report, reportStatus, widgets } = state
       if (mapViewChanged) {
         dispatch(exportMapPreview())
       }
-      dispatch(savedReport(lastSaved, res.updatedAt, res.versionId, report.versionId, widgets.revision, widgets.raw))
-      return true
-    } catch (err) {
-      dispatch(saveMapFailed())
-      return false
-    } finally {
-      resumeReportUpdates(deferred)
+      dispatch(savedReport(
+        reportStatus.lastChanged, res.updatedAt, res.versionId,
+        report.versionId, widgets.revision, widgets.raw
+      ))
     }
-  }
+  })
 }
 
 export function restoreReportSnapshotSuccess (versionId) {
