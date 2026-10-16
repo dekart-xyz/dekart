@@ -363,13 +363,20 @@ describe('cloud report save regression', () => {
 
     clickWriteReadme()
     cy.contains('.ant-tabs-tab', 'Readme', { timeout: 20000 }).should('be.visible')
-    cy.get('button#dekart-save-button').click()
-    cy.get('button#dekart-save-button', { timeout: 60000 }).should('not.be.disabled')
+    // Remove while an accepted save still carries the old README back to the browser.
+    let releaseSave
+    cy.intercept({ method: 'POST', url: '**/Dekart/UpdateReport', times: 1 }, request => {
+      request.continue(() => new Promise(resolve => { releaseSave = resolve }))
+    }).as('saveBeforeRemoval')
+    cy.get('.ace_editor:visible textarea').type('{end} Pending save', { force: true })
+    cy.wrap(null).should(() => expect(releaseSave).to.be.a('function'))
 
     cy.get('.ant-tabs-tab-remove').first().click()
     cy.contains('.ant-modal-confirm-title', 'Remove readme from report?').should('be.visible')
     cy.contains('.ant-modal-confirm-btns button', 'Yes').click()
-    cy.get('button#dekart-save-button').click()
+    cy.then(() => releaseSave())
+    cy.wait('@saveBeforeRemoval')
+    cy.get('button#dekart-save-button', { timeout: 60000 }).should('not.be.disabled').click()
     cy.get('button#dekart-save-button', { timeout: 60000 }).should('not.be.disabled')
 
     cy.contains('.ant-tabs-tab', 'Readme').should('not.exist')

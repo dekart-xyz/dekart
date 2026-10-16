@@ -39,6 +39,11 @@ function resumeReportUpdates (deferred) {
   }
 }
 
+// Finish the active save before another command changes the same report draft.
+export async function waitForReportSave () {
+  if (reportUpdateDeferred) await reportUpdateDeferred.promise
+}
+
 export function closeReport () {
   return (dispatch) => {
     // Closing a report discards pending filter recovery before cancelling its stream and execution runtime.
@@ -157,12 +162,14 @@ function shouldDownloadQueryText (query, prevQueriesList, queriesList) {
   return false
 }
 
-// Finds initial datasets whose first publishable result has not been produced yet.
-function initialAutoCreateLayerIds (datasets, queries, files, queryJobs) {
+// Restores defaults for unsaved maps without recreating layers removed from saved maps.
+function initialAutoCreateLayerIds (datasets, queries, files, queryJobs, mapConfig) {
   return datasets.filter(dataset => {
     if (isDuckDBDataset(dataset, queries)) {
       return false
     }
+    // Reloading before the first map save must still infer the initial layer.
+    if (!mapConfig) return true
     if (dataset.fileId) {
       return !files.find(file => file.id === dataset.fileId)?.sourceId
     }
@@ -365,7 +372,9 @@ export function reportUpdate (reportStreamResponse) {
       queryParamsList,
       directAccessEmailsList,
       initialHydration,
-      initialAutoCreateLayerIds: initialAutoCreateLayerIds(datasetsList, queriesList, filesList, queryJobsList),
+      initialAutoCreateLayerIds: initialAutoCreateLayerIds(
+        datasetsList, queriesList, filesList, queryJobsList, report.mapConfig
+      ),
       newDatasetIds: datasetsList.filter(dataset => !prevDatasetsList.find(previous => previous.id === dataset.id)).map(dataset => dataset.id),
       hasRemoteMapConflict
     })
@@ -681,7 +690,11 @@ export function saveMap (mapViewChanged = false) {
     if (reportStatus.mapConfigConflict || widgets.conflict) return false
     const lastSaved = reportStatus.lastChanged
     const configToSave = getMapConfigToSave(keplerGl.kepler, report.mapConfig)
-    const mapConfig = JSON.stringify(configToSave)
+    // An early metadata save must not turn pending default layers into a saved empty map.
+    const awaitingInitialData = !report.mapConfig &&
+      state.dataset.autoCreateLayerIds.length > 0 &&
+      Object.keys(keplerGl.kepler.visState.datasets).length === 0
+    const mapConfig = awaitingInitialData ? '' : JSON.stringify(configToSave)
     const deferred = deferReportUpdates(report.versionId)
     dispatch({ type: saveMap.name })
     const request = new UpdateReportRequest()

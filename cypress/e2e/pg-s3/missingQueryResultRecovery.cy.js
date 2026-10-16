@@ -1,8 +1,51 @@
-// Regression: A missing stored query-result CSV leaves the report at 404 without rerunning.
+// Regression: Reload before the first map save or after stored-result deletion loses map layers.
 /* eslint-disable no-undef */
 import copy from '../../fixtures/copy.json'
 
 describe('pg-s3 missing query result recovery', () => {
+  it('restores the initial layer after an early autosave and reload before the layer is saved', () => {
+    // An early autosave must not mark a map as initialized before its first result arrives.
+    cy.intercept('GET', '**/dataset-source/*/*.csv', req => {
+      req.on('before:response', res => res.setDelay(4000))
+    })
+    cy.intercept('POST', '**/Dekart/UpdateReport').as('earlySave')
+    cy.visit('/')
+    cy.ensureTestWorkspace()
+    cy.get('button#dekart-create-report', { timeout: 30000 }).click({ force: true })
+    cy.get('.ace_editor:not(.ace_autocomplete):visible textarea, button:contains("Run SQL directly on Postgres")', { timeout: 30000 }).then($elements => {
+      if ($elements.filter('textarea').length === 0) {
+        cy.wrap($elements.filter('button').first()).click({ force: true })
+      }
+    })
+    cy.enterQuery('SELECT 42 AS value, 13.4 AS longitude, 52.5 AS latitude')
+    cy.get(`button:contains("${copy.execute}"):visible`).click()
+    cy.wait('@earlySave', { timeout: 30000 }).its('response.statusCode').should('eq', 200)
+    // Reload before the later autosave can persist the inferred layer.
+    cy.intercept('POST', '**/Dekart/UpdateReport', { forceNetworkError: true })
+    cy.get(`span:contains("${copy.ready}")`, { timeout: 120000 }).should('be.visible')
+    cy.openLayerPanel()
+    cy.get('.layer__title__type', { timeout: 120000 }).should('be.visible')
+
+    cy.reload()
+    cy.get(`span:contains("${copy.ready}")`, { timeout: 120000 }).should('be.visible')
+    cy.get('div:contains("1 row")', { timeout: 120000 }).should('be.visible')
+    cy.openLayerPanel()
+    cy.get('.layer__title__type', { timeout: 30000 }).should('be.visible')
+
+    // Once an empty map is deliberately saved, reload must preserve that choice.
+    cy.intercept('POST', '**/Dekart/UpdateReport', req => req.continue()).as('saveEmptyMap')
+    cy.waitForMapSettingsEnabled()
+    cy.get('[data-testid="remove-layer-action"]').click({ force: true })
+    cy.get('.layer__title__type').should('not.exist')
+    cy.get('button#dekart-save-button', { timeout: 30000 }).should('not.be.disabled').click()
+    cy.wait('@saveEmptyMap', { timeout: 60000 }).its('response.statusCode').should('eq', 200)
+    cy.reload()
+    cy.get(`span:contains("${copy.ready}")`, { timeout: 120000 }).should('be.visible')
+    cy.get('div:contains("1 row")', { timeout: 120000 }).should('be.visible')
+    cy.openLayerPanel()
+    cy.get('.layer__title__type').should('not.exist')
+  })
+
   it('reruns a completed query and restores map data after its stored result disappears', () => {
     cy.intercept('GET', '**/dataset-source/*/*.csv', req => {
       req.on('before:response', res => { res.headers['cache-control'] = 'no-store' })

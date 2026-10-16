@@ -27,3 +27,18 @@ Plan: `docs/missing-query-result-recovery-spec.md`
   loading. CI image/default-browser execution has not been verified.
 - Open questions: why production result objects disappeared remains unknown.
 - Git: changes remain unstaged and uncommitted.
+
+## 2026-10-16 — Reload before the first successful map save
+
+Plan: current chat bug report; extends `docs/missing-query-result-recovery-spec.md`.
+
+- Tests: the new regression failed before the fix: the query row returned after reload, but its layer did not. The affected client and query/report server paths match main; the reproduction does not delete a stored result.
+- Results: all four PostgreSQL/S3 E2E tests and the local file-upload saved-layer test pass. Five client action unit tests, full client lint, targeted Cypress lint, and diff checks pass. Clean correctness review: no findings.
+- Fix: infer initial default layers when no map configuration has been saved, even if the query result already exists. Preserve deliberately saved empty maps. Remove the explicit-save workaround from the missing-result test.
+- Deviations: extend the original missing-result plan to the reproduced first-save layer loss. This restores defaults; it does not persist arbitrary unsaved map edits.
+- Files outside the original plan: `src/client/actions/report.js`; this handoff update.
+- Refactor candidates: none required.
+- Known failures: none remaining. Local PostGIS/query-URL and IPv4/IPv6 test-runtime mismatches were resolved without changing repository environment files; the isolated PostGIS runtime was removed afterward.
+- Open questions: none for the reproduced default-layer loss.
+- Git: changes remain local, unstaged and uncommitted.
+- Video: `cypress/videos/missingQueryResultRecovery.cy.js.mp4`; adjacent proof: `cypress/videos/mapConfigAutoLayers.cy.js.mp4`.

@@ -1,15 +1,19 @@
-import { AddReadmeRequest, RemoveReadmeRequest } from 'dekart-proto/dekart_pb'
+import { AddReadmeRequest } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { track } from '../lib/tracking'
 import { grpcCall } from './grpc'
+import { saveMap, waitForReportSave } from './report'
 
 export function removeReadme () {
-  return (dispatch, getState) => {
-    dispatch({ type: removeReadme.name })
-    const request = new RemoveReadmeRequest()
+  return async (dispatch, getState) => {
     const reportId = getState().report.id
-    request.setReportId(reportId)
-    dispatch(grpcCall(Dekart.RemoveReadme, request))
+    await waitForReportSave()
+    // Navigation while the save is pending must not delete a different report's README.
+    if (getState().report?.id !== reportId) return false
+    dispatch({ type: removeReadme.name })
+    dispatch(setReadmeValue(null))
+    // Save removal with the report revision so an overlapping save cannot restore old text.
+    return dispatch(saveMap())
   }
 }
 
