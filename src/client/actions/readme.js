@@ -1,17 +1,9 @@
-import { AddReadmeRequest, RemoveReadmeRequest } from 'dekart-proto/dekart_pb'
+import { AddReadmeRequest } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { track } from '../lib/tracking'
 import { grpcCall } from './grpc'
-
-export function removeReadme () {
-  return (dispatch, getState) => {
-    dispatch({ type: removeReadme.name })
-    const request = new RemoveReadmeRequest()
-    const reportId = getState().report.id
-    request.setReportId(reportId)
-    dispatch(grpcCall(Dekart.RemoveReadme, request))
-  }
-}
+// REVIEW: README removal shares report save coordination so later saves wait for canonical content.
+export { removeReadme } from './report'
 
 export function addReadme (datasetId) {
   return (dispatch, getState) => {

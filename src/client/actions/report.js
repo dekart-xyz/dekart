@@ -3,7 +3,7 @@ import { cleanupExportImage, setExportImageSetting, startExportingImage } from '
 
 import { grpcCall, grpcStream, grpcStreamCancel } from './grpc'
 import { showMapConfigConflictMessage, success } from './message'
-import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType, SetTrackViewersRequest, SetAutoRefreshIntervalSecondsRequest, RestoreReportSnapshotRequest, SaveMapPreviewRequest } from 'dekart-proto/dekart_pb'
+import { ArchiveReportRequest, CreateReportRequest, SetDiscoverableRequest, ForkReportRequest, Query, Report, ReportListRequest, UpdateReportRequest, File, ReportStreamRequest, PublishReportRequest, AllowExportDatasetsRequest, Readme, AddReportDirectAccessRequest, ConnectionType, SetTrackViewersRequest, SetAutoRefreshIntervalSecondsRequest, RestoreReportSnapshotRequest, SaveMapPreviewRequest, RemoveReadmeRequest } from 'dekart-proto/dekart_pb'
 import { Dekart } from 'dekart-proto/dekart_pb_service'
 import { createQuery, downloadQuerySource, getQueryParamsFromQuery, invalidateRunAllQueries, runWarehouseQuery } from './query'
 import { cleanupRemovedDataset, downloadDataset } from './dataset'
@@ -39,8 +39,58 @@ function resumeReportUpdates (deferred) {
   }
 }
 
+// REVIEW: Remove only the README, then wait for canonical content before allowing another save.
+export function removeReadme () {
+  return async (dispatch, getState) => {
+    const reportId = getState().report.id
+    const pending = reportUpdateDeferred
+    if (pending) await (pending.complete || pending.promise)
+    // Navigation while waiting must not submit a command for a different report.
+    if (getState().report?.id !== reportId) return false
+    const report = getState().report
+    const deferred = deferReportUpdates(report.versionId)
+    const updated = new Promise(resolve => {
+      deferred.onReportUpdate = canonicalReport => {
+        dispatch({ type: removeReadme.name, versionId: canonicalReport.versionId })
+        resolve(true)
+      }
+      deferred.cancel = () => resolve(false)
+    })
+    deferred.complete = updated
+    dispatch({ type: removeReadme.name })
+    const request = new RemoveReadmeRequest()
+    request.setReportId(reportId)
+    request.setExpectedVersionId(report.versionId)
+    try {
+      await new Promise((resolve, reject) => {
+        dispatch(grpcCall(Dekart.RemoveReadme, request, resolve, err => {
+          reject(err)
+          return err
+        }))
+      })
+      deferred.saved = true
+      // Release queued stream messages, but keep saves blocked until canonical content is applied.
+      deferred.resolve()
+      return await updated
+    } catch (err) {
+      if (getState().report?.id === reportId) {
+        dispatch({ type: removeReadme.name, error: true })
+      }
+      return false
+    } finally {
+      deferred.cancel()
+      resumeReportUpdates(deferred)
+    }
+  }
+}
+
 export function closeReport () {
   return (dispatch) => {
+    // REVIEW: Leaving the report releases a removal that is waiting for its canonical stream update.
+    if (reportUpdateDeferred?.cancel) {
+      reportUpdateDeferred.cancel()
+      resumeReportUpdates(reportUpdateDeferred)
+    }
     // Closing a report discards pending filter recovery before cancelling its stream and execution runtime.
     dispatch(filterRestore.reset())
 
@@ -157,12 +207,15 @@ function shouldDownloadQueryText (query, prevQueriesList, queriesList) {
   return false
 }
 
-// Finds initial datasets whose first publishable result has not been produced yet.
-function initialAutoCreateLayerIds (datasets, queries, files, queryJobs) {
+// REVIEW: An absent saved map configuration allows initial layers even when a query result already exists.
+// Restores defaults for unsaved maps without recreating layers removed from saved maps.
+function initialAutoCreateLayerIds (datasets, queries, files, queryJobs, mapConfig) {
   return datasets.filter(dataset => {
     if (isDuckDBDataset(dataset, queries)) {
       return false
     }
+    // Reloading before the first map save must still infer the initial layer.
+    if (!mapConfig) return true
     if (dataset.fileId) {
       return !files.find(file => file.id === dataset.fileId)?.sourceId
     }
@@ -365,7 +418,9 @@ export function reportUpdate (reportStreamResponse) {
       queryParamsList,
       directAccessEmailsList,
       initialHydration,
-      initialAutoCreateLayerIds: initialAutoCreateLayerIds(datasetsList, queriesList, filesList, queryJobsList),
+      initialAutoCreateLayerIds: initialAutoCreateLayerIds(
+        datasetsList, queriesList, filesList, queryJobsList, report.mapConfig
+      ),
       newDatasetIds: datasetsList.filter(dataset => !prevDatasetsList.find(previous => previous.id === dataset.id)).map(dataset => dataset.id),
       hasRemoteMapConflict
     })
@@ -482,6 +537,10 @@ export function reportUpdate (reportStreamResponse) {
 
     // Schedule query job refresh if auto-refresh is enabled
     dispatch(scheduleQueryJobRefresh(reportStreamResponse))
+    // REVIEW: A queued response from a finished command must not unblock a newer command.
+    if (deferred?.saved && deferred === reportUpdateDeferred) {
+      deferred.onReportUpdate?.(report)
+    }
   }
 }
 
@@ -677,11 +736,16 @@ export function saveMap (mapViewChanged = false) {
   return async (dispatch, getState) => {
     const state = getState()
     const { keplerGl, report, reportStatus, queryStatus, queryParams, readme, widgets } = state
-    // Block stale map or widget saves before constructing a request that could overwrite remote work.
-    if (reportStatus.mapConfigConflict || widgets.conflict) return false
+    // REVIEW: Pending commands and conflicts block saves that could overwrite unresolved report content.
+    if (reportStatus.saving || reportStatus.mapConfigConflict || widgets.conflict) return false
     const lastSaved = reportStatus.lastChanged
     const configToSave = getMapConfigToSave(keplerGl.kepler, report.mapConfig)
-    const mapConfig = JSON.stringify(configToSave)
+    // REVIEW: Metadata saves keep the map configuration absent until pending initial data reaches Kepler.
+    // An early metadata save must not turn pending default layers into a saved empty map.
+    const awaitingInitialData = !report.mapConfig &&
+      state.dataset.autoCreateLayerIds.length > 0 &&
+      Object.keys(keplerGl.kepler.visState.datasets).length === 0
+    const mapConfig = awaitingInitialData ? '' : JSON.stringify(configToSave)
     const deferred = deferReportUpdates(report.versionId)
     dispatch({ type: saveMap.name })
     const request = new UpdateReportRequest()
