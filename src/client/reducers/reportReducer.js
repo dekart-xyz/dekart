@@ -3,7 +3,7 @@ import { setStreamError } from '../actions/message'
 import { queryChanged, queryParamChanged, updateQueryParamsFromQueries } from '../actions/query'
 import { setReadmeValue } from '../actions/readme'
 import { widgetsChanged } from '../actions/widgets'
-import { closeReport, exportMapPreview, forkReport, markKeplerPanelInteracted, newForkedReport, newReport, openReport, reportsListUpdate, reportTitleChange, reportUpdate, reportWillOpen, savedReport, saveMap, saveMapFailed, saveMapPreview, setAutoRefreshIntervalSeconds, setLastMapConfigChanged, setQueryJobRefreshTimeout, toggleReportEdit, toggleReportFullscreen, unsubscribeReports } from '../actions/report'
+import { closeReport, removeReadme, exportMapPreview, forkReport, markKeplerPanelInteracted, newForkedReport, newReport, openReport, reportsListUpdate, reportTitleChange, reportUpdate, reportWillOpen, savedReport, saveMap, saveMapFailed, saveMapPreview, setAutoRefreshIntervalSeconds, setLastMapConfigChanged, setQueryJobRefreshTimeout, toggleReportEdit, toggleReportFullscreen, unsubscribeReports } from '../actions/report'
 
 export function reportDirectAccessEmails (state = [], action) {
   switch (action.type) {
@@ -142,6 +142,9 @@ export function reportStatus (state = defaultReportStatus, action) {
         ...state,
         willOpen: true
       }
+    // REVIEW: Removal keeps saves blocked until its canonical version arrives or the command fails.
+    case removeReadme.name:
+      return { ...state, saving: !action.versionId && !action.error }
     case forkReport.name:
     case saveMap.name:
       return {

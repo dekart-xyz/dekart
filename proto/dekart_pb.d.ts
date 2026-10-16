@@ -543,6 +543,11 @@ export class RemoveReadmeRequest extends jspb.Message {
   getReportId(): string;
   setReportId(value: string): void;
 
+  hasExpectedVersionId(): boolean;
+  clearExpectedVersionId(): void;
+  getExpectedVersionId(): string;
+  setExpectedVersionId(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): RemoveReadmeRequest.AsObject;
   static toObject(includeInstance: boolean, msg: RemoveReadmeRequest): RemoveReadmeRequest.AsObject;
@@ -556,10 +561,14 @@ export class RemoveReadmeRequest extends jspb.Message {
 export namespace RemoveReadmeRequest {
   export type AsObject = {
     reportId: string,
+    expectedVersionId: string,
   }
 }
 
 export class RemoveReadmeResponse extends jspb.Message {
+  getVersionId(): string;
+  setVersionId(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): RemoveReadmeResponse.AsObject;
   static toObject(includeInstance: boolean, msg: RemoveReadmeResponse): RemoveReadmeResponse.AsObject;
@@ -572,6 +581,7 @@ export class RemoveReadmeResponse extends jspb.Message {
 
 export namespace RemoveReadmeResponse {
   export type AsObject = {
+    versionId: string,
   }
 }
 
