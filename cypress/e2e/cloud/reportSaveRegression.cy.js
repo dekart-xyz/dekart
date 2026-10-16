@@ -445,7 +445,8 @@ describe('cloud report save regression', () => {
     })
   })
 
-  it('keeps README removed after immediate save and report reload', () => {
+  // The held save response must outlast typing and the removal confirmation dialog.
+  it('keeps README removed after immediate save and report reload', { defaultCommandTimeout: 30000 }, () => {
     createUploadedReport()
 
     clickWriteReadme()
