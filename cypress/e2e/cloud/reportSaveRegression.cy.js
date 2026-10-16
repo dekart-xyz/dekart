@@ -25,7 +25,7 @@ function getStore () {
   return cy.window({ timeout: 60000 }).then((win) => getReduxStoreFromWindow(win))
 }
 
-function createUploadedReport (fixture = 'sample.csv') {
+function createUploadedReport (fixture = 'sample.geojson') {
   const email = `report-save-${Date.now()}@example.com`
   cy.setDevClaimsEmail(email)
   cy.intercept(`${Cypress.env('DEKART_E2E_API_URL')}/api/v1/**`, request => {
