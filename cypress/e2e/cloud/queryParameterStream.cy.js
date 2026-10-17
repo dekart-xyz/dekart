@@ -1,23 +1,19 @@
 // Regression: Report updates discard unsaved SQL parameters and typed input (5180a76, fa86eb3).
 /* eslint-disable no-undef */
-import { CreateQueryResponse, Query, QueryParam, UpdateReportRequest, UpdateReportResponse } from 'dekart-proto/dekart_pb'
+import { CreateQueryResponse, Query, QueryParam, UpdateReportRequest } from 'dekart-proto/dekart_pb'
 import { createReport, selectDuckDB } from '../local/duckdbHelpers'
 import { saveReport } from './queryParameterHelpers'
 import { enterVisibleQuery, queryParameterInput } from '../bq/duckdbRefreshHelpers'
 
-// Send another client's save from the last accepted request and report version.
+// Send another client's save using the server's current report and query versions.
 function renameReportRemotely (save, queryId) {
   const requestBytes = Cypress.Buffer.from(save.request.body)
-  const responseBytes = Cypress.Buffer.from(save.response.body)
   const request = UpdateReportRequest.deserializeBinary(
     new Uint8Array(requestBytes.buffer, requestBytes.byteOffset + 5, requestBytes.length - 5)
   )
-  const response = UpdateReportResponse.deserializeBinary(
-    new Uint8Array(responseBytes.buffer, responseBytes.byteOffset + 5, responseBytes.readUInt32BE(1))
-  )
   request.setTitle('Remote parameter stream')
-  request.setExpectedVersionId(response.getVersionId())
-  // A title-only save leaves the existing SQL and parameter definitions intact.
+  // A title-only save must not resubmit query edits from the captured request.
+  request.setQueryList([])
   if (queryId) {
     const query = new Query()
     query.setId(queryId)
@@ -29,27 +25,36 @@ function renameReportRemotely (save, queryId) {
     parameter.setDefaultValue('Remote default')
     request.setQueryParamsList([parameter])
   }
-  const payload = request.serializeBinary()
-  const body = new Uint8Array(payload.length + 5)
-  new DataView(body.buffer).setUint32(1, payload.length)
-  body.set(payload, 5)
-  return cy.window().then(win => win.fetch(`${Cypress.env('DEKART_E2E_API_URL')}/Dekart/UpdateReport`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/grpc-web+proto',
-      'X-Grpc-Web': '1',
-      'X-Dekart-Claim-Email': save.request.headers['x-dekart-claim-email'],
-      'X-Dekart-Report-Id': request.getReportId()
-    },
-    body
-  })).then(response => {
-    expect(response.ok).to.equal(true)
-    expect(response.headers.get('grpc-status')).to.be.oneOf([null, '0'])
+  // The simulated client must observe the versions it changes, including the query source.
+  return cy.psql(`SELECT version_id,
+    coalesce((SELECT query_source_id FROM queries WHERE id='${queryId || '00000000-0000-0000-0000-000000000000'}'), '')
+    FROM reports WHERE id='${request.getReportId()}'`).then(({ stdout }) => {
+    const [reportVersion, querySourceId] = stdout.split('|')
+    request.setExpectedVersionId(reportVersion)
+    if (queryId) request.getQueryList()[0].setQuerySourceId(querySourceId)
+    const payload = request.serializeBinary()
+    const body = new Uint8Array(payload.length + 5)
+    new DataView(body.buffer).setUint32(1, payload.length)
+    body.set(payload, 5)
+    return cy.window().then(win => win.fetch(`${Cypress.env('DEKART_E2E_API_URL')}/Dekart/UpdateReport`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/grpc-web+proto',
+        'X-Grpc-Web': '1',
+        'X-Dekart-Claim-Email': save.request.headers['x-dekart-claim-email'],
+        'X-Dekart-Report-Id': request.getReportId()
+      },
+      body
+    })).then(response => {
+      expect(response.ok).to.equal(true)
+      expect(response.headers.get('grpc-status')).to.be.oneOf([null, '0'])
+    })
   })
 }
 
 describe('query parameters during report stream updates', () => {
-  it('retains B, _x and a typed while their SQL save completes', () => {
+  // The response stays held while Cypress types three inputs and performs a remote save.
+  it('retains B, _x and a typed while their SQL save completes', { defaultCommandTimeout: 15000 }, () => {
     cy.setDevClaimsEmail(`parameter-save-${Date.now()}@example.com`)
     cy.visit('/')
     cy.ensureTestWorkspace()
@@ -60,19 +65,23 @@ describe('query parameters during report stream updates', () => {
 
     // Hold the accepted save until all three draft inputs are visible.
     let releaseSave
+    let acceptedSave
     cy.intercept({ method: 'POST', url: '**/Dekart/UpdateReport', times: 1 }, request => {
-      request.continue(() => new Promise(resolve => { releaseSave = resolve }))
+      request.continue(response => new Promise(resolve => {
+        acceptedSave = { request, response }
+        releaseSave = resolve
+      }))
     }).as('parameterSave')
     enterVisibleQuery("SELECT CONCAT({{B}}, '|', {{_x}}, '|', {{a}}) AS binding")
     cy.wrap(null).should(() => expect(releaseSave).to.be.a('function'))
     queryParameterInput('B').clear().type('upper').should('have.value', 'upper')
     queryParameterInput('_x').clear().type('underscore').should('have.value', 'underscore')
     queryParameterInput('a').clear().type('lower').should('have.value', 'lower')
+    // Keep local autosave busy until the other client has used this accepted version.
+    cy.then(() => renameReportRemotely(acceptedSave))
     cy.then(() => releaseSave())
-    cy.wait('@parameterSave').then(save => {
-      cy.get('#dekart-save-button .anticon-cloud', { timeout: 60000 }).should('exist')
-      renameReportRemotely(save)
-    })
+    cy.wait('@parameterSave')
+    cy.get('#dekart-save-button .anticon-cloud', { timeout: 60000 }).should('exist')
     cy.contains('Remote parameter stream', { timeout: 30000 }).should('be.visible')
     queryParameterInput('B').should('have.value', 'upper')
     queryParameterInput('_x').should('have.value', 'underscore')
@@ -103,12 +112,11 @@ describe('query parameters during report stream updates', () => {
     cy.enterQuery('SELECT 2')
     cy.intercept('POST', '**/Dekart/UpdateReport').as('baselineSave')
     saveReport()
-    // Let saves queued while the empty query was created settle before reusing their version.
-    cy.wait(1500)
-    cy.get('@baselineSave.all').then(saves => cy.wrap(saves[saves.length - 1]).as('savedReport'))
+    cy.wait('@baselineSave').as('savedReport')
+    // Let the completed save clear its real timers before pausing autosave for the draft.
+    cy.clock(Date.now(), ['setTimeout', 'clearTimeout'])
 
     // Keep the edit unsaved while the independent save arrives through the real stream.
-    cy.clock(Date.now(), ['setTimeout', 'clearTimeout'])
     cy.contains('[role="tab"]', 'Query 1').click()
     cy.enterQuery('SELECT {{station}} AS station')
     cy.contains('.ant-input-group-addon', 'station').parent().find('input').type('DLA5')

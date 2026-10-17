@@ -46,7 +46,7 @@ function assertRenderedPoints (name, attempts = 10, visible = true) {
 
 // Apply the customer parameter through the same visible form used in the report.
 function applyStation (station, rows) {
-  cy.contains('.ant-input-group-addon', 'station').parent().find('input').first().clear()
+  cy.contains('.ant-input-group-addon', 'station').parent().find('input').first().clear({ timeout: 120000 })
   // An empty value reproduces opening the saved map with qp_station= before applying DLA5.
   if (station) cy.contains('.ant-input-group-addon', 'station').parent().find('input').first().type(station)
   cy.intercept('POST', '**/Dekart/RunAllQueries').as('applyParameters')

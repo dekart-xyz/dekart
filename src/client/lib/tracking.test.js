@@ -53,6 +53,7 @@ describe('track', () => {
   let originalLocalStorage
 
   beforeEach(() => {
+    vi.useFakeTimers()
     // Mock plausible
     mockPlausible = vi.fn()
     window.plausible = mockPlausible
@@ -71,6 +72,7 @@ describe('track', () => {
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     // Restore localStorage
     global.localStorage = originalLocalStorage
   })
@@ -78,10 +80,10 @@ describe('track', () => {
   it('calls plausible with event and props when plausible exists', async () => {
     global.localStorage.getItem.mockReturnValue(null)
 
-    track('test-event', { prop1: 'value1' })
+    await track('test-event', { prop1: 'value1' })
 
     // Wait for setTimeout to execute
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await vi.runAllTimersAsync()
 
     expect(mockPlausible).toHaveBeenCalledWith('test-event', { props: { prop1: 'value1' } })
   })
@@ -90,10 +92,10 @@ describe('track', () => {
     window.plausible = undefined
     global.localStorage.getItem.mockReturnValue(null)
 
-    track('test-event', { prop1: 'value1' })
+    await track('test-event', { prop1: 'value1' })
 
     // Wait for setTimeout to execute
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await vi.runAllTimersAsync()
 
     expect(mockPlausible).not.toHaveBeenCalled()
   })
@@ -102,10 +104,10 @@ describe('track', () => {
     const loginHint = 'user@example.com'
     global.localStorage.getItem.mockReturnValue(JSON.stringify({ loginHint }))
 
-    track('test-event', { prop1: 'value1' })
+    await track('test-event', { prop1: 'value1' })
 
     // Wait for setTimeout to execute
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await vi.runAllTimersAsync()
 
     expect(global.localStorage.getItem).toHaveBeenCalledWith(LOCAL_STORAGE_KEY)
     expect(mockPlausible).toHaveBeenCalledWith('test-event', {
@@ -123,10 +125,10 @@ describe('track', () => {
     const loginHint = 'user@example.com'
     global.localStorage.getItem.mockReturnValue(JSON.stringify({ loginHint }))
 
-    track('test-event', { prop1: 'value1' })
+    await track('test-event', { prop1: 'value1' })
 
     // Wait for setTimeout to execute
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await vi.runAllTimersAsync()
 
     const call = mockPlausible.mock.calls[0]
     expect(call[1].props).toHaveProperty('seid')
@@ -136,10 +138,10 @@ describe('track', () => {
   it('handles localStorage parsing errors gracefully', async () => {
     global.localStorage.getItem.mockReturnValue('invalid-json')
 
-    track('test-event', { prop1: 'value1' })
+    await track('test-event', { prop1: 'value1' })
 
     // Wait for setTimeout to execute
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await vi.runAllTimersAsync()
 
     expect(mockPlausible).toHaveBeenCalledWith('test-event', { props: { prop1: 'value1' } })
   })
@@ -149,10 +151,10 @@ describe('track', () => {
       throw new Error('localStorage error')
     })
 
-    track('test-event', { prop1: 'value1' })
+    await track('test-event', { prop1: 'value1' })
 
     // Wait for setTimeout to execute
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await vi.runAllTimersAsync()
 
     expect(mockPlausible).toHaveBeenCalledWith('test-event', { props: { prop1: 'value1' } })
   })
@@ -165,10 +167,10 @@ describe('track', () => {
     const originalDigest = global.crypto.subtle.digest
     global.crypto.subtle.digest = vi.fn().mockRejectedValue(new Error('crypto error'))
 
-    track('test-event', { prop1: 'value1' })
+    await track('test-event', { prop1: 'value1' })
 
     // Wait for setTimeout to execute
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await vi.runAllTimersAsync()
 
     // Should still call plausible without seid (and without loginHint for privacy)
     expect(mockPlausible).toHaveBeenCalledWith('test-event', {
@@ -188,10 +190,10 @@ describe('track', () => {
       throw new Error('Unexpected error')
     })
 
-    track('test-event', { prop1: 'value1' })
+    await track('test-event', { prop1: 'value1' })
 
     // Wait for setTimeout to execute
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await vi.runAllTimersAsync()
 
     expect(mockPlausible).toHaveBeenCalledWith('test-event', { props: { prop1: 'value1' } })
   })
@@ -199,10 +201,10 @@ describe('track', () => {
   it('works with null localStorage value', async () => {
     global.localStorage.getItem.mockReturnValue(null)
 
-    track('test-event', { prop2: 'value2' })
+    await track('test-event', { prop2: 'value2' })
 
     // Wait for setTimeout to execute
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await vi.runAllTimersAsync()
 
     expect(mockPlausible).toHaveBeenCalledWith('test-event', { props: { prop2: 'value2' } })
   })
@@ -210,10 +212,10 @@ describe('track', () => {
   it('works with empty localStorage object', async () => {
     global.localStorage.getItem.mockReturnValue('{}')
 
-    track('test-event', { prop3: 'value3' })
+    await track('test-event', { prop3: 'value3' })
 
     // Wait for setTimeout to execute
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await vi.runAllTimersAsync()
 
     expect(mockPlausible).toHaveBeenCalledWith('test-event', { props: { prop3: 'value3' } })
   })
@@ -221,10 +223,10 @@ describe('track', () => {
   it('works with localStorage object without loginHint', async () => {
     global.localStorage.getItem.mockReturnValue(JSON.stringify({ otherProp: 'value' }))
 
-    track('test-event', { prop4: 'value4' })
+    await track('test-event', { prop4: 'value4' })
 
     // Wait for setTimeout to execute
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await vi.runAllTimersAsync()
 
     expect(mockPlausible).toHaveBeenCalledWith('test-event', { props: { prop4: 'value4' } })
   })
@@ -232,10 +234,10 @@ describe('track', () => {
   it('handles empty loginHint gracefully', async () => {
     global.localStorage.getItem.mockReturnValue(JSON.stringify({ loginHint: '' }))
 
-    track('test-event', { prop5: 'value5' })
+    await track('test-event', { prop5: 'value5' })
 
     // Wait for setTimeout to execute
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await vi.runAllTimersAsync()
 
     expect(mockPlausible).toHaveBeenCalledWith('test-event', { props: { prop5: 'value5' } })
   })

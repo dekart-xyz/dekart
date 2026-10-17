@@ -1,39 +1,38 @@
 // Regression: Switching from viewing to editing loses authored layers while parameter results are empty.
 /* eslint-disable no-undef */
-import { UpdateReportRequest, UpdateReportResponse } from 'dekart-proto/dekart_pb'
+import { UpdateReportRequest } from 'dekart-proto/dekart_pb'
 import { LAYER_SELECTOR, uploadActiveDataset } from '../local/duckdbHelpers'
 import { ROW_LIMIT, createParameterizedReport, saveReport } from './queryParameterHelpers'
 
-// Send an independent save using the public request and returned report version.
+// Send an independent layer change using the report's current saved version.
 function hidePendingLayerRemotely (save) {
   const requestBytes = Cypress.Buffer.from(save.request.body)
-  const responseBytes = Cypress.Buffer.from(save.response.body)
   const request = UpdateReportRequest.deserializeBinary(
     new Uint8Array(requestBytes.buffer, requestBytes.byteOffset + 5, requestBytes.length - 5)
-  )
-  const responseLength = responseBytes.readUInt32BE(1)
-  const response = UpdateReportResponse.deserializeBinary(
-    new Uint8Array(responseBytes.buffer, responseBytes.byteOffset + 5, responseLength)
   )
   const config = JSON.parse(request.getMapConfig())
   config.config.visState.layers[0].config.isVisible = false
   request.setMapConfig(JSON.stringify(config))
   request.setTitle('Remote pending layer')
-  request.setExpectedVersionId(response.getVersionId())
-  const payload = request.serializeBinary()
-  const body = new Uint8Array(payload.length + 5)
-  new DataView(body.buffer).setUint32(1, payload.length)
-  body.set(payload, 5)
-  return cy.window().then(win => win.fetch(`${Cypress.env('DEKART_E2E_API_URL')}/Dekart/UpdateReport`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/grpc-web+proto',
-      'X-Grpc-Web': '1',
-      Authorization: save.request.headers.authorization,
-      'X-Dekart-Report-Id': request.getReportId()
-    },
-    body
-  })).then(response => {
+  // Viewer query execution can advance the version after the captured save.
+  request.setQueryList([])
+  return cy.psql(`SELECT version_id FROM reports WHERE id='${request.getReportId()}'`).then(({ stdout }) => {
+    request.setExpectedVersionId(stdout.trim())
+    const payload = request.serializeBinary()
+    const body = new Uint8Array(payload.length + 5)
+    new DataView(body.buffer).setUint32(1, payload.length)
+    body.set(payload, 5)
+    return cy.window().then(win => win.fetch(`${Cypress.env('DEKART_E2E_API_URL')}/Dekart/UpdateReport`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/grpc-web+proto',
+        'X-Grpc-Web': '1',
+        Authorization: save.request.headers.authorization,
+        'X-Dekart-Report-Id': request.getReportId()
+      },
+      body
+    }))
+  }).then(response => {
     expect(response.ok).to.equal(true)
     expect(response.headers.get('grpc-status'), decodeURIComponent(response.headers.get('grpc-message') || '')).to.be.oneOf([null, '0'])
   })

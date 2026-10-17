@@ -1,6 +1,6 @@
 // Critical path: Save a report and reopen it with layers intact
 /* eslint-disable no-undef */
-import { UpdateReportRequest } from 'dekart-proto/dekart_pb'
+import { RemoveReadmeRequest, UpdateReportRequest } from 'dekart-proto/dekart_pb'
 
 const LAYER_SELECTOR = '[data-testid="sortable-layer-item"], [data-testid="static-layer-item"]'
 
@@ -25,7 +25,7 @@ function getStore () {
   return cy.window({ timeout: 60000 }).then((win) => getReduxStoreFromWindow(win))
 }
 
-function createUploadedReport (fixture = 'sample.csv') {
+function createUploadedReport (fixture = 'sample.geojson') {
   const email = `report-save-${Date.now()}@example.com`
   cy.setDevClaimsEmail(email)
   cy.intercept(`${Cypress.env('DEKART_E2E_API_URL')}/api/v1/**`, request => {
@@ -358,18 +358,113 @@ describe('cloud report save regression', () => {
     cy.contains('Map changed').should('not.exist')
   })
 
-  it('keeps README removed after immediate save and report reload', () => {
+  it('keeps the README when removal observes a stale report version', () => {
+    createUploadedReport()
+    clickWriteReadme()
+    cy.contains('.ant-tabs-tab', 'Readme', { timeout: 20000 }).should('be.visible')
+    waitForIdleSave()
+    cy.intercept('POST', '**/Dekart/RemoveReadme', req => {
+      const bytes = Cypress.Buffer.from(req.body)
+      const command = RemoveReadmeRequest.deserializeBinary(
+        new Uint8Array(bytes.buffer, bytes.byteOffset + 5, bytes.length - 5)
+      )
+      expect(command.getExpectedVersionId()).to.be.a('string').and.not.equal('')
+      command.setExpectedVersionId('stale-version')
+      const payload = command.serializeBinary()
+      const body = new Uint8Array(payload.length + 5)
+      new DataView(body.buffer).setUint32(1, payload.length)
+      body.set(payload, 5)
+      req.body = body.buffer
+    }).as('staleRemoval')
+    cy.get('.ant-tabs-tab-remove').first().click()
+    cy.contains('.ant-modal-confirm-btns button', 'Yes').click()
+    cy.wait('@staleRemoval').its('response.headers.grpc-status').should('eq', '10')
+    cy.contains('.ant-tabs-tab', 'Readme').should('be.visible')
+    cy.reload()
+    cy.contains('.ant-tabs-tab', 'Readme', { timeout: 30000 }).should('be.visible')
+  })
+
+  it('allows MCP to remove the current README without an observed version', () => {
+    createUploadedReport()
+    clickWriteReadme()
+    cy.contains('.ant-tabs-tab', 'Readme', { timeout: 20000 }).should('be.visible')
+    waitForIdleSave()
+    cy.get('@createdReportPath').then(path => {
+      const reportId = path.split('/')[2]
+      cy.mcpDeviceToken(undefined, { fresh: true }).then(token => {
+        cy.visit(path)
+        cy.contains('.ant-tabs-tab', 'Readme', { timeout: 30000 }).should('be.visible')
+        cy.request({
+          method: 'POST',
+          url: `${Cypress.env('DEKART_E2E_API_URL')}/api/v1/mcp/call`,
+          headers: { Authorization: `Bearer ${token}` },
+          body: { name: 'remove_report_readme', arguments: { report_id: reportId } }
+        }).then(({ body }) => {
+          expect(body).not.to.have.property('error')
+          expect(body.result.versionId || body.result.version_id).to.be.a('string').and.not.equal('')
+        })
+        cy.contains('.ant-tabs-tab', 'Readme').should('not.exist')
+        cy.reload()
+        cy.get(LAYER_SELECTOR, { timeout: 120000 }).should('have.length', 1)
+        cy.contains('.ant-tabs-tab', 'Readme').should('not.exist')
+      })
+    })
+  })
+
+  it('removes only the README while a layer deletion remains unsaved', () => {
+    createUploadedReport()
+    clickWriteReadme()
+    cy.contains('.ant-tabs-tab', 'Readme', { timeout: 20000 }).should('be.visible')
+    waitForIdleSave()
+    cy.location('pathname').then(path => {
+      const reportId = path.split('/')[2]
+      cy.psql(`SELECT map_config FROM reports WHERE id='${reportId}'`).its('stdout').as('savedMap')
+      cy.clock(Date.now(), ['setTimeout', 'clearTimeout'])
+      cy.openLayerPanel()
+      cy.tick(100)
+      cy.get('[data-testid="remove-layer-action"]').click({ force: true })
+      cy.get(LAYER_SELECTOR).should('not.exist')
+      cy.intercept('POST', '**/Dekart/UpdateReport').as('unexpectedSave')
+      cy.intercept('POST', '**/Dekart/RemoveReadme').as('removeReadme')
+      cy.get('.ant-tabs-tab-remove').first().click()
+      cy.tick(100)
+      cy.contains('.ant-modal-confirm-btns button', 'Yes').click()
+      cy.tick(100)
+      cy.wait('@removeReadme').its('response.statusCode').should('eq', 200)
+      cy.contains('.ant-tabs-tab', 'Readme').should('not.exist')
+      cy.get(LAYER_SELECTOR).should('not.exist')
+      cy.get('@unexpectedSave.all').should('have.length', 0)
+      cy.get('@savedMap').then(savedMap => {
+        cy.psql(`SELECT map_config FROM reports WHERE id='${reportId}'`).its('stdout').should('eq', savedMap)
+      })
+      // Reload discards the unsaved layer deletion but keeps the committed README removal.
+      cy.clock().invoke('restore')
+      cy.reload()
+      cy.get(LAYER_SELECTOR, { timeout: 120000 }).should('have.length', 1)
+      cy.contains('.ant-tabs-tab', 'Readme').should('not.exist')
+    })
+  })
+
+  // The held save response must outlast typing and the removal confirmation dialog.
+  it('keeps README removed after immediate save and report reload', { defaultCommandTimeout: 30000 }, () => {
     createUploadedReport()
 
     clickWriteReadme()
     cy.contains('.ant-tabs-tab', 'Readme', { timeout: 20000 }).should('be.visible')
-    cy.get('button#dekart-save-button').click()
-    cy.get('button#dekart-save-button', { timeout: 60000 }).should('not.be.disabled')
+    // Remove while an accepted save still carries the old README back to the browser.
+    let releaseSave
+    cy.intercept({ method: 'POST', url: '**/Dekart/UpdateReport', times: 1 }, request => {
+      request.continue(() => new Promise(resolve => { releaseSave = resolve }))
+    }).as('saveBeforeRemoval')
+    cy.get('.ace_editor:visible textarea').type('{end} Pending save', { force: true })
+    cy.wrap(null).should(() => expect(releaseSave).to.be.a('function'))
 
     cy.get('.ant-tabs-tab-remove').first().click()
     cy.contains('.ant-modal-confirm-title', 'Remove readme from report?').should('be.visible')
     cy.contains('.ant-modal-confirm-btns button', 'Yes').click()
-    cy.get('button#dekart-save-button').click()
+    cy.then(() => releaseSave())
+    cy.wait('@saveBeforeRemoval')
+    cy.get('button#dekart-save-button', { timeout: 60000 }).should('not.be.disabled').click()
     cy.get('button#dekart-save-button', { timeout: 60000 }).should('not.be.disabled')
 
     cy.contains('.ant-tabs-tab', 'Readme').should('not.exist')

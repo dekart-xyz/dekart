@@ -7131,7 +7131,8 @@ proto.RemoveReadmeRequest.prototype.toObject = function(opt_includeInstance) {
  */
 proto.RemoveReadmeRequest.toObject = function(includeInstance, msg) {
   var f, obj = {
-    reportId: jspb.Message.getFieldWithDefault(msg, 1, "")
+    reportId: jspb.Message.getFieldWithDefault(msg, 1, ""),
+    expectedVersionId: jspb.Message.getFieldWithDefault(msg, 2, "")
   };
 
   if (includeInstance) {
@@ -7172,6 +7173,10 @@ proto.RemoveReadmeRequest.deserializeBinaryFromReader = function(msg, reader) {
       var value = /** @type {string} */ (reader.readString());
       msg.setReportId(value);
       break;
+    case 2:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setExpectedVersionId(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -7208,6 +7213,13 @@ proto.RemoveReadmeRequest.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
+  f = /** @type {string} */ (jspb.Message.getField(message, 2));
+  if (f != null) {
+    writer.writeString(
+      2,
+      f
+    );
+  }
 };
 
 
@@ -7226,6 +7238,42 @@ proto.RemoveReadmeRequest.prototype.getReportId = function() {
  */
 proto.RemoveReadmeRequest.prototype.setReportId = function(value) {
   return jspb.Message.setProto3StringField(this, 1, value);
+};
+
+
+/**
+ * optional string expected_version_id = 2;
+ * @return {string}
+ */
+proto.RemoveReadmeRequest.prototype.getExpectedVersionId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 2, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.RemoveReadmeRequest} returns this
+ */
+proto.RemoveReadmeRequest.prototype.setExpectedVersionId = function(value) {
+  return jspb.Message.setField(this, 2, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.RemoveReadmeRequest} returns this
+ */
+proto.RemoveReadmeRequest.prototype.clearExpectedVersionId = function() {
+  return jspb.Message.setField(this, 2, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.RemoveReadmeRequest.prototype.hasExpectedVersionId = function() {
+  return jspb.Message.getField(this, 2) != null;
 };
 
 
@@ -7261,7 +7309,7 @@ proto.RemoveReadmeResponse.prototype.toObject = function(opt_includeInstance) {
  */
 proto.RemoveReadmeResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
-
+    versionId: jspb.Message.getFieldWithDefault(msg, 1, "")
   };
 
   if (includeInstance) {
@@ -7298,6 +7346,10 @@ proto.RemoveReadmeResponse.deserializeBinaryFromReader = function(msg, reader) {
     }
     var field = reader.getFieldNumber();
     switch (field) {
+    case 1:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setVersionId(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -7327,6 +7379,31 @@ proto.RemoveReadmeResponse.prototype.serializeBinary = function() {
  */
 proto.RemoveReadmeResponse.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
+  f = message.getVersionId();
+  if (f.length > 0) {
+    writer.writeString(
+      1,
+      f
+    );
+  }
+};
+
+
+/**
+ * optional string version_id = 1;
+ * @return {string}
+ */
+proto.RemoveReadmeResponse.prototype.getVersionId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 1, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.RemoveReadmeResponse} returns this
+ */
+proto.RemoveReadmeResponse.prototype.setVersionId = function(value) {
+  return jspb.Message.setProto3StringField(this, 1, value);
 };
 
 

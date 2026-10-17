@@ -129,19 +129,46 @@ func (s Server) RemoveReadme(ctx context.Context, req *proto.RemoveReadmeRequest
 	updatedAt := time.Now()
 	newVersionID := newUUID()
 
-	_, err = s.db.ExecContext(ctx,
+	// Removal, version validation and history commit together so rejected commands leave the README intact.
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer tx.Rollback()
+	if err := lockReportTx(ctx, tx, req.ReportId); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	// Browser removals are conditional; callers without a draft may remove the current README.
+	if req.ExpectedVersionId != nil {
+		var currentVersion sql.NullString
+		if err := tx.QueryRowContext(ctx,
+			"SELECT version_id FROM reports WHERE id=$1", req.ReportId,
+		).Scan(&currentVersion); err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		if err := validateExpectedReportVersion(currentVersion.String, req.ExpectedVersionId); err != nil {
+			return nil, err
+		}
+	}
+
+	_, err = tx.ExecContext(ctx,
 		`update reports set readme = null, updated_at = $1, version_id = $2 where id = $3`,
 		updatedAt, newVersionID, req.ReportId)
 	if err != nil {
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	err = s.createReportSnapshotWithVersionID(ctx, newVersionID, req.ReportId, claims.Email, proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE)
+	err = s.createReportSnapshotWithVersionIDTx(
+		ctx, tx, newVersionID, req.ReportId, claims.Email,
+		proto.ReportSnapshot_TRIGGER_TYPE_REPORT_CHANGE,
+	)
 	if err != nil {
 		errtype.LogError(err, "Cannot create report snapshot for readme removal")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+	if err := tx.Commit(); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 	s.reportStreams.Ping(req.ReportId)
-	return &proto.RemoveReadmeResponse{}, nil
-
+	return &proto.RemoveReadmeResponse{VersionId: newVersionID}, nil
 }
