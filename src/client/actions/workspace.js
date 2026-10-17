@@ -9,6 +9,7 @@ import {
   RespondToInviteRequest,
   RevokeDeviceTokenRequest,
   UpdateWorkspaceRequest,
+  DeleteWorkspaceRequest,
   UpdateWorkspaceUserRequest,
   PlanType
 } from 'dekart-proto/dekart_pb'
@@ -225,5 +226,16 @@ export function listUsers () {
       dispatch(grpcCall(Dekart.ListUsers, request, resolve))
     })
     dispatch(usersListUpdate(res.usersList))
+  }
+}
+
+// Reload without a preferred workspace so the server selects a surviving membership.
+export function deleteWorkspace (workspaceId) {
+  return (dispatch) => {
+    const request = new DeleteWorkspaceRequest()
+    request.setWorkspaceId(workspaceId)
+    dispatch(grpcCall(Dekart.DeleteWorkspace, request, () => {
+      dispatch(switchWorkspace(''))
+    }))
   }
 }

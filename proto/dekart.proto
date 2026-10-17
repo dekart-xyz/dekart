@@ -76,6 +76,7 @@ service Dekart {
     //workspace
     rpc CreateWorkspace(CreateWorkspaceRequest) returns (CreateWorkspaceResponse) {}
     rpc UpdateWorkspace(UpdateWorkspaceRequest) returns (UpdateWorkspaceResponse) {}
+    rpc DeleteWorkspace(DeleteWorkspaceRequest) returns (DeleteWorkspaceResponse) {}
     rpc GetWorkspace(GetWorkspaceRequest) returns (GetWorkspaceResponse) {}
     rpc UpdateWorkspaceUser(UpdateWorkspaceUserRequest) returns (UpdateWorkspaceUserResponse) {}
 }
@@ -1143,3 +1144,6 @@ message DuckDBExecutionExtension {
     string name = 1;
     string repository = 2; // core | community
 }
+
+message DeleteWorkspaceRequest { string workspace_id = 1; }
+message DeleteWorkspaceResponse {}
