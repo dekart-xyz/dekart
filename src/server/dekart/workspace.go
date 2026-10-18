@@ -563,10 +563,6 @@ func (s Server) resolveWorkspaceContext(ctx context.Context, preferredWorkspaceI
 			break
 		}
 	}
-	if workspaceId == "" && claims.WorkspaceID != "" {
-		// why: token-scoped auth (device/snapshot) must keep workspace routing bound to token scope.
-		workspaceId = claims.WorkspaceID
-	}
 	if workspaceId != "" {
 		subscription, err := s.getSubscription(ctx, workspaceId)
 		if err != nil {
