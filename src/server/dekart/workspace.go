@@ -563,10 +563,7 @@ func (s Server) resolveWorkspaceContext(ctx context.Context, preferredWorkspaceI
 			break
 		}
 	}
-	if workspaceId == "" && claims.WorkspaceID != "" {
-		// why: token-scoped auth (device/snapshot) must keep workspace routing bound to token scope.
-		workspaceId = claims.WorkspaceID
-	}
+	// REVIEW: A scoped token keeps workspace access only while its user remains a member.
 	if workspaceId != "" {
 		subscription, err := s.getSubscription(ctx, workspaceId)
 		if err != nil {

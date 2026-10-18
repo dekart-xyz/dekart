@@ -2,11 +2,12 @@ import { Header } from './Header'
 import { Helmet } from 'react-helmet'
 import styles from './WorkspacePage.module.css'
 import Card from 'antd/es/card'
+import Modal from 'antd/es/modal'
 import { TeamOutlined, CreditCardOutlined, AppstoreTwoTone, KeyOutlined } from '@ant-design/icons'
 import Title from 'antd/es/typography/Title'
 import Button from 'antd/es/button'
 import { useEffect, useState } from 'react'
-import { createWorkspace, updateWorkspace, respondToInvite } from './actions/workspace'
+import { createWorkspace, updateWorkspace, deleteWorkspace, redirectToCustomerPortal, respondToInvite } from './actions/workspace'
 import { useDispatch, useSelector } from 'react-redux'
 import { PlanType } from 'dekart-proto/dekart_pb'
 import Table from 'antd/es/table'
@@ -200,6 +201,40 @@ function CreateWorkspaceForm () {
   )
 }
 
+// REVIEW: Deletion requires an exact workspace name and stays unavailable for paid subscriptions.
+// The server checks permissions and billing again when the confirmed command arrives.
+function DeleteWorkspaceSection () {
+  const workspace = useSelector(state => state.workspace)
+  const isCloud = useSelector(state => state.env.isCloud)
+  const isAdmin = useSelector(state => state.user.isAdmin)
+  const isDefault = useSelector(state => state.user.isDefaultWorkspace)
+  const dispatch = useDispatch()
+  const [open, setOpen] = useState(false)
+  const [name, setName] = useState('')
+  const paid = Boolean(workspace.subscription?.stripeSubscriptionId)
+  if (!isCloud || !isAdmin || isDefault) return null
+  return (
+    <Card title='Delete workspace'>
+      <p>Permanently delete this workspace, its maps, data and connections.</p>
+      {paid && (
+        <p>Cancel your subscription first. <Button onClick={() => dispatch(redirectToCustomerPortal())}>Manage subscription</Button></p>
+      )}
+      <Button danger disabled={paid} onClick={() => { setName(''); setOpen(true) }}>Delete workspace</Button>
+      <Modal
+        title='Delete workspace'
+        open={open}
+        onCancel={() => setOpen(false)}
+        okText='Delete'
+        okButtonProps={{ danger: true, disabled: name !== workspace.name }}
+        onOk={() => dispatch(deleteWorkspace(workspace.id))}
+      >
+        <p>Type {workspace.name} to permanently delete this workspace.</p>
+        <Input aria-label='Workspace name to delete' value={name} onChange={e => setName(e.target.value)} />
+      </Modal>
+    </Card>
+  )
+}
+
 function UpdateWorkspaceForm () {
   const workspace = useSelector(state => state.workspace)
   const isAdmin = useSelector(state => state.user.isAdmin)
@@ -274,7 +309,8 @@ function WorkspaceTab ({ nextStep, setNextStep, isCreatingAdditionalWorkspace })
             </div>
             )}
       </div>
-      <div className={styles.workspaceTabBody}>{form}</div>
+      // REVIEW: Deletion is offered only while managing an existing workspace.
+      <div className={styles.workspaceTabBody}>{form}{workspace.id && !isCreatingAdditionalWorkspace && nextStep !== 'invites' && <DeleteWorkspaceSection />}</div>
 
     </div>
   )

@@ -45,6 +45,7 @@ type ReportAccessGranted struct {
 type Service interface {
 	SendWorkspaceInvite(WorkspaceInvite)
 	SendReportAccessGranted(ReportAccessGranted)
+	SendWorkspaceDeleteCleanupFailed(WorkspaceDeleteCleanupFailed)
 }
 
 type noopService struct{}
@@ -199,29 +200,7 @@ func (s *resendService) dispatchWorkspaceInvite(invite WorkspaceInvite) error {
 		Html:    htmlBody.String(),
 		Text:    textBody.String(),
 	}
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return fmt.Errorf("marshal resend payload: %w", err)
-	}
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "https://api.resend.com/emails", bytes.NewReader(body))
-	if err != nil {
-		return fmt.Errorf("create resend request: %w", err)
-	}
-	req.Header.Set("Authorization", "Bearer "+s.apiKey)
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := s.httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("send resend request: %w", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 300 {
-		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4*1024))
-		if isInvalidRecipientEmail(resp.StatusCode, respBody) {
-			return errInvalidRecipientEmail
-		}
-		return fmt.Errorf("resend responded with %d: %s", resp.StatusCode, strings.TrimSpace(string(respBody)))
-	}
-	return nil
+	return s.dispatchEmail(payload)
 }
 
 func workspaceRoleLabel(role proto.UserRole) string {
@@ -282,6 +261,11 @@ func (s *resendService) dispatchReportAccessGranted(notification ReportAccessGra
 		Html:    htmlBody.String(),
 		Text:    textBody.String(),
 	}
+	return s.dispatchEmail(payload)
+}
+
+// dispatchEmail preserves Resend error details for notification-specific logging.
+func (s *resendService) dispatchEmail(payload resendEmailPayload) error {
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("marshal resend payload: %w", err)
