@@ -4477,6 +4477,42 @@ export namespace DuckDBExecutionExtension {
   }
 }
 
+export class DeleteWorkspaceRequest extends jspb.Message {
+  getWorkspaceId(): string;
+  setWorkspaceId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): DeleteWorkspaceRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: DeleteWorkspaceRequest): DeleteWorkspaceRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: DeleteWorkspaceRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): DeleteWorkspaceRequest;
+  static deserializeBinaryFromReader(message: DeleteWorkspaceRequest, reader: jspb.BinaryReader): DeleteWorkspaceRequest;
+}
+
+export namespace DeleteWorkspaceRequest {
+  export type AsObject = {
+    workspaceId: string,
+  }
+}
+
+export class DeleteWorkspaceResponse extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): DeleteWorkspaceResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: DeleteWorkspaceResponse): DeleteWorkspaceResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: DeleteWorkspaceResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): DeleteWorkspaceResponse;
+  static deserializeBinaryFromReader(message: DeleteWorkspaceResponse, reader: jspb.BinaryReader): DeleteWorkspaceResponse;
+}
+
+export namespace DeleteWorkspaceResponse {
+  export type AsObject = {
+  }
+}
+
 export interface UserStatusMap {
   USER_STATUS_UNSPECIFIED: 0;
   USER_STATUS_PENDING: 1;

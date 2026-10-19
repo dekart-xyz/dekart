@@ -463,6 +463,15 @@ type DekartUpdateWorkspace = {
   readonly responseType: typeof dekart_pb.UpdateWorkspaceResponse;
 };
 
+type DekartDeleteWorkspace = {
+  readonly methodName: string;
+  readonly service: typeof Dekart;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof dekart_pb.DeleteWorkspaceRequest;
+  readonly responseType: typeof dekart_pb.DeleteWorkspaceResponse;
+};
+
 type DekartGetWorkspace = {
   readonly methodName: string;
   readonly service: typeof Dekart;
@@ -534,6 +543,7 @@ export class Dekart {
   static readonly GetStripePortalSession: DekartGetStripePortalSession;
   static readonly CreateWorkspace: DekartCreateWorkspace;
   static readonly UpdateWorkspace: DekartUpdateWorkspace;
+  static readonly DeleteWorkspace: DekartDeleteWorkspace;
   static readonly GetWorkspace: DekartGetWorkspace;
   static readonly UpdateWorkspaceUser: DekartUpdateWorkspaceUser;
 }
@@ -1004,6 +1014,15 @@ export class DekartClient {
   updateWorkspace(
     requestMessage: dekart_pb.UpdateWorkspaceRequest,
     callback: (error: ServiceError|null, responseMessage: dekart_pb.UpdateWorkspaceResponse|null) => void
+  ): UnaryResponse;
+  deleteWorkspace(
+    requestMessage: dekart_pb.DeleteWorkspaceRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.DeleteWorkspaceResponse|null) => void
+  ): UnaryResponse;
+  deleteWorkspace(
+    requestMessage: dekart_pb.DeleteWorkspaceRequest,
+    callback: (error: ServiceError|null, responseMessage: dekart_pb.DeleteWorkspaceResponse|null) => void
   ): UnaryResponse;
   getWorkspace(
     requestMessage: dekart_pb.GetWorkspaceRequest,

@@ -1,0 +1,9 @@
+Workspace {{ .WorkspaceName }} ({{ .WorkspaceID }}) was deleted.{{ if .ObjectURLs }}
+
+These storage objects could not be deleted:
+{{ join "\n" .ObjectURLs }}{{ end }}{{ if .RetainedConnections }}
+
+These connections and their stored credentials were retained because datasets or saved history in another workspace still reference them:
+{{ join "\n" .RetainedConnections }}{{ end }}
+
+Please forward this email to support@dekart.xyz to request manual deletion of the items listed above.

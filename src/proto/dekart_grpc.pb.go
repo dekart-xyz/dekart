@@ -70,6 +70,7 @@ const (
 	Dekart_GetStripePortalSession_FullMethodName        = "/Dekart/GetStripePortalSession"
 	Dekart_CreateWorkspace_FullMethodName               = "/Dekart/CreateWorkspace"
 	Dekart_UpdateWorkspace_FullMethodName               = "/Dekart/UpdateWorkspace"
+	Dekart_DeleteWorkspace_FullMethodName               = "/Dekart/DeleteWorkspace"
 	Dekart_GetWorkspace_FullMethodName                  = "/Dekart/GetWorkspace"
 	Dekart_UpdateWorkspaceUser_FullMethodName           = "/Dekart/UpdateWorkspaceUser"
 )
@@ -140,6 +141,7 @@ type DekartClient interface {
 	// workspace
 	CreateWorkspace(ctx context.Context, in *CreateWorkspaceRequest, opts ...grpc.CallOption) (*CreateWorkspaceResponse, error)
 	UpdateWorkspace(ctx context.Context, in *UpdateWorkspaceRequest, opts ...grpc.CallOption) (*UpdateWorkspaceResponse, error)
+	DeleteWorkspace(ctx context.Context, in *DeleteWorkspaceRequest, opts ...grpc.CallOption) (*DeleteWorkspaceResponse, error)
 	GetWorkspace(ctx context.Context, in *GetWorkspaceRequest, opts ...grpc.CallOption) (*GetWorkspaceResponse, error)
 	UpdateWorkspaceUser(ctx context.Context, in *UpdateWorkspaceUserRequest, opts ...grpc.CallOption) (*UpdateWorkspaceUserResponse, error)
 }
@@ -689,6 +691,16 @@ func (c *dekartClient) UpdateWorkspace(ctx context.Context, in *UpdateWorkspaceR
 	return out, nil
 }
 
+func (c *dekartClient) DeleteWorkspace(ctx context.Context, in *DeleteWorkspaceRequest, opts ...grpc.CallOption) (*DeleteWorkspaceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteWorkspaceResponse)
+	err := c.cc.Invoke(ctx, Dekart_DeleteWorkspace_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *dekartClient) GetWorkspace(ctx context.Context, in *GetWorkspaceRequest, opts ...grpc.CallOption) (*GetWorkspaceResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetWorkspaceResponse)
@@ -775,6 +787,7 @@ type DekartServer interface {
 	// workspace
 	CreateWorkspace(context.Context, *CreateWorkspaceRequest) (*CreateWorkspaceResponse, error)
 	UpdateWorkspace(context.Context, *UpdateWorkspaceRequest) (*UpdateWorkspaceResponse, error)
+	DeleteWorkspace(context.Context, *DeleteWorkspaceRequest) (*DeleteWorkspaceResponse, error)
 	GetWorkspace(context.Context, *GetWorkspaceRequest) (*GetWorkspaceResponse, error)
 	UpdateWorkspaceUser(context.Context, *UpdateWorkspaceUserRequest) (*UpdateWorkspaceUserResponse, error)
 	mustEmbedUnimplementedDekartServer()
@@ -939,6 +952,9 @@ func (UnimplementedDekartServer) CreateWorkspace(context.Context, *CreateWorkspa
 }
 func (UnimplementedDekartServer) UpdateWorkspace(context.Context, *UpdateWorkspaceRequest) (*UpdateWorkspaceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateWorkspace not implemented")
+}
+func (UnimplementedDekartServer) DeleteWorkspace(context.Context, *DeleteWorkspaceRequest) (*DeleteWorkspaceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteWorkspace not implemented")
 }
 func (UnimplementedDekartServer) GetWorkspace(context.Context, *GetWorkspaceRequest) (*GetWorkspaceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetWorkspace not implemented")
@@ -1864,6 +1880,24 @@ func _Dekart_UpdateWorkspace_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Dekart_DeleteWorkspace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteWorkspaceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DekartServer).DeleteWorkspace(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Dekart_DeleteWorkspace_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DekartServer).DeleteWorkspace(ctx, req.(*DeleteWorkspaceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Dekart_GetWorkspace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetWorkspaceRequest)
 	if err := dec(in); err != nil {
@@ -2098,6 +2132,10 @@ var Dekart_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateWorkspace",
 			Handler:    _Dekart_UpdateWorkspace_Handler,
+		},
+		{
+			MethodName: "DeleteWorkspace",
+			Handler:    _Dekart_DeleteWorkspace_Handler,
 		},
 		{
 			MethodName: "GetWorkspace",
