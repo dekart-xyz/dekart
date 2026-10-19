@@ -2,6 +2,8 @@ import { Header } from './Header'
 import { Helmet } from 'react-helmet'
 import styles from './WorkspacePage.module.css'
 import Card from 'antd/es/card'
+import Alert from 'antd/es/alert'
+import { copyUrlToClipboard } from './actions/clipboard'
 import Modal from 'antd/es/modal'
 import { TeamOutlined, CreditCardOutlined, AppstoreTwoTone, KeyOutlined } from '@ant-design/icons'
 import Title from 'antd/es/typography/Title'
@@ -201,6 +203,13 @@ function CreateWorkspaceForm () {
   )
 }
 
+const subscriptionPlanNames = {
+  [PlanType.TYPE_TEAM]: 'Team',
+  [PlanType.TYPE_GROW]: 'Grow',
+  [PlanType.TYPE_MAX]: 'Max',
+  [PlanType.TYPE_TRIAL]: 'Trial'
+}
+
 // The server checks permissions and billing again when the confirmed command arrives.
 function DeleteWorkspaceSection () {
   const workspace = useSelector(state => state.workspace)
@@ -213,12 +222,34 @@ function DeleteWorkspaceSection () {
   const requiresCancellation = Boolean(workspace.subscription?.stripeSubscriptionId) && !workspace.subscription.cancelAt
   if (!isCloud || !isAdmin || isDefault) return null
   return (
-    <Card title='Delete workspace'>
-      <p>Permanently delete this workspace, its maps, data and connections.</p>
+    <Card title='Danger zone' className={styles.dangerZone}>
+      <div className={styles.deleteWorkspaceRow}>
+        <div className={styles.deleteWorkspaceDescription}>
+          <div className={styles.deleteWorkspaceTitle}>Delete workspace</div>
+          <div className={styles.secondaryText}>
+            Permanently delete this workspace, its maps, data and connections. This cannot be undone.
+          </div>
+        </div>
+        <Button
+          danger
+          disabled={requiresCancellation}
+          onClick={() => {
+            setName('')
+            setOpen(true)
+          }}
+        >
+          Delete workspace
+        </Button>
+      </div>
       {requiresCancellation && (
-        <p>Cancel your subscription first. <Button onClick={() => dispatch(redirectToCustomerPortal())}>Manage subscription</Button></p>
+        <Alert
+          className={styles.subscriptionWarning}
+          type='warning'
+          message={`Active ${subscriptionPlanNames[workspace.subscription.planType]} subscription`}
+          description='Cancel your subscription before deleting this workspace.'
+          action={<Button onClick={() => dispatch(redirectToCustomerPortal())}>Manage subscription</Button>}
+        />
       )}
-      <Button danger disabled={requiresCancellation} onClick={() => { setName(''); setOpen(true) }}>Delete workspace</Button>
       <Modal
         title='Delete workspace'
         open={open}
@@ -238,32 +269,54 @@ function UpdateWorkspaceForm () {
   const workspace = useSelector(state => state.workspace)
   const isAdmin = useSelector(state => state.user.isAdmin)
   const [disabled, setDisabled] = useState(!isAdmin)
+  const [form] = Form.useForm()
+  const name = Form.useWatch('name', form)
   const dispatch = useDispatch()
   useEffect(() => {
     setDisabled(!isAdmin)
   }, [workspace, isAdmin])
   return (
-    <Card>
+    <Card title='General'>
       <Form
+        form={form}
+        className={styles.generalForm}
         disabled={disabled}
-        initialValues={{ name: workspace.name, workspaceIDReadOnly: workspace.id }}
+        initialValues={{ name: workspace.name }}
         layout='vertical' onFinish={(values) => {
           track('UpdateWorkspace')
           setDisabled(true)
           dispatch(updateWorkspace(values.name))
         }}
       >
-        <Form.Item name='name' label='Workspace name' rules={[{ required: true, message: 'Workspace name is required' }]}>
+        <Form.Item
+          name='name'
+          label='Workspace name'
+          rules={[{ required: true, whitespace: true, message: 'Workspace name is required' }]}
+        >
           <Input />
         </Form.Item>
-        <Form.Item label='Workspace ID' name='workspaceIDReadOnly'>
-          <Input readOnly disabled />
+        <Form.Item
+          label='Workspace ID'
+          htmlFor='workspaceIDReadOnly'
+          extra='Used to reference this workspace in API calls and support requests.'
+        >
+          <Input.Group compact className={styles.workspaceId}>
+            <Input id='workspaceIDReadOnly' aria-label='Workspace ID' value={workspace.id} readOnly disabled={false} />
+            <Button
+              disabled={false}
+              onClick={() => dispatch(copyUrlToClipboard(workspace.id, 'Workspace ID copied'))}
+            >
+              Copy
+            </Button>
+          </Input.Group>
         </Form.Item>
-        <Form.Item>
-          <Button type='primary' htmlType='submit'>
-            Update
-          </Button>
-        </Form.Item>
+        <Button
+          type='primary'
+          htmlType='submit'
+          disabled={disabled || !name?.trim() || name === workspace.name}
+        >
+          Save changes
+        </Button>
       </Form>
     </Card>
   )
