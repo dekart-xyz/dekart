@@ -133,13 +133,24 @@ func (n workspaceDeleteNotification) SendWorkspaceDeleteCleanupFailed(v notifica
 
 // Stripe status is checked server-side even when the browser submits the command directly.
 func TestDeleteWorkspacePaidSubscription(t *testing.T) {
-	for _, state := range []string{"active", "past_due"} {
-		t.Run(state, func(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		state    string
+		cancelAt int64
+		code     codes.Code
+	}{
+		{"active renewing", "active", 0, codes.FailedPrecondition},
+		{"past due renewing", "past_due", 0, codes.FailedPrecondition},
+		{"active scheduled cancellation", "active", 2000000000, codes.OK},
+		{"past due scheduled cancellation", "past_due", 2000000000, codes.OK},
+		{"canceled", "canceled", 0, codes.OK},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
 			s, ctx := workspaceDeleteFixture(t)
 			t.Setenv("STRIPE_PRICE_ID", "price_test")
 			endpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
-				fmt.Fprintf(w, `{"id":"cus_test","subscriptions":{"data":[{"id":"sub_test","status":%q,"cancel_at":2000000000,"items":{"data":[{"id":"item_test","price":{"id":"price_test"}}]}}]}}`, state)
+				fmt.Fprintf(w, `{"id":"cus_test","subscriptions":{"data":[{"id":"sub_test","status":%q,"cancel_at":%d,"items":{"data":[{"id":"item_test","price":{"id":"price_test"}}]}}]}}`, tc.state, tc.cancelAt)
 			}))
 			defer endpoint.Close()
 			old := stripe.GetBackend(stripe.APIBackend)
@@ -149,10 +160,15 @@ func TestDeleteWorkspacePaidSubscription(t *testing.T) {
  VALUES('delete-me',2,'admin@example.com','cus_test','2099-01-01')`)
 			require.NoError(t, err)
 			_, err = s.DeleteWorkspace(ctx, &proto.DeleteWorkspaceRequest{WorkspaceId: "delete-me"})
-			require.Equal(t, codes.FailedPrecondition, status.Code(err))
+			require.Equal(t, tc.code, status.Code(err))
 			var n int
 			require.NoError(t, s.db.QueryRow(`SELECT count(*) FROM workspaces WHERE deleted_at IS NOT NULL`).Scan(&n))
-			require.Zero(t, n)
+			// Allowed cancellations must actually mark the workspace deleted.
+			if tc.code == codes.OK {
+				require.Equal(t, 1, n)
+			} else {
+				require.Zero(t, n)
+			}
 		})
 	}
 }

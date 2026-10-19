@@ -37,8 +37,8 @@ func (s Server) DeleteWorkspace(ctx context.Context, req *proto.DeleteWorkspaceR
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	// Stripe's active and past_due subscriptions have an ID even when scheduled to cancel.
-	if sub != nil && sub.StripeSubscriptionId != "" {
+	// Scheduled cancellation already stops renewal, so deletion need not wait for the paid period to end.
+	if sub != nil && sub.StripeSubscriptionId != "" && sub.CancelAt == 0 {
 		return nil, status.Error(codes.FailedPrecondition, "Cancel your subscription first")
 	}
 	tx, err := s.db.BeginTx(ctx, nil)

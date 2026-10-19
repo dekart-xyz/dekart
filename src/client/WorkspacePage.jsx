@@ -210,15 +210,15 @@ function DeleteWorkspaceSection () {
   const dispatch = useDispatch()
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
-  const paid = Boolean(workspace.subscription?.stripeSubscriptionId)
+  const requiresCancellation = Boolean(workspace.subscription?.stripeSubscriptionId) && !workspace.subscription.cancelAt
   if (!isCloud || !isAdmin || isDefault) return null
   return (
     <Card title='Delete workspace'>
       <p>Permanently delete this workspace, its maps, data and connections.</p>
-      {paid && (
+      {requiresCancellation && (
         <p>Cancel your subscription first. <Button onClick={() => dispatch(redirectToCustomerPortal())}>Manage subscription</Button></p>
       )}
-      <Button danger disabled={paid} onClick={() => { setName(''); setOpen(true) }}>Delete workspace</Button>
+      <Button danger disabled={requiresCancellation} onClick={() => { setName(''); setOpen(true) }}>Delete workspace</Button>
       <Modal
         title='Delete workspace'
         open={open}
