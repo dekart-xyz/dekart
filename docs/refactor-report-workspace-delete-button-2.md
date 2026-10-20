@@ -15,3 +15,18 @@
 - Handoff: `dekart-implement` should reconcile the temporary assertion with the approved panel text, then rerun Cypress before resuming this pass.
 - Human review plan deferred until the required checks are green; application changes remain unstaged and uncommitted.
 - Cypress log: `/tmp/dekart-refactor-cypress.log`; video: `cypress/videos/tmpWorkspaceDelete.cy.js.mp4`.
+
+
+## 2026-10-19: Retry after map-save fix
+
+- Status: stopped at the Cypress precondition; no refactor edits made in this pass.
+- Snapshot created and pushed: `workspace-delete-button-2_snapshot_20261019_185201`.
+- Preserved existing uncommitted `mapConfig.js` and `mapConfig.test.js` changes.
+- Verified: Go server tests, all 175 frontend tests, lint, and `git diff --check` pass.
+- Cypress: panel and scheduled-cancellation checks pass; deletion check has 5 passing / 1 failing (7 passing / 1 failing overall).
+- Blocker: `cypress/e2e/cloud/tmpWorkspaceDelete.cy.js:61` still expects `Cancel your subscription first`; the UI displays `Cancel your subscription before deleting this workspace.`
+- Required handoff: `dekart-implement` must reconcile the temporary assertion with the approved UI wording and rerun Cypress before another refactor pass.
+- Deleted/deduplicated/extracted: none; interface changes: none; interface proposals: none.
+- Reviewers and human review plan deferred because the green-tree precondition failed.
+- No Cypress specs changed; no working-tree changes staged, committed or pushed.
+- Cypress log: `/tmp/dekart-refactor-cypress-20261019.log`.

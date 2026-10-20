@@ -76,10 +76,15 @@ export function useCheckMapConfig () {
   const report = useSelector(state => state.report)
   const { mapConfig } = report || {}
   const datasets = useSelector(state => state.dataset.list)
+  const autoCreateLayerIds = useSelector(state => state.dataset.autoCreateLayerIds)
+  const awaitingInitialData = !mapConfig && autoCreateLayerIds.length > 0 &&
+    (!kepler || Object.keys(kepler.visState.datasets).length === 0)
   const updatingNum = useSelector(state => state.dataset.updatingNum)
   const downloadingNum = useSelector(state => state.dataset.downloading.length)
 
   useEffect(() => {
+    // Saves preserve an empty map until data can supply default layers; marking it dirty would save forever.
+    if (awaitingInitialData) return
     if (updatingNum > 0 || downloadingNum > 0) {
       // skip checking map config while datasets are updating
       if (checkMapConfigTimer) {
@@ -88,7 +93,7 @@ export function useCheckMapConfig () {
       return
     }
     return checkMapConfig(kepler, mapConfig, dispatch, datasets)
-  }, [kepler, mapConfig, dispatch, report, datasets, updatingNum])
+  }, [kepler, mapConfig, dispatch, report, datasets, updatingNum, awaitingInitialData])
 }
 
 let checkMapConfigTimer

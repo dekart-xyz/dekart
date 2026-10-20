@@ -1,8 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { createElement } from 'react'
+import { act, cleanup, renderHook } from '@testing-library/react'
+import { Provider } from 'react-redux'
+import { createStore } from 'redux'
+import { reportStatus } from '../reducers/reportReducer'
 import { KeplerGlLayers } from '@kepler.gl/layers'
 import { INITIAL_MAP_STATE, INITIAL_MAP_STYLE, visStateUpdaters } from '@kepler.gl/reducers'
 import { KeplerGlSchema } from '@kepler.gl/schemas'
-import { getMapConfigToSave } from './mapConfig'
+import { getMapConfigToSave, useCheckMapConfig } from './mapConfig'
 
 // Real Kepler layers provide the same serialization contract used by the map editor.
 function pointLayer (id, dataId) {
@@ -167,5 +172,58 @@ describe('getMapConfigToSave', () => {
 
     expect(result.layers).toEqual(saved.config.visState.layers)
     expect(result.interactionConfig.tooltip.fieldsToShow).toEqual({})
+  })
+})
+
+afterEach(() => {
+  cleanup()
+  vi.useRealTimers()
+})
+
+describe('useCheckMapConfig', () => {
+  it.each([false, true])('does not repeatedly dirty a pending empty map (initialized: %s)', initialized => {
+    vi.useFakeTimers()
+    const kepler = keplerState([])
+    const initialState = {
+      report: { id: 'report-a', versionId: 'version-a', mapConfig: '' },
+      reportStatus: reportStatus(undefined, {}),
+      keplerGl: { kepler: initialized ? kepler : undefined },
+      dataset: {
+        list: [{ id: 'dataset-a' }],
+        autoCreateLayerIds: ['dataset-a'],
+        updatingNum: 0,
+        downloading: []
+      }
+    }
+    const store = createStore((state = initialState, action) => ({
+      ...state,
+      report: action.type === 'reportUpdate' ? action.report : state.report,
+      keplerGl: action.type === 'dataLoaded'
+        ? {
+            kepler: {
+              ...kepler,
+              visState: { ...kepler.visState, datasets: { 'dataset-a': {} } }
+            }
+          }
+        : state.keplerGl,
+      reportStatus: reportStatus(state.reportStatus, action)
+    }))
+    renderHook(useCheckMapConfig, {
+      wrapper: ({ children }) => createElement(Provider, { store }, children)
+    })
+    act(() => vi.advanceTimersByTime(1100))
+    expect(store.getState().reportStatus.lastMapConfigChanged).toBe(0)
+
+    // Metadata saves keep the map empty until its default layers can be inferred.
+    act(() => store.dispatch({
+      type: 'reportUpdate',
+      report: { ...initialState.report, versionId: 'version-b' }
+    }))
+    act(() => vi.advanceTimersByTime(1100))
+    expect(store.getState().reportStatus.lastMapConfigChanged).toBe(0)
+
+    act(() => store.dispatch({ type: 'dataLoaded' }))
+    act(() => vi.advanceTimersByTime(100))
+    expect(store.getState().reportStatus.lastMapConfigChanged).toBeGreaterThan(0)
   })
 })
