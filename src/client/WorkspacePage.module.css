@@ -37,7 +37,8 @@
 }
 
 .workspaceTab {
-    width: 600px;
+    width: 100%;
+    max-width: 752px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -52,13 +53,87 @@
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    width: 600px;
+    width: 100%;
     margin-bottom: 20px;
     padding: 0 20px;
 }
 
 .workspaceTabBody {
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.generalForm {
+    max-width: 520px;
+}
+
+.generalForm .workspaceId {
+    display: flex !important;
+    margin-bottom: 8px;
+}
+
+.workspaceId :global(.ant-input) {
+    flex: 1;
+    min-width: 0;
+}
+
+.workspaceId :global(.ant-btn) {
+    flex-shrink: 0;
+}
+
+.secondaryText {
+    color: rgba(0, 0, 0, 0.45);
+}
+
+.dangerZone :global(.ant-card-head) {
+    color: #cf1322;
+    border-bottom-color: #ffccc7;
+}
+
+.deleteWorkspaceRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 24px;
+}
+
+.deleteWorkspaceDescription {
+    flex: 1 1 320px;
+    min-width: 0;
+}
+
+.deleteWorkspaceTitle {
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.dangerZone .subscriptionWarning:global(.ant-alert) {
+    align-items: center;
+    margin-top: 20px;
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.subscriptionWarning :global(.ant-alert-content) {
+    flex: 1 1 280px;
+}
+
+.dangerZone .subscriptionWarning :global(.ant-alert-message) {
+    margin-bottom: 2px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.subscriptionWarning :global(.ant-alert-description) {
+    color: rgba(0, 0, 0, 0.65);
+}
+
+.subscriptionWarning :global(.ant-alert-action) {
+    margin-left: 0;
 }
 
 .acceptButton {

@@ -52,7 +52,7 @@ describe('Workspace deletion after scheduled cancellation', () => {
     })
     cy.visit('/workspace')
     cy.contains('button', 'Delete workspace').should('be.disabled')
-    cy.contains('Cancel your subscription first.').should('be.visible')
+    cy.contains('Cancel your subscription before deleting this workspace.').scrollIntoView().should('be.visible')
 
     cy.then(() => { cancelAt = 2000000000 })
     cy.reload()

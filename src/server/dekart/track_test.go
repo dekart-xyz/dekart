@@ -3,16 +3,59 @@ package dekart
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"dekart/src/proto"
 	"dekart/src/server/user"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
 )
+
+// Tracking records the selected workspace, including the default workspace, while onboarding has none.
+func TestTrackEventStoresWorkspaceID(t *testing.T) {
+	t.Setenv("DEKART_CLOUD", "1")
+	db, err := sql.Open("sqlite3", ":memory:")
+	require.NoError(t, err)
+	db.SetMaxOpenConns(1)
+	t.Cleanup(func() { db.Close() })
+	files, err := filepath.Glob("../../../sqlite/migrations/*.up.sql")
+	require.NoError(t, err)
+	require.NotEmpty(t, files)
+	for _, file := range files {
+		execMigration(t, db, filepath.Join("sqlite/migrations", filepath.Base(file)))
+	}
+	server := Server{db: db}
+	for _, tc := range []struct {
+		name string
+		id   string
+	}{
+		{name: "selected workspace", id: "8b532020-1838-4d13-bbea-54f8b1022ea5"},
+		{name: "default workspace", id: user.GetDefaultWorkspaceID()},
+		{name: "no workspace"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.WithValue(context.Background(), user.ContextKey, &user.Claims{Email: "user@example.com"})
+			ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{ID: tc.id})
+			_, err := server.TrackEvent(ctx, &proto.TrackEventRequest{
+				EventName: tc.name, EventDataJson: `{"source":"test"}`,
+			})
+			require.NoError(t, err)
+			var workspaceID sql.NullString
+			var email, payload string
+			require.NoError(t, db.QueryRow(`SELECT workspace_id, email, event_data_json
+				FROM track_events WHERE event_name = $1`, tc.name).Scan(&workspaceID, &email, &payload))
+			require.Equal(t, sql.NullString{String: tc.id, Valid: tc.id != ""}, workspaceID)
+			require.Equal(t, "user@example.com", email)
+			require.JSONEq(t, `{"source":"test"}`, payload)
+		})
+	}
+}
 
 func TestNormalizeTelemetryID(t *testing.T) {
 	tests := []struct {

@@ -2,6 +2,7 @@ package dekart
 
 import (
 	"context"
+	"database/sql"
 	"dekart/src/proto"
 	"dekart/src/server/errtype"
 	"dekart/src/server/user"
@@ -55,14 +56,16 @@ func (s Server) TrackEvent(ctx context.Context, req *proto.TrackEventRequest) (*
 		return &proto.TrackEventResponse{}, nil
 	}
 
-	// Store event in database
+	// Events before workspace selection have no workspace to attribute.
+	workspaceID := user.CheckWorkspaceCtx(ctx).ID
 	_, err := s.db.ExecContext(
 		ctx,
-		`INSERT INTO track_events (email, event_name, event_data_json)
-		VALUES ($1, $2, $3)`,
+		`INSERT INTO track_events (email, event_name, event_data_json, workspace_id)
+		VALUES ($1, $2, $3, $4)`,
 		claims.Email,
 		req.EventName,
 		req.EventDataJson,
+		sql.NullString{String: workspaceID, Valid: workspaceID != ""},
 	)
 
 	if err != nil {
