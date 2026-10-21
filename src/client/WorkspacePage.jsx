@@ -282,7 +282,8 @@ function UpdateWorkspaceForm () {
         className={styles.generalForm}
         disabled={disabled}
         initialValues={{ name: workspace.name }}
-        layout='vertical' onFinish={(values) => {
+        layout='vertical'
+        onFinish={(values) => {
           track('UpdateWorkspace')
           setDisabled(true)
           dispatch(updateWorkspace(values.name))
@@ -301,7 +302,13 @@ function UpdateWorkspaceForm () {
           extra='Used to reference this workspace in API calls and support requests.'
         >
           <Input.Group compact className={styles.workspaceId}>
-            <Input id='workspaceIDReadOnly' aria-label='Workspace ID' value={workspace.id} readOnly disabled={false} />
+            <Input
+              id='workspaceIDReadOnly'
+              aria-label='Workspace ID'
+              value={workspace.id}
+              readOnly
+              disabled={false}
+            />
             <Button
               disabled={false}
               onClick={() => dispatch(copyUrlToClipboard(workspace.id, 'Workspace ID copied'))}
