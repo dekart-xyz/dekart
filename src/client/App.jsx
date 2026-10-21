@@ -87,8 +87,13 @@ function AppRedirect ({ allowWorkspaceRedirect = true }) {
   const isAnonymous = useSelector(state => state.user.isAnonymous)
   const isReportUrl = useIsReportUrl()
   const isWorkspaceUrl = location.pathname.startsWith('/workspace')
+  // Accepting another workspace's invitation must not require a Personal trial.
+  const isInviteUrl = location.pathname === '/workspace/join' || location.pathname.startsWith('/workspace/invite/')
   const isReportView = /^\/reports\/[a-f0-9-]+\/?$/.test(location.pathname)
   const trialNotStarted = isCloud && userStream?.planType === PlanType.TYPE_PERSONAL
+  const needsTrialRedirect = trialNotStarted &&
+    !isReportView && !isInviteUrl &&
+    !['/workspace/trial', '/workspace/plan'].includes(location.pathname)
 
   useEffect(() => {
     if (
@@ -114,7 +119,7 @@ function AppRedirect ({ allowWorkspaceRedirect = true }) {
   if (
     allowWorkspaceRedirect &&
     userStream &&
-    ((trialNotStarted && !isReportView && !['/workspace/trial', '/workspace/plan'].includes(location.pathname)) || (!userStream.planType && !isWorkspaceUrl && !isPlayground)) &&
+    (needsTrialRedirect || (!userStream.planType && !isWorkspaceUrl && !isPlayground)) &&
     !(reportWillOpen && !report) && // report is being loaded
     !(report?.isPlayground) && // playground report
     !(report?.isPublic) && // public report
@@ -353,7 +358,8 @@ export default function App () {
             </Route>
             <Route path='/workspace/invite/:inviteId'>
               <AppRedirect />
-              <WorkspacePage userInvite />
+              {/* Invitation links open the same acceptance screen as the Join page. */}
+              <WorkspacePage step='workspace' onboarding='join' />
             </Route>
             <Route exact path='/workspace/plan'>
               <AppRedirect />
@@ -398,7 +404,11 @@ export default function App () {
           </Switch>
         </div>
         <NewVersion />
-        <WorkspaceReadOnlyBanner />
+        {/* Workspace pages control their banner so joining can hide it. */}
+        <Switch>
+          <Route path='/workspace' />
+          <Route><WorkspaceReadOnlyBanner /></Route>
+        </Switch>
       </div>
     </Router>
   )

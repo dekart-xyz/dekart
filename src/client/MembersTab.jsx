@@ -37,6 +37,8 @@ export default function MembersTab () {
   const addedUsersCount = useSelector(state => state.workspace.addedUsersCount)
   const userStream = useSelector(state => state.user.stream)
   const planType = userStream?.planType
+  const roleOptions = [UserRole.ROLE_ADMIN, UserRole.ROLE_EDITOR, UserRole.ROLE_VIEWER]
+    .map(role => ({ value: role, label: getRoleTitle(role, planType) }))
   const dispatch = useDispatch()
   const [email, setEmail] = useState('')
   const [inviteRole, setInviteRole] = useState(UserRole.ROLE_VIEWER)
@@ -96,21 +98,7 @@ export default function MembersTab () {
               onChange={(value) => {
                 setInviteRole(value)
               }}
-              options={[
-                {
-                  value: UserRole.ROLE_ADMIN,
-                  label: getRoleTitle(UserRole.ROLE_ADMIN, planType)
-                },
-                {
-                  value: UserRole.ROLE_EDITOR,
-                  label: getRoleTitle(UserRole.ROLE_EDITOR, planType)
-                },
-                {
-                  value: UserRole.ROLE_VIEWER,
-                  label: getRoleTitle(UserRole.ROLE_VIEWER, planType)
-                }
-
-              ]}
+              options={roleOptions}
             />
             <Button
               disabled={inviteDisabled}
@@ -142,7 +130,7 @@ export default function MembersTab () {
                       type='text'
                       onClick={() => {
                         track('CopyInviteLink', { inviteId: u.inviteId })
-                        dispatch(copyUrlToClipboard(window.location.toString() + '/invite/' + u.inviteId, 'Invite link copied to clipboard'))
+                        dispatch(copyUrlToClipboard(`${window.location.origin}/workspace/invite/${u.inviteId}`, 'Invite link copied to clipboard'))
                       }}
                     >
                       Copy invite link
@@ -150,31 +138,19 @@ export default function MembersTab () {
                     )
                   : null}
               </div>
+              {/* Members cannot change their own role even when the login email uses different capitalization. */}
               <div className={styles.memberRoleColumn}>
                 {hasAuthenticatedUser
                   ? (
                     <Select
                       defaultValue={u.role}
                       style={{ width: 220 }}
-                      disabled={u.email === userStream.email || !canChangeUserRoles}
+                      disabled={u.email.toLowerCase() === userStream.email.toLowerCase() || !canChangeUserRoles}
                       onChange={(value) => {
                         track('ChangeUserRole', { email: u.email, newRole: value })
                         dispatch(updateWorkspaceUser(u.email, UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_UPDATE, value))
                       }}
-                      options={[
-                        {
-                          value: UserRole.ROLE_ADMIN,
-                          label: getRoleTitle(UserRole.ROLE_ADMIN, planType)
-                        },
-                        {
-                          value: UserRole.ROLE_EDITOR,
-                          label: getRoleTitle(UserRole.ROLE_EDITOR, planType)
-                        },
-                        {
-                          value: UserRole.ROLE_VIEWER,
-                          label: getRoleTitle(UserRole.ROLE_VIEWER, planType)
-                        }
-                      ]}
+                      options={roleOptions}
                     />
                     )
                   : <Text>{getRoleTitle(u.role, planType)}</Text>}
@@ -199,7 +175,8 @@ function RemoveButton ({ email }) {
   const isAdmin = useSelector(state => state.user.isAdmin)
   const readOnly = useSelector(state => state.workspace.readOnly)
   const canManageUsers = isAdmin && !readOnly && Boolean(userStream?.email && userStream.email !== UNKNOWN_EMAIL)
-  const disabled = email === userStream?.email || !canManageUsers || removing
+  // Members cannot remove themselves even when the login email uses different capitalization.
+  const disabled = email.toLowerCase() === userStream?.email?.toLowerCase() || !canManageUsers || removing
 
   if (confirming) {
     return (

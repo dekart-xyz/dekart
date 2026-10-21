@@ -27,6 +27,7 @@ import { track } from './lib/tracking'
 import Select from 'antd/es/select'
 import { Loading } from './Loading'
 import DeviceTokensTab from './DeviceTokensTab'
+import WorkspaceReadOnlyBanner from './WorkspaceReadOnlyBanner'
 
 function Invites () {
   const workspace = useSelector(state => state.workspace)
@@ -456,6 +457,7 @@ export function Workspace ({ nextStep, setNextStep, stepId, isCreatingAdditional
 }
 
 function WelcomeScreen ({ setNextStep }) {
+  const history = useHistory()
   const workspace = useSelector(state => state.workspace)
   const invites = workspace.invites
   useEffect(() => {
@@ -473,7 +475,7 @@ function WelcomeScreen ({ setNextStep }) {
             id='dekart-create-workspace'
             type='primary' key='1' disabled={invites.length > 0} onClick={() => {
               track('CreateWorkspace')
-              setNextStep('workspace')
+              history.push('/workspace/create')
             }}
           >
             Create Workspace
@@ -562,6 +564,7 @@ export default function WorkspacePage ({ step, onboarding }) {
           </div>
           )
         : null}
+      {!(step === 'workspace' && nextStep === 'invites') && <WorkspaceReadOnlyBanner />}
     </div>
   )
 }
