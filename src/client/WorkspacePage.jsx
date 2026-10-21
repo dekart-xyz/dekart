@@ -456,6 +456,7 @@ export function Workspace ({ nextStep, setNextStep, stepId, isCreatingAdditional
 }
 
 function WelcomeScreen ({ setNextStep }) {
+  const history = useHistory()
   const workspace = useSelector(state => state.workspace)
   const invites = workspace.invites
   useEffect(() => {
@@ -473,7 +474,7 @@ function WelcomeScreen ({ setNextStep }) {
             id='dekart-create-workspace'
             type='primary' key='1' disabled={invites.length > 0} onClick={() => {
               track('CreateWorkspace')
-              setNextStep('workspace')
+              history.push('/workspace/create')
             }}
           >
             Create Workspace
