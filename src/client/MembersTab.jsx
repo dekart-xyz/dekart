@@ -142,7 +142,7 @@ export default function MembersTab () {
                       type='text'
                       onClick={() => {
                         track('CopyInviteLink', { inviteId: u.inviteId })
-                        dispatch(copyUrlToClipboard(window.location.toString() + '/invite/' + u.inviteId, 'Invite link copied to clipboard'))
+                        dispatch(copyUrlToClipboard(`${window.location.origin}/workspace/invite/${u.inviteId}`, 'Invite link copied to clipboard'))
                       }}
                     >
                       Copy invite link
@@ -156,7 +156,7 @@ export default function MembersTab () {
                     <Select
                       defaultValue={u.role}
                       style={{ width: 220 }}
-                      disabled={u.email === userStream.email || !canChangeUserRoles}
+                      disabled={u.email.toLowerCase() === userStream.email.toLowerCase() || !canChangeUserRoles}
                       onChange={(value) => {
                         track('ChangeUserRole', { email: u.email, newRole: value })
                         dispatch(updateWorkspaceUser(u.email, UpdateWorkspaceUserRequest.UserUpdateType.USER_UPDATE_TYPE_UPDATE, value))
@@ -199,7 +199,7 @@ function RemoveButton ({ email }) {
   const isAdmin = useSelector(state => state.user.isAdmin)
   const readOnly = useSelector(state => state.workspace.readOnly)
   const canManageUsers = isAdmin && !readOnly && Boolean(userStream?.email && userStream.email !== UNKNOWN_EMAIL)
-  const disabled = email === userStream?.email || !canManageUsers || removing
+  const disabled = email.toLowerCase() === userStream?.email?.toLowerCase() || !canManageUsers || removing
 
   if (confirming) {
     return (

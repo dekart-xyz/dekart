@@ -269,3 +269,27 @@ func TestSetWorkspaceContext_ExpiredLicenseKeepsPlaygroundReadOnly(t *testing.T)
 	require.True(t, workspace.ReadOnly)
 	require.Equal(t, proto.GetWorkspaceResponse_READ_ONLY_REASON_LICENSE_KEY_EXPIRED, workspace.ReadOnlyReason)
 }
+
+// Login casing must not bypass the existing protection against changing your own membership.
+func TestUpdateWorkspaceUser_RejectsMixedCaseSelfUpdate(t *testing.T) {
+	t.Setenv("DEKART_CLOUD", "1")
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+	server := Server{db: db}
+	ctx := context.WithValue(context.Background(), user.ContextKey, &user.Claims{Email: "teammate@example.com"})
+	ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{
+		ID:       "00000000-0000-0000-0000-000000000601",
+		PlanType: proto.PlanType_TYPE_TRIAL,
+		UserRole: proto.UserRole_ROLE_ADMIN,
+	})
+	for _, updateType := range []proto.UpdateWorkspaceUserRequest_UserUpdateType{
+		proto.UpdateWorkspaceUserRequest_USER_UPDATE_TYPE_REMOVE,
+		proto.UpdateWorkspaceUserRequest_USER_UPDATE_TYPE_UPDATE,
+	} {
+		_, err := server.UpdateWorkspaceUser(ctx, &proto.UpdateWorkspaceUserRequest{
+			Email: "Teammate@example.com", UserUpdateType: updateType, Role: proto.UserRole_ROLE_VIEWER,
+		})
+		require.Equal(t, codes.InvalidArgument, status.Code(err))
+	}
+}

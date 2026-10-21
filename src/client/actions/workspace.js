@@ -32,13 +32,19 @@ export function redirectToCustomerPortal () {
 }
 
 export function respondToInvite (inviteId, accept) {
-  return (dispatch) => {
+  return (dispatch, getState) => {
+    const invite = getState().workspace.invites.find(invite => invite.inviteId === inviteId)
     dispatch({ type: respondToInvite.name })
     const request = new RespondToInviteRequest()
     request.setInviteId(inviteId)
     request.setAccept(accept)
     dispatch(grpcCall(Dekart.RespondToInvite, request, () => {
-      window.location.href = '/'
+      // Joining must replace a previously selected Personal workspace.
+      if (accept) {
+        dispatch(switchWorkspace(invite.workspaceId))
+      } else {
+        window.location.href = '/'
+      }
     }))
   }
 }

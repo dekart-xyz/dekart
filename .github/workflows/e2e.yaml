@@ -72,7 +72,7 @@ jobs:
             config: cloud-stripe
             target: premium
             cloud: true
-            spec: cypress/e2e/cloud/cloudBasicFlowEnd.cy.js,cypress/e2e/cloud/trialAcknowledgement.cy.js,cypress/e2e/cloud/workspaceScheduledCancellation.cy.js,cypress/e2e/cloud/reportSaveRegression.cy.js,cypress/e2e/cloud/readOnlyMemberRoles.cy.js,cypress/e2e/cloud/workspaceCreateFromMembers.cy.js
+            spec: cypress/e2e/cloud/cloudBasicFlowEnd.cy.js,cypress/e2e/cloud/trialAcknowledgement.cy.js,cypress/e2e/cloud/workspaceScheduledCancellation.cy.js,cypress/e2e/cloud/reportSaveRegression.cy.js,cypress/e2e/cloud/readOnlyMemberRoles.cy.js,cypress/e2e/cloud/workspaceCreateFromMembers.cy.js,cypress/e2e/cloud/workspaceInvitations.cy.js
             extra_env: |
               -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
               -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
