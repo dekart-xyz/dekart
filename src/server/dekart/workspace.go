@@ -10,6 +10,7 @@ import (
 	"dekart/src/server/user"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -43,13 +44,14 @@ func (s Server) getUserWorkspaces(ctx context.Context, email string) ([]*proto.W
 				FROM
 					workspace_log
 				WHERE
-					email = $1
+					-- REVIEW: Match login and invitation emails regardless of capitalization.
+					LOWER(email) = LOWER($1)
 					AND status IN (1, 2)
 				GROUP BY
 					workspace_id
 			) AS ls2 ON wl.workspace_id = ls2.workspace_id AND wl.created_at = ls2.created_at
 			WHERE
-				wl.email = $1
+				LOWER(wl.email) = LOWER($1)
 		),
 		user_role AS (
 			SELECT
@@ -65,13 +67,13 @@ func (s Server) getUserWorkspaces(ctx context.Context, email string) ([]*proto.W
 				FROM
 					workspace_log
 				WHERE
-					email = $1
+					LOWER(email) = LOWER($1)
 					AND status IN (1, 3)
 				GROUP BY
 					workspace_id
 			) AS oll ON ol.workspace_id = oll.workspace_id AND ol.created_at = oll.created_at
 			WHERE
-				ol.email = $1
+				LOWER(ol.email) = LOWER($1)
 				AND ol.status IN (1, 3)
 		),
 		latest_subscription AS (
@@ -97,12 +99,12 @@ func (s Server) getUserWorkspaces(ctx context.Context, email string) ([]*proto.W
 			COALESCE(ls_sub.plan_type, 0) AS plan_type
 		FROM workspaces w
 		JOIN last_status ls ON w.id = ls.workspace_id
-		LEFT JOIN confirmation_log AS cl ON ls.id = cl.workspace_log_id AND cl.authored_by = ls.email
-		LEFT JOIN user_role AS ur ON ls.workspace_id = ur.workspace_id AND ls.email = ur.email
+		LEFT JOIN confirmation_log AS cl ON ls.id = cl.workspace_log_id AND LOWER(cl.authored_by) = LOWER(ls.email)
+		LEFT JOIN user_role AS ur ON ls.workspace_id = ur.workspace_id AND LOWER(ls.email) = LOWER(ur.email)
 		LEFT JOIN latest_subscription AS ls_sub ON w.id = ls_sub.workspace_id
 		WHERE
 			ls.status = 1
-			AND (ls.authored_by = $1 OR cl.accepted = TRUE)
+			AND (LOWER(ls.authored_by) = LOWER($1) OR cl.accepted = TRUE)
 		ORDER BY COALESCE(cl.created_at, ls.created_at) DESC, ls.created_at DESC
 	`, email)
 	if err != nil {
@@ -409,86 +411,6 @@ func (s Server) getWorkspaceUsers(ctx context.Context, workspaceID string) ([]*p
 	return users, nil
 }
 
-func (s Server) getUserWorkspace(ctx context.Context, email string) (*proto.Workspace, *proto.UserRole, error) {
-	res, err := s.db.QueryContext(ctx, `
-		with user_role as (
-			SELECT
-				ol.role,
-				ol.email,
-				ol.workspace_id
-			FROM
-				workspace_log ol
-			JOIN (
-				SELECT
-					workspace_id,
-					MAX(created_at) AS created_at
-				FROM workspace_log
-				WHERE
-					email = $1
-					and status in (1, 3)
-				GROUP BY workspace_id
-			) AS oll ON ol.workspace_id = oll.workspace_id AND ol.created_at = oll.created_at
-			WHERE
-				ol.email = $1
-				AND ol.status in (1, 3)
-		)
-		SELECT
-			o.id,
-			o.name,
-			ur.role
-		FROM workspaces AS o
-		JOIN workspace_log AS ol ON o.id = ol.workspace_id
-		JOIN (
-			SELECT
-				workspace_id,
-				MAX(created_at) AS created_at
-			FROM workspace_log
-			WHERE email = $1
-			and status in (1, 2)
-			GROUP BY workspace_id
-		) AS oll ON ol.workspace_id = oll.workspace_id AND ol.created_at = oll.created_at
-		LEFT JOIN confirmation_log AS cl ON ol.id = cl.workspace_log_id AND cl.authored_by = ol.email
-		LEFT JOIN user_role AS ur ON ol.email = ur.email AND ol.workspace_id = ur.workspace_id
-		WHERE ol.status = 1 AND (ol.authored_by = $1 OR cl.accepted = TRUE)
-		-- if user accepted the invite, we should show that workspace
-		ORDER BY COALESCE(cl.created_at, ol.created_at) DESC, ol.created_at DESC
-		LIMIT 1
-	`, email)
-	if err != nil {
-		errtype.LogError(err, "Error getting user workspace")
-		return nil, nil, err
-	}
-	defer res.Close()
-	role := proto.UserRole_ROLE_UNSPECIFIED
-	if res.Next() {
-		workspace := proto.Workspace{}
-		err := res.Scan(&workspace.Id, &workspace.Name, &role)
-		if err != nil {
-			log.Err(err).Send()
-			return nil, nil, err
-		}
-		return &workspace, &role, nil
-	}
-	if user.ShouldUseDefaultWorkspace(email) { // users without separate onboarding use the default workspace
-		workspaceID := user.GetDefaultWorkspaceID()
-		if err := s.ensureDefaultWorkspace(ctx, email); err != nil {
-			log.Err(err).Send()
-			return nil, nil, err
-		}
-		_, err = s.db.ExecContext(ctx, `
-		INSERT INTO workspace_log (workspace_id, email, status, authored_by, id, role)
-		VALUES ($1, $2, 1, $2, $3, $4)
-	`, workspaceID, email, newUUID(), user.GetUserDefaultRole(email))
-		if err != nil {
-			log.Err(err).Send()
-			return nil, nil, err
-		}
-		return s.getUserWorkspace(ctx, email)
-	}
-
-	return nil, &role, nil
-}
-
 func (s Server) SetWorkspaceContext(ctx context.Context, r *http.Request) context.Context {
 	var preferredWorkspaceID string
 	var isPlayground bool
@@ -703,7 +625,7 @@ func (s Server) UpdateWorkspaceUser(ctx context.Context, req *proto.UpdateWorksp
 		log.Error().Msgf("User update type not specified")
 		return nil, status.Error(codes.InvalidArgument, "User update type not specified")
 	}
-	if claims.Email == req.Email {
+	if strings.EqualFold(claims.Email, req.Email) {
 		return nil, status.Error(codes.InvalidArgument, "Cannot remove yourself")
 	}
 	if claims.Email == user.UnknownEmail && req.UserUpdateType != proto.UpdateWorkspaceUserRequest_USER_UPDATE_TYPE_UNSPECIFIED {
@@ -767,14 +689,15 @@ func (s Server) getInvites(ctx context.Context, email string) ([]*proto.Workspac
 			FROM
 				workspace_log
 			WHERE
-				email = $1
+				-- REVIEW: Match login and invitation emails regardless of capitalization.
+				LOWER(email) = LOWER($1)
 				AND status in (1, 2)
 			GROUP BY
 				workspace_id) subq
 		ON ol.workspace_id=subq.workspace_id AND ol.created_at = subq.max_created_at
 		JOIN workspaces AS o ON ol.workspace_id = o.id
-		LEFT JOIN confirmation_log AS cl ON ol.id = cl.workspace_log_id AND cl.authored_by = ol.email
-		WHERE ol.status = 1 AND ol.authored_by != $1 AND cl.accepted is null
+		LEFT JOIN confirmation_log AS cl ON ol.id = cl.workspace_log_id AND LOWER(cl.authored_by) = LOWER(ol.email)
+		WHERE ol.status = 1 AND LOWER(ol.authored_by) != LOWER($1) AND cl.accepted is null
 		ORDER BY ol.created_at DESC
 		`, email)
 	if err != nil {

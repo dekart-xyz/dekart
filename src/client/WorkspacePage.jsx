@@ -27,6 +27,7 @@ import { track } from './lib/tracking'
 import Select from 'antd/es/select'
 import { Loading } from './Loading'
 import DeviceTokensTab from './DeviceTokensTab'
+import WorkspaceReadOnlyBanner from './WorkspaceReadOnlyBanner'
 
 function Invites () {
   const workspace = useSelector(state => state.workspace)
@@ -563,6 +564,7 @@ export default function WorkspacePage ({ step, onboarding }) {
           </div>
           )
         : null}
+      {!(step === 'workspace' && nextStep === 'invites') && <WorkspaceReadOnlyBanner />}
     </div>
   )
 }
