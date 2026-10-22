@@ -80,7 +80,8 @@ func (s Server) collectWorkspaceDeleteObjects(ctx context.Context, tx *sql.Tx, i
 		return content, err
 	}
 	for rows.Next() {
-		var fileID, sourceID, mimeType, connectionID string
+		var fileID, mimeType, connectionID string
+		var sourceID sql.NullString
 		var public, sharedObject, sharedRow bool
 		if err = rows.Scan(&fileID, &sourceID, &mimeType, &connectionID, &public, &sharedObject, &sharedRow); err != nil {
 			rows.Close()
@@ -90,10 +91,11 @@ func (s Server) collectWorkspaceDeleteObjects(ctx context.Context, tx *sql.Tx, i
 		if !sharedRow {
 			content.fileIDs = append(content.fileIDs, fileID)
 		}
-		if sharedObject {
+		// Unfinished uploads have no storage object; shared objects belong to surviving reports.
+		if sharedObject || !sourceID.Valid {
 			continue
 		}
-		name := sourceID + "." + getFileExtensionFromMime(mimeType)
+		name := sourceID.String + "." + getFileExtensionFromMime(mimeType)
 		// User connections own their private objects; only system storage is managed here.
 		if conn.IsSystemConnectionID(connectionID) {
 			add(defaultBucket, name, s.storage)
