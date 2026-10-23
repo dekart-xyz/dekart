@@ -117,6 +117,32 @@ func TestDeleteWorkspaceStorage(t *testing.T) {
 	require.Equal(t, 1, count)
 }
 
+// Meet5 could not delete its expired workspace with an unfinished upload in live data and history.
+func TestDeleteWorkspaceUnfinishedUpload(t *testing.T) {
+	s, ctx := workspaceDeleteFixture(t)
+	t.Setenv("DEKART_CLOUD_STORAGE_BUCKET", "default")
+	t.Setenv("DEKART_CLOUD_PUBLIC_STORAGE_BUCKET", "")
+	_, err := s.db.Exec(`INSERT INTO reports(id,workspace_id) VALUES('report','delete-me');
+ INSERT INTO files(id) VALUES('unfinished-file');
+ INSERT INTO datasets(id,report_id,file_id) VALUES('dataset','report','unfinished-file');
+ INSERT INTO report_snapshots(version_id,report_id,author_email,trigger_type)
+ VALUES('version','report','admin@example.com',1);
+ INSERT INTO dataset_snapshots(snapshot_id,report_version_id,dataset_id,report_id,file_id,author_email)
+ VALUES('snapshot','version','dataset','report','unfinished-file','admin@example.com');`)
+	require.NoError(t, err)
+	deleted := []string{}
+	s.storage = workspaceDeleteStorage{deleted: &deleted}
+
+	_, err = s.DeleteWorkspace(ctx, &proto.DeleteWorkspaceRequest{WorkspaceId: "delete-me"})
+	require.NoError(t, err)
+	require.Empty(t, deleted)
+	var count int
+	require.NoError(t, s.db.QueryRow(`SELECT count(*) FROM workspaces WHERE id='delete-me' AND deleted_at IS NOT NULL`).Scan(&count))
+	require.Equal(t, 1, count)
+	require.NoError(t, s.db.QueryRow(`SELECT count(*) FROM files WHERE id='unfinished-file'`).Scan(&count))
+	require.Zero(t, count)
+}
+
 // Missing objects are successful cleanup; other failures are included with retained connections.
 func TestDeleteWorkspaceCleanupNotifiesAdmin(t *testing.T) {
 	for _, tc := range []struct {
