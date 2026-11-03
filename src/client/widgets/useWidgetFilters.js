@@ -12,7 +12,9 @@ const filterTypes = new Set(['count-plot', 'search', 'histogram'])
 // Keep the app store mapping separate from Kepler/Mosaic reconciliation.
 function widgetFilterInputs (store, redux, datasetId, ready, editing) {
   const state = store.getState()
-  const kepler = redux.getState().keplerGl.kepler.visState
+  const kepler = redux.getState().keplerGl.kepler?.visState
+  // Kepler unregisters between map visits; postpone filters until its state returns.
+  if (!kepler) return { ready: false, editing, filters: [], layers: [], tables: [], columnTypes: {} }
   const panels = state.mosaicDashboard.config.dashboardsById[datasetId]?.panels
   const widgetColumns = state.db.tables.find(table => table.table.schema === 'widgets' && table.table.table === `d_${datasetId.replaceAll('-', '_')}`)?.columns
   return {

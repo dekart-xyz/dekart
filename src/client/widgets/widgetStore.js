@@ -11,6 +11,7 @@ import { searchChartType } from './SearchWidget'
 import ChartHeaderActions from './ChartHeaderActions'
 import HistogramChart from './HistogramChart'
 import DekartChartPanel from './WidgetPanel'
+import ReportWidgetsErrorBoundary from './ReportWidgetsErrorBoundary'
 import { getSharedDuckDB } from '../lib/duckdb/database'
 import { duckDBViewName } from '../lib/duckdb/constants'
 import { deferMapPresentation } from '../lib/mapRender'
@@ -142,7 +143,7 @@ export function createWidgetStore (onQueryPending = () => {}, onPresentationErro
         // Ignore outside snapshots and repeat reports so subscribers only see the first paint.
         if (painted && !painted[panelId]) set({ paintedPanels: { ...painted, [panelId]: true } })
       },
-      ...createRoomShellSlice({ connector, config: { title: 'Report widgets', dataSources: [] } })(set, get, store),
+      ...createRoomShellSlice({ connector, CustomErrorBoundary: ReportWidgetsErrorBoundary, config: { title: 'Report widgets', dataSources: [] } })(set, get, store),
       ...createMosaicSlice({ preagg: { enabled: false } })(set, get, store),
       ...dashboardSlices
     }
