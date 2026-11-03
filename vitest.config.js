@@ -12,6 +12,8 @@ export default defineConfig({
           enabled: true,
           // Bundle Kepler's CommonJS/ESM graph while preserving Node-only loaders.
           include: [
+            // REVIEW: Load the error display in tests without loading the unrelated UI components.
+            '@sqlrooms/ui/dist/components/error-boundary',
             '@kepler.gl/layers', '@kepler.gl/reducers',
             'dekart-proto/dekart_pb', 'dekart-proto/dekart_pb_service'
           ],

@@ -1,9 +1,10 @@
-import React, { Component, createContext, useContext, useEffect, useMemo } from 'react'
+import React, { createContext, useContext, useEffect, useMemo } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { useStoreWithMosaicDashboard } from '@sqlrooms/mosaic'
 import { useTablesWithColumns } from '@sqlrooms/mosaic/dist/hooks/useTablesWithColumns'
 import { resolveMosaicTableReference } from '@sqlrooms/mosaic/dist/mosaicTableReference'
 import styles from './ReportWidgets.module.css'
+import ReportWidgetsErrorBoundary from './ReportWidgetsErrorBoundary'
 
 const WidgetSlotContext = createContext(null)
 
@@ -44,27 +45,6 @@ export function WidgetStub () {
   )
 }
 
-// Keep render exceptions below the normal panel header and publish one sticky panel failure.
-class WidgetErrorBoundary extends Component {
-  constructor (props) {
-    super(props)
-    this.state = { failed: false }
-  }
-
-  static getDerivedStateFromError () {
-    return { failed: true }
-  }
-
-  componentDidCatch (error, errorInfo) {
-    console.error(`[WidgetErrorBoundary] Error rendering panel (${this.props.panelType}):`, error, errorInfo)
-    this.props.failPanel(this.props.panelId)
-  }
-
-  render () {
-    return this.state.failed ? <WidgetFailure panelId={this.props.panelId} /> : this.props.children
-  }
-}
-
 // Replace only the chart body so the upstream title and actions remain intact.
 export default function DekartChartPanel ({ Renderer, ...props }) {
   const { dashboard, panel } = props
@@ -93,8 +73,11 @@ export default function DekartChartPanel ({ Renderer, ...props }) {
   // Tables and the shared connection can be registered after the panel shell mounts.
   if (sourceUnavailable || !dataTable || connectionStatus === 'loading' || connectionStatus === 'idle') return <WidgetStub />
   return (
-    <WidgetErrorBoundary panelId={panel.id} panelType={panel.type} failPanel={failPanel}>
+    <ReportWidgetsErrorBoundary
+      fallback={<WidgetFailure panelId={panel.id} />}
+      onError={() => failPanel(panel.id)}
+    >
       <Renderer {...props} />
-    </WidgetErrorBoundary>
+    </ReportWidgetsErrorBoundary>
   )
 }
