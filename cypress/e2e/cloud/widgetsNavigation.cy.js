@@ -19,6 +19,18 @@ function createMap (title, count) {
   cy.get('button#dekart-save-button .anticon-cloud', { timeout: 60000 }).should('exist')
 }
 
+// Follow the visible menu when the header moves navigation into its overflow.
+function openMyMaps () {
+  cy.get('.ant-menu-horizontal').then(menu => {
+    // Overflowed items remain in the header but cannot receive hover events.
+    if (!menu.find('[id="dekart-main-menu"]:visible').length) {
+      cy.wrap(menu).find('.ant-menu-overflow-item-rest').trigger('mouseover')
+    }
+  })
+  cy.get('[id="dekart-main-menu"]:visible').trigger('mouseover')
+  cy.contains('a:visible', 'My Maps').click()
+}
+
 describe('Charts across map navigation', () => {
   it('renders each saved map and its filters without reloading the page', () => {
     cy.viewport(1280, 960)
@@ -35,8 +47,7 @@ describe('Charts across map navigation', () => {
     cy.contains('.dekart-map-card h3', 'Navigation map A', { timeout: 30000 }).click()
     cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.text', '6')
     cy.window().then(win => { win.navigationReproduction = true })
-    cy.get('#dekart-main-menu').trigger('mouseover')
-    cy.contains('a', 'My Maps').click()
+    openMyMaps()
     cy.contains('.dekart-map-card h3', 'Navigation map B', { timeout: 30000 }).click()
     cy.window().its('navigationReproduction').should('eq', true)
     cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.text', '8')
@@ -44,8 +55,7 @@ describe('Charts across map navigation', () => {
     cy.get('[data-testid="number-value"]').should('have.text', '4')
     cy.get('[data-testid="filter-strip"]').should('contain.text', 'category')
     cy.get('[data-testid="error-message-text"]').should('not.exist')
-    cy.get('#dekart-main-menu').trigger('mouseover')
-    cy.contains('a', 'My Maps').click()
+    openMyMaps()
     cy.contains('.dekart-map-card h3', 'Navigation map A', { timeout: 30000 }).click()
     cy.window().its('navigationReproduction').should('eq', true)
     cy.get('[data-testid="number-value"]', { timeout: 120000 }).should('have.text', '6')
