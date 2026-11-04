@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"dekart/src/server/deviceauth"
 	"dekart/src/server/jwtkeys"
 	"encoding/base64"
 	"fmt"
@@ -36,7 +37,6 @@ func (c ClaimsCheck) validateGoogleOrDeviceAuthToken(ctx context.Context, header
 
 // validateDeviceAuthToken validates signed workspace-scoped device token and returns claims when active.
 func (c ClaimsCheck) validateDeviceAuthToken(ctx context.Context, header string) *Claims {
-	_ = ctx
 	tokenString, ok := normalizeBearerToken(header)
 	if !ok || !looksLikeJWT(tokenString) {
 		return nil
@@ -67,7 +67,16 @@ func (c ClaimsCheck) validateDeviceAuthToken(ctx context.Context, header string)
 
 	email, _ := claimsMap["email"].(string)
 	workspaceID, _ := claimsMap["workspace_id"].(string)
-	if email == "" || workspaceID == "" {
+	deviceID, _ := claimsMap["device_id"].(string)
+	// Pre-fix tokens cannot be revoked by session and must be replaced.
+	if email == "" || workspaceID == "" || deviceID == "" {
+		return nil
+	}
+
+	// Read the latest row each time so revocation takes effect on the next request.
+	state, err := deviceauth.GetSessionState(ctx, c.db, deviceID)
+	if err != nil || !state.Found || state.Status != deviceauth.SessionStatusConsumed ||
+		state.Email != email || state.WorkspaceID != workspaceID {
 		return nil
 	}
 

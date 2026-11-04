@@ -415,6 +415,15 @@ Dekart.AuthorizeDevice = {
   responseType: dekart_pb.AuthorizeDeviceResponse
 };
 
+Dekart.CreateDeviceToken = {
+  methodName: "CreateDeviceToken",
+  service: Dekart,
+  requestStream: false,
+  responseStream: false,
+  requestType: dekart_pb.CreateDeviceTokenRequest,
+  responseType: dekart_pb.CreateDeviceTokenResponse
+};
+
 Dekart.ListDeviceTokens = {
   methodName: "ListDeviceTokens",
   service: Dekart,
@@ -1896,6 +1905,37 @@ DekartClient.prototype.authorizeDevice = function authorizeDevice(requestMessage
     callback = arguments[1];
   }
   var client = grpc.unary(Dekart.AuthorizeDevice, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+DekartClient.prototype.createDeviceToken = function createDeviceToken(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(Dekart.CreateDeviceToken, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,

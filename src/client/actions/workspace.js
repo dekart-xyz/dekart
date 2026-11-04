@@ -1,5 +1,6 @@
 import {
   CreateWorkspaceRequest,
+  CreateDeviceTokenRequest,
   CreateSubscriptionRequest,
   GetInvitesRequest,
   GetWorkspaceRequest,
@@ -209,6 +210,18 @@ export function getDeviceTokens () {
     const request = new ListDeviceTokensRequest()
     dispatch(grpcCall(Dekart.ListDeviceTokens, request, (response) => {
       dispatch(deviceTokensUpdate(response.tokensList))
+    }))
+  }
+}
+
+// Return the full token only to the creation dialog; list refreshes contain masked previews.
+export function createDeviceToken (resolve) {
+  return (dispatch) => {
+    const request = new CreateDeviceTokenRequest()
+    request.setDeviceName('GeoSQL MCP')
+    return dispatch(grpcCall(Dekart.CreateDeviceToken, request, (response) => {
+      dispatch(getDeviceTokens())
+      resolve(response.token)
     }))
   }
 }

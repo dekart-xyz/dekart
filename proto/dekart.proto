@@ -66,6 +66,7 @@ service Dekart {
     //user
     rpc RespondToInvite(RespondToInviteRequest) returns (RespondToInviteResponse) {}
     rpc AuthorizeDevice(AuthorizeDeviceRequest) returns (AuthorizeDeviceResponse) {}
+    rpc CreateDeviceToken(CreateDeviceTokenRequest) returns (CreateDeviceTokenResponse) {}
     rpc ListDeviceTokens(ListDeviceTokensRequest) returns (ListDeviceTokensResponse) {}
     rpc RevokeDeviceToken(RevokeDeviceTokenRequest) returns (RevokeDeviceTokenResponse) {}
 
@@ -663,6 +664,18 @@ message DeviceToken {
     string device_name = 2; // Human-readable device label from CLI.
     string token_preview = 3; // Masked token preview; never a full raw token.
     int64 created_at = 4; // Creation time in unix seconds.
+}
+
+// CreateDeviceTokenRequest names a token created by the current browser user.
+message CreateDeviceTokenRequest {
+    string device_name = 1;
+}
+
+// CreateDeviceTokenResponse returns the full token only at creation.
+message CreateDeviceTokenResponse {
+    string token = 1;
+    int64 expires_in = 2;
+    DeviceToken device_token = 3;
 }
 
 // ListDeviceTokensRequest lists active device tokens for current workspace.
