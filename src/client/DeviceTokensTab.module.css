@@ -1,77 +1,117 @@
 .container {
   width: 100%;
-  max-width: 980px;
-}
-
-.wrapper {
-  width: 100%;
-}
-
-.list {
+  max-width: 752px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 24px;
+  min-width: 0;
 }
 
-.item {
-  display: grid;
-  grid-template-columns: minmax(240px, 1fr) minmax(320px, 1fr) auto;
-  align-items: center;
-  gap: 20px;
+.introduction {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.introduction p {
+  flex: 1 1 320px;
+  color: rgba(0, 0, 0, 0.65);
+  margin: 0;
+}
+
+.table {
   border: 1px solid #f0f0f0;
-  border-radius: 8px;
-  padding: 14px 18px;
-  background: #fff;
+  border-radius: 2px;
 }
 
-.deviceName {
-  font-size: 16px;
-  line-height: 1.5;
+.table :global(.ant-table-thead > tr > th) {
+  background: #fafafa;
+  font-weight: 500;
+  padding: 10px 16px;
 }
 
-.detailsColumn {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.table :global(.ant-table-thead > tr > th::before) {
+  display: none;
 }
 
-.metaItem {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  line-height: 1.4;
+.table :global(.ant-table-tbody > tr > td) {
+  padding: 12px 16px;
 }
 
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  flex-shrink: 0;
-}
-
-.removeButton {
+.table :global(.ant-table-cell) {
   color: rgba(0, 0, 0, 0.65);
 }
 
-.agentLink {
-  margin-top: 12px;
+.name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 240px;
+  overflow-wrap: anywhere;
+}
+
+.name strong {
+  color: rgba(0, 0, 0, 0.85);
+  font-weight: 500;
+}
+
+.name span {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.preview {
+  font-family: SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 32px 16px;
   text-align: center;
+  border: 1px dashed #d9d9d9;
+  border-radius: 2px;
 }
 
-@media (max-width: 900px) {
-  .item {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  .actions {
-    justify-content: flex-start;
-  }
+.empty span, .secondary {
+  color: rgba(0, 0, 0, 0.45);
 }
 
-.createButton {
-  margin-bottom: 16px;
+.instructions {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nameInput {
+  margin: 8px 0;
+}
+
+.reveal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .createdToken {
-  overflow-wrap: anywhere;
+  background: #fafafa;
+  border: 1px solid #d9d9d9;
+  border-radius: 2px;
+  max-height: 96px;
+  overflow: auto;
+  padding: 10px 12px;
+  font-family: SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 18px;
+  word-break: break-all;
+  user-select: all;
 }

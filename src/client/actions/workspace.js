@@ -74,13 +74,14 @@ export function createWorkspace (name) {
   }
 }
 
-export function updateWorkspace (name) {
+export function updateWorkspace (name, resolve = () => {}) {
   return (dispatch) => {
     dispatch({ type: updateWorkspace.name })
     const request = new UpdateWorkspaceRequest()
     request.setWorkspaceName(name)
-    dispatch(grpcCall(Dekart.UpdateWorkspace, request, () => {
+    return dispatch(grpcCall(Dekart.UpdateWorkspace, request, () => {
       success('Workspace updated')
+      resolve()
     }))
   }
 }
@@ -214,10 +215,10 @@ export function getDeviceTokens () {
   }
 }
 
-export function createDeviceToken (resolve) {
+export function createDeviceToken (deviceName, resolve) {
   return (dispatch) => {
     const request = new CreateDeviceTokenRequest()
-    request.setDeviceName('GeoSQL MCP')
+    request.setDeviceName(deviceName)
     return dispatch(grpcCall(Dekart.CreateDeviceToken, request, (response) => {
       dispatch(getDeviceTokens())
       resolve(response.token)
@@ -225,13 +226,14 @@ export function createDeviceToken (resolve) {
   }
 }
 
-export function revokeDeviceToken (tokenId) {
+export function revokeDeviceToken (tokenId, resolve = () => {}) {
   return (dispatch) => {
     dispatch({ type: revokeDeviceToken.name, tokenId })
     const request = new RevokeDeviceTokenRequest()
     request.setTokenId(tokenId)
-    dispatch(grpcCall(Dekart.RevokeDeviceToken, request, () => {
+    return dispatch(grpcCall(Dekart.RevokeDeviceToken, request, () => {
       success('Token revoked')
+      resolve()
     }))
   }
 }
