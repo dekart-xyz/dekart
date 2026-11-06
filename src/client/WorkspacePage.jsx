@@ -5,6 +5,7 @@ import Card from 'antd/es/card'
 import Alert from 'antd/es/alert'
 import { copyUrlToClipboard } from './actions/clipboard'
 import Modal from 'antd/es/modal'
+import Tooltip from 'antd/es/tooltip'
 import { TeamOutlined, CreditCardOutlined, AppstoreTwoTone, KeyOutlined } from '@ant-design/icons'
 import Title from 'antd/es/typography/Title'
 import Button from 'antd/es/button'
@@ -231,16 +232,20 @@ function DeleteWorkspaceSection () {
             Permanently delete this workspace, its maps, data and connections. This cannot be undone.
           </div>
         </div>
-        <Button
-          danger
-          disabled={requiresCancellation}
-          onClick={() => {
-            setName('')
-            setOpen(true)
-          }}
-        >
-          Delete workspace
-        </Button>
+        <Tooltip title={requiresCancellation ? 'Cancel your subscription first' : ''}>
+          <span>
+            <Button
+              danger
+              disabled={requiresCancellation}
+              onClick={() => {
+                setName('')
+                setOpen(true)
+              }}
+            >
+              Delete workspace
+            </Button>
+          </span>
+        </Tooltip>
       </div>
       {requiresCancellation && (
         <Alert
@@ -252,14 +257,15 @@ function DeleteWorkspaceSection () {
         />
       )}
       <Modal
-        title='Delete workspace'
+        title='Delete workspace?'
         open={open}
         onCancel={() => setOpen(false)}
-        okText='Delete'
+        okText='Delete workspace'
         okButtonProps={{ danger: true, disabled: name !== workspace.name }}
         onOk={() => dispatch(deleteWorkspace(workspace.id))}
       >
-        <p>Type {workspace.name} to permanently delete this workspace.</p>
+        <p>All maps, data and connections in <strong>{workspace.name}</strong> will be permanently deleted.</p>
+        <p>Type <strong>{workspace.name}</strong> to confirm.</p>
         <Input aria-label='Workspace name to delete' value={name} onChange={e => setName(e.target.value)} />
       </Modal>
     </Card>
@@ -269,13 +275,15 @@ function DeleteWorkspaceSection () {
 function UpdateWorkspaceForm () {
   const workspace = useSelector(state => state.workspace)
   const isAdmin = useSelector(state => state.user.isAdmin)
-  const [disabled, setDisabled] = useState(!isAdmin)
+  const [saving, setSaving] = useState(false)
+  const [justSaved, setJustSaved] = useState(false)
+  const disabled = !isAdmin || saving
   const [form] = Form.useForm()
   const name = Form.useWatch('name', form)
   const dispatch = useDispatch()
   useEffect(() => {
-    setDisabled(!isAdmin)
-  }, [workspace, isAdmin])
+    form.setFieldsValue({ name: workspace.name })
+  }, [workspace.id, workspace.name, form])
   return (
     <Card title='General'>
       <Form
@@ -284,18 +292,20 @@ function UpdateWorkspaceForm () {
         disabled={disabled}
         initialValues={{ name: workspace.name }}
         layout='vertical'
-        onFinish={(values) => {
+        onValuesChange={() => setJustSaved(false)}
+        onFinish={async (values) => {
           track('UpdateWorkspace')
-          setDisabled(true)
-          dispatch(updateWorkspace(values.name))
+          setSaving(true)
+          await dispatch(updateWorkspace(values.name.trim(), () => setJustSaved(true)))
+          setSaving(false)
         }}
       >
         <Form.Item
           name='name'
           label='Workspace name'
-          rules={[{ required: true, whitespace: true, message: 'Workspace name is required' }]}
+          rules={[{ required: true, whitespace: true, message: 'Workspace name is required.' }]}
         >
-          <Input />
+          <Input maxLength={64} />
         </Form.Item>
         <Form.Item
           label='Workspace ID'
@@ -318,13 +328,27 @@ function UpdateWorkspaceForm () {
             </Button>
           </Input.Group>
         </Form.Item>
-        <Button
-          type='primary'
-          htmlType='submit'
-          disabled={disabled || !name?.trim() || name === workspace.name}
-        >
-          Save changes
-        </Button>
+        {/* REVIEW: Disable unchanged or blank names and let users restore the saved name without sending a request. */}
+        <div className={styles.formActions}>
+          <Button
+            type='primary'
+            htmlType='submit'
+            loading={saving}
+            disabled={disabled || !name?.trim() || name.trim() === workspace.name}
+          >
+            Save changes
+          </Button>
+          {name !== undefined && name !== workspace.name && (
+            <Button
+              type='text' onClick={() => {
+                form.setFieldsValue({ name: workspace.name })
+                setJustSaved(false)
+              }}
+            >Cancel
+            </Button>
+          )}
+          {justSaved && <span className={styles.saved}>Changes saved</span>}
+        </div>
       </Form>
     </Card>
   )
@@ -337,7 +361,9 @@ function WorkspaceTab ({ nextStep, setNextStep, isCreatingAdditionalWorkspace })
   if (userStream.workspaceId && userStream.workspaceId !== workspace.id) {
     return null
   }
-  let form = workspace.id && !isCreatingAdditionalWorkspace ? <UpdateWorkspaceForm /> : <CreateWorkspaceForm />
+  // REVIEW: Use the same existing-workspace condition for the form, heading and deletion controls.
+  const hasWorkspace = workspace.id && !isCreatingAdditionalWorkspace
+  let form = hasWorkspace ? <UpdateWorkspaceForm /> : <CreateWorkspaceForm />
   if (nextStep === 'invites') {
     form = <Invites />
   }
@@ -345,7 +371,7 @@ function WorkspaceTab ({ nextStep, setNextStep, isCreatingAdditionalWorkspace })
   let title = 'Create workspace'
   if (nextStep === 'invites') {
     title = 'Join workspace'
-  } else if (workspace.id && !isCreatingAdditionalWorkspace) {
+  } else if (hasWorkspace) {
     title = null
   }
 
@@ -370,7 +396,10 @@ function WorkspaceTab ({ nextStep, setNextStep, isCreatingAdditionalWorkspace })
             )}
       </div>
       {/* REVIEW: Deletion is offered only while managing an existing workspace. */}
-      <div className={styles.workspaceTabBody}>{form}{workspace.id && !isCreatingAdditionalWorkspace && nextStep !== 'invites' && <DeleteWorkspaceSection />}</div>
+      <div className={styles.workspaceTabBody}>
+        {form}
+        {hasWorkspace && nextStep !== 'invites' && <DeleteWorkspaceSection />}
+      </div>
 
     </div>
   )
