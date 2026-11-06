@@ -10,6 +10,7 @@ import (
 	"dekart/src/server/jwtkeys"
 	"encoding/base64"
 	"encoding/pem"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"testing"
 	"time"
@@ -22,12 +23,16 @@ func TestGetContextAcceptsDeviceToken(t *testing.T) {
 	privateKey, publicKeyPEM := generateDeviceJWTKeyPair(t)
 	t.Setenv(deviceAuthPublicKeyEnv, base64.StdEncoding.EncodeToString(publicKeyPEM))
 	token := signDeviceToken(t, privateKey, "user@example.com", "workspace-1")
+	db, err := sql.Open("sqlite3", ":memory:")
+	require.NoError(t, err)
+	defer db.Close()
+	createDeviceSessionFixture(t, db)
 
 	claimsCheck := NewClaimsCheck(ClaimsCheckConfig{
 		RequireGoogleOAuth:  true,
 		GoogleOAuthClientId: "test-client",
 		GoogleOAuthSecret:   "test-secret",
-	}, nil)
+	}, db)
 
 	req, err := http.NewRequest(http.MethodPost, "/api/v1/reports", nil)
 	if err != nil {
@@ -92,8 +97,9 @@ func TestGetContextAcceptsDeviceTokenWithBootstrapFallback(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EnsureBootstrapKeyInMemory: %v", err)
 	}
+	createDeviceSessionFixture(t, db)
 	issuer := deviceauth.NewJWTIssuer()
-	token, _, err := issuer.Issue("user@example.com", "workspace-1")
+	token, _, err := issuer.Issue("user@example.com", "workspace-1", "device-1")
 	if err != nil {
 		t.Fatalf("Issue: %v", err)
 	}
@@ -172,6 +178,7 @@ func signDeviceToken(t *testing.T, privateKey *rsa.PrivateKey, email, workspaceI
 		"aud":          deviceAuthAudience,
 		"email":        email,
 		"workspace_id": workspaceID,
+		"device_id":    "device-1",
 		"iat":          now.Unix(),
 		"exp":          now.Add(time.Hour).Unix(),
 	})
@@ -197,4 +204,72 @@ func signDeviceTokenWithoutWorkspace(t *testing.T, privateKey *rsa.PrivateKey, e
 		t.Fatalf("SignedString: %v", err)
 	}
 	return signed
+}
+
+// Device credentials must be checked against their current session on every request.
+func TestDeviceTokenCurrentSession(t *testing.T) {
+	privateKey, publicKeyPEM := generateDeviceJWTKeyPair(t)
+	t.Setenv(deviceAuthPublicKeyEnv, base64.StdEncoding.EncodeToString(publicKeyPEM))
+	db, err := sql.Open("sqlite3", ":memory:")
+	require.NoError(t, err)
+	defer db.Close()
+	createDeviceSessionFixture(t, db)
+	check := NewClaimsCheck(ClaimsCheckConfig{RequireGoogleOAuth: true, GoogleOAuthClientId: "test-client", GoogleOAuthSecret: "test-secret"}, db)
+	for _, scenario := range []struct {
+		name, deviceID, email, workspace string
+		expired, accepted                bool
+	}{
+		{name: "active", deviceID: "device-1", email: "user@example.com", workspace: "workspace-1", accepted: true},
+		{name: "pre-fix", email: "user@example.com", workspace: "workspace-1"},
+		{name: "unknown device", deviceID: "unknown", email: "user@example.com", workspace: "workspace-1"},
+		{name: "wrong user", deviceID: "device-1", email: "other@example.com", workspace: "workspace-1"},
+		{name: "wrong workspace", deviceID: "device-1", email: "user@example.com", workspace: "other"},
+		{name: "expired", deviceID: "device-1", email: "user@example.com", workspace: "workspace-1", expired: true},
+	} {
+		t.Run(scenario.name, func(t *testing.T) {
+			expires := time.Now().Add(time.Hour).Unix()
+			if scenario.expired {
+				expires = time.Now().Add(-time.Hour).Unix()
+			}
+			tokenClaims := jwt.MapClaims{
+				"iss": deviceAuthIssuer, "aud": deviceAuthAudience, "email": scenario.email,
+				"workspace_id": scenario.workspace, "exp": expires,
+			}
+			if scenario.deviceID != "" {
+				tokenClaims["device_id"] = scenario.deviceID
+			}
+			token, err := jwt.NewWithClaims(jwt.SigningMethodRS256, tokenClaims).SignedString(privateKey)
+			require.NoError(t, err)
+			req, err := http.NewRequest(http.MethodPost, "/api/v1/mcp/call", nil)
+			require.NoError(t, err)
+			req.Header.Set("Authorization", "Bearer "+token)
+			require.Equal(t, scenario.accepted, GetClaims(check.GetContext(req)) != nil)
+		})
+	}
+	token := signDeviceToken(t, privateKey, "user@example.com", "workspace-1")
+	activeReq, err := http.NewRequest(http.MethodPost, "/api/v1/mcp/call", nil)
+	require.NoError(t, err)
+	activeReq.Header.Set("Authorization", "Bearer "+token)
+	require.NotNil(t, GetClaims(check.GetContext(activeReq)))
+	revoked, err := deviceauth.RevokeWorkspaceToken(context.Background(), db, "workspace-1", "user@example.com", "device-1")
+	require.NoError(t, err)
+	require.True(t, revoked)
+	require.Nil(t, GetClaims(check.GetContext(activeReq)), "revocation must take effect on the next request")
+
+	req, err := http.NewRequest(http.MethodPost, "/api/v1/mcp/call", nil)
+	require.NoError(t, err)
+	require.Nil(t, GetClaims(check.GetContext(req)), "missing bearer token")
+}
+
+// The consumed session remains active after the short browser authorization window expires.
+func createDeviceSessionFixture(t *testing.T, db *sql.DB) {
+	t.Helper()
+	_, err := db.Exec(`CREATE TABLE device_auth_log (
+ id TEXT PRIMARY KEY, device_id TEXT, device_name TEXT, status TEXT,
+ email TEXT, workspace_id TEXT, expires_at TIMESTAMP,
+ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+ INSERT INTO device_auth_log (id, device_id, status, email, workspace_id, expires_at)
+ VALUES ('issued', 'device-1', 'consumed', 'user@example.com', 'workspace-1', '2020-01-01');`)
+	require.NoError(t, err)
+
 }

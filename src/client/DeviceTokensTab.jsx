@@ -1,11 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import Card from 'antd/es/card'
 import Button from 'antd/es/button'
+import Modal from 'antd/es/modal'
 import Empty from 'antd/es/empty'
 import Typography from 'antd/es/typography'
 import styles from './DeviceTokensTab.module.css'
-import { revokeDeviceToken } from './actions/workspace'
+import { createDeviceToken, revokeDeviceToken } from './actions/workspace'
 
 const { Text } = Typography
 const gisSkillRepoURL = 'https://github.com/dekart-xyz/geosql'
@@ -27,25 +28,40 @@ export default function DeviceTokensTab () {
   const loading = useSelector(state => state.deviceTokens.loading)
   const [confirmingId, setConfirmingId] = useState('')
 
-  const isEmpty = useMemo(() => devices.length === 0, [devices.length])
-
-  if (!loading && isEmpty) {
-    return (
-      <div className={styles.container}>
-        <Card className={styles.wrapper}>
-          <Empty description='No active device tokens' />
-        </Card>
-        <AgentLink />
-      </div>
-    )
-  }
+  // REVIEW: Keep the full token in the open dialog so closing it removes the only displayed copy.
+  const [createdToken, setCreatedToken] = useState('')
+  const [creating, setCreating] = useState(false)
 
   return (
     <div className={styles.container}>
+      <Button
+        className={styles.createButton}
+        loading={creating}
+        onClick={async () => {
+          setCreating(true)
+          await dispatch(createDeviceToken(setCreatedToken))
+          setCreating(false)
+        }}
+      >
+        Create token for GeoSQL MCP
+      </Button>
+      <Modal
+        title='Token for GeoSQL MCP'
+        open={Boolean(createdToken)}
+        onCancel={() => setCreatedToken('')}
+        footer={<Button onClick={() => setCreatedToken('')}>Done</Button>}
+        destroyOnClose
+      >
+        <p>Copy this token now. You will only see it once.</p>
+        <Text code copyable data-testid='created-device-token' className={styles.createdToken}>
+          {createdToken}
+        </Text>
+      </Modal>
       <Card className={styles.wrapper} loading={loading}>
+        {devices.length === 0 && <Empty description='No active device tokens' />}
         <div className={styles.list}>
           {devices.map((device) => (
-            <div key={device.id} className={styles.item}>
+            <div key={device.id} className={styles.item} data-testid='device-token-row'>
               <div className={styles.nameColumn}>
                 <Text strong className={styles.deviceName}>{device.deviceName}</Text>
               </div>

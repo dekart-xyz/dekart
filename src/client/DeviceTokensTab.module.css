@@ -67,3 +67,11 @@
     justify-content: flex-start;
   }
 }
+
+.createButton {
+  margin-bottom: 16px;
+}
+
+.createdToken {
+  overflow-wrap: anywhere;
+}
