@@ -36,11 +36,13 @@ type Claims struct {
 	AccessToken                string
 	MCPGoogleAccessTokenHeader string
 	MCPGoogleAccessToken       string
-	DeviceToken                string
-	SnapshotToken              string
-	SensitiveScopesGranted     bool
-	WorkspaceID                string
-	ReportID                   string
+	// REVIEW: Keep the verified device identifier with the signed-in user so usage records identify the calling client.
+	DeviceID               string
+	DeviceToken            string
+	SnapshotToken          string
+	SensitiveScopesGranted bool
+	WorkspaceID            string
+	ReportID               string
 }
 
 // ContextKeyType type

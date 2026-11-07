@@ -42,3 +42,32 @@ Plan: /Users/vladi/dev/magic/docs/geosql-mcp-spec-20261104.md
 - Validation: frontend lint and diff checks passed; local acceptance expectations updated.
 - Deviations, outside-scope files, refactor candidates, known failures and open questions: none.
 - Changes remain unstaged and uncommitted.
+
+## 2026-11-07 — Slice 1b: editor access and MCP usage
+Plan: /Users/vladi/dev/magic/docs/geosql-mcp-spec-20261104.md
+- Tests: Go regressions first demonstrated missing role checks, device ID propagation and Cloud usage rows; all affected packages now pass (`go test ./src/server/dekart ./src/server/user ./src/server/deviceauth ./src/server/app`).
+- Tests: `npm test -- --run` passed 179 tests in 24 files; `npm run lint` and `git diff --check` passed.
+- Tests: Cloud/Postgres Cypress passed both `tmpMCPEditorAccess.cy.js` and `tmpWorkspaceTokensRedesign.cy.js` using `make cypress-run ENV_FILE=.env.cloud SPEC="cypress/e2e/cloud/tmpMCPEditorAccess.cy.js,cypress/e2e/cloud/tmpWorkspaceTokensRedesign.cy.js"`.
+- Tests: verified admin/editor access, viewer/unspecified denial, viewer token-creation refusal, persisted demotion with the same real bearer on both endpoints, pre-trial discovery and trial message, no-auth local calls, Cloud usage identity without arguments, and no self-hosted usage rows.
+- Videos: /Users/vladi/dev/dekart-b/cypress/videos/tmpMCPEditorAccess.cy.js.mp4 and /Users/vladi/dev/dekart-b/cypress/videos/tmpWorkspaceTokensRedesign.cy.js.mp4.
+- Review: persisted-demotion coverage finding fixed; follow-up clean correctness review has no remaining findings.
+- Deviations: feature-driving Cypress spec remains ignored per repo policy. Commit, push and PR remain pending because dekart-implement requires explicit Git authorization.
+- Files outside plan: none; existing claims now carry the verified device_id for usage attribution. This local hand-off report is required by the skill.
+- Refactor candidates: none required for this slice; existing mcp.go remains a large dispatcher and was not split.
+- Known failures outside scope: none in final checks. Vite IPv4 binding required `NODE_OPTIONS=--dns-result-order=ipv4first make client`; no runtime config files changed.
+- Open questions: none for implementation. Changes remain unstaged and uncommitted on geosql-mcp.
+
+## 2026-11-07 — Fix Google OAuth token acceptance fixture
+Bug report: `docs/refactor-report-geosql-mcp.md`, 2026-11-07 baseline failure.
+- Tests: reproduced the missing Create token button on `.env.googleoauth`; `tmpWorkspaceSettingsRedesign.cy.js:14` failed as reported.
+- Cause: the spec's new self-hosted user receives the configured default viewer role; token creation correctly requires admin/editor access.
+- Fix: the existing acceptance spec now creates explicit editor membership before device authorization and removes its own membership/token rows afterward; all original assertions remain.
+- Tests: corrected Google OAuth Cypress flow passed (1 test); frontend lint, direct Standard check of the ignored spec via stdin, JavaScript syntax and diff checks passed.
+- Video: `/Users/vladi/dev/dekart-b/cypress/videos/tmpWorkspaceSettingsRedesign.cy.js.mp4`.
+- Baseline retained: full Go suite, 179 frontend tests and all four current Cloud Cypress specs passed earlier in this session; no production code changed during this fix.
+- Review: clean correctness reviewer inspected the full uncommitted diff and the ignored acceptance spec; no actionable findings; targeted Go tests passed independently.
+- Deviations: fixed test setup rather than production permissions; viewer restrictions are intentional.
+- Files outside bug scope: none; the acceptance spec remains ignored under the feature-driving test policy, and this report is the required handoff aid.
+- Refactor candidates: deferred `mcp.go` separation remains recorded in the refactor report.
+- Known failures out of scope: obsolete ignored `tmpCreateDeviceToken.cy.js` targets the previous UI and is superseded by the redesign spec.
+- Open questions: none. Changes remain unstaged and uncommitted on `geosql-mcp`.

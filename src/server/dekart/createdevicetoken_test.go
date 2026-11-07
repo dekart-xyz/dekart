@@ -25,7 +25,7 @@ func TestCreateDeviceToken(t *testing.T) {
 	require.NoError(t, err)
 	server := Server{db: db, userStreams: user.NewStreams()}
 	ctx := context.WithValue(context.Background(), user.ContextKey, &user.Claims{Email: "owner@example.com"})
-	ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{ID: "workspace-1"})
+	ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{ID: "workspace-1", UserRole: proto.UserRole_ROLE_EDITOR})
 	result, err := server.CreateDeviceToken(ctx, &proto.CreateDeviceTokenRequest{DeviceName: "GeoSQL MCP"})
 	require.NoError(t, err)
 	require.NotEmpty(t, result.Token)
@@ -51,6 +51,7 @@ func TestCreateDeviceToken(t *testing.T) {
 	require.NoError(t, err)
 	request.Header.Set("Authorization", "Bearer "+result.Token)
 	require.NotNil(t, user.GetClaims(check.GetContext(request)), "created token must authenticate")
+	require.Equal(t, result.DeviceToken.Id, user.GetClaims(check.GetContext(request)).DeviceID)
 
 	listed, err := server.ListDeviceTokens(ctx, &proto.ListDeviceTokensRequest{})
 	require.NoError(t, err)

@@ -84,6 +84,8 @@ func (c ClaimsCheck) validateDeviceAuthToken(ctx context.Context, header string)
 	return &Claims{
 		Email:       email,
 		DeviceToken: tokenString,
+		// REVIEW: Carry the verified device identifier into the request after checking that its token remains active.
+		DeviceID:    deviceID,
 		WorkspaceID: workspaceID,
 	}
 }

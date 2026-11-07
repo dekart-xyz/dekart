@@ -112,6 +112,10 @@ func (s Server) CreateDeviceToken(ctx context.Context, req *proto.CreateDeviceTo
 	if err != nil {
 		return nil, err
 	}
+	// REVIEW: Check the current workspace role before creating a token that can run agent tools.
+	if err := requireMCPEditor(ctx); err != nil {
+		return nil, err
+	}
 	deviceID := device.NewDeviceID()
 	token, expiresAt, err := device.NewJWTIssuer().Issue(claims.Email, workspaceID, deviceID)
 	if err != nil {
