@@ -84,6 +84,7 @@ func (c ClaimsCheck) validateDeviceAuthToken(ctx context.Context, header string)
 	return &Claims{
 		Email:       email,
 		DeviceToken: tokenString,
+		DeviceID:    deviceID,
 		WorkspaceID: workspaceID,
 	}
 }

@@ -112,6 +112,9 @@ func (s Server) CreateDeviceToken(ctx context.Context, req *proto.CreateDeviceTo
 	if err != nil {
 		return nil, err
 	}
+	if err := requireMCPEditor(ctx); err != nil {
+		return nil, err
+	}
 	deviceID := device.NewDeviceID()
 	token, expiresAt, err := device.NewJWTIssuer().Issue(claims.Email, workspaceID, deviceID)
 	if err != nil {
