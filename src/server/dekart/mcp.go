@@ -130,14 +130,34 @@ func (s *Server) HandleCreateFile(w http.ResponseWriter, r *http.Request) {
 	writeProtoJSON(w, http.StatusOK, response)
 }
 
+// requireMCPEditor checks workspace role without blocking subscription-limited discovery.
+func requireMCPEditor(ctx context.Context) error {
+	if user.GetClaims(ctx) == nil {
+		return Unauthenticated
+	}
+	role := checkWorkspace(ctx).UserRole
+	// Only explicit editor and admin membership grants access to the agent tools.
+	if role != proto.UserRole_ROLE_ADMIN && role != proto.UserRole_ROLE_EDITOR {
+		return status.Error(codes.PermissionDenied, "Only editors can use GeoSQL in Claude")
+	}
+	return nil
+}
+
 // HandleMCPTools returns available MCP tool definitions for agent discovery.
 func (s *Server) HandleMCPTools(w http.ResponseWriter, r *http.Request) {
-	_ = s
+	if err := requireMCPEditor(r.Context()); err != nil {
+		writeMCPCallError(w, err)
+		return
+	}
 	writeJSON(w, http.StatusOK, mcpToolsResponse{Tools: mcpToolDefinitions()})
 }
 
 // HandleMCPCall executes one MCP tool call and returns structured result payload.
 func (s *Server) HandleMCPCall(w http.ResponseWriter, r *http.Request) {
+	if err := requireMCPEditor(r.Context()); err != nil {
+		writeMCPCallError(w, err)
+		return
+	}
 	// Old CLI versions cannot execute statement-attached HTTP sources.
 	if agent := r.UserAgent(); strings.HasPrefix(agent, "dekart-cli/") {
 		version, err := semver.StrictNewVersion(strings.TrimPrefix(agent, "dekart-cli/"))
@@ -156,6 +176,14 @@ func (s *Server) HandleMCPCall(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := user.WithMCPGoogleAccessTokenHeader(r.Context(), r.Header.Get(user.MCPGoogleAccessTokenHeader))
+	// Track dispatched calls without including arguments or tool results.
+	data, _ := json.Marshal(map[string]string{
+		"device_id": user.GetClaims(ctx).DeviceID,
+		"tool_name": request.Name,
+	})
+	_, _ = s.TrackEvent(ctx, &proto.TrackEventRequest{
+		EventName: "MCPToolCall", EventDataJson: string(data),
+	})
 	result, err := s.callMCPTool(ctx, request)
 	if err != nil {
 		writeMCPCallError(w, err)
