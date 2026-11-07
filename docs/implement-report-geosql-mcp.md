@@ -42,3 +42,17 @@ Plan: /Users/vladi/dev/magic/docs/geosql-mcp-spec-20261104.md
 - Validation: frontend lint and diff checks passed; local acceptance expectations updated.
 - Deviations, outside-scope files, refactor candidates, known failures and open questions: none.
 - Changes remain unstaged and uncommitted.
+
+## 2026-11-07 — Slice 1b: editor access and MCP usage
+Plan: /Users/vladi/dev/magic/docs/geosql-mcp-spec-20261104.md
+- Tests: Go regressions first demonstrated missing role checks, device ID propagation and Cloud usage rows; all affected packages now pass (`go test ./src/server/dekart ./src/server/user ./src/server/deviceauth ./src/server/app`).
+- Tests: `npm test -- --run` passed 179 tests in 24 files; `npm run lint` and `git diff --check` passed.
+- Tests: Cloud/Postgres Cypress passed both `tmpMCPEditorAccess.cy.js` and `tmpWorkspaceTokensRedesign.cy.js` using `make cypress-run ENV_FILE=.env.cloud SPEC="cypress/e2e/cloud/tmpMCPEditorAccess.cy.js,cypress/e2e/cloud/tmpWorkspaceTokensRedesign.cy.js"`.
+- Tests: verified admin/editor access, viewer/unspecified denial, viewer token-creation refusal, persisted demotion with the same real bearer on both endpoints, pre-trial discovery and trial message, no-auth local calls, Cloud usage identity without arguments, and no self-hosted usage rows.
+- Videos: /Users/vladi/dev/dekart-b/cypress/videos/tmpMCPEditorAccess.cy.js.mp4 and /Users/vladi/dev/dekart-b/cypress/videos/tmpWorkspaceTokensRedesign.cy.js.mp4.
+- Review: persisted-demotion coverage finding fixed; follow-up clean correctness review has no remaining findings.
+- Deviations: feature-driving Cypress spec remains ignored per repo policy. Commit, push and PR remain pending because dekart-implement requires explicit Git authorization.
+- Files outside plan: none; existing claims now carry the verified device_id for usage attribution. This local hand-off report is required by the skill.
+- Refactor candidates: none required for this slice; existing mcp.go remains a large dispatcher and was not split.
+- Known failures outside scope: none in final checks. Vite IPv4 binding required `NODE_OPTIONS=--dns-result-order=ipv4first make client`; no runtime config files changed.
+- Open questions: none for implementation. Changes remain unstaged and uncommitted on geosql-mcp.

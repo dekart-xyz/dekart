@@ -1,3 +1,4 @@
+import { UserRole } from 'dekart-proto/dekart_pb'
 import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import Card from 'antd/es/card'
@@ -18,6 +19,8 @@ export default function DeviceTokensTab () {
   const devices = useSelector(state => state.deviceTokens.list)
   const loading = useSelector(state => state.deviceTokens.loading)
   const workspaceName = useSelector(state => state.workspace.name)
+  const role = useSelector(state => state.user.stream?.role)
+  const canCreateToken = role === UserRole.ROLE_ADMIN || role === UserRole.ROLE_EDITOR
   const [createOpen, setCreateOpen] = useState(false)
   const [name, setName] = useState('MCP Token')
   const [createdToken, setCreatedToken] = useState('')
@@ -34,15 +37,17 @@ export default function DeviceTokensTab () {
             Tokens let GeoSQL MCP clients, like Claude, query data in {workspaceName} on your
             behalf. Create one token per client so you can revoke them independently.
           </p>
-          <Button
-            type='primary'
-            onClick={() => {
-              setName('MCP Token')
-              setCreateOpen(true)
-            }}
-          >
-            Create token
-          </Button>
+          {canCreateToken && (
+            <Button
+              type='primary'
+              onClick={() => {
+                setName('MCP Token')
+                setCreateOpen(true)
+              }}
+            >
+              Create token
+            </Button>
+          )}
         </div>
         {devices.length === 0
           ? (
