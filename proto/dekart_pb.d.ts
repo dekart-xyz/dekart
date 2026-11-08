@@ -2111,6 +2111,7 @@ export namespace GetEnvResponse {
       TYPE_VERSION_CHECK_URL: 30;
       TYPE_VERSION_CHECK_FORCE_CURRENT_VERSION: 31;
       TYPE_INSTANCE_ID: 32;
+      TYPE_GEOSQL_MCP_URL: 33;
     }
 
     export const Type: TypeMap;

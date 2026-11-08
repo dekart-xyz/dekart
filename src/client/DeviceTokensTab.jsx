@@ -19,6 +19,8 @@ export default function DeviceTokensTab () {
   const devices = useSelector(state => state.deviceTokens.list)
   const loading = useSelector(state => state.deviceTokens.loading)
   const workspaceName = useSelector(state => state.workspace.name)
+  const geosqlMcpURL = useSelector(state => state.env.variables.GEOSQL_MCP_URL || '')
+  const serverURL = geosqlMcpURL.replace(/\/+$/, '')
   const role = useSelector(state => state.user.stream?.role)
   const canCreateToken = role === UserRole.ROLE_ADMIN || role === UserRole.ROLE_EDITOR
   const [createOpen, setCreateOpen] = useState(false)
@@ -96,12 +98,27 @@ export default function DeviceTokensTab () {
       <Card title='Use with Claude'>
         <ol className={styles.instructions}>
           <li>Create a token above and copy it.</li>
-          <li>
-            <a href={gisSkillRepoURL} target='_blank' rel='noreferrer'>
-              Install the Dekart Claude skill
-            </a> to run agentic GIS queries.
-          </li>
-          <li>Paste the token when the skill asks for it.</li>
+          {serverURL
+            ? (
+              <>
+                <li>
+                  <a href={`${serverURL}/geosql.mcpb`}>
+                    Install the GeoSQL extension in Claude Desktop
+                  </a>.
+                </li>
+                <li>Paste the token and MCP Server URL: <code>{serverURL}/mcp</code></li>
+              </>
+              )
+            : (
+              <>
+                <li>
+                  <a href={gisSkillRepoURL} target='_blank' rel='noreferrer'>
+                    Install the Dekart Claude skill
+                  </a> to run agentic GIS queries.
+                </li>
+                <li>Paste the token when the skill asks for it.</li>
+              </>
+              )}
         </ol>
       </Card>
       <Modal
@@ -157,8 +174,19 @@ export default function DeviceTokensTab () {
             {copied ? 'Copied to clipboard' : 'Copy token'}
           </Button>
           <span>
-            Next: <a href={gisSkillRepoURL} target='_blank' rel='noreferrer'>install the Claude skill</a>
-            {' '}and paste this token when prompted.
+            {serverURL
+              ? (
+                <>
+                  Next: <a href={`${serverURL}/geosql.mcpb`}>install the GeoSQL extension</a>
+                  {' '}in Claude Desktop and paste this token and MCP Server URL: <code>{serverURL}/mcp</code>
+                </>
+                )
+              : (
+                <>
+                  Next: <a href={gisSkillRepoURL} target='_blank' rel='noreferrer'>install the Claude skill</a>
+                  {' '}and paste this token when prompted.
+                </>
+                )}
           </span>
         </div>
       </Modal>
