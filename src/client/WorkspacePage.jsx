@@ -23,7 +23,7 @@ import SubscriptionTab from './SubscriptionTab'
 import MembersTab from './MembersTab'
 import Result from 'antd/es/result'
 import { switchPlayground } from './actions/user'
-import { useHistory } from 'react-router-dom/cjs/react-router-dom'
+import { Redirect, useHistory } from 'react-router-dom/cjs/react-router-dom'
 import { track } from './lib/tracking'
 import Select from 'antd/es/select'
 import { Loading } from './Loading'
@@ -274,10 +274,8 @@ function DeleteWorkspaceSection () {
 
 function UpdateWorkspaceForm () {
   const workspace = useSelector(state => state.workspace)
-  const isAdmin = useSelector(state => state.user.isAdmin)
   const [saving, setSaving] = useState(false)
   const [justSaved, setJustSaved] = useState(false)
-  const disabled = !isAdmin || saving
   const [form] = Form.useForm()
   const name = Form.useWatch('name', form)
   const dispatch = useDispatch()
@@ -289,7 +287,7 @@ function UpdateWorkspaceForm () {
       <Form
         form={form}
         className={styles.generalForm}
-        disabled={disabled}
+        disabled={saving}
         initialValues={{ name: workspace.name }}
         layout='vertical'
         onValuesChange={() => setJustSaved(false)}
@@ -334,7 +332,7 @@ function UpdateWorkspaceForm () {
             type='primary'
             htmlType='submit'
             loading={saving}
-            disabled={disabled || !name?.trim() || name.trim() === workspace.name}
+            disabled={saving || !name?.trim() || name.trim() === workspace.name}
           >
             Save changes
           </Button>
@@ -358,12 +356,15 @@ function WorkspaceTab ({ nextStep, setNextStep, isCreatingAdditionalWorkspace })
   const userStream = useSelector(state => state.user.stream)
   const workspace = useSelector(state => state.workspace)
   const invites = workspace.invites
+  const isAdmin = useSelector(state => state.user.isAdmin)
   if (userStream.workspaceId && userStream.workspaceId !== workspace.id) {
     return null
   }
   // REVIEW: Use the same existing-workspace condition for the form, heading and deletion controls.
   const hasWorkspace = workspace.id && !isCreatingAdditionalWorkspace
-  let form = hasWorkspace ? <UpdateWorkspaceForm /> : <CreateWorkspaceForm />
+  let form = hasWorkspace
+    ? (isAdmin ? <UpdateWorkspaceForm /> : <Card title='Workspace name'>{workspace.name}</Card>)
+    : <CreateWorkspaceForm />
   if (nextStep === 'invites') {
     form = <Invites />
   }
@@ -415,6 +416,7 @@ function getMembersSubTitle (addedUsersCount, planType) {
 export function Workspace ({ nextStep, setNextStep, stepId, isCreatingAdditionalWorkspace }) {
   const userStream = useSelector(state => state.user.stream)
   const isSelfHosted = useSelector(state => state.user.isSelfHosted)
+  const isAdmin = useSelector(state => state.user.isAdmin)
   const addedUsersCount = useSelector(state => state.workspace.addedUsersCount)
   const workspaceId = userStream?.workspaceId
   const planType = userStream?.planType
@@ -424,6 +426,10 @@ export function Workspace ({ nextStep, setNextStep, stepId, isCreatingAdditional
 
   if (!userStream) {
     return null
+  }
+  // Wait for the role before redirecting direct links to admin tabs.
+  if (!isAdmin && (step === 'members' || step === 'plan')) {
+    return <Redirect to='/workspace' />
   }
   return (
     <div className={styles.workspace}>
@@ -450,19 +456,21 @@ export function Workspace ({ nextStep, setNextStep, stepId, isCreatingAdditional
                 <Radio.Button value='workspace'>
                   <AppstoreTwoTone /> Workspace
                 </Radio.Button>
-                {!isSelfHosted
+                {isAdmin && !isSelfHosted
                   ? (
                     <Radio.Button value='plan' disabled={!userStream.workspaceId}>
                       <CreditCardOutlined /> Plan
                     </Radio.Button>
                     )
                   : null}
-                <Radio.Button value='members'>
-                  <Badge color='blue' count={getMembersSubTitle(addedUsersCount, planType) ? undefined : 0} style={{ display: 'none' }}>
-                    {/* keep layout consistent without visible badge when not needed */}
-                    <TeamOutlined /> Members {getMembersSubTitle(addedUsersCount, planType)}
-                  </Badge>
-                </Radio.Button>
+                {isAdmin && (
+                  <Radio.Button value='members'>
+                    <Badge color='blue' count={getMembersSubTitle(addedUsersCount, planType) ? undefined : 0} style={{ display: 'none' }}>
+                      {/* keep layout consistent without visible badge when not needed */}
+                      <TeamOutlined /> Members {getMembersSubTitle(addedUsersCount, planType)}
+                    </Badge>
+                  </Radio.Button>
+                )}
                 <Radio.Button value='tokens'>
                   <KeyOutlined /> Tokens
                 </Radio.Button>

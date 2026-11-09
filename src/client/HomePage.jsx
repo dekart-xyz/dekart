@@ -206,7 +206,6 @@ function FirstSetupOnboarding () {
 function ReportsHeader (
   { reportFilter, archived, setArchived }
 ) {
-  const connectionList = useSelector(state => state.connection.list)
   const reportsList = useSelector(state => state.reportsList)
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
   const dispatch = useDispatch()
@@ -244,7 +243,9 @@ function ReportsHeader (
               <Radio.Button value='my'>My Maps</Radio.Button>
               <Radio.Button value='discoverable'>Shared Maps</Radio.Button>
               {
-                connectionList && userDefinedConnection ? <Radio.Button value='connections'>Connections</Radio.Button> : null
+                userDefinedConnection && isAdmin
+                  ? <Radio.Button value='connections'>Connections</Radio.Button>
+                  : null
               }
             </Radio.Group>
 
