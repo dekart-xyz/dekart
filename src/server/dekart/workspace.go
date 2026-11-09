@@ -582,10 +582,21 @@ func (s Server) GetWorkspace(ctx context.Context, req *proto.GetWorkspaceRequest
 		log.Err(err).Send()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	users, err := s.getWorkspaceUsers(ctx, workspaceInfo.ID)
-	if err != nil {
-		log.Err(err).Send()
-		return nil, status.Error(codes.Internal, err.Error())
+	var users []*proto.User
+	// Only admins receive workspace membership and billing details.
+	if workspaceInfo.UserRole == proto.UserRole_ROLE_ADMIN {
+		users, err = s.getWorkspaceUsers(ctx, workspaceInfo.ID)
+		if err != nil {
+			log.Err(err).Send()
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	} else if subscription != nil {
+		// Keep the plan status used by trial and read-only banners.
+		subscription = &proto.Subscription{
+			PlanType: subscription.PlanType,
+			Expired:  subscription.Expired,
+			CancelAt: subscription.CancelAt,
+		}
 	}
 
 	return &proto.GetWorkspaceResponse{
