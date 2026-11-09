@@ -426,6 +426,7 @@ export function reportUpdate (reportStreamResponse) {
     dispatch({
       type: reportUpdate.name,
       report,
+      previousTitle: state.report?.title,
       queriesList,
       prevQueriesList,
       datasetsList,
