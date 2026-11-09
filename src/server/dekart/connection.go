@@ -33,6 +33,10 @@ func (s Server) TestConnection(ctx context.Context, req *proto.TestConnectionReq
 	if claims == nil {
 		return nil, Unauthenticated
 	}
+	// REVIEW: Only workspace admins may test connection settings and credentials.
+	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "only admins can test connections")
+	}
 	con := req.Connection
 	if con == nil {
 		return nil, status.Error(codes.InvalidArgument, "connection is required")

@@ -443,10 +443,18 @@ func (s Server) versionCheckInstanceID(ctx context.Context) string {
 
 // GetWherobotsConnectionHint returns a hint for Wherobots connection based on the provided host and key
 func (s Server) GetWherobotsConnectionHint(ctx context.Context, req *proto.GetWherobotsConnectionHintRequest) (*proto.GetWherobotsConnectionHintResponse, error) {
+	// REVIEW: Require a signed-in workspace admin before using credentials to request connection setup hints.
+	claims := user.GetClaims(ctx)
+	if claims == nil {
+		return nil, Unauthenticated
+	}
+	if checkWorkspace(ctx).UserRole != proto.UserRole_ROLE_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "only admins can get connection hints")
+	}
 	if req.WherobotsHost == "" || req.WherobotsKey == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "wherobots_host and wherobots_key are required")
 	}
-	apiKey := secrets.SecretToString(req.WherobotsKey, user.GetClaims(ctx))
+	apiKey := secrets.SecretToString(req.WherobotsKey, claims)
 
 	// make http request to Wherobots API
 	reqURL := fmt.Sprintf("https://%s/me/jupyter/lab/config-hint", req.WherobotsHost)
