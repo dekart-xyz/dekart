@@ -260,6 +260,8 @@ export default function App () {
   const env = useSelector(state => state.env)
   const envLoaded = env.loaded
   const userDefinedConnection = useSelector(state => state.connection.userDefined)
+  const userStream = useSelector(state => state.user.stream)
+  const isAdmin = useSelector(state => state.user.isAdmin)
   const dispatch = useDispatch()
   const visitedPages = React.useRef(['/'])
   const storageLoaded = useSelector(state => state.storage.loaded)
@@ -339,7 +341,8 @@ export default function App () {
             </Route>
             <Route exact path='/connections'>
               <AppRedirect />
-              {userDefinedConnection ? <HomePage reportFilter='connections' /> : <Redirect to='/' />}
+              {/* Wait for the role so an admin's direct URL survives initial loading. */}
+              {userStream && (userDefinedConnection && isAdmin ? <HomePage reportFilter='connections' /> : <Redirect to='/' />)}
             </Route>
             <Route path='/reports/:id/edit'>
               <RedirectToSource />

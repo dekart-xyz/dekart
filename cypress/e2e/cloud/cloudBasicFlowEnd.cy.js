@@ -14,6 +14,7 @@ describe('cloud basic flow', () => {
 
     // create new report
     cy.get('button#dekart-create-report').click()
+    cy.location('pathname').should('match', /\/reports\/.*\/source/).as('reportPath', { type: 'static' })
 
     // click #dekart-add-connection
     cy.get('#dekart-add-connection', { timeout: 30000 }).should('be.visible').click()
@@ -35,13 +36,12 @@ describe('cloud basic flow', () => {
     cy.get('button#saveConnection').should('be.enabled')
     cy.get('button#saveConnection').click()
 
-    // run query
-    cy.get('body').then(($body) => {
-      if ($body.find('button:contains("Run SQL")').length === 0) {
-        cy.contains('button', 'Edit').click()
-      }
+    // Connection management can leave the report; reopen it before selecting SQL.
+    cy.get('@reportPath').then(path => {
+      cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN', path)
+      cy.visit(path)
     })
-    cy.get('button:contains("Run SQL")').click()
+    cy.contains('button', randomConnectionName, { timeout: 30000 }).scrollIntoView().click()
     cy.get('textarea').type(copy.simple_sql_query, { force: true })
     cy.get(`button:contains("${copy.execute}")`).click()
     cy.get(`span:contains("${copy.ready}")`, { timeout: 20000 }).should('be.visible')
@@ -52,8 +52,9 @@ describe('cloud basic flow', () => {
     cy.get('span:contains("No Access")').click()
     cy.get('div.dekart-share-view').click({ force: true })
     cy.get('button').contains('Done').click()
+    cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN', '/')
     cy.visit('/')
-    cy.get('span').contains('Shared Maps').click()
+    cy.contains('.ant-radio-button-wrapper', 'Shared Maps', { timeout: 30000 }).click()
     cy.get('span.anticon-team').should('be.visible')
   })
 })

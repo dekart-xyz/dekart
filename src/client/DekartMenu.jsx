@@ -20,6 +20,7 @@ export default function DekartMenu () {
   const { authEnabled } = env
   const isPlayground = useSelector(state => state.user.isPlayground)
   const isSnowpark = useSelector(state => state.env.isSnowpark)
+  const isAdmin = useSelector(state => state.user.isAdmin)
   const isViewer = useSelector(state => state.user.isViewer)
   const readOnly = useSelector(state => state.workspace.readOnly)
   const isBigQueryDatasource = env.variables.DATASOURCE === 'BQ'
@@ -55,7 +56,7 @@ export default function DekartMenu () {
                 </Menu.Item>
               </>
               )}
-          {userDefinedConnection
+          {userDefinedConnection && isAdmin
             ? (
               <Menu.Item key='connections' onClick={() => track('NavigateToConnections')}>
                 <Link to='/connections'>Connections</Link>

@@ -244,7 +244,7 @@ function ReportsHeader (
               <Radio.Button value='my'>My Maps</Radio.Button>
               <Radio.Button value='discoverable'>Shared Maps</Radio.Button>
               {
-                connectionList && userDefinedConnection ? <Radio.Button value='connections'>Connections</Radio.Button> : null
+                connectionList && userDefinedConnection && isAdmin ? <Radio.Button value='connections'>Connections</Radio.Button> : null
               }
             </Radio.Group>
 
