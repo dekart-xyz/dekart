@@ -62,7 +62,7 @@ type SessionState struct {
 
 // TokenIssuer provides token issuing behavior for device authorization.
 type TokenIssuer interface {
-	Issue(email string, workspaceID string) (string, time.Time, error)
+	Issue(email string, workspaceID string, deviceID string) (string, time.Time, error)
 }
 
 // StartDeviceSession creates a new pending session for browser authorization.
@@ -327,7 +327,7 @@ func pollAuthorizedSession(ctx context.Context, db *sql.DB, issuer TokenIssuer, 
 	if workspaceID == "" {
 		workspaceID = state.WorkspaceID
 	}
-	token, tokenExpiresAt, err := issuer.Issue(email, workspaceID)
+	token, tokenExpiresAt, err := issuer.Issue(email, workspaceID, deviceID)
 	if err != nil {
 		// why: keep session re-pollable if signing fails, instead of burning authorization.
 		_ = tx.Rollback()

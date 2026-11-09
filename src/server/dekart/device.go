@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"dekart/src/proto"
 	device "dekart/src/server/deviceauth"
@@ -106,6 +107,47 @@ func (s Server) AuthorizeDevice(ctx context.Context, req *proto.AuthorizeDeviceR
 	return &proto.AuthorizeDeviceResponse{Status: "authorized"}, nil
 }
 
+func (s Server) CreateDeviceToken(ctx context.Context, req *proto.CreateDeviceTokenRequest) (*proto.CreateDeviceTokenResponse, error) {
+	claims, workspaceID, err := requireDeviceAuthorizeContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := requireMCPEditor(ctx); err != nil {
+		return nil, err
+	}
+	deviceID := device.NewDeviceID()
+	token, expiresAt, err := device.NewJWTIssuer().Issue(claims.Email, workspaceID, deviceID)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to issue device token")
+		return nil, status.Error(codes.Internal, "failed to create device token")
+	}
+	_, err = s.db.ExecContext(ctx, `INSERT INTO device_auth_log
+ (id, device_id, device_name, status, email, workspace_id, expires_at)
+ VALUES ($1, $1, $2, $3, $4, $5, $6)`,
+		deviceID, normalizeDeviceName(req.GetDeviceName()), device.SessionStatusConsumed,
+		claims.Email, workspaceID, expiresAt)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to store device token")
+		return nil, status.Error(codes.Internal, "failed to create device token")
+	}
+	// Reuse the list's canonical preview and timestamp in the creation response.
+	tokens, err := device.ListWorkspaceTokens(ctx, s.db, workspaceID, claims.Email)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to read created device token")
+	}
+	for _, entry := range tokens {
+		if entry.ID == deviceID {
+			s.userStreams.Ping([]string{claims.Email})
+			return &proto.CreateDeviceTokenResponse{
+				Token:       token,
+				ExpiresIn:   int64(time.Until(expiresAt).Seconds()),
+				DeviceToken: deviceTokenProto(entry),
+			}, nil
+		}
+	}
+	return nil, status.Error(codes.Internal, "failed to read created device token")
+}
+
 // ListDeviceTokens returns active workspace device tokens for settings UI.
 func (s Server) ListDeviceTokens(ctx context.Context, req *proto.ListDeviceTokensRequest) (*proto.ListDeviceTokensResponse, error) {
 	claims, workspaceID, err := requireDeviceAuthorizeContext(ctx)
@@ -119,14 +161,19 @@ func (s Server) ListDeviceTokens(ctx context.Context, req *proto.ListDeviceToken
 	}
 	result := make([]*proto.DeviceToken, 0, len(tokens))
 	for _, token := range tokens {
-		result = append(result, &proto.DeviceToken{
-			Id:           token.ID,
-			DeviceName:   token.DeviceName,
-			TokenPreview: token.TokenPreview,
-			CreatedAt:    token.CreatedAt,
-		})
+		result = append(result, deviceTokenProto(token))
 	}
 	return &proto.ListDeviceTokensResponse{Tokens: result}, nil
+}
+
+// deviceTokenProto keeps creation and listing responses on the same field mapping.
+func deviceTokenProto(token device.WorkspaceDeviceToken) *proto.DeviceToken {
+	return &proto.DeviceToken{
+		Id:           token.ID,
+		DeviceName:   token.DeviceName,
+		TokenPreview: token.TokenPreview,
+		CreatedAt:    token.CreatedAt,
+	}
 }
 
 // RevokeDeviceToken revokes one workspace device token by id.

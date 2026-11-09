@@ -67,7 +67,7 @@ func NewJWTIssuerFromEnv() *JWTIssuer {
 }
 
 // Issue creates a signed JWT with device auth audience and workspace-scoped claims.
-func (i *JWTIssuer) Issue(email string, workspaceID string) (string, time.Time, error) {
+func (i *JWTIssuer) Issue(email string, workspaceID string, deviceID string) (string, time.Time, error) {
 	if i.initErr != nil {
 		return "", time.Time{}, i.initErr
 	}
@@ -97,6 +97,7 @@ func (i *JWTIssuer) Issue(email string, workspaceID string) (string, time.Time, 
 		"aud":          defaultAudience,
 		"email":        email,
 		"workspace_id": workspaceID,
+		"device_id":    deviceID,
 		"iat":          now.Unix(),
 		"exp":          expiresAt.Unix(),
 		"jti":          jti,

@@ -399,6 +399,10 @@ func (s Server) GetEnv(ctx context.Context, req *proto.GetEnvRequest) (*proto.Ge
 				Value: defaultString(os.Getenv("DEKART_REQUIRE_SNOWFLAKE_CONTEXT"), ""),
 			},
 			{
+				Type:  proto.GetEnvResponse_Variable_TYPE_GEOSQL_MCP_URL,
+				Value: os.Getenv("DEKART_GEOSQL_MCP_URL"),
+			},
+			{
 				Type:  proto.GetEnvResponse_Variable_TYPE_STORE_MAP_PREVIEW,
 				Value: storeMapPreview,
 			},

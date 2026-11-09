@@ -36,6 +36,7 @@ type Claims struct {
 	AccessToken                string
 	MCPGoogleAccessTokenHeader string
 	MCPGoogleAccessToken       string
+	DeviceID                   string
 	DeviceToken                string
 	SnapshotToken              string
 	SensitiveScopesGranted     bool

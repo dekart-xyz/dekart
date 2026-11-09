@@ -2111,6 +2111,7 @@ export namespace GetEnvResponse {
       TYPE_VERSION_CHECK_URL: 30;
       TYPE_VERSION_CHECK_FORCE_CURRENT_VERSION: 31;
       TYPE_INSTANCE_ID: 32;
+      TYPE_GEOSQL_MCP_URL: 33;
     }
 
     export const Type: TypeMap;
@@ -2379,6 +2380,56 @@ export namespace DeviceToken {
     deviceName: string,
     tokenPreview: string,
     createdAt: number,
+  }
+}
+
+export class CreateDeviceTokenRequest extends jspb.Message {
+  getDeviceName(): string;
+  setDeviceName(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CreateDeviceTokenRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: CreateDeviceTokenRequest): CreateDeviceTokenRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CreateDeviceTokenRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CreateDeviceTokenRequest;
+  static deserializeBinaryFromReader(message: CreateDeviceTokenRequest, reader: jspb.BinaryReader): CreateDeviceTokenRequest;
+}
+
+export namespace CreateDeviceTokenRequest {
+  export type AsObject = {
+    deviceName: string,
+  }
+}
+
+export class CreateDeviceTokenResponse extends jspb.Message {
+  getToken(): string;
+  setToken(value: string): void;
+
+  getExpiresIn(): number;
+  setExpiresIn(value: number): void;
+
+  hasDeviceToken(): boolean;
+  clearDeviceToken(): void;
+  getDeviceToken(): DeviceToken | undefined;
+  setDeviceToken(value?: DeviceToken): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): CreateDeviceTokenResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: CreateDeviceTokenResponse): CreateDeviceTokenResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: CreateDeviceTokenResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): CreateDeviceTokenResponse;
+  static deserializeBinaryFromReader(message: CreateDeviceTokenResponse, reader: jspb.BinaryReader): CreateDeviceTokenResponse;
+}
+
+export namespace CreateDeviceTokenResponse {
+  export type AsObject = {
+    token: string,
+    expiresIn: number,
+    deviceToken?: DeviceToken.AsObject,
   }
 }
 

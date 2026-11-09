@@ -40,7 +40,7 @@ func TestJWTIssuerIssueIncludesRequiredClaims(t *testing.T) {
 		publicKeyPEM:  publicKeyPEM,
 		ttl:           2 * time.Hour,
 	}
-	token, expiresAt, err := issuer.Issue("user@example.com", "workspace-1")
+	token, expiresAt, err := issuer.Issue("user@example.com", "workspace-1", "device-1")
 	if err != nil {
 		t.Fatalf("Issue: %v", err)
 	}
@@ -73,6 +73,9 @@ func TestJWTIssuerIssueIncludesRequiredClaims(t *testing.T) {
 	}
 	if claims["workspace_id"] != "workspace-1" {
 		t.Fatalf("unexpected workspace_id: %v", claims["workspace_id"])
+	}
+	if claims["device_id"] != "device-1" {
+		t.Fatalf("unexpected device_id: %v", claims["device_id"])
 	}
 	exp, ok := claims["exp"].(float64)
 	if !ok || int64(exp) != expiresAt.Unix() {
@@ -114,7 +117,7 @@ func TestJWTIssuerIssueFailsWhenKeyPairMismatch(t *testing.T) {
 		publicKeyPEM:  publicKeyPEM,
 		ttl:           2 * time.Hour,
 	}
-	if _, _, err := issuer.Issue("user@example.com", "workspace-1"); err == nil {
+	if _, _, err := issuer.Issue("user@example.com", "workspace-1", "device-1"); err == nil {
 		t.Fatal("expected key pair mismatch error")
 	}
 }
@@ -189,7 +192,7 @@ func TestNewJWTIssuer_UsesBootstrapFallbackWhenEnvMissing(t *testing.T) {
 	if len(issuer.privateKeyPEM) == 0 || len(issuer.publicKeyPEM) == 0 {
 		t.Fatal("expected keypair from bootstrap fallback")
 	}
-	token, _, err := issuer.Issue("user@example.com", "workspace-1")
+	token, _, err := issuer.Issue("user@example.com", "workspace-1", "device-1")
 	if err != nil {
 		t.Fatalf("Issue: %v", err)
 	}
