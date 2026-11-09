@@ -25,8 +25,7 @@ export function createParameterizedReport () {
   createReport()
   cy.location('pathname').should('match', /^\/reports\/[a-f0-9-]+\/source$/).as('newReportPath')
   cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN', '/connections')
-  cy.visit('/')
-  cy.contains('.ant-radio-button-wrapper', 'Connections', { timeout: 30000 }).click()
+  cy.visit('/connections')
   cy.location('pathname').should('eq', '/connections')
   cy.get([
     '#dekart-connection-type-card-bigquery',
@@ -49,6 +48,8 @@ export function createParameterizedReport () {
   cy.get('input#cloudStorageBucket:visible').clear().type('dekart-dev')
   cy.get('#testConnection:visible').click()
   cy.get('#saveConnection:visible', { timeout: 60000 }).should('be.enabled').click()
+  // The modal closes after the server acknowledges the connection save.
+  cy.contains('.ant-modal-title:visible', 'BigQuery').should('not.exist')
   cy.get('@newReportPath').then(path => {
     cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN', path)
     cy.visit(path)

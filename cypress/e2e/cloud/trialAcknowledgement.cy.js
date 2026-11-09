@@ -203,8 +203,10 @@ describe('Cloud trial acknowledgement', () => {
     `)
     cy.visit('/workspace/plan')
     cy.contains('Your trial has ended').should('be.visible')
-    cy.contains('Ask your workspace admin to upgrade, or book a call to extend the trial.').should('be.visible')
-    cy.contains('button', 'Upgrade').should('be.disabled')
+    cy.location('pathname').should('equal', '/workspace')
+    cy.contains('Workspace is read-only.').should('be.visible')
+    cy.contains('a', 'Book a call').should('be.visible')
+    cy.contains('button', 'Upgrade').should('not.exist')
   })
 
   it('requires the legacy Cloud default workspace to start a trial', () => {

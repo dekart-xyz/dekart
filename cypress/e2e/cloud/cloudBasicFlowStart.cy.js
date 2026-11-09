@@ -65,7 +65,8 @@ describe('cloud basic flow', () => {
   it('anonymous public report login uses auth redirect', () => {
     cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN_INFO')
     cy.visit('/')
-    cy.get('button#dekart-create-report').click()
+    // Login returns before the workspace's report and connection streams finish loading.
+    cy.get('button#dekart-create-report', { timeout: 30000 }).should('be.visible').click()
     cy.get('button:contains("Upload File")').click()
     cy.get('input[type="file"]').selectFile('cypress/fixtures/sample.csv', { force: true })
     cy.get('button:contains("Upload")').click()

@@ -64,9 +64,13 @@ func (s Server) sendReportMessage(reportID string, srv proto.Dekart_GetReportStr
 		return GRPCError("Cannot retrieve query jobs", err)
 	}
 
-	directAccessEmails, err := s.getDirectAccessEmails(ctx, reportID)
-	if err != nil {
-		return GRPCError("Cannot retrieve direct access emails", err)
+	// REVIEW: Only people who can edit the report receive the emails of people granted direct access.
+	var directAccessEmails []string
+	if report.CanWrite {
+		directAccessEmails, err = s.getDirectAccessEmails(ctx, reportID)
+		if err != nil {
+			return GRPCError("Cannot retrieve direct access emails", err)
+		}
 	}
 
 	res := proto.ReportStreamResponse{
