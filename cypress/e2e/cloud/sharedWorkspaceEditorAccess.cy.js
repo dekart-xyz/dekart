@@ -52,10 +52,20 @@ describe('shared workspace editor access', () => {
   })
 
   it('hides Connections from the editor menu and redirects direct navigation', () => {
+    cy.intercept('POST', '**/Dekart/GetConnectionList').as('connectionList')
     cy.visit('/workspace')
-    cy.contains('Open EV Data', { timeout: 30000 }).should('be.visible')
-    cy.get('#dekart-main-menu').trigger('mouseover')
-    cy.contains('a', 'My Maps').should('be.visible')
+    // Connection loading changes menu entries and can move them into the overflow.
+    cy.wait('@connectionList').its('response.statusCode').should('eq', 200)
+    cy.contains('.ant-card-head-title', 'Workspace name', { timeout: 30000 }).should('be.visible')
+    // Narrow headers move the menu into the visible overflow submenu.
+    cy.get('.ant-menu-horizontal').then(menu => {
+      if (!menu.find('[id="dekart-main-menu"]:visible').length) {
+        cy.wrap(menu).find('.ant-menu-overflow-item-rest').trigger('mouseover', { scrollBehavior: false })
+      }
+    })
+    // Scrolling the popup into view can close its parent overflow menu.
+    cy.get('[id="dekart-main-menu"]:visible').trigger('mouseover', { scrollBehavior: false, waitForAnimations: false })
+    cy.contains('a:visible', 'My Maps').should('be.visible')
     cy.get('a[href="/connections"]').should('not.exist')
     cy.visit('/connections')
     cy.location('pathname', { timeout: 30000 }).should('eq', '/')

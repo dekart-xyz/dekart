@@ -183,6 +183,8 @@ export function reportStatus (state = defaultReportStatus, action) {
         fullscreen: !state.fullscreen
       }
     case reportUpdate.name: {
+      // REVIEW: Keep the edited name until it is saved, while accepting incoming names when no local name change is pending.
+      const hasUnsavedTitle = state.edit && state.lastChanged > state.lastSaved && state.title !== action.previousTitle
       let fullscreen = state.fullscreen
       if (fullscreen === null) { // not defined yet, if defined, keep it as is
         const { readme } = action.report
@@ -194,7 +196,7 @@ export function reportStatus (state = defaultReportStatus, action) {
       return {
         ...state,
         online: true,
-        title: action.report.title,
+        title: hasUnsavedTitle ? state.title : action.report.title,
         lastUpdated: Date.now(),
         fullscreen,
         autoRefreshIntervalSeconds: action.report.autoRefreshIntervalSeconds || 0,

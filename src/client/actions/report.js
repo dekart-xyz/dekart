@@ -426,6 +426,8 @@ export function reportUpdate (reportStreamResponse) {
     dispatch({
       type: reportUpdate.name,
       report,
+      // REVIEW: Pass the previously saved title so incoming updates can preserve a name the user has not saved yet.
+      previousTitle: state.report?.title,
       queriesList,
       prevQueriesList,
       datasetsList,

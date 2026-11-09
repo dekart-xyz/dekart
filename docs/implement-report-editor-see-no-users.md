@@ -24,3 +24,16 @@ Plan: /Users/vladi/dev/magic/docs/dekart-shared-workspace-editor-access-spec-202
 - Open questions: none.
 - Artifacts: `cypress/videos/sharedWorkspaceEditorAccess.cy.js.mp4`; logs in `/tmp/dekart-b-slice2-{cloud,final,regression,basic-final,unit,lint}.log`.
 - Git: current branch `editor-see-no-users`; changes remain unstaged and uncommitted.
+
+## 2026-11-09 — View-to-edit failure reproduction
+
+- Bug report: `docs/refactor-report-editor-see-no-users.md`, “Cleanup verification stopped at Cypress”; missing `Query 1` after reopening the map with populated parameters.
+- Tests: `make cypress-run ENV_FILE=.env.cloud SPEC="cypress/e2e/cloud/viewToEditQueryParameters.cy.js"` passes 2/2 unchanged (2m03s), using local Postgres, Cloud backend on port 8090 and Vite on port 3010.
+- Reproduction: created the parameterized BigQuery report, uploaded the second dataset, opened the empty-parameter viewer, entered editing, changed visibility, saved and reopened with populated parameters; the previously failing loaded-layer test passes. The remote-change test also passes.
+- Deviations: stopped under `dekart-implement`'s non-reproducing-bug rule; no speculative fix, new test or correctness review.
+- Files outside the bug scope: only this handoff report; application code and Cypress tests unchanged during this turn.
+- Refactor candidates: none identified.
+- Known failures: the prior seven-spec run failed 1/26; the full sequence was not repeated, so intermittent or run-order-dependent failure remains unresolved.
+- Open question: what distinguishes the failing seven-spec run from the passing focused run? Root cause is unproven.
+- Log: `/tmp/dekart-b-implement-view-edit-repro.log`. Video: `cypress/videos/viewToEditQueryParameters.cy.js.mp4`.
+- Changes remain unstaged and uncommitted.
