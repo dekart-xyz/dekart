@@ -26,3 +26,31 @@
 - Stopped under the skill's failing-Cypress rule; return the three setup failures to `dekart-implement` before completing this pass.
 - Deferred: final review notes and human review plan until browser verification is green. No production or test edits after the failure.
 - Logs: `/tmp/dekart-b-refactor-cypress.log`, `/tmp/dekart-b-refactor-cypress-final.log`; code and report remain unstaged and uncommitted.
+
+## 2026-11-09 — Cleanup verification stopped at Cypress
+
+- No further extraction, deletion or deduplication warranted; production behavior is unchanged from the snapshot.
+- Added two title-preservation review comments and a provisional human review plan.
+- Public interface changes during this pass: none; no proposals for `dekart-refactor-plan`. Dark libraries untouched.
+- Snapshot: `editor-see-no-users_snapshot_20261109_165932` pushed; current branch and index unchanged.
+- Verification: full Go tests, Go vet, 180 frontend tests, lint and diff checks pass.
+- Cypress: 25/26 pass across seven affected specs; no Cypress spec changed during this pass.
+- Failure: `viewToEditQueryParameters.cy.js`, “saves loaded-layer edits while another saved layer has no query result”, cannot find `Query 1` in `.source-data-title .dataset-name` after 120 seconds (`cypress/support/commands.js:123`).
+- The other view-to-edit test and the BigQuery rendering regression pass; failure cause remains unproven.
+- Ponytail and maintainability reviewers report no actionable findings, including final comment changes.
+- Stopped under the skill's failing-Cypress rule; return this regression to `dekart-implement`. Do not treat the provisional review plan as completion approval.
+- Log: `/tmp/dekart-b-refactor-cypress-nov9.log`; screenshot and video under `cypress/screenshots/viewToEditQueryParameters.cy.js/` and `cypress/videos/`.
+- All working changes and review aids remain unstaged and uncommitted.
+
+## 2026-11-09 — Final cleanup review
+
+- No further deletion, deduplication or extraction warranted; this pass leaves production code and Cypress unchanged.
+- Public interface diff against HEAD: none. Proposed interface changes: none. Dark libraries untouched.
+- Snapshot: `editor-see-no-users_snapshot_20261109_173503` pushed; current branch and index unchanged.
+- Verification: full Go tests, Go vet, 180 frontend tests, lint and diff checks pass.
+- Every affected Cypress spec has a green run on this code: 24 tests in six specs plus the focused view-to-edit rerun, 2/2.
+- Residual risk: the prior combined run passed 25/26; its missing-Query-1 failure did not reproduce in the unchanged focused run. No combined all-green run is claimed.
+- Ponytail and maintainability reviewers: no actionable findings. No new review comments needed; two existing title-preservation notes retained, no REVIEW! flags.
+- Human review plan refreshed: `docs/review-plan-editor-see-no-users.md`; workflow: keep an edited map name through incoming updates and save it.
+- Deferred: explanation of the intermittent Cypress failure and the helper's existing fixed settling wait; no speculative fixes.
+- Working changes and review aids remain unstaged and uncommitted.
