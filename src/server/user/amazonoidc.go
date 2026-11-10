@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"dekart/src/server/errtype"
+
 	"github.com/golang-jwt/jwt"
 	"github.com/rs/zerolog/log"
 )
@@ -19,55 +20,53 @@ import (
 // amazonOIDCClaims preserves Amazon header precedence over Dekart bearer credentials.
 func (c ClaimsCheck) amazonOIDCClaims(r *http.Request) *Claims {
 	ctx := r.Context()
-	var claims *Claims
 	header := strings.TrimSpace(r.Header.Get("x-amzn-oidc-data"))
 	// A supplied Amazon identity must never be overridden by a bearer token.
 	if header != "" {
-		claims = c.validateJWTFromAmazonOIDC(ctx, header)
-	} else {
-		authHeader := r.Header.Get("Authorization")
-		// Amazon mode accepts Dekart credentials without contacting Google.
-		if token, ok := normalizeBearerToken(authHeader); ok {
-			claims = validateSnapshotToken(token)
-			if claims == nil {
-				claims = c.validateDeviceAuthToken(ctx, authHeader)
-			}
-		}
+		return c.validateJWTFromAmazonOIDC(ctx, header)
 	}
-	return claims
+	authHeader := r.Header.Get("Authorization")
+	token, ok := normalizeBearerToken(authHeader)
+	// Amazon mode accepts only Dekart bearer credentials without a login header.
+	if !ok {
+		return nil
+	}
+	// Snapshot credentials take precedence over device credentials.
+	if claims := validateSnapshotToken(token); claims != nil {
+		return claims
+	}
+	return c.validateDeviceAuthToken(ctx, authHeader)
 }
 
 func (c ClaimsCheck) getPublicKeyFromAmazon(token *jwt.Token) (interface{}, error) {
 	kid := token.Header["kid"]
-	var publicKey *ecdsa.PublicKey
 	publicKeyValue, ok := c.publicKeys.Load(kid)
+	// Reuse keys already fetched for this signer.
 	if ok {
-		publicKey = publicKeyValue.(*ecdsa.PublicKey)
-	} else {
-		url := fmt.Sprintf("https://public-keys.auth.elb.%s.amazonaws.com/%s", c.Region, kid)
-		resp, err := http.Get(url)
-		if err != nil {
-			log.Error().Err(err).Send()
-			return nil, err
-		}
-		if resp.StatusCode != http.StatusOK {
-			err := fmt.Errorf("error fetch %s, status %d", url, resp.StatusCode)
-			log.Error().Err(err).Send()
-			return nil, err
-		}
-		pem, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Error().Err(err).Msgf("error fetching reading response body %s", url)
-			return nil, err
-		}
-		publicKey, err = jwt.ParseECPublicKeyFromPEM(pem)
-		if err != nil {
-			errtype.LogError(err, "error parsing public key")
-			return nil, err
-		} else {
-			c.publicKeys.Store(kid, publicKey)
-		}
+		return publicKeyValue.(*ecdsa.PublicKey), nil
 	}
+	url := fmt.Sprintf("https://public-keys.auth.elb.%s.amazonaws.com/%s", c.Region, kid)
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Error().Err(err).Send()
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		err := fmt.Errorf("error fetch %s, status %d", url, resp.StatusCode)
+		log.Error().Err(err).Send()
+		return nil, err
+	}
+	pem, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Error().Err(err).Msgf("error fetching reading response body %s", url)
+		return nil, err
+	}
+	publicKey, err := jwt.ParseECPublicKeyFromPEM(pem)
+	if err != nil {
+		errtype.LogError(err, "error parsing public key")
+		return nil, err
+	}
+	c.publicKeys.Store(kid, publicKey)
 	return publicKey, nil
 }
 

@@ -22,8 +22,6 @@ func (s Server) ServeQuerySource(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	ctx := r.Context()
 	claims := user.GetClaims(ctx)
-	// REVIEW: Requests without an identity return immediately, before reading the database or stored query text.
-	// Stop before database or storage access when the request has no identity.
 	if claims == nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -36,11 +34,6 @@ func (s Server) ServeQuerySource(w http.ResponseWriter, r *http.Request) {
 		HttpError(w, err)
 		return
 	}
-
-	// if connection.Id == "default" {
-	// 	// dataset has no connection, it means it's a playground dataset
-	// 	ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{IsPlayground: true})
-	// }
 
 	conCtx := conn.GetCtx(ctx, connection)
 	bucketName := s.getBucketNameFromConnection(connection)

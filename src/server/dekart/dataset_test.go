@@ -77,6 +77,42 @@ func TestCreateDataset_EmptyReportID_ReturnsInvalidArgument(t *testing.T) {
 	require.Equal(t, "report_id is required", st.Message())
 }
 
+// SQLite must bind dataset and source IDs correctly when authorizing snapshot downloads.
+func TestDatasetOwnsSourceSQLite(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	require.NoError(t, err)
+	defer db.Close()
+	_, err = db.Exec(`
+		create table datasets (id text, query_id text, file_id text);
+		create table queries (id text);
+		create table query_jobs (query_id text, job_result_id text, http_sources text);
+		create table files (id text, file_source_id text);
+		insert into datasets values ('file-dataset', null, 'file'), ('query-dataset', 'query', null);
+		insert into queries values ('query');
+		insert into query_jobs values ('query', 'query-result', '[]');
+		insert into files values ('file', 'uploaded-source');
+	`)
+	require.NoError(t, err)
+	server := Server{db: db}
+	for _, tc := range []struct {
+		name, dataset, source string
+		want                  bool
+	}{
+		{"uploaded file", "file-dataset", "uploaded-source", true},
+		{"query result", "query-dataset", "query-result", true},
+		{"legacy query ID", "query", "query-result", true},
+		{"another dataset's file", "query-dataset", "uploaded-source", false},
+		{"another dataset's result", "file-dataset", "query-result", false},
+		{"unknown source", "file-dataset", "unknown", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			owns, err := server.datasetOwnsSource(context.Background(), tc.dataset, tc.source)
+			require.NoError(t, err)
+			require.Equal(t, tc.want, owns)
+		})
+	}
+}
+
 func TestServeDatasetSourceRejectsDatasetOutsideSnapshotReport(t *testing.T) {
 	datasetID := "00000000-0000-0000-0000-000000000031"
 	requestedReportID := "00000000-0000-0000-0000-000000000032"

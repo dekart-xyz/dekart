@@ -151,6 +151,20 @@ jobs:
               -e DEKART_DEV_CLAIMS=1 \
               -e DEKART_ALLOW_FILE_UPLOAD=1 \
 
+          - id: amazon-oidc
+            skip_postgres: true
+            spec: cypress/e2e/amazon-oidc/cliAndSnapshot.cy.js
+            extra_env: |
+              -e DEKART_LICENSE_KEY=$DEKART_LICENSE_KEY_SEC \
+              -e DEKART_STORAGE=USER \
+              -e DEKART_DATASOURCE=USER \
+              -e DEKART_SQLITE_DB_PATH=/dekart/data/dekart.db \
+              -e DEKART_LOCAL_FILES_ROOT=/dekart/data/files \
+              -e DEKART_ALLOW_FILE_UPLOAD=1 \
+              -e DEKART_REQUIRE_AMAZON_OIDC=1 \
+              -e AWS_REGION=eu-central-1 \
+              -e DEKART_DEV_CLAIMS=1 \
+
           - id: local-first-setup
             config: local
             spec: cypress/e2e/local/firstSetupHappyFlow.cy.js
