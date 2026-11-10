@@ -62,7 +62,7 @@ describe('cloud basic flow', () => {
     cy.get('button:contains("Continue to Google")').should('be.visible')
   })
 
-  it('anonymous public report login uses auth redirect', () => {
+  it('loads public report data anonymously and requires login when tracking viewers', () => {
     cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN_INFO')
     cy.visit('/')
     // Login returns before the workspace's report and connection streams finish loading.
@@ -86,6 +86,8 @@ describe('cloud basic flow', () => {
       cy.visit(reportPath)
     })
 
+    cy.get('div:contains("8,276 rows")', { timeout: 60000 }).should('be.visible')
+    cy.assertDatasetTable('sample.csv', ['primary_type', 'district'], ['THEFT'])
     cy.get('#dekart-login-button').should('be.visible').and('contain', 'Login with Google')
     cy.contains('button', 'Create Map').should('not.exist')
     cy.contains('Login requires SSO').should('not.exist')
@@ -95,5 +97,26 @@ describe('cloud basic flow', () => {
     })
     cy.get('#dekart-login-button').click()
     cy.wait('@authenticate')
+    cy.get('button#dekart-share-report', { timeout: 30000 }).click()
+    cy.get('button#dekart-track-viewers').click()
+    cy.get('button#dekart-track-viewers', { timeout: 30000 })
+      .should('have.class', 'ant-switch-checked')
+      .and('not.have.class', 'ant-switch-loading')
+
+    cy.location('pathname').then((reportPath) => {
+      cy.clearLocalStorage()
+      cy.window().then((win) => {
+        win.sessionStorage.clear()
+      })
+      // Stop at the login page so the OAuth helper cannot sign the viewer back in.
+      cy.intercept('GET', '**/api/v1/authenticate*', {
+        statusCode: 200,
+        body: 'Login required for this report'
+      }).as('trackedReportLogin')
+      cy.visit(reportPath)
+    })
+    cy.wait('@trackedReportLogin')
+    cy.contains('Login required for this report').should('be.visible')
+    cy.get('.source-data-title').should('not.exist')
   })
 })

@@ -2,14 +2,12 @@ package user
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"database/sql"
 	pb "dekart/src/proto"
 	"dekart/src/server/errtype"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -18,7 +16,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
@@ -277,6 +274,15 @@ func GetTokenSource(ctx context.Context) oauth2.TokenSource {
 	})
 }
 
+// validateSnapshotReport prevents snapshot credentials from reading another report.
+func validateSnapshotReport(claims *Claims, reportID string) *Claims {
+	// Only an explicit report mismatch invalidates snapshot credentials.
+	if claims != nil && claims.SnapshotToken != "" && reportID != "" && claims.ReportID != reportID {
+		return nil
+	}
+	return claims
+}
+
 // GetContext Context with user claims
 func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 	ctx := r.Context()
@@ -294,7 +300,8 @@ func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 	if claims == nil && c.RequireIAP {
 		claims = c.validateJWTFromAppEngine(ctx, r.Header.Get("X-Goog-IAP-JWT-Assertion"))
 	} else if claims == nil && c.RequireAmazonOIDC {
-		claims = c.validateJWTFromAmazonOIDC(ctx, r.Header.Get("x-amzn-oidc-data"))
+		claims = c.amazonOIDCClaims(r)
+		claims = validateSnapshotReport(claims, reportID)
 	} else if claims == nil && c.RequireOIDC {
 		claims = c.validateJWTFromOIDCHeader(r)
 	} else if claims == nil && c.RequireGoogleOAuth {
@@ -307,10 +314,7 @@ func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 			}
 		} else {
 			claims = c.validateGoogleOrDeviceAuthToken(ctx, authHeader)
-			// why: snapshot token is report-scoped and must not be reused for other report IDs.
-			if claims != nil && claims.SnapshotToken != "" && reportID != "" && claims.ReportID != reportID {
-				claims = nil
-			}
+			claims = validateSnapshotReport(claims, reportID)
 		}
 	} else if claims == nil && c.RequireSnowflakeContext {
 		claims = c.getSnowflakeContext(r.Header.Get("Sf-Context-Current-User"))
@@ -621,62 +625,6 @@ func GetClaims(ctx context.Context) *Claims {
 		return value
 	}
 
-	return nil
-}
-
-func (c ClaimsCheck) getPublicKeyFromAmazon(token *jwt.Token) (interface{}, error) {
-	kid := token.Header["kid"]
-	var publicKey *ecdsa.PublicKey
-	publicKeyValue, ok := c.publicKeys.Load(kid)
-	if ok {
-		publicKey = publicKeyValue.(*ecdsa.PublicKey)
-	} else {
-		url := fmt.Sprintf("https://public-keys.auth.elb.%s.amazonaws.com/%s", c.Region, kid)
-		resp, err := http.Get(url)
-		if err != nil {
-			log.Error().Err(err).Send()
-			return nil, err
-		}
-		if resp.StatusCode != http.StatusOK {
-			err := fmt.Errorf("error fetch %s, status %d", url, resp.StatusCode)
-			log.Error().Err(err).Send()
-			return nil, err
-		}
-		pem, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Error().Err(err).Msgf("error fetching reading response body %s", url)
-			return nil, err
-		}
-		publicKey, err = jwt.ParseECPublicKeyFromPEM(pem)
-		if err != nil {
-			errtype.LogError(err, "error parsing public key")
-			return nil, err
-		} else {
-			c.publicKeys.Store(kid, publicKey)
-		}
-	}
-	return publicKey, nil
-}
-
-// validateJWTFromAmazonOIDC parses and validates token from x-amzn-oidc-data
-// see https://docs.aws.amazon.com/elasticloadbalancing/latest/application/listener-authenticate-users.html
-func (c ClaimsCheck) validateJWTFromAmazonOIDC(ctx context.Context, header string) *Claims {
-	if header == "" {
-		return nil
-	}
-	// claims := make(jwt.MapClaims)
-	token, err := jwt.Parse(header, c.getPublicKeyFromAmazon)
-	if err != nil {
-		log.Error().Err(err).Send()
-		return nil
-	}
-	mapClaims := token.Claims.(jwt.MapClaims)
-	if email, ok := mapClaims["email"]; ok {
-		return &Claims{
-			Email: email.(string),
-		}
-	}
-	log.Error().Msg("No email in Claims")
 	return nil
 }
 
