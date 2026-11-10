@@ -294,7 +294,24 @@ func (c ClaimsCheck) GetContext(r *http.Request) context.Context {
 	if claims == nil && c.RequireIAP {
 		claims = c.validateJWTFromAppEngine(ctx, r.Header.Get("X-Goog-IAP-JWT-Assertion"))
 	} else if claims == nil && c.RequireAmazonOIDC {
-		claims = c.validateJWTFromAmazonOIDC(ctx, r.Header.Get("x-amzn-oidc-data"))
+		header := strings.TrimSpace(r.Header.Get("x-amzn-oidc-data"))
+		// A supplied Amazon identity must never be overridden by a bearer token.
+		if header != "" {
+			claims = c.validateJWTFromAmazonOIDC(ctx, header)
+		} else {
+			authHeader := r.Header.Get("Authorization")
+			// Amazon mode accepts Dekart credentials without contacting Google.
+			if token, ok := normalizeBearerToken(authHeader); ok {
+				claims = validateSnapshotToken(token)
+				if claims == nil {
+					claims = c.validateDeviceAuthToken(ctx, authHeader)
+				}
+			}
+			// Snapshot credentials cannot be used for a different report.
+			if claims != nil && claims.SnapshotToken != "" && reportID != "" && claims.ReportID != reportID {
+				claims = nil
+			}
+		}
 	} else if claims == nil && c.RequireOIDC {
 		claims = c.validateJWTFromOIDCHeader(r)
 	} else if claims == nil && c.RequireGoogleOAuth {
@@ -664,10 +681,17 @@ func (c ClaimsCheck) validateJWTFromAmazonOIDC(ctx context.Context, header strin
 	if header == "" {
 		return nil
 	}
-	// claims := make(jwt.MapClaims)
 	token, err := jwt.Parse(header, c.getPublicKeyFromAmazon)
 	if err != nil {
 		log.Error().Err(err).Send()
+		return nil
+	}
+	// ALB puts expiry in the JWT header, outside the library's claims validation.
+	if !jwt.MapClaims(token.Header).VerifyExpiresAt(time.Now().Unix(), false) {
+		return nil
+	}
+	// Regional keys are shared across load balancers; pin the signer when configured.
+	if signer := os.Getenv("DEKART_AMAZON_OIDC_ALB_ARN"); signer != "" && token.Header["signer"] != signer {
 		return nil
 	}
 	mapClaims := token.Claims.(jwt.MapClaims)

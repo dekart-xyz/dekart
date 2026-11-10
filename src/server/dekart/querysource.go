@@ -22,8 +22,10 @@ func (s Server) ServeQuerySource(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	ctx := r.Context()
 	claims := user.GetClaims(ctx)
+	// Stop before database or storage access when the request has no identity.
 	if claims == nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
 	}
 
 	connection, err := s.getConnectionFromQueryID(ctx, vars["query"])
