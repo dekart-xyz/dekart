@@ -111,7 +111,8 @@ describe('cloud basic flow', () => {
       // Stop at the login page so the OAuth helper cannot sign the viewer back in.
       cy.intercept('GET', '**/api/v1/authenticate*', {
         statusCode: 200,
-        body: 'Login required for this report'
+        headers: { 'content-type': 'text/html' },
+        body: '<!doctype html><html><body>Login required for this report</body></html>'
       }).as('trackedReportLogin')
       cy.visit(reportPath)
     })
