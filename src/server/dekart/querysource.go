@@ -24,6 +24,7 @@ func (s Server) ServeQuerySource(w http.ResponseWriter, r *http.Request) {
 	claims := user.GetClaims(ctx)
 	if claims == nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
 	}
 
 	connection, err := s.getConnectionFromQueryID(ctx, vars["query"])
@@ -33,11 +34,6 @@ func (s Server) ServeQuerySource(w http.ResponseWriter, r *http.Request) {
 		HttpError(w, err)
 		return
 	}
-
-	// if connection.Id == "default" {
-	// 	// dataset has no connection, it means it's a playground dataset
-	// 	ctx = user.SetWorkspaceCtx(ctx, user.WorkspaceInfo{IsPlayground: true})
-	// }
 
 	conCtx := conn.GetCtx(ctx, connection)
 	bucketName := s.getBucketNameFromConnection(connection)

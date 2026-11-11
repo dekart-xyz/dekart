@@ -152,12 +152,13 @@ func (s Server) getReportID(ctx context.Context, datasetID string, canWrite bool
 // datasetOwnsSource verifies that sourceID (result or uploaded file) belongs to the requested dataset.
 func (s Server) datasetOwnsSource(ctx context.Context, datasetID string, sourceID string) (bool, error) {
 	var count int
+	// SQLite binds numbered placeholders by first appearance, unlike Postgres.
 	err := s.db.QueryRowContext(ctx, `select count(*) from (
 		select qj.job_result_id from query_jobs as qj
-		where qj.job_result_id=$2 and qj.query_id in (
+		where qj.query_id in (
 			select query_id from datasets where id=$1
 			union select id from queries where id=$1
-		)
+		) and qj.job_result_id=$2
 		union all
 		select f.file_source_id from files as f
 		join datasets as d on d.file_id=f.id
