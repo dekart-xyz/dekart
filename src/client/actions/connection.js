@@ -171,13 +171,13 @@ export function connectionSaved () {
 function setHTTPConnectionMetadata (connection, props) {
   connection.setConnectionName(props.connectionName)
   connection.setHttpBaseUrl(props.httpBaseUrl)
-  connection.setHttpDocsUrl(props.httpDocsUrl || '')
 }
 
 export function saveConnection (id, connectionType, connectionProps) {
   return async (dispatch, getState) => {
     const connection = new Connection()
     connection.setConnectionType(connectionType)
+    connection.setHttpDocsUrl(connectionProps.httpDocsUrl || '')
     dispatch({ type: saveConnection.name })
     if (!id) {
       // create new connection
@@ -254,6 +254,17 @@ export function saveConnection (id, connectionType, connectionProps) {
           const secret = new Secret()
           secret.setClientEncrypted(await encryptPassword(connectionProps.snowflakeKey, getState().env.variables.AES_KEY, getState().env.variables.AES_IV))
           connection.setSnowflakeKey(secret)
+        }
+      } else if (connectionType === ConnectionType.CONNECTION_TYPE_WHEROBOTS) {
+        connection.setConnectionName(connectionProps.connectionName)
+        connection.setWherobotsHost(connectionProps.wherobotsHost)
+        connection.setWherobotsRegion(connectionProps.wherobotsRegion)
+        connection.setWherobotsRuntime(connectionProps.wherobotsRuntime)
+        if (prevConnection.wherobotsKey !== connectionProps.wherobotsKey) {
+          // Keep the stored credential when the form still contains its placeholder.
+          const secret = new Secret()
+          secret.setClientEncrypted(await encryptPassword(connectionProps.wherobotsKey, getState().env.variables.AES_KEY, getState().env.variables.AES_IV))
+          connection.setWherobotsKey(secret)
         }
       } else if (prevConnection.bigqueryKey) { // bigquery service account key
         connection.setConnectionName(connectionProps.connectionName)

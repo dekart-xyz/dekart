@@ -33,12 +33,6 @@ func validateHTTPConnection(ctx context.Context, connection *proto.Connection) e
 		return status.Error(codes.InvalidArgument, "HTTP source base URL cannot contain query parameters")
 	}
 	connection.HttpBaseUrl = match.URL
-	if connection.HttpDocsUrl != "" {
-		docs, err := url.Parse(connection.HttpDocsUrl)
-		if err != nil || (docs.Scheme != "https" && docs.Scheme != "http") || docs.Host == "" {
-			return status.Error(codes.InvalidArgument, "HTTP source docs URL must be an HTTP or HTTPS URL")
-		}
-	}
 	// An omitted secret preserves the saved map on update.
 	if connection.HttpHeadersJson == nil {
 		return nil
