@@ -1,4 +1,4 @@
-// Regression: Vay CLI requests had no identity behind ALB with Cognito
+// Regression: CLI requests had no identity behind ALB with Cognito
 /* eslint-disable no-undef */
 
 const apiOrigin = Cypress.env('DEKART_E2E_API_URL')
