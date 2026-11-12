@@ -26,7 +26,7 @@ export default function WorkspaceSelector () {
   }
   const workspaces = userStream.userWorkspacesList || []
   const currentWorkspaceId = userStream.workspaceId || workspaces[0]?.id
-  const canCreateWorkspace = !env.isCloud && env.variables.ALLOW_WORKSPACE_CREATION && !readOnly
+  const canCreateWorkspace = env.variables.ALLOW_WORKSPACE_CREATION && !readOnly
   if (!currentWorkspaceId || workspaces.length === 0) {
     return null
   }

@@ -562,7 +562,7 @@ export default function WorkspacePage ({ step, onboarding }) {
   const isAnonymous = useSelector(state => state.user.isAnonymous)
   const env = useSelector(state => state.env)
   const readOnly = useSelector(state => state.workspace.readOnly)
-  const isCreatingAdditionalWorkspace = onboarding === 'create' && Boolean(workspaceId) && !env.isCloud && Boolean(env.variables.ALLOW_WORKSPACE_CREATION) && !readOnly
+  const isCreatingAdditionalWorkspace = onboarding === 'create' && Boolean(workspaceId) && Boolean(env.variables.ALLOW_WORKSPACE_CREATION) && !readOnly
   const dispatch = useDispatch()
   useEffect(() => {
     if (isPlayground) {
