@@ -285,7 +285,9 @@ export function reportsList (state = defaultReportsList, action) {
         loaded: true,
         my: action.reportsList.filter(report => !report.archived && report.isAuthor),
         archived: action.reportsList.filter(report => report.archived),
-        discoverable: action.reportsList.filter(report => report.discoverable && !report.archived)
+        discoverable: action.reportsList.filter(report =>
+          !report.archived && (report.discoverable || (report.hasDirectAccess && !report.isAuthor))
+        )
       }
     default:
       return state

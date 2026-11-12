@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"dekart/src/proto"
+	"dekart/src/server/conn"
 	device "dekart/src/server/deviceauth"
 	"dekart/src/server/errtype"
 	"dekart/src/server/report"
@@ -204,6 +205,34 @@ func (s Server) GetReportStream(req *proto.ReportStreamRequest, srv proto.Dekart
 func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportListStreamServer, sequence int64) error {
 	claims := user.GetClaims(ctx)
 
+	// Match getReport's sharing rule before adding email recipients to the list.
+	sharable := `(
+		select count(*) from connections as c
+		join datasets as d on c.id=d.connection_id
+		where d.report_id=r.id and c.cloud_storage_bucket is not null and (
+			c.cloud_storage_bucket != '' or c.connection_type > 1
+			or (c.bigquery_key_encrypted is not null and c.bigquery_key_encrypted != '')
+		)
+	) = (
+		select count(*) from connections as c
+		join datasets as d on c.id=d.connection_id
+		where d.report_id=r.id
+	)`
+	// Server-configured connections use the instance-wide sharing setting instead.
+	if !conn.IsUserDefined() {
+		sharable = strconv.FormatBool(conn.CanShareReports())
+	}
+	// Reuse the filter so listed maps and their connection types cannot diverge.
+	workspaceFilter := `(r.author_email=$1
+		or (r.discoverable=true and r.archived=false)
+		or r.allow_edit=true
+		or (r.archived=false and (r.is_public=true or (` + sharable + `)) and (
+			select status from report_access_log
+			where report_id=r.id and email=$2
+			order by created_at desc limit 1
+		) != 2)
+	) and r.workspace_id=$3`
+
 	var err error
 	var reportRows *sql.Rows
 	if checkWorkspace(ctx).ID == "" {
@@ -272,8 +301,9 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 				case when mp.report_id is not null then true else false end as has_map_preview
 			from reports as r
 			left join map_previews as mp on r.id = mp.report_id
-			where (r.author_email=$1 or (r.discoverable=true and r.archived=false) or r.allow_edit=true) and r.workspace_id=$2
+			where `+workspaceFilter+`
 			order by r.updated_at desc`,
+			claims.Email,
 			claims.Email,
 			checkWorkspace(ctx).ID,
 		)
@@ -340,7 +370,8 @@ func (s Server) sendReportList(ctx context.Context, srv proto.Dekart_GetReportLi
 			from datasets as d
 			left join connections as c on d.connection_id = c.id
 			inner join reports as r on d.report_id = r.id
-			where (r.author_email=$1 or (r.discoverable=true and r.archived=false) or r.allow_edit=true) and r.workspace_id=$2 and c.connection_type is not null`,
+			where `+workspaceFilter+` and c.connection_type is not null`,
+			claims.Email,
 			claims.Email,
 			checkWorkspace(ctx).ID,
 		)
