@@ -104,7 +104,7 @@ jobs:
             config: cloud
             target: premium
             cloud: true
-            spec: cypress/e2e/cloud/keplerReportLoad.cy.js,cypress/e2e/cloud/queryParameterBigQueryRendering.cy.js,cypress/e2e/cloud/viewToEditQueryParameters.cy.js,cypress/e2e/cloud/queryParameterStream.cy.js
+            spec: cypress/e2e/cloud/keplerReportLoad.cy.js,cypress/e2e/cloud/queryParameterBigQueryRendering.cy.js,cypress/e2e/cloud/viewToEditQueryParameters.cy.js,cypress/e2e/cloud/queryParameterStream.cy.js,cypress/e2e/cloud/emailSharedMaps.cy.js
             extra_env: |
               -e GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS \
               -e DEKART_POSTGRES_USER=$DEKART_POSTGRES_USER \
