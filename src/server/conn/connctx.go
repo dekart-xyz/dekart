@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -193,6 +194,13 @@ func ValidateReqConnection(con *proto.Connection) error {
 	if con == nil {
 		return status.Error(codes.InvalidArgument, "connection is required")
 	}
+	// Documentation is metadata for every connection type; it is never fetched here.
+	if con.HttpDocsUrl != "" {
+		docs, err := url.Parse(con.HttpDocsUrl)
+		if err != nil || (docs.Scheme != "https" && docs.Scheme != "http") || docs.Host == "" {
+			return status.Error(codes.InvalidArgument, "Docs URL must be an HTTP or HTTPS URL")
+		}
+	}
 	if con.ConnectionName == "" {
 		return status.Error(codes.InvalidArgument, "connection_name is required")
 	}
@@ -213,7 +221,8 @@ func ValidateReqConnection(con *proto.Connection) error {
 		if con.WherobotsHost == "" {
 			return status.Error(codes.InvalidArgument, "wherobots_host is required")
 		}
-		if con.WherobotsKey == nil {
+		// Existing connections keep their saved key during metadata-only edits.
+		if con.WherobotsKey == nil && (con.Id == "" || con.Id == "test-connection") {
 			return status.Error(codes.InvalidArgument, "wherobots_key is required")
 		}
 		if con.WherobotsRegion == "" {

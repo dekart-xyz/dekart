@@ -55,8 +55,8 @@ func TestUpdateConnection_BigQueryAllowsMetadataOnlyServiceAccountEdit(t *testin
 		UserRole: proto.UserRole_ROLE_ADMIN,
 	})
 
-	mock.ExpectExec(`update connections set\s+connection_name=\$1,\s+cloud_storage_bucket=\$2,\s+updated_at=CURRENT_TIMESTAMP\s+where id=\$3`).
-		WithArgs("Renamed BigQuery", "metadata-bucket", connectionID).
+	mock.ExpectExec(`update connections set\s+connection_name=\$1,\s+cloud_storage_bucket=\$2,\s+http_docs_url=\$3,\s+updated_at=CURRENT_TIMESTAMP\s+where id=\$4`).
+		WithArgs("Renamed BigQuery", "metadata-bucket", "", connectionID).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	response, err := server.UpdateConnection(ctx, &proto.UpdateConnectionRequest{

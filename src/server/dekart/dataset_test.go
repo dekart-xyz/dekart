@@ -201,9 +201,9 @@ func TestServeDatasetSourceRestoresSnapshotCredentialForConnectionReader(t *test
 			"snowflake_account_id", "snowflake_username", "snowflake_password_encrypted", "snowflake_key_encrypted",
 			"snowflake_warehouse", "bigquery_key_encrypted", "dataset_count", "wherobots_host",
 			"wherobots_key_encrypted", "wherobots_region", "wherobots_runtime", "postgres_host",
-			"postgres_username", "postgres_password_encrypted", "postgres_database", "postgres_port", "postgres_ssl_mode",
+			"postgres_username", "postgres_password_encrypted", "postgres_database", "postgres_port", "postgres_ssl_mode", "http_docs_url",
 		}).AddRow(connectionID, "BigQuery passthrough", "project", "", proto.ConnectionType_CONNECTION_TYPE_BIGQUERY,
-			nil, nil, nil, nil, nil, nil, 1, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil))
+			nil, nil, nil, nil, nil, nil, 1, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, ""))
 	mock.ExpectQuery("select dw_job_id, dw_job_location from query_jobs").WithArgs(sourceID).
 		WillReturnRows(sqlmock.NewRows([]string{"dw_job_id", "dw_job_location"}))
 	mock.ExpectQuery("select result_uri from query_jobs").WithArgs(sourceID).

@@ -17,6 +17,15 @@ import { DatasourceIcon } from './Datasource'
 import { track } from './lib/tracking'
 import TextArea from 'antd/es/input/TextArea'
 
+// Keep the optional documentation field consistent across warehouse forms.
+function DocsURLField () {
+  return (
+    <Form.Item label='Docs URL' name='httpDocsUrl'>
+      <Input placeholder='https://example.com/docs' />
+    </Form.Item>
+  )
+}
+
 function connectionTestFieldsChanged (changedValues, fields) {
   return fields.some(field => Object.prototype.hasOwnProperty.call(changedValues, field))
 }
@@ -163,6 +172,7 @@ function WherobotsConnectionModal ({ form }) {
               filterOption={(inputValue, option) => option.value.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1}
             />
           </Form.Item>
+          <DocsURLField />
         </Form>
       </div>
     </Modal>
@@ -240,6 +250,7 @@ function SnowflakeConnectionModal ({ form }) {
           <Form.Item label='Snowflake Warehouse' name='snowflakeWarehouse' extra='Optional: Snowflake warehouse. If the user lacks a default warehouse, you’ll need to enter the warehouse to connect to.'>
             <Input />
           </Form.Item>
+          <DocsURLField />
         </Form>
       </div>
     </Modal>
@@ -351,6 +362,7 @@ function PostgresConnectionModal ({ form }) {
               </div>
               )
             : null}
+          <DocsURLField />
         </Form>
       </div>
     </Modal>
@@ -367,7 +379,7 @@ function BigQueryServiceAccountConnectionModal ({ form }) {
     track('BigQueryServiceAccountConnectionModal')
   }, [])
 
-  // only name can be changed for connections used in datasets
+  // Keep connection credentials fixed when datasets already use them.
   const nameChangeOnly = connection?.datasetCount > 0
 
   useEffect(() => {
@@ -435,6 +447,7 @@ function BigQueryServiceAccountConnectionModal ({ form }) {
           <Form.Item label='Optional: Storage Bucket' extra={<>Google Cloud Storage bucket to permanently cache query results. Required to share map with other users.</>} name='cloudStorageBucket'>
             <Input placeholder='my-gcs-bucket' disabled={nameChangeOnly} />
           </Form.Item>
+          <DocsURLField />
         </Form>
       </div>
     </Modal>
@@ -460,7 +473,7 @@ function BigQueryConnectionModal ({ form }) {
     }
   }, [connection, form])
 
-  // only name can be changed for connections used in datasets
+  // Keep connection credentials fixed when datasets already use them.
   const nameChangeOnly = connection?.datasetCount > 0
 
   const options = (projects || []).map(project => ({ value: project, label: project }))
@@ -499,7 +512,7 @@ function BigQueryConnectionModal ({ form }) {
             }
           }}
         >
-          {nameChangeOnly ? <div className={styles.datasetsCountAlert}><Alert message={<>This connection is used in {connection.datasetCount} dataset{connection.datasetCount > 1 ? 's' : ''}.</>} description='Only the name can be changed.' type='warning' /></div> : null}
+          {nameChangeOnly ? <div className={styles.datasetsCountAlert}><Alert message={<>This connection is used in {connection.datasetCount} dataset{connection.datasetCount > 1 ? 's' : ''}.</>} description='Only the name and Docs URL can be changed.' type='warning' /></div> : null}
           <Form.Item label='Connection Name' name='connectionName'>
             <Input />
           </Form.Item>
@@ -522,6 +535,7 @@ function BigQueryConnectionModal ({ form }) {
           <Form.Item label='Optional: Storage Bucket' extra={<>Google Cloud Storage bucket to permanently cache query results. Required to share map with other users.</>} name='cloudStorageBucket'>
             <Input placeholder='my-gcs-bucket' disabled={nameChangeOnly} />
           </Form.Item>
+          <DocsURLField />
         </Form>
       </div>
     </Modal>
