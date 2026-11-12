@@ -285,7 +285,10 @@ export function reportsList (state = defaultReportsList, action) {
         loaded: true,
         my: action.reportsList.filter(report => !report.archived && report.isAuthor),
         archived: action.reportsList.filter(report => report.archived),
-        discoverable: action.reportsList.filter(report => report.discoverable && !report.archived)
+        // Shared Maps includes email-shared maps while excluding archived maps and the author's private maps.
+        discoverable: action.reportsList.filter(report =>
+          !report.archived && (report.discoverable || (report.hasDirectAccess && !report.isAuthor))
+        )
       }
     default:
       return state
