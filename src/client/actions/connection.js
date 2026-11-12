@@ -167,23 +167,18 @@ export function connectionSaved () {
   }
 }
 
-// Saved headers stay separate from the metadata shared by create and update requests.
-function setHTTPConnectionMetadata (connection, props) {
-  connection.setConnectionName(props.connectionName)
-  connection.setHttpBaseUrl(props.httpBaseUrl)
-  connection.setHttpDocsUrl(props.httpDocsUrl || '')
-}
-
 export function saveConnection (id, connectionType, connectionProps) {
   return async (dispatch, getState) => {
     const connection = new Connection()
     connection.setConnectionType(connectionType)
+    connection.setHttpDocsUrl(connectionProps.httpDocsUrl || '')
     dispatch({ type: saveConnection.name })
     if (!id) {
       // create new connection
       const request = new CreateConnectionRequest()
       if (connectionType === ConnectionType.CONNECTION_TYPE_HTTP) {
-        setHTTPConnectionMetadata(connection, connectionProps)
+        connection.setConnectionName(connectionProps.connectionName)
+        connection.setHttpBaseUrl(connectionProps.httpBaseUrl)
         const headers = Object.fromEntries(connectionProps.httpHeaderRows.map(row => [row.name, row.value]))
         const secret = new Secret()
         secret.setClientEncrypted(await encryptPassword(JSON.stringify(headers), getState().env.variables.AES_KEY, getState().env.variables.AES_IV))
@@ -241,11 +236,11 @@ export function saveConnection (id, connectionType, connectionProps) {
       // update existing connection
       const request = new UpdateConnectionRequest()
       connection.setId(id)
+      connection.setConnectionName(connectionProps.connectionName)
       // Update HTTP metadata without sending or replacing saved credentials.
       if (connectionType === ConnectionType.CONNECTION_TYPE_HTTP) {
-        setHTTPConnectionMetadata(connection, connectionProps)
+        connection.setHttpBaseUrl(connectionProps.httpBaseUrl)
       } else if (connectionType === ConnectionType.CONNECTION_TYPE_SNOWFLAKE) {
-        connection.setConnectionName(connectionProps.connectionName)
         connection.setSnowflakeAccountId(connectionProps.snowflakeAccountId)
         connection.setSnowflakeUsername(connectionProps.snowflakeUsername)
         connection.setSnowflakeWarehouse(connectionProps.snowflakeWarehouse)
@@ -255,8 +250,18 @@ export function saveConnection (id, connectionType, connectionProps) {
           secret.setClientEncrypted(await encryptPassword(connectionProps.snowflakeKey, getState().env.variables.AES_KEY, getState().env.variables.AES_IV))
           connection.setSnowflakeKey(secret)
         }
+      // Keep the saved Wherobots key unless the user replaces its displayed value.
+      } else if (connectionType === ConnectionType.CONNECTION_TYPE_WHEROBOTS) {
+        connection.setWherobotsHost(connectionProps.wherobotsHost)
+        connection.setWherobotsRegion(connectionProps.wherobotsRegion)
+        connection.setWherobotsRuntime(connectionProps.wherobotsRuntime)
+        if (prevConnection.wherobotsKey !== connectionProps.wherobotsKey) {
+          // Keep the stored credential when the form still contains its placeholder.
+          const secret = new Secret()
+          secret.setClientEncrypted(await encryptPassword(connectionProps.wherobotsKey, getState().env.variables.AES_KEY, getState().env.variables.AES_IV))
+          connection.setWherobotsKey(secret)
+        }
       } else if (prevConnection.bigqueryKey) { // bigquery service account key
-        connection.setConnectionName(connectionProps.connectionName)
         connection.setCloudStorageBucket(connectionProps.cloudStorageBucket)
         if (connectionProps.newBigqueryKey) {
           // update key only if it was changed, otherwise it's just a placeholder
@@ -267,7 +272,6 @@ export function saveConnection (id, connectionType, connectionProps) {
         }
       } else if (connectionType === ConnectionType.CONNECTION_TYPE_POSTGRES) {
         const postgresSslMode = connectionProps.postgresSslMode || defaultPostgresSslMode(getState().env.isCloud)
-        connection.setConnectionName(connectionProps.connectionName)
         connection.setPostgresHost(connectionProps.postgresHost)
         connection.setPostgresUsername(connectionProps.postgresUsername)
         connection.setPostgresDatabase(connectionProps.postgresDatabase)
@@ -279,7 +283,6 @@ export function saveConnection (id, connectionType, connectionProps) {
           connection.setPostgresPassword(secret)
         }
       } else {
-        connection.setConnectionName(connectionProps.connectionName)
         connection.setBigqueryProjectId(connectionProps.bigqueryProjectId)
         connection.setCloudStorageBucket(connectionProps.cloudStorageBucket)
       }

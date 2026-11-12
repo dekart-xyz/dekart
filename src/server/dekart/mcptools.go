@@ -45,7 +45,7 @@ func mcpToolDefinitions() []mcpTool {
 	tools := []mcpTool{
 		{
 			Name:         "list_connections",
-			Description:  "List available workspace and system connections visible to caller. Secret fields are never returned.",
+			Description:  "List available workspace and system connections visible to caller. Secret fields are never returned. When http_docs_url is present, read that page before writing SQL.",
 			InputSchema:  mcpschema.Object(nil, map[string]any{}),
 			WhenToUse:    "Use before creating datasets or queries to discover available connection ids/types/names.",
 			WhenNotToUse: "Do not use when you already have a valid connection_id and need to perform writes.",

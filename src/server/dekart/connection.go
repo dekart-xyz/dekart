@@ -227,7 +227,8 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 			postgres_password_encrypted,
 			postgres_database,
 			postgres_port,
-			postgres_ssl_mode
+			postgres_ssl_mode,
+			http_docs_url
 		from connections where id=$1 limit 1`,
 		connectionID,
 	)
@@ -281,6 +282,7 @@ func (s Server) getConnection(ctx context.Context, connectionID string) (*proto.
 			&postgresDatabase,
 			&postgresPort,
 			&postgresSSLMode,
+			&connection.HttpDocsUrl,
 		)
 		connection.Id = ID.String
 		connection.BigqueryProjectId = bigqueryProjectId.String
@@ -372,7 +374,8 @@ func (s Server) getUserConnections(ctx context.Context) ([]*proto.Connection, er
 			postgres_password_encrypted,
 			postgres_database,
 			postgres_port,
-			postgres_ssl_mode
+			postgres_ssl_mode,
+			http_docs_url
 		from connections where archived=false and workspace_id=$1 order by created_at desc`,
 		checkWorkspace(ctx).ID,
 	)
@@ -437,6 +440,7 @@ func (s Server) getUserConnections(ctx context.Context) ([]*proto.Connection, er
 			&postgresDatabase,
 			&postgresPort,
 			&postgresSSLMode,
+			&connection.HttpDocsUrl,
 		)
 		if err != nil {
 			errtype.LogError(err, "scan failed")
@@ -583,12 +587,14 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 				snowflake_account_id=$2,
 				snowflake_username=$3,
 				snowflake_warehouse=$4,
+				http_docs_url=$5,
 				updated_at=CURRENT_TIMESTAMP
-			where id=$5`,
+			where id=$6`,
 			req.Connection.ConnectionName,
 			req.Connection.SnowflakeAccountId,
 			req.Connection.SnowflakeUsername,
 			req.Connection.SnowflakeWarehouse,
+			req.Connection.HttpDocsUrl,
 			req.Connection.Id,
 		)
 		snowflakeKey := secrets.SecretToServerEncrypted(req.Connection.SnowflakeKey, claims)
@@ -608,12 +614,14 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 				wherobots_host=$2,
 				wherobots_region=$3,
 				wherobots_runtime=$4,
+				http_docs_url=$5,
 				updated_at=now()
-			where id=$5`,
+			where id=$6`,
 			req.Connection.ConnectionName,
 			req.Connection.WherobotsHost,
 			req.Connection.WherobotsRegion,
 			req.Connection.WherobotsRuntime,
+			req.Connection.HttpDocsUrl,
 			req.Connection.Id,
 		)
 		// update key if it is provided
@@ -636,14 +644,16 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 			postgres_database=$4,
 			postgres_port=$5,
 			postgres_ssl_mode=$6,
+				http_docs_url=$7,
 			updated_at=CURRENT_TIMESTAMP
-		where id=$7`,
+		where id=$8`,
 			req.Connection.ConnectionName,
 			req.Connection.PostgresHost,
 			req.Connection.PostgresUsername,
 			req.Connection.PostgresDatabase,
 			req.Connection.PostgresPort,
 			req.Connection.PostgresSslMode,
+			req.Connection.HttpDocsUrl,
 			req.Connection.Id,
 		)
 		postgresPassword := secrets.SecretToServerEncrypted(req.Connection.PostgresPassword, claims)
@@ -661,10 +671,12 @@ func (s Server) UpdateConnection(ctx context.Context, req *proto.UpdateConnectio
 			`update connections set
 			connection_name=$1,
 			cloud_storage_bucket=$2,
+				http_docs_url=$3,
 			updated_at=CURRENT_TIMESTAMP
-		where id=$3`,
+		where id=$4`,
 			req.Connection.ConnectionName,
 			req.Connection.CloudStorageBucket,
+			req.Connection.HttpDocsUrl,
 			req.Connection.Id,
 		)
 		if req.Connection.BigqueryProjectId != "" && err == nil {
