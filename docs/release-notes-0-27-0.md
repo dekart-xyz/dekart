@@ -18,6 +18,12 @@ Admins and editors can create named tokens for Claude and other MCP clients dire
 
 <img src="images/release-0-27/mcp-tokens.png" alt="Workspace API tokens and Claude setup instructions" width="392">
 
+### Use Dekart CLI and MCP with Amazon OIDC
+
+Deployments using Amazon Application Load Balancer OIDC authentication now support Dekart CLI and MCP access, including file uploads, queries, and map snapshots. Run `dekart init` and approve access in your browser; subsequent CLI requests use the issued device token.
+
+The new optional `DEKART_AMAZON_OIDC_ALB_ARN` environment variable restricts accepted Amazon login tokens to the Application Load Balancer ARN you configure. When set, tokens whose `signer` header does not match that ARN are rejected.
+
 ### Add documentation to any connection
 
 Every connection type now has an optional **Docs URL**. The link is also returned by the MCP `list_connections` tool so agents can read the data documentation before writing SQL.
@@ -48,7 +54,6 @@ Cloud admins can delete a non-default workspace from its settings after confirmi
 - PostgreSQL and SQLite metadata migrations add HTTP connection settings, workspace deletion timestamps, and workspace identifiers for tracking events. They run automatically at startup.
 - HTTP data is fetched by the Dekart server. Allow outbound HTTPS access to the public hosts configured in HTTP connections.
 - Set the optional `DEKART_GEOSQL_MCP_URL` to show the GeoSQL MCP extension setup option for Claude Desktop in workspace settings.
-- Amazon OIDC deployments now accept Dekart device bearer tokens for CLI/MCP requests and snapshot tokens for map rendering, while retaining the existing browser authentication flow.
 
 ## 🔧 User-Facing Bug Fixes
 
