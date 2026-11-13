@@ -26,7 +26,8 @@ export default function WorkspaceSelector () {
   }
   const workspaces = userStream.userWorkspacesList || []
   const currentWorkspaceId = userStream.workspaceId || workspaces[0]?.id
-  const canCreateWorkspace = !env.isCloud && env.variables.ALLOW_WORKSPACE_CREATION && !readOnly
+  // Offer workspace creation to Cloud members when creation is enabled and the current workspace is writable.
+  const canCreateWorkspace = env.variables.ALLOW_WORKSPACE_CREATION && !readOnly
   if (!currentWorkspaceId || workspaces.length === 0) {
     return null
   }
