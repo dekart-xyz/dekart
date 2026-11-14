@@ -27,19 +27,21 @@ describe('cloud basic flow', () => {
     cy.get('button:contains("Connect with Google")').click()
     const randomConnectionName = `test-${Math.floor(Math.random() * 1000000)}`
     cy.get('div.ant-modal-title').should('contain', 'BigQuery')
-    cy.get('input#connectionName').clear()
-    cy.get('input#connectionName').type(randomConnectionName)
+    cy.get('input#connectionName').click()
+    cy.get('input#connectionName').type(`{selectall}{backspace}${randomConnectionName}`)
+    cy.get('input#connectionName').should('have.value', randomConnectionName)
     cy.get('input#bigqueryProjectId').clear() // prevent autofill
     cy.get('input#bigqueryProjectId').type('dekart-dev')
     cy.get('input#cloudStorageBucket').type('dekart-dev')
     cy.get('button:contains("Test Connection")').click()
     cy.get('button#saveConnection').should('be.enabled')
-    cy.get('button#saveConnection').click()
-
-    // Connection management can leave the report; reopen it before selecting SQL.
+    // Keep authentication on the report when saving returns from connection management.
     cy.get('@reportPath').then(path => {
       cy.stubGoogleOAuthToken('DEV_REFRESH_TOKEN', path)
-      cy.visit(path)
+    })
+    cy.get('button#saveConnection').click()
+    cy.get('@reportPath').then(path => {
+      cy.location('pathname', { timeout: 30000 }).should('eq', path)
     })
     cy.contains('button', randomConnectionName, { timeout: 30000 }).scrollIntoView().click()
     cy.get('textarea').type(copy.simple_sql_query, { force: true })
